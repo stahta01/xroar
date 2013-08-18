@@ -1,6 +1,6 @@
+## autoconf files
+.dirstamp
 ## build files
-/.deps.mak
-/.deps.mak.bak
 /*.o
 /alsa/*.o
 /gtk2/*.o

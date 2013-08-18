@@ -1,4 +1,11 @@
+## autoconf files
+/mdate-sh
+/stamp-vti
+/texinfo.tex
 /version.texi
+/xroar.t2d
+/xroar.t2p
+## build files
 /xroar.html
 /xroar.info
 /xroar.pdf

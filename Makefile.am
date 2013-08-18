@@ -1,0 +1,7 @@
+ACLOCAL_AMFLAGS = -I m4
+AUTOMAKE_OPTIONS = foreign
+
+EXTRA_DIST = README COPYING.GPL COPYING.LGPL-2.1
+
+SUBDIRS = portalib src doc
+DIST_SUBDIRS = tools portalib src doc

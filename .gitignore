@@ -1,5 +1,21 @@
 *~
 *.swp
-/config.h
+## autoconf files
+.deps/
+Makefile
+Makefile.in
+/aclocal.m4
+/autom4te.cache/
+/compile
 /config.log
 /config.mak
+/config.guess
+/config.h
+/config.h.in
+/config.status
+/config.sub
+/configure
+/depcomp
+/install-sh
+/missing
+/stamp-h1
