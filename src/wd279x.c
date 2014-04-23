@@ -128,6 +128,7 @@ static void _vdrive_write(WD279X *fdc, uint8_t b) {
 	} while (0)
 
 static void wd279x_init(WD279X *fdc, enum WD279X_type type) {
+	memset(fdc, 0, sizeof(*fdc));
 	fdc->type = type;
 	fdc->has_sso = (type == WD2795 || type == WD2797);
 	fdc->has_length_flag = (type == WD2795 || type == WD2797);
