@@ -43,11 +43,6 @@ enum xroar_filetype {
 	FILETYPE_ASC,
 };
 
-extern char const * const xroar_disk_exts[];
-extern char const * const xroar_tape_exts[];
-extern char const * const xroar_snap_exts[];
-extern char const * const xroar_cart_exts[];
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 enum xroar_run_state {

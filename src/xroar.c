@@ -404,10 +404,10 @@ static int autorun_loaded_file = 0;
 static struct event timeout_event;
 static void handle_timeout_event(void *);
 
-char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
-char const * const xroar_tape_exts[] = { "CAS", NULL };
-char const * const xroar_snap_exts[] = { "SNA", NULL };
-char const * const xroar_cart_exts[] = { "ROM", NULL };
+static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
+static char const * const xroar_tape_exts[] = { "CAS", NULL };
+static char const * const xroar_snap_exts[] = { "SNA", NULL };
+static char const * const xroar_cart_exts[] = { "ROM", NULL };
 
 static struct {
 	const char *ext;
