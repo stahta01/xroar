@@ -248,7 +248,7 @@ static void emulator_command(SDLKey sym) {
 		if (shift)
 			xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
 		else
-			xroar_run_file(xroar_cart_exts);
+			xroar_run_file(NULL);
 		break;
 	case SDLK_j:
 		if (shift) {
