@@ -56,7 +56,6 @@ struct slist *slist_insert_before(struct slist *list, struct slist *before, void
 /* Remove list entry containing data. */
 struct slist *slist_remove(struct slist *list, void *data) {
 	struct slist **entp;
-	if (!data) return list;
 	for (entp = &list; *entp; entp = &(*entp)->next) {
 		if ((*entp)->data == data) break;
 	}
