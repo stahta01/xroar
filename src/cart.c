@@ -293,7 +293,7 @@ void cart_rom_attach(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->autorun) {
 		c->firq_event = event_new(DELEGATE_AS0(void, do_firq, c));
-		c->firq_event->at_tick = event_current_tick + (OSCILLATOR_RATE/10);
+		c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
 		event_queue(&MACHINE_EVENT_LIST, c->firq_event);
 	} else {
 		c->firq_event = NULL;
@@ -315,6 +315,6 @@ void cart_rom_detach(struct cart *c) {
 static void do_firq(void *data) {
 	struct cart *c = data;
 	DELEGATE_SAFE_CALL1(c->signal_firq, 1);
-	c->firq_event->at_tick = event_current_tick + (OSCILLATOR_RATE/10);
+	c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
 	event_queue(&MACHINE_EVENT_LIST, c->firq_event);
 }

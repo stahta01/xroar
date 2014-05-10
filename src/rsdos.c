@@ -33,7 +33,6 @@
 #include "cart.h"
 #include "delegate.h"
 #include "logging.h"
-#include "machine.h"
 #include "rsdos.h"
 #include "vdrive.h"
 #include "wd279x.h"

@@ -27,7 +27,6 @@
 
 #include "events.h"
 #include "fs.h"
-#include "machine.h"
 #include "tape.h"
 #include "vdrive.h"
 #include "xroar.h"
@@ -151,7 +150,7 @@ void gtk2_create_tc_window(void) {
 	g_object_unref(builder);
 
 	event_init(&update_tape_counters_event, DELEGATE_AS0(void, update_tape_counters, NULL));
-	update_tape_counters_event.at_tick = event_current_tick + OSCILLATOR_RATE / 2;
+	update_tape_counters_event.at_tick = event_current_tick + EVENT_MS(500);
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
 }
 
@@ -252,7 +251,7 @@ static void update_tape_counters(void *data) {
 		gtk_adjustment_set_value(GTK_ADJUSTMENT(tc_output_adjustment), (gdouble)opos);
 		gtk_label_set_text(GTK_LABEL(tc_output_time), ms_to_string(new_opos));
 	}
-	update_tape_counters_event.at_tick += OSCILLATOR_RATE / 2;
+	update_tape_counters_event.at_tick += EVENT_MS(500);
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
 }
 

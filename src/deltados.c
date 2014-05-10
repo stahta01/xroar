@@ -35,7 +35,6 @@
 #include "delegate.h"
 #include "deltados.h"
 #include "logging.h"
-#include "machine.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"

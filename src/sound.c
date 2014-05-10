@@ -26,7 +26,6 @@
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "sound.h"
 #include "tape.h"
@@ -182,7 +181,7 @@ void sound_init(void *buf, enum sound_fmt fmt, unsigned rate, unsigned nchannels
 	buffer_nframes = nframes;
 	buffer_fmt = fmt;
 	buffer_nchannels = nchannels;
-	ticks_per_frame = (float)OSCILLATOR_RATE / (float)rate;
+	ticks_per_frame = (float)EVENT_TICK_RATE / (float)rate;
 	ticks_per_buffer = ticks_per_frame * nframes;
 	last_cycle = event_current_tick;
 

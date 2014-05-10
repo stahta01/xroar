@@ -30,7 +30,6 @@
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
 #include "mc6809.h"
 #include "printer.h"
 #include "xroar.h"
@@ -124,7 +123,7 @@ void printer_strobe(_Bool strobe, int data) {
 	}
 	/* ACK, and schedule !ACK */
 	DELEGATE_SAFE_CALL1(printer_signal_ack, 1);
-	ack_clear_event.at_tick = event_current_tick + (OSCILLATOR_RATE / 150000);
+	ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
 	event_queue(&MACHINE_EVENT_LIST, &ack_clear_event);
 }
 

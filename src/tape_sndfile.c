@@ -25,9 +25,9 @@
 
 #include "xalloc.h"
 
+#include "events.h"
 #include "fs.h"
 #include "logging.h"
-#include "machine.h"
 #include "tape.h"
 
 #define BLOCK_LENGTH (512)
@@ -88,7 +88,7 @@ struct tape *tape_sndfile_open(const char *filename, const char *mode) {
 		sndfile_close(t);
 		return NULL;
 	}
-	sndfile->cycles_per_frame = OSCILLATOR_RATE / sndfile->info.samplerate;
+	sndfile->cycles_per_frame = EVENT_TICK_RATE / sndfile->info.samplerate;
 	sndfile->block = xmalloc(BLOCK_LENGTH * sizeof(*sndfile->block) * sndfile->info.channels);
 	sndfile->block_length = 0;
 	sndfile->cursor = 0;
@@ -167,7 +167,7 @@ static int sndfile_pulse_in(struct tape *t, int *pulse_width) {
 		}
 		t->offset++;
 		length += sndfile->cycles_per_frame;
-		if (length > (OSCILLATOR_RATE / 2))
+		if (length > EVENT_MS(500))
 			break;
 	}
 	*pulse_width = length;

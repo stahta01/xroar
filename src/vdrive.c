@@ -25,12 +25,11 @@
 
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
 
-#define BYTE_TIME (OSCILLATOR_RATE / 31250)
+#define BYTE_TIME (EVENT_TICK_RATE / 31250)
 #define MAX_DRIVES VDRIVE_MAX_DRIVES
 #define MAX_SIDES (2)
 #define MAX_TRACKS (256)
@@ -353,7 +352,8 @@ unsigned vdrive_time_to_next_byte(void) {
 
 unsigned vdrive_time_to_next_idam(void) {
 	event_ticks next_cycle;
-	if (!ready_state) return OSCILLATOR_RATE / 5;
+	if (!ready_state)
+		return EVENT_MS(200);
 	/* Update head_pos based on time elapsed since track start */
 	head_pos = 128 + ((event_current_tick - track_start_cycle) / BYTE_TIME);
 	unsigned next_head_pos = current_drive->disk->track_length;

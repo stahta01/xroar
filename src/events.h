@@ -15,6 +15,13 @@
 
 typedef unsigned event_ticks;
 
+/* Event tick frequency */
+#define EVENT_TICK_RATE ((uintmax_t)14318180)
+
+#define EVENT_S(s) (EVENT_TICK_RATE * (s))
+#define EVENT_MS(ms) ((EVENT_TICK_RATE * (ms)) / 1000)
+#define EVENT_US(us) ((EVENT_TICK_RATE * (us)) / 1000000)
+
 /* Current "time". */
 extern event_ticks event_current_tick;
 

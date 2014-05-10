@@ -33,7 +33,6 @@
 #include "crc16.h"
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
@@ -51,10 +50,7 @@
 #define STATUS_DRQ           (1<<1)
 #define STATUS_BUSY          (1<<0)
 
-#define W_MILLISEC(ms) ((OSCILLATOR_RATE/1000)*(ms))
-#define W_MICROSEC(us) ((OSCILLATOR_RATE*(us))/1000000)
-
-#define W_BYTE_TIME (OSCILLATOR_RATE / 31250)
+#define W_BYTE_TIME (EVENT_TICK_RATE / 31250)
 
 #define SET_DRQ do { \
 		fdc->status_register |= STATUS_DRQ; \
@@ -376,7 +372,7 @@ static void state_machine(void *sptr) {
 				else
 					SET_SIDE(fdc->command_register & 0x08);  /* 'S' */
 				if (fdc->command_register & 0x04) {  /* 'E' set */
-					NEXT_STATE(WD279X_state_type2_1, W_MILLISEC(30));
+					NEXT_STATE(WD279X_state_type2_1, EVENT_MS(30));
 					return;
 				}
 				GOTO_STATE(WD279X_state_type2_1);
@@ -403,7 +399,7 @@ static void state_machine(void *sptr) {
 				else
 					SET_SIDE(fdc->command_register & 0x08);  /* 'S' */
 				if (fdc->command_register & 0x04) {  /* 'E' set */
-					NEXT_STATE(WD279X_state_type3_1, W_MILLISEC(30));
+					NEXT_STATE(WD279X_state_type3_1, EVENT_MS(30));
 					return;
 				}
 				GOTO_STATE(WD279X_state_type3_1);
@@ -435,15 +431,15 @@ static void state_machine(void *sptr) {
 				// The WD279x flow chart implies this delay is
 				// not incurred in this situation, but real
 				// code fails without it.
-				NEXT_STATE(WD279X_state_verify_track_1, W_MILLISEC(fdc->step_delay));
+				NEXT_STATE(WD279X_state_verify_track_1, EVENT_MS(fdc->step_delay));
 				return;
 			}
 			vdrive_step();
 			if (fdc->is_step_cmd) {
-				NEXT_STATE(WD279X_state_verify_track_1, W_MILLISEC(fdc->step_delay));
+				NEXT_STATE(WD279X_state_verify_track_1, EVENT_MS(fdc->step_delay));
 				return;
 			}
-			NEXT_STATE(WD279X_state_type1_1, W_MILLISEC(fdc->step_delay));
+			NEXT_STATE(WD279X_state_type1_1, EVENT_MS(fdc->step_delay));
 			return;
 
 
@@ -717,7 +713,7 @@ static void state_machine(void *sptr) {
 			}
 			log_close(&log_wsec_hex);
 			VDRIVE_WRITE_CRC16;
-			NEXT_STATE(WD279X_state_write_sector_6, vdrive_time_to_next_byte() + W_MICROSEC(20));
+			NEXT_STATE(WD279X_state_write_sector_6, vdrive_time_to_next_byte() + EVENT_US(20));
 			return;
 
 

@@ -35,7 +35,6 @@
 
 #include "events.h"
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
@@ -48,8 +47,6 @@ SoundModule sound_null_module = {
 		    .init = init, },
 	.write_buffer = write_buffer,
 };
-
-#define CYCLES_PER_MS (OSCILLATOR_RATE / 1000)
 
 static event_ticks last_pause_cycle;
 static unsigned int last_pause_ms;
@@ -91,7 +88,7 @@ static void sleep_ms(unsigned int ms) {
 
 static void *write_buffer(void *buffer) {
 	event_ticks elapsed_cycles = event_current_tick - last_pause_cycle;
-	unsigned int expected_elapsed_ms = elapsed_cycles / CYCLES_PER_MS;
+	unsigned int expected_elapsed_ms = elapsed_cycles / EVENT_MS(1);
 	unsigned int actual_elapsed_ms, difference_ms;
 	actual_elapsed_ms = current_time() - last_pause_ms;
 	difference_ms = expected_elapsed_ms - actual_elapsed_ms;
@@ -103,7 +100,7 @@ static void *write_buffer(void *buffer) {
 			sleep_ms(difference_ms);
 			difference_ms = current_time() - last_pause_ms;
 			last_pause_ms += difference_ms;
-			last_pause_cycle += difference_ms * CYCLES_PER_MS;
+			last_pause_cycle += difference_ms * EVENT_MS(1);
 		}
 	}
 	return buffer;

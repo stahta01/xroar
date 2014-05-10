@@ -388,7 +388,7 @@ void tape_update_motor(_Bool state) {
 			waggle_bit(NULL);
 		}
 		if (tape_output && !flush_event.queued) {
-			flush_event.at_tick = event_current_tick + OSCILLATOR_RATE / 2;
+			flush_event.at_tick = event_current_tick + EVENT_MS(500);
 			event_queue(&MACHINE_EVENT_LIST, &flush_event);
 			tape_output->last_write_cycle = event_current_tick;
 		}
@@ -447,7 +447,7 @@ static void flush_output(void *data) {
 	(void)data;
 	tape_update_output(last_tape_output);
 	if (motor) {
-		flush_event.at_tick += OSCILLATOR_RATE / 2;
+		flush_event.at_tick += EVENT_MS(500);
 		event_queue(&MACHINE_EVENT_LIST, &flush_event);
 	}
 }

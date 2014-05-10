@@ -27,7 +27,6 @@
 #include "xalloc.h"
 
 #include "fs.h"
-#include "machine.h"
 #include "tape.h"
 
 struct tape_cas {
