@@ -8,8 +8,7 @@
 
 #include <stdint.h>
 
-#define SAM_CPU_SLOW_DIVISOR 16
-#define SAM_CPU_FAST_DIVISOR 8
+#define EVENT_SAM_CYCLES(c) (c)
 
 #define sam_init()
 void sam_reset(void);

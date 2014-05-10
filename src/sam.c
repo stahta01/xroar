@@ -142,27 +142,27 @@ _Bool sam_run(uint16_t A, _Bool RnW, int *S, uint16_t *Z, int *ncycles) {
 	if (running_fast) {
 		if (fast_cycle) {
 			// Fast cycle, may become un-interleaved
-			*ncycles = SAM_CPU_FAST_DIVISOR;
+			*ncycles = EVENT_SAM_CYCLES(8);
 			odd_cycle = !odd_cycle;
 		} else {
 			// Transition fast to slow
 			if (odd_cycle) {
 				// Re-interleave
-				*ncycles = SAM_CPU_SLOW_DIVISOR + SAM_CPU_FAST_DIVISOR;
+				*ncycles = EVENT_SAM_CYCLES(25);
 				odd_cycle = 0;
 			} else {
-				*ncycles = SAM_CPU_SLOW_DIVISOR;
+				*ncycles = EVENT_SAM_CYCLES(17);
 			}
 			running_fast = 0;
 		}
 	} else {
 		if (fast_cycle) {
 			// Transition slow to fast
-			*ncycles = SAM_CPU_SLOW_DIVISOR;
+			*ncycles = EVENT_SAM_CYCLES(15);
 			running_fast = 1;
 		} else {
 			// Slow cycle
-			*ncycles = SAM_CPU_SLOW_DIVISOR;
+			*ncycles = EVENT_SAM_CYCLES(16);
 		}
 	}
 
