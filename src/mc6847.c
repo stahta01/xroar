@@ -32,11 +32,12 @@
 #include "mc6809.h"
 #include "mc6847.h"
 #include "module.h"
+#include "sam.h"
 #include "vdg_bitmaps.h"
 #include "xroar.h"
 
-// Convert VDG timing to SAM cycles:
-#define VDG_CYCLES(c) ((c) * 2)
+// Convert VDG pixels (half-cycles) to event ticks:
+#define EVENT_VDG_PIXELS(c) EVENT_SAM_CYCLES((c) * 2)
 
 enum vdg_render_mode {
 	VDG_RENDER_SG,
@@ -142,8 +143,8 @@ static void do_hs_fall(void *data) {
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + VDG_CYCLES(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + VDG_CYCLES(VDG_LINE_DURATION);
+	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_HS_RISING_EDGE);
+	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
 
 	/* On PAL machines, the clock to the VDG is interrupted at two points
 	 * in every frame to fake up some extra scanlines, padding the signal
@@ -162,8 +163,8 @@ static void do_hs_fall(void *data) {
 	} else if (IS_PAL && IS_DRAGON) {
 		if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
 		    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
-				vdg->hs_rise_event.at_tick += 25 * VDG_CYCLES(VDG_PAL_PADDING_LINE);
-				vdg->hs_fall_event.at_tick += 25 * VDG_CYCLES(VDG_PAL_PADDING_LINE);
+				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
+				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 		}
 	}
 
@@ -214,8 +215,8 @@ static void do_hs_fall_pal_coco(void *data) {
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + VDG_CYCLES(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + VDG_CYCLES(VDG_LINE_DURATION);
+	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_HS_RISING_EDGE);
+	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
 
 	vdg->pal_padding--;
 	if (vdg->pal_padding == 0)
@@ -226,7 +227,7 @@ static void do_hs_fall_pal_coco(void *data) {
 }
 
 static void render_scanline(struct MC6847_private *vdg) {
-	unsigned beam_to = (event_current_tick - vdg->scanline_start) >> 1;
+	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_PIXELS(1);
 	if (vdg->is_32byte && beam_to >= 102) {
 		unsigned nbytes = (beam_to - 102) >> 3;
 		if (nbytes > 42)
@@ -424,7 +425,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->scanline = 0;
 	vdg->row = 0;
 	vdg->scanline_start = event_current_tick;
-	vdg->hs_fall_event.at_tick = event_current_tick + VDG_CYCLES(VDG_LINE_DURATION);
+	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
