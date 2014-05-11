@@ -457,7 +457,7 @@ static void flush_output(void *data) {
 static int pskip = 0;
 
 static int pulse_skip(void) {
-	pskip <<= 4;
+	pskip *= EVENT_SAM_CYCLES(16);
 	for (;;) {
 		if (pskip < in_pulse_width) {
 			in_pulse_width -= pskip;
