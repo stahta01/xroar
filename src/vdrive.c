@@ -344,7 +344,7 @@ unsigned vdrive_time_to_next_byte(void) {
 		LOG_DEBUG(3, "Negative time to next byte!\n");
 		return 1;
 	}
-	return to_time + 1;
+	return to_time;
 }
 
 /* Calculates the number of cycles it would take to get from the current head
@@ -366,15 +366,16 @@ unsigned vdrive_time_to_next_idam(void) {
 			}
 		}
 	}
-	if (next_head_pos >= current_drive->disk->track_length)
-		return (index_pulse_event.at_tick - event_current_tick) + 1;
+	if (next_head_pos >= current_drive->disk->track_length) {
+		return index_pulse_event.at_tick - event_current_tick;
+	}
 	next_cycle = track_start_cycle + (next_head_pos - 128) * BYTE_TIME;
 	unsigned to_time = next_cycle - event_current_tick;
 	if (to_time > (UINT_MAX/2)) {
 		LOG_DEBUG(3, "Negative time to next IDAM!\n");
 		return 1;
 	}
-	return to_time + 1;
+	return to_time;
 }
 
 /* Updates head_pos to next IDAM and returns a pointer to it.  If no valid
