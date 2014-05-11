@@ -54,7 +54,7 @@ void event_queue(struct event **list, struct event *event) {
 	event->list = list;
 	event->queued = 1;
 	for (entry = list; *entry; entry = &((*entry)->next)) {
-		if ((int)((*entry)->at_tick - event->at_tick) > 0) {
+		if ((event->at_tick - (*entry)->at_tick) > (EVENT_TICK_MAX/2)) {
 			event->next = *entry;
 			*entry = event;
 			return;

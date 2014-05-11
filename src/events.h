@@ -14,6 +14,7 @@
  * delegate is scheduled to run.  */
 
 typedef unsigned event_ticks;
+#define EVENT_TICK_MAX (UINT_MAX)
 
 /* Event tick frequency */
 #define EVENT_TICK_RATE ((uintmax_t)14318180)
@@ -36,12 +37,15 @@ struct event {
 struct event *event_new(DELEGATE_T0(void));
 void event_init(struct event *event, DELEGATE_T0(void));
 
+/* event_queue() guarantees that events scheduled for the same time will run in
+ * order of their being added to queue */
+
 void event_free(struct event *event);
 void event_queue(struct event **list, struct event *event);
 void event_dequeue(struct event *event);
 
 static inline _Bool event_pending(struct event **list) {
-	return *list && (event_current_tick - (*list)->at_tick) <= (UINT_MAX/2);
+	return *list && (event_current_tick - (*list)->at_tick) <= (EVENT_TICK_MAX/2);
 }
 
 static inline void event_dispatch_next(struct event **list) {
