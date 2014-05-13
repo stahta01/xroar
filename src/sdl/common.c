@@ -147,6 +147,8 @@ void sdl_run(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static event_ticks last_mouse_update_time;
+
 static void update_mouse_state(void) {
 	int x, y;
 	Uint8 buttons = SDL_GetMouseState(&x, &y);
@@ -165,15 +167,18 @@ static void update_mouse_state(void) {
 	mouse_button[0] = buttons & SDL_BUTTON(1);
 	mouse_button[1] = buttons & SDL_BUTTON(2);
 	mouse_button[2] = buttons & SDL_BUTTON(3);
+	last_mouse_update_time = event_current_tick;
 }
 
 static unsigned read_axis(unsigned *a) {
-	update_mouse_state();
+	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state();
 	return *a;
 }
 
 static _Bool read_button(_Bool *b) {
-	update_mouse_state();
+	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state();
 	return *b;
 }
 
@@ -204,6 +209,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
+	last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return axis;
 }
 
@@ -216,6 +222,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	struct joystick_button *button = xmalloc(sizeof(*button));
 	button->read = (js_read_button_func)read_button;
 	button->data = &mouse_button[jbutton];
+	last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return button;
 }
 

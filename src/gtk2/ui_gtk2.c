@@ -862,6 +862,8 @@ static char *escape_underscores(const char *str) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static event_ticks last_mouse_update_time;
+
 static void update_mouse_state(void) {
 	int x, y;
 	GdkModifierType buttons;
@@ -882,15 +884,18 @@ static void update_mouse_state(void) {
 	mouse_button[0] = buttons & GDK_BUTTON1_MASK;
 	mouse_button[1] = buttons & GDK_BUTTON2_MASK;
 	mouse_button[2] = buttons & GDK_BUTTON3_MASK;
+	last_mouse_update_time = event_current_tick;
 }
 
 static unsigned read_axis(unsigned *a) {
-	update_mouse_state();
+	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state();
 	return *a;
 }
 
 static _Bool read_button(_Bool *b) {
-	update_mouse_state();
+	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state();
 	return *b;
 }
 
@@ -921,6 +926,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct joystick_axis *axis = g_malloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
+	last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return axis;
 }
 
@@ -933,5 +939,6 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	struct joystick_button *button = g_malloc(sizeof(*button));
 	button->read = (js_read_button_func)read_button;
 	button->data = &mouse_button[jbutton];
+	last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return button;
 }
