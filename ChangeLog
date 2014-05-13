@@ -1,5 +1,20 @@
 Version 0.33, unreleased
 
+  * Capped mouse polling frequency (could cause high CPU load).
+  * Slight SAM timing tweak.
+  * Fix builtin machine "coco2bus" to use 6847T1.
+  * Tape rewriting now emits sine waves instead of square waves.
+  * New option -tape-ao-rate _hz_ specifies output samplerate for wav files.
+  * New option -timeout-motoroff _s_ quits _s_ seconds after tape motor off.
+  * New option -snap-motoroff _file_ creates snapshots on tape motor off.
+  * New option -tape-channel-mode _mode_ specifies how to read stereo audio
+    files: mix, left or right.
+  * New option -config-print-all prints even default values.
+  * Fix PIA address decode for Dragon 32, Dragon 64.
+  * Timing fixes in fast tape loading.
+  * Recognise key shortcuts in GTK+ tape/drive control dialogues.
+  * Unverified fix for hang in Windows using SDL audio.
+
 Version 0.32, Tue Apr 22 2014
 
   * Fix keyboard handling - CoCo Tetris now playable again.
