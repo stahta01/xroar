@@ -413,7 +413,7 @@ static char const * const xroar_cart_exts[] = { "ROM", NULL };
 static struct {
 	const char *ext;
 	int filetype;
-} filetypes[] = {
+} const filetypes[] = {
 	{ "VDK", FILETYPE_VDK },
 	{ "JVC", FILETYPE_JVC },
 	{ "DSK", FILETYPE_JVC },
