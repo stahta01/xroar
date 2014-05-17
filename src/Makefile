@@ -82,15 +82,15 @@ xroar_BASE_C = \
 	sound.c \
 	tape.c \
 	tape_cas.c \
-	ui_null.c \
 	vdg_bitmaps.c \
 	vdg_palette.c \
 	vdisk.c \
 	vdrive.c \
-	vo_null.c \
 	wd279x.c \
 	xconfig.c \
-	xroar.c
+	xroar.c \
+	null/ui_null.c \
+	null/vo_null.c
 xroar_BASE_C_O = $(xroar_BASE_C:.c=.o)
 #
 xroar_SOURCES_C += $(xroar_BASE_C)
@@ -308,7 +308,7 @@ ifeq ($(opt_sndfile),yes)
 	xroar_LDFLAGS += $(opt_sndfile_LDFLAGS)
 endif
 
-xroar_nullaudio_C = ao_null.c
+xroar_nullaudio_C = null/ao_null.c
 xroar_nullaudio_C_O = $(xroar_nullaudio_C:.c=.o)
 #
 xroar_SOURCES_C += $(xroar_nullaudio_C)

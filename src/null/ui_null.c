@@ -38,7 +38,7 @@ static VideoModule * const null_video_module_list[] = {
 	NULL
 };
 
-KeyboardModule keyboard_null_module = {
+static KeyboardModule keyboard_null_module = {
 	.common = { .name = "null", .description = "No keyboard" },
 };
 

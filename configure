@@ -1407,8 +1407,8 @@ EOF
 # Ensure build directories exist
 mkdir -p doc portalib src tools
 mkdir -p portalib/pl_glib
-mkdir -p src/alsa src/gtk2 src/jack src/linux src/macosx src/oss src/pulseaudio
-mkdir -p src/sdl src/sunos src/windows32
+mkdir -p src/alsa src/gtk2 src/jack src/linux src/macosx src/null src/oss
+mkdir -p src/pulseaudio src/sdl src/sunos src/windows32
 
 if test \! -f Makefile; then
 	echo "Symlinking Makefile"
