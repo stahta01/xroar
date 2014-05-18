@@ -96,6 +96,8 @@ struct xroar_cfg {
 	_Bool becker;
 	char *becker_ip;
 	char *becker_port;
+	// Cassettes
+	int tape_channel_mode;
 	// Disks
 	_Bool disk_write_back;
 	_Bool disk_auto_os9;

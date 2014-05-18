@@ -1769,6 +1769,13 @@ static struct xconfig_enum cart_type_list[] = {
 	{ XC_ENUM_END() }
 };
 
+static struct xconfig_enum tape_channel_mode_list[] = {
+	{ .value = tape_channel_mix, .name = "mix", .description = "downmix to mono" },
+	{ .value = tape_channel_left, .name = "left", .description = "left channel only" },
+	{ .value = tape_channel_right, .name = "right", .description = "right channel only" },
+	{ XC_ENUM_END() }
+};
+
 static struct xconfig_enum gl_filter_list[] = {
 	{ .value = ANY_AUTO, .name = "auto", .description = "Automatic" },
 	{ .value = XROAR_GL_FILTER_NEAREST, .name = "nearest", .description = "Nearest-neighbour filtering" },
@@ -1859,6 +1866,7 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Cassettes: */
 	{ XC_SET_STRING("tape-write", &private_cfg.tape_write) },
+	{ XC_SET_ENUM("tape-channel-mode", &xroar_cfg.tape_channel_mode, tape_channel_mode_list) },
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
 	{ XC_SET_INT1("tape-pad", &private_cfg.tape_pad) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
@@ -2017,12 +2025,13 @@ static void helptext(void) {
 "  -run FILENAME         load or attach FILENAME and attempt autorun\n"
 
 "\n Cassettes:\n"
-"  -tape-write FILENAME  open FILENAME for tape writing\n"
-"  -no-tape-fast         disable fast tape loading\n"
-"  -tape-pad             force tape leader padding\n"
-"  -no-tape-pad-auto     disable automatic leader padding\n"
-"  -tape-rewrite         enable tape rewriting\n"
-"  -tape-ao-rate HZ      set tape writing frame rate\n"
+"  -tape-write FILENAME      open FILENAME for tape writing\n"
+"  -tape-channel-mode MODE   select stereo input channel (mix, left, right)\n"
+"  -no-tape-fast             disable fast tape loading\n"
+"  -tape-pad                 force tape leader padding\n"
+"  -no-tape-pad-auto         disable automatic leader padding\n"
+"  -tape-rewrite             enable tape rewriting\n"
+"  -tape-ao-rate HZ          set tape writing frame rate\n"
 
 "\n Disks:\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"
@@ -2170,6 +2179,16 @@ static void config_print_all(void) {
 
 	puts("# Cassettes");
 	if (private_cfg.tape_write) printf("tape-write %s\n", private_cfg.tape_write);
+	switch (xroar_cfg.tape_channel_mode) {
+	case tape_channel_left:
+		puts("tape-channel-mode left");
+		break;
+	case tape_channel_right:
+		puts("tape-channel-mode right");
+		break;
+	default:
+		break;
+	}
 	if (private_cfg.tape_fast == 0) puts("no-tape-fast");
 	if (private_cfg.tape_fast == 1) puts("tape-fast");
 	if (private_cfg.tape_pad == 0) puts("no-tape-pad");
