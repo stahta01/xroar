@@ -16,6 +16,7 @@ struct event;
 struct machine_config;
 struct cart;
 struct vdg_palette;
+struct xroar_timeout;
 
 /* Convenient values for arguments to helper functions */
 #define XROAR_OFF    (0)
@@ -180,6 +181,10 @@ void xroar_machine_trap(void *data);
 
 int xroar_filetype_by_ext(const char *filename);
 int xroar_load_file_by_type(const char *filename, int autorun);
+
+/* Scheduled shutdown */
+struct xroar_timeout *xroar_set_timeout(char const *timestring);
+void xroar_cancel_timeout(struct xroar_timeout *);
 
 /* Helper functions */
 void xroar_set_trace(int mode);

@@ -183,9 +183,6 @@ static void config_print_all(void);
 
 static int load_disk_to_drive = 0;
 
-static int timeout_seconds;
-static int timeout_cycles;
-
 static struct joystick_config *cur_joy_config = NULL;
 
 static struct xconfig_option const xroar_options[];
@@ -401,9 +398,6 @@ static struct event load_file_event;
 static void do_load_file(void *);
 //static char *load_file = NULL;
 static int autorun_loaded_file = 0;
-
-static struct event timeout_event;
-static void handle_timeout_event(void *);
 
 static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
 static char const * const xroar_tape_exts[] = { "CAS", NULL };
@@ -774,15 +768,7 @@ _Bool xroar_init(int argc, char **argv) {
 #endif
 
 	if (private_cfg.timeout) {
-		double t = strtod(private_cfg.timeout, NULL);
-		if (t >= 0.0) {
-			timeout_seconds = (int)t;
-			timeout_cycles = EVENT_S(t - timeout_seconds);
-			event_init(&timeout_event, DELEGATE_AS0(void, handle_timeout_event, NULL));
-			/* handler can set up the first call for us... */
-			timeout_seconds++;
-			handle_timeout_event(NULL);
-		}
+		(void)xroar_set_timeout(private_cfg.timeout);
 	}
 
 	while (private_cfg.type_list) {
@@ -993,23 +979,54 @@ static void do_load_file(void *data) {
 	xroar_load_file_by_type(load_file, autorun_loaded_file);
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct xroar_timeout {
+	int seconds;
+	int cycles;
+	struct event event;
+};
+
 static void handle_timeout_event(void *sptr) {
-	(void)sptr;
-	if (timeout_seconds == 0) {
+	struct xroar_timeout *timeout = sptr;
+	if (timeout->seconds == 0) {
 		xroar_quit();
 		return;
 	}
-	timeout_seconds--;
-	if (timeout_seconds) {
-		timeout_event.at_tick = event_current_tick + EVENT_S(1);
+	timeout->seconds--;
+	if (timeout->seconds) {
+		timeout->event.at_tick = event_current_tick + EVENT_S(1);
 	} else {
-		if (timeout_cycles == 0) {
+		if (timeout->cycles == 0) {
+			free(timeout);
 			xroar_quit();
 			return;
 		}
-		timeout_event.at_tick = event_current_tick + timeout_cycles;
+		timeout->event.at_tick = event_current_tick + timeout->cycles;
 	}
-	event_queue(&MACHINE_EVENT_LIST, &timeout_event);
+	event_queue(&MACHINE_EVENT_LIST, &timeout->event);
+}
+
+/* Configure a timeout (period after which emulator will exit). */
+
+struct xroar_timeout *xroar_set_timeout(char const *timestring) {
+	struct xroar_timeout *timeout = NULL;
+	double t = strtod(timestring, NULL);
+	if (t >= 0.0) {
+		timeout = xmalloc(sizeof(*timeout));
+		timeout->seconds = (int)t;
+		timeout->cycles = EVENT_S(t - timeout->seconds);
+		event_init(&timeout->event, DELEGATE_AS0(void, handle_timeout_event, timeout));
+		/* handler can set up the first call for us... */
+		timeout->seconds++;
+		handle_timeout_event(timeout);
+	}
+	return timeout;
+}
+
+void xroar_cancel_timeout(struct xroar_timeout *timeout) {
+	event_dequeue(&timeout->event);
+	free(timeout);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
