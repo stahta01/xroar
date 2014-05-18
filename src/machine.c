@@ -253,6 +253,13 @@ static char const * const machine_arch_string[] = {
 	"coco",
 };
 
+static char const * const machine_keyboard_string[] = {
+	"dragon",
+	"coco",
+	"dragon200e",
+	"coco3",
+};
+
 static char const * const machine_cpu_string[] = {
 	"6809",
 	"6309",
@@ -275,6 +282,8 @@ void machine_config_print_all(void) {
 		if (mc->description) printf("  machine-desc %s\n", mc->description);
 		if (mc->architecture >= 0 && mc->architecture < ARRAY_N_ELEMENTS(machine_arch_string))
 			printf("  machine-arch %s\n", machine_arch_string[mc->architecture]);
+		if (mc->keymap >= 0 && mc->keymap < ARRAY_N_ELEMENTS(machine_keyboard_string))
+			printf("  machine-keyboard %s\n", machine_keyboard_string[mc->keymap]);
 		if (mc->cpu >= 0 && mc->cpu < ARRAY_N_ELEMENTS(machine_cpu_string))
 			printf("  machine-cpu %s\n", machine_cpu_string[mc->cpu]);
 		if (mc->vdg_palette) printf("  machine-palette %s\n", mc->vdg_palette);
