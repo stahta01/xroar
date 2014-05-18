@@ -8,6 +8,9 @@
 #ifndef XROAR_GDB_H_
 #define XROAR_GDB_H_
 
+#define GDB_IP_DEFAULT "127.0.0.1"
+#define GDB_PORT_DEFAULT "65520"
+
 int gdb_init(void);
 void gdb_shutdown(void);
 

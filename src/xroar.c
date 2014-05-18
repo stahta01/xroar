@@ -2097,8 +2097,8 @@ static void helptext(void) {
 "\n Debugging:\n"
 #ifdef WANT_GDB_TARGET
 "  -gdb                  enable GDB target\n"
-"  -gdb-ip ADDRESS       address of interface for GDB target [127.0.0.1]\n"
-"  -gdb-port PORT        port for GDB target to listen on [65520]\n"
+"  -gdb-ip ADDRESS       address of interface for GDB target [" GDB_IP_DEFAULT "]\n"
+"  -gdb-port PORT        port for GDB target to listen on [" GDB_PORT_DEFAULT "]\n"
 #endif
 #ifdef TRACE
 "  -trace                start with trace mode on\n"
