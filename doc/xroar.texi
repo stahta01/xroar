@@ -320,9 +320,10 @@ the installation prefix, which is usually @file{/usr/local}.
 To bypass the search path and start XRoar using a specific configuration file,
 pass @option{-c @var{filename}} as the very first option to XRoar.
 
-To print the complete current configuration to standard output (suitable for
-redirection to a config file), run with @option{-config-print}.  This will
-include all the built-in machine and cartridge definitions.
+To print the current configuration to standard output (suitable for redirection
+to a config file), run with @option{-config-print}.  This will include all the
+built-in machine and cartridge definitions.  For a complete version including
+default values, use @option{-config-print-all}.
 
 
 @node Hardware emulation
@@ -568,6 +569,19 @@ truncated to zero length, so be careful not to overwrite any existing files
 with this command.
 
 The currently open tape files used for reading and writing are distinct.
+
+Some cassette tapes are distributed with only one of the stereo channels
+containing data, and these can cause loading issues.  How stereo audio files
+are read can be adjusted with the @option{-tape-channel-mode @var{mode}}
+option, where @var{mode} is one of: @samp{mix} - mix two channels into one (the
+default), @samp{left} - read only the left channel, @samp{right} - read only
+the right channel.
+
+Select the output frame rate when writing to audio files with
+@option{-tape-ao-rate @var{hz}}.  The default is 9600Hz.
+
+Some debugging actions can be triggered each time the cassette motor switches
+off (e.g., when finished loading).  @xref{Debugging}.
 
 The @option{-tape-fast} option accelerates tape loading by intercepting ROM
 calls.  Disable with @option{-no-tape-fast}.  On by default.
@@ -1129,6 +1143,17 @@ Miscellaneous internal debugging.
 
 XRoar can be told to exit after a number of (emulated) seconds with the
 @option{-timeout @var{seconds}} option.
+
+XRoar can quit a number of seconds after the cassette motor is switched off
+with the @option{-timeout-motoroff @var{seconds}} option.  This is useful in
+the case of automatic tape rewriting.  A value of 1 is usually sufficient to
+account for the brief motor click that occurs after header blocks and during
+gapped loading.
+
+Similarly, a snapshot can be automatically written after loading with the
+@option{-snap-motoroff @var{file}} option.   The file is overwritten each time
+the motor transitions to off.  This can be used to help analyse the machine
+state immediately after loading, before any autorun code has taken effect.
 
 
 @node Keyboard shortcuts
