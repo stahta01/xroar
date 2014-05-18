@@ -2021,11 +2021,11 @@ static void helptext(void) {
 "  -becker-port PORT     port of DriveWire server [65504]\n"
 
 "\n Files:\n"
-"  -load FILENAME        load or attach FILENAME\n"
-"  -run FILENAME         load or attach FILENAME and attempt autorun\n"
+"  -load FILE            load or attach FILE\n"
+"  -run FILE             load or attach FILE and attempt autorun\n"
 
 "\n Cassettes:\n"
-"  -tape-write FILENAME      open FILENAME for tape writing\n"
+"  -tape-write FILE          open FILE for tape writing\n"
 "  -tape-channel-mode MODE   select stereo input channel (mix, left, right)\n"
 "  -no-tape-fast             disable fast tape loading\n"
 "  -tape-pad                 force tape leader padding\n"
@@ -2090,7 +2090,7 @@ static void helptext(void) {
 "  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"
 
 "\n Printing:\n"
-"  -lp-file FILENAME     append Dragon printer output to FILENAME\n"
+"  -lp-file FILE         append Dragon printer output to FILE\n"
 "  -lp-pipe COMMAND      pipe Dragon printer output to COMMAND\n"
 
 "\n Debugging:\n"
