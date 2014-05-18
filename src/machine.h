@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "xconfig.h"
+
 struct cart;
 struct MC6809;
 struct MC6821;
@@ -88,6 +90,12 @@ extern struct cart *machine_cart;
 extern _Bool has_bas, has_extbas, has_altbas, has_combined;
 extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 
+extern struct xconfig_enum machine_arch_list[];
+extern struct xconfig_enum machine_keyboard_list[];
+extern struct xconfig_enum machine_cpu_list[];
+extern struct xconfig_enum machine_tv_type_list[];
+extern struct xconfig_enum machine_vdg_type_list[];
+
 /* Add a new machine config: */
 struct machine_config *machine_config_new(void);
 /* For finding known configs: */
@@ -99,7 +107,7 @@ struct machine_config *machine_config_by_arch(int arch);
 struct machine_config *machine_config_first_working(void);
 /* Complete a config replacing ANY_AUTO entries: */
 void machine_config_complete(struct machine_config *mc);
-void machine_config_print_all(void);
+void machine_config_print_all(_Bool all);
 
 void machine_init(void);
 void machine_shutdown(void);

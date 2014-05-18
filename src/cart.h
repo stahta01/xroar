@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "delegate.h"
+#include "xconfig.h"
 
 struct machine_config;
 struct event;
@@ -46,13 +47,15 @@ struct cart {
 	struct event *firq_event;
 };
 
+extern struct xconfig_enum cart_type_list[];
+
 struct cart_config *cart_config_new(void);
 int cart_config_count(void);
 struct cart_config *cart_config_index(int i);
 struct cart_config *cart_config_by_name(const char *name);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
-void cart_config_print_all(void);
+void cart_config_print_all(_Bool all);
 
 // c->config MUST point to a complete cart config before calling cart_init()
 void cart_init(struct cart *c);

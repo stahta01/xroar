@@ -144,6 +144,7 @@ struct private_cfg {
 	char *joy_button[JOYSTICK_NUM_BUTTONS];
 
 	_Bool config_print;
+	_Bool config_print_all;
 	char *timeout;
 };
 
@@ -181,7 +182,7 @@ static void set_joystick_button(const char *spec);
 /* Help texts */
 static void helptext(void);
 static void versiontext(void);
-static void config_print_all(void);
+static void config_print_all(_Bool);
 
 static int load_disk_to_drive = 0;
 
@@ -524,7 +525,11 @@ _Bool xroar_init(int argc, char **argv) {
 	set_joystick(NULL);
 
 	if (private_cfg.config_print) {
-		config_print_all();
+		config_print_all(0);
+		exit(EXIT_SUCCESS);
+	}
+	if (private_cfg.config_print_all) {
+		config_print_all(1);
 		exit(EXIT_SUCCESS);
 	}
 
@@ -1728,48 +1733,6 @@ static void add_load(char *string) {
 
 /* Enumeration lists used by configuration directives */
 
-static struct xconfig_enum arch_list[] = {
-	{ .value = ARCH_DRAGON64, .name = "dragon64", .description = "Dragon 64" },
-	{ .value = ARCH_DRAGON32, .name = "dragon32", .description = "Dragon 32" },
-	{ .value = ARCH_COCO, .name = "coco", .description = "Tandy CoCo" },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum keyboard_list[] = {
-	{ .value = dkbd_layout_dragon, .name = "dragon", .description = "Dragon" },
-	{ .value = dkbd_layout_dragon200e, .name = "dragon200e", .description = "Dragon 200-E" },
-	{ .value = dkbd_layout_coco, .name = "coco", .description = "Tandy CoCo" },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum cpu_list[] = {
-	{ .value = CPU_MC6809, .name = "6809", .description = "Motorola 6809" },
-	{ .value = CPU_HD6309, .name = "6309", .description = "Hitachi 6309 - UNVERIFIED" },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum tv_type_list[] = {
-	{ .value = TV_PAL,  .name = "pal",  .description = "PAL (50Hz)" },
-	{ .value = TV_NTSC, .name = "ntsc", .description = "NTSC (60Hz)" },
-	{ .value = TV_NTSC, .name = "pal-m", .description = "PAL-M (60Hz)" },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum vdg_type_list[] = {
-	{ .value = VDG_6847, .name = "6847", .description = "Original 6847" },
-	{ .value = VDG_6847T1, .name = "6847t1", .description = "6847T1 with lowercase" },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum cart_type_list[] = {
-	{ .value = CART_ROM, .name = "rom", .description = "ROM cartridge" },
-	{ .value = CART_DRAGONDOS, .name = "dragondos", .description = "DragonDOS" },
-	{ .value = CART_DELTADOS, .name = "delta", .description = "Delta System" },
-	{ .value = CART_RSDOS, .name = "rsdos", .description = "RS-DOS" },
-	{ .value = CART_ORCH90, .name = "orch90", .description = "Orchestra 90-CC" },
-	{ XC_ENUM_END() }
-};
-
 static struct xconfig_enum tape_channel_mode_list[] = {
 	{ .value = tape_channel_mix, .name = "mix", .description = "downmix to mono" },
 	{ .value = tape_channel_left, .name = "left", .description = "left channel only" },
@@ -1817,9 +1780,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("default-machine", &private_cfg.default_machine) },
 	{ XC_CALL_STRING("machine", &set_machine) },
 	{ XC_SET_STRING("machine-desc", &private_cfg.machine_desc) },
-	{ XC_SET_ENUM("machine-arch", &private_cfg.machine_arch, arch_list) },
-	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, keyboard_list) },
-	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, cpu_list) },
+	{ XC_SET_ENUM("machine-arch", &private_cfg.machine_arch, machine_arch_list) },
+	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, machine_keyboard_list) },
+	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, machine_cpu_list) },
 	{ XC_SET_STRING("bas", &private_cfg.bas) },
 	{ XC_SET_STRING("extbas", &private_cfg.extbas) },
 	{ XC_SET_STRING("altbas", &private_cfg.altbas) },
@@ -1827,8 +1790,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("noextbas", &private_cfg.noextbas) },
 	{ XC_SET_INT1("noaltbas", &private_cfg.noaltbas) },
 	{ XC_SET_STRING("ext-charset", &private_cfg.ext_charset) },
-	{ XC_SET_ENUM("tv-type", &private_cfg.tv, tv_type_list) },
-	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, vdg_type_list) },
+	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
+	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_INT("ram", &private_cfg.ram) },
 	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart) },
 	{ XC_SET_INT1("nodos", &private_cfg.nodos) },
@@ -1962,6 +1925,7 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Other options: */
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
+	{ XC_SET_BOOL("config-print-all", &private_cfg.config_print_all) },
 	{ XC_SET_INT0("quiet", &log_level) },
 	{ XC_SET_INT0("q", &log_level) },
 	{ XC_SET_INT("verbose", &log_level) },
@@ -2114,9 +2078,10 @@ static void helptext(void) {
 "  -snap-motoroff FILE   write a snapshot each time tape motor switches off\n"
 
 "\n Other options:\n"
-"  -config-print         print full configuration to standard output\n"
-"  -h, --help            display this help and exit\n"
-"  -V, --version         output version information and exit\n"
+"  -config-print       print configuration to standard out\n"
+"  -config-print-all   print configuration to standard out, including defaults\n"
+"  -h, --help          display this help and exit\n"
+"  -V, --version       output version information and exit\n"
 
 "\nJoystick SPECs are of the form [INTERFACE:][ARG[,ARG]...], from:\n"
 
@@ -2158,145 +2123,218 @@ static void versiontext(void) {
  * a default changes or new options are added.  Be careful!
  */
 
-static void config_print_all(void) {
+static void config_print_all(_Bool all) {
+	char *tmp;
 	puts("# Machines\n");
-	machine_config_print_all();
+	xroar_cfg_print_string(all, "default-machine", private_cfg.default_machine, NULL);
+	puts("");
+	machine_config_print_all(all);
 
 	puts("# Cartridges\n");
-	cart_config_print_all();
+	cart_config_print_all(all);
 	puts("# Becker port");
-	if (xroar_cfg.becker) puts("becker");
-	if (xroar_cfg.becker_ip) printf("becker-ip %s\n", xroar_cfg.becker_ip);
-	if (xroar_cfg.becker_port) printf("becker-port %s\n", xroar_cfg.becker_port);
-	putchar('\n');
+	xroar_cfg_print_bool(all, "becker", xroar_cfg.becker, 0);
+	xroar_cfg_print_string(all, "becker-ip", xroar_cfg.becker_ip, BECKER_IP_DEFAULT);
+	xroar_cfg_print_string(all, "becker-port", xroar_cfg.becker_port, BECKER_PORT_DEFAULT);
+	puts("");
 
 	puts("# Files");
-	for (struct slist *l = private_cfg.load_list; l; l = l->next) {
-		const char *s = l->data;
-		printf("load %s\n", s);
-	}
-	if (private_cfg.run) printf("run %s\n", private_cfg.run);
-	putchar('\n');
+	xroar_cfg_print_string_list(all, "load", private_cfg.load_list);
+	xroar_cfg_print_string(all, "run", private_cfg.run, NULL);
+	puts("");
 
 	puts("# Cassettes");
-	if (private_cfg.tape_write) printf("tape-write %s\n", private_cfg.tape_write);
-	switch (xroar_cfg.tape_channel_mode) {
-	case tape_channel_left:
-		puts("tape-channel-mode left");
-		break;
-	case tape_channel_right:
-		puts("tape-channel-mode right");
-		break;
-	default:
-		break;
-	}
-	if (private_cfg.tape_fast == 0) puts("no-tape-fast");
-	if (private_cfg.tape_fast == 1) puts("tape-fast");
-	if (private_cfg.tape_pad == 0) puts("no-tape-pad");
-	if (private_cfg.tape_pad == 1) puts("tape-pad");
-	if (private_cfg.tape_pad_auto == 0) puts("no-tape-pad-auto");
-	if (private_cfg.tape_pad_auto == 1) puts("tape-pad-auto");
-	if (private_cfg.tape_rewrite == 0) puts("no-tape-rewrite");
-	if (private_cfg.tape_ao_rate > 0) printf("tape-ao-rate %d\n", private_cfg.tape_ao_rate);
-	if (private_cfg.tape_rewrite == 1) puts("tape-rewrite");
+	xroar_cfg_print_string(all, "tape-write", private_cfg.tape_write, NULL);
+	xroar_cfg_print_enum(all, "tape-channel-mode", xroar_cfg.tape_channel_mode, tape_channel_mix, tape_channel_mode_list);
+
+	xroar_cfg_print_bool(all, "tape-fast", private_cfg.tape_fast, 1);
+	xroar_cfg_print_bool(all, "tape-pad", private_cfg.tape_pad, -1);
+	xroar_cfg_print_bool(all, "tape-pad-auto", private_cfg.tape_pad_auto, 1);
+	xroar_cfg_print_bool(all, "tape-rewrite", private_cfg.tape_rewrite, 0);
+	xroar_cfg_print_int_nz(all, "tape-ao-rate", private_cfg.tape_ao_rate);
 	puts("");
 
 	puts("# Disks");
-	if (xroar_cfg.disk_write_back) puts("disk-write-back");
-	if (!xroar_cfg.disk_auto_os9) puts("no-disk-auto-os9");
+	xroar_cfg_print_bool(all, "disk-write-back", xroar_cfg.disk_write_back, 0);
+	xroar_cfg_print_bool(all, "disk-auto-os9", xroar_cfg.disk_auto_os9, 1);
 	puts("");
 
 	puts("# Firmware ROM images");
-	if (xroar_rom_path) printf("rompath %s\n", xroar_rom_path);
+	xroar_cfg_print_string(all, "rompath", xroar_rom_path, NULL);
 	romlist_print_all();
 	crclist_print_all();
-	if (xroar_cfg.force_crc_match) puts("force-crc-match");
-	putchar('\n');
+	xroar_cfg_print_bool(all, "force-crc-match", xroar_cfg.force_crc_match, 0);
+	puts("");
 
 	puts("# User interface");
-	if (private_cfg.ui) printf("ui %s\n", private_cfg.ui);
-	if (private_cfg.filereq) printf("filereq %s\n", private_cfg.filereq);
-	putchar('\n');
+	xroar_cfg_print_string(all, "ui", private_cfg.ui, NULL);
+	xroar_cfg_print_string(all, "filereq", private_cfg.filereq, NULL);
+	puts("");
 
 	puts("# Video");
-	if (private_cfg.vo) printf("vo %s\n", private_cfg.vo);
-	if (xroar_cfg.fullscreen) puts("fs");
-	if (xroar_frameskip > 0) printf("fskip %d\n", xroar_frameskip);
-	switch (xroar_cfg.ccr) {
-	case CROSS_COLOUR_SIMPLE: puts("ccr simple"); break;
-	// case CROSS_COLOUR_5BIT: puts("ccr 5bit"); break;
-	default: break;
-	}
-	switch (xroar_cfg.gl_filter) {
-	// case ANY_AUTO: puts("gl-filter auto"); break;
-	case XROAR_GL_FILTER_NEAREST: puts("gl-filter nearest"); break;
-	case XROAR_GL_FILTER_LINEAR: puts("gl-filter linear"); break;
-	default: break;
-	}
-	if (xroar_cfg.geometry) printf("geometry %s\n", xroar_cfg.geometry);
-	if (xroar_cfg.vdg_inverted_text) puts("invert-text");
-	putchar('\n');
+	xroar_cfg_print_string(all, "vo", private_cfg.vo, NULL);
+	xroar_cfg_print_bool(all, "fs", xroar_cfg.fullscreen, 0);
+	xroar_cfg_print_int_nz(all, "fskip", xroar_frameskip);
+	xroar_cfg_print_enum(all, "ccr", xroar_cfg.ccr, CROSS_COLOUR_5BIT, ccr_list);
+	xroar_cfg_print_enum(all, "gl-filter", xroar_cfg.gl_filter, ANY_AUTO, gl_filter_list);
+	xroar_cfg_print_string(all, "geometry", xroar_cfg.geometry, NULL);
+	xroar_cfg_print_bool(all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
+	puts("");
 
 	puts("# Audio");
-	if (private_cfg.ao) printf("ao %s\n", private_cfg.ao);
-	if (xroar_cfg.ao_device) printf("ao-device %s\n", xroar_cfg.ao_device);
-	switch (xroar_cfg.ao_format) {
-	case SOUND_FMT_U8: puts("ao-format u8"); break;
-	case SOUND_FMT_S8: puts("ao-format u8"); break;
-	case SOUND_FMT_S16_HE: puts("ao-format s16"); break;
-	case SOUND_FMT_S16_SE: puts("ao-format s16se"); break;
-	case SOUND_FMT_S16_BE: puts("ao-format s16be"); break;
-	case SOUND_FMT_S16_LE: puts("ao-format s16le"); break;
-	case SOUND_FMT_FLOAT: puts("ao-format float"); break;
-	default: break;
-	}
-	if (xroar_cfg.ao_rate != 0) printf("ao-rate %d\n", xroar_cfg.ao_rate);
-	if (xroar_cfg.ao_channels != 0) printf("ao-channels %d\n", xroar_cfg.ao_channels);
-	if (xroar_cfg.ao_fragments != 0) printf("ao-fragments %d\n", xroar_cfg.ao_fragments);
-	if (xroar_cfg.ao_fragment_ms != 0) printf("ao-fragment-ms %d\n", xroar_cfg.ao_fragment_ms);
-	if (xroar_cfg.ao_fragment_nframes != 0) printf("ao-fragment-frames %d\n", xroar_cfg.ao_fragment_nframes);
-	if (xroar_cfg.ao_buffer_ms != 0) printf("ao-buffer-ms %d\n", xroar_cfg.ao_buffer_ms);
-	if (xroar_cfg.ao_buffer_nframes != 0) printf("ao-buffer-frames %d\n", xroar_cfg.ao_buffer_nframes);
-	if (private_cfg.volume != 100) printf("volume %d\n", private_cfg.volume);
+	xroar_cfg_print_string(all, "ao", private_cfg.ao, NULL);
+	xroar_cfg_print_string(all, "ao-device", xroar_cfg.ao_device, NULL);
+	xroar_cfg_print_enum(all, "ao-format", xroar_cfg.ao_format, SOUND_FMT_NULL, ao_format_list);
+	xroar_cfg_print_int_nz(all, "ao-rate", xroar_cfg.ao_rate);
+	xroar_cfg_print_int_nz(all, "ao-channels", xroar_cfg.ao_channels);
+	xroar_cfg_print_int_nz(all, "ao-fragments", xroar_cfg.ao_fragments);
+	xroar_cfg_print_int_nz(all, "ao-fragment-ms", xroar_cfg.ao_fragment_ms);
+	xroar_cfg_print_int_nz(all, "ao-fragment-frames", xroar_cfg.ao_fragment_nframes);
+	xroar_cfg_print_int_nz(all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
+	xroar_cfg_print_int_nz(all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
+	xroar_cfg_print_int(all, "volume", private_cfg.volume, 100);
 #ifndef FAST_SOUND
-	if (xroar_cfg.fast_sound) puts("fast-sound");
+	xroar_cfg_print_bool(all, "fast-sound", xroar_cfg.fast_sound, 0);
 #endif
-	putchar('\n');
+	puts("");
 
 	puts("# Keyboard");
-	if (xroar_cfg.keymap) printf("keymap %s\n", xroar_cfg.keymap);
-	if (xroar_cfg.kbd_translate) puts("kbd-translate");
+	xroar_cfg_print_string(all, "keymap", xroar_cfg.keymap, "uk");
+	xroar_cfg_print_bool(all, "kbd-translate", xroar_cfg.kbd_translate, 0);
 	for (struct slist *l = private_cfg.type_list; l; l = l->next) {
 		const char *s = l->data;
 		printf("type %s\n", s);
 	}
-	putchar('\n');
+	puts("");
 
 	puts("# Joysticks");
-	joystick_config_print_all();
+	joystick_config_print_all(all);
+	xroar_cfg_print_string(all, "joy-right", private_cfg.joy_right, "joy0");
+	xroar_cfg_print_string(all, "joy-left", private_cfg.joy_left, "joy1");
+	xroar_cfg_print_string(all, "joy-virtual", private_cfg.joy_virtual, "kjoy0");
+	puts("");
 
 	puts("# Printing");
-	if (private_cfg.lp_file) printf("lp-file %s\n", private_cfg.lp_file);
-	if (private_cfg.lp_pipe) printf("lp-pipe %s\n", private_cfg.lp_pipe);
-	putchar('\n');
+	xroar_cfg_print_string(all, "lp-file", private_cfg.lp_file, NULL);
+	xroar_cfg_print_string(all, "lp-pipe", private_cfg.lp_pipe, NULL);
+	puts("");
 
 	puts("# Debugging");
 #ifdef WANT_GDB_TARGET
-	if (private_cfg.gdb) puts("gdb");
-	if (xroar_cfg.gdb_ip) printf("gdb-ip %s\n", xroar_cfg.gdb_ip);
-	if (xroar_cfg.gdb_port) printf("gdb-port %s\n", xroar_cfg.gdb_port);
+	xroar_cfg_print_bool(all, "gdb", private_cfg.gdb, 0);
+	xroar_cfg_print_string(all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
+	xroar_cfg_print_string(all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
 #endif
 #ifdef TRACE
-	if (xroar_cfg.trace_enabled == 1) puts("trace");
+	xroar_cfg_print_bool(all, "trace", xroar_cfg.trace_enabled, 0);
 #endif
-	if (xroar_cfg.debug_ui != 0) printf("debug-ui 0x%x\n", xroar_cfg.debug_ui);
-	if (xroar_cfg.debug_file != 0) printf("debug-file 0x%x\n", xroar_cfg.debug_file);
-	if (xroar_cfg.debug_fdc != 0) printf("debug-fdc 0x%x\n", xroar_cfg.debug_fdc);
+	xroar_cfg_print_flags(all, "debug-ui", xroar_cfg.debug_ui);
+	xroar_cfg_print_flags(all, "debug-file", xroar_cfg.debug_file);
+	xroar_cfg_print_flags(all, "debug-fdc", xroar_cfg.debug_fdc);
 #ifdef WANT_GDB_TARGET
-	if (xroar_cfg.debug_gdb != 0) printf("debug-gdb 0x%x\n", xroar_cfg.debug_gdb);
+	xroar_cfg_print_flags(all, "debug-gdb", xroar_cfg.debug_gdb);
 #endif
-	if (private_cfg.timeout) printf("timeout %s\n", private_cfg.timeout);
-	if (xroar_cfg.timeout_motoroff) printf("timeout-motoroff %s\n", xroar_cfg.timeout_motoroff);
-	if (xroar_cfg.snap_motoroff) printf("snap-motoroff %s\n", xroar_cfg.snap_motoroff);
-	putchar('\n');
+	xroar_cfg_print_string(all, "timeout", private_cfg.timeout, NULL);
+	xroar_cfg_print_string(all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
+	xroar_cfg_print_string(all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);
+	puts("");
+}
+
+/* Helper functions for config printing */
+
+static int cfg_print_indent_level = 0;
+
+void xroar_cfg_print_inc_indent(void) {
+	cfg_print_indent_level++;
+}
+
+void xroar_cfg_print_dec_indent(void) {
+	assert(cfg_print_indent_level > 0);
+	cfg_print_indent_level--;
+}
+
+void xroar_cfg_print_indent(void) {
+	for (int i = 0; i < cfg_print_indent_level; i++)
+		printf("  ");
+}
+
+void xroar_cfg_print_bool(_Bool all, char const *opt, int value, int normal) {
+	if (!all && value == normal)
+		return;
+	xroar_cfg_print_indent();
+	if (value >= 0) {
+		if (!value)
+			printf("no-");
+		puts(opt);
+		return;
+	}
+	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal) {
+	if (!all && value == normal)
+		return;
+	xroar_cfg_print_indent();
+	if (value != 0) {
+		printf("%s %d\n", opt, value);
+		return;
+	}
+	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value) {
+	if (!all && value == 0)
+		return;
+	xroar_cfg_print_indent();
+	if (value != 0) {
+		printf("%s %d\n", opt, value);
+		return;
+	}
+	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value) {
+	if (!all && value == 0)
+		return;
+	xroar_cfg_print_indent();
+	printf("%s 0x%x\n", opt, value);
+}
+
+void xroar_cfg_print_string(_Bool all, char const *opt, char const *value, char const *normal) {
+	if (!all && !value)
+		return;
+	xroar_cfg_print_indent();
+	if (value || normal) {
+		char const *tmp = value ? value : normal;
+		printf("%s %s\n", opt, tmp);
+		return;
+	}
+	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_enum(_Bool all, char const *opt, int value, int normal, struct xconfig_enum const *e) {
+	if (!all && value == normal)
+		return;
+	xroar_cfg_print_indent();
+	for (int i = 0; e[i].name; i++) {
+		if (value == e[i].value) {
+			printf("%s %s\n", opt, e[i].name);
+			return;
+		}
+	}
+	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_string_list(_Bool all, char const *opt, struct slist *l) {
+	if (!all  && !l)
+		return;
+	xroar_cfg_print_indent();
+	if (l) {
+		for (; l; l = l->next) {
+			char const *s = l->data;
+			printf("%s %s\n", opt, s);
+		}
+		return;
+	}
+	printf("# %s undefined\n", opt);
 }

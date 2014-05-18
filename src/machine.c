@@ -55,6 +55,7 @@
 #include "tape.h"
 #include "vdrive.h"
 #include "wd279x.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 unsigned int machine_ram_size = 0x10000;  /* RAM in bytes, up to 64K */
@@ -247,60 +248,62 @@ void machine_config_complete(struct machine_config *mc) {
 	}
 }
 
-static char const * const machine_arch_string[] = {
-	"dragon32",
-	"dragon64",
-	"coco",
+struct xconfig_enum machine_arch_list[] = {
+	{ .value = ARCH_DRAGON64, .name = "dragon64", .description = "Dragon 64" },
+	{ .value = ARCH_DRAGON32, .name = "dragon32", .description = "Dragon 32" },
+	{ .value = ARCH_COCO, .name = "coco", .description = "Tandy CoCo" },
+	{ XC_ENUM_END() }
 };
 
-static char const * const machine_keyboard_string[] = {
-	"dragon",
-	"coco",
-	"dragon200e",
-	"coco3",
+struct xconfig_enum machine_keyboard_list[] = {
+	{ .value = dkbd_layout_dragon, .name = "dragon", .description = "Dragon" },
+	{ .value = dkbd_layout_dragon200e, .name = "dragon200e", .description = "Dragon 200-E" },
+	{ .value = dkbd_layout_coco, .name = "coco", .description = "Tandy CoCo" },
+	{ XC_ENUM_END() }
 };
 
-static char const * const machine_cpu_string[] = {
-	"6809",
-	"6309",
+struct xconfig_enum machine_cpu_list[] = {
+	{ .value = CPU_MC6809, .name = "6809", .description = "Motorola 6809" },
+	{ .value = CPU_HD6309, .name = "6309", .description = "Hitachi 6309 - UNVERIFIED" },
+	{ XC_ENUM_END() }
 };
 
-static char const * const machine_tv_type_string[] = {
-	"pal",
-	"ntsc",
+struct xconfig_enum machine_tv_type_list[] = {
+	{ .value = TV_PAL,  .name = "pal",  .description = "PAL (50Hz)" },
+	{ .value = TV_NTSC, .name = "ntsc", .description = "NTSC (60Hz)" },
+	{ .value = TV_NTSC, .name = "pal-m", .description = "PAL-M (60Hz)" },
+	{ XC_ENUM_END() }
 };
 
-static char const * const machine_vdg_type_string[] = {
-	"6847",
-	"6847t1",
+struct xconfig_enum machine_vdg_type_list[] = {
+	{ .value = VDG_6847, .name = "6847", .description = "Original 6847" },
+	{ .value = VDG_6847T1, .name = "6847t1", .description = "6847T1 with lowercase" },
+	{ XC_ENUM_END() }
 };
 
-void machine_config_print_all(void) {
+void machine_config_print_all(_Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
 		printf("machine %s\n", mc->name);
-		if (mc->description) printf("  machine-desc %s\n", mc->description);
-		if (mc->architecture >= 0 && mc->architecture < ARRAY_N_ELEMENTS(machine_arch_string))
-			printf("  machine-arch %s\n", machine_arch_string[mc->architecture]);
-		if (mc->keymap >= 0 && mc->keymap < ARRAY_N_ELEMENTS(machine_keyboard_string))
-			printf("  machine-keyboard %s\n", machine_keyboard_string[mc->keymap]);
-		if (mc->cpu >= 0 && mc->cpu < ARRAY_N_ELEMENTS(machine_cpu_string))
-			printf("  machine-cpu %s\n", machine_cpu_string[mc->cpu]);
-		if (mc->vdg_palette) printf("  machine-palette %s\n", mc->vdg_palette);
-		if (mc->bas_rom) printf("  bas %s\n", mc->bas_rom);
-		if (mc->extbas_rom) printf("  extbas %s\n", mc->extbas_rom);
-		if (mc->altbas_rom) printf("  altbas %s\n", mc->altbas_rom);
-		if (mc->nobas) printf("  nobas\n");
-		if (mc->noextbas) printf("  noextbas\n");
-		if (mc->noaltbas) printf("  noaltbas\n");
-		if (mc->ext_charset_rom) printf("  ext-charset %s\n", mc->ext_charset_rom);
-		if (mc->tv_standard >= 0 && mc->tv_standard < ARRAY_N_ELEMENTS(machine_tv_type_string))
-			printf("  tv-type %s\n", machine_tv_type_string[mc->tv_standard]);
-		if (mc->vdg_type >= 0 && mc->vdg_type < ARRAY_N_ELEMENTS(machine_vdg_type_string))
-			printf("  vdg-type %s\n", machine_vdg_type_string[mc->vdg_type]);
-		if (mc->ram >= 0) printf("  ram %d\n", mc->ram);
-		if (mc->default_cart) printf("  machine-cart %s\n", mc->default_cart);
-		if (mc->nodos) printf("  nodos\n");
+		xroar_cfg_print_inc_indent();
+		xroar_cfg_print_string(all, "machine-desc", mc->description, NULL);
+		xroar_cfg_print_enum(all, "machine-arch", mc->architecture, ANY_AUTO, machine_arch_list);
+		xroar_cfg_print_enum(all, "machine-keyboard", mc->keymap, ANY_AUTO, machine_keyboard_list);
+		xroar_cfg_print_enum(all, "machine-cpu", mc->cpu, CPU_MC6809, machine_cpu_list);
+		xroar_cfg_print_string(all, "machine-palette", mc->vdg_palette, "ideal");
+		xroar_cfg_print_string(all, "bas", mc->bas_rom, NULL);
+		xroar_cfg_print_string(all, "extbas", mc->extbas_rom, NULL);
+		xroar_cfg_print_string(all, "altbas", mc->altbas_rom, NULL);
+		xroar_cfg_print_bool(all, "nobas", mc->nobas, 0);
+		xroar_cfg_print_bool(all, "noextbas", mc->noextbas, 0);
+		xroar_cfg_print_bool(all, "noaltbas", mc->noaltbas, 0);
+		xroar_cfg_print_string(all, "ext-charset", mc->ext_charset_rom, NULL);
+		xroar_cfg_print_enum(all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
+		xroar_cfg_print_enum(all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
+		xroar_cfg_print_int_nz(all, "ram", mc->ram);
+		xroar_cfg_print_string(all, "machine-cart", mc->default_cart, NULL);
+		xroar_cfg_print_bool(all, "nodos", mc->nodos, 0);
+		xroar_cfg_print_dec_indent();
 		printf("\n");
 	}
 }

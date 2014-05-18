@@ -12,9 +12,10 @@
 
 #include "xconfig.h"
 
+struct cart;
 struct event;
 struct machine_config;
-struct cart;
+struct slist;
 struct vdg_palette;
 struct xroar_timeout;
 
@@ -220,5 +221,19 @@ void xroar_select_tape_output(void);
 void xroar_eject_tape_output(void);
 void xroar_hard_reset(void);
 void xroar_soft_reset(void);
+
+/* Helper functions for config printing */
+void xroar_cfg_print_inc_indent(void);
+void xroar_cfg_print_dec_indent(void);
+void xroar_cfg_print_indent(void);
+void xroar_cfg_print_bool(_Bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value);
+void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value);
+void xroar_cfg_print_string(_Bool all, char const *opt, char const *value,
+			    char const *normal);
+void xroar_cfg_print_enum(_Bool all, char const *opt, int value, int normal,
+			  struct xconfig_enum const *e);
+void xroar_cfg_print_string_list(_Bool all, char const *opt, struct slist *l);
 
 #endif  /* XROAR_XROAR_H_ */

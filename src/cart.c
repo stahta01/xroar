@@ -39,6 +39,7 @@
 #include "orch90.h"
 #include "romlist.h"
 #include "rsdos.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 static struct slist *config_list = NULL;
@@ -164,26 +165,27 @@ void cart_config_complete(struct cart_config *cc) {
 	}
 }
 
-static char const * const cart_type_string[] = {
-	"rom",
-	"dragondos",
-	"rsdos",
-	"delta",
-	"orch90",
+struct xconfig_enum cart_type_list[] = {
+	{ .value = CART_ROM, .name = "rom", .description = "ROM cartridge" },
+	{ .value = CART_DRAGONDOS, .name = "dragondos", .description = "DragonDOS" },
+	{ .value = CART_DELTADOS, .name = "delta", .description = "Delta System" },
+	{ .value = CART_RSDOS, .name = "rsdos", .description = "RS-DOS" },
+	{ .value = CART_ORCH90, .name = "orch90", .description = "Orchestra 90-CC" },
+	{ XC_ENUM_END() }
 };
 
-void cart_config_print_all(void) {
+void cart_config_print_all(_Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
 		printf("cart %s\n", cc->name);
-		if (cc->description) printf("  cart-desc %s\n", cc->description);
-		if (cc->type >= 0 && cc->type < ARRAY_N_ELEMENTS(cart_type_string))
-			printf("  cart-type %s\n", cart_type_string[cc->type]);
-		if (cc->rom) printf("  cart-rom %s\n", cc->rom);
-		if (cc->rom2) printf("  cart-rom2 %s\n", cc->rom2);
-		if (cc->becker_port) printf("  cart-becker\n");
-		if (cc->type != CART_ROM && cc->autorun) printf("  cart-autorun\n");
-		if (cc->type == CART_ROM && !cc->autorun) printf("  no-cart-autorun\n");
+		xroar_cfg_print_inc_indent();
+		xroar_cfg_print_string(all, "cart-desc", cc->description, NULL);
+		xroar_cfg_print_enum(all, "cart-type", cc->type, CART_ROM, cart_type_list);
+		xroar_cfg_print_string(all, "cart-rom", cc->rom, NULL);
+		xroar_cfg_print_string(all, "cart-rom2", cc->rom2, NULL);
+		xroar_cfg_print_bool(all, "cart-autorun", cc->autorun, cc->type == CART_ROM);
+		xroar_cfg_print_bool(all, "cart-becker", cc->becker_port, 0);
+		xroar_cfg_print_dec_indent();
 		printf("\n");
 	}
 }
