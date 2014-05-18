@@ -35,6 +35,7 @@
 #include "machine.h"
 #include "mc6809.h"
 #include "module.h"
+#include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
 #include "xroar.h"
@@ -432,6 +433,9 @@ void tape_update_motor(_Bool state) {
 		}
 		if (!state && xroar_cfg.timeout_motoroff) {
 			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		}
+		if (!state && xroar_cfg.snap_motoroff) {
+			write_snapshot(xroar_cfg.snap_motoroff);
 		}
 		LOG_DEBUG(2, "Tape: motor %s\n", state ? "ON" : "OFF");
 	}

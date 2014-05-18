@@ -111,6 +111,7 @@ struct xroar_cfg {
 	unsigned debug_fdc;
 	unsigned debug_gdb;
 	char *timeout_motoroff;
+	char *snap_motoroff;
 };
 
 extern struct xroar_cfg xroar_cfg;

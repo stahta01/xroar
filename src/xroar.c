@@ -1949,6 +1949,7 @@ static struct xconfig_option const xroar_options[] = {
 #endif
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
 	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
+	{ XC_SET_STRING("snap-motoroff", &xroar_cfg.snap_motoroff) },
 
 	/* Other options: */
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
@@ -2100,6 +2101,7 @@ static void helptext(void) {
 "  -q, --quiet           equivalent to --verbose 0\n"
 "  -timeout S            run for S seconds then quit\n"
 "  -timeout-motoroff S   quit S seconds after tape motor switches off\n"
+"  -snap-motoroff FILE   write a snapshot each time tape motor switches off\n"
 
 "\n Other options:\n"
 "  -config-print         print full configuration to standard output\n"
@@ -2276,5 +2278,6 @@ static void config_print_all(void) {
 #endif
 	if (private_cfg.timeout) printf("timeout %s\n", private_cfg.timeout);
 	if (xroar_cfg.timeout_motoroff) printf("timeout-motoroff %s\n", xroar_cfg.timeout_motoroff);
+	if (xroar_cfg.snap_motoroff) printf("snap-motoroff %s\n", xroar_cfg.snap_motoroff);
 	putchar('\n');
 }
