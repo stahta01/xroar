@@ -20,6 +20,12 @@
 
 struct tape_module;
 
+enum tape_channel {
+	tape_channel_mix,
+	tape_channel_left,
+	tape_channel_right
+};
+
 struct tape {
 	struct tape_module *module;
 	void *data;  /* module-specific data */
@@ -38,6 +44,7 @@ struct tape_module {
 	int (* const pulse_in)(struct tape *t, int *pulse_width);
 	int (* const sample_out)(struct tape *t, uint8_t sample, int length);
 	void (* const motor_off)(struct tape *t);
+	void (* const set_channel_mode)(struct tape *, enum tape_channel);
 };
 
 extern struct tape *tape_input;

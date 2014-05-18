@@ -293,6 +293,8 @@ int tape_open_reading(const char *filename) {
 		return -1;
 #endif
 	}
+	if (tape_input->module->set_channel_mode)
+		tape_input->module->set_channel_mode(tape_input, tape_channel_mix);
 
 	tape_desync(256);
 	tape_update_motor(motor);
