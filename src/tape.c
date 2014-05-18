@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "xalloc.h"
 
 #include "breakpoint.h"
@@ -118,14 +119,22 @@ static int tape_byte_in(struct tape *t) {
 	return byte;
 }
 
+/* Tape waveform is similar to the one in ROM, but higher precision, offset
+ * slightly, with peaks reduced. */
+
+static uint8_t const bit_out_waveform[] = {
+	0x82, 0x97, 0xab, 0xbd, 0xce, 0xdc, 0xe8, 0xf0,
+	0xf5, 0xf6, 0xf4, 0xee, 0xe5, 0xd9, 0xca, 0xb9,
+	0xa6, 0x92, 0x7e, 0x69, 0x55, 0x43, 0x32, 0x24,
+	0x18, 0x10, 0x0b, 0x0a, 0x0c, 0x12, 0x1b, 0x27,
+	0x36, 0x47, 0x5a, 0x6e
+};
+
 static void tape_bit_out(struct tape *t, int bit) {
 	if (!t) return;
-	if (bit) {
-		tape_sample_out(t, 0xf8, TAPE_BIT1_LENGTH / 2);
-		tape_sample_out(t, 0x00, TAPE_BIT1_LENGTH / 2);
-	} else {
-		tape_sample_out(t, 0xf8, TAPE_BIT0_LENGTH / 2);
-		tape_sample_out(t, 0x00, TAPE_BIT0_LENGTH / 2);
+	int sample_length = bit ? 176 : 352;
+	for (int i = 0; i < ARRAY_N_ELEMENTS(bit_out_waveform); i++) {
+		tape_sample_out(t, bit_out_waveform[i], sample_length);
 	}
 	rewrite_bit_count = (rewrite_bit_count + 1) & 7;
 	last_tape_output = 0;
