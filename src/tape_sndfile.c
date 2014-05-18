@@ -62,7 +62,7 @@ struct tape_module tape_sndfile_module = {
 	.set_channel_mode = sndfile_set_channel_mode,
 };
 
-struct tape *tape_sndfile_open(const char *filename, const char *mode) {
+struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate) {
 	struct tape *t;
 	struct tape_sndfile *sndfile;
 	t = tape_new();
@@ -73,7 +73,7 @@ struct tape *tape_sndfile_open(const char *filename, const char *mode) {
 	sndfile->info.format = 0;
 	if (mode[0] == 'w') {
 		sndfile->writing = 1;
-		sndfile->info.samplerate = 22050;
+		sndfile->info.samplerate = rate;
 		sndfile->info.channels = 1;
 		sndfile->info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
 		sndfile->fd = sf_open(filename, SFM_WRITE, &sndfile->info);

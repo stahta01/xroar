@@ -136,6 +136,7 @@ struct private_cfg {
 	int tape_pad;
 	int tape_pad_auto;
 	int tape_rewrite;
+	int tape_ao_rate;
 	_Bool gdb;
 
 	char *joy_axis[JOYSTICK_NUM_AXES];
@@ -575,6 +576,8 @@ _Bool xroar_init(int argc, char **argv) {
 	private_cfg.tape_pad = (private_cfg.tape_pad > 0) ? TAPE_PAD : 0;
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
+	if (private_cfg.tape_ao_rate > 0)
+		tape_set_ao_rate(private_cfg.tape_ao_rate);
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
 	_Bool definitely_dos = 0;
@@ -1860,6 +1863,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("tape-pad", &private_cfg.tape_pad) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
 	{ XC_SET_INT1("tape-rewrite", &private_cfg.tape_rewrite) },
+	{ XC_SET_INT("tape-ao-rate", &private_cfg.tape_ao_rate) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT1("tapehack", &private_cfg.tape_rewrite), .deprecated = 1 },
 
@@ -2017,6 +2021,7 @@ static void helptext(void) {
 "  -tape-pad             force tape leader padding\n"
 "  -no-tape-pad-auto     disable automatic leader padding\n"
 "  -tape-rewrite         enable tape rewriting\n"
+"  -tape-ao-rate HZ      set tape writing frame rate\n"
 
 "\n Disks:\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"
@@ -2170,6 +2175,7 @@ static void config_print_all(void) {
 	if (private_cfg.tape_pad_auto == 0) puts("no-tape-pad-auto");
 	if (private_cfg.tape_pad_auto == 1) puts("tape-pad-auto");
 	if (private_cfg.tape_rewrite == 0) puts("no-tape-rewrite");
+	if (private_cfg.tape_ao_rate > 0) printf("tape-ao-rate %d\n", private_cfg.tape_ao_rate);
 	if (private_cfg.tape_rewrite == 1) puts("tape-rewrite");
 	puts("");
 

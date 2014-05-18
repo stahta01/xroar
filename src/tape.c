@@ -58,6 +58,8 @@ static int tape_rewrite = 0;
 static int in_pulse = -1;
 static int in_pulse_width = 0;
 
+static int tape_ao_rate = 9600;
+
 static uint8_t last_tape_output = 0;
 static _Bool motor = 0;
 
@@ -260,6 +262,13 @@ void tape_shutdown(void) {
 	tape_reset();
 }
 
+void tape_set_ao_rate(int rate) {
+	if (rate > 0)
+		tape_ao_rate = rate;
+	else
+		tape_ao_rate = 9600;
+}
+
 int tape_open_reading(const char *filename) {
 	tape_close_reading();
 	input_skip_sync = 0;
@@ -287,7 +296,7 @@ int tape_open_reading(const char *filename) {
 		break;
 	default:
 #ifdef HAVE_SNDFILE
-		if ((tape_input = tape_sndfile_open(filename, "rb")) == NULL) {
+		if ((tape_input = tape_sndfile_open(filename, "rb", -1)) == NULL) {
 			LOG_WARN("Failed to open '%s'\n", filename);
 			return -1;
 		}
@@ -330,7 +339,7 @@ int tape_open_writing(const char *filename) {
 		break;
 	default:
 #ifdef HAVE_SNDFILE
-		if ((tape_output = tape_sndfile_open(filename, "wb")) == NULL) {
+		if ((tape_output = tape_sndfile_open(filename, "wb", tape_ao_rate)) == NULL) {
 			LOG_WARN("Failed to open '%s' for writing.", filename);
 			return -1;
 		}

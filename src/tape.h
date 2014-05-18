@@ -80,7 +80,7 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f);
 /* Module-specific open() calls */
 struct tape *tape_cas_open(const char *filename, const char *mode);
 struct tape *tape_asc_open(const char *filename, const char *mode);
-struct tape *tape_sndfile_open(const char *filename, const char *mode);
+struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate);
 
 /* Only to be used by tape modules */
 struct tape *tape_new(void);
@@ -94,6 +94,9 @@ void tape_shutdown(void);
 
 /* Delegate for tape output updates */
 extern DELEGATE_T1(void, float) tape_update_audio;
+
+/* Only affects libsndfile output */
+void tape_set_ao_rate(int);
 
 int tape_open_reading(const char *filename);
 void tape_close_reading(void);
