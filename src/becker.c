@@ -73,8 +73,8 @@ struct log_handle *log_data_out_hex = NULL;
 _Bool becker_open(void) {
 
 	struct addrinfo hints, *info;
-	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : "127.0.0.1";
-	const char *portname = xroar_cfg.becker_port ? xroar_cfg.becker_port : "65504";
+	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
+	const char *portname = xroar_cfg.becker_port ? xroar_cfg.becker_port : BECKER_PORT_DEFAULT;
 
 	// Find the server
 	memset(&hints, 0, sizeof(hints));

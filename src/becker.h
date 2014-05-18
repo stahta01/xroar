@@ -11,6 +11,9 @@
 
 #include <stdint.h>
 
+#define BECKER_IP_DEFAULT "127.0.0.1"
+#define BECKER_PORT_DEFAULT "65504"
+
 _Bool becker_open(void);
 void becker_close(void);
 void becker_reset(void);

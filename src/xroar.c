@@ -39,6 +39,7 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "becker.h"
 #include "cart.h"
 #include "crclist.h"
 #include "dkbd.h"
@@ -2017,8 +2018,8 @@ static void helptext(void) {
 
 "\n Becker port:\n"
 "  -becker               prefer becker-enabled DOS (when picked automatically)\n"
-"  -becker-ip ADDRESS    address or hostname of DriveWire server [127.0.0.1]\n"
-"  -becker-port PORT     port of DriveWire server [65504]\n"
+"  -becker-ip ADDRESS    address or hostname of DriveWire server [" BECKER_IP_DEFAULT "]\n"
+"  -becker-port PORT     port of DriveWire server [" BECKER_PORT_DEFAULT "]\n"
 
 "\n Files:\n"
 "  -load FILE            load or attach FILE\n"
