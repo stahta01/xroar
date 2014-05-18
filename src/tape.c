@@ -380,6 +380,8 @@ int tape_autorun(const char *filename) {
 	return type;
 }
 
+static struct xroar_timeout *motoroff_timeout = NULL;
+
 /* Called whenever the motor control line is written to. */
 void tape_update_motor(_Bool state) {
 	if (state) {
@@ -406,6 +408,13 @@ void tape_update_motor(_Bool state) {
 		}
 	}
 	if (motor != state) {
+		if (motoroff_timeout) {
+			xroar_cancel_timeout(motoroff_timeout);
+			motoroff_timeout = NULL;
+		}
+		if (!state && xroar_cfg.timeout_motoroff) {
+			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		}
 		LOG_DEBUG(2, "Tape: motor %s\n", state ? "ON" : "OFF");
 	}
 	motor = state;

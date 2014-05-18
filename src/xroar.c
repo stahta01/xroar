@@ -1944,6 +1944,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("debug-gdb", &xroar_cfg.debug_gdb) },
 #endif
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
+	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
 
 	/* Other options: */
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
@@ -2092,7 +2093,8 @@ static void helptext(void) {
 "  -debug-gdb FLAGS      GDB target debugging (see manual, or -1 for all)\n"
 "  -v, --verbose LEVEL   general debug verbosity (0-3) [1]\n"
 "  -q, --quiet           equivalent to --verbose 0\n"
-"  -timeout SECONDS      run for SECONDS then quit\n"
+"  -timeout S            run for S seconds then quit\n"
+"  -timeout-motoroff S   quit S seconds after tape motor switches off\n"
 
 "\n Other options:\n"
 "  -config-print         print full configuration to standard output\n"
@@ -2267,5 +2269,6 @@ static void config_print_all(void) {
 	if (xroar_cfg.debug_gdb != 0) printf("debug-gdb 0x%x\n", xroar_cfg.debug_gdb);
 #endif
 	if (private_cfg.timeout) printf("timeout %s\n", private_cfg.timeout);
+	if (xroar_cfg.timeout_motoroff) printf("timeout-motoroff %s\n", xroar_cfg.timeout_motoroff);
 	putchar('\n');
 }
