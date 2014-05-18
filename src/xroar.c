@@ -1038,7 +1038,7 @@ void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 
 void xroar_set_trace(int mode) {
 #ifdef TRACE
-	int set_to;
+	_Bool set_to;
 	switch (mode) {
 		case XROAR_OFF: default:
 			set_to = 0;
@@ -2286,7 +2286,6 @@ static void config_print_all(void) {
 	if (xroar_cfg.gdb_port) printf("gdb-port %s\n", xroar_cfg.gdb_port);
 #endif
 #ifdef TRACE
-	if (xroar_cfg.trace_enabled == 0) puts("no-trace");
 	if (xroar_cfg.trace_enabled == 1) puts("trace");
 #endif
 	if (xroar_cfg.debug_ui != 0) printf("debug-ui 0x%x\n", xroar_cfg.debug_ui);

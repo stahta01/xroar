@@ -107,7 +107,7 @@ struct xroar_cfg {
 	char *gdb_ip;
 	char *gdb_port;
 	// Debugging
-	int trace_enabled;
+	_Bool trace_enabled;
 	unsigned debug_ui;
 	unsigned debug_file;
 	unsigned debug_fdc;
