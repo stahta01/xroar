@@ -76,6 +76,7 @@ static _Bool inverted_text = 0;
 
 /* Useful configuration side-effect tracking */
 static _Bool unexpanded_dragon32 = 0;
+static _Bool relaxed_pia_decode = 0;
 static enum {
 	RAM_ORGANISATION_4K,
 	RAM_ORGANISATION_16K,
@@ -782,6 +783,7 @@ void machine_configure(struct machine_config *mc) {
 	}
 
 	unexpanded_dragon32 = 0;
+	relaxed_pia_decode = 0;
 	ram_mask = 0xffff;
 
 	if (IS_COCO) {
@@ -795,12 +797,14 @@ void machine_configure(struct machine_config *mc) {
 			if (machine_ram_size <= 0x8000)
 				ram_mask = 0x7fff;
 		}
+		relaxed_pia_decode = 1;
 	}
 
 	if (IS_DRAGON) {
 		ram_organisation = RAM_ORGANISATION_64K;
 		if (IS_DRAGON32 && machine_ram_size <= 0x8000) {
 			unexpanded_dragon32 = 1;
+			relaxed_pia_decode = 1;
 			ram_mask = 0x7fff;
 		}
 	}
@@ -984,7 +988,7 @@ static uint8_t read_cycle(uint16_t A) {
 				machine_cart->read(machine_cart, A, 0, &read_D);
 			break;
 		case 4:
-			if (IS_COCO) {
+			if (relaxed_pia_decode) {
 				read_D = mc6821_read(PIA0, A & 3);
 			} else {
 				if ((A & 4) == 0) {
@@ -1010,7 +1014,9 @@ static uint8_t read_cycle(uint16_t A) {
 			}
 			break;
 		case 5:
-			read_D = mc6821_read(PIA1, A & 3);
+			if (relaxed_pia_decode || (A & 4) == 0) {
+				read_D = mc6821_read(PIA1, A & 3);
+			}
 			break;
 		case 6:
 			if (machine_cart)
@@ -1055,7 +1061,7 @@ static void write_cycle(uint16_t A, uint8_t D) {
 					machine_cart->write(machine_cart, A, 0, D);
 				break;
 			case 4:
-				if (IS_COCO) {
+				if (IS_COCO || unexpanded_dragon32) {
 					mc6821_write(PIA0, A & 3, D);
 				} else {
 					if ((A & 4) == 0) {
@@ -1064,7 +1070,9 @@ static void write_cycle(uint16_t A, uint8_t D) {
 				}
 				break;
 			case 5:
-				mc6821_write(PIA1, A & 3, D);
+				if (relaxed_pia_decode || (A & 4) == 0) {
+					mc6821_write(PIA1, A & 3, D);
+				}
 				break;
 			case 6:
 				if (machine_cart)
@@ -1142,7 +1150,7 @@ uint8_t machine_read_byte(uint16_t A) {
 				machine_cart->read(machine_cart, A, 0, &D);
 			break;
 		case 4:
-			if (IS_COCO) {
+			if (IS_COCO || unexpanded_dragon32) {
 				D = mc6821_read(PIA0, A & 3);
 			} else {
 				if ((A & 4) == 0) {
@@ -1168,7 +1176,9 @@ uint8_t machine_read_byte(uint16_t A) {
 			}
 			break;
 		case 5:
-			D = mc6821_read(PIA1, A & 3);
+			if (relaxed_pia_decode || (A & 4) == 0) {
+				D = mc6821_read(PIA1, A & 3);
+			}
 			break;
 		case 6:
 			if (machine_cart)
@@ -1202,7 +1212,7 @@ void machine_write_byte(uint16_t A, uint8_t D) {
 					machine_cart->write(machine_cart, A, 0, D);
 				break;
 			case 4:
-				if (IS_COCO) {
+				if (IS_COCO || unexpanded_dragon32) {
 					mc6821_write(PIA0, A & 3, D);
 				} else {
 					if ((A & 4) == 0) {
@@ -1211,7 +1221,9 @@ void machine_write_byte(uint16_t A, uint8_t D) {
 				}
 				break;
 			case 5:
-				mc6821_write(PIA1, A & 3, D);
+				if (relaxed_pia_decode || (A & 4) == 0) {
+					mc6821_write(PIA1, A & 3, D);
+				}
 				break;
 			case 6:
 				if (machine_cart)
