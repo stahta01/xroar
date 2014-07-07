@@ -471,6 +471,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 	(void)sptr;
 	if (level) {
 		mc6821_set_cx1(&PIA0->b);
+		sound_update();
 	} else {
 		mc6821_reset_cx1(&PIA0->b);
 	}

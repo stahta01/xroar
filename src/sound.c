@@ -283,7 +283,7 @@ static void null_frames(int nframes) {
 
 /* Fill sound buffer to current point in time, call sound module's
  * update() function if buffer is full. */
-static void sound_update(void) {
+void sound_update(void) {
 	unsigned elapsed = (event_current_tick - last_cycle);
 	unsigned nframes = 0;
 	if (elapsed <= (UINT_MAX/2)) {

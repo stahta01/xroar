@@ -24,6 +24,7 @@ extern DELEGATE_T1(void, bool) sound_sbs_feedback;
 void sound_init(void *buf, enum sound_fmt fmt, unsigned rate, unsigned nchannels, unsigned nframes);
 void sound_set_volume(int v);
 
+void sound_update(void);
 void sound_enable_external(void);
 void sound_disable_external(void);
 
