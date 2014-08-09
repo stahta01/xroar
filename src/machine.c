@@ -645,7 +645,6 @@ void machine_configure(struct machine_config *mc) {
 			if (size > 0x2000) {
 				if (!has_combined)
 					has_bas = 1;
-				has_combined = 1;
 			}
 			free(tmp);
 		}
@@ -1299,27 +1298,31 @@ static void initialise_ram(void) {
 /**************************************************************************/
 
 int machine_load_rom(const char *path, uint8_t *dest, size_t max_size) {
-	char *dot;
 	FILE *fd;
-	int size;
 
 	if (path == NULL)
 		return -1;
-	dot = strrchr(path, '.');
+
+	struct stat statbuf;
+	if (stat(path, &statbuf) != 0)
+		return -1;
+	off_t file_size = statbuf.st_size;
+	int header_size = file_size % 256;
+	file_size -= header_size;
+	if (file_size > max_size)
+		file_size = max_size;
+
 	if (!(fd = fopen(path, "rb"))) {
 		return -1;
 	}
-	if (dot && c_strcasecmp(dot, ".dgn") == 0) {
-		LOG_DEBUG(1, "Loading DGN: %s\n", path);
-		if (fread(dest, 16, 1, fd) < 1) {
-			LOG_WARN("Failed to read DGN header in '%s'\n", path);
-			fclose(fd);
-			return -1;
-		}
-	} else {
-		LOG_DEBUG(1, "Loading ROM: %s\n", path);
+	LOG_DEBUG(1, "Loading ROM image: %s\n", path);
+
+	if (header_size > 0) {
+		LOG_DEBUG(2, "\tskipping %d byte header\n", header_size);
+		fseek(fd, header_size, SEEK_SET);
 	}
-	size = fread(dest, 1, max_size, fd);
+
+	size_t size = fread(dest, 1, file_size, fd);
 	fclose(fd);
 	return size;
 }
