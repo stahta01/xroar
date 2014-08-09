@@ -313,8 +313,8 @@ static char const * const default_config[] = {
 	"romlist dragon200e_alt=@d200e_2,@d64_2",
 	"romlist dragon200e_charset=d200e_26,rom26.ic1",
 	// Fallback CoCo BASIC
-	"romlist coco=bas13,bas12,bas11,bas10",
-	"romlist coco_ext=extbas11,extbas10",
+	"romlist coco=bas13,bas12,Color Basic v1.2 (1982)(Tandy),bas11,bas10",
+	"romlist coco_ext=extbas11,extbas10,coco,COCO",
 	// Specific CoCo BASIC
 	"romlist coco1=bas10,@coco",
 	"romlist coco1e=bas11,@coco",
