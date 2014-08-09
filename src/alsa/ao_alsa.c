@@ -227,6 +227,7 @@ failed:
 
 static void shutdown(void) {
 	snd_pcm_close(pcm_handle);
+	snd_config_update_free_global();
 	free(audio_buffer);
 }
 
