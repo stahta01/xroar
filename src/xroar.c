@@ -815,6 +815,7 @@ void xroar_shutdown(void) {
 	pthread_mutex_destroy(&run_state_mt);
 	pthread_cond_destroy(&run_state_cv);
 #endif
+	printer_close();
 	keyboard_shutdown();
 	joystick_shutdown();
 	cart_shutdown();
