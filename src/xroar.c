@@ -827,6 +827,7 @@ void xroar_shutdown(void) {
 		if (private_cfg.joy_button[i])
 			free(private_cfg.joy_button[i]);
 	}
+	xconfig_shutdown(xroar_options);
 }
 
 static struct vdg_palette *get_machine_palette(void) {

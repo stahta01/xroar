@@ -297,3 +297,14 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 	if (argn) *argn = _argn;
 	return XCONFIG_OK;
 }
+
+void xconfig_shutdown(struct xconfig_option const *options) {
+	for (int i = 0; options[i].type != XCONFIG_END; i++) {
+		if (options[i].type == XCONFIG_STRING) {
+			if (!options[i].call && *(char **)options[i].dest.object) {
+				free(*(char **)options[i].dest.object);
+				*(char **)options[i].dest.object = NULL;
+			}
+		}
+	}
+}
