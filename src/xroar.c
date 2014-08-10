@@ -1014,6 +1014,7 @@ struct xroar_timeout {
 static void handle_timeout_event(void *sptr) {
 	struct xroar_timeout *timeout = sptr;
 	if (timeout->seconds == 0) {
+		free(timeout);
 		xroar_quit();
 		return;
 	}
