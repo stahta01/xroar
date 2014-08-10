@@ -89,6 +89,10 @@ static void deltados_reset(struct cart *c) {
 
 static void deltados_detach(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
+	vdrive_ready = DELEGATE_DEFAULT1(void, bool);
+	vdrive_tr00 = DELEGATE_DEFAULT1(void, bool);
+	vdrive_index_pulse = DELEGATE_DEFAULT1(void, bool);
+	vdrive_write_protect = DELEGATE_DEFAULT1(void, bool);
 	wd279x_free(d->fdc);
 	d->fdc = NULL;
 	cart_rom_detach(c);

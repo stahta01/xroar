@@ -81,6 +81,7 @@ void vdrive_init(void) {
 	vdrive_ready = DELEGATE_DEFAULT1(void, bool);
 	vdrive_tr00 = DELEGATE_DEFAULT1(void, bool);
 	vdrive_index_pulse = DELEGATE_DEFAULT1(void, bool);
+	vdrive_write_protect = DELEGATE_DEFAULT1(void, bool);
 	vdrive_set_dden(NULL, 1);
 	vdrive_set_drive(0);
 	event_init(&index_pulse_event, DELEGATE_AS0(void, do_index_pulse, NULL));
