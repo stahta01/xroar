@@ -165,6 +165,18 @@ void cart_config_complete(struct cart_config *cc) {
 	}
 }
 
+static void cart_config_free(struct cart_config *cc) {
+	if (cc->name)
+		free(cc->name);
+	if (cc->description)
+		free(cc->description);
+	if (cc->rom)
+		free(cc->rom);
+	if (cc->rom2)
+		free(cc->rom2);
+	free(cc);
+}
+
 struct xconfig_enum cart_type_list[] = {
 	{ .value = CART_ROM, .name = "rom", .description = "ROM cartridge" },
 	{ .value = CART_DRAGONDOS, .name = "dragondos", .description = "DragonDOS" },
@@ -188,6 +200,11 @@ void cart_config_print_all(_Bool all) {
 		xroar_cfg_print_dec_indent();
 		printf("\n");
 	}
+}
+
+void cart_shutdown(void) {
+	slist_free_full(config_list, (slist_free_func)cart_config_free);
+	config_list = NULL;
 }
 
 /* ---------------------------------------------------------------------- */

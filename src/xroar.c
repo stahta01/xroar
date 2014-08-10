@@ -803,6 +803,7 @@ void xroar_shutdown(void) {
 	pthread_mutex_destroy(&run_state_mt);
 	pthread_cond_destroy(&run_state_cv);
 #endif
+	cart_shutdown();
 	machine_shutdown();
 	module_shutdown((struct module *)keyboard_module);
 	module_shutdown((struct module *)sound_module);
