@@ -784,8 +784,10 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 
 	while (private_cfg.type_list) {
-		keyboard_queue_basic(private_cfg.type_list->data);
-		private_cfg.type_list = slist_remove(private_cfg.type_list, private_cfg.type_list->data);
+		char *data = private_cfg.type_list->data;
+		keyboard_queue_basic(data);
+		private_cfg.type_list = slist_remove(private_cfg.type_list, data);
+		free(data);
 	}
 	if (private_cfg.lp_file) {
 		printer_open_file(private_cfg.lp_file);
@@ -806,9 +808,10 @@ void xroar_shutdown(void) {
 	pthread_mutex_destroy(&run_state_mt);
 	pthread_cond_destroy(&run_state_cv);
 #endif
+	keyboard_shutdown();
+	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
-	joystick_shutdown();
 	module_shutdown((struct module *)keyboard_module);
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)video_module);
@@ -1741,7 +1744,7 @@ static void set_joystick_button(const char *spec) {
 }
 
 static void type_command(char *string) {
-	private_cfg.type_list = slist_append(private_cfg.type_list, string);
+	private_cfg.type_list = slist_append(private_cfg.type_list, xstrdup(string));
 }
 
 static void add_load(char *string) {

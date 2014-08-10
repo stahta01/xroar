@@ -71,6 +71,7 @@ enum keyboard_chord_mode {
 };
 
 void keyboard_init(void);
+void keyboard_shutdown(void);
 void keyboard_set_keymap(int map);
 
 void keyboard_set_chord_mode(enum keyboard_chord_mode mode);

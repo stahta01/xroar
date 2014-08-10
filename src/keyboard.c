@@ -46,12 +46,31 @@ static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basi
 unsigned keyboard_column[9];
 unsigned keyboard_row[9];
 
+static struct slist *basic_command_list = NULL;
+static const uint8_t *basic_command = NULL;
+
+static void type_command(struct MC6809 *cpu);
+
+static struct breakpoint basic_command_breakpoint[] = {
+	BP_DRAGON_ROM(.address = 0xbbe5, .handler = (bp_handler)type_command),
+	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
+	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
+	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
+	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
+	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
+};
+
 void keyboard_init(void) {
 	int i;
 	for (i = 0; i < 8; i++) {
 		keyboard_column[i] = ~0;
 		keyboard_row[i] = ~0;
 	}
+}
+
+void keyboard_shutdown(void) {
+	bp_remove_list(basic_command_breakpoint);
+	slist_free_full(basic_command_list, (slist_free_func)free);
 }
 
 void keyboard_set_keymap(int map) {
@@ -142,20 +161,6 @@ void keyboard_unicode_release(unsigned unicode) {
 	keyboard_release(keymap_new.unicode_to_dkey[unicode].dk_key);
 	return;
 }
-
-static struct slist *basic_command_list = NULL;
-static const uint8_t *basic_command = NULL;
-
-static void type_command(struct MC6809 *cpu);
-
-static struct breakpoint basic_command_breakpoint[] = {
-	BP_DRAGON_ROM(.address = 0xbbe5, .handler = (bp_handler)type_command),
-	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
-	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
-	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
-	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
-	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
-};
 
 static void type_command(struct MC6809 *cpu) {
 	if (basic_command) {
