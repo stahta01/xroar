@@ -85,7 +85,8 @@ void bp_remove(struct breakpoint *bp) {
 	bp_instruction_list = slist_remove(bp_instruction_list, bp);
 	if (!bp_instruction_list) {
 		struct MC6809 *cpu = machine_get_cpu(0);
-		cpu->instruction_hook.func = NULL;
+		if (cpu)
+			cpu->instruction_hook.func = NULL;
 	}
 }
 
