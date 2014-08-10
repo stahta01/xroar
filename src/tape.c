@@ -260,6 +260,7 @@ void tape_reset(void) {
 }
 
 void tape_shutdown(void) {
+	tape_close_reading();
 	tape_reset();
 }
 
