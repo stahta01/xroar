@@ -72,7 +72,7 @@ struct log_handle *log_data_out_hex = NULL;
 
 _Bool becker_open(void) {
 
-	struct addrinfo hints, *info;
+	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
 	const char *portname = xroar_cfg.becker_port ? xroar_cfg.becker_port : BECKER_PORT_DEFAULT;
 
@@ -102,6 +102,8 @@ _Bool becker_open(void) {
 		goto failed;
 	}
 
+	freeaddrinfo(info);
+
 	// Set the socket to non-blocking
 #ifndef WINDOWS32
 	int flags = fcntl(sockfd, F_GETFL, 0);
@@ -123,6 +125,8 @@ failed:
 		close(sockfd);
 		sockfd = -1;
 	}
+	if (info)
+		freeaddrinfo(info);
 	return 0;
 }
 
