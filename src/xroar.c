@@ -805,6 +805,7 @@ void xroar_shutdown(void) {
 #endif
 	cart_shutdown();
 	machine_shutdown();
+	joystick_shutdown();
 	module_shutdown((struct module *)keyboard_module);
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)video_module);
@@ -813,6 +814,14 @@ void xroar_shutdown(void) {
 #ifdef WINDOWS32
 	windows32_shutdown();
 #endif
+	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
+		if (private_cfg.joy_axis[i])
+			free(private_cfg.joy_axis[i]);
+	}
+	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
+		if (private_cfg.joy_button[i])
+			free(private_cfg.joy_button[i]);
+	}
 }
 
 static struct vdg_palette *get_machine_palette(void) {

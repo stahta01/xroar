@@ -70,6 +70,8 @@ static struct joystick_config const *virtual_joystick_config;
 static struct joystick const *virtual_joystick = NULL;
 static struct joystick_config const *cycled_config[JOYSTICK_NUM_PORTS];
 
+static void joystick_config_free(struct joystick_config *jc);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void joystick_init(void) {
@@ -83,6 +85,8 @@ void joystick_shutdown(void) {
 	for (unsigned p = 0; p < JOYSTICK_NUM_PORTS; p++) {
 		joystick_unmap(p);
 	}
+	slist_free_full(config_list, (slist_free_func)joystick_config_free);
+	config_list = NULL;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -141,6 +145,22 @@ void joystick_config_print_all(_Bool all) {
 		xroar_cfg_print_dec_indent();
 		printf("\n");
 	}
+}
+
+static void joystick_config_free(struct joystick_config *jc) {
+	if (jc->name)
+		free(jc->name);
+	if (jc->description)
+		free(jc->description);
+	for (int i = 0; i < JOYSTICK_NUM_AXES; i++) {
+		if (jc->axis_specs[i])
+			free(jc->axis_specs[i]);
+	}
+	for (int i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
+		if (jc->button_specs[i])
+			free(jc->button_specs[i]);
+	}
+	free(jc);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
