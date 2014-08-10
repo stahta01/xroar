@@ -2157,7 +2157,6 @@ static void versiontext(void) {
  */
 
 static void config_print_all(_Bool all) {
-	char *tmp;
 	puts("# Machines\n");
 	xroar_cfg_print_string(all, "default-machine", private_cfg.default_machine, NULL);
 	puts("");
