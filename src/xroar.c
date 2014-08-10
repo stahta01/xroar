@@ -814,6 +814,7 @@ void xroar_shutdown(void) {
 #ifdef WINDOWS32
 	windows32_shutdown();
 #endif
+	crclist_shutdown();
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
 		if (private_cfg.joy_axis[i])
 			free(private_cfg.joy_axis[i]);

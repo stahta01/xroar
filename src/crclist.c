@@ -174,3 +174,17 @@ void crclist_print(void) {
 	slist_foreach(crclist_list, (slist_iter_func)print_crclist_entry, NULL);
 	exit(EXIT_SUCCESS);
 }
+
+static void crclist_free(struct crclist *list) {
+	if (list->name)
+		free(list->name);
+	if (list->list)
+		slist_free_full(list->list, (slist_free_func)free);
+	free(list);
+}
+
+/* Tidy up */
+void crclist_shutdown(void) {
+	slist_free_full(crclist_list, (slist_free_func)crclist_free);
+	crclist_list = NULL;
+}

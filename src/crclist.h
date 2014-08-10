@@ -20,4 +20,7 @@ void crclist_print_all(void);
 /* Print list and exit */
 void crclist_print(void);
 
+/* Tidy up */
+void crclist_shutdown(void);
+
 #endif  /* XROAR_CRCLIST_H_ */
