@@ -207,6 +207,9 @@ failed:
 
 void gdb_shutdown(void) {
 	pthread_cancel(sock_thread);
+	if (info)
+		freeaddrinfo(info);
+	info = NULL;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
