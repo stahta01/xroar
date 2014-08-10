@@ -90,8 +90,6 @@ static _Bool init(void) {
 static void _shutdown(void) {
 	set_fullscreen(0);
 	vo_opengl_shutdown();
-	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
-	gdk_gl_context_destroy(glcontext);
 }
 
 static void resize(unsigned int w, unsigned int h) {

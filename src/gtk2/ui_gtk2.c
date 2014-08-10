@@ -662,6 +662,7 @@ static _Bool init(void) {
 }
 
 static void shutdown(void) {
+	gtk_widget_destroy(gtk2_top_window);
 }
 
 static gboolean run_cpu(gpointer data) {
