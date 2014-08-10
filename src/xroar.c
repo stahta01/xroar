@@ -174,6 +174,7 @@ static void set_pal(void);
 static void set_ntsc(void);
 static void set_cart(const char *name);
 static void add_load(char *string);
+static void add_load_dup(char *string);
 static void type_command(char *string);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
@@ -566,15 +567,18 @@ _Bool xroar_init(int argc, char **argv) {
 	// Remaining command line arguments are files.
 	while (argn < argc) {
 		if ((argn+1) < argc) {
-			add_load(argv[argn]);
+			add_load_dup(argv[argn]);
 		} else {
 			// Autorun last file given.
 			private_cfg.run = argv[argn];
 		}
 		argn++;
 	}
+	_Bool autorun_last = 0;
 	if (private_cfg.run) {
-		add_load(private_cfg.run);
+		add_load_dup(private_cfg.run);
+		autorun_last = 1;
+		private_cfg.run = NULL;
 	}
 
 	sound_set_volume(private_cfg.volume);
@@ -593,7 +597,7 @@ _Bool xroar_init(int argc, char **argv) {
 	for (struct slist *tmp_list = private_cfg.load_list; tmp_list; tmp_list = tmp_list->next) {
 		char *load_file = tmp_list->data;
 		int load_file_type = xroar_filetype_by_ext(load_file);
-		_Bool autorun = (load_file == private_cfg.run);
+		_Bool autorun = autorun_last && !tmp_list->next;
 		switch (load_file_type) {
 		// tapes - flag that DOS shouldn't be automatically found
 		case FILETYPE_CAS:
@@ -722,10 +726,11 @@ _Bool xroar_init(int argc, char **argv) {
 		char *load_file = private_cfg.load_list->data;
 		int load_file_type = xroar_filetype_by_ext(load_file);
 		// inhibit autorun if a -type option was given
-		_Bool autorun = !private_cfg.type_list && (load_file == private_cfg.run);
+		_Bool autorun = !private_cfg.type_list && autorun_last && !private_cfg.load_list->next;
 		switch (load_file_type) {
 		// cart will already be loaded (will autorun even with -type)
 		case FILETYPE_ROM:
+			free(load_file);
 			break;
 		// delay loading binary files by 2s
 		case FILETYPE_BIN:
@@ -744,10 +749,12 @@ _Bool xroar_init(int argc, char **argv) {
 			load_disk_to_drive++;
 			if (load_disk_to_drive > 3)
 				load_disk_to_drive = 3;
+			free(load_file);
 			break;
 		// the rest can be loaded straight off
 		default:
 			xroar_load_file_by_type(load_file, autorun);
+			free(load_file);
 			break;
 		}
 		private_cfg.load_list = slist_remove(private_cfg.load_list, private_cfg.load_list->data);
@@ -1005,6 +1012,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 static void do_load_file(void *data) {
 	char *load_file = data;
 	xroar_load_file_by_type(load_file, autorun_loaded_file);
+	free(load_file);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1751,6 +1759,10 @@ static void add_load(char *string) {
 	private_cfg.load_list = slist_append(private_cfg.load_list, string);
 }
 
+static void add_load_dup(char *string) {
+	add_load(xstrdup(string));
+}
+
 /* Enumeration lists used by configuration directives */
 
 static struct xconfig_enum tape_channel_mode_list[] = {
@@ -1842,11 +1854,11 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("dw4-port", &xroar_cfg.becker_port), .deprecated = 1 },
 
 	/* Files: */
-	{ XC_CALL_STRING("load", &add_load) },
+	{ XC_CALL_STRING("load", &add_load_dup) },
 	{ XC_SET_STRING("run", &private_cfg.run) },
 	/* Backwards-compatibility: */
-	{ XC_CALL_STRING("cartna", &add_load), .deprecated = 1 },
-	{ XC_CALL_STRING("snap", &add_load), .deprecated = 1 },
+	{ XC_CALL_STRING("cartna", &add_load_dup), .deprecated = 1 },
+	{ XC_CALL_STRING("snap", &add_load_dup), .deprecated = 1 },
 
 	/* Cassettes: */
 	{ XC_SET_STRING("tape-write", &private_cfg.tape_write) },
