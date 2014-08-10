@@ -161,6 +161,26 @@ struct machine_config *machine_config_by_arch(int arch) {
 	return NULL;
 }
 
+static void machine_config_free(struct machine_config *mc) {
+	if (mc->name)
+		free(mc->name);
+	if (mc->description)
+		free(mc->description);
+	if (mc->vdg_palette)
+		free(mc->vdg_palette);
+	if (mc->bas_rom)
+		free(mc->bas_rom);
+	if (mc->extbas_rom)
+		free(mc->extbas_rom);
+	if (mc->altbas_rom)
+		free(mc->altbas_rom);
+	if (mc->ext_charset_rom)
+		free(mc->ext_charset_rom);
+	if (mc->default_cart)
+		free(mc->default_cart);
+	free(mc);
+}
+
 static int find_working_arch(void) {
 	int arch;
 	char *tmp = NULL;
@@ -440,10 +460,32 @@ void machine_init(void) {
 	tape_init();
 }
 
+static void free_devices(void) {
+	if (CPU0) {
+		CPU0->free(CPU0);
+		CPU0 = NULL;
+	}
+	if (PIA0) {
+		mc6821_free(PIA0);
+		PIA0 = NULL;
+	}
+	if (PIA1) {
+		mc6821_free(PIA1);
+		PIA1 = NULL;
+	}
+	if (VDG0) {
+		mc6847_free(VDG0);
+		VDG0 = NULL;
+	}
+}
+
 void machine_shutdown(void) {
 	machine_remove_cart();
 	tape_shutdown();
 	vdrive_shutdown();
+	free_devices();
+	slist_free_full(config_list, (slist_free_func)machine_config_free);
+	config_list = NULL;
 }
 
 /* VDG edge delegates */
@@ -542,11 +584,8 @@ void machine_configure(struct machine_config *mc) {
 	if (mc->description) {
 		LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	}
+	free_devices();
 	// CPU
-	if (CPU0) {
-		CPU0->free(CPU0);
-		CPU0 = NULL;
-	}
 	switch (mc->cpu) {
 	case CPU_MC6809: default:
 		CPU0 = mc6809_new();
@@ -558,14 +597,6 @@ void machine_configure(struct machine_config *mc) {
 	CPU0->read_cycle = read_cycle;
 	CPU0->write_cycle = write_cycle;
 	// PIAs
-	if (PIA0) {
-		mc6821_free(PIA0);
-		PIA0 = NULL;
-	}
-	if (PIA1) {
-		mc6821_free(PIA1);
-		PIA1 = NULL;
-	}
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = pia0a_data_preread;
 	PIA0->a.data_postwrite = pia0a_data_postwrite;
@@ -590,8 +621,6 @@ void machine_configure(struct machine_config *mc) {
 	tape_update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, NULL);
 
 	// VDG
-	if (VDG0)
-		mc6847_free(VDG0);
 	VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
 
 	if (IS_COCO && IS_PAL) {
