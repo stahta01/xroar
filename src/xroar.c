@@ -506,10 +506,13 @@ _Bool xroar_init(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	// Set a default ROM search path if required.
-	if (!xroar_rom_path)
-		xroar_rom_path = getenv("XROAR_ROM_PATH");
-	if (!xroar_rom_path)
-		xroar_rom_path = ROMPATH;
+	if (!xroar_rom_path) {
+		char *env = getenv("XROAR_ROM_PATH");
+		if (!env)
+			env = ROMPATH;
+		if (env)
+			xroar_rom_path = xstrdup(env);
+	}
 	// If no machine specified on command line, get default.
 	if (!xroar_machine_config && private_cfg.default_machine) {
 		xroar_machine_config = machine_config_by_name(private_cfg.default_machine);
