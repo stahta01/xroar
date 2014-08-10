@@ -18,4 +18,7 @@ void romlist_print_all(void);
 /* Print list and exit */
 void romlist_print(void);
 
+/* Tidy up */
+void romlist_shutdown(void);
+
 #endif  /* XROAR_ROMLIST_H_ */

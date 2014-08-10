@@ -189,3 +189,17 @@ void romlist_print(void) {
 	slist_foreach(romlist_list, (slist_iter_func)print_romlist_entry, NULL);
 	exit(EXIT_SUCCESS);
 }
+
+static void romlist_free(struct romlist *list) {
+	if (list->name)
+		free(list->name);
+	if (list->list)
+		slist_free_full(list->list, (slist_free_func)free);
+	free(list);
+}
+
+/* Tidy up */
+void romlist_shutdown(void) {
+	slist_free_full(romlist_list, (slist_free_func)romlist_free);
+	romlist_list = NULL;
+}
