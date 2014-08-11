@@ -32,7 +32,7 @@ static Pixel artifact_simple[2][4];
 /* Map VDG palette entry */
 static Pixel map_palette_entry(int i) {
 	float R, G, B;
-	_Bool is_pal = (xroar_machine_config->tv_standard == TV_PAL);
+	_Bool is_pal = !xroar_machine_config || (xroar_machine_config->tv_standard == TV_PAL);
 	vdg_palette_RGB(xroar_vdg_palette, is_pal, i, &R, &G, &B);
 	R *= 255.0;
 	G *= 255.0;

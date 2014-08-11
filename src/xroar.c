@@ -820,6 +820,7 @@ void xroar_shutdown(void) {
 	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
+	xroar_machine_config = NULL;
 	module_shutdown((struct module *)keyboard_module);
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)video_module);
