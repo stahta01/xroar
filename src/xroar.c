@@ -116,11 +116,11 @@ struct private_cfg {
 	char *dos_option;
 
 	/* Attach files */
+	struct slist *load_list;
 	char *run;
 	char *tape_write;
 	char *lp_file;
 	char *lp_pipe;
-	struct slist *load_list;
 	struct slist *type_list;
 
 	/* Emulator interface */
@@ -173,8 +173,6 @@ static void set_machine(const char *name);
 static void set_pal(void);
 static void set_ntsc(void);
 static void set_cart(const char *name);
-static void add_load(char *string);
-static void add_load_dup(char *string);
 static void type_command(char *string);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
@@ -567,7 +565,7 @@ _Bool xroar_init(int argc, char **argv) {
 	// Remaining command line arguments are files.
 	while (argn < argc) {
 		if ((argn+1) < argc) {
-			add_load_dup(argv[argn]);
+			xconfig_set_option(xroar_options, "load", argv[argn]);
 		} else {
 			// Autorun last file given.
 			private_cfg.run = argv[argn];
@@ -576,7 +574,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 	_Bool autorun_last = 0;
 	if (private_cfg.run) {
-		add_load_dup(private_cfg.run);
+		xconfig_set_option(xroar_options, "load", private_cfg.run);
 		autorun_last = 1;
 		private_cfg.run = NULL;
 	}
@@ -1757,14 +1755,6 @@ static void type_command(char *string) {
 	private_cfg.type_list = slist_append(private_cfg.type_list, xstrdup(string));
 }
 
-static void add_load(char *string) {
-	private_cfg.load_list = slist_append(private_cfg.load_list, string);
-}
-
-static void add_load_dup(char *string) {
-	add_load(xstrdup(string));
-}
-
 /* Enumeration lists used by configuration directives */
 
 static struct xconfig_enum tape_channel_mode_list[] = {
@@ -1856,11 +1846,11 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("dw4-port", &xroar_cfg.becker_port), .deprecated = 1 },
 
 	/* Files: */
-	{ XC_CALL_STRING("load", &add_load_dup) },
+	{ XC_SET_STRING_LIST("load", &private_cfg.load_list) },
 	{ XC_SET_STRING("run", &private_cfg.run) },
 	/* Backwards-compatibility: */
-	{ XC_CALL_STRING("cartna", &add_load_dup), .deprecated = 1 },
-	{ XC_CALL_STRING("snap", &add_load_dup), .deprecated = 1 },
+	{ XC_SET_STRING_LIST("cartna", &private_cfg.load_list), .deprecated = 1 },
+	{ XC_SET_STRING_LIST("snap", &private_cfg.load_list), .deprecated = 1 },
 
 	/* Cassettes: */
 	{ XC_SET_STRING("tape-write", &private_cfg.tape_write) },
