@@ -173,7 +173,6 @@ static void set_machine(const char *name);
 static void set_pal(void);
 static void set_ntsc(void);
 static void set_cart(const char *name);
-static void type_command(char *string);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
 static void set_joystick_button(const char *spec);
@@ -1751,10 +1750,6 @@ static void set_joystick_button(const char *spec) {
 	free(spec_copy);
 }
 
-static void type_command(char *string) {
-	private_cfg.type_list = slist_append(private_cfg.type_list, xstrdup(string));
-}
-
 /* Enumeration lists used by configuration directives */
 
 static struct xconfig_enum tape_channel_mode_list[] = {
@@ -1913,7 +1908,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Keyboard: */
 	{ XC_SET_STRING("keymap", &xroar_cfg.keymap) },
 	{ XC_SET_BOOL("kbd-translate", &xroar_cfg.kbd_translate) },
-	{ XC_CALL_STRING("type", &type_command) },
+	{ XC_SET_STRING_LIST("type", &private_cfg.type_list) },
 
 	/* Joysticks: */
 	{ XC_CALL_STRING("joy", &set_joystick) },
