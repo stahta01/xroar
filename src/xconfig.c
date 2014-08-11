@@ -18,11 +18,13 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "slist.h"
 #include "xalloc.h"
 
 #include "logging.h"
@@ -109,6 +111,10 @@ static void set_option(struct xconfig_option const *option, char *arg) {
 				*(char **)option->dest.object = xstrdup(arg);
 			}
 			break;
+		case XCONFIG_STRING_LIST:
+			assert(!option->call);
+			*(struct slist **)option->dest.object = slist_append(*(struct slist **)option->dest.object, xstrdup(arg));
+			break;
 		case XCONFIG_NULL:
 			if (option->call)
 				option->dest.func_null();
@@ -161,10 +167,49 @@ static int unset_option(struct xconfig_option const *option) {
 			*(char **)option->dest.object = NULL;
 		}
 		return 0;
+	case XCONFIG_STRING_LIST:
+		assert(!option->call);
+		/* providing an argument to remove here might more sense, but
+		 * for now just remove the entire list: */
+		slist_free_full(*(struct slist **)option->dest.object, (slist_free_func)free);
+		*(struct slist **)option->dest.object = NULL;
+		return 0;
 	default:
 		break;
 	}
 	return -1;
+}
+
+enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
+				       const char *opt, char *arg) {
+	struct xconfig_option const *option = find_option(options, opt);
+	if (option == NULL) {
+		if (0 == strncmp(opt, "no-", 3)) {
+			option = find_option(options, opt + 3);
+			if (option && unset_option(option) == 0) {
+				return XCONFIG_OK;
+			}
+		}
+		LOG_ERROR("Unrecognised option `%s'\n", opt);
+		return XCONFIG_BAD_OPTION;
+	}
+	if (option->deprecated) {
+		LOG_WARN("Deprecated option `%s'\n", opt);
+	}
+	if (option->type == XCONFIG_BOOL ||
+	    option->type == XCONFIG_BOOL0 ||
+	    option->type == XCONFIG_INT0 ||
+	    option->type == XCONFIG_INT1 ||
+	    option->type == XCONFIG_NULL) {
+		set_option(option, NULL);
+		return XCONFIG_OK;
+	}
+	if (!arg) {
+		LOG_ERROR("Missing argument to `%s'\n", opt);
+		return XCONFIG_MISSING_ARG;
+	}
+	set_option(option, arg);
+	return XCONFIG_OK;
 }
 
 /* Simple parser: one directive per line, "option argument" */
@@ -214,7 +259,7 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	if (option->deprecated) {
 		LOG_WARN("Deprecated option `%s'\n", opt);
 	}
-	if (option->type == XCONFIG_STRING) {
+	if (option->type == XCONFIG_STRING || option->type == XCONFIG_STRING_LIST) {
 		/* preserve spaces */
 		arg = strtok(NULL, "\n\v\f\r");
 		if (arg) {
@@ -305,6 +350,9 @@ void xconfig_shutdown(struct xconfig_option const *options) {
 				free(*(char **)options[i].dest.object);
 				*(char **)options[i].dest.object = NULL;
 			}
+		} else if (options[i].type == XCONFIG_STRING_LIST) {
+			slist_free_full(*(struct slist **)options[i].dest.object, (slist_free_func)free);
+			*(struct slist **)options[i].dest.object = NULL;
 		}
 	}
 }

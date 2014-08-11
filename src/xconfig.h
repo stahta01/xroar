@@ -13,6 +13,7 @@
 #define XC_SET_INT1(o,d) .type = XCONFIG_INT1, .name = (o), .dest.object = (d)
 #define XC_SET_DOUBLE(o,d) .type = XCONFIG_DOUBLE, .name = (o), .dest.object = (d)
 #define XC_SET_STRING(o,d) .type = XCONFIG_STRING, .name = (o), .dest.object = (d)
+#define XC_SET_STRING_LIST(o,d) .type = XCONFIG_STRING_LIST, .name = (o), .dest.object = (d)
 #define XC_SET_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.object = (d)
 
 #define XC_CALL_BOOL(o,d) .type = XCONFIG_BOOL, .name = (o), .dest.func_bool = (d), .call = 1
@@ -44,6 +45,7 @@ enum xconfig_option_type {
 	XCONFIG_INT1,  /* sets an int to 1 */
 	XCONFIG_DOUBLE,
 	XCONFIG_STRING,
+	XCONFIG_STRING_LIST,
 	XCONFIG_NULL,
 	XCONFIG_ENUM,
 	XCONFIG_END
@@ -80,6 +82,9 @@ struct xconfig_enum {
 /* For error reporting: */
 extern char *xconfig_option;
 extern int xconfig_line_number;
+
+enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
+				       const char *opt, char *arg);
 
 enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 		const char *filename);
