@@ -37,6 +37,8 @@ profile-use: LDFLAGS += -fprofile-use
 
 ifeq ($(VERBOSE),)
 
+WARN = -Wall -W
+
 do_cc = @echo CC $(1); $(CC) -o $(1) $(2)
 do_cxx = @echo CXX $(1); $(CXX) -o $(1) $(2)
 do_objc = @echo OBJC $(1); $(OBJC) -o $(1) $(2)
@@ -51,6 +53,10 @@ do_makeinfo = @echo MAKEINFO $(1); $(MAKEINFO) -o $(1) $(2)
 do_texi2pdf = @echo TEXI2PDF $(1); $(TEXI2PDF) -o $(1) $(2)
 
 else
+
+WARN = -Wall -W -Wstrict-prototypes -Wpointer-arith -Wcast-align \
+	-Wcast-qual -Wshadow -Waggregate-return -Wnested-externs -Winline \
+	-Wwrite-strings -Wundef -Wmissing-prototypes -Wredundant-decls
 
 do_cc = $(CC) -o $(1) $(2)
 do_cxx = $(CXX) -o $(1) $(2)
