@@ -23,7 +23,7 @@ or made an assumption, and HAVE_BIG_ENDIAN will be defined accordingly.
 #ifndef __BIG_ENDIAN
 #define __BIG_ENDIAN    4321
 #endif
-#ifndef __BIG_ENDIAN
+#ifndef __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN 1234
 #endif
 
