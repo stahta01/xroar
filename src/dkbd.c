@@ -129,7 +129,7 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	/* Populate the unicode_to_dkey map */
 
 	// Clear table
-	for (int i = 0; i < ARRAY_N_ELEMENTS(map->unicode_to_dkey); i++) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(map->unicode_to_dkey); i++) {
 		map->unicode_to_dkey[i] = (struct dkey_chord){DSCAN_INVALID, 0};
 	}
 	// "1!" - "9)", ":*", ";+"

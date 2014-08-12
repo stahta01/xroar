@@ -128,11 +128,9 @@ void vdisk_destroy(struct vdisk *disk) {
 }
 
 struct vdisk *vdisk_load(const char *filename) {
-	int filetype;
-	int i;
 	if (filename == NULL) return NULL;
-	filetype = xroar_filetype_by_ext(filename);
-	for (i = 0; i < ARRAY_N_ELEMENTS(dispatch); i++) {
+	enum xroar_filetype filetype = xroar_filetype_by_ext(filename);
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(dispatch); i++) {
 		if (dispatch[i].filetype == filetype) {
 			return dispatch[i].load_func(filename);
 		}

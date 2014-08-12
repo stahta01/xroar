@@ -274,6 +274,7 @@ static void *write_buffer(void *buffer) {
 
 static void callback(void *userdata, Uint8 *stream, int len) {
 	(void)userdata;  /* unused */
+	(void)len;  /* unused */
 	if (shutting_down)
 		return;
 	SDL_LockMutex(fragment_mutex);
@@ -295,6 +296,7 @@ static void callback(void *userdata, Uint8 *stream, int len) {
 
 static void callback_1(void *userdata, Uint8 *stream, int len) {
 	(void)userdata;  /* unused */
+	(void)len;  /* unused */
 	if (shutting_down)
 		return;
 	SDL_LockMutex(fragment_mutex);

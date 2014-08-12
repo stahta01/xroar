@@ -188,7 +188,7 @@ static int sndfile_pulse_in(struct tape *t, int *pulse_width) {
 		return -1;
 	t->offset++;
 	int sign = (sample < 0);
-	int length = sndfile->cycles_per_frame;
+	unsigned length = sndfile->cycles_per_frame;
 	while (read_sample(sndfile, &sample)) {
 		if ((sample < 0) != sign) {
 			sndfile->cursor--;

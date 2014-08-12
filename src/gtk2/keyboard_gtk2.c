@@ -197,11 +197,11 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 		last_unicode[i] = 0;
 
 	/* First clear the table and map obvious keys */
-	for (int i = 0; i < G_N_ELEMENTS(keyval_to_dkey); i++) {
+	for (unsigned i = 0; i < G_N_ELEMENTS(keyval_to_dkey); i++) {
 		keyval_to_dkey[i] = DSCAN_INVALID;
 		keyval_priority[i] = 0;
 	}
-	for (int i = 0; i < G_N_ELEMENTS(keyval_dkey_default); i++) {
+	for (unsigned i = 0; i < G_N_ELEMENTS(keyval_dkey_default); i++) {
 		keyval_to_dkey[keyval_index(keyval_dkey_default[i].sym)] = keyval_dkey_default[i].dkey;
 		keyval_priority[keyval_index(keyval_dkey_default[i].sym)] = keyval_dkey_default[i].priority;
 	}
@@ -231,13 +231,13 @@ static _Bool init(void) {
 	struct keymap *selected_keymap = &keymaps[0];
 	if (keymap_option) {
 		if (0 == strcmp(keymap_option, "help")) {
-			for (int i = 0; i < G_N_ELEMENTS(keymaps); i++) {
+			for (unsigned i = 0; i < G_N_ELEMENTS(keymaps); i++) {
 				if (keymaps[i].description)
 					printf("\t%-10s %s\n", keymaps[i].name, keymaps[i].description);
 			}
 			exit(EXIT_SUCCESS);
 		}
-		for (int i = 0; i < G_N_ELEMENTS(keymaps); i++) {
+		for (unsigned i = 0; i < G_N_ELEMENTS(keymaps); i++) {
 			if (0 == strcmp(keymap_option, keymaps[i].name)) {
 				selected_keymap = &keymaps[i];
 				LOG_DEBUG(1, "\tSelecting '%s' keymap\n", keymap_option);

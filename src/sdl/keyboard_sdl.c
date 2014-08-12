@@ -153,7 +153,7 @@ static void map_keyboard(struct keymap *keymap) {
 		sym_to_dkey[i] = DSCAN_INVALID;
 		sym_priority[i] = 0;
 	}
-	for (int i = 0; i < ARRAY_N_ELEMENTS(sym_dkey_default); i++) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(sym_dkey_default); i++) {
 		sym_to_dkey[sym_dkey_default[i].sym] = sym_dkey_default[i].dkey;
 		sym_priority[sym_dkey_default[i].sym] = sym_dkey_default[i].priority;
 	}
@@ -183,13 +183,13 @@ static _Bool init(void) {
 	struct keymap *selected_keymap = &keymaps[0];
 	if (keymap_option) {
 		if (0 == strcmp(keymap_option, "help")) {
-			for (int i = 0; i < ARRAY_N_ELEMENTS(keymaps); i++) {
+			for (unsigned i = 0; i < ARRAY_N_ELEMENTS(keymaps); i++) {
 				if (keymaps[i].description)
 					printf("\t%-10s %s\n", keymaps[i].name, keymaps[i].description);
 			}
 			exit(EXIT_SUCCESS);
 		}
-		for (int i = 0; i < ARRAY_N_ELEMENTS(keymaps); i++) {
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(keymaps); i++) {
 			if (0 == strcmp(keymap_option, keymaps[i].name)) {
 				selected_keymap = &keymaps[i];
 				LOG_DEBUG(1, "\tSelecting '%s' keymap\n",keymap_option);

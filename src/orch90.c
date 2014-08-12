@@ -26,6 +26,7 @@
 
 #include "cart.h"
 #include "logging.h"
+#include "orch90.h"
 #include "sound.h"
 #include "xroar.h"
 

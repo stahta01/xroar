@@ -136,7 +136,7 @@ static uint8_t const bit_out_waveform[] = {
 static void tape_bit_out(struct tape *t, int bit) {
 	if (!t) return;
 	int sample_length = bit ? 176 : 352;
-	for (int i = 0; i < ARRAY_N_ELEMENTS(bit_out_waveform); i++) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(bit_out_waveform); i++) {
 		tape_sample_out(t, bit_out_waveform[i], sample_length);
 	}
 	rewrite_bit_count = (rewrite_bit_count + 1) & 7;

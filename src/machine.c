@@ -1326,7 +1326,7 @@ static void initialise_ram(void) {
 
 /**************************************************************************/
 
-int machine_load_rom(const char *path, uint8_t *dest, size_t max_size) {
+int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 	FILE *fd;
 
 	if (path == NULL)

@@ -47,7 +47,7 @@ unsigned keyboard_column[9];
 unsigned keyboard_row[9];
 
 static struct slist *basic_command_list = NULL;
-static const uint8_t *basic_command = NULL;
+static const char *basic_command = NULL;
 
 static void type_command(struct MC6809 *cpu);
 
@@ -96,7 +96,7 @@ void keyboard_set_chord_mode(enum keyboard_chord_mode mode) {
 void keyboard_read_matrix(struct keyboard_state *state) {
 	/* Ghosting: combine columns that share any pressed rows.  Repeat until
 	 * no change in the row mask. */
-	int old;
+	unsigned old;
 	do {
 		old = state->row_sink;
 		for (int i = 0; i < 8; i++) {
@@ -256,7 +256,7 @@ static void type_command(struct MC6809 *cpu) {
 	machine_op_rts(cpu);
 }
 
-void keyboard_queue_basic(const uint8_t *s) {
+void keyboard_queue_basic(const char *s) {
 	char *data = NULL;
 	bp_remove_list(basic_command_breakpoint);
 	if (s) {

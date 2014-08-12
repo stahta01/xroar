@@ -83,8 +83,6 @@ enum {
 
 static int num_machines = 0;
 static int num_cartridges = 0;
-static int is_kbd_translate = 0;
-static _Bool is_fast_sound = 0;
 
 static struct {
 	const char *name;
@@ -291,12 +289,12 @@ static void setup_machine_menu(void) {
 	AppendMenu(machine_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(machine_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Right Joystick");
-	for (int i = 0; i < NUM_JOYSTICK_NAMES; i++) {
+	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAG_JOY_RIGHT | i, joystick_names[i].description);
 	}
 	submenu = CreatePopupMenu();
 	AppendMenu(machine_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Left Joystick");
-	for (int i = 0; i < NUM_JOYSTICK_NAMES; i++) {
+	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAG_JOY_LEFT | i, joystick_names[i].description);
 	}
 	AppendMenu(machine_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_JOY_SWAP, "Swap Joysticks");
@@ -494,9 +492,9 @@ static void keymap_changed_cb(int map) {
 
 static void joystick_changed_cb(int port, const char *name) {
 	int tag_base = (port == 0) ? TAG_JOY_RIGHT : TAG_JOY_LEFT;
-	int sel = 0;
+	unsigned sel = 0;
 	if (name) {
-		for (int i = 1; i < NUM_JOYSTICK_NAMES; i++)
+		for (unsigned i = 1; i < NUM_JOYSTICK_NAMES; i++)
 			if (0 == strcmp(name, joystick_names[i].name)) {
 				sel = i;
 				break;

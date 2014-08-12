@@ -204,9 +204,9 @@ static void select_interface(char **spec) {
 		if_name = strsep(spec, ":");
 	}
 	if (mod_name) {
-		struct joystick_module *m = (struct joystick_module *)module_select_by_arg((struct module **)ui_module->joystick_module_list, mod_name);
+		struct joystick_module *m = (struct joystick_module *)module_select_by_arg((struct module * const *)ui_module->joystick_module_list, mod_name);
 		if (!m) {
-			m = (struct joystick_module *)module_select_by_arg((struct module **)joystick_module_list, mod_name);
+			m = (struct joystick_module *)module_select_by_arg((struct module * const *)joystick_module_list, mod_name);
 		}
 		selected_interface = find_if_in_mod(m, if_name);
 	} else if (if_name) {

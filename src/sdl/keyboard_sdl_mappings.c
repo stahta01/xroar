@@ -34,395 +34,395 @@
 /* ie, Irish, QWERTY */
 /* usa, USA, QWERTY */
 static struct sym_dkey_mapping keymap_uk[] = {
-	{ SDLK_MINUS, DSCAN_COLON },
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_LEFTBRACKET, DSCAN_AT },
-	{ SDLK_SEMICOLON, DSCAN_SEMICOLON },
-	{ SDLK_BACKQUOTE, DSCAN_CLEAR, 1 },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_SLASH, DSCAN_SLASH },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_LEFTBRACKET, .dkey = DSCAN_AT },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_SLASH, .dkey = DSCAN_SLASH },
 };
 
 /* be, Belgian, AZERTY */
 static struct sym_dkey_mapping keymap_be[] = {
-	{ SDLK_AMPERSAND, DSCAN_1 },
-	{ SDLK_QUOTEDBL, DSCAN_3 },
-	{ SDLK_QUOTE, DSCAN_4 },
-	{ SDLK_LEFTPAREN, DSCAN_5 },
-	{ SDLK_EXCLAIM, DSCAN_8 },
-	{ SDLK_RIGHTPAREN, DSCAN_COLON },
-	{ SDLK_MINUS, DSCAN_MINUS },
-	{ SDLK_a, DSCAN_Q },
-	{ SDLK_z, DSCAN_W },
-	{ SDLK_CARET, DSCAN_AT },
-	{ SDLK_q, DSCAN_A },
-	{ SDLK_m, DSCAN_SEMICOLON },
-	{ SDLK_w, DSCAN_Z },
-	{ SDLK_COMMA, DSCAN_M },
-	{ SDLK_SEMICOLON, DSCAN_COMMA },
-	{ SDLK_COLON, DSCAN_FULL_STOP },
-	{ SDLK_EQUALS, DSCAN_SLASH },
+	{ .sym = SDLK_AMPERSAND, .dkey = DSCAN_1 },
+	{ .sym = SDLK_QUOTEDBL, .dkey = DSCAN_3 },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_4 },
+	{ .sym = SDLK_LEFTPAREN, .dkey = DSCAN_5 },
+	{ .sym = SDLK_EXCLAIM, .dkey = DSCAN_8 },
+	{ .sym = SDLK_RIGHTPAREN, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_a, .dkey = DSCAN_Q },
+	{ .sym = SDLK_z, .dkey = DSCAN_W },
+	{ .sym = SDLK_CARET, .dkey = DSCAN_AT },
+	{ .sym = SDLK_q, .dkey = DSCAN_A },
+	{ .sym = SDLK_m, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_w, .dkey = DSCAN_Z },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_M },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_COLON, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_WORLD_73, DSCAN_2 }, // é
-	{ SDLK_WORLD_7, DSCAN_6 }, // §
-	{ SDLK_WORLD_72, DSCAN_7 }, // è
-	{ SDLK_WORLD_71, DSCAN_9 }, // ç
-	{ SDLK_WORLD_64, DSCAN_0 }, // à
-	{ SDLK_WORLD_18, DSCAN_CLEAR, 1 }, // ²
+	{ .sym = SDLK_WORLD_73, .dkey = DSCAN_2 }, // é
+	{ .sym = SDLK_WORLD_7, .dkey = DSCAN_6 }, // §
+	{ .sym = SDLK_WORLD_72, .dkey = DSCAN_7 }, // è
+	{ .sym = SDLK_WORLD_71, .dkey = DSCAN_9 }, // ç
+	{ .sym = SDLK_WORLD_64, .dkey = DSCAN_0 }, // à
+	{ .sym = SDLK_WORLD_18, .dkey = DSCAN_CLEAR, .priority = 1 }, // ²
 #else
-	{ SDLK_WORLD_0, DSCAN_2 }, // é
-	{ SDLK_WORLD_1, DSCAN_6 }, // §
-	{ SDLK_WORLD_3, DSCAN_7 }, // è
-	{ SDLK_WORLD_2, DSCAN_9 }, // ç
-	{ SDLK_WORLD_4, DSCAN_0 }, // à
-	{ SDLK_BACKQUOTE, DSCAN_CLEAR, 1 },
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_2 }, // é
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_6 }, // §
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_7 }, // è
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_9 }, // ç
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_0 }, // à
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_CLEAR, .priority = 1 },
 #endif
 };
 
 /* de, German, QWERTZ */
 static struct sym_dkey_mapping keymap_de[] = {
-	{ SDLK_z, DSCAN_Y },
-	{ SDLK_y, DSCAN_Z },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_z, .dkey = DSCAN_Y },
+	{ .sym = SDLK_y, .dkey = DSCAN_Z },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_WORLD_63, DSCAN_COLON }, // ß
-	{ SDLK_COMPOSE, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_92, DSCAN_AT }, // ü
-	{ SDLK_WORLD_86, DSCAN_SEMICOLON }, // ö
-	{ SDLK_CARET, DSCAN_CLEAR, 1 }, // dead caret
+	{ .sym = SDLK_WORLD_63, .dkey = DSCAN_COLON }, // ß
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_92, .dkey = DSCAN_AT }, // ü
+	{ .sym = SDLK_WORLD_86, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_CARET, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead caret
 #else
-	{ SDLK_WORLD_1, DSCAN_COLON }, // ß
-	{ SDLK_WORLD_0, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_2, DSCAN_AT }, // ü
-	{ SDLK_WORLD_4, DSCAN_SEMICOLON }, // ö
-	{ SDLK_WORLD_3, DSCAN_CLEAR, 1 }, // ä
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_COLON }, // ß
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_AT }, // ü
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_CLEAR, .priority = 1 }, // ä
 #endif
 };
 
 /* dk, Danish, QWERTY */
 static struct sym_dkey_mapping keymap_dk[] = {
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_COMPOSE, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_69, DSCAN_AT }, // å
-	{ SDLK_WORLD_70, DSCAN_SEMICOLON }, // æ
-	{ SDLK_WORLD_29, DSCAN_CLEAR, 1 }, // ½
-	{ SDLK_WORLD_88, DSCAN_CLEAR, 1 }, // ø
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_69, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_70, .dkey = DSCAN_SEMICOLON }, // æ
+	{ .sym = SDLK_WORLD_29, .dkey = DSCAN_CLEAR, .priority = 1 }, // ½
+	{ .sym = SDLK_WORLD_88, .dkey = DSCAN_CLEAR, .priority = 1 }, // ø
 #else
-	{ SDLK_WORLD_0, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_2, DSCAN_AT }, // å
-	{ SDLK_WORLD_4, DSCAN_SEMICOLON }, // æ
-	{ SDLK_WORLD_3, DSCAN_CLEAR, 1 }, // ø
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_SEMICOLON }, // æ
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_CLEAR, .priority = 1 }, // ø
 #endif
 };
 
 /* es, Spanish, QWERTY */
 static struct sym_dkey_mapping keymap_es[] = {
-	{ SDLK_QUOTE, DSCAN_COLON },
-	{ SDLK_WORLD_1, DSCAN_MINUS },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_COMPOSE, DSCAN_AT }, // dead grave
-	{ SDLK_WORLD_81, DSCAN_SEMICOLON }, // ñ
-	{ SDLK_WORLD_26, DSCAN_CLEAR, 1 }, // º
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_AT }, // dead grave
+	{ .sym = SDLK_WORLD_81, .dkey = DSCAN_SEMICOLON }, // ñ
+	{ .sym = SDLK_WORLD_26, .dkey = DSCAN_CLEAR, .priority = 1 }, // º
 #else
-	{ SDLK_BACKQUOTE, DSCAN_AT },
-	{ SDLK_WORLD_3, DSCAN_SEMICOLON },
-	{ SDLK_WORLD_2, DSCAN_CLEAR, 1 }, // dead acute
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_AT },
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead acute
 #endif
 };
 
 #ifdef HAVE_COCOA
 /* es, Spanish, QWERTY (Apple) */
 static struct sym_dkey_mapping keymap_es_apple[] = {
-	{ SDLK_MINUS, DSCAN_COLON },
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_WORLD_0, DSCAN_AT }, // dead acute
-	{ SDLK_WORLD_1, DSCAN_SEMICOLON }, // ñ
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_AT }, // dead acute
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_SEMICOLON }, // ñ
 	// No obvious pick for CLEAR - use Home
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_WORLD_2, DSCAN_SLASH }, // ç
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_SLASH }, // ç
 };
 #endif
 
 /* fi, Finnish, QWERTY */
 static struct sym_dkey_mapping keymap_fi[] = {
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_COMPOSE, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_69, DSCAN_AT }, // å
-	{ SDLK_WORLD_86, DSCAN_SEMICOLON }, // ö
-	{ SDLK_WORLD_7, DSCAN_CLEAR, 1 }, // §
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_69, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_86, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_WORLD_7, .dkey = DSCAN_CLEAR, .priority = 1 }, // §
 #else
-	{ SDLK_WORLD_1, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_3, DSCAN_AT }, // å
-	{ SDLK_WORLD_5, DSCAN_SEMICOLON }, // ö
-	{ SDLK_WORLD_4, DSCAN_CLEAR, 1 }, // ä
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_5, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_CLEAR, .priority = 1 }, // ä
 #endif
 };
 
 /* fr, French, AZERTY */
 static struct sym_dkey_mapping keymap_fr[] = {
-	{ SDLK_AMPERSAND, DSCAN_1 },
-	{ SDLK_QUOTEDBL, DSCAN_3 },
-	{ SDLK_QUOTE, DSCAN_4 },
-	{ SDLK_LEFTPAREN, DSCAN_5 },
-	{ SDLK_RIGHTPAREN, DSCAN_COLON },
-	{ SDLK_a, DSCAN_Q },
-	{ SDLK_z, DSCAN_W },
-	{ SDLK_CARET, DSCAN_AT },
-	{ SDLK_q, DSCAN_A },
-	{ SDLK_m, DSCAN_SEMICOLON },
-	{ SDLK_w, DSCAN_Z },
-	{ SDLK_COMMA, DSCAN_M },
-	{ SDLK_SEMICOLON, DSCAN_COMMA },
-	{ SDLK_COLON, DSCAN_FULL_STOP },
+	{ .sym = SDLK_AMPERSAND, .dkey = DSCAN_1 },
+	{ .sym = SDLK_QUOTEDBL, .dkey = DSCAN_3 },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_4 },
+	{ .sym = SDLK_LEFTPAREN, .dkey = DSCAN_5 },
+	{ .sym = SDLK_RIGHTPAREN, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_a, .dkey = DSCAN_Q },
+	{ .sym = SDLK_z, .dkey = DSCAN_W },
+	{ .sym = SDLK_CARET, .dkey = DSCAN_AT },
+	{ .sym = SDLK_q, .dkey = DSCAN_A },
+	{ .sym = SDLK_m, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_w, .dkey = DSCAN_Z },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_M },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_COLON, .dkey = DSCAN_FULL_STOP },
 #ifndef HAVE_COCOA
-	{ SDLK_WORLD_73, DSCAN_2 }, // é
-	{ SDLK_MINUS, DSCAN_6 },
-	{ SDLK_WORLD_72, DSCAN_7 }, // è
-	{ SDLK_UNDERSCORE, DSCAN_8 },
-	{ SDLK_WORLD_71, DSCAN_9 }, // ç
-	{ SDLK_WORLD_64, DSCAN_0 }, // à
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_WORLD_18, DSCAN_CLEAR, 1 }, // ²
-	{ SDLK_EXCLAIM, DSCAN_SLASH },
+	{ .sym = SDLK_WORLD_73, .dkey = DSCAN_2 }, // é
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_6 },
+	{ .sym = SDLK_WORLD_72, .dkey = DSCAN_7 }, // è
+	{ .sym = SDLK_UNDERSCORE, .dkey = DSCAN_8 },
+	{ .sym = SDLK_WORLD_71, .dkey = DSCAN_9 }, // ç
+	{ .sym = SDLK_WORLD_64, .dkey = DSCAN_0 }, // à
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_WORLD_18, .dkey = DSCAN_CLEAR, .priority = 1 }, // ²
+	{ .sym = SDLK_EXCLAIM, .dkey = DSCAN_SLASH },
 #else
-	{ SDLK_WORLD_0, DSCAN_2 }, // é
-	{ SDLK_WORLD_1, DSCAN_6 }, // §
-	{ SDLK_WORLD_3, DSCAN_7 }, // è
-	{ SDLK_EXCLAIM, DSCAN_8 },
-	{ SDLK_WORLD_2, DSCAN_9 }, // ç
-	{ SDLK_WORLD_4, DSCAN_0 }, // à
-	{ SDLK_MINUS, DSCAN_MINUS },
-	{ SDLK_BACKQUOTE, DSCAN_CLEAR, 1 },
-	{ SDLK_EQUALS, DSCAN_SLASH },
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_2 }, // é
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_6 }, // §
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_7 }, // è
+	{ .sym = SDLK_EXCLAIM, .dkey = DSCAN_8 },
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_9 }, // ç
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_0 }, // à
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_SLASH },
 #endif
 };
 
 /* fr_CA, Canadian French, QWERTY */
 static struct sym_dkey_mapping keymap_fr_CA[] = {
-	{ SDLK_MINUS, DSCAN_COLON },
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_CARET, DSCAN_AT },
-	{ SDLK_SEMICOLON, DSCAN_SEMICOLON },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_CARET, .dkey = DSCAN_AT },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
 #ifndef HAVE_COCOA
-	{ SDLK_COMPOSE, DSCAN_CLEAR, 1 }, // various
-	{ SDLK_WORLD_73, DSCAN_SLASH }, // é
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_CLEAR, .priority = 1 }, // various
+	{ .sym = SDLK_WORLD_73, .dkey = DSCAN_SLASH }, // é
 #else
-	{ SDLK_WORLD_4, DSCAN_CLEAR, 1 }, // ù
-	{ SDLK_WORLD_3, DSCAN_SLASH }, // é
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_CLEAR, .priority = 1 }, // ù
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_SLASH }, // é
 #endif
 };
 
 /* is, Icelandic, QWERTY */
 static struct sym_dkey_mapping keymap_is[] = {
-	{ SDLK_MINUS, DSCAN_MINUS },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
 #ifndef HAVE_COCOA
-	{ SDLK_WORLD_86, DSCAN_COLON }, // ö
-	{ SDLK_WORLD_80, DSCAN_AT }, // ð
-	{ SDLK_WORLD_70, DSCAN_SEMICOLON }, // æ
-	{ SDLK_COMPOSE, DSCAN_CLEAR, 1 }, // dead ring
-	{ SDLK_WORLD_94, DSCAN_SLASH }, // þ
+	{ .sym = SDLK_WORLD_86, .dkey = DSCAN_COLON }, // ö
+	{ .sym = SDLK_WORLD_80, .dkey = DSCAN_AT }, // ð
+	{ .sym = SDLK_WORLD_70, .dkey = DSCAN_SEMICOLON }, // æ
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead ring
+	{ .sym = SDLK_WORLD_94, .dkey = DSCAN_SLASH }, // þ
 #else
-	{ SDLK_WORLD_1, DSCAN_COLON }, // ö
-	{ SDLK_WORLD_2, DSCAN_AT }, // ð
-	{ SDLK_WORLD_4, DSCAN_SEMICOLON }, // æ
-	{ SDLK_WORLD_3, DSCAN_CLEAR, 1 }, // dead acute
-	{ SDLK_WORLD_5, DSCAN_SLASH }, // þ
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_COLON }, // ö
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_AT }, // ð
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_SEMICOLON }, // æ
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead acute
+	{ .sym = SDLK_WORLD_5, .dkey = DSCAN_SLASH }, // þ
 #endif
 };
 
 /* it, Italian, QWERTY */
 static struct sym_dkey_mapping keymap_it[] = {
-	{ SDLK_QUOTE, DSCAN_COLON },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_WORLD_76, DSCAN_MINUS }, // ì
-	{ SDLK_WORLD_72, DSCAN_AT }, // è
-	{ SDLK_WORLD_82, DSCAN_SEMICOLON }, // ò
-	{ SDLK_WORLD_89, DSCAN_CLEAR, 1 }, // ù
+	{ .sym = SDLK_WORLD_76, .dkey = DSCAN_MINUS }, // ì
+	{ .sym = SDLK_WORLD_72, .dkey = DSCAN_AT }, // è
+	{ .sym = SDLK_WORLD_82, .dkey = DSCAN_SEMICOLON }, // ò
+	{ .sym = SDLK_WORLD_89, .dkey = DSCAN_CLEAR, .priority = 1 }, // ù
 #else
-	{ SDLK_WORLD_0, DSCAN_MINUS }, // ì
-	{ SDLK_WORLD_1, DSCAN_AT }, // è
-	{ SDLK_WORLD_3, DSCAN_SEMICOLON }, // ò
-	{ SDLK_WORLD_4, DSCAN_CLEAR, 1 }, // ù
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_MINUS }, // ì
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_AT }, // è
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_SEMICOLON }, // ò
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_CLEAR, .priority = 1 }, // ù
 #endif
 };
 
 #ifdef HAVE_COCOA
 /* it, Italian, QZERTY (Apple) */
 static struct sym_dkey_mapping keymap_it_apple[] = {
-	{ SDLK_AMPERSAND, DSCAN_1 },
-	{ SDLK_QUOTEDBL, DSCAN_2 },
-	{ SDLK_QUOTE, DSCAN_3 },
-	{ SDLK_LEFTPAREN, DSCAN_4 },
-	{ SDLK_WORLD_1, DSCAN_5 }, // ç
-	{ SDLK_WORLD_0, DSCAN_6 }, // è
-	{ SDLK_RIGHTPAREN, DSCAN_7 },
-	{ SDLK_WORLD_3, DSCAN_8 }, // £
-	{ SDLK_WORLD_2, DSCAN_9 }, // à
-	{ SDLK_WORLD_4, DSCAN_0 }, // é
-	{ SDLK_MINUS, DSCAN_COLON },
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_z, DSCAN_W },
-	{ SDLK_WORLD_5, DSCAN_AT }, // ì
-	{ SDLK_m, DSCAN_SEMICOLON },
-	{ SDLK_WORLD_7, DSCAN_CLEAR, 1 }, // §
-	{ SDLK_w, DSCAN_Z },
-	{ SDLK_COMMA, DSCAN_M },
-	{ SDLK_SEMICOLON, DSCAN_COMMA },
-	{ SDLK_COLON, DSCAN_FULL_STOP },
-	{ SDLK_WORLD_8, DSCAN_SLASH }, // ò
+	{ .sym = SDLK_AMPERSAND, .dkey = DSCAN_1 },
+	{ .sym = SDLK_QUOTEDBL, .dkey = DSCAN_2 },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_3 },
+	{ .sym = SDLK_LEFTPAREN, .dkey = DSCAN_4 },
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_5 }, // ç
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_6 }, // è
+	{ .sym = SDLK_RIGHTPAREN, .dkey = DSCAN_7 },
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_8 }, // £
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_9 }, // à
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_0 }, // é
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_z, .dkey = DSCAN_W },
+	{ .sym = SDLK_WORLD_5, .dkey = DSCAN_AT }, // ì
+	{ .sym = SDLK_m, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_WORLD_7, .dkey = DSCAN_CLEAR, .priority = 1 }, // §
+	{ .sym = SDLK_w, .dkey = DSCAN_Z },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_M },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_COLON, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_WORLD_8, .dkey = DSCAN_SLASH }, // ò
 };
 #endif
 
 /* nl, Dutch, QWERTY */
 static struct sym_dkey_mapping keymap_nl[] = {
 #ifndef HAVE_COCOA
-	{ SDLK_SLASH, DSCAN_COLON },
-	{ SDLK_WORLD_16, DSCAN_MINUS }, // °
-	{ SDLK_COMPOSE, DSCAN_AT }, // dead diaeresis
-	{ SDLK_PLUS, DSCAN_SEMICOLON },
+	{ .sym = SDLK_SLASH, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_WORLD_16, .dkey = DSCAN_MINUS }, // °
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_AT }, // dead diaeresis
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_SEMICOLON },
 	// No obvious pick for CLEAR - use Home
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #else
-	{ SDLK_MINUS, DSCAN_COLON },
-	{ SDLK_EQUALS, DSCAN_MINUS },
-	{ SDLK_LEFTBRACKET, DSCAN_AT },
-	{ SDLK_SEMICOLON, DSCAN_SEMICOLON },
-	{ SDLK_BACKQUOTE, DSCAN_CLEAR, 1 },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_SLASH, DSCAN_SLASH },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_EQUALS, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_LEFTBRACKET, .dkey = DSCAN_AT },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_SLASH, .dkey = DSCAN_SLASH },
 #endif
 };
 
 /* no, Norwegian, QWERTY */
 static struct sym_dkey_mapping keymap_no[] = {
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #ifndef HAVE_COCOA
-	{ SDLK_BACKSLASH, DSCAN_MINUS },
-	{ SDLK_WORLD_69, DSCAN_AT }, // å
-	{ SDLK_WORLD_88, DSCAN_SEMICOLON }, // ø
-	{ SDLK_WORLD_70, DSCAN_CLEAR, 1 }, // æ
-	{ SDLK_COMPOSE, DSCAN_CLEAR, 1 }, // dead diaeresis
+	{ .sym = SDLK_BACKSLASH, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_WORLD_69, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_88, .dkey = DSCAN_SEMICOLON }, // ø
+	{ .sym = SDLK_WORLD_70, .dkey = DSCAN_CLEAR, .priority = 1 }, // æ
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead diaeresis
 #else
-	{ SDLK_WORLD_0, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_2, DSCAN_AT }, // å
-	{ SDLK_WORLD_4, DSCAN_SEMICOLON }, // æ
-	{ SDLK_WORLD_3, DSCAN_CLEAR, 1 }, // ø
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_SEMICOLON }, // æ
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_CLEAR, .priority = 1 }, // ø
 #endif
 };
 
 /* pl, Polish, QWERTZ */
 static struct sym_dkey_mapping keymap_pl[] = {
 #ifndef HAVE_COCOA
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_QUOTE, DSCAN_MINUS },
-	{ SDLK_WORLD_31, DSCAN_AT }, // ż
-	{ SDLK_z, DSCAN_Y },
-	{ SDLK_WORLD_19, DSCAN_SEMICOLON }, // ł
-	{ SDLK_WORLD_95, DSCAN_CLEAR, 1 }, // ˙
-	{ SDLK_y, DSCAN_Z },
-	{ SDLK_PERIOD, DSCAN_COMMA },
-	{ SDLK_COMMA, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_WORLD_31, .dkey = DSCAN_AT }, // ż
+	{ .sym = SDLK_z, .dkey = DSCAN_Y },
+	{ .sym = SDLK_WORLD_19, .dkey = DSCAN_SEMICOLON }, // ł
+	{ .sym = SDLK_WORLD_95, .dkey = DSCAN_CLEAR, .priority = 1 }, // ˙
+	{ .sym = SDLK_y, .dkey = DSCAN_Z },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #else
-	{ SDLK_WORLD_0, DSCAN_COLON }, // ż
-	{ SDLK_LEFTBRACKET, DSCAN_MINUS },
-	{ SDLK_WORLD_1, DSCAN_AT }, // ó
-	{ SDLK_z, DSCAN_Y },
-	{ SDLK_WORLD_3, DSCAN_SEMICOLON }, // ł
-	{ SDLK_WORLD_2, DSCAN_CLEAR, 1 }, // ą
-	{ SDLK_y, DSCAN_Z },
-	{ SDLK_PERIOD, DSCAN_COMMA },
-	{ SDLK_COMMA, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_WORLD_0, .dkey = DSCAN_COLON }, // ż
+	{ .sym = SDLK_LEFTBRACKET, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_AT }, // ó
+	{ .sym = SDLK_z, .dkey = DSCAN_Y },
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_SEMICOLON }, // ł
+	{ .sym = SDLK_WORLD_2, .dkey = DSCAN_CLEAR, .priority = 1 }, // ą
+	{ .sym = SDLK_y, .dkey = DSCAN_Z },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #endif
 };
 
 /* se, Swedish, QWERTY */
 static struct sym_dkey_mapping keymap_se[] = {
 #ifndef HAVE_COCOA
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_COMPOSE, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_69, DSCAN_AT }, // å
-	{ SDLK_WORLD_86, DSCAN_SEMICOLON }, // ö
-	{ SDLK_WORLD_7, DSCAN_CLEAR, 1 }, // §
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_COMPOSE, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_69, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_86, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_WORLD_7, .dkey = DSCAN_CLEAR, .priority = 1 }, // §
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #else
-	{ SDLK_PLUS, DSCAN_COLON },
-	{ SDLK_WORLD_1, DSCAN_MINUS }, // dead acute
-	{ SDLK_WORLD_3, DSCAN_AT }, // å
-	{ SDLK_WORLD_5, DSCAN_SEMICOLON }, // ö
-	{ SDLK_WORLD_4, DSCAN_CLEAR, 1 }, // ä
-	{ SDLK_COMMA, DSCAN_COMMA },
-	{ SDLK_PERIOD, DSCAN_FULL_STOP },
-	{ SDLK_MINUS, DSCAN_SLASH },
+	{ .sym = SDLK_PLUS, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_WORLD_1, .dkey = DSCAN_MINUS }, // dead acute
+	{ .sym = SDLK_WORLD_3, .dkey = DSCAN_AT }, // å
+	{ .sym = SDLK_WORLD_5, .dkey = DSCAN_SEMICOLON }, // ö
+	{ .sym = SDLK_WORLD_4, .dkey = DSCAN_CLEAR, .priority = 1 }, // ä
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_MINUS, .dkey = DSCAN_SLASH },
 #endif
 };
 
 /* DVORAK */
 static struct sym_dkey_mapping keymap_dvorak[] = {
-	{ SDLK_LEFTBRACKET, DSCAN_COLON },
-	{ SDLK_RIGHTBRACKET, DSCAN_MINUS },
-	{ SDLK_QUOTE, DSCAN_Q },
-	{ SDLK_COMMA, DSCAN_W },
-	{ SDLK_PERIOD, DSCAN_E },
-	{ SDLK_p, DSCAN_R },
-	{ SDLK_y, DSCAN_T },
-	{ SDLK_f, DSCAN_Y },
-	{ SDLK_g, DSCAN_U },
-	{ SDLK_c, DSCAN_I },
-	{ SDLK_r, DSCAN_O },
-	{ SDLK_l, DSCAN_P },
-	{ SDLK_SLASH, DSCAN_AT },
-	{ SDLK_a, DSCAN_A },
-	{ SDLK_o, DSCAN_S },
-	{ SDLK_e, DSCAN_D },
-	{ SDLK_u, DSCAN_F },
-	{ SDLK_i, DSCAN_G },
-	{ SDLK_d, DSCAN_H },
-	{ SDLK_h, DSCAN_J },
-	{ SDLK_t, DSCAN_K },
-	{ SDLK_n, DSCAN_L },
-	{ SDLK_s, DSCAN_SEMICOLON },
-	{ SDLK_BACKQUOTE, DSCAN_CLEAR, 1 },
-	{ SDLK_SEMICOLON, DSCAN_Z },
-	{ SDLK_q, DSCAN_X },
-	{ SDLK_j, DSCAN_C },
-	{ SDLK_k, DSCAN_V },
-	{ SDLK_x, DSCAN_B },
-	{ SDLK_b, DSCAN_N },
-	{ SDLK_m, DSCAN_M },
-	{ SDLK_w, DSCAN_COMMA },
-	{ SDLK_v, DSCAN_FULL_STOP },
-	{ SDLK_z, DSCAN_SLASH },
+	{ .sym = SDLK_LEFTBRACKET, .dkey = DSCAN_COLON },
+	{ .sym = SDLK_RIGHTBRACKET, .dkey = DSCAN_MINUS },
+	{ .sym = SDLK_QUOTE, .dkey = DSCAN_Q },
+	{ .sym = SDLK_COMMA, .dkey = DSCAN_W },
+	{ .sym = SDLK_PERIOD, .dkey = DSCAN_E },
+	{ .sym = SDLK_p, .dkey = DSCAN_R },
+	{ .sym = SDLK_y, .dkey = DSCAN_T },
+	{ .sym = SDLK_f, .dkey = DSCAN_Y },
+	{ .sym = SDLK_g, .dkey = DSCAN_U },
+	{ .sym = SDLK_c, .dkey = DSCAN_I },
+	{ .sym = SDLK_r, .dkey = DSCAN_O },
+	{ .sym = SDLK_l, .dkey = DSCAN_P },
+	{ .sym = SDLK_SLASH, .dkey = DSCAN_AT },
+	{ .sym = SDLK_a, .dkey = DSCAN_A },
+	{ .sym = SDLK_o, .dkey = DSCAN_S },
+	{ .sym = SDLK_e, .dkey = DSCAN_D },
+	{ .sym = SDLK_u, .dkey = DSCAN_F },
+	{ .sym = SDLK_i, .dkey = DSCAN_G },
+	{ .sym = SDLK_d, .dkey = DSCAN_H },
+	{ .sym = SDLK_h, .dkey = DSCAN_J },
+	{ .sym = SDLK_t, .dkey = DSCAN_K },
+	{ .sym = SDLK_n, .dkey = DSCAN_L },
+	{ .sym = SDLK_s, .dkey = DSCAN_SEMICOLON },
+	{ .sym = SDLK_BACKQUOTE, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = SDLK_SEMICOLON, .dkey = DSCAN_Z },
+	{ .sym = SDLK_q, .dkey = DSCAN_X },
+	{ .sym = SDLK_j, .dkey = DSCAN_C },
+	{ .sym = SDLK_k, .dkey = DSCAN_V },
+	{ .sym = SDLK_x, .dkey = DSCAN_B },
+	{ .sym = SDLK_b, .dkey = DSCAN_N },
+	{ .sym = SDLK_m, .dkey = DSCAN_M },
+	{ .sym = SDLK_w, .dkey = DSCAN_COMMA },
+	{ .sym = SDLK_v, .dkey = DSCAN_FULL_STOP },
+	{ .sym = SDLK_z, .dkey = DSCAN_SLASH },
 };
 
 #define MAPPING(m) .num_mappings = ARRAY_N_ELEMENTS(m), .mappings = (m)

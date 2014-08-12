@@ -142,6 +142,6 @@ void machine_set_inverted_text(_Bool);
 void machine_insert_cart(struct cart *c);
 void machine_remove_cart(void);
 
-int machine_load_rom(const char *path, uint8_t *dest, size_t max_size);
+int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);
 
 #endif  /* XROAR_MACHINE_H_ */

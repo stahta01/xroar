@@ -79,6 +79,6 @@ void keyboard_set_chord_mode(enum keyboard_chord_mode mode);
 void keyboard_read_matrix(struct keyboard_state *);
 void keyboard_unicode_press(unsigned unicode);
 void keyboard_unicode_release(unsigned unicode);
-void keyboard_queue_basic(const uint8_t *s);
+void keyboard_queue_basic(const char *s);
 
 #endif  /* XROAR_KEYBOARD_H_ */

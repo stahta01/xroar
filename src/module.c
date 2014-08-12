@@ -137,7 +137,7 @@ SoundModule *sound_module = NULL;
 KeyboardModule * const *keyboard_module_list = NULL;
 KeyboardModule *keyboard_module = NULL;
 
-void module_print_list(struct module **list) {
+void module_print_list(struct module * const *list) {
 	int i;
 	if (list == NULL || list[0]->name == NULL) {
 		puts("\tNone found.");
@@ -148,7 +148,7 @@ void module_print_list(struct module **list) {
 	}
 }
 
-struct module *module_select(struct module **list, const char *name) {
+struct module *module_select(struct module * const *list, const char *name) {
 	int i;
 	if (list == NULL)
 		return NULL;
@@ -159,7 +159,7 @@ struct module *module_select(struct module **list, const char *name) {
 	return NULL;
 }
 
-struct module *module_select_by_arg(struct module **list, const char *name) {
+struct module *module_select_by_arg(struct module * const *list, const char *name) {
 	if (name == NULL)
 		return list[0];
 	if (0 == strcmp(name, "help")) {
@@ -186,7 +186,7 @@ struct module *module_init(struct module *module) {
 	return NULL;
 }
 
-struct module *module_init_from_list(struct module **list, struct module *module) {
+struct module *module_init_from_list(struct module * const *list, struct module *module) {
 	int i;
 	/* First attempt to initialise selected module (if given) */
 	if (module_init(module))

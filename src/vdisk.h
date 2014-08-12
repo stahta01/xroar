@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include "xroar.h"
+
 #define VDISK_LENGTH_5_25 (0x1900)
 #define VDISK_LENGTH_8    (0x2940)
 
@@ -26,7 +28,7 @@
  */
 
 struct vdisk {
-	int filetype;
+	enum xroar_filetype filetype;
 	char *filename;
 	_Bool write_back;
 	_Bool write_protect;
