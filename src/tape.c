@@ -113,8 +113,8 @@ static int tape_bit_in(struct tape *t) {
 }
 
 static int tape_byte_in(struct tape *t) {
-	int byte = 0, i;
-	for (i = 8; i; i--) {
+	int byte = 0;
+	for (int i = 8; i; i--) {
 		int bit = tape_bit_in(t);
 		if (bit == -1) return -1;
 		byte = (byte >> 1) | (bit ? 0x80 : 0);
@@ -144,9 +144,8 @@ static void tape_bit_out(struct tape *t, int bit) {
 }
 
 static void tape_byte_out(struct tape *t, int byte) {
-	int i;
 	if (!t) return;
-	for (i = 8; i; i--) {
+	for (int i = 8; i; i--) {
 		tape_bit_out(t, byte & 1);
 		byte >>= 1;
 	}
@@ -169,7 +168,7 @@ static int block_sync(struct tape *tape) {
 /* read next block.  returns -1 on EOF/error, block type on success. */
 /* *sum will be computed sum - checksum byte, which should be 0 */
 static int block_in(struct tape *t, uint8_t *sum, long *offset, uint8_t *block) {
-	int type, size, sumbyte, i;
+	int type, size, sumbyte;
 
 	if (block_sync(t) == -1) return -1;
 	if (offset) {
@@ -180,7 +179,7 @@ static int block_in(struct tape *t, uint8_t *sum, long *offset, uint8_t *block) 
 	if ((size = tape_byte_in(t)) == -1) return -1;
 	if (block) block[1] = size;
 	if (sum) *sum = type + size;
-	for (i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		int data;
 		if ((data = tape_byte_in(t)) == -1) return -1;
 		if (block) block[2+i] = data;
@@ -490,25 +489,26 @@ static void flush_output(void *data) {
 
 static int pskip = 0;
 
-static int pulse_skip(void) {
-	pskip *= EVENT_SAM_CYCLES(16);
-	for (;;) {
-		if (pskip < in_pulse_width) {
-			in_pulse_width -= pskip;
-			pskip = 0;
-			waggle_event.at_tick = event_current_tick + in_pulse_width;
-			event_queue(&MACHINE_EVENT_LIST, &waggle_event);
-			DELEGATE_CALL1(tape_update_audio, in_pulse ? 1.0 : 0.0);
-			return in_pulse;
-		}
-		pskip -= in_pulse_width;
+static void do_pulse_skip(int skip) {
+	while (skip >= in_pulse_width) {
+		skip -= in_pulse_width;
 		in_pulse = tape_pulse_in(tape_input, &in_pulse_width);
 		if (in_pulse < 0) {
 			event_dequeue(&waggle_event);
-			pskip = 0;
-			return -1;
+			return;
 		}
 	}
+	in_pulse_width -= skip;
+	skip = 0;
+	waggle_event.at_tick = event_current_tick + in_pulse_width;
+	event_queue(&MACHINE_EVENT_LIST, &waggle_event);
+	DELEGATE_CALL1(tape_update_audio, in_pulse ? 1.0 : 0.0);
+}
+
+static int pulse_skip(void) {
+	do_pulse_skip(pskip * EVENT_SAM_CYCLES(16));
+	pskip = 0;
+	return in_pulse;
 }
 
 static uint8_t op_add(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
@@ -533,6 +533,7 @@ static uint8_t op_sub(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
 }
 
 #define BSR(f) do { pskip += 7; f(cpu); } while (0)
+#define RTS()  do { pskip += 5; } while (0)
 #define CLR(a) do { pskip += 6; machine_write_byte((a), 0); } while (0)
 #define DEC(a) do { pskip += 6; machine_write_byte((a), machine_read_byte(a) - 1); } while (0)
 #define INC(a) do { pskip += 6; machine_write_byte((a), machine_read_byte(a) + 1); } while (0)
@@ -552,7 +553,7 @@ static void motor_on(struct MC6809 *cpu) {
 	}
 	cpu->reg_x = 0;
 	cpu->reg_cc |= 0x04;
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static uint8_t op_clr(struct MC6809 *cpu) {
@@ -564,7 +565,7 @@ static uint8_t op_clr(struct MC6809 *cpu) {
 static void sample_cas(struct MC6809 *cpu) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	INC(pwcount);
-	pskip += 5;  /* LDB >$FF20 (should this be split 4,1?) */
+	pskip += 5;  /* LDB >$FF20 */
 	pulse_skip();
 	pskip += 2;  /* RORB */
 	if (in_pulse) {
@@ -572,7 +573,7 @@ static void sample_cas(struct MC6809 *cpu) {
 	} else {
 		cpu->reg_cc |= 1;
 	}
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void tape_wait_p0(struct MC6809 *cpu) {
@@ -581,7 +582,7 @@ static void tape_wait_p0(struct MC6809 *cpu) {
 		if (in_pulse < 0) return;
 		pskip += 3;  /* BCS tape_wait_p0 */
 	} while (cpu->reg_cc & 0x01);
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void tape_wait_p1(struct MC6809 *cpu) {
@@ -590,7 +591,7 @@ static void tape_wait_p1(struct MC6809 *cpu) {
 		if (in_pulse < 0) return;
 		pskip += 3;  /* BCC tape_wait_p1 */
 	} while (!(cpu->reg_cc & 0x01));
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void tape_wait_p0_p1(struct MC6809 *cpu) {
@@ -617,12 +618,12 @@ static void L_BDC3(struct MC6809 *cpu) {
 	if (!(cpu->reg_cc & 0x05)) {
 		CLR(bcount);
 		op_clr(cpu);
-		pskip += 5;  /* RTS */
+		RTS();
 		return;
 	}
 	pskip += 4;  /* CMPB <$93 */
 	op_sub(cpu, machine_read_byte(pwcount), machine_read_byte(minpw1200));
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void tape_cmp_p1_1200(struct MC6809 *cpu) {
@@ -689,7 +690,7 @@ L_BE0D:
 		goto L_BDED;
 	pskip += 4;  /* STA <$84 */
 	machine_write_byte(0x84, store);
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void tape_wait_2p(struct MC6809 *cpu) {
@@ -712,15 +713,15 @@ static void bitin(struct MC6809 *cpu) {
 	pskip += 2;  /* DECB */
 	pskip += 4;  /* CMPB <$92 */
 	op_sub(cpu, machine_read_byte(pwcount) - 1, machine_read_byte(mincw1200));
-	pskip += 5;  /* RTS */
+	RTS();
 }
 
 static void cbin(struct MC6809 *cpu) {
 	int bcount = IS_DRAGON ? 0x83 : 0x82;
-	int bin = 0, i;
+	int bin = 0;
 	pskip += 2;  /* LDA #$08 */
 	pskip += 4;  /* STA <$83 */
-	for (i = 0; i < 8; i++) {
+	for (int i = 8; i; i--) {
 		BSR(bitin);
 		pskip += 2;  /* RORA */
 		bin >>= 1;
@@ -728,12 +729,21 @@ static void cbin(struct MC6809 *cpu) {
 		pskip += 6;  /* DEC <$83 */
 		pskip += 3;  /* BNE $BDB1 */
 	}
-	pskip += 5;  /* RTS */
+	RTS();
 	MC6809_REG_A(cpu) = bin;
 	machine_write_byte(bcount, 0);
 }
 
+static void update_pskip(void) {
+	event_ticks skip = waggle_event.at_tick - event_current_tick;
+	skip = in_pulse_width - skip;
+	if (skip <= (EVENT_TICK_MAX/2)) {
+		do_pulse_skip(skip);
+	}
+}
+
 static void fast_motor_on(struct MC6809 *cpu) {
+	update_pskip();
 	if (!tape_pad) {
 		motor_on(cpu);
 	}
@@ -742,6 +752,7 @@ static void fast_motor_on(struct MC6809 *cpu) {
 }
 
 static void fast_sync_leader(struct MC6809 *cpu) {
+	update_pskip();
 	if (tape_pad) {
 		machine_write_byte(0x84, 0);
 	} else {
@@ -752,6 +763,7 @@ static void fast_sync_leader(struct MC6809 *cpu) {
 }
 
 static void fast_bitin(struct MC6809 *cpu) {
+	update_pskip();
 	bitin(cpu);
 	machine_op_rts(cpu);
 	pulse_skip();
@@ -759,6 +771,7 @@ static void fast_bitin(struct MC6809 *cpu) {
 }
 
 static void fast_cbin(struct MC6809 *cpu) {
+	update_pskip();
 	cbin(cpu);
 	machine_op_rts(cpu);
 	pulse_skip();
