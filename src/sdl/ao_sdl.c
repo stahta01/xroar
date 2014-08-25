@@ -280,8 +280,12 @@ static void callback(void *userdata, Uint8 *stream, int len) {
 	SDL_LockMutex(fragment_mutex);
 
 	// wait until at least one fragment buffer is filled
-	while (fragment_queue_length == 0)
-		SDL_CondWait(fragment_cv, fragment_mutex);
+	while (fragment_queue_length == 0) {
+		if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			SDL_UnlockMutex(fragment_mutex);
+			return;
+		}
+	}
 
 	// copy it to callback buffer
 	memcpy(stream, fragment_buffer[play_fragment], fragment_nbytes);
@@ -306,8 +310,12 @@ static void callback_1(void *userdata, Uint8 *stream, int len) {
 	SDL_CondSignal(fragment_cv);
 
 	// wait until main thread signals filled buffer
-	while (fragment_queue_length == 0)
-		SDL_CondWait(fragment_cv, fragment_mutex);
+	while (fragment_queue_length == 0) {
+		if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			SDL_UnlockMutex(fragment_mutex);
+			return;
+		}
+	}
 
 	// set to 0 so next callback will wait
 	fragment_queue_length = 0;
