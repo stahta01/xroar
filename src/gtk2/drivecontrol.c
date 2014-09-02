@@ -29,6 +29,7 @@
 #include "vdrive.h"
 #include "xroar.h"
 
+#include "gtk2/common.h"
 #include "gtk2/drivecontrol.h"
 #include "gtk2/ui_gtk2.h"
 
@@ -113,6 +114,7 @@ void gtk2_create_dc_window(void) {
 	dc_drive_cyl_head = GTK_WIDGET(gtk_builder_get_object(builder, "drive_cyl_head"));
 
 	/* Connect signals */
+	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), NULL);
 	for (i = 0; i < 4; i++) {
 		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (char *)0 + i);
 		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (char *)0 + i);

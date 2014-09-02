@@ -134,6 +134,7 @@ ifeq ($(opt_glib2),yes)
 endif
 
 xroar_gtk2_C = \
+	gtk2/common.c \
 	gtk2/drivecontrol.c \
 	gtk2/filereq_gtk2.c \
 	gtk2/keyboard_gtk2.c \
