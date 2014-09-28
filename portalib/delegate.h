@@ -37,6 +37,8 @@ typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
 typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
 typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
 typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
+typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
+typedef DELEGATE_S2(void, uint16_t, uint8_t) DELEGATE_T2(void, uint16, uint8);
 
 /* Convenience function for declaring anonymous structs. */
 
@@ -56,9 +58,9 @@ typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
 #define DELEGATE_DEF_PROTO1(T,N,T0,N0) T DELEGATE_DEFAULT_F1(N,N0)(void *, T0)
 #define DELEGATE_DEF_PROTO2(T,N,T0,N0,T1,N1) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *, T0, T1)
 
-#define DELEGATE_DEF_FUNC0(T,N) T DELEGATE_DEFAULT_F0(N)(void *sptr) { (void)sptr; }
-#define DELEGATE_DEF_FUNC1(T,N,T0,N0) T DELEGATE_DEFAULT_F1(N,N0)(void *sptr, T0 v0) { (void)sptr; (void)v0; }
-#define DELEGATE_DEF_FUNC2(T,N,T0,N0,T1,N1) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *sptr, T0 v0, T1 v1) { (void)sptr; (void)v0; (void)v1; }
+#define DELEGATE_DEF_FUNC0(T,N,R) T DELEGATE_DEFAULT_F0(N)(void *sptr) { (void)sptr; return R; }
+#define DELEGATE_DEF_FUNC1(T,N,T0,N0,R) T DELEGATE_DEFAULT_F1(N,N0)(void *sptr, T0 v0) { (void)sptr; (void)v0; return R; }
+#define DELEGATE_DEF_FUNC2(T,N,T0,N0,T1,N1,R) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *sptr, T0 v0, T1 v1) { (void)sptr; (void)v0; (void)v1; return R; }
 
 DELEGATE_DEF_PROTO0(void, void);
 DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
@@ -68,6 +70,8 @@ DELEGATE_DEF_PROTO1(void, void, float, float);
 DELEGATE_DEF_PROTO0(uint8_t, uint8);
 DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint8_t *, uint8p);
+DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
+DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
 
 #define DELEGATE_DEFAULT0(N) DELEGATE_AS0(N, DELEGATE_DEFAULT_F0(N), NULL)
 #define DELEGATE_DEFAULT1(N,N0) DELEGATE_AS1(N, N0, DELEGATE_DEFAULT_F1(N, N0), NULL)
