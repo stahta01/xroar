@@ -99,7 +99,7 @@ int intel_hex_read(const char *filename, int autorun) {
 			if (type == 0) {
 				if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN_DATA)
 					log_hexdump_byte(log_hex, data);
-				machine_ram[addr] = data;
+				machine_write_byte(addr & 0xffff, data);
 				addr++;
 			}
 		}
