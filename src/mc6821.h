@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include "delegate.h"
+
 /* Two "sides" per PIA (A & B), with slightly different characteristics.  A
  * side represented as output and input sink (the struct used is common to both
  * but for the A side the source values are ignored).  B side represented by
@@ -33,10 +35,10 @@ struct MC6821_side {
 	uint8_t in_source;  /* ignored for side A */
 	uint8_t in_sink;
 	/* Hooks */
-	void (*control_preread)(void);
-	void (*control_postwrite)(void);
-	void (*data_preread)(void);
-	void (*data_postwrite)(void);
+	DELEGATE_T0(void) control_preread;
+	DELEGATE_T0(void) control_postwrite;
+	DELEGATE_T0(void) data_preread;
+	DELEGATE_T0(void) data_postwrite;
 };
 
 struct MC6821 {

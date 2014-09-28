@@ -29,6 +29,7 @@
 
 #include "array.h"
 #include "c-strcase.h"
+#include "delegate.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -331,7 +332,8 @@ void machine_config_print_all(_Bool all) {
 
 /* ---------------------------------------------------------------------- */
 
-static void keyboard_update(void) {
+static void keyboard_update(void *m) {
+	(void)m;
 	unsigned buttons = ~(joystick_read_buttons() & 3);
 	struct keyboard_state state = {
 		.row_source = PIA0->a.out_sink,
@@ -345,7 +347,8 @@ static void keyboard_update(void) {
 	PIA0->b.in_sink = state.col_sink;
 }
 
-static void joystick_update(void) {
+static void joystick_update(void *m) {
+	(void)m;
 	int port = (PIA0->b.control_register & 0x08) >> 3;
 	int axis = (PIA0->a.control_register & 0x08) >> 3;
 	int dac_value = (PIA1->a.out_sink & 0xfc) + 2;
@@ -356,7 +359,8 @@ static void joystick_update(void) {
 		PIA0->a.in_sink &= 0x7f;
 }
 
-static void update_sound_mux_source(void) {
+static void update_sound_mux_source(void *m) {
+	(void)m;
 	unsigned source = ((PIA0->b.control_register & (1<<3)) >> 2)
 	                  | ((PIA0->a.control_register & (1<<3)) >> 3);
 	sound_set_mux_source(source);
@@ -371,9 +375,10 @@ static void update_vdg_mode(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void pia0a_data_preread(void) {
-	keyboard_update();
-	joystick_update();
+static void pia0a_data_preread(void *m) {
+	(void)m;
+	keyboard_update(m);
+	joystick_update(m);
 }
 
 #define pia0a_data_postwrite NULL
@@ -383,8 +388,9 @@ static void pia0a_data_preread(void) {
 #define pia0b_data_postwrite NULL
 #define pia0b_control_postwrite update_sound_mux_source
 
-static void pia0b_data_preread_coco64k(void) {
-	keyboard_update();
+static void pia0b_data_preread_coco64k(void *m) {
+	(void)m;
+	keyboard_update(m);
 	/* PB6 of PIA0 is linked to PB2 of PIA1 on 64K CoCos */
 	if ((PIA1->b.out_source & PIA1->b.out_sink) & (1<<2)) {
 		PIA0->b.in_source |= (1<<6);
@@ -397,29 +403,33 @@ static void pia0b_data_preread_coco64k(void) {
 
 #define pia1a_data_preread NULL
 
-static void pia1a_data_postwrite(void) {
+static void pia1a_data_postwrite(void *m) {
+	(void)m;
 	sound_set_dac_level((float)(PIA_VALUE_A(PIA1) & 0xfc) / 252.);
 	tape_update_output(PIA1->a.out_sink & 0xfc);
 	if (IS_DRAGON) {
-		keyboard_update();
+		keyboard_update(m);
 		printer_strobe(PIA_VALUE_A(PIA1) & 0x02, PIA_VALUE_B(PIA0));
 	}
 }
 
-static void pia1a_control_postwrite(void) {
+static void pia1a_control_postwrite(void *m) {
+	(void)m;
 	tape_update_motor(PIA1->a.control_register & 0x08);
 }
 
 #define pia1b_data_preread NULL
 
-static void pia1b_data_preread_dragon(void) {
+static void pia1b_data_preread_dragon(void *m) {
+	(void)m;
 	if (printer_busy())
 		PIA1->b.in_sink |= 0x01;
 	else
 		PIA1->b.in_sink &= ~0x01;
 }
 
-static void pia1b_data_preread_coco64k(void) {
+static void pia1b_data_preread_coco64k(void *m) {
+	(void)m;
 	/* PB6 of PIA0 is linked to PB2 of PIA1 on 64K CoCos */
 	if ((PIA0->b.out_source & PIA0->b.out_sink) & (1<<6)) {
 		PIA1->b.in_source |= (1<<2);
@@ -430,7 +440,8 @@ static void pia1b_data_preread_coco64k(void) {
 	}
 }
 
-static void pia1b_data_postwrite(void) {
+static void pia1b_data_postwrite(void *m) {
+	(void)m;
 	if (IS_DRAGON64) {
 		_Bool is_32k = PIA_VALUE_B(PIA1) & 0x04;
 		if (is_32k) {
@@ -449,7 +460,8 @@ static void pia1b_data_postwrite(void) {
 	update_vdg_mode();
 }
 
-static void pia1b_control_postwrite(void) {
+static void pia1b_control_postwrite(void *m) {
+	(void)m;
 	sound_set_mux_enabled(PIA1->b.control_register & 0x08);
 }
 
@@ -598,19 +610,19 @@ void machine_configure(struct machine_config *mc) {
 	CPU0->write_cycle = write_cycle;
 	// PIAs
 	PIA0 = mc6821_new();
-	PIA0->a.data_preread = pia0a_data_preread;
-	PIA0->a.data_postwrite = pia0a_data_postwrite;
-	PIA0->a.control_postwrite = pia0a_control_postwrite;
-	PIA0->b.data_preread = pia0b_data_preread;
-	PIA0->b.data_postwrite = pia0b_data_postwrite;
-	PIA0->b.control_postwrite = pia0b_control_postwrite;
+	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
+	PIA0->a.data_postwrite = DELEGATE_AS0(void, pia0a_data_postwrite, NULL);
+	PIA0->a.control_postwrite = DELEGATE_AS0(void, pia0a_control_postwrite, NULL);
+	PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, NULL);
+	PIA0->b.data_postwrite = DELEGATE_AS0(void, pia0b_data_postwrite, NULL);
+	PIA0->b.control_postwrite = DELEGATE_AS0(void, pia0b_control_postwrite, NULL);
 	PIA1 = mc6821_new();
-	PIA1->a.data_preread = pia1a_data_preread;
-	PIA1->a.data_postwrite = pia1a_data_postwrite;
-	PIA1->a.control_postwrite = pia1a_control_postwrite;
-	PIA1->b.data_preread = pia1b_data_preread;
-	PIA1->b.data_postwrite = pia1b_data_postwrite;
-	PIA1->b.control_postwrite = pia1b_control_postwrite;
+	PIA1->a.data_preread = DELEGATE_AS0(void, pia1a_data_preread, NULL);
+	PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite, NULL);
+	PIA1->a.control_postwrite = DELEGATE_AS0(void, pia1a_control_postwrite, NULL);
+	PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread, NULL);
+	PIA1->b.data_postwrite = DELEGATE_AS0(void, pia1b_data_postwrite, NULL);
+	PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, NULL);
 
 	// Single-bit sound feedback
 #ifndef FAST_SOUND
@@ -793,16 +805,16 @@ void machine_configure(struct machine_config *mc) {
 		/* 16K CoCo pulls PB2 of PIA1 high */
 		PIA1->b.in_source |= (1<<2);
 	}
-	PIA0->b.data_preread = pia0b_data_preread;
+	PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, NULL);
 	if (IS_DRAGON) {
 		/* Dragons need to poll printer BUSY state */
-		PIA1->b.data_preread = pia1b_data_preread_dragon;
+		PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, NULL);
 	}
 	if (IS_COCO && machine_ram_size > 0x4000) {
 		/* 64K CoCo connects PB6 of PIA0 to PB2 of PIA1->
 		 * Deal with this through a postwrite. */
-		PIA0->b.data_preread = pia0b_data_preread_coco64k;
-		PIA1->b.data_preread = pia1b_data_preread_coco64k;
+		PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, NULL);
+		PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, NULL);
 	}
 
 	if (IS_DRAGON) {
