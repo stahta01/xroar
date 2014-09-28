@@ -194,10 +194,6 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
  * External interface
  */
 
-/* Dummy handlers */
-static uint8_t dummy_read_cycle(uint16_t a) { (void)a; return 0; }
-static void dummy_write_cycle(uint16_t a, uint8_t v) { (void)a; (void)v; }
-
 struct MC6809 *hd6309_new(void) {
 	struct HD6309 *hcpu = xzalloc(sizeof(*hcpu));
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
@@ -206,8 +202,8 @@ struct MC6809 *hd6309_new(void) {
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
 	// External handlers
-	cpu->read_cycle = dummy_read_cycle;
-	cpu->write_cycle = dummy_write_cycle;
+	cpu->read_cycle = DELEGATE_DEFAULT1(uint8, uint16);
+	cpu->write_cycle = DELEGATE_DEFAULT2(void, uint16, uint8);
 	hd6309_reset(cpu);
 	return cpu;
 }

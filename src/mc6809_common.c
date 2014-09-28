@@ -12,12 +12,12 @@
 
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	cpu->cycle++;
-	return cpu->read_cycle(a);
+	return DELEGATE_CALL1(cpu->read_cycle, a);
 }
 
 static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
 	cpu->cycle++;
-	cpu->write_cycle(a, d);
+	DELEGATE_CALL2(cpu->write_cycle, a, d);
 }
 
 /* Read & write various addressing modes */

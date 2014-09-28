@@ -153,10 +153,6 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
  * External interface
  */
 
-/* Dummy handlers */
-static uint8_t dummy_read_cycle(uint16_t a) { (void)a; return 0; }
-static void dummy_write_cycle(uint16_t a, uint8_t v) { (void)a; (void)v; }
-
 struct MC6809 *mc6809_new(void) {
 	struct MC6809 *cpu = xzalloc(sizeof(*cpu));
 	cpu->free = mc6809_free;
@@ -164,8 +160,8 @@ struct MC6809 *mc6809_new(void) {
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
 	// External handlers
-	cpu->read_cycle = dummy_read_cycle;
-	cpu->write_cycle = dummy_write_cycle;
+	cpu->read_cycle = DELEGATE_DEFAULT1(uint8, uint16);
+	cpu->write_cycle = DELEGATE_DEFAULT2(void, uint16, uint8);
 	mc6809_reset(cpu);
 	return cpu;
 }

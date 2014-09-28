@@ -102,8 +102,8 @@ static int num_configs = 0;
 static void initialise_ram(void);
 
 static int cycles;
-static uint8_t read_cycle(uint16_t A);
-static void write_cycle(uint16_t A, uint8_t D);
+static uint8_t read_cycle(void *m, uint16_t A);
+static void write_cycle(void *m, uint16_t A, uint8_t D);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest);
 
 static void machine_instruction_posthook(void *);
@@ -606,8 +606,8 @@ void machine_configure(struct machine_config *mc) {
 		CPU0 = hd6309_new();
 		break;
 	}
-	CPU0->read_cycle = read_cycle;
-	CPU0->write_cycle = write_cycle;
+	CPU0->read_cycle = DELEGATE_AS1(uint8, uint16, read_cycle, NULL);
+	CPU0->write_cycle = DELEGATE_AS2(void, uint16, uint8, write_cycle, NULL);
 	// PIAs
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
@@ -1007,7 +1007,8 @@ static _Bool debug_cpu_cycle(uint16_t A, _Bool RnW, int *S, uint16_t *Z) {
 
 static uint8_t read_D = 0;
 
-static uint8_t read_cycle(uint16_t A) {
+static uint8_t read_cycle(void *m, uint16_t A) {
+	(void)m;
 	int S;
 	uint16_t Z = 0;
 	_Bool is_ram_access = do_cpu_cycle(A, 1, &S, &Z);
@@ -1082,7 +1083,8 @@ static uint8_t read_cycle(uint16_t A) {
 	return read_D;
 }
 
-static void write_cycle(uint16_t A, uint8_t D) {
+static void write_cycle(void *m, uint16_t A, uint8_t D) {
+	(void)m;
 	int S;
 	uint16_t Z = 0;
 	// Changing the SAM VDG mode can affect its idea of the current VRAM
