@@ -23,7 +23,9 @@
 
 #include "xalloc.h"
 
+#include "events.h"
 #include "mc6821.h"
+#include "xroar.h"
 
 struct MC6821 *mc6821_new(void) {
 	struct MC6821 *new = xmalloc(sizeof(*new));
@@ -31,10 +33,17 @@ struct MC6821 *mc6821_new(void) {
 	return new;
 }
 
+static void do_irq(void *data) {
+	struct MC6821_side *side = data;
+	side->irq = 1;
+}
+
 void mc6821_init(struct MC6821 *pia) {
 	memset(pia, 0, sizeof(*pia));
 	pia->a.in_sink = 0xff;
 	pia->b.in_sink = 0xff;
+	event_init(&pia->a.irq_event, DELEGATE_AS0(void, do_irq, &pia->a));
+	event_init(&pia->b.irq_event, DELEGATE_AS0(void, do_irq, &pia->b));
 }
 
 void mc6821_free(struct MC6821 *pia) {
@@ -71,7 +80,8 @@ void mc6821_set_cx1(struct MC6821_side *side) {
 	if (PIA_ACTIVE_TRANSITION(side)) {
 		side->interrupt_received = 1;
 		if (PIA_INTERRUPT_ENABLED(side)) {
-			side->irq = 1;
+			side->irq_event.at_tick = event_current_tick + EVENT_US(1);
+			event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
 		} else {
 			side->irq = 0;
 		}
@@ -82,7 +92,8 @@ void mc6821_reset_cx1(struct MC6821_side *side) {
 	if (!PIA_ACTIVE_TRANSITION(side)) {
 		side->interrupt_received = 1;
 		if (PIA_INTERRUPT_ENABLED(side)) {
-			side->irq = 1;
+			side->irq_event.at_tick = event_current_tick + EVENT_US(1);
+			event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
 		} else {
 			side->irq = 0;
 		}

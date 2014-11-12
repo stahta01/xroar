@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "delegate.h"
+#include "events.h"
 
 /* Two "sides" per PIA (A & B), with slightly different characteristics.  A
  * side represented as output and input sink (the struct used is common to both
@@ -28,6 +29,7 @@ struct MC6821_side {
 	uint8_t output_register;
 	_Bool interrupt_received;
 	_Bool irq;
+	struct event irq_event;
 	/* Calculated pin state */
 	uint8_t out_source;  /* ignored for side A */
 	uint8_t out_sink;
