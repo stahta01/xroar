@@ -215,10 +215,11 @@ static void hd6309_free(struct MC6809 *cpu) {
 
 static void hd6309_reset(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	cpu->halt = cpu->nmi = 0;
-	cpu->firq = cpu->irq = 0;
-	cpu->nmi_cycle = cpu->firq_cycle = cpu->irq_cycle = cpu->cycle = 0;
+	cpu->halt = 0;
 	cpu->nmi_armed = 0;
+	cpu->nmi = cpu->nmi_latch = cpu->nmi_active = 0;
+	cpu->firq = cpu->firq_latch = cpu->firq_active = 0;
+	cpu->irq = cpu->irq_latch = cpu->irq_active = 0;
 	hcpu->state = hd6309_state_reset;
 }
 
@@ -229,21 +230,15 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 	do {
 
-		_Bool nmi_active = cpu->nmi && ((cpu->cycle - cpu->nmi_cycle) <= (UINT_MAX/2));
-		_Bool firq_active = cpu->firq && ((cpu->cycle - cpu->firq_cycle) <= (UINT_MAX/2));
-		_Bool irq_active = cpu->irq && ((cpu->cycle - cpu->irq_cycle) <= (UINT_MAX/2));
-
-		// Prevent overflow
-		if (firq_active) cpu->firq_cycle = cpu->cycle;
-		if (irq_active) cpu->irq_cycle = cpu->cycle;
-
 		switch (hcpu->state) {
 
 		case hd6309_state_reset:
 			REG_DP = 0;
 			REG_CC |= (CC_F | CC_I);
-			cpu->nmi = 0;
 			cpu->nmi_armed = 0;
+			cpu->nmi = cpu->nmi_active = 0;
+			cpu->firq_active = 0;
+			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
 			// fall through
 
@@ -269,21 +264,21 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// fall through
 
 		case hd6309_state_label_b:
-			if (cpu->nmi_armed && nmi_active) {
+			if (cpu->nmi_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
 				continue;
 			}
-			if (!(REG_CC & CC_F) && firq_active) {
+			if (!(REG_CC & CC_F) && cpu->firq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, FIRQ_STACK_ALL);
 				hcpu->state = hd6309_state_dispatch_irq;
 				continue;
 			}
-			if (!(REG_CC & CC_I) && irq_active) {
+			if (!(REG_CC & CC_I) && cpu->irq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
@@ -297,20 +292,20 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_dispatch_irq:
-			if (cpu->nmi_armed && nmi_active) {
-				cpu->nmi = 0;
+			if (cpu->nmi_active) {
+				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
 				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			if (!(REG_CC & CC_F) && firq_active) {
+			if (!(REG_CC & CC_F) && cpu->firq_active) {
 				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			if (!(REG_CC & CC_I) && irq_active) {
+			if (!(REG_CC & CC_I) && cpu->irq_active) {
 				REG_CC |= CC_I;
 				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
 				hcpu->state = hd6309_state_label_a;
@@ -320,6 +315,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_cwai_check_halt:
+			cpu->nmi_active = cpu->nmi_latch;
+			cpu->firq_active = cpu->firq_latch;
+			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
 			if (cpu->halt) {
 				continue;
@@ -328,13 +326,15 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_sync:
-			if (nmi_active || firq_active || irq_active) {
-				NVMA_CYCLE;
+			if (cpu->nmi_active || cpu->firq_active || cpu->irq_active) {
 				NVMA_CYCLE;
 				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
+			cpu->nmi_active = cpu->nmi_latch;
+			cpu->firq_active = cpu->firq_latch;
+			cpu->irq_active = cpu->irq_latch;
 			NVMA_CYCLE;
 			if (cpu->halt)
 				hcpu->state = hd6309_state_sync_check_halt;
@@ -355,20 +355,20 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_tfm_write:
-			if (cpu->nmi_armed && nmi_active) {
+			if (cpu->nmi_active) {
 				cpu->nmi = 0;
 				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			if (!(REG_CC & CC_F) && firq_active) {
+			if (!(REG_CC & CC_F) && cpu->firq_active) {
 				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			if (!(REG_CC & CC_I) && irq_active) {
+			if (!(REG_CC & CC_I) && cpu->irq_active) {
 				REG_CC |= CC_I;
 				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
 				hcpu->state = hd6309_state_label_a;
@@ -383,6 +383,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 				hcpu->state = hd6309_state_label_a;
 				goto done_instruction;
 			}
+			cpu->nmi_active = cpu->nmi_latch;
+			cpu->firq_active = cpu->firq_latch;
+			cpu->irq_active = cpu->irq_latch;
 			hcpu->state = hd6309_state_tfm;
 			continue;
 
@@ -536,6 +539,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x13:
 				if (!NATIVE_MODE)
 					peek_byte(cpu, REG_PC);
+				cpu->nmi_active = cpu->nmi_latch;
+				cpu->firq_active = cpu->firq_latch;
+				cpu->irq_active = cpu->irq_latch;
 				hcpu->state = hd6309_state_sync;
 				continue;
 			// 0x14 SEXW inherent
@@ -1868,6 +1874,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 		}
 
 done_instruction:
+		cpu->nmi_active = cpu->nmi_latch;
+		cpu->firq_active = cpu->firq_latch;
+		cpu->irq_active = cpu->irq_latch;
 		instruction_posthook(cpu);
 		continue;
 

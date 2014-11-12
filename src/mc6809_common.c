@@ -11,12 +11,16 @@
 /* Memory interface */
 
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
-	cpu->cycle++;
+	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
+	cpu->firq_latch = cpu->firq;
+	cpu->irq_latch = cpu->irq;
 	return DELEGATE_CALL1(cpu->read_cycle, a);
 }
 
 static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
-	cpu->cycle++;
+	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
+	cpu->firq_latch = cpu->firq;
+	cpu->irq_latch = cpu->irq;
 	DELEGATE_CALL2(cpu->write_cycle, a, d);
 }
 

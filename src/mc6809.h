@@ -82,11 +82,8 @@ struct MC6809 {
 	uint16_t reg_x, reg_y, reg_u, reg_s, reg_pc;
 	/* Interrupts */
 	_Bool nmi_armed;
-	/* Interrupts are only recognised after being asserted for a number of
-	 * cycles, so maintain an internal cycle count, and record when an
-	 * interrupt is first seen. */
-	unsigned cycle;
-	unsigned nmi_cycle, firq_cycle, irq_cycle;
+	_Bool nmi_latch, firq_latch, irq_latch;
+	_Bool nmi_active, firq_active, irq_active;
 };
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -105,23 +102,14 @@ static inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val) {
 }
 
 static inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val) {
-	if (!cpu->nmi) {
-		cpu->nmi_cycle = cpu->cycle + 2;
-	}
 	cpu->nmi = val;
 }
 
 static inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val) {
-	if (!cpu->firq) {
-		cpu->firq_cycle = cpu->cycle + 2;
-	}
 	cpu->firq = val;
 }
 
 static inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
-	if (!cpu->irq) {
-		cpu->irq_cycle = cpu->cycle + 2;
-	}
 	cpu->irq = val;
 }
 
