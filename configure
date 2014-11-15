@@ -773,9 +773,9 @@ EOF
 	echo "$_strsep"
 fi
 if test "$_strsep" = "yes"; then
-	_strsep_def="#undef NEED_STRSEP"
+	_strsep_def="#define HAVE_STRSEP"
 else
-	_strsep_def="#define NEED_STRSEP"
+	_strsep_def="#undef HAVE_STRSEP"
 fi
 
 ########

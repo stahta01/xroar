@@ -16,7 +16,7 @@ option) any later version.
 
 #include "pl-string.h"
 
-#ifdef NEED_STRSEP
+#ifndef HAVE_STRSEP
 char *strsep(char **str, const char *sep);
 
 char *strsep(char **str, const char *sep) {

@@ -23,7 +23,7 @@ _BSD_SOURCE) before inclusion to get the right set of prototypes.
 
 #ifdef _BSD_SOURCE
 
-#ifdef NEED_STRSEP
+#ifndef HAVE_STRSEP
 char *strsep(char **, const char *);
 #endif
 
