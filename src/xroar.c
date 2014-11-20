@@ -2037,9 +2037,7 @@ static void helptext(void) {
 "  -fs                   start emulator full-screen if possible\n"
 "  -fskip FRAMES         frameskip (default: 0)\n"
 "  -ccr RENDERER         cross-colour renderer (-ccr help for list)\n"
-#ifdef HAVE_SDLGL
 "  -gl-filter FILTER     OpenGL texture filter (-gl-filter help for list)\n"
-#endif
 "  -geometry WxH+X+Y     initial emulator geometry\n"
 "  -invert-text          start with text mode inverted\n"
 
