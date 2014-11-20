@@ -1,0 +1,361 @@
+.TH XROAR 1 "@MANPAGE_DATE@" "XRoar @PACKAGE_VERSION@"
+.SH NAME
+xroar \- Dragon and Tandy CoCo 1/2 emulator
+.SH SYNOPSIS
+\fBxroar\fR [\fB\-c\fR \fIconffile\fR] [\fIOPTION\fR]... [\fIFILENAME\fR]...
+.SH DESCRIPTION
+\fBxroar\fR is a Dragon emulator that runs on a wide variety of platforms.  Due
+to hardware similarities, XRoar also emulates the Tandy Colour Computer (CoCo)
+models 1 & 2.
+.PP
+.SH OPTIONS
+Options are first read from a configuration file
+(by default, \fI$HOME/.xroar/xroar.conf\fR).  Options on the command line override
+any found in the configuration file.
+.PP
+.TP
+\fB\-c\fR \fIconffile\fR
+specify a configuration file
+
+.SS Machines:
+
+.TP
+\fB\-default\-machine\fR \fIname\fR
+default machine on startup
+.TP
+\fB\-machine\fR \fIname\fR
+configure named machine (\fB\-machine help\fR for list)
+
+.PP
+The remaining options configure the currently selected machine:
+
+.TP
+\fB\-machine\-desc\fR \fItext\fR
+machine description
+.TP
+\fB\-machine\-arch\fR \fIarch\fR
+machine architecture (\fBdragon64\fR, \fBdragon32\fR or \fBcoco\fR)
+.TP
+\fB\-machine\-keyboard\fR \fIlayout\fR
+keyboard layout (\fBdragon\fR, \fBdragon200e\fR or \fBcoco\fR)
+.TP
+\fB\-machine\-cpu\fR \fIcpu\fR
+machine CPU (\fB6809\fR or \fB6309\fR)
+.TP
+\fB\-bas\fR \fIname\fR
+BASIC ROM to use (CoCo only)
+.TP
+\fB\-extbas\fR \fIname\fR
+Extended BASIC ROM to use
+.TP
+\fB\-altbas\fR \fIname\fR
+64K mode Extended BASIC ROM (Dragon 64)
+.TP
+\fB\-nobas\fR
+disable BASIC
+.TP
+\fB\-noextbas\fR
+disable Extended BASIC
+.TP
+\fB\-noaltbas\fR
+disable 64K mode Extended BASIC
+.TP
+\fB\-ext\-charset\fR \fIname\fR
+external character generator ROM to use
+.TP
+\fB\-tv\-type\fR \fItype\fR
+TV type (\fBpal\fR, \fBntsc\fR or \fBpal\-m\fR)
+.TP
+\fB\-vdg\-type\fR \fItype\fR
+VDG type (\fB6847\fR or \fB6847t1\fR)
+.TP
+\fB\-ram\fR \fIkbytes\fR
+amount of RAM in K
+.TP
+\fB\-machine\-cart\fR \fIname\fR
+default cartridge for selected machine
+.TP
+\fB\-nodos\fR
+don't automatically pick a DOS cartridge
+
+.SS Cartridges:
+
+.TP
+\fB\-cart\fR \fIname\fR
+configure named cartridge (\fB\-cart help\fR for list)
+
+.PP
+The remaining options configure the currently selected cartridge:
+
+.TP
+\fB\-cart\-desc\fR \fItext\fR
+cartridge description
+.TP
+\fB\-cart\-type\fR \fItype\fR
+cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR or \fBorch90\fR)
+.TP
+\fB\-cart\-rom\fR \fIname\fR
+ROM image to load ($C000\-)
+.TP
+\fB\-cart\-rom2\fR \fIname\fR
+second ROM image to load ($E000\-)
+.TP
+\fB\-cart\-autorun\fR
+autorun cartridge
+.TP
+\fB\-cart\-becker\fR
+enable becker port where supported
+
+.SS Becker port:
+
+.TP
+\fB\-becker\fR
+prefer becker\-enabled DOS (when picked automatically)
+.TP
+\fB\-becker\-ip\fR \fIaddress\fR
+address or hostname of DriveWire server [127.0.0.1]
+.TP
+\fB\-becker\-port\fR \fIport\fR
+port of DriveWire server [65504]
+
+.SS Files:
+
+.TP
+\fB\-load\fR \fIfile\fR
+load or attach \fIfile\fR
+.TP
+\fB\-run\fR \fIfile\fR
+load or attach \fIfile\fR and attempt autorun
+
+.SS Cassettes:
+
+.TP
+\fB\-tape\-write\fR \fIfile\fR
+open \fIfile\fR for tape writing
+.TP
+\fB\-tape\-channel\-mode\fR \fImode\fR
+select stereo input channel (\fBmix\fR, \fBleft\fR, \fBright\fR)
+.TP
+\fB\-no\-tape\-fast\fR
+disable fast tape loading
+.TP
+\fB\-tape\-pad\fR
+force tape leader padding
+.TP
+\fB\-no\-tape\-pad\-auto\fR
+disable automatic leader padding
+.TP
+\fB\-tape\-rewrite\fR
+enable tape rewriting
+.TP
+\fB\-tape\-ao\-rate\fR \fIhz\fR
+set tape writing frame rate
+
+.SS Disks:
+
+.TP
+\fB\-disk\-write\-back\fR
+default to enabling write\-back for disk images
+.TP
+\fB\-no\-disk\-auto\-os9\fR
+don't try to detect headerless OS\-9 JVC disk images
+
+.SS Firmware ROM images:
+
+.TP
+\fB\-rompath\fR \fIpath\fR
+ROM search path (colon\-separated list)
+.TP
+\fB\-romlist\fR \fIname\fR=\fIlist\fR
+define a ROM list
+.TP
+\fB\-romlist\-print\fR
+print defined ROM lists
+.TP
+\fB\-crclist\fR \fIname\fR=\fIlist\fR
+define a ROM CRC list
+.TP
+\fB\-crclist\-print\fR
+print defined ROM CRC lists
+.TP
+\fB\-force\-crc\-match\fR
+force per\-architecture CRC matches
+
+.SS User interface:
+
+.TP
+\fB\-ui\fR \fImodule\fR
+user\-interface module (\fB\-ui help\fR for list)
+
+.SS Video:
+
+.TP
+\fB\-vo\fR \fImodule\fR
+video module (\fB\-vo help\fR for list)
+.TP
+\fB\-fs\fR
+start emulator full\-screen if possible
+.TP
+\fB\-fskip\fR \fIframes\fR
+frameskip (default: 0)
+.TP
+\fB\-ccr\fR \fIrenderer\fR
+cross\-colour renderer (\fBsimple\fR or \fB5bit\fR)
+.TP
+\fB\-gl\-filter\fR \fIfilter\fR
+OpenGL texture filter (\fBauto\fR, \fBnearest\fR or \fBlinear\fR)
+.TP
+\fB\-geometry\fR \fIw\fRx\fIh\fR+\fIx\fR+\fIy\fR
+initial emulator geometry
+.TP
+\fB\-invert\-text\fR
+start with text mode inverted
+
+.SS Audio:
+
+.TP
+\fB\-ao\fR \fImodule\fR
+audio module (\fB\-ao help\fR for list)
+.TP
+\fB\-ao\-device\fR \fIstring\fR
+device to use for audio module
+.TP
+\fB\-ao\-format\fR \fIfmt\fR
+set audio sample format (\fBu8\fR, \fBs8\fR, \fBs16\fR, \fBs16se\fR, \fBs16be\fR, \fBs16le\fR or \fBfloat\fR)
+.TP
+\fB\-ao\-rate\fR \fIhz\fR
+set audio frame rate (if supported by module)
+.TP
+\fB\-ao\-channels\fR \fIn\fR
+set number of audio channels, \fB1\fR or \fB2\fR
+.TP
+\fB\-ao\-fragments\fR \fIn\fR
+set number of audio fragments
+.TP
+\fB\-ao\-fragment\-ms\fR \fIms\fR
+set audio fragment size in ms (if supported)
+.TP
+\fB\-ao\-fragment\-frames\fR \fIn\fR
+set audio fragment size in samples (if supported)
+.TP
+\fB\-ao\-buffer\-ms\fR \fIms\fR
+set total audio buffer size in ms (if supported)
+.TP
+\fB\-ao\-buffer\-frames\fR \fIn\fR
+set total audio buffer size in samples (if supported)
+.TP
+\fB\-volume\fR \fIvolume\fR
+audio volume (0 \- 100)
+.TP
+\fB\-fast\-sound\fR
+faster but less accurate sound
+
+.SS Keyboard:
+
+.TP
+\fB\-keymap\fR \fIcode\fR
+host keyboard type (\fB\-keymap help\fR for list)
+.TP
+\fB\-kbd\-translate\fR
+enable keyboard translation
+.TP
+\fB\-type\fR \fIstring\fR
+intercept ROM calls to type \fIstring\fR into BASIC
+
+.SS Joysticks:
+
+.TP
+\fB\-joy\-right\fR \fIname\fR
+map right joystick
+.TP
+\fB\-joy\-left\fR \fIname\fR
+map left joystick
+.TP
+\fB\-joy\-virtual\fR \fIname\fR
+specify the 'virtual' joystick to cycle [kjoy0]
+.TP
+\fB\-joy\fR \fIname\fR
+configure named joystick (\fB\-joy help\fR for list)
+
+.PP
+The remaining options configure the currently selected joystick:
+
+.TP
+\fB\-joy\-desc\fR \fItext\fR
+joystick description
+.TP
+\fB\-joy\-axis\fR \fIaxis\fR=\fIspec\fR
+configure joystick axis
+.TP
+\fB\-joy\-button\fR \fIbtn\fR=\fIspec\fR
+configure joystick button
+
+.SS Printing:
+
+.TP
+\fB\-lp\-file\fR \fIfile\fR
+append printer output to \fIfile\fR
+.TP
+\fB\-lp\-pipe\fR \fIcommand\fR
+pipe printer output to \fIcommand\fR
+
+.SS Debugging:
+
+.TP
+\fB\-gdb\fR
+enable GDB target
+.TP
+\fB\-gdb\-ip\fR \fIaddress\fR
+address of interface for GDB target [127.0.0.1]
+.TP
+\fB\-gdb\-port\fR \fIport\fR
+port for GDB target to listen on [65520]
+.TP
+\fB\-trace\fR
+start with trace mode on
+.TP
+\fB\-debug\-ui\fR \fIflags\fR
+UI debugging (see manual, or \fB\-1\fR for all)
+.TP
+\fB\-debug\-file\fR \fIflags\fR
+file debugging (see manual, or \fB\-1\fR for all)
+.TP
+\fB\-debug\-fdc\fR \fIflags\fR
+FDC debugging (see manual, or \fB\-1\fR for all)
+.TP
+\fB\-debug\-gdb\fR \fIflags\fR
+GDB target debugging (see manual, or \fB\-1\fR for all)
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
+general debug verbosity (\fB0\fR to \fB3\fR) [1]
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+equivalent to \fB\-\-verbose 0\fR
+.TP
+\fB\-timeout\fR \fIs\fR
+run for \fIs\fR seconds then quit
+.TP
+\fB\-timeout\-motoroff\fR \fIs\fR
+quit \fIs\fR seconds after tape motor switches off
+.TP
+\fB\-snap\-motoroff\fR \fIfile\fR
+write a snapshot each time tape motor switches off
+
+.SS Other options:
+
+.TP
+\fB\-config\-print\fR
+print configuration to standard out
+.TP
+\fB\-config\-print\-all\fR
+print configuration to standard out, including defaults
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+display help and exit
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+output version information and exit
+.SH FILES
+\fI$HOME/.xroar/xroar.conf\fR
+.SH AUTHOR
+Ciaran Anscomb <xroar@6809.org.uk>

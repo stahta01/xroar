@@ -5,6 +5,9 @@ AC_PREREQ(2.61)
 AC_INIT([xroar], [0.33])
 AM_INIT_AUTOMAKE([foreign])
 
+MANPAGE_DATE="November 2014"
+AC_SUBST(MANPAGE_DATE)
+
 AC_CONFIG_SRCDIR([src/xroar.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -499,6 +502,7 @@ AM_COND_IF([TRACE], [AC_DEFINE([TRACE], 1, [Support trace mode])])
 AC_CONFIG_FILES([Makefile
                  portalib/Makefile
                  src/Makefile
+                 doc/xroar.1
                  doc/Makefile
                  tools/Makefile])
 AC_OUTPUT
