@@ -88,10 +88,17 @@ EXTRA_DIST += \
 
 # ROM paths
 
+if MINGW
+xroar_CFLAGS += -DROMPATH=\":~/Local\ Settings/Application\ Data/XRoar/roms:~/Application\ Data/XRoar/roms\"
+xroar_CFLAGS += -DCONFPATH=\":~/Local\ Settings/Application\ Data/XRoar:~/Application\ Data/XRoar\"
+else
 if UI_COCOA
 xroar_CFLAGS += -DROMPATH=\"~/Library/XRoar/roms:~/.xroar/roms:$(datadir)/xroar/roms:\"
+xroar_CFLAGS += -DCONFPATH=\"~/Library/XRoar:~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 else
 xroar_CFLAGS += -DROMPATH=\"~/.xroar/roms:$(datadir)/xroar/roms:\"
+xroar_CFLAGS += -DCONFPATH=\"~/.xroar:$(sysconfdir):$(datadir)/xroar\"
+endif
 endif
 
 if ZLIB
