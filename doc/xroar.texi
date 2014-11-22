@@ -257,7 +257,10 @@ program using the normal method for the type of image:
 @item If a BASIC program is found on a cassette, XRoar types ``CLOAD'', waits
 for the program to load, then types ``RUN''.
 
-@item For machine code programs on cassette, XRoar types ``CLOADM:EXEC''.
+@item For machine code programs on cassette, XRoar types ``CLOADM'' if they
+appear to load in an autorun fashion, otherwise ``CLOADM:EXEC''.  Special
+built-in rules try and recognise some programs and issue a customised series of
+commands.
 
 @item If a ROM cartridge is inserted, the emulated machine is power cycled.
 
@@ -1092,6 +1095,8 @@ Hex & binary file debugging can be enabled with @option{-debug-file
 Print summary information such as load or exec addresses.
 @item 0x0002
 Hex dump of all data read into memory.
+@item 0x0004
+Print filename block metadata when autorunning a tape.
 @end table
 
 Floppy controller debugging can be enabled with @option{-debug-fdc @var{value}},

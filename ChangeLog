@@ -14,6 +14,9 @@ Version 0.33, unreleased
   * Timing fixes in fast tape loading.
   * Recognise key shortcuts in GTK+ tape/drive control dialogues.
   * Unverified fix for hang in Windows using SDL audio.
+  * IRQ timing tweaked, passes Stewart Orchard's PAL timing test v1.2.
+  * Special-case autorun instructions for some tape programs.
+  * Building from source now uses GNU build system (autotools).
 
 Version 0.32, Tue Apr 22 2014
 
