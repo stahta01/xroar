@@ -102,7 +102,7 @@ static SoundModule * const default_sound_module_list[] = {
 	&sound_windows32_module,
 #endif
 */
-#ifdef HAVE_PULSE_AUDIO
+#ifdef HAVE_PULSE
 	&sound_pulse_module,
 #endif
 #ifdef HAVE_SDL
