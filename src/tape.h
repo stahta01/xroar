@@ -70,6 +70,8 @@ struct tape_file {
 	int start_address;
 	int load_address;
 	_Bool checksum_error;
+	int fnblock_size;
+	uint16_t fnblock_crc;
 };
 
 /* find next tape file */

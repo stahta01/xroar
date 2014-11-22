@@ -27,6 +27,7 @@
 #include "xalloc.h"
 
 #include "breakpoint.h"
+#include "crc16.h"
 #include "delegate.h"
 #include "events.h"
 #include "fs.h"
@@ -75,6 +76,55 @@ static void rewrite_tape_on(struct MC6809 *cpu);
 static void rewrite_end_of_block(struct MC6809 *cpu);
 
 static void set_breakpoints(void);
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+/* Special case autorun instructions based on filename block size and CRC16 */
+
+struct tape_file_autorun {
+	const char *name;
+	int size;
+	uint16_t crc;
+	const char *run;
+};
+
+static struct tape_file_autorun autorun_special[] = {
+	{
+	  .name = "Electronic Author",
+	  .size = 15, .crc = 0x8866,
+	  .run = "\003CLEAR20\\r\\0CLOADM\\r",
+	},
+	{
+	  .name = "Lucifer's Kingdom",
+	  .size = 15, .crc = 0x7f34,
+	  .run = "\003CLEAR1,32767:CLOADM\\r",
+	},
+	{
+	  .name = "North-Sea Action",
+	  .size = 15, .crc = 0x9c2b,
+	  .run = "\003CLEAR20\\r\\0CLOADM\\r\\0EXEC\\r",
+	},
+	{
+	  .name = "Speak Up!",
+	  .size = 15, .crc = 0x7bff,
+	  .run = "\003CLEAR200,25448\\r\\0CLOADM\\r\\0EXEC\\r",
+	},
+	{
+	  .name = "Spy Against Spy",
+	  .size = 15, .crc = 0x48a0,
+	  .run = "\003CLEAR20:CLOADM\\r",
+	},
+	{
+	  .name = "Tanglewood",
+	  .size = 115, .crc = 0x7e5e,
+	  .run = "\003CLEAR10\\r\\0CLOADM\\r",
+	},
+	{
+	  .name = "Utopia",
+	  .size = 15, .crc = 0xeb14,
+	  .run = "\003CLEAR10:CLOADM\\r\\0EXEC\\r",
+	},
+};
 
 /**************************************************************************/
 
@@ -223,6 +273,8 @@ struct tape_file *tape_file_next(struct tape *t, int skip_bad) {
 		f->start_address = (block[13] << 8) | block[14];
 		f->load_address = (block[15] << 8) | block[16];
 		f->checksum_error = sum ? 1 : 0;
+		f->fnblock_size = block[1];
+		f->fnblock_crc = crc16_block(CRC16_RESET, block + 2, f->fnblock_size);
 		return f;
 	}
 }
@@ -384,18 +436,52 @@ int tape_autorun(const char *filename) {
 	if (!f) {
 		return -1;
 	}
+
 	int type = f->type;
-	free(f);
-	switch (type) {
-		case 0:
-			keyboard_queue_basic("\003CLOAD\rRUN\r");
-			break;
-		case 2:
-			keyboard_queue_basic("\003CLOADM:EXEC\r");
-			break;
-		default:
-			break;
+	_Bool done = 0;
+
+	if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_TAPE_FNBLOCK) {
+		LOG_PRINT("\tname:  %s\n", f->name);
+		LOG_PRINT("\ttype:  %d\n", f->type);
+		LOG_PRINT("\tascii: %s\n", f->ascii_flag ? "true" : "false");
+		LOG_PRINT("\tgap:   %s\n", f->gap_flag ? "true" : "false");
+		LOG_PRINT("\tstart: %04x\n", f->start_address);
+		LOG_PRINT("\tload:  %04x\n", f->load_address);
+		LOG_PRINT("\tfnblock: .size = %d, .crc = %04x\n", f->fnblock_size, f->fnblock_crc);
 	}
+
+	/* Check list of known programs */
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(autorun_special); i++) {
+		if (autorun_special[i].size == f->fnblock_size
+		    && autorun_special[i].crc == f->fnblock_crc) {
+			LOG_DEBUG(1, "Using special load instructions for '%s'\n", autorun_special[i].name);
+			keyboard_queue_basic(autorun_special[i].run);
+			done = 1;
+		}
+	}
+
+	free(f);
+
+	/* Otherwise, use a simple heuristic: */
+	if (!done) {
+		_Bool need_exec = (type == 2 && f->load_address >= 0x01a9);
+
+		switch (type) {
+			case 0:
+				keyboard_queue_basic("\003CLOAD\\r\\0RUN\\r");
+				break;
+			case 2:
+				if (need_exec) {
+					keyboard_queue_basic("\003CLOADM:EXEC\\r");
+				} else {
+					keyboard_queue_basic("\003CLOADM\\r");
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
 	return type;
 }
 

@@ -155,6 +155,8 @@ extern struct vdg_palette *xroar_vdg_palette;
 #define XROAR_DEBUG_FILE_BIN (1 << 0)
 // Files: binary files & hex record data
 #define XROAR_DEBUG_FILE_BIN_DATA (1 << 1)
+// Files: tape autorun filename block metadata
+#define XROAR_DEBUG_FILE_TAPE_FNBLOCK (1 << 2)
 
 // FDC: state debug level mask (1 = commands, 2 = all)
 #define XROAR_DEBUG_FDC_STATE (3 << 0)
