@@ -275,14 +275,20 @@ xroar_SOURCES += \
 	windows32/ao_windows32.c \
 	windows32/common_windows32.c windows32/common_windows32.h \
 	windows32/filereq_windows32.c \
-	windows32/ui_windows32.c
+	windows32/ui_windows32.c \
+	windows32/xroar.rc
+
+.rc.o:
+	$(RC) -o $@ -O coff -DRC_VERSION=$(RC_VERSION) -DRC_VER_MAJOR=$(RC_VER_MAJOR) -DRC_VER_MINOR=$(RC_VER_MINOR) -DRC_REV_MAJOR=$(RC_REV_MAJOR) -DRC_REV_MINOR=$(RC_REV_MINOR) $<
+.rc.obj:
+	$(RC) -o $@ -O coff -DRC_VERSION=$(RC_VERSION) -DRC_VER_MAJOR=$(RC_VER_MAJOR) -DRC_VER_MINOR=$(RC_VER_MINOR) -DRC_REV_MAJOR=$(RC_REV_MAJOR) -DRC_REV_MINOR=$(RC_REV_MINOR) $<
+
 endif
 
 EXTRA_DIST += \
 	windows32/xroar-16x16.ico \
 	windows32/xroar-32x32.ico \
-	windows32/xroar-48x48.ico \
-	windows32/xroar.rc
+	windows32/xroar-48x48.ico
 
 # Trace mode support
 if TRACE

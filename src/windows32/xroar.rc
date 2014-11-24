@@ -8,8 +8,8 @@
 #define to_hex_(s) 0x ## s
 
 1 VERSIONINFO
-FILEVERSION     0,0,0,0
-PRODUCTVERSION  VERSION_MAJOR,VERSION_MINOR,VERSION_PATCH,to_hex(VERSION_SUBPATCH)
+FILEVERSION  RC_VER_MAJOR,RC_VER_MINOR,RC_REV_MAJOR,RC_REV_MINOR
+PRODUCTVERSION  RC_VER_MAJOR,RC_VER_MINOR,RC_REV_MAJOR,RC_REV_MINOR
 BEGIN
 
   BLOCK "StringFileInfo"
@@ -18,15 +18,12 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "6809.org.uk"
       VALUE "FileDescription", "Dragon/Tandy CoCo emulator"
-      VALUE "FileVersion", "0.0"
+      VALUE "FileVersion", to_str(RC_VERSION)
       VALUE "InternalName", "xroar"
       VALUE "LegalCopyright", "Copyright 2003-2014 Ciaran Anscomb.  GNU GPL 2 or later."
       VALUE "OriginalFilename", "xroar.exe"
       VALUE "ProductName", "XRoar"
-      VALUE "ProductVersion", to_str(VERSION)
-#if (to_hex(VERSION_SUBPATCH) > 0)
-      VALUE "PrivateBuild", "snap-" to_str(VERSION_PATCH) to_str(VERSION_SUBPATCH)
-#endif
+      VALUE "ProductVersion", to_str(RC_VERSION)
     END
   END
 

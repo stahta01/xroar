@@ -22,6 +22,10 @@ AC_PROG_OBJC
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
+AN_MAKEVAR([RC], [AC_PROG_RC])
+AN_PROGRAM([windres], [AC_PROG_RC])
+AC_CHECK_TOOL(RC, windres, :)
+
 # Checks for libraries.
 
 # Checks for header files.
@@ -496,6 +500,28 @@ AM_COND_IF([LOGGING], [AC_DEFINE([LOGGING], 1, [Logging])])
 
 AM_CONDITIONAL([TRACE], [test "x$enable_trace" != "xno"])
 AM_COND_IF([TRACE], [AC_DEFINE([TRACE], 1, [Support trace mode])])
+
+# Version information for Windows resource file
+RC_VER_MAJOR=`echo $VERSION|cut -d. -f1`
+RC_VER_MINOR=`echo $VERSION|cut -d. -f2`
+test -z "$RC_REV_MAJOR" && RC_REV_MAJOR=`date +%Y`
+if test -z "$RC_REV_MINOR"; then
+	tmp_m=`date +%m`
+	tmp_d=`date +%d`
+	tmp_H=`date +%H`
+	tmp_M=`date +%M`
+	RC_REV_MINOR=`expr $tmp_m \* 4096 + $tmp_d \* 128 + $tmp_H \* 4 + $tmp_M / 15`
+fi
+RC_VER_MAJOR=`expr $RC_VER_MAJOR + 0`
+RC_VER_MINOR=`expr $RC_VER_MINOR + 0`
+RC_REV_MAJOR=`expr $RC_REV_MAJOR + 0`
+RC_REV_MINOR=`expr $RC_REV_MINOR + 0`
+RC_VERSION="$RC_VER_MAJOR.$RC_VER_MINOR.$RC_REV_MAJOR.$RC_REV_MINOR"
+AC_SUBST(RC_VER_MAJOR)
+AC_SUBST(RC_VER_MINOR)
+AC_SUBST(RC_REV_MAJOR)
+AC_SUBST(RC_REV_MINOR)
+AC_SUBST(RC_VERSION)
 
 ### Write everything out
 
