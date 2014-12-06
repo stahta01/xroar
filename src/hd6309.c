@@ -561,7 +561,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				ea = long_relative(cpu);
 				REG_PC += ea;
 				NVMA_CYCLE;
-				NVMA_CYCLE;
+				if (!NATIVE_MODE)
+					NVMA_CYCLE;
 			} break;
 			// 0x17 LBSR relative
 			case 0x17: {
@@ -570,8 +571,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				ea += REG_PC;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				NVMA_CYCLE;
-				NVMA_CYCLE;
+				if (!NATIVE_MODE) {
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+				}
 				push_word(cpu, &REG_S, REG_PC);
 				REG_PC = ea;
 			} break;
@@ -1062,7 +1065,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned tmp = word_immediate(cpu);
 				if (branch_condition(cpu, op)) {
 					REG_PC += tmp;
-					NVMA_CYCLE;
+					if (!NATIVE_MODE)
+						NVMA_CYCLE;
 				}
 				NVMA_CYCLE;
 			} break;
