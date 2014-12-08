@@ -324,7 +324,7 @@ static char const * const default_config[] = {
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
 	// DragonDOS
-	"romlist dragondos=ddos40,ddos15,ddos10,Dragon Data Ltd - DragonDOS 1.0",
+	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,Dragon Data Ltd - DragonDOS 1.0",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
 	"romlist superdos=sdose6,PNP - SuperDOS E6,sdose5,sdose4",
 	"romlist cumana=cdos20,CDOS20",
