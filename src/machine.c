@@ -97,7 +97,7 @@ static struct {
 };
 
 static struct slist *config_list = NULL;
-static int num_configs = 0;
+static int next_id = 0;
 
 static void initialise_ram(void);
 
@@ -115,7 +115,7 @@ static int stop_signal = 0;
 struct machine_config *machine_config_new(void) {
 	struct machine_config *new;
 	new = xzalloc(sizeof(*new));
-	new->index = num_configs;
+	new->id = next_id;
 	new->architecture = ANY_AUTO;
 	new->cpu = CPU_MC6809;
 	new->keymap = ANY_AUTO;
@@ -124,18 +124,14 @@ struct machine_config *machine_config_new(void) {
 	new->ram = ANY_AUTO;
 	new->cart_enabled = 1;
 	config_list = slist_append(config_list, new);
-	num_configs++;
+	next_id++;
 	return new;
 }
 
-int machine_config_count(void) {
-	return num_configs;
-}
-
-struct machine_config *machine_config_index(int i) {
+struct machine_config *machine_config_by_id(int id) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
-		if (mc->index == i)
+		if (mc->id == id)
 			return mc;
 	}
 	return NULL;
@@ -180,6 +176,19 @@ static void machine_config_free(struct machine_config *mc) {
 	if (mc->default_cart)
 		free(mc->default_cart);
 	free(mc);
+}
+
+_Bool machine_config_remove(const char *name) {
+	struct machine_config *mc = machine_config_by_name(name);
+	if (!mc)
+		return 0;
+	config_list = slist_remove(config_list, mc);
+	machine_config_free(mc);
+	return 1;
+}
+
+struct slist *machine_config_list(void) {
+	return config_list;
 }
 
 static int find_working_arch(void) {

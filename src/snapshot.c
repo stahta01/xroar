@@ -142,7 +142,7 @@ int write_snapshot(const char *filename) {
 	fs_write_uint16(fd, SNAPSHOT_VERSION_MINOR);
 	// Machine running config
 	write_chunk_header(fd, ID_MACHINECONFIG, 8);
-	fs_write_uint8(fd, xroar_machine_config->index);
+	fs_write_uint8(fd, 0);  // xroar_machine_config->index;
 	fs_write_uint8(fd, xroar_machine_config->architecture);
 	fs_write_uint8(fd, xroar_machine_config->cpu);
 	fs_write_uint8(fd, xroar_machine_config->keymap);

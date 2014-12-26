@@ -274,9 +274,11 @@ static void setup_machine_menu(void) {
 
 	machine_menu = CreatePopupMenu();
 	num_machines = machine_config_count();
-	for (int i = 0; i < num_machines; i++) {
-		struct machine_config *mc = machine_config_index(i);
-		AppendMenu(machine_menu, MF_STRING, TAG_MACHINE | mc->index, mc->description);
+	struct slist *mcl = machine_config_list();
+	while (mcl) {
+		struct machine_config *mc = mcl->data;
+		AppendMenu(machine_menu, MF_STRING, TAG_MACHINE | mc->id, mc->description);
+		mcl = mcl->next;
 	}
 
 	AppendMenu(machine_menu, MF_SEPARATOR, 0, NULL);
@@ -305,7 +307,7 @@ static void setup_machine_menu(void) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)machine_menu, "&Machine");
 
-	machine_changed_cb(xroar_machine_config ? xroar_machine_config->index : 0);
+	machine_changed_cb(xroar_machine_config ? xroar_machine_config->id : 0);
 }
 
 static void setup_cartridge_menu(void) {

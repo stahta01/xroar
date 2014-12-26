@@ -11,6 +11,7 @@
 
 #include "xconfig.h"
 
+struct slist;
 struct cart;
 struct MC6809;
 struct MC6821;
@@ -63,7 +64,7 @@ struct MC6821;
 struct machine_config {
 	char *name;
 	char *description;
-	int index;
+	int id;
 	int architecture;
 	int cpu;
 	char *vdg_palette;
@@ -99,10 +100,11 @@ extern struct xconfig_enum machine_vdg_type_list[];
 /* Add a new machine config: */
 struct machine_config *machine_config_new(void);
 /* For finding known configs: */
-int machine_config_count(void);
-struct machine_config *machine_config_index(int i);
+struct machine_config *machine_config_by_id(int id);
 struct machine_config *machine_config_by_name(const char *name);
 struct machine_config *machine_config_by_arch(int arch);
+_Bool machine_config_remove(const char *name);
+struct slist *machine_config_list(void);
 /* Find a working machine by searching available ROMs: */
 struct machine_config *machine_config_first_working(void);
 /* Complete a config replacing ANY_AUTO entries: */

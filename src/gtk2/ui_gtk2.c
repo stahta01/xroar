@@ -29,6 +29,7 @@
 #include <gtk/gtk.h>
 
 #include "pl-string.h"
+#include "slist.h"
 
 #include "cart.h"
 #include "events.h"
@@ -689,20 +690,22 @@ static void free_action_group(GtkActionGroup *action_group) {
 
 /* Dynamic machine menu */
 static void update_machine_menu(void) {
-	int num_machines = machine_config_count();
-	int i;
+	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
+	int num_machines = slist_length(mcl);
 	int selected = -1;
 	free_action_group(machine_action_group);
 	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_machines);
-	if (xroar_machine_config) selected = xroar_machine_config->index;
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
 	/* add these to the ui in reverse order, as each will be
 	 * inserted before the previous */
-	for (i = num_machines-1; i >= 0; i--) {
-		struct machine_config *mc = machine_config_index(i);
+	int i = 0;
+	for (struct slist *iter = mcl; iter; iter = iter->next, i++) {
+		struct machine_config *mc = iter->data;
+		if (mc == xroar_machine_config)
+			selected = mc->id;
 		radio_entries[i].name = g_strconcat("machine-", mc->name, NULL);
 		radio_entries[i].label = escape_underscores(mc->description);
-		radio_entries[i].value = i;
+		radio_entries[i].value = mc->id;
 		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_machines, "/MainMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	gtk_action_group_add_radio_actions(machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
@@ -711,6 +714,7 @@ static void update_machine_menu(void) {
 		g_free((gpointer)radio_entries[i].label);
 	}
 	g_free(radio_entries);
+	slist_free(mcl);
 }
 
 /* Dynamic cartridge menu */

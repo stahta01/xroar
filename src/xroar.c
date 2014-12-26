@@ -1344,39 +1344,41 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
-void xroar_set_machine(int machine_type) {
+void xroar_set_machine(int id) {
 	static int lock = 0;
 	if (lock) return;
 	lock = 1;
-	int new = xroar_machine_config->index;
-	int num_machine_types = machine_config_count();
-	switch (machine_type) {
-		case XROAR_TOGGLE:
-			break;
+	int new = xroar_machine_config->id;
+	struct slist *mcl, *mcc;
+	switch (id) {
 		case XROAR_CYCLE:
-			new = (new + 1) % num_machine_types;
+			mcl = machine_config_list();
+			mcc = slist_find(mcl, xroar_machine_config);
+			if (mcc && mcc->next) {
+				new = ((struct machine_config *)mcc->next->data)->id;
+			} else {
+				new = ((struct machine_config *)mcl->data)->id;
+			}
 			break;
 		default:
-			new = machine_type;
+			new = (id >= 0 ? id : 0);
 			break;
 	}
-	if (new >= 0 && new < num_machine_types) {
-		machine_remove_cart();
-		xroar_machine_config = machine_config_index(new);
-		machine_configure(xroar_machine_config);
-		if (xroar_machine_config->cart_enabled) {
-			xroar_set_cart(xroar_machine_config->default_cart);
-		} else {
-			xroar_set_cart(NULL);
-		}
-		xroar_vdg_palette = get_machine_palette();
-		if (video_module->update_palette) {
-			video_module->update_palette();
-		}
-		xroar_hard_reset();
-		if (ui_module->machine_changed_cb) {
-			ui_module->machine_changed_cb(new);
-		}
+	machine_remove_cart();
+	xroar_machine_config = machine_config_by_id(new);
+	machine_configure(xroar_machine_config);
+	if (xroar_machine_config->cart_enabled) {
+		xroar_set_cart(xroar_machine_config->default_cart);
+	} else {
+		xroar_set_cart(NULL);
+	}
+	xroar_vdg_palette = get_machine_palette();
+	if (video_module->update_palette) {
+		video_module->update_palette();
+	}
+	xroar_hard_reset();
+	if (ui_module->machine_changed_cb) {
+		ui_module->machine_changed_cb(new);
 	}
 	lock = 0;
 }
@@ -1505,10 +1507,10 @@ static void set_ntsc(void) {
 static void set_machine(const char *name) {
 #ifdef LOGGING
 	if (name && 0 == strcmp(name, "help")) {
-		int count = machine_config_count();
-		int i;
-		for (i = 0; i < count; i++) {
-			struct machine_config *mc = machine_config_index(i);
+		struct slist *mcl = machine_config_list();
+		while (mcl) {
+			struct machine_config *mc = mcl->data;
+			mcl = mcl->next;
 			printf("\t%-10s %s\n", mc->name, mc->description);
 		}
 		exit(EXIT_SUCCESS);
