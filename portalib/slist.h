@@ -57,10 +57,16 @@ void slist_free_full(struct slist *, slist_free_func);
 /* Free one list element. */
 void slist_free_1(struct slist *);
 
+/* Number of elements. */
+unsigned slist_length(struct slist *);
+
 /* Copy a list, new elements reference same data. */
 struct slist *slist_copy(struct slist *);
 /* Copy a list, new elements are copied with user function. */
 struct slist *slist_copy_deep(struct slist *, slist_copy_func, void *);
+
+/* Reverse a list. */
+struct slist *slist_reverse(struct slist *);
 
 /* Sort list in-place, the old list order is lost. */
 struct slist *slist_sort(struct slist *, slist_cmp_func);

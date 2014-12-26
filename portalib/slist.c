@@ -88,6 +88,16 @@ void slist_free_1(struct slist *list) {
 	free(list);
 }
 
+/* Number of elements. */
+unsigned slist_length(struct slist *list) {
+	unsigned length = 0;
+	while (list) {
+		length++;
+		list = list->next;
+	}
+	return length;
+}
+
 /* Copy a list, new elements reference same data. */
 struct slist *slist_copy(struct slist *list) {
 	struct slist *new = NULL;
@@ -106,6 +116,18 @@ struct slist *slist_copy_deep(struct slist *list, slist_copy_func copy_func, voi
 		l->data = copy_func(l->data, copy_data);
 	}
 	return new;
+}
+
+/* Reverse a list. */
+struct slist *slist_reverse(struct slist *list) {
+	struct slist *prev = NULL;
+	while (list) {
+		struct slist *next = list->next;
+		list->next = prev;
+		prev = list;
+		list = next;
+	}
+	return prev;
 }
 
 /* Helper function for slist_sort().  Merges left and right into a single
