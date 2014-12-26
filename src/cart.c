@@ -43,7 +43,7 @@
 #include "xroar.h"
 
 static struct slist *config_list = NULL;
-static int num_configs = 0;
+static int next_id = 0;
 
 /* Single config for auto-defined ROM carts */
 static struct cart_config *rom_cart_config = NULL;
@@ -59,22 +59,18 @@ static void do_firq(void *);
 struct cart_config *cart_config_new(void) {
 	struct cart_config *new;
 	new = xzalloc(sizeof(*new));
-	new->index = num_configs;
+	new->id = next_id;
 	new->type = CART_ROM;
 	new->autorun = ANY_AUTO;
 	config_list = slist_append(config_list, new);
-	num_configs++;
+	next_id++;
 	return new;
 }
 
-int cart_config_count(void) {
-	return num_configs;
-}
-
-struct cart_config *cart_config_index(int i) {
+struct cart_config *cart_config_by_id(int id) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
-		if (cc->index == i)
+		if (cc->id == id)
 			return cc;
 	}
 	return NULL;
@@ -175,6 +171,19 @@ static void cart_config_free(struct cart_config *cc) {
 	if (cc->rom2)
 		free(cc->rom2);
 	free(cc);
+}
+
+_Bool cart_config_remove(const char *name) {
+	struct cart_config *cc = cart_config_by_name(name);
+	if (!cc)
+		return 0;
+	config_list = slist_remove(config_list, cc);
+	cart_config_free(cc);
+	return 1;
+}
+
+struct slist *cart_config_list(void) {
+	return config_list;
 }
 
 struct xconfig_enum cart_type_list[] = {

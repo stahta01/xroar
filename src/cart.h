@@ -11,6 +11,7 @@
 #include "delegate.h"
 #include "xconfig.h"
 
+struct slist;
 struct machine_config;
 struct event;
 
@@ -25,7 +26,7 @@ enum cart_type {
 struct cart_config {
 	char *name;
 	char *description;
-	int index;
+	int id;
 	enum cart_type type;
 	char *rom;
 	char *rom2;
@@ -50,9 +51,10 @@ struct cart {
 extern struct xconfig_enum cart_type_list[];
 
 struct cart_config *cart_config_new(void);
-int cart_config_count(void);
-struct cart_config *cart_config_index(int i);
+struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
+_Bool cart_config_remove(const char *name);
+struct slist *cart_config_list(void);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
 void cart_config_print_all(_Bool all);

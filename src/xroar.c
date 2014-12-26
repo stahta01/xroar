@@ -1414,7 +1414,7 @@ void xroar_set_cart(const char *cc_name) {
 
 	if (ui_module->cart_changed_cb) {
 		if (machine_cart) {
-			ui_module->cart_changed_cb(machine_cart->config->index);
+			ui_module->cart_changed_cb(machine_cart->config->id);
 		} else {
 			ui_module->cart_changed_cb(-1);
 		}
@@ -1614,10 +1614,10 @@ static void set_machine(const char *name) {
 static void set_cart(const char *name) {
 #ifdef LOGGING
 	if (name && 0 == strcmp(name, "help")) {
-		int count = cart_config_count();
-		int i;
-		for (i = 0; i < count; i++) {
-			struct cart_config *cc = cart_config_index(i);
+		struct slist *ccl = cart_config_list();
+		while (ccl) {
+			struct cart_config *cc = ccl->data;
+			ccl = ccl->next;
 			printf("\t%-10s %s\n", cc->name, cc->description);
 		}
 		exit(EXIT_SUCCESS);

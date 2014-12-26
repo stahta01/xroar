@@ -291,7 +291,7 @@ static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer u
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	(void)user_data;
-	struct cart_config *cc = cart_config_index(val);
+	struct cart_config *cc = cart_config_by_id(val);
 	xroar_set_cart(cc ? cc->name : NULL);
 }
 
@@ -719,21 +719,22 @@ static void update_machine_menu(void) {
 
 /* Dynamic cartridge menu */
 static void update_cartridge_menu(void) {
-	int num_carts = cart_config_count();
-	int i;
+	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
+	int num_carts = slist_length(ccl);
 	int selected = 0;
 	free_action_group(cart_action_group);
 	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_carts);
-	if (xroar_cart)
-		selected = xroar_cart->config->index;
 	GtkRadioActionEntry *radio_entries = g_malloc0((num_carts+1) * sizeof(*radio_entries));
 	/* add these to the ui in reverse order, as each will be
 	   inserted before the previous */
-	for (i = num_carts-1; i >= 0; i--) {
-		struct cart_config *cc = cart_config_index(i);
+	int i = 0;
+	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
+		struct cart_config *cc = iter->data;
+		if (xroar_cart && cc == xroar_cart->config)
+			selected = cc->id;
 		radio_entries[i].name = g_strconcat("cart-", cc->name, NULL);
 		radio_entries[i].label = escape_underscores(cc->description);
-		radio_entries[i].value = i;
+		radio_entries[i].value = cc->id;
 		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	radio_entries[num_carts].name = "none";
@@ -747,6 +748,7 @@ static void update_cartridge_menu(void) {
 		g_free((gpointer)radio_entries[i].label);
 	}
 	g_free(radio_entries);
+	slist_free(ccl);
 }
 
 /* Cursor hiding */
