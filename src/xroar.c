@@ -450,11 +450,29 @@ int xroar_last_signal;
 _Bool xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
+	_Bool no_conffile = 0;
+	_Bool no_builtin = 0;
 
-	// If the very first argument is -c, override conffile.
-	if ((argn + 1) <= argc && 0 == strcmp(argv[argn], "-c")) {
-		conffile = xstrdup(argv[argn+1]);
-		argn += 2;
+	/* Options that must come first on the command line, as they affect
+	 * initial config & config file. */
+	while (1) {
+		if ((argn+1) < argc && 0 == strcmp(argv[argn], "-c")) {
+			// -c, override conffile
+			if (conffile)
+				free(conffile);
+			conffile = xstrdup(argv[argn+1]);
+			argn += 2;
+		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-c")) {
+			// -no-c, disable conffile
+			no_conffile = 1;
+			argn++;
+		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-builtin")) {
+			// -no-builtin, disable builtin config
+			no_builtin = 1;
+			argn++;
+		} else {
+			break;
+		}
 	}
 
 #ifdef WINDOWS32
@@ -471,23 +489,27 @@ _Bool xroar_init(int argc, char **argv) {
 		private_cfg.joy_button[i] = NULL;
 
 	// Default configuration.
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(default_config); i++) {
-		xconfig_parse_line(xroar_options, default_config[i]);
+	if (!no_builtin) {
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(default_config); i++) {
+			xconfig_parse_line(xroar_options, default_config[i]);
+		}
+		// Finish any machine or cart config in defaults.
+		set_machine(NULL);
+		set_cart(NULL);
+		set_joystick(NULL);
+		xroar_machine_config = NULL;
+		selected_cart_config = NULL;
+		cur_joy_config = NULL;
 	}
-	// Finish any machine or cart config in defaults.
-	set_machine(NULL);
-	set_cart(NULL);
-	set_joystick(NULL);
-	xroar_machine_config = NULL;
-	selected_cart_config = NULL;
-	cur_joy_config = NULL;
 
 	// If a configuration file is found, parse it.
-	if (!conffile)
-		conffile = find_in_path(xroar_conf_path, "xroar.conf");
-	if (conffile) {
-		(void)xconfig_parse_file(xroar_options, conffile);
-		free(conffile);
+	if (!no_conffile) {
+		if (!conffile)
+			conffile = find_in_path(xroar_conf_path, "xroar.conf");
+		if (conffile) {
+			(void)xconfig_parse_file(xroar_options, conffile);
+			free(conffile);
+		}
 	}
 	// Finish any machine or cart config in config file.
 	set_machine(NULL);
@@ -519,7 +541,6 @@ _Bool xroar_init(int argc, char **argv) {
 	if (!xroar_machine_config) {
 		xroar_machine_config = machine_config_first_working();
 	}
-	assert(xroar_machine_config != NULL);
 	// Finish any machine or cart config on command line.
 	set_machine(NULL);
 	set_cart(NULL);
@@ -533,6 +554,7 @@ _Bool xroar_init(int argc, char **argv) {
 		config_print_all(1);
 		exit(EXIT_SUCCESS);
 	}
+	assert(xroar_machine_config != NULL);
 
 	// Select a UI module.
 	ui_module = (UIModule *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
