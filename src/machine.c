@@ -211,7 +211,10 @@ static int find_working_arch(void) {
 }
 
 struct machine_config *machine_config_first_working(void) {
-	return machine_config_by_arch(find_working_arch());
+	struct machine_config *mc = machine_config_by_arch(find_working_arch());
+	if (!mc && config_list)
+		mc = config_list->data;
+	return mc;
 }
 
 void machine_config_complete(struct machine_config *mc) {
