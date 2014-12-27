@@ -8,6 +8,8 @@
 
 #include "module.h"
 
+struct slist;
+
 // Each joystick module contains a list of interfaces, with standard names:
 //
 // physical - interface reads from a real joystick
@@ -48,7 +50,7 @@ struct joystick_module {
 struct joystick_config {
 	char *name;
 	char *description;
-	unsigned index;
+	unsigned id;
 	char *axis_specs[JOYSTICK_NUM_AXES];
 	char *button_specs[JOYSTICK_NUM_BUTTONS];
 };
@@ -85,10 +87,11 @@ struct joystick_interface {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct joystick_config *joystick_config_new(void);
-unsigned joystick_config_count(void);
-struct joystick_config *joystick_config_index(unsigned i);
+struct joystick_config *joystick_config_by_id(unsigned i);
 struct joystick_config *joystick_config_by_name(const char *name);
 void joystick_config_print_all(_Bool all);
+_Bool joystick_config_remove(const char *name);
+struct slist *joystick_config_list(void);
 
 void joystick_init(void);
 void joystick_shutdown(void);

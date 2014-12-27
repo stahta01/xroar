@@ -1694,10 +1694,10 @@ static void set_joystick(const char *name) {
 	}
 #ifdef LOGGING
 	if (name && 0 == strcmp(name, "help")) {
-		int count = joystick_config_count();
-		int i;
-		for (i = 0; i < count; i++) {
-			struct joystick_config *jc = joystick_config_index(i);
+		struct slist *jcl = joystick_config_list();
+		while (jcl) {
+			struct joystick_config *jc = jcl->data;
+			jcl = jcl->next;
 			printf("\t%-10s %s\n", jc->name, jc->description);
 		}
 		exit(EXIT_SUCCESS);

@@ -49,7 +49,7 @@ static struct joystick_module * const joystick_module_list[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct slist *config_list = NULL;
-static unsigned num_configs = 0;
+static unsigned next_id = 0;
 
 // Current configuration, per-port:
 struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
@@ -94,20 +94,16 @@ void joystick_shutdown(void) {
 struct joystick_config *joystick_config_new(void) {
 	struct joystick_config *new;
 	new = xzalloc(sizeof(*new));
-	new->index = num_configs;
+	new->id = next_id;
 	config_list = slist_append(config_list, new);
-	num_configs++;
+	next_id++;
 	return new;
 }
 
-unsigned joystick_config_count(void) {
-	return num_configs;
-}
-
-struct joystick_config *joystick_config_index(unsigned i) {
+struct joystick_config *joystick_config_by_id(unsigned id) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct joystick_config *jc = l->data;
-		if (jc->index == i)
+		if (jc->id == id)
 			return jc;
 	}
 	return NULL;
@@ -161,6 +157,19 @@ static void joystick_config_free(struct joystick_config *jc) {
 			free(jc->button_specs[i]);
 	}
 	free(jc);
+}
+
+_Bool joystick_config_remove(const char *name) {
+	struct joystick_config *jc = joystick_config_by_name(name);
+	if (!jc)
+		return 0;
+	config_list = slist_remove(config_list, jc);
+	joystick_config_free(jc);
+	return 1;
+}
+
+struct slist *joystick_config_list(void) {
+	return config_list;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
