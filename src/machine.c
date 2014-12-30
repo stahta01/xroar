@@ -1076,6 +1076,12 @@ static uint8_t read_cycle(void *m, uint16_t A) {
 			if (machine_cart)
 				machine_cart->read(machine_cart, A, 1, &read_D);
 			break;
+		// Should call cart's read() whatever the address and
+		// indicate P2 and CTS.
+		case 7:
+			if (machine_cart)
+				machine_cart->read(machine_cart, A, 0, &read_D);
+			break;
 		default:
 			break;
 	}
@@ -1134,7 +1140,7 @@ static void write_cycle(void *m, uint16_t A, uint8_t D) {
 					machine_cart->write(machine_cart, A, 1, D);
 				break;
 			// Should call cart's write() whatever the address and
-			// set P2 accordingly, but for now this enables orch90:
+			// indicate P2 and CTS.
 			case 7:
 				if (machine_cart)
 					machine_cart->write(machine_cart, A, 0, D);
