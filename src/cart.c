@@ -233,7 +233,7 @@ struct cart *cart_new(struct cart_config *cc) {
 	case CART_DELTADOS: c = deltados_new(cc); break;
 	case CART_ORCH90: c = orch90_new(cc); break;
 	}
-	if (c->attach)
+	if (c && c->attach)
 		c->attach(c);
 	return c;
 }
