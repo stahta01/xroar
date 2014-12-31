@@ -21,6 +21,7 @@ enum cart_type {
 	CART_RSDOS = 2,
 	CART_DELTADOS = 3,
 	CART_ORCH90 = 4,
+	CART_MPI = 5,
 };
 
 struct cart_config {

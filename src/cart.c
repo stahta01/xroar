@@ -36,6 +36,7 @@
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
+#include "mpi.h"
 #include "orch90.h"
 #include "romlist.h"
 #include "rsdos.h"
@@ -192,6 +193,7 @@ struct xconfig_enum cart_type_list[] = {
 	{ .value = CART_DELTADOS, .name = "delta", .description = "Delta System" },
 	{ .value = CART_RSDOS, .name = "rsdos", .description = "RS-DOS" },
 	{ .value = CART_ORCH90, .name = "orch90", .description = "Orchestra 90-CC" },
+	{ .value = CART_MPI, .name = "mpi", .description = "Multi-Pak Interface" },
 	{ XC_ENUM_END() }
 };
 
@@ -232,6 +234,7 @@ struct cart *cart_new(struct cart_config *cc) {
 	case CART_RSDOS: c = rsdos_new(cc); break;
 	case CART_DELTADOS: c = deltados_new(cc); break;
 	case CART_ORCH90: c = orch90_new(cc); break;
+	case CART_MPI: c = mpi_new(cc); break;
 	}
 	if (c && c->attach)
 		c->attach(c);

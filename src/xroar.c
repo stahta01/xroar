@@ -55,6 +55,7 @@
 #include "mc6809_trace.h"
 #include "mc6847.h"
 #include "module.h"
+#include "mpi.h"
 #include "path.h"
 #include "printer.h"
 #include "romlist.h"
@@ -293,6 +294,10 @@ static char const * const default_config[] = {
 	"cart-desc Orchestra-90 CC",
 	"cart-type orch90",
 	"cart-rom orch90",
+	// Multi-Pak Interface
+	"cart mpi",
+	"cart-desc Multi-Pak Interface",
+	"cart-type mpi",
 
 	// ROM lists
 
@@ -1689,6 +1694,24 @@ static void set_cart(const char *name) {
 	}
 }
 
+static void cfg_mpi_slot(int slot) {
+	mpi_set_initial(slot);
+}
+
+static void cfg_mpi_load_cart(const char *arg) {
+	char *arg_copy = xstrdup(arg);
+	char *carg = arg_copy;
+	char *tmp = strsep(&carg, "=");
+	static int slot = 0;
+	if (carg) {
+		slot = strtol(tmp, NULL, 0);
+		tmp = carg;
+	}
+	mpi_set_cart(slot, tmp);
+	slot++;
+	free(arg_copy);
+}
+
 /* Called when a "-joystick" option is encountered. */
 static void set_joystick(const char *name) {
 	// Apply any config to the current joystick config.
@@ -1855,6 +1878,10 @@ static struct xconfig_option const xroar_options[] = {
 	/* Backwards compatibility: */
 	{ XC_SET_ENUM("dostype", &private_cfg.cart_type, cart_type_list), .deprecated = 1 },
 	{ XC_SET_STRING("dos", &private_cfg.dos_option), .deprecated = 1 },
+
+	/* Multi-Pak Interface: */
+	{ XC_CALL_INT("mpi-slot", &cfg_mpi_slot) },
+	{ XC_CALL_STRING("mpi-load-cart", &cfg_mpi_load_cart) },
 
 	/* Becker port: */
 	{ XC_SET_BOOL("becker", &xroar_cfg.becker) },
@@ -2023,6 +2050,10 @@ static void helptext(void) {
 "    -cart-autorun         autorun cartridge\n"
 "    -cart-becker          enable becker port where supported\n"
 
+"\n Multi-Pak Interface:\n"
+"  -mpi-slot SLOT               initially select slot (0-3)\n"
+"  -mpi-load-cart [SLOT=]NAME   insert cartridge into next or numbered slot\n"
+
 "\n Becker port:\n"
 "  -becker               prefer becker-enabled DOS (when picked automatically)\n"
 "  -becker-ip ADDRESS    address or hostname of DriveWire server [" BECKER_IP_DEFAULT "]\n"
@@ -2123,6 +2154,9 @@ static void helptext(void) {
 "  -config-print-all   print configuration to standard out, including defaults\n"
 "  -h, --help          display this help and exit\n"
 "  -V, --version       output version information and exit\n"
+
+"\nWhen configuring a Multi-Pak Interface (MPI), only the last configured DOS\n"
+"cartridge will end up connected to the virtual drives.\n"
 
 "\nJoystick SPECs are of the form [INTERFACE:][ARG[,ARG]...], from:\n"
 
