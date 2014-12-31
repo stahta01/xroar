@@ -40,6 +40,12 @@ option) any later version.
 #include "sdl/common.h"
 #include "windows32/common_windows32.h"
 
+#ifdef STRICT
+#define WNDPROCTYPE WNDPROC
+#else
+#define WNDPROCTYPE FARPROC
+#endif
+
 #define TAG_TYPE_MASK (0x7f << 8)
 #define TAG_VALUE_MASK (0xff)
 
@@ -142,6 +148,9 @@ UIModule ui_windows32_module = {
 
 static HMENU top_menu;
 
+static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static WNDPROCTYPE sdl_window_proc = NULL;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void setup_file_menu(void);
@@ -172,7 +181,16 @@ static _Bool init(void) {
 	SDL_GetWMInfo(&sdlinfo);
 	windows32_main_hwnd = sdlinfo.window;
 
-	SetFocus(windows32_main_hwnd);
+	// Preserve SDL's "windowproc"
+	sdl_window_proc = (WNDPROCTYPE)GetWindowLongPtr(windows32_main_hwnd, GWLP_WNDPROC);
+
+	// Set my own to process wm events.  Without this, the windows menu
+	// blocks and the internal SDL event queue overflows, causing missed
+	// selections.
+	SetWindowLongPtr(windows32_main_hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
+
+	// Explicitly disable SDL processing of these events
+	SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
 
 	top_menu = CreateMenu();
 	setup_file_menu();
@@ -185,16 +203,15 @@ static _Bool init(void) {
 }
 
 static void ui_shutdown(void) {
+	DestroyMenu(top_menu);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
 void sdl_windows32_update_menu(_Bool fullscreen) {
 	if (fullscreen) {
 		SetMenu(windows32_main_hwnd, NULL);
-		SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
 	} else {
 		SetMenu(windows32_main_hwnd, top_menu);
-		SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 	}
 }
 
@@ -345,12 +362,40 @@ static void setup_tool_menu(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	SDL_Event event;
+	SDL_SysWMmsg wmmsg;
+
+	switch (msg) {
+
+	case WM_COMMAND:
+		/* Selectively push WM events onto the SDL queue */
+		wmmsg.hwnd = hwnd;
+		wmmsg.msg = msg;
+		wmmsg.wParam = wParam;
+		wmmsg.lParam = lParam;
+		event.type = SDL_SYSWMEVENT;
+		event.syswm.msg = &wmmsg;
+		SDL_PushEvent(&event);
+		break;
+
+	default:
+		/* Fall back to original SDL handler */
+		return sdl_window_proc(hwnd, msg, wParam, lParam);
+
+	}
+	return 0;
+}
+
 void sdl_windows32_handle_syswmevent(void *data) {
-	SDL_SysWMmsg *msg = data;
-	int tag = LOWORD(msg->wParam);
+	SDL_SysWMmsg *wmmsg = data;
+	int msg = wmmsg->msg;
+	int tag = LOWORD(wmmsg->wParam);
 	int tag_type = tag & TAG_TYPE_MASK;
 	int tag_value = tag & TAG_VALUE_MASK;
-	switch (msg->msg) {
+
+	switch (msg) {
+
 	case WM_COMMAND:
 		switch (tag_type) {
 
@@ -469,6 +514,10 @@ void sdl_windows32_handle_syswmevent(void *data) {
 		default:
 			break;
 		}
+		break;
+
+	default:
+		break;
 	}
 }
 
