@@ -36,6 +36,7 @@
 #include "breakpoint.h"
 #include "cart.h"
 #include "crc32.h"
+#include "crclist.h"
 #include "fs.h"
 #include "hd6309.h"
 #include "hd6309_trace.h"
@@ -739,52 +740,110 @@ void machine_configure(struct machine_config *mc) {
 	}
 
 	/* CRCs */
+
 	if (has_combined) {
-		_Bool forced = 0;
-		if (IS_DRAGON64 && xroar_cfg.force_crc_match) {
-			crc_combined = 0x84f68bf9;  // Dragon 64 Extended BASIC
-			forced = 1;
-		} else if (IS_DRAGON32 && xroar_cfg.force_crc_match) {
-			crc_combined = 0xe3879310;  // Dragon 32 Extended BASIC
-			forced = 1;
-		} else {
-			crc_combined = crc32_block(CRC32_RESET, rom0, 0x4000);
+		_Bool forced = 0, valid_crc = 0;
+
+		crc_combined = crc32_block(CRC32_RESET, rom0, 0x4000);
+
+		if (IS_DRAGON64)
+			valid_crc = crclist_match("@d64_1", crc_combined);
+		else if (IS_DRAGON32)
+			valid_crc = crclist_match("@d32", crc_combined);
+
+		if (xroar_cfg.force_crc_match) {
+			if (IS_DRAGON64) {
+				crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
+				forced = 1;
+			} else if (IS_DRAGON32) {
+				crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
+				forced = 1;
+			}
 		}
+
 		(void)forced;  // avoid warning if no logging
 		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", crc_combined, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			LOG_WARN("Invalid CRC for combined BASIC ROM\n");
+		}
 	}
+
 	if (has_altbas) {
-		_Bool forced = 0;
-		if (IS_DRAGON64 && xroar_cfg.force_crc_match) {
-			crc_altbas = 0x17893a42;  // Dragon 64 64K mode Extended BASIC
-			forced = 1;
-		} else {
-			crc_altbas = crc32_block(CRC32_RESET, rom1, 0x4000);
+		_Bool forced = 0, valid_crc = 0;
+
+		crc_altbas = crc32_block(CRC32_RESET, rom1, 0x4000);
+
+		if (IS_DRAGON64)
+			valid_crc = crclist_match("@d64_2", crc_altbas);
+
+		if (xroar_cfg.force_crc_match) {
+			if (IS_DRAGON64) {
+				crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
+				forced = 1;
+			}
 		}
 		(void)forced;  // avoid warning if no logging
 		LOG_DEBUG(1, "\t64K mode BASIC CRC = 0x%08x%s\n", crc_altbas, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			LOG_WARN("Invalid CRC for alternate BASIC ROM\n");
+		}
 	}
+
 	if (has_bas) {
-		_Bool forced = 0;
-		if (IS_COCO && xroar_cfg.force_crc_match) {
-			crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
-			forced = 1;
-		} else {
-			crc_bas = crc32_block(CRC32_RESET, rom0 + 0x2000, 0x2000);
+		_Bool forced = 0, valid_crc = 0, coco4k = 0;
+
+		crc_bas = crc32_block(CRC32_RESET, rom0 + 0x2000, 0x2000);
+
+		if (IS_COCO) {
+			if (mc->ram > 4) {
+				valid_crc = crclist_match("@coco", crc_bas);
+			} else {
+				valid_crc = crclist_match("@bas10", crc_bas);
+				coco4k = 1;
+			}
+		}
+
+		if (xroar_cfg.force_crc_match) {
+			if (IS_COCO) {
+				if (mc->ram > 4) {
+					crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
+				} else {
+					crc_bas = 0x00b50aaa;  // CoCo BASIC 1.0
+				}
+				forced = 1;
+			}
 		}
 		(void)forced;  // avoid warning if no logging
 		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", crc_bas, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			if (coco4k) {
+				LOG_WARN("Invalid CRC for Colour BASIC 1.0 ROM\n");
+			} else {
+				LOG_WARN("Invalid CRC for Colour BASIC ROM\n");
+			}
+		}
 	}
+
 	if (has_extbas) {
-		_Bool forced = 0;
-		if (IS_COCO && xroar_cfg.force_crc_match) {
-			crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
-			forced = 1;
-		} else {
-			crc_extbas = crc32_block(CRC32_RESET, rom0, 0x2000);
+		_Bool forced = 0, valid_crc = 0;
+
+		crc_extbas = crc32_block(CRC32_RESET, rom0, 0x2000);
+
+		if (IS_COCO) {
+			valid_crc = crclist_match("@cocoext", crc_extbas);
+		}
+
+		if (xroar_cfg.force_crc_match) {
+			if (IS_COCO) {
+				crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
+				forced = 1;
+			}
 		}
 		(void)forced;  // avoid warning if no logging
 		LOG_DEBUG(1, "\tExtended BASIC CRC = 0x%08x%s\n", crc_extbas, forced ? " (forced)" : "");
+		if (!valid_crc) {
+			LOG_WARN("Invalid CRC for Extended Colour BASIC ROM\n");
+		}
 	}
 	if (has_ext_charset) {
 		crc_ext_charset = crc32_block(CRC32_RESET, ext_charset, 0x1000);
