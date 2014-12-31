@@ -17,6 +17,9 @@ Version 0.33, unreleased
   * IRQ timing tweaked, passes Stewart Orchard's PAL timing test v1.2.
   * Special-case autorun instructions for some tape programs.
   * Building from source now uses GNU build system (autotools).
+  * Fix Windows menu selection event drops.
+  * Warn about unrecognised BASIC ROM CRCs.
+  * MPI support.
 
 Version 0.32, Tue Apr 22 2014
 
