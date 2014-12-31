@@ -22,6 +22,7 @@ option) any later version.
 #include <SDL_syswm.h>
 
 #include "array.h"
+#include "slist.h"
 
 #include "cart.h"
 #include "events.h"
@@ -81,8 +82,8 @@ enum {
 	TAG_JOY_SWAP,
 };
 
-static int num_machines = 0;
-static int num_cartridges = 0;
+static int max_machine_id = 0;
+static int max_cartridge_id = 0;
 
 static struct {
 	const char *name;
@@ -273,10 +274,12 @@ static void setup_machine_menu(void) {
 	HMENU submenu;
 
 	machine_menu = CreatePopupMenu();
-	num_machines = machine_config_count();
+	max_machine_id = 0;
 	struct slist *mcl = machine_config_list();
 	while (mcl) {
 		struct machine_config *mc = mcl->data;
+		if (mc->id > max_machine_id)
+			max_machine_id = mc->id;
 		AppendMenu(machine_menu, MF_STRING, TAG_MACHINE | mc->id, mc->description);
 		mcl = mcl->next;
 	}
@@ -315,15 +318,19 @@ static void setup_cartridge_menu(void) {
 
 	cartridge_menu = CreatePopupMenu();
 	AppendMenu(cartridge_menu, MF_STRING, TAG_CARTRIDGE, "None");
-	num_cartridges = cart_config_count();
-	for (int i = 0; i < num_cartridges; i++) {
-		struct cart_config *cc = cart_config_index(i);
-		AppendMenu(cartridge_menu, MF_STRING, TAG_CARTRIDGE | (cc->index + 1), cc->description);
+	max_cartridge_id = 0;
+	struct slist *ccl = cart_config_list();
+	while (ccl) {
+		struct cart_config *cc = ccl->data;
+		if ((cc->id + 1) > max_cartridge_id)
+			max_cartridge_id = cc->id + 1;
+		AppendMenu(cartridge_menu, MF_STRING, TAG_CARTRIDGE | (cc->id + 1), cc->description);
+		ccl = ccl->next;
 	}
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)cartridge_menu, "&Cartridge");
 
-	cart_changed_cb(xroar_cart ? xroar_cart->config->index : 0);
+	cart_changed_cb(xroar_cart ? xroar_cart->config->id : 0);
 }
 
 static void setup_tool_menu(void) {
@@ -404,7 +411,7 @@ void sdl_windows32_handle_syswmevent(void *data) {
 		/* Cartridges: */
 		case TAG_CARTRIDGE:
 			{
-				struct cart_config *cc = cart_config_index(tag_value - 1);
+				struct cart_config *cc = cart_config_by_id(tag_value - 1);
 				xroar_set_cart(cc ? cc->name : NULL);
 			}
 			break;
@@ -480,12 +487,12 @@ static void vdg_inverse_cb(_Bool i) {
 }
 
 static void machine_changed_cb(int machine_type) {
-	CheckMenuRadioItem(top_menu, TAG_MACHINE, TAG_MACHINE | (num_machines - 1), TAG_MACHINE | machine_type, MF_BYCOMMAND);
+	CheckMenuRadioItem(top_menu, TAG_MACHINE, TAG_MACHINE | max_machine_id, TAG_MACHINE | machine_type, MF_BYCOMMAND);
 }
 
 static void cart_changed_cb(int cart_index) {
 	cart_index++;
-	CheckMenuRadioItem(top_menu, TAG_CARTRIDGE, TAG_CARTRIDGE | num_cartridges, TAG_CARTRIDGE | cart_index, MF_BYCOMMAND);
+	CheckMenuRadioItem(top_menu, TAG_CARTRIDGE, TAG_CARTRIDGE | max_cartridge_id, TAG_CARTRIDGE | cart_index, MF_BYCOMMAND);
 }
 
 static void keymap_changed_cb(int map) {
