@@ -448,6 +448,11 @@ WD1793 controller.
 The Orchestra 90-CC cartridge provides stereo 8-bit audio output.  The default
 ROM is CoCo-only, but the hardware is compatible with the Dragon.
 
+@item mpi
+
+Multi-Pak Interface.  A CoCo add-on by Tandy that allows up to four
+cartridges to be connected, selectable by software or hardware switch.
+
 @end table
 
 You can create new cartridge configurations or reconfigure existing ones.
@@ -510,6 +515,18 @@ line options, or with @kbd{Ctrl}+@kbd{L} or
 Within the emulator, cartridges can be enabled or disabled by pressing
 @kbd{Ctrl}+@kbd{E}.  You will almost certainly want to follow this with a
 hard reset (@kbd{Ctrl}+@kbd{Shift}+@kbd{R}).
+
+@subsection Multi-Pak Interface
+
+If you attach a Multi-Pak Interface (MPI), you'll want to populate one or more
+of its slots (numbered 0-3).  Use @option{-mpi-load-cart
+[@emph{slot}=]@emph{name}} to attach a named cartridge to the specified (or
+next) slot.  Configure the initially selected slot with @option{-mpi-slot
+@emph{slot}}.
+
+It's not recommended to load more than one DOS cartridge into the MPI.
+As things stand, only the last one (in slot order) will have the emulated
+drives properly connected.
 
 @subsection Becker port
 
