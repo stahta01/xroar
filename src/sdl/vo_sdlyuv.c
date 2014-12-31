@@ -89,6 +89,7 @@ static _Bool init(void) {
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
+	video_sdlyuv_module.is_fullscreen = !xroar_cfg.fullscreen;
 
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
@@ -174,7 +175,8 @@ static int set_fullscreen(_Bool fullscreen) {
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
-	sdl_windows32_update_menu(fullscreen);
+	if (fullscreen != video_sdlyuv_module.is_fullscreen)
+		sdl_windows32_update_menu(fullscreen);
 #endif
 
 	if (fullscreen) {

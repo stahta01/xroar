@@ -83,6 +83,7 @@ static Pixel alloc_and_map(int r, int g, int b) {
 #include "vo_generic_ops.c"
 
 static _Bool init(void) {
+	video_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
 	vsync();
@@ -96,7 +97,8 @@ static void shutdown(void) {
 
 static int set_fullscreen(_Bool fullscreen) {
 #ifdef WINDOWS32
-	sdl_windows32_update_menu(fullscreen);
+	if (fullscreen != video_sdl_module.is_fullscreen)
+		sdl_windows32_update_menu(fullscreen);
 #endif
 	screen = SDL_SetVideoMode(320, 240, 8, SDL_HWSURFACE|(fullscreen?SDL_FULLSCREEN:0));
 	if (screen == NULL) {
