@@ -730,7 +730,7 @@ static void update_cartridge_menu(void) {
 	int i = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
 		struct cart_config *cc = iter->data;
-		if (xroar_cart && cc == xroar_cart->config)
+		if (machine_cart && cc == machine_cart->config)
 			selected = cc->id;
 		radio_entries[i].name = g_strconcat("cart-", cc->name, NULL);
 		radio_entries[i].label = escape_underscores(cc->description);

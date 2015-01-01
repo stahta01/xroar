@@ -142,7 +142,6 @@ extern struct event *xroar_ui_events;
 extern struct event *xroar_machine_events;
 
 extern struct machine_config *xroar_machine_config;
-extern struct cart *xroar_cart;
 extern struct vdg_palette *xroar_vdg_palette;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -347,7 +347,7 @@ static void setup_cartridge_menu(void) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)cartridge_menu, "&Cartridge");
 
-	cart_changed_cb(xroar_cart ? xroar_cart->config->id : 0);
+	cart_changed_cb(machine_cart ? machine_cart->config->id : 0);
 }
 
 static void setup_tool_menu(void) {

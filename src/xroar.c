@@ -197,7 +197,6 @@ int xroar_frameskip = 0;
 
 struct machine_config *xroar_machine_config;
 static struct cart_config *selected_cart_config;
-struct cart *xroar_cart;
 struct vdg_palette *xroar_vdg_palette;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
