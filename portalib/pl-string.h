@@ -1,7 +1,7 @@
 /*
 
 Missing string handling functions
-Copyright 2012-2014, Ciaran Anscomb
+Copyright 2012-2015, Ciaran Anscomb
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
