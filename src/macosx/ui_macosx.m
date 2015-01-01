@@ -14,6 +14,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include "slist.h"
+
 #include "logging.h"
 #include "cart.h"
 #include "joystick.h"
@@ -235,7 +237,7 @@ int cocoa_super_all_keys = 0;
 		{
 			if (tag_value & (1 << 23))
 				tag_value = -1;
-			struct cart_config *cc = cart_config_index(tag_value);
+			struct cart_config *cc = cart_config_by_id(tag_value);
 			xroar_set_cart(cc ? cc->name : NULL);
 		}
 		break;
@@ -940,10 +942,10 @@ int main(int argc, char **argv) {
 static _Bool init(void);
 static void shutdown(void);
 static void cross_colour_changed_cb(int cc);
-static void machine_changed_cb(int machine_type);
+static void machine_changed_cb(int machine_id);
 static void keymap_changed_cb(int map);
 static void kbd_translate_changed_cb(_Bool kbd_translate);
-static void cart_changed_cb(int cart_index);
+static void cart_changed_cb(int cart_id);
 static void fullscreen_changed_cb(_Bool fullscreen);
 static void fast_sound_changed_cb(_Bool fast_sound);
 static void update_drive_write_enable(int drive, _Bool write_enable);
@@ -994,37 +996,33 @@ static void shutdown(void) {
 }
 
 static void update_machine_menu(void) {
-	int num_machines = machine_config_count();
-	int i;
 	NSMenuItem *item;
-
-	if (xroar_machine_config) current_machine = TAG_MACHINE | (xroar_machine_config->index & TAG_VALUE_MASK);
-
-	for (i = num_machines-1; i >= 0; i--) {
-		struct machine_config *mc = machine_config_index(i);
+	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
+	for (struct slist *iter = mcl; iter; iter = iter->next) {
+		struct machine_config *mc = iter->data;
+		if (mc == xroar_machine_config)
+			current_machine = mc->id;
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_MACHINE | mc->index)];
+		[item setTag:(TAG_MACHINE | mc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[machine_menu insertItem:item atIndex:0];
 		[item release];
 	}
+	slist_free(mcl);
 }
 
 static void update_cartridge_menu(void) {
-	int num_carts = cart_config_count();
-	int i;
 	NSMenuItem *item;
-
-	if (xroar_cart)
-		current_cartridge = TAG_CARTRIDGE | (xroar_cart->config->index & TAG_VALUE_MASK);
-
-	for (i = num_carts-1; i >= 0; i--) {
-		struct cart_config *cc = cart_config_index(i);
+	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
+	for (struct slist *iter = ccl; iter; iter = iter->next) {
+		struct cart_config *cc = iter->data;
+		if (machine_cart && cc == machine_cart->config)
+			current_cartridge = TAG_CARTRIDGE | cc->id;
 		NSString *description = [[NSString alloc] initWithUTF8String:cc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_CARTRIDGE | cc->index)];
+		[item setTag:(TAG_CARTRIDGE | cc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[cartridge_menu insertItem:item atIndex:0];
@@ -1034,14 +1032,15 @@ static void update_cartridge_menu(void) {
 	[item setTag:(TAG_CARTRIDGE | (-1 & TAG_VALUE_MASK))];
 	[cartridge_menu insertItem:item atIndex:0];
 	[item release];
+	slist_free(ccl);
 }
 
 static void cross_colour_changed_cb(int cc) {
 	current_cc = TAG_CROSS_COLOUR | (cc & TAG_VALUE_MASK);
 }
 
-static void machine_changed_cb(int machine_type) {
-	current_machine = TAG_MACHINE | (machine_type & TAG_VALUE_MASK);
+static void machine_changed_cb(int machine_id) {
+	current_machine = TAG_MACHINE | (machine_id & TAG_VALUE_MASK);
 }
 
 static void keymap_changed_cb(int map) {
@@ -1052,8 +1051,8 @@ static void kbd_translate_changed_cb(_Bool kbd_translate) {
 	is_kbd_translate = kbd_translate;
 }
 
-static void cart_changed_cb(int cart_index) {
-	current_cartridge = TAG_CARTRIDGE | (cart_index & TAG_VALUE_MASK);
+static void cart_changed_cb(int cart_id) {
+	current_cartridge = TAG_CARTRIDGE | (cart_id & TAG_VALUE_MASK);
 }
 
 static void fullscreen_changed_cb(_Bool fullscreen) {
