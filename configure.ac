@@ -319,6 +319,19 @@ AM_COND_IF([AO_JACK], [AC_DEFINE([HAVE_JACK_AUDIO], 1, [Use JACK audio])])
 ### OpenGL
 
 AX_CHECK_GL
+AS_IF([test -z "$GL_LIBS"], [
+		OLD_LIBS="$LIBS"
+		LIBS="$LIBS -framework OpenGL"
+		AC_MSG_CHECKING([if -framework OpenGL works instead])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <OpenGL/gl.h>
+int main(int argc, char **argv) { GLuint t; glGenTextures(1, &t); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			GL_LIBS="-framework OpenGL"
+			], [AC_MSG_RESULT([no])] )
+		LIBS="$OLD_LIBS"
+		])
 AM_CONDITIONAL([OPENGL], [test -n "$GL_LIBS"])
 
 ### GTK+-2
