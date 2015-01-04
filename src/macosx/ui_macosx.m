@@ -998,7 +998,8 @@ static void shutdown(void) {
 static void update_machine_menu(void) {
 	NSMenuItem *item;
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
-	for (struct slist *iter = mcl; iter; iter = iter->next) {
+	struct slist *iter;
+	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
 			current_machine = mc->id;
@@ -1016,7 +1017,8 @@ static void update_machine_menu(void) {
 static void update_cartridge_menu(void) {
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
-	for (struct slist *iter = ccl; iter; iter = iter->next) {
+	struct slist *iter;
+	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (machine_cart && cc == machine_cart->config)
 			current_cartridge = TAG_CARTRIDGE | cc->id;
