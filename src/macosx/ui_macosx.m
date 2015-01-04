@@ -1002,7 +1002,7 @@ static void update_machine_menu(void) {
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
-			current_machine = mc->id;
+			current_machine = TAG_MACHINE | mc->id;
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
 		[item setTag:(TAG_MACHINE | mc->id)];
