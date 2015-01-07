@@ -229,7 +229,7 @@ int cocoa_super_all_keys = 0;
 	/* Machines: */
 	case TAG_MACHINE:
 		current_machine = tag;
-		xroar_set_machine(tag_value);
+		xroar_set_machine(0, tag_value);
 		break;
 
 	/* Cartridges: */

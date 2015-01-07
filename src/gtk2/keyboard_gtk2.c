@@ -301,7 +301,7 @@ static void emulator_command(guint keyval, int shift) {
 		xroar_set_keymap(1, XROAR_CYCLE);
 		break;
 	case GDK_m:
-		xroar_set_machine(XROAR_CYCLE);
+		xroar_set_machine(1, XROAR_CYCLE);
 		break;
 	case GDK_p:
 		if (shift)

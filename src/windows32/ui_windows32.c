@@ -450,7 +450,7 @@ void sdl_windows32_handle_syswmevent(void *data) {
 
 		/* Machines: */
 		case TAG_MACHINE:
-			xroar_set_machine(tag_value);
+			xroar_set_machine(1, tag_value);
 			break;
 
 		/* Cartridges: */

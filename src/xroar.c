@@ -1366,10 +1366,7 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
-void xroar_set_machine(int id) {
-	static int lock = 0;
-	if (lock) return;
-	lock = 1;
+void xroar_set_machine(_Bool notify, int id) {
 	int new = xroar_machine_config->id;
 	struct slist *mcl, *mcc;
 	switch (id) {
@@ -1399,10 +1396,9 @@ void xroar_set_machine(int id) {
 		video_module->update_palette();
 	}
 	xroar_hard_reset();
-	if (ui_module->machine_changed_cb) {
+	if (notify && ui_module->machine_changed_cb) {
 		ui_module->machine_changed_cb(new);
 	}
-	lock = 0;
 }
 
 void xroar_toggle_cart(void) {

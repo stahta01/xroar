@@ -268,7 +268,7 @@ static void emulator_command(SDLKey sym) {
 		}
 		break;
 	case SDLK_m:
-		xroar_set_machine(XROAR_CYCLE);
+		xroar_set_machine(1, XROAR_CYCLE);
 		break;
 	case SDLK_p:
 		if (shift)

@@ -284,7 +284,7 @@ static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointe
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	(void)user_data;
-	xroar_set_machine(val);
+	xroar_set_machine(0, val);
 }
 
 static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
