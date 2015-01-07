@@ -238,7 +238,7 @@ int cocoa_super_all_keys = 0;
 			if (tag_value & (1 << 23))
 				tag_value = -1;
 			struct cart_config *cc = cart_config_by_id(tag_value);
-			xroar_set_cart(cc ? cc->name : NULL);
+			xroar_set_cart(0, cc ? cc->name : NULL);
 		}
 		break;
 

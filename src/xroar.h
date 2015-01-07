@@ -213,7 +213,7 @@ void xroar_swap_joysticks(_Bool notify);
 void xroar_cycle_joysticks(_Bool notify);
 void xroar_set_machine(_Bool notify, int id);
 void xroar_toggle_cart(void);
-void xroar_set_cart(const char *cc_name);
+void xroar_set_cart(_Bool notify, const char *cc_name);
 void xroar_set_dos(int dos_type);  /* for old snapshots only */
 void xroar_save_snapshot(void);
 void xroar_select_tape_input(void);

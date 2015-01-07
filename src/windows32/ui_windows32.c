@@ -457,7 +457,7 @@ void sdl_windows32_handle_syswmevent(void *data) {
 		case TAG_CARTRIDGE:
 			{
 				struct cart_config *cc = cart_config_by_id(tag_value - 1);
-				xroar_set_cart(cc ? cc->name : NULL);
+				xroar_set_cart(1, cc ? cc->name : NULL);
 			}
 			break;
 
