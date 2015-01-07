@@ -927,7 +927,7 @@ void machine_configure(struct machine_config *mc) {
 }
 
 void machine_reset(_Bool hard) {
-	xroar_set_keymap(xroar_machine_config->keymap);
+	xroar_set_keymap(1, xroar_machine_config->keymap);
 	switch (xroar_machine_config->tv_standard) {
 	case TV_PAL: default:
 		xroar_set_cross_colour(1, CROSS_COLOUR_OFF);

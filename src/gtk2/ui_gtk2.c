@@ -299,7 +299,7 @@ static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	(void)user_data;
-	xroar_set_keymap(val);
+	xroar_set_keymap(0, val);
 }
 
 static char const * const joystick_name[] = {

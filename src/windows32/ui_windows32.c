@@ -497,7 +497,7 @@ void sdl_windows32_handle_syswmevent(void *data) {
 
 		/* Keyboard: */
 		case TAG_KEYMAP:
-			xroar_set_keymap(tag_value);
+			xroar_set_keymap(1, tag_value);
 			break;
 		case TAG_KBD_TRANSLATE:
 			xroar_set_kbd_translate(1, XROAR_TOGGLE);

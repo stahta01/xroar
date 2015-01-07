@@ -206,7 +206,7 @@ void xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);
 void xroar_load_file(const char * const *exts);
 void xroar_run_file(const char * const *exts);
-void xroar_set_keymap(int map);
+void xroar_set_keymap(_Bool notify, int map);
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);

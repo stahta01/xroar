@@ -303,7 +303,7 @@ int read_snapshot(const char *filename) {
 				// Deprecated: Keyboard map
 				if (size < 1) break;
 				tmp = fs_read_uint8(fd);
-				xroar_set_keymap(tmp);
+				xroar_set_keymap(1, tmp);
 				size--;
 				break;
 			case ID_REGISTER_DUMP:

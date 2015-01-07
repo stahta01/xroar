@@ -285,7 +285,7 @@ int cocoa_super_all_keys = 0;
 	/* Keyboard: */
 	case TAG_KEYMAP:
 		current_keymap = tag;
-		xroar_set_keymap(tag_value);
+		xroar_set_keymap(0, tag_value);
 		break;
 	case TAG_KBD_TRANSLATE:
 		is_kbd_translate = !is_kbd_translate;

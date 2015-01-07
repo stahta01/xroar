@@ -1281,10 +1281,7 @@ void xroar_run_file(char const * const *exts) {
 	}
 }
 
-void xroar_set_keymap(int map) {
-	static int lock = 0;
-	if (lock) return;
-	lock = 1;
+void xroar_set_keymap(_Bool notify, int map) {
 	int new;
 	switch (map) {
 		case XROAR_CYCLE:
@@ -1308,11 +1305,10 @@ void xroar_set_keymap(int map) {
 	}
 	if (new >= 0 && new < NUM_KEYMAPS) {
 		keyboard_set_keymap(new);
-		if (ui_module->keymap_changed_cb) {
+		if (notify && ui_module->keymap_changed_cb) {
 			ui_module->keymap_changed_cb(new);
 		}
 	}
-	lock = 0;
 }
 
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
