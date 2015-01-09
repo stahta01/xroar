@@ -57,6 +57,8 @@ AC_CHECK_FUNCS([atexit gettimeofday memset putenv setenv socket strchr strcspn s
 
 ### Options
 
+AC_ARG_ENABLE([snapshot],[])
+
 AC_ARG_WITH([gtk2],
 	AS_HELP_STRING([--without-gtk2], [don't test for GTK+-2]) )
 
@@ -535,6 +537,11 @@ AC_SUBST(RC_VER_MINOR)
 AC_SUBST(RC_REV_MAJOR)
 AC_SUBST(RC_REV_MINOR)
 AC_SUBST(RC_VERSION)
+AC_DEFINE_UNQUOTED([RC_REV_MAJOR], [$RC_REV_MAJOR], [Snapshot major])
+AC_DEFINE_UNQUOTED([RC_REV_MINOR], [$RC_REV_MINOR], [Snapshot minor])
+
+AM_CONDITIONAL([ENABLE_SNAPSHOT], [test "x$enable_snapshot" = "xyes"])
+AM_COND_IF([ENABLE_SNAPSHOT], [AC_DEFINE([ENABLE_SNAPSHOT], 1, [Snapshot build])])
 
 ### Write everything out
 

@@ -2162,9 +2162,12 @@ static void helptext(void) {
 
 static void versiontext(void) {
 #ifdef LOGGING
+	printf("XRoar " VERSION);
+#ifdef ENABLE_SNAPSHOT
+	printf(" (snap-%d-%05d)", RC_REV_MAJOR, RC_REV_MINOR);
+#endif
 	puts(
-"XRoar " VERSION "\n"
-"Copyright (C) 2015 Ciaran Anscomb\n"
+"\nCopyright (C) 2015 Ciaran Anscomb\n"
 "License: GNU GPL version 2 or later <http://www.gnu.org/licenses/gpl-2.0.html>.\n"
 "This is free software: you are free to change and redistribute it.\n"
 "There is NO WARRANTY, to the extent permitted by law."
