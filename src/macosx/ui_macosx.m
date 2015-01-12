@@ -41,6 +41,7 @@
 #define TAG_NEW_DISK (6 << 24)
 #define TAG_WRITE_ENABLE (7 << 24)
 #define TAG_WRITE_BACK (8 << 24)
+#define TAG_EJECT_DISK (17 << 24)
 
 #define TAG_FULLSCREEN (9 << 24)
 #define TAG_VDG_INVERSE (16 << 24)
@@ -261,6 +262,9 @@ int cocoa_super_all_keys = 0;
 	case TAG_WRITE_BACK:
 		disk_write_back[tag_value] = !disk_write_back[tag_value];
 		xroar_set_write_back(1, tag_value, disk_write_back[tag_value]);
+		break;
+	case TAG_EJECT_DISK:
+		xroar_eject_disk(tag_value);
 		break;
 
 	/* Video: */
@@ -547,6 +551,15 @@ static void setup_file_menu(void) {
 		[item setTag:(TAG_WRITE_BACK | drive)];
 		[submenu addItem:item];
 		[item release];
+
+		[submenu addItem:[NSMenuItem separatorItem]];
+
+		tmp = [NSString stringWithFormat:@"Eject Disk%C", 0x2026];
+		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(TAG_EJECT_DISK | drive)];
+		[submenu addItem:item];
+		[item release];
+		[tmp release];
 
 		item = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
 		[item setSubmenu:submenu];
