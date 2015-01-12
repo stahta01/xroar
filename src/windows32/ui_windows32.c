@@ -61,6 +61,7 @@ option) any later version.
 #define TAG_NEW_DISK (6 << 8)
 #define TAG_WRITE_ENABLE (7 << 8)
 #define TAG_WRITE_BACK (8 << 8)
+#define TAG_EJECT_DISK (17 << 8)
 
 #define TAG_FULLSCREEN (9 << 8)
 #define TAG_VDG_INVERSE (16 << 8)
@@ -252,6 +253,8 @@ static void setup_file_menu(void) {
 		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
 		AppendMenu(submenu, MF_STRING, TAG_WRITE_ENABLE | drive, "Write Enable");
 		AppendMenu(submenu, MF_STRING, TAG_WRITE_BACK | drive, "Write Back");
+		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
+		AppendMenu(submenu, MF_STRING, TAG_EJECT_DISK | drive, "Eject Disk");
 	}
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
@@ -478,6 +481,9 @@ void sdl_windows32_handle_syswmevent(void *data) {
 			break;
 		case TAG_WRITE_BACK:
 			xroar_set_write_back(1, tag_value, XROAR_TOGGLE);
+			break;
+		case TAG_EJECT_DISK:
+			xroar_eject_disk(tag_value);
 			break;
 
 		/* Video: */
