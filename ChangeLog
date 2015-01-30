@@ -20,6 +20,7 @@ Version 0.33, unreleased
   * Fix Windows menu selection event drops.
   * Warn about unrecognised BASIC ROM CRCs.
   * MPI support.
+  * Add 'eject' option to disk menus on Windows/Mac OS.
 
 Version 0.32, Tue Apr 22 2014
 
