@@ -27,13 +27,14 @@
 
 #include "delegate.h"
 #include "events.h"
+#include "font-6847.h"
+#include "font-6847t1.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
 #include "mc6847.h"
 #include "module.h"
 #include "sam.h"
-#include "vdg_bitmaps.h"
 #include "xroar.h"
 
 // Convert VDG pixels (half-cycles) to event ticks:

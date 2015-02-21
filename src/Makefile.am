@@ -26,6 +26,8 @@ xroar_SOURCES = \
 	dkbd.c dkbd.h \
 	dragondos.c dragondos.h \
 	events.c events.h \
+	font-6847.c font-6847.h \
+	font-6847t1.c font-6847t1.h \
 	fs.c fs.h \
 	hd6309.c hd6309.h \
 	hexs19.c hexs19.h \
@@ -48,7 +50,6 @@ xroar_SOURCES = \
 	sound.c sound.h \
 	tape.c tape.h \
 	tape_cas.c \
-	vdg_bitmaps.c vdg_bitmaps.h \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
 	vdrive.c vdrive.h \
@@ -59,14 +60,16 @@ xroar_SOURCES = \
 	null/vo_null.c
 
 BUILT_SOURCES += \
-	vdg_bitmaps.c vdg_bitmaps.h
+	font-6847.c font-6847.h \
+	font-6847t1.c font-6847t1.h
 
 xroar_SOURCES += \
 	main_unix.c
 
 EXTRA_DIST += \
+	font-6847.c font-6847.h \
+	font-6847t1.c font-6847t1.h \
 	mc6809_common.c mc6809_common.h \
-	vdg_bitmaps.c vdg_bitmaps.h \
 	vo_generic_ops.c
 
 # VDG bitmaps should be distributed, but can be generated from font image files
@@ -74,15 +77,21 @@ EXTRA_DIST += \
 
 FONT2C = $(top_builddir)/tools/font2c
 
-vdg_bitmaps.h:
+font-6847.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
 	$(FONT2C) --header --array font_6847 --type "unsigned char" --vdg $(srcdir)/font-6847.png > $@
-	$(FONT2C) --header --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png >> $@
 
-vdg_bitmaps.c:
+font-6847.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
 	$(FONT2C) --array font_6847 --type "unsigned char" --vdg $(srcdir)/font-6847.png > $@
-	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png >> $@
+
+font-6847t1.h:
+	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
+	$(FONT2C) --header --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png > $@
+
+font-6847t1.c:
+	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
+	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png > $@
 
 EXTRA_DIST += \
 	font-6847.png font-6847t1.png
