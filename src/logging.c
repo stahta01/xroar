@@ -102,7 +102,7 @@ void log_hexdump_line(struct log_handle *l) {
 	for (i = 0; i < l->ctx.hexdump.nbytes; i++) {
 		int f = ((i + 1) == l->ctx.hexdump.flag) ? '*' : ' ';
 		LOG_PRINT("%02x%c", l->ctx.hexdump.buf[i], f);
-		if (i == 8)
+		if (i == 7)
 			LOG_PRINT(" ");
 	}
 	for (; i < 16; i++) {
