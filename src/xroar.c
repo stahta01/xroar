@@ -79,6 +79,7 @@
 
 struct xroar_cfg xroar_cfg = {
 	.disk_auto_os9 = 1,
+	.disk_auto_sd = 1,
 	.gl_filter = ANY_AUTO,
 	.ccr = CROSS_COLOUR_5BIT,
 };
@@ -1898,6 +1899,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Disks: */
 	{ XC_SET_BOOL("disk-write-back", &xroar_cfg.disk_write_back) },
 	{ XC_SET_BOOL("disk-auto-os9", &xroar_cfg.disk_auto_os9) },
+	{ XC_SET_BOOL("disk-auto-sd", &xroar_cfg.disk_auto_sd) },
 	/* Backwards-compatibility: */
 	{ XC_SET_BOOL("disk-jvc-hack", &dummy_bool), .deprecated = 1 },
 
@@ -2061,6 +2063,7 @@ static void helptext(void) {
 "\n Disks:\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"
 "  -no-disk-auto-os9     don't try to detect headerless OS-9 JVC disk images\n"
+"  -no-disk-auto-sd      don't assume single density for 10 sec/track disks\n"
 
 "\n Firmware ROM images:\n"
 "  -rompath PATH         ROM search path (colon-separated list)\n"
@@ -2220,6 +2223,7 @@ static void config_print_all(_Bool all) {
 	puts("# Disks");
 	xroar_cfg_print_bool(all, "disk-write-back", xroar_cfg.disk_write_back, 0);
 	xroar_cfg_print_bool(all, "disk-auto-os9", xroar_cfg.disk_auto_os9, 1);
+	xroar_cfg_print_bool(all, "disk-auto-sd", xroar_cfg.disk_auto_sd, 1);
 	puts("");
 
 	puts("# Firmware ROM images");

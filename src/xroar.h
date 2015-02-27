@@ -102,6 +102,7 @@ struct xroar_cfg {
 	// Disks
 	_Bool disk_write_back;
 	_Bool disk_auto_os9;
+	_Bool disk_auto_sd;
 	// CRC lists
 	_Bool force_crc_match;
 	// GDB target

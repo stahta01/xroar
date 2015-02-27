@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -372,6 +373,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	unsigned nheads = 1;
 	unsigned ssize_code = 1;
 	unsigned first_sector = 1;
+	_Bool double_density = 1;
 	_Bool sector_attr_flag = 0;
 	_Bool headerless_os9 = 0;
 
@@ -433,6 +435,8 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	if ((file_size % bytes_per_cyl) >= bytes_per_sector) {
 		ncyls++;
 	}
+	if (xroar_cfg.disk_auto_sd && nsectors == 10)
+		double_density = 0;
 
 	struct vdisk *disk = vdisk_blank_disk(ncyls, nheads, VDISK_LENGTH_5_25);
 	if (!disk) {
@@ -442,7 +446,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	disk->filetype = FILETYPE_JVC;
 	disk->filename = xstrdup(filename);
 	disk->fmt.jvc.headerless_os9 = headerless_os9;
-	if (vdisk_format_disk(disk, 1, nsectors, first_sector, ssize_code) != 0) {
+	if (vdisk_format_disk(disk, double_density, nsectors, first_sector, ssize_code) != 0) {
 		fclose(fd);
 		vdisk_destroy(disk);
 		return NULL;
@@ -731,28 +735,82 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 	return side_data[head] + cyl * tlength;
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /*
- * DragonDOS gets pretty good performance using 2:1 interleave, RS-DOS is a bit
- * slower and needs 3:1.
+ * Helper functions for dealing with the in-memory disk images.
  */
 
-static const unsigned ddos_sector_interleave[18] =
+/* DragonDOS gets pretty good performance using 2:1 interleave, RS-DOS is a bit
+ * slower and needs 3:1. */
+
+static const uint8_t ddos_sector_interleave[18] =
 	{ 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17 };
 
-static const unsigned rsdos_sector_interleave[18] =
+static const uint8_t rsdos_sector_interleave[18] =
 	{ 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10, 16, 5, 11, 17 };
 
-#define WRITE_BYTE(v) data[offset++] = (v)
+/* Oddball single-density sector interleave from Delta: */
 
-#define WRITE_BYTE_CRC(v) do { \
-		WRITE_BYTE(v); \
-		crc = crc16_byte(crc, v); \
-	} while (0)
+static const uint8_t delta_sector_interleave[18] =
+	{ 2, 6, 3, 7, 0, 4, 8, 1, 5, 9 };
 
-#define WRITE_CRC() do { \
-		data[offset++] = (crc & 0xff00) >> 8; \
-		data[offset++] = crc & 0xff; \
-	} while (0)
+/* Keep track of these separately for direct access to memory image: */
+
+static unsigned mem_track_length;
+static uint8_t *mem_track_base;
+static unsigned mem_offset;
+static _Bool mem_double_density;
+static uint16_t mem_crc;
+
+/* Write 'repeat' bytes of 'data', update CRC */
+
+static void write_bytes(unsigned repeat, uint8_t data) {
+	assert(mem_offset >= 128);
+	assert(mem_offset < mem_track_length);
+	unsigned nbytes = mem_double_density ? 1 : 2;
+	for ( ; repeat; repeat--) {
+		for (unsigned i = nbytes; i; i--) {
+			mem_track_base[mem_offset++] = data;
+			if (mem_offset >= mem_track_length)
+				mem_offset = 128;
+		}
+		mem_crc = crc16_byte(mem_crc, data);
+	}
+}
+
+/* Write CRC, should leave mem_crc == 0 */
+
+static void write_crc(void) {
+	uint8_t hi = mem_crc >> 8;
+	uint8_t lo = mem_crc & 0xff;
+	write_bytes(1, hi);
+	write_bytes(1, lo);
+}
+
+/* Read a byte, update CRC */
+
+static uint8_t read_byte(void) {
+	assert(mem_offset >= 128);
+	assert(mem_offset < mem_track_length);
+	int nbytes = mem_double_density ? 1 : 2;
+	uint8_t data = mem_track_base[mem_offset];
+	mem_crc = crc16_byte(mem_crc, data);
+	for (int i = 0; i < nbytes; i++) {
+		mem_offset++;
+		if (mem_offset >= mem_track_length)
+			mem_offset = 128;
+	}
+	return data;
+}
+
+/* Read CRC bytes and return 1 if valid */
+
+static _Bool read_crc(void) {
+	(void)read_byte();
+	(void)read_byte();
+	return mem_crc == 0;
+}
 
 int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		       unsigned cyl, unsigned head,
@@ -761,51 +819,86 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		return -1;
 
 	uint16_t *idams = vdisk_extend_disk(disk, cyl, head);
-	uint8_t *data = (uint8_t *)idams;
-	unsigned offset = 128;
 	unsigned idam = 0;
 	unsigned ssize = 128 << ssize_code;
 
-	const unsigned *sect_interleave;
-	if (IS_DRAGON)
-		sect_interleave = ddos_sector_interleave;
-	else
-		sect_interleave = rsdos_sector_interleave;
+	mem_track_length = disk->track_length;
+	mem_track_base = (uint8_t *)idams;
+	mem_offset = 128;
+	mem_double_density = double_density;
 
-	// XXX can't handle single density here yet - will need to for the
-	// first track on flex disks!
-	if (!double_density)
-		return -1;
-
-	for (unsigned i = 0; i < 54; i++) WRITE_BYTE(0x4e);
-	for (unsigned i = 0; i < 9; i++) WRITE_BYTE(0x00);
-	for (unsigned i = 0; i < 3; i++) WRITE_BYTE(0xc2);
-	WRITE_BYTE(0xfc);
-	for (unsigned i = 0; i < 32; i++) WRITE_BYTE(0x4e);
-	for (unsigned sector = 0; sector < nsectors; sector++) {
-		if (offset + ssize + 82 >= disk->track_length)
-			break;
-		for (unsigned i = 0; i < 8; i++) WRITE_BYTE(0x00);
-		uint16_t crc = CRC16_RESET;
-		for (unsigned i = 0; i < 3; i++) WRITE_BYTE_CRC(0xa1);
-		idams[idam++] = offset | VDISK_DOUBLE_DENSITY;
-		WRITE_BYTE_CRC(0xfe);
-		WRITE_BYTE_CRC(cyl);
-		WRITE_BYTE_CRC(head);
-		WRITE_BYTE_CRC(sect_interleave[sector] + first_sector);
-		WRITE_BYTE_CRC(ssize_code);
-		WRITE_CRC();
-		for (unsigned i = 0; i < 22; i++) WRITE_BYTE(0x4e);
-		for (unsigned i = 0; i < 12; i++) WRITE_BYTE(0x00);
-		crc = CRC16_RESET;
-		for (unsigned i = 0; i < 3; i++) WRITE_BYTE_CRC(0xa1);
-		WRITE_BYTE_CRC(0xfb);
-		for (unsigned i = 0; i < ssize; i++) WRITE_BYTE_CRC(0xe5);
-		WRITE_CRC();
-		for (unsigned i = 0; i < 24; i++) WRITE_BYTE(0x4e);
+	const uint8_t *sect_interleave = NULL;
+	if (double_density && nsectors == 18) {
+		if (IS_DRAGON)
+			sect_interleave = ddos_sector_interleave;
+		else
+			sect_interleave = rsdos_sector_interleave;
+	} else if (!double_density && nsectors == 10) {
+		sect_interleave = delta_sector_interleave;
 	}
-	while (offset < disk->track_length) {
-		WRITE_BYTE(0x4e);
+
+	if (!double_density) {
+
+		/* Single density */
+		write_bytes(20, 0xff);
+		for (unsigned sector = 0; sector < nsectors; sector++) {
+			uint8_t sect = sect_interleave ? sect_interleave[sector] : sector;
+			write_bytes(6, 0x00);
+			mem_crc = CRC16_RESET;
+			idams[idam++] = mem_offset | VDISK_SINGLE_DENSITY;
+			write_bytes(1, 0xfe);
+			write_bytes(1, cyl);
+			write_bytes(1, head);
+			write_bytes(1, sect + first_sector);
+			write_bytes(1, ssize_code);
+			write_crc();
+			write_bytes(11, 0xff);
+			write_bytes(6, 0x00);
+			mem_crc = CRC16_RESET;
+			write_bytes(1, 0xfb);
+			write_bytes(ssize, 0xe5);
+			write_crc();
+			write_bytes(12, 0xff);
+		}
+		/* fill to end of disk */
+		while (mem_offset != 128) {
+			write_bytes(1, 0xff);
+		}
+
+	} else {
+
+		/* Double density */
+		write_bytes(54, 0x4e);
+		write_bytes(9, 0x00);
+		write_bytes(3, 0xc2);
+		write_bytes(1, 0xfc);
+		write_bytes(32, 0x4e);
+		for (unsigned sector = 0; sector < nsectors; sector++) {
+			uint8_t sect = sect_interleave ? sect_interleave[sector] : sector;
+			write_bytes(8, 0x00);
+			mem_crc = CRC16_RESET;
+			write_bytes(3, 0xa1);
+			idams[idam++] = mem_offset | VDISK_DOUBLE_DENSITY;
+			write_bytes(1, 0xfe);
+			write_bytes(1, cyl);
+			write_bytes(1, head);
+			write_bytes(1, sect + first_sector);
+			write_bytes(1, ssize_code);
+			write_crc();
+			write_bytes(22, 0x4e);
+			write_bytes(12, 0x00);
+			mem_crc = CRC16_RESET;
+			write_bytes(3, 0xa1);
+			write_bytes(1, 0xfb);
+			write_bytes(ssize, 0xe5);
+			write_crc();
+			write_bytes(24, 0x4e);
+		}
+		/* fill to end of disk */
+		while (mem_offset != 128) {
+			write_bytes(1, 0x4e);
+		}
+
 	}
 	return 0;
 }
@@ -824,50 +917,71 @@ int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
 }
 
 /*
- * Locate a sector on the disk (by searching the disk data in the same way the
- * FDC would) and update its data from that provided.
+ * Locate a sector on the disk by scanning the IDAM table, and update its data
+ * from that provided.
  */
 
 int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
 			unsigned sector, unsigned sector_length, uint8_t *buf) {
-	uint8_t *data;
 	uint16_t *idams;
-	unsigned offset;
 	unsigned ssize, i;
-	uint16_t crc;
+
 	if (disk == NULL)
 		return -1;
 	idams = vdisk_extend_disk(disk, cyl, head);
 	if (idams == NULL)
 		return -1;
-	data = (uint8_t *)idams;
+	mem_track_length = disk->track_length;
+	mem_track_base = (uint8_t *)idams;
 	for (i = 0; i < 64; i++) {
-		offset = idams[i] & 0x3fff;
-		if (data[offset + 1] == cyl && data[offset + 2] == head
-				&& data[offset + 3] == sector)
+		mem_offset = idams[i] & 0x3fff;
+		mem_double_density = idams[i] & VDISK_DOUBLE_DENSITY;
+		mem_crc = CRC16_RESET;
+		if (mem_double_density) {
+			for (unsigned j = 3; j; j--)
+				mem_crc = crc16_byte(mem_crc, 0xa1);
+		}
+		(void)read_byte();
+		if (read_byte() == cyl && read_byte() == head && read_byte() == sector) {
 			break;
+		}
 	}
 	if (i >= 64)
 		return -1;
-	ssize = 128 << data[offset + 4];
-	offset += 7;
-	offset += 22;
-	for (i = 0; i < 12; i++) WRITE_BYTE(0x00);
-	crc = CRC16_RESET;
-	for (i = 0; i < 3; i++) WRITE_BYTE_CRC(0xa1);
-	WRITE_BYTE_CRC(0xfb);
+
+	unsigned ssize_code = read_byte();
+	if (ssize_code > 3)
+		return -1;
+	ssize = 128 << ssize_code;
+
+	(void)read_crc();  // discard CRC result for now
+
+	if (mem_double_density) {
+		for (i = 0; i < 22; i++)
+			(void)read_byte();
+		write_bytes(12, 0x00);
+		mem_crc = CRC16_RESET;
+		write_bytes(3, 0xa1);
+	} else {
+		for (i = 0; i < 11; i++)
+			(void)read_byte();
+		write_bytes(6, 0x00);
+		mem_crc = CRC16_RESET;
+	}
+
+	write_bytes(1, 0xfb);
 	for (i = 0; i < sector_length; i++) {
 		if (i < ssize)
-			WRITE_BYTE_CRC(buf[i]);
+			write_bytes(1, buf[i]);
 	}
 	// On-disk sector size may differ from provided sector_length
-	for ( ; i < ssize; i++) WRITE_BYTE_CRC(0x00);
-	WRITE_CRC();
-	WRITE_BYTE(0xfe);
+	for ( ; i < ssize; i++)
+		write_bytes(1, 0x00);
+	write_crc();
+	write_bytes(1, 0xfe);
+
 	return 0;
 }
-
-#define READ_BYTE() data[offset++]
 
 /*
  * Similarly, locate a sector and copy out its data.
@@ -875,40 +989,51 @@ int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
 
 int vdisk_fetch_sector(struct vdisk const *disk, unsigned cyl, unsigned head,
 		       unsigned sector, unsigned sector_length, uint8_t *buf) {
-	uint8_t *data;
 	uint16_t *idams;
-	unsigned offset;
 	unsigned ssize, i;
 	if (!disk)
 		return -1;
 	idams = vdisk_track_base(disk, cyl, head);
 	if (!idams)
 		return -1;
-	data = (uint8_t *)idams;
+	mem_track_length = disk->track_length;
+	mem_track_base = (uint8_t *)idams;
 	for (i = 0; i < 64; i++) {
-		offset = idams[i] & 0x3fff;
-		if (data[offset + 1] == cyl && data[offset + 2] == head
-				&& data[offset + 3] == sector)
+		mem_offset = idams[i] & 0x3fff;
+		mem_double_density = idams[i] & VDISK_DOUBLE_DENSITY;
+		mem_crc = CRC16_RESET;
+		if (mem_double_density) {
+			for (unsigned j = 3; j; j--)
+				mem_crc = crc16_byte(mem_crc, 0xa1);
+		}
+		(void)read_byte();
+		if (read_byte() == cyl && read_byte() == head && read_byte() == sector)
 			break;
 	}
 	if (i >= 64) {
 		memset(buf, 0, sector_length);
 		return -1;
 	}
-	ssize = 128 << data[offset + 4];
+
+	unsigned ssize_code = read_byte();
+	if (ssize_code > 3)
+		return -1;
+	ssize = 128 << ssize_code;
 	if (ssize > sector_length)
 		ssize = sector_length;
-	offset += 7;
-	/* XXX: CRC ignored for now */
+
+	(void)read_crc();  // discard CRC result for now
+
 	for (i = 0; i < 43; i++) {
-		uint8_t d = READ_BYTE();
-		if (d == 0xfb)
+		if (read_byte() == 0xfb)
 			break;
 	}
 	if (i >= 43)
 		return -1;
 	for (i = 0; i < ssize; i++) {
-		buf[i] = READ_BYTE();
+		buf[i] = read_byte();
 	}
+	(void)read_crc();  // discard CRC result for now
+
 	return 0;
 }
