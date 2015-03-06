@@ -21,6 +21,11 @@ Version 0.33, unreleased
   * Warn about unrecognised BASIC ROM CRCs.
   * MPI support.
   * Add 'eject' option to disk menus on Windows/Mac OS.
+  * Assume single density JVC/DSK where sectors = 10.  Disable with
+    -no-disk-auto-sd.
+  * Fix hook-based printing on switching machines.
+  * Fix GTK+ tape dialog when attached from command line.
+  * Fix Dragon PAL padding.  Passes Steward Orchard's PAL tests v1.3.
 
 Version 0.32, Tue Apr 22 2014
 
