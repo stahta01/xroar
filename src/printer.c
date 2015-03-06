@@ -63,6 +63,8 @@ void printer_init(void) {
 
 void printer_reset(void) {
 	strobe_state = 1;
+	bp_remove_list(coco_print_breakpoint);
+	bp_add_list(coco_print_breakpoint);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
