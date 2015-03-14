@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include "module.h"
+#include "ui.h"
 
 static char *filereq_noop(char const * const *extensions);
 FileReqModule filereq_null_module = {
@@ -47,11 +48,14 @@ static KeyboardModule * const null_keyboard_module_list[] = {
 	NULL
 };
 
-UIModule ui_null_module = {
+static void set_state(enum ui_tag tag, int value, const void *data);
+
+struct ui_module ui_null_module = {
 	.common = { .name = "null", .description = "No UI" },
 	.filereq_module_list = null_filereq_module_list,
 	.video_module_list = null_video_module_list,
 	.keyboard_module_list = null_keyboard_module_list,
+	.set_state = set_state,
 };
 
 /* */
@@ -59,4 +63,10 @@ UIModule ui_null_module = {
 static char *filereq_noop(char const * const *extensions) {
 	(void)extensions;
 	return NULL;
+}
+
+static void set_state(enum ui_tag tag, int value, const void *data) {
+	(void)tag;
+	(void)value;
+	(void)data;
 }
