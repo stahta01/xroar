@@ -32,6 +32,7 @@
 #include "mc6847.h"
 #include "module.h"
 #include "sam.h"
+#include "ui.h"
 #include "xroar.h"
 
 #include "sdl/common.h"
@@ -45,14 +46,16 @@
 
 static _Bool init(void);
 static void shutdown(void);
+static void set_state(enum ui_tag tag, int value, const void *data);
 
-UIModule ui_sdl_module = {
+struct ui_module ui_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL UI",
 	            .init = init, .shutdown = shutdown },
 	.video_module_list = sdl_video_module_list,
 	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
+	.set_state = set_state,
 };
 
 static _Bool init(void) {
@@ -89,4 +92,10 @@ static _Bool init(void) {
 
 static void shutdown(void) {
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
+static void set_state(enum ui_tag tag, int value, const void *data) {
+	(void)tag;
+	(void)value;
+	(void)data;
 }
