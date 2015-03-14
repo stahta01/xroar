@@ -34,6 +34,7 @@ option) any later version.
 #include "module.h"
 #include "sam.h"
 #include "tape.h"
+#include "ui.h"
 #include "vdisk.h"
 #include "xroar.h"
 
@@ -46,48 +47,10 @@ option) any later version.
 #define WNDPROCTYPE FARPROC
 #endif
 
-#define TAG_TYPE_MASK (0x7f << 8)
-#define TAG_VALUE_MASK (0xff)
-
-#define TAG_SIMPLE_ACTION (1 << 8)
-
-#define TAG_MACHINE (2 << 8)
-
-#define TAG_CARTRIDGE (3 << 8)
-
-#define TAG_TAPE_FLAGS (4 << 8)
-
-#define TAG_INSERT_DISK (5 << 8)
-#define TAG_NEW_DISK (6 << 8)
-#define TAG_WRITE_ENABLE (7 << 8)
-#define TAG_WRITE_BACK (8 << 8)
-#define TAG_EJECT_DISK (17 << 8)
-
-#define TAG_FULLSCREEN (9 << 8)
-#define TAG_VDG_INVERSE (16 << 8)
-#define TAG_CROSS_COLOUR (10 << 8)
-
-#define TAG_FAST_SOUND (11 << 8)
-
-#define TAG_KEYMAP (12 << 8)
-#define TAG_KBD_TRANSLATE (13 << 8)
-#define TAG_JOY_RIGHT (14 << 8)
-#define TAG_JOY_LEFT (15 << 8)
-
-enum {
-	TAG_QUIT,
-	TAG_RESET_SOFT,
-	TAG_RESET_HARD,
-	TAG_FILE_LOAD,
-	TAG_FILE_RUN,
-	TAG_FILE_SAVE_SNAPSHOT,
-	TAG_TAPE_INPUT,
-	TAG_TAPE_OUTPUT,
-	TAG_TAPE_INPUT_REWIND,
-	TAG_ZOOM_IN,
-	TAG_ZOOM_OUT,
-	TAG_JOY_SWAP,
-};
+#define TAG(t) (((t) & 0x7f) << 8)
+#define TAGV(t,v) (TAG(t) | ((v) & 0xff))
+#define TAG_TYPE(t) (((t) >> 8) & 0x7f)
+#define TAG_VALUE(t) ((t) & 0xff)
 
 static int max_machine_id = 0;
 static int max_cartridge_id = 0;
@@ -108,43 +71,19 @@ static struct {
 
 static _Bool init(void);
 static void ui_shutdown(void);
-static void fullscreen_changed_cb(_Bool);
-static void cross_colour_changed_cb(int);
-static void vdg_inverse_cb(_Bool);
-static void machine_changed_cb(int);
-static void cart_changed_cb(int);
-static void keymap_changed_cb(int);
-static void joystick_changed_cb(int, const char *);
-static void kbd_translate_changed_cb(_Bool);
-static void fast_sound_changed_cb(_Bool);
-static void update_tape_state(int);
-static void update_drive_disk(int, struct vdisk *);
-static void update_drive_write_enable(int, _Bool);
-static void update_drive_write_back(int, _Bool);
+static void set_state(enum ui_tag tag, int value, const void *data);
 
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
 
-UIModule ui_windows32_module = {
+struct ui_module ui_windows32_module = {
 	.common = { .name = "windows32", .description = "Windows SDL UI",
 	            .init = init, .shutdown = ui_shutdown },
 	.video_module_list = sdl_video_module_list,
 	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
-	.fullscreen_changed_cb = fullscreen_changed_cb,
-	.cross_colour_changed_cb = cross_colour_changed_cb,
-	.vdg_inverse_cb = vdg_inverse_cb,
-	.machine_changed_cb = machine_changed_cb,
-	.cart_changed_cb = cart_changed_cb,
-	.keymap_changed_cb = keymap_changed_cb,
-	.joystick_changed_cb = joystick_changed_cb,
-	.kbd_translate_changed_cb = kbd_translate_changed_cb,
-	.fast_sound_changed_cb = fast_sound_changed_cb,
-	.update_tape_state = update_tape_state,
-	.update_drive_disk = update_drive_disk,
-	.update_drive_write_enable = update_drive_write_enable,
-	.update_drive_write_back = update_drive_write_back,
+	.set_state = set_state,
 };
 
 static HMENU top_menu;
@@ -222,22 +161,21 @@ static void setup_file_menu(void) {
 
 	file_menu = CreatePopupMenu();
 
-	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_FILE_RUN, "&Run...");
-	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_FILE_LOAD, "&Load...");
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_run), "&Run...");
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_load), "&Load...");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 
 	submenu = CreatePopupMenu();
 	AppendMenu(file_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cassette");
-	AppendMenu(submenu, MF_STRING, TAG_SIMPLE_ACTION | TAG_TAPE_INPUT, "Input Tape...");
-	AppendMenu(submenu, MF_STRING, TAG_SIMPLE_ACTION | TAG_TAPE_OUTPUT, "Output Tape...");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input), "Input Tape...");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output), "Output Tape...");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input_rewind), "Rewind Input Tape");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAG_SIMPLE_ACTION | TAG_TAPE_INPUT_REWIND, "Rewind Input Tape");
-	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAG_TAPE_FLAGS | TAPE_FAST, "Fast Loading");
-	AppendMenu(submenu, MF_STRING, TAG_TAPE_FLAGS | TAPE_PAD, "Leader Padding");
-	AppendMenu(submenu, MF_STRING, TAG_TAPE_FLAGS | TAPE_PAD_AUTO, "Automatic Padding");
-	AppendMenu(submenu, MF_STRING, TAG_TAPE_FLAGS | TAPE_REWRITE, "Rewrite");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_FAST), "Fast Loading");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD), "Leader Padding");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "Automatic Padding");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_REWRITE), "Rewrite");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 
@@ -246,19 +184,19 @@ static void setup_file_menu(void) {
 		snprintf(title, sizeof(title), "Drive &%c", '1' + drive);
 		submenu = CreatePopupMenu();
 		AppendMenu(file_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, title);
-		AppendMenu(submenu, MF_STRING, TAG_INSERT_DISK | drive, "Insert Disk...");
-		AppendMenu(submenu, MF_STRING, TAG_NEW_DISK | drive, "New Disk...");
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_insert, drive), "Insert Disk...");
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_new, drive), "New Disk...");
 		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-		AppendMenu(submenu, MF_STRING, TAG_WRITE_ENABLE | drive, "Write Enable");
-		AppendMenu(submenu, MF_STRING, TAG_WRITE_BACK | drive, "Write Back");
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_write_enable, drive), "Write Enable");
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_write_back, drive), "Write Back");
 		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-		AppendMenu(submenu, MF_STRING, TAG_EJECT_DISK | drive, "Eject Disk");
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_eject, drive), "Eject Disk");
 	}
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_FILE_SAVE_SNAPSHOT, "&Save Snapshot...");
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save Snapshot...");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_QUIT, "&Quit");
+	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)file_menu, "&File");
 }
@@ -271,18 +209,18 @@ static void setup_view_menu(void) {
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Zoom");
-	AppendMenu(submenu, MF_STRING, TAG_SIMPLE_ACTION | TAG_ZOOM_IN, "Zoom In");
-	AppendMenu(submenu, MF_STRING, TAG_SIMPLE_ACTION | TAG_ZOOM_OUT, "Zoom Out");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_in), "Zoom In");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG_FULLSCREEN, "Full Screen");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "Full Screen");
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG_VDG_INVERSE, "Inverse Text");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "Inverse Text");
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cross-colour");
 	for (int i = 0; xroar_cross_colour_list[i].name; i++) {
-		AppendMenu(submenu, MF_STRING, TAG_CROSS_COLOUR | xroar_cross_colour_list[i].value, xroar_cross_colour_list[i].description);
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cross_colour, xroar_cross_colour_list[i].value), xroar_cross_colour_list[i].description);
 	}
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
@@ -302,60 +240,60 @@ static void setup_hardware_menu(void) {
 		struct machine_config *mc = mcl->data;
 		if (mc->id > max_machine_id)
 			max_machine_id = mc->id;
-		AppendMenu(submenu, MF_STRING, TAG_MACHINE | mc->id, mc->description);
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
 		mcl = mcl->next;
 	}
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cartridge");
-	AppendMenu(submenu, MF_STRING, TAG_CARTRIDGE, "None");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
 	max_cartridge_id = 0;
 	struct slist *ccl = cart_config_list();
 	while (ccl) {
 		struct cart_config *cc = ccl->data;
 		if ((cc->id + 1) > max_cartridge_id)
 			max_cartridge_id = cc->id + 1;
-		AppendMenu(submenu, MF_STRING, TAG_CARTRIDGE | (cc->id + 1), cc->description);
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
 		ccl = ccl->next;
 	}
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Keyboard Map");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON, "Dragon Layout");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON200E, "Dragon 200-E Layout");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_COCO, "CoCo Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_DRAGON), "Dragon Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_DRAGON200E), "Dragon 200-E Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_COCO), "CoCo Layout");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Right Joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAG_JOY_RIGHT | i, joystick_names[i].description);
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_right, i), joystick_names[i].description);
 	}
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Left Joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAG_JOY_LEFT | i, joystick_names[i].description);
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_left, i), joystick_names[i].description);
 	}
-	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_JOY_SWAP, "Swap Joysticks");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_joystick_swap), "Swap Joysticks");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_SOFT, "Soft Reset");
-	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_HARD, "Hard Reset");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft Reset");
+	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard Reset");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
-	machine_changed_cb(xroar_machine_config ? xroar_machine_config->id : 0);
-	cart_changed_cb(machine_cart ? machine_cart->config->id : 0);
+	set_state(ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
+	set_state(ui_tag_cartridge, machine_cart ? machine_cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
 	HMENU tool_menu;
 
 	tool_menu = CreatePopupMenu();
-	AppendMenu(tool_menu, MF_STRING, TAG_KBD_TRANSLATE, "Keyboard Translation");
-	AppendMenu(tool_menu, MF_STRING, TAG_FAST_SOUND, "Fast Sound");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "Keyboard Translation");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_fast_sound), "Fast Sound");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
 }
@@ -391,8 +329,8 @@ void sdl_windows32_handle_syswmevent(void *data) {
 	SDL_SysWMmsg *wmmsg = data;
 	int msg = wmmsg->msg;
 	int tag = LOWORD(wmmsg->wParam);
-	int tag_type = tag & TAG_TYPE_MASK;
-	int tag_value = tag & TAG_VALUE_MASK;
+	int tag_type = TAG_TYPE(tag);
+	int tag_value = TAG_VALUE(tag);
 
 	switch (msg) {
 
@@ -400,47 +338,47 @@ void sdl_windows32_handle_syswmevent(void *data) {
 		switch (tag_type) {
 
 		/* Simple actions: */
-		case TAG_SIMPLE_ACTION:
+		case ui_tag_action:
 			switch (tag_value) {
-			case TAG_QUIT:
+			case ui_action_quit:
 				{
 					SDL_Event event;
 					event.type = SDL_QUIT;
 					SDL_PushEvent(&event);
 				}
 				break;
-			case TAG_RESET_SOFT:
+			case ui_action_reset_soft:
 				xroar_soft_reset();
 				break;
-			case TAG_RESET_HARD:
+			case ui_action_reset_hard:
 				xroar_hard_reset();
 				break;
-			case TAG_FILE_RUN:
+			case ui_action_file_run:
 				xroar_run_file(NULL);
 				break;
-			case TAG_FILE_LOAD:
+			case ui_action_file_load:
 				xroar_load_file(NULL);
 				break;
-			case TAG_FILE_SAVE_SNAPSHOT:
+			case ui_action_file_save_snapshot:
 				xroar_save_snapshot();
 				break;
-			case TAG_TAPE_INPUT:
+			case ui_action_tape_input:
 				xroar_select_tape_input();
 				break;
-			case TAG_TAPE_OUTPUT:
+			case ui_action_tape_output:
 				xroar_select_tape_output();
 				break;
-			case TAG_TAPE_INPUT_REWIND:
+			case ui_action_tape_input_rewind:
 				if (tape_input)
 					tape_rewind(tape_input);
 				break;
-			case TAG_ZOOM_IN:
+			case ui_action_zoom_in:
 				sdl_zoom_in();
 				break;
-			case TAG_ZOOM_OUT:
+			case ui_action_zoom_out:
 				sdl_zoom_out();
 				break;
-			case TAG_JOY_SWAP:
+			case ui_action_joystick_swap:
 				xroar_swap_joysticks(1);
 				break;
 			default:
@@ -449,12 +387,12 @@ void sdl_windows32_handle_syswmevent(void *data) {
 			break;
 
 		/* Machines: */
-		case TAG_MACHINE:
+		case ui_tag_machine:
 			xroar_set_machine(1, tag_value);
 			break;
 
 		/* Cartridges: */
-		case TAG_CARTRIDGE:
+		case ui_tag_cartridge:
 			{
 				struct cart_config *cc = cart_config_by_id(tag_value - 1);
 				xroar_set_cart(1, cc ? cc->name : NULL);
@@ -462,55 +400,55 @@ void sdl_windows32_handle_syswmevent(void *data) {
 			break;
 
 		/* Cassettes: */
-		case TAG_TAPE_FLAGS:
+		case ui_tag_tape_flags:
 			tape_select_state(tape_get_state() ^ tag_value);
 			break;
 
 		/* Disks: */
-		case TAG_INSERT_DISK:
+		case ui_tag_disk_insert:
 			xroar_insert_disk(tag_value);
 			break;
-		case TAG_NEW_DISK:
+		case ui_tag_disk_new:
 			xroar_new_disk(tag_value);
 			break;
-		case TAG_WRITE_ENABLE:
+		case ui_tag_disk_write_enable:
 			xroar_set_write_enable(1, tag_value, XROAR_TOGGLE);
 			break;
-		case TAG_WRITE_BACK:
+		case ui_tag_disk_write_back:
 			xroar_set_write_back(1, tag_value, XROAR_TOGGLE);
 			break;
-		case TAG_EJECT_DISK:
+		case ui_tag_disk_eject:
 			xroar_eject_disk(tag_value);
 			break;
 
 		/* Video: */
-		case TAG_FULLSCREEN:
+		case ui_tag_fullscreen:
 			xroar_set_fullscreen(1, XROAR_TOGGLE);
 			break;
-		case TAG_CROSS_COLOUR:
+		case ui_tag_cross_colour:
 			xroar_set_cross_colour(1, tag_value);
 			break;
-		case TAG_VDG_INVERSE:
+		case ui_tag_vdg_inverse:
 			xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
 			break;
 		/* Audio: */
-		case TAG_FAST_SOUND:
+		case ui_tag_fast_sound:
 			machine_select_fast_sound(!xroar_cfg.fast_sound);
 			break;
 
 		/* Keyboard: */
-		case TAG_KEYMAP:
+		case ui_tag_keymap:
 			xroar_set_keymap(1, tag_value);
 			break;
-		case TAG_KBD_TRANSLATE:
+		case ui_tag_kbd_translate:
 			xroar_set_kbd_translate(1, XROAR_TOGGLE);
 			break;
 
 		/* Joysticks: */
-		case TAG_JOY_RIGHT:
+		case ui_tag_joy_right:
 			xroar_set_joystick(1, 0, joystick_names[tag_value].name);
 			break;
-		case TAG_JOY_LEFT:
+		case ui_tag_joy_left:
 			xroar_set_joystick(1, 1, joystick_names[tag_value].name);
 			break;
 
@@ -526,78 +464,94 @@ void sdl_windows32_handle_syswmevent(void *data) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void fullscreen_changed_cb(_Bool fs) {
-	CheckMenuItem(top_menu, TAG_FULLSCREEN, MF_BYCOMMAND | (fs ? MF_CHECKED : MF_UNCHECKED));
-}
+static void set_state(enum ui_tag tag, int value, const void *data) {
+	switch (tag) {
 
-static void cross_colour_changed_cb(int cc) {
-	CheckMenuRadioItem(top_menu, TAG_CROSS_COLOUR, TAG_CROSS_COLOUR | 2, TAG_CROSS_COLOUR | cc, MF_BYCOMMAND);
-}
+	/* Simple toggles */
 
-static void vdg_inverse_cb(_Bool i) {
-	CheckMenuItem(top_menu, TAG_VDG_INVERSE, MF_BYCOMMAND | (i ? MF_CHECKED : MF_UNCHECKED));
-}
+	case ui_tag_fullscreen:
+	case ui_tag_vdg_inverse:
+	case ui_tag_fast_sound:
+	case ui_tag_kbd_translate:
+		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
 
-static void machine_changed_cb(int machine_type) {
-	CheckMenuRadioItem(top_menu, TAG_MACHINE, TAG_MACHINE | max_machine_id, TAG_MACHINE | machine_type, MF_BYCOMMAND);
-}
+	/* Hardware */
 
-static void cart_changed_cb(int cart_index) {
-	cart_index++;
-	CheckMenuRadioItem(top_menu, TAG_CARTRIDGE, TAG_CARTRIDGE | max_cartridge_id, TAG_CARTRIDGE | cart_index, MF_BYCOMMAND);
-}
+	case ui_tag_machine:
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
+		break;
 
-static void keymap_changed_cb(int map) {
-	CheckMenuRadioItem(top_menu, TAG_KEYMAP, TAG_KEYMAP | (NUM_KEYMAPS - 1), TAG_KEYMAP | map, MF_BYCOMMAND);
-}
+	case ui_tag_cartridge:
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
+		break;
 
-static void joystick_changed_cb(int port, const char *name) {
-	int tag_base = (port == 0) ? TAG_JOY_RIGHT : TAG_JOY_LEFT;
-	unsigned sel = 0;
-	if (name) {
-		for (unsigned i = 1; i < NUM_JOYSTICK_NAMES; i++)
-			if (0 == strcmp(name, joystick_names[i].name)) {
-				sel = i;
-				break;
+	/* Tape */
+
+	case ui_tag_tape_flags:
+		for (int i = 0; i < 4; i++) {
+			int f = value & (1 << i);
+			int t = TAGV(tag, 1 << i);
+			CheckMenuItem(top_menu, t, MF_BYCOMMAND | (f ? MF_CHECKED : MF_UNCHECKED));
+		}
+		break;
+
+	/* Disk */
+
+	case ui_tag_disk_data:
+		{
+			const struct vdisk *disk = data;
+			_Bool we = 1, wb = 0;
+			if (disk) {
+				we = !disk->write_protect;
+				wb = disk->write_back;
 			}
+			set_state(ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			set_state(ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+		}
+		break;
+
+	case ui_tag_disk_write_enable:
+		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	case ui_tag_disk_write_back:
+		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	/* Video */
+
+	case ui_tag_cross_colour:
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 2), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	/* Keyboard */
+
+	case ui_tag_keymap:
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (NUM_KEYMAPS - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	/* Joysticks */
+
+	case ui_tag_joy_right:
+	case ui_tag_joy_left:
+		{
+			int joy = 0;
+			if (data) {
+				for (int i = 1; i < NUM_JOYSTICK_NAMES; i++) {
+					if (0 == strcmp((const char *)data, joystick_names[i].name)) {
+						joy = i;
+						break;
+					}
+				}
+			}
+			CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, NUM_JOYSTICK_NAMES - 1), TAGV(tag, joy), MF_BYCOMMAND);
+		}
+		break;
+
+	default:
+		break;
+
 	}
-	CheckMenuRadioItem(top_menu, tag_base, tag_base | (NUM_JOYSTICK_NAMES - 1), tag_base | sel, MF_BYCOMMAND);
-}
 
-static void kbd_translate_changed_cb(_Bool state) {
-	CheckMenuItem(top_menu, TAG_KBD_TRANSLATE, MF_BYCOMMAND | (state ? MF_CHECKED : MF_UNCHECKED));
-}
-
-static void fast_sound_changed_cb(_Bool state) {
-	CheckMenuItem(top_menu, TAG_FAST_SOUND, MF_BYCOMMAND | (state ? MF_CHECKED : MF_UNCHECKED));
-}
-
-static void update_tape_state(int flags) {
-	for (int i = 0; i < 4; i++) {
-		int f = flags & (1 << i);
-		int tag = TAG_TAPE_FLAGS | (1 << i);
-		CheckMenuItem(top_menu, tag, MF_BYCOMMAND | (f ? MF_CHECKED : MF_UNCHECKED));
-	}
-}
-
-static void update_drive_disk(int drive, struct vdisk *disk) {
-	_Bool we = 1, wb = 0;
-	if (disk) {
-		we = !disk->write_protect;
-		wb = disk->write_back;
-	}
-	update_drive_write_enable(drive, we);
-	update_drive_write_back(drive, wb);
-}
-
-static void update_drive_write_enable(int drive, _Bool state) {
-	if (drive < 0 || drive > 3)
-		return;
-	CheckMenuItem(top_menu, TAG_WRITE_ENABLE | drive, MF_BYCOMMAND | (state ? MF_CHECKED : MF_UNCHECKED));
-}
-
-static void update_drive_write_back(int drive, _Bool state) {
-	if (drive < 0 || drive > 3)
-		return;
-	CheckMenuItem(top_menu, TAG_WRITE_BACK | drive, MF_BYCOMMAND | (state ? MF_CHECKED : MF_UNCHECKED));
 }

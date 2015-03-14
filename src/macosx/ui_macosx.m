@@ -23,8 +23,13 @@
 #include "machine.h"
 #include "module.h"
 #include "tape.h"
+#include "ui.h"
 #include "xroar.h"
 #include "sdl/common.h"
+
+#define TAG(ui_tag,value) ((((ui_tag) & 0x7f) << 24) | ((value) & 0xffffff))
+#define TAG_TYPE(t) (((t) >> 24) & 0x7f)
+#define TAG_VALUE(t) ((t) & 0xffffff)
 
 #define TAG_TYPE_MASK (0x7f << 24)
 #define TAG_VALUE_MASK (0xffffff)
@@ -955,6 +960,8 @@ int main(int argc, char **argv) {
 
 static _Bool init(void);
 static void shutdown(void);
+static void set_state(enum ui_tag tag, int value, void *data);
+/* DEPRECATED */
 static void cross_colour_changed_cb(int cc);
 static void machine_changed_cb(int machine_id);
 static void keymap_changed_cb(int map);
@@ -1017,10 +1024,10 @@ static void update_machine_menu(void) {
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
-			current_machine = TAG_MACHINE | mc->id;
+			current_machine = TAG(ui_tag_machine, mc->id);
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_MACHINE | mc->id)];
+		[item setTag:(TAG(ui_tag_machine, mc->id))];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[machine_menu insertItem:item atIndex:0];
@@ -1051,6 +1058,10 @@ static void update_cartridge_menu(void) {
 	[cartridge_menu insertItem:item atIndex:0];
 	[item release];
 	slist_free(ccl);
+}
+
+static void set_state(enum ui_tag tag, int value, void *data) {
+
 }
 
 static void cross_colour_changed_cb(int cc) {
