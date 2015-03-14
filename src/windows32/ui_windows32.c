@@ -257,6 +257,7 @@ static void setup_file_menu(void) {
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_FILE_SAVE_SNAPSHOT, "&Save Snapshot...");
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_QUIT, "&Quit");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)file_menu, "&File");
