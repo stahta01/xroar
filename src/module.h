@@ -50,33 +50,6 @@ typedef struct {
 	void (* const update_kbd_translate)(void);
 } KeyboardModule;
 
-typedef struct {
-	struct module common;
-	FileReqModule * const *filereq_module_list;
-	VideoModule * const *video_module_list;
-	SoundModule * const *sound_module_list;
-	KeyboardModule * const *keyboard_module_list;
-	struct joystick_module * const *joystick_module_list;
-	void (* const run)(void);
-	void (* const fullscreen_changed_cb)(_Bool fullscreen);
-	void (* const cross_colour_changed_cb)(int cc);
-	void (* const vdg_inverse_cb)(_Bool inverse);
-	void (* const machine_changed_cb)(int machine_type);
-	void (* const cart_changed_cb)(int cart_index);
-	void (* const keymap_changed_cb)(int map);
-	void (* const joystick_changed_cb)(int port, const char *name);
-	void (* const kbd_translate_changed_cb)(_Bool translate);
-	void (* const fast_sound_changed_cb)(_Bool fast);
-	void (* const input_tape_filename_cb)(const char *filename);
-	void (* const output_tape_filename_cb)(const char *filename);
-	void (* const update_tape_state)(int flags);  /* flag bits from tape.h */
-	void (* const update_drive_disk)(int drive, struct vdisk *disk);
-	void (* const update_drive_write_enable)(int drive, _Bool write_enable);
-	void (* const update_drive_write_back)(int drive, _Bool write_back);
-} UIModule;
-
-extern UIModule * const *ui_module_list;
-extern UIModule *ui_module;
 extern FileReqModule * const *filereq_module_list;
 extern FileReqModule *filereq_module;
 extern VideoModule * const *video_module_list;

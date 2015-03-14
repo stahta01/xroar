@@ -50,6 +50,7 @@ xroar_SOURCES = \
 	sound.c sound.h \
 	tape.c tape.h \
 	tape_cas.c \
+	ui.c ui.h \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
 	vdrive.c vdrive.h \

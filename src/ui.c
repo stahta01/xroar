@@ -18,26 +18,35 @@
 
 #include "config.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 
-#ifdef HAVE_SDL
-# include <SDL.h>
-#endif
-
+#include "module.h"
 #include "ui.h"
-#include "xroar.h"
-#include "logging.h"
 
-int main(int argc, char **argv) {
-	atexit(xroar_shutdown);
-	if (!xroar_init(argc, argv))
-		exit(EXIT_FAILURE);
-	if (ui_module->run) {
-		ui_module->run();
-	} else {
-		while (xroar_run())
-			;
-	}
-	return 0;
-}
+extern struct ui_module ui_gtk2_module;
+extern struct ui_module ui_macosx_module;
+extern struct ui_module ui_null_module;
+extern struct ui_module ui_sdl_module;
+extern struct ui_module ui_windows32_module;
+static struct ui_module * const default_ui_module_list[] = {
+#ifdef HAVE_GTK2
+#ifdef HAVE_GTKGL
+	&ui_gtk2_module,
+#endif
+#endif
+#ifdef HAVE_SDL
+#ifdef HAVE_COCOA
+	&ui_macosx_module,
+#else
+#ifdef WINDOWS32
+	&ui_windows32_module,
+#endif
+	&ui_sdl_module,
+#endif
+#endif
+	&ui_null_module,
+	NULL
+};
+
+struct ui_module * const *ui_module_list = default_ui_module_list;
+struct ui_module *ui_module = NULL;

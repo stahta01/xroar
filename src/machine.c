@@ -48,13 +48,13 @@
 #include "mc6809_trace.h"
 #include "mc6821.h"
 #include "mc6847.h"
-#include "module.h"
 #include "path.h"
 #include "printer.h"
 #include "romlist.h"
 #include "sam.h"
 #include "sound.h"
 #include "tape.h"
+#include "ui.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xconfig.h"
@@ -1372,9 +1372,7 @@ void machine_set_fast_sound(_Bool fast) {
 }
 
 void machine_select_fast_sound(_Bool fast) {
-	if (ui_module->fast_sound_changed_cb) {
-		ui_module->fast_sound_changed_cb(fast);
-	}
+	ui_module->set_state(ui_tag_fast_sound, fast, NULL);
 	machine_set_fast_sound(fast);
 }
 #endif

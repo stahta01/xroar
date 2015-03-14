@@ -63,6 +63,7 @@
 #include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
+#include "ui.h"
 #include "vdg_palette.h"
 #include "vdisk.h"
 #include "vdrive.h"
@@ -562,7 +563,7 @@ _Bool xroar_init(int argc, char **argv) {
 	assert(xroar_machine_config != NULL);
 
 	// Select a UI module.
-	ui_module = (UIModule *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
+	ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
 	if (ui_module == NULL) {
 		LOG_ERROR("%s: ui module `%s' not found\n", argv[0], private_cfg.ui);
 		exit(EXIT_FAILURE);
@@ -729,9 +730,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 
 	/* Notify UI of starting options: */
-	if (ui_module->fullscreen_changed_cb) {
-		ui_module->fullscreen_changed_cb(xroar_cfg.fullscreen);
-	}
+	ui_module->set_state(ui_tag_fullscreen, xroar_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	/* Configure machine */
@@ -791,9 +790,7 @@ _Bool xroar_init(int argc, char **argv) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
 				tape_open_writing(private_cfg.tape_write);
-				if (ui_module->output_tape_filename_cb) {
-					ui_module->output_tape_filename_cb(private_cfg.tape_write);
-				}
+				ui_module->set_state(ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
 				break;
@@ -1027,8 +1024,8 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			} else {
 				ret = tape_open_reading(filename);
 			}
-			if (ret == 0 && ui_module->input_tape_filename_cb) {
-				ui_module->input_tape_filename_cb(filename);
+			if (ret == 0) {
+				ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
 			}
 			break;
 	}
@@ -1156,8 +1153,8 @@ void xroar_new_disk(int drive) {
 	new_disk->filename = xstrdup(filename);
 	new_disk->write_back = 1;
 	vdrive_insert_disk(drive, new_disk);
-	if (ui_module && ui_module->update_drive_disk) {
-		ui_module->update_drive_disk(drive, new_disk);
+	if (ui_module) {
+		ui_module->set_state(ui_tag_disk_data, drive, new_disk);
 	}
 }
 
@@ -1165,8 +1162,8 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(drive, disk);
-	if (ui_module && ui_module->update_drive_disk) {
-		ui_module->update_drive_disk(drive, disk);
+	if (ui_module) {
+		ui_module->set_state(ui_tag_disk_data, drive, disk);
 	}
 }
 
@@ -1177,8 +1174,8 @@ void xroar_insert_disk(int drive) {
 
 void xroar_eject_disk(int drive) {
 	vdrive_eject_disk(drive);
-	if (ui_module && ui_module->update_drive_disk) {
-		ui_module->update_drive_disk(drive, NULL);
+	if (ui_module) {
+		ui_module->set_state(ui_tag_disk_data, drive, NULL);
 	}
 }
 
@@ -1189,8 +1186,8 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 	} else {
 		LOG_DEBUG(1, "Disk in drive %d write protected.\n", drive);
 	}
-	if (notify && ui_module && ui_module->update_drive_write_enable) {
-		ui_module->update_drive_write_enable(drive, we);
+	if (notify && ui_module) {
+		ui_module->set_state(ui_tag_disk_write_enable, drive, (void *)(uintptr_t)we);
 	}
 	return we;
 }
@@ -1202,8 +1199,8 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	} else {
 		LOG_DEBUG(1, "Write back disabled for disk in drive %d.\n", drive);
 	}
-	if (notify && ui_module && ui_module->update_drive_write_back) {
-		ui_module->update_drive_write_back(drive, wb);
+	if (notify && ui_module) {
+		ui_module->set_state(ui_tag_disk_write_back, drive, (void *)(uintptr_t)wb);
 	}
 	return wb;
 }
@@ -1221,8 +1218,8 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 	if (video_module->update_cross_colour_phase) {
 		video_module->update_cross_colour_phase();
 	}
-	if (notify && ui_module->cross_colour_changed_cb) {
-		ui_module->cross_colour_changed_cb(xroar_machine_config->cross_colour_phase);
+	if (notify) {
+		ui_module->set_state(ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
 	}
 }
 
@@ -1236,8 +1233,8 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 		break;
 	}
 	machine_set_inverted_text(xroar_cfg.vdg_inverted_text);
-	if (notify && ui_module->vdg_inverse_cb) {
-		ui_module->vdg_inverse_cb(xroar_cfg.vdg_inverted_text);
+	if (notify) {
+		ui_module->set_state(ui_tag_vdg_inverse, xroar_cfg.vdg_inverted_text, NULL);
 	}
 }
 
@@ -1263,8 +1260,8 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 	if (video_module->set_fullscreen) {
 		video_module->set_fullscreen(set_to);
 	}
-	if (notify && ui_module->fullscreen_changed_cb) {
-		ui_module->fullscreen_changed_cb(set_to);
+	if (notify) {
+		ui_module->set_state(ui_tag_fullscreen, set_to, NULL);
 	}
 }
 
@@ -1306,8 +1303,8 @@ void xroar_set_keymap(_Bool notify, int map) {
 	}
 	if (new >= 0 && new < NUM_KEYMAPS) {
 		keyboard_set_keymap(new);
-		if (notify && ui_module->keymap_changed_cb) {
-			ui_module->keymap_changed_cb(new);
+		if (notify) {
+			ui_module->set_state(ui_tag_keymap, new, NULL);
 		}
 	}
 }
@@ -1324,19 +1321,17 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 	if (keyboard_module->update_kbd_translate) {
 		keyboard_module->update_kbd_translate();
 	}
-	if (notify && ui_module->kbd_translate_changed_cb) {
-		ui_module->kbd_translate_changed_cb(xroar_cfg.kbd_translate);
+	if (notify) {
+		ui_module->set_state(ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
 	}
 }
 
 static void update_ui_joysticks(int port) {
-	if (!ui_module->joystick_changed_cb)
-		return;
 	const char *name = NULL;
 	if (joystick_port_config[port] && joystick_port_config[port]->name) {
 		name = joystick_port_config[port]->name;
 	}
-	ui_module->joystick_changed_cb(port, name);
+	ui_module->set_state(ui_tag_joy_right + port, 0, name);
 }
 
 void xroar_set_joystick(_Bool notify, int port, const char *name) {
@@ -1397,8 +1392,8 @@ void xroar_set_machine(_Bool notify, int id) {
 		video_module->update_palette();
 	}
 	xroar_hard_reset();
-	if (notify && ui_module->machine_changed_cb) {
-		ui_module->machine_changed_cb(new);
+	if (notify) {
+		ui_module->set_state(ui_tag_machine, new, NULL);
 	}
 }
 
@@ -1427,12 +1422,9 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		machine_insert_cart(cart_new_named(cc_name));
 	}
 
-	if (notify && ui_module->cart_changed_cb) {
-		if (machine_cart) {
-			ui_module->cart_changed_cb(machine_cart->config->id);
-		} else {
-			ui_module->cart_changed_cb(-1);
-		}
+	if (notify) {
+		int id = machine_cart ? machine_cart->config->id : -1;
+		ui_module->set_state(ui_tag_cartridge, id, NULL);
 	}
 }
 
@@ -1464,34 +1456,26 @@ void xroar_select_tape_input(void) {
 	char *filename = filereq_module->load_filename(xroar_tape_exts);
 	if (filename) {
 		tape_open_reading(filename);
-		if (ui_module->input_tape_filename_cb) {
-			ui_module->input_tape_filename_cb(filename);
-		}
+		ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_input(void) {
 	tape_close_reading();
-	if (ui_module->input_tape_filename_cb) {
-		ui_module->input_tape_filename_cb(NULL);
-	}
+	ui_module->set_state(ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_select_tape_output(void) {
 	char *filename = filereq_module->save_filename(xroar_tape_exts);
 	if (filename) {
 		tape_open_writing(filename);
-		if (ui_module->output_tape_filename_cb) {
-			ui_module->output_tape_filename_cb(filename);
-		}
+		ui_module->set_state(ui_tag_tape_output_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_output(void) {
 	tape_close_writing();
-	if (ui_module->output_tape_filename_cb) {
-		ui_module->output_tape_filename_cb(NULL);
-	}
+	ui_module->set_state(ui_tag_tape_output_filename, 0, NULL);
 }
 
 void xroar_soft_reset(void) {

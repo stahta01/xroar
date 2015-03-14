@@ -25,33 +25,6 @@
 #include "logging.h"
 #include "module.h"
 
-/**** Default user interface module list ****/
-
-extern UIModule ui_gtk2_module;
-extern UIModule ui_macosx_module;
-extern UIModule ui_null_module;
-extern UIModule ui_sdl_module;
-extern UIModule ui_windows32_module;
-static UIModule * const default_ui_module_list[] = {
-#ifdef HAVE_GTK2
-#ifdef HAVE_GTKGL
-	&ui_gtk2_module,
-#endif
-#endif
-#ifdef HAVE_SDL
-#ifdef HAVE_COCOA
-	&ui_macosx_module,
-#else
-#ifdef WINDOWS32
-	&ui_windows32_module,
-#endif
-	&ui_sdl_module,
-#endif
-#endif
-	&ui_null_module,
-	NULL
-};
-
 /**** Default file requester module list ****/
 
 extern FileReqModule filereq_cocoa_module;
@@ -126,8 +99,6 @@ static VideoModule * const default_video_module_list[] = {
 	NULL
 };
 
-UIModule * const *ui_module_list = default_ui_module_list;
-UIModule *ui_module = NULL;
 FileReqModule * const *filereq_module_list = default_filereq_module_list;
 FileReqModule *filereq_module = NULL;
 VideoModule * const *video_module_list = default_video_module_list;

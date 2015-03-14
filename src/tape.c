@@ -35,10 +35,10 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
-#include "module.h"
 #include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
+#include "ui.h"
 #include "xroar.h"
 
 /* Tape output delegate.  Called when the output from the tape unit (i.e., the
@@ -974,9 +974,7 @@ void tape_set_state(int flags) {
 /* sets state and updates UI */
 void tape_select_state(int flags) {
 	tape_set_state(flags);
-	if (ui_module && ui_module->update_tape_state) {
-		ui_module->update_tape_state(flags);
-	}
+	ui_module->set_state(ui_tag_tape_flags, flags, NULL);
 }
 
 int tape_get_state(void) {
