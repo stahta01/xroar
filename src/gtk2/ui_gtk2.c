@@ -39,6 +39,7 @@
 #include "machine.h"
 #include "mc6847.h"
 #include "module.h"
+#include "ui.h"
 #include "vdrive.h"
 #include "xroar.h"
 
@@ -111,38 +112,16 @@ static struct joystick_module *gtk2_js_modlist[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Module callbacks */
-static void fullscreen_changed_cb(_Bool fullscreen);
-static void cross_colour_changed_cb(int cc);
-static void vdg_inverse_cb(_Bool inverse);
-static void machine_changed_cb(int machine_type);
-static void cart_changed_cb(int cart_index);
-static void keymap_changed_cb(int map);
-static void joystick_changed_cb(int port, const char *name);
-static void kbd_translate_changed_cb(_Bool kbd_translate);
-static void fast_sound_changed_cb(_Bool fast);
+static void set_state(enum ui_tag tag, int value, const void *data);
 
-UIModule ui_gtk2_module = {
+struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+-2 UI",
 	            .init = init, .shutdown = shutdown },
-	.run = &run,
 	.video_module_list = gtk2_video_module_list,
 	.keyboard_module_list = gtk2_keyboard_module_list,
 	.joystick_module_list = gtk2_js_modlist,
-	.fullscreen_changed_cb = fullscreen_changed_cb,
-	.cross_colour_changed_cb = cross_colour_changed_cb,
-	.vdg_inverse_cb = vdg_inverse_cb,
-	.machine_changed_cb = machine_changed_cb,
-	.cart_changed_cb = cart_changed_cb,
-	.keymap_changed_cb = keymap_changed_cb,
-	.joystick_changed_cb = joystick_changed_cb,
-	.kbd_translate_changed_cb = kbd_translate_changed_cb,
-	.fast_sound_changed_cb = fast_sound_changed_cb,
-	.input_tape_filename_cb = gtk2_input_tape_filename_cb,
-	.output_tape_filename_cb = gtk2_output_tape_filename_cb,
-	.update_tape_state = gtk2_update_tape_state,
-	.update_drive_disk = gtk2_update_drive_disk,
-	.update_drive_write_enable = gtk2_update_drive_write_enable,
-	.update_drive_write_back = gtk2_update_drive_write_back,
+	.run = run,
+	.set_state = set_state,
 };
 
 GtkWidget *gtk2_top_window = NULL;
@@ -680,6 +659,113 @@ static void run(void) {
 	gtk_main();
 }
 
+static void set_state(enum ui_tag tag, int value, const void *data) {
+	GtkToggleAction *toggle;
+	GtkRadioAction *radio;
+
+	switch (tag) {
+
+	/* Hardware */
+
+	case ui_tag_machine:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine-dragon32");
+		gtk_radio_action_set_current_value(radio, value);
+		break;
+
+	case ui_tag_cartridge:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart-dragondos");
+		gtk_radio_action_set_current_value(radio, value);
+		break;
+
+	/* Tape */
+
+	case ui_tag_tape_flags:
+		gtk2_update_tape_state(value);
+		break;
+
+	case ui_tag_tape_input_filename:
+		gtk2_input_tape_filename_cb((const char *)value);
+		break;
+
+	case ui_tag_tape_output_filename:
+		gtk2_output_tape_filename_cb((const char *)value);
+		break;
+
+	/* Disk */
+
+	case ui_tag_disk_write_enable:
+		gtk2_update_drive_write_enable(value, (intptr_t)data);
+		break;
+
+	case ui_tag_disk_write_back:
+		gtk2_update_drive_write_back(value, (intptr_t)data);
+		break;
+
+	case ui_tag_disk_data:
+		gtk2_update_drive_disk(value, (struct vdisk *)data);
+		break;
+
+	/* Video */
+
+	case ui_tag_fullscreen:
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/FullScreen");
+		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_vdg_inverse:
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/InverseText");
+		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_cross_colour:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
+		gtk_radio_action_set_current_value(radio, value);
+		break;
+
+	/* Audio */
+
+	case ui_tag_fast_sound:
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/FastSound");
+		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	/* Keyboard */
+
+	case ui_tag_keymap:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
+		gtk_radio_action_set_current_value(radio, value);
+		break;
+
+	case ui_tag_kbd_translate:
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
+		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	/* Joysticks */
+
+	case ui_tag_joy_right:
+	case ui_tag_joy_left:
+		if (tag == ui_tag_joy_right)
+			radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
+		else
+			radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
+		{
+			int joy = 0;
+			if (data) {
+				for (int i = 1; i < 5; i++) {
+					if (0 == strcmp((const char *)data, joystick_name[i])) {
+						joy = i;
+						break;
+					}
+				}
+			}
+			gtk_radio_action_set_current_value(radio, joy);
+		}
+		break;
+
+	}
+}
+
 static void remove_action_from_group(gpointer data, gpointer user_data) {
 	GtkAction *action = data;
 	GtkActionGroup *action_group = user_data;
@@ -786,70 +872,7 @@ static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer d
 	return FALSE;
 }
 
-/* View callbacks */
-
-static void fullscreen_changed_cb(_Bool fullscreen) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/FullScreen");
-	gtk_toggle_action_set_active(toggle, fullscreen ? TRUE : FALSE);
-}
-
-static void vdg_inverse_cb(_Bool inverse) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/InverseText");
-	gtk_toggle_action_set_active(toggle, inverse ? TRUE : FALSE);
-}
-
-static void cross_colour_changed_cb(int cc) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
-	gtk_radio_action_set_current_value(radio, cc);
-}
-
-/* Emulation callbacks */
-
-static void machine_changed_cb(int machine_type) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine-dragon32");
-	gtk_radio_action_set_current_value(radio, machine_type);
-}
-
-static void cart_changed_cb(int cart_index) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart-dragondos");
-	gtk_radio_action_set_current_value(radio, cart_index);
-}
-
-static void keymap_changed_cb(int map) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
-	gtk_radio_action_set_current_value(radio, map);
-}
-
-static void joystick_changed_cb(int port, const char *name) {
-	GtkRadioAction *radio;
-	if (port == 0) {
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
-	} else {
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
-	}
-	int joy = 0;
-	if (name) {
-		for (int i = 1; i < 5; i++) {
-			if (0 == strcmp(name, joystick_name[i])) {
-				joy = i;
-				break;
-			}
-		}
-	}
-	gtk_radio_action_set_current_value(radio, joy);
-}
-
 /* Tool callbacks */
-
-static void kbd_translate_changed_cb(_Bool kbd_translate) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
-	gtk_toggle_action_set_active(toggle, kbd_translate ? TRUE : FALSE);
-}
-
-static void fast_sound_changed_cb(_Bool fast) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/FastSound");
-	gtk_toggle_action_set_active(toggle, fast ? TRUE : FALSE);
-}
 
 static char *escape_underscores(const char *str) {
 	if (!str) return NULL;
