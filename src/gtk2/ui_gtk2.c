@@ -352,18 +352,18 @@ static void about(GtkMenuItem *item, gpointer data) {
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © 2003–2015 Ciaran Anscomb <xroar@6809.org.uk>");
 	gtk_about_dialog_set_license(dialog,
-"XRoar is free software: you can redistribute it and/or modify\n"
-"it under the terms of the GNU General Public License as published by\n"
-"the Free Software Foundation, either version 2 of the License, or\n"
-"(at your option) any later version.\n"
+"XRoar is free software: you can redistribute it and/or modify it under\n"
+"the terms of the GNU General Public License as published by the Free\n"
+"Software Foundation, either version 2 of the License, or (at your option)\n"
+"any later version.\n"
 "\n"
-"XRoar is distributed in the hope that it will be useful,\n"
-"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-"GNU General Public License for more details.\n"
+"XRoar is distributed in the hope that it will be useful, but WITHOUT\n"
+"ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or\n"
+"FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License\n"
+"for more details.\n"
 "\n"
-"You should have received a copy of the GNU General Public License\n"
-"along with XRoar.  If not, see <http://www.gnu.org/licenses/>."
+"You should have received a copy of the GNU General Public License along\n"
+"with XRoar.  If not, see <http://www.gnu.org/licenses/>."
 	);
 	gtk_about_dialog_set_website(dialog, "http://www.6809.org.uk/xroar/");
 	g_signal_connect(dialog, "response", G_CALLBACK(close_about), NULL);
@@ -407,7 +407,12 @@ static const gchar *ui =
 	      "<separator/>"
 	      "<menuitem name='FullScreen' action='FullScreenAction'/>"
 	    "</menu>"
-	    "<menu name='MachineMenu' action='MachineMenuAction'>"
+	    "<menu name='HardwareMenu' action='HardwareMenuAction'>"
+	      "<menu name='MachineMenu' action='MachineMenuAction'>"
+	      "</menu>"
+	      "<separator/>"
+	      "<menu name='CartridgeMenu' action='CartridgeMenuAction'>"
+	      "</menu>"
 	      "<separator/>"
 	      "<menu name='KeymapMenu' action='KeymapMenuAction'>"
 	        "<menuitem action='keymap_dragon'/>"
@@ -434,8 +439,6 @@ static const gchar *ui =
 	      "<menuitem name='SoftReset' action='SoftResetAction'/>"
 	      "<menuitem name='HardReset' action='HardResetAction'/>"
 	    "</menu>"
-	    "<menu name='CartridgeMenu' action='CartridgeMenuAction'>"
-	    "</menu>"
 	    "<menu name='ToolMenu' action='ToolMenuAction'>"
 	      "<menuitem name='TranslateKeyboard' action='TranslateKeyboardAction'/>"
 	      "<menuitem name='DriveControl' action='DriveControlAction'/>"
@@ -452,8 +455,7 @@ static GtkActionEntry const ui_entries[] = {
 	/* Top level */
 	{ .name = "FileMenuAction", .label = "_File" },
 	{ .name = "ViewMenuAction", .label = "_View" },
-	{ .name = "MachineMenuAction", .label = "_Machine" },
-	{ .name = "CartridgeMenuAction", .label = "_Cartridge" },
+	{ .name = "HardwareMenuAction", .label = "_Hardware" },
 	{ .name = "ToolMenuAction", .label = "_Tool" },
 	{ .name = "HelpMenuAction", .label = "_Help" },
 	/* File */
@@ -496,7 +498,9 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "zoom_reset", .label = "Reset",
 	  .accelerator = "<control>0",
 	  .callback = G_CALLBACK(zoom_2_1) },
-	/* Machine */
+	/* Hardware */
+	{ .name = "MachineMenuAction", .label = "_Machine" },
+	{ .name = "CartridgeMenuAction", .label = "_Cartridge" },
 	{ .name = "KeymapMenuAction", .label = "_Keyboard Map" },
 	{ .name = "JoyRightMenuAction", .label = "_Right Joystick" },
 	{ .name = "JoyLeftMenuAction", .label = "_Left Joystick" },
@@ -706,7 +710,7 @@ static void update_machine_menu(void) {
 		radio_entries[i].name = g_strconcat("machine-", mc->name, NULL);
 		radio_entries[i].label = escape_underscores(mc->description);
 		radio_entries[i].value = mc->id;
-		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_machines, "/MainMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	gtk_action_group_add_radio_actions(machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
 	for (i = 0; i < num_machines; i++) {
@@ -735,12 +739,12 @@ static void update_cartridge_menu(void) {
 		radio_entries[i].name = g_strconcat("cart-", cc->name, NULL);
 		radio_entries[i].label = escape_underscores(cc->description);
 		radio_entries[i].value = cc->id;
-		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	radio_entries[num_carts].name = "none";
 	radio_entries[num_carts].label = "None";
 	radio_entries[num_carts].value = -1;
-	gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+	gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	gtk_action_group_add_radio_actions(cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, NULL);
 	/* don't need to free last label */
 	for (i = 0; i < num_carts; i++) {
@@ -802,26 +806,26 @@ static void cross_colour_changed_cb(int cc) {
 /* Emulation callbacks */
 
 static void machine_changed_cb(int machine_type) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/MachineMenu/machine-dragon32");
+	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine-dragon32");
 	gtk_radio_action_set_current_value(radio, machine_type);
 }
 
 static void cart_changed_cb(int cart_index) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/CartridgeMenu/cart-dragondos");
+	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart-dragondos");
 	gtk_radio_action_set_current_value(radio, cart_index);
 }
 
 static void keymap_changed_cb(int map) {
-	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/MachineMenu/KeymapMenu/keymap_dragon");
+	GtkRadioAction *radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
 	gtk_radio_action_set_current_value(radio, map);
 }
 
 static void joystick_changed_cb(int port, const char *name) {
 	GtkRadioAction *radio;
 	if (port == 0) {
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/MachineMenu/JoyRightMenu/joy_right_none");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
 	} else {
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/MachineMenu/JoyLeftMenu/joy_left_none");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
 	}
 	int joy = 0;
 	if (name) {
