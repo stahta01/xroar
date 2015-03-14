@@ -156,8 +156,7 @@ static WNDPROCTYPE sdl_window_proc = NULL;
 
 static void setup_file_menu(void);
 static void setup_view_menu(void);
-static void setup_machine_menu(void);
-static void setup_cartridge_menu(void);
+static void setup_hardware_menu(void);
 static void setup_tool_menu(void);
 
 static _Bool init(void) {
@@ -196,8 +195,7 @@ static _Bool init(void) {
 	top_menu = CreateMenu();
 	setup_file_menu();
 	setup_view_menu();
-	setup_machine_menu();
-	setup_cartridge_menu();
+	setup_hardware_menu();
 	setup_tool_menu();
 
 	return 1;
@@ -289,67 +287,65 @@ static void setup_view_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
 }
 
-static void setup_machine_menu(void) {
-	HMENU machine_menu;
+static void setup_hardware_menu(void) {
+	HMENU hardware_menu;
 	HMENU submenu;
 
-	machine_menu = CreatePopupMenu();
+	hardware_menu = CreatePopupMenu();
+
+	submenu = CreatePopupMenu();
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Machine");
 	max_machine_id = 0;
 	struct slist *mcl = machine_config_list();
 	while (mcl) {
 		struct machine_config *mc = mcl->data;
 		if (mc->id > max_machine_id)
 			max_machine_id = mc->id;
-		AppendMenu(machine_menu, MF_STRING, TAG_MACHINE | mc->id, mc->description);
+		AppendMenu(submenu, MF_STRING, TAG_MACHINE | mc->id, mc->description);
 		mcl = mcl->next;
 	}
 
-	AppendMenu(machine_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(machine_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Keyboard Map");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON, "Dragon Layout");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON200E, "Dragon 200-E Layout");
-	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_COCO, "CoCo Layout");
-
-	AppendMenu(machine_menu, MF_SEPARATOR, 0, NULL);
-	submenu = CreatePopupMenu();
-	AppendMenu(machine_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Right Joystick");
-	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAG_JOY_RIGHT | i, joystick_names[i].description);
-	}
-	submenu = CreatePopupMenu();
-	AppendMenu(machine_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Left Joystick");
-	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
-		AppendMenu(submenu, MF_STRING, TAG_JOY_LEFT | i, joystick_names[i].description);
-	}
-	AppendMenu(machine_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_JOY_SWAP, "Swap Joysticks");
-
-	AppendMenu(machine_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(machine_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_SOFT, "Soft Reset");
-	AppendMenu(machine_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_HARD, "Hard Reset");
-
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)machine_menu, "&Machine");
-
-	machine_changed_cb(xroar_machine_config ? xroar_machine_config->id : 0);
-}
-
-static void setup_cartridge_menu(void) {
-	HMENU cartridge_menu;
-
-	cartridge_menu = CreatePopupMenu();
-	AppendMenu(cartridge_menu, MF_STRING, TAG_CARTRIDGE, "None");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cartridge");
+	AppendMenu(submenu, MF_STRING, TAG_CARTRIDGE, "None");
 	max_cartridge_id = 0;
 	struct slist *ccl = cart_config_list();
 	while (ccl) {
 		struct cart_config *cc = ccl->data;
 		if ((cc->id + 1) > max_cartridge_id)
 			max_cartridge_id = cc->id + 1;
-		AppendMenu(cartridge_menu, MF_STRING, TAG_CARTRIDGE | (cc->id + 1), cc->description);
+		AppendMenu(submenu, MF_STRING, TAG_CARTRIDGE | (cc->id + 1), cc->description);
 		ccl = ccl->next;
 	}
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)cartridge_menu, "&Cartridge");
+	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
+	submenu = CreatePopupMenu();
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Keyboard Map");
+	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON, "Dragon Layout");
+	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_DRAGON200E, "Dragon 200-E Layout");
+	AppendMenu(submenu, MF_STRING, TAG_KEYMAP | KEYMAP_COCO, "CoCo Layout");
 
+	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
+	submenu = CreatePopupMenu();
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Right Joystick");
+	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
+		AppendMenu(submenu, MF_STRING, TAG_JOY_RIGHT | i, joystick_names[i].description);
+	}
+	submenu = CreatePopupMenu();
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Left Joystick");
+	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
+		AppendMenu(submenu, MF_STRING, TAG_JOY_LEFT | i, joystick_names[i].description);
+	}
+	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_JOY_SWAP, "Swap Joysticks");
+
+	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_SOFT, "Soft Reset");
+	AppendMenu(hardware_menu, MF_STRING, TAG_SIMPLE_ACTION | TAG_RESET_HARD, "Hard Reset");
+
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
+
+	machine_changed_cb(xroar_machine_config ? xroar_machine_config->id : 0);
 	cart_changed_cb(machine_cart ? machine_cart->config->id : 0);
 }
 
