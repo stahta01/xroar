@@ -653,16 +653,32 @@ static void setup_view_menu(void) {
 }
 
 static NSMenu *machine_menu;
+static NSMenu *cartridge_menu;
 
 /* Create Machine menu */
-static void setup_machine_menu(void) {
-	NSMenuItem *machine_menu_item;
+static void setup_hardware_menu(void) {
+	NSMenu *hardware_menu;
+	NSMenuItem *hardware_menu_item;
 	NSMenuItem *item;
 	NSMenu *submenu;
 
-	machine_menu = [[NSMenu alloc] initWithTitle:@"Machine"];
+	hardware_menu = [[NSMenu alloc] initWithTitle:@"Hardware"];
 
-	[machine_menu addItem:[NSMenuItem separatorItem]];
+	machine_menu = [[NSMenu alloc] initWithTitle:@"Machine"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Machine" action:nil keyEquivalent:@""];
+	[item setSubmenu:machine_menu]
+	[hardware_menu addItem:item]
+	[item release];
+
+	[hardware_menu addItem:[NSMenuItem separatorItem]];
+
+	cartridge_menu = [[NSMenu alloc] initWithTitle:@"Cartridge"];
+	item = [[NSMenuItem alloc] initWithTitle:@"Cartridge" action:nil keyEquivalent:@""];
+	[item setSubmenu:cartridge_menu];
+	[hardware_menu addItem:item];
+	[item release];
+
+	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard Map"];
 
@@ -686,10 +702,10 @@ static void setup_machine_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard Map" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
-	[machine_menu addItem:[NSMenuItem separatorItem]];
+	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Right Joystick"];
 
@@ -704,7 +720,7 @@ static void setup_machine_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Right Joystick" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Left Joystick"];
@@ -719,44 +735,30 @@ static void setup_machine_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Left Joystick" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Swap Joysticks" action:@selector(do_set_state:) keyEquivalent:@"J"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_JOY_SWAP)];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
-	[machine_menu addItem:[NSMenuItem separatorItem]];
+	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Soft Reset" action:@selector(do_set_state:) keyEquivalent:@"r"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_SOFT)];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Hard Reset" action:@selector(do_set_state:) keyEquivalent:@"R"];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_HARD)];
-	[machine_menu addItem:item];
+	[hardware_menu addItem:item];
 	[item release];
 
-	machine_menu_item = [[NSMenuItem alloc] initWithTitle:@"Machine" action:nil keyEquivalent:@""];
-	[machine_menu_item setSubmenu:machine_menu];
-	[[NSApp mainMenu] addItem:machine_menu_item];
-	[machine_menu_item release];
-}
-
-static NSMenu *cartridge_menu;
-
-/* Create Cartridge menu */
-static void setup_cartridge_menu(void) {
-	NSMenuItem *cartridge_menu_item;
-
-	cartridge_menu = [[NSMenu alloc] initWithTitle:@"Cartridge"];
-
-	cartridge_menu_item = [[NSMenuItem alloc] initWithTitle:@"Cartridge" action:nil keyEquivalent:@""];
-	[cartridge_menu_item setSubmenu:cartridge_menu];
-	[[NSApp mainMenu] addItem:cartridge_menu_item];
-	[cartridge_menu_item release];
+	hardware_menu_item = [[NSMenuItem alloc] initWithTitle:@"Machine" action:nil keyEquivalent:@""];
+	[hardware_menu_item setSubmenu:hardware_menu];
+	[[NSApp mainMenu] addItem:hardware_menu_item];
+	[hardware_menu_item release];
 }
 
 /* Create Tool menu */
@@ -836,8 +838,7 @@ static void CustomApplicationMain(int argc, char **argv) {
 	setApplicationMenu();
 	setup_file_menu();
 	setup_view_menu();
-	setup_machine_menu();
-	setup_cartridge_menu();
+	setup_hardware_menu();
 	setup_tool_menu();
 	setup_window_menu();
 
@@ -1012,6 +1013,7 @@ static void update_machine_menu(void) {
 	NSMenuItem *item;
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	struct slist *iter;
+	[machine_menu removeAllItems];
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
@@ -1031,6 +1033,7 @@ static void update_cartridge_menu(void) {
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	struct slist *iter;
+	[cartridge_menu removeAllItems];
 	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (machine_cart && cc == machine_cart->config)
