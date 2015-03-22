@@ -96,7 +96,13 @@ static _Bool init(void) {
 	if (xroar_cfg.ao_channels >= 1 && xroar_cfg.ao_channels <= 2)
 		nchannels = xroar_cfg.ao_channels;
 
+	/* My threading code doesn't seem to work on Windows, nfragments == 1
+	 * is the only way to get reasonable audio. */
+#ifdef WINDOWS32
+	nfragments = 1;
+#else
 	nfragments = 2;
+#endif
 	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
 		nfragments = xroar_cfg.ao_fragments;
 
