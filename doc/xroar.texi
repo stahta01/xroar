@@ -127,8 +127,9 @@ After this, you can start the emulator by simply typing @command{xroar}
 followed by any command line options.
 
 ROM images should be placed in a directory you create under your @env{HOME}
-named @file{~/Library/XRoar/roms/} (not the system directory, @file{/Library/}.
-Name any configuration file you create @file{~/Library/XRoar/xroar.conf}.
+named @file{~/Library/XRoar/roms/} (not the system directory,
+@file{/Library/}).  Name any configuration file you create
+@file{~/Library/XRoar/xroar.conf}.
 
 The Mac OS X build provides a menu for access to certain features, and often
 accepts the more familiar @kbd{Command}+@var{key} in place of the
