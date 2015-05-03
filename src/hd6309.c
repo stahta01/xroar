@@ -381,7 +381,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			if (REG_W == 0) {
 				REG_PC += 3;
 				hcpu->state = hd6309_state_label_a;
-				goto done_instruction;
+				break;
 			}
 			cpu->nmi_active = cpu->nmi_latch;
 			cpu->firq_active = cpu->firq_latch;
@@ -393,6 +393,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			{
 			unsigned op;
 			// Fetch op-code and process
+			hcpu->state = hd6309_state_label_a;
 			op = byte_immediate(cpu);
 			switch (op) {
 
@@ -816,7 +817,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				NVMA_CYCLE;
 				hcpu->state = hd6309_state_dispatch_irq;
-				goto done_instruction;
+				break;
 			} break;
 			// 0x3d MUL inherent
 			case 0x3d: {
@@ -1041,13 +1042,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			hcpu->state = hd6309_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		case hd6309_state_instruction_page_2:
 			{
 			unsigned op;
+			hcpu->state = hd6309_state_label_a;
 			op = byte_immediate(cpu);
 			switch (op) {
 
@@ -1466,13 +1467,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			hcpu->state = hd6309_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		case hd6309_state_instruction_page_3:
 			{
 			unsigned op;
+			hcpu->state = hd6309_state_label_a;
 			op = byte_immediate(cpu);
 			switch (op) {
 
@@ -1871,13 +1872,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 				hcpu->state = hd6309_state_label_a;
 				continue;
 			}
-			hcpu->state = hd6309_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		}
 
-done_instruction:
 		cpu->nmi_active = cpu->nmi_latch;
 		cpu->firq_active = cpu->firq_latch;
 		cpu->irq_active = cpu->irq_latch;

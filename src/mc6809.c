@@ -306,6 +306,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 		case mc6809_state_next_instruction:
 			{
 			unsigned op;
+			cpu->state = mc6809_state_label_a;
 			// Fetch op-code and process
 			op = byte_immediate(cpu);
 			switch (op) {
@@ -423,7 +424,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x14:
 			case 0x15:
 				cpu->state = mc6809_state_hcf;
-				goto done_instruction;
+				break;
 			// 0x16 LBRA relative
 			case 0x16: {
 				uint16_t ea;
@@ -671,7 +672,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				NVMA_CYCLE;
 				cpu->state = mc6809_state_dispatch_irq;
-				goto done_instruction;
+				break;
 			} break;
 			// 0x3d MUL inherent
 			case 0x3d: {
@@ -896,20 +897,20 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0xcd HCF? (illegal)
 			case 0xcd:
 				cpu->state = mc6809_state_hcf;
-				goto done_instruction;
+				break;
 
 			// Illegal instruction
 			default:
 				NVMA_CYCLE;
 				break;
 			}
-			cpu->state = mc6809_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		case mc6809_state_instruction_page_2:
 			{
 			unsigned op;
+			cpu->state = mc6809_state_label_a;
 			op = byte_immediate(cpu);
 			switch (op) {
 
@@ -1002,13 +1003,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				break;
 			}
-			cpu->state = mc6809_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		case mc6809_state_instruction_page_3:
 			{
 			unsigned op;
+			cpu->state = mc6809_state_label_a;
 			op = byte_immediate(cpu);
 			switch (op) {
 
@@ -1049,8 +1050,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				break;
 			}
-			cpu->state = mc6809_state_label_a;
-			goto done_instruction;
+			break;
 			}
 
 		// Certain illegal instructions cause the CPU to lock up:
@@ -1060,7 +1060,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 		}
 
-done_instruction:
 		cpu->nmi_active = cpu->nmi_latch;
 		cpu->firq_active = cpu->firq_latch;
 		cpu->irq_active = cpu->irq_latch;
