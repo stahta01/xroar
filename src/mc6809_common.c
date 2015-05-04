@@ -17,6 +17,11 @@ static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	return DELEGATE_CALL1(cpu->read_cycle, a);
 }
 
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
+	unsigned v = fetch_byte(cpu, a) << 8;
+	return v | fetch_byte(cpu, a+1);
+}
+
 static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
@@ -31,45 +36,38 @@ static uint8_t byte_immediate(struct MC6809 *cpu) {
 }
 
 static uint8_t byte_direct(struct MC6809 *cpu) {
-	uint16_t ea = ea_direct(cpu);
+	unsigned ea = ea_direct(cpu);
 	return fetch_byte(cpu, ea);
 }
 
 static uint8_t byte_extended(struct MC6809 *cpu) {
-	uint16_t ea = ea_extended(cpu);
+	unsigned ea = ea_extended(cpu);
 	return fetch_byte(cpu, ea);
 }
 
 static uint8_t byte_indexed(struct MC6809 *cpu) {
-	uint16_t ea = ea_indexed(cpu);
+	unsigned ea = ea_indexed(cpu);
 	return fetch_byte(cpu, ea);
 }
 
 static uint16_t word_immediate(struct MC6809 *cpu) {
 	unsigned v = fetch_byte(cpu, REG_PC++) << 8;
-	v |= fetch_byte(cpu, REG_PC++);
-	return v;
+	return v | fetch_byte(cpu, REG_PC++);
 }
 
 static uint16_t word_direct(struct MC6809 *cpu) {
-	uint16_t ea = ea_direct(cpu);
-	unsigned v = fetch_byte(cpu, ea) << 8;
-	v |= fetch_byte(cpu, ea + 1);
-	return v;
+	unsigned ea = ea_direct(cpu);
+	return fetch_word(cpu, ea);
 }
 
 static uint16_t word_extended(struct MC6809 *cpu) {
-	uint16_t ea = ea_extended(cpu);
-	unsigned v = fetch_byte(cpu, ea) << 8;
-	v |= fetch_byte(cpu, ea + 1);
-	return v;
+	unsigned ea = ea_extended(cpu);
+	return fetch_word(cpu, ea);
 }
 
 static uint16_t word_indexed(struct MC6809 *cpu) {
-	uint16_t ea = ea_indexed(cpu);
-	unsigned v = fetch_byte(cpu, ea) << 8;
-	v |= fetch_byte(cpu, ea + 1);
-	return v;
+	unsigned ea = ea_indexed(cpu);
+	return fetch_word(cpu, ea);
 }
 
 static uint16_t short_relative(struct MC6809 *cpu) {
@@ -78,22 +76,40 @@ static uint16_t short_relative(struct MC6809 *cpu) {
 
 /* Stack operations */
 
-static void push_byte(struct MC6809 *cpu, uint16_t *s, uint8_t v) {
-	store_byte(cpu, --(*s), v);
+static void push_s_byte(struct MC6809 *cpu, uint8_t v) {
+	store_byte(cpu, --REG_S, v);
 }
 
-static void push_word(struct MC6809 *cpu, uint16_t *s, uint16_t v) {
-	store_byte(cpu, --(*s), v);
-	store_byte(cpu, --(*s), v >> 8);
+static void push_s_word(struct MC6809 *cpu, uint16_t v) {
+	store_byte(cpu, --REG_S, v);
+	store_byte(cpu, --REG_S, v >> 8);
 }
 
-static uint8_t pull_byte(struct MC6809 *cpu, uint16_t *s) {
-	return fetch_byte(cpu, (*s)++);
+static uint8_t pull_s_byte(struct MC6809 *cpu) {
+	return fetch_byte(cpu, REG_S++);
 }
 
-static uint16_t pull_word(struct MC6809 *cpu, uint16_t *s) {
-	unsigned val = fetch_byte(cpu, (*s)++);
-	return (val << 8) | fetch_byte(cpu, (*s)++);
+static uint16_t pull_s_word(struct MC6809 *cpu) {
+	unsigned val = fetch_byte(cpu, REG_S++);
+	return (val << 8) | fetch_byte(cpu, REG_S++);
+}
+
+static void push_u_byte(struct MC6809 *cpu, uint8_t v) {
+	store_byte(cpu, --REG_U, v);
+}
+
+static void push_u_word(struct MC6809 *cpu, uint16_t v) {
+	store_byte(cpu, --REG_U, v);
+	store_byte(cpu, --REG_U, v >> 8);
+}
+
+static uint8_t pull_u_byte(struct MC6809 *cpu) {
+	return fetch_byte(cpu, REG_U++);
+}
+
+static uint16_t pull_u_word(struct MC6809 *cpu) {
+	unsigned val = fetch_byte(cpu, REG_U++);
+	return (val << 8) | fetch_byte(cpu, REG_U++);
 }
 
 /* 8-bit inherent operations */
@@ -266,13 +282,14 @@ static uint16_t op_add16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
 /* Various utility functions */
 
 /* Sign extend 5 bits into 16 bits */
-static uint16_t sex5(uint16_t v) {
+static uint16_t sex5(unsigned v) {
 	return (v & 0x0f) - (v & 0x10);
 }
 
 /* Sign extend 8 bits into 16 bits */
-static uint16_t sex8(uint8_t v) {
-	return (int16_t)(*((int8_t *)&v));
+static uint16_t sex8(unsigned v) {
+	uint8_t tmp = v;
+	return (int16_t)(*((int8_t *)&tmp));
 }
 
 #define N_EOR_V ((REG_CC & CC_N)^((REG_CC & CC_V)<<2))

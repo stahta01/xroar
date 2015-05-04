@@ -2,6 +2,7 @@
 
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
 static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d);
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
 #define peek_byte(c,a) ((void)fetch_byte(c,a))
 #define NVMA_CYCLE (peek_byte(cpu, 0xffff))
 
@@ -21,10 +22,15 @@ static uint16_t short_relative(struct MC6809 *cpu);
 
 /* Stack operations */
 
-static void push_byte(struct MC6809 *cpu, uint16_t *s, uint8_t v);
-static void push_word(struct MC6809 *cpu, uint16_t *s, uint16_t v);
-static uint8_t pull_byte(struct MC6809 *cpu, uint16_t *s);
-static uint16_t pull_word(struct MC6809 *cpu, uint16_t *s);
+static void push_s_byte(struct MC6809 *cpu, uint8_t v);
+static void push_s_word(struct MC6809 *cpu, uint16_t v);
+static uint8_t pull_s_byte(struct MC6809 *cpu);
+static uint16_t pull_s_word(struct MC6809 *cpu);
+
+static void push_u_byte(struct MC6809 *cpu, uint8_t v);
+static void push_u_word(struct MC6809 *cpu, uint16_t v);
+static uint8_t pull_u_byte(struct MC6809 *cpu);
+static uint16_t pull_u_word(struct MC6809 *cpu);
 
 /* 8-bit inherent operations */
 
@@ -59,7 +65,7 @@ static uint16_t op_add16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 
 /* Various utility functions */
 
-static uint16_t sex5(uint16_t v);
-static uint16_t sex8(uint8_t v);
+static uint16_t sex5(unsigned v);
+static uint16_t sex8(unsigned v);
 static _Bool branch_condition(struct MC6809 const *cpu, unsigned op);
 

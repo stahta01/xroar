@@ -64,11 +64,6 @@ static uint16_t ea_direct(struct MC6809 *cpu);
 static uint16_t ea_extended(struct MC6809 *cpu);
 static uint16_t ea_indexed(struct MC6809 *cpu);
 
-/* Stack operations */
-
-static void psh(struct MC6809 *cpu, uint16_t *s, uint16_t as);
-static void pul(struct MC6809 *cpu, uint16_t *s, uint16_t *as);
-
 /*
  * Interrupt handling
  */
@@ -442,7 +437,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				push_word(cpu, &REG_S, REG_PC);
+				push_s_word(cpu, REG_PC);
 				REG_PC = ea;
 			} break;
 			// 0x18 Shift CC with mask inherent (illegal)
@@ -614,14 +609,75 @@ static void mc6809_run(struct MC6809 *cpu) {
 				REG_U = ea_indexed(cpu);
 				NVMA_CYCLE;
 				break;
+
 			// 0x34 PSHS immediate
-			case 0x34: psh(cpu, &REG_S, REG_U); break;
+			case 0x34:
+				{
+					unsigned postbyte = byte_immediate(cpu);
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+					peek_byte(cpu, REG_S);
+					if (postbyte & 0x80) { push_s_word(cpu, REG_PC); }
+					if (postbyte & 0x40) { push_s_word(cpu, REG_U); }
+					if (postbyte & 0x20) { push_s_word(cpu, REG_Y); }
+					if (postbyte & 0x10) { push_s_word(cpu, REG_X); }
+					if (postbyte & 0x08) { push_s_byte(cpu, REG_DP); }
+					if (postbyte & 0x04) { push_s_byte(cpu, RREG_B); }
+					if (postbyte & 0x02) { push_s_byte(cpu, RREG_A); }
+					if (postbyte & 0x01) { push_s_byte(cpu, REG_CC); }
+				}
+				break;
 			// 0x35 PULS immediate
-			case 0x35: pul(cpu, &REG_S, &REG_U); break;
+			case 0x35:
+				{
+					unsigned postbyte = byte_immediate(cpu);
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+					if (postbyte & 0x01) { REG_CC = pull_s_byte(cpu); }
+					if (postbyte & 0x02) { WREG_A = pull_s_byte(cpu); }
+					if (postbyte & 0x04) { WREG_B = pull_s_byte(cpu); }
+					if (postbyte & 0x08) { REG_DP = pull_s_byte(cpu); }
+					if (postbyte & 0x10) { REG_X = pull_s_word(cpu); }
+					if (postbyte & 0x20) { REG_Y = pull_s_word(cpu); }
+					if (postbyte & 0x40) { REG_U = pull_s_word(cpu); }
+					if (postbyte & 0x80) { REG_PC = pull_s_word(cpu); }
+					peek_byte(cpu, REG_S);
+				}
+				break;
 			// 0x36 PSHU immediate
-			case 0x36: psh(cpu, &REG_U, REG_S); break;
+			case 0x36:
+				{
+					unsigned postbyte = byte_immediate(cpu);
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+					peek_byte(cpu, REG_U);
+					if (postbyte & 0x80) { push_u_word(cpu, REG_PC); }
+					if (postbyte & 0x40) { push_u_word(cpu, REG_S); }
+					if (postbyte & 0x20) { push_u_word(cpu, REG_Y); }
+					if (postbyte & 0x10) { push_u_word(cpu, REG_X); }
+					if (postbyte & 0x08) { push_u_byte(cpu, REG_DP); }
+					if (postbyte & 0x04) { push_u_byte(cpu, RREG_B); }
+					if (postbyte & 0x02) { push_u_byte(cpu, RREG_A); }
+					if (postbyte & 0x01) { push_u_byte(cpu, REG_CC); }
+				}
+				break;
 			// 0x37 PULU immediate
-			case 0x37: pul(cpu, &REG_U, &REG_S); break;
+			case 0x37:
+				{
+					unsigned postbyte = byte_immediate(cpu);
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+					if (postbyte & 0x01) { REG_CC = pull_u_byte(cpu); }
+					if (postbyte & 0x02) { WREG_A = pull_u_byte(cpu); }
+					if (postbyte & 0x04) { WREG_B = pull_u_byte(cpu); }
+					if (postbyte & 0x08) { REG_DP = pull_u_byte(cpu); }
+					if (postbyte & 0x10) { REG_X = pull_u_word(cpu); }
+					if (postbyte & 0x20) { REG_Y = pull_u_word(cpu); }
+					if (postbyte & 0x40) { REG_S = pull_u_word(cpu); }
+					if (postbyte & 0x80) { REG_PC = pull_u_word(cpu); }
+					peek_byte(cpu, REG_U);
+				}
+				break;
 			// 0x38 ANDCC immediate (illegal)
 			case 0x38: {
 				unsigned data;
@@ -635,7 +691,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x39 RTS inherent
 			case 0x39:
 				peek_byte(cpu, REG_PC);
-				REG_PC = pull_word(cpu, &REG_S);
+				REG_PC = pull_s_word(cpu);
 				NVMA_CYCLE;
 				break;
 			// 0x3a ABX inherent
@@ -647,17 +703,17 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x3b RTI inherent
 			case 0x3b:
 				peek_byte(cpu, REG_PC);
-				REG_CC = pull_byte(cpu, &REG_S);
+				REG_CC = pull_s_byte(cpu);
 				if (REG_CC & CC_E) {
-					WREG_A = pull_byte(cpu, &REG_S);
-					WREG_B = pull_byte(cpu, &REG_S);
-					REG_DP = pull_byte(cpu, &REG_S);
-					REG_X = pull_word(cpu, &REG_S);
-					REG_Y = pull_word(cpu, &REG_S);
-					REG_U = pull_word(cpu, &REG_S);
-					REG_PC = pull_word(cpu, &REG_S);
+					WREG_A = pull_s_byte(cpu);
+					WREG_B = pull_s_byte(cpu);
+					REG_DP = pull_s_byte(cpu);
+					REG_X = pull_s_word(cpu);
+					REG_Y = pull_s_word(cpu);
+					REG_U = pull_s_word(cpu);
+					REG_PC = pull_s_word(cpu);
 				} else {
-					REG_PC = pull_word(cpu, &REG_S);
+					REG_PC = pull_s_word(cpu);
 				}
 				cpu->nmi_armed = 1;
 				peek_byte(cpu, REG_S);
@@ -804,7 +860,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 3: ea = ea_extended(cpu); peek_byte(cpu, ea); NVMA_CYCLE; break;
 				default: ea = 0; break;
 				}
-				push_word(cpu, &REG_S, REG_PC);
+				push_s_word(cpu, REG_PC);
 				REG_PC = ea;
 			} break;
 
@@ -1146,40 +1202,6 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 	return ea;
 }
 
-/* Stack operations */
-
-static void psh(struct MC6809 *cpu, uint16_t *s, uint16_t as) {
-	unsigned postbyte;
-	postbyte = byte_immediate(cpu);
-	NVMA_CYCLE;
-	NVMA_CYCLE;
-	peek_byte(cpu, *s);
-	if (postbyte & 0x80) { push_word(cpu, s, REG_PC); }
-	if (postbyte & 0x40) { push_word(cpu, s, as); }
-	if (postbyte & 0x20) { push_word(cpu, s, REG_Y); }
-	if (postbyte & 0x10) { push_word(cpu, s, REG_X); }
-	if (postbyte & 0x08) { push_byte(cpu, s, REG_DP); }
-	if (postbyte & 0x04) { push_byte(cpu, s, RREG_B); }
-	if (postbyte & 0x02) { push_byte(cpu, s, RREG_A); }
-	if (postbyte & 0x01) { push_byte(cpu, s, REG_CC); }
-}
-
-static void pul(struct MC6809 *cpu, uint16_t *s, uint16_t *as) {
-	unsigned postbyte;
-	postbyte = byte_immediate(cpu);
-	NVMA_CYCLE;
-	NVMA_CYCLE;
-	if (postbyte & 0x01) { REG_CC = pull_byte(cpu, s); }
-	if (postbyte & 0x02) { WREG_A = pull_byte(cpu, s); }
-	if (postbyte & 0x04) { WREG_B = pull_byte(cpu, s); }
-	if (postbyte & 0x08) { REG_DP = pull_byte(cpu, s); }
-	if (postbyte & 0x10) { REG_X = pull_word(cpu, s); }
-	if (postbyte & 0x20) { REG_Y = pull_word(cpu, s); }
-	if (postbyte & 0x40) { *as = pull_word(cpu, s); }
-	if (postbyte & 0x80) { REG_PC = pull_word(cpu, s); }
-	peek_byte(cpu, *s);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
@@ -1188,20 +1210,20 @@ static void pul(struct MC6809 *cpu, uint16_t *s, uint16_t *as) {
 
 static void push_irq_registers(struct MC6809 *cpu) {
 	NVMA_CYCLE;
-	push_word(cpu, &REG_S, REG_PC);
-	push_word(cpu, &REG_S, REG_U);
-	push_word(cpu, &REG_S, REG_Y);
-	push_word(cpu, &REG_S, REG_X);
-	push_byte(cpu, &REG_S, REG_DP);
-	push_byte(cpu, &REG_S, RREG_B);
-	push_byte(cpu, &REG_S, RREG_A);
-	push_byte(cpu, &REG_S, REG_CC);
+	push_s_word(cpu, REG_PC);
+	push_s_word(cpu, REG_U);
+	push_s_word(cpu, REG_Y);
+	push_s_word(cpu, REG_X);
+	push_s_byte(cpu, REG_DP);
+	push_s_byte(cpu, RREG_B);
+	push_s_byte(cpu, RREG_A);
+	push_s_byte(cpu, REG_CC);
 }
 
 static void push_firq_registers(struct MC6809 *cpu) {
 	NVMA_CYCLE;
-	push_word(cpu, &REG_S, REG_PC);
-	push_byte(cpu, &REG_S, REG_CC);
+	push_s_word(cpu, REG_PC);
+	push_s_byte(cpu, REG_CC);
 }
 
 static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
