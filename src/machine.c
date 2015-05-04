@@ -677,7 +677,7 @@ void machine_configure(struct machine_config *mc) {
 	 * Dragon 32s split this across two pieces of hardware, it doesn't make
 	 * sense to consider the two regions separately.
 	 *
-	 * Draogn 64s also contain a separate 64K mode Extended BASIC.
+	 * Dragon 64s also contain a separate 64K mode Extended BASIC.
 	 */
 
 	has_combined = has_extbas = has_bas = has_altbas = 0;
