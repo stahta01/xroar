@@ -103,8 +103,7 @@ static int next_id = 0;
 static void initialise_ram(void);
 
 static int cycles;
-static uint8_t read_cycle(void *m, uint16_t A);
-static void write_cycle(void *m, uint16_t A, uint8_t D);
+static uint8_t mem_cycle(void *m, _Bool RnW, uint16_t A, uint8_t D);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest);
 
 static void machine_instruction_posthook(void *);
@@ -619,8 +618,7 @@ void machine_configure(struct machine_config *mc) {
 		CPU0 = hd6309_new();
 		break;
 	}
-	CPU0->read_cycle = DELEGATE_AS1(uint8, uint16, read_cycle, NULL);
-	CPU0->write_cycle = DELEGATE_AS2(void, uint16, uint8, write_cycle, NULL);
+	CPU0->mem_cycle = DELEGATE_AS3(uint8, bool, uint16, uint8, mem_cycle, NULL);
 	// PIAs
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
@@ -1036,7 +1034,7 @@ static void machine_instruction_posthook(void *sptr) {
 	single_step = 0;
 }
 
-static uint16_t decode_Z(uint16_t Z) {
+static uint16_t decode_Z(unsigned Z) {
 	switch (ram_organisation) {
 	case RAM_ORGANISATION_4K:
 		return (Z & 0x3f) | ((Z & 0x3f00) >> 2) | ((~Z & 0x8000) >> 3);
@@ -1047,171 +1045,157 @@ static uint16_t decode_Z(uint16_t Z) {
 	}
 }
 
-/* Interface to SAM to decode and translate address */
-static _Bool do_cpu_cycle(uint16_t A, _Bool RnW, int *S, uint16_t *Z) {
-	uint16_t tmp_Z;
-	int ncycles;
-	_Bool is_ram_access = sam_run(A, RnW, S, &tmp_Z, &ncycles);
-	if (is_ram_access) {
-		*Z = decode_Z(tmp_Z);
+static uint8_t read_D = 0;
+
+static uint8_t read_byte(unsigned A) {
+	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
+	// produce a different "null" result on his 16K CoCo
+	uint8_t D = sam_RAS ? 0xff : read_D;
+	switch (sam_S) {
+	case 0:
+		if (sam_RAS) {
+			unsigned Z = decode_Z(sam_Z);
+			if (Z < machine_ram_size)
+				D = machine_ram[Z];
+		}
+		break;
+	case 1:
+	case 2:
+		D = machine_rom[A & 0x3fff];
+		break;
+	case 3:
+		if (machine_cart)
+			machine_cart->read(machine_cart, A, 0, &D);
+		break;
+	case 4:
+		if (relaxed_pia_decode) {
+			D = mc6821_read(PIA0, A);
+		} else {
+			if ((A & 4) == 0) {
+				D = mc6821_read(PIA0, A);
+			} else {
+				if (have_acia) {
+					/* XXX Dummy ACIA reads */
+					switch (A & 3) {
+					default:
+					case 0:  /* Receive Data */
+					case 3:  /* Control */
+						D = 0x00;
+						break;
+					case 2:  /* Command */
+						D = 0x02;
+						break;
+					case 1:  /* Status */
+						D = 0x10;
+						break;
+					}
+				}
+			}
+		}
+		break;
+	case 5:
+		if (relaxed_pia_decode || (A & 4) == 0) {
+			D = mc6821_read(PIA1, A);
+		}
+		break;
+	case 6:
+		if (machine_cart)
+			machine_cart->read(machine_cart, A, 1, &D);
+		break;
+		// Should call cart's read() whatever the address and
+		// indicate P2 and CTS.
+	case 7:
+		if (machine_cart)
+			machine_cart->read(machine_cart, A, 0, &D);
+		break;
+	default:
+		break;
 	}
+	return D;
+}
+
+static uint8_t write_byte(unsigned A, unsigned D) {
+	if ((sam_S & 4) || unexpanded_dragon32) {
+		switch (sam_S) {
+		case 1:
+		case 2:
+			D = machine_rom[A & 0x3fff];
+			break;
+		case 3:
+			if (machine_cart)
+				machine_cart->write(machine_cart, A, 0, D);
+			break;
+		case 4:
+			if (IS_COCO || unexpanded_dragon32) {
+				mc6821_write(PIA0, A, D);
+			} else {
+				if ((A & 4) == 0) {
+					mc6821_write(PIA0, A, D);
+				}
+			}
+			break;
+		case 5:
+			if (relaxed_pia_decode || (A & 4) == 0) {
+				mc6821_write(PIA1, A, D);
+			}
+			break;
+		case 6:
+			if (machine_cart)
+				machine_cart->write(machine_cart, A, 1, D);
+			break;
+			// Should call cart's write() whatever the address and
+			// indicate P2 and CTS.
+		case 7:
+			if (machine_cart)
+				machine_cart->write(machine_cart, A, 0, D);
+			break;
+		default:
+			break;
+		}
+	}
+	if (sam_RAS) {
+		unsigned Z = decode_Z(sam_Z);
+		machine_ram[Z] = D;
+	}
+	return D;
+}
+
+static uint8_t mem_cycle(void *m, _Bool RnW, uint16_t A, uint8_t D) {
+	(void)m;
+	int ncycles = sam_cpu_cycle(RnW, A);
 	cycles -= ncycles;
 	if (cycles <= 0) CPU0->running = 0;
 	event_current_tick += ncycles;
 	event_run_queue(&MACHINE_EVENT_LIST);
 	MC6809_IRQ_SET(CPU0, PIA0->a.irq | PIA0->b.irq);
 	MC6809_FIRQ_SET(CPU0, PIA1->a.irq | PIA1->b.irq);
-	return is_ram_access;
-}
 
-/* Same as do_cpu_cycle, but for debugging accesses */
-static _Bool debug_cpu_cycle(uint16_t A, _Bool RnW, int *S, uint16_t *Z) {
-	uint16_t tmp_Z;
-	_Bool is_ram_access = sam_run(A, RnW, S, &tmp_Z, NULL);
-	if (is_ram_access) {
-		*Z = decode_Z(tmp_Z);
-	}
-	MC6809_IRQ_SET(CPU0, PIA0->a.irq | PIA0->b.irq);
-	MC6809_FIRQ_SET(CPU0, PIA1->a.irq | PIA1->b.irq);
-	return is_ram_access;
-}
-
-static uint8_t read_D = 0;
-
-static uint8_t read_cycle(void *m, uint16_t A) {
-	(void)m;
-	int S;
-	uint16_t Z = 0;
-	_Bool is_ram_access = do_cpu_cycle(A, 1, &S, &Z);
-	/* Thanks to CrAlt on #coco_chat for verifying that RAM accesses
-	 * produce a different "null" result on his 16K CoCo */
-	if (is_ram_access)
-		read_D = 0xff;
-	switch (S) {
-		case 0:
-			if (Z < machine_ram_size)
-				read_D = machine_ram[Z];
-			break;
-		case 1:
-		case 2:
-			read_D = machine_rom[A & 0x3fff];
-			break;
-		case 3:
-			if (machine_cart)
-				machine_cart->read(machine_cart, A, 0, &read_D);
-			break;
-		case 4:
-			if (relaxed_pia_decode) {
-				read_D = mc6821_read(PIA0, A & 3);
-			} else {
-				if ((A & 4) == 0) {
-					read_D = mc6821_read(PIA0, A & 3);
-				} else {
-					if (have_acia) {
-						/* XXX Dummy ACIA reads */
-						switch (A & 3) {
-						default:
-						case 0:  /* Receive Data */
-						case 3:  /* Control */
-							read_D = 0x00;
-							break;
-						case 2:  /* Command */
-							read_D = 0x02;
-							break;
-						case 1:  /* Status */
-							read_D = 0x10;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		case 5:
-			if (relaxed_pia_decode || (A & 4) == 0) {
-				read_D = mc6821_read(PIA1, A & 3);
-			}
-			break;
-		case 6:
-			if (machine_cart)
-				machine_cart->read(machine_cart, A, 1, &read_D);
-			break;
-		// Should call cart's read() whatever the address and
-		// indicate P2 and CTS.
-		case 7:
-			if (machine_cart)
-				machine_cart->read(machine_cart, A, 0, &read_D);
-			break;
-		default:
-			break;
-	}
+	if (RnW) {
+		read_D = read_byte(A);
 #ifdef TRACE
-	if (xroar_cfg.trace_enabled) {
-		switch (xroar_machine_config->cpu) {
-		case CPU_MC6809: default:
-			mc6809_trace_byte(read_D, A);
-			break;
-		case CPU_HD6309:
-			hd6309_trace_byte(read_D, A);
-			break;
+		if (xroar_cfg.trace_enabled) {
+			switch (xroar_machine_config->cpu) {
+			case CPU_MC6809: default:
+				mc6809_trace_byte(read_D, A);
+				break;
+			case CPU_HD6309:
+				hd6309_trace_byte(read_D, A);
+				break;
+			}
 		}
-	}
 #endif
-	bp_wp_read_hook(A);
-	return read_D;
-}
-
-static void write_cycle(void *m, uint16_t A, uint8_t D) {
-	(void)m;
-	int S;
-	uint16_t Z = 0;
-	// Changing the SAM VDG mode can affect its idea of the current VRAM
-	// address, so get the VDG output up to date:
-	if (A >= 0xffc0 && A < 0xffc6) {
-		update_vdg_mode();
-	}
-	_Bool is_ram_access = do_cpu_cycle(A, 0, &S, &Z);
-	if ((S & 4) || unexpanded_dragon32) {
-		switch (S) {
-			case 1:
-			case 2:
-				D = machine_rom[A & 0x3fff];
-				break;
-			case 3:
-				if (machine_cart)
-					machine_cart->write(machine_cart, A, 0, D);
-				break;
-			case 4:
-				if (IS_COCO || unexpanded_dragon32) {
-					mc6821_write(PIA0, A & 3, D);
-				} else {
-					if ((A & 4) == 0) {
-						mc6821_write(PIA0, A & 3, D);
-					}
-				}
-				break;
-			case 5:
-				if (relaxed_pia_decode || (A & 4) == 0) {
-					mc6821_write(PIA1, A & 3, D);
-				}
-				break;
-			case 6:
-				if (machine_cart)
-					machine_cart->write(machine_cart, A, 1, D);
-				break;
-			// Should call cart's write() whatever the address and
-			// indicate P2 and CTS.
-			case 7:
-				if (machine_cart)
-					machine_cart->write(machine_cart, A, 0, D);
-				break;
-			default:
-				break;
+		bp_wp_read_hook(A);
+	} else {
+		// Changing the SAM VDG mode can affect its idea of the current VRAM
+		// address, so get the VDG output up to date:
+		A &= 0xffff;
+		if (A >= 0xffc0 && A < 0xffc6) {
+			update_vdg_mode();
 		}
+		read_D = write_byte(A, D);
+		bp_wp_write_hook(A);
 	}
-	if (is_ram_access) {
-		machine_ram[Z] = D;
-	}
-	bp_wp_write_hook(A);
+	return read_D;
 }
 
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest) {
@@ -1249,113 +1233,16 @@ void machine_toggle_pause(void) {
 
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
-uint8_t machine_read_byte(uint16_t A) {
-	uint8_t D = read_D;
-	int S;
-	uint16_t Z = 0;
-	_Bool is_ram_access = debug_cpu_cycle(A, 1, &S, &Z);
-	if (is_ram_access)
-		D = 0xff;
-	switch (S) {
-		case 0:
-			if (Z < machine_ram_size)
-				D = machine_ram[Z];
-			break;
-		case 1:
-		case 2:
-			D = machine_rom[A & 0x3fff];
-			break;
-		case 3:
-			if (machine_cart)
-				machine_cart->read(machine_cart, A, 0, &D);
-			break;
-		case 4:
-			if (IS_COCO || unexpanded_dragon32) {
-				D = mc6821_read(PIA0, A & 3);
-			} else {
-				if ((A & 4) == 0) {
-					D = mc6821_read(PIA0, A & 3);
-				} else {
-					if (have_acia) {
-						/* XXX Dummy ACIA reads */
-						switch (A & 3) {
-						default:
-						case 0:  /* Receive Data */
-						case 3:  /* Control */
-							D = 0x00;
-							break;
-						case 2:  /* Command */
-							D = 0x02;
-							break;
-						case 1:  /* Status */
-							D = 0x10;
-							break;
-						}
-					}
-				}
-			}
-			break;
-		case 5:
-			if (relaxed_pia_decode || (A & 4) == 0) {
-				D = mc6821_read(PIA1, A & 3);
-			}
-			break;
-		case 6:
-			if (machine_cart)
-				machine_cart->read(machine_cart, A, 1, &D);
-			break;
-		default:
-			break;
-	}
-	return D;
+uint8_t machine_read_byte(unsigned A) {
+	(void)sam_cpu_cycle(1, A);
+	return read_D = read_byte(A);
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
-void machine_write_byte(uint16_t A, uint8_t D) {
-	int S;
-	uint16_t Z = 0;
-	// Changing the SAM VDG mode can affect its idea of the current VRAM
-	// address, so get the VDG output up to date:
-	if (A >= 0xffc0 && A < 0xffc6) {
-		update_vdg_mode();
-	}
-	_Bool is_ram_access = debug_cpu_cycle(A, 0, &S, &Z);
-	if ((S & 4) || unexpanded_dragon32) {
-		switch (S) {
-			case 1:
-			case 2:
-				D = machine_rom[A & 0x3fff];
-				break;
-			case 3:
-				if (machine_cart)
-					machine_cart->write(machine_cart, A, 0, D);
-				break;
-			case 4:
-				if (IS_COCO || unexpanded_dragon32) {
-					mc6821_write(PIA0, A & 3, D);
-				} else {
-					if ((A & 4) == 0) {
-						mc6821_write(PIA0, A & 3, D);
-					}
-				}
-				break;
-			case 5:
-				if (relaxed_pia_decode || (A & 4) == 0) {
-					mc6821_write(PIA1, A & 3, D);
-				}
-				break;
-			case 6:
-				if (machine_cart)
-					machine_cart->write(machine_cart, A, 1, D);
-				break;
-			default:
-				break;
-		}
-	}
-	if (is_ram_access) {
-		machine_ram[Z] = D;
-	}
+void machine_write_byte(unsigned A, unsigned D) {
+	(void)sam_cpu_cycle(0, A);
+	read_D = write_byte(A, D);
 }
 
 /* simulate an RTS without otherwise affecting machine state */

@@ -60,10 +60,8 @@ struct MC6809 {
 
 	/* External handlers */
 
-	/* Return result of a byte read cycle */
-	DELEGATE_T1(uint8, uint16) read_cycle;
-	/* Perform a byte write cycle */
-	DELEGATE_T2(void, uint16, uint8) write_cycle;
+	/* Memory access cycle */
+	DELEGATE_T3(uint8, bool, uint16, uint8) mem_cycle;
 	/* Called just before instruction fetch if non-NULL */
 	DELEGATE_T0(void) instruction_hook;
 	/* Called after instruction is executed */

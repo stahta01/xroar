@@ -10,9 +10,13 @@
 
 #define EVENT_SAM_CYCLES(c) (c)
 
+extern unsigned sam_S;
+extern unsigned sam_Z;
+extern _Bool sam_RAS;
+
 #define sam_init()
 void sam_reset(void);
-_Bool sam_run(uint16_t A, _Bool RnW, int *S, uint16_t *Z, int *ncycles);
+int sam_cpu_cycle(_Bool RnW, unsigned A);
 void sam_vdg_hsync(_Bool level);
 void sam_vdg_fsync(_Bool level);
 int sam_vdg_bytes(int nbytes, uint16_t *V, _Bool *valid);

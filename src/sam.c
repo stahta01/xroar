@@ -23,10 +23,10 @@
 
 #include "sam.h"
 
-/* Internal cycle flag, for determining when a slow CPU cycle needs to be
- * extended to interleave with VDG properly. */
-
-static _Bool odd_cycle;
+// External interface
+unsigned sam_S;
+unsigned sam_Z;
+_Bool sam_RAS;
 
 /* Constants for tracking VDG address counter */
 static int const vdg_mod_xdivs[8] = { 1, 3, 1, 2, 1, 1, 1, 1 };
@@ -69,14 +69,16 @@ static uint_fast16_t sam_register;
 /* MPU rate */
 static _Bool mpu_rate_fast;
 static _Bool mpu_rate_ad;
-static _Bool running_fast = 0;
+static _Bool running_fast;
+static _Bool extend_slow_cycle;
 
 static void update_from_register(void);
 
 void sam_reset(void) {
 	sam_set_register(0);
 	sam_vdg_fsync(1);
-	odd_cycle = 0;
+	running_fast = 0;
+	extend_slow_cycle = 0;
 }
 
 #define VRAM_TRANSLATE(a) ( \
@@ -93,36 +95,37 @@ void sam_reset(void) {
  * clock would be use for this access is written to ncycles.  Returns 1 when
  * the access is to a RAM area, 0 otherwise. */
 
-_Bool sam_run(uint16_t A, _Bool RnW, int *S, uint16_t *Z, int *ncycles) {
-	_Bool is_ram_access;
+int sam_cpu_cycle(_Bool RnW, unsigned A) {
+	int ncycles;
 	_Bool fast_cycle;
+	A &= 0xffff;
 	if (A < 0x8000 || (map_type_1 && A < 0xff00)) {
-		*Z = RAM_TRANSLATE(A);
-		is_ram_access = 1;
+		sam_Z = RAM_TRANSLATE(A);
+		sam_RAS = 1;
 		fast_cycle = mpu_rate_fast;
 	} else {
 		fast_cycle = mpu_rate_fast || mpu_rate_ad;
-		is_ram_access = 0;
+		sam_RAS = 0;
 	}
 	if (A < 0x8000) {
-		*S = RnW ? 0 : 7;
+		sam_S = RnW ? 0 : 7;
 	} else if (map_type_1 && RnW && A < 0xff00) {
-		*S = 0;
+		sam_S = 0;
 	} else if (A < 0xa000) {
-		*S = 1;
+		sam_S = 1;
 	} else if (A < 0xc000) {
-		*S = 2;
+		sam_S = 2;
 	} else if (A < 0xff00) {
-		*S = 3;
+		sam_S = 3;
 	} else if (A < 0xff20) {
-		*S = 4;
+		sam_S = 4;
 		fast_cycle = mpu_rate_fast;
 	} else if (A < 0xff40) {
-		*S = 5;
+		sam_S = 5;
 	} else if (A < 0xff60) {
-		*S = 6;
+		sam_S = 6;
 	} else if (A < 0xffe0) {
-		*S = 7;
+		sam_S = 7;
 		if (!RnW && A >= 0xffc0) {
 			uint_fast16_t b = 1 << ((A >> 1) & 0x0f);
 			if (A & 1) {
@@ -133,40 +136,37 @@ _Bool sam_run(uint16_t A, _Bool RnW, int *S, uint16_t *Z, int *ncycles) {
 			update_from_register();
 		}
 	} else {
-		*S = 2;
+		sam_S = 2;
 	}
-
-	if (!ncycles)
-		return is_ram_access;
 
 	if (running_fast) {
 		if (fast_cycle) {
 			// Fast cycle, may become un-interleaved
-			*ncycles = EVENT_SAM_CYCLES(8);
-			odd_cycle = !odd_cycle;
+			ncycles = EVENT_SAM_CYCLES(8);
+			extend_slow_cycle = !extend_slow_cycle;
 		} else {
 			// Transition fast to slow
-			if (odd_cycle) {
+			if (extend_slow_cycle) {
 				// Re-interleave
-				*ncycles = EVENT_SAM_CYCLES(25);
-				odd_cycle = 0;
+				ncycles = EVENT_SAM_CYCLES(25);
+				extend_slow_cycle = 0;
 			} else {
-				*ncycles = EVENT_SAM_CYCLES(17);
+				ncycles = EVENT_SAM_CYCLES(17);
 			}
 			running_fast = 0;
 		}
 	} else {
 		if (fast_cycle) {
 			// Transition slow to fast
-			*ncycles = EVENT_SAM_CYCLES(15);
+			ncycles = EVENT_SAM_CYCLES(15);
 			running_fast = 1;
 		} else {
 			// Slow cycle
-			*ncycles = EVENT_SAM_CYCLES(16);
+			ncycles = EVENT_SAM_CYCLES(16);
 		}
 	}
 
-	return is_ram_access;
+	return ncycles;
 }
 
 static void vdg_address_add(int n) {

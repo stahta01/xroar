@@ -14,7 +14,7 @@ static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
-	return DELEGATE_CALL1(cpu->read_cycle, a);
+	return DELEGATE_CALL3(cpu->mem_cycle, 1, a, 0);
 }
 
 static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
@@ -26,7 +26,7 @@ static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
-	DELEGATE_CALL2(cpu->write_cycle, a, d);
+	(void)DELEGATE_CALL3(cpu->mem_cycle, 0, a, d);
 }
 
 /* Read & write various addressing modes */

@@ -130,8 +130,8 @@ struct MC6809 *machine_get_cpu(int n);
 struct MC6821 *machine_get_pia(int n);
 
 /* simplified read & write byte for convenience functions */
-uint8_t machine_read_byte(uint16_t A);
-void machine_write_byte(uint16_t A, uint8_t D);
+uint8_t machine_read_byte(unsigned A);
+void machine_write_byte(unsigned A, unsigned D);
 /* simulate an RTS without otherwise affecting machine state */
 void machine_op_rts(struct MC6809 *cpu);
 

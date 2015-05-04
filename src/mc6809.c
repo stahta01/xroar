@@ -155,8 +155,7 @@ struct MC6809 *mc6809_new(void) {
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
 	// External handlers
-	cpu->read_cycle = DELEGATE_DEFAULT1(uint8, uint16);
-	cpu->write_cycle = DELEGATE_DEFAULT2(void, uint16, uint8);
+	cpu->mem_cycle = DELEGATE_DEFAULT3(uint8, bool, uint16, uint8);
 	mc6809_reset(cpu);
 	return cpu;
 }
