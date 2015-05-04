@@ -26,6 +26,7 @@
 // External interface
 unsigned sam_S;
 unsigned sam_Z;
+unsigned sam_V;
 _Bool sam_RAS;
 
 /* Constants for tracking VDG address counter */
@@ -206,17 +207,14 @@ void sam_vdg_fsync(_Bool level) {
 }
 
 /* Called with the number of bytes of video data required, this implements the
- * divide-by-X and divide-by-Y parts of the SAM video address counter.  Sets
- * 'V' to the base address of available data and returns the actual number of
- * bytes available.  As the next byte may not be sequential, continue calling
- * until all required data is fetched. */
+ * divide-by-X and divide-by-Y parts of the SAM video address counter.  Updates
+ * 'sam_V' to the base address of available data and returns the actual number
+ * of bytes available.  As the next byte may not be sequential, continue
+ * calling until all required data is fetched. */
 
-int sam_vdg_bytes(int nbytes, uint16_t *V, _Bool *valid) {
+int sam_vdg_bytes(int nbytes) {
 	uint16_t b3_0 = vdg_address & 0xf;
-	_Bool is_valid = !mpu_rate_fast;
-	if (valid) *valid = is_valid;
-	if (is_valid && V)
-		*V = VRAM_TRANSLATE(vdg_address);
+	sam_V = mpu_rate_fast ? sam_Z : VRAM_TRANSLATE(vdg_address);
 	if ((b3_0 + nbytes) < 16) {
 		vdg_address += nbytes;
 		return nbytes;

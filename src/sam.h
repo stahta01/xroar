@@ -12,6 +12,7 @@
 
 extern unsigned sam_S;
 extern unsigned sam_Z;
+extern unsigned sam_V;
 extern _Bool sam_RAS;
 
 #define sam_init()
@@ -19,7 +20,7 @@ void sam_reset(void);
 int sam_cpu_cycle(_Bool RnW, unsigned A);
 void sam_vdg_hsync(_Bool level);
 void sam_vdg_fsync(_Bool level);
-int sam_vdg_bytes(int nbytes, uint16_t *V, _Bool *valid);
+int sam_vdg_bytes(int nbytes);
 void sam_set_register(unsigned int value);
 unsigned int sam_get_register(void);
 

@@ -1201,25 +1201,20 @@ static uint8_t mem_cycle(void *m, _Bool RnW, uint16_t A, uint8_t D) {
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest) {
 	(void)sptr;
 	while (nbytes > 0) {
-		uint16_t V = 0;
-		_Bool valid;
-		int n = sam_vdg_bytes(nbytes, &V, &valid);
+		int n = sam_vdg_bytes(nbytes);
 		if (dest) {
-			if (valid) {
-				V = decode_Z(V);
-			}
-			uint8_t *src = machine_ram + V;
+			uint16_t V = decode_Z(sam_V);
 			if (has_ext_charset) {
 				/* omit INV in attrs */
 				for (int i = n; i; i--) {
-					*(dest++) = *(src);
-					*(dest++) = *(src++) & 0x80;
+					*(dest++) = machine_ram[V];
+					*(dest++) = machine_ram[V++] & 0x80;
 				}
 			} else {
 				/* duplicate data as attrs */
 				for (int i = n; i; i--) {
-					*(dest++) = *(src);
-					*(dest++) = *(src++);
+					*(dest++) = machine_ram[V];
+					*(dest++) = machine_ram[V++];
 				}
 			}
 		}
