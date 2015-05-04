@@ -1050,7 +1050,7 @@ static uint8_t read_D = 0;
 static uint8_t read_byte(unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
-	uint8_t D = sam_RAS ? 0xff : read_D;
+	unsigned D = sam_RAS ? 0xff : read_D;
 	switch (sam_S) {
 	case 0:
 		if (sam_RAS) {
@@ -1065,7 +1065,7 @@ static uint8_t read_byte(unsigned A) {
 		break;
 	case 3:
 		if (machine_cart)
-			machine_cart->read(machine_cart, A, 0, &D);
+			D = machine_cart->read(machine_cart, A, 0, D);
 		break;
 	case 4:
 		if (relaxed_pia_decode) {
@@ -1100,13 +1100,13 @@ static uint8_t read_byte(unsigned A) {
 		break;
 	case 6:
 		if (machine_cart)
-			machine_cart->read(machine_cart, A, 1, &D);
+			D = machine_cart->read(machine_cart, A, 1, D);
 		break;
 		// Should call cart's read() whatever the address and
 		// indicate P2 and CTS.
 	case 7:
 		if (machine_cart)
-			machine_cart->read(machine_cart, A, 0, &D);
+			D = machine_cart->read(machine_cart, A, 0, D);
 		break;
 	default:
 		break;

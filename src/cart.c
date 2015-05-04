@@ -51,7 +51,7 @@ static struct cart_config *rom_cart_config = NULL;
 
 /* ---------------------------------------------------------------------- */
 
-static void cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void do_firq(void *);
 
@@ -308,9 +308,10 @@ struct cart *cart_rom_new(struct cart_config *cc) {
 	return c;
 }
 
-static void cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	if (!P2)
-		*D = c->rom_data[A & 0x3fff];
+		return c->rom_data[A & 0x3fff];
+	return D;
 }
 
 static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {

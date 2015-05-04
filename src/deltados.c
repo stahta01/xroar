@@ -48,7 +48,7 @@ struct deltados {
 	WD279X *fdc;
 };
 
-static void deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
@@ -98,14 +98,14 @@ static void deltados_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
+static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	struct deltados *d = (struct deltados *)c;
 	if (!P2) {
-		*D = c->rom_data[A & 0x3fff];
-		return;
+		return c->rom_data[A & 0x3fff];
 	}
 	if ((A & 4) == 0)
-		*D = wd279x_read(d->fdc, A);
+		return wd279x_read(d->fdc, A);
+	return D;
 }
 
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {

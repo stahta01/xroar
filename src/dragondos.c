@@ -57,7 +57,7 @@ struct dragondos {
 static void set_drq(void *, _Bool);
 static void set_intrq(void *, _Bool);
 
-static void dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
@@ -115,30 +115,27 @@ static void dragondos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
+static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	if (!P2) {
-		*D = c->rom_data[A & 0x3fff];
-		return;
+		return c->rom_data[A & 0x3fff];
 	}
 	if ((A & 0xc) == 0) {
-		*D = wd279x_read(d->fdc, A);
-		return;
+		return wd279x_read(d->fdc, A);
 	}
 	if (!(A & 8))
-		return;
+		return D;
 	if (d->have_becker) {
 		switch (A & 3) {
 		case 0x1:
-			*D = becker_read_status();
-			break;
+			return becker_read_status();
 		case 0x2:
-			*D = becker_read_data();
-			break;
+			return becker_read_data();
 		default:
 			break;
 		}
 	}
+	return D;
 }
 
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {

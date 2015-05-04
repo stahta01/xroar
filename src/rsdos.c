@@ -50,7 +50,7 @@ struct rsdos {
 	WD279X *fdc;
 };
 
-static void rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
@@ -114,28 +114,25 @@ static void rsdos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
+static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	struct rsdos *r = (struct rsdos *)c;
 	if (!P2) {
-		*D = c->rom_data[A & 0x3fff];
-		return;
+		return c->rom_data[A & 0x3fff];
 	}
 	if (A & 0x8) {
-		*D = wd279x_read(r->fdc, A);
-		return;
+		return wd279x_read(r->fdc, A);
 	}
 	if (r->have_becker) {
 		switch (A & 3) {
 		case 0x1:
-			*D = becker_read_status();
-			break;
+			return becker_read_status();
 		case 0x2:
-			*D = becker_read_data();
-			break;
+			return becker_read_data();
 		default:
 			break;
 		}
 	}
+	return D;
 }
 
 static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {

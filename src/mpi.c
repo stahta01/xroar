@@ -62,7 +62,7 @@ static unsigned initial_slot = 0;
 static void set_nmi(void *, _Bool);
 static void set_halt(void *, _Bool);
 
-static void mpi_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void mpi_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void mpi_reset(struct cart *c);
 static void mpi_attach(struct cart *c);
@@ -177,11 +177,10 @@ void mpi_switch_slot(struct cart *c, unsigned slot) {
 	select_slot(c, (slot << 4) | slot);
 }
 
-static void mpi_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
+static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
 	if (A == 0xff7f) {
-		*D = (m->cts_route << 4) | m->p2_route;
-		return;
+		return (m->cts_route << 4) | m->p2_route;
 	}
 	struct cart *c2 = NULL;
 	if (P2) {
@@ -190,7 +189,8 @@ static void mpi_read(struct cart *c, uint16_t A, _Bool P2, uint8_t *D) {
 		c2 = m->slot[m->cts_route].cart;
 	}
 	if (c2)
-		c2->read(c2, A, P2, D);
+		return c2->read(c2, A, P2, D);
+	return D;
 }
 
 static void mpi_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {

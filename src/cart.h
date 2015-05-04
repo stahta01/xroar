@@ -37,7 +37,7 @@ struct cart_config {
 
 struct cart {
 	struct cart_config *config;
-	void (*read)(struct cart *c, uint16_t A, _Bool P2, uint8_t *D);
+	uint8_t (*read)(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 	void (*write)(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 	void (*reset)(struct cart *c);
 	void (*attach)(struct cart *c);
