@@ -43,8 +43,8 @@
 
 struct dragondos {
 	struct cart cart;
-	int ic1_old;
-	int ic1_drive_select;
+	unsigned ic1_old;
+	unsigned ic1_drive_select;
 	_Bool ic1_motor_enable;
 	_Bool ic1_precomp_enable;
 	_Bool ic1_density;
@@ -53,15 +53,15 @@ struct dragondos {
 	WD279X *fdc;
 };
 
-/* Handle signals from WD2797 */
-static void set_drq(void *, _Bool);
-static void set_intrq(void *, _Bool);
-
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
-static void ff48_write(struct dragondos *d, int octet);
+static void ff48_write(struct dragondos *d, unsigned flags);
+
+/* Handle signals from WD2797 */
+static void set_drq(void *, _Bool);
+static void set_intrq(void *, _Bool);
 
 static void dragondos_init(struct dragondos *d) {
 	struct cart *c = (struct cart *)d;
@@ -165,34 +165,34 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 }
 
 /* DragonDOS cartridge circuitry */
-static void ff48_write(struct dragondos *d, int octet) {
-	if (octet != d->ic1_old) {
+static void ff48_write(struct dragondos *d, unsigned flags) {
+	if (flags != d->ic1_old) {
 		LOG_DEBUG(2, "DragonDOS: Write to FF48: ");
-		if ((octet ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01d, ", octet & 0x03);
+		if ((flags ^ d->ic1_old) & 0x03) {
+			LOG_DEBUG(2, "DRIVE SELECT %01d, ", flags & 0x03);
 		}
-		if ((octet ^ d->ic1_old) & 0x04) {
-			LOG_DEBUG(2, "MOTOR %s, ", (octet & 0x04)?"ON":"OFF");
+		if ((flags ^ d->ic1_old) & 0x04) {
+			LOG_DEBUG(2, "MOTOR %s, ", (flags & 0x04)?"ON":"OFF");
 		}
-		if ((octet ^ d->ic1_old) & 0x08) {
-			LOG_DEBUG(2, "DENSITY %s, ", (octet & 0x08)?"SINGLE":"DOUBLE");
+		if ((flags ^ d->ic1_old) & 0x08) {
+			LOG_DEBUG(2, "DENSITY %s, ", (flags & 0x08)?"SINGLE":"DOUBLE");
 		}
-		if ((octet ^ d->ic1_old) & 0x10) {
-			LOG_DEBUG(2, "PRECOMP %s, ", (octet & 0x10)?"ON":"OFF");
+		if ((flags ^ d->ic1_old) & 0x10) {
+			LOG_DEBUG(2, "PRECOMP %s, ", (flags & 0x10)?"ON":"OFF");
 		}
-		if ((octet ^ d->ic1_old) & 0x20) {
-			LOG_DEBUG(2, "NMI %s, ", (octet & 0x20)?"ENABLED":"DISABLED");
+		if ((flags ^ d->ic1_old) & 0x20) {
+			LOG_DEBUG(2, "NMI %s, ", (flags & 0x20)?"ENABLED":"DISABLED");
 		}
 		LOG_DEBUG(2, "\n");
-		d->ic1_old = octet;
+		d->ic1_old = flags;
 	}
-	d->ic1_drive_select = octet & 0x03;
+	d->ic1_drive_select = flags & 0x03;
 	vdrive_set_drive(d->ic1_drive_select);
-	d->ic1_motor_enable = octet & 0x04;
-	d->ic1_density = octet & 0x08;
+	d->ic1_motor_enable = flags & 0x04;
+	d->ic1_density = flags & 0x08;
 	wd279x_set_dden(d->fdc, !d->ic1_density);
-	d->ic1_precomp_enable = octet & 0x10;
-	d->ic1_nmi_enable = octet & 0x20;
+	d->ic1_precomp_enable = flags & 0x10;
+	d->ic1_nmi_enable = flags & 0x20;
 }
 
 static void set_drq(void *sptr, _Bool value) {

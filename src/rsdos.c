@@ -40,8 +40,8 @@
 
 struct rsdos {
 	struct cart cart;
-	int ic1_old;
-	int ic1_drive_select;
+	unsigned ic1_old;
+	unsigned ic1_drive_select;
 	_Bool ic1_density;
 	_Bool drq_flag;
 	_Bool intrq_flag;
@@ -54,12 +54,11 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
+static void ff40_write(struct rsdos *r, unsigned flags);
 
 /* Handle signals from WD2793 */
 static void set_drq(void *, _Bool);
 static void set_intrq(void *, _Bool);
-
-static void ff40_write(struct rsdos *r, int octet);
 
 static void rsdos_init(struct rsdos *r) {
 	struct cart *c = (struct cart *)r;
@@ -163,49 +162,49 @@ static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 }
 
 /* RSDOS cartridge circuitry */
-static void ff40_write(struct rsdos *r, int octet) {
+static void ff40_write(struct rsdos *r, unsigned flags) {
 	struct cart *c = (struct cart *)r;
-	int new_drive_select = 0;
-	octet ^= 0x20;
-	if (octet & 0x01) {
+	unsigned new_drive_select = 0;
+	flags ^= 0x20;
+	if (flags & 0x01) {
 		new_drive_select = 0;
-	} else if (octet & 0x02) {
+	} else if (flags & 0x02) {
 		new_drive_select = 1;
-	} else if (octet & 0x04) {
+	} else if (flags & 0x04) {
 		new_drive_select = 2;
 	}
-	vdrive_set_sso(NULL, octet & 0x40 ? 1 : 0);
-	if (octet != r->ic1_old) {
+	vdrive_set_sso(NULL, flags & 0x40 ? 1 : 0);
+	if (flags != r->ic1_old) {
 		LOG_DEBUG(2, "RSDOS: Write to FF40: ");
 		if (new_drive_select != r->ic1_drive_select) {
 			LOG_DEBUG(2, "DRIVE SELECT %d, ", new_drive_select);
 		}
-		if ((octet ^ r->ic1_old) & 0x08) {
-			LOG_DEBUG(2, "MOTOR %s, ", (octet & 0x08)?"ON":"OFF");
+		if ((flags ^ r->ic1_old) & 0x08) {
+			LOG_DEBUG(2, "MOTOR %s, ", (flags & 0x08)?"ON":"OFF");
 		}
-		if ((octet ^ r->ic1_old) & 0x20) {
-			LOG_DEBUG(2, "DENSITY %s, ", (octet & 0x20)?"SINGLE":"DOUBLE");
+		if ((flags ^ r->ic1_old) & 0x20) {
+			LOG_DEBUG(2, "DENSITY %s, ", (flags & 0x20)?"SINGLE":"DOUBLE");
 		}
-		if ((octet ^ r->ic1_old) & 0x10) {
-			LOG_DEBUG(2, "PRECOMP %s, ", (octet & 0x10)?"ON":"OFF");
+		if ((flags ^ r->ic1_old) & 0x10) {
+			LOG_DEBUG(2, "PRECOMP %s, ", (flags & 0x10)?"ON":"OFF");
 		}
-		if ((octet ^ r->ic1_old) & 0x40) {
-			LOG_DEBUG(2, "SIDE %d, ", (octet & 0x40) >> 6);
+		if ((flags ^ r->ic1_old) & 0x40) {
+			LOG_DEBUG(2, "SIDE %d, ", (flags & 0x40) >> 6);
 		}
-		if ((octet ^ r->ic1_old) & 0x80) {
-			LOG_DEBUG(2, "HALT %s, ", (octet & 0x80)?"ENABLED":"DISABLED");
+		if ((flags ^ r->ic1_old) & 0x80) {
+			LOG_DEBUG(2, "HALT %s, ", (flags & 0x80)?"ENABLED":"DISABLED");
 		}
 		LOG_DEBUG(2, "\n");
-		r->ic1_old = octet;
+		r->ic1_old = flags;
 	}
 	r->ic1_drive_select = new_drive_select;
 	vdrive_set_drive(r->ic1_drive_select);
-	r->ic1_density = octet & 0x20;
+	r->ic1_density = flags & 0x20;
 	wd279x_set_dden(r->fdc, !r->ic1_density);
 	if (r->ic1_density && r->intrq_flag) {
 		DELEGATE_CALL1(c->signal_nmi, 1);
 	}
-	r->halt_enable = octet & 0x80;
+	r->halt_enable = flags & 0x80;
 	if (r->intrq_flag) r->halt_enable = 0;
 	DELEGATE_CALL1(c->signal_halt, r->halt_enable && !r->drq_flag);
 }

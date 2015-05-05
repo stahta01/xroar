@@ -41,8 +41,8 @@
 
 struct deltados {
 	struct cart cart;
-	int ic1_old;
-	int ic1_drive_select;
+	unsigned ic1_old;
+	unsigned ic1_drive_select;
 	_Bool ic1_side_select;
 	_Bool ic1_density;
 	WD279X *fdc;
@@ -52,7 +52,7 @@ static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
-static void ff44_write(struct deltados *d, uint8_t octet);
+static void ff44_write(struct deltados *d, unsigned flags);
 
 static void deltados_init(struct deltados *d) {
 	struct cart *c = (struct cart *)d;
@@ -117,25 +117,25 @@ static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 }
 
 /* Delta cartridge circuitry */
-static void ff44_write(struct deltados *d, uint8_t octet) {
-	if (octet != d->ic1_old) {
+static void ff44_write(struct deltados *d, unsigned flags) {
+	if (flags != d->ic1_old) {
 		LOG_DEBUG(2, "Delta: Write to FF44: ");
-		if ((octet ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01d, ", octet & 0x03);
+		if ((flags ^ d->ic1_old) & 0x03) {
+			LOG_DEBUG(2, "DRIVE SELECT %01d, ", flags & 0x03);
 		}
-		if ((octet ^ d->ic1_old) & 0x04) {
-			LOG_DEBUG(2, "SIDE %s, ", (octet & 0x04)?"1":"0");
+		if ((flags ^ d->ic1_old) & 0x04) {
+			LOG_DEBUG(2, "SIDE %s, ", (flags & 0x04)?"1":"0");
 		}
-		if ((octet ^ d->ic1_old) & 0x08) {
-			LOG_DEBUG(2, "DENSITY %s, ", (octet & 0x08)?"DOUBLE":"SINGLE");
+		if ((flags ^ d->ic1_old) & 0x08) {
+			LOG_DEBUG(2, "DENSITY %s, ", (flags & 0x08)?"DOUBLE":"SINGLE");
 		}
 		LOG_DEBUG(2, "\n");
-		d->ic1_old = octet;
+		d->ic1_old = flags;
 	}
-	d->ic1_drive_select = octet & 0x03;
+	d->ic1_drive_select = flags & 0x03;
 	vdrive_set_drive(d->ic1_drive_select);
-	d->ic1_side_select = octet & 0x04;
+	d->ic1_side_select = flags & 0x04;
 	vdrive_set_sso(NULL, d->ic1_side_select ? 1 : 0);
-	d->ic1_density = !(octet & 0x08);
+	d->ic1_density = !(flags & 0x08);
 	wd279x_set_dden(d->fdc, !d->ic1_density);
 }
