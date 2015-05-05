@@ -215,11 +215,15 @@ static void bp_instruction_hook(void *sptr) {
 }
 
 void bp_wp_read_hook(unsigned address) {
-	bp_hook(wp_read_list, address);
-	bp_hook(wp_access_list, address);
+	if (wp_read_list)
+		bp_hook(wp_read_list, address);
+	if (wp_access_list)
+		bp_hook(wp_access_list, address);
 }
 
 void bp_wp_write_hook(unsigned address) {
-	bp_hook(wp_write_list, address);
-	bp_hook(wp_access_list, address);
+	if (wp_read_list)
+		bp_hook(wp_write_list, address);
+	if (wp_access_list)
+		bp_hook(wp_access_list, address);
 }
