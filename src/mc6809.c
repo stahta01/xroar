@@ -197,8 +197,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				continue;
 			}
-			REG_PC = fetch_byte(cpu, MC6809_INT_VEC_RESET) << 8;
-			REG_PC |= fetch_byte(cpu, MC6809_INT_VEC_RESET + 1);
+			REG_PC = fetch_word(cpu, MC6809_INT_VEC_RESET);
 			NVMA_CYCLE;
 			cpu->state = mc6809_state_label_a;
 			continue;
@@ -1150,8 +1149,7 @@ static uint16_t ea_direct(struct MC6809 *cpu) {
 }
 
 static uint16_t ea_extended(struct MC6809 *cpu) {
-	unsigned ea = fetch_byte(cpu, REG_PC) << 8;
-	ea |= fetch_byte(cpu, REG_PC+1);
+	unsigned ea = fetch_word(cpu, REG_PC);
 	REG_PC += 2;
 	NVMA_CYCLE;
 	return ea;
@@ -1159,34 +1157,33 @@ static uint16_t ea_extended(struct MC6809 *cpu) {
 
 static uint16_t ea_indexed(struct MC6809 *cpu) {
 	unsigned ea;
-	unsigned postbyte;
-	uint16_t *reg;
-	postbyte = byte_immediate(cpu);
+	uint16_t reg;
+	unsigned postbyte = byte_immediate(cpu);
 	switch ((postbyte >> 5) & 3) {
-		case 0: reg = &REG_X; break;
-		case 1: reg = &REG_Y; break;
-		case 2: reg = &REG_U; break;
-		case 3: reg = &REG_S; break;
-		default: return 0;
+		case 0: reg = REG_X; break;
+		case 1: reg = REG_Y; break;
+		case 2: reg = REG_U; break;
+		case 3: reg = REG_S; break;
+		default: reg = 0; break;
 	}
 	if ((postbyte & 0x80) == 0) {
 		peek_byte(cpu, REG_PC);
 		NVMA_CYCLE;
-		return *reg + sex5(postbyte & 0x1f);
+		return reg + sex5(postbyte & 0x1f);
 	}
 	switch (postbyte & 0x0f) {
-		case 0x00: ea = *reg; *reg += 1; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x01: ea = *reg; *reg += 2; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x02: *reg -= 1; ea = *reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x03: *reg -= 2; ea = *reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x04: ea = *reg; peek_byte(cpu, REG_PC); break;
-		case 0x05: ea = *reg + sex8(RREG_B); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x00: ea = reg; reg += 1; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x01: ea = reg; reg += 2; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x02: reg -= 1; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x03: reg -= 2; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x04: ea = reg; peek_byte(cpu, REG_PC); break;
+		case 0x05: ea = reg + sex8(RREG_B); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
 		case 0x07: // illegal
-		case 0x06: ea = *reg + sex8(RREG_A); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
-		case 0x08: ea = byte_immediate(cpu); ea = sex8(ea) + *reg; NVMA_CYCLE; break;
-		case 0x09: ea = word_immediate(cpu); ea = ea + *reg; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x06: ea = reg + sex8(RREG_A); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x08: ea = byte_immediate(cpu); ea = sex8(ea) + reg; NVMA_CYCLE; break;
+		case 0x09: ea = word_immediate(cpu); ea = ea + reg; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x0a: ea = REG_PC | 0xff; break;
-		case 0x0b: ea = *reg + REG_D; peek_byte(cpu, REG_PC); peek_byte(cpu, REG_PC + 1); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
+		case 0x0b: ea = reg + REG_D; peek_byte(cpu, REG_PC); peek_byte(cpu, REG_PC + 1); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x0c: ea = byte_immediate(cpu); ea = sex8(ea) + REG_PC; NVMA_CYCLE; break;
 		case 0x0d: ea = word_immediate(cpu); ea = ea + REG_PC; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x0e: ea = 0xffff; break; // illegal
@@ -1194,9 +1191,14 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		default: ea = 0; break;
 	}
 	if (postbyte & 0x10) {
-		unsigned tmp_ea = fetch_byte(cpu, ea) << 8;
-		ea = tmp_ea | fetch_byte(cpu, ea + 1);
+		ea = fetch_word(cpu, ea);
 		NVMA_CYCLE;
+	}
+	switch ((postbyte >> 5) & 3) {
+	case 0: REG_X = reg; break;
+	case 1: REG_Y = reg; break;
+	case 2: REG_U = reg; break;
+	case 3: REG_S = reg; break;
 	}
 	return ea;
 }
@@ -1239,9 +1241,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
 	DELEGATE_SAFE_CALL1(cpu->interrupt_hook, vec);
-	unsigned new_pc = fetch_byte(cpu, vec) << 8;
-	new_pc |= fetch_byte(cpu, vec+1);
-	REG_PC = new_pc;
+	REG_PC = fetch_word(cpu, vec);
 	NVMA_CYCLE;
 }
 
