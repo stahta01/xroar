@@ -1426,10 +1426,17 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x1097, 0x10a7, 0x10b7 STW
 			// 0x109f, 0x10af, 0x10bf STY
+			// 0x10df, 0x10ef, 0x10ff STS
 			case 0x97: case 0xa7: case 0xb7:
-			case 0x9f: case 0xaf: case 0xbf: {
+			case 0x9f: case 0xaf: case 0xbf:
+			case 0xdf: case 0xef: case 0xff: {
 				unsigned ea, tmp1;
-				tmp1 = !(op & 0x08) ? REG_W : REG_Y;
+				switch (op & 0x48) {
+				case 0x00: tmp1 = REG_W; break;
+				case 0x08: tmp1 = REG_Y; break;
+				case 0x48: tmp1 = REG_S; break;
+				default: tmp1 = 0; break;
+				}
 				switch ((op >> 4) & 3) {
 				case 1: ea = ea_direct(cpu); break;
 				case 2: ea = ea_indexed(cpu); break;
@@ -1490,22 +1497,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				SET_N16(REG_D);
 				if (REG_D == 0 && REG_W == 0)
 					REG_CC |= CC_Z;
-			} break;
-
-			// 0x10df, 0x10ef, 0x10ff STS
-			case 0xdf: case 0xef: case 0xff: {
-				unsigned ea, tmp1;
-				tmp1 = REG_S;
-				switch ((op >> 4) & 3) {
-				case 1: ea = ea_direct(cpu); break;
-				case 2: ea = ea_indexed(cpu); break;
-				case 3: ea = ea_extended(cpu); break;
-				default: ea = 0; break;
-				}
-				store_byte(cpu, ea, tmp1 >> 8);
-				store_byte(cpu, ea + 1, tmp1);
-				CLR_NZV;
-				SET_NZ16(tmp1);
 			} break;
 
 			// Illegal instruction
