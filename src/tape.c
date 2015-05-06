@@ -585,7 +585,6 @@ static void do_pulse_skip(int skip) {
 		}
 	}
 	in_pulse_width -= skip;
-	skip = 0;
 	waggle_event.at_tick = event_current_tick + in_pulse_width;
 	event_queue(&MACHINE_EVENT_LIST, &waggle_event);
 	DELEGATE_CALL1(tape_update_audio, in_pulse ? 1.0 : 0.0);
