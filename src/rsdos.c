@@ -173,11 +173,11 @@ static void ff40_write(struct rsdos *r, unsigned flags) {
 	} else if (flags & 0x04) {
 		new_drive_select = 2;
 	}
-	vdrive_set_sso(NULL, flags & 0x40 ? 1 : 0);
+	vdrive_set_sso(NULL, (flags & 0x40) ? 1 : 0);
 	if (flags != r->ic1_old) {
 		LOG_DEBUG(2, "RSDOS: Write to FF40: ");
 		if (new_drive_select != r->ic1_drive_select) {
-			LOG_DEBUG(2, "DRIVE SELECT %d, ", new_drive_select);
+			LOG_DEBUG(2, "DRIVE SELECT %u, ", new_drive_select);
 		}
 		if ((flags ^ r->ic1_old) & 0x08) {
 			LOG_DEBUG(2, "MOTOR %s, ", (flags & 0x08)?"ON":"OFF");
