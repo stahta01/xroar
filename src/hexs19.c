@@ -68,7 +68,6 @@ static int skip_eol(FILE *fd) {
 int intel_hex_read(const char *filename, int autorun) {
 	FILE *fd;
 	int data;
-	uint8_t rsum;
 	uint16_t exec = 0;
 	struct log_handle *log_hex = NULL;
 	if (filename == NULL)
@@ -92,7 +91,7 @@ int intel_hex_read(const char *filename, int autorun) {
 		int type = read_byte(fd);
 		if (type == 0 && (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN_DATA))
 			log_hexdump_set_addr(log_hex, addr);
-		rsum = length + (length >> 8) + addr + (addr >> 8) + type;
+		uint8_t rsum = length + (length >> 8) + addr + (addr >> 8) + type;
 		for (int i = 0; i < length; i++) {
 			data = read_byte(fd);
 			rsum += data;
