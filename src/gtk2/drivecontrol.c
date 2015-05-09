@@ -199,7 +199,7 @@ void gtk2_update_drive_write_back(int drive, _Bool write_back) {
 	}
 }
 
-void gtk2_update_drive_disk(int drive, struct vdisk *disk) {
+void gtk2_update_drive_disk(int drive, const struct vdisk *disk) {
 	if (drive < 0 || drive > 3)
 		return;
 	char *filename = NULL;

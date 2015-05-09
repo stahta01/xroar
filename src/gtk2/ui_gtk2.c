@@ -668,12 +668,12 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 	/* Hardware */
 
 	case ui_tag_machine:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine-dragon32");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine1");
 		gtk_radio_action_set_current_value(radio, value);
 		break;
 
 	case ui_tag_cartridge:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart-dragondos");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart0");
 		gtk_radio_action_set_current_value(radio, value);
 		break;
 
@@ -702,7 +702,7 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		break;
 
 	case ui_tag_disk_data:
-		gtk2_update_drive_disk(value, (struct vdisk *)data);
+		gtk2_update_drive_disk(value, (const struct vdisk *)data);
 		break;
 
 	/* Video */
@@ -763,6 +763,8 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		}
 		break;
 
+	default:
+		break;
 	}
 }
 
@@ -786,6 +788,9 @@ static void update_machine_menu(void) {
 	free_action_group(machine_action_group);
 	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_machines);
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
+	// jump through alloc hoops just to avoid const-ness warnings
+	gchar **names = g_malloc0(num_machines * sizeof(gchar *));
+	gchar **labels = g_malloc0(num_machines * sizeof(gchar *));
 	/* add these to the ui in reverse order, as each will be
 	 * inserted before the previous */
 	int i = 0;
@@ -793,16 +798,21 @@ static void update_machine_menu(void) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
 			selected = mc->id;
-		radio_entries[i].name = g_strconcat("machine-", mc->name, NULL);
-		radio_entries[i].label = escape_underscores(mc->description);
+		names[i] = g_strdup_printf("machine%d", i+1);
+		radio_entries[i].name = names[i];
+		labels[i] = escape_underscores(mc->description);
+		radio_entries[i].label = labels[i];
 		radio_entries[i].value = mc->id;
 		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	gtk_action_group_add_radio_actions(machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
+	// back through the hoops
 	for (i = 0; i < num_machines; i++) {
-		g_free((gpointer)radio_entries[i].name);
-		g_free((gpointer)radio_entries[i].label);
+		g_free(names[i]);
+		g_free(labels[i]);
 	}
+	g_free(names);
+	g_free(labels);
 	g_free(radio_entries);
 	slist_free(mcl);
 }
@@ -815,6 +825,11 @@ static void update_cartridge_menu(void) {
 	free_action_group(cart_action_group);
 	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_carts);
 	GtkRadioActionEntry *radio_entries = g_malloc0((num_carts+1) * sizeof(*radio_entries));
+	// jump through alloc hoops just to avoid const-ness warnings
+	// note: final entry's name & label is const, no need to allow space
+	// for it in names[] & labels[]
+	gchar **names = g_malloc0(num_carts * sizeof(gchar *));
+	gchar **labels = g_malloc0(num_carts * sizeof(gchar *));
 	/* add these to the ui in reverse order, as each will be
 	   inserted before the previous */
 	int i = 0;
@@ -822,21 +837,25 @@ static void update_cartridge_menu(void) {
 		struct cart_config *cc = iter->data;
 		if (machine_cart && cc == machine_cart->config)
 			selected = cc->id;
-		radio_entries[i].name = g_strconcat("cart-", cc->name, NULL);
-		radio_entries[i].label = escape_underscores(cc->description);
+		names[i] = g_strdup_printf("cart%d", i+1);
+		radio_entries[i].name = names[i];
+		labels[i] = escape_underscores(cc->description);
+		radio_entries[i].label = labels[i];
 		radio_entries[i].value = cc->id;
 		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
-	radio_entries[num_carts].name = "none";
+	radio_entries[num_carts].name = "cart0";
 	radio_entries[num_carts].label = "None";
 	radio_entries[num_carts].value = -1;
 	gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	gtk_action_group_add_radio_actions(cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, NULL);
-	/* don't need to free last label */
+	// back through the hoops
 	for (i = 0; i < num_carts; i++) {
-		g_free((gpointer)radio_entries[i].name);
-		g_free((gpointer)radio_entries[i].label);
+		g_free(names[i]);
+		g_free(labels[i]);
 	}
+	g_free(names);
+	g_free(labels);
 	g_free(radio_entries);
 	slist_free(ccl);
 }

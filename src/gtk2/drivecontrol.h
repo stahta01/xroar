@@ -12,7 +12,7 @@ void gtk2_insert_disk(int drive);
 void gtk2_create_dc_window(void);
 void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data);
 
-void gtk2_update_drive_disk(int drive, struct vdisk *disk);
+void gtk2_update_drive_disk(int drive, const struct vdisk *disk);
 void gtk2_update_drive_write_enable(int drive, _Bool write_enable);
 void gtk2_update_drive_write_back(int drive, _Bool write_back);
 
