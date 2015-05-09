@@ -21,13 +21,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "sam.h"
+#include "xalloc.h"
 
-// External interface
-unsigned sam_S;
-unsigned sam_Z;
-unsigned sam_V;
-_Bool sam_RAS;
+#include "sam.h"
 
 /* Constants for tracking VDG address counter */
 static int const vdg_mod_xdivs[8] = { 1, 3, 1, 2, 1, 1, 1, 1 };
@@ -43,52 +39,69 @@ static int const ram_col_shifts[4] = { 2, 1, 0, 0 };
 static uint16_t const ram_col_masks[4] = { 0x3f00, 0x7f00, 0xff00, 0xff00 };
 static uint16_t const ram_ras1_bits[4] = { 0x1000, 0x4000, 0, 0 };
 
-/* VDG address counter */
-static uint16_t vdg_base;
-static uint16_t vdg_address;
-static int vdg_mod_xdiv;
-static int vdg_mod_ydiv;
-static int vdg_mod_add;
-static uint16_t vdg_mod_clear;
-static int vdg_xcount;
-static int vdg_ycount;
+struct MC6883_private {
 
-/* Address multiplexer */
-static uint16_t ram_row_mask;
-static int ram_col_shift;
-static uint16_t ram_col_mask;
-static uint16_t ram_ras1_bit;
-static uint16_t ram_ras1;
-static uint16_t ram_page_bit;
+	struct MC6883 public;
 
-/* Address decode */
-static _Bool map_type_1;
+	/* SAM control register */
+	uint_fast16_t reg;
 
-/* SAM control register */
-static uint_fast16_t sam_register;
+	/* Address decode */
+	_Bool map_type_1;
 
-/* MPU rate */
-static _Bool mpu_rate_fast;
-static _Bool mpu_rate_ad;
-static _Bool running_fast;
-static _Bool extend_slow_cycle;
+	/* Address multiplexer */
+	uint16_t ram_row_mask;
+	int ram_col_shift;
+	uint16_t ram_col_mask;
+	uint16_t ram_ras1_bit;
+	uint16_t ram_ras1;
+	uint16_t ram_page_bit;
 
-static void update_from_register(void);
+	/* MPU rate */
+	_Bool mpu_rate_fast;
+	_Bool mpu_rate_ad;
+	_Bool running_fast;
+	_Bool extend_slow_cycle;
 
-void sam_reset(void) {
-	sam_set_register(0);
-	sam_vdg_fsync(1);
-	running_fast = 0;
-	extend_slow_cycle = 0;
+	/* VDG address counter */
+	uint16_t vdg_base;
+	uint16_t vdg_address;
+	int vdg_mod_xdiv;
+	int vdg_mod_ydiv;
+	int vdg_mod_add;
+	uint16_t vdg_mod_clear;
+	int vdg_xcount;
+	int vdg_ycount;
+
+};
+
+static void update_from_register(struct MC6883_private *);
+
+struct MC6883 *sam_new(void) {
+	struct MC6883_private *sam = xzalloc(sizeof(*sam));
+	return (struct MC6883 *)sam;
+}
+
+void sam_free(struct MC6883 *samp) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	free(sam);
+}
+
+void sam_reset(struct MC6883 *samp) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	sam_set_register(samp, 0);
+	sam_vdg_fsync(samp, 1);
+	sam->running_fast = 0;
+	sam->extend_slow_cycle = 0;
 }
 
 #define VRAM_TRANSLATE(a) ( \
-		((a << ram_col_shift) & ram_col_mask) \
-		| (a & ram_row_mask) \
-		| (!(a & ram_ras1_bit) ? ram_ras1 : 0) \
+		((a << sam->ram_col_shift) & sam->ram_col_mask) \
+		| (a & sam->ram_row_mask) \
+		| (!(a & sam->ram_ras1_bit) ? sam->ram_ras1 : 0) \
 	)
 
-#define RAM_TRANSLATE(a) (VRAM_TRANSLATE(a) | ram_page_bit)
+#define RAM_TRANSLATE(a) (VRAM_TRANSLATE(a) | sam->ram_page_bit)
 
 /* The primary function of the SAM: translates an address (A) plus Read/!Write
  * flag (RnW) into an S value and RAM address (Z).  Writes to the SAM control
@@ -96,71 +109,72 @@ void sam_reset(void) {
  * clock would be use for this access is written to ncycles.  Returns 1 when
  * the access is to a RAM area, 0 otherwise. */
 
-int sam_cpu_cycle(_Bool RnW, unsigned A) {
+int sam_cpu_cycle(struct MC6883 *samp, _Bool RnW, unsigned A) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
 	A &= 0xffff;
-	if (A < 0x8000 || (map_type_1 && A < 0xff00)) {
-		sam_Z = RAM_TRANSLATE(A);
-		sam_RAS = 1;
-		fast_cycle = mpu_rate_fast;
+	if (A < 0x8000 || (sam->map_type_1 && A < 0xff00)) {
+		samp->Z = RAM_TRANSLATE(A);
+		samp->RAS = 1;
+		fast_cycle = sam->mpu_rate_fast;
 	} else {
-		fast_cycle = mpu_rate_fast || mpu_rate_ad;
-		sam_RAS = 0;
+		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
+		samp->RAS = 0;
 	}
 	if (A < 0x8000) {
-		sam_S = RnW ? 0 : 7;
-	} else if (map_type_1 && RnW && A < 0xff00) {
-		sam_S = 0;
+		samp->S = RnW ? 0 : 7;
+	} else if (sam->map_type_1 && RnW && A < 0xff00) {
+		samp->S = 0;
 	} else if (A < 0xa000) {
-		sam_S = 1;
+		samp->S = 1;
 	} else if (A < 0xc000) {
-		sam_S = 2;
+		samp->S = 2;
 	} else if (A < 0xff00) {
-		sam_S = 3;
+		samp->S = 3;
 	} else if (A < 0xff20) {
-		sam_S = 4;
-		fast_cycle = mpu_rate_fast;
+		samp->S = 4;
+		fast_cycle = sam->mpu_rate_fast;
 	} else if (A < 0xff40) {
-		sam_S = 5;
+		samp->S = 5;
 	} else if (A < 0xff60) {
-		sam_S = 6;
+		samp->S = 6;
 	} else if (A < 0xffe0) {
-		sam_S = 7;
+		samp->S = 7;
 		if (!RnW && A >= 0xffc0) {
 			uint_fast16_t b = 1 << ((A >> 1) & 0x0f);
 			if (A & 1) {
-				sam_register |= b;
+				sam->reg |= b;
 			} else {
-				sam_register &= ~b;
+				sam->reg &= ~b;
 			}
-			update_from_register();
+			update_from_register(sam);
 		}
 	} else {
-		sam_S = 2;
+		samp->S = 2;
 	}
 
-	if (running_fast) {
+	if (sam->running_fast) {
 		if (fast_cycle) {
 			// Fast cycle, may become un-interleaved
 			ncycles = EVENT_SAM_CYCLES(8);
-			extend_slow_cycle = !extend_slow_cycle;
+			sam->extend_slow_cycle = !sam->extend_slow_cycle;
 		} else {
 			// Transition fast to slow
-			if (extend_slow_cycle) {
+			if (sam->extend_slow_cycle) {
 				// Re-interleave
 				ncycles = EVENT_SAM_CYCLES(25);
-				extend_slow_cycle = 0;
+				sam->extend_slow_cycle = 0;
 			} else {
 				ncycles = EVENT_SAM_CYCLES(17);
 			}
-			running_fast = 0;
+			sam->running_fast = 0;
 		}
 	} else {
 		if (fast_cycle) {
 			// Transition slow to fast
 			ncycles = EVENT_SAM_CYCLES(15);
-			running_fast = 1;
+			sam->running_fast = 1;
 		} else {
 			// Slow cycle
 			ncycles = EVENT_SAM_CYCLES(16);
@@ -170,97 +184,102 @@ int sam_cpu_cycle(_Bool RnW, unsigned A) {
 	return ncycles;
 }
 
-static void vdg_address_add(int n) {
-	uint16_t new_B = vdg_address + n;
-	if ((vdg_address ^ new_B) & 0x10) {
-		vdg_xcount = (vdg_xcount + 1) % vdg_mod_xdiv;
-		if (vdg_xcount != 0) {
+static void vdg_address_add(struct MC6883_private *sam, int n) {
+	uint16_t new_B = sam->vdg_address + n;
+	if ((sam->vdg_address ^ new_B) & 0x10) {
+		sam->vdg_xcount = (sam->vdg_xcount + 1) % sam->vdg_mod_xdiv;
+		if (sam->vdg_xcount != 0) {
 			new_B -= 0x10;
 		} else {
-			if ((vdg_address ^ new_B) & 0x20) {
-				vdg_ycount = (vdg_ycount + 1) % vdg_mod_ydiv;
-				if (vdg_ycount != 0) {
+			if ((sam->vdg_address ^ new_B) & 0x20) {
+				sam->vdg_ycount = (sam->vdg_ycount + 1) % sam->vdg_mod_ydiv;
+				if (sam->vdg_ycount != 0) {
 					new_B -= 0x20;
 				}
 			}
 		}
 	}
-	vdg_address = new_B;
+	sam->vdg_address = new_B;
 }
 
-void sam_vdg_hsync(_Bool level) {
+void sam_vdg_hsync(struct MC6883 *samp, _Bool level) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (level)
 		return;
 	/* The top cleared bit will, if a transition to low occurs, increment
 	 * the bits above it.  This dummy fetch will achieve the same effective
 	 * result. */
-	vdg_address_add(vdg_mod_add);
-	vdg_address &= vdg_mod_clear;
+	vdg_address_add(sam, sam->vdg_mod_add);
+	sam->vdg_address &= sam->vdg_mod_clear;
 }
 
-void sam_vdg_fsync(_Bool level) {
+void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (!level)
 		return;
-	vdg_address = vdg_base;
-	vdg_xcount = 0;
-	vdg_ycount = 0;
+	sam->vdg_address = sam->vdg_base;
+	sam->vdg_xcount = 0;
+	sam->vdg_ycount = 0;
 }
 
 /* Called with the number of bytes of video data required, this implements the
  * divide-by-X and divide-by-Y parts of the SAM video address counter.  Updates
- * 'sam_V' to the base address of available data and returns the actual number
- * of bytes available.  As the next byte may not be sequential, continue
- * calling until all required data is fetched. */
+ * 'V' to the base address of available data and returns the actual number of
+ * bytes available.  As the next byte may not be sequential, continue calling
+ * until all required data is fetched. */
 
-int sam_vdg_bytes(int nbytes) {
-	uint16_t b3_0 = vdg_address & 0xf;
-	sam_V = mpu_rate_fast ? sam_Z : VRAM_TRANSLATE(vdg_address);
+int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	uint16_t b3_0 = sam->vdg_address & 0xf;
+	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(sam->vdg_address);
 	if ((b3_0 + nbytes) < 16) {
-		vdg_address += nbytes;
+		sam->vdg_address += nbytes;
 		return nbytes;
 	}
 	nbytes = 16 - b3_0;
-	vdg_address_add(nbytes);
+	vdg_address_add(sam, nbytes);
 	return nbytes;
 }
 
-void sam_set_register(unsigned int value) {
-	sam_register = value;
-	update_from_register();
+void sam_set_register(struct MC6883 *samp, unsigned int value) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	sam->reg = value;
+	update_from_register(sam);
 }
 
-unsigned int sam_get_register(void) {
-	return sam_register;
+unsigned int sam_get_register(struct MC6883 *samp) {
+	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	return sam->reg;
 }
 
-static void update_from_register(void) {
-	int vdg_mode = sam_register & 7;
-	vdg_base = (sam_register & 0x03f8) << 6;
-	vdg_mod_xdiv = vdg_mod_xdivs[vdg_mode];
-	vdg_mod_ydiv = vdg_mod_ydivs[vdg_mode];
-	vdg_mod_add = vdg_mod_adds[vdg_mode];
-	vdg_mod_clear = vdg_mod_clears[vdg_mode];
+static void update_from_register(struct MC6883_private *sam) {
+	int vdg_mode = sam->reg & 7;
+	sam->vdg_base = (sam->reg & 0x03f8) << 6;
+	sam->vdg_mod_xdiv = vdg_mod_xdivs[vdg_mode];
+	sam->vdg_mod_ydiv = vdg_mod_ydivs[vdg_mode];
+	sam->vdg_mod_add = vdg_mod_adds[vdg_mode];
+	sam->vdg_mod_clear = vdg_mod_clears[vdg_mode];
 
-	int memory_size = (sam_register >> 13) & 3;
-	ram_row_mask = ram_row_masks[memory_size];
-	ram_col_shift = ram_col_shifts[memory_size];
-	ram_col_mask = ram_col_masks[memory_size];
-	ram_ras1_bit = ram_ras1_bits[memory_size];
+	int memory_size = (sam->reg >> 13) & 3;
+	sam->ram_row_mask = ram_row_masks[memory_size];
+	sam->ram_col_shift = ram_col_shifts[memory_size];
+	sam->ram_col_mask = ram_col_masks[memory_size];
+	sam->ram_ras1_bit = ram_ras1_bits[memory_size];
 	switch (memory_size) {
 		case 0: /* 4K */
 		case 1: /* 16K */
-			ram_page_bit = 0;
-			ram_ras1 = 0x8080;
+			sam->ram_page_bit = 0;
+			sam->ram_ras1 = 0x8080;
 			break;
 		default:
 		case 2:
 		case 3: /* 64K */
-			ram_page_bit = (sam_register & 0x0400) << 5;
-			ram_ras1 = 0;
+			sam->ram_page_bit = (sam->reg & 0x0400) << 5;
+			sam->ram_ras1 = 0;
 			break;
 	}
 
-	map_type_1 = ((sam_register & 0x8000) != 0);
-	mpu_rate_fast = sam_register & 0x1000;
-	mpu_rate_ad = !map_type_1 && (sam_register & 0x800);
+	sam->map_type_1 = ((sam->reg & 0x8000) != 0);
+	sam->mpu_rate_fast = sam->reg & 0x1000;
+	sam->mpu_rate_ad = !sam->map_type_1 && (sam->reg & 0x800);
 }

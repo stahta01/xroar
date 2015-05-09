@@ -65,6 +65,7 @@ uint8_t machine_ram[0x10000];
 static uint8_t *machine_rom;
 static uint8_t rom0[0x4000];
 static uint8_t rom1[0x4000];
+struct MC6883 *SAM0 = NULL;
 static struct MC6809 *CPU0 = NULL;
 static struct MC6821 *PIA0, *PIA1;
 static struct MC6847 *VDG0;
@@ -478,13 +479,15 @@ static void pia1b_control_postwrite(void *m) {
 }
 
 void machine_init(void) {
-	sam_init();
-
 	vdrive_init();
 	tape_init();
 }
 
 static void free_devices(void) {
+	if (SAM0) {
+		sam_free(SAM0);
+		SAM0 = NULL;
+	}
 	if (CPU0) {
 		CPU0->free(CPU0);
 		CPU0 = NULL;
@@ -520,7 +523,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 		mc6821_set_cx1(&PIA0->a);
 	else
 		mc6821_reset_cx1(&PIA0->a);
-	sam_vdg_hsync(level);
+	sam_vdg_hsync(SAM0, level);
 }
 
 // PAL CoCos invert HS
@@ -530,7 +533,7 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 		mc6821_reset_cx1(&PIA0->a);
 	else
 		mc6821_set_cx1(&PIA0->a);
-	sam_vdg_hsync(level);
+	sam_vdg_hsync(SAM0, level);
 }
 
 static void vdg_fs(void *sptr, _Bool level) {
@@ -541,7 +544,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 	} else {
 		mc6821_reset_cx1(&PIA0->b);
 	}
-	sam_vdg_fsync(level);
+	sam_vdg_fsync(SAM0, level);
 }
 
 /* Dragon parallel printer line delegate. */
@@ -609,6 +612,8 @@ void machine_configure(struct machine_config *mc) {
 		LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	}
 	free_devices();
+	// SAM
+	SAM0 = sam_new();
 	// CPU
 	switch (mc->cpu) {
 	case CPU_MC6809: default:
@@ -942,7 +947,7 @@ void machine_reset(_Bool hard) {
 	if (machine_cart && machine_cart->reset) {
 		machine_cart->reset(machine_cart);
 	}
-	sam_reset();
+	sam_reset(SAM0);
 	CPU0->reset(CPU0);
 #ifdef TRACE
 	mc6809_trace_reset();
@@ -1050,11 +1055,11 @@ static uint8_t read_D = 0;
 static uint8_t read_byte(unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
-	unsigned D = sam_RAS ? 0xff : read_D;
-	switch (sam_S) {
+	unsigned D = SAM0->RAS ? 0xff : read_D;
+	switch (SAM0->S) {
 	case 0:
-		if (sam_RAS) {
-			unsigned Z = decode_Z(sam_Z);
+		if (SAM0->RAS) {
+			unsigned Z = decode_Z(SAM0->Z);
 			if (Z < machine_ram_size)
 				D = machine_ram[Z];
 		}
@@ -1115,8 +1120,8 @@ static uint8_t read_byte(unsigned A) {
 }
 
 static uint8_t write_byte(unsigned A, unsigned D) {
-	if ((sam_S & 4) || unexpanded_dragon32) {
-		switch (sam_S) {
+	if ((SAM0->S & 4) || unexpanded_dragon32) {
+		switch (SAM0->S) {
 		case 1:
 		case 2:
 			D = machine_rom[A & 0x3fff];
@@ -1153,8 +1158,8 @@ static uint8_t write_byte(unsigned A, unsigned D) {
 			break;
 		}
 	}
-	if (sam_RAS) {
-		unsigned Z = decode_Z(sam_Z);
+	if (SAM0->RAS) {
+		unsigned Z = decode_Z(SAM0->Z);
 		machine_ram[Z] = D;
 	}
 	return D;
@@ -1162,7 +1167,7 @@ static uint8_t write_byte(unsigned A, unsigned D) {
 
 static uint8_t mem_cycle(void *m, _Bool RnW, uint16_t A, uint8_t D) {
 	(void)m;
-	int ncycles = sam_cpu_cycle(RnW, A);
+	int ncycles = sam_cpu_cycle(SAM0, RnW, A);
 	cycles -= ncycles;
 	if (cycles <= 0) CPU0->running = 0;
 	event_current_tick += ncycles;
@@ -1201,9 +1206,9 @@ static uint8_t mem_cycle(void *m, _Bool RnW, uint16_t A, uint8_t D) {
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest) {
 	(void)sptr;
 	while (nbytes > 0) {
-		int n = sam_vdg_bytes(nbytes);
+		int n = sam_vdg_bytes(SAM0, nbytes);
 		if (dest) {
-			uint16_t V = decode_Z(sam_V);
+			uint16_t V = decode_Z(SAM0->V);
 			if (has_ext_charset) {
 				/* omit INV in attrs */
 				for (int i = n; i; i--) {
@@ -1229,14 +1234,14 @@ void machine_toggle_pause(void) {
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
 uint8_t machine_read_byte(unsigned A) {
-	(void)sam_cpu_cycle(1, A);
+	(void)sam_cpu_cycle(SAM0, 1, A);
 	return read_D = read_byte(A);
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 void machine_write_byte(unsigned A, unsigned D) {
-	(void)sam_cpu_cycle(0, A);
+	(void)sam_cpu_cycle(SAM0, 0, A);
 	read_D = write_byte(A, D);
 }
 

@@ -188,7 +188,7 @@ int write_snapshot(const char *filename) {
 	}
 	// SAM
 	write_chunk_header(fd, ID_SAM_REGISTERS, 2);
-	fs_write_uint16(fd, sam_get_register());
+	fs_write_uint16(fd, sam_get_register(SAM0));
 	// Attached virtual disk filenames
 	{
 		for (unsigned drive = 0; drive < VDRIVE_MAX_DRIVES; drive++) {
@@ -464,7 +464,7 @@ int read_snapshot(const char *filename) {
 				if (size < 2) break;
 				tmp = fs_read_uint16(fd);
 				size -= 2;
-				sam_set_register(tmp);
+				sam_set_register(SAM0, tmp);
 				break;
 
 			case ID_SNAPVERSION:

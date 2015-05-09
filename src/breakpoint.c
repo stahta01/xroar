@@ -189,7 +189,7 @@ void bp_wp_remove(unsigned type, unsigned addr, unsigned nbytes, unsigned match_
  * alter the original list. */
 
 static void bp_hook(struct slist *bp_list, unsigned address) {
-	unsigned sam_register = sam_get_register();
+	unsigned sam_register = sam_get_register(SAM0);
 	unsigned cond = sam_register & 0x8400;
 	for (struct slist *iter = bp_list; iter; iter = iter_next) {
 		iter_next = iter->next;

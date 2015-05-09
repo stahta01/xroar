@@ -10,18 +10,22 @@
 
 #define EVENT_SAM_CYCLES(c) (c)
 
-extern unsigned sam_S;
-extern unsigned sam_Z;
-extern unsigned sam_V;
-extern _Bool sam_RAS;
+struct MC6883 {
+	unsigned S;
+	unsigned Z;
+	unsigned V;
+	_Bool RAS;
+};
 
-#define sam_init()
-void sam_reset(void);
-int sam_cpu_cycle(_Bool RnW, unsigned A);
-void sam_vdg_hsync(_Bool level);
-void sam_vdg_fsync(_Bool level);
-int sam_vdg_bytes(int nbytes);
-void sam_set_register(unsigned int value);
-unsigned int sam_get_register(void);
+struct MC6883 *sam_new(void);
+void sam_free(struct MC6883 *);
+
+void sam_reset(struct MC6883 *);
+int sam_cpu_cycle(struct MC6883 *, _Bool RnW, unsigned A);
+void sam_vdg_hsync(struct MC6883 *, _Bool level);
+void sam_vdg_fsync(struct MC6883 *, _Bool level);
+int sam_vdg_bytes(struct MC6883 *, int nbytes);
+void sam_set_register(struct MC6883 *, unsigned int value);
+unsigned int sam_get_register(struct MC6883 *);
 
 #endif  /* XROAR_SAM_H_ */

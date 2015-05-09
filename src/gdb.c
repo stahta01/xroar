@@ -692,7 +692,7 @@ static void general_query(int fd, char *args) {
 			if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
 				LOG_PRINT("gdb: query: xroar.sam\n");
 			}
-			sprintf(packet, "%04x", sam_get_register());
+			sprintf(packet, "%04x", sam_get_register(SAM0));
 			send_packet(fd, packet, 4);
 		} else {
 			if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
@@ -722,7 +722,7 @@ static void general_set(int fd, char *args) {
 	if (0 == strncmp(set, "xroar.", 6)) {
 		set += 6;
 		if (0 == strcmp(set, "sam")) {
-			sam_set_register(hex16(args));
+			sam_set_register(SAM0, hex16(args));
 			send_packet_string(fd, "OK");
 			return;
 		}

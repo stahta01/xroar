@@ -13,6 +13,7 @@
 
 struct slist;
 struct cart;
+struct MC6883;
 struct MC6809;
 struct MC6821;
 
@@ -85,6 +86,7 @@ struct machine_config {
 	_Bool cart_enabled;
 };
 
+extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
 extern struct cart *machine_cart;
