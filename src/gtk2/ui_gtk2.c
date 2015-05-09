@@ -684,11 +684,11 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		break;
 
 	case ui_tag_tape_input_filename:
-		gtk2_input_tape_filename_cb((const char *)value);
+		gtk2_input_tape_filename_cb((const char *)data);
 		break;
 
 	case ui_tag_tape_output_filename:
-		gtk2_output_tape_filename_cb((const char *)value);
+		gtk2_output_tape_filename_cb((const char *)data);
 		break;
 
 	/* Disk */
