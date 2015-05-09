@@ -37,7 +37,6 @@ static struct slist *bp_instruction_list = NULL;
 
 static struct slist *wp_read_list = NULL;
 static struct slist *wp_write_list = NULL;
-static struct slist *wp_access_list = NULL;
 
 static struct slist *iter_next = NULL;
 
@@ -159,7 +158,8 @@ void bp_wp_add(unsigned type, unsigned addr, unsigned nbytes, unsigned match_mas
 		trap_add(&wp_read_list, addr, addr + nbytes - 1, match_mask, match_cond);
 		break;
 	case 4:
-		trap_add(&wp_access_list, addr, addr + nbytes - 1, match_mask, match_cond);
+		trap_add(&wp_write_list, addr, addr + nbytes - 1, match_mask, match_cond);
+		trap_add(&wp_read_list, addr, addr + nbytes - 1, match_mask, match_cond);
 		break;
 	default:
 		break;
@@ -175,7 +175,8 @@ void bp_wp_remove(unsigned type, unsigned addr, unsigned nbytes, unsigned match_
 		trap_remove(&wp_read_list, addr, addr + nbytes - 1, match_mask, match_cond);
 		break;
 	case 4:
-		trap_remove(&wp_access_list, addr, addr + nbytes - 1, match_mask, match_cond);
+		trap_remove(&wp_write_list, addr, addr + nbytes - 1, match_mask, match_cond);
+		trap_remove(&wp_read_list, addr, addr + nbytes - 1, match_mask, match_cond);
 		break;
 	default:
 		break;
@@ -217,13 +218,9 @@ static void bp_instruction_hook(void *sptr) {
 void bp_wp_read_hook(unsigned address) {
 	if (wp_read_list)
 		bp_hook(wp_read_list, address);
-	if (wp_access_list)
-		bp_hook(wp_access_list, address);
 }
 
 void bp_wp_write_hook(unsigned address) {
 	if (wp_read_list)
 		bp_hook(wp_write_list, address);
-	if (wp_access_list)
-		bp_hook(wp_access_list, address);
 }
