@@ -72,7 +72,6 @@ static void select_slot(struct cart *c, unsigned D);
 
 static void mpi_init(struct mpi *m) {
 	struct cart *c = (struct cart *)m;
-	struct cart_config *cc = c->config;
 	cart_rom_init(c);
 	c->read = mpi_read;
 	c->write = mpi_write;
