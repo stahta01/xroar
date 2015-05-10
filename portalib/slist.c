@@ -135,7 +135,7 @@ struct slist *slist_reverse(struct slist *list) {
 static struct slist *slist_merge(struct slist *left, struct slist *right, slist_cmp_func cmp_func) {
 	struct slist *new = NULL;
 	struct slist **newp = &new;
-	while (left || right) {
+	while (1) {
 		if (left && right) {
 			if (cmp_func(left->data, right->data) <= 0) {
 				*newp = left;
@@ -147,9 +147,11 @@ static struct slist *slist_merge(struct slist *left, struct slist *right, slist_
 		} else if (left) {
 			*newp = left;
 			left = left->next;
-		} else {
+		} else if (right) {
 			*newp = right;
 			right = right->next;
+		} else {
+			break;
 		}
 		newp = &(*newp)->next;
 	}
