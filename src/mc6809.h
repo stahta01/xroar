@@ -50,6 +50,7 @@ enum mc6809_state {
 struct MC6809 {
 	/* Interrupt lines */
 	_Bool halt, nmi, firq, irq;
+	uint8_t D;
 
 	/* Methods */
 
@@ -61,7 +62,7 @@ struct MC6809 {
 	/* External handlers */
 
 	/* Memory access cycle */
-	DELEGATE_T3(uint8, bool, uint16, uint8) mem_cycle;
+	DELEGATE_T2(void, bool, uint16) mem_cycle;
 	/* Called just before instruction fetch if non-NULL */
 	DELEGATE_T0(void) instruction_hook;
 	/* Called after instruction is executed */
