@@ -1251,7 +1251,7 @@ void hd6309_trace_byte(uint8_t byte, uint16_t pc) {
 			}
 
 			if (ins_type == INDEXED) {
-				strncpy(operand_text, tmp_text, sizeof(operand_text));
+				snprintf(operand_text, sizeof(operand_text), "%s", tmp_text);
 			} else {
 				snprintf(operand_text, sizeof(operand_text), "#$%02x,%s", im_value, tmp_text);
 			}
