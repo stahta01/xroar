@@ -109,40 +109,24 @@ void sam_reset(struct MC6883 *samp) {
  * clock would be use for this access is written to ncycles.  Returns 1 when
  * the access is to a RAM area, 0 otherwise. */
 
+static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
+static unsigned const rom_S[4] = { 1, 2, 3, 3 };
+
 int sam_cpu_cycle(struct MC6883 *samp, _Bool RnW, unsigned A) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
 	A &= 0xffff;
-	if (A < 0x8000 || (sam->map_type_1 && A < 0xff00)) {
-		samp->Z = RAM_TRANSLATE(A);
-		samp->RAS = 1;
-		fast_cycle = sam->mpu_rate_fast;
-	} else {
-		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
-		samp->RAS = 0;
-	}
-	if (A < 0x8000) {
-		samp->S = RnW ? 0 : 7;
-	} else if (sam->map_type_1 && RnW && A < 0xff00) {
-		samp->S = 0;
-	} else if (A < 0xa000) {
-		samp->S = 1;
-	} else if (A < 0xc000) {
-		samp->S = 2;
-	} else if (A < 0xff00) {
-		samp->S = 3;
-	} else if (A < 0xff20) {
-		samp->S = 4;
-		fast_cycle = sam->mpu_rate_fast;
-	} else if (A < 0xff40) {
-		samp->S = 5;
-	} else if (A < 0xff60) {
-		samp->S = 6;
-	} else if (A < 0xffe0) {
-		samp->S = 7;
-		if (!RnW && A >= 0xffc0) {
-			uint_fast16_t b = 1 << ((A >> 1) & 0x0f);
+	_Bool is_io = (A >> 8) == 0xff;
+	_Bool is_ram = !is_io && (!(A & 0x8000) || sam->map_type_1);
+	_Bool is_rom = !is_io && !is_ram;
+
+	samp->RAS = is_ram;
+	if (is_io) {
+		samp->S = io_S[(A >> 5) & 7];
+		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
+		if (samp->S == 7 && !RnW && A >= 0xffc0) {
+			unsigned b = 1 << ((A >> 1) & 0x0f);
 			if (A & 1) {
 				sam->reg |= b;
 			} else {
@@ -150,34 +134,42 @@ int sam_cpu_cycle(struct MC6883 *samp, _Bool RnW, unsigned A) {
 			}
 			update_from_register(sam);
 		}
+	} else if (is_rom) {
+		samp->S = rom_S[(A >> 13) & 3];
+		fast_cycle = sam->mpu_rate_fast || (!sam->map_type_1 && sam->mpu_rate_ad);
 	} else {
-		samp->S = 2;
+		samp->S = RnW ? 0 : 7;
+		samp->Z = RAM_TRANSLATE(A);
+		fast_cycle = sam->mpu_rate_fast;
 	}
 
-	if (sam->running_fast) {
-		if (fast_cycle) {
-			// Fast cycle, may become un-interleaved
-			ncycles = EVENT_SAM_CYCLES(8);
-			sam->extend_slow_cycle = !sam->extend_slow_cycle;
+	if (!sam->running_fast) {
+		// Last cycle was slow
+		if (!fast_cycle) {
+			// Slow cycle
+			ncycles = EVENT_SAM_CYCLES(16);
 		} else {
-			// Transition fast to slow
-			if (sam->extend_slow_cycle) {
-				// Re-interleave
-				ncycles = EVENT_SAM_CYCLES(25);
-				sam->extend_slow_cycle = 0;
-			} else {
-				ncycles = EVENT_SAM_CYCLES(17);
-			}
-			sam->running_fast = 0;
-		}
-	} else {
-		if (fast_cycle) {
 			// Transition slow to fast
 			ncycles = EVENT_SAM_CYCLES(15);
 			sam->running_fast = 1;
+		}
+	} else {
+		// Last cycle was fast
+		if (!fast_cycle) {
+			// Transition fast to slow
+			if (!sam->extend_slow_cycle) {
+				// Still interleaved
+				ncycles = EVENT_SAM_CYCLES(17);
+			} else {
+				// Re-interleave
+				ncycles = EVENT_SAM_CYCLES(25);
+				sam->extend_slow_cycle = 0;
+			}
+			sam->running_fast = 0;
 		} else {
-			// Slow cycle
-			ncycles = EVENT_SAM_CYCLES(16);
+			// Fast cycle, may become un-interleaved
+			ncycles = EVENT_SAM_CYCLES(8);
+			sam->extend_slow_cycle = !sam->extend_slow_cycle;
 		}
 	}
 
