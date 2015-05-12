@@ -104,7 +104,8 @@ static int next_id = 0;
 static void initialise_ram(void);
 
 static int cycles;
-static void mem_cycle(void *m, _Bool RnW, uint16_t A);
+static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A);
+static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest);
 
 static void machine_instruction_posthook(void *);
@@ -614,6 +615,7 @@ void machine_configure(struct machine_config *mc) {
 	free_devices();
 	// SAM
 	SAM0 = sam_new();
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
 	// CPU
 	switch (mc->cpu) {
 	case CPU_MC6809: default:
@@ -623,7 +625,7 @@ void machine_configure(struct machine_config *mc) {
 		CPU0 = hd6309_new();
 		break;
 	}
-	CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, mem_cycle, NULL);
+	CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, SAM0);
 	// PIAs
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
@@ -1162,14 +1164,13 @@ static uint8_t write_byte(unsigned A) {
 	}
 }
 
-static void mem_cycle(void *m, _Bool RnW, uint16_t A) {
+static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
 	(void)m;
 	// Changing the SAM VDG mode can affect its idea of the current VRAM
 	// address, so get the VDG output up to date:
 	if (!RnW && A >= 0xffc0 && A < 0xffc6) {
 		update_vdg_mode();
 	}
-	int ncycles = sam_cpu_cycle(SAM0, RnW, A);
 	cycles -= ncycles;
 	if (cycles <= 0) CPU0->running = 0;
 	event_current_tick += ncycles;
@@ -1195,6 +1196,16 @@ static void mem_cycle(void *m, _Bool RnW, uint16_t A) {
 	} else {
 		write_byte(A);
 		bp_wp_write_hook(A);
+	}
+}
+
+static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A) {
+	(void)m;
+	(void)ncycles;
+	if (RnW) {
+		read_byte(A);
+	} else {
+		write_byte(A);
 	}
 }
 
@@ -1229,17 +1240,19 @@ void machine_toggle_pause(void) {
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
 uint8_t machine_read_byte(unsigned A) {
-	(void)sam_cpu_cycle(SAM0, 1, A);
-	read_byte(A);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, NULL);
+	sam_mem_cycle(SAM0, 1, A);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
 	return CPU0->D;
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 void machine_write_byte(unsigned A, unsigned D) {
-	(void)sam_cpu_cycle(SAM0, 0, A);
 	CPU0->D = D;
-	write_byte(A);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, NULL);
+	sam_mem_cycle(SAM0, 0, A);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
 }
 
 /* simulate an RTS without otherwise affecting machine state */

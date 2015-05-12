@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include "delegate.h"
+
 #define EVENT_SAM_CYCLES(c) (c)
 
 struct MC6883 {
@@ -15,13 +17,14 @@ struct MC6883 {
 	unsigned Z;
 	unsigned V;
 	_Bool RAS;
+	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 };
 
 struct MC6883 *sam_new(void);
 void sam_free(struct MC6883 *);
 
 void sam_reset(struct MC6883 *);
-int sam_cpu_cycle(struct MC6883 *, _Bool RnW, unsigned A);
+void sam_mem_cycle(void *, _Bool RnW, uint16_t A);
 void sam_vdg_hsync(struct MC6883 *, _Bool level);
 void sam_vdg_fsync(struct MC6883 *, _Bool level);
 int sam_vdg_bytes(struct MC6883 *, int nbytes);

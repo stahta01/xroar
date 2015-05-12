@@ -23,6 +23,7 @@
 
 #include "xalloc.h"
 
+#include "delegate.h"
 #include "sam.h"
 
 /* Constants for tracking VDG address counter */
@@ -79,6 +80,7 @@ static void update_from_register(struct MC6883_private *);
 
 struct MC6883 *sam_new(void) {
 	struct MC6883_private *sam = xzalloc(sizeof(*sam));
+	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	return (struct MC6883 *)sam;
 }
 
@@ -112,11 +114,11 @@ void sam_reset(struct MC6883 *samp) {
 static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static unsigned const rom_S[4] = { 1, 2, 3, 3 };
 
-int sam_cpu_cycle(struct MC6883 *samp, _Bool RnW, unsigned A) {
+void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
-	A &= 0xffff;
 	_Bool is_io = (A >> 8) == 0xff;
 	_Bool is_ram = !is_io && (!(A & 0x8000) || sam->map_type_1);
 	_Bool is_rom = !is_io && !is_ram;
@@ -173,7 +175,7 @@ int sam_cpu_cycle(struct MC6883 *samp, _Bool RnW, unsigned A) {
 		}
 	}
 
-	return ncycles;
+	DELEGATE_CALL3(samp->cpu_cycle, ncycles, RnW, A);
 }
 
 static void vdg_address_add(struct MC6883_private *sam, int n) {
