@@ -41,7 +41,8 @@ typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
 typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
 typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
 typedef DELEGATE_S2(void, uint16_t, uint8_t) DELEGATE_T2(void, uint16, uint8);
-typedef DELEGATE_S3(uint8_t, _Bool, uint16_t, uint8_t) DELEGATE_T3(uint8, bool, uint16, uint8);
+typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
+typedef DELEGATE_S3(void, int, _Bool, uint16_t) DELEGATE_T3(void, int, bool, uint16);
 
 /* Convenience function for declaring anonymous structs. */
 
@@ -79,7 +80,8 @@ DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint8_t *, uint8p);
 DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
 DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
-DELEGATE_DEF_PROTO3(uint8_t, uint8, _Bool, bool, uint16_t, uint16, uint8_t, uint8);
+DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
+DELEGATE_DEF_PROTO3(void, void, int, int, _Bool, bool, uint16_t, uint16);
 
 #define DELEGATE_DEFAULT0(N) DELEGATE_AS0(N, DELEGATE_DEFAULT_F0(N), NULL)
 #define DELEGATE_DEFAULT1(N,N0) DELEGATE_AS1(N, N0, DELEGATE_DEFAULT_F1(N, N0), NULL)
