@@ -107,7 +107,7 @@ struct MC6847_private {
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
-static void do_hs_fall_pal_coco(void *);
+static void do_hs_fall_pal(void *);
 
 static void render_scanline(struct MC6847_private *vdg);
 
@@ -153,19 +153,27 @@ static void do_hs_fall(void *data) {
 	 * interrupt signal during this time, CoCos do.  The positioning and
 	 * duration of each interruption differs also. */
 
-	if (IS_PAL && IS_COCO) {
-		if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 25)) {
-			vdg->pal_padding = 26;
-			vdg->hs_fall_event.delegate.func = do_hs_fall_pal_coco;
-		} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 47)) {
-			vdg->pal_padding = 24;
-			vdg->hs_fall_event.delegate.func = do_hs_fall_pal_coco;
-		}
-	} else if (IS_PAL && IS_DRAGON) {
-		if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
-		    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
+	if (IS_PAL) {
+		if (IS_DRAGON64) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
+			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
 				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
+			}
+		} else if (IS_DRAGON32) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
+			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
+				vdg->pal_padding = 25;
+				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
+			}
+		} else if (IS_COCO) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 25)) {
+				vdg->pal_padding = 26;
+				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
+			} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 47)) {
+				vdg->pal_padding = 24;
+				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
+			}
 		}
 	}
 
@@ -209,7 +217,7 @@ static void do_hs_rise(void *data) {
 	DELEGATE_CALL1(vdg->public.signal_hs, 1);
 }
 
-static void do_hs_fall_pal_coco(void *data) {
+static void do_hs_fall_pal(void *data) {
 	struct MC6847_private *vdg = data;
 	// HS falling edge
 	DELEGATE_CALL1(vdg->public.signal_hs, 0);
