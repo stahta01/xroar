@@ -71,9 +71,10 @@ void bp_add_n(struct breakpoint *bp, int n) {
 			continue;
 		if ((bp[i].add_cond & BP_CRC_BAS) && (!has_bas || !crclist_match(bp[i].cond_crc_bas, crc_bas)))
 			continue;
-		if (!bp[i].handler_data) {
-			bp[i].handler_data = machine_get_cpu(0);
-		}
+		// XXX always overriding the handler data here.  It's never set
+		// to anything else so far, but without this, adding static
+		// breakpoints will not update the CPU pointer.
+		bp[i].handler_data = machine_get_cpu(0);
 		bp_add(&bp[i]);
 	}
 }
