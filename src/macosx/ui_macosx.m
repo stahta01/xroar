@@ -24,6 +24,7 @@
 #include "module.h"
 #include "tape.h"
 #include "ui.h"
+#include "vdisk.h"
 #include "xroar.h"
 #include "sdl/common.h"
 
@@ -671,8 +672,8 @@ static void setup_hardware_menu(void) {
 
 	machine_menu = [[NSMenu alloc] initWithTitle:@"Machine"];
 	item = [[NSMenuItem alloc] initWithTitle:@"Machine" action:nil keyEquivalent:@""];
-	[item setSubmenu:machine_menu]
-	[hardware_menu addItem:item]
+	[item setSubmenu:machine_menu];
+	[hardware_menu addItem:item];
 	[item release];
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
@@ -960,37 +961,19 @@ int main(int argc, char **argv) {
 
 static _Bool init(void);
 static void shutdown(void);
-static void set_state(enum ui_tag tag, int value, void *data);
-/* DEPRECATED */
-static void cross_colour_changed_cb(int cc);
-static void machine_changed_cb(int machine_id);
-static void keymap_changed_cb(int map);
-static void kbd_translate_changed_cb(_Bool kbd_translate);
-static void cart_changed_cb(int cart_id);
-static void fullscreen_changed_cb(_Bool fullscreen);
-static void fast_sound_changed_cb(_Bool fast_sound);
-static void update_drive_write_enable(int drive, _Bool write_enable);
-static void update_drive_write_back(int drive, _Bool write_back);
+static void set_state(enum ui_tag tag, int value, const void *data);
 
 static void update_machine_menu(void);
 static void update_cartridge_menu(void);
 
-UIModule ui_macosx_module = {
+struct ui_module ui_macosx_module = {
 	.common = { .name = "macosx", .description = "Mac OS X SDL UI",
 	            .init = init, .shutdown = shutdown },
 	.video_module_list = sdl_video_module_list,
 	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
-	.fullscreen_changed_cb = fullscreen_changed_cb,
-	.cross_colour_changed_cb = cross_colour_changed_cb,
-	.machine_changed_cb = machine_changed_cb,
-	.keymap_changed_cb = keymap_changed_cb,
-	.kbd_translate_changed_cb = kbd_translate_changed_cb,
-	.fast_sound_changed_cb = fast_sound_changed_cb,
-	.cart_changed_cb = cart_changed_cb,
-	.update_drive_write_enable = update_drive_write_enable,
-	.update_drive_write_back = update_drive_write_back,
+	.set_state = set_state,
 };
 
 static _Bool init(void) {
@@ -1020,7 +1003,8 @@ static void update_machine_menu(void) {
 	NSMenuItem *item;
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	struct slist *iter;
-	[machine_menu removeAllItems];
+	while ([machine_menu numberOfItems] > 0)
+		[machine_menu removeItem:[machine_menu itemAtIndex:0]];
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
@@ -1040,7 +1024,8 @@ static void update_cartridge_menu(void) {
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	struct slist *iter;
-	[cartridge_menu removeAllItems];
+	while ([cartridge_menu numberOfItems] > 0)
+		[cartridge_menu removeItem:[cartridge_menu itemAtIndex:0]];
 	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (machine_cart && cc == machine_cart->config)
@@ -1060,44 +1045,71 @@ static void update_cartridge_menu(void) {
 	slist_free(ccl);
 }
 
-static void set_state(enum ui_tag tag, int value, void *data) {
+static void set_state(enum ui_tag tag, int value, const void *data) {
 
-}
+	switch (tag) {
 
-static void cross_colour_changed_cb(int cc) {
-	current_cc = TAG_CROSS_COLOUR | (cc & TAG_VALUE_MASK);
-}
+	/* Hardware */
 
-static void machine_changed_cb(int machine_id) {
-	current_machine = TAG_MACHINE | (machine_id & TAG_VALUE_MASK);
-}
+	case ui_tag_machine:
+		current_machine = TAG_MACHINE | value;
+		break;
 
-static void keymap_changed_cb(int map) {
-	current_keymap = TAG_KEYMAP | (map & TAG_VALUE_MASK);
-}
+	case ui_tag_cartridge:
+		current_cartridge = TAG_CARTRIDGE | value;
+		break;
 
-static void kbd_translate_changed_cb(_Bool kbd_translate) {
-	is_kbd_translate = kbd_translate;
-}
+	/* Disk */
 
-static void cart_changed_cb(int cart_id) {
-	current_cartridge = TAG_CARTRIDGE | (cart_id & TAG_VALUE_MASK);
-}
+	case ui_tag_disk_data:
+		{
+			const struct vdisk *disk = data;
+			int we = 1, wb = 0;
+			if (disk) {
+				we = !disk->write_protect;
+				wb = disk->write_back;
+			}
+			set_state(ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			set_state(ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+		}
+		break;
 
-static void fullscreen_changed_cb(_Bool fullscreen) {
-	is_fullscreen = fullscreen;
-}
+	case ui_tag_disk_write_enable:
+		disk_write_enable[value] = data ? 1 : 0;
+		break;
 
-static void fast_sound_changed_cb(_Bool fast_sound) {
-	is_fast_sound = fast_sound;
-}
+	case ui_tag_disk_write_back:
+		disk_write_back[value] = data ? 1 : 0;
+		break;
 
-static void update_drive_write_enable(int drive, _Bool write_enable) {
-	if (drive >= 0 && drive <= 3)
-		disk_write_enable[drive] = write_enable;
-}
+	/* Video */
 
-static void update_drive_write_back(int drive, _Bool write_back) {
-	if (drive >= 0 && drive <= 3)
-		disk_write_back[drive] = write_back;
+	case ui_tag_fullscreen:
+		is_fullscreen = value ? 1 : 0;
+		break;
+
+	case ui_tag_cross_colour:
+		current_cc = TAG_CROSS_COLOUR | value;
+		break;
+
+	/* Audio */
+
+	case ui_tag_fast_sound:
+		is_fast_sound = value ? 1 : 0;
+		break;
+
+	/* Keyboard */
+
+	case ui_tag_keymap:
+		current_keymap = TAG_KEYMAP | value;
+		break;
+
+	case ui_tag_kbd_translate:
+		is_kbd_translate = value ? 1 : 0;
+		break;
+
+	default: break;
+
+	}
+
 }
