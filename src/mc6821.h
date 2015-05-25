@@ -27,6 +27,7 @@ struct MC6821_side {
 	uint8_t control_register;
 	uint8_t direction_register;
 	uint8_t output_register;
+	_Bool cx1;
 	_Bool interrupt_received;
 	_Bool irq;
 	struct event irq_event;
@@ -58,8 +59,7 @@ void mc6821_init(struct MC6821 *pia);
 void mc6821_free(struct MC6821 *pia);
 
 void mc6821_reset(struct MC6821 *pia);
-void mc6821_set_cx1(struct MC6821_side *side);
-void mc6821_reset_cx1(struct MC6821_side *side);
+void mc6821_set_cx1(struct MC6821_side *side, _Bool level);
 void mc6821_update_state(struct MC6821 *pia);
 uint8_t mc6821_read(struct MC6821 *pia, uint16_t A);
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D);

@@ -23,6 +23,7 @@
 
 #include "xalloc.h"
 
+#include "delegate.h"
 #include "events.h"
 #include "mc6821.h"
 #include "xroar.h"
@@ -62,36 +63,30 @@ void mc6821_reset(struct MC6821 *pia) {
 	pia->a.direction_register = 0;
 	pia->a.output_register = 0;
 	pia->a.interrupt_received = 0;
+	pia->a.cx1 = 0;
 	pia->a.irq = 0;
 	pia->b.control_register = 0;
 	pia->b.direction_register = 0;
 	pia->b.output_register = 0;
 	pia->b.interrupt_received = 0;
+	pia->b.cx1 = 0;
 	pia->b.irq = 0;
 	mc6821_update_state(pia);
 }
 
 #define PIA_INTERRUPT_ENABLED(s) (s->control_register & 0x01)
-#define PIA_ACTIVE_TRANSITION(s) (s->control_register & 0x02)
 #define PIA_DDR_SELECTED(s)      (!(s->control_register & 0x04))
 #define PIA_PDR_SELECTED(s)      (s->control_register & 0x04)
 
-void mc6821_set_cx1(struct MC6821_side *side) {
-	if (PIA_ACTIVE_TRANSITION(side)) {
+void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
+	if (level == side->cx1)
+		return;
+	side->cx1 = level;
+	_Bool active_high = side->control_register & 2;
+	if (active_high == level) {
+		_Bool irq_enabled = side->control_register & 1;
 		side->interrupt_received = 1;
-		if (PIA_INTERRUPT_ENABLED(side)) {
-			side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-			event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
-		} else {
-			side->irq = 0;
-		}
-	}
-}
-
-void mc6821_reset_cx1(struct MC6821_side *side) {
-	if (!PIA_ACTIVE_TRANSITION(side)) {
-		side->interrupt_received = 1;
-		if (PIA_INTERRUPT_ENABLED(side)) {
+		if (irq_enabled) {
 			side->irq_event.at_tick = event_current_tick + EVENT_US(1);
 			event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
 		} else {

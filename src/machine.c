@@ -520,31 +520,22 @@ void machine_shutdown(void) {
 
 static void vdg_hs(void *sptr, _Bool level) {
 	(void)sptr;
-	if (level)
-		mc6821_set_cx1(&PIA0->a);
-	else
-		mc6821_reset_cx1(&PIA0->a);
+	mc6821_set_cx1(&PIA0->a, level);
 	sam_vdg_hsync(SAM0, level);
 }
 
 // PAL CoCos invert HS
 static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 	(void)sptr;
-	if (level)
-		mc6821_reset_cx1(&PIA0->a);
-	else
-		mc6821_set_cx1(&PIA0->a);
+	mc6821_set_cx1(&PIA0->a, !level);
 	sam_vdg_hsync(SAM0, level);
 }
 
 static void vdg_fs(void *sptr, _Bool level) {
 	(void)sptr;
-	if (level) {
-		mc6821_set_cx1(&PIA0->b);
+	mc6821_set_cx1(&PIA0->b, level);
+	if (level)
 		sound_update();
-	} else {
-		mc6821_reset_cx1(&PIA0->b);
-	}
 	sam_vdg_fsync(SAM0, level);
 }
 
@@ -553,10 +544,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 //ACK is active low
 static void printer_ack(void *sptr, _Bool ack) {
 	(void)sptr;
-	if (ack)
-		mc6821_reset_cx1(&PIA1->a);
-	else
-		mc6821_set_cx1(&PIA1->a);
+	mc6821_set_cx1(&PIA1->a, !ack);
 }
 
 /* Sound output can feed back into the single bit sound pin when it's
@@ -588,10 +576,7 @@ static void update_audio_from_tape(void *sptr, float value) {
 
 static void cart_firq(void *sptr, _Bool level) {
 	(void)sptr;
-	if (level)
-		mc6821_set_cx1(&PIA1->b);
-	else
-		mc6821_reset_cx1(&PIA1->b);
+	mc6821_set_cx1(&PIA1->b, level);
 }
 
 static void cart_nmi(void *sptr, _Bool level) {
