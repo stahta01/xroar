@@ -49,6 +49,8 @@ void mc6821_init(struct MC6821 *pia) {
 
 void mc6821_free(struct MC6821 *pia) {
 	if (pia == NULL) return;
+	event_dequeue(&pia->a.irq_event);
+	event_dequeue(&pia->b.irq_event);
 	free(pia);
 }
 
