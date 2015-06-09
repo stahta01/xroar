@@ -460,8 +460,6 @@ int tape_autorun(const char *filename) {
 		}
 	}
 
-	free(f);
-
 	/* Otherwise, use a simple heuristic: */
 	if (!done) {
 		_Bool need_exec = (type == 2 && f->load_address >= 0x01a9);
@@ -481,6 +479,8 @@ int tape_autorun(const char *filename) {
 				break;
 		}
 	}
+
+	free(f);
 
 	return type;
 }
