@@ -66,6 +66,9 @@ AC_ARG_WITH([gtkgl],
 	AS_HELP_STRING([--without-gtkgl], [don't test for GtkGLExt]) )
 test "x$with_gtk2" = "xno" && with_gtkgl=no
 
+AC_ARG_WITH([sdl2],
+	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
+
 AC_ARG_WITH([sdl],
 	AS_HELP_STRING([--without-sdl], [don't test for SDL]) )
 
@@ -397,13 +400,40 @@ AC_CHECK_HEADER([linux/joystick.h], [have_linux_joystick=1], :)
 AM_CONDITIONAL([LINUX_JOYSTICK], [test -n "$have_linux_joystick"])
 AM_COND_IF([LINUX_JOYSTICK], [AC_DEFINE([HAVE_LINUX_JOYSTICK], 1, [Have linux/joystick.h])])
 
+### SDL2
+
+AS_IF([test "x$with_sdl2" != "xno"], [
+		AM_PATH_SDL2([2.0.0], :) ], :)
+
+unset have_sdl2
+AS_IF([test -n "$SDL_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		CFLAGS="$CFLAGS $SDL_CFLAGS"
+		LIBS="$LIBS $SDL_LIBS"
+		AC_MSG_CHECKING([if SDL2 is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <SDL.h>
+#include <SDL_syswm.h>
+int main(int argc, char **argv) { SDL_Init(0); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_sdl2=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([UI_SDL2], [test -n "$have_sdl2"])
+AM_COND_IF([UI_SDL2], [AC_DEFINE([HAVE_SDL2], 1, [Have SDL2])])
+
 ### SDL
 
-AS_IF([test "x$with_sdl" != "xno"], [
+AS_IF([test -z "$have_sdl2" -a "x$with_sdl" != "xno"], [
 		AM_PATH_SDL([1.2.0], :) ], :)
 
 unset have_sdl
-AS_IF([test -n "$SDL_LIBS"], [
+AS_IF([test -z "$have_sdl2" -a -n "$SDL_LIBS"], [
 		OLD_CFLAGS="$CFLAGS"
 		OLD_LIBS="$LIBS"
 		CFLAGS="$CFLAGS $SDL_CFLAGS"

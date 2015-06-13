@@ -170,7 +170,16 @@ EXTRA_DIST += \
 	$(SED) 's/"/'\''/g;s/^\( *\)/\1"/;s/$$/"/;' $< >> $@
 	echo ";" >> $@
 
-# SDL user interface
+# SDL2 user interface
+
+if UI_SDL2
+
+xroar_CFLAGS += $(SDL_CFLAGS)
+xroar_LDADD += $(SDL_LIBS)
+
+else
+
+# SDL user interface - incompatible with SDL2
 
 if UI_SDL
 xroar_CFLAGS += $(SDL_CFLAGS)
@@ -192,6 +201,8 @@ endif
 
 EXTRA_DIST += \
 	sdl/keyboard_sdl_mappings.c
+
+endif
 
 # Mac OS X special case SDL user interface
 
