@@ -1037,7 +1037,7 @@ static uint16_t decode_Z(unsigned Z) {
 	}
 }
 
-static uint8_t read_byte(unsigned A) {
+static void read_byte(unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
 	if (SAM0->RAS)
@@ -1104,7 +1104,7 @@ static uint8_t read_byte(unsigned A) {
 	}
 }
 
-static uint8_t write_byte(unsigned A) {
+static void write_byte(unsigned A) {
 	if ((SAM0->S & 4) || unexpanded_dragon32) {
 		switch (SAM0->S) {
 		case 1:
