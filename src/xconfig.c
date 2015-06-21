@@ -41,7 +41,7 @@ static struct xconfig_option const *find_option(struct xconfig_option const *opt
 	return NULL;
 }
 
-static int lookup_enum(const char *name, struct xconfig_enum *list) {
+static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_value) {
 	int i;
 	for (i = 0; list[i].name; i++) {
 		if (0 == strcmp(name, list[i].name)) {
@@ -55,7 +55,7 @@ static int lookup_enum(const char *name, struct xconfig_enum *list) {
 		}
 		exit(EXIT_SUCCESS);
 	}
-	return -1;
+	return undef_value;
 }
 
 static void set_option(struct xconfig_option const *option, char *arg) {
@@ -120,7 +120,7 @@ static void set_option(struct xconfig_option const *option, char *arg) {
 				option->dest.func_null();
 			break;
 		case XCONFIG_ENUM: {
-			int val = lookup_enum(arg, (struct xconfig_enum *)option->ref);
+			int val = lookup_enum(arg, (struct xconfig_enum *)option->ref, -1);
 			if (option->call)
 				option->dest.func_int(val);
 			else

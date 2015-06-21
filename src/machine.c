@@ -285,35 +285,35 @@ void machine_config_complete(struct machine_config *mc) {
 }
 
 struct xconfig_enum machine_arch_list[] = {
-	{ .value = ARCH_DRAGON64, .name = "dragon64", .description = "Dragon 64" },
-	{ .value = ARCH_DRAGON32, .name = "dragon32", .description = "Dragon 32" },
-	{ .value = ARCH_COCO, .name = "coco", .description = "Tandy CoCo" },
+	{ XC_ENUM_INT("dragon64", ARCH_DRAGON64, "Dragon 64") },
+	{ XC_ENUM_INT("dragon32", ARCH_DRAGON32, "Dragon 32") },
+	{ XC_ENUM_INT("coco", ARCH_COCO, "Tandy CoCo") },
 	{ XC_ENUM_END() }
 };
 
 struct xconfig_enum machine_keyboard_list[] = {
-	{ .value = dkbd_layout_dragon, .name = "dragon", .description = "Dragon" },
-	{ .value = dkbd_layout_dragon200e, .name = "dragon200e", .description = "Dragon 200-E" },
-	{ .value = dkbd_layout_coco, .name = "coco", .description = "Tandy CoCo" },
+	{ XC_ENUM_INT("dragon", dkbd_layout_dragon, "Dragon") },
+	{ XC_ENUM_INT("dragon200e", dkbd_layout_dragon200e, "Dragon 200-E") },
+	{ XC_ENUM_INT("coco", dkbd_layout_coco, "Tandy CoCo") },
 	{ XC_ENUM_END() }
 };
 
 struct xconfig_enum machine_cpu_list[] = {
-	{ .value = CPU_MC6809, .name = "6809", .description = "Motorola 6809" },
-	{ .value = CPU_HD6309, .name = "6309", .description = "Hitachi 6309 - UNVERIFIED" },
+	{ XC_ENUM_INT("6809", CPU_MC6809, "Motorola 6809") },
+	{ XC_ENUM_INT("6309", CPU_HD6309, "Hitachi 6309 - UNVERIFIED") },
 	{ XC_ENUM_END() }
 };
 
 struct xconfig_enum machine_tv_type_list[] = {
-	{ .value = TV_PAL,  .name = "pal",  .description = "PAL (50Hz)" },
-	{ .value = TV_NTSC, .name = "ntsc", .description = "NTSC (60Hz)" },
-	{ .value = TV_NTSC, .name = "pal-m", .description = "PAL-M (60Hz)" },
+	{ XC_ENUM_INT("pal", TV_PAL, "PAL (50Hz)") },
+	{ XC_ENUM_INT("ntsc", TV_NTSC, "NTSC (60Hz)") },
+	{ XC_ENUM_INT("pal-m", TV_NTSC, "PAL-M (60Hz)") },
 	{ XC_ENUM_END() }
 };
 
 struct xconfig_enum machine_vdg_type_list[] = {
-	{ .value = VDG_6847, .name = "6847", .description = "Original 6847" },
-	{ .value = VDG_6847T1, .name = "6847t1", .description = "6847T1 with lowercase" },
+	{ XC_ENUM_INT("6847", VDG_6847, "Original 6847") },
+	{ XC_ENUM_INT("6847t1", VDG_6847T1, "6847T1 with lowercase") },
 	{ XC_ENUM_END() }
 };
 

@@ -28,6 +28,7 @@
 
 #define XC_OPT_END() .type = XCONFIG_END
 
+#define XC_ENUM_INT(k,v,d) .name = (k), .value = (v), .description = (d)
 #define XC_ENUM_END() .name = NULL
 
 enum xconfig_result {

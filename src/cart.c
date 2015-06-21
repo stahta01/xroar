@@ -188,12 +188,12 @@ struct slist *cart_config_list(void) {
 }
 
 struct xconfig_enum cart_type_list[] = {
-	{ .value = CART_ROM, .name = "rom", .description = "ROM cartridge" },
-	{ .value = CART_DRAGONDOS, .name = "dragondos", .description = "DragonDOS" },
-	{ .value = CART_DELTADOS, .name = "delta", .description = "Delta System" },
-	{ .value = CART_RSDOS, .name = "rsdos", .description = "RS-DOS" },
-	{ .value = CART_ORCH90, .name = "orch90", .description = "Orchestra 90-CC" },
-	{ .value = CART_MPI, .name = "mpi", .description = "Multi-Pak Interface" },
+	{ XC_ENUM_INT("rom", CART_ROM, "ROM cartridge") },
+	{ XC_ENUM_INT("dragondos", CART_DRAGONDOS, "DragonDOS") },
+	{ XC_ENUM_INT("delta", CART_DELTADOS, "Delta System") },
+	{ XC_ENUM_INT("rsdos", CART_RSDOS, "RS-DOS") },
+	{ XC_ENUM_INT("orch90", CART_ORCH90, "Orchestra 90-CC") },
+	{ XC_ENUM_INT("mpi", CART_MPI, "Multi-Pak Interface") },
 	{ XC_ENUM_END() }
 };
 

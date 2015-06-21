@@ -1771,40 +1771,40 @@ static void set_joystick_button(const char *spec) {
 /* Enumeration lists used by configuration directives */
 
 static struct xconfig_enum tape_channel_mode_list[] = {
-	{ .value = tape_channel_mix, .name = "mix", .description = "downmix to mono" },
-	{ .value = tape_channel_left, .name = "left", .description = "left channel only" },
-	{ .value = tape_channel_right, .name = "right", .description = "right channel only" },
+	{ XC_ENUM_INT("mix", tape_channel_mix, "downmix to mono") },
+	{ XC_ENUM_INT("left", tape_channel_left, "left channel only") },
+	{ XC_ENUM_INT("right", tape_channel_right, "right channel only") },
 	{ XC_ENUM_END() }
 };
 
 static struct xconfig_enum gl_filter_list[] = {
-	{ .value = ANY_AUTO, .name = "auto", .description = "Automatic" },
-	{ .value = XROAR_GL_FILTER_NEAREST, .name = "nearest", .description = "Nearest-neighbour filtering" },
-	{ .value = XROAR_GL_FILTER_LINEAR, .name = "linear", .description = "Linear filter" },
+	{ XC_ENUM_INT("auto", ANY_AUTO, "Automatic") },
+	{ XC_ENUM_INT("nearest", ANY_AUTO, "Nearest-neighbour filter") },
+	{ XC_ENUM_INT("linear", ANY_AUTO, "Linear filter") },
 	{ XC_ENUM_END() }
 };
 
 static struct xconfig_enum ccr_list[] = {
-	{ .value = CROSS_COLOUR_SIMPLE, .name = "simple", .description = "four colour palette" },
-	{ .value = CROSS_COLOUR_5BIT, .name = "5bit", .description = "5-bit lookup table" },
+	{ XC_ENUM_INT("simple", CROSS_COLOUR_SIMPLE, "four colour palette") },
+	{ XC_ENUM_INT("5bit", CROSS_COLOUR_5BIT, "5-bit lookup table") },
 	{ XC_ENUM_END() }
 };
 
 struct xconfig_enum xroar_cross_colour_list[] = {
-	{ .value = CROSS_COLOUR_OFF, .name = "none", .description = "None" },
-	{ .value = CROSS_COLOUR_KBRW, .name = "blue-red", .description = "Blue-red" },
-	{ .value = CROSS_COLOUR_KRBW, .name = "red-blue", .description = "Red-blue" },
+	{ XC_ENUM_INT("none", CROSS_COLOUR_OFF, "None") },
+	{ XC_ENUM_INT("blue-red", CROSS_COLOUR_KBRW, "Blue-red") },
+	{ XC_ENUM_INT("red-blue", CROSS_COLOUR_KRBW, "Red-blue") },
 	{ XC_ENUM_END() }
 };
 
 static struct xconfig_enum ao_format_list[] = {
-	{ .value = SOUND_FMT_U8, .name = "u8", .description = "8-bit unsigned" },
-	{ .value = SOUND_FMT_S8, .name = "s8", .description = "8-bit signed" },
-	{ .value = SOUND_FMT_S16_HE, .name = "s16", .description = "16-bit signed host-endian" },
-	{ .value = SOUND_FMT_S16_SE, .name = "s16se", .description = "16-bit signed swapped-endian" },
-	{ .value = SOUND_FMT_S16_BE, .name = "s16be", .description = "16-bit signed big-endian" },
-	{ .value = SOUND_FMT_S16_LE, .name = "s16le", .description = "16-bit signed little-endian" },
-	{ .value = SOUND_FMT_FLOAT, .name = "float", .description = "Floating point" },
+	{ XC_ENUM_INT("u8", SOUND_FMT_U8, "8-bit unsigned") },
+	{ XC_ENUM_INT("s8", SOUND_FMT_S8, "8-bit signed") },
+	{ XC_ENUM_INT("s16", SOUND_FMT_S16_HE, "16-bit signed host-endian") },
+	{ XC_ENUM_INT("s16se", SOUND_FMT_S16_SE, "16-bit signed swapped-endian") },
+	{ XC_ENUM_INT("s16be", SOUND_FMT_S16_BE, "16-bit signed big-endian") },
+	{ XC_ENUM_INT("s16le", SOUND_FMT_S16_LE, "16-bit signed little-endian") },
+	{ XC_ENUM_INT("float", SOUND_FMT_FLOAT, "Floating point") },
 	{ XC_ENUM_END() }
 };
 
