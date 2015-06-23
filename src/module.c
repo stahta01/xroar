@@ -78,7 +78,7 @@ static SoundModule * const default_sound_module_list[] = {
 #ifdef HAVE_PULSE
 	&sound_pulse_module,
 #endif
-#ifdef HAVE_SDL
+#if defined(HAVE_SDL2) || defined(HAVE_SDL)
 	&sound_sdl_module,
 #endif
 #ifdef HAVE_ALSA_AUDIO

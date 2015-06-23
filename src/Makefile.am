@@ -177,6 +177,7 @@ if UI_SDL2
 xroar_CFLAGS += $(SDL_CFLAGS)
 xroar_LDADD += $(SDL_LIBS)
 xroar_SOURCES += \
+	sdl2/ao_sdl2.c \
 	sdl2/common.c sdl2/common.h \
 	sdl2/keyboard_sdl2.c \
 	sdl2/ui_sdl2.c \
