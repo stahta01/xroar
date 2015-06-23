@@ -11,6 +11,7 @@
 /oss/*.o
 /pulseaudio/*.o
 /sdl/*.o
+/sdl2/*.o
 /sunos/*.o
 /windows32/*.o
 /windows32/*.res

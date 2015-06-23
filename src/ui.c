@@ -34,6 +34,12 @@ static struct ui_module * const default_ui_module_list[] = {
 	&ui_gtk2_module,
 #endif
 #endif
+#ifdef HAVE_SDL2
+#ifdef WINDOWS32
+	&ui_windows32_module,
+#endif
+	&ui_sdl_module,
+#endif
 #ifdef HAVE_SDL
 #ifdef HAVE_COCOA
 	&ui_macosx_module,
