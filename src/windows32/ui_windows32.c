@@ -38,14 +38,12 @@ option) any later version.
 #include "vdisk.h"
 #include "xroar.h"
 
-#include "sdl/common.h"
-#include "windows32/common_windows32.h"
-
-#ifdef STRICT
-#define WNDPROCTYPE WNDPROC
+#ifdef HAVE_SDL2
+#include "sdl2/common.h"
 #else
-#define WNDPROCTYPE FARPROC
+#include "sdl/common.h"
 #endif
+#include "windows32/common_windows32.h"
 
 #define TAG(t) (((t) & 0x7f) << 8)
 #define TAGV(t,v) (TAG(t) | ((v) & 0xff))
@@ -77,7 +75,12 @@ static void set_state(enum ui_tag tag, int value, const void *data);
  * will include the SDL options. */
 
 struct ui_module ui_windows32_module = {
-	.common = { .name = "windows32", .description = "Windows SDL UI",
+	.common = { .name = "windows32",
+#ifdef HAVE_SDL2
+		    .description = "Windows SDL2 UI",
+#else
+		    .description = "Windows SDL UI",
+#endif
 	            .init = init, .shutdown = ui_shutdown },
 	.video_module_list = sdl_video_module_list,
 	.joystick_module_list = sdl_js_modlist,
@@ -88,7 +91,7 @@ struct ui_module ui_windows32_module = {
 static HMENU top_menu;
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-static WNDPROCTYPE sdl_window_proc = NULL;
+static WNDPROC sdl_window_proc = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -98,8 +101,6 @@ static void setup_hardware_menu(void);
 static void setup_tool_menu(void);
 
 static _Bool init(void) {
-	if (!getenv("SDL_VIDEODRIVER"))
-		putenv("SDL_VIDEODRIVER=windib");
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
@@ -107,28 +108,11 @@ static _Bool init(void) {
 			return 0;
 		}
 	}
+
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
 		return 0;
 	}
-
-	SDL_version sdlver;
-	SDL_SysWMinfo sdlinfo;
-	SDL_VERSION(&sdlver);
-	sdlinfo.version = sdlver;
-	SDL_GetWMInfo(&sdlinfo);
-	windows32_main_hwnd = sdlinfo.window;
-
-	// Preserve SDL's "windowproc"
-	sdl_window_proc = (WNDPROCTYPE)GetWindowLongPtr(windows32_main_hwnd, GWLP_WNDPROC);
-
-	// Set my own to process wm events.  Without this, the windows menu
-	// blocks and the internal SDL event queue overflows, causing missed
-	// selections.
-	SetWindowLongPtr(windows32_main_hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
-
-	// Explicitly disable SDL processing of these events
-	SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
 
 	top_menu = CreateMenu();
 	setup_file_menu();
@@ -147,10 +131,37 @@ static void ui_shutdown(void) {
 }
 
 void sdl_windows32_update_menu(_Bool fullscreen) {
+	SDL_version sdlver;
+	SDL_SysWMinfo sdlinfo;
+	SDL_VERSION(&sdlver);
+	sdlinfo.version = sdlver;
+#ifdef HAVE_SDL2
+	SDL_GetWindowWMInfo(sdl_window, &sdlinfo);
+	HWND hwnd = sdlinfo.info.win.window;
+#else
+	SDL_GetWMInfo(&sdlinfo);
+	HWND hwnd = sdlinfo.window;
+#endif
+
+	if (windows32_main_hwnd != hwnd) {
+		// Preserve SDL's "windowproc"
+		sdl_window_proc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+
+		// Set my own to process wm events.  Without this, the windows menu
+		// blocks and the internal SDL event queue overflows, causing missed
+		// selections.
+		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
+
+		// Explicitly disable SDL processing of these events
+		SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
+
+		windows32_main_hwnd = hwnd;
+	}
+
 	if (fullscreen) {
-		SetMenu(windows32_main_hwnd, NULL);
+		SetMenu(hwnd, NULL);
 	} else {
-		SetMenu(windows32_main_hwnd, top_menu);
+		SetMenu(hwnd, top_menu);
 	}
 }
 
@@ -309,10 +320,17 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 	case WM_COMMAND:
 		/* Selectively push WM events onto the SDL queue */
+#ifdef HAVE_SDL2
+		wmmsg.msg.win.hwnd = hwnd;
+		wmmsg.msg.win.msg = msg;
+		wmmsg.msg.win.wParam = wParam;
+		wmmsg.msg.win.lParam = lParam;
+#else
 		wmmsg.hwnd = hwnd;
 		wmmsg.msg = msg;
 		wmmsg.wParam = wParam;
 		wmmsg.lParam = lParam;
+#endif
 		event.type = SDL_SYSWMEVENT;
 		event.syswm.msg = &wmmsg;
 		SDL_PushEvent(&event);
@@ -320,7 +338,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 	default:
 		/* Fall back to original SDL handler */
-		return sdl_window_proc(hwnd, msg, wParam, lParam);
+		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	}
 	return 0;
@@ -328,8 +346,13 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 void sdl_windows32_handle_syswmevent(void *data) {
 	SDL_SysWMmsg *wmmsg = data;
+#ifdef HAVE_SDL2
+	int msg = wmmsg->msg.win.msg;
+	int tag = LOWORD(wmmsg->msg.win.wParam);
+#else
 	int msg = wmmsg->msg;
 	int tag = LOWORD(wmmsg->wParam);
+#endif
 	int tag_type = TAG_TYPE(tag);
 	int tag_value = TAG_VALUE(tag);
 

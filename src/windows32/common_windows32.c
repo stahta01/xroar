@@ -27,7 +27,7 @@
 
 #include "windows32/common_windows32.h"
 
-HWND windows32_main_hwnd;
+HWND windows32_main_hwnd = NULL;
 
 int windows32_init(void) {
 	// Windows needs this to do networking
