@@ -74,7 +74,7 @@ static void sdl_js_shutdown(void);
 // If the SDL UI is active, more joystick interfaces are available
 
 static struct joystick_interface *js_iflist[] = {
-	//&sdl_js_if_physical,
+	&sdl_js_if_physical,
 	&sdl_js_if_keyboard,
 	&sdl_js_if_mouse,
 	NULL
@@ -94,7 +94,7 @@ struct joystick_module * const sdl_js_modlist[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_js_shutdown(void) {
-	//sdl_js_physical_shutdown();
+	sdl_js_physical_shutdown();
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
