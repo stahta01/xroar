@@ -16,17 +16,17 @@ extern VideoModule video_sdlgl_module;
 extern VideoModule video_sdlyuv_module;
 extern VideoModule video_sdl_module;
 extern VideoModule video_null_module;
-extern KeyboardModule keyboard_sdl_module;
 
 extern struct joystick_interface sdl_js_if_physical;
 extern struct joystick_interface sdl_js_if_keyboard;
 extern struct joystick_module sdl_js_internal;
 
 extern VideoModule * const sdl_video_module_list[];
-extern KeyboardModule * const sdl_keyboard_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
 void sdl_run(void);
+void sdl_keyboard_init(void);
+void sdl_keyboard_set_translate(_Bool);
 void sdl_keypress(SDL_keysym *keysym);
 void sdl_keyrelease(SDL_keysym *keysym);
 void sdl_js_physical_shutdown(void);

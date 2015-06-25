@@ -26,7 +26,6 @@
 #include <SDL_syswm.h>
 
 #include "events.h"
-#include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6847.h"
@@ -52,7 +51,6 @@ struct ui_module ui_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL UI",
 	            .init = init, .shutdown = shutdown },
 	.video_module_list = sdl_video_module_list,
-	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,
@@ -87,6 +85,8 @@ static _Bool init(void) {
 	}
 #endif
 
+	sdl_keyboard_init();
+
 	return 1;
 }
 
@@ -95,7 +95,12 @@ static void shutdown(void) {
 }
 
 static void set_state(enum ui_tag tag, int value, const void *data) {
-	(void)tag;
-	(void)value;
 	(void)data;
+	switch (tag) {
+	case ui_tag_kbd_translate:
+		sdl_keyboard_set_translate(value);
+		break;
+	default:
+		break;
+	}
 }

@@ -43,15 +43,6 @@
 
 #include "sdl/common.h"
 
-static _Bool init(void);
-static void update_kbd_translate(void);
-
-KeyboardModule keyboard_sdl_module = {
-	.common = { .name = "sdl", .description = "SDL keyboard input",
-	            .init = init },
-	.update_kbd_translate = update_kbd_translate,
-};
-
 struct sym_dkey_mapping {
 	SDLKey sym;
 	int8_t dkey;
@@ -178,7 +169,7 @@ static void map_keyboard(struct keymap *keymap) {
 	}
 }
 
-static _Bool init(void) {
+void sdl_keyboard_init(void) {
 	const char *keymap_option = xroar_cfg.keymap;
 	struct keymap *selected_keymap = &keymaps[0];
 	if (keymap_option) {
@@ -203,12 +194,10 @@ static _Bool init(void) {
 		enabled_axis[i] = NULL;
 	for (unsigned i = 0; i < MAX_BUTTONS; i++)
 		enabled_button[i] = NULL;
-
-	return 1;
 }
 
-static void update_kbd_translate(void) {
-	SDL_EnableUNICODE(xroar_cfg.kbd_translate);
+void sdl_keyboard_set_translate(_Bool enabled) {
+	SDL_EnableUNICODE(enabled ? SDL_TRUE : SDL_FALSE);
 }
 
 static void emulator_command(SDLKey sym) {

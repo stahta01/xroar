@@ -58,11 +58,6 @@ VideoModule * const sdl_video_module_list[] = {
 	NULL
 };
 
-KeyboardModule * const sdl_keyboard_module_list[] = {
-	&keyboard_sdl_module,
-	NULL
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *, unsigned);
