@@ -970,7 +970,6 @@ struct ui_module ui_macosx_module = {
 	.common = { .name = "macosx", .description = "Mac OS X SDL UI",
 	            .init = init, .shutdown = shutdown },
 	.video_module_list = sdl_video_module_list,
-	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,
@@ -991,6 +990,8 @@ static _Bool init(void) {
 
 	update_machine_menu();
 	update_cartridge_menu();
+
+	sdl_keyboard_init();
 
 	return 1;
 }
@@ -1106,6 +1107,7 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 
 	case ui_tag_kbd_translate:
 		is_kbd_translate = value ? 1 : 0;
+		sdl_keyboard_set_translate(is_kbd_translate);
 		break;
 
 	default: break;
