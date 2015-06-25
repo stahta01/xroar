@@ -70,7 +70,6 @@ struct ui_module {
 	FileReqModule * const *filereq_module_list;
 	VideoModule * const *video_module_list;
 	SoundModule * const *sound_module_list;
-	KeyboardModule * const *keyboard_module_list;
 	struct joystick_module * const *joystick_module_list;
 	void (* const run)(void);
 	void (* const set_state)(enum ui_tag, int value, const void *data);

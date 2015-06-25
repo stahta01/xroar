@@ -575,14 +575,10 @@ _Bool xroar_init(int argc, char **argv) {
 		video_module_list = ui_module->video_module_list;
 	if (ui_module->sound_module_list != NULL)
 		sound_module_list = ui_module->sound_module_list;
-	if (ui_module->keyboard_module_list != NULL)
-		keyboard_module_list = ui_module->keyboard_module_list;
 	// Select file requester, video & sound modules
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
 	video_module = (VideoModule *)module_select_by_arg((struct module * const *)video_module_list, private_cfg.vo);
 	sound_module = (SoundModule *)module_select_by_arg((struct module * const *)sound_module_list, private_cfg.ao);
-	// Keyboard & joystick modules
-	keyboard_module = NULL;
 
 	/* Check other command-line options */
 	if (xroar_cfg.frameskip < 0)
@@ -701,10 +697,6 @@ _Bool xroar_init(int argc, char **argv) {
 	if (sound_module == NULL && sound_module_list != NULL) {
 		LOG_ERROR("No sound module initialised.\n");
 		return 0;
-	}
-	keyboard_module = (KeyboardModule *)module_init_from_list((struct module * const *)keyboard_module_list, (struct module *)keyboard_module);
-	if (keyboard_module == NULL && keyboard_module_list != NULL) {
-		LOG_WARN("No keyboard module initialised.\n");
 	}
 	/* ... subsystems */
 	keyboard_init();
@@ -842,7 +834,6 @@ void xroar_shutdown(void) {
 	cart_shutdown();
 	machine_shutdown();
 	xroar_machine_config = NULL;
-	module_shutdown((struct module *)keyboard_module);
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)video_module);
 	module_shutdown((struct module *)filereq_module);
@@ -1317,9 +1308,6 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 		default:
 			xroar_cfg.kbd_translate = kbd_translate;
 			break;
-	}
-	if (keyboard_module->update_kbd_translate) {
-		keyboard_module->update_kbd_translate();
 	}
 	if (notify) {
 		ui_module->set_state(ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);

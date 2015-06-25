@@ -39,22 +39,12 @@ static VideoModule * const null_video_module_list[] = {
 	NULL
 };
 
-static KeyboardModule keyboard_null_module = {
-	.common = { .name = "null", .description = "No keyboard" },
-};
-
-static KeyboardModule * const null_keyboard_module_list[] = {
-	&keyboard_null_module,
-	NULL
-};
-
 static void set_state(enum ui_tag tag, int value, const void *data);
 
 struct ui_module ui_null_module = {
 	.common = { .name = "null", .description = "No UI" },
 	.filereq_module_list = null_filereq_module_list,
 	.video_module_list = null_video_module_list,
-	.keyboard_module_list = null_keyboard_module_list,
 	.set_state = set_state,
 };
 

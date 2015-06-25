@@ -105,8 +105,6 @@ VideoModule * const *video_module_list = default_video_module_list;
 VideoModule *video_module = NULL;
 SoundModule * const *sound_module_list = default_sound_module_list;
 SoundModule *sound_module = NULL;
-KeyboardModule * const *keyboard_module_list = NULL;
-KeyboardModule *keyboard_module = NULL;
 
 void module_print_list(struct module * const *list) {
 	int i;

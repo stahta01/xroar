@@ -45,19 +45,12 @@ typedef struct {
 	void *(* const write_buffer)(void *buffer);
 } SoundModule;
 
-typedef struct {
-	struct module common;
-	void (* const update_kbd_translate)(void);
-} KeyboardModule;
-
 extern FileReqModule * const *filereq_module_list;
 extern FileReqModule *filereq_module;
 extern VideoModule * const *video_module_list;
 extern VideoModule *video_module;
 extern SoundModule * const *sound_module_list;
 extern SoundModule *sound_module;
-extern KeyboardModule * const *keyboard_module_list;
-extern KeyboardModule *keyboard_module;
 
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);
