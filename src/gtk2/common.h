@@ -8,6 +8,7 @@
 
 #include <gtk/gtk.h>
 
+void gtk2_keyboard_init(void);
 gboolean gtk2_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
 
 #endif  /* XROAR_GTK2_COMMON_H_ */

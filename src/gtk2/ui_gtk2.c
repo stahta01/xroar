@@ -43,6 +43,7 @@
 #include "vdrive.h"
 #include "xroar.h"
 
+#include "gtk2/common.h"
 #include "gtk2/drivecontrol.h"
 #include "gtk2/tapecontrol.h"
 #include "gtk2/ui_gtk2.h"
@@ -63,12 +64,6 @@ static VideoModule * const gtk2_video_module_list[] = {
 	&video_gtkgl_module,
 #endif
 	&video_null_module,
-	NULL
-};
-
-extern KeyboardModule keyboard_gtk2_module;
-static KeyboardModule * const gtk2_keyboard_module_list[] = {
-	&keyboard_gtk2_module,
 	NULL
 };
 
@@ -118,7 +113,6 @@ struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+-2 UI",
 	            .init = init, .shutdown = shutdown },
 	.video_module_list = gtk2_video_module_list,
-	.keyboard_module_list = gtk2_keyboard_module_list,
 	.joystick_module_list = gtk2_js_modlist,
 	.run = run,
 	.set_state = set_state,
@@ -641,6 +635,8 @@ static _Bool init(void) {
 
 	/* Create (hidden) tape control window */
 	gtk2_create_tc_window();
+
+	gtk2_keyboard_init();
 
 	return 1;
 }

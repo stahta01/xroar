@@ -42,14 +42,6 @@
 
 #include "gtk2/ui_gtk2.h"
 
-static _Bool init(void);
-static void shutdown(void);
-
-KeyboardModule keyboard_gtk2_module = {
-	.common = { .name = "gtk2", .description = "GTK+-2 keyboard input",
-	            .init = init, .shutdown = shutdown }
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *, unsigned);
@@ -226,7 +218,7 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	return FALSE;
 }
 
-static _Bool init(void) {
+void gtk2_keyboard_init(void) {
 	const char *keymap_option = xroar_cfg.keymap;
 	struct keymap *selected_keymap = &keymaps[0];
 	if (keymap_option) {
@@ -251,7 +243,6 @@ static _Bool init(void) {
 	/* Connect GTK key press/release signals to handlers */
 	g_signal_connect(G_OBJECT(gtk2_top_window), "key-press-event", G_CALLBACK(keypress), NULL);
 	g_signal_connect(G_OBJECT(gtk2_top_window), "key-release-event", G_CALLBACK(keyrelease), NULL);
-	return 1;
 }
 
 static void shutdown(void) {
