@@ -80,7 +80,6 @@ struct ui_module ui_windows32_module = {
 	.common = { .name = "windows32", .description = "Windows SDL UI",
 	            .init = init, .shutdown = ui_shutdown },
 	.video_module_list = sdl_video_module_list,
-	.keyboard_module_list = sdl_keyboard_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,
@@ -136,6 +135,8 @@ static _Bool init(void) {
 	setup_view_menu();
 	setup_hardware_menu();
 	setup_tool_menu();
+
+	sdl_keyboard_init();
 
 	return 1;
 }
@@ -472,7 +473,6 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 	case ui_tag_fullscreen:
 	case ui_tag_vdg_inverse:
 	case ui_tag_fast_sound:
-	case ui_tag_kbd_translate:
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
@@ -529,6 +529,11 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 
 	case ui_tag_keymap:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (NUM_KEYMAPS - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	case ui_tag_kbd_translate:
+		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		sdl_keyboard_set_translate(value);
 		break;
 
 	/* Joysticks */
