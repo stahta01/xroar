@@ -47,6 +47,15 @@ FileReqModule filereq_windows32_module = {
 
 static char *filename = NULL;
 
+static const char *lpstrFilter =
+	"All\0"             "*.*\0"
+	"Binary files\0"    "*.BIN;*.HEX\0"
+	"Cassette images\0" "*.ASC;*.BAS;*.CAS;*.WAV\0"
+	"Cartridges\0"      "*.ROM;*.CCC\0"
+	"Disk images\0"     "*.DMK;*.DSK;*.JVC;*.OS9;*.VDK\0"
+	"Snapshots\0"       "*.SNA\0"
+	;
+
 static char *load_filename(char const * const *extensions) {
 	OPENFILENAME ofn;
 	char fn_buf[260];
@@ -63,7 +72,7 @@ static char *load_filename(char const * const *extensions) {
 	ofn.lpstrFile = fn_buf;
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = sizeof(fn_buf);
-	ofn.lpstrFilter = "All\0*.*\0Snapshots\0*.SNA\0Cassette images\0*.CAS\0Virtual discs\0*.VDK;*.DSK;*.DMK;*.JVC\0";
+	ofn.lpstrFilter = lpstrFilter;
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
@@ -98,7 +107,7 @@ static char *save_filename(char const * const *extensions) {
 	ofn.lpstrFile = fn_buf;
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = sizeof(fn_buf);
-	ofn.lpstrFilter = "All\0*.*\0Snapshots\0*.SNA\0Cassette images\0*.CAS\0Virtual discs\0*.VDK;*.DSK;*.DMK;*.JVC\0";
+	ofn.lpstrFilter = lpstrFilter;
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;
