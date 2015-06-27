@@ -66,6 +66,7 @@ typedef uint16_t Pixel;
 #define VIDEO_MODULE_NAME video_sdl_module
 
 SDL_Window *sdl_window = NULL;
+Uint32 sdl_windowID = 0;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
 static uint16_t *pixels = NULL;
@@ -128,6 +129,7 @@ static int set_fullscreen(_Bool fullscreen) {
 		LOG_ERROR("Failed to create window\n");
 		return -1;
 	}
+	sdl_windowID = SDL_GetWindowID(sdl_window);
 	if (!fullscreen) {
 		SDL_SetWindowMinimumSize(sdl_window, 160, 120);
 	}
