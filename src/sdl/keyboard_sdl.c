@@ -283,6 +283,12 @@ static void emulator_command(SDLKey sym) {
 	case SDLK_z: /* running out of letters... */
 		xroar_set_kbd_translate(1, XROAR_TOGGLE);
 		break;
+	case SDLK_MINUS:
+		sdl_zoom_out();
+		break;
+	case SDLK_EQUALS:
+		sdl_zoom_in();
+		break;
 	default:
 		break;
 	}
