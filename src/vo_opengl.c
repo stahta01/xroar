@@ -132,12 +132,12 @@ void vo_opengl_set_window_size(unsigned w, unsigned h) {
 
 	if (((float)window_width/(float)window_height)>(4.0/3.0)) {
 		vo_opengl_h = window_height;
-		vo_opengl_w = ((float)vo_opengl_h/3.0)*4;
+		vo_opengl_w = (((float)vo_opengl_h/3.0)*4.0) + 0.5;
 		vo_opengl_x = (window_width - vo_opengl_w) / 2;
 		vo_opengl_y = 0;
 	} else {
 		vo_opengl_w = window_width;
-		vo_opengl_h = ((float)vo_opengl_w/4.0)*3;
+		vo_opengl_h = (((float)vo_opengl_w/4.0)*3.0) + 0.5;
 		vo_opengl_x = 0;
 		vo_opengl_y = (window_height - vo_opengl_h)/2;
 	}
