@@ -94,8 +94,11 @@ static int set_fullscreen(_Bool fullscreen) {
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
-	if (fullscreen != video_sdlgl_module.is_fullscreen)
-		sdl_windows32_update_menu(fullscreen);
+	/* Remove menubar if transitioning from windowed to fullscreen. */
+
+	if (screen && !video_sdlgl_module.is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(screen);
+	}
 #endif
 
 	if (fullscreen) {
@@ -113,11 +116,38 @@ static int set_fullscreen(_Bool fullscreen) {
 		LOG_ERROR("Failed to initialise display\n");
 		return 1;
 	}
+
+#ifdef WINDOWS32
+	sdl_windows32_set_events_window(screen);
+
+	/* Add menubar if transitioning from fullscreen to windowed. */
+
+	if (video_sdlgl_module.is_fullscreen && !fullscreen) {
+		sdl_windows32_add_menu(screen);
+
+		/* Adding the menubar will resize the *client area*, i.e., the
+		 * bit SDL wants to render into. A specified geometry in this
+		 * case should apply to the client area, so we need to resize
+		 * again to account for this. */
+
+		screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_OPENGL|SDL_RESIZABLE);
+
+		/* Now purge any resize events this all generated from the
+		 * event queue. Don't want to end up in a resize loop! */
+
+		SDL_PumpEvents();
+		SDL_Event dummy;
+		while (SDL_PeepEvents(&dummy, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_VIDEORESIZE)) > 0);
+	}
+#endif
+
 	SDL_WM_SetCaption("XRoar", "XRoar");
+
 	if (fullscreen)
 		SDL_ShowCursor(SDL_DISABLE);
 	else
 		SDL_ShowCursor(SDL_ENABLE);
+
 	video_sdlgl_module.is_fullscreen = fullscreen;
 
 	vo_opengl_set_window_size(want_width, want_height);

@@ -130,41 +130,6 @@ static void ui_shutdown(void) {
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
-void sdl_windows32_update_menu(_Bool fullscreen) {
-	SDL_version sdlver;
-	SDL_SysWMinfo sdlinfo;
-	SDL_VERSION(&sdlver);
-	sdlinfo.version = sdlver;
-#ifdef HAVE_SDL2
-	SDL_GetWindowWMInfo(sdl_window, &sdlinfo);
-	HWND hwnd = sdlinfo.info.win.window;
-#else
-	SDL_GetWMInfo(&sdlinfo);
-	HWND hwnd = sdlinfo.window;
-#endif
-
-	if (windows32_main_hwnd != hwnd) {
-		// Preserve SDL's "windowproc"
-		sdl_window_proc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-
-		// Set my own to process wm events.  Without this, the windows menu
-		// blocks and the internal SDL event queue overflows, causing missed
-		// selections.
-		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
-
-		// Explicitly disable SDL processing of these events
-		SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
-
-		windows32_main_hwnd = hwnd;
-	}
-
-	if (fullscreen) {
-		SetMenu(hwnd, NULL);
-	} else {
-		SetMenu(hwnd, top_menu);
-	}
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void setup_file_menu(void) {
@@ -311,38 +276,6 @@ static void setup_tool_menu(void) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	SDL_Event event;
-	SDL_SysWMmsg wmmsg;
-
-	switch (msg) {
-
-	case WM_COMMAND:
-		/* Selectively push WM events onto the SDL queue */
-#ifdef HAVE_SDL2
-		wmmsg.msg.win.hwnd = hwnd;
-		wmmsg.msg.win.msg = msg;
-		wmmsg.msg.win.wParam = wParam;
-		wmmsg.msg.win.lParam = lParam;
-#else
-		wmmsg.hwnd = hwnd;
-		wmmsg.msg = msg;
-		wmmsg.wParam = wParam;
-		wmmsg.lParam = lParam;
-#endif
-		event.type = SDL_SYSWMEVENT;
-		event.syswm.msg = &wmmsg;
-		SDL_PushEvent(&event);
-		break;
-
-	default:
-		/* Fall back to original SDL handler */
-		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
-
-	}
-	return 0;
-}
 
 void sdl_windows32_handle_syswmevent(void *data) {
 	SDL_SysWMmsg *wmmsg = data;
@@ -582,4 +515,98 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 
 	}
 
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* SDL integration.  The SDL and SDL2 video modules call out to these when
+ * WINDOWS32 is defined to add and remove the menu bar.  Note that SDL 1.2 only
+ * handles one window, so the SDL_Window type is faked, and arguments of that
+ * type are not used. */
+
+/* Get underlying window handle from SDL. */
+
+static HWND get_hwnd(SDL_Window *w) {
+	SDL_version sdlver;
+	SDL_SysWMinfo sdlinfo;
+	SDL_VERSION(&sdlver);
+	sdlinfo.version = sdlver;
+#ifdef HAVE_SDL2
+	SDL_GetWindowWMInfo(w, &sdlinfo);
+	return sdlinfo.info.win.window;
+#else
+	SDL_GetWMInfo(&sdlinfo);
+	return sdlinfo.window;
+#endif
+}
+
+/* Custom window event handler to intercept menu selections. */
+
+static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	SDL_Event event;
+	SDL_SysWMmsg wmmsg;
+
+	switch (msg) {
+
+	case WM_COMMAND:
+		/* Selectively push WM events onto the SDL queue */
+#ifdef HAVE_SDL2
+		wmmsg.msg.win.hwnd = hwnd;
+		wmmsg.msg.win.msg = msg;
+		wmmsg.msg.win.wParam = wParam;
+		wmmsg.msg.win.lParam = lParam;
+#else
+		wmmsg.hwnd = hwnd;
+		wmmsg.msg = msg;
+		wmmsg.wParam = wParam;
+		wmmsg.lParam = lParam;
+#endif
+		event.type = SDL_SYSWMEVENT;
+		event.syswm.msg = &wmmsg;
+		SDL_PushEvent(&event);
+		break;
+
+	default:
+		/* Fall back to original SDL handler */
+		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
+
+	}
+	return 0;
+}
+
+/* Set up custom event handler to receive menu selection events. While the menu
+ * is being navigated, the main application is blocked, and SDL quickly runs
+ * out of space in its event queue. Without this handler, the ultimate menu
+ * option selection is often missed. */
+
+void sdl_windows32_set_events_window(SDL_Window *sw) {
+	HWND hwnd = get_hwnd(sw);
+	WNDPROC old_window_proc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+	if (old_window_proc != window_proc) {
+		// Preserve SDL's "windowproc"
+		sdl_window_proc = old_window_proc;
+		// Set my own to process wm events.  Without this, the windows menu
+		// blocks and the internal SDL event queue overflows, causing missed
+		// selections.
+		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
+		// Explicitly disable SDL processing of these events
+		SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
+	}
+	windows32_main_hwnd = hwnd;
+}
+
+/* Add menubar to window. This will reduce the size of the client area while
+ * leaving the window size the same, so the video module should then resize
+ * itself to account for this. */
+
+void sdl_windows32_add_menu(SDL_Window *sw) {
+	HWND hwnd = get_hwnd(sw);
+	SetMenu(hwnd, top_menu);
+}
+
+/* Remove menubar from window. */
+
+void sdl_windows32_remove_menu(SDL_Window *sw) {
+	HWND hwnd = get_hwnd(sw);
+	SetMenu(hwnd, NULL);
 }

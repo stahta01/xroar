@@ -111,9 +111,10 @@ static int set_fullscreen(_Bool fullscreen) {
 	int err;
 
 #ifdef WINDOWS32
-	if (fullscreen && !video_sdl_module.is_fullscreen) {
-		// remove menu from old window
-		sdl_windows32_update_menu(1);
+	/* Remove menubar if transitioning from windowed to fullscreen. */
+
+	if (sdl_window && !video_sdl_module.is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(sdl_window);
 	}
 #endif
 
@@ -135,14 +136,24 @@ static int set_fullscreen(_Bool fullscreen) {
 	}
 
 #ifdef WINDOWS32
-	if (fullscreen != video_sdl_module.is_fullscreen) {
-		sdl_windows32_update_menu(fullscreen);
-		if (!fullscreen) {
-			// Adding menubar changes the size, so change it back
-			SDL_SetWindowSize(sdl_window, window_w, window_h);
-			// And ditch the resize event
-			SDL_FlushEvent(SDL_WINDOWEVENT);
-		}
+	sdl_windows32_set_events_window(sdl_window);
+
+	/* Add menubar if transitioning from fullscreen to windowed. */
+
+	if (video_sdl_module.is_fullscreen && !fullscreen) {
+		sdl_windows32_add_menu(sdl_window);
+
+		/* Adding the menubar will resize the *client area*, i.e., the
+		 * bit SDL wants to render into. A specified geometry in this
+		 * case should apply to the client area, so we need to resize
+		 * again to account for this. */
+
+		SDL_SetWindowSize(sdl_window, window_w, window_h);
+
+		/* Now purge any resize events this all generated from the
+		 * event queue. Don't want to end up in a resize loop! */
+
+		SDL_FlushEvent(SDL_WINDOWEVENT);
 	}
 #endif
 

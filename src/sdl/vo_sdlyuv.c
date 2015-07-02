@@ -82,7 +82,6 @@ static Uint32 overlay_format;
 
 static _Bool init(void) {
 	const SDL_VideoInfo *video_info;
-	int i;
 
 	video_info = SDL_GetVideoInfo();
 	screen_width = video_info->current_w;
@@ -93,8 +92,10 @@ static _Bool init(void) {
 
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
+
+	overlay = NULL;
 	Uint32 first_successful_format = 0;
-	for (i = 0; i < NUM_OVERLAY_FORMATS; i++) {
+	for (int i = 0; i < NUM_OVERLAY_FORMATS; i++) {
 		overlay_format = try_overlay_format[i];
 		overlay = SDL_CreateYUVOverlay(640, 240, overlay_format, screen);
 		if (!overlay) {
@@ -121,6 +122,7 @@ static _Bool init(void) {
 	if (overlay->hw_overlay != 1) {
 		LOG_WARN("Warning: SDL overlay is not hardware accelerated\n");
 	}
+
 	alloc_colours();
 	video_module->scanline = 0;
 	video_module->window_x = VDG_ACTIVE_LINE_START - 32;
@@ -175,8 +177,11 @@ static int set_fullscreen(_Bool fullscreen) {
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
-	if (fullscreen != video_sdlyuv_module.is_fullscreen)
-		sdl_windows32_update_menu(fullscreen);
+	/* Remove menubar if transitioning from windowed to fullscreen. */
+
+	if (screen && !video_sdlyuv_module.is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(screen);
+	}
 #endif
 
 	if (fullscreen) {
@@ -194,11 +199,38 @@ static int set_fullscreen(_Bool fullscreen) {
 		LOG_ERROR("Failed to allocate SDL surface for display\n");
 		return 1;
 	}
+
+#ifdef WINDOWS32
+	sdl_windows32_set_events_window(screen);
+
+	/* Add menubar if transitioning from fullscreen to windowed. */
+
+	if (video_sdlyuv_module.is_fullscreen && !fullscreen) {
+		sdl_windows32_add_menu(screen);
+
+		/* Adding the menubar will resize the *client area*, i.e., the
+		 * bit SDL wants to render into. A specified geometry in this
+		 * case should apply to the client area, so we need to resize
+		 * again to account for this. */
+
+		screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_HWSURFACE|SDL_ANYFORMAT|SDL_RESIZABLE);
+
+		/* Now purge any resize events this all generated from the
+		 * event queue. Don't want to end up in a resize loop! */
+
+		SDL_PumpEvents();
+		SDL_Event dummy;
+		while (SDL_PeepEvents(&dummy, 1, SDL_GETEVENT, SDL_EVENTMASK(SDL_VIDEORESIZE)) > 0);
+	}
+#endif
+
 	SDL_WM_SetCaption("XRoar", "XRoar");
+
 	if (fullscreen)
 		SDL_ShowCursor(SDL_DISABLE);
 	else
 		SDL_ShowCursor(SDL_ENABLE);
+
 	video_sdlyuv_module.is_fullscreen = fullscreen;
 
 	memcpy(&dstrect, &screen->clip_rect, sizeof(SDL_Rect));
@@ -217,6 +249,7 @@ static int set_fullscreen(_Bool fullscreen) {
 	sdl_window_y = dstrect.y;
 	sdl_window_w = dstrect.w;
 	sdl_window_h = dstrect.h;
+
 	return 0;
 }
 

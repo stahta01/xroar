@@ -96,31 +96,63 @@ static void shutdown(void) {
 }
 
 static int set_fullscreen(_Bool fullscreen) {
+
 #ifdef WINDOWS32
-	if (fullscreen != video_sdl_module.is_fullscreen)
-		sdl_windows32_update_menu(fullscreen);
+	/* Remove menubar if transitioning from windowed to fullscreen. */
+
+	if (screen && !video_sdl_module.is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(screen);
+	}
 #endif
-	screen = SDL_SetVideoMode(320, 240, 8, SDL_HWSURFACE|(fullscreen?SDL_FULLSCREEN:0));
+
+	screen = SDL_SetVideoMode(320, 240, 8, SDL_SWSURFACE|(fullscreen?SDL_FULLSCREEN:0));
 	if (screen == NULL) {
 		LOG_ERROR("Failed to allocate SDL surface for display\n");
 		return 1;
 	}
+
+#ifdef WINDOWS32
+	sdl_windows32_set_events_window(screen);
+
+	/* Add menubar if transitioning from fullscreen to windowed. */
+
+	if (video_sdl_module.is_fullscreen && !fullscreen) {
+		sdl_windows32_add_menu(screen);
+
+		/* Adding the menubar will resize the *client area*, i.e., the
+		 * bit SDL wants to render into. A specified geometry in this
+		 * case should apply to the client area, so we need to resize
+		 * again to account for this. */
+
+		screen = SDL_SetVideoMode(320, 240, 8, SDL_SWSURFACE);
+
+		/* No need to purge resize events in SDL module - window is not
+		 * resizable anyway, so we don't handle them. */
+	}
+#endif
+
+
 	SDL_WM_SetCaption("XRoar", "XRoar");
+
+	if (fullscreen)
+		SDL_ShowCursor(SDL_DISABLE);
+	else
+		SDL_ShowCursor(SDL_ENABLE);
+
+	video_sdl_module.is_fullscreen = fullscreen;
+
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	alloc_colours();
 	video_module->scanline = 0;
 	video_module->window_x = VDG_ACTIVE_LINE_START - 32;
 	video_module->window_y = VDG_TOP_BORDER_START + 1;
 	video_module->window_w = 320;
 	video_module->window_h = 240;
-	if (fullscreen)
-		SDL_ShowCursor(SDL_DISABLE);
-	else
-		SDL_ShowCursor(SDL_ENABLE);
-	video_sdl_module.is_fullscreen = fullscreen;
 	sdl_window_x = sdl_window_y = 0;
 	sdl_window_w = 320;
 	sdl_window_h = 240;
+
+	alloc_colours();
+
 	return 0;
 }
 

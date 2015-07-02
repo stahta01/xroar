@@ -34,7 +34,15 @@ void sdl_js_physical_shutdown(void);
 void sdl_zoom_in(void);
 void sdl_zoom_out(void);
 
-void sdl_windows32_update_menu(_Bool fullscreen);
+#ifdef WINDOWS32
+
+/* These functions will be in the windows32-specific code. */
+
 void sdl_windows32_handle_syswmevent(void *data);
+void sdl_windows32_set_events_window(SDL_Window *sw);
+void sdl_windows32_add_menu(SDL_Window *sw);
+void sdl_windows32_remove_menu(SDL_Window *sw);
+
+#endif
 
 #endif  /* XROAR_SDL2_COMMON_H_ */
