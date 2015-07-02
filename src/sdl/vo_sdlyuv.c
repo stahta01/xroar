@@ -203,13 +203,13 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	memcpy(&dstrect, &screen->clip_rect, sizeof(SDL_Rect));
 	if (((float)screen->w/(float)screen->h)>(4.0/3.0)) {
-		dstrect.w = ((float)screen->h/3.0)*4;
+		dstrect.w = (((float)screen->h/3.0)*4.0) + 0.5;
 		dstrect.h = screen->h;
 		dstrect.x = (screen->w - dstrect.w)/2;
 		dstrect.y = 0;
 	} else {
 		dstrect.w = screen->w;
-		dstrect.h = ((float)screen->w/4.0)*3;
+		dstrect.h = (((float)screen->w/4.0)*3.0) + 0.5;
 		dstrect.x = 0;
 		dstrect.y = (screen->h - dstrect.h)/2;
 	}
