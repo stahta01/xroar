@@ -170,6 +170,34 @@ int main(int argc, char **argv) { (void)crc32(0L, NULL, 0); (void)gzopen("", "")
 AM_CONDITIONAL([ZLIB], [test -n "$have_zlib"])
 AM_COND_IF([ZLIB], [AC_DEFINE([HAVE_ZLIB], 1, [Have zlib])])
 
+### X11
+
+AS_IF([test "x$with_x11" != "xno"], [
+		AC_CHECK_LIB([X11], [XKeysymToKeycode], [X11_LIBS="-lX11"])
+		])
+
+unset have_xlib
+AS_IF([test -n "$X11_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		CFLAGS="$CFLAGS $X11_CFLAGS"
+		LIBS="$LIBS $X11_LIBS"
+		AC_MSG_CHECKING([if xlib is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <stdlib.h>
+#include <X11/keysym.h>
+int main(int argc, char **argv) { (void)XKeysymToKeycode(NULL, 0); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_xlib=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([X11], [test -n "$have_xlib"])
+AM_COND_IF([X11], [AC_DEFINE([HAVE_X11], 1, [Have xlib])])
+
 ### POSIX threads
 
 AS_IF([test "x$with_pthreads" != "xno"], [
