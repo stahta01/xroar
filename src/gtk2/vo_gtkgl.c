@@ -50,6 +50,7 @@ VideoModule video_gtkgl_module = {
 	.update_cross_colour_phase = vo_opengl_update_cross_colour_phase,
 };
 
+static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 
@@ -74,6 +75,7 @@ static _Bool init(void) {
 		return 0;
 	}
 
+	g_signal_connect(gtk2_top_window, "window-state-event", G_CALLBACK(window_state), NULL);
 	g_signal_connect(gtk2_drawing_area, "configure-event", G_CALLBACK(configure), NULL);
 
 	/* Show top window first so that drawing area is realised to the
@@ -103,7 +105,7 @@ static void resize(unsigned int w, unsigned int h) {
 		return;
 	}
 	/* You can't just set the widget size and expect GTK to adapt the
-	 * containing window, * or indeed ask it to.  This will hopefully work
+	 * containing window, or indeed ask it to.  This will hopefully work
 	 * consistently.  It seems to be basically how GIMP "shrink wrap"s its
 	 * windows.  */
 	gint oldw = gtk2_top_window->allocation.width;
@@ -118,13 +120,25 @@ static void resize(unsigned int w, unsigned int h) {
 static int set_fullscreen(_Bool fullscreen) {
 	(void)fullscreen;
 	if (fullscreen) {
-		gtk_widget_hide(gtk2_menubar);
 		gtk_window_fullscreen(GTK_WINDOW(gtk2_top_window));
 	} else {
 		gtk_window_unfullscreen(GTK_WINDOW(gtk2_top_window));
-		gtk_widget_show(gtk2_menubar);
 	}
 	video_gtkgl_module.is_fullscreen = fullscreen;
+	return 0;
+}
+
+static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer data) {
+	(void)tw;
+	(void)data;
+	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !video_gtkgl_module.is_fullscreen) {
+		gtk_widget_hide(gtk2_menubar);
+		video_gtkgl_module.is_fullscreen = 1;
+	}
+	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && video_gtkgl_module.is_fullscreen) {
+		gtk_widget_show(gtk2_menubar);
+		video_gtkgl_module.is_fullscreen = 0;
+	}
 	return 0;
 }
 
