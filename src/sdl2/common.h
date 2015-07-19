@@ -6,6 +6,8 @@
 #ifndef XROAR_SDL2_COMMON_H_
 #define XROAR_SDL2_COMMON_H_
 
+#include <SDL_syswm.h>
+
 #include "module.h"
 struct joystick_module;
 
@@ -34,6 +36,26 @@ void sdl_js_physical_shutdown(void);
 void sdl_zoom_in(void);
 void sdl_zoom_out(void);
 
+/* Platform-specific support */
+
+#ifdef HAVE_X11
+
+/* X11 event interception. */
+
+void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
+
+/* X11 keyboard handling. */
+
+void sdl_x11_keyboard_init(SDL_Window *);
+
+void sdl_x11_mapping_notify(XMappingEvent *);
+void sdl_x11_keymap_notify(XKeymapEvent *);
+
+void sdl_x11_fix_keyboard_event(SDL_Event *);
+int sdl_x11_keysym_to_unicode(SDL_Keysym *);
+
+#endif
+
 #ifdef WINDOWS32
 
 /* These functions will be in the windows32-specific code. */
@@ -44,5 +66,36 @@ void sdl_windows32_add_menu(SDL_Window *sw);
 void sdl_windows32_remove_menu(SDL_Window *sw);
 
 #endif
+
+/* Now wrap all of the above in inline functions so that common code doesn't
+ * need to be littered with these conditionals. */
+
+static inline void sdl_os_keyboard_init(SDL_Window *sw) {
+	(void)sw;
+#if defined(HAVE_X11)
+	sdl_x11_keyboard_init(sw);
+#endif
+}
+
+static inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+	(void)wmmsg;
+#if defined(HAVE_X11)
+	sdl_x11_handle_syswmevent(wmmsg);
+#endif
+}
+
+static inline void sdl_os_fix_keyboard_event(SDL_Event *ev) {
+	(void)ev;
+#if defined(HAVE_X11)
+	sdl_x11_fix_keyboard_event(ev);
+#endif
+}
+
+static inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
+#if defined(HAVE_X11)
+	return sdl_x11_keysym_to_unicode(keysym);
+#endif
+	return keysym->sym;
+}
 
 #endif  /* XROAR_SDL2_COMMON_H_ */

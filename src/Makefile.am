@@ -184,6 +184,13 @@ xroar_SOURCES += \
 	sdl2/ui_sdl2.c \
 	sdl2/vo_sdl2.c
 
+if X11
+xroar_SOURCES += \
+	sdl2/sdl_x11.c \
+	sdl2/sdl_x11_keyboard.c \
+	sdl2/sdl_x11_keycode_tables.h
+endif
+
 else
 
 # SDL user interface - incompatible with SDL2

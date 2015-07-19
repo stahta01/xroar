@@ -70,6 +70,10 @@ static _Bool init(void) {
 		return 0;
 	}
 
+#ifdef HAVE_X11
+	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+#endif
+
 #ifdef WINDOWS32
 	{
 		SDL_version sdlver;

@@ -85,6 +85,9 @@ static _Bool init(void) {
 		return 0;
 	}
 
+	/* Initialise keyboard */
+	sdl_os_keyboard_init(sdl_window);
+
 	alloc_colours();
 	video_sdl_module.window_x = VDG_ACTIVE_LINE_START - 32;
 	video_sdl_module.window_y = VDG_TOP_BORDER_START + 1;

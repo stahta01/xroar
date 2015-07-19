@@ -117,9 +117,11 @@ void sdl_run(void) {
 				xroar_quit();
 				break;
 			case SDL_KEYDOWN:
+				sdl_os_fix_keyboard_event(&event);
 				sdl_keypress(&event.key.keysym);
 				break;
 			case SDL_KEYUP:
+				sdl_os_fix_keyboard_event(&event);
 				sdl_keyrelease(&event.key.keysym);
 				break;
 			case SDL_MOUSEMOTION:
@@ -140,11 +142,11 @@ void sdl_run(void) {
 					mouse_button[event.button.button-1] = event.button.state;
 				}
 				break;
-#ifdef WINDOWS32
+
 			case SDL_SYSWMEVENT:
-				sdl_windows32_handle_syswmevent(event.syswm.msg);
+				sdl_os_handle_syswmevent(event.syswm.msg);
 				break;
-#endif
+
 			default:
 				break;
 			}
