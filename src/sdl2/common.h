@@ -58,12 +58,15 @@ int sdl_x11_keysym_to_unicode(SDL_Keysym *);
 
 #ifdef WINDOWS32
 
+void sdl_windows32_keyboard_init(SDL_Window *);
+int sdl_windows32_keysym_to_unicode(SDL_Keysym *);
+
 /* These functions will be in the windows32-specific code. */
 
-void sdl_windows32_handle_syswmevent(void *data);
-void sdl_windows32_set_events_window(SDL_Window *sw);
-void sdl_windows32_add_menu(SDL_Window *sw);
-void sdl_windows32_remove_menu(SDL_Window *sw);
+void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *);
+void sdl_windows32_set_events_window(SDL_Window *);
+void sdl_windows32_add_menu(SDL_Window *);
+void sdl_windows32_remove_menu(SDL_Window *);
 
 #endif
 
@@ -74,6 +77,8 @@ static inline void sdl_os_keyboard_init(SDL_Window *sw) {
 	(void)sw;
 #if defined(HAVE_X11)
 	sdl_x11_keyboard_init(sw);
+#elif defined(WINDOWS32)
+	sdl_windows32_keyboard_init(sw);
 #endif
 }
 
@@ -81,6 +86,8 @@ static inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	(void)wmmsg;
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);
+#elif defined(WINDOWS32)
+	sdl_windows32_handle_syswmevent(wmmsg);
 #endif
 }
 
@@ -94,6 +101,8 @@ static inline void sdl_os_fix_keyboard_event(SDL_Event *ev) {
 static inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
 #if defined(HAVE_X11)
 	return sdl_x11_keysym_to_unicode(keysym);
+#elif defined(WINDOWS32)
+	return sdl_windows32_keysym_to_unicode(keysym);
 #endif
 	return keysym->sym;
 }

@@ -277,141 +277,133 @@ static void setup_tool_menu(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void sdl_windows32_handle_syswmevent(void *data) {
-	SDL_SysWMmsg *wmmsg = data;
-#ifdef HAVE_SDL2
-	int msg = wmmsg->msg.win.msg;
-	int tag = LOWORD(wmmsg->msg.win.wParam);
-#else
-	int msg = wmmsg->msg;
-	int tag = LOWORD(wmmsg->wParam);
-#endif
+void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+	UINT msg = wmmsg->msg.win.msg;
+	WPARAM wParam = wmmsg->msg.win.wParam;
+
+	if (msg != WM_COMMAND)
+		return;
+
+	int tag = LOWORD(wParam);
 	int tag_type = TAG_TYPE(tag);
 	int tag_value = TAG_VALUE(tag);
 
-	switch (msg) {
+	switch (tag_type) {
 
-	case WM_COMMAND:
-		switch (tag_type) {
-
-		/* Simple actions: */
-		case ui_tag_action:
-			switch (tag_value) {
-			case ui_action_quit:
-				{
-					SDL_Event event;
-					event.type = SDL_QUIT;
-					SDL_PushEvent(&event);
-				}
-				break;
-			case ui_action_reset_soft:
-				xroar_soft_reset();
-				break;
-			case ui_action_reset_hard:
-				xroar_hard_reset();
-				break;
-			case ui_action_file_run:
-				xroar_run_file(NULL);
-				break;
-			case ui_action_file_load:
-				xroar_load_file(NULL);
-				break;
-			case ui_action_file_save_snapshot:
-				xroar_save_snapshot();
-				break;
-			case ui_action_tape_input:
-				xroar_select_tape_input();
-				break;
-			case ui_action_tape_output:
-				xroar_select_tape_output();
-				break;
-			case ui_action_tape_input_rewind:
-				if (tape_input)
-					tape_rewind(tape_input);
-				break;
-			case ui_action_zoom_in:
-				sdl_zoom_in();
-				break;
-			case ui_action_zoom_out:
-				sdl_zoom_out();
-				break;
-			case ui_action_joystick_swap:
-				xroar_swap_joysticks(1);
-				break;
-			default:
-				break;
-			}
-			break;
-
-		/* Machines: */
-		case ui_tag_machine:
-			xroar_set_machine(1, tag_value);
-			break;
-
-		/* Cartridges: */
-		case ui_tag_cartridge:
+	// Simple actions:
+	case ui_tag_action:
+		switch (tag_value) {
+		case ui_action_quit:
 			{
-				struct cart_config *cc = cart_config_by_id(tag_value - 1);
-				xroar_set_cart(1, cc ? cc->name : NULL);
+				SDL_Event event;
+				event.type = SDL_QUIT;
+				SDL_PushEvent(&event);
 			}
 			break;
-
-		/* Cassettes: */
-		case ui_tag_tape_flags:
-			tape_select_state(tape_get_state() ^ tag_value);
+		case ui_action_reset_soft:
+			xroar_soft_reset();
 			break;
-
-		/* Disks: */
-		case ui_tag_disk_insert:
-			xroar_insert_disk(tag_value);
+		case ui_action_reset_hard:
+			xroar_hard_reset();
 			break;
-		case ui_tag_disk_new:
-			xroar_new_disk(tag_value);
+		case ui_action_file_run:
+			xroar_run_file(NULL);
 			break;
-		case ui_tag_disk_write_enable:
-			xroar_set_write_enable(1, tag_value, XROAR_TOGGLE);
+		case ui_action_file_load:
+			xroar_load_file(NULL);
 			break;
-		case ui_tag_disk_write_back:
-			xroar_set_write_back(1, tag_value, XROAR_TOGGLE);
+		case ui_action_file_save_snapshot:
+			xroar_save_snapshot();
 			break;
-		case ui_tag_disk_eject:
-			xroar_eject_disk(tag_value);
+		case ui_action_tape_input:
+			xroar_select_tape_input();
 			break;
-
-		/* Video: */
-		case ui_tag_fullscreen:
-			xroar_set_fullscreen(1, XROAR_TOGGLE);
+		case ui_action_tape_output:
+			xroar_select_tape_output();
 			break;
-		case ui_tag_cross_colour:
-			xroar_set_cross_colour(1, tag_value);
+		case ui_action_tape_input_rewind:
+			if (tape_input)
+				tape_rewind(tape_input);
 			break;
-		case ui_tag_vdg_inverse:
-			xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+		case ui_action_zoom_in:
+			sdl_zoom_in();
 			break;
-		/* Audio: */
-		case ui_tag_fast_sound:
-			machine_select_fast_sound(!xroar_cfg.fast_sound);
+		case ui_action_zoom_out:
+			sdl_zoom_out();
 			break;
-
-		/* Keyboard: */
-		case ui_tag_keymap:
-			xroar_set_keymap(1, tag_value);
+		case ui_action_joystick_swap:
+			xroar_swap_joysticks(1);
 			break;
-		case ui_tag_kbd_translate:
-			xroar_set_kbd_translate(1, XROAR_TOGGLE);
-			break;
-
-		/* Joysticks: */
-		case ui_tag_joy_right:
-			xroar_set_joystick(1, 0, joystick_names[tag_value].name);
-			break;
-		case ui_tag_joy_left:
-			xroar_set_joystick(1, 1, joystick_names[tag_value].name);
-			break;
-
 		default:
 			break;
 		}
+		break;
+
+	// Machines:
+	case ui_tag_machine:
+		xroar_set_machine(1, tag_value);
+		break;
+
+	// Cartridges:
+	case ui_tag_cartridge:
+		{
+			struct cart_config *cc = cart_config_by_id(tag_value - 1);
+			xroar_set_cart(1, cc ? cc->name : NULL);
+		}
+		break;
+
+	// Cassettes:
+	case ui_tag_tape_flags:
+		tape_select_state(tape_get_state() ^ tag_value);
+		break;
+
+	// Disks:
+	case ui_tag_disk_insert:
+		xroar_insert_disk(tag_value);
+		break;
+	case ui_tag_disk_new:
+		xroar_new_disk(tag_value);
+		break;
+	case ui_tag_disk_write_enable:
+		xroar_set_write_enable(1, tag_value, XROAR_TOGGLE);
+		break;
+	case ui_tag_disk_write_back:
+		xroar_set_write_back(1, tag_value, XROAR_TOGGLE);
+		break;
+	case ui_tag_disk_eject:
+		xroar_eject_disk(tag_value);
+		break;
+
+	// Video:
+	case ui_tag_fullscreen:
+		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		break;
+	case ui_tag_cross_colour:
+		xroar_set_cross_colour(1, tag_value);
+		break;
+	case ui_tag_vdg_inverse:
+		xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+		break;
+
+	// Audio:
+	case ui_tag_fast_sound:
+		machine_select_fast_sound(!xroar_cfg.fast_sound);
+		break;
+
+	// Keyboard:
+	case ui_tag_keymap:
+		xroar_set_keymap(1, tag_value);
+		break;
+	case ui_tag_kbd_translate:
+		xroar_set_kbd_translate(1, XROAR_TOGGLE);
+		break;
+
+	// Joysticks:
+	case ui_tag_joy_right:
+		xroar_set_joystick(1, 0, joystick_names[tag_value].name);
+		break;
+	case ui_tag_joy_left:
+		xroar_set_joystick(1, 1, joystick_names[tag_value].name);
 		break;
 
 	default:
@@ -424,7 +416,7 @@ void sdl_windows32_handle_syswmevent(void *data) {
 static void set_state(enum ui_tag tag, int value, const void *data) {
 	switch (tag) {
 
-	/* Simple toggles */
+	// Simple toggles
 
 	case ui_tag_fullscreen:
 	case ui_tag_vdg_inverse:
@@ -432,7 +424,7 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
-	/* Hardware */
+	// Hardware
 
 	case ui_tag_machine:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
@@ -442,7 +434,7 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
 		break;
 
-	/* Tape */
+	// Tape
 
 	case ui_tag_tape_flags:
 		for (int i = 0; i < 4; i++) {
@@ -452,7 +444,7 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		}
 		break;
 
-	/* Disk */
+	// Disk
 
 	case ui_tag_disk_data:
 		{
@@ -475,13 +467,13 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
-	/* Video */
+	// Video
 
 	case ui_tag_cross_colour:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 2), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
-	/* Keyboard */
+	// Keyboard
 
 	case ui_tag_keymap:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (NUM_KEYMAPS - 1)), TAGV(tag, value), MF_BYCOMMAND);
@@ -492,14 +484,14 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		sdl_keyboard_set_translate(value);
 		break;
 
-	/* Joysticks */
+	// Joysticks
 
 	case ui_tag_joy_right:
 	case ui_tag_joy_left:
 		{
 			int joy = 0;
 			if (data) {
-				for (int i = 1; i < NUM_JOYSTICK_NAMES; i++) {
+				for (unsigned i = 1; i < NUM_JOYSTICK_NAMES; i++) {
 					if (0 == strcmp((const char *)data, joystick_names[i].name)) {
 						joy = i;
 						break;
@@ -549,7 +541,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 	switch (msg) {
 
 	case WM_COMMAND:
-		/* Selectively push WM events onto the SDL queue */
+		// Selectively push WM events onto the SDL queue.
 #ifdef HAVE_SDL2
 		wmmsg.msg.win.hwnd = hwnd;
 		wmmsg.msg.win.msg = msg;
@@ -567,17 +559,20 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		break;
 
 	default:
-		/* Fall back to original SDL handler */
+		// Fall back to original SDL handler for anything else -
+		// SysWMEvent handling is not enabled, so this should not flood
+		// the queue.
 		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	}
 	return 0;
 }
 
-/* Set up custom event handler to receive menu selection events. While the menu
- * is being navigated, the main application is blocked, and SDL quickly runs
- * out of space in its event queue. Without this handler, the ultimate menu
- * option selection is often missed. */
+/* While the menu is being navigated, the main application is blocked. If event
+ * processing is enabled for SysWMEvent, SDL quickly runs out of space in its
+ * event queue, leading to the ultimate menu option often being missed.  This
+ * sets up a custom Windows event handler that pushes a SDL_SysWMEvent only for
+ * WM_COMMAND messages. */
 
 void sdl_windows32_set_events_window(SDL_Window *sw) {
 	HWND hwnd = get_hwnd(sw);

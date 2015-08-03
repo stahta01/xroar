@@ -191,6 +191,12 @@ xroar_SOURCES += \
 	sdl2/sdl_x11_keycode_tables.h
 endif
 
+if MINGW
+xroar_SOURCES += \
+	sdl2/sdl_windows32_keyboard.c \
+	sdl2/sdl_windows32_vsc_table.h
+endif
+
 else
 
 # SDL user interface - incompatible with SDL2
