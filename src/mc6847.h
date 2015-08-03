@@ -53,6 +53,10 @@ enum vdg_colour {
 };
 
 struct MC6847 {
+	// Text row (0-11). In reality, this would be external circuitry
+	// clocked by HS and cleared by RP, but provided here for now.
+	unsigned row;
+
 	// Delegates to notify on signal edges.
 	DELEGATE_T1(void, bool) signal_hs;
 	DELEGATE_T1(void, bool) signal_fs;

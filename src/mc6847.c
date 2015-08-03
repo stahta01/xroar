@@ -85,7 +85,6 @@ struct MC6847_private {
 	enum vdg_render_mode render_mode;
 	unsigned pal_padding;
 	uint8_t pixel_data[VDG_LINE_DURATION];
-	unsigned row;
 
 	uint16_t vram[42];
 	uint16_t *vram_ptr;
@@ -126,9 +125,9 @@ static void do_hs_fall(void *data) {
 			video_module->render_scanline(vdg->pixel_data);
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 			render_scanline(vdg);
-			vdg->row++;
-			if (vdg->row > 11)
-				vdg->row = 0;
+			vdg->public.row++;
+			if (vdg->public.row > 11)
+				vdg->public.row = 0;
 			video_module->render_scanline(vdg->pixel_data);
 			vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
@@ -191,7 +190,7 @@ static void do_hs_fall(void *data) {
 	vdg->rborder_remaining = VDG_tRB;
 
 	if (vdg->scanline == VDG_ACTIVE_AREA_START) {
-		vdg->row = 0;
+		vdg->public.row = 0;
 	}
 
 	if (vdg->scanline == VDG_ACTIVE_AREA_END) {
@@ -291,13 +290,13 @@ static void render_scanline(struct MC6847_private *vdg) {
 					INV ^= vdg->inverse_text;
 					if (!vdg->EXT)
 						vdg->vram_g_data |= 0x40;
-					vdg->vram_g_data = font_6847t1[(vdg->vram_g_data&0x7f)*12 + vdg->row];
+					vdg->vram_g_data = font_6847t1[(vdg->vram_g_data&0x7f)*12 + vdg->public.row];
 				} else {
 					INV = vdata & 0x100;
 					if (vdg->ext_charset)
-						vdg->vram_g_data = ~vdg->ext_charset[(vdg->row * 256) + vdg->vram_g_data];
+						vdg->vram_g_data = ~vdg->ext_charset[(vdg->public.row * 256) + vdg->vram_g_data];
 					else if (!vdg->EXT)
-						vdg->vram_g_data = font_6847[(vdg->vram_g_data&0x3f)*12 + vdg->row];
+						vdg->vram_g_data = font_6847[(vdg->vram_g_data&0x3f)*12 + vdg->public.row];
 				}
 				if (INV ^ vdg->inverted_text)
 					vdg->vram_g_data = ~vdg->vram_g_data;
@@ -306,13 +305,13 @@ static void render_scanline(struct MC6847_private *vdg) {
 			if (!vdg->nA_G && vdg->nA_S) {
 				vdg->vram_sg_data = vdg->vram_g_data;
 				if (vdg->is_t1 || !vdg->EXT) {
-					if (vdg->row < 6)
+					if (vdg->public.row < 6)
 						vdg->vram_sg_data >>= 2;
 					vdg->s_fg_colour = (vdg->vram_g_data >> 4) & 7;
 				} else {
-					if (vdg->row < 4)
+					if (vdg->public.row < 4)
 						vdg->vram_sg_data >>= 4;
-					else if (vdg->row < 8)
+					else if (vdg->public.row < 8)
 						vdg->vram_sg_data >>= 2;
 					vdg->s_fg_colour = vdg->cg_colours + ((vdg->vram_g_data >> 6) & 3);
 				}
@@ -428,7 +427,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
 	vdg->frame = 0;
 	vdg->scanline = 0;
-	vdg->row = 0;
+	vdg->public.row = 0;
 	vdg->scanline_start = event_current_tick;
 	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
@@ -466,7 +465,7 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 
 	/* If switching from graphics to alpha/semigraphics */
 	if (vdg->nA_G && !new_nA_G) {
-		vdg->row = 0;
+		vdg->public.row = 0;
 		vdg->render_mode = VDG_RENDER_RG;
 		if (vdg->nA_S) {
 			vdg->vram_g_data = 0x3f;
