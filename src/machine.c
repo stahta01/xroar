@@ -106,7 +106,7 @@ static void initialise_ram(void);
 static int cycles;
 static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A);
-static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest);
+static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 
 static void machine_instruction_posthook(void *);
 static _Bool single_step = 0;
@@ -644,7 +644,7 @@ void machine_configure(struct machine_config *mc) {
 		VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, NULL);
 	}
 	VDG0->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, NULL);
-	VDG0->fetch_bytes = DELEGATE_AS2(void, int, uint8p, vdg_fetch_handler, NULL);
+	VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler, NULL);
 	mc6847_set_inverted_text(VDG0, inverted_text);
 
 	// Printer
@@ -1194,23 +1194,25 @@ static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A) {
 	}
 }
 
-static void vdg_fetch_handler(void *sptr, int nbytes, uint8_t *dest) {
+static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest) {
 	(void)sptr;
+	uint16_t attr = (PIA_VALUE_B(PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
 		int n = sam_vdg_bytes(SAM0, nbytes);
 		if (dest) {
 			uint16_t V = decode_Z(SAM0->V);
 			if (has_ext_charset) {
-				/* omit INV in attrs */
+				/* omit INV */
 				for (int i = n; i; i--) {
-					*(dest++) = machine_ram[V];
-					*(dest++) = machine_ram[V++] & 0x80;
+					uint16_t D = machine_ram[V++] | EXT;
+					D |= (D & 0x80) << 2;  // D7 -> ¬A/S
+					*(dest++) = D;
 				}
 			} else {
-				/* duplicate data as attrs */
 				for (int i = n; i; i--) {
-					*(dest++) = machine_ram[V];
-					*(dest++) = machine_ram[V++];
+					uint16_t D = machine_ram[V++] | EXT;
+					D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
+					*(dest++) = D;
 				}
 			}
 		}

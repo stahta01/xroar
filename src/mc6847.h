@@ -52,15 +52,22 @@ enum vdg_colour {
 	VDG_BLACK, VDG_DARK_GREEN, VDG_DARK_ORANGE, VDG_BRIGHT_ORANGE
 };
 
-/* Nothing in this struct yet, might expose some things in future. */
 struct MC6847 {
-	/* Delegates to notify on signal edges */
+	// Delegates to notify on signal edges.
 	DELEGATE_T1(void, bool) signal_hs;
 	DELEGATE_T1(void, bool) signal_fs;
-	/* External handler to fetch data for display.  First arg is number of bytes,
-	 * second a pointer to a buffer to receive them. */
-	DELEGATE_T2(void, int, uint8p) fetch_bytes;
+	// External handler to fetch data for display. First arg is number of
+	// 16-bit words, second a pointer to a buffer to receive them.
+	DELEGATE_T2(void, int, uint16p) fetch_data;
 };
+
+/* Fetched data is a buffer of uint16_t, with bits:
+ *
+ *     10   ¬INT/EXT
+ *      9   ¬A/S
+ *      8   INV
+ *  7...0   DD7..DD0
+ */
 
 struct MC6847 *mc6847_new(_Bool t1);
 void mc6847_free(struct MC6847 *);
@@ -71,7 +78,6 @@ void mc6847_set_inverted_text(struct MC6847 *, _Bool);
 
 /*
  * Mode bits:
- * 8    ¬INT/EXT
  * 7    ¬A/G
  * 6..4 GM2..GM0
  * 3    CSS

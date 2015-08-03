@@ -53,7 +53,7 @@ struct MC6847_private {
 	_Bool nA_S;
 	_Bool nA_G;
 	_Bool GM0;
-	_Bool EXT, EXTa, EXTb;
+	_Bool EXT;
 	_Bool CSS, CSSa, CSSb;
 	_Bool inverted_text;
 
@@ -87,8 +87,8 @@ struct MC6847_private {
 	uint8_t pixel_data[VDG_LINE_DURATION];
 	unsigned row;
 
-	uint8_t vram[84];
-	uint8_t *vram_ptr;
+	uint16_t vram[42];
+	uint16_t *vram_ptr;
 	unsigned vram_nbytes;
 
 	uint8_t *ext_charset;
@@ -242,7 +242,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL2(vdg->public.fetch_bytes, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes*2);
+			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	} else if (!vdg->is_32byte && beam_to >= 102) {
@@ -250,7 +250,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL2(vdg->public.fetch_bytes, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes*2);
+			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	}
@@ -263,7 +263,6 @@ static void render_scanline(struct MC6847_private *vdg) {
 	while (vdg->lborder_remaining > 0) {
 		if ((vdg->beam_pos & 7) == 4) {
 			vdg->CSSa = vdg->CSS;
-			vdg->EXTa = vdg->EXT;
 		}
 		*(vdg->pixel++) = vdg->border_colour;
 		vdg->beam_pos++;
@@ -274,31 +273,30 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 	while (vdg->vram_remaining > 0) {
 		if (vdg->vram_bit == 0) {
-			vdg->vram_g_data = *(vdg->vram_ptr++);
-			uint8_t attr = *(vdg->vram_ptr++);
+			uint16_t vdata = *(vdg->vram_ptr++);
+			vdg->vram_g_data = vdata & 0xff;
 			vdg->vram_bit = 8;
-			vdg->nA_S = attr & 0x80;
+			vdg->nA_S = vdata & 0x200;
+			vdg->EXT = vdata & 0x400;
 
 			vdg->CSSb = vdg->CSSa;
 			vdg->CSSa = vdg->CSS;
-			vdg->EXTb = vdg->EXTa;
-			vdg->EXTa = vdg->EXT;
 			vdg->cg_colours = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 
 			if (!vdg->nA_G && !vdg->nA_S) {
 				_Bool INV;
 				if (vdg->is_t1) {
-					INV = vdg->EXTb || (attr & 0x40);
+					INV = vdg->EXT || (vdata & 0x100);
 					INV ^= vdg->inverse_text;
-					if (!vdg->EXTb)
+					if (!vdg->EXT)
 						vdg->vram_g_data |= 0x40;
 					vdg->vram_g_data = font_6847t1[(vdg->vram_g_data&0x7f)*12 + vdg->row];
 				} else {
-					INV = attr & 0x40;
+					INV = vdata & 0x100;
 					if (vdg->ext_charset)
 						vdg->vram_g_data = ~vdg->ext_charset[(vdg->row * 256) + vdg->vram_g_data];
-					else if (!vdg->EXTb)
+					else if (!vdg->EXT)
 						vdg->vram_g_data = font_6847[(vdg->vram_g_data&0x3f)*12 + vdg->row];
 				}
 				if (INV ^ vdg->inverted_text)
@@ -307,7 +305,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 			if (!vdg->nA_G && vdg->nA_S) {
 				vdg->vram_sg_data = vdg->vram_g_data;
-				if (vdg->is_t1 || !vdg->EXTb) {
+				if (vdg->is_t1 || !vdg->EXT) {
 					if (vdg->row < 6)
 						vdg->vram_sg_data >>= 2;
 					vdg->s_fg_colour = (vdg->vram_g_data >> 4) & 7;
@@ -380,11 +378,9 @@ static void render_scanline(struct MC6847_private *vdg) {
 	while (vdg->rborder_remaining > 0) {
 		if ((vdg->beam_pos & 7) == 4) {
 			vdg->CSSa = vdg->CSS;
-			vdg->EXTa = vdg->EXT;
 		}
 		if (vdg->beam_pos == 316) {
 			vdg->CSSb = vdg->CSSa;
-			vdg->EXTb = vdg->EXTa;
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
@@ -412,7 +408,7 @@ struct MC6847 *mc6847_new(_Bool t1) {
 	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
-	vdg->public.fetch_bytes = DELEGATE_DEFAULT2(void, int, uint8p);
+	vdg->public.fetch_data = DELEGATE_DEFAULT2(void, int, uint16p);
 	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
 	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
 	return (struct MC6847 *)vdg;
@@ -462,7 +458,6 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	unsigned GM = (mode >> 4) & 7;
 	vdg->GM0 = mode & 0x10;
 	vdg->CSS = mode & 0x08;
-	vdg->EXT = mode & 0x100;
 	_Bool new_nA_G = mode & 0x80;
 
 	vdg->inverse_text = vdg->is_t1 && (GM & 2);
