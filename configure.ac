@@ -104,6 +104,9 @@ AC_ARG_WITH([jack],
 AC_ARG_ENABLE([ao_null],
 	AS_HELP_STRING([--disable-ao-null], [don't build null audio driver]) )
 
+AC_ARG_WITH([joydev],
+	AS_HELP_STRING([--without-joydev], [don't test for Linux joystick interface]) )
+
 AC_ARG_WITH([sndfile],
 	AS_HELP_STRING([--without-sndfile], [don't test for libsndfile]) )
 
@@ -422,9 +425,10 @@ AM_COND_IF([GTKGL], [AC_DEFINE([HAVE_GTKGL], 1, [Use GtkGLExt])])
 
 ### Linux joysticks
 
-unset have_linux_joystick
-AC_CHECK_HEADER([linux/joystick.h], [have_linux_joystick=1], :)
+AS_IF([test "x$with_joydev" != "xno"], [
+		AC_CHECK_HEADER([linux/joystick.h], [have_linux_joystick=1], :) ])
 
+unset have_linux_joystick
 AM_CONDITIONAL([LINUX_JOYSTICK], [test -n "$have_linux_joystick"])
 AM_COND_IF([LINUX_JOYSTICK], [AC_DEFINE([HAVE_LINUX_JOYSTICK], 1, [Have linux/joystick.h])])
 
