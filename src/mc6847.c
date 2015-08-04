@@ -90,8 +90,6 @@ struct MC6847_private {
 	uint16_t *vram_ptr;
 	unsigned vram_nbytes;
 
-	uint8_t *ext_charset;
-
 	/* Counters */
 	unsigned lborder_remaining;
 	unsigned vram_remaining;
@@ -275,7 +273,11 @@ static void render_scanline(struct MC6847_private *vdg) {
 			uint16_t vdata = *(vdg->vram_ptr++);
 			vdg->vram_g_data = vdata & 0xff;
 			vdg->vram_bit = 8;
-			vdg->nA_S = vdata & 0x200;
+			if (vdg->is_t1) {
+				vdg->nA_S = vdata & 0x80;
+			} else {
+				vdg->nA_S = vdata & 0x200;
+			}
 			vdg->EXT = vdata & 0x400;
 
 			vdg->CSSb = vdg->CSSa;
@@ -286,16 +288,14 @@ static void render_scanline(struct MC6847_private *vdg) {
 			if (!vdg->nA_G && !vdg->nA_S) {
 				_Bool INV;
 				if (vdg->is_t1) {
-					INV = vdg->EXT || (vdata & 0x100);
+					INV = vdg->EXT || (vdata & 0x40);
 					INV ^= vdg->inverse_text;
 					if (!vdg->EXT)
 						vdg->vram_g_data |= 0x40;
 					vdg->vram_g_data = font_6847t1[(vdg->vram_g_data&0x7f)*12 + vdg->public.row];
 				} else {
 					INV = vdata & 0x100;
-					if (vdg->ext_charset)
-						vdg->vram_g_data = ~vdg->ext_charset[(vdg->public.row * 256) + vdg->vram_g_data];
-					else if (!vdg->EXT)
+					if (!vdg->EXT)
 						vdg->vram_g_data = font_6847[(vdg->vram_g_data&0x3f)*12 + vdg->public.row];
 				}
 				if (INV ^ vdg->inverted_text)
@@ -490,9 +490,4 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	}
 
 	vdg->is_32byte = !vdg->nA_G || !(GM == 0 || (vdg->GM0 && GM != 7));
-}
-
-void mc6847_set_ext_charset(struct MC6847 *vdgp, uint8_t *rom) {
-	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	vdg->ext_charset = rom;
 }
