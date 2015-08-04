@@ -107,6 +107,7 @@ static int cycles;
 static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
+static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
 
 static void machine_instruction_posthook(void *);
 static _Bool single_step = 0;
@@ -842,9 +843,7 @@ void machine_configure(struct machine_config *mc) {
 
 	/* VDG external charset */
 	if (has_ext_charset)
-		mc6847_set_ext_charset(VDG0, ext_charset);
-	else
-		mc6847_set_ext_charset(VDG0, NULL);
+		VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler_chargen, NULL);
 
 	/* Default all PIA connections to unconnected (no source, no sink) */
 	PIA0->b.in_source = 0;
@@ -1201,19 +1200,43 @@ static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest) {
 		int n = sam_vdg_bytes(SAM0, nbytes);
 		if (dest) {
 			uint16_t V = decode_Z(SAM0->V);
-			if (has_ext_charset) {
-				/* omit INV */
-				for (int i = n; i; i--) {
-					uint16_t D = machine_ram[V++] | EXT;
-					D |= (D & 0x80) << 2;  // D7 -> ¬A/S
-					*(dest++) = D;
+			for (int i = n; i; i--) {
+				uint16_t D = machine_ram[V++] | attr;
+				D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
+				*(dest++) = D;
+			}
+		}
+		nbytes -= n;
+	}
+}
+
+// Used in the Dragon 200-E, this may contain logic that is not common to all
+// chargen modules (e.g. as provided for the CoCo). As I don't have schematics
+// for any of the others, those will have to wait!
+
+static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest) {
+	(void)sptr;
+	unsigned pia_vdg_mode = PIA_VALUE_B(PIA1);
+	_Bool GnA = pia_vdg_mode & 0x80;
+	_Bool EnI = pia_vdg_mode & 0x10;
+	uint16_t Aram7 = EnI ? 0x80 : 0;
+	while (nbytes > 0) {
+		int n = sam_vdg_bytes(SAM0, nbytes);
+		if (dest) {
+			uint16_t V = decode_Z(SAM0->V);
+			for (int i = n; i; i--) {
+				uint16_t Dram = machine_ram[V++];;
+				_Bool SnA = Dram & 0x80;
+				uint16_t D;
+				if (!GnA && !SnA) {
+					unsigned Aext = (VDG0->row << 8) | Aram7 | Dram;
+					D = ext_charset[Aext&0xfff] | 0x100;  // set INV
+					D |= (~Dram & 0x80) << 3;
+				} else {
+					D = Dram;
 				}
-			} else {
-				for (int i = n; i; i--) {
-					uint16_t D = machine_ram[V++] | EXT;
-					D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
-					*(dest++) = D;
-				}
+				D |= (Dram & 0x80) << 2;  // D7 -> ¬A/S
+				*(dest++) = D;
 			}
 		}
 		nbytes -= n;
