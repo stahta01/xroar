@@ -6,6 +6,8 @@
 #ifndef XROAR_SDL_COMMON_H_
 #define XROAR_SDL_COMMON_H_
 
+#include <SDL_syswm.h>
+
 #include "module.h"
 struct joystick_module;
 
@@ -34,14 +36,14 @@ void sdl_js_physical_shutdown(void);
 void sdl_zoom_in(void);
 void sdl_zoom_out(void);
 
+// Fake "SDL_Window" type
+typedef void SDL_Window;
+
 #ifdef WINDOWS32
 
 /* These functions will be in the windows32-specific code. */
 
-// Fake "SDL_Window" type
-typedef void SDL_Window;
-
-void sdl_windows32_handle_syswmevent(void *data);
+void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *);
 void sdl_windows32_set_events_window(SDL_Window *sw);
 void sdl_windows32_add_menu(SDL_Window *sw);
 void sdl_windows32_remove_menu(SDL_Window *sw);

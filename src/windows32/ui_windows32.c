@@ -278,8 +278,13 @@ static void setup_tool_menu(void) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+#ifdef HAVE_SDL2
 	UINT msg = wmmsg->msg.win.msg;
 	WPARAM wParam = wmmsg->msg.win.wParam;
+#else
+	UINT msg = wmmsg->msg;
+	WPARAM wParam = wmmsg->wParam;
+#endif
 
 	if (msg != WM_COMMAND)
 		return;
@@ -527,6 +532,7 @@ static HWND get_hwnd(SDL_Window *w) {
 	SDL_GetWindowWMInfo(w, &sdlinfo);
 	return sdlinfo.info.win.window;
 #else
+	(void)w;
 	SDL_GetWMInfo(&sdlinfo);
 	return sdlinfo.window;
 #endif
