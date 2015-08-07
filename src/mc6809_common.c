@@ -294,30 +294,21 @@ static uint16_t sex8(unsigned v) {
 	return (int16_t)(*((int8_t *)&tmp));
 }
 
-#define N_EOR_V ((REG_CC & CC_N)^((REG_CC & CC_V)<<2))
-
 /* Determine branch condition from op-code */
 static _Bool branch_condition(struct MC6809 const *cpu, unsigned op) {
 	_Bool cond;
-	switch (op & 0xf) {
+	_Bool invert = op & 1;
+	switch ((op >> 1) & 7) {
 	default:
-	case 0x0: cond = 1; break; // BRA, LBRA
-	case 0x1: cond = 0; break; // BRN, LBRN
-	case 0x2: cond = !(REG_CC & (CC_Z|CC_C)); break; // BHI, LBHI
-	case 0x3: cond = REG_CC & (CC_Z|CC_C); break; // BLS, LBLS
-	case 0x4: cond = !(REG_CC & CC_C); break; // BCC, BHS, LBCC, LBHS
-	case 0x5: cond = REG_CC & CC_C; break; // BCS, BLO, LBCS, LBLO
-	case 0x6: cond = !(REG_CC & CC_Z); break; // BNE, LBNE
-	case 0x7: cond = REG_CC & CC_Z; break; // BEQ, LBEQ
-	case 0x8: cond = !(REG_CC & CC_V); break; // BVC, LBVC
-	case 0x9: cond = REG_CC & CC_V; break; // BVS, LBVS
-	case 0xa: cond = !(REG_CC & CC_N); break; // BPL, LBPL
-	case 0xb: cond = REG_CC & CC_N; break; // BMI, LBMI
-	case 0xc: cond = !N_EOR_V; break; // BGE, LBGE
-	case 0xd: cond = N_EOR_V; break; // BLT, LBLT
-	case 0xe: cond = !(N_EOR_V || REG_CC & CC_Z); break; // BGT, LBGT
-	case 0xf: cond = N_EOR_V || REG_CC & CC_Z; break; // BLE, LBLE
+	case 0x0: cond = 1; break; // BRA, !BRN
+	case 0x1: cond = !(REG_CC & (CC_Z|CC_C)); break; // BHI, !BLS
+	case 0x2: cond = !(REG_CC & CC_C); break; // BCC, BHS, !BCS, !BLO
+	case 0x3: cond = !(REG_CC & CC_Z); break; // BNE, !BEQ
+	case 0x4: cond = !(REG_CC & CC_V); break; // BVC, !BVS
+	case 0x5: cond = !(REG_CC & CC_N); break; // BPL, !BMI
+	case 0x6: cond = !((REG_CC ^ (REG_CC << 2)) & CC_N); break; // BGE, !BLT
+	case 0x7: cond = !(((REG_CC&(CC_N|CC_Z)) ^ ((REG_CC&CC_V) << 2))); break; // BGT, !BLE
 	}
-	return cond;
+	return cond != invert;
 }
 
