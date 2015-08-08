@@ -69,7 +69,7 @@ static struct joystick *joystick_port[JOYSTICK_NUM_PORTS];
 // Support the swap/cycle shortcuts:
 static struct joystick_config const *virtual_joystick_config;
 static struct joystick const *virtual_joystick = NULL;
-static struct joystick_config const *cycled_config[JOYSTICK_NUM_PORTS];
+static struct joystick_config const *cycled_config = NULL;
 
 static void joystick_config_free(struct joystick_config *jc);
 
@@ -78,7 +78,6 @@ static void joystick_config_free(struct joystick_config *jc);
 void joystick_init(void) {
 	for (unsigned p = 0; p < JOYSTICK_NUM_PORTS; p++) {
 		joystick_port[p] = NULL;
-		cycled_config[p] = NULL;
 	}
 }
 
@@ -230,6 +229,8 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 	selected_interface = NULL;
 	if (port >= JOYSTICK_NUM_PORTS)
 		return;
+	if (joystick_port_config[port] == jc)
+		return;
 	joystick_unmap(port);
 	if (!jc)
 		return;
@@ -340,15 +341,9 @@ void joystick_set_virtual(struct joystick_config const *jc) {
 
 // Swap the right & left joysticks
 void joystick_swap(void) {
-	struct joystick_config const *tmp_jc = joystick_port_config[0];
-	joystick_port_config[0] = joystick_port_config[1];
-	joystick_port_config[1] = tmp_jc;
-	struct joystick_config const *tmp_cc = cycled_config[0];
-	cycled_config[0] = cycled_config[1];
-	cycled_config[1] = tmp_cc;
-	struct joystick *tmp_j = joystick_port[0];
-	joystick_port[0] = joystick_port[1];
-	joystick_port[1] = tmp_j;
+	struct joystick_config const *tmp = joystick_port_config[0];
+	joystick_map(joystick_port_config[1], 0);
+	joystick_map(tmp, 1);
 }
 
 // Cycle the virtual joystick through right and left joystick ports
@@ -357,23 +352,15 @@ void joystick_cycle(void) {
 		joystick_swap();
 		return;
 	}
-	if (virtual_joystick && joystick_port[0] == virtual_joystick) {
-		cycled_config[1] = joystick_port_config[1];
-		joystick_unmap(0);
-		joystick_unmap(1);
-		joystick_map(cycled_config[0], 0);
-		joystick_map(virtual_joystick_config, 1);
-		virtual_joystick = joystick_port[1];
-	} else if (virtual_joystick && joystick_port[1] == virtual_joystick) {
-		joystick_unmap(1);
-		joystick_map(cycled_config[1], 1);
-		virtual_joystick = NULL;
-	} else {
-		cycled_config[0] = joystick_port_config[0];
-		joystick_unmap(0);
-		joystick_map(virtual_joystick_config, 0);
-		virtual_joystick = joystick_port[0];
+	struct joystick_config const *tmp0 = joystick_port_config[0];
+	struct joystick_config const *tmp1 = joystick_port_config[1];
+	if (cycled_config == NULL &&
+	    tmp0 != virtual_joystick_config && tmp1 != virtual_joystick_config) {
+		cycled_config = virtual_joystick_config;
 	}
+	joystick_map(cycled_config, 0);
+	joystick_map(tmp0, 1);
+	cycled_config = tmp1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
