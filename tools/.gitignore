@@ -5,3 +5,6 @@
 /scandump
 /scandump.exe
 /scandump.dSYM/
+/scandump_windows
+/scandump_windows.exe
+/scandump_windows.dSYM/
