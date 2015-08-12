@@ -118,10 +118,16 @@ static struct device *open_device(int joystick_index) {
 	d->num_axes = tmp;
 	ioctl(fd, JSIOCGBUTTONS, &tmp);
 	d->num_buttons = tmp;
-	if (d->num_axes > 0)
-		d->axis_value = xzalloc(d->num_axes * sizeof(*d->axis_value));
-	if (d->num_buttons > 0)
-		d->button_value = xzalloc(d->num_buttons * sizeof(*d->button_value));
+	if (d->num_axes > 0) {
+		d->axis_value = xmalloc(d->num_axes * sizeof(*d->axis_value));
+		for (unsigned i = 0; i < d->num_axes; i++)
+			d->axis_value[i] = 0;
+	}
+	if (d->num_buttons > 0) {
+		d->button_value = xmalloc(d->num_buttons * sizeof(*d->button_value));
+		for (unsigned i = 0; i < d->num_buttons; i++)
+			d->button_value[i] = 0;
+	}
 	char namebuf[128];
 	ioctl(fd, JSIOCGNAME(sizeof(namebuf)), namebuf);
 	LOG_DEBUG(1, "Opened joystick %d: %s\n", joystick_index, namebuf);

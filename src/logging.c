@@ -51,7 +51,8 @@ struct log_handle {
 static void log_open(struct log_handle **lp, const char *prefix, enum log_type type) {
 	assert(lp != NULL);
 	log_close(lp);
-	struct log_handle *l = xzalloc(sizeof(*l));
+	struct log_handle *l = xmalloc(sizeof(*l));
+	*l = (struct log_handle){0};
 	l->type = type;
 	l->prefix = prefix;
 	*lp = l;

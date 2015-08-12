@@ -79,7 +79,8 @@ struct MC6883_private {
 static void update_from_register(struct MC6883_private *);
 
 struct MC6883 *sam_new(void) {
-	struct MC6883_private *sam = xzalloc(sizeof(*sam));
+	struct MC6883_private *sam = xmalloc(sizeof(*sam));
+	*sam = (struct MC6883_private){.public={0}};
 	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	return (struct MC6883 *)sam;
 }

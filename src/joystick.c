@@ -92,8 +92,8 @@ void joystick_shutdown(void) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct joystick_config *joystick_config_new(void) {
-	struct joystick_config *new;
-	new = xzalloc(sizeof(*new));
+	struct joystick_config *new = xmalloc(sizeof(*new));
+	*new = (struct joystick_config){0};
 	new->id = next_id;
 	config_list = slist_append(config_list, new);
 	next_id++;
@@ -234,7 +234,8 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 	joystick_unmap(port);
 	if (!jc)
 		return;
-	struct joystick *j = xzalloc(sizeof(*j));
+	struct joystick *j = xmalloc(sizeof(*j));
+	*j = (struct joystick){.axes={0}};
 	_Bool valid_joystick = 0;
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
 		char *spec_copy = xstrdup(jc->axis_specs[i]);

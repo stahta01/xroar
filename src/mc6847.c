@@ -401,7 +401,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct MC6847 *mc6847_new(_Bool t1) {
-	struct MC6847_private *vdg = xzalloc(sizeof(*vdg));
+	struct MC6847_private *vdg = xmalloc(sizeof(*vdg));
+	*vdg = (struct MC6847_private){0};
 	vdg->is_t1 = t1;
 	vdg->vram_ptr = vdg->vram;
 	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;

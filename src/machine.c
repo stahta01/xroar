@@ -116,8 +116,8 @@ static int stop_signal = 0;
 /**************************************************************************/
 
 struct machine_config *machine_config_new(void) {
-	struct machine_config *new;
-	new = xzalloc(sizeof(*new));
+	struct machine_config *new = xmalloc(sizeof(*new));
+	*new = (struct machine_config){0};
 	new->id = next_id;
 	new->architecture = ANY_AUTO;
 	new->cpu = CPU_MC6809;

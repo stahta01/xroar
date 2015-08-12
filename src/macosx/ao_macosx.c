@@ -153,7 +153,7 @@ static _Bool init(void) {
 	fragment_buffer = xmalloc(nfragments * sizeof(void *));
 	if (nfragments > 1) {
 		for (unsigned i = 0; i < nfragments; i++) {
-			fragment_buffer[i] = xzalloc(fragment_nbytes);
+			fragment_buffer[i] = xmalloc(fragment_nbytes);
 		}
 	}
 

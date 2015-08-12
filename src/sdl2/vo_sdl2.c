@@ -78,7 +78,9 @@ static void destroy_window(void);
 static void destroy_renderer(void);
 
 static _Bool init(void) {
-	pixels = xzalloc(320 * 240 * sizeof(Pixel));
+	pixels = xmalloc(320 * 240 * sizeof(Pixel));
+	for (int i = 0; i < 320 * 240; i++)
+		pixels[i] = MAPCOLOUR(0,0,0);
 
 	video_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
 	if (set_fullscreen(xroar_cfg.fullscreen) != 0) {

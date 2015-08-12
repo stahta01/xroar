@@ -184,7 +184,8 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
  */
 
 struct MC6809 *hd6309_new(void) {
-	struct HD6309 *hcpu = xzalloc(sizeof(*hcpu));
+	struct HD6309 *hcpu = xmalloc(sizeof(*hcpu));
+	*hcpu = (struct HD6309){0};
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
 	cpu->free = hd6309_free;
 	cpu->reset = hd6309_reset;

@@ -58,8 +58,8 @@ static void do_firq(void *);
 /**************************************************************************/
 
 struct cart_config *cart_config_new(void) {
-	struct cart_config *new;
-	new = xzalloc(sizeof(*new));
+	struct cart_config *new = xmalloc(sizeof(*new));
+	*new = (struct cart_config){0};
 	new->id = next_id;
 	new->type = CART_ROM;
 	new->autorun = ANY_AUTO;
