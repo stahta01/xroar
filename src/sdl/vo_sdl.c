@@ -26,7 +26,7 @@
 
 #include "logging.h"
 #include "mc6847.h"
-#include "module.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "sdl/common.h"
@@ -39,7 +39,7 @@ static void render_scanline(uint8_t const *scanline_data);
 static int set_fullscreen(_Bool fullscreen);
 static void update_cross_colour_phase(void);
 
-VideoModule video_sdl_module = {
+struct vo_module vo_sdl_module = {
 	.common = { .name = "sdl", .description = "Minimal SDL video",
 	            .init = init, .shutdown = shutdown },
 	.update_palette = alloc_colours,
@@ -59,7 +59,7 @@ typedef Uint8 Pixel;
 #define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE SDL_LockSurface(screen)
 #define UNLOCK_SURFACE SDL_UnlockSurface(screen)
-#define VIDEO_MODULE_NAME video_sdl_module
+#define VIDEO_MODULE_NAME vo_sdl_module
 
 static SDL_Surface *screen;
 
@@ -83,7 +83,7 @@ static Pixel alloc_and_map(int r, int g, int b) {
 #include "vo_generic_ops.c"
 
 static _Bool init(void) {
-	video_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
+	vo_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
 	vsync();
@@ -100,7 +100,7 @@ static int set_fullscreen(_Bool fullscreen) {
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !video_sdl_module.is_fullscreen && fullscreen) {
+	if (screen && !vo_sdl_module.is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(screen);
 	}
 #endif
@@ -116,7 +116,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (video_sdl_module.is_fullscreen && !fullscreen) {
+	if (vo_sdl_module.is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -139,14 +139,14 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	video_sdl_module.is_fullscreen = fullscreen;
+	vo_sdl_module.is_fullscreen = fullscreen;
 
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	video_module->scanline = 0;
-	video_module->window_x = VDG_ACTIVE_LINE_START - 32;
-	video_module->window_y = VDG_TOP_BORDER_START + 1;
-	video_module->window_w = 320;
-	video_module->window_h = 240;
+	vo_module->scanline = 0;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_y = VDG_TOP_BORDER_START + 1;
+	vo_module->window_w = 320;
+	vo_module->window_h = 240;
 	sdl_window_x = sdl_window_y = 0;
 	sdl_window_w = 320;
 	sdl_window_h = 240;
@@ -159,5 +159,5 @@ static int set_fullscreen(_Bool fullscreen) {
 static void vsync(void) {
 	SDL_UpdateRect(screen, 0, 0, 320, 240);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	video_module->scanline = 0;
+	vo_module->scanline = 0;
 }

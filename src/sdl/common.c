@@ -35,7 +35,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6847.h"
-#include "module.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "sdl/common.h"
@@ -43,18 +43,18 @@
 unsigned sdl_window_x = 0, sdl_window_y = 0;
 unsigned sdl_window_w = 320, sdl_window_h = 240;
 
-VideoModule * const sdl_video_module_list[] = {
+struct vo_module * const sdl_vo_module_list[] = {
 #ifdef HAVE_SDLGL
-	&video_sdlgl_module,
+	&vo_sdlgl_module,
 #endif
 #ifdef PREFER_NOYUV
-	&video_sdl_module,
-	&video_sdlyuv_module,
+	&vo_sdl_module,
+	&vo_sdlyuv_module,
 #else
-	&video_sdlyuv_module,
-	&video_sdl_module,
+	&vo_sdlyuv_module,
+	&vo_sdl_module,
 #endif
-	&video_null_module,
+	&vo_null_module,
 	NULL
 };
 
@@ -115,8 +115,8 @@ void sdl_run(void) {
 		while (SDL_PollEvent(&event) == 1) {
 			switch(event.type) {
 			case SDL_VIDEORESIZE:
-				if (video_module->resize) {
-					video_module->resize(event.resize.w, event.resize.h);
+				if (vo_module->resize) {
+					vo_module->resize(event.resize.w, event.resize.h);
 				}
 				break;
 			case SDL_QUIT:

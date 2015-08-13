@@ -27,6 +27,7 @@
 #include "logging.h"
 #include "mc6847.h"
 #include "module.h"
+#include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"
 
@@ -39,7 +40,7 @@ static void vsync(void);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
 
-VideoModule video_gtkgl_module = {
+struct vo_module vo_gtkgl_module = {
 	.common = { .name = "gtkgl", .description = "GtkGLExt video",
 	            .init = init, .shutdown = _shutdown },
 	.update_palette = vo_opengl_alloc_colours,
@@ -95,7 +96,7 @@ static void _shutdown(void) {
 }
 
 static void resize(unsigned int w, unsigned int h) {
-	if (video_gtkgl_module.is_fullscreen) {
+	if (vo_gtkgl_module.is_fullscreen) {
 		return;
 	}
 	if (w < 160 || h < 120) {
@@ -124,20 +125,20 @@ static int set_fullscreen(_Bool fullscreen) {
 	} else {
 		gtk_window_unfullscreen(GTK_WINDOW(gtk2_top_window));
 	}
-	video_gtkgl_module.is_fullscreen = fullscreen;
+	vo_gtkgl_module.is_fullscreen = fullscreen;
 	return 0;
 }
 
 static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer data) {
 	(void)tw;
 	(void)data;
-	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !video_gtkgl_module.is_fullscreen) {
+	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo_gtkgl_module.is_fullscreen) {
 		gtk_widget_hide(gtk2_menubar);
-		video_gtkgl_module.is_fullscreen = 1;
+		vo_gtkgl_module.is_fullscreen = 1;
 	}
-	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && video_gtkgl_module.is_fullscreen) {
+	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && vo_gtkgl_module.is_fullscreen) {
 		gtk_widget_show(gtk2_menubar);
-		video_gtkgl_module.is_fullscreen = 0;
+		vo_gtkgl_module.is_fullscreen = 0;
 	}
 	return 0;
 }

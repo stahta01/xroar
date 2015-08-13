@@ -41,6 +41,7 @@
 #include "module.h"
 #include "ui.h"
 #include "vdrive.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "gtk2/common.h"
@@ -57,13 +58,13 @@ static void run(void);
 unsigned gtk2_window_x = 0, gtk2_window_y = 0;
 unsigned gtk2_window_w = 640, gtk2_window_h = 480;
 
-extern VideoModule video_gtkgl_module;
-extern VideoModule video_null_module;
-static VideoModule * const gtk2_video_module_list[] = {
+extern struct vo_module vo_gtkgl_module;
+extern struct vo_module vo_null_module;
+static struct vo_module * const gtk2_vo_module_list[] = {
 #ifdef HAVE_GTKGL
-	&video_gtkgl_module,
+	&vo_gtkgl_module,
 #endif
-	&video_null_module,
+	&vo_null_module,
 	NULL
 };
 
@@ -112,7 +113,7 @@ static void set_state(enum ui_tag tag, int value, const void *data);
 struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+-2 UI",
 	            .init = init, .shutdown = shutdown },
-	.video_module_list = gtk2_video_module_list,
+	.vo_module_list = gtk2_vo_module_list,
 	.joystick_module_list = gtk2_js_modlist,
 	.run = run,
 	.set_state = set_state,
@@ -195,19 +196,19 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 }
 
 static void zoom_1_1(void) {
-	if (video_module && video_module->resize) {
-		video_module->resize(320, 240);
+	if (vo_module && vo_module->resize) {
+		vo_module->resize(320, 240);
 	}
 }
 
 static void zoom_2_1(void) {
-	if (video_module && video_module->resize) {
-		video_module->resize(640, 480);
+	if (vo_module && vo_module->resize) {
+		vo_module->resize(640, 480);
 	}
 }
 
 static void zoom_in(void) {
-	if (video_module && video_module->resize) {
+	if (vo_module && vo_module->resize) {
 		int xscale = gtk2_window_w / 160;
 		int yscale = gtk2_window_h / 120;
 		int scale = 1;
@@ -219,12 +220,12 @@ static void zoom_in(void) {
 			scale = xscale + 1;
 		if (scale < 1)
 			scale = 1;
-		video_module->resize(160 * scale, 120 * scale);
+		vo_module->resize(160 * scale, 120 * scale);
 	}
 }
 
 static void zoom_out(void) {
-	if (video_module && video_module->resize) {
+	if (vo_module && vo_module->resize) {
 		int xscale = gtk2_window_w / 160;
 		int yscale = gtk2_window_h / 120;
 		int scale = 1;
@@ -236,7 +237,7 @@ static void zoom_out(void) {
 			scale = xscale - 1;
 		if (scale < 1)
 			scale = 1;
-		video_module->resize(160 * scale, 120 * scale);
+		vo_module->resize(160 * scale, 120 * scale);
 	}
 }
 

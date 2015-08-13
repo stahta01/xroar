@@ -26,7 +26,7 @@
 
 #include "logging.h"
 #include "mc6847.h"
-#include "module.h"
+#include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"
 
@@ -39,7 +39,7 @@ static void vsync(void);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
 
-VideoModule video_sdlgl_module = {
+struct vo_module vo_sdlgl_module = {
 	.common = { .name = "sdlgl", .description = "SDL OpenGL video",
 	            .init = init, .shutdown = shutdown },
 	.update_palette = vo_opengl_alloc_colours,
@@ -69,7 +69,7 @@ static _Bool init(void) {
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	video_sdlgl_module.is_fullscreen = !xroar_cfg.fullscreen;
+	vo_sdlgl_module.is_fullscreen = !xroar_cfg.fullscreen;
 
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
@@ -87,7 +87,7 @@ static void shutdown(void) {
 static void resize(unsigned int w, unsigned int h) {
 	window_width = w;
 	window_height = h;
-	set_fullscreen(video_sdlgl_module.is_fullscreen);
+	set_fullscreen(vo_sdlgl_module.is_fullscreen);
 }
 
 static int set_fullscreen(_Bool fullscreen) {
@@ -96,7 +96,7 @@ static int set_fullscreen(_Bool fullscreen) {
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !video_sdlgl_module.is_fullscreen && fullscreen) {
+	if (screen && !vo_sdlgl_module.is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(screen);
 	}
 #endif
@@ -122,7 +122,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (video_sdlgl_module.is_fullscreen && !fullscreen) {
+	if (vo_sdlgl_module.is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -148,7 +148,7 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	video_sdlgl_module.is_fullscreen = fullscreen;
+	vo_sdlgl_module.is_fullscreen = fullscreen;
 
 	vo_opengl_set_window_size(want_width, want_height);
 	sdl_window_x = vo_opengl_x;

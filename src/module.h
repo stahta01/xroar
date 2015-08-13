@@ -27,28 +27,11 @@ typedef struct {
 
 typedef struct {
 	struct module common;
-	int scanline;
-	int window_x, window_y;
-	int window_w, window_h;
-	void (* const update_palette)(void);
-	void (* const resize)(unsigned int w, unsigned int h);
-	int (* const set_fullscreen)(_Bool fullscreen);
-	_Bool is_fullscreen;
-	void (*render_scanline)(uint8_t const *scanline_data);
-	void (* const vsync)(void);
-	void (* const refresh)(void);
-	void (* const update_cross_colour_phase)(void);
-} VideoModule;
-
-typedef struct {
-	struct module common;
 	void *(* const write_buffer)(void *buffer);
 } SoundModule;
 
 extern FileReqModule * const *filereq_module_list;
 extern FileReqModule *filereq_module;
-extern VideoModule * const *video_module_list;
-extern VideoModule *video_module;
 extern SoundModule * const *sound_module_list;
 extern SoundModule *sound_module;
 

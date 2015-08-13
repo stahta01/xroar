@@ -67,6 +67,7 @@
 #include "vdg_palette.h"
 #include "vdisk.h"
 #include "vdrive.h"
+#include "vo.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -571,13 +572,13 @@ _Bool xroar_init(int argc, char **argv) {
 	// Override other module lists if UI has an entry.
 	if (ui_module->filereq_module_list != NULL)
 		filereq_module_list = ui_module->filereq_module_list;
-	if (ui_module->video_module_list != NULL)
-		video_module_list = ui_module->video_module_list;
+	if (ui_module->vo_module_list != NULL)
+		vo_module_list = ui_module->vo_module_list;
 	if (ui_module->sound_module_list != NULL)
 		sound_module_list = ui_module->sound_module_list;
 	// Select file requester, video & sound modules
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
-	video_module = (VideoModule *)module_select_by_arg((struct module * const *)video_module_list, private_cfg.vo);
+	vo_module = (struct vo_module *)module_select_by_arg((struct module * const *)vo_module_list, private_cfg.vo);
 	sound_module = (SoundModule *)module_select_by_arg((struct module * const *)sound_module_list, private_cfg.ao);
 
 	/* Check other command-line options */
@@ -688,8 +689,8 @@ _Bool xroar_init(int argc, char **argv) {
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	video_module = (VideoModule *)module_init_from_list((struct module * const *)video_module_list, (struct module *)video_module);
-	if (video_module == NULL && video_module_list != NULL) {
+	vo_module = (struct vo_module *)module_init_from_list((struct module * const *)vo_module_list, (struct module *)vo_module);
+	if (vo_module == NULL && vo_module_list != NULL) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
@@ -835,7 +836,7 @@ void xroar_shutdown(void) {
 	machine_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
-	module_shutdown((struct module *)video_module);
+	module_shutdown((struct module *)vo_module);
 	module_shutdown((struct module *)filereq_module);
 	module_shutdown((struct module *)ui_module);
 #ifdef WINDOWS32
@@ -887,8 +888,8 @@ _Bool xroar_run(void) {
 		ts.tv_sec = tv.tv_sec;
 		ts.tv_nsec = tv.tv_usec * 1000;
 		if (pthread_cond_timedwait(&run_state_cv, &run_state_mt, &ts) == ETIMEDOUT) {
-			if (video_module->refresh)
-				video_module->refresh();
+			if (vo_module->refresh)
+				vo_module->refresh();
 			pthread_mutex_unlock(&run_state_mt);
 			return 1;
 		}
@@ -1206,8 +1207,8 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
-	if (video_module->update_cross_colour_phase) {
-		video_module->update_cross_colour_phase();
+	if (vo_module->update_cross_colour_phase) {
+		vo_module->update_cross_colour_phase();
 	}
 	if (notify) {
 		ui_module->set_state(ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
@@ -1245,11 +1246,11 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 			break;
 		case XROAR_TOGGLE:
 		default:
-			set_to = !video_module->is_fullscreen;
+			set_to = !vo_module->is_fullscreen;
 			break;
 	}
-	if (video_module->set_fullscreen) {
-		video_module->set_fullscreen(set_to);
+	if (vo_module->set_fullscreen) {
+		vo_module->set_fullscreen(set_to);
 	}
 	if (notify) {
 		ui_module->set_state(ui_tag_fullscreen, set_to, NULL);
@@ -1376,8 +1377,8 @@ void xroar_set_machine(_Bool notify, int id) {
 		xroar_set_cart(1, NULL);
 	}
 	xroar_vdg_palette = get_machine_palette();
-	if (video_module->update_palette) {
-		video_module->update_palette();
+	if (vo_module->update_palette) {
+		vo_module->update_palette();
 	}
 	xroar_hard_reset();
 	if (notify) {

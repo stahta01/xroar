@@ -93,16 +93,8 @@ static SoundModule * const default_sound_module_list[] = {
 	NULL
 };
 
-extern VideoModule video_null_module;
-static VideoModule * const default_video_module_list[] = {
-	&video_null_module,
-	NULL
-};
-
 FileReqModule * const *filereq_module_list = default_filereq_module_list;
 FileReqModule *filereq_module = NULL;
-VideoModule * const *video_module_list = default_video_module_list;
-VideoModule *video_module = NULL;
 SoundModule * const *sound_module_list = default_sound_module_list;
 SoundModule *sound_module = NULL;
 

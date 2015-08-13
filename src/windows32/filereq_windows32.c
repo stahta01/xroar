@@ -32,6 +32,7 @@
 #include "fs.h"
 #include "logging.h"
 #include "module.h"
+#include "vo.h"
 
 #include "windows32/common_windows32.h"
 
@@ -62,9 +63,9 @@ static char *load_filename(char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = video_module->is_fullscreen;
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(0);
+	was_fullscreen = vo_module->is_fullscreen;
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -86,8 +87,8 @@ static char *load_filename(char const * const *extensions) {
 	if (GetOpenFileName(&ofn)==TRUE) {
 		filename = xstrdup(ofn.lpstrFile);
 	}
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(1);
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(1);
 	return filename;
 }
 
@@ -97,9 +98,9 @@ static char *save_filename(char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = video_module->is_fullscreen;
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(0);
+	was_fullscreen = vo_module->is_fullscreen;
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -121,7 +122,7 @@ static char *save_filename(char const * const *extensions) {
 	if (GetSaveFileName(&ofn)==TRUE) {
 		filename = xstrdup(ofn.lpstrFile);
 	}
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(1);
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(1);
 	return filename;
 }

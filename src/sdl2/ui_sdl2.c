@@ -32,6 +32,7 @@
 #include "module.h"
 #include "sam.h"
 #include "ui.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
@@ -50,7 +51,7 @@ static void set_state(enum ui_tag tag, int value, const void *data);
 struct ui_module ui_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL2 UI",
 	            .init = init, .shutdown = shutdown },
-	.video_module_list = sdl_video_module_list,
+	.vo_module_list = sdl_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,

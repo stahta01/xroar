@@ -10,6 +10,7 @@
 
 #include "module.h"
 
+struct vo_module;
 struct joystick_module;
 struct vdisk;
 
@@ -68,7 +69,7 @@ enum ui_action {
 struct ui_module {
 	struct module common;
 	FileReqModule * const *filereq_module_list;
-	VideoModule * const *video_module_list;
+	struct vo_module * const *vo_module_list;
 	SoundModule * const *sound_module_list;
 	struct joystick_module * const *joystick_module_list;
 	void (* const run)(void);

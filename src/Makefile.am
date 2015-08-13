@@ -54,6 +54,7 @@ xroar_SOURCES = \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
 	vdrive.c vdrive.h \
+	vo.c vo.h \
 	wd279x.c wd279x.h \
 	xconfig.c xconfig.h \
 	xroar.c xroar.h \

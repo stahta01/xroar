@@ -33,8 +33,8 @@
 #include "machine.h"
 #include "mc6809.h"
 #include "mc6847.h"
-#include "module.h"
 #include "sam.h"
+#include "vo.h"
 #include "xroar.h"
 
 // Convert VDG pixels (half-cycles) to event ticks:
@@ -120,19 +120,19 @@ static void do_hs_fall(void *data) {
 			if (vdg->scanline == 0) {
 				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
 			}
-			video_module->render_scanline(vdg->pixel_data);
+			vo_module->render_scanline(vdg->pixel_data);
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 			render_scanline(vdg);
 			vdg->public.row++;
 			if (vdg->public.row > 11)
 				vdg->public.row = 0;
-			video_module->render_scanline(vdg->pixel_data);
+			vo_module->render_scanline(vdg->pixel_data);
 			vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
 				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
 			}
-			video_module->render_scanline(vdg->pixel_data);
+			vo_module->render_scanline(vdg->pixel_data);
 		}
 	}
 
@@ -203,7 +203,7 @@ static void do_hs_fall(void *data) {
 		if (vdg->frame < 0)
 			vdg->frame = xroar_frameskip;
 		if (vdg->frame == 0)
-			video_module->vsync();
+			vo_module->vsync();
 	}
 
 }
@@ -402,7 +402,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 struct MC6847 *mc6847_new(_Bool t1) {
 	struct MC6847_private *vdg = xmalloc(sizeof(*vdg));
-	*vdg = (struct MC6847_private){0};
+	*vdg = (struct MC6847_private){.public={0}};
 	vdg->is_t1 = t1;
 	vdg->vram_ptr = vdg->vram;
 	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
@@ -423,7 +423,7 @@ void mc6847_free(struct MC6847 *vdgp) {
 
 void mc6847_reset(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	video_module->vsync();
+	vo_module->vsync();
 	memset(vdg->pixel_data, VDG_BLACK, sizeof(vdg->pixel_data));
 	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
 	vdg->frame = 0;

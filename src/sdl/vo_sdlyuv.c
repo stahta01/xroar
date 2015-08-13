@@ -26,7 +26,7 @@
 
 #include "logging.h"
 #include "mc6847.h"
-#include "module.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "sdl/common.h"
@@ -40,7 +40,7 @@ static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
 static void update_cross_colour_phase(void);
 
-VideoModule video_sdlyuv_module = {
+struct vo_module vo_sdlyuv_module = {
 	.common = { .name = "sdlyuv", .description = "SDL YUV overlay video",
 	            .init = init, .shutdown = shutdown },
 	.update_palette = alloc_colours,
@@ -59,7 +59,7 @@ typedef Uint32 Pixel;
 #define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE SDL_LockYUVOverlay(overlay)
 #define UNLOCK_SURFACE SDL_UnlockYUVOverlay(overlay)
-#define VIDEO_MODULE_NAME video_sdlyuv_module
+#define VIDEO_MODULE_NAME vo_sdlyuv_module
 
 static SDL_Surface *screen;
 static SDL_Overlay *overlay;
@@ -88,7 +88,7 @@ static _Bool init(void) {
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	video_sdlyuv_module.is_fullscreen = !xroar_cfg.fullscreen;
+	vo_sdlyuv_module.is_fullscreen = !xroar_cfg.fullscreen;
 
 	if (set_fullscreen(xroar_cfg.fullscreen))
 		return 0;
@@ -124,11 +124,11 @@ static _Bool init(void) {
 	}
 
 	alloc_colours();
-	video_module->scanline = 0;
-	video_module->window_x = VDG_ACTIVE_LINE_START - 32;
-	video_module->window_y = VDG_TOP_BORDER_START + 1;
-	video_module->window_w = 320;
-	video_module->window_h = 240;
+	vo_module->scanline = 0;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_y = VDG_TOP_BORDER_START + 1;
+	vo_module->window_w = 320;
+	vo_module->window_h = 240;
 
 	vsync();
 	return 1;
@@ -170,7 +170,7 @@ static Uint32 map_colour(int r, int g, int b) {
 static void resize(unsigned int w, unsigned int h) {
 	window_width = w;
 	window_height = h;
-	set_fullscreen(video_sdlyuv_module.is_fullscreen);
+	set_fullscreen(vo_sdlyuv_module.is_fullscreen);
 }
 
 static int set_fullscreen(_Bool fullscreen) {
@@ -179,7 +179,7 @@ static int set_fullscreen(_Bool fullscreen) {
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !video_sdlyuv_module.is_fullscreen && fullscreen) {
+	if (screen && !vo_sdlyuv_module.is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(screen);
 	}
 #endif
@@ -205,7 +205,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (video_sdlyuv_module.is_fullscreen && !fullscreen) {
+	if (vo_sdlyuv_module.is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -231,7 +231,7 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	video_sdlyuv_module.is_fullscreen = fullscreen;
+	vo_sdlyuv_module.is_fullscreen = fullscreen;
 
 	memcpy(&dstrect, &screen->clip_rect, sizeof(SDL_Rect));
 	if (((float)screen->w/(float)screen->h)>(4.0/3.0)) {
@@ -256,5 +256,5 @@ static int set_fullscreen(_Bool fullscreen) {
 static void vsync(void) {
 	SDL_DisplayYUVOverlay(overlay, &dstrect);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	video_module->scanline = 0;
+	vo_module->scanline = 0;
 }

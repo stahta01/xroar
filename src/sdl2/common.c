@@ -35,7 +35,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6847.h"
-#include "module.h"
+#include "vo.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
@@ -43,8 +43,8 @@
 unsigned sdl_window_x = 0, sdl_window_y = 0;
 unsigned sdl_window_w = 320, sdl_window_h = 240;
 
-VideoModule * const sdl_video_module_list[] = {
-	&video_sdl_module,
+struct vo_module * const sdl_vo_module_list[] = {
+	&vo_sdl_module,
 	NULL
 };
 
@@ -107,8 +107,8 @@ void sdl_run(void) {
 			case SDL_WINDOWEVENT:
 				switch(event.window.event) {
 				case SDL_WINDOWEVENT_RESIZED:
-					if (video_module->resize) {
-						video_module->resize(event.window.data1, event.window.data2);
+					if (vo_module->resize) {
+						vo_module->resize(event.window.data1, event.window.data2);
 					}
 					break;
 				}
@@ -221,8 +221,8 @@ void sdl_zoom_in(void) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
-	if (video_module->resize) {
-		video_module->resize(160*scale, 120*scale);
+	if (vo_module->resize) {
+		vo_module->resize(160*scale, 120*scale);
 	}
 }
 
@@ -239,7 +239,7 @@ void sdl_zoom_out(void) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
-	if (video_module->resize) {
-		video_module->resize(160*scale, 120*scale);
+	if (vo_module->resize) {
+		vo_module->resize(160*scale, 120*scale);
 	}
 }

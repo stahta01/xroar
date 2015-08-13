@@ -36,6 +36,7 @@ option) any later version.
 #include "tape.h"
 #include "ui.h"
 #include "vdisk.h"
+#include "vo.h"
 #include "xroar.h"
 
 #ifdef HAVE_SDL2
@@ -82,7 +83,7 @@ struct ui_module ui_windows32_module = {
 		    .description = "Windows SDL UI",
 #endif
 	            .init = init, .shutdown = ui_shutdown },
-	.video_module_list = sdl_video_module_list,
+	.vo_module_list = sdl_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,

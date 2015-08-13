@@ -128,28 +128,28 @@ static void alloc_colours(void) {
 
 /* Render colour line using palette */
 static void render_scanline(uint8_t const *scanline_data) {
-	if (video_module->scanline >= video_module->window_y &&
-	    video_module->scanline < (video_module->window_y + video_module->window_h)) {
-		scanline_data += video_module->window_x;
+	if (vo_module->scanline >= vo_module->window_y &&
+	    vo_module->scanline < (vo_module->window_y + vo_module->window_h)) {
+		scanline_data += vo_module->window_x;
 		LOCK_SURFACE;
-		for (int i = video_module->window_w; i; i--) {
+		for (int i = vo_module->window_w; i; i--) {
 			*pixel = vdg_colour[*(scanline_data++)];
 			pixel += XSTEP;
 		}
 		UNLOCK_SURFACE;
 		pixel += NEXTLINE;
 	}
-	video_module->scanline++;
+	vo_module->scanline++;
 }
 
 /* Render artifacted colours - simple 4-colour lookup */
 static void render_ccr_simple(uint8_t const *scanline_data) {
-	if (video_module->scanline >= video_module->window_y &&
-	    video_module->scanline < (video_module->window_y + video_module->window_h)) {
+	if (vo_module->scanline >= vo_module->window_y &&
+	    vo_module->scanline < (vo_module->window_y + vo_module->window_h)) {
 		int phase = xroar_machine_config->cross_colour_phase - 1;
-		scanline_data += video_module->window_x;
+		scanline_data += vo_module->window_x;
 		LOCK_SURFACE;
-		for (int i = video_module->window_w >> 1; i; i--) {
+		for (int i = vo_module->window_w >> 1; i; i--) {
 			uint8_t c0 = *(scanline_data++);
 			uint8_t c1 = *(scanline_data++);
 			if (c0 == VDG_BLACK || c0 == VDG_WHITE) {
@@ -165,20 +165,20 @@ static void render_ccr_simple(uint8_t const *scanline_data) {
 		UNLOCK_SURFACE;
 		pixel += NEXTLINE;
 	}
-	video_module->scanline++;
+	vo_module->scanline++;
 }
 
 /* Render artifacted colours - 5-bit lookup table */
 static void render_ccr_5bit(uint8_t const *scanline_data) {
-	if (video_module->scanline >= video_module->window_y &&
-	    video_module->scanline < (video_module->window_y + video_module->window_h)) {
+	if (vo_module->scanline >= vo_module->window_y &&
+	    vo_module->scanline < (vo_module->window_y + vo_module->window_h)) {
 		int phase = xroar_machine_config->cross_colour_phase - 1;
 		unsigned aindex = 0;
-		scanline_data += video_module->window_x;
+		scanline_data += vo_module->window_x;
 		aindex = (*(scanline_data - 2) != VDG_BLACK) ? 14 : 0;
 		aindex |= (*(scanline_data - 1) != VDG_BLACK) ? 1 : 0;
 		LOCK_SURFACE;
-		for (int i = video_module->window_w; i; i--) {
+		for (int i = vo_module->window_w; i; i--) {
 			aindex = (aindex << 1) & 31;
 			if (*(scanline_data + 2) != VDG_BLACK)
 				aindex |= 1;
@@ -194,17 +194,17 @@ static void render_ccr_5bit(uint8_t const *scanline_data) {
 		UNLOCK_SURFACE;
 		pixel += NEXTLINE;
 	}
-	video_module->scanline++;
+	vo_module->scanline++;
 }
 
 static void update_cross_colour_phase(void) {
 	if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_OFF) {
-		video_module->render_scanline = render_scanline;
+		vo_module->render_scanline = render_scanline;
 	} else {
 		if (xroar_cfg.ccr == CROSS_COLOUR_SIMPLE) {
-			video_module->render_scanline = render_ccr_simple;
+			vo_module->render_scanline = render_ccr_simple;
 		} else {
-			video_module->render_scanline = render_ccr_5bit;
+			vo_module->render_scanline = render_ccr_5bit;
 		}
 	}
 }

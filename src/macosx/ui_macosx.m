@@ -25,6 +25,7 @@
 #include "tape.h"
 #include "ui.h"
 #include "vdisk.h"
+#include "vo.h"
 #include "xroar.h"
 #include "sdl/common.h"
 
@@ -969,7 +970,7 @@ static void update_cartridge_menu(void);
 struct ui_module ui_macosx_module = {
 	.common = { .name = "macosx", .description = "Mac OS X SDL UI",
 	            .init = init, .shutdown = shutdown },
-	.video_module_list = sdl_video_module_list,
+	.vo_module_list = sdl_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 	.run = sdl_run,
 	.set_state = set_state,

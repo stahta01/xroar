@@ -23,7 +23,7 @@
 
 #include "fs.h"
 #include "logging.h"
-#include "module.h"
+#include "vo.h"
 
 static char *get_filename(char const * const *extensions);
 
@@ -40,14 +40,14 @@ static char *get_filename(char const * const *extensions) {
 	_Bool was_fullscreen;
 	(void)extensions;  /* unused */
 
-	was_fullscreen = video_module->is_fullscreen;
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(0);
+	was_fullscreen = vo_module->is_fullscreen;
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(0);
 	printf("Filename? ");
 	fflush(stdout);
 	in = fgets(fnbuf, sizeof(fnbuf), stdin);
-	if (video_module->set_fullscreen && was_fullscreen)
-		video_module->set_fullscreen(1);
+	if (vo_module->set_fullscreen && was_fullscreen)
+		vo_module->set_fullscreen(1);
 	if (!in)
 		return NULL;
 	cr = strrchr(fnbuf, '\n');

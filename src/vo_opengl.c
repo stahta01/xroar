@@ -41,6 +41,7 @@
 #endif
 
 #include "mc6847.h"
+#include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"
 
@@ -108,11 +109,11 @@ _Bool vo_opengl_init(void) {
 	}
 
 	alloc_colours();
-	video_module->scanline = 0;
-	video_module->window_x = VDG_ACTIVE_LINE_START - 32;
-	video_module->window_y = VDG_TOP_BORDER_START + 1;
-	video_module->window_w = 320;
-	video_module->window_h = 240;
+	vo_module->scanline = 0;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_y = VDG_TOP_BORDER_START + 1;
+	vo_module->window_w = 320;
+	vo_module->window_h = 240;
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	return 1;
 }
@@ -210,7 +211,7 @@ void vo_opengl_refresh(void) {
 void vo_opengl_vsync(void) {
 	vo_opengl_refresh();
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	video_module->scanline = 0;
+	vo_module->scanline = 0;
 }
 
 void vo_opengl_render_scanline(uint8_t const *scanline_data) {

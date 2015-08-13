@@ -22,6 +22,7 @@
 
 #include "module.h"
 #include "ui.h"
+#include "vo.h"
 
 static char *filereq_noop(char const * const *extensions);
 FileReqModule filereq_null_module = {
@@ -33,9 +34,9 @@ static FileReqModule * const null_filereq_module_list[] = {
 	&filereq_null_module, NULL
 };
 
-extern VideoModule video_null_module;
-static VideoModule * const null_video_module_list[] = {
-	&video_null_module,
+extern struct vo_module vo_null_module;
+static struct vo_module * const null_vo_module_list[] = {
+	&vo_null_module,
 	NULL
 };
 
@@ -44,7 +45,7 @@ static void set_state(enum ui_tag tag, int value, const void *data);
 struct ui_module ui_null_module = {
 	.common = { .name = "null", .description = "No UI" },
 	.filereq_module_list = null_filereq_module_list,
-	.video_module_list = null_video_module_list,
+	.vo_module_list = null_vo_module_list,
 	.set_state = set_state,
 };
 

@@ -20,12 +20,12 @@
 
 #include <stdint.h>
 
-#include "module.h"
+#include "vo.h"
 
 static void no_op(void);
 static void no_op_render(uint8_t const *);
 
-VideoModule video_null_module = {
+struct vo_module vo_null_module = {
 	.common = { .name = "null", .description = "No video" },
 	.vsync = no_op,
 	.render_scanline = no_op_render,
