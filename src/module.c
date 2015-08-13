@@ -122,7 +122,7 @@ struct module *module_select(struct module * const *list, const char *name) {
 	if (list == NULL)
 		return NULL;
 	for (i = 0; list[i]; i++) {
-		if (!strcmp(list[i]->name, name))
+		if (strcmp(list[i]->name, name) == 0)
 			return list[i];
 	}
 	return NULL;
