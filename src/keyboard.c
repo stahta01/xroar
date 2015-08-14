@@ -33,6 +33,11 @@
 #include "mc6809.h"
 #include "xroar.h"
 
+extern inline void keyboard_press_matrix(int col, int row);
+extern inline void keyboard_release_matrix(int col, int row);
+extern inline void keyboard_press(int s);
+extern inline void keyboard_release(int s);
+
 /* Map of virtual scancodes to keyboard matrix points: */
 struct dkbd_map keymap_new;
 

@@ -25,6 +25,10 @@
 #include "events.h"
 #include "logging.h"
 
+extern inline _Bool event_pending(struct event **list);
+extern inline void event_dispatch_next(struct event **list);
+extern inline void event_run_queue(struct event **list);
+
 event_ticks event_current_tick = 0;
 
 struct event *event_new(DELEGATE_T0(void) delegate) {

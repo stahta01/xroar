@@ -34,23 +34,23 @@ struct keyboard_state {
 
 /* Press or release a key at the the matrix position (col,row). */
 
-static inline void keyboard_press_matrix(int col, int row) {
+inline void keyboard_press_matrix(int col, int row) {
 	keyboard_column[col] &= ~(1<<(row));
 	keyboard_row[row] &= ~(1<<(col));
 }
 
-static inline void keyboard_release_matrix(int col, int row) {
+inline void keyboard_release_matrix(int col, int row) {
 	keyboard_column[col] |= 1<<(row);
 	keyboard_row[row] |= 1<<(col);
 }
 
 /* Press or release a key from the current keymap. */
 
-static inline void keyboard_press(int s) {
+inline void keyboard_press(int s) {
 	keyboard_press_matrix(keymap_new.point[s].col, keymap_new.point[s].row);
 }
 
-static inline void keyboard_release(int s) {
+inline void keyboard_release(int s) {
 	keyboard_release_matrix(keymap_new.point[s].col, keymap_new.point[s].row);
 }
 

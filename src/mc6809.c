@@ -39,6 +39,11 @@
 #include "delegate.h"
 #include "mc6809.h"
 
+extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
+extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
+extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val);
+extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
+
 /*
  * External interface
  */

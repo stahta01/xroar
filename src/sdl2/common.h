@@ -73,7 +73,7 @@ void sdl_windows32_remove_menu(SDL_Window *);
 /* Now wrap all of the above in inline functions so that common code doesn't
  * need to be littered with these conditionals. */
 
-static inline void sdl_os_keyboard_init(SDL_Window *sw) {
+inline void sdl_os_keyboard_init(SDL_Window *sw) {
 	(void)sw;
 #if defined(HAVE_X11)
 	sdl_x11_keyboard_init(sw);
@@ -82,7 +82,7 @@ static inline void sdl_os_keyboard_init(SDL_Window *sw) {
 #endif
 }
 
-static inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
+inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	(void)wmmsg;
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);
@@ -91,14 +91,14 @@ static inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 #endif
 }
 
-static inline void sdl_os_fix_keyboard_event(SDL_Event *ev) {
+inline void sdl_os_fix_keyboard_event(SDL_Event *ev) {
 	(void)ev;
 #if defined(HAVE_X11)
 	sdl_x11_fix_keyboard_event(ev);
 #endif
 }
 
-static inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
+inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
 #if defined(HAVE_X11)
 	return sdl_x11_keysym_to_unicode(keysym);
 #elif defined(WINDOWS32)

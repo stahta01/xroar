@@ -96,19 +96,19 @@ struct MC6809 {
 #define MC6809_REG_A(cpu) (*((uint8_t *)&cpu->reg_d + MC6809_REG_HI))
 #define MC6809_REG_B(cpu) (*((uint8_t *)&cpu->reg_d + MC6809_REG_LO))
 
-static inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->halt = val;
 }
 
-static inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->nmi = val;
 }
 
-static inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->firq = val;
 }
 
-static inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->irq = val;
 }
 
