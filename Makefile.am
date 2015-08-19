@@ -5,3 +5,6 @@ EXTRA_DIST = README COPYING.GPL COPYING.LGPL-2.1
 
 SUBDIRS = portalib src doc
 DIST_SUBDIRS = tools portalib src doc
+
+clena: clean
+	@echo "How much clena do you want it?"
