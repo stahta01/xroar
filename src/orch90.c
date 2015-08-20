@@ -26,9 +26,16 @@
 
 #include "cart.h"
 #include "logging.h"
-#include "orch90.h"
 #include "sound.h"
 #include "xroar.h"
+
+static struct cart *orch90_new(struct cart_config *);
+
+struct cart_module cart_orch90_module = {
+	.name = "orch90",
+	.description = "Orchestra 90-CC",
+	.new = orch90_new,
+};
 
 struct orch90 {
 	struct cart cart;
@@ -40,21 +47,20 @@ static void orch90_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void orch90_reset(struct cart *c);
 static void orch90_detach(struct cart *c);
 
-static void orch90_init(struct orch90 *o) {
-	struct cart *c = (struct cart *)o;
+static struct cart *orch90_new(struct cart_config *cc) {
+	struct orch90 *o = xmalloc(sizeof(*o));
+	struct cart *c = &o->cart;
+
+	c->config = cc;
 	cart_rom_init(c);
 	c->write = orch90_write;
 	c->reset = orch90_reset;
 	c->detach = orch90_detach;
+
 	o->left = 0.0;
 	o->right = 0.0;
-}
 
-struct cart *orch90_new(struct cart_config *cc) {
-	struct orch90 *o = xmalloc(sizeof(*o));
-	o->cart.config = cc;
-	orch90_init(o);
-	return (struct cart *)o;
+	return c;
 }
 
 static void orch90_reset(struct cart *c) {

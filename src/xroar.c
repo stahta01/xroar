@@ -111,7 +111,7 @@ struct private_cfg {
 
 	/* Emulated cartridge */
 	char *cart_desc;
-	int cart_type;
+	char *cart_type;
 	char *cart_rom;
 	char *cart_rom2;
 	int cart_becker;
@@ -162,7 +162,6 @@ static struct private_cfg private_cfg = {
 	.tv = ANY_AUTO,
 	.vdg_type = -1,
 	.nodos = -1,
-	.cart_type = ANY_AUTO,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
 	.volume = 100,
@@ -177,6 +176,7 @@ static void set_machine(const char *name);
 static void set_pal(void);
 static void set_ntsc(void);
 static void set_cart(const char *name);
+static void set_cart_type(const char *name);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
 static void set_joystick_button(const char *spec);
@@ -485,6 +485,8 @@ _Bool xroar_init(int argc, char **argv) {
 #ifdef WINDOWS32
 	windows32_init();
 #endif
+
+	cart_init();
 
 	xroar_conf_path = getenv("XROAR_CONF_PATH");
 	if (!xroar_conf_path)
@@ -1624,9 +1626,9 @@ static void set_cart(const char *name) {
 			cc->description = private_cfg.cart_desc;
 			private_cfg.cart_desc = NULL;
 		}
-		if (private_cfg.cart_type != ANY_AUTO) {
+		if (private_cfg.cart_type) {
 			cc->type = private_cfg.cart_type;
-			private_cfg.cart_type = ANY_AUTO;
+			private_cfg.cart_type = NULL;
 		}
 		if (private_cfg.cart_rom) {
 			cc->rom = private_cfg.cart_rom;
@@ -1653,6 +1655,17 @@ static void set_cart(const char *name) {
 			selected_cart_config->name = xstrdup(name);
 		}
 	}
+}
+
+static void set_cart_type(const char *name) {
+	if (name && 0 == strcmp(name, "help")) {
+		cart_type_help();
+		exit(EXIT_SUCCESS);
+	}
+	if (private_cfg.cart_type) {
+		free(private_cfg.cart_type);
+	}
+	private_cfg.cart_type = xstrdup(name);
 }
 
 static void cfg_mpi_slot(int slot) {
@@ -1831,13 +1844,13 @@ static struct xconfig_option const xroar_options[] = {
 	/* Cartridges: */
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
-	{ XC_SET_ENUM("cart-type", &private_cfg.cart_type, cart_type_list) },
+	{ XC_CALL_STRING("cart-type", &set_cart_type) },
 	{ XC_SET_STRING("cart-rom", &private_cfg.cart_rom) },
 	{ XC_SET_STRING("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
 	/* Backwards compatibility: */
-	{ XC_SET_ENUM("dostype", &private_cfg.cart_type, cart_type_list), .deprecated = 1 },
+	{ XC_SET_STRING("dostype", &private_cfg.cart_type), .deprecated = 1 },
 	{ XC_SET_STRING("dos", &private_cfg.dos_option), .deprecated = 1 },
 
 	/* Multi-Pak Interface: */

@@ -22,9 +22,9 @@ xroar_SOURCES = \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
-	deltados.c deltados.h \
+	deltados.c \
 	dkbd.c dkbd.h \
-	dragondos.c dragondos.h \
+	dragondos.c \
 	events.c events.h \
 	font-6847.c font-6847.h \
 	font-6847t1.c font-6847t1.h \
@@ -40,11 +40,11 @@ xroar_SOURCES = \
 	mc6847.c mc6847.h \
 	module.c module.h \
 	mpi.c mpi.h \
-	orch90.c orch90.h \
+	orch90.c \
 	path.c path.h \
 	printer.c printer.h \
 	romlist.c romlist.h \
-	rsdos.c rsdos.h \
+	rsdos.c \
 	sam.c sam.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \

@@ -33,11 +33,18 @@
 
 #include "cart.h"
 #include "delegate.h"
-#include "deltados.h"
 #include "logging.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
+
+static struct cart *deltados_new(struct cart_config *);
+
+struct cart_module cart_deltados_module = {
+	.name = "delta",
+	.description = "Delta System",
+	.new = deltados_new,
+};
 
 struct deltados {
 	struct cart cart;
@@ -54,29 +61,29 @@ static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
 static void ff44_write(struct deltados *d, unsigned flags);
 
-static void deltados_init(struct deltados *d) {
-	struct cart *c = (struct cart *)d;
+static struct cart *deltados_new(struct cart_config *cc) {
+	struct deltados *d = xmalloc(sizeof(*d));
+	struct cart *c = &d->cart;
+
+	c->config = cc;
 	cart_rom_init(c);
 	c->read = deltados_read;
 	c->write = deltados_write;
 	c->reset = deltados_reset;
 	c->detach = deltados_detach;
+
 	d->fdc = wd279x_new(WD2791);
 	d->fdc->set_dirc = (DELEGATE_T1(void,int)){vdrive_set_dirc, NULL};
 	d->fdc->set_dden = (DELEGATE_T1(void,bool)){vdrive_set_dden, NULL};
+
 	vdrive_ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
 	vdrive_tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
 	vdrive_index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
 	vdrive_write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
 	wd279x_update_connection(d->fdc);
 	vdrive_update_connection();
-}
 
-struct cart *deltados_new(struct cart_config *cc) {
-	struct deltados *d = xmalloc(sizeof(*d));
-	d->cart.config = cc;
-	deltados_init(d);
-	return (struct cart *)d;
+	return c;
 }
 
 static void deltados_reset(struct cart *c) {

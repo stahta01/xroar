@@ -6,10 +6,8 @@
 #ifndef XROAR_MPI_H_
 #define XROAR_MPI_H_
 
-struct cart_config;
 struct cart;
 
-struct cart *mpi_new(struct cart_config *cc);
 void mpi_switch_slot(struct cart *c, unsigned slot);
 
 void mpi_set_initial(int slot);

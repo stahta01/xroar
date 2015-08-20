@@ -25,21 +25,17 @@
 #include <string.h>
 
 #include "array.h"
+#include "c-strcase.h"
 #include "slist.h"
 #include "xalloc.h"
 
 #include "cart.h"
 #include "crc32.h"
 #include "delegate.h"
-#include "deltados.h"
-#include "dragondos.h"
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
-#include "mpi.h"
-#include "orch90.h"
 #include "romlist.h"
-#include "rsdos.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -49,7 +45,25 @@ static int next_id = 0;
 /* Single config for auto-defined ROM carts */
 static struct cart_config *rom_cart_config = NULL;
 
-/* ---------------------------------------------------------------------- */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static struct cart *cart_rom_new(struct cart_config *cc);
+
+static struct cart_module cart_rom_module = {
+	.name = "rom",
+	.description = "ROM cartridge",
+	.new = cart_rom_new,
+};
+
+extern struct cart_module cart_dragondos_module;
+extern struct cart_module cart_deltados_module;
+extern struct cart_module cart_rsdos_module;
+extern struct cart_module cart_orch90_module;
+extern struct cart_module cart_mpi_module;
+
+static struct slist *cart_modules = NULL;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
@@ -61,7 +75,6 @@ struct cart_config *cart_config_new(void) {
 	struct cart_config *new = xmalloc(sizeof(*new));
 	*new = (struct cart_config){0};
 	new->id = next_id;
-	new->type = CART_ROM;
 	new->autorun = ANY_AUTO;
 	config_list = slist_append(config_list, new);
 	next_id++;
@@ -117,7 +130,6 @@ struct cart_config *cart_config_by_name(const char *name) {
 		} else {
 			rom_cart_config->description = xstrdup("ROM cartridge");
 		}
-		rom_cart_config->type = CART_ROM;
 		if (rom_cart_config->rom) free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
 		rom_cart_config->autorun = 1;
@@ -150,11 +162,14 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 }
 
 void cart_config_complete(struct cart_config *cc) {
+	if (!cc->type) {
+		cc->type = xstrdup("rom");
+	}
 	if (!cc->description) {
 		cc->description = xstrdup(cc->name);
 	}
 	if (cc->autorun == ANY_AUTO) {
-		if (cc->type == CART_ROM) {
+		if (c_strcasecmp(cc->type, "rom") == 0) {
 			cc->autorun = 1;
 		} else {
 			cc->autorun = 0;
@@ -167,6 +182,8 @@ static void cart_config_free(struct cart_config *cc) {
 		free(cc->name);
 	if (cc->description)
 		free(cc->description);
+	if (cc->type)
+		free(cc->type);
 	if (cc->rom)
 		free(cc->rom);
 	if (cc->rom2)
@@ -187,35 +204,48 @@ struct slist *cart_config_list(void) {
 	return config_list;
 }
 
-struct xconfig_enum cart_type_list[] = {
-	{ XC_ENUM_INT("rom", CART_ROM, "ROM cartridge") },
-	{ XC_ENUM_INT("dragondos", CART_DRAGONDOS, "DragonDOS") },
-	{ XC_ENUM_INT("delta", CART_DELTADOS, "Delta System") },
-	{ XC_ENUM_INT("rsdos", CART_RSDOS, "RS-DOS") },
-	{ XC_ENUM_INT("orch90", CART_ORCH90, "Orchestra 90-CC") },
-	{ XC_ENUM_INT("mpi", CART_MPI, "Multi-Pak Interface") },
-	{ XC_ENUM_END() }
-};
-
 void cart_config_print_all(_Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
 		printf("cart %s\n", cc->name);
 		xroar_cfg_print_inc_indent();
 		xroar_cfg_print_string(all, "cart-desc", cc->description, NULL);
-		xroar_cfg_print_enum(all, "cart-type", cc->type, CART_ROM, cart_type_list);
+		xroar_cfg_print_string(all, "cart-type", cc->type, NULL);
 		xroar_cfg_print_string(all, "cart-rom", cc->rom, NULL);
 		xroar_cfg_print_string(all, "cart-rom2", cc->rom2, NULL);
-		xroar_cfg_print_bool(all, "cart-autorun", cc->autorun, cc->type == CART_ROM);
+		xroar_cfg_print_bool(all, "cart-autorun", cc->autorun, (strcmp(cc->type, "rom") == 0));
 		xroar_cfg_print_bool(all, "cart-becker", cc->becker_port, 0);
 		xroar_cfg_print_dec_indent();
 		printf("\n");
 	}
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void cart_init(void) {
+	// reverse order
+	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);
+	cart_modules = slist_prepend(cart_modules, &cart_orch90_module);
+	cart_modules = slist_prepend(cart_modules, &cart_rsdos_module);
+	cart_modules = slist_prepend(cart_modules, &cart_deltados_module);
+	cart_modules = slist_prepend(cart_modules, &cart_dragondos_module);
+	cart_modules = slist_prepend(cart_modules, &cart_rom_module);
+}
+
 void cart_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)cart_config_free);
 	config_list = NULL;
+}
+
+static void cart_type_help_func(struct cart_module *cm, void *udata) {
+	(void)udata;
+	if (!cm)
+		return;
+	printf("\t%-10s %s\n", cm->name, cm->description);
+}
+
+void cart_type_help(void) {
+	slist_foreach(cart_modules, (slist_iter_func)cart_type_help_func, NULL);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -226,17 +256,20 @@ struct cart *cart_new(struct cart_config *cc) {
 		LOG_DEBUG(1, "Cartridge: %s\n", cc->description);
 	}
 	cart_config_complete(cc);
-	struct cart *c;
-	switch (cc->type) {
-	default:
-	case CART_ROM: c = cart_rom_new(cc); break;
-	case CART_DRAGONDOS: c = dragondos_new(cc); break;
-	case CART_RSDOS: c = rsdos_new(cc); break;
-	case CART_DELTADOS: c = deltados_new(cc); break;
-	case CART_ORCH90: c = orch90_new(cc); break;
-	case CART_MPI: c = mpi_new(cc); break;
+	struct cart *c = NULL;
+	const char *req_type = cc->type;
+	for (struct slist *iter = cart_modules; iter; iter = iter->next) {
+		struct cart_module *cm = iter->data;
+		if (c_strcasecmp(req_type, cm->name) == 0) {
+			c = cm->new(cc);
+			break;
+		}
 	}
-	if (c && c->attach)
+	if (!c) {
+		LOG_WARN("Cartridge module '%s' not found for cartridge '%s'\n", cc->type, cc->name);
+		return NULL;
+	}
+	if (c->attach)
 		c->attach(c);
 	return c;
 }
@@ -299,7 +332,7 @@ void cart_rom_init(struct cart *c) {
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
 }
 
-struct cart *cart_rom_new(struct cart_config *cc) {
+static struct cart *cart_rom_new(struct cart_config *cc) {
 	if (!cc) return NULL;
 	struct cart *c = xmalloc(sizeof(*c));
 	c->config = cc;

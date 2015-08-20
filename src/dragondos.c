@@ -35,11 +35,18 @@
 #include "becker.h"
 #include "cart.h"
 #include "delegate.h"
-#include "dragondos.h"
 #include "logging.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
+
+static struct cart *dragondos_new(struct cart_config *);
+
+struct cart_module cart_dragondos_module = {
+	.name = "dragondos",
+	.description = "DragonDOS",
+	.new = dragondos_new,
+};
 
 struct dragondos {
 	struct cart cart;
@@ -63,14 +70,17 @@ static void ff48_write(struct dragondos *d, unsigned flags);
 static void set_drq(void *, _Bool);
 static void set_intrq(void *, _Bool);
 
-static void dragondos_init(struct dragondos *d) {
-	struct cart *c = (struct cart *)d;
-	struct cart_config *cc = c->config;
+static struct cart *dragondos_new(struct cart_config *cc) {
+	struct dragondos *d = xmalloc(sizeof(*d));
+	struct cart *c = &d->cart;
+
+	c->config = cc;
 	cart_rom_init(c);
 	c->read = dragondos_read;
 	c->write = dragondos_write;
 	c->reset = dragondos_reset;
 	c->detach = dragondos_detach;
+
 	d->have_becker = (cc->becker_port && becker_open());
 	d->fdc = wd279x_new(WD2797);
 	d->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_set_dirc, NULL);
@@ -78,19 +88,15 @@ static void dragondos_init(struct dragondos *d) {
 	d->fdc->set_sso = DELEGATE_AS1(void, unsigned, vdrive_set_sso, NULL);
 	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
 	d->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
+
 	vdrive_ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
 	vdrive_tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
 	vdrive_index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
 	vdrive_write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
 	wd279x_update_connection(d->fdc);
 	vdrive_update_connection();
-}
 
-struct cart *dragondos_new(struct cart_config *cc) {
-	struct dragondos *d = xmalloc(sizeof(*d));
-	d->cart.config = cc;
-	dragondos_init(d);
-	return (struct cart *)d;
+	return c;
 }
 
 static void dragondos_reset(struct cart *c) {

@@ -18,9 +18,14 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "array.h"
+#include "c-strcase.h"
+#include "xalloc.h"
 
 #include "cart.h"
 #include "fs.h"
@@ -56,11 +61,35 @@
 #define ID_SNAPVERSION   (9)
 #define ID_VDISK_FILE    (10)
 #define ID_HD6309_STATE  (11)
+#define ID_CART          (12)  // as of v1.8
 
 #define SNAPSHOT_VERSION_MAJOR 1
-#define SNAPSHOT_VERSION_MINOR 7
+#define SNAPSHOT_VERSION_MINOR 8
 
-static void write_chunk_header(FILE *fd, unsigned id, unsigned size) {
+// Versions < 1.8 used a number for these (add 1 to index)
+static const char *old_cart_type_names[] = {
+	"dragondos",
+	"rsdos",
+	"delta",
+};
+
+static char *read_string(FILE *fd, int *size) {
+	char *str = NULL;
+	if (*size == 0) {
+		return NULL;
+	}
+	int len = fs_read_uint8(fd);
+	(*size)--;
+	if ((len-1) >= *size) {
+		return NULL;
+	}
+	str = xzalloc(len);
+	*size -= fread(str, 1, len-1, fd);
+	return str;
+}
+
+static void write_chunk_header(FILE *fd, unsigned id, int size) {
+	assert(size >= 0);
 	fs_write_uint8(fd, id);
 	fs_write_uint16(fd, size);
 }
@@ -149,18 +178,26 @@ int write_snapshot(const char *filename) {
 	fs_write_uint8(fd, xroar_machine_config->tv_standard);
 	fs_write_uint8(fd, xroar_machine_config->ram);
 	if (machine_cart) {
-		fs_write_uint8(fd, machine_cart->config->type);
+		// attempt to keep snapshots >= v1.8 loadable by older versions
+		unsigned old_cart_type = 0;
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(old_cart_type_names); i++) {
+			if (c_strcasecmp(machine_cart->config->type, old_cart_type_names[i]) == 0) {
+				old_cart_type = i + 1;
+				break;
+			}
+		}
+		fs_write_uint8(fd, old_cart_type);
 	} else {
 		fs_write_uint8(fd, 0);
 	}
 	fs_write_uint8(fd, xroar_machine_config->cross_colour_phase);
 	// RAM page 0
-	unsigned ram0_size = machine_ram_size > 0x8000 ? 0x8000 : machine_ram_size;
+	int ram0_size = machine_ram_size > 0x8000 ? 0x8000 : machine_ram_size;
 	write_chunk_header(fd, ID_RAM_PAGE0, ram0_size);
 	fwrite(machine_ram, 1, ram0_size, fd);
 	// RAM page 1
 	if (machine_ram_size > 0x8000) {
-		unsigned ram1_size = machine_ram_size - 0x8000;
+		int ram1_size = machine_ram_size - 0x8000;
 		write_chunk_header(fd, ID_RAM_PAGE1, ram1_size);
 		fwrite(machine_ram + 0x8000, 1, ram1_size, fd);
 	}
@@ -189,6 +226,41 @@ int write_snapshot(const char *filename) {
 	// SAM
 	write_chunk_header(fd, ID_SAM_REGISTERS, 2);
 	fs_write_uint16(fd, sam_get_register(SAM0));
+
+	// Cartridge
+	if (machine_cart) {
+		struct cart_config *cc = machine_cart->config;
+		size_t name_len = cc->name ? strlen(cc->name) + 1 : 1;
+		if (name_len > 255) name_len = 255;
+		size_t desc_len = cc->description ? strlen(cc->description) + 1 : 1;
+		if (desc_len > 255) desc_len = 255;
+		size_t type_len = cc->type ? strlen(cc->type) + 1 : 1;
+		if (type_len > 255) type_len = 255;
+		size_t rom_len = cc->rom ? strlen(cc->rom) + 1: 1;
+		if (rom_len > 255) rom_len = 255;
+		size_t rom2_len = cc->rom2 ? strlen(cc->rom2) + 1: 1;
+		if (rom2_len > 255) rom2_len = 255;
+		int size = name_len + desc_len + type_len + rom_len + rom2_len + 2;
+		write_chunk_header(fd, ID_CART, size);
+		fs_write_uint8(fd, name_len);
+		if (cc->name)
+			fwrite(cc->name, 1, name_len-1, fd);
+		fs_write_uint8(fd, desc_len);
+		if (cc->description)
+			fwrite(cc->description, 1, desc_len-1, fd);
+		fs_write_uint8(fd, type_len);
+		if (cc->type)
+			fwrite(cc->type, 1, type_len-1, fd);
+		fs_write_uint8(fd, rom_len);
+		if (cc->rom)
+			fwrite(cc->rom, 1, rom_len-1, fd);
+		fs_write_uint8(fd, rom2_len);
+		if (cc->rom2)
+			fwrite(cc->rom2, 1, rom2_len-1, fd);
+		fs_write_uint8(fd, cc->becker_port);
+		fs_write_uint8(fd, cc->autorun);
+	}
+
 	// Attached virtual disk filenames
 	{
 		for (unsigned drive = 0; drive < VDRIVE_MAX_DRIVES; drive++) {
@@ -285,9 +357,11 @@ int read_snapshot(const char *filename) {
 	if (buffer[0] != 'X') {
 		old_set_registers(buffer + 3);
 	}
+	struct cart_config *cart_config = NULL;
 	while ((section = fs_read_uint8(fd)) >= 0) {
 		int size = fs_read_uint16(fd);
 		if (size == 0) size = 0x10000;
+		LOG_DEBUG(2, "Snapshot read: chunk type %d, size %d\n", section, size);
 		switch (section) {
 			case ID_ARCHITECTURE:
 				// Deprecated: Machine architecture
@@ -418,7 +492,10 @@ int read_snapshot(const char *filename) {
 				xroar_machine_config->tv_standard = fs_read_uint8(fd);
 				xroar_machine_config->ram = fs_read_uint8(fd);
 				tmp = fs_read_uint8(fd);  // dos_type
-				xroar_set_dos(tmp);
+				if (version_minor < 8) {
+					// v1.8 adds a separate cart chunk
+					xroar_set_dos(tmp);
+				}
 				size -= 7;
 				if (size > 0) {
 					xroar_machine_config->cross_colour_phase = fs_read_uint8(fd);
@@ -498,6 +575,46 @@ int read_snapshot(const char *filename) {
 					}
 				}
 				break;
+
+			case ID_CART:
+				// Attached cartridge
+				{
+					char *name = read_string(fd, &size);
+					// must have a name
+					if (!name || size == 0) break;
+					char *desc = read_string(fd, &size);
+					if (size == 0) break;
+					char *type = read_string(fd, &size);
+					if (size == 0) break;
+					char *rom = read_string(fd, &size);
+					if (size == 0) break;
+					char *rom2 = read_string(fd, &size);
+					if (size < 2) break;
+					cart_config = cart_config_by_name(name);
+					if (!cart_config) {
+						cart_config = cart_config_new();
+					}
+					if (cart_config->name)
+						free(cart_config->name);
+					cart_config->name = name;
+					if (cart_config->description)
+						free(cart_config->description);
+					cart_config->description = desc;
+					if (cart_config->type)
+						free(cart_config->type);
+					cart_config->type = type;
+					if (cart_config->rom)
+						free(cart_config->rom);
+					cart_config->rom = rom;
+					if (cart_config->rom2)
+						free(cart_config->rom2);
+					cart_config->rom2 = rom2;
+					cart_config->becker_port = fs_read_uint8(fd);
+					cart_config->autorun = fs_read_uint8(fd);
+					size -= 2;
+				}
+				break;
+
 			default:
 				// Unknown chunk
 				LOG_WARN("Unknown chunk in snaphot.\n");
@@ -510,5 +627,11 @@ int read_snapshot(const char *filename) {
 		}
 	}
 	fclose(fd);
+	if (cart_config) {
+		// XXX really we need something to update the UI here, the
+		// embedded cart config may have changed description.  more
+		// importantly, the UI won't know about the id.
+		xroar_set_cart(1, cart_config->name);
+	}
 	return 0;
 }

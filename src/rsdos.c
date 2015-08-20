@@ -33,10 +33,17 @@
 #include "cart.h"
 #include "delegate.h"
 #include "logging.h"
-#include "rsdos.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
+
+static struct cart *rsdos_new(struct cart_config *);
+
+struct cart_module cart_rsdos_module = {
+	.name = "rsdos",
+	.description = "RS-DOS",
+	.new = rsdos_new,
+};
 
 struct rsdos {
 	struct cart cart;
@@ -60,33 +67,32 @@ static void ff40_write(struct rsdos *r, unsigned flags);
 static void set_drq(void *, _Bool);
 static void set_intrq(void *, _Bool);
 
-static void rsdos_init(struct rsdos *r) {
-	struct cart *c = (struct cart *)r;
-	struct cart_config *cc = c->config;
+static struct cart *rsdos_new(struct cart_config *cc) {
+	struct rsdos *r = xmalloc(sizeof(*r));
+	struct cart *c = &r->cart;
+
+	c->config = cc;
 	cart_rom_init(c);
 	c->read = rsdos_read;
 	c->write = rsdos_write;
 	c->reset = rsdos_reset;
 	c->detach = rsdos_detach;
+
 	r->have_becker = (cc->becker_port && becker_open());
 	r->fdc = wd279x_new(WD2793);
 	r->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_set_dirc, NULL);
 	r->fdc->set_dden = DELEGATE_AS1(void, bool, vdrive_set_dden, NULL);
 	r->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
 	r->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
+
 	vdrive_ready = DELEGATE_AS1(void, bool, wd279x_ready, r->fdc);
 	vdrive_tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, r->fdc);
 	vdrive_index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, r->fdc);
 	vdrive_write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, r->fdc);
 	wd279x_update_connection(r->fdc);
 	vdrive_update_connection();
-}
 
-struct cart *rsdos_new(struct cart_config *cc) {
-	struct rsdos *r = xmalloc(sizeof(*r));
-	r->cart.config = cc;
-	rsdos_init(r);
-	return (struct cart *)r;
+	return c;
 }
 
 static void rsdos_reset(struct cart *c) {

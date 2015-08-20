@@ -15,20 +15,11 @@ struct slist;
 struct machine_config;
 struct event;
 
-enum cart_type {
-	CART_ROM = 0,
-	CART_DRAGONDOS = 1,
-	CART_RSDOS = 2,
-	CART_DELTADOS = 3,
-	CART_ORCH90 = 4,
-	CART_MPI = 5,
-};
-
 struct cart_config {
 	char *name;
 	char *description;
+	char *type;
 	int id;
-	enum cart_type type;
 	char *rom;
 	char *rom2;
 	_Bool becker_port;
@@ -49,7 +40,11 @@ struct cart {
 	struct event *firq_event;
 };
 
-extern struct xconfig_enum cart_type_list[];
+struct cart_module {
+	const char *name;
+	const char *description;
+	struct cart *(* const new)(struct cart_config *);
+};
 
 struct cart_config *cart_config_new(void);
 struct cart_config *cart_config_by_id(int id);
@@ -60,16 +55,15 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
 void cart_config_print_all(_Bool all);
 
+void cart_init(void);
 void cart_shutdown(void);
+void cart_type_help(void);
 
-// c->config MUST point to a complete cart config before calling cart_init()
-void cart_init(struct cart *c);
 struct cart *cart_new(struct cart_config *cc);
 struct cart *cart_new_named(const char *cc_name);
 void cart_free(struct cart *c);
 
 void cart_rom_init(struct cart *c);
-struct cart *cart_rom_new(struct cart_config *cc);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
 

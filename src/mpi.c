@@ -31,6 +31,14 @@
 #include "logging.h"
 #include "xroar.h"
 
+static struct cart *mpi_new(struct cart_config *);
+
+struct cart_module cart_mpi_module = {
+	.name = "mpi",
+	.description = "Multi-Pak Interface",
+	.new = mpi_new,
+};
+
 struct mpi;
 
 struct mpi_slot {
@@ -70,14 +78,24 @@ static void mpi_detach(struct cart *c);
 
 static void select_slot(struct cart *c, unsigned D);
 
-static void mpi_init(struct mpi *m) {
-	struct cart *c = (struct cart *)m;
+static struct cart *mpi_new(struct cart_config *cc) {
+	if (mpi_active) {
+		LOG_WARN("Chaining Multi-Pak Interfaces not supported.\n");
+		return NULL;
+	}
+	mpi_active = 1;
+
+	struct mpi *m = xmalloc(sizeof(*m));
+	struct cart *c = &m->cart;
+
+	c->config = cc;
 	cart_rom_init(c);
 	c->read = mpi_read;
 	c->write = mpi_write;
 	c->reset = mpi_reset;
 	c->attach = mpi_attach;
 	c->detach = mpi_detach;
+
 	m->switch_enable = 1;
 	m->cts_route = 0;
 	m->p2_route = 0;
@@ -98,18 +116,8 @@ static void mpi_init(struct mpi *m) {
 		}
 	}
 	mpi_switch_slot(c, initial_slot);
-}
 
-struct cart *mpi_new(struct cart_config *cc) {
-	if (mpi_active) {
-		LOG_WARN("Chaining Multi-Pak Interfaces not supported.\n");
-		return NULL;
-	}
-	mpi_active = 1;
-	struct mpi *m = xmalloc(sizeof(*m));
-	m->cart.config = cc;
-	mpi_init(m);
-	return (struct cart *)m;
+	return c;
 }
 
 static void mpi_reset(struct cart *c) {
