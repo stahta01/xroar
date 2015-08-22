@@ -600,6 +600,7 @@ _Bool xroar_init(int argc, char **argv) {
 	if (private_cfg.run) {
 		xconfig_set_option(xroar_options, "load", private_cfg.run);
 		autorun_last = 1;
+		// XXX???  free(private_cfg.run);
 		private_cfg.run = NULL;
 	}
 

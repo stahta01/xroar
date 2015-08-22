@@ -243,6 +243,7 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		select_interface(&spec);
 		if (!selected_interface) {
 			free(spec_copy);
+			free(j);
 			return;
 		}
 		struct joystick_axis *axis = selected_interface->configure_axis(spec, i);
@@ -259,6 +260,7 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		select_interface(&spec);
 		if (!selected_interface) {
 			free(spec_copy);
+			free(j);
 			return;
 		}
 		struct joystick_button *button = selected_interface->configure_button(spec, i);
