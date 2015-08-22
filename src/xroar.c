@@ -1577,7 +1577,7 @@ static void set_machine(const char *name) {
 		if (private_cfg.machine_cart) {
 			if (xroar_machine_config->default_cart)
 				free(xroar_machine_config->default_cart);
-			xroar_machine_config->default_cart = xstrdup(private_cfg.machine_cart);
+			xroar_machine_config->default_cart = private_cfg.machine_cart;
 			private_cfg.machine_cart = NULL;
 		}
 		if (private_cfg.nodos != -1) {
