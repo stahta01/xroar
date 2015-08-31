@@ -45,6 +45,7 @@ struct orch90 {
 
 static void orch90_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void orch90_reset(struct cart *c);
+static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
 
 static struct cart *orch90_new(struct cart_config *cc) {
@@ -55,6 +56,7 @@ static struct cart *orch90_new(struct cart_config *cc) {
 	cart_rom_init(c);
 	c->write = orch90_write;
 	c->reset = orch90_reset;
+	c->attach = orch90_attach;
 	c->detach = orch90_detach;
 
 	o->left = 0.0;
@@ -66,6 +68,11 @@ static struct cart *orch90_new(struct cart_config *cc) {
 static void orch90_reset(struct cart *c) {
 	(void)c;
 	sound_enable_external();
+}
+
+static void orch90_attach(struct cart *c) {
+	cart_rom_attach(c);
+	orch90_reset(c);
 }
 
 static void orch90_detach(struct cart *c) {
