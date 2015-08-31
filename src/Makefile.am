@@ -59,6 +59,7 @@ xroar_SOURCES = \
 	romlist.c romlist.h \
 	rsdos.c \
 	sam.c sam.h \
+	serialise.c serialise.h \
 	sn76489.c sn76489.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
