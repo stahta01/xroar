@@ -296,6 +296,7 @@ static char const * const default_config[] = {
 	"cart-desc Orchestra-90 CC",
 	"cart-type orch90",
 	"cart-rom orch90",
+	"cart-autorun",
 	// Multi-Pak Interface
 	"cart mpi",
 	"cart-desc Multi-Pak Interface",
