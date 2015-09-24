@@ -30,6 +30,8 @@ xroar_SOURCES = \
 	fs.c fs.h \
 	hd6309.c hd6309.h \
 	hexs19.c hexs19.h \
+	ide.c ide.h \
+	idecart.c idecart.h \
 	joystick.c joystick.h \
 	keyboard.c keyboard.h \
 	logging.c logging.h \

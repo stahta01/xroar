@@ -305,6 +305,12 @@ static char const * const default_config[] = {
 	"cart mpi",
 	"cart-desc Multi-Pak Interface",
 	"cart-type mpi",
+	// IDE Cartridge
+	"cart ide",
+	"cart-desc IDE Interface",
+	"cart-type ide",
+	"cart-rom @hdblba",
+	"cart-becker",
 
 	// ROM lists
 
