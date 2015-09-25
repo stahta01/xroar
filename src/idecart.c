@@ -33,12 +33,19 @@
 #include "becker.h"
 #include "ide.h"
 
+static struct cart *idecart_new(struct cart_config *cc);
+
+struct cart_module cart_ide_module = {
+	.name = "ide",
+	.description = "Glenside IDE",
+	.new = idecart_new,
+};
+
 struct idecart {
   struct cart cart;
   struct ide_controller *controller;
   _Bool have_becker;
 };
-
 
 static void idecart_reset(struct cart *c) {
   struct idecart *ide = (struct idecart *)c;
@@ -127,7 +134,7 @@ static void idecart_init(struct idecart *ide) {
   ide_reset_begin(ide->controller);
 }
 
-struct cart *idecart_new(struct cart_config *cc) {
+static struct cart *idecart_new(struct cart_config *cc) {
   struct idecart *ide = xmalloc(sizeof(*ide));
   ide->cart.config = cc;
   idecart_init(ide);

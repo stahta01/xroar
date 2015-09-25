@@ -33,6 +33,7 @@
 #include "crc32.h"
 #include "delegate.h"
 #include "events.h"
+#include "idecart.h"
 #include "logging.h"
 #include "machine.h"
 #include "romlist.h"
@@ -60,6 +61,7 @@ extern struct cart_module cart_deltados_module;
 extern struct cart_module cart_rsdos_module;
 extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
+extern struct cart_module cart_ide_module;
 
 static struct slist *cart_modules = NULL;
 
@@ -225,6 +227,7 @@ void cart_config_print_all(_Bool all) {
 
 void cart_init(void) {
 	// reverse order
+	cart_modules = slist_prepend(cart_modules, &cart_ide_module);
 	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);
 	cart_modules = slist_prepend(cart_modules, &cart_orch90_module);
 	cart_modules = slist_prepend(cart_modules, &cart_rsdos_module);
