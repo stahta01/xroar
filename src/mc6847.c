@@ -50,9 +50,9 @@ struct MC6847_private {
 	struct MC6847 public;
 
 	/* Control lines */
+	unsigned GM;
 	_Bool nA_S;
 	_Bool nA_G;
-	_Bool GM0;
 	_Bool EXT;
 	_Bool CSS, CSSa, CSSb;
 	_Bool inverted_text;
@@ -74,6 +74,7 @@ struct MC6847_private {
 
 	/* Internal state */
 	_Bool is_32byte;
+	_Bool GM0;
 	uint8_t s_fg_colour;
 	uint8_t s_bg_colour;
 	uint8_t fg_colour;
@@ -455,13 +456,13 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 		render_scanline(vdg);
 	}
 
-	unsigned GM = (mode >> 4) & 7;
+	vdg->GM = (mode >> 4) & 7;
 	vdg->GM0 = mode & 0x10;
 	vdg->CSS = mode & 0x08;
 	_Bool new_nA_G = mode & 0x80;
 
-	vdg->inverse_text = vdg->is_t1 && (GM & 2);
-	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (GM & 4);
+	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
+	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
 	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 
 	/* If switching from graphics to alpha/semigraphics */
@@ -490,5 +491,5 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 		vdg->border_colour = vdg->text_border ? vdg->text_border_colour : VDG_BLACK;
 	}
 
-	vdg->is_32byte = !vdg->nA_G || !(GM == 0 || (vdg->GM0 && GM != 7));
+	vdg->is_32byte = !vdg->nA_G || !(vdg->GM == 0 || (vdg->GM0 && vdg->GM != 7));
 }
