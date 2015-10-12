@@ -37,6 +37,8 @@
 #include "vo.h"
 #include "xroar.h"
 
+struct ser_handle;
+
 // Convert VDG pixels (half-cycles) to event ticks:
 #define EVENT_VDG_PIXELS(c) EVENT_SAM_CYCLES((c) * 2)
 
@@ -69,7 +71,6 @@ struct MC6847_private {
 	uint8_t vram_sg_data;
 
 	/* Output */
-	uint8_t *pixel;
 	int frame;  // frameskip counter
 
 	/* Internal state */
@@ -88,7 +89,7 @@ struct MC6847_private {
 	uint8_t pixel_data[VDG_LINE_DURATION];
 
 	uint16_t vram[42];
-	uint16_t *vram_ptr;
+	unsigned vram_index;
 	unsigned vram_nbytes;
 
 	/* Counters */
@@ -102,6 +103,32 @@ struct MC6847_private {
 	_Bool text_border;
 	uint8_t text_border_colour;
 };
+
+#define SER_VDG_GM (0x01)
+#define SER_VDG_nA_S (0x02)
+#define SER_VDG_nA_G (0x03)
+#define SER_VDG_EXT (0x04)
+#define SER_VDG_CSS (0x05)
+#define SER_VDG_CSSa (0x06)
+#define SER_VDG_CSSb (0x07)
+#define SER_VDG_ROW (0x08)
+#define SER_VDG_HS_FALL_TIME (0x09)
+#define SER_VDG_HS_RISE_TIME (0x0a)
+#define SER_VDG_SCANLINE_START (0x0b)
+#define SER_VDG_SCANLINE (0x0c)
+#define SER_VDG_VRAM_G_DATA (0x0d)
+#define SER_VDG_VRAM_SG_DATA (0x0e)
+#define SER_VDG_BEAM_POS (0x0f)
+#define SER_VDG_S_FG_COLOUR (0x10)
+#define SER_VDG_S_BG_COLOUR (0x11)
+#define SER_VDG_VRAM_BIT (0x12)
+#define SER_VDG_IS_32BYTE (0x13)
+#define SER_VDG_VRAM (0x14)
+#define SER_VDG_VRAM_INDEX (0x15)
+#define SER_VDG_LBORDER_REMAINING (0x16)
+#define SER_VDG_VRAM_REMAINING (0x17)
+#define SER_VDG_RBORDER_REMAINING (0x18)
+#define SER_VDG_IS_T1 (0x19)
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
@@ -128,7 +155,7 @@ static void do_hs_fall(void *data) {
 			if (vdg->public.row > 11)
 				vdg->public.row = 0;
 			vo_module->render_scanline(vdg->pixel_data);
-			vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
+			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
 				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
@@ -180,9 +207,8 @@ static void do_hs_fall(void *data) {
 
 	// Next scanline
 	vdg->scanline = SCANLINE(vdg->scanline + 1);
-	vdg->beam_pos = 0;
 	vdg->vram_nbytes = 0;
-	vdg->vram_ptr = vdg->vram;
+	vdg->vram_index = 0;
 	vdg->vram_bit = 0;
 	vdg->lborder_remaining = VDG_tLB;
 	vdg->vram_remaining = vdg->is_32byte ? 32 : 16;
@@ -252,18 +278,19 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->vram_nbytes = nbytes;
 		}
 	}
-	beam_to -= VDG_LEFT_BORDER_START;
-	if (beam_to > (UINT_MAX/2))
-		return;
-	if (vdg->beam_pos >= beam_to)
+	if (beam_to < VDG_LEFT_BORDER_START)
 		return;
 
+	if (vdg->beam_pos >= beam_to)
+		return;
+	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos;
+
 	while (vdg->lborder_remaining > 0) {
-		if ((vdg->beam_pos & 7) == 4) {
+		*(pixel++) = vdg->border_colour;
+		vdg->beam_pos++;
+		if ((vdg->beam_pos & 7) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
-		*(vdg->pixel++) = vdg->border_colour;
-		vdg->beam_pos++;
 		vdg->lborder_remaining--;
 		if (vdg->beam_pos >= beam_to)
 			return;
@@ -271,7 +298,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 	while (vdg->vram_remaining > 0) {
 		if (vdg->vram_bit == 0) {
-			uint16_t vdata = *(vdg->vram_ptr++);
+			uint16_t vdata = vdg->vram[vdg->vram_index++];
 			vdg->vram_g_data = vdata & 0xff;
 			vdg->vram_bit = 8;
 			if (vdg->is_t1) {
@@ -334,34 +361,34 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (vdg->is_32byte) {
 			switch (vdg->render_mode) {
 			case VDG_RENDER_SG:
-				*(vdg->pixel) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				*(vdg->pixel+1) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
+				*(pixel) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
+				*(pixel+1) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
 				break;
 			case VDG_RENDER_CG:
-				*(vdg->pixel) = *(vdg->pixel+1) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
+				*(pixel) = *(pixel+1) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
 				break;
 			case VDG_RENDER_RG:
-				*(vdg->pixel) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
-				*(vdg->pixel+1) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
+				*(pixel) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
+				*(pixel+1) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
 				break;
 			}
-			vdg->pixel += 2;
+			pixel += 2;
 			vdg->beam_pos += 2;
 		} else {
 			switch (vdg->render_mode) {
 			case VDG_RENDER_SG:
-				*(vdg->pixel) = *(vdg->pixel+1) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				*(vdg->pixel+2) = *(vdg->pixel+3) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
+				*(pixel) = *(pixel+1) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
+				*(pixel+2) = *(pixel+3) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
 				break;
 			case VDG_RENDER_CG:
-				*(vdg->pixel) = *(vdg->pixel+1) = *(vdg->pixel+2) = *(vdg->pixel+3) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
+				*(pixel) = *(pixel+1) = *(pixel+2) = *(pixel+3) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
 				break;
 			case VDG_RENDER_RG:
-				*(vdg->pixel) = *(vdg->pixel+1) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
-				*(vdg->pixel+2) = *(vdg->pixel+3) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
+				*(pixel) = *(pixel+1) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
+				*(pixel+2) = *(pixel+3) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
 				break;
 			}
-			vdg->pixel += 4;
+			pixel += 4;
 			vdg->beam_pos += 4;
 		}
 
@@ -376,16 +403,16 @@ static void render_scanline(struct MC6847_private *vdg) {
 	}
 
 	while (vdg->rborder_remaining > 0) {
-		if ((vdg->beam_pos & 7) == 4) {
-			vdg->CSSa = vdg->CSS;
-		}
-		if (vdg->beam_pos == 316) {
+		if (vdg->beam_pos == VDG_RIGHT_BORDER_START) {
 			vdg->CSSb = vdg->CSSa;
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
-		*(vdg->pixel++) = vdg->border_colour;
+		*(pixel++) = vdg->border_colour;
 		vdg->beam_pos++;
+		if ((vdg->beam_pos & 7) == 0) {
+			vdg->CSSa = vdg->CSS;
+		}
 		vdg->rborder_remaining--;
 		if (vdg->beam_pos >= beam_to)
 			return;
@@ -393,25 +420,54 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 	// If a program switches to 32 bytes per line mid-scanline, the whole
 	// scanline might not have been rendered:
-	while (vdg->beam_pos < (VDG_RIGHT_BORDER_END - VDG_LEFT_BORDER_START)) {
-		*(vdg->pixel++) = VDG_BLACK;
+	while (vdg->beam_pos < VDG_RIGHT_BORDER_END) {
+		*(pixel++) = VDG_BLACK;
 		vdg->beam_pos++;
 	}
+
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void update_vdg(struct MC6847_private *vdg) {
+
+	vdg->GM0 = vdg->GM & 1;
+	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
+	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
+	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
+	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
+	vdg->cg_colours = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
+
+	if (!vdg->nA_G) {
+		vdg->render_mode = VDG_RENDER_RG;
+		if (vdg->nA_S) {
+			vdg->fg_colour = VDG_GREEN;
+			vdg->bg_colour = VDG_DARK_GREEN;
+		} else {
+			vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
+			vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_DARK_ORANGE;
+		}
+		vdg->border_colour = vdg->text_border ? vdg->text_border_colour : VDG_BLACK;
+	} else {
+		vdg->render_mode = vdg->GM0 ? VDG_RENDER_RG : VDG_RENDER_CG;
+		vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
+		vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_BLACK;
+		vdg->border_colour = vdg->cg_colours;
+	}
+
+}
 
 struct MC6847 *mc6847_new(_Bool t1) {
 	struct MC6847_private *vdg = xmalloc(sizeof(*vdg));
 	*vdg = (struct MC6847_private){.public={0}};
 	vdg->is_t1 = t1;
-	vdg->vram_ptr = vdg->vram;
-	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
+	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.fetch_data = DELEGATE_DEFAULT2(void, int, uint16p);
 	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
 	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
+	update_vdg(vdg);
 	return (struct MC6847 *)vdg;
 }
 
@@ -426,7 +482,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 	vo_module->vsync();
 	memset(vdg->pixel_data, VDG_BLACK, sizeof(vdg->pixel_data));
-	vdg->pixel = vdg->pixel_data + VDG_LEFT_BORDER_START;
+	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->frame = 0;
 	vdg->scanline = 0;
 	vdg->public.row = 0;
@@ -436,8 +492,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
 	mc6847_set_mode(vdgp, 0);
-	vdg->beam_pos = 0;
-	vdg->vram_ptr = vdg->vram;
+	vdg->vram_index = 0;
 	vdg->vram_bit = 0;
 	vdg->lborder_remaining = VDG_tLB;
 	vdg->vram_remaining = vdg->is_32byte ? 32 : 16;
