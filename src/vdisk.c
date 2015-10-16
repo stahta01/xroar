@@ -431,6 +431,14 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	unsigned bytes_per_sector = ssize + sector_attr_flag;
 	unsigned bytes_per_cyl = nsectors * bytes_per_sector * nheads;
 	unsigned ncyls = file_size / bytes_per_cyl;
+	// Too many tracks is implausible, so assume this (single-sided) means
+	// a 720K disk.
+	if (ncyls >= 88 && nheads == 1) {
+		ncyls <<= 1;
+		nheads++;
+		bytes_per_cyl = nsectors * bytes_per_sector * nheads;
+		ncyls = file_size / bytes_per_cyl;
+	}
 	// if there is at least one more sector of data, allow an extra track
 	if ((file_size % bytes_per_cyl) >= bytes_per_sector) {
 		ncyls++;
