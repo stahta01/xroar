@@ -15,8 +15,8 @@
 
 extern struct dkbd_map keymap_new;
 
-#define IS_DRAGON_KEYMAP (xroar_machine_config->keymap == KEYMAP_DRAGON)
-#define IS_COCO_KEYMAP (xroar_machine_config->keymap == KEYMAP_COCO)
+#define IS_DRAGON_KEYMAP (machine_active_config->keymap == KEYMAP_DRAGON)
+#define IS_COCO_KEYMAP (machine_active_config->keymap == KEYMAP_COCO)
 
 /* These contain masks to be applied when the corresponding row/column is held
  * low.  eg, if row 1 is outputting a 0 , keyboard_column[1] will be applied on

@@ -31,7 +31,6 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
-#include "xroar.h"
 
 extern inline void keyboard_press_matrix(int col, int row);
 extern inline void keyboard_release_matrix(int col, int row);
@@ -80,7 +79,7 @@ void keyboard_shutdown(void) {
 
 void keyboard_set_keymap(int map) {
 	map %= NUM_KEYMAPS;
-	xroar_machine_config->keymap = map;
+	machine_active_config->keymap = map;
 	dkbd_map_init(&keymap_new, map);
 }
 
