@@ -15,6 +15,7 @@
 /sunos/*.o
 /windows32/*.o
 /windows32/*.res
+/tags
 /xroar
 /xroar.exe
 /xroar.dSYM/
