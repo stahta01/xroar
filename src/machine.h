@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "breakpoint.h"
 #include "xconfig.h"
 
 struct slist;
@@ -61,6 +62,67 @@ struct MC6821;
 #define CROSS_COLOUR_OFF  (0)
 #define CROSS_COLOUR_KBRW (1)
 #define CROSS_COLOUR_KRBW (2)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* Breakpoint flags for Dragon & compatibles. */
+
+#define BP_SAM_TY (1 << 15)
+#define BP_SAM_P1 (1 << 10)
+
+/* Useful breakpoint mask and condition combinations. */
+
+#define BP_MASK_ROM (BP_SAM_TY)
+#define BP_COND_ROM (0)
+
+/* Local flags determining whether breakpoints are added with
+ * machine_add_bp_list(). */
+
+#define BP_MACHINE_ARCH (1 << 0)
+#define BP_CRC_BAS (1 << 1)
+#define BP_CRC_EXT (1 << 2)
+#define BP_CRC_ALT (1 << 3)
+#define BP_CRC_COMBINED (1 << 4)
+
+struct machine_bp {
+	struct breakpoint bp;
+
+	// Each bit of add_cond represents a local condition that must match
+	// before machine_add_bp_list() will add a breakpoint.
+	unsigned add_cond;
+
+	// Local conditions to be matched.
+	int cond_machine_arch;
+	// CRC conditions listed by crclist name.
+	const char *cond_crc_combined;
+	const char *cond_crc_bas;
+	const char *cond_crc_extbas;
+	const char *cond_crc_altbas;
+};
+
+/* Convenience macros for standard types of breakpoint. */
+
+#define BP_DRAGON64_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d64_1" }
+#define BP_DRAGON32_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d32" }
+#define BP_DRAGON_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@dragon" }
+
+#define BP_COCO_BAS10_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas10" }
+#define BP_COCO_BAS11_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas11" }
+#define BP_COCO_BAS12_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas12" }
+#define BP_COCO_BAS13_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas13" }
+#define BP_MX1600_BAS_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
+#define BP_COCO_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@coco" }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config {
 	char *name;
@@ -149,6 +211,12 @@ void machine_select_fast_sound(_Bool fast);
 void machine_update_sound(void);
 
 void machine_set_inverted_text(_Bool);
+
+/* Helper function to populate breakpoints from a list. */
+void machine_bp_add_n(struct machine_bp *list, int n);
+void machine_bp_remove_n(struct machine_bp *list, int n);
+#define machine_bp_add_list(list) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp))
+#define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
 
 void machine_insert_cart(struct cart *c);
 void machine_remove_cart(void);

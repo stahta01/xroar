@@ -31,6 +31,7 @@
 #include "events.h"
 #include "logging.h"
 #include "mc6809.h"
+#include "machine.h"
 #include "printer.h"
 #include "xroar.h"
 
@@ -46,10 +47,10 @@ DELEGATE_T1(void, bool) printer_signal_ack = { NULL, NULL };
 static void do_ack_clear(void *);
 static void open_stream(void);
 
-static void coco_print_byte(struct MC6809 *cpu);
+static void coco_print_byte(void *);
 
-static struct breakpoint coco_print_breakpoint[] = {
-	BP_COCO_ROM(.address = 0xa2c1, .handler = (bp_handler)coco_print_byte),
+static struct machine_bp coco_print_breakpoint[] = {
+	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_AS0(void, coco_print_byte, NULL) ),
 };
 
 void printer_init(void) {
@@ -63,8 +64,8 @@ void printer_init(void) {
 
 void printer_reset(void) {
 	strobe_state = 1;
-	bp_remove_list(coco_print_breakpoint);
-	bp_add_list(coco_print_breakpoint);
+	machine_bp_remove_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
@@ -77,7 +78,7 @@ void printer_open_file(const char *filename) {
 	stream_dest = xstrdup(filename);
 	is_pipe = 0;
 	busy = 0;
-	bp_add_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint);
 }
 
 void printer_open_pipe(const char *command) {
@@ -86,7 +87,7 @@ void printer_open_pipe(const char *command) {
 	stream_dest = xstrdup(command);
 	is_pipe = 1;
 	busy = 0;
-	bp_add_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint);
 }
 
 void printer_close(void) {
@@ -96,7 +97,7 @@ void printer_close(void) {
 	stream_dest = NULL;
 	is_pipe = 0;
 	busy = 1;
-	bp_remove_list(coco_print_breakpoint);
+	machine_bp_remove_list(coco_print_breakpoint);
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */
@@ -129,7 +130,8 @@ void printer_strobe(_Bool strobe, int data) {
 	event_queue(&MACHINE_EVENT_LIST, &ack_clear_event);
 }
 
-static void coco_print_byte(struct MC6809 *cpu) {
+static void coco_print_byte(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	int byte;
 	/* Open stream for output if it's not already */
 	if (!stream_dest) return;

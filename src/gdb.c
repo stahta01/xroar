@@ -103,6 +103,8 @@
 #include "sam.h"
 #include "xroar.h"
 
+extern struct bp_session *machine_bp_session;
+
 static int listenfd = -1;
 static struct addrinfo *info;
 
@@ -754,10 +756,10 @@ static void add_breakpoint(int fd, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_add(addr, 0, 0);
+		bp_hbreak_add(machine_bp_session, addr, 0, 0);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_add(type, addr, nbytes, 0, 0);
+		bp_wp_add(machine_bp_session, type, addr, nbytes, 0, 0);
 	}
 	send_packet_string(fd, "OK");
 	return;
@@ -780,10 +782,10 @@ static void remove_breakpoint(int fd, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_remove(addr, 0, 0);
+		bp_hbreak_remove(machine_bp_session, addr, 0, 0);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_remove(type, addr, nbytes, 0, 0);
+		bp_wp_remove(machine_bp_session, type, addr, nbytes, 0, 0);
 	}
 	send_packet_string(fd, "OK");
 	return;

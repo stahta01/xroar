@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -31,6 +32,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
+#include "xroar.h"
 
 extern inline void keyboard_press_matrix(int col, int row);
 extern inline void keyboard_release_matrix(int col, int row);
@@ -53,15 +55,15 @@ unsigned keyboard_row[9];
 static struct slist *basic_command_list = NULL;
 static const char *basic_command = NULL;
 
-static void type_command(struct MC6809 *cpu);
+static void type_command(void *);
 
-static struct breakpoint basic_command_breakpoint[] = {
-	BP_DRAGON_ROM(.address = 0xbbe5, .handler = (bp_handler)type_command),
-	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
-	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = (bp_handler)type_command),
-	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
-	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
-	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = (bp_handler)type_command),
+static struct machine_bp basic_command_breakpoint[] = {
+	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
 };
 
 void keyboard_init(void) {
@@ -73,13 +75,13 @@ void keyboard_init(void) {
 }
 
 void keyboard_shutdown(void) {
-	bp_remove_list(basic_command_breakpoint);
+	machine_bp_remove_list(basic_command_breakpoint);
 	slist_free_full(basic_command_list, (slist_free_func)free);
 }
 
 void keyboard_set_keymap(int map) {
 	map %= NUM_KEYMAPS;
-	machine_active_config->keymap = map;
+	xroar_machine_config->keymap = map;
 	dkbd_map_init(&keymap_new, map);
 }
 
@@ -166,7 +168,8 @@ void keyboard_unicode_release(unsigned unicode) {
 	return;
 }
 
-static void type_command(struct MC6809 *cpu) {
+static void type_command(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	if (basic_command) {
 		int chr = *(basic_command++);
 		if (chr == '\\') {
@@ -253,7 +256,7 @@ static void type_command(struct MC6809 *cpu) {
 		if (basic_command_list) {
 			basic_command = basic_command_list->data;
 		} else {
-			bp_remove_list(basic_command_breakpoint);
+			machine_bp_remove_list(basic_command_breakpoint);
 		}
 	}
 	/* Use CPU read routine to pull return address back off stack */
@@ -262,7 +265,7 @@ static void type_command(struct MC6809 *cpu) {
 
 void keyboard_queue_basic(const char *s) {
 	char *data = NULL;
-	bp_remove_list(basic_command_breakpoint);
+	machine_bp_remove_list(basic_command_breakpoint);
 	if (s) {
 		data = xstrdup(s);
 		basic_command_list = slist_append(basic_command_list, data);
@@ -271,6 +274,6 @@ void keyboard_queue_basic(const char *s) {
 		basic_command = data;
 	}
 	if (basic_command) {
-		bp_add_list(basic_command_breakpoint);
+		machine_bp_add_list(basic_command_breakpoint);
 	}
 }

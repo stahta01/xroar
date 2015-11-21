@@ -24,11 +24,11 @@
 #include <string.h>
 
 #include "array.h"
+#include "delegate.h"
 #include "xalloc.h"
 
 #include "breakpoint.h"
 #include "crc16.h"
-#include "delegate.h"
 #include "events.h"
 #include "fs.h"
 #include "keyboard.h"
@@ -70,10 +70,10 @@ static int rewrite_have_sync = 0;
 static int rewrite_leader_count = 256;
 static int rewrite_bit_count = 0;
 static void tape_desync(int leader);
-static void rewrite_sync(struct MC6809 *cpu);
-static void rewrite_bitin(struct MC6809 *cpu);
-static void rewrite_tape_on(struct MC6809 *cpu);
-static void rewrite_end_of_block(struct MC6809 *cpu);
+static void rewrite_sync(void *sptr);
+static void rewrite_bitin(void *sptr);
+static void rewrite_tape_on(void *sptr);
+static void rewrite_end_of_block(void *sptr);
 
 static void set_breakpoints(void);
 
@@ -827,7 +827,8 @@ static void update_pskip(void) {
 	}
 }
 
-static void fast_motor_on(struct MC6809 *cpu) {
+static void fast_motor_on(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	update_pskip();
 	if (!tape_pad) {
 		motor_on(cpu);
@@ -836,7 +837,8 @@ static void fast_motor_on(struct MC6809 *cpu) {
 	pulse_skip();
 }
 
-static void fast_sync_leader(struct MC6809 *cpu) {
+static void fast_sync_leader(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	update_pskip();
 	if (tape_pad) {
 		machine_write_byte(0x84, 0);
@@ -847,7 +849,8 @@ static void fast_sync_leader(struct MC6809 *cpu) {
 	pulse_skip();
 }
 
-static void fast_bitin(struct MC6809 *cpu) {
+static void fast_bitin(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	update_pskip();
 	bitin(cpu);
 	machine_op_rts(cpu);
@@ -855,7 +858,8 @@ static void fast_bitin(struct MC6809 *cpu) {
 	if (tape_rewrite) rewrite_bitin(cpu);
 }
 
-static void fast_cbin(struct MC6809 *cpu) {
+static void fast_cbin(void *sptr) {
+	struct MC6809 *cpu = sptr;
 	update_pskip();
 	cbin(cpu);
 	machine_op_rts(cpu);
@@ -875,9 +879,9 @@ static void tape_desync(int leader) {
 	}
 }
 
-static void rewrite_sync(struct MC6809 *cpu) {
+static void rewrite_sync(void *sptr) {
 	/* BLKIN, having read sync byte $3C */
-	(void)cpu;
+	(void)sptr;
 	if (rewrite_have_sync) return;
 	if (tape_rewrite) {
 		for (int i = 0; i < rewrite_leader_count; i++)
@@ -887,17 +891,17 @@ static void rewrite_sync(struct MC6809 *cpu) {
 	}
 }
 
-static void rewrite_bitin(struct MC6809 *cpu) {
+static void rewrite_bitin(void *sptr) {
 	/* RTS from BITIN */
-	(void)cpu;
+	struct MC6809 *cpu = sptr;
 	if (tape_rewrite && rewrite_have_sync) {
 		tape_bit_out(tape_output, cpu->reg_cc & 0x01);
 	}
 }
 
-static void rewrite_tape_on(struct MC6809 *cpu) {
+static void rewrite_tape_on(void *sptr) {
 	/* CSRDON */
-	(void)cpu;
+	struct MC6809 *cpu = sptr;
 	/* desync with long leader */
 	tape_desync(256);
 	/* for audio files, when padding leaders, assume a phase */
@@ -907,57 +911,57 @@ static void rewrite_tape_on(struct MC6809 *cpu) {
 	}
 }
 
-static void rewrite_end_of_block(struct MC6809 *cpu) {
+static void rewrite_end_of_block(void *sptr) {
 	/* BLKIN, having confirmed checksum */
-	(void)cpu;
+	(void)sptr;
 	/* desync with short inter-block leader */
 	tape_desync(2);
 }
 
 /* Configuring tape options */
 
-static struct breakpoint bp_list_fast[] = {
-	BP_DRAGON_ROM(.address = 0xbdd7, .handler = (bp_handler)fast_motor_on),
-	BP_COCO_ROM(.address = 0xa7d1, .handler = (bp_handler)fast_motor_on),
-	BP_DRAGON_ROM(.address = 0xbded, .handler = (bp_handler)fast_sync_leader),
-	BP_COCO_ROM(.address = 0xa782, .handler = (bp_handler)fast_sync_leader),
-	BP_DRAGON_ROM(.address = 0xbda5, .handler = (bp_handler)fast_bitin),
-	BP_COCO_ROM(.address = 0xa755, .handler = (bp_handler)fast_bitin),
+static struct machine_bp bp_list_fast[] = {
+	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_AS0(void, fast_motor_on, NULL) ),
+	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_AS0(void, fast_motor_on, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_AS0(void, fast_sync_leader, NULL) ),
+	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_AS0(void, fast_sync_leader, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_AS0(void, fast_bitin, NULL) ),
+	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_AS0(void, fast_bitin, NULL) ),
 };
 
-static struct breakpoint bp_list_fast_cbin[] = {
-	BP_DRAGON_ROM(.address = 0xbdad, .handler = (bp_handler)fast_cbin),
-	BP_COCO_ROM(.address = 0xa749, .handler = (bp_handler)fast_cbin),
+static struct machine_bp bp_list_fast_cbin[] = {
+	BP_DRAGON_ROM(.address = 0xbdad, .handler = DELEGATE_AS0(void, fast_cbin, NULL) ),
+	BP_COCO_ROM(.address = 0xa749, .handler = DELEGATE_AS0(void, fast_cbin, NULL) ),
 };
 
-static struct breakpoint bp_list_rewrite[] = {
-	BP_DRAGON_ROM(.address = 0xb94d, .handler = (bp_handler)rewrite_sync),
-	BP_COCO_ROM(.address = 0xa719, .handler = (bp_handler)rewrite_sync),
-	BP_DRAGON_ROM(.address = 0xbdac, .handler = (bp_handler)rewrite_bitin),
-	BP_COCO_ROM(.address = 0xa75c, .handler = (bp_handler)rewrite_bitin),
-	BP_DRAGON_ROM(.address = 0xbdeb, .handler = (bp_handler)rewrite_tape_on),
-	BP_COCO_ROM(.address = 0xa780, .handler = (bp_handler)rewrite_tape_on),
-	BP_DRAGON_ROM(.address = 0xb97e, .handler = (bp_handler)rewrite_end_of_block),
-	BP_COCO_ROM(.address = 0xa746, .handler = (bp_handler)rewrite_end_of_block),
+static struct machine_bp bp_list_rewrite[] = {
+	BP_DRAGON_ROM(.address = 0xb94d, .handler = DELEGATE_AS0(void, rewrite_sync, NULL) ),
+	BP_COCO_ROM(.address = 0xa719, .handler = DELEGATE_AS0(void, rewrite_sync, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbdac, .handler = DELEGATE_AS0(void, rewrite_bitin, NULL) ),
+	BP_COCO_ROM(.address = 0xa75c, .handler = DELEGATE_AS0(void, rewrite_bitin, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbdeb, .handler = DELEGATE_AS0(void, rewrite_tape_on, NULL) ),
+	BP_COCO_ROM(.address = 0xa780, .handler = DELEGATE_AS0(void, rewrite_tape_on, NULL) ),
+	BP_DRAGON_ROM(.address = 0xb97e, .handler = DELEGATE_AS0(void, rewrite_end_of_block, NULL) ),
+	BP_COCO_ROM(.address = 0xa746, .handler = DELEGATE_AS0(void, rewrite_end_of_block, NULL) ),
 };
 
 static void set_breakpoints(void) {
 	/* clear any old breakpoints */
-	bp_remove_list(bp_list_fast);
-	bp_remove_list(bp_list_fast_cbin);
-	bp_remove_list(bp_list_rewrite);
+	machine_bp_remove_list(bp_list_fast);
+	machine_bp_remove_list(bp_list_fast_cbin);
+	machine_bp_remove_list(bp_list_rewrite);
 	if (!motor)
 		return;
 	/* add required breakpoints */
 	if (tape_fast) {
-		bp_add_list(bp_list_fast);
+		machine_bp_add_list(bp_list_fast);
 		/* these are incompatible with the other flags */
 		if (!tape_pad && !tape_rewrite) {
-			bp_add_list(bp_list_fast_cbin);
+			machine_bp_add_list(bp_list_fast_cbin);
 		}
 	}
 	if (tape_pad || tape_rewrite) {
-		bp_add_list(bp_list_rewrite);
+		machine_bp_add_list(bp_list_rewrite);
 	}
 }
 

@@ -109,6 +109,7 @@ static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
 
+struct bp_session *machine_bp_session = NULL;
 static void machine_instruction_posthook(void *);
 static _Bool single_step = 0;
 static int stop_signal = 0;
@@ -913,6 +914,13 @@ void machine_configure(struct machine_config *mc) {
 #ifndef FAST_SOUND
 	machine_select_fast_sound(xroar_cfg.fast_sound);
 #endif
+
+	keyboard_set_keymap(xroar_machine_config->keymap);
+
+	// Breakpoint session
+	if (machine_bp_session)
+		bp_session_free(machine_bp_session);
+	machine_bp_session = bp_session_new(CPU0);
 }
 
 void machine_reset(_Bool hard) {
@@ -1176,10 +1184,10 @@ static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
 			}
 		}
 #endif
-		bp_wp_read_hook(A);
+		bp_wp_read_hook(machine_bp_session, A);
 	} else {
 		write_byte(A);
-		bp_wp_write_hook(A);
+		bp_wp_write_hook(machine_bp_session, A);
 	}
 }
 
@@ -1288,6 +1296,31 @@ void machine_set_inverted_text(_Bool invert) {
 	inverted_text = invert;
 	mc6847_set_inverted_text(VDG0, invert);
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void machine_bp_add_n(struct machine_bp *list, int n) {
+	for (int i = 0; i < n; i++) {
+		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
+			continue;
+		if ((list[i].add_cond & BP_CRC_COMBINED) && (!has_combined || !crclist_match(list[i].cond_crc_combined, crc_combined)))
+			continue;
+		if ((list[i].add_cond & BP_CRC_EXT) && (!has_extbas || !crclist_match(list[i].cond_crc_extbas, crc_extbas)))
+			continue;
+		if ((list[i].add_cond & BP_CRC_BAS) && (!has_bas || !crclist_match(list[i].cond_crc_bas, crc_bas)))
+			continue;
+		list[i].bp.handler.sptr = CPU0;
+		bp_add(machine_bp_session, &list[i].bp);
+	}
+}
+
+void machine_bp_remove_n(struct machine_bp *list, int n) {
+	for (int i = 0; i < n; i++) {
+		bp_remove(machine_bp_session, &list[i].bp);
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void machine_insert_cart(struct cart *c) {
 	machine_remove_cart();
