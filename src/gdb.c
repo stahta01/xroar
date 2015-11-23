@@ -152,11 +152,19 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int gdb_init(void) {
+/* Debugging */
+
+static unsigned gdb_debug = 0;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+int gdb_init(const char *hostname, const char *portname) {
 
 	struct addrinfo hints;
-	const char *hostname = xroar_cfg.gdb_ip ? xroar_cfg.gdb_ip : GDB_IP_DEFAULT;
-	const char *portname = xroar_cfg.gdb_port ? xroar_cfg.gdb_port : GDB_PORT_DEFAULT;
+	if (!hostname)
+		hostname = GDB_IP_DEFAULT;
+	if (!portname)
+		portname = GDB_PORT_DEFAULT;
 
 	// Find the interface
 	memset(&hints, 0, sizeof(hints));
@@ -234,7 +242,7 @@ static void *handle_tcp_sock(void *data) {
 			int flag = 1;
 			setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
 		}
-		if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_CONNECT) {
+		if (gdb_debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection accepted\n");
 		}
 		xroar_machine_signal(XROAR_SIGINT);
@@ -242,7 +250,7 @@ static void *handle_tcp_sock(void *data) {
 		while (attached) {
 			int l = read_packet(sockfd, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
-				if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_PACKET) {
+				if (gdb_debug & GDB_DEBUG_PACKET) {
 					LOG_PRINT("gdb: BREAK\n");
 				}
 				xroar_machine_signal(XROAR_SIGINT);
@@ -254,7 +262,7 @@ static void *handle_tcp_sock(void *data) {
 			} else if (l < 0) {
 				break;
 			}
-			if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_PACKET) {
+			if (gdb_debug & GDB_DEBUG_PACKET) {
 				if (xroar_run_state == xroar_run_state_stopped) {
 					LOG_PRINT("gdb: packet received: ");
 				} else {
@@ -345,7 +353,7 @@ static void *handle_tcp_sock(void *data) {
 		}
 		close(sockfd);
 		xroar_machine_continue();
-		if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_CONNECT) {
+		if (gdb_debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection closed\n");
 		}
 	}
@@ -410,7 +418,7 @@ static int read_packet(int fd, char *buffer, unsigned count) {
 			}
 			csum |= tmp;
 			if (csum != packet_sum) {
-				if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_CHECKSUM) {
+				if (gdb_debug & GDB_DEBUG_CHECKSUM) {
 					LOG_PRINT("gdb: bad checksum in '");
 					if (isprint(buffer[0]))
 						LOG_PRINT("%c", buffer[0]);
@@ -457,7 +465,7 @@ static int send_packet(int fd, const char *buffer, unsigned count) {
 		return -GDBE_WRITE_ERROR;
 	// the reply ("+" or "-") will be discarded by the next read_packet
 
-	if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_PACKET) {
+	if (gdb_debug & GDB_DEBUG_PACKET) {
 		LOG_PRINT("gdb: packet sent: ");
 		for (unsigned i = 0; i < (unsigned)count; i++) {
 			if (isprint(buffer[i])) {
@@ -575,7 +583,7 @@ static void send_memory(int fd, char *args) {
 	if (send(fd, packet, 3, 0) < 0)
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
-	if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_PACKET) {
+	if (gdb_debug & GDB_DEBUG_PACKET) {
 		LOG_PRINT("gdb: packet sent (binary): %u bytes\n", length);
 	}
 	return;
@@ -689,28 +697,28 @@ static void general_query(int fd, char *args) {
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
 		if (0 == strcmp(query, "sam")) {
-			if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
+			if (gdb_debug & GDB_DEBUG_QUERY) {
 				LOG_PRINT("gdb: query: xroar.sam\n");
 			}
 			sprintf(packet, "%04x", sam_get_register(SAM0));
 			send_packet(fd, packet, 4);
 		} else {
-			if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
+			if (gdb_debug & GDB_DEBUG_QUERY) {
 				LOG_PRINT("gdb: query: unknown xroar vendor query\n");
 			}
 		}
 	} else if (0 == strcmp(query, "Supported")) {
-		if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
+		if (gdb_debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: Supported\n");
 		}
 		send_supported(fd, args);
 	} else if (0 == strcmp(query, "Attached")) {
-		if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
+		if (gdb_debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: Attached\n");
 		}
 		send_packet_string(fd, "1");
 	} else {
-		if (xroar_cfg.debug_gdb & XROAR_DEBUG_GDB_QUERY) {
+		if (gdb_debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: unknown query\n");
 		}
 		send_packet(fd, NULL, 0);
@@ -819,4 +827,12 @@ static int hex16(char *s) {
 	if (b0 < 0 || b1 < 0)
 		return -1;
 	return (b1 << 8) | b0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* Debugging */
+
+void gdb_set_debug(unsigned value) {
+	gdb_debug = value;
 }

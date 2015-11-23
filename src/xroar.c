@@ -150,6 +150,11 @@ struct private_cfg {
 	_Bool config_print;
 	_Bool config_print_all;
 	char *timeout;
+
+	/* Debugging */
+	char *gdb_ip;
+	char *gdb_port;
+	unsigned debug_gdb;
 };
 
 static struct private_cfg private_cfg = {
@@ -800,8 +805,10 @@ _Bool xroar_init(int argc, char **argv) {
 #ifdef WANT_GDB_TARGET
 	pthread_mutex_init(&run_state_mt, NULL);
 	pthread_cond_init(&run_state_cv, NULL);
-	if (private_cfg.gdb)
-		gdb_init();
+	gdb_set_debug(private_cfg.debug_gdb);
+	if (private_cfg.gdb) {
+		gdb_init(private_cfg.gdb_ip, private_cfg.gdb_port);
+	}
 #endif
 
 	if (private_cfg.timeout) {
@@ -1953,8 +1960,8 @@ static struct xconfig_option const xroar_options[] = {
 	/* Debugging: */
 #ifdef WANT_GDB_TARGET
 	{ XC_SET_BOOL("gdb", &private_cfg.gdb) },
-	{ XC_SET_STRING("gdb-ip", &xroar_cfg.gdb_ip) },
-	{ XC_SET_STRING("gdb-port", &xroar_cfg.gdb_port) },
+	{ XC_SET_STRING("gdb-ip", &private_cfg.gdb_ip) },
+	{ XC_SET_STRING("gdb-port", &private_cfg.gdb_port) },
 #endif
 #ifdef TRACE
 	{ XC_SET_INT1("trace", &xroar_cfg.trace_enabled) },
@@ -1963,7 +1970,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("debug-file", &xroar_cfg.debug_file) },
 	{ XC_SET_INT("debug-fdc", &xroar_cfg.debug_fdc) },
 #ifdef WANT_GDB_TARGET
-	{ XC_SET_INT("debug-gdb", &xroar_cfg.debug_gdb) },
+	{ XC_SET_INT("debug-gdb", &private_cfg.debug_gdb) },
 #endif
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
 	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
@@ -2277,8 +2284,8 @@ static void config_print_all(_Bool all) {
 	puts("# Debugging");
 #ifdef WANT_GDB_TARGET
 	xroar_cfg_print_bool(all, "gdb", private_cfg.gdb, 0);
-	xroar_cfg_print_string(all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
-	xroar_cfg_print_string(all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
+	xroar_cfg_print_string(all, "gdb-ip", private_cfg.gdb_ip, GDB_IP_DEFAULT);
+	xroar_cfg_print_string(all, "gdb-port", private_cfg.gdb_port, GDB_PORT_DEFAULT);
 #endif
 #ifdef TRACE
 	xroar_cfg_print_bool(all, "trace", xroar_cfg.trace_enabled, 0);
@@ -2287,7 +2294,7 @@ static void config_print_all(_Bool all) {
 	xroar_cfg_print_flags(all, "debug-file", xroar_cfg.debug_file);
 	xroar_cfg_print_flags(all, "debug-fdc", xroar_cfg.debug_fdc);
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_flags(all, "debug-gdb", xroar_cfg.debug_gdb);
+	xroar_cfg_print_flags(all, "debug-gdb", private_cfg.debug_gdb);
 #endif
 	xroar_cfg_print_string(all, "timeout", private_cfg.timeout, NULL);
 	xroar_cfg_print_string(all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);

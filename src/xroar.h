@@ -105,15 +105,11 @@ struct xroar_cfg {
 	_Bool disk_auto_sd;
 	// CRC lists
 	_Bool force_crc_match;
-	// GDB target
-	char *gdb_ip;
-	char *gdb_port;
 	// Debugging
 	_Bool trace_enabled;
 	unsigned debug_ui;
 	unsigned debug_file;
 	unsigned debug_fdc;
-	unsigned debug_gdb;
 	char *timeout_motoroff;
 	char *snap_motoroff;
 };
@@ -164,15 +160,6 @@ extern struct vdg_palette *xroar_vdg_palette;
 #define XROAR_DEBUG_FDC_DATA (1 << 2)
 // FDC: dump becker data flag
 #define XROAR_DEBUG_FDC_BECKER (1 << 3)
-
-// GDB: connections
-#define XROAR_DEBUG_GDB_CONNECT (1 << 0)
-// GDB: packets
-#define XROAR_DEBUG_GDB_PACKET (1 << 1)
-// GDB: report bad checksums
-#define XROAR_DEBUG_GDB_CHECKSUM (1 << 2)
-// GDB: queries and sets
-#define XROAR_DEBUG_GDB_QUERY (1 << 3)
 
 /**************************************************************************/
 
