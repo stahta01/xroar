@@ -55,13 +55,6 @@ enum xroar_run_state {
 
 extern enum xroar_run_state xroar_run_state;
 
-#define XROAR_SIGINT (2)
-#define XROAR_SIGILL (4)
-#define XROAR_SIGTRAP (5)
-#define XROAR_SIGFPE (8)
-
-extern int xroar_last_signal;
-
 /**************************************************************************/
 /* Command line arguments */
 
@@ -171,7 +164,6 @@ _Bool xroar_run(void);
 void xroar_machine_continue(void);
 void xroar_machine_signal(int sig);
 void xroar_machine_single_step(void);
-void xroar_machine_trap(void *data);
 
 int xroar_filetype_by_ext(const char *filename);
 int xroar_load_file_by_type(const char *filename, int autorun);

@@ -245,7 +245,7 @@ static void *handle_tcp_sock(void *data) {
 		if (gdb_debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection accepted\n");
 		}
-		xroar_machine_signal(XROAR_SIGINT);
+		xroar_machine_signal(MACHINE_SIGINT);
 		_Bool attached = 1;
 		while (attached) {
 			int l = read_packet(sockfd, in_packet, sizeof(in_packet));
@@ -253,7 +253,7 @@ static void *handle_tcp_sock(void *data) {
 				if (gdb_debug & GDB_DEBUG_PACKET) {
 					LOG_PRINT("gdb: BREAK\n");
 				}
-				xroar_machine_signal(XROAR_SIGINT);
+				xroar_machine_signal(MACHINE_SIGINT);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
 				if (send_char(sockfd, '-') < 0)

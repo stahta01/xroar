@@ -449,7 +449,6 @@ static pthread_mutex_t run_state_mt;
 #endif
 
 enum xroar_run_state xroar_run_state = xroar_run_state_running;
-int xroar_last_signal;
 
 /**************************************************************************/
 
@@ -919,7 +918,7 @@ _Bool xroar_run(void) {
 	} else if (xroar_run_state == xroar_run_state_single_step) {
 		machine_single_step();
 		xroar_run_state = xroar_run_state_stopped;
-		gdb_handle_signal(XROAR_SIGTRAP);
+		gdb_handle_signal(MACHINE_SIGTRAP);
 		pthread_cond_signal(&run_state_cv);
 	}
 	pthread_mutex_unlock(&run_state_mt);
@@ -958,11 +957,6 @@ void xroar_machine_single_step(void) {
 	pthread_mutex_unlock(&run_state_mt);
 }
 #endif  /* WANT_GDB_TARGET */
-
-void xroar_machine_trap(void *data) {
-	(void)data;
-	machine_signal(XROAR_SIGTRAP);
-}
 
 int xroar_filetype_by_ext(const char *filename) {
 	char *ext;

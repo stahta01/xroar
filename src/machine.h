@@ -86,6 +86,13 @@ struct machine_config {
 	_Bool cart_enabled;
 };
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#define MACHINE_SIGINT (2)
+#define MACHINE_SIGILL (4)
+#define MACHINE_SIGTRAP (5)
+#define MACHINE_SIGFPE (8)
+
 extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
