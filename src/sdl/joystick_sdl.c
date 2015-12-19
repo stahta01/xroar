@@ -19,6 +19,7 @@
 #include "config.h"
 
 // For strsep()
+#define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 
 #include <string.h>
