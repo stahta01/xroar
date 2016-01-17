@@ -37,7 +37,7 @@ Version 0.33, Fri May 22 2015
     -no-disk-auto-sd.
   * Fix hook-based printing on switching machines.
   * Fix GTK+ tape dialog when attached from command line.
-  * Fix Dragon PAL padding.  Passes Steward Orchard's PAL tests v1.3.
+  * Fix Dragon PAL padding.  Passes Stewart Orchard's PAL tests v1.3.
   * Work around breakpoint re-add bug.
 
 Version 0.32, Tue Apr 22 2014
