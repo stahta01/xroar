@@ -63,6 +63,7 @@ extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
 extern struct cart_module cart_ide_module;
 extern struct cart_module cart_nx32_module;
+extern struct cart_module cart_mooh_module;
 
 static struct slist *cart_modules = NULL;
 
@@ -228,6 +229,7 @@ void cart_config_print_all(FILE *f, _Bool all) {
 
 void cart_init(void) {
 	// reverse order
+	cart_modules = slist_prepend(cart_modules, &cart_mooh_module);
 	cart_modules = slist_prepend(cart_modules, &cart_nx32_module);
 	cart_modules = slist_prepend(cart_modules, &cart_ide_module);
 	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);

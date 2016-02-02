@@ -46,6 +46,7 @@ xroar_SOURCES = \
 	mpi.c mpi.h \
 	ntsc.c ntsc.h \
 	nx32.c \
+	mooh.c \
 	orch90.c \
 	path.c path.h \
 	printer.c printer.h \
