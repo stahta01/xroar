@@ -138,10 +138,10 @@ static off_t xlate_block(struct ide_taskfile *t)
 /*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n",
       t->lba4, t->lba3, t->lba2, t->lba1);*/
     if (d->lba)
-      return 2 + (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
+      return ((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1;
     ide_fault(d, "LBA on non LBA drive");
   }
-  return 2 + (((t->lba4 & DEVH_HEAD) * d->cylinders + ((t->lba3 << 8) + t->lba2)) * d->sectors + t->lba1);
+  return ((t->lba4 & DEVH_HEAD) * d->cylinders + ((t->lba3 << 8) + t->lba2)) * d->sectors + t->lba1;
 }
 
 /* Indicate the drive is ready */
