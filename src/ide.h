@@ -1,29 +1,29 @@
 #include <stdint.h>
 
-#define ACME_ROADRUNNER		1	/* 504MB classic IDE drive */
-#define ACME_COYOTE		2	/* 20MB early IDE drive */
-#define ACME_NEMESIS		3	/* 20MB LBA capable drive */
-#define ACME_ULTRASONICUS	4	/* 40MB LBA capable drive */
+#define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
+#define ACME_COYOTE             2       /* 20MB early IDE drive */
+#define ACME_NEMESIS            3       /* 20MB LBA capable drive */
+#define ACME_ULTRASONICUS       4       /* 40MB LBA capable drive */
 
-#define MAX_DRIVE_TYPE		4
+#define MAX_DRIVE_TYPE          4
 
-#define		ide_data	0
-#define		ide_error_r	1
-#define		ide_feature_w	1
-#define		ide_sec_count	2
-#define		ide_sec_num	3
-#define		ide_lba_low	3
-#define		ide_cyl_low	4
-#define		ide_lba_mid	4
-#define		ide_cyl_hi	5
-#define		ide_lba_hi	5
-#define		ide_dev_head	6
-#define		ide_lba_top	6
-#define		ide_status_r	7
-#define		ide_command_w	7
-#define		ide_altst_r	8
-#define		ide_devctrl_w	8
-#define		ide_data_latch	9
+#define         ide_data        0
+#define         ide_error_r     1
+#define         ide_feature_w   1
+#define         ide_sec_count   2
+#define         ide_sec_num     3
+#define         ide_lba_low     3
+#define         ide_cyl_low     4
+#define         ide_lba_mid     4
+#define         ide_cyl_hi      5
+#define         ide_lba_hi      5
+#define         ide_dev_head    6
+#define         ide_lba_top     6
+#define         ide_status_r    7
+#define         ide_command_w   7
+#define         ide_altst_r     8
+#define         ide_devctrl_w   8
+#define         ide_data_latch  9
 
 struct ide_taskfile {
   uint16_t data;

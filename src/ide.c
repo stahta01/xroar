@@ -1,20 +1,20 @@
 /*
- *	IDE Emulation Layer for retro-style PIO interfaces
+ *      IDE Emulation Layer for retro-style PIO interfaces
  *
- *	(c) Copyright Alan Cox, 2015
+ *      (c) Copyright Alan Cox, 2015
  *
- *	IDE-emu is free software: you can redistribute it and/or modify
- *	it under the terms of the GNU General Public License as published by
- *	the Free Software Foundation, either version 2 of the License, or
- *	(at your option) any later version.
+ *      IDE-emu is free software: you can redistribute it and/or modify
+ *      it under the terms of the GNU General Public License as published by
+ *      the Free Software Foundation, either version 2 of the License, or
+ *      (at your option) any later version.
  *
- *	IDE-emu is distributed in the hope that it will be useful,
- *	but WITHOUT ANY WARRANTY; without even the implied warranty of
- *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *	GNU General Public License for more details.
+ *      IDE-emu is distributed in the hope that it will be useful,
+ *      but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *      GNU General Public License for more details.
  *
- *	You should have received a copy of the GNU General Public License
- *	along with IDE-emu.  If not, see <http://www.gnu.org/licenses/>.
+ *      You should have received a copy of the GNU General Public License
+ *      along with IDE-emu.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
@@ -27,50 +27,50 @@
 
 #include "ide.h"
 
-#define IDE_IDLE	0
-#define IDE_CMD		1
-#define IDE_DATA_IN	2
-#define IDE_DATA_OUT	3
-  
-#define DCR_NIEN 	2
-#define DCR_SRST 	4
+#define IDE_IDLE        0
+#define IDE_CMD         1
+#define IDE_DATA_IN     2
+#define IDE_DATA_OUT    3
 
-#define DEVH_HEAD	15
-#define DEVH_DEV	16
-#define DEVH_LBA	64
+#define DCR_NIEN        2
+#define DCR_SRST        4
 
-#define ERR_AMNF	1
-#define ERR_TKNONF	2
-#define ERR_ABRT	4
-#define ERR_MCR		8
-#define ERR_IDNF	16
-#define	ERR_MC		32
-#define ERR_UNC		64
+#define DEVH_HEAD       15
+#define DEVH_DEV        16
+#define DEVH_LBA        64
 
-#define ST_ERR		1
-#define ST_IDX		2
-#define ST_CORR		4
-#define ST_DRQ		8
-#define ST_DSC		16
-#define ST_DF		32
-#define ST_DRDY		64
-#define ST_BSY		128
+#define ERR_AMNF        1
+#define ERR_TKNONF      2
+#define ERR_ABRT        4
+#define ERR_MCR         8
+#define ERR_IDNF        16
+#define ERR_MC          32
+#define ERR_UNC         64
 
-#define DCL_SRST	4
-#define DCL_NIEN	2
+#define ST_ERR          1
+#define ST_IDX          2
+#define ST_CORR         4
+#define ST_DRQ          8
+#define ST_DSC          16
+#define ST_DF           32
+#define ST_DRDY         64
+#define ST_BSY          128
 
-#define IDE_CMD_CALIB		0x10
-#define IDE_CMD_READ		0x20
-#define IDE_CMD_READ_NR		0x21
-#define IDE_CMD_WRITE		0x30
-#define IDE_CMD_WRITE_NR	0x31
-#define IDE_CMD_VERIFY		0x40
-#define IDE_CMD_VERIFY_NR	0x41
-#define IDE_CMD_SEEK		0x70
-#define IDE_CMD_EDD		0x90
-#define IDE_CMD_INTPARAMS	0x91
-#define IDE_CMD_IDENTIFY	0xEC
-#define IDE_CMD_SETFEATURES	0xEF
+#define DCL_SRST        4
+#define DCL_NIEN        2
+
+#define IDE_CMD_CALIB           0x10
+#define IDE_CMD_READ            0x20
+#define IDE_CMD_READ_NR         0x21
+#define IDE_CMD_WRITE           0x30
+#define IDE_CMD_WRITE_NR        0x31
+#define IDE_CMD_VERIFY          0x40
+#define IDE_CMD_VERIFY_NR       0x41
+#define IDE_CMD_SEEK            0x70
+#define IDE_CMD_EDD             0x90
+#define IDE_CMD_INTPARAMS       0x91
+#define IDE_CMD_IDENTIFY        0xEC
+#define IDE_CMD_SETFEATURES     0xEF
 
 const uint8_t ide_magic[8] = {
   '1','D','E','D','1','5','C','0'
@@ -135,7 +135,7 @@ static off_t xlate_block(struct ide_taskfile *t)
 {
   struct ide_drive *d = t->drive;
   if (t->lba4 & DEVH_LBA) {
-/*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n", 
+/*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n",
       t->lba4, t->lba3, t->lba2, t->lba1);*/
     if (d->lba)
       return 2 + (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
@@ -173,7 +173,7 @@ static void data_in_state(struct ide_taskfile *tf)
   d->dptr = d->data + 512;
   tf->status &= ~ (ST_BSY|ST_DRDY);
   tf->status |= ST_DRQ;
-  d->intrq = 1;			/* Double check */
+  d->intrq = 1;                 /* Double check */
 }
 
 static void data_out_state(struct ide_taskfile *tf)
@@ -183,13 +183,13 @@ static void data_out_state(struct ide_taskfile *tf)
   d->dptr = d->data;
   tf->status &= ~ (ST_BSY|ST_DRDY);
   tf->status |= ST_DRQ;
-  d->intrq = 1;			/* Double check */
+  d->intrq = 1;                 /* Double check */
 }
 
 static void edd_setup(struct ide_taskfile *tf)
 {
-  tf->error = 0x01;		/* All good */
-  tf->lba1 = 0x01;		/* EDD always updates drive 0 */
+  tf->error = 0x01;             /* All good */
+  tf->lba1 = 0x01;              /* EDD always updates drive 0 */
   tf->lba2 = 0x00;
   tf->lba3 = 0x00;
   tf->lba4 = 0x00;
@@ -231,7 +231,7 @@ static void ide_srst_begin(struct ide_controller *c)
     c->drive[0].taskfile.status |= ST_BSY;
   if (c->drive[1].present)
     c->drive[1].taskfile.status |= ST_BSY;
-}  
+}
 
 static void ide_srst_end(struct ide_controller *c)
 {
@@ -267,10 +267,10 @@ static void cmd_initparam_complete(struct ide_taskfile *tf)
   if (tf->count != d->sectors || (tf->lba4 & DEVH_HEAD) != d->heads) {
     tf->status |= ST_ERR;
     tf->error |= ERR_ABRT;
-    tf->drive->failed = 1;		/* Report ID NF until fixed */
+    tf->drive->failed = 1;              /* Report ID NF until fixed */
     ide_fault(d, "invalid geometry");
   } else if (tf->drive->failed == 1)
-    tf->drive->failed = 0;		/* Valid translation */
+    tf->drive->failed = 0;              /* Valid translation */
   completed(tf);
 }
 
@@ -449,8 +449,8 @@ static uint16_t ide_data_in(struct ide_drive *d, int len)
   if (d->state == IDE_DATA_IN) {
     if (d->dptr == d->data + 512) {
       if (ide_read_sector(d) < 0) {
-        ide_set_error(d);	/* Set the LBA or CHS etc */
-        return 0xFFFF;		/* and error bits set by read_sector */
+        ide_set_error(d);       /* Set the LBA or CHS etc */
+        return 0xFFFF;          /* and error bits set by read_sector */
       }
     }
     v = *d->dptr;
@@ -463,7 +463,7 @@ static uint16_t ide_data_in(struct ide_drive *d, int len)
     d->taskfile.data = v;
     if (d->dptr == d->data + 512) {
       d->length--;
-      d->intrq = 1;		/* we don't yet emulate multimode */
+      d->intrq = 1;             /* we don't yet emulate multimode */
       if (d->length == 0) {
         d->state = IDE_IDLE;
         completed(&d->taskfile);
@@ -494,7 +494,7 @@ static void ide_data_out(struct ide_drive *d, uint16_t v, int len)
     if (d->dptr == d->data + 512) {
       if (ide_write_sector(d) < 0) {
         ide_set_error(d);
-        return;	
+        return;
       }
       d->length--;
       d->intrq = 1;
@@ -512,35 +512,35 @@ static void ide_issue_command(struct ide_taskfile *t)
   t->status |= ST_BSY;
   t->error = 0;
   t->drive->state = IDE_CMD;
-  
+
   /* We could complete with delays but don't do so yet */
   switch(t->command) {
-    case IDE_CMD_EDD:	/* 0x90 */
+    case IDE_CMD_EDD:   /* 0x90 */
       cmd_edd_complete(t);
       break;
-    case IDE_CMD_IDENTIFY:	/* 0xEC */
+    case IDE_CMD_IDENTIFY:      /* 0xEC */
       cmd_identify_complete(t);
       break;
-    case IDE_CMD_INTPARAMS:	/* 0x91 */
+    case IDE_CMD_INTPARAMS:     /* 0x91 */
       cmd_initparam_complete(t);
       break;
-    case IDE_CMD_READ:		/* 0x20 */
-    case IDE_CMD_READ_NR:	/* 0x21 */
+    case IDE_CMD_READ:          /* 0x20 */
+    case IDE_CMD_READ_NR:       /* 0x21 */
       cmd_readsectors_complete(t);
       break;
-    case IDE_CMD_SETFEATURES:	/* 0xEF */
+    case IDE_CMD_SETFEATURES:   /* 0xEF */
       cmd_setfeatures_complete(t);
       break;
-    case IDE_CMD_VERIFY:	/* 0x40 */
-    case IDE_CMD_VERIFY_NR:	/* 0x41 */
+    case IDE_CMD_VERIFY:        /* 0x40 */
+    case IDE_CMD_VERIFY_NR:     /* 0x41 */
       cmd_verifysectors_complete(t);
       break;
-    case IDE_CMD_WRITE:		/* 0x30 */
-    case IDE_CMD_WRITE_NR:	/* 0x31 */
+    case IDE_CMD_WRITE:         /* 0x30 */
+    case IDE_CMD_WRITE_NR:      /* 0x31 */
       cmd_writesectors_complete(t);
       break;
     default:
-      if ((t->command & 0xF0) == IDE_CMD_CALIB)	/* 1x */
+      if ((t->command & 0xF0) == IDE_CMD_CALIB) /* 1x */
         cmd_recalibrate_complete(t);
       else if ((t->command & 0xF0) == IDE_CMD_SEEK) /* 7x */
         cmd_seek_complete(t);
@@ -554,7 +554,7 @@ static void ide_issue_command(struct ide_taskfile *t)
 }
 
 /*
- *	8bit IDE controller emulation
+ *      8bit IDE controller emulation
  */
 
 uint8_t ide_read8(struct ide_controller *c, uint8_t r)
@@ -577,7 +577,7 @@ uint8_t ide_read8(struct ide_controller *c, uint8_t r)
     case ide_lba_top:
       return t->lba4;
     case ide_status_r:
-      d->intrq = 0;		/* Acked */
+      d->intrq = 0;             /* Acked */
     case ide_altst_r:
       return t->status;
     default:
@@ -627,7 +627,7 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
       c->selected = (v & DEVH_DEV) ? 1 : 0;
       break;
     case ide_command_w:
-      t->command = v; 
+      t->command = v;
       ide_issue_command(t);
       break;
     case ide_devctrl_w:
@@ -637,13 +637,13 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
         else
           ide_srst_end(c);
       }
-      t->devctrl = v;	/* Check versus real h/w does this end up cleared */
+      t->devctrl = v;   /* Check versus real h/w does this end up cleared */
       break;
   }
 }
 
 /*
- *	16bit IDE controller emulation
+ *      16bit IDE controller emulation
  */
 
 uint16_t ide_read16(struct ide_controller *c, uint8_t r)
@@ -670,7 +670,7 @@ void ide_write16(struct ide_controller *c, uint8_t r, uint16_t v)
 }
 
 /*
- *	Allocate a new IDE controller emulation
+ *      Allocate a new IDE controller emulation
  */
 struct ide_controller *ide_allocate(const char *name)
 {
@@ -690,7 +690,7 @@ struct ide_controller *ide_allocate(const char *name)
 }
 
 /*
- *	Attach a file to a device on the controller
+ *      Attach a file to a device on the controller
  */
 int ide_attach(struct ide_controller *c, int drive, int fd)
 {
@@ -719,7 +719,7 @@ int ide_attach(struct ide_controller *c, int drive, int fd)
 }
 
 /*
- *	Detach an IDE device from the interface (not hot pluggable)
+ *      Detach an IDE device from the interface (not hot pluggable)
  */
 void ide_detach(struct ide_drive *d)
 {
@@ -729,8 +729,8 @@ void ide_detach(struct ide_drive *d)
 }
 
 /*
- *	Free up and release and IDE controller
- */  
+ *      Free up and release and IDE controller
+ */
 void ide_free(struct ide_controller *c)
 {
   if (c->drive[0].present)
@@ -742,8 +742,8 @@ void ide_free(struct ide_controller *c)
 }
 
 /*
- *	Emulation interface for an 8bit controller using latches on the
- *	data register
+ *      Emulation interface for an 8bit controller using latches on the
+ *      data register
  */
 uint8_t ide_read_latched(struct ide_controller *c, uint8_t reg)
 {
@@ -768,7 +768,7 @@ void ide_write_latched(struct ide_controller *c, uint8_t reg, uint8_t v)
   }
   if (reg == ide_data)
     d |=  (c->data_latch << 8);
-  ide_write16(c, reg, d);  
+  ide_write16(c, reg, d);
 }
 
 static void make_ascii(uint16_t *p, const char *t, int len)
@@ -782,7 +782,7 @@ static void make_ascii(uint16_t *p, const char *t, int len)
     *d = d[1];
     d[1] = c;
     d += 2;
-  }  
+  }
 }
 
 static void make_serial(uint16_t *p)
@@ -802,19 +802,19 @@ int ide_make_drive(uint8_t type, int fd)
 
   if (type < 1 || type > MAX_DRIVE_TYPE)
     return -2;
-  
+
   memset(ident, 0, 512);
   memcpy(ident, ide_magic, 8);
   if (write(fd, ident, 512) != 512)
     return -1;
 
   memset(ident, 0, 8);
-  ident[0] = le16((1 << 15) | (1 << 6));	/* Non removable */
+  ident[0] = le16((1 << 15) | (1 << 6));        /* Non removable */
   make_serial(ident + 10);
   ident[47] = 0; /* no read multi for now */
-  ident[51] = le16(240 /* PIO2 */ << 8);	/* PIO cycle time */
-  ident[53] = le16(1);		/* Geometry words are valid */
-  
+  ident[51] = le16(240 /* PIO2 */ << 8);        /* PIO cycle time */
+  ident[53] = le16(1);          /* Geometry words are valid */
+
   switch(type) {
     case ACME_ROADRUNNER:
       /* 504MB drive with LBA support */
@@ -824,7 +824,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME ROADRUNNER v0.1", 40);
       ident[49] = le16(1 << 9); /* LBA */
-      break;  
+      break;
     case ACME_ULTRASONICUS:
       /* 40MB drive with LBA support */
       c = 977;
@@ -850,7 +850,7 @@ int ide_make_drive(uint8_t type, int fd)
       s = 16;
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME COYOTE v0.1", 40);
-      break;  
+      break;
   }
   ident[1] = le16(c);
   ident[3] = le16(h);
@@ -865,10 +865,10 @@ int ide_make_drive(uint8_t type, int fd)
   ident[61] = ident[58];
   if (write(fd, ident, 512) != 512)
     return -1;
-  
+
   memset(ident, 0xE5, 512);
   while(sectors--)
     if (write(fd, ident, 512) != 512)
-      return -1;  
+      return -1;
   return 0;
 }

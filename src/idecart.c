@@ -57,7 +57,7 @@ static void idecart_detach(struct cart *c) {
 
 static void idecart_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
   struct idecart *ide = (struct idecart *)c;
-  
+
   if (!P2)
     return;
 
@@ -81,7 +81,7 @@ static void idecart_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
   struct idecart *ide = (struct idecart *)c;
-  
+
   uint8_t r = D;
   if (!P2)
     return c->rom_data[A & 0x3FFF];
@@ -112,7 +112,7 @@ static void idecart_init(struct idecart *ide) {
   c->reset = idecart_reset;
   c->detach = idecart_detach;
   ide->have_becker = (cc->becker_port && becker_open());
-  
+
   ide->controller = ide_allocate("ide0");
   if (ide->controller == NULL) {
     perror(NULL);
