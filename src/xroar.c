@@ -311,6 +311,10 @@ static char const * const default_config[] = {
 	"cart-type ide",
 	"cart-rom @hdblba",
 	"cart-becker",
+	// nx32 memory cartridge
+	"cart nx32",
+	"cart-desc NX32 memory cartridge",
+	"cart-type nx32",
 
 	// ROM lists
 
