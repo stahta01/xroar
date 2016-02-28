@@ -1404,8 +1404,15 @@ void xroar_toggle_cart(void) {
 
 void xroar_set_cart(_Bool notify, const char *cc_name) {
 	assert(xroar_machine_config != NULL);
+
+	struct cart *old_cart = machine_get_cart();
+	if (!old_cart && !cc_name)
+		return;
+	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
+		return;
 	machine_remove_cart();
 
+	struct cart *new_cart = NULL;
 	if (!cc_name) {
 		xroar_machine_config->cart_enabled = 0;
 	} else {
@@ -1414,12 +1421,12 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 			xroar_machine_config->default_cart = xstrdup(cc_name);
 		}
 		xroar_machine_config->cart_enabled = 1;
-		machine_insert_cart(cart_new_named(cc_name));
+		new_cart = cart_new_named(cc_name);
+		machine_insert_cart(new_cart);
 	}
 
 	if (notify) {
-		struct cart *machine_cart = machine_get_cart();
-		int id = machine_cart ? machine_cart->config->id : -1;
+		int id = new_cart ? new_cart->config->id : -1;
 		ui_module->set_state(ui_tag_cartridge, id, NULL);
 	}
 }
