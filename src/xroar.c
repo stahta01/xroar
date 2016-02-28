@@ -1418,6 +1418,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 	}
 
 	if (notify) {
+		struct cart *machine_cart = machine_get_cart();
 		int id = machine_cart ? machine_cart->config->id : -1;
 		ui_module->set_state(ui_tag_cartridge, id, NULL);
 	}

@@ -1026,6 +1026,7 @@ static void update_cartridge_menu(void) {
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	struct slist *iter;
+	struct cart *machine_cart = machine_get_cart();
 	while ([cartridge_menu numberOfItems] > 0)
 		[cartridge_menu removeItem:[cartridge_menu itemAtIndex:0]];
 	for (iter = ccl; iter; iter = iter->next) {

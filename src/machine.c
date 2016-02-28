@@ -69,7 +69,7 @@ struct MC6883 *SAM0 = NULL;
 static struct MC6809 *CPU0 = NULL;
 static struct MC6821 *PIA0, *PIA1;
 static struct MC6847 *VDG0;
-struct cart *machine_cart = NULL;
+static struct cart *machine_cart = NULL;
 _Bool has_bas, has_extbas, has_altbas, has_combined;
 uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 static uint8_t ext_charset[0x1000];
@@ -1321,6 +1321,10 @@ void machine_bp_remove_n(struct machine_bp *list, int n) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct cart *machine_get_cart(void) {
+	return machine_cart;
+}
 
 void machine_insert_cart(struct cart *c) {
 	machine_remove_cart();

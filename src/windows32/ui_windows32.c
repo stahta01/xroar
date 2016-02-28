@@ -263,6 +263,7 @@ static void setup_hardware_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
 	set_state(ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
+	struct cart *machine_cart = machine_get_cart();
 	set_state(ui_tag_cartridge, machine_cart ? machine_cart->config->id : 0, NULL);
 }
 

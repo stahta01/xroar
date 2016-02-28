@@ -830,6 +830,7 @@ static void update_cartridge_menu(void) {
 	gchar **labels = g_malloc0(num_carts * sizeof(gchar *));
 	/* add these to the ui in reverse order, as each will be
 	   inserted before the previous */
+	struct cart *machine_cart = machine_get_cart();
 	int i = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
 		struct cart_config *cc = iter->data;

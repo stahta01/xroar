@@ -158,7 +158,6 @@ struct machine_config {
 extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
-extern struct cart *machine_cart;
 extern _Bool has_bas, has_extbas, has_altbas, has_combined;
 extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 
@@ -218,6 +217,7 @@ void machine_bp_remove_n(struct machine_bp *list, int n);
 #define machine_bp_add_list(list) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp))
 #define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
 
+struct cart *machine_get_cart(void);
 void machine_insert_cart(struct cart *c);
 void machine_remove_cart(void);
 
