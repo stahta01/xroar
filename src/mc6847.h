@@ -63,6 +63,13 @@ struct MC6847 {
 	// External handler to fetch data for display. First arg is number of
 	// 16-bit words, second a pointer to a buffer to receive them.
 	DELEGATE_T2(void, int, uint16p) fetch_data;
+
+	// Flags to affect behaviour.  Really, these should be handled by
+	// machine-specific code.
+	_Bool is_dragon64;
+	_Bool is_dragon32;
+	_Bool is_coco;
+	_Bool is_pal;
 };
 
 /* Fetched data is a buffer of uint16_t, with bits:

@@ -30,7 +30,6 @@
 #include "font-6847.h"
 #include "font-6847t1.h"
 #include "logging.h"
-#include "machine.h"
 #include "mc6809.h"
 #include "mc6847.h"
 #include "sam.h"
@@ -178,20 +177,20 @@ static void do_hs_fall(void *data) {
 	 * interrupt signal during this time, CoCos do.  The positioning and
 	 * duration of each interruption differs also. */
 
-	if (IS_PAL) {
-		if (IS_DRAGON64) {
+	if (vdg->public.is_pal) {
+		if (vdg->public.is_dragon64) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
 			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
 				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 			}
-		} else if (IS_DRAGON32) {
+		} else if (vdg->public.is_dragon32) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
 			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
 				vdg->pal_padding = 25;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
-		} else if (IS_COCO) {
+		} else if (vdg->public.is_coco) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 25)) {
 				vdg->pal_padding = 26;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;

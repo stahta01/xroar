@@ -639,6 +639,11 @@ void machine_configure(struct machine_config *mc) {
 
 	// VDG
 	VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
+	// XXX kludges that should be handled by machine-specific code
+	VDG0->is_dragon64 = IS_DRAGON64;
+	VDG0->is_dragon32 = IS_DRAGON32;
+	VDG0->is_coco = IS_COCO;
+	VDG0->is_pal = IS_PAL;
 
 	if (IS_COCO && IS_PAL) {
 		VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, NULL);
