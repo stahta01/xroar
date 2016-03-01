@@ -262,7 +262,7 @@ static void do_hs_fall_pal(void *data) {
 static void render_scanline(struct MC6847_private *vdg) {
 	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_PIXELS(1);
 	if (vdg->is_32byte && beam_to >= 102) {
-		unsigned nbytes = (beam_to - 102) >> 3;
+		unsigned nbytes = (beam_to - 86) >> 3;
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
@@ -270,7 +270,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->vram_nbytes = nbytes;
 		}
 	} else if (!vdg->is_32byte && beam_to >= 102) {
-		unsigned nbytes = (beam_to - 102) >> 4;
+		unsigned nbytes = (beam_to - 86) >> 4;
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
