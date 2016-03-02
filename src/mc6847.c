@@ -260,16 +260,16 @@ static void do_hs_fall_pal(void *data) {
 
 static void render_scanline(struct MC6847_private *vdg) {
 	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_PIXELS(1);
-	if (vdg->is_32byte && beam_to >= 102) {
-		unsigned nbytes = (beam_to - 86) >> 3;
+	if (vdg->is_32byte && beam_to >= (VDG_tHBNK + 8)) {
+		unsigned nbytes = (beam_to - VDG_tHBNK) >> 3;
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
 			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
-	} else if (!vdg->is_32byte && beam_to >= 102) {
-		unsigned nbytes = (beam_to - 86) >> 4;
+	} else if (!vdg->is_32byte && beam_to >= (VDG_tHBNK + 16)) {
+		unsigned nbytes = (beam_to - VDG_tHBNK) >> 4;
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
