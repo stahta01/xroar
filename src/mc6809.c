@@ -249,19 +249,16 @@ static void mc6809_run(struct MC6809 *cpu) {
 		case mc6809_state_dispatch_irq:
 			if (cpu->nmi_active) {
 				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
-				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
 				cpu->state = mc6809_state_label_a;
 				continue;
 			}
 			if (!(REG_CC & CC_F) && cpu->firq_active) {
-				REG_CC |= (CC_F | CC_I);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
 				cpu->state = mc6809_state_label_a;
 				continue;
 			}
 			if (!(REG_CC & CC_I) && cpu->irq_active) {
-				REG_CC |= CC_I;
 				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
 				cpu->state = mc6809_state_label_a;
 				continue;
