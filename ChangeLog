@@ -2,6 +2,7 @@ Version 0.34, unreleased
 
   * Zoom controls fixed or added where missing.
   * Dragon 200-E "CLS 9" alternate text mode fixed.
+  * Control+C to quit removed from SDL UI (use Control+Q as per the docs).
 
   * Work in progress changes:
   * * WIP: SDL2 support
