@@ -195,7 +195,6 @@ static void emulator_command(int cmdkey, _Bool shift) {
 		}
 		return;
 	case 'a': xroar_set_cross_colour(1, XROAR_CYCLE); return;
-	case 'c':
 	case 'q': xroar_quit(); return;
 	case 'e': xroar_toggle_cart(); return;
 	case 'f': xroar_set_fullscreen(1, XROAR_TOGGLE); return;

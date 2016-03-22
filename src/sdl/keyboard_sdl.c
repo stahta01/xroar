@@ -220,7 +220,6 @@ static void emulator_command(SDLKey sym) {
 	case SDLK_a:
 		xroar_set_cross_colour(1, XROAR_CYCLE);
 		break;
-	case SDLK_c:
 	case SDLK_q:
 		xroar_quit();
 		break;
