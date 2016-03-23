@@ -27,6 +27,7 @@
 
 #include "events.h"
 #include "fs.h"
+#include "machine.h"
 #include "tape.h"
 #include "vdrive.h"
 #include "xroar.h"
@@ -86,7 +87,7 @@ static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTr
 	(void)user_data;
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(tc_input_list_store), &iter, path);
 	gtk_tree_model_get(GTK_TREE_MODEL(tc_input_list_store), &iter, TC_FILE_POINTER, &file, -1);
-	tape_seek_to_file(tape_input, file);
+	tape_seek_to_file(tape_interface->tape_input, file);
 }
 
 static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data);
@@ -160,14 +161,14 @@ void gtk2_create_tc_window(void) {
 
 static void update_input_list_store(void) {
 	if (have_input_list_store) return;
-	if (!tape_input) return;
+	if (!tape_interface || !tape_interface->tape_input) return;
 	have_input_list_store = 1;
 	struct tape_file *file;
-	long old_offset = tape_tell(tape_input);
-	tape_rewind(tape_input);
-	while ((file = tape_file_next(tape_input, 1))) {
+	long old_offset = tape_tell(tape_interface->tape_input);
+	tape_rewind(tape_interface->tape_input);
+	while ((file = tape_file_next(tape_interface->tape_input, 1))) {
 		GtkTreeIter iter;
-		int ms = tape_to_ms(tape_input, file->offset);
+		int ms = tape_to_ms(tape_interface->tape_input, file->offset);
 		gchar *timestr = ms_to_string(ms);
 		gtk_list_store_append(tc_input_list_store, &iter);
 		gtk_list_store_set(tc_input_list_store, &iter,
@@ -176,7 +177,7 @@ static void update_input_list_store(void) {
 				   TC_FILE_POINTER, file,
 				   -1);
 	}
-	tape_seek(tape_input, old_offset, SEEK_SET);
+	tape_seek(tape_interface->tape_input, old_offset, SEEK_SET);
 }
 
 static gchar *ms_to_string(int ms) {
@@ -227,13 +228,13 @@ static void update_tape_counters(void *data) {
 	static long imax = -1, ipos = -1;
 	long new_omax = 0, new_opos = 0;
 	long new_imax = 0, new_ipos = 0;
-	if (tape_input) {
-		new_imax = tape_to_ms(tape_input, tape_input->size);
-		new_ipos = tape_to_ms(tape_input, tape_input->offset);
+	if (tape_interface->tape_input) {
+		new_imax = tape_to_ms(tape_interface->tape_input, tape_interface->tape_input->size);
+		new_ipos = tape_to_ms(tape_interface->tape_input, tape_interface->tape_input->offset);
 	}
-	if (tape_output) {
-		new_omax = tape_to_ms(tape_output, tape_output->size);
-		new_opos = tape_to_ms(tape_output, tape_output->offset);
+	if (tape_interface->tape_output) {
+		new_omax = tape_to_ms(tape_interface->tape_output, tape_interface->tape_output->size);
+		new_opos = tape_to_ms(tape_interface->tape_output, tape_interface->tape_output->offset);
 	}
 	if (imax != new_imax) {
 		imax = new_imax;
@@ -284,22 +285,22 @@ void gtk2_output_tape_filename_cb(const char *filename) {
 static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data) {
 	(void)user_data;
 	int set = gtk_toggle_button_get_active(togglebutton) ? TAPE_FAST : 0;
-	int flags = (tape_get_state() & ~TAPE_FAST) | set;
-	tape_set_state(flags);
+	int flags = (tape_get_state(tape_interface) & ~TAPE_FAST) | set;
+	tape_set_state(tape_interface, flags);
 }
 
 static void tc_toggled_pad(GtkToggleButton *togglebutton, gpointer user_data) {
 	(void)user_data;
 	int set = gtk_toggle_button_get_active(togglebutton) ? TAPE_PAD : 0;
-	int flags = (tape_get_state() & ~TAPE_PAD) | set;
-	tape_set_state(flags);
+	int flags = (tape_get_state(tape_interface) & ~TAPE_PAD) | set;
+	tape_set_state(tape_interface, flags);
 }
 
 static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data) {
 	(void)user_data;
 	int set = gtk_toggle_button_get_active(togglebutton) ? TAPE_REWRITE : 0;
-	int flags = (tape_get_state() & ~TAPE_REWRITE) | set;
-	tape_set_state(flags);
+	int flags = (tape_get_state(tape_interface) & ~TAPE_REWRITE) | set;
+	tape_set_state(tape_interface, flags);
 }
 
 void gtk2_update_tape_state(int flags) {
@@ -331,15 +332,15 @@ static void hide_tc_window(void) {
 static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data) {
 	(void)range;
 	(void)user_data;
-	tc_seek(tape_input, scroll, value);
+	tc_seek(tape_interface->tape_input, scroll, value);
 	return TRUE;
 }
 
 static void tc_input_rewind(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	if (tape_input) {
-		tape_seek(tape_input, 0, SEEK_SET);
+	if (tape_interface->tape_input) {
+		tape_seek(tape_interface->tape_input, 0, SEEK_SET);
 	}
 }
 
@@ -358,15 +359,15 @@ static void tc_input_eject(GtkButton *button, gpointer user_data) {
 static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data) {
 	(void)range;
 	(void)user_data;
-	tc_seek(tape_output, scroll, value);
+	tc_seek(tape_interface->tape_output, scroll, value);
 	return TRUE;
 }
 
 static void tc_output_rewind(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	if (tape_output) {
-		tape_seek(tape_output, 0, SEEK_SET);
+	if (tape_interface && tape_interface->tape_output) {
+		tape_seek(tape_interface->tape_output, 0, SEEK_SET);
 	}
 }
 

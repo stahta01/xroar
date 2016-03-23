@@ -155,11 +155,13 @@ struct machine_config {
 #define MACHINE_SIGTRAP (5)
 #define MACHINE_SIGFPE (8)
 
+extern struct MC6809 *CPU0;
 extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
 extern _Bool has_bas, has_extbas, has_altbas, has_combined;
 extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
+extern struct tape_interface *tape_interface;
 
 extern struct xconfig_enum machine_arch_list[];
 extern struct xconfig_enum machine_keyboard_list[];
@@ -212,9 +214,9 @@ void machine_update_sound(void);
 void machine_set_inverted_text(_Bool);
 
 /* Helper function to populate breakpoints from a list. */
-void machine_bp_add_n(struct machine_bp *list, int n);
+void machine_bp_add_n(struct machine_bp *list, int n, void *sptr);
 void machine_bp_remove_n(struct machine_bp *list, int n);
-#define machine_bp_add_list(list) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp))
+#define machine_bp_add_list(list, sptr) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp), sptr)
 #define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
 
 struct cart *machine_get_cart(void);

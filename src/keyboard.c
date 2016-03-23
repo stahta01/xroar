@@ -274,6 +274,6 @@ void keyboard_queue_basic(const char *s) {
 		basic_command = data;
 	}
 	if (basic_command) {
-		machine_bp_add_list(basic_command_breakpoint);
+		machine_bp_add_list(basic_command_breakpoint, CPU0);
 	}
 }

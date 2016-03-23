@@ -62,10 +62,10 @@ struct tape_module tape_sndfile_module = {
 	.set_channel_mode = sndfile_set_channel_mode,
 };
 
-struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate) {
+struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate) {
 	struct tape *t;
 	struct tape_sndfile *sndfile;
-	t = tape_new();
+	t = tape_new(ti);
 	t->module = &tape_sndfile_module;
 	sndfile = xmalloc(sizeof(*sndfile));
 	t->data = sndfile;

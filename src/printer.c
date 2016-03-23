@@ -65,7 +65,7 @@ void printer_init(void) {
 void printer_reset(void) {
 	strobe_state = 1;
 	machine_bp_remove_list(coco_print_breakpoint);
-	machine_bp_add_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint, CPU0);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
@@ -78,7 +78,7 @@ void printer_open_file(const char *filename) {
 	stream_dest = xstrdup(filename);
 	is_pipe = 0;
 	busy = 0;
-	machine_bp_add_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint, CPU0);
 }
 
 void printer_open_pipe(const char *command) {
@@ -87,7 +87,7 @@ void printer_open_pipe(const char *command) {
 	stream_dest = xstrdup(command);
 	is_pipe = 1;
 	busy = 0;
-	machine_bp_add_list(coco_print_breakpoint);
+	machine_bp_add_list(coco_print_breakpoint, CPU0);
 }
 
 void printer_close(void) {

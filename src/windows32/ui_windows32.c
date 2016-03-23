@@ -329,8 +329,8 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			xroar_select_tape_output();
 			break;
 		case ui_action_tape_input_rewind:
-			if (tape_input)
-				tape_rewind(tape_input);
+			if (tape_interface && tape_interface->tape_input)
+				tape_rewind(tape_interface->tape_input);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in();
@@ -361,7 +361,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Cassettes:
 	case ui_tag_tape_flags:
-		tape_select_state(tape_get_state() ^ tag_value);
+		tape_select_state(tape_interface, tape_get_state(tape_interface) ^ tag_value);
 		break;
 
 	// Disks:

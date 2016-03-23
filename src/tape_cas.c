@@ -85,8 +85,8 @@ static uint8_t ascii_eof_block[EOFBLOCK_LENGTH] = {
 	0x55, 0x3c, 0xff, 0x00, 0xff, 0x55
 };
 
-static struct tape *do_tape_cas_open(const char *filename, const char *mode,
-                                     _Bool is_ascii) {
+static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *filename,
+				     const char *mode, _Bool is_ascii) {
 	struct tape *t;
 	struct tape_cas *cas;
 	FILE *fd;
@@ -106,7 +106,7 @@ static struct tape *do_tape_cas_open(const char *filename, const char *mode,
 		size = stat_buf.st_size;
 	}
 
-	t = tape_new();
+	t = tape_new(ti);
 	t->module = &tape_cas_module;
 	cas = xmalloc(sizeof(*cas));
 	t->data = cas;
@@ -151,12 +151,12 @@ static struct tape *do_tape_cas_open(const char *filename, const char *mode,
 	return t;
 }
 
-struct tape *tape_cas_open(const char *filename, const char *mode) {
-	return do_tape_cas_open(filename, mode, 0);
+struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode) {
+	return do_tape_cas_open(ti, filename, mode, 0);
 }
 
-struct tape *tape_asc_open(const char *filename, const char *mode) {
-	return do_tape_cas_open(filename, mode, 1);
+struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode) {
+	return do_tape_cas_open(ti, filename, mode, 1);
 }
 
 static void cas_close(struct tape *t) {

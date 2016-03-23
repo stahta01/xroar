@@ -18,6 +18,16 @@
 #define TAPE_BIT1_LENGTH (435 * EVENT_SAM_CYCLES(16))
 #define TAPE_AV_BIT_LENGTH ((TAPE_BIT0_LENGTH + TAPE_BIT1_LENGTH) / 2)
 
+struct MC6809;
+
+struct tape_interface {
+	// Delegate for tape output updates
+	DELEGATE_T1(void, float) update_audio;
+	// Current tapes for input and output
+	struct tape *tape_input;
+	struct tape *tape_output;
+};
+
 struct tape_module;
 
 enum tape_channel {
@@ -28,6 +38,7 @@ enum tape_channel {
 
 struct tape {
 	struct tape_module *module;
+	struct tape_interface *tape_interface;
 	void *data;  /* module-specific data */
 	long offset;  /* current tape position */
 	long size;  /* current tape size */
@@ -46,9 +57,6 @@ struct tape_module {
 	void (* const motor_off)(struct tape *t);
 	void (* const set_channel_mode)(struct tape *, enum tape_channel);
 };
-
-extern struct tape *tape_input;
-extern struct tape *tape_output;
 
 #define tape_close(t) (t)->module->close(t)
 /* for audio file input, tape_tell() might return an absolute file position,
@@ -80,43 +88,41 @@ struct tape_file *tape_file_next(struct tape *t, int skip_bad);
 void tape_seek_to_file(struct tape *t, struct tape_file const *f);
 
 /* Module-specific open() calls */
-struct tape *tape_cas_open(const char *filename, const char *mode);
-struct tape *tape_asc_open(const char *filename, const char *mode);
-struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate);
+struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode);
+struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode);
+struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate);
 
 /* Only to be used by tape modules */
-struct tape *tape_new(void);
+struct tape *tape_new(struct tape_interface *ti);
 void tape_free(struct tape *t);
 
 /**************************************************************************/
 
-void tape_init(void);
-void tape_reset(void);
-void tape_shutdown(void);
+struct tape_interface *tape_interface_new(struct MC6809 *cpu);
+void tape_interface_free(struct tape_interface *ti);
 
-/* Delegate for tape output updates */
-extern DELEGATE_T1(void, float) tape_update_audio;
+void tape_reset(struct tape_interface *ti);
 
 /* Only affects libsndfile output */
-void tape_set_ao_rate(int);
+void tape_set_ao_rate(struct tape_interface *ti, int);
 
-int tape_open_reading(const char *filename);
-void tape_close_reading(void);
-int tape_open_writing(const char *filename);
-void tape_close_writing(void);
+int tape_open_reading(struct tape_interface *ti, const char *filename);
+void tape_close_reading(struct tape_interface *ti);
+int tape_open_writing(struct tape_interface *ti, const char *filename);
+void tape_close_writing(struct tape_interface *ti);
 
-int tape_autorun(const char *filename);
+int tape_autorun(struct tape_interface *ti, const char *filename);
 
-void tape_update_motor(_Bool state);
-void tape_update_output(uint8_t value);
+void tape_update_motor(struct tape_interface *ti, _Bool state);
+void tape_update_output(struct tape_interface *ti, uint8_t value);
 
 #define TAPE_FAST (1 << 0)
 #define TAPE_PAD (1 << 1)
 #define TAPE_PAD_AUTO (1 << 2)
 #define TAPE_REWRITE (1 << 3)
 
-void tape_set_state(int flags);
-void tape_select_state(int flags);  /* set & update UI */
-int tape_get_state(void);
+void tape_set_state(struct tape_interface *ti, int flags);
+void tape_select_state(struct tape_interface *ti, int flags);  /* set & update UI */
+int tape_get_state(struct tape_interface *ti);
 
 #endif  /* XROAR_TAPE_H_ */

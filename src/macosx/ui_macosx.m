@@ -217,8 +217,8 @@ int cocoa_super_all_keys = 0;
 			xroar_select_tape_output();
 			break;
 		case TAG_TAPE_INPUT_REWIND:
-			if (tape_input)
-				tape_rewind(tape_input);
+			if (tape_interface && tape_interface->tape_input)
+				tape_rewind(tape_interface->tape_input);
 			break;
 		case TAG_ZOOM_IN:
 			sdl_zoom_in();
@@ -252,7 +252,7 @@ int cocoa_super_all_keys = 0;
 
 	/* Cassettes: */
 	case TAG_TAPE_FLAGS:
-		tape_set_state(tape_get_state() ^ tag_value);
+		tape_set_state(tape_interface, tape_get_state(tape_interface) ^ tag_value);
 		break;
 
 	/* Disks: */
@@ -339,7 +339,7 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	case TAG_TAPE_FLAGS:
-		[item setState:((tape_get_state() & tag_value) ? NSOnState : NSOffState)];
+		[item setState:((tape_get_state(tape_interface) & tag_value) ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_WRITE_ENABLE:

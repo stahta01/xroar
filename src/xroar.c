@@ -621,7 +621,7 @@ _Bool xroar_init(int argc, char **argv) {
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
 	if (private_cfg.tape_ao_rate > 0)
-		tape_set_ao_rate(private_cfg.tape_ao_rate);
+		tape_set_ao_rate(tape_interface, private_cfg.tape_ao_rate);
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
 	_Bool definitely_dos = 0;
@@ -744,7 +744,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 	/* Reset everything */
 	xroar_hard_reset();
-	tape_select_state(private_cfg.tape_fast | private_cfg.tape_pad | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
+	tape_select_state(tape_interface, private_cfg.tape_fast | private_cfg.tape_pad | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
 
 	load_disk_to_drive = 0;
 	while (private_cfg.load_list) {
@@ -791,7 +791,7 @@ _Bool xroar_init(int argc, char **argv) {
 		switch (write_file_type) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
-				tape_open_writing(private_cfg.tape_write);
+				tape_open_writing(tape_interface, private_cfg.tape_write);
 				ui_module->set_state(ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
@@ -1018,9 +1018,9 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 		case FILETYPE_WAV:
 		default:
 			if (autorun) {
-				ret = tape_autorun(filename);
+				ret = tape_autorun(tape_interface, filename);
 			} else {
-				ret = tape_open_reading(filename);
+				ret = tape_open_reading(tape_interface, filename);
 			}
 			if (ret == 0) {
 				ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
@@ -1458,26 +1458,26 @@ void xroar_save_snapshot(void) {
 void xroar_select_tape_input(void) {
 	char *filename = filereq_module->load_filename(xroar_tape_exts);
 	if (filename) {
-		tape_open_reading(filename);
+		tape_open_reading(tape_interface, filename);
 		ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_input(void) {
-	tape_close_reading();
+	tape_close_reading(tape_interface);
 	ui_module->set_state(ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_select_tape_output(void) {
 	char *filename = filereq_module->save_filename(xroar_tape_exts);
 	if (filename) {
-		tape_open_writing(filename);
+		tape_open_writing(tape_interface, filename);
 		ui_module->set_state(ui_tag_tape_output_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_output(void) {
-	tape_close_writing();
+	tape_close_writing(tape_interface);
 	ui_module->set_state(ui_tag_tape_output_filename, 0, NULL);
 }
 

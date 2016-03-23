@@ -41,41 +41,42 @@
 #include "ui.h"
 #include "xroar.h"
 
-/* Tape output delegate.  Called when the output from the tape unit (i.e., the
- * input to the machine) changes. */
-DELEGATE_T1(void, float) tape_update_audio;
+struct tape_interface_private {
+	struct tape_interface public;
 
-struct tape *tape_input = NULL;
-struct tape *tape_output = NULL;
+	struct MC6809 *cpu;
+
+	int tape_fast;
+	int tape_pad;
+	int tape_pad_auto;
+	int tape_rewrite;
+	int in_pulse;
+	int in_pulse_width;
+
+	int ao_rate;
+
+	uint8_t last_tape_output;
+	_Bool motor;
+
+	int input_skip_sync;
+	int rewrite_have_sync;
+	int rewrite_leader_count;
+	int rewrite_bit_count;
+
+	struct event waggle_event;
+	struct event flush_event;
+};
 
 static void waggle_bit(void *);
-static struct event waggle_event;
 static void flush_output(void *);
-static struct event flush_event;
 
-static int tape_fast = 0;
-static int tape_pad = 0;
-static int tape_pad_auto = 0;
-static int tape_rewrite = 0;
-static int in_pulse = -1;
-static int in_pulse_width = 0;
-
-static int tape_ao_rate = 9600;
-
-static uint8_t last_tape_output = 0;
-static _Bool motor = 0;
-
-static int input_skip_sync = 0;
-static int rewrite_have_sync = 0;
-static int rewrite_leader_count = 256;
-static int rewrite_bit_count = 0;
-static void tape_desync(int leader);
+static void tape_desync(struct tape_interface_private *tip, int leader);
 static void rewrite_sync(void *sptr);
 static void rewrite_bitin(void *sptr);
 static void rewrite_tape_on(void *sptr);
 static void rewrite_end_of_block(void *sptr);
 
-static void set_breakpoints(void);
+static void set_breakpoints(struct tape_interface_private *tip);
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
@@ -128,13 +129,44 @@ static struct tape_file_autorun autorun_special[] = {
 
 /**************************************************************************/
 
+/* For now, creating a tape interface requires a pointer to the CPU.  This
+ * should probably become a pointer to the machine it's a part of. */
+
+struct tape_interface *tape_interface_new(struct MC6809 *cpu) {
+	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
+	*tip = (struct tape_interface_private){0};
+	struct tape_interface *ti = &tip->public;
+
+	tip->cpu = cpu;
+
+	tip->in_pulse = -1;
+	tip->ao_rate = 9600;
+	tip->rewrite_leader_count = 256;
+
+	ti->update_audio = DELEGATE_DEFAULT1(void, float);
+	DELEGATE_CALL1(ti->update_audio, 0.5);
+	event_init(&tip->waggle_event, DELEGATE_AS0(void, waggle_bit, tip));
+	event_init(&tip->flush_event, DELEGATE_AS0(void, flush_output, tip));
+
+	return &tip->public;
+}
+
+void tape_interface_free(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_close_reading(ti);
+	tape_reset(ti);
+	free(tip);
+}
+
 int tape_seek(struct tape *t, long offset, int whence) {
+	struct tape_interface *ti = t->tape_interface;
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int r = t->module->seek(t, offset, whence);
-	tape_update_motor(motor);
+	tape_update_motor(ti, tip->motor);
 	/* if seeking to beginning of tape, ensure any fake leader etc.
 	 * is set up properly */
 	if (r >= 0 && t->offset == 0) {
-		tape_desync(256);
+		tape_desync(tip, 256);
 	}
 	return r;
 }
@@ -185,12 +217,14 @@ static uint8_t const bit_out_waveform[] = {
 
 static void tape_bit_out(struct tape *t, int bit) {
 	if (!t) return;
+	struct tape_interface *ti = t->tape_interface;
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int sample_length = bit ? 176 : 352;
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(bit_out_waveform); i++) {
 		tape_sample_out(t, bit_out_waveform[i], sample_length);
 	}
-	rewrite_bit_count = (rewrite_bit_count + 1) & 7;
-	last_tape_output = 0;
+	tip->rewrite_bit_count = (tip->rewrite_bit_count + 1) & 7;
+	tip->last_tape_output = 0;
 }
 
 static void tape_byte_out(struct tape *t, int byte) {
@@ -286,8 +320,9 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f) {
 
 /**************************************************************************/
 
-struct tape *tape_new(void) {
+struct tape *tape_new(struct tape_interface *ti) {
 	struct tape *new = xzalloc(sizeof(*new));
+	new->tape_interface = ti;
 	return new;
 }
 
@@ -297,102 +332,94 @@ void tape_free(struct tape *t) {
 
 /**************************************************************************/
 
-void tape_init(void) {
-	tape_update_audio = DELEGATE_DEFAULT1(void, float);
-	DELEGATE_CALL1(tape_update_audio, 0.5);
-	event_init(&waggle_event, DELEGATE_AS0(void, waggle_bit, NULL));
-	event_init(&flush_event, DELEGATE_AS0(void, flush_output, NULL));
+void tape_reset(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_close_writing(ti);
+	tip->motor = 0;
+	event_dequeue(&tip->waggle_event);
 }
 
-void tape_reset(void) {
-	tape_close_writing();
-	motor = 0;
-	event_dequeue(&waggle_event);
-}
-
-void tape_shutdown(void) {
-	tape_close_reading();
-	tape_reset();
-}
-
-void tape_set_ao_rate(int rate) {
+void tape_set_ao_rate(struct tape_interface *ti, int rate) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	if (rate > 0)
-		tape_ao_rate = rate;
+		tip->ao_rate = rate;
 	else
-		tape_ao_rate = 9600;
+		tip->ao_rate = 9600;
 }
 
-int tape_open_reading(const char *filename) {
-	tape_close_reading();
-	input_skip_sync = 0;
+int tape_open_reading(struct tape_interface *ti, const char *filename) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_close_reading(ti);
+	tip->input_skip_sync = 0;
 	int type = xroar_filetype_by_ext(filename);
 	switch (type) {
 	case FILETYPE_CAS:
-		if ((tape_input = tape_cas_open(filename, "rb")) == NULL) {
+		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
 			LOG_WARN("Failed to open '%s'\n", filename);
 			return -1;
 		}
-		if (tape_pad_auto) {
-			int flags = tape_get_state() & ~TAPE_PAD;
-			if (IS_DRAGON && tape_input->leader_count < 114)
+		if (tip->tape_pad_auto) {
+			int flags = tape_get_state(ti) & ~TAPE_PAD;
+			if (IS_DRAGON && ti->tape_input->leader_count < 114)
 				flags |= TAPE_PAD;
-			if (IS_COCO && tape_input->leader_count < 130)
+			if (IS_COCO && ti->tape_input->leader_count < 130)
 				flags |= TAPE_PAD;
-			tape_select_state(flags);
+			tape_select_state(ti, flags);
 		}
 		break;
 	case FILETYPE_ASC:
-		if ((tape_input = tape_asc_open(filename, "rb")) == NULL) {
+		if ((ti->tape_input = tape_asc_open(ti, filename, "rb")) == NULL) {
 			LOG_WARN("Failed to open '%s'\n", filename);
 			return -1;
 		}
 		break;
 	default:
 #ifdef HAVE_SNDFILE
-		if ((tape_input = tape_sndfile_open(filename, "rb", -1)) == NULL) {
+		if ((ti->tape_input = tape_sndfile_open(ti, filename, "rb", -1)) == NULL) {
 			LOG_WARN("Failed to open '%s'\n", filename);
 			return -1;
 		}
-		if (tape_pad_auto) {
-			int flags = tape_get_state() & ~TAPE_PAD;
-			tape_select_state(flags);
+		if (tip->tape_pad_auto) {
+			int flags = tape_get_state(ti) & ~TAPE_PAD;
+			tape_select_state(ti, flags);
 		}
-		input_skip_sync = 1;
+		tip->input_skip_sync = 1;
 		break;
 #else
 		LOG_WARN("Failed to open '%s'\n", filename);
 		return -1;
 #endif
 	}
-	if (tape_input->module->set_channel_mode)
-		tape_input->module->set_channel_mode(tape_input, xroar_cfg.tape_channel_mode);
+	if (ti->tape_input->module->set_channel_mode)
+		ti->tape_input->module->set_channel_mode(ti->tape_input, xroar_cfg.tape_channel_mode);
 
-	tape_desync(256);
-	tape_update_motor(motor);
+	tape_desync(tip, 256);
+	tape_update_motor(ti, tip->motor);
 	LOG_DEBUG(1, "Tape: Attached '%s' for reading\n", filename);
 	return 0;
 }
 
-void tape_close_reading(void) {
-	if (tape_input)
-		tape_close(tape_input);
-	tape_input = NULL;
+void tape_close_reading(struct tape_interface *ti) {
+	if (ti->tape_input)
+		tape_close(ti->tape_input);
+	ti->tape_input = NULL;
 }
 
-int tape_open_writing(const char *filename) {
-	tape_close_writing();
+int tape_open_writing(struct tape_interface *ti, const char *filename) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_close_writing(ti);
 	int type = xroar_filetype_by_ext(filename);
 	switch (type) {
 	case FILETYPE_CAS:
 	case FILETYPE_ASC:
-		if ((tape_output = tape_cas_open(filename, "wb")) == NULL) {
+		if ((ti->tape_output = tape_cas_open(ti, filename, "wb")) == NULL) {
 			LOG_WARN("Failed to open '%s' for writing.", filename);
 			return -1;
 		}
 		break;
 	default:
 #ifdef HAVE_SNDFILE
-		if ((tape_output = tape_sndfile_open(filename, "wb", tape_ao_rate)) == NULL) {
+		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
 			LOG_WARN("Failed to open '%s' for writing.", filename);
 			return -1;
 		}
@@ -403,36 +430,37 @@ int tape_open_writing(const char *filename) {
 		break;
 	}
 
-	tape_update_motor(motor);
-	rewrite_bit_count = 0;
+	tape_update_motor(ti, tip->motor);
+	tip->rewrite_bit_count = 0;
 	LOG_DEBUG(1, "Tape: Attached '%s' for writing.\n", filename);
 	return 0;
 }
 
-void tape_close_writing(void) {
-	if (tape_rewrite) {
-		tape_byte_out(tape_output, 0x55);
-		tape_byte_out(tape_output, 0x55);
+void tape_close_writing(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	if (tip->tape_rewrite) {
+		tape_byte_out(ti->tape_output, 0x55);
+		tape_byte_out(ti->tape_output, 0x55);
 	}
-	if (tape_output) {
-		event_dequeue(&flush_event);
-		tape_update_output(last_tape_output);
-		tape_close(tape_output);
+	if (ti->tape_output) {
+		event_dequeue(&tip->flush_event);
+		tape_update_output(ti, tip->last_tape_output);
+		tape_close(ti->tape_output);
 	}
-	tape_output = NULL;
+	ti->tape_output = NULL;
 }
 
 /* Close any currently-open tape file, open a new one and read the first
  * bufferful of data.  Tries to guess the filetype.  Returns -1 on error,
  * 0 for a BASIC program, 1 for data and 2 for M/C. */
-int tape_autorun(const char *filename) {
+int tape_autorun(struct tape_interface *ti, const char *filename) {
 	if (filename == NULL)
 		return -1;
 	keyboard_queue_basic(NULL);
-	if (tape_open_reading(filename) == -1)
+	if (tape_open_reading(ti, filename) == -1)
 		return -1;
-	struct tape_file *f = tape_file_next(tape_input, 0);
-	tape_rewind(tape_input);
+	struct tape_file *f = tape_file_next(ti->tape_input, 0);
+	tape_rewind(ti->tape_input);
 	if (!f) {
 		return -1;
 	}
@@ -488,31 +516,32 @@ int tape_autorun(const char *filename) {
 static struct xroar_timeout *motoroff_timeout = NULL;
 
 /* Called whenever the motor control line is written to. */
-void tape_update_motor(_Bool state) {
+void tape_update_motor(struct tape_interface *ti, _Bool state) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	if (state) {
-		if (tape_input && !waggle_event.queued) {
+		if (ti->tape_input && !tip->waggle_event.queued) {
 			/* If motor turned on and tape file attached,
 			 * enable the tape input bit waggler */
-			waggle_event.at_tick = event_current_tick;
-			waggle_bit(NULL);
+			tip->waggle_event.at_tick = event_current_tick;
+			waggle_bit(tip);
 		}
-		if (tape_output && !flush_event.queued) {
-			flush_event.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&MACHINE_EVENT_LIST, &flush_event);
-			tape_output->last_write_cycle = event_current_tick;
+		if (ti->tape_output && !tip->flush_event.queued) {
+			tip->flush_event.at_tick = event_current_tick + EVENT_MS(500);
+			event_queue(&MACHINE_EVENT_LIST, &tip->flush_event);
+			ti->tape_output->last_write_cycle = event_current_tick;
 		}
 	} else {
-		event_dequeue(&waggle_event);
-		event_dequeue(&flush_event);
-		tape_update_output(last_tape_output);
-		if (tape_output && tape_output->module->motor_off) {
-			tape_output->module->motor_off(tape_output);
+		event_dequeue(&tip->waggle_event);
+		event_dequeue(&tip->flush_event);
+		tape_update_output(ti, tip->last_tape_output);
+		if (ti->tape_output && ti->tape_output->module->motor_off) {
+			ti->tape_output->module->motor_off(ti->tape_output);
 		}
-		if (tape_pad || tape_rewrite) {
-			tape_desync(256);
+		if (tip->tape_pad || tip->tape_rewrite) {
+			tape_desync(tip, 256);
 		}
 	}
-	if (motor != state) {
+	if (tip->motor != state) {
 		if (motoroff_timeout) {
 			xroar_cancel_timeout(motoroff_timeout);
 			motoroff_timeout = NULL;
@@ -525,49 +554,52 @@ void tape_update_motor(_Bool state) {
 		}
 		LOG_DEBUG(2, "Tape: motor %s\n", state ? "ON" : "OFF");
 	}
-	motor = state;
-	set_breakpoints();
+	tip->motor = state;
+	set_breakpoints(tip);
 }
 
 /* Called whenever the DAC is written to. */
-void tape_update_output(uint8_t value) {
-	if (motor && tape_output && !tape_rewrite) {
-		int length = event_current_tick - tape_output->last_write_cycle;
-		tape_output->module->sample_out(tape_output, last_tape_output, length);
-		tape_output->last_write_cycle = event_current_tick;
+void tape_update_output(struct tape_interface *ti, uint8_t value) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	if (tip->motor && ti->tape_output && !tip->tape_rewrite) {
+		int length = event_current_tick - ti->tape_output->last_write_cycle;
+		ti->tape_output->module->sample_out(ti->tape_output, tip->last_tape_output, length);
+		ti->tape_output->last_write_cycle = event_current_tick;
 	}
-	last_tape_output = value;
+	tip->last_tape_output = value;
 }
 
 /* Read pulse & duration, schedule next read */
-static void waggle_bit(void *data) {
-	(void)data;
-	in_pulse = tape_pulse_in(tape_input, &in_pulse_width);
-	switch (in_pulse) {
+static void waggle_bit(void *sptr) {
+	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
+	tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
+	switch (tip->in_pulse) {
 	default:
 	case -1:
-		DELEGATE_CALL1(tape_update_audio, 0.5);
-		event_dequeue(&waggle_event);
+		DELEGATE_CALL1(ti->update_audio, 0.5);
+		event_dequeue(&tip->waggle_event);
 		return;
 	case 0:
-		DELEGATE_CALL1(tape_update_audio, 0.0);
+		DELEGATE_CALL1(ti->update_audio, 0.0);
 		break;
 	case 1:
-		DELEGATE_CALL1(tape_update_audio, 1.0);
+		DELEGATE_CALL1(ti->update_audio, 1.0);
 		break;
 	}
-	waggle_event.at_tick += in_pulse_width;
-	event_queue(&MACHINE_EVENT_LIST, &waggle_event);
+	tip->waggle_event.at_tick += tip->in_pulse_width;
+	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
 }
 
 /* ensure any "pulse" over 1/2 second long is flushed to output, so it doesn't
  * overflow any counters */
-static void flush_output(void *data) {
-	(void)data;
-	tape_update_output(last_tape_output);
-	if (motor) {
-		flush_event.at_tick += EVENT_MS(500);
-		event_queue(&MACHINE_EVENT_LIST, &flush_event);
+static void flush_output(void *sptr) {
+	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
+	tape_update_output(ti, tip->last_tape_output);
+	if (tip->motor) {
+		tip->flush_event.at_tick += EVENT_MS(500);
+		event_queue(&MACHINE_EVENT_LIST, &tip->flush_event);
 	}
 }
 
@@ -575,25 +607,26 @@ static void flush_output(void *data) {
 
 static int pskip = 0;
 
-static void do_pulse_skip(int skip) {
-	while (skip >= in_pulse_width) {
-		skip -= in_pulse_width;
-		in_pulse = tape_pulse_in(tape_input, &in_pulse_width);
-		if (in_pulse < 0) {
-			event_dequeue(&waggle_event);
+static void do_pulse_skip(struct tape_interface_private *tip, int skip) {
+	struct tape_interface *ti = &tip->public;
+	while (skip >= tip->in_pulse_width) {
+		skip -= tip->in_pulse_width;
+		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
+		if (tip->in_pulse < 0) {
+			event_dequeue(&tip->waggle_event);
 			return;
 		}
 	}
-	in_pulse_width -= skip;
-	waggle_event.at_tick = event_current_tick + in_pulse_width;
-	event_queue(&MACHINE_EVENT_LIST, &waggle_event);
-	DELEGATE_CALL1(tape_update_audio, in_pulse ? 1.0 : 0.0);
+	tip->in_pulse_width -= skip;
+	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
+	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
+	DELEGATE_CALL1(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
 }
 
-static int pulse_skip(void) {
-	do_pulse_skip(pskip * EVENT_SAM_CYCLES(16));
+static int pulse_skip(struct tape_interface_private *tip) {
+	do_pulse_skip(tip, pskip * EVENT_SAM_CYCLES(16));
 	pskip = 0;
-	return in_pulse;
+	return tip->in_pulse;
 }
 
 static uint8_t op_add(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
@@ -617,13 +650,19 @@ static uint8_t op_sub(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
 	return v;
 }
 
-#define BSR(f) do { pskip += 7; f(cpu); } while (0)
+static uint8_t op_clr(struct MC6809 *cpu) {
+	cpu->reg_cc &= ~0x0b;  /* clear NVC */
+	cpu->reg_cc |= 0x04;  /* set Z */
+	return 0;
+}
+
+#define BSR(f) do { pskip += 7; f(tip); } while (0)
 #define RTS()  do { pskip += 5; } while (0)
 #define CLR(a) do { pskip += 6; machine_write_byte((a), 0); } while (0)
 #define DEC(a) do { pskip += 6; machine_write_byte((a), machine_read_byte(a) - 1); } while (0)
 #define INC(a) do { pskip += 6; machine_write_byte((a), machine_read_byte(a) + 1); } while (0)
 
-static void motor_on(struct MC6809 *cpu) {
+static void motor_on(struct tape_interface_private *tip) {
 	int delay = IS_DRAGON ? 0x95 : 0x8a;
 	pskip += 5;  /* LDX <$95 */
 	int i = (machine_read_byte(delay) << 8) | machine_read_byte(delay+1);
@@ -634,174 +673,168 @@ static void motor_on(struct MC6809 *cpu) {
 		pskip += 3;  /* BNE delay_X */
 		/* periodically sync up tape position */
 		if ((i & 63) == 0)
-			pulse_skip();
+			pulse_skip(tip);
 	}
-	cpu->reg_x = 0;
-	cpu->reg_cc |= 0x04;
+	tip->cpu->reg_x = 0;
+	tip->cpu->reg_cc |= 0x04;
 	RTS();
 }
 
-static uint8_t op_clr(struct MC6809 *cpu) {
-	cpu->reg_cc &= ~0x0b;  /* clear NVC */
-	cpu->reg_cc |= 0x04;  /* set Z */
-	return 0;
-}
-
-static void sample_cas(struct MC6809 *cpu) {
+static void sample_cas(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	INC(pwcount);
 	pskip += 5;  /* LDB >$FF20 */
-	pulse_skip();
+	pulse_skip(tip);
 	pskip += 2;  /* RORB */
-	if (in_pulse) {
-		cpu->reg_cc &= ~1;
+	if (tip->in_pulse) {
+		tip->cpu->reg_cc &= ~1;
 	} else {
-		cpu->reg_cc |= 1;
+		tip->cpu->reg_cc |= 1;
 	}
 	RTS();
 }
 
-static void tape_wait_p0(struct MC6809 *cpu) {
+static void tape_wait_p0(struct tape_interface_private *tip) {
 	do {
 		BSR(sample_cas);
-		if (in_pulse < 0) return;
+		if (tip->in_pulse < 0) return;
 		pskip += 3;  /* BCS tape_wait_p0 */
-	} while (cpu->reg_cc & 0x01);
+	} while (tip->cpu->reg_cc & 0x01);
 	RTS();
 }
 
-static void tape_wait_p1(struct MC6809 *cpu) {
+static void tape_wait_p1(struct tape_interface_private *tip) {
 	do {
 		BSR(sample_cas);
-		if (in_pulse < 0) return;
+		if (tip->in_pulse < 0) return;
 		pskip += 3;  /* BCC tape_wait_p1 */
-	} while (!(cpu->reg_cc & 0x01));
+	} while (!(tip->cpu->reg_cc & 0x01));
 	RTS();
 }
 
-static void tape_wait_p0_p1(struct MC6809 *cpu) {
+static void tape_wait_p0_p1(struct tape_interface_private *tip) {
 	BSR(tape_wait_p0);
-	if (in_pulse < 0) return;
-	tape_wait_p1(cpu);
+	if (tip->in_pulse < 0) return;
+	tape_wait_p1(tip);
 }
 
-static void tape_wait_p1_p0(struct MC6809 *cpu) {
+static void tape_wait_p1_p0(struct tape_interface_private *tip) {
 	BSR(tape_wait_p1);
-	if (in_pulse < 0) return;
-	tape_wait_p0(cpu);
+	if (tip->in_pulse < 0) return;
+	tape_wait_p0(tip);
 }
 
-static void L_BDC3(struct MC6809 *cpu) {
+static void L_BDC3(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	int bcount = IS_DRAGON ? 0x83 : 0x82;
 	int minpw1200 = IS_DRAGON ? 0x93 : 0x91;
 	int maxpw1200 = IS_DRAGON ? 0x94 : 0x90;
 	pskip += 4;  /* LDB <$82 */
 	pskip += 4;  /* CMPB <$94 */
-	op_sub(cpu, machine_read_byte(pwcount), machine_read_byte(maxpw1200));
+	op_sub(tip->cpu, machine_read_byte(pwcount), machine_read_byte(maxpw1200));
 	pskip += 3;  /* BHI L_BDCC */
-	if (!(cpu->reg_cc & 0x05)) {
+	if (!(tip->cpu->reg_cc & 0x05)) {
 		CLR(bcount);
-		op_clr(cpu);
+		op_clr(tip->cpu);
 		RTS();
 		return;
 	}
 	pskip += 4;  /* CMPB <$93 */
-	op_sub(cpu, machine_read_byte(pwcount), machine_read_byte(minpw1200));
+	op_sub(tip->cpu, machine_read_byte(pwcount), machine_read_byte(minpw1200));
 	RTS();
 }
 
-static void tape_cmp_p1_1200(struct MC6809 *cpu) {
+static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	CLR(pwcount);
 	BSR(tape_wait_p0);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 	pskip += 3;  /* BRA L_BDC3 */
-	L_BDC3(cpu);
+	L_BDC3(tip);
 }
 
-static void tape_cmp_p0_1200(struct MC6809 *cpu) {
+static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	CLR(pwcount);
 	BSR(tape_wait_p1);
-	if (in_pulse < 0) return;
-	L_BDC3(cpu);
+	if (tip->in_pulse < 0) return;
+	L_BDC3(tip);
 }
 
-static void sync_leader(struct MC6809 *cpu) {
+static void sync_leader(struct tape_interface_private *tip) {
 	int bcount = IS_DRAGON ? 0x83 : 0x82;
 	int store;
 L_BDED:
 	BSR(tape_wait_p0_p1);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 L_BDEF:
 	BSR(tape_cmp_p1_1200);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 	pskip += 3;  /* BHI L_BDFF */
-	if (!(cpu->reg_cc & 0x05))
+	if (!(tip->cpu->reg_cc & 0x05))
 		goto L_BDFF;
 L_BDF3:
 	BSR(tape_cmp_p0_1200);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 	pskip += 3;  /* BCS L_BE03 */
-	if (cpu->reg_cc & 0x01)
+	if (tip->cpu->reg_cc & 0x01)
 		goto L_BE03;
 	INC(bcount);
 	pskip += 4;  /* LDA <$83 */
 	pskip += 2;  /* CMPA #$60 */
 	store = machine_read_byte(bcount);
-	op_sub(cpu, store, 0x60);
+	op_sub(tip->cpu, store, 0x60);
 	pskip += 3;  /* BRA L_BE0D */
 	goto L_BE0D;
 L_BDFF:
 	BSR(tape_cmp_p0_1200);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 	pskip += 3;  /* BHI L_BDEF */
-	if (!(cpu->reg_cc & 0x05))
+	if (!(tip->cpu->reg_cc & 0x05))
 		goto L_BDEF;
 L_BE03:
 	BSR(tape_cmp_p1_1200);
-	if (in_pulse < 0) return;
+	if (tip->in_pulse < 0) return;
 	pskip += 3;  /* BCS L_BDF3 */
-	if (cpu->reg_cc & 0x01)
+	if (tip->cpu->reg_cc & 0x01)
 		goto L_BDF3;
 	DEC(bcount);
 	pskip += 4;  /* LDA <$83 */
 	pskip += 2;  /* ADDA #$60 */
-	store = op_add(cpu, machine_read_byte(bcount), 0x60);
+	store = op_add(tip->cpu, machine_read_byte(bcount), 0x60);
 L_BE0D:
 	pskip += 3;  /* BNE L_BDED */
-	if (!(cpu->reg_cc & 0x04))
+	if (!(tip->cpu->reg_cc & 0x04))
 		goto L_BDED;
 	pskip += 4;  /* STA <$84 */
 	machine_write_byte(0x84, store);
 	RTS();
 }
 
-static void tape_wait_2p(struct MC6809 *cpu) {
+static void tape_wait_2p(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	CLR(pwcount);
 	pskip += 6;  /* TST <$84 */
 	pskip += 3;  /* BNE tape_wait_p1_p0 */
 	if (machine_read_byte(0x84)) {
-		tape_wait_p1_p0(cpu);
+		tape_wait_p1_p0(tip);
 	} else {
-		tape_wait_p0_p1(cpu);
+		tape_wait_p0_p1(tip);
 	}
 }
 
-static void bitin(struct MC6809 *cpu) {
+static void bitin(struct tape_interface_private *tip) {
 	int pwcount = IS_DRAGON ? 0x82 : 0x83;
 	int mincw1200 = IS_DRAGON ? 0x92 : 0x8f;
 	BSR(tape_wait_2p);
 	pskip += 4;  /* LDB <$82 */
 	pskip += 2;  /* DECB */
 	pskip += 4;  /* CMPB <$92 */
-	op_sub(cpu, machine_read_byte(pwcount) - 1, machine_read_byte(mincw1200));
+	op_sub(tip->cpu, machine_read_byte(pwcount) - 1, machine_read_byte(mincw1200));
 	RTS();
 }
 
-static void cbin(struct MC6809 *cpu) {
+static void cbin(struct tape_interface_private *tip) {
 	int bcount = IS_DRAGON ? 0x83 : 0x82;
 	int bin = 0;
 	pskip += 2;  /* LDA #$08 */
@@ -810,112 +843,115 @@ static void cbin(struct MC6809 *cpu) {
 		BSR(bitin);
 		pskip += 2;  /* RORA */
 		bin >>= 1;
-		bin |= (cpu->reg_cc & 0x01) ? 0x80 : 0;
+		bin |= (tip->cpu->reg_cc & 0x01) ? 0x80 : 0;
 		pskip += 6;  /* DEC <$83 */
 		pskip += 3;  /* BNE $BDB1 */
 	}
 	RTS();
-	MC6809_REG_A(cpu) = bin;
+	MC6809_REG_A(tip->cpu) = bin;
 	machine_write_byte(bcount, 0);
 }
 
-static void update_pskip(void) {
-	event_ticks skip = waggle_event.at_tick - event_current_tick;
-	skip = in_pulse_width - skip;
+static void update_pskip(struct tape_interface_private *tip) {
+	event_ticks skip = tip->waggle_event.at_tick - event_current_tick;
+	skip = tip->in_pulse_width - skip;
 	if (skip <= (EVENT_TICK_MAX/2)) {
-		do_pulse_skip(skip);
+		do_pulse_skip(tip, skip);
 	}
 }
 
 static void fast_motor_on(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	update_pskip();
-	if (!tape_pad) {
-		motor_on(cpu);
+	struct tape_interface_private *tip = sptr;
+	update_pskip(tip);
+	if (!tip->tape_pad) {
+		motor_on(tip);
 	}
-	machine_op_rts(cpu);
-	pulse_skip();
+	machine_op_rts(tip->cpu);
+	pulse_skip(tip);
 }
 
 static void fast_sync_leader(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	update_pskip();
-	if (tape_pad) {
+	struct tape_interface_private *tip = sptr;
+	update_pskip(tip);
+	if (tip->tape_pad) {
 		machine_write_byte(0x84, 0);
 	} else {
-		sync_leader(cpu);
+		sync_leader(tip);
 	}
-	machine_op_rts(cpu);
-	pulse_skip();
+	machine_op_rts(tip->cpu);
+	pulse_skip(tip);
 }
 
 static void fast_bitin(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	update_pskip();
-	bitin(cpu);
-	machine_op_rts(cpu);
-	pulse_skip();
-	if (tape_rewrite) rewrite_bitin(cpu);
+	struct tape_interface_private *tip = sptr;
+	update_pskip(tip);
+	bitin(tip);
+	machine_op_rts(tip->cpu);
+	pulse_skip(tip);
+	if (tip->tape_rewrite) rewrite_bitin(tip);
 }
 
 static void fast_cbin(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	update_pskip();
-	cbin(cpu);
-	machine_op_rts(cpu);
-	pulse_skip();
+	struct tape_interface_private *tip = sptr;
+	update_pskip(tip);
+	cbin(tip);
+	machine_op_rts(tip->cpu);
+	pulse_skip(tip);
 }
 
 /* Leader padding & tape rewriting */
 
-static void tape_desync(int leader) {
-	if (tape_rewrite) {
+static void tape_desync(struct tape_interface_private *tip, int leader) {
+	struct tape_interface *ti = &tip->public;
+	if (tip->tape_rewrite) {
 		/* complete last byte */
-		while (rewrite_bit_count)
-			tape_bit_out(tape_output, 0);
+		while (tip->rewrite_bit_count)
+			tape_bit_out(ti->tape_output, 0);
 		/* desync writing - pick up at next sync byte */
-		rewrite_have_sync = 0;
-		rewrite_leader_count = leader;
+		tip->rewrite_have_sync = 0;
+		tip->rewrite_leader_count = leader;
 	}
 }
 
 static void rewrite_sync(void *sptr) {
 	/* BLKIN, having read sync byte $3C */
-	(void)sptr;
-	if (rewrite_have_sync) return;
-	if (tape_rewrite) {
-		for (int i = 0; i < rewrite_leader_count; i++)
-			tape_byte_out(tape_output, 0x55);
-		tape_byte_out(tape_output, 0x3c);
-		rewrite_have_sync = 1;
+	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
+	if (tip->rewrite_have_sync) return;
+	if (tip->tape_rewrite) {
+		for (int i = 0; i < tip->rewrite_leader_count; i++)
+			tape_byte_out(ti->tape_output, 0x55);
+		tape_byte_out(ti->tape_output, 0x3c);
+		tip->rewrite_have_sync = 1;
 	}
 }
 
 static void rewrite_bitin(void *sptr) {
 	/* RTS from BITIN */
-	struct MC6809 *cpu = sptr;
-	if (tape_rewrite && rewrite_have_sync) {
-		tape_bit_out(tape_output, cpu->reg_cc & 0x01);
+	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
+	if (tip->tape_rewrite && tip->rewrite_have_sync) {
+		tape_bit_out(ti->tape_output, tip->cpu->reg_cc & 0x01);
 	}
 }
 
 static void rewrite_tape_on(void *sptr) {
 	/* CSRDON */
-	struct MC6809 *cpu = sptr;
+	struct tape_interface_private *tip = sptr;
 	/* desync with long leader */
-	tape_desync(256);
+	tape_desync(tip, 256);
 	/* for audio files, when padding leaders, assume a phase */
-	if (tape_pad && input_skip_sync) {
+	if (tip->tape_pad && tip->input_skip_sync) {
 		machine_write_byte(0x84, 0);  /* phase */
-		machine_op_rts(cpu);
+		machine_op_rts(tip->cpu);
 	}
 }
 
 static void rewrite_end_of_block(void *sptr) {
 	/* BLKIN, having confirmed checksum */
-	(void)sptr;
+	struct tape_interface_private *tip = sptr;
 	/* desync with short inter-block leader */
-	tape_desync(2);
+	tape_desync(tip, 2);
 }
 
 /* Configuring tape options */
@@ -945,46 +981,48 @@ static struct machine_bp bp_list_rewrite[] = {
 	BP_COCO_ROM(.address = 0xa746, .handler = DELEGATE_AS0(void, rewrite_end_of_block, NULL) ),
 };
 
-static void set_breakpoints(void) {
+static void set_breakpoints(struct tape_interface_private *tip) {
 	/* clear any old breakpoints */
 	machine_bp_remove_list(bp_list_fast);
 	machine_bp_remove_list(bp_list_fast_cbin);
 	machine_bp_remove_list(bp_list_rewrite);
-	if (!motor)
+	if (!tip->motor)
 		return;
 	/* add required breakpoints */
-	if (tape_fast) {
-		machine_bp_add_list(bp_list_fast);
+	if (tip->tape_fast) {
+		machine_bp_add_list(bp_list_fast, tip);
 		/* these are incompatible with the other flags */
-		if (!tape_pad && !tape_rewrite) {
-			machine_bp_add_list(bp_list_fast_cbin);
+		if (!tip->tape_pad && !tip->tape_rewrite) {
+			machine_bp_add_list(bp_list_fast_cbin, tip);
 		}
 	}
-	if (tape_pad || tape_rewrite) {
-		machine_bp_add_list(bp_list_rewrite);
+	if (tip->tape_pad || tip->tape_rewrite) {
+		machine_bp_add_list(bp_list_rewrite, tip);
 	}
 }
 
-void tape_set_state(int flags) {
+void tape_set_state(struct tape_interface *ti, int flags) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	/* set flags */
-	tape_fast = flags & TAPE_FAST;
-	tape_pad = flags & TAPE_PAD;
-	tape_pad_auto = flags & TAPE_PAD_AUTO;
-	tape_rewrite = flags & TAPE_REWRITE;
-	set_breakpoints();
+	tip->tape_fast = flags & TAPE_FAST;
+	tip->tape_pad = flags & TAPE_PAD;
+	tip->tape_pad_auto = flags & TAPE_PAD_AUTO;
+	tip->tape_rewrite = flags & TAPE_REWRITE;
+	set_breakpoints(tip);
 }
 
 /* sets state and updates UI */
-void tape_select_state(int flags) {
-	tape_set_state(flags);
+void tape_select_state(struct tape_interface *ti, int flags) {
+	tape_set_state(ti, flags);
 	ui_module->set_state(ui_tag_tape_flags, flags, NULL);
 }
 
-int tape_get_state(void) {
+int tape_get_state(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int flags = 0;
-	if (tape_fast) flags |= TAPE_FAST;
-	if (tape_pad) flags |= TAPE_PAD;
-	if (tape_pad_auto) flags |= TAPE_PAD_AUTO;
-	if (tape_rewrite) flags |= TAPE_REWRITE;
+	if (tip->tape_fast) flags |= TAPE_FAST;
+	if (tip->tape_pad) flags |= TAPE_PAD;
+	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
+	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
 	return flags;
 }

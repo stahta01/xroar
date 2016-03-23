@@ -66,7 +66,7 @@ static uint8_t *machine_rom;
 static uint8_t rom0[0x4000];
 static uint8_t rom1[0x4000];
 struct MC6883 *SAM0 = NULL;
-static struct MC6809 *CPU0 = NULL;
+struct MC6809 *CPU0 = NULL;
 static struct MC6821 *PIA0, *PIA1;
 static struct MC6847 *VDG0;
 static struct cart *machine_cart = NULL;
@@ -76,6 +76,7 @@ static uint8_t ext_charset[0x1000];
 _Bool has_ext_charset;
 uint32_t crc_ext_charset;
 static _Bool inverted_text = 0;
+struct tape_interface *tape_interface;
 
 /* Useful configuration side-effect tracking */
 static _Bool unexpanded_dragon32 = 0;
@@ -422,7 +423,7 @@ static void pia0b_data_preread_coco64k(void *m) {
 static void pia1a_data_postwrite(void *m) {
 	(void)m;
 	sound_set_dac_level((float)(PIA_VALUE_A(PIA1) & 0xfc) / 252.);
-	tape_update_output(PIA1->a.out_sink & 0xfc);
+	tape_update_output(tape_interface, PIA1->a.out_sink & 0xfc);
 	if (IS_DRAGON) {
 		keyboard_update(m);
 		printer_strobe(PIA_VALUE_A(PIA1) & 0x02, PIA_VALUE_B(PIA0));
@@ -431,7 +432,7 @@ static void pia1a_data_postwrite(void *m) {
 
 static void pia1a_control_postwrite(void *m) {
 	(void)m;
-	tape_update_motor(PIA1->a.control_register & 0x08);
+	tape_update_motor(tape_interface, PIA1->a.control_register & 0x08);
 }
 
 #define pia1b_data_preread NULL
@@ -483,10 +484,13 @@ static void pia1b_control_postwrite(void *m) {
 
 void machine_init(void) {
 	vdrive_init();
-	tape_init();
 }
 
 static void free_devices(void) {
+	if (tape_interface) {
+		tape_interface_free(tape_interface);
+		tape_interface = NULL;
+	}
 	if (SAM0) {
 		sam_free(SAM0);
 		SAM0 = NULL;
@@ -511,7 +515,6 @@ static void free_devices(void) {
 
 void machine_shutdown(void) {
 	machine_remove_cart();
-	tape_shutdown();
 	vdrive_shutdown();
 	free_devices();
 	slist_free_full(config_list, (slist_free_func)machine_config_free);
@@ -600,6 +603,7 @@ void machine_configure(struct machine_config *mc) {
 		LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	}
 	free_devices();
+
 	// SAM
 	SAM0 = sam_new();
 	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
@@ -613,6 +617,10 @@ void machine_configure(struct machine_config *mc) {
 		break;
 	}
 	CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, SAM0);
+
+	// Tape interface
+	tape_interface = tape_interface_new(CPU0);
+
 	// PIAs
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
@@ -635,7 +643,7 @@ void machine_configure(struct machine_config *mc) {
 #endif
 
 	// Tape
-	tape_update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, NULL);
+	tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, NULL);
 
 	// VDG
 	VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
@@ -953,7 +961,7 @@ void machine_reset(_Bool hard) {
 	hd6309_trace_reset();
 #endif
 	mc6847_reset(VDG0);
-	tape_reset();
+	tape_reset(tape_interface);
 }
 
 int machine_run(int ncycles) {
@@ -1304,7 +1312,7 @@ void machine_set_inverted_text(_Bool invert) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_bp_add_n(struct machine_bp *list, int n) {
+void machine_bp_add_n(struct machine_bp *list, int n, void *sptr) {
 	for (int i = 0; i < n; i++) {
 		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
 			continue;
@@ -1314,7 +1322,7 @@ void machine_bp_add_n(struct machine_bp *list, int n) {
 			continue;
 		if ((list[i].add_cond & BP_CRC_BAS) && (!has_bas || !crclist_match(list[i].cond_crc_bas, crc_bas)))
 			continue;
-		list[i].bp.handler.sptr = CPU0;
+		list[i].bp.handler.sptr = sptr;
 		bp_add(machine_bp_session, &list[i].bp);
 	}
 }
