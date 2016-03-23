@@ -709,7 +709,6 @@ _Bool xroar_init(int argc, char **argv) {
 		return 0;
 	}
 	/* ... subsystems */
-	keyboard_init();
 	joystick_init();
 	machine_init();
 	printer_init();
@@ -817,7 +816,7 @@ _Bool xroar_init(int argc, char **argv) {
 
 	while (private_cfg.type_list) {
 		char *data = private_cfg.type_list->data;
-		keyboard_queue_basic(data);
+		keyboard_queue_basic(keyboard_interface, data);
 		private_cfg.type_list = slist_remove(private_cfg.type_list, data);
 		free(data);
 	}
@@ -841,7 +840,6 @@ void xroar_shutdown(void) {
 	pthread_cond_destroy(&run_state_cv);
 #endif
 	printer_close();
-	keyboard_shutdown();
 	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
@@ -987,9 +985,9 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			xroar_insert_disk_file(load_disk_to_drive, filename);
 			if (autorun && vdrive_disk_in_drive(0)) {
 				if (IS_DRAGON) {
-					keyboard_queue_basic("\033BOOT\r");
+					keyboard_queue_basic(keyboard_interface, "\033BOOT\r");
 				} else {
-					keyboard_queue_basic("\033DOS\r");
+					keyboard_queue_basic(keyboard_interface, "\033DOS\r");
 				}
 				return 0;
 			}
@@ -1300,7 +1298,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 			break;
 	}
 	if (new >= 0 && new < NUM_KEYMAPS) {
-		keyboard_set_keymap(new);
+		keyboard_set_keymap(keyboard_interface, new);
 		if (notify) {
 			ui_module->set_state(ui_tag_keymap, new, NULL);
 		}

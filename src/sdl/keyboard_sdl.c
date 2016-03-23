@@ -325,7 +325,7 @@ void sdl_keypress(SDL_keysym *keysym) {
 
 	if (sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) {
 		shift = 1;
-		KEYBOARD_PRESS_SHIFT;
+		KEYBOARD_PRESS_SHIFT(keyboard_interface);
 		return;
 	}
 	if (sym == SDLK_LCTRL || sym == SDLK_RCTRL) {
@@ -363,7 +363,7 @@ void sdl_keypress(SDL_keysym *keysym) {
 	if (sym_priority[sym]) {
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("sdl press   code %6d   sym %6d   %s\n", keysym->scancode, sym, SDL_GetKeyName(sym));
-		keyboard_press(sym_to_dkey[sym]);
+		keyboard_press(keyboard_interface, sym_to_dkey[sym]);
 		return;
 	}
 
@@ -382,14 +382,14 @@ void sdl_keypress(SDL_keysym *keysym) {
 		if (sym_to_dkey[sym] == DSCAN_SPACE)
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		unicode_last_keysym[sym] = unicode;
-		keyboard_unicode_press(unicode);
+		keyboard_unicode_press(keyboard_interface, unicode);
 		return;
 	}
 
 	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 		printf("sdl press   code %6d   sym %6d   %s\n", keysym->scancode, sym, SDL_GetKeyName(sym));
 	int8_t dkey = sym_to_dkey[sym];
-	keyboard_press(dkey);
+	keyboard_press(keyboard_interface, dkey);
 }
 
 void sdl_keyrelease(SDL_keysym *keysym) {
@@ -424,7 +424,7 @@ void sdl_keyrelease(SDL_keysym *keysym) {
 
 	if (sym == SDLK_LSHIFT || sym == SDLK_RSHIFT) {
 		shift = 0;
-		KEYBOARD_RELEASE_SHIFT;
+		KEYBOARD_RELEASE_SHIFT(keyboard_interface);
 		return;
 	}
 	if (sym == SDLK_LCTRL || sym == SDLK_RCTRL) { control = 0; return; }
@@ -438,7 +438,7 @@ void sdl_keyrelease(SDL_keysym *keysym) {
 	if (sym_priority[sym]) {
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("sdl release code %6d   sym %6d   %s\n", keysym->scancode, sym, SDL_GetKeyName(sym));
-		keyboard_release(sym_to_dkey[sym]);
+		keyboard_release(keyboard_interface, sym_to_dkey[sym]);
 		return;
 	}
 
@@ -449,19 +449,19 @@ void sdl_keyrelease(SDL_keysym *keysym) {
 		unicode = unicode_last_keysym[sym];
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("sdl release code %6d   sym %6d   unicode %08x   %s\n", keysym->scancode, sym, unicode, SDL_GetKeyName(sym));
-		keyboard_unicode_release(unicode);
+		keyboard_unicode_release(keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KEYBOARD_PRESS_SHIFT;
+			KEYBOARD_PRESS_SHIFT(keyboard_interface);
 		else
-			KEYBOARD_RELEASE_SHIFT;
+			KEYBOARD_RELEASE_SHIFT(keyboard_interface);
 		return;
 	}
 
 	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 		printf("sdl release code %6d   sym %6d   %s\n", keysym->scancode, sym, SDL_GetKeyName(sym));
 	int8_t dkey = sym_to_dkey[sym];
-	keyboard_release(dkey);
+	keyboard_release(keyboard_interface, dkey);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -341,10 +341,10 @@ void sdl_keypress(SDL_Keysym *keysym) {
 
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
-		KEYBOARD_PRESS_SHIFT;
+		KEYBOARD_PRESS_SHIFT(keyboard_interface);
 		return;
 	case SDLK_CLEAR:
-		KEYBOARD_PRESS_CLEAR;
+		KEYBOARD_PRESS_CLEAR(keyboard_interface);
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		return;
@@ -380,7 +380,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 
 	// If scancode has priority, never do a unicode lookup.
 	if (scancode_priority[scancode]) {
-		keyboard_press(scancode_to_dkey[scancode]);
+		keyboard_press(keyboard_interface, scancode_to_dkey[scancode]);
 		return;
 	}
 
@@ -396,11 +396,11 @@ void sdl_keypress(SDL_Keysym *keysym) {
 		if (scancode_to_dkey[scancode] == DSCAN_SPACE)
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		unicode_last_scancode[scancode] = unicode;
-		keyboard_unicode_press(unicode);
+		keyboard_unicode_press(keyboard_interface, unicode);
 		return;
 	}
 
-	keyboard_press(scancode_to_dkey[scancode]);
+	keyboard_press(keyboard_interface, scancode_to_dkey[scancode]);
 }
 
 void sdl_keyrelease(SDL_Keysym *keysym) {
@@ -453,10 +453,10 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
 		if (!shift)
-			KEYBOARD_RELEASE_SHIFT;
+			KEYBOARD_RELEASE_SHIFT(keyboard_interface);
 		return;
 	case SDLK_CLEAR:
-		KEYBOARD_RELEASE_CLEAR;
+		KEYBOARD_RELEASE_CLEAR(keyboard_interface);
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		return;
@@ -472,7 +472,7 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 
 	// If scancode has priority, never do a unicode lookup.
 	if (scancode_priority[scancode]) {
-		keyboard_release(scancode_to_dkey[scancode]);
+		keyboard_release(keyboard_interface, scancode_to_dkey[scancode]);
 		return;
 	}
 
@@ -481,16 +481,16 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 		if (scancode >= SDL_NUM_SCANCODES)
 			return;
 		unicode = unicode_last_scancode[scancode];
-		keyboard_unicode_release(unicode);
+		keyboard_unicode_release(keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KEYBOARD_PRESS_SHIFT;
+			KEYBOARD_PRESS_SHIFT(keyboard_interface);
 		else
-			KEYBOARD_RELEASE_SHIFT;
+			KEYBOARD_RELEASE_SHIFT(keyboard_interface);
 		return;
 	}
 
-	keyboard_release(scancode_to_dkey[scancode]);
+	keyboard_release(keyboard_interface, scancode_to_dkey[scancode]);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -77,6 +77,7 @@ _Bool has_ext_charset;
 uint32_t crc_ext_charset;
 static _Bool inverted_text = 0;
 struct tape_interface *tape_interface;
+struct keyboard_interface *keyboard_interface;
 
 /* Useful configuration side-effect tracking */
 static _Bool unexpanded_dragon32 = 0;
@@ -358,7 +359,7 @@ static void keyboard_update(void *m) {
 		.col_source = PIA0->b.out_source,
 		.col_sink = PIA0->b.out_sink,
 	};
-	keyboard_read_matrix(&state);
+	keyboard_read_matrix(keyboard_interface, &state);
 	PIA0->a.in_sink = state.row_sink;
 	PIA0->b.in_source = state.col_source;
 	PIA0->b.in_sink = state.col_sink;
@@ -463,10 +464,10 @@ static void pia1b_data_postwrite(void *m) {
 		_Bool is_32k = PIA_VALUE_B(PIA1) & 0x04;
 		if (is_32k) {
 			machine_rom = rom0;
-			keyboard_set_chord_mode(keyboard_chord_mode_dragon_32k_basic);
+			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 		} else {
 			machine_rom = rom1;
-			keyboard_set_chord_mode(keyboard_chord_mode_dragon_64k_basic);
+			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
 		}
 	}
 	// Single-bit sound
@@ -487,6 +488,10 @@ void machine_init(void) {
 }
 
 static void free_devices(void) {
+	if (keyboard_interface) {
+		keyboard_interface_free(keyboard_interface);
+		keyboard_interface = NULL;
+	}
 	if (tape_interface) {
 		tape_interface_free(tape_interface);
 		tape_interface = NULL;
@@ -618,8 +623,11 @@ void machine_configure(struct machine_config *mc) {
 	}
 	CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, SAM0);
 
+	// Keyboard interface
+	keyboard_interface = keyboard_interface_new(CPU0);
+
 	// Tape interface
-	tape_interface = tape_interface_new(CPU0);
+	tape_interface = tape_interface_new(CPU0, keyboard_interface);
 
 	// PIAs
 	PIA0 = mc6821_new();
@@ -892,9 +900,9 @@ void machine_configure(struct machine_config *mc) {
 	}
 
 	if (IS_DRAGON) {
-		keyboard_set_chord_mode(keyboard_chord_mode_dragon_32k_basic);
+		keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
-		keyboard_set_chord_mode(keyboard_chord_mode_coco_basic);
+		keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_coco_basic);
 	}
 
 	unexpanded_dragon32 = 0;
@@ -928,7 +936,7 @@ void machine_configure(struct machine_config *mc) {
 	machine_select_fast_sound(xroar_cfg.fast_sound);
 #endif
 
-	keyboard_set_keymap(xroar_machine_config->keymap);
+	keyboard_set_keymap(keyboard_interface, xroar_machine_config->keymap);
 
 	// Breakpoint session
 	if (machine_bp_session)

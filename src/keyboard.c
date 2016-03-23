@@ -34,26 +34,22 @@
 #include "mc6809.h"
 #include "xroar.h"
 
-extern inline void keyboard_press_matrix(int col, int row);
-extern inline void keyboard_release_matrix(int col, int row);
-extern inline void keyboard_press(int s);
-extern inline void keyboard_release(int s);
-
-/* Map of virtual scancodes to keyboard matrix points: */
-struct dkbd_map keymap_new;
+extern inline void keyboard_press_matrix(struct keyboard_interface *ki, int col, int row);
+extern inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int row);
+extern inline void keyboard_press(struct keyboard_interface *ki, int s);
+extern inline void keyboard_release(struct keyboard_interface *ki, int s);
 
 /* Current chording mode - only affects how backslash is typed: */
 static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basic;
 
-/* These contain masks to be applied when the corresponding row/column is held
- * low.  e.g., if row 1 is outputting a 0, keyboard_column[1] will be applied
- * on column reads: */
+struct keyboard_interface_private {
+	struct keyboard_interface public;
 
-unsigned keyboard_column[9];
-unsigned keyboard_row[9];
+	struct MC6809 *cpu;
 
-static struct slist *basic_command_list = NULL;
-static const char *basic_command = NULL;
+	struct slist *basic_command_list;
+	const char *basic_command;
+};
 
 static void type_command(void *);
 
@@ -66,32 +62,38 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
 };
 
-void keyboard_init(void) {
-	int i;
-	for (i = 0; i < 8; i++) {
-		keyboard_column[i] = ~0;
-		keyboard_row[i] = ~0;
+struct keyboard_interface *keyboard_interface_new(struct MC6809 *cpu) {
+	struct keyboard_interface_private *kip = xmalloc(sizeof(*kip));
+	*kip = (struct keyboard_interface_private){0};
+	struct keyboard_interface *ki = &kip->public;
+	kip->cpu = cpu;
+	for (int i = 0; i < 8; i++) {
+		ki->keyboard_column[i] = ~0;
+		ki->keyboard_row[i] = ~0;
 	}
+	return ki;
 }
 
-void keyboard_shutdown(void) {
+void keyboard_interface_free(struct keyboard_interface *ki) {
+	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
 	machine_bp_remove_list(basic_command_breakpoint);
-	slist_free_full(basic_command_list, (slist_free_func)free);
+	slist_free_full(kip->basic_command_list, (slist_free_func)free);
+	free(kip);
 }
 
-void keyboard_set_keymap(int map) {
+void keyboard_set_keymap(struct keyboard_interface *ki, int map) {
 	map %= NUM_KEYMAPS;
 	xroar_machine_config->keymap = map;
-	dkbd_map_init(&keymap_new, map);
+	dkbd_map_init(&ki->keymap, map);
 }
 
-void keyboard_set_chord_mode(enum keyboard_chord_mode mode) {
+void keyboard_set_chord_mode(struct keyboard_interface *ki, enum keyboard_chord_mode mode) {
 	chord_mode = mode;
-	if (keymap_new.layout == dkbd_layout_dragon) {
+	if (ki->keymap.layout == dkbd_layout_dragon) {
 		if (mode == keyboard_chord_mode_dragon_32k_basic) {
-			keymap_new.unicode_to_dkey['\\'].dk_key = DSCAN_COMMA;
+			ki->keymap.unicode_to_dkey['\\'].dk_key = DSCAN_COMMA;
 		} else {
-			keymap_new.unicode_to_dkey['\\'].dk_key = DSCAN_INVALID;
+			ki->keymap.unicode_to_dkey['\\'].dk_key = DSCAN_INVALID;
 		}
 	}
 }
@@ -99,16 +101,16 @@ void keyboard_set_chord_mode(enum keyboard_chord_mode mode) {
 /* Compute sources & sinks based on inputs to the matrix and the current state
  * of depressed keys. */
 
-void keyboard_read_matrix(struct keyboard_state *state) {
+void keyboard_read_matrix(struct keyboard_interface *ki, struct keyboard_state *state) {
 	/* Ghosting: combine columns that share any pressed rows.  Repeat until
 	 * no change in the row mask. */
 	unsigned old;
 	do {
 		old = state->row_sink;
 		for (int i = 0; i < 8; i++) {
-			if (~state->row_sink & ~keyboard_column[i]) {
+			if (~state->row_sink & ~ki->keyboard_column[i]) {
 				state->col_sink &= ~(1 << i);
-				state->row_sink &= keyboard_column[i];
+				state->row_sink &= ki->keyboard_column[i];
 			}
 		}
 	} while (old != state->row_sink);
@@ -116,9 +118,9 @@ void keyboard_read_matrix(struct keyboard_state *state) {
 	do {
 		old = state->col_sink;
 		for (int i = 0; i < 7; i++) {
-			if (~state->col_sink & ~keyboard_row[i]) {
+			if (~state->col_sink & ~ki->keyboard_row[i]) {
 				state->row_sink &= ~(1 << i);
-				state->col_sink &= keyboard_row[i];
+				state->col_sink &= ki->keyboard_row[i];
 			}
 		}
 	} while (old != state->col_sink);
@@ -126,54 +128,56 @@ void keyboard_read_matrix(struct keyboard_state *state) {
 	/* Sink & source any directly connected rows & columns */
 	for (int i = 0; i < 8; i++) {
 		if (!(state->col_sink & (1 << i))) {
-			state->row_sink &= keyboard_column[i];
+			state->row_sink &= ki->keyboard_column[i];
 		}
 		if (state->col_source & (1 << i)) {
-			state->row_source |= ~keyboard_column[i];
+			state->row_source |= ~ki->keyboard_column[i];
 		}
 	}
 	for (int i = 0; i < 7; i++) {
 		if (!(state->row_sink & (1 << i))) {
-			state->col_sink &= keyboard_row[i];
+			state->col_sink &= ki->keyboard_row[i];
 		}
 		if (state->row_source & (1 << i)) {
-			state->col_source |= ~keyboard_row[i];
+			state->col_source |= ~ki->keyboard_row[i];
 		}
 	}
 }
 
-void keyboard_unicode_press(unsigned unicode) {
+void keyboard_unicode_press(struct keyboard_interface *ki, unsigned unicode) {
 	if (unicode >= DKBD_U_TABLE_SIZE)
 		return;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
-		KEYBOARD_PRESS_SHIFT;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
-		KEYBOARD_RELEASE_SHIFT;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
-		KEYBOARD_PRESS_CLEAR;
-	keyboard_press(keymap_new.unicode_to_dkey[unicode].dk_key);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
+		KEYBOARD_PRESS_SHIFT(ki);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
+		KEYBOARD_RELEASE_SHIFT(ki);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
+		KEYBOARD_PRESS_CLEAR(ki);
+	keyboard_press(ki, ki->keymap.unicode_to_dkey[unicode].dk_key);
 	return;
 }
 
-void keyboard_unicode_release(unsigned unicode) {
+void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 	if (unicode >= DKBD_U_TABLE_SIZE)
 		return;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
-		KEYBOARD_RELEASE_SHIFT;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
-		KEYBOARD_PRESS_SHIFT;
-	if (keymap_new.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
-		KEYBOARD_RELEASE_CLEAR;
-	keyboard_release(keymap_new.unicode_to_dkey[unicode].dk_key);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_SHIFT)
+		KEYBOARD_RELEASE_SHIFT(ki);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_UNSHIFT)
+		KEYBOARD_PRESS_SHIFT(ki);
+	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
+		KEYBOARD_RELEASE_CLEAR(ki);
+	keyboard_release(ki, ki->keymap.unicode_to_dkey[unicode].dk_key);
 	return;
 }
 
 static void type_command(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	if (basic_command) {
-		int chr = *(basic_command++);
+	struct keyboard_interface_private *kip = sptr;
+	struct keyboard_interface *ki = &kip->public;
+	struct MC6809 *cpu = kip->cpu;
+	if (kip->basic_command) {
+		int chr = *(kip->basic_command++);
 		if (chr == '\\') {
-			chr = *(basic_command++);
+			chr = *(kip->basic_command++);
 			switch (chr) {
 				case '0': chr = '\0'; break;
 				case 'e': chr = '\003'; break;
@@ -183,13 +187,13 @@ static void type_command(void *sptr) {
 				default: break;
 			}
 		}
-		if (keymap_new.layout == dkbd_layout_dragon200e) {
+		if (ki->keymap.layout == dkbd_layout_dragon200e) {
 			switch (chr) {
 			case '[': chr = 0x00; break;
 			case ']': chr = 0x01; break;
 			case '\\': chr = 0x0b; break;
 			case 0xc2:
-				chr = *(basic_command++);
+				chr = *(kip->basic_command++);
 				switch (chr) {
 				case 0xa1: chr = 0x5b; break; // ¡
 				case 0xa7: chr = 0x13; break; // §
@@ -199,7 +203,7 @@ static void type_command(void *sptr) {
 				}
 				break;
 			case 0xc3:
-				chr = *(basic_command++);
+				chr = *(kip->basic_command++);
 				switch (chr) {
 				case 0x80: case 0xa0: chr = 0x1b; break; // à
 				case 0x81: case 0xa1: chr = 0x16; break; // á
@@ -231,7 +235,7 @@ static void type_command(void *sptr) {
 				}
 				break;
 			case 0xce:
-				chr = *(basic_command++);
+				chr = *(kip->basic_command++);
 				switch (chr) {
 				case 0xb1: case 0x91: chr = 0x04; break; // α
 				case 0xb2: case 0x92: chr = 0x02; break; // β (also ß)
@@ -244,17 +248,17 @@ static void type_command(void *sptr) {
 			MC6809_REG_A(cpu) = chr;
 			cpu->reg_cc &= ~4;
 		}
-		if (*basic_command == 0)
-			basic_command = NULL;
+		if (*kip->basic_command == 0)
+			kip->basic_command = NULL;
 	}
-	if (!basic_command) {
-		if (basic_command_list) {
-			void *data = basic_command_list->data;
-			basic_command_list = slist_remove(basic_command_list, data);
+	if (!kip->basic_command) {
+		if (kip->basic_command_list) {
+			void *data = kip->basic_command_list->data;
+			kip->basic_command_list = slist_remove(kip->basic_command_list, data);
 			free(data);
 		}
-		if (basic_command_list) {
-			basic_command = basic_command_list->data;
+		if (kip->basic_command_list) {
+			kip->basic_command = kip->basic_command_list->data;
 		} else {
 			machine_bp_remove_list(basic_command_breakpoint);
 		}
@@ -263,17 +267,18 @@ static void type_command(void *sptr) {
 	machine_op_rts(cpu);
 }
 
-void keyboard_queue_basic(const char *s) {
+void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
+	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
 	char *data = NULL;
 	machine_bp_remove_list(basic_command_breakpoint);
 	if (s) {
 		data = xstrdup(s);
-		basic_command_list = slist_append(basic_command_list, data);
+		kip->basic_command_list = slist_append(kip->basic_command_list, data);
 	}
-	if (!basic_command) {
-		basic_command = data;
+	if (!kip->basic_command) {
+		kip->basic_command = data;
 	}
-	if (basic_command) {
-		machine_bp_add_list(basic_command_breakpoint, CPU0);
+	if (kip->basic_command) {
+		machine_bp_add_list(basic_command_breakpoint, kip);
 	}
 }

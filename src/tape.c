@@ -45,6 +45,7 @@ struct tape_interface_private {
 	struct tape_interface public;
 
 	struct MC6809 *cpu;
+	struct keyboard_interface *keyboard_interface;
 
 	int tape_fast;
 	int tape_pad;
@@ -132,12 +133,13 @@ static struct tape_file_autorun autorun_special[] = {
 /* For now, creating a tape interface requires a pointer to the CPU.  This
  * should probably become a pointer to the machine it's a part of. */
 
-struct tape_interface *tape_interface_new(struct MC6809 *cpu) {
+struct tape_interface *tape_interface_new(struct MC6809 *cpu, struct keyboard_interface *ki) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
 	tip->cpu = cpu;
+	tip->keyboard_interface = ki;
 
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
@@ -454,9 +456,10 @@ void tape_close_writing(struct tape_interface *ti) {
  * bufferful of data.  Tries to guess the filetype.  Returns -1 on error,
  * 0 for a BASIC program, 1 for data and 2 for M/C. */
 int tape_autorun(struct tape_interface *ti, const char *filename) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	if (filename == NULL)
 		return -1;
-	keyboard_queue_basic(NULL);
+	keyboard_queue_basic(tip->keyboard_interface, NULL);
 	if (tape_open_reading(ti, filename) == -1)
 		return -1;
 	struct tape_file *f = tape_file_next(ti->tape_input, 0);
@@ -483,7 +486,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 		if (autorun_special[i].size == f->fnblock_size
 		    && autorun_special[i].crc == f->fnblock_crc) {
 			LOG_DEBUG(1, "Using special load instructions for '%s'\n", autorun_special[i].name);
-			keyboard_queue_basic(autorun_special[i].run);
+			keyboard_queue_basic(tip->keyboard_interface, autorun_special[i].run);
 			done = 1;
 		}
 	}
@@ -494,13 +497,13 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 		switch (type) {
 			case 0:
-				keyboard_queue_basic("\003CLOAD\\r\\0RUN\\r");
+				keyboard_queue_basic(tip->keyboard_interface, "\003CLOAD\\r\\0RUN\\r");
 				break;
 			case 2:
 				if (need_exec) {
-					keyboard_queue_basic("\003CLOADM:EXEC\\r");
+					keyboard_queue_basic(tip->keyboard_interface, "\003CLOADM:EXEC\\r");
 				} else {
-					keyboard_queue_basic("\003CLOADM\\r");
+					keyboard_queue_basic(tip->keyboard_interface, "\003CLOADM\\r");
 				}
 				break;
 			default:
