@@ -44,6 +44,7 @@
 struct tape_interface_private {
 	struct tape_interface public;
 
+	_Bool is_dragon;
 	struct MC6809 *cpu;
 	struct keyboard_interface *keyboard_interface;
 
@@ -133,11 +134,16 @@ static struct tape_file_autorun autorun_special[] = {
 /* For now, creating a tape interface requires a pointer to the CPU.  This
  * should probably become a pointer to the machine it's a part of. */
 
-struct tape_interface *tape_interface_new(struct MC6809 *cpu, struct keyboard_interface *ki) {
+struct tape_interface *tape_interface_new(int machine_arch, struct MC6809 *cpu,
+					  struct keyboard_interface *ki) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
+	switch (machine_arch) {
+	case ARCH_COCO: tip->is_dragon = 0; break;
+	default: tip->is_dragon = 1; break;
+	}
 	tip->cpu = cpu;
 	tip->keyboard_interface = ki;
 
@@ -362,9 +368,9 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		}
 		if (tip->tape_pad_auto) {
 			int flags = tape_get_state(ti) & ~TAPE_PAD;
-			if (IS_DRAGON && ti->tape_input->leader_count < 114)
+			if (tip->is_dragon && ti->tape_input->leader_count < 114)
 				flags |= TAPE_PAD;
-			if (IS_COCO && ti->tape_input->leader_count < 130)
+			if (!tip->is_dragon && ti->tape_input->leader_count < 130)
 				flags |= TAPE_PAD;
 			tape_select_state(ti, flags);
 		}
@@ -666,10 +672,10 @@ static uint8_t op_clr(struct MC6809 *cpu) {
 #define INC(a) do { pskip += 6; machine_write_byte((a), machine_read_byte(a) + 1); } while (0)
 
 static void motor_on(struct tape_interface_private *tip) {
-	int delay = IS_DRAGON ? 0x95 : 0x8a;
+	int delay = tip->is_dragon ? 0x95 : 0x8a;
 	pskip += 5;  /* LDX <$95 */
 	int i = (machine_read_byte(delay) << 8) | machine_read_byte(delay+1);
-	if (IS_DRAGON)
+	if (tip->is_dragon)
 		pskip += 5;  /* LBRA delay_X */
 	for (; i; i--) {
 		pskip += 5;  /* LEAX -1,X */
@@ -684,7 +690,7 @@ static void motor_on(struct tape_interface_private *tip) {
 }
 
 static void sample_cas(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
 	INC(pwcount);
 	pskip += 5;  /* LDB >$FF20 */
 	pulse_skip(tip);
@@ -728,10 +734,10 @@ static void tape_wait_p1_p0(struct tape_interface_private *tip) {
 }
 
 static void L_BDC3(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
-	int bcount = IS_DRAGON ? 0x83 : 0x82;
-	int minpw1200 = IS_DRAGON ? 0x93 : 0x91;
-	int maxpw1200 = IS_DRAGON ? 0x94 : 0x90;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
+	int bcount = tip->is_dragon ? 0x83 : 0x82;
+	int minpw1200 = tip->is_dragon ? 0x93 : 0x91;
+	int maxpw1200 = tip->is_dragon ? 0x94 : 0x90;
 	pskip += 4;  /* LDB <$82 */
 	pskip += 4;  /* CMPB <$94 */
 	op_sub(tip->cpu, machine_read_byte(pwcount), machine_read_byte(maxpw1200));
@@ -748,7 +754,7 @@ static void L_BDC3(struct tape_interface_private *tip) {
 }
 
 static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
 	CLR(pwcount);
 	BSR(tape_wait_p0);
 	if (tip->in_pulse < 0) return;
@@ -757,7 +763,7 @@ static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
 }
 
 static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
 	CLR(pwcount);
 	BSR(tape_wait_p1);
 	if (tip->in_pulse < 0) return;
@@ -765,7 +771,7 @@ static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
 }
 
 static void sync_leader(struct tape_interface_private *tip) {
-	int bcount = IS_DRAGON ? 0x83 : 0x82;
+	int bcount = tip->is_dragon ? 0x83 : 0x82;
 	int store;
 L_BDED:
 	BSR(tape_wait_p0_p1);
@@ -815,7 +821,7 @@ L_BE0D:
 }
 
 static void tape_wait_2p(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
 	CLR(pwcount);
 	pskip += 6;  /* TST <$84 */
 	pskip += 3;  /* BNE tape_wait_p1_p0 */
@@ -827,8 +833,8 @@ static void tape_wait_2p(struct tape_interface_private *tip) {
 }
 
 static void bitin(struct tape_interface_private *tip) {
-	int pwcount = IS_DRAGON ? 0x82 : 0x83;
-	int mincw1200 = IS_DRAGON ? 0x92 : 0x8f;
+	int pwcount = tip->is_dragon ? 0x82 : 0x83;
+	int mincw1200 = tip->is_dragon ? 0x92 : 0x8f;
 	BSR(tape_wait_2p);
 	pskip += 4;  /* LDB <$82 */
 	pskip += 2;  /* DECB */
@@ -838,7 +844,7 @@ static void bitin(struct tape_interface_private *tip) {
 }
 
 static void cbin(struct tape_interface_private *tip) {
-	int bcount = IS_DRAGON ? 0x83 : 0x82;
+	int bcount = tip->is_dragon ? 0x83 : 0x82;
 	int bin = 0;
 	pskip += 2;  /* LDA #$08 */
 	pskip += 4;  /* STA <$83 */

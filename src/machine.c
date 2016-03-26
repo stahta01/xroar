@@ -627,7 +627,7 @@ void machine_configure(struct machine_config *mc) {
 	keyboard_interface = keyboard_interface_new(CPU0);
 
 	// Tape interface
-	tape_interface = tape_interface_new(CPU0, keyboard_interface);
+	tape_interface = tape_interface_new(mc->architecture, CPU0, keyboard_interface);
 
 	// PIAs
 	PIA0 = mc6821_new();
