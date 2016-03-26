@@ -163,6 +163,7 @@ extern _Bool has_bas, has_extbas, has_altbas, has_combined;
 extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 extern struct tape_interface *tape_interface;
 extern struct keyboard_interface *keyboard_interface;
+extern struct printer_interface *printer_interface;
 
 extern struct xconfig_enum machine_arch_list[];
 extern struct xconfig_enum machine_keyboard_list[];

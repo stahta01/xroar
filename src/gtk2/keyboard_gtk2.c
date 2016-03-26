@@ -295,7 +295,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_p:
 		if (shift)
-			printer_flush();
+			printer_flush(printer_interface);
 		break;
 	case GDK_w:
 		xroar_select_tape_output();

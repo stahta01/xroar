@@ -711,7 +711,6 @@ _Bool xroar_init(int argc, char **argv) {
 	/* ... subsystems */
 	joystick_init();
 	machine_init();
-	printer_init();
 
 	// Default joystick mapping
 	if (private_cfg.joy_right) {
@@ -821,9 +820,9 @@ _Bool xroar_init(int argc, char **argv) {
 		free(data);
 	}
 	if (private_cfg.lp_file) {
-		printer_open_file(private_cfg.lp_file);
+		printer_open_file(printer_interface, private_cfg.lp_file);
 	} else if (private_cfg.lp_pipe) {
-		printer_open_pipe(private_cfg.lp_pipe);
+		printer_open_pipe(printer_interface, private_cfg.lp_pipe);
 	}
 	return 1;
 }
@@ -839,7 +838,6 @@ void xroar_shutdown(void) {
 	pthread_mutex_destroy(&run_state_mt);
 	pthread_cond_destroy(&run_state_cv);
 #endif
-	printer_close();
 	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
@@ -1484,7 +1482,6 @@ void xroar_soft_reset(void) {
 }
 
 void xroar_hard_reset(void) {
-	printer_reset();
 	machine_reset(RESET_HARD);
 }
 

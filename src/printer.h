@@ -8,17 +8,22 @@
 
 #include "delegate.h"
 
-void printer_init(void);
-void printer_reset(void);
+struct MC6809;
 
-extern DELEGATE_T1(void, bool) printer_signal_ack;
+struct printer_interface {
+	DELEGATE_T1(void, bool) signal_ack;
+};
 
-void printer_open_file(const char *filename);
-void printer_open_pipe(const char *command);
-void printer_close(void);
+struct printer_interface *printer_interface_new(struct MC6809 *cpu);
+void printer_interface_free(struct printer_interface *pi);
+void printer_reset(struct printer_interface *pi);
 
-void printer_flush(void);
-void printer_strobe(_Bool strobe, int data);
-_Bool printer_busy(void);
+void printer_open_file(struct printer_interface *pi, const char *filename);
+void printer_open_pipe(struct printer_interface *pi, const char *command);
+void printer_close(struct printer_interface *pi);
 
-#endif  /* XROAR_PRINTER_H_ */
+void printer_flush(struct printer_interface *pi);
+void printer_strobe(struct printer_interface *pi, _Bool strobe, int data);
+_Bool printer_busy(struct printer_interface *pi);
+
+#endif

@@ -228,7 +228,7 @@ static void emulator_command(int cmdkey, _Bool shift) {
 	case 'm': xroar_set_machine(1, XROAR_CYCLE); return;
 	case 'p':
 		     if (shift) {
-			     printer_flush();
+			     printer_flush(printer_interface);
 		     }
 		     return;
 	case 'r':

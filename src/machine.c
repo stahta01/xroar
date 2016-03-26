@@ -78,6 +78,7 @@ uint32_t crc_ext_charset;
 static _Bool inverted_text = 0;
 struct tape_interface *tape_interface;
 struct keyboard_interface *keyboard_interface;
+struct printer_interface *printer_interface;
 
 /* Useful configuration side-effect tracking */
 static _Bool unexpanded_dragon32 = 0;
@@ -427,7 +428,7 @@ static void pia1a_data_postwrite(void *m) {
 	tape_update_output(tape_interface, PIA1->a.out_sink & 0xfc);
 	if (IS_DRAGON) {
 		keyboard_update(m);
-		printer_strobe(PIA_VALUE_A(PIA1) & 0x02, PIA_VALUE_B(PIA0));
+		printer_strobe(printer_interface, PIA_VALUE_A(PIA1) & 0x02, PIA_VALUE_B(PIA0));
 	}
 }
 
@@ -440,7 +441,7 @@ static void pia1a_control_postwrite(void *m) {
 
 static void pia1b_data_preread_dragon(void *m) {
 	(void)m;
-	if (printer_busy())
+	if (printer_busy(printer_interface))
 		PIA1->b.in_sink |= 0x01;
 	else
 		PIA1->b.in_sink &= ~0x01;
@@ -495,6 +496,10 @@ static void free_devices(void) {
 	if (tape_interface) {
 		tape_interface_free(tape_interface);
 		tape_interface = NULL;
+	}
+	if (printer_interface) {
+		printer_interface_free(printer_interface);
+		printer_interface = NULL;
 	}
 	if (SAM0) {
 		sam_free(SAM0);
@@ -629,6 +634,9 @@ void machine_configure(struct machine_config *mc) {
 	// Tape interface
 	tape_interface = tape_interface_new(mc->architecture, CPU0, keyboard_interface);
 
+	// Printer interface
+	printer_interface = printer_interface_new(CPU0);
+
 	// PIAs
 	PIA0 = mc6821_new();
 	PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, NULL);
@@ -671,7 +679,7 @@ void machine_configure(struct machine_config *mc) {
 	mc6847_set_inverted_text(VDG0, inverted_text);
 
 	// Printer
-	printer_signal_ack = DELEGATE_AS1(void, bool, printer_ack, NULL);
+	printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, NULL);
 
 	/* Load appropriate ROMs */
 	memset(rom0, 0, sizeof(rom0));
@@ -970,6 +978,7 @@ void machine_reset(_Bool hard) {
 #endif
 	mc6847_reset(VDG0);
 	tape_reset(tape_interface);
+	printer_reset(printer_interface);
 }
 
 int machine_run(int ncycles) {

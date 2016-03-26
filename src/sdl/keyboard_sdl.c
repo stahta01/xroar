@@ -261,7 +261,7 @@ static void emulator_command(SDLKey sym) {
 		break;
 	case SDLK_p:
 		if (shift)
-			printer_flush();
+			printer_flush(printer_interface);
 		break;
 	case SDLK_r:
 		if (shift)

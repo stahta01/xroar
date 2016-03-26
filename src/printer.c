@@ -35,17 +35,21 @@
 #include "printer.h"
 #include "xroar.h"
 
-static FILE *stream;
-static char *stream_dest;
-static int is_pipe;
-static struct event ack_clear_event;
-static _Bool strobe_state = 1;
-static _Bool busy;
+struct printer_interface_private {
+	struct printer_interface public;
 
-DELEGATE_T1(void, bool) printer_signal_ack = { NULL, NULL };
+	struct MC6809 *cpu;
+
+	FILE *stream;
+	char *stream_dest;
+	int is_pipe;
+	struct event ack_clear_event;
+	_Bool strobe_state;
+	_Bool busy;
+};
 
 static void do_ack_clear(void *);
-static void open_stream(void);
+static void open_stream(struct printer_interface_private *pip);
 
 static void coco_print_byte(void *);
 
@@ -53,115 +57,134 @@ static struct machine_bp coco_print_breakpoint[] = {
 	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_AS0(void, coco_print_byte, NULL) ),
 };
 
-void printer_init(void) {
-	stream = NULL;
-	stream_dest = NULL;
-	is_pipe = 0;
-	event_init(&ack_clear_event, DELEGATE_AS0(void, do_ack_clear, NULL));
-	strobe_state = 1;
-	busy = 0;
+struct printer_interface *printer_interface_new(struct MC6809 *cpu) {
+	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
+	*pip = (struct printer_interface_private){0};
+	pip->cpu = cpu;
+	pip->stream = NULL;
+	pip->stream_dest = NULL;
+	pip->is_pipe = 0;
+	event_init(&pip->ack_clear_event, DELEGATE_AS0(void, do_ack_clear, pip));
+	pip->strobe_state = 1;
+	pip->busy = 0;
+	return &pip->public;
 }
 
-void printer_reset(void) {
-	strobe_state = 1;
+void printer_interface_free(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	printer_close(pi);
+	free(pip);
+}
+
+void printer_reset(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	pip->strobe_state = 1;
 	machine_bp_remove_list(coco_print_breakpoint);
-	machine_bp_add_list(coco_print_breakpoint, CPU0);
+	machine_bp_add_list(coco_print_breakpoint, pip);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
  * can be specified in the config file, but we won't send anything unless
  * something is printed. */
 
-void printer_open_file(const char *filename) {
-	printer_close();
-	if (stream_dest) free(stream_dest);
-	stream_dest = xstrdup(filename);
-	is_pipe = 0;
-	busy = 0;
-	machine_bp_add_list(coco_print_breakpoint, CPU0);
+void printer_open_file(struct printer_interface *pi, const char *filename) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	printer_close(pi);
+	if (pip->stream_dest) free(pip->stream_dest);
+	pip->stream_dest = xstrdup(filename);
+	pip->is_pipe = 0;
+	pip->busy = 0;
+	machine_bp_add_list(coco_print_breakpoint, pip);
 }
 
-void printer_open_pipe(const char *command) {
-	printer_close();
-	if (stream_dest) free(stream_dest);
-	stream_dest = xstrdup(command);
-	is_pipe = 1;
-	busy = 0;
-	machine_bp_add_list(coco_print_breakpoint, CPU0);
+void printer_open_pipe(struct printer_interface *pi, const char *command) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	printer_close(pi);
+	if (pip->stream_dest) free(pip->stream_dest);
+	pip->stream_dest = xstrdup(command);
+	pip->is_pipe = 1;
+	pip->busy = 0;
+	machine_bp_add_list(coco_print_breakpoint, pip);
 }
 
-void printer_close(void) {
+void printer_close(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	/* flush stream, but destroy stream_dest so it won't be reopened */
-	printer_flush();
-	if (stream_dest) free(stream_dest);
-	stream_dest = NULL;
-	is_pipe = 0;
-	busy = 1;
+	printer_flush(pi);
+	if (pip->stream_dest) free(pip->stream_dest);
+	pip->stream_dest = NULL;
+	pip->is_pipe = 0;
+	pip->busy = 1;
 	machine_bp_remove_list(coco_print_breakpoint);
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */
-void printer_flush(void) {
-	if (!stream) return;
-	if (is_pipe) {
-		pclose(stream);
+void printer_flush(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	if (!pip->stream) return;
+	if (pip->is_pipe) {
+		pclose(pip->stream);
 	} else {
-		fclose(stream);
+		fclose(pip->stream);
 	}
-	stream = NULL;
+	pip->stream = NULL;
 }
 
 /* Called when the PIA bus containing STROBE is changed */
-void printer_strobe(_Bool strobe, int data) {
+void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	/* Ignore if this is not a transition to high */
-	if (strobe == strobe_state) return;
-	strobe_state = strobe;
-	if (!strobe_state) return;
+	if (strobe == pip->strobe_state) return;
+	pip->strobe_state = strobe;
+	if (!pip->strobe_state) return;
 	/* Open stream for output if it's not already */
-	if (!stream_dest) return;
-	if (!stream) open_stream();
+	if (!pip->stream_dest) return;
+	if (!pip->stream) open_stream(pip);
 	/* Print byte */
-	if (stream) {
-		fputc(data, stream);
+	if (pip->stream) {
+		fputc(data, pip->stream);
 	}
 	/* ACK, and schedule !ACK */
-	DELEGATE_SAFE_CALL1(printer_signal_ack, 1);
-	ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
-	event_queue(&MACHINE_EVENT_LIST, &ack_clear_event);
+	DELEGATE_SAFE_CALL1(pi->signal_ack, 1);
+	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
+	event_queue(&MACHINE_EVENT_LIST, &pip->ack_clear_event);
 }
 
 static void coco_print_byte(void *sptr) {
-	struct MC6809 *cpu = sptr;
+	struct printer_interface_private *pip = sptr;
 	int byte;
 	/* Open stream for output if it's not already */
-	if (!stream_dest) return;
-	if (!stream) open_stream();
+	if (!pip->stream_dest) return;
+	if (!pip->stream) open_stream(pip);
 	/* Print byte */
-	byte = MC6809_REG_A(cpu);
-	if (stream) {
-		fputc(byte, stream);
+	byte = MC6809_REG_A(pip->cpu);
+	if (pip->stream) {
+		fputc(byte, pip->stream);
 	}
 }
 
-static void open_stream(void) {
-	if (!stream_dest) return;
-	if (is_pipe) {
-		stream = popen(stream_dest, "w");
+static void open_stream(struct printer_interface_private *pip) {
+	struct printer_interface *pi = &pip->public;
+	if (!pip->stream_dest) return;
+	if (pip->is_pipe) {
+		pip->stream = popen(pip->stream_dest, "w");
 	} else {
-		stream = fopen(stream_dest, "ab");
+		pip->stream = fopen(pip->stream_dest, "ab");
 	}
-	if (stream) {
-		busy = 0;
+	if (pip->stream) {
+		pip->busy = 0;
 	} else {
-		printer_close();
+		printer_close(pi);
 	}
 }
 
-static void do_ack_clear(void *data) {
-	(void)data;
-	DELEGATE_SAFE_CALL1(printer_signal_ack, 0);
+static void do_ack_clear(void *sptr) {
+	struct printer_interface_private *pip = sptr;
+	struct printer_interface *pi = &pip->public;
+	DELEGATE_SAFE_CALL1(pi->signal_ack, 0);
 }
 
-_Bool printer_busy(void) {
-	return busy;
+_Bool printer_busy(struct printer_interface *pi) {
+	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	return pip->busy;
 }
