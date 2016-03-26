@@ -66,7 +66,7 @@ static uint8_t *machine_rom;
 static uint8_t rom0[0x4000];
 static uint8_t rom1[0x4000];
 struct MC6883 *SAM0 = NULL;
-struct MC6809 *CPU0 = NULL;
+static struct MC6809 *CPU0 = NULL;
 static struct MC6821 *PIA0, *PIA1;
 static struct MC6847 *VDG0;
 static struct cart *machine_cart = NULL;

@@ -155,7 +155,6 @@ struct machine_config {
 #define MACHINE_SIGTRAP (5)
 #define MACHINE_SIGFPE (8)
 
-extern struct MC6809 *CPU0;
 extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
