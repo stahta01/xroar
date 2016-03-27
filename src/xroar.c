@@ -1,4 +1,4 @@
-/*  Copyright 2003-2015 Ciaran Anscomb
+/*  Copyright 2003-2016 Ciaran Anscomb
  *
  *  This file is part of XRoar.
  *
@@ -2168,7 +2168,7 @@ static void versiontext(void) {
 	printf(" (snap-%d-%05d)", RC_REV_MAJOR, RC_REV_MINOR);
 #endif
 	puts(
-"\nCopyright (C) 2015 Ciaran Anscomb\n"
+"\nCopyright (C) 2016 Ciaran Anscomb\n"
 "License: GNU GPL version 2 or later <http://www.gnu.org/licenses/gpl-2.0.html>.\n"
 "This is free software: you are free to change and redistribute it.\n"
 "There is NO WARRANTY, to the extent permitted by law."
