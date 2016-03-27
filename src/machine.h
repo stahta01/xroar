@@ -202,7 +202,6 @@ void machine_single_step(void);
 void machine_toggle_pause(void);
 
 void machine_signal(int sig);
-void machine_trap(void *data);
 
 void machine_set_trace(_Bool trace_on);
 
