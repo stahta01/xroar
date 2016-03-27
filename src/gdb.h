@@ -11,10 +11,26 @@
 #define GDB_IP_DEFAULT "127.0.0.1"
 #define GDB_PORT_DEFAULT "65520"
 
-int gdb_init(const char *hostname, const char *portname);
-void gdb_shutdown(void);
+struct bp_session;
+struct MC6809;
 
-void gdb_handle_signal(int sig);
+enum gdb_run_state {
+	gdb_run_state_stopped = 0,
+	gdb_run_state_single_step,
+	gdb_run_state_running,
+	gdb_run_state_timeout,
+};
+
+struct gdb_interface;
+
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct bp_session *bp_session);
+void gdb_interface_free(struct gdb_interface *gi);
+
+int gdb_run_lock(struct gdb_interface *gi);
+void gdb_run_unlock(struct gdb_interface *gi);
+void gdb_stop(struct gdb_interface *gi, int sig);
+void gdb_single_step(struct gdb_interface *gi);
+_Bool gdb_signal_lock(struct gdb_interface *gi, int sig);
 
 /* Debugging */
 
@@ -27,6 +43,6 @@ void gdb_handle_signal(int sig);
 // queries and sets
 #define GDB_DEBUG_QUERY (1 << 3)
 
-void gdb_set_debug(unsigned);
+void gdb_set_debug(struct gdb_interface *gi, unsigned);
 
 #endif  /* XROAR_GDB_H_ */

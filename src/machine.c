@@ -38,6 +38,7 @@
 #include "crc32.h"
 #include "crclist.h"
 #include "fs.h"
+#include "gdb.h"
 #include "hd6309.h"
 #include "hd6309_trace.h"
 #include "joystick.h"
@@ -79,6 +80,9 @@ static _Bool inverted_text = 0;
 struct tape_interface *tape_interface;
 struct keyboard_interface *keyboard_interface;
 struct printer_interface *printer_interface;
+#ifdef WANT_GDB_TARGET
+struct gdb_interface *gdb_interface;
+#endif
 
 /* Useful configuration side-effect tracking */
 static _Bool unexpanded_dragon32 = 0;
@@ -489,6 +493,14 @@ void machine_init(void) {
 }
 
 static void free_devices(void) {
+	if (gdb_interface) {
+		gdb_interface_free(gdb_interface);
+		gdb_interface = NULL;
+	}
+	if (machine_bp_session) {
+		bp_session_free(machine_bp_session);
+		machine_bp_session = NULL;
+	}
 	if (keyboard_interface) {
 		keyboard_interface_free(keyboard_interface);
 		keyboard_interface = NULL;
@@ -947,9 +959,15 @@ void machine_configure(struct machine_config *mc) {
 	keyboard_set_keymap(keyboard_interface, xroar_machine_config->keymap);
 
 	// Breakpoint session
-	if (machine_bp_session)
-		bp_session_free(machine_bp_session);
 	machine_bp_session = bp_session_new(CPU0);
+
+#ifdef WANT_GDB_TARGET
+	// GDB
+	if (xroar_cfg.gdb) {
+		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, CPU0, machine_bp_session);
+		gdb_set_debug(gdb_interface, xroar_cfg.debug_gdb);
+	}
+#endif
 }
 
 void machine_reset(_Bool hard) {
@@ -981,12 +999,38 @@ void machine_reset(_Bool hard) {
 	printer_reset(printer_interface);
 }
 
-int machine_run(int ncycles) {
-	stop_signal = 0;
-	cycles += ncycles;
-	CPU0->running = 1;
-	CPU0->run(CPU0);
-	return stop_signal;
+enum machine_run_state machine_run(int ncycles) {
+
+#ifdef WANT_GDB_TARGET
+	if (gdb_interface) {
+		switch (gdb_run_lock(gdb_interface)) {
+		case gdb_run_state_timeout:
+			return machine_run_state_timeout;
+		case gdb_run_state_running:
+			stop_signal = 0;
+			cycles += ncycles;
+			CPU0->running = 1;
+			CPU0->run(CPU0);
+			if (stop_signal != 0) {
+				gdb_stop(gdb_interface, stop_signal);
+			}
+			break;
+		case gdb_run_state_single_step:
+			machine_single_step();
+			gdb_single_step(gdb_interface);
+			break;
+		}
+		gdb_run_unlock(gdb_interface);
+		return stop_signal ? machine_run_state_stopped : machine_run_state_ok;
+	} else {
+#endif
+		cycles += ncycles;
+		CPU0->running = 1;
+		CPU0->run(CPU0);
+		return machine_run_state_ok;
+#ifdef WANT_GDB_TARGET
+	}
+#endif
 }
 
 void machine_single_step(void) {

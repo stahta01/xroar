@@ -45,16 +45,6 @@ enum xroar_filetype {
 	FILETYPE_ASC,
 };
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-enum xroar_run_state {
-	xroar_run_state_stopped = 0,
-	xroar_run_state_single_step,
-	xroar_run_state_running
-};
-
-extern enum xroar_run_state xroar_run_state;
-
 /**************************************************************************/
 /* Command line arguments */
 
@@ -99,6 +89,10 @@ struct xroar_cfg {
 	// CRC lists
 	_Bool force_crc_match;
 	// Debugging
+	_Bool gdb;
+	char *gdb_ip;
+	char *gdb_port;
+	unsigned debug_gdb;
 	_Bool trace_enabled;
 	unsigned debug_ui;
 	unsigned debug_file;
@@ -161,9 +155,6 @@ _Bool xroar_init(int argc, char **argv);
 void xroar_shutdown(void);
 
 _Bool xroar_run(void);
-void xroar_machine_continue(void);
-void xroar_machine_signal(int sig);
-void xroar_machine_single_step(void);
 
 int xroar_filetype_by_ext(const char *filename);
 int xroar_load_file_by_type(const char *filename, int autorun);

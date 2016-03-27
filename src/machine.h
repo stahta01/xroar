@@ -155,6 +155,12 @@ struct machine_config {
 #define MACHINE_SIGTRAP (5)
 #define MACHINE_SIGFPE (8)
 
+enum machine_run_state {
+	machine_run_state_ok,
+	machine_run_state_stopped,
+	machine_run_state_timeout,
+};
+
 extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
@@ -163,6 +169,9 @@ extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 extern struct tape_interface *tape_interface;
 extern struct keyboard_interface *keyboard_interface;
 extern struct printer_interface *printer_interface;
+#ifdef WANT_GDB_TARGET
+extern struct gdb_interface *gdb_interface;
+#endif
 
 extern struct xconfig_enum machine_arch_list[];
 extern struct xconfig_enum machine_keyboard_list[];
@@ -188,7 +197,7 @@ void machine_init(void);
 void machine_shutdown(void);
 void machine_configure(struct machine_config *mc);  /* apply config */
 void machine_reset(_Bool hard);
-int machine_run(int ncycles);
+enum machine_run_state machine_run(int ncycles);
 void machine_single_step(void);
 void machine_toggle_pause(void);
 

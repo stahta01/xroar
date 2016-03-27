@@ -69,13 +69,16 @@
 #define _DARWIN_C_SOURCE
 
 #include <ctype.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "pl-string.h"
+#include "xalloc.h"
 
 #ifndef WINDOWS32
 
@@ -104,15 +107,30 @@
 #include "sam.h"
 #include "xroar.h"
 
-extern struct bp_session *machine_bp_session;
+struct gdb_interface_private {
+	// CPU
+	struct MC6809 *cpu;
 
-static int listenfd = -1;
-static struct addrinfo *info;
+	// Breakpoint session
+	struct bp_session *bp_session;
 
-static pthread_t sock_thread;
-static void *handle_tcp_sock(void *data);
+	// Thread info
+	int listenfd;
+	struct addrinfo *info;
+	pthread_t sock_thread;
+	int sockfd;
 
-static int sockfd;
+	// Run state
+	enum gdb_run_state run_state;
+	pthread_cond_t run_state_cv;
+	pthread_mutex_t run_state_mt;
+	int last_signal;
+
+	// Debugging
+	unsigned debug;
+};
+
+static void *handle_tcp_sock(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -126,26 +144,25 @@ enum gdb_error {
 
 static char in_packet[1025];
 static char packet[1025];
-static int last_signal = 0;
 
-static int read_packet(int fd, char *buffer, unsigned count);
-static int send_packet(int fd, const char *buffer, unsigned count);
-static int send_packet_string(int fd, const char *string);
-static int send_char(int fd, char c);
+static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned count);
+static int send_packet(struct gdb_interface_private *gip, const char *buffer, unsigned count);
+static int send_packet_string(struct gdb_interface_private *gip, const char *string);
+static int send_char(struct gdb_interface_private *gip, char c);
 
-static void send_last_signal(int fd);  // ?
-static void send_general_registers(int fd);  // g
-static void set_general_registers(int fd, char *args);  // G
-static void send_memory(int fd, char *args);  // m
-static void set_memory(int fd, char *args);  // M
-static void send_register(int fd, char *args);  // p
-static void set_register(int fd, char *args);  // P
-static void general_query(int fd, char *args);  // q
-static void general_set(int fd, char *args);  // Q
-static void add_breakpoint(int fd, char *args);  // Z
-static void remove_breakpoint(int fd, char *args);  // z
+static void send_last_signal(struct gdb_interface_private *gip);  // ?
+static void send_general_registers(struct gdb_interface_private *gip);  // g
+static void set_general_registers(struct gdb_interface_private *gip, char *args);  // G
+static void send_memory(struct gdb_interface_private *gip, char *args);  // m
+static void set_memory(struct gdb_interface_private *gip, char *args);  // M
+static void send_register(struct gdb_interface_private *gip, char *args);  // p
+static void set_register(struct gdb_interface_private *gip, char *args);  // P
+static void general_query(struct gdb_interface_private *gip, char *args);  // q
+static void general_set(struct gdb_interface_private *gip, char *args);  // Q
+static void add_breakpoint(struct gdb_interface_private *gip, char *args);  // Z
+static void remove_breakpoint(struct gdb_interface_private *gip, char *args);  // z
 
-static void send_supported(int fd, char *args);  // qSupported
+static void send_supported(struct gdb_interface_private *gip, char *args);  // qSupported
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -155,13 +172,13 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Debugging */
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct bp_session *bp_session) {
+	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
+	*gip = (struct gdb_interface_private){0};
 
-static unsigned gdb_debug = 0;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-int gdb_init(const char *hostname, const char *portname) {
+	gip->cpu = cpu;
+	gip->bp_session = bp_session;
+	gip->run_state = gdb_run_state_running;
 
 	struct addrinfo hints;
 	if (!hostname)
@@ -173,60 +190,137 @@ int gdb_init(const char *hostname, const char *portname) {
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
-	if (getaddrinfo(hostname, portname, &hints, &info) < 0) {
+	if (getaddrinfo(hostname, portname, &hints, &gip->info) < 0) {
 		LOG_WARN("gdb: getaddrinfo %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
-	if (!info) {
+	if (!gip->info) {
 		LOG_WARN("gdb: failed lookup %s:%s\n", hostname, portname);
 		goto failed;
 	}
 
 	// Create a socket...
-	listenfd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
-	if (listenfd < 0) {
+	gip->listenfd = socket(gip->info->ai_family, gip->info->ai_socktype, gip->info->ai_protocol);
+	if (gip->listenfd < 0) {
 		LOG_WARN("gdb: socket not created\n");
 		goto failed;
 	}
 
 	// bind
-	if (bind(listenfd, info->ai_addr, info->ai_addrlen) < 0) {
+	if (bind(gip->listenfd, gip->info->ai_addr, gip->info->ai_addrlen) < 0) {
 		LOG_WARN("gdb: bind %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
 
 	// ... and listen
-	if (listen(listenfd, 1) < 0) {
+	if (listen(gip->listenfd, 1) < 0) {
 		LOG_WARN("gdb: failed to listen to socket\n");
 		goto failed;
 	}
 
-	pthread_create(&sock_thread, NULL, handle_tcp_sock, NULL);
-	pthread_detach(sock_thread);
+	pthread_create(&gip->sock_thread, NULL, handle_tcp_sock, gip);
+	pthread_detach(gip->sock_thread);
 
 	LOG_DEBUG(1, "gdb: target listening on %s:%s\n", hostname, portname);
 
-	return 0;
+	return (struct gdb_interface *)gip;
 
 failed:
-	if (listenfd != -1) {
-		close(listenfd);
-		listenfd = -1;
+	if (gip->listenfd != -1) {
+		close(gip->listenfd);
 	}
-	return -1;
+	free(gip);
+	return NULL;
 }
 
-void gdb_shutdown(void) {
-	pthread_cancel(sock_thread);
-	if (info)
-		freeaddrinfo(info);
-	info = NULL;
+void gdb_interface_free(struct gdb_interface *gi) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	pthread_cancel(gip->sock_thread);
+	if (gip->info)
+		freeaddrinfo(gip->info);
+	pthread_mutex_destroy(&gip->run_state_mt);
+	pthread_cond_destroy(&gip->run_state_cv);
+	free(gip);
+}
+
+// Lock the run_state mutex and return true if ready to run
+int gdb_run_lock(struct gdb_interface *gi) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+
+	pthread_mutex_lock(&gip->run_state_mt);
+	if (gip->run_state == gdb_run_state_stopped) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		tv.tv_usec += 20000;
+		tv.tv_sec += (tv.tv_usec / 1000000);
+		tv.tv_usec %= 1000000;
+		struct timespec ts;
+		ts.tv_sec = tv.tv_sec;
+		ts.tv_nsec = tv.tv_usec * 1000;
+		if (pthread_cond_timedwait(&gip->run_state_cv, &gip->run_state_mt, &ts) == ETIMEDOUT) {
+			pthread_mutex_unlock(&gip->run_state_mt);
+			return gdb_run_state_timeout;
+		}
+	}
+	return gip->run_state;
+}
+
+void gdb_run_unlock(struct gdb_interface *gi) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	pthread_mutex_unlock(&gip->run_state_mt);
+}
+
+static void gdb_handle_signal(struct gdb_interface_private *gip, int sig) {
+	gip->last_signal = sig;
+	send_last_signal(gip);
+}
+
+void gdb_stop(struct gdb_interface *gi, int sig) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	gip->run_state = gdb_run_state_stopped;
+	gdb_handle_signal(gip, sig);
+}
+
+void gdb_single_step(struct gdb_interface *gi) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	gip->run_state = gdb_run_state_stopped;
+	gdb_handle_signal(gip, MACHINE_SIGTRAP);
+	pthread_cond_signal(&gip->run_state_cv);
+}
+
+static void gdb_machine_single_step(struct gdb_interface_private *gip) {
+	pthread_mutex_lock(&gip->run_state_mt);
+	if (gip->run_state == gdb_run_state_stopped) {
+		gip->run_state = gdb_run_state_single_step;
+		pthread_cond_wait(&gip->run_state_cv, &gip->run_state_mt);
+	}
+	pthread_mutex_unlock(&gip->run_state_mt);
+}
+
+static void gdb_machine_signal(struct gdb_interface_private *gip, int sig) {
+	pthread_mutex_lock(&gip->run_state_mt);
+	if (gip->run_state == gdb_run_state_running) {
+		machine_signal(sig);
+		gip->run_state = gdb_run_state_stopped;
+		gdb_handle_signal(gip, sig);
+	}
+	pthread_mutex_unlock(&gip->run_state_mt);
+}
+
+static void gdb_continue(struct gdb_interface_private *gip) {
+	//struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	pthread_mutex_lock(&gip->run_state_mt);
+	if (gip->run_state == gdb_run_state_stopped) {
+		gip->run_state = gdb_run_state_running;
+		pthread_cond_signal(&gip->run_state_cv);
+	}
+	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void *handle_tcp_sock(void *data) {
-	(void)data;
+static void *handle_tcp_sock(void *sptr) {
+	struct gdb_interface_private *gip = sptr;
 
 	for (;;) {
 
@@ -234,39 +328,39 @@ static void *handle_tcp_sock(void *data) {
 		 * addrinfo).ai_addrlen is size_t instead of sockaddr_t, but
 		 * accept() takes an (int *).  Raises a warning when compiling
 		 * 64-bit. */
-		socklen_t ai_addrlen = info->ai_addrlen;
-		sockfd = accept(listenfd, info->ai_addr, &ai_addrlen);
+		socklen_t ai_addrlen = gip->info->ai_addrlen;
+		gip->sockfd = accept(gip->listenfd, gip->info->ai_addr, &ai_addrlen);
 
-		if (sockfd < 0) {
+		if (gip->sockfd < 0) {
 			LOG_WARN("gdb: accept() failed\n");
 			continue;
 		}
 		{
 			int flag = 1;
-			setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
+			setsockopt(gip->sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
 		}
-		if (gdb_debug & GDB_DEBUG_CONNECT) {
+		if (gip->debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection accepted\n");
 		}
-		xroar_machine_signal(MACHINE_SIGINT);
+		gdb_machine_signal(gip, MACHINE_SIGINT);
 		_Bool attached = 1;
 		while (attached) {
-			int l = read_packet(sockfd, in_packet, sizeof(in_packet));
+			int l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
-				if (gdb_debug & GDB_DEBUG_PACKET) {
+				if (gip->debug & GDB_DEBUG_PACKET) {
 					LOG_PRINT("gdb: BREAK\n");
 				}
-				xroar_machine_signal(MACHINE_SIGINT);
+				gdb_machine_signal(gip, MACHINE_SIGINT);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
-				if (send_char(sockfd, '-') < 0)
+				if (send_char(gip, '-') < 0)
 					break;
 				continue;
 			} else if (l < 0) {
 				break;
 			}
-			if (gdb_debug & GDB_DEBUG_PACKET) {
-				if (xroar_run_state == xroar_run_state_stopped) {
+			if (gip->debug & GDB_DEBUG_PACKET) {
+				if (gip->run_state == gdb_run_state_stopped) {
 					LOG_PRINT("gdb: packet received: ");
 				} else {
 					LOG_PRINT("gdb: packet ignored (send ^C first): ");
@@ -280,12 +374,12 @@ static void *handle_tcp_sock(void *data) {
 				}
 				LOG_PRINT("\n");
 			}
-			if (xroar_run_state != xroar_run_state_stopped) {
-				if (send_char(sockfd, '-') < 0)
+			if (gip->run_state != gdb_run_state_stopped) {
+				if (send_char(gip, '-') < 0)
 					break;
 				continue;
 			}
-			if (send_char(sockfd, '+') < 0)
+			if (send_char(gip, '+') < 0)
 				break;
 
 			char *args = &in_packet[1];
@@ -293,79 +387,74 @@ static void *handle_tcp_sock(void *data) {
 			switch (in_packet[0]) {
 
 			case '?':
-				send_last_signal(sockfd);
+				send_last_signal(gip);
 				break;
 
 			case 'c':
-				xroar_machine_continue();
+				gdb_continue(gip);
 				break;
 
 			case 'D':
-				send_packet_string(sockfd, "OK");
+				send_packet_string(gip, "OK");
 				attached = 0;
 				break;
 
 			case 'g':
-				send_general_registers(sockfd);
+				send_general_registers(gip);
 				break;
 
 			case 'G':
-				set_general_registers(sockfd, args);
+				set_general_registers(gip, args);
 				break;
 
 			case 'm':
-				send_memory(sockfd, args);
+				send_memory(gip, args);
 				break;
 
 			case 'M':
-				set_memory(sockfd, args);
+				set_memory(gip, args);
 				break;
 
 			case 'p':
-				send_register(sockfd, args);
+				send_register(gip, args);
 				break;
 
 			case 'P':
-				set_register(sockfd, args);
+				set_register(gip, args);
 				break;
 
 			case 'q':
-				general_query(sockfd, args);
+				general_query(gip, args);
 				break;
 
 			case 'Q':
-				general_set(sockfd, args);
+				general_set(gip, args);
 				break;
 
 			case 's':
-				xroar_machine_single_step();
+				gdb_machine_single_step(gip);
 				break;
 
 			case 'z':
-				remove_breakpoint(sockfd, args);
+				remove_breakpoint(gip, args);
 				break;
 
 			case 'Z':
-				add_breakpoint(sockfd, args);
+				add_breakpoint(gip, args);
 				break;
 
 			default:
-				send_packet(sockfd, NULL, 0);
+				send_packet(gip, NULL, 0);
 				break;
 			}
 		}
-		close(sockfd);
-		xroar_machine_continue();
-		if (gdb_debug & GDB_DEBUG_CONNECT) {
+		close(gip->sockfd);
+		gdb_continue(gip);
+		if (gip->debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection closed\n");
 		}
 	}
 	return NULL;
-}
-
-void gdb_handle_signal(int sig) {
-	last_signal = sig;
-	send_last_signal(sockfd);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -377,14 +466,14 @@ enum packet_state {
 	packet_csum1,
 };
 
-static int read_packet(int fd, char *buffer, unsigned count) {
+static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned count) {
 	enum packet_state state = packet_wait;
 	unsigned length = 0;
 	uint8_t packet_sum = 0;
 	uint8_t csum = 0;
 	char in_byte;
 	int tmp;
-	while (recv(fd, &in_byte, 1, 0) > 0) {
+	while (recv(gip->sockfd, &in_byte, 1, 0) > 0) {
 		switch (state) {
 		case packet_wait:
 			if (in_byte == '$') {
@@ -421,7 +510,7 @@ static int read_packet(int fd, char *buffer, unsigned count) {
 			}
 			csum |= tmp;
 			if (csum != packet_sum) {
-				if (gdb_debug & GDB_DEBUG_CHECKSUM) {
+				if (gip->debug & GDB_DEBUG_CHECKSUM) {
 					LOG_PRINT("gdb: bad checksum in '");
 					if (isprint(buffer[0]))
 						LOG_PRINT("%c", buffer[0]);
@@ -439,11 +528,11 @@ static int read_packet(int fd, char *buffer, unsigned count) {
 	return -GDBE_READ_ERROR;
 }
 
-static int send_packet(int fd, const char *buffer, unsigned count) {
+static int send_packet(struct gdb_interface_private *gip, const char *buffer, unsigned count) {
 	char tmpbuf[4];
 	uint8_t csum = 0;
 	tmpbuf[0] = '$';
-	if (send(fd, tmpbuf, 1, 0) < 0)
+	if (send(gip->sockfd, tmpbuf, 1, 0) < 0)
 		return -GDBE_WRITE_ERROR;
 	for (unsigned i = 0; i < count; i++) {
 		csum += buffer[i];
@@ -454,21 +543,21 @@ static int send_packet(int fd, const char *buffer, unsigned count) {
 		case '*':
 			tmpbuf[0] = 0x7d;
 			tmpbuf[1] = buffer[i] ^ 0x20;
-			if (send(fd, tmpbuf, 2, 0) < 0)
+			if (send(gip->sockfd, tmpbuf, 2, 0) < 0)
 				return -GDBE_WRITE_ERROR;
 			break;
 		default:
-			if (send(fd, &buffer[i], 1, 0) < 0)
+			if (send(gip->sockfd, &buffer[i], 1, 0) < 0)
 				return -GDBE_WRITE_ERROR;
 			break;
 		}
 	}
 	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", csum);
-	if (send(fd, tmpbuf, 3, 0) < 0)
+	if (send(gip->sockfd, tmpbuf, 3, 0) < 0)
 		return -GDBE_WRITE_ERROR;
 	// the reply ("+" or "-") will be discarded by the next read_packet
 
-	if (gdb_debug & GDB_DEBUG_PACKET) {
+	if (gip->debug & GDB_DEBUG_PACKET) {
 		LOG_PRINT("gdb: packet sent: ");
 		for (unsigned i = 0; i < (unsigned)count; i++) {
 			if (isprint(buffer[i])) {
@@ -483,88 +572,86 @@ static int send_packet(int fd, const char *buffer, unsigned count) {
 	return count;
 }
 
-static int send_packet_string(int fd, const char *string) {
+static int send_packet_string(struct gdb_interface_private *gip, const char *string) {
 	unsigned count = strlen(string);
-	return send_packet(fd, string, count);
+	return send_packet(gip, string, count);
 }
 
-static int send_char(int fd, char c) {
-	if (send(fd, &c, 1, 0) < 0)
+static int send_char(struct gdb_interface_private *gip, char c) {
+	if (send(gip->sockfd, &c, 1, 0) < 0)
 		return -GDBE_WRITE_ERROR;
 	return GDBE_OK;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void send_last_signal(int fd) {
+static void send_last_signal(struct gdb_interface_private *gip) {
 	char tmpbuf[4];
-	snprintf(tmpbuf, sizeof(tmpbuf), "S%02x", last_signal);
-	send_packet(fd, tmpbuf, 3);
+	snprintf(tmpbuf, sizeof(tmpbuf), "S%02x", gip->last_signal);
+	send_packet(gip, tmpbuf, 3);
 }
 
-static void send_general_registers(int fd) {
-	struct MC6809 *cpu = machine_get_cpu(0);
+static void send_general_registers(struct gdb_interface_private *gip) {
 	sprintf(packet, "%02x%02x%02x%02x%04x%04x%04x%04x%04x",
-		 cpu->reg_cc,
-		 MC6809_REG_A(cpu),
-		 MC6809_REG_B(cpu),
-		 cpu->reg_dp,
-		 cpu->reg_x,
-		 cpu->reg_y,
-		 cpu->reg_u,
-		 cpu->reg_s,
-		 cpu->reg_pc);
-	if (xroar_machine_config->cpu == CPU_HD6309) {
+		 gip->cpu->reg_cc,
+		 MC6809_REG_A(gip->cpu),
+		 MC6809_REG_B(gip->cpu),
+		 gip->cpu->reg_dp,
+		 gip->cpu->reg_x,
+		 gip->cpu->reg_y,
+		 gip->cpu->reg_u,
+		 gip->cpu->reg_s,
+		 gip->cpu->reg_pc);
+	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
 		sprintf(packet + 28, "%02x%02x%02x%04x",
-			 ((struct HD6309 *)cpu)->reg_md,
-			 HD6309_REG_E(((struct HD6309 *)cpu)),
-			 HD6309_REG_F(((struct HD6309 *)cpu)),
-			 ((struct HD6309 *)cpu)->reg_v);
+			 ((struct HD6309 *)gip->cpu)->reg_md,
+			 HD6309_REG_E(((struct HD6309 *)gip->cpu)),
+			 HD6309_REG_F(((struct HD6309 *)gip->cpu)),
+			 ((struct HD6309 *)gip->cpu)->reg_v);
 	} else {
 		strcat(packet, "xxxxxxxxxx");
 	}
-	send_packet_string(fd, packet);
+	send_packet_string(gip, packet);
 }
 
-static void set_general_registers(int fd, char *args) {
-	struct MC6809 *cpu = machine_get_cpu(0);
+static void set_general_registers(struct gdb_interface_private *gip, char *args) {
 	if (strlen(args) != 38) {
-		send_packet_string(fd, "E00");
+		send_packet_string(gip, "E00");
 		return;
 	}
 	int tmp;
 	if ((tmp = hex8(args)) >= 0)
-		cpu->reg_cc = tmp;
+		gip->cpu->reg_cc = tmp;
 	if ((tmp = hex8(args+2)) >= 0)
-		MC6809_REG_A(cpu) = tmp;
+		MC6809_REG_A(gip->cpu) = tmp;
 	if ((tmp = hex8(args+4)) >= 0)
-		MC6809_REG_B(cpu) = tmp;
+		MC6809_REG_B(gip->cpu) = tmp;
 	if ((tmp = hex8(args+6)) >= 0)
-		cpu->reg_dp = tmp;
+		gip->cpu->reg_dp = tmp;
 	if ((tmp = hex16(args+8)) >= 0)
-		cpu->reg_x = tmp;
+		gip->cpu->reg_x = tmp;
 	if ((tmp = hex16(args+12)) >= 0)
-		cpu->reg_y = tmp;
+		gip->cpu->reg_y = tmp;
 	if ((tmp = hex16(args+16)) >= 0)
-		cpu->reg_u = tmp;
+		gip->cpu->reg_u = tmp;
 	if ((tmp = hex16(args+20)) >= 0)
-		cpu->reg_s = tmp;
+		gip->cpu->reg_s = tmp;
 	if ((tmp = hex16(args+24)) >= 0)
-		cpu->reg_pc = tmp;
-	if (xroar_machine_config->cpu == CPU_HD6309) {
+		gip->cpu->reg_pc = tmp;
+	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
 		if ((tmp = hex8(args)) >= 0)
-			((struct HD6309 *)cpu)->reg_md = tmp;
+			((struct HD6309 *)gip->cpu)->reg_md = tmp;
 		if ((tmp = hex8(args)) >= 0)
-			HD6309_REG_E(((struct HD6309 *)cpu)) = tmp;
+			HD6309_REG_E(((struct HD6309 *)gip->cpu)) = tmp;
 		if ((tmp = hex8(args)) >= 0)
-			HD6309_REG_F(((struct HD6309 *)cpu)) = tmp;
+			HD6309_REG_F(((struct HD6309 *)gip->cpu)) = tmp;
 		if ((tmp = hex16(args)) >= 0)
-			((struct HD6309 *)cpu)->reg_v = tmp;
+			((struct HD6309 *)gip->cpu)->reg_v = tmp;
 	}
-	send_packet_string(fd, "OK");
+	send_packet_string(gip, "OK");
 }
 
-static void send_memory(int fd, char *args) {
+static void send_memory(struct gdb_interface_private *gip, char *args) {
 	char *addr = strsep(&args, ",");
 	if (!args || !addr)
 		goto error;
@@ -572,29 +659,29 @@ static void send_memory(int fd, char *args) {
 	unsigned length = strtoul(args, NULL, 16);
 	uint8_t csum = 0;
 	packet[0] = '$';
-	if (send(fd, packet, 1, 0) < 0)
+	if (send(gip->sockfd, packet, 1, 0) < 0)
 		return;
 	for (unsigned i = 0; i < length; i++) {
 		uint8_t b = machine_read_byte(A++);
 		snprintf(packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
-		if (send(fd, packet, 2, 0) < 0)
+		if (send(gip->sockfd, packet, 2, 0) < 0)
 			return;
 	}
 	snprintf(packet, sizeof(packet), "#%02x", csum);
-	if (send(fd, packet, 3, 0) < 0)
+	if (send(gip->sockfd, packet, 3, 0) < 0)
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
-	if (gdb_debug & GDB_DEBUG_PACKET) {
+	if (gip->debug & GDB_DEBUG_PACKET) {
 		LOG_PRINT("gdb: packet sent (binary): %u bytes\n", length);
 	}
 	return;
 error:
-	send_packet(fd, NULL, 0);
+	send_packet(gip, NULL, 0);
 }
 
-static void set_memory(int fd, char *args) {
+static void set_memory(struct gdb_interface_private *gip, char *args) {
 	char *arglist = strsep(&args, ":");
 	char *data = args;
 	if (!arglist || !data)
@@ -614,35 +701,34 @@ static void set_memory(int fd, char *args) {
 		A++;
 		data += 2;
 	}
-	send_packet_string(fd, "OK");
+	send_packet_string(gip, "OK");
 	return;
 error:
-	send_packet_string(fd, "E00");
+	send_packet_string(gip, "E00");
 }
 
-static void send_register(int fd, char *args) {
-	struct MC6809 *cpu = machine_get_cpu(0);
+static void send_register(struct gdb_interface_private *gip, char *args) {
 	unsigned regnum = strtoul(args, NULL, 16);
 	unsigned value = 0;
 	int size = 0;
 	switch (regnum) {
-	case 0: value = cpu->reg_cc; size = 1; break;
-	case 1: value = MC6809_REG_A(cpu); size = 1; break;
-	case 2: value = MC6809_REG_B(cpu); size = 1; break;
-	case 3: value = cpu->reg_dp; size = 1; break;
-	case 4: value = cpu->reg_x; size = 2; break;
-	case 5: value = cpu->reg_y; size = 2; break;
-	case 6: value = cpu->reg_u; size = 2; break;
-	case 7: value = cpu->reg_s; size = 2; break;
-	case 8: value = cpu->reg_pc; size = 2; break;
+	case 0: value = gip->cpu->reg_cc; size = 1; break;
+	case 1: value = MC6809_REG_A(gip->cpu); size = 1; break;
+	case 2: value = MC6809_REG_B(gip->cpu); size = 1; break;
+	case 3: value = gip->cpu->reg_dp; size = 1; break;
+	case 4: value = gip->cpu->reg_x; size = 2; break;
+	case 5: value = gip->cpu->reg_y; size = 2; break;
+	case 6: value = gip->cpu->reg_u; size = 2; break;
+	case 7: value = gip->cpu->reg_s; size = 2; break;
+	case 8: value = gip->cpu->reg_pc; size = 2; break;
 	case 9: size = -1; break;
 	case 10: size = -1; break;
 	case 11: size = -1; break;
 	case 12: size = -2; break;
 	default: break;
 	}
-	if (xroar_machine_config->cpu == CPU_HD6309) {
-		struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
+		struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
 		switch (regnum) {
 		case 9: value = hcpu->reg_md; size = 1; break;
 		case 10: value = HD6309_REG_E(hcpu); size = 1; break;
@@ -658,91 +744,90 @@ static void send_register(int fd, char *args) {
 	case 1: sprintf(packet, "%02x", value); break;
 	default: sprintf(packet, "E00"); break;
 	}
-	send_packet_string(fd, packet);
+	send_packet_string(gip, packet);
 }
 
-static void set_register(int fd, char *args) {
+static void set_register(struct gdb_interface_private *gip, char *args) {
 	char *regnum_str = strsep(&args, "=");
 	if (!regnum_str || !args)
 		goto error;
 	unsigned regnum = strtoul(regnum_str, NULL, 16);
 	unsigned value = strtoul(args, NULL, 16);
-	struct MC6809 *cpu = machine_get_cpu(0);
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
 	if (regnum > 12)
 		goto error;
-	if (regnum > 8 && xroar_machine_config->cpu != CPU_HD6309)
+	if (regnum > 8 && gip->cpu->variant != MC6809_VARIANT_HD6309)
 		goto error;
 	switch (regnum) {
-	case 0: cpu->reg_cc = value; break;
-	case 1: MC6809_REG_A(cpu) = value; break;
-	case 2: MC6809_REG_B(cpu) = value; break;
-	case 3: cpu->reg_dp = value; break;
-	case 4: cpu->reg_x = value; break;
-	case 5: cpu->reg_y = value; break;
-	case 6: cpu->reg_u = value; break;
-	case 7: cpu->reg_s = value; break;
-	case 8: cpu->reg_pc = value; break;
+	case 0: gip->cpu->reg_cc = value; break;
+	case 1: MC6809_REG_A(gip->cpu) = value; break;
+	case 2: MC6809_REG_B(gip->cpu) = value; break;
+	case 3: gip->cpu->reg_dp = value; break;
+	case 4: gip->cpu->reg_x = value; break;
+	case 5: gip->cpu->reg_y = value; break;
+	case 6: gip->cpu->reg_u = value; break;
+	case 7: gip->cpu->reg_s = value; break;
+	case 8: gip->cpu->reg_pc = value; break;
 	case 9: hcpu->reg_md = value; break;
 	case 10: HD6309_REG_E(hcpu) = value; break;
 	case 11: HD6309_REG_F(hcpu) = value; break;
 	case 12: hcpu->reg_v = value; break;
 	default: break;
 	}
-	send_packet_string(fd, "OK");
+	send_packet_string(gip, "OK");
 	return;
 error:
-	send_packet_string(fd, "E00");
+	send_packet_string(gip, "E00");
 }
 
-static void general_query(int fd, char *args) {
+static void general_query(struct gdb_interface_private *gip, char *args) {
 	char *query = strsep(&args, ":");
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
 		if (0 == strcmp(query, "sam")) {
-			if (gdb_debug & GDB_DEBUG_QUERY) {
+			if (gip->debug & GDB_DEBUG_QUERY) {
 				LOG_PRINT("gdb: query: xroar.sam\n");
 			}
 			sprintf(packet, "%04x", sam_get_register(SAM0));
-			send_packet(fd, packet, 4);
+			send_packet(gip, packet, 4);
 		} else {
-			if (gdb_debug & GDB_DEBUG_QUERY) {
+			if (gip->debug & GDB_DEBUG_QUERY) {
 				LOG_PRINT("gdb: query: unknown xroar vendor query\n");
 			}
 		}
 	} else if (0 == strcmp(query, "Supported")) {
-		if (gdb_debug & GDB_DEBUG_QUERY) {
+		if (gip->debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: Supported\n");
 		}
-		send_supported(fd, args);
+		send_supported(gip, args);
 	} else if (0 == strcmp(query, "Attached")) {
-		if (gdb_debug & GDB_DEBUG_QUERY) {
+		if (gip->debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: Attached\n");
 		}
-		send_packet_string(fd, "1");
+		send_packet_string(gip, "1");
 	} else {
-		if (gdb_debug & GDB_DEBUG_QUERY) {
+		if (gip->debug & GDB_DEBUG_QUERY) {
 			LOG_PRINT("gdb: query: unknown query\n");
 		}
-		send_packet(fd, NULL, 0);
+		send_packet(gip, NULL, 0);
 	}
 }
 
-static void general_set(int fd, char *args) {
+static void general_set(struct gdb_interface_private *gip, char *args) {
 	char *set = strsep(&args, ":");
 	if (0 == strncmp(set, "xroar.", 6)) {
 		set += 6;
 		if (0 == strcmp(set, "sam")) {
 			sam_set_register(SAM0, hex16(args));
-			send_packet_string(fd, "OK");
+			send_packet_string(gip, "OK");
 			return;
 		}
 	}
-	send_packet(fd, NULL, 0);
+	send_packet(gip, NULL, 0);
 	return;
 }
 
-static void add_breakpoint(int fd, char *args) {
+static void add_breakpoint(struct gdb_interface_private *gip, char *args) {
 	char *type_str = strsep(&args, ",");
 	if (!type_str || !args)
 		goto error;
@@ -757,18 +842,18 @@ static void add_breakpoint(int fd, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_add(machine_bp_session, addr, 0, 0);
+		bp_hbreak_add(gip->bp_session, addr, 0, 0);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_add(machine_bp_session, type, addr, nbytes, 0, 0);
+		bp_wp_add(gip->bp_session, type, addr, nbytes, 0, 0);
 	}
-	send_packet_string(fd, "OK");
+	send_packet_string(gip, "OK");
 	return;
 error:
-	send_packet_string(fd, "E00");
+	send_packet_string(gip, "E00");
 }
 
-static void remove_breakpoint(int fd, char *args) {
+static void remove_breakpoint(struct gdb_interface_private *gip, char *args) {
 	char *type_str = strsep(&args, ",");
 	if (!type_str || !args)
 		goto error;
@@ -783,25 +868,25 @@ static void remove_breakpoint(int fd, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_remove(machine_bp_session, addr, 0, 0);
+		bp_hbreak_remove(gip->bp_session, addr, 0, 0);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_remove(machine_bp_session, type, addr, nbytes, 0, 0);
+		bp_wp_remove(gip->bp_session, type, addr, nbytes, 0, 0);
 	}
-	send_packet_string(fd, "OK");
+	send_packet_string(gip, "OK");
 	return;
 error:
-	send_packet_string(fd, "E00");
+	send_packet_string(gip, "E00");
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // qSupported
 
-static void send_supported(int fd, char *args) {
+static void send_supported(struct gdb_interface_private *gip, char *args) {
 	(void)args;  // args ignored at the moment
 	snprintf(packet, sizeof(packet), "PacketSize=%zx", sizeof(packet)-1);
-	send_packet_string(fd, packet);
+	send_packet_string(gip, packet);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -836,6 +921,7 @@ static int hex16(char *s) {
 
 /* Debugging */
 
-void gdb_set_debug(unsigned value) {
-	gdb_debug = value;
+void gdb_set_debug(struct gdb_interface *gi, unsigned value) {
+	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
+	gip->debug = value;
 }

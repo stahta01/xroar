@@ -24,11 +24,9 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 
 #ifdef WANT_GDB_TARGET
 #include <pthread.h>
@@ -143,7 +141,6 @@ struct private_cfg {
 	int tape_pad_auto;
 	int tape_rewrite;
 	int tape_ao_rate;
-	_Bool gdb;
 
 	char *joy_axis[JOYSTICK_NUM_AXES];
 	char *joy_button[JOYSTICK_NUM_BUTTONS];
@@ -151,11 +148,6 @@ struct private_cfg {
 	_Bool config_print;
 	_Bool config_print_all;
 	char *timeout;
-
-	/* Debugging */
-	char *gdb_ip;
-	char *gdb_port;
-	unsigned debug_gdb;
 };
 
 static struct private_cfg private_cfg = {
@@ -174,7 +166,6 @@ static struct private_cfg private_cfg = {
 	.tape_fast = 1,
 	.tape_pad = -1,
 	.tape_pad_auto = 1,
-	.gdb = 0,
 };
 
 /* Helper functions used by configuration */
@@ -441,15 +432,6 @@ static struct {
 };
 
 static struct vdg_palette *get_machine_palette(void);
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-#ifdef WANT_GDB_TARGET
-static pthread_cond_t run_state_cv;
-static pthread_mutex_t run_state_mt;
-#endif
-
-enum xroar_run_state xroar_run_state = xroar_run_state_running;
 
 /**************************************************************************/
 
@@ -800,15 +782,6 @@ _Bool xroar_init(int argc, char **argv) {
 	xroar_set_trace(xroar_cfg.trace_enabled);
 	xroar_set_vdg_inverted_text(1, xroar_cfg.vdg_inverted_text);
 
-#ifdef WANT_GDB_TARGET
-	pthread_mutex_init(&run_state_mt, NULL);
-	pthread_cond_init(&run_state_cv, NULL);
-	gdb_set_debug(private_cfg.debug_gdb);
-	if (private_cfg.gdb) {
-		gdb_init(private_cfg.gdb_ip, private_cfg.gdb_port);
-	}
-#endif
-
 	if (private_cfg.timeout) {
 		(void)xroar_set_timeout(private_cfg.timeout);
 	}
@@ -832,12 +805,6 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
-#ifdef WANT_GDB_TARGET
-	if (private_cfg.gdb)
-		gdb_shutdown();
-	pthread_mutex_destroy(&run_state_mt);
-	pthread_cond_destroy(&run_state_cv);
-#endif
 	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
@@ -882,78 +849,17 @@ static struct vdg_palette *get_machine_palette(void) {
  */
 
 _Bool xroar_run(void) {
-
-#ifdef WANT_GDB_TARGET
-	pthread_mutex_lock(&run_state_mt);
-	if (xroar_run_state == xroar_run_state_stopped) {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		tv.tv_usec += 20000;
-		tv.tv_sec += (tv.tv_usec / 1000000);
-		tv.tv_usec %= 1000000;
-		struct timespec ts;
-		ts.tv_sec = tv.tv_sec;
-		ts.tv_nsec = tv.tv_usec * 1000;
-		if (pthread_cond_timedwait(&run_state_cv, &run_state_mt, &ts) == ETIMEDOUT) {
-			if (vo_module->refresh)
-				vo_module->refresh();
-			pthread_mutex_unlock(&run_state_mt);
-			return 1;
-		}
+	switch (machine_run(VDG_LINE_DURATION * 32)) {
+	case machine_run_state_timeout:
+		if (vo_module->refresh)
+			vo_module->refresh();
+		break;
+	default:
+		break;
 	}
-	if (xroar_run_state == xroar_run_state_running) {
-#endif
-
-		int sig = machine_run(VDG_LINE_DURATION * 32);
-		(void)sig;
-
-#ifdef WANT_GDB_TARGET
-		if (sig != 0) {
-			xroar_run_state = xroar_run_state_stopped;
-			gdb_handle_signal(sig);
-		}
-	} else if (xroar_run_state == xroar_run_state_single_step) {
-		machine_single_step();
-		xroar_run_state = xroar_run_state_stopped;
-		gdb_handle_signal(MACHINE_SIGTRAP);
-		pthread_cond_signal(&run_state_cv);
-	}
-	pthread_mutex_unlock(&run_state_mt);
-#endif
-
 	event_run_queue(&UI_EVENT_LIST);
 	return 1;
 }
-
-#ifdef WANT_GDB_TARGET
-void xroar_machine_continue(void) {
-	pthread_mutex_lock(&run_state_mt);
-	if (xroar_run_state == xroar_run_state_stopped) {
-		xroar_run_state = xroar_run_state_running;
-		pthread_cond_signal(&run_state_cv);
-	}
-	pthread_mutex_unlock(&run_state_mt);
-}
-
-void xroar_machine_signal(int sig) {
-	pthread_mutex_lock(&run_state_mt);
-	if (xroar_run_state == xroar_run_state_running) {
-		machine_signal(sig);
-		xroar_run_state = xroar_run_state_stopped;
-		gdb_handle_signal(sig);
-	}
-	pthread_mutex_unlock(&run_state_mt);
-}
-
-void xroar_machine_single_step(void) {
-	pthread_mutex_lock(&run_state_mt);
-	if (xroar_run_state == xroar_run_state_stopped) {
-		xroar_run_state = xroar_run_state_single_step;
-		pthread_cond_wait(&run_state_cv, &run_state_mt);
-	}
-	pthread_mutex_unlock(&run_state_mt);
-}
-#endif  /* WANT_GDB_TARGET */
 
 int xroar_filetype_by_ext(const char *filename) {
 	char *ext;
@@ -1957,9 +1863,9 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Debugging: */
 #ifdef WANT_GDB_TARGET
-	{ XC_SET_BOOL("gdb", &private_cfg.gdb) },
-	{ XC_SET_STRING("gdb-ip", &private_cfg.gdb_ip) },
-	{ XC_SET_STRING("gdb-port", &private_cfg.gdb_port) },
+	{ XC_SET_BOOL("gdb", &xroar_cfg.gdb) },
+	{ XC_SET_STRING("gdb-ip", &xroar_cfg.gdb_ip) },
+	{ XC_SET_STRING("gdb-port", &xroar_cfg.gdb_port) },
 #endif
 #ifdef TRACE
 	{ XC_SET_INT1("trace", &xroar_cfg.trace_enabled) },
@@ -1968,7 +1874,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("debug-file", &xroar_cfg.debug_file) },
 	{ XC_SET_INT("debug-fdc", &xroar_cfg.debug_fdc) },
 #ifdef WANT_GDB_TARGET
-	{ XC_SET_INT("debug-gdb", &private_cfg.debug_gdb) },
+	{ XC_SET_INT("debug-gdb", &xroar_cfg.debug_gdb) },
 #endif
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
 	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
@@ -2281,9 +2187,9 @@ static void config_print_all(_Bool all) {
 
 	puts("# Debugging");
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_bool(all, "gdb", private_cfg.gdb, 0);
-	xroar_cfg_print_string(all, "gdb-ip", private_cfg.gdb_ip, GDB_IP_DEFAULT);
-	xroar_cfg_print_string(all, "gdb-port", private_cfg.gdb_port, GDB_PORT_DEFAULT);
+	xroar_cfg_print_bool(all, "gdb", xroar_cfg.gdb, 0);
+	xroar_cfg_print_string(all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
+	xroar_cfg_print_string(all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
 #endif
 #ifdef TRACE
 	xroar_cfg_print_bool(all, "trace", xroar_cfg.trace_enabled, 0);
@@ -2292,7 +2198,7 @@ static void config_print_all(_Bool all) {
 	xroar_cfg_print_flags(all, "debug-file", xroar_cfg.debug_file);
 	xroar_cfg_print_flags(all, "debug-fdc", xroar_cfg.debug_fdc);
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_flags(all, "debug-gdb", private_cfg.debug_gdb);
+	xroar_cfg_print_flags(all, "debug-gdb", xroar_cfg.debug_gdb);
 #endif
 	xroar_cfg_print_string(all, "timeout", private_cfg.timeout, NULL);
 	xroar_cfg_print_string(all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
