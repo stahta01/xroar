@@ -187,6 +187,7 @@ struct MC6809 *hd6309_new(void) {
 	struct HD6309 *hcpu = xmalloc(sizeof(*hcpu));
 	*hcpu = (struct HD6309){.state=0};
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
+	cpu->variant = MC6809_VARIANT_HD6309;
 	cpu->free = hd6309_free;
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;

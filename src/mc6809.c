@@ -156,6 +156,7 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
 struct MC6809 *mc6809_new(void) {
 	struct MC6809 *cpu = xmalloc(sizeof(*cpu));
 	*cpu = (struct MC6809){0};
+	cpu->variant = MC6809_VARIANT_MC6809;
 	cpu->free = mc6809_free;
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;

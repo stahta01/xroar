@@ -14,6 +14,8 @@
 
 #include "delegate.h"
 
+#define MC6809_VARIANT_MC6809 (0x00006809)
+
 #define MC6809_INT_VEC_RESET (0xfffe)
 #define MC6809_INT_VEC_NMI (0xfffc)
 #define MC6809_INT_VEC_SWI (0xfffa)
@@ -48,6 +50,9 @@ enum mc6809_state {
 
 /* Interface shared with all 6809-compatible CPUs */
 struct MC6809 {
+	// Variant
+	uint32_t variant;
+
 	/* Interrupt lines */
 	_Bool halt, nmi, firq, irq;
 	uint8_t D;
