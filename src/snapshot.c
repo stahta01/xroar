@@ -216,11 +216,11 @@ int write_snapshot(const char *filename) {
 	}
 	// CPU state
 	struct MC6809 *cpu = machine_get_cpu(0);
-	switch (xroar_machine_config->cpu) {
-	case CPU_MC6809: default:
+	switch (cpu->variant) {
+	case MC6809_VARIANT_MC6809: default:
 		write_mc6809(fd, cpu);
 		break;
-	case CPU_HD6309:
+	case MC6809_VARIANT_HD6309:
 		write_hd6309(fd, (struct HD6309 *)cpu);
 		break;
 	}
@@ -392,11 +392,11 @@ int read_snapshot(const char *filename) {
 				{
 					// MC6809 state
 					if (size < 20) break;
-					if (xroar_machine_config->cpu != CPU_MC6809) {
+					struct MC6809 *cpu = machine_get_cpu(0);
+					if (cpu->variant != MC6809_VARIANT_MC6809) {
 						LOG_WARN("CPU mismatch - skipping MC6809 chunk\n");
 						break;
 					}
-					struct MC6809 *cpu = machine_get_cpu(0);
 					cpu->reg_cc = fs_read_uint8(fd);
 					MC6809_REG_A(cpu) = fs_read_uint8(fd);
 					MC6809_REG_B(cpu) = fs_read_uint8(fd);
@@ -441,11 +441,11 @@ int read_snapshot(const char *filename) {
 				{
 					// HD6309 state
 					if (size < 27) break;
-					if (xroar_machine_config->cpu != CPU_HD6309) {
+					struct MC6809 *cpu = machine_get_cpu(0);
+					if (cpu->variant != MC6809_VARIANT_HD6309) {
 						LOG_WARN("CPU mismatch - skipping HD6309 chunk\n");
 						break;
 					}
-					struct MC6809 *cpu = machine_get_cpu(0);
 					struct HD6309 *hcpu = (struct HD6309 *)cpu;
 					cpu->reg_cc = fs_read_uint8(fd);
 					MC6809_REG_A(cpu) = fs_read_uint8(fd);
