@@ -1095,11 +1095,11 @@ struct MC6821 *machine_get_pia(int n) {
 static void machine_instruction_posthook(void *sptr) {
 	struct MC6809 *cpu = sptr;
 	if (xroar_cfg.trace_enabled) {
-		switch (xroar_machine_config->cpu) {
-		case CPU_MC6809: default:
+		switch (cpu->variant) {
+		case MC6809_VARIANT_MC6809: default:
 			mc6809_trace_print(cpu);
 			break;
-		case CPU_HD6309:
+		case MC6809_VARIANT_HD6309:
 			hd6309_trace_print(cpu);
 			break;
 		}
@@ -1248,11 +1248,11 @@ static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
 		read_byte(A);
 #ifdef TRACE
 		if (xroar_cfg.trace_enabled) {
-			switch (xroar_machine_config->cpu) {
-			case CPU_MC6809: default:
+			switch (CPU0->variant) {
+			case MC6809_VARIANT_MC6809: default:
 				mc6809_trace_byte(CPU0->D, A);
 				break;
-			case CPU_HD6309:
+			case MC6809_VARIANT_HD6309:
 				hd6309_trace_byte(CPU0->D, A);
 				break;
 			}
