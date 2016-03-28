@@ -20,7 +20,7 @@ extern DELEGATE_T1(void,bool) vdrive_ready;
 extern DELEGATE_T1(void,bool) vdrive_tr00;
 extern DELEGATE_T1(void,bool) vdrive_index_pulse;
 extern DELEGATE_T1(void,bool) vdrive_write_protect;
-extern void (*vdrive_update_drive_cyl_head)(unsigned drive, unsigned cyl, unsigned head);
+extern DELEGATE_T3(void,unsigned,unsigned,unsigned) vdrive_update_drive_cyl_head;
 
 void vdrive_init(void);
 void vdrive_shutdown(void);

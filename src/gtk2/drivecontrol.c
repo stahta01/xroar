@@ -36,7 +36,7 @@
 #include "gtk2/drivecontrol_glade.h"
 
 /* Module callbacks */
-static void update_drive_cyl_head(unsigned drive, unsigned cyl, unsigned head);
+static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
 
 /* Drive control widgets */
 static GtkWidget *dc_window = NULL;
@@ -141,7 +141,7 @@ void gtk2_create_dc_window(void) {
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
 
-	vdrive_update_drive_cyl_head = update_drive_cyl_head;
+	vdrive_update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
 }
 
 /* Drive Control - Signal Handlers */
@@ -214,7 +214,8 @@ void gtk2_update_drive_disk(int drive, const struct vdisk *disk) {
 	gtk2_update_drive_write_back(drive, wb);
 }
 
-static void update_drive_cyl_head(unsigned drive, unsigned cyl, unsigned head) {
+static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head) {
+	(void)sptr;
 	char string[16];
 	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
 	gtk_label_set_text(GTK_LABEL(dc_drive_cyl_head), string);

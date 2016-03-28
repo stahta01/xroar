@@ -47,7 +47,7 @@ DELEGATE_T1(void,bool) vdrive_index_pulse;
 static _Bool index_state = 0;
 DELEGATE_T1(void,bool) vdrive_write_protect;
 static _Bool write_protect_state = 0;
-void (*vdrive_update_drive_cyl_head)(unsigned drive, unsigned cyl, unsigned head) = NULL;
+DELEGATE_T3(void,unsigned,unsigned,unsigned) vdrive_update_drive_cyl_head = DELEGATE_DEFAULT3(void,unsigned,unsigned,unsigned);
 
 static struct drive_data drives[MAX_DRIVES];
 static struct drive_data *current_drive = &drives[0];
@@ -212,9 +212,7 @@ static void set_write_protect_state(_Bool state) {
 static void update_signals(void) {
 	set_ready_state(current_drive->disk != NULL);
 	set_tr00_state(current_drive->current_cyl == 0);
-	if (vdrive_update_drive_cyl_head) {
-		vdrive_update_drive_cyl_head(cur_drive_number, current_drive->current_cyl, cur_head);
-	}
+	DELEGATE_SAFE_CALL3(vdrive_update_drive_cyl_head, cur_drive_number, current_drive->current_cyl, cur_head);
 	if (!ready_state) {
 		set_write_protect_state(0);
 		track_base = NULL;
