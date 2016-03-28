@@ -128,6 +128,8 @@ extern struct event *xroar_machine_events;
 extern struct machine_config *xroar_machine_config;
 extern struct vdg_palette *xroar_vdg_palette;
 
+extern struct vdrive_interface *vdrive_interface;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Debug flags
 

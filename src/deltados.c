@@ -73,15 +73,15 @@ static struct cart *deltados_new(struct cart_config *cc) {
 	c->detach = deltados_detach;
 
 	d->fdc = wd279x_new(WD2791);
-	d->fdc->set_dirc = (DELEGATE_T1(void,int)){vdrive_set_dirc, NULL};
-	d->fdc->set_dden = (DELEGATE_T1(void,bool)){vdrive_set_dden, NULL};
+	d->fdc->set_dirc = (DELEGATE_T1(void,int)){vdrive_interface->set_dirc, vdrive_interface};
+	d->fdc->set_dden = (DELEGATE_T1(void,bool)){vdrive_interface->set_dden, vdrive_interface};
 
-	vdrive_ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
-	vdrive_tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
-	vdrive_index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
-	vdrive_write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
+	vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
+	vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
+	vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
+	vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
 	wd279x_update_connection(d->fdc);
-	vdrive_update_connection();
+	vdrive_interface->update_connection(vdrive_interface);
 
 	return c;
 }
@@ -96,10 +96,10 @@ static void deltados_reset(struct cart *c) {
 
 static void deltados_detach(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
-	vdrive_ready = DELEGATE_DEFAULT1(void, bool);
-	vdrive_tr00 = DELEGATE_DEFAULT1(void, bool);
-	vdrive_index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vdrive_write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->ready = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->tr00 = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->index_pulse = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->write_protect = DELEGATE_DEFAULT1(void, bool);
 	wd279x_free(d->fdc);
 	d->fdc = NULL;
 	cart_rom_detach(c);
@@ -140,9 +140,9 @@ static void ff44_write(struct deltados *d, unsigned flags) {
 		d->ic1_old = flags;
 	}
 	d->ic1_drive_select = flags & 0x03;
-	vdrive_set_drive(d->ic1_drive_select);
+	vdrive_interface->set_drive(vdrive_interface, d->ic1_drive_select);
 	d->ic1_side_select = flags & 0x04;
-	vdrive_set_sso(NULL, d->ic1_side_select ? 1 : 0);
+	vdrive_interface->set_sso(NULL, d->ic1_side_select ? 1 : 0);
 	d->ic1_density = !(flags & 0x08);
 	wd279x_set_dden(d->fdc, !d->ic1_density);
 }

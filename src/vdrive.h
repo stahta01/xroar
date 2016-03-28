@@ -3,7 +3,7 @@
  *
  *  See COPYING.GPL for redistribution conditions. */
 
-/* Implements virtual disk in a drive */
+/* Implements virtual disks in a set of drives */
 
 #ifndef XROAR_VDRIVE_H_
 #define XROAR_VDRIVE_H_
@@ -16,39 +16,44 @@ struct vdisk;
 
 #define VDRIVE_MAX_DRIVES (4)
 
-extern DELEGATE_T1(void,bool) vdrive_ready;
-extern DELEGATE_T1(void,bool) vdrive_tr00;
-extern DELEGATE_T1(void,bool) vdrive_index_pulse;
-extern DELEGATE_T1(void,bool) vdrive_write_protect;
-extern DELEGATE_T3(void,unsigned,unsigned,unsigned) vdrive_update_drive_cyl_head;
+/* Interface to be connected to a disk controller. */
 
-void vdrive_init(void);
-void vdrive_shutdown(void);
+struct vdrive_interface {
+	// Signal callbacks
+	DELEGATE_T1(void,bool) ready;
+	DELEGATE_T1(void,bool) tr00;
+	DELEGATE_T1(void,bool) index_pulse;
+	DELEGATE_T1(void,bool) write_protect;
 
-void vdrive_update_connection(void);
+	// UI callbacks
+	DELEGATE_T3(void,unsigned,unsigned,unsigned) update_drive_cyl_head;
 
-void vdrive_insert_disk(unsigned drive, struct vdisk *disk);
-void vdrive_eject_disk(unsigned drive);
-struct vdisk *vdrive_disk_in_drive(unsigned drive);
+	// Signals to all drives
+	void (*set_dirc)(void *sptr, int dirc);
+	void (*set_dden)(void *sptr, _Bool dden);
+	void (*set_sso)(void *sptr, unsigned sso);
 
-unsigned vdrive_head_pos(void);
+	// Drive select
+	void (*set_drive)(struct vdrive_interface *vi, unsigned drive);
 
-/* Lines from controller sent to all drives */
-void vdrive_set_dirc(void *, int);
-void vdrive_set_dden(void *, _Bool);
-void vdrive_set_sso(void *, unsigned);
+	// Operations on selected drive
+	unsigned (*get_head_pos)(struct vdrive_interface *vi);
+	void (*step)(struct vdrive_interface *vi);
+	void (*write)(struct vdrive_interface *vi, uint8_t data);
+	void (*skip)(struct vdrive_interface *vi);
+	uint8_t (*read)(struct vdrive_interface *vi);
+	void (*write_idam)(struct vdrive_interface *vi);
+	unsigned (*time_to_next_byte)(struct vdrive_interface *vi);
+	unsigned (*time_to_next_idam)(struct vdrive_interface *vi);
+	uint8_t *(*next_idam)(struct vdrive_interface *vi);
+	void (*update_connection)(struct vdrive_interface *vi);
+};
 
-/* Drive select */
-void vdrive_set_drive(unsigned drive);
+struct vdrive_interface *vdrive_interface_new(void);
+void vdrive_interface_free(struct vdrive_interface *vi);
 
-/* Drive-specific actions */
-void vdrive_step(void);
-void vdrive_write(uint8_t data);
-void vdrive_skip(void);
-uint8_t vdrive_read(void);
-void vdrive_write_idam(void);
-unsigned vdrive_time_to_next_byte(void);
-unsigned vdrive_time_to_next_idam(void);
-uint8_t *vdrive_next_idam(void);
+void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk);
+void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive);
+struct vdisk *vdrive_disk_in_drive(struct vdrive_interface *vi, unsigned drive);
 
-#endif  /* XROAR_VDRIVE_H_ */
+#endif

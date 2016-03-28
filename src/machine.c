@@ -489,7 +489,6 @@ static void pia1b_control_postwrite(void *m) {
 }
 
 void machine_init(void) {
-	vdrive_init();
 }
 
 static void free_devices(void) {
@@ -537,7 +536,6 @@ static void free_devices(void) {
 
 void machine_shutdown(void) {
 	machine_remove_cart();
-	vdrive_shutdown();
 	free_devices();
 	slist_free_full(config_list, (slist_free_func)machine_config_free);
 	config_list = NULL;

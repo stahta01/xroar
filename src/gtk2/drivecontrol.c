@@ -141,7 +141,7 @@ void gtk2_create_dc_window(void) {
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
 
-	vdrive_update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
+	vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
 }
 
 /* Drive Control - Signal Handlers */

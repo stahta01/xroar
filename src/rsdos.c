@@ -80,17 +80,17 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 
 	r->have_becker = (cc->becker_port && becker_open());
 	r->fdc = wd279x_new(WD2793);
-	r->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_set_dirc, NULL);
-	r->fdc->set_dden = DELEGATE_AS1(void, bool, vdrive_set_dden, NULL);
+	r->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_interface->set_dirc, vdrive_interface);
+	r->fdc->set_dden = DELEGATE_AS1(void, bool, vdrive_interface->set_dden, vdrive_interface);
 	r->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
 	r->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
 
-	vdrive_ready = DELEGATE_AS1(void, bool, wd279x_ready, r->fdc);
-	vdrive_tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, r->fdc);
-	vdrive_index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, r->fdc);
-	vdrive_write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, r->fdc);
+	vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, r->fdc);
+	vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, r->fdc);
+	vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, r->fdc);
+	vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, r->fdc);
 	wd279x_update_connection(r->fdc);
-	vdrive_update_connection();
+	vdrive_interface->update_connection(vdrive_interface);
 
 	return c;
 }
@@ -108,10 +108,10 @@ static void rsdos_reset(struct cart *c) {
 
 static void rsdos_detach(struct cart *c) {
 	struct rsdos *r = (struct rsdos *)c;
-	vdrive_ready = DELEGATE_DEFAULT1(void, bool);
-	vdrive_tr00 = DELEGATE_DEFAULT1(void, bool);
-	vdrive_index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vdrive_write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->ready = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->tr00 = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->index_pulse = DELEGATE_DEFAULT1(void, bool);
+	vdrive_interface->write_protect = DELEGATE_DEFAULT1(void, bool);
 	wd279x_free(r->fdc);
 	r->fdc = NULL;
 	if (r->have_becker)
@@ -179,7 +179,7 @@ static void ff40_write(struct rsdos *r, unsigned flags) {
 	} else if (flags & 0x04) {
 		new_drive_select = 2;
 	}
-	vdrive_set_sso(NULL, (flags & 0x40) ? 1 : 0);
+	vdrive_interface->set_sso(vdrive_interface, (flags & 0x40) ? 1 : 0);
 	if (flags != r->ic1_old) {
 		LOG_DEBUG(2, "RSDOS: Write to FF40: ");
 		if (new_drive_select != r->ic1_drive_select) {
@@ -204,7 +204,7 @@ static void ff40_write(struct rsdos *r, unsigned flags) {
 		r->ic1_old = flags;
 	}
 	r->ic1_drive_select = new_drive_select;
-	vdrive_set_drive(r->ic1_drive_select);
+	vdrive_interface->set_drive(vdrive_interface, r->ic1_drive_select);
 	r->ic1_density = flags & 0x20;
 	wd279x_set_dden(r->fdc, !r->ic1_density);
 	if (r->ic1_density && r->intrq_flag) {
