@@ -33,17 +33,20 @@ option) any later version.
 
 typedef DELEGATE_S0(void) DELEGATE_T0(void);
 typedef DELEGATE_S1(void, _Bool) DELEGATE_T1(void, bool);
+typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
 typedef DELEGATE_S1(void, int) DELEGATE_T1(void, int);
-typedef DELEGATE_S1(void, unsigned) DELEGATE_T1(void, unsigned);
-typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
-typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
-typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
 typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
 typedef DELEGATE_S2(void, int, uint16_t *) DELEGATE_T2(void, int, uint16p);
-typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
+typedef DELEGATE_S1(void, unsigned) DELEGATE_T1(void, unsigned);
+typedef DELEGATE_S3(void, unsigned, unsigned, unsigned) DELEGATE_T3(void, unsigned, unsigned, unsigned);
+typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
 typedef DELEGATE_S2(void, uint16_t, uint8_t) DELEGATE_T2(void, uint16, uint8);
-typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
+typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
 typedef DELEGATE_S3(void, int, _Bool, uint16_t) DELEGATE_T3(void, int, bool, uint16);
+typedef DELEGATE_S0(unsigned) DELEGATE_T0(unsigned);
+typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
+typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
+typedef DELEGATE_S0(uint8_t *) DELEGATE_T0(uint8p);
 
 /* Convenience function for declaring anonymous structs. */
 
@@ -73,17 +76,20 @@ typedef DELEGATE_S3(void, int, _Bool, uint16_t) DELEGATE_T3(void, int, bool, uin
 
 DELEGATE_DEF_PROTO0(void, void);
 DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
+DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
 DELEGATE_DEF_PROTO1(void, void, int, int);
-DELEGATE_DEF_PROTO1(void, void, unsigned, unsigned);
-DELEGATE_DEF_PROTO1(void, void, float, float);
-DELEGATE_DEF_PROTO0(uint8_t, uint8);
-DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint8_t *, uint8p);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint16_t *, uint16p);
-DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
-DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
-DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
 DELEGATE_DEF_PROTO3(void, void, int, int, _Bool, bool, uint16_t, uint16);
+DELEGATE_DEF_PROTO1(void, void, unsigned, unsigned);
+DELEGATE_DEF_PROTO3(void, void, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
+DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
+DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
+DELEGATE_DEF_PROTO1(void, void, float, float);
+DELEGATE_DEF_PROTO0(unsigned, unsigned);
+DELEGATE_DEF_PROTO0(uint8_t, uint8);
+DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
+DELEGATE_DEF_PROTO0(uint8_t *, uint8p);
 
 #define DELEGATE_DEFAULT0(N) DELEGATE_AS0(N, DELEGATE_DEFAULT_F0(N), NULL)
 #define DELEGATE_DEFAULT1(N,N0) DELEGATE_AS1(N, N0, DELEGATE_DEFAULT_F1(N, N0), NULL)
@@ -98,7 +104,7 @@ DELEGATE_DEF_PROTO3(void, void, int, int, _Bool, bool, uint16_t, uint16);
 #define DELEGATE_CALL3(d,v0,v1,v2) ((d).func((d).sptr,(v0),(v1),(v2)))
 #define DELEGATE_SAFE_CALL0(d) do { if ((d).func) { DELEGATE_CALL0((d)); } } while (0)
 #define DELEGATE_SAFE_CALL1(d,v0) do { if ((d).func) { DELEGATE_CALL1((d),(v0)); } } while (0)
-#define DELEGATE_SAFE_CALL2(d,v0,v1) do { if ((d).func) { DELEGATE_CALL1((d),(v0),(v1)); } } while (0)
-#define DELEGATE_SAFE_CALL3(d,v0,v1,v2) do { if ((d).func) { DELEGATE_CALL1((d),(v0),(v1),(v2)); } } while (0)
+#define DELEGATE_SAFE_CALL2(d,v0,v1) do { if ((d).func) { DELEGATE_CALL2((d),(v0),(v1)); } } while (0)
+#define DELEGATE_SAFE_CALL3(d,v0,v1,v2) do { if ((d).func) { DELEGATE_CALL3((d),(v0),(v1),(v2)); } } while (0)
 
 #endif  /* DELEGATE_H__oeW3udTBnzIVk */
