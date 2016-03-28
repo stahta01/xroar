@@ -129,34 +129,6 @@ struct vdisk *vdrive_disk_in_drive(unsigned drive) {
 	return drives[drive].disk;
 }
 
-_Bool vdrive_set_write_enable(unsigned drive, int action) {
-	assert(drive < MAX_DRIVES);
-	struct vdisk *disk = vdrive_disk_in_drive(drive);
-	if (!disk) return -1;
-	_Bool new_we = !disk->write_protect;
-	if (action < 0) {
-		new_we = !new_we;
-	} else {
-		new_we = action ? 1 : 0;
-	}
-	disk->write_protect = !new_we;
-	return new_we;
-}
-
-_Bool vdrive_set_write_back(unsigned drive, int action) {
-	assert(drive < MAX_DRIVES);
-	struct vdisk *disk = vdrive_disk_in_drive(drive);
-	if (!disk) return -1;
-	_Bool new_wb = disk->write_back;
-	if (action < 0) {
-		new_wb = !new_wb;
-	} else {
-		new_wb = action ? 1 : 0;
-	}
-	disk->write_back = new_wb;
-	return new_wb;
-}
-
 unsigned vdrive_head_pos(void) {
 	return head_pos;
 }

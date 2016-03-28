@@ -1080,29 +1080,45 @@ void xroar_eject_disk(int drive) {
 }
 
 _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
-	_Bool we = vdrive_set_write_enable(drive, action);
-	if (we) {
-		LOG_DEBUG(1, "Disk in drive %d write enabled.\n", drive);
-	} else {
-		LOG_DEBUG(1, "Disk in drive %d write protected.\n", drive);
+	assert(drive >= 0 && drive < 4);
+	struct vdisk *vd = vdrive_disk_in_drive(drive);
+	if (!vd)
+		return 0;
+	_Bool new_we = !vd->write_protect;
+	switch (action) {
+	case XROAR_TOGGLE:
+		new_we = !new_we;
+		break;
+	default:
+		new_we = action;
+		break;
 	}
+	vd->write_protect = !new_we;
 	if (notify && ui_module) {
-		ui_module->set_state(ui_tag_disk_write_enable, drive, (void *)(uintptr_t)we);
+		ui_module->set_state(ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
 	}
-	return we;
+	return new_we;
 }
 
 _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
-	_Bool wb = vdrive_set_write_back(drive, action);
-	if (wb) {
-		LOG_DEBUG(1, "Write back enabled for disk in drive %d.\n", drive);
-	} else {
-		LOG_DEBUG(1, "Write back disabled for disk in drive %d.\n", drive);
+	assert(drive >= 0 && drive < 4);
+	struct vdisk *vd = vdrive_disk_in_drive(drive);
+	if (!vd)
+		return 0;
+	_Bool new_wb = vd->write_back;
+	switch (action) {
+	case XROAR_TOGGLE:
+		new_wb = !new_wb;
+		break;
+	default:
+		new_wb = action;
+		break;
 	}
+	vd->write_back = new_wb;
 	if (notify && ui_module) {
-		ui_module->set_state(ui_tag_disk_write_back, drive, (void *)(uintptr_t)wb);
+		ui_module->set_state(ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
 	}
-	return wb;
+	return new_wb;
 }
 
 void xroar_set_cross_colour(_Bool notify, int action) {

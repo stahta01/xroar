@@ -30,8 +30,6 @@ void vdrive_update_connection(void);
 void vdrive_insert_disk(unsigned drive, struct vdisk *disk);
 void vdrive_eject_disk(unsigned drive);
 struct vdisk *vdrive_disk_in_drive(unsigned drive);
-_Bool vdrive_set_write_enable(unsigned drive, int action);
-_Bool vdrive_set_write_back(unsigned drive, int action);
 
 unsigned vdrive_head_pos(void);
 
