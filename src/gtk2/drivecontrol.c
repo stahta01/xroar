@@ -203,7 +203,7 @@ void gtk2_update_drive_disk(int drive, const struct vdisk *disk) {
 	if (drive < 0 || drive > 3)
 		return;
 	char *filename = NULL;
-	_Bool we = 1, wb = 0;
+	_Bool we = 0, wb = 0;
 	if (disk) {
 		filename = disk->filename;
 		we = !disk->write_protect;
