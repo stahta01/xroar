@@ -128,7 +128,7 @@ static void ff44_write(struct deltados *d, unsigned flags) {
 	if (flags != d->ic1_old) {
 		LOG_DEBUG(2, "Delta: Write to FF44: ");
 		if ((flags ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01d, ", flags & 0x03);
+			LOG_DEBUG(2, "DRIVE SELECT %01u, ", flags & 0x03);
 		}
 		if ((flags ^ d->ic1_old) & 0x04) {
 			LOG_DEBUG(2, "SIDE %s, ", (flags & 0x04)?"1":"0");

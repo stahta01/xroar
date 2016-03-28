@@ -175,7 +175,7 @@ static void ff48_write(struct dragondos *d, unsigned flags) {
 	if (flags != d->ic1_old) {
 		LOG_DEBUG(2, "DragonDOS: Write to FF48: ");
 		if ((flags ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01d, ", flags & 0x03);
+			LOG_DEBUG(2, "DRIVE SELECT %01u, ", flags & 0x03);
 		}
 		if ((flags ^ d->ic1_old) & 0x04) {
 			LOG_DEBUG(2, "MOTOR %s, ", (flags & 0x04)?"ON":"OFF");
