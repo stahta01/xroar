@@ -107,13 +107,13 @@ static void debug_state(WD279X *fdc);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static uint8_t _vdrive_read(WD279X *fdc) {
-	uint8_t b = vdrive_interface->read(vdrive_interface);
+	uint8_t b = DELEGATE_CALL0(fdc->read);
 	fdc->crc = crc16_byte(fdc->crc, b);
 	return b;
 }
 
 static void _vdrive_write(WD279X *fdc, uint8_t b) {
-	vdrive_interface->write(vdrive_interface, b);
+	DELEGATE_CALL1(fdc->write, b);
 	fdc->crc = crc16_byte(fdc->crc, b);
 }
 
@@ -123,35 +123,46 @@ static void _vdrive_write(WD279X *fdc, uint8_t b) {
 		_vdrive_write(fdc, tmp & 0xff); \
 	} while (0)
 
-static void wd279x_init(WD279X *fdc, enum WD279X_type type) {
-	memset(fdc, 0, sizeof(*fdc));
+WD279X *wd279x_new(enum WD279X_type type) {
+	WD279X *fdc = xmalloc(sizeof(*fdc));
+	*fdc = (WD279X){0};
+
 	fdc->type = type;
 	fdc->has_sso = (type == WD2795 || type == WD2797);
 	fdc->has_length_flag = (type == WD2795 || type == WD2797);
 	fdc->invert_data = (type == WD2791 || type == WD2795) ? 0xff : 0;
+	wd279x_disconnect(fdc);
+
+	fdc->state = WD279X_state_accept_command;
+	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
+
+	return fdc;
+}
+
+void wd279x_free(WD279X *fdc) {
+	assert(fdc != NULL);
+	event_dequeue(&fdc->state_event);
+	free(fdc);
+}
+
+void wd279x_disconnect(WD279X *fdc) {
+	if (!fdc)
+		return;
 	fdc->set_dirc = DELEGATE_DEFAULT1(void, int);
 	fdc->set_dden = DELEGATE_DEFAULT1(void, bool);
 	fdc->set_sso = DELEGATE_DEFAULT1(void, unsigned);
 	fdc->set_drq = DELEGATE_DEFAULT1(void, bool);
 	fdc->set_intrq = DELEGATE_DEFAULT1(void, bool);
-	fdc->state = WD279X_state_accept_command;
-	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
-}
-
-WD279X *wd279x_new(enum WD279X_type type) {
-	WD279X *new = xmalloc(sizeof(WD279X));
-	wd279x_init(new, type);
-	return new;
-}
-
-static void wd279x_deinit(WD279X *fdc) {
-	event_dequeue(&fdc->state_event);
-}
-
-void wd279x_free(WD279X *fdc) {
-	assert(fdc != NULL);
-	wd279x_deinit(fdc);
-	free(fdc);
+	fdc->get_head_pos = DELEGATE_DEFAULT0(unsigned);
+	fdc->step = DELEGATE_DEFAULT0(void);
+	fdc->write = DELEGATE_DEFAULT1(void, uint8);
+	fdc->skip = DELEGATE_DEFAULT0(void);
+	fdc->read = DELEGATE_DEFAULT0(uint8);
+	fdc->write_idam = DELEGATE_DEFAULT0(void);
+	fdc->time_to_next_byte = DELEGATE_DEFAULT0(unsigned);
+	fdc->time_to_next_idam = DELEGATE_DEFAULT0(unsigned);
+	fdc->next_idam = DELEGATE_DEFAULT0(uint8p);
+	fdc->update_connection = DELEGATE_DEFAULT0(void);
 }
 
 void wd279x_reset(WD279X *fdc) {
@@ -218,7 +229,8 @@ void wd279x_update_connection(WD279X *fdc) {
 	DELEGATE_CALL1(fdc->set_dden, fdc->double_density);
 	if (fdc->has_sso)
 		DELEGATE_CALL1(fdc->set_sso, fdc->side);
-	DELEGATE_CALL1(fdc->set_dirc, fdc->direction); \
+	DELEGATE_CALL1(fdc->set_dirc, fdc->direction);
+	DELEGATE_CALL0(fdc->update_connection);
 }
 
 uint8_t wd279x_read(WD279X *fdc, uint16_t A) {
@@ -434,7 +446,7 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_verify_track_1, EVENT_MS(fdc->step_delay));
 				return;
 			}
-			vdrive_interface->step(vdrive_interface);
+			DELEGATE_CALL0(fdc->step);
 			if (fdc->is_step_cmd) {
 				NEXT_STATE(WD279X_state_verify_track_1, EVENT_MS(fdc->step_delay));
 				return;
@@ -450,12 +462,12 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			fdc->index_holes_count = 0;
-			NEXT_STATE(WD279X_state_verify_track_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+			NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 			return;
 
 
 		case WD279X_state_verify_track_2:
-			idam = vdrive_interface->next_idam(vdrive_interface);
+			idam = DELEGATE_CALL0(fdc->next_idam);
 			if (fdc->index_holes_count >= 5) {
 				LOG_DEBUG(3, "WD279X: index_holes_count >= 5: seek error\n");
 				fdc->status_register &= ~(STATUS_BUSY);
@@ -465,7 +477,7 @@ static void state_machine(void *sptr) {
 			}
 			if (idam == NULL) {
 				LOG_DEBUG(3, "WD279X: null IDAM: -> WD279X_state_verify_track_2\n");
-				NEXT_STATE(WD279X_state_verify_track_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->crc = CRC16_RESET;
@@ -477,7 +489,7 @@ static void state_machine(void *sptr) {
 			(void)_vdrive_read(fdc);  /* Include IDAM in CRC */
 			if (fdc->track_register != _vdrive_read(fdc)) {
 				LOG_DEBUG(3, "WD279X: track_register != idam[1]: -> WD279X_state_verify_track_2\n");
-				NEXT_STATE(WD279X_state_verify_track_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			/* Include rest of ID field - should result in computed CRC = 0 */
@@ -486,7 +498,7 @@ static void state_machine(void *sptr) {
 			if (fdc->crc != 0) {
 				LOG_DEBUG(3, "WD279X: Verify track %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->crc);
 				fdc->status_register |= STATUS_CRC_ERROR;
-				NEXT_STATE(WD279X_state_verify_track_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->status_register &= ~(STATUS_CRC_ERROR|STATUS_BUSY);
@@ -502,12 +514,12 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			fdc->index_holes_count = 0;
-			NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+			NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 			return;
 
 
 		case WD279X_state_type2_2:
-			idam = vdrive_interface->next_idam(vdrive_interface);
+			idam = DELEGATE_CALL0(fdc->next_idam);
 			if (fdc->index_holes_count >= 5) {
 				fdc->status_register &= ~(STATUS_BUSY);
 				fdc->status_register |= STATUS_RNF;
@@ -515,7 +527,7 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			if (idam == NULL) {
-				NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->crc = CRC16_RESET;
@@ -526,18 +538,18 @@ static void state_machine(void *sptr) {
 			}
 			(void)_vdrive_read(fdc);  /* Include IDAM in CRC */
 			if (fdc->track_register != _vdrive_read(fdc)) {
-				NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			if (fdc->side != (int)_vdrive_read(fdc)) {
 				/* No error if no SSO or 'C' not set */
 				if (fdc->has_sso || fdc->command_register & 0x02) {
-					NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+					NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 					return;
 				}
 			}
 			if (fdc->sector_register != _vdrive_read(fdc)) {
-				NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			i = _vdrive_read(fdc);
@@ -551,7 +563,7 @@ static void state_machine(void *sptr) {
 			if (fdc->crc != 0) {
 				fdc->status_register |= STATUS_CRC_ERROR;
 				LOG_DEBUG(3, "WD279X: Type 2 tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
-				NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 
@@ -576,20 +588,20 @@ static void state_machine(void *sptr) {
 					j++;
 				} while (j < bytes_to_scan && fdc->dam == 0);
 				if (fdc->dam == 0) {
-					NEXT_STATE(WD279X_state_type2_2, vdrive_interface->time_to_next_byte(vdrive_interface));
+					NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 					return;
 				}
-				NEXT_STATE(WD279X_state_read_sector_1, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_read_sector_1, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
-			vdrive_interface->skip(vdrive_interface);
-			vdrive_interface->skip(vdrive_interface);
-			NEXT_STATE(WD279X_state_write_sector_1, vdrive_interface->time_to_next_byte(vdrive_interface));
+			DELEGATE_CALL0(fdc->skip);
+			DELEGATE_CALL0(fdc->skip);
+			NEXT_STATE(WD279X_state_write_sector_1, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
 		case WD279X_state_read_sector_1:
-			LOG_DEBUG(3, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, vdrive_interface->get_head_pos(vdrive_interface));
+			LOG_DEBUG(3, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, DELEGATE_CALL0(fdc->get_head_pos));
 			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
 				log_open_hexdump(&log_rsec_hex, "WD279X: read-sector");
 			fdc->status_register |= ((~fdc->dam & 1) << 5);
@@ -598,7 +610,7 @@ static void state_machine(void *sptr) {
 				log_hexdump_byte(log_rsec_hex, fdc->data_register);
 			fdc->bytes_left--;
 			SET_DRQ;
-			NEXT_STATE(WD279X_state_read_sector_2, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_read_sector_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -615,14 +627,14 @@ static void state_machine(void *sptr) {
 					log_hexdump_byte(log_rsec_hex, fdc->data_register);
 				fdc->bytes_left--;
 				SET_DRQ;
-				NEXT_STATE(WD279X_state_read_sector_2, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_read_sector_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			log_close(&log_rsec_hex);
 			/* Including CRC bytes should result in computed CRC = 0 */
 			(void)_vdrive_read(fdc);
 			(void)_vdrive_read(fdc);
-			NEXT_STATE(WD279X_state_read_sector_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_read_sector_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -643,8 +655,8 @@ static void state_machine(void *sptr) {
 		case WD279X_state_write_sector_1:
 			SET_DRQ;
 			for (i = 0; i < 8; i++)
-				vdrive_interface->skip(vdrive_interface);
-			NEXT_STATE(WD279X_state_write_sector_2, vdrive_interface->time_to_next_byte(vdrive_interface));
+				DELEGATE_CALL0(fdc->skip);
+			NEXT_STATE(WD279X_state_write_sector_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -656,8 +668,8 @@ static void state_machine(void *sptr) {
 				SET_INTRQ;
 				return;
 			}
-			vdrive_interface->skip(vdrive_interface);
-			NEXT_STATE(WD279X_state_write_sector_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+			DELEGATE_CALL0(fdc->skip);
+			NEXT_STATE(WD279X_state_write_sector_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -666,15 +678,15 @@ static void state_machine(void *sptr) {
 				log_open_hexdump(&log_wsec_hex, "WD279X: write-sector");
 			if (IS_DOUBLE_DENSITY) {
 				for (i = 0; i < 11; i++)
-					vdrive_interface->skip(vdrive_interface);
+					DELEGATE_CALL0(fdc->skip);
 				for (i = 0; i < 12; i++)
 					_vdrive_write(fdc, 0);
-				NEXT_STATE(WD279X_state_write_sector_4, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_sector_4, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			for (i = 0; i < 6; i++)
 				_vdrive_write(fdc, 0);
-			NEXT_STATE(WD279X_state_write_sector_4, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_write_sector_4, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -689,7 +701,7 @@ static void state_machine(void *sptr) {
 				_vdrive_write(fdc, 0xf8);
 			else
 				_vdrive_write(fdc, 0xfb);
-			NEXT_STATE(WD279X_state_write_sector_5, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_write_sector_5, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -708,12 +720,12 @@ static void state_machine(void *sptr) {
 			fdc->bytes_left--;
 			if (fdc->bytes_left > 0) {
 				SET_DRQ;
-				NEXT_STATE(WD279X_state_write_sector_5, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_sector_5, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			log_close(&log_wsec_hex);
 			VDRIVE_WRITE_CRC16;
-			NEXT_STATE(WD279X_state_write_sector_6, vdrive_interface->time_to_next_byte(vdrive_interface) + EVENT_US(20));
+			NEXT_STATE(WD279X_state_write_sector_6, DELEGATE_CALL0(fdc->time_to_next_byte) + EVENT_US(20));
 			return;
 
 
@@ -729,7 +741,7 @@ static void state_machine(void *sptr) {
 			switch (fdc->command_register & 0xf0) {
 				case 0xc0:
 					fdc->index_holes_count = 0;
-					NEXT_STATE(WD279X_state_read_address_1, vdrive_interface->time_to_next_idam(vdrive_interface));
+					NEXT_STATE(WD279X_state_read_address_1, DELEGATE_CALL0(fdc->time_to_next_idam));
 					return;
 				case 0xe0:
 					LOG_WARN("WD279X: CMD: Read track not implemented\n");
@@ -744,7 +756,7 @@ static void state_machine(void *sptr) {
 
 
 		case WD279X_state_read_address_1:
-			idam = vdrive_interface->next_idam(vdrive_interface);
+			idam = DELEGATE_CALL0(fdc->next_idam);
 			if (fdc->index_holes_count >= 6) {
 				fdc->status_register &= ~(STATUS_BUSY);
 				fdc->status_register |= STATUS_RNF;
@@ -752,7 +764,7 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			if (idam == NULL) {
-				NEXT_STATE(WD279X_state_read_address_1, vdrive_interface->time_to_next_idam(vdrive_interface));
+				NEXT_STATE(WD279X_state_read_address_1, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->crc = CRC16_RESET;
@@ -762,7 +774,7 @@ static void state_machine(void *sptr) {
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 			}
 			(void)_vdrive_read(fdc);
-			NEXT_STATE(WD279X_state_read_address_2, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_read_address_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -772,7 +784,7 @@ static void state_machine(void *sptr) {
 			/* At end of command, this is transferred to the sector register: */
 			fdc->track_register_tmp = fdc->data_register;
 			SET_DRQ;
-			NEXT_STATE(WD279X_state_read_address_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_read_address_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 
@@ -783,7 +795,7 @@ static void state_machine(void *sptr) {
 				fdc->data_register = _vdrive_read(fdc);
 				fdc->bytes_left--;
 				SET_DRQ;
-				NEXT_STATE(WD279X_state_read_address_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_read_address_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			fdc->sector_register = fdc->track_register_tmp;
@@ -818,18 +830,18 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			fdc->index_holes_count = 0;
-			NEXT_STATE(WD279X_state_write_track_2b, vdrive_interface->time_to_next_idam(vdrive_interface));
+			NEXT_STATE(WD279X_state_write_track_2b, DELEGATE_CALL0(fdc->time_to_next_idam));
 			return;
 
 
 		case WD279X_state_write_track_2b:
 			if (fdc->index_holes_count == 0) {
-				LOG_DEBUG(3, "WD279X: Waiting for index pulse, head_pos=%04x\n", vdrive_interface->get_head_pos(vdrive_interface));
-				NEXT_STATE(WD279X_state_write_track_2b, vdrive_interface->time_to_next_idam(vdrive_interface));
+				LOG_DEBUG(3, "WD279X: Waiting for index pulse, head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
+				NEXT_STATE(WD279X_state_write_track_2b, DELEGATE_CALL0(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->index_holes_count = 0;
-			LOG_DEBUG(3, "WD279X: Writing track from head_pos=%04x\n", vdrive_interface->get_head_pos(vdrive_interface));
+			LOG_DEBUG(3, "WD279X: Writing track from head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
 				log_open_hexdump(&log_wtrk_hex, "WD279X: write-track");
 			GOTO_STATE(WD279X_state_write_track_3);
@@ -840,7 +852,7 @@ static void state_machine(void *sptr) {
 			if (fdc->index_holes_count > 0) {
 				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
 					log_close(&log_wtrk_hex);
-				LOG_DEBUG(3, "WD279X: Finished writing track at head_pos=%04x\n", vdrive_interface->get_head_pos(vdrive_interface));
+				LOG_DEBUG(3, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 				RESET_DRQ;  /* XXX */
 				fdc->status_register &= ~(STATUS_BUSY);
 				SET_INTRQ;
@@ -862,38 +874,38 @@ static void state_machine(void *sptr) {
 				}
 				if (data == 0xf7) {
 					VDRIVE_WRITE_CRC16;
-					NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+					NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 					return;
 				}
 				if (data >= 0xf8 && data <= 0xfb) {
 					fdc->crc = CRC16_RESET;
 					_vdrive_write(fdc, data);
-					NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+					NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 					return;
 				}
 				if (data == 0xfe) {
-					LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", vdrive_interface->get_head_pos(vdrive_interface));
+					LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 					fdc->crc = CRC16_RESET;
-					vdrive_interface->write_idam(vdrive_interface);
+					DELEGATE_CALL0(fdc->write_idam);
 					fdc->crc = crc16_byte(fdc->crc, 0xfe);
-					NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+					NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 					return;
 				}
 				_vdrive_write(fdc, data);
-				NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			/* Double density */
 			if (data == 0xf7) {
 				VDRIVE_WRITE_CRC16;
-				NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			if (data == 0xfe) {
-				LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", vdrive_interface->get_head_pos(vdrive_interface));
-				vdrive_interface->write_idam(vdrive_interface);
+				LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
+				DELEGATE_CALL0(fdc->write_idam);
 				fdc->crc = crc16_byte(fdc->crc, 0xfe);
-				NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			if (data == 0xf5) {
@@ -901,14 +913,14 @@ static void state_machine(void *sptr) {
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 				_vdrive_write(fdc, 0xa1);
-				NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
 			if (data == 0xf6) {
 				data = 0xc2;
 			}
 			_vdrive_write(fdc, data);
-			NEXT_STATE(WD279X_state_write_track_3, vdrive_interface->time_to_next_byte(vdrive_interface));
+			NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL0(fdc->time_to_next_byte));
 			return;
 
 		default:

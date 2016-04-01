@@ -37,20 +37,21 @@ struct vdrive_interface {
 	void (*set_drive)(struct vdrive_interface *vi, unsigned drive);
 
 	// Operations on selected drive
-	unsigned (*get_head_pos)(struct vdrive_interface *vi);
-	void (*step)(struct vdrive_interface *vi);
-	void (*write)(struct vdrive_interface *vi, uint8_t data);
-	void (*skip)(struct vdrive_interface *vi);
-	uint8_t (*read)(struct vdrive_interface *vi);
-	void (*write_idam)(struct vdrive_interface *vi);
-	unsigned (*time_to_next_byte)(struct vdrive_interface *vi);
-	unsigned (*time_to_next_idam)(struct vdrive_interface *vi);
-	uint8_t *(*next_idam)(struct vdrive_interface *vi);
-	void (*update_connection)(struct vdrive_interface *vi);
+	unsigned (*get_head_pos)(void *sptr);
+	void (*step)(void *sptr);
+	void (*write)(void *sptr, uint8_t data);
+	void (*skip)(void *sptr);
+	uint8_t (*read)(void *sptr);
+	void (*write_idam)(void *sptr);
+	unsigned (*time_to_next_byte)(void *sptr);
+	unsigned (*time_to_next_idam)(void *sptr);
+	uint8_t *(*next_idam)(void *sptr);
+	void (*update_connection)(void *sptr);
 };
 
 struct vdrive_interface *vdrive_interface_new(void);
 void vdrive_interface_free(struct vdrive_interface *vi);
+void vdrive_disconnect(struct vdrive_interface *vi);
 
 void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk);
 void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive);

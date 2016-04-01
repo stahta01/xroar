@@ -77,16 +77,16 @@ static void vdrive_set_dden(void *sptr, _Bool dden);
 static void vdrive_set_sso(void *sptr, unsigned head);
 static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive);
 
-static unsigned vdrive_get_head_pos(struct vdrive_interface *vi);
-static void vdrive_step(struct vdrive_interface *vi);
-static void vdrive_write(struct vdrive_interface *vi, uint8_t data);
-static void vdrive_skip(struct vdrive_interface *vi);
-static uint8_t vdrive_read(struct vdrive_interface *vi);
-static void vdrive_write_idam(struct vdrive_interface *vi);
-static unsigned vdrive_time_to_next_byte(struct vdrive_interface *vi);
-static unsigned vdrive_time_to_next_idam(struct vdrive_interface *vi);
-static uint8_t *vdrive_next_idam(struct vdrive_interface *vi);
-static void vdrive_update_connection(struct vdrive_interface *vi);
+static unsigned vdrive_get_head_pos(void *sptr);
+static void vdrive_step(void *sptr);
+static void vdrive_write(void *sptr, uint8_t data);
+static void vdrive_skip(void *sptr);
+static uint8_t vdrive_read(void *sptr);
+static void vdrive_write_idam(void *sptr);
+static unsigned vdrive_time_to_next_byte(void *sptr);
+static unsigned vdrive_time_to_next_idam(void *sptr);
+static uint8_t *vdrive_next_idam(void *sptr);
+static void vdrive_update_connection(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -119,10 +119,7 @@ struct vdrive_interface *vdrive_interface_new(void) {
 	vip->cur_density = VDISK_SINGLE_DENSITY;
 	vip->head_incr = 2;  // SD
 
-	vi->ready = DELEGATE_DEFAULT1(void, bool);
-	vi->tr00 = DELEGATE_DEFAULT1(void, bool);
-	vi->index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vi->write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_disconnect(vi);
 
 	vi->set_dirc = vdrive_set_dirc;
 	vi->set_dden = vdrive_set_dden;
@@ -156,6 +153,15 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 			vdrive_eject_disk(vi, i);
 		}
 	}
+}
+
+void vdrive_disconnect(struct vdrive_interface *vi) {
+	if (!vi)
+		return;
+	vi->ready = DELEGATE_DEFAULT1(void, bool);
+	vi->tr00 = DELEGATE_DEFAULT1(void, bool);
+	vi->index_pulse = DELEGATE_DEFAULT1(void, bool);
+	vi->write_protect = DELEGATE_DEFAULT1(void, bool);
 }
 
 void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk) {
@@ -222,13 +228,13 @@ static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive) {
 
 /* Operations on selected drive */
 
-static unsigned vdrive_get_head_pos(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+static unsigned vdrive_get_head_pos(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	return vip->head_pos;
 }
 
-void vdrive_step(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+void vdrive_step(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	if (vip->ready_state) {
 		if (vip->cur_direction > 0 || vip->current_drive->current_cyl > 0)
 			vip->current_drive->current_cyl += vip->cur_direction;
@@ -238,8 +244,8 @@ void vdrive_step(struct vdrive_interface *vi) {
 	update_signals(vip);
 }
 
-void vdrive_write(struct vdrive_interface *vi, uint8_t data) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+void vdrive_write(void *sptr, uint8_t data) {
+	struct vdrive_interface_private *vip = sptr;
 	if (!vip->ready_state) return;
 	if (!vip->track_base) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
@@ -262,8 +268,8 @@ void vdrive_write(struct vdrive_interface *vi, uint8_t data) {
 	}
 }
 
-void vdrive_skip(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+void vdrive_skip(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	if (!vip->ready_state) return;
 	vip->head_pos += vip->head_incr;
 	if (vip->head_pos >= vip->current_drive->disk->track_length) {
@@ -271,8 +277,8 @@ void vdrive_skip(struct vdrive_interface *vi) {
 	}
 }
 
-uint8_t vdrive_read(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+uint8_t vdrive_read(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	uint8_t ret = 0;
 	if (!vip->ready_state) return 0;
 	if (vip->track_base && vip->head_pos < vip->current_drive->disk->track_length) {
@@ -285,8 +291,8 @@ uint8_t vdrive_read(struct vdrive_interface *vi) {
 	return ret;
 }
 
-void vdrive_write_idam(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+void vdrive_write_idam(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	if (!vip->track_base) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
 		vip->track_base = (uint8_t *)vip->idamptr;
@@ -311,8 +317,8 @@ void vdrive_write_idam(struct vdrive_interface *vi) {
 	}
 }
 
-unsigned vdrive_time_to_next_byte(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+unsigned vdrive_time_to_next_byte(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	event_ticks next_cycle = vip->track_start_cycle + (vip->head_pos - 128) * BYTE_TIME;
 	unsigned to_time = next_cycle - event_current_tick;
 	if (to_time > (UINT_MAX/2)) {
@@ -325,8 +331,8 @@ unsigned vdrive_time_to_next_byte(struct vdrive_interface *vi) {
 /* Calculates the number of cycles it would take to get from the current head
  * position to the next IDAM or next index pulse, whichever comes first. */
 
-unsigned vdrive_time_to_next_idam(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+unsigned vdrive_time_to_next_idam(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	event_ticks next_cycle;
 	if (!vip->ready_state)
 		return EVENT_MS(200);
@@ -358,8 +364,8 @@ unsigned vdrive_time_to_next_idam(struct vdrive_interface *vi) {
  * IDAMs are present, an index pulse is generated and the head left at the
  * beginning of the track. */
 
-uint8_t *vdrive_next_idam(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+uint8_t *vdrive_next_idam(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
 	unsigned next_head_pos;
 	if (!vip->ready_state) return NULL;
 	next_head_pos = vip->current_drive->disk->track_length;
@@ -380,8 +386,9 @@ uint8_t *vdrive_next_idam(struct vdrive_interface *vi) {
 	return vip->track_base + next_head_pos;
 }
 
-static void vdrive_update_connection(struct vdrive_interface *vi) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+static void vdrive_update_connection(void *sptr) {
+	struct vdrive_interface_private *vip = sptr;
+	struct vdrive_interface *vi = &vip->public;
 	DELEGATE_CALL1(vi->ready, vip->ready_state);
 	DELEGATE_CALL1(vi->tr00, vip->tr00_state);
 	DELEGATE_CALL1(vi->index_pulse, vip->index_state);

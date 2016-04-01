@@ -265,7 +265,7 @@ int write_snapshot(const char *filename) {
 	// Attached virtual disk filenames
 	{
 		for (unsigned drive = 0; drive < VDRIVE_MAX_DRIVES; drive++) {
-			struct vdisk *disk = vdrive_disk_in_drive(vdrive_interface, drive);
+			struct vdisk *disk = vdrive_disk_in_drive(xroar_vdrive_interface, drive);
 			if (disk != NULL && disk->filename != NULL) {
 				int length = strlen(disk->filename) + 1;
 				write_chunk_header(fd, ID_VDISK_FILE, 1 + length);
@@ -566,12 +566,12 @@ int read_snapshot(const char *filename) {
 					int drive;
 					size--;
 					drive = fs_read_uint8(fd);
-					vdrive_eject_disk(vdrive_interface, drive);
+					vdrive_eject_disk(xroar_vdrive_interface, drive);
 					if (size > 0) {
 						char *name = malloc(size);
 						if (name != NULL) {
 							size -= fread(name, 1, size, fd);
-							vdrive_insert_disk(vdrive_interface, drive, vdisk_load(name));
+							vdrive_insert_disk(xroar_vdrive_interface, drive, vdisk_load(name));
 						}
 					}
 				}

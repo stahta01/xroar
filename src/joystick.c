@@ -304,9 +304,9 @@ void joystick_unmap(unsigned port) {
 	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; a++) {
 		struct joystick_axis *axis = j->axes[a];
 		if (axis) {
-			struct joystick_interface *interface = axis->intf;
-			if (interface->unmap_axis) {
-				interface->unmap_axis(axis);
+			struct joystick_interface *intf = axis->intf;
+			if (intf->unmap_axis) {
+				intf->unmap_axis(axis);
 			} else {
 				free(j->axes[a]);
 			}
@@ -315,9 +315,9 @@ void joystick_unmap(unsigned port) {
 	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; b++) {
 		struct joystick_button *button = j->buttons[b];
 		if (button) {
-			struct joystick_interface *interface = button->intf;
-			if (interface->unmap_button) {
-				interface->unmap_button(button);
+			struct joystick_interface *intf = button->intf;
+			if (intf->unmap_button) {
+				intf->unmap_button(button);
 			} else {
 				free(j->buttons[b]);
 			}

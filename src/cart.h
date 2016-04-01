@@ -38,6 +38,8 @@ struct cart {
 	DELEGATE_T1(void, bool) signal_nmi;
 	DELEGATE_T1(void, bool) signal_halt;
 	struct event *firq_event;
+	_Bool (*has_interface)(struct cart *c, const char *ifname);
+	void (*attach_interface)(struct cart *c, const char *ifname, void *intf);
 };
 
 struct cart_module {

@@ -199,7 +199,7 @@ struct machine_config *xroar_machine_config;
 static struct cart_config *selected_cart_config;
 struct vdg_palette *xroar_vdg_palette;
 
-struct vdrive_interface *vdrive_interface;
+struct vdrive_interface *xroar_vdrive_interface;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -556,7 +556,7 @@ _Bool xroar_init(int argc, char **argv) {
 	assert(xroar_machine_config != NULL);
 
 	/* New vdrive interface */
-	vdrive_interface = vdrive_interface_new();
+	xroar_vdrive_interface = vdrive_interface_new();
 
 	// Select a UI module.
 	ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
@@ -831,7 +831,7 @@ void xroar_shutdown(void) {
 		if (private_cfg.joy_button[i])
 			free(private_cfg.joy_button[i]);
 	}
-	vdrive_interface_free(vdrive_interface);
+	vdrive_interface_free(xroar_vdrive_interface);
 	xconfig_shutdown(xroar_options);
 }
 
@@ -893,7 +893,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 		case FILETYPE_OS9:
 		case FILETYPE_DMK:
 			xroar_insert_disk_file(load_disk_to_drive, filename);
-			if (autorun && vdrive_disk_in_drive(vdrive_interface, 0)) {
+			if (autorun && vdrive_disk_in_drive(xroar_vdrive_interface, 0)) {
 				if (IS_DRAGON) {
 					keyboard_queue_basic(keyboard_interface, "\033BOOT\r");
 				} else {
@@ -1058,7 +1058,7 @@ void xroar_new_disk(int drive) {
 	new_disk->filetype = filetype;
 	new_disk->filename = xstrdup(filename);
 	new_disk->write_back = 1;
-	vdrive_insert_disk(vdrive_interface, drive, new_disk);
+	vdrive_insert_disk(xroar_vdrive_interface, drive, new_disk);
 	if (ui_module) {
 		ui_module->set_state(ui_tag_disk_data, drive, new_disk);
 	}
@@ -1067,7 +1067,7 @@ void xroar_new_disk(int drive) {
 void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
-	vdrive_insert_disk(vdrive_interface, drive, disk);
+	vdrive_insert_disk(xroar_vdrive_interface, drive, disk);
 	if (ui_module) {
 		ui_module->set_state(ui_tag_disk_data, drive, disk);
 	}
@@ -1079,7 +1079,7 @@ void xroar_insert_disk(int drive) {
 }
 
 void xroar_eject_disk(int drive) {
-	vdrive_eject_disk(vdrive_interface, drive);
+	vdrive_eject_disk(xroar_vdrive_interface, drive);
 	if (ui_module) {
 		ui_module->set_state(ui_tag_disk_data, drive, NULL);
 	}
@@ -1087,7 +1087,7 @@ void xroar_eject_disk(int drive) {
 
 _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 	assert(drive >= 0 && drive < 4);
-	struct vdisk *vd = vdrive_disk_in_drive(vdrive_interface, drive);
+	struct vdisk *vd = vdrive_disk_in_drive(xroar_vdrive_interface, drive);
 	if (!vd)
 		return 0;
 	_Bool new_we = !vd->write_protect;
@@ -1108,7 +1108,7 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 
 _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	assert(drive >= 0 && drive < 4);
-	struct vdisk *vd = vdrive_disk_in_drive(vdrive_interface, drive);
+	struct vdisk *vd = vdrive_disk_in_drive(xroar_vdrive_interface, drive);
 	if (!vd)
 		return 0;
 	_Bool new_wb = vd->write_back;
@@ -1347,6 +1347,9 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		xroar_machine_config->cart_enabled = 1;
 		new_cart = cart_new_named(cc_name);
 		machine_insert_cart(new_cart);
+		if (new_cart->has_interface && new_cart->has_interface(new_cart, "floppy")) {
+			new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
+		}
 	}
 
 	if (notify) {

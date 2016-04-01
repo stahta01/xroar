@@ -63,6 +63,17 @@ struct WD279X {
 	DELEGATE_T1(void, bool) set_drq;
 	DELEGATE_T1(void, bool) set_intrq;
 
+	DELEGATE_T0(unsigned) get_head_pos;
+	DELEGATE_T0(void) step;
+	DELEGATE_T1(void, uint8) write;
+	DELEGATE_T0(void) skip;
+	DELEGATE_T0(uint8) read;
+	DELEGATE_T0(void) write_idam;
+	DELEGATE_T0(unsigned) time_to_next_byte;
+	DELEGATE_T0(unsigned) time_to_next_idam;
+	DELEGATE_T0(uint8p) next_idam;
+	DELEGATE_T0(void) update_connection;
+
 	/* WD279X internal state */
 	enum WD279X_state state;
 	struct event state_event;
@@ -101,6 +112,7 @@ struct WD279X {
 WD279X *wd279x_new(enum WD279X_type type);
 void wd279x_free(WD279X *fdc);
 void wd279x_reset(WD279X *fdc);
+void wd279x_disconnect(WD279X *fdc);
 
 /* Signal all connected delegates */
 void wd279x_update_connection(WD279X *fdc);

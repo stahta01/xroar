@@ -55,12 +55,15 @@ struct rsdos {
 	_Bool halt_enable;
 	_Bool have_becker;
 	WD279X *fdc;
+	struct vdrive_interface *vdrive_interface;
 };
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
+static _Bool rsdos_has_interface(struct cart *c, const char *ifname);
+static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf);
 static void ff40_write(struct rsdos *r, unsigned flags);
 
 /* Handle signals from WD2793 */
@@ -69,6 +72,7 @@ static void set_intrq(void *, _Bool);
 
 static struct cart *rsdos_new(struct cart_config *cc) {
 	struct rsdos *r = xmalloc(sizeof(*r));
+	*r = (struct rsdos){0};
 	struct cart *c = &r->cart;
 
 	c->config = cc;
@@ -77,20 +81,11 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 	c->write = rsdos_write;
 	c->reset = rsdos_reset;
 	c->detach = rsdos_detach;
+	c->has_interface = rsdos_has_interface;
+	c->attach_interface = rsdos_attach_interface;
 
 	r->have_becker = (cc->becker_port && becker_open());
 	r->fdc = wd279x_new(WD2793);
-	r->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_interface->set_dirc, vdrive_interface);
-	r->fdc->set_dden = DELEGATE_AS1(void, bool, vdrive_interface->set_dden, vdrive_interface);
-	r->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
-	r->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
-
-	vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, r->fdc);
-	vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, r->fdc);
-	vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, r->fdc);
-	vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, r->fdc);
-	wd279x_update_connection(r->fdc);
-	vdrive_interface->update_connection(vdrive_interface);
 
 	return c;
 }
@@ -108,10 +103,8 @@ static void rsdos_reset(struct cart *c) {
 
 static void rsdos_detach(struct cart *c) {
 	struct rsdos *r = (struct rsdos *)c;
-	vdrive_interface->ready = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->tr00 = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_disconnect(r->vdrive_interface);
+	wd279x_disconnect(r->fdc);
 	wd279x_free(r->fdc);
 	r->fdc = NULL;
 	if (r->have_becker)
@@ -167,6 +160,38 @@ static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	}
 }
 
+static _Bool rsdos_has_interface(struct cart *c, const char *ifname) {
+	return c && (0 == strcmp(ifname, "floppy"));
+}
+
+static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf) {
+	if (!c || (0 != strcmp(ifname, "floppy")))
+		return;
+	struct rsdos *r = (struct rsdos *)c;
+	r->vdrive_interface = intf;
+
+	r->fdc->set_dirc = DELEGATE_AS1(void, int, r->vdrive_interface->set_dirc, r->vdrive_interface);
+	r->fdc->set_dden = DELEGATE_AS1(void, bool, r->vdrive_interface->set_dden, r->vdrive_interface);
+	r->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
+	r->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
+	r->fdc->get_head_pos = DELEGATE_AS0(unsigned, r->vdrive_interface->get_head_pos, r->vdrive_interface);
+	r->fdc->step = DELEGATE_AS0(void, r->vdrive_interface->step, r->vdrive_interface);
+	r->fdc->write = DELEGATE_AS1(void, uint8, r->vdrive_interface->write, r->vdrive_interface);
+	r->fdc->skip = DELEGATE_AS0(void, r->vdrive_interface->skip, r->vdrive_interface);
+	r->fdc->read = DELEGATE_AS0(uint8, r->vdrive_interface->read, r->vdrive_interface);
+	r->fdc->write_idam = DELEGATE_AS0(void, r->vdrive_interface->write_idam, r->vdrive_interface);
+	r->fdc->time_to_next_byte = DELEGATE_AS0(unsigned, r->vdrive_interface->time_to_next_byte, r->vdrive_interface);
+	r->fdc->time_to_next_idam = DELEGATE_AS0(unsigned, r->vdrive_interface->time_to_next_idam, r->vdrive_interface);
+	r->fdc->next_idam = DELEGATE_AS0(uint8p, r->vdrive_interface->next_idam, r->vdrive_interface);
+	r->fdc->update_connection = DELEGATE_AS0(void, r->vdrive_interface->update_connection, r->vdrive_interface);
+
+	r->vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, r->fdc);
+	r->vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, r->fdc);
+	r->vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, r->fdc);
+	r->vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, r->fdc);
+	wd279x_update_connection(r->fdc);
+}
+
 /* RSDOS cartridge circuitry */
 static void ff40_write(struct rsdos *r, unsigned flags) {
 	struct cart *c = (struct cart *)r;
@@ -179,7 +204,7 @@ static void ff40_write(struct rsdos *r, unsigned flags) {
 	} else if (flags & 0x04) {
 		new_drive_select = 2;
 	}
-	vdrive_interface->set_sso(vdrive_interface, (flags & 0x40) ? 1 : 0);
+	r->vdrive_interface->set_sso(r->vdrive_interface, (flags & 0x40) ? 1 : 0);
 	if (flags != r->ic1_old) {
 		LOG_DEBUG(2, "RSDOS: Write to FF40: ");
 		if (new_drive_select != r->ic1_drive_select) {
@@ -204,7 +229,7 @@ static void ff40_write(struct rsdos *r, unsigned flags) {
 		r->ic1_old = flags;
 	}
 	r->ic1_drive_select = new_drive_select;
-	vdrive_interface->set_drive(vdrive_interface, r->ic1_drive_select);
+	r->vdrive_interface->set_drive(r->vdrive_interface, r->ic1_drive_select);
 	r->ic1_density = flags & 0x20;
 	wd279x_set_dden(r->fdc, !r->ic1_density);
 	if (r->ic1_density && r->intrq_flag) {

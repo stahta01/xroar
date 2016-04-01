@@ -58,12 +58,16 @@ struct dragondos {
 	_Bool ic1_nmi_enable;
 	_Bool have_becker;
 	WD279X *fdc;
+	struct vdrive_interface *vdrive_interface;
 };
 
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
+static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
+static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
+
 static void ff48_write(struct dragondos *d, unsigned flags);
 
 /* Handle signals from WD2797 */
@@ -72,6 +76,7 @@ static void set_intrq(void *, _Bool);
 
 static struct cart *dragondos_new(struct cart_config *cc) {
 	struct dragondos *d = xmalloc(sizeof(*d));
+	*d = (struct dragondos){0};
 	struct cart *c = &d->cart;
 
 	c->config = cc;
@@ -80,21 +85,11 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 	c->write = dragondos_write;
 	c->reset = dragondos_reset;
 	c->detach = dragondos_detach;
+	c->has_interface = dragondos_has_interface;
+	c->attach_interface = dragondos_attach_interface;
 
 	d->have_becker = (cc->becker_port && becker_open());
 	d->fdc = wd279x_new(WD2797);
-	d->fdc->set_dirc = DELEGATE_AS1(void, int, vdrive_interface->set_dirc, vdrive_interface);
-	d->fdc->set_dden = DELEGATE_AS1(void, bool, vdrive_interface->set_dden, vdrive_interface);
-	d->fdc->set_sso = DELEGATE_AS1(void, unsigned, vdrive_interface->set_sso, vdrive_interface);
-	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
-	d->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
-
-	vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
-	vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
-	vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
-	vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
-	wd279x_update_connection(d->fdc);
-	vdrive_interface->update_connection(vdrive_interface);
 
 	return c;
 }
@@ -110,10 +105,8 @@ static void dragondos_reset(struct cart *c) {
 
 static void dragondos_detach(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
-	vdrive_interface->ready = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->tr00 = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_disconnect(d->vdrive_interface);
+	wd279x_disconnect(d->fdc);
 	wd279x_free(d->fdc);
 	d->fdc = NULL;
 	if (d->have_becker)
@@ -170,6 +163,41 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	}
 }
 
+static _Bool dragondos_has_interface(struct cart *c, const char *ifname) {
+	return c && (0 == strcmp(ifname, "floppy"));
+}
+
+static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf) {
+	if (!c || (0 != strcmp(ifname, "floppy")))
+		return;
+	struct dragondos *d = (struct dragondos *)c;
+	d->vdrive_interface = intf;
+
+	d->fdc->set_dirc = DELEGATE_AS1(void, int, d->vdrive_interface->set_dirc, d->vdrive_interface);
+	d->fdc->set_dden = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dden, d->vdrive_interface);
+	d->fdc->set_sso = DELEGATE_AS1(void, unsigned, d->vdrive_interface->set_sso, d->vdrive_interface);
+	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
+	d->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
+	d->fdc->get_head_pos = DELEGATE_AS0(unsigned, d->vdrive_interface->get_head_pos, d->vdrive_interface);
+	d->fdc->step = DELEGATE_AS0(void, d->vdrive_interface->step, d->vdrive_interface);
+	d->fdc->write = DELEGATE_AS1(void, uint8, d->vdrive_interface->write, d->vdrive_interface);
+	d->fdc->skip = DELEGATE_AS0(void, d->vdrive_interface->skip, d->vdrive_interface);
+	d->fdc->read = DELEGATE_AS0(uint8, d->vdrive_interface->read, d->vdrive_interface);
+	d->fdc->write_idam = DELEGATE_AS0(void, d->vdrive_interface->write_idam, d->vdrive_interface);
+	d->fdc->time_to_next_byte = DELEGATE_AS0(unsigned, d->vdrive_interface->time_to_next_byte, d->vdrive_interface);
+	d->fdc->time_to_next_idam = DELEGATE_AS0(unsigned, d->vdrive_interface->time_to_next_idam, d->vdrive_interface);
+	d->fdc->next_idam = DELEGATE_AS0(uint8p, d->vdrive_interface->next_idam, d->vdrive_interface);
+	d->fdc->update_connection = DELEGATE_AS0(void, d->vdrive_interface->update_connection, d->vdrive_interface);
+
+	d->vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
+	d->vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
+	d->vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
+	d->vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
+	wd279x_update_connection(d->fdc);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* DragonDOS cartridge circuitry */
 static void ff48_write(struct dragondos *d, unsigned flags) {
 	if (flags != d->ic1_old) {
@@ -193,7 +221,7 @@ static void ff48_write(struct dragondos *d, unsigned flags) {
 		d->ic1_old = flags;
 	}
 	d->ic1_drive_select = flags & 0x03;
-	vdrive_interface->set_drive(vdrive_interface, d->ic1_drive_select);
+	d->vdrive_interface->set_drive(d->vdrive_interface, d->ic1_drive_select);
 	d->ic1_motor_enable = flags & 0x04;
 	d->ic1_density = flags & 0x08;
 	wd279x_set_dden(d->fdc, !d->ic1_density);

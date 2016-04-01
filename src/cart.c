@@ -68,6 +68,7 @@ static struct slist *cart_modules = NULL;
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void do_firq(void *);
+static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
 /**************************************************************************/
 
@@ -330,6 +331,7 @@ void cart_rom_init(struct cart *c) {
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
+	c->has_interface = cart_rom_has_interface;
 }
 
 static struct cart *cart_rom_new(struct cart_config *cc) {
@@ -381,4 +383,12 @@ static void do_firq(void *data) {
 	DELEGATE_SAFE_CALL1(c->signal_firq, 1);
 	c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
 	event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+}
+
+/* Default has_interface() - no interfaces supported */
+
+static _Bool cart_rom_has_interface(struct cart *c, const char *ifname) {
+	(void)c;
+	(void)ifname;
+	return 0;
 }

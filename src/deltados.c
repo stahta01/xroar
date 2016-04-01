@@ -53,17 +53,21 @@ struct deltados {
 	_Bool ic1_side_select;
 	_Bool ic1_density;
 	WD279X *fdc;
+	struct vdrive_interface *vdrive_interface;
 };
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
+static _Bool deltados_has_interface(struct cart *c, const char *ifname);
+static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
 static void ff44_write(struct deltados *d, unsigned flags);
 
 static struct cart *deltados_new(struct cart_config *cc) {
 	struct deltados *d = xmalloc(sizeof(*d));
 	struct cart *c = &d->cart;
+	*d = (struct deltados){0};
 
 	c->config = cc;
 	cart_rom_init(c);
@@ -71,18 +75,10 @@ static struct cart *deltados_new(struct cart_config *cc) {
 	c->write = deltados_write;
 	c->reset = deltados_reset;
 	c->detach = deltados_detach;
+	c->has_interface = deltados_has_interface;
+	c->attach_interface = deltados_attach_interface;
 
 	d->fdc = wd279x_new(WD2791);
-	d->fdc->set_dirc = (DELEGATE_T1(void,int)){vdrive_interface->set_dirc, vdrive_interface};
-	d->fdc->set_dden = (DELEGATE_T1(void,bool)){vdrive_interface->set_dden, vdrive_interface};
-
-	vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
-	vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
-	vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
-	vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
-	wd279x_update_connection(d->fdc);
-	vdrive_interface->update_connection(vdrive_interface);
-
 	return c;
 }
 
@@ -96,10 +92,8 @@ static void deltados_reset(struct cart *c) {
 
 static void deltados_detach(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
-	vdrive_interface->ready = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->tr00 = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->index_pulse = DELEGATE_DEFAULT1(void, bool);
-	vdrive_interface->write_protect = DELEGATE_DEFAULT1(void, bool);
+	vdrive_disconnect(d->vdrive_interface);
+	wd279x_disconnect(d->fdc);
 	wd279x_free(d->fdc);
 	d->fdc = NULL;
 	cart_rom_detach(c);
@@ -123,6 +117,36 @@ static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	if (A & 4) ff44_write(d, D);
 }
 
+static _Bool deltados_has_interface(struct cart *c, const char *ifname) {
+	return c && (0 == strcmp(ifname, "floppy"));
+}
+
+static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf) {
+	if (!c || (0 != strcmp(ifname, "floppy")))
+		return;
+	struct deltados *d = (struct deltados *)c;
+	d->vdrive_interface = intf;
+
+	d->fdc->set_dirc = (DELEGATE_T1(void,int)){d->vdrive_interface->set_dirc, d->vdrive_interface};
+	d->fdc->set_dden = (DELEGATE_T1(void,bool)){d->vdrive_interface->set_dden, d->vdrive_interface};
+	d->fdc->get_head_pos = DELEGATE_AS0(unsigned, d->vdrive_interface->get_head_pos, d->vdrive_interface);
+	d->fdc->step = DELEGATE_AS0(void, d->vdrive_interface->step, d->vdrive_interface);
+	d->fdc->write = DELEGATE_AS1(void, uint8, d->vdrive_interface->write, d->vdrive_interface);
+	d->fdc->skip = DELEGATE_AS0(void, d->vdrive_interface->skip, d->vdrive_interface);
+	d->fdc->read = DELEGATE_AS0(uint8, d->vdrive_interface->read, d->vdrive_interface);
+	d->fdc->write_idam = DELEGATE_AS0(void, d->vdrive_interface->write_idam, d->vdrive_interface);
+	d->fdc->time_to_next_byte = DELEGATE_AS0(unsigned, d->vdrive_interface->time_to_next_byte, d->vdrive_interface);
+	d->fdc->time_to_next_idam = DELEGATE_AS0(unsigned, d->vdrive_interface->time_to_next_idam, d->vdrive_interface);
+	d->fdc->next_idam = DELEGATE_AS0(uint8p, d->vdrive_interface->next_idam, d->vdrive_interface);
+	d->fdc->update_connection = DELEGATE_AS0(void, d->vdrive_interface->update_connection, d->vdrive_interface);
+
+	d->vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
+	d->vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
+	d->vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
+	d->vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
+	wd279x_update_connection(d->fdc);
+}
+
 /* Delta cartridge circuitry */
 static void ff44_write(struct deltados *d, unsigned flags) {
 	if (flags != d->ic1_old) {
@@ -140,9 +164,9 @@ static void ff44_write(struct deltados *d, unsigned flags) {
 		d->ic1_old = flags;
 	}
 	d->ic1_drive_select = flags & 0x03;
-	vdrive_interface->set_drive(vdrive_interface, d->ic1_drive_select);
+	d->vdrive_interface->set_drive(d->vdrive_interface, d->ic1_drive_select);
 	d->ic1_side_select = flags & 0x04;
-	vdrive_interface->set_sso(NULL, d->ic1_side_select ? 1 : 0);
+	d->vdrive_interface->set_sso(d->vdrive_interface, d->ic1_side_select ? 1 : 0);
 	d->ic1_density = !(flags & 0x08);
 	wd279x_set_dden(d->fdc, !d->ic1_density);
 }
