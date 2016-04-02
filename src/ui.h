@@ -9,10 +9,32 @@
 #include <stdint.h>
 
 #include "module.h"
+#include "xconfig.h"
 
 struct vo_module;
 struct joystick_module;
 struct vdisk;
+
+/* Filtering option for OpenGL video */
+#define UI_GL_FILTER_AUTO (-1)
+#define UI_GL_FILTER_NEAREST (0)
+#define UI_GL_FILTER_LINEAR  (1)
+
+/* NTSC cross-colour can either be rendered as a simple four colour palette, or
+ * with a 5-bit lookup table */
+#define UI_CCR_SIMPLE (0)
+#define UI_CCR_5BIT   (1)
+
+struct ui_cfg {
+	char *vo;  // video output module
+	char *geometry;
+	int gl_filter;
+	_Bool fullscreen;
+	int ccr;  // cross-colour renderer
+};
+
+extern struct xconfig_enum ui_ccr_list[];
+extern struct xconfig_enum ui_gl_filter_list[];
 
 /* To fit into the limits of the various UI toolkits in use, tag ids are 7
  * bits, and values are 16 bits wide. */

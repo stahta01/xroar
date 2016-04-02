@@ -69,12 +69,7 @@ static unsigned window_width, window_height;
 static GLuint texnum = 0;
 int vo_opengl_x, vo_opengl_y;
 int vo_opengl_w, vo_opengl_h;
-
-static enum {
-	FILTER_AUTO,
-	FILTER_NEAREST,
-	FILTER_LINEAR,
-} filter;
+static int filter;
 
 static const GLfloat tex_coords[][2] = {
 	{ 0.0, 0.0 },
@@ -95,19 +90,7 @@ _Bool vo_opengl_init(void) {
 	window_width = 640;
 	window_height = 480;
 	vo_opengl_x = vo_opengl_y = 0;
-
-	switch (xroar_cfg.gl_filter) {
-	case XROAR_GL_FILTER_NEAREST:
-		filter = FILTER_NEAREST;
-		break;
-	case XROAR_GL_FILTER_LINEAR:
-		filter = FILTER_LINEAR;
-		break;
-	default:
-		filter = FILTER_AUTO;
-		break;
-	}
-
+	filter = xroar_ui_cfg.gl_filter;
 	alloc_colours();
 	vo_module->scanline = 0;
 	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
@@ -164,8 +147,8 @@ void vo_opengl_set_window_size(unsigned w, unsigned h) {
 	glGenTextures(1, &texnum);
 	glBindTexture(GL_TEXTURE_2D, texnum);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5, 512, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	if (filter == FILTER_NEAREST
-	    || (filter == FILTER_AUTO && (vo_opengl_w % 320) == 0 && (vo_opengl_h % 240) == 0)) {
+	if (filter == UI_GL_FILTER_NEAREST
+	    || (filter == UI_GL_FILTER_AUTO && (vo_opengl_w % 320) == 0 && (vo_opengl_h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	} else {

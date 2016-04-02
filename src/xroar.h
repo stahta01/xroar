@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include "ui.h"
 #include "xconfig.h"
 
 struct cart;
@@ -48,17 +49,10 @@ enum xroar_filetype {
 /**************************************************************************/
 /* Command line arguments */
 
-#define XROAR_GL_FILTER_NEAREST (0)
-#define XROAR_GL_FILTER_LINEAR  (1)
-
 struct xroar_cfg {
 	/* Emulator interface */
 	// Video
-	char *geometry;
-	int gl_filter;
-	_Bool fullscreen;
 	int frameskip;
-	int ccr;
 	_Bool vdg_inverted_text;
 	// Audio
 	char *ao_device;
@@ -102,6 +96,7 @@ struct xroar_cfg {
 };
 
 extern struct xroar_cfg xroar_cfg;
+extern struct ui_cfg xroar_ui_cfg;
 
 /* Emulator interface */
 
@@ -109,11 +104,6 @@ extern struct xconfig_enum xroar_cross_colour_list[];
 
 /**************************************************************************/
 /* Global flags */
-
-/* NTSC cross-colour can either be rendered as a simple four colour palette,
- * or with a 5-bit lookup table */
-#define CROSS_COLOUR_SIMPLE (0)
-#define CROSS_COLOUR_5BIT   (1)
 
 extern _Bool xroar_noratelimit;
 extern int xroar_frameskip;

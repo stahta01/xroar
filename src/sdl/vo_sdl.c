@@ -83,8 +83,8 @@ static Pixel alloc_and_map(int r, int g, int b) {
 #include "vo_generic_ops.c"
 
 static _Bool init(void) {
-	vo_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
-	if (set_fullscreen(xroar_cfg.fullscreen))
+	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
+	if (set_fullscreen(xroar_ui_cfg.fullscreen))
 		return 0;
 	vsync();
 	return 1;

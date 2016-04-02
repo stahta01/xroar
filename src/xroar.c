@@ -81,8 +81,6 @@
 struct xroar_cfg xroar_cfg = {
 	.disk_auto_os9 = 1,
 	.disk_auto_sd = 1,
-	.gl_filter = ANY_AUTO,
-	.ccr = CROSS_COLOUR_5BIT,
 };
 
 // Private
@@ -129,7 +127,6 @@ struct private_cfg {
 	/* Emulator interface */
 	char *ui;
 	char *filereq;
-	char *vo;
 	char *ao;
 	int volume;
 	char *joy_right;
@@ -166,6 +163,11 @@ static struct private_cfg private_cfg = {
 	.tape_fast = 1,
 	.tape_pad = -1,
 	.tape_pad_auto = 1,
+};
+
+struct ui_cfg xroar_ui_cfg = {
+	.gl_filter = UI_GL_FILTER_AUTO,
+	.ccr = UI_CCR_5BIT,
 };
 
 /* Helper functions used by configuration */
@@ -573,7 +575,7 @@ _Bool xroar_init(int argc, char **argv) {
 		sound_module_list = ui_module->sound_module_list;
 	// Select file requester, video & sound modules
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
-	vo_module = (struct vo_module *)module_select_by_arg((struct module * const *)vo_module_list, private_cfg.vo);
+	vo_module = (struct vo_module *)module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
 	sound_module = (SoundModule *)module_select_by_arg((struct module * const *)sound_module_list, private_cfg.ao);
 
 	/* Check other command-line options */
@@ -717,7 +719,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 
 	/* Notify UI of starting options: */
-	ui_module->set_state(ui_tag_fullscreen, xroar_cfg.fullscreen, NULL);
+	ui_module->set_state(ui_tag_fullscreen, xroar_ui_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	/* Configure machine */
@@ -1717,19 +1719,6 @@ static struct xconfig_enum tape_channel_mode_list[] = {
 	{ XC_ENUM_END() }
 };
 
-static struct xconfig_enum gl_filter_list[] = {
-	{ XC_ENUM_INT("auto", ANY_AUTO, "Automatic") },
-	{ XC_ENUM_INT("nearest", ANY_AUTO, "Nearest-neighbour filter") },
-	{ XC_ENUM_INT("linear", ANY_AUTO, "Linear filter") },
-	{ XC_ENUM_END() }
-};
-
-static struct xconfig_enum ccr_list[] = {
-	{ XC_ENUM_INT("simple", CROSS_COLOUR_SIMPLE, "four colour palette") },
-	{ XC_ENUM_INT("5bit", CROSS_COLOUR_5BIT, "5-bit lookup table") },
-	{ XC_ENUM_END() }
-};
-
 struct xconfig_enum xroar_cross_colour_list[] = {
 	{ XC_ENUM_INT("none", CROSS_COLOUR_OFF, "None") },
 	{ XC_ENUM_INT("blue-red", CROSS_COLOUR_KBRW, "Blue-red") },
@@ -1841,13 +1830,13 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("filereq", &private_cfg.filereq) },
 
 	/* Video: */
-	{ XC_SET_STRING("vo", &private_cfg.vo) },
-	{ XC_SET_BOOL("fs", &xroar_cfg.fullscreen) },
+	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
+	{ XC_SET_BOOL("fs", &xroar_ui_cfg.fullscreen) },
 	{ XC_SET_INT("fskip", &xroar_cfg.frameskip) },
-	{ XC_SET_ENUM("ccr", &xroar_cfg.ccr, ccr_list) },
-	{ XC_SET_ENUM("gl-filter", &xroar_cfg.gl_filter, gl_filter_list) },
-	{ XC_SET_STRING("geometry", &xroar_cfg.geometry) },
-	{ XC_SET_STRING("g", &xroar_cfg.geometry) },
+	{ XC_SET_ENUM("ccr", &xroar_ui_cfg.ccr, ui_ccr_list) },
+	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.gl_filter, ui_gl_filter_list) },
+	{ XC_SET_STRING("geometry", &xroar_ui_cfg.geometry) },
+	{ XC_SET_STRING("g", &xroar_ui_cfg.geometry) },
 	{ XC_SET_BOOL("invert-text", &xroar_cfg.vdg_inverted_text) },
 
 	/* Audio: */
@@ -2163,12 +2152,12 @@ static void config_print_all(_Bool all) {
 	puts("");
 
 	puts("# Video");
-	xroar_cfg_print_string(all, "vo", private_cfg.vo, NULL);
-	xroar_cfg_print_bool(all, "fs", xroar_cfg.fullscreen, 0);
+	xroar_cfg_print_string(all, "vo", xroar_ui_cfg.vo, NULL);
+	xroar_cfg_print_bool(all, "fs", xroar_ui_cfg.fullscreen, 0);
 	xroar_cfg_print_int_nz(all, "fskip", xroar_frameskip);
-	xroar_cfg_print_enum(all, "ccr", xroar_cfg.ccr, CROSS_COLOUR_5BIT, ccr_list);
-	xroar_cfg_print_enum(all, "gl-filter", xroar_cfg.gl_filter, ANY_AUTO, gl_filter_list);
-	xroar_cfg_print_string(all, "geometry", xroar_cfg.geometry, NULL);
+	xroar_cfg_print_enum(all, "ccr", xroar_ui_cfg.ccr, UI_CCR_5BIT, ui_ccr_list);
+	xroar_cfg_print_enum(all, "gl-filter", xroar_ui_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
+	xroar_cfg_print_string(all, "geometry", xroar_ui_cfg.geometry, NULL);
 	xroar_cfg_print_bool(all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
 	puts("");
 

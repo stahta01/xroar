@@ -82,8 +82,8 @@ static _Bool init(void) {
 	for (int i = 0; i < 320 * 240; i++)
 		pixels[i] = MAPCOLOUR(0,0,0);
 
-	vo_sdl_module.is_fullscreen = !xroar_cfg.fullscreen;
-	if (set_fullscreen(xroar_cfg.fullscreen) != 0) {
+	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
+	if (set_fullscreen(xroar_ui_cfg.fullscreen) != 0) {
 		return 0;
 	}
 

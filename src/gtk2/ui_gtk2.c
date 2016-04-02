@@ -619,8 +619,8 @@ static _Bool init(void) {
 	gtk_widget_show(gtk2_drawing_area);
 
 	/* Parse initial geometry */
-	if (xroar_cfg.geometry) {
-		gtk_window_parse_geometry(GTK_WINDOW(gtk2_top_window), xroar_cfg.geometry);
+	if (xroar_ui_cfg.geometry) {
+		gtk_window_parse_geometry(GTK_WINDOW(gtk2_top_window), xroar_ui_cfg.geometry);
 	}
 
 	/* Cursor hiding */

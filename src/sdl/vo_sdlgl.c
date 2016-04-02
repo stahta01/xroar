@@ -69,9 +69,9 @@ static _Bool init(void) {
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	vo_sdlgl_module.is_fullscreen = !xroar_cfg.fullscreen;
+	vo_sdlgl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
 
-	if (set_fullscreen(xroar_cfg.fullscreen))
+	if (set_fullscreen(xroar_ui_cfg.fullscreen))
 		return 0;
 
 	vsync();
