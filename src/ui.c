@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "module.h"
 #include "ui.h"
@@ -70,3 +71,12 @@ struct xconfig_enum ui_gl_filter_list[] = {
 	{ XC_ENUM_INT("linear", UI_GL_FILTER_LINEAR, "Linear filter") },
 	{ XC_ENUM_END() }
 };
+
+void ui_print_vo_help(void) {
+	for (int i = 0; ui_module_list[i]; i++) {
+		if (!ui_module_list[i]->vo_module_list)
+			continue;
+		printf("Video modules for %s (ui %s)\n", ui_module_list[i]->common.description, ui_module_list[i]->common.name);
+		module_print_list((struct module * const*)ui_module_list[i]->vo_module_list);
+	}
+}

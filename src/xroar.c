@@ -547,6 +547,13 @@ _Bool xroar_init(int argc, char **argv) {
 	set_cart(NULL);
 	set_joystick(NULL);
 
+	// Help text
+
+	// Useful for -vo help to list the video modules within all available UIs
+	if (xroar_ui_cfg.vo && 0 == strcmp(xroar_ui_cfg.vo, "help")) {
+		ui_print_vo_help();
+		exit(EXIT_SUCCESS);
+	}
 	if (private_cfg.config_print) {
 		config_print_all(0);
 		exit(EXIT_SUCCESS);
@@ -555,6 +562,7 @@ _Bool xroar_init(int argc, char **argv) {
 		config_print_all(1);
 		exit(EXIT_SUCCESS);
 	}
+
 	assert(xroar_machine_config != NULL);
 
 	/* New vdrive interface */

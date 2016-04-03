@@ -101,4 +101,6 @@ struct ui_module {
 extern struct ui_module * const *ui_module_list;
 extern struct ui_module *ui_module;
 
+void ui_print_vo_help(void);
+
 #endif
