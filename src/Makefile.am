@@ -190,6 +190,8 @@ xroar_SOURCES += \
 	sdl2/sdl_x11.c \
 	sdl2/sdl_x11_keyboard.c \
 	sdl2/sdl_x11_keycode_tables.h
+xroar_CFLAGS += $(X11_CFLAGS)
+xroar_LDADD += $(X11_LIBS)
 endif
 
 if MINGW

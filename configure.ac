@@ -200,6 +200,8 @@ int main(int argc, char **argv) { (void)XKeysymToKeycode(NULL, 0); return 0; }
 
 AM_CONDITIONAL([X11], [test -n "$have_xlib"])
 AM_COND_IF([X11], [AC_DEFINE([HAVE_X11], 1, [Have xlib])])
+AC_SUBST(X11_CFLAGS)
+AC_SUBST(X11_LIBS)
 
 ### POSIX threads
 
