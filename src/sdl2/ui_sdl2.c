@@ -37,10 +37,6 @@
 
 #include "sdl2/common.h"
 
-#ifdef WINDOWS32
-#include "windows32/common_windows32.h"
-#endif
-
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
 
@@ -73,17 +69,6 @@ static _Bool init(void) {
 
 #ifdef HAVE_X11
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
-#endif
-
-#ifdef WINDOWS32
-	{
-		SDL_version sdlver;
-		SDL_SysWMinfo sdlinfo;
-		SDL_VERSION(&sdlver);
-		sdlinfo.version = sdlver;
-		SDL_GetWindowWMInfo(sdl_window, &sdlinfo);
-		windows32_main_hwnd = sdlinfo.info.win.window;
-	}
 #endif
 
 	sdl_keyboard_init();

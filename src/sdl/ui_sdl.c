@@ -37,10 +37,6 @@
 
 #include "sdl/common.h"
 
-#ifdef WINDOWS32
-#include "windows32/common_windows32.h"
-#endif
-
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
 
@@ -58,10 +54,6 @@ struct ui_module ui_sdl_module = {
 };
 
 static _Bool init(void) {
-#ifdef WINDOWS32
-	if (!getenv("SDL_VIDEODRIVER"))
-		putenv("SDL_VIDEODRIVER=windib");
-#endif
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
@@ -74,17 +66,6 @@ static _Bool init(void) {
 		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
 		return 0;
 	}
-
-#ifdef WINDOWS32
-	{
-		SDL_version sdlver;
-		SDL_SysWMinfo sdlinfo;
-		SDL_VERSION(&sdlver);
-		sdlinfo.version = sdlver;
-		SDL_GetWMInfo(&sdlinfo);
-		windows32_main_hwnd = sdlinfo.window;
-	}
-#endif
 
 	sdl_keyboard_init();
 
