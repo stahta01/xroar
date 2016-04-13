@@ -38,7 +38,7 @@
 #include "wd279x.h"
 #include "xroar.h"
 
-static struct cart *deltados_new(struct cart_config *);
+static struct cart *deltados_new(struct cart_config *cc);
 
 struct cart_module cart_deltados_module = {
 	.name = "delta",
@@ -48,13 +48,15 @@ struct cart_module cart_deltados_module = {
 
 struct deltados {
 	struct cart cart;
-	unsigned ic1_old;
-	unsigned ic1_drive_select;
-	_Bool ic1_side_select;
-	_Bool ic1_density;
+	unsigned latch_old;
+	unsigned latch_drive_select;
+	_Bool latch_side_select;
+	_Bool latch_density;
 	WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
+
+/* Cart interface */
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
@@ -62,7 +64,12 @@ static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
 static _Bool deltados_has_interface(struct cart *c, const char *ifname);
 static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
-static void ff44_write(struct deltados *d, unsigned flags);
+
+/* Latch */
+
+static void latch_write(struct deltados *d, unsigned D);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct cart *deltados_new(struct cart_config *cc) {
 	struct deltados *d = xmalloc(sizeof(*d));
@@ -79,15 +86,15 @@ static struct cart *deltados_new(struct cart_config *cc) {
 	c->attach_interface = deltados_attach_interface;
 
 	d->fdc = wd279x_new(WD2791);
+
 	return c;
 }
 
 static void deltados_reset(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
 	wd279x_reset(d->fdc);
-	d->ic1_old = -1;
-	d->ic1_drive_select = -1;
-	ff44_write(d, 0);
+	d->latch_old = -1;
+	latch_write(d, 0);
 }
 
 static void deltados_detach(struct cart *c) {
@@ -114,7 +121,7 @@ static void deltados_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	if (!P2)
 		return;
 	if ((A & 4) == 0) wd279x_write(d->fdc, A, D);
-	if (A & 4) ff44_write(d, D);
+	if (A & 4) latch_write(d, D);
 }
 
 static _Bool deltados_has_interface(struct cart *c, const char *ifname) {
@@ -147,26 +154,27 @@ static void deltados_attach_interface(struct cart *c, const char *ifname, void *
 	wd279x_update_connection(d->fdc);
 }
 
-/* Delta cartridge circuitry */
-static void ff44_write(struct deltados *d, unsigned flags) {
-	if (flags != d->ic1_old) {
-		LOG_DEBUG(2, "Delta: Write to FF44: ");
-		if ((flags ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01u, ", flags & 0x03);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void latch_write(struct deltados *d, unsigned D) {
+	if (D != d->latch_old) {
+		LOG_DEBUG(2, "Delta: Write to latch: ");
+		if ((D ^ d->latch_old) & 0x03) {
+			LOG_DEBUG(2, "DRIVE SELECT %01u, ", D & 0x03);
 		}
-		if ((flags ^ d->ic1_old) & 0x04) {
-			LOG_DEBUG(2, "SIDE %s, ", (flags & 0x04)?"1":"0");
+		if ((D ^ d->latch_old) & 0x04) {
+			LOG_DEBUG(2, "SIDE %s, ", (D & 0x04)?"1":"0");
 		}
-		if ((flags ^ d->ic1_old) & 0x08) {
-			LOG_DEBUG(2, "DENSITY %s, ", (flags & 0x08)?"DOUBLE":"SINGLE");
+		if ((D ^ d->latch_old) & 0x08) {
+			LOG_DEBUG(2, "DENSITY %s, ", (D & 0x08)?"DOUBLE":"SINGLE");
 		}
 		LOG_DEBUG(2, "\n");
-		d->ic1_old = flags;
+		d->latch_old = D;
 	}
-	d->ic1_drive_select = flags & 0x03;
-	d->vdrive_interface->set_drive(d->vdrive_interface, d->ic1_drive_select);
-	d->ic1_side_select = flags & 0x04;
-	d->vdrive_interface->set_sso(d->vdrive_interface, d->ic1_side_select ? 1 : 0);
-	d->ic1_density = !(flags & 0x08);
-	wd279x_set_dden(d->fdc, !d->ic1_density);
+	d->latch_drive_select = D & 0x03;
+	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	d->latch_side_select = D & 0x04;
+	d->vdrive_interface->set_sso(d->vdrive_interface, d->latch_side_select ? 1 : 0);
+	d->latch_density = !(D & 0x08);
+	wd279x_set_dden(d->fdc, !d->latch_density);
 }

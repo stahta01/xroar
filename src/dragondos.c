@@ -40,7 +40,7 @@
 #include "wd279x.h"
 #include "xroar.h"
 
-static struct cart *dragondos_new(struct cart_config *);
+static struct cart *dragondos_new(struct cart_config *cc);
 
 struct cart_module cart_dragondos_module = {
 	.name = "dragondos",
@@ -50,17 +50,18 @@ struct cart_module cart_dragondos_module = {
 
 struct dragondos {
 	struct cart cart;
-	unsigned ic1_old;
-	unsigned ic1_drive_select;
-	_Bool ic1_motor_enable;
-	_Bool ic1_precomp_enable;
-	_Bool ic1_density;
-	_Bool ic1_nmi_enable;
+	unsigned latch_old;
+	unsigned latch_drive_select;
+	_Bool latch_motor_enable;
+	_Bool latch_precomp_enable;
+	_Bool latch_density;
+	_Bool latch_nmi_enable;
 	_Bool have_becker;
 	WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
 
+/* Cart interface */
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
 static void dragondos_reset(struct cart *c);
@@ -68,11 +69,14 @@ static void dragondos_detach(struct cart *c);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
-static void ff48_write(struct dragondos *d, unsigned flags);
-
 /* Handle signals from WD2797 */
-static void set_drq(void *, _Bool);
-static void set_intrq(void *, _Bool);
+static void set_drq(void *sptr, _Bool value);
+static void set_intrq(void *sptr, _Bool value);
+
+/* Latch */
+static void latch_write(struct dragondos *d, unsigned D);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct cart *dragondos_new(struct cart_config *cc) {
 	struct dragondos *d = xmalloc(sizeof(*d));
@@ -97,8 +101,8 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 static void dragondos_reset(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
 	wd279x_reset(d->fdc);
-	d->ic1_old = 0xff;
-	ff48_write(d, 0);
+	d->latch_old = -1;
+	latch_write(d, 0);
 	if (d->have_becker)
 		becker_reset();
 }
@@ -150,7 +154,7 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	if (d->have_becker) {
 		switch (A & 3) {
 		case 0x0:
-			ff48_write(d, D);
+			latch_write(d, D);
 			break;
 		case 0x2:
 			becker_write_data(D);
@@ -159,7 +163,7 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 			break;
 		}
 	} else {
-		ff48_write(d, D);
+		latch_write(d, D);
 	}
 }
 
@@ -176,8 +180,8 @@ static void dragondos_attach_interface(struct cart *c, const char *ifname, void 
 	d->fdc->set_dirc = DELEGATE_AS1(void, int, d->vdrive_interface->set_dirc, d->vdrive_interface);
 	d->fdc->set_dden = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dden, d->vdrive_interface);
 	d->fdc->set_sso = DELEGATE_AS1(void, unsigned, d->vdrive_interface->set_sso, d->vdrive_interface);
-	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, c);
-	d->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, c);
+	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, d);
+	d->fdc->set_intrq = DELEGATE_AS1(void, bool, set_intrq, d);
 	d->fdc->get_head_pos = DELEGATE_AS0(unsigned, d->vdrive_interface->get_head_pos, d->vdrive_interface);
 	d->fdc->step = DELEGATE_AS0(void, d->vdrive_interface->step, d->vdrive_interface);
 	d->fdc->write = DELEGATE_AS1(void, uint8, d->vdrive_interface->write, d->vdrive_interface);
@@ -198,47 +202,47 @@ static void dragondos_attach_interface(struct cart *c, const char *ifname, void 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* DragonDOS cartridge circuitry */
-static void ff48_write(struct dragondos *d, unsigned flags) {
-	if (flags != d->ic1_old) {
-		LOG_DEBUG(2, "DragonDOS: Write to FF48: ");
-		if ((flags ^ d->ic1_old) & 0x03) {
-			LOG_DEBUG(2, "DRIVE SELECT %01u, ", flags & 0x03);
+static void latch_write(struct dragondos *d, unsigned D) {
+	if (D != d->latch_old) {
+		LOG_DEBUG(2, "DragonDOS: Write to latch: ");
+		if ((D ^ d->latch_old) & 0x03) {
+			LOG_DEBUG(2, "DRIVE SELECT %01u, ", D & 0x03);
 		}
-		if ((flags ^ d->ic1_old) & 0x04) {
-			LOG_DEBUG(2, "MOTOR %s, ", (flags & 0x04)?"ON":"OFF");
+		if ((D ^ d->latch_old) & 0x04) {
+			LOG_DEBUG(2, "MOTOR %s, ", (D & 0x04)?"ON":"OFF");
 		}
-		if ((flags ^ d->ic1_old) & 0x08) {
-			LOG_DEBUG(2, "DENSITY %s, ", (flags & 0x08)?"SINGLE":"DOUBLE");
+		if ((D ^ d->latch_old) & 0x08) {
+			LOG_DEBUG(2, "DENSITY %s, ", (D & 0x08)?"SINGLE":"DOUBLE");
 		}
-		if ((flags ^ d->ic1_old) & 0x10) {
-			LOG_DEBUG(2, "PRECOMP %s, ", (flags & 0x10)?"ON":"OFF");
+		if ((D ^ d->latch_old) & 0x10) {
+			LOG_DEBUG(2, "PRECOMP %s, ", (D & 0x10)?"ON":"OFF");
 		}
-		if ((flags ^ d->ic1_old) & 0x20) {
-			LOG_DEBUG(2, "NMI %s, ", (flags & 0x20)?"ENABLED":"DISABLED");
+		if ((D ^ d->latch_old) & 0x20) {
+			LOG_DEBUG(2, "NMI %s, ", (D & 0x20)?"ENABLED":"DISABLED");
 		}
 		LOG_DEBUG(2, "\n");
-		d->ic1_old = flags;
+		d->latch_old = D;
 	}
-	d->ic1_drive_select = flags & 0x03;
-	d->vdrive_interface->set_drive(d->vdrive_interface, d->ic1_drive_select);
-	d->ic1_motor_enable = flags & 0x04;
-	d->ic1_density = flags & 0x08;
-	wd279x_set_dden(d->fdc, !d->ic1_density);
-	d->ic1_precomp_enable = flags & 0x10;
-	d->ic1_nmi_enable = flags & 0x20;
+	d->latch_drive_select = D & 0x03;
+	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
+	d->latch_motor_enable = D & 0x04;
+	d->latch_density = D & 0x08;
+	wd279x_set_dden(d->fdc, !d->latch_density);
+	d->latch_precomp_enable = D & 0x10;
+	d->latch_nmi_enable = D & 0x20;
 }
 
 static void set_drq(void *sptr, _Bool value) {
-	struct cart *c = sptr;
+	struct dragondos *d = sptr;
+	struct cart *c = &d->cart;
 	DELEGATE_CALL1(c->signal_firq, value);
 }
 
 static void set_intrq(void *sptr, _Bool value) {
-	struct cart *c = sptr;
 	struct dragondos *d = sptr;
+	struct cart *c = &d->cart;
 	if (value) {
-		if (d->ic1_nmi_enable) {
+		if (d->latch_nmi_enable) {
 			DELEGATE_CALL1(c->signal_nmi, 1);
 		}
 	} else {
