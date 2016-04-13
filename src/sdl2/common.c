@@ -42,6 +42,7 @@
 #include "sdl2/common.h"
 
 extern inline void sdl_os_keyboard_init(SDL_Window *sw);
+extern inline void sdl_os_keyboard_free(SDL_Window *sw);
 extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
 extern inline void sdl_os_fix_keyboard_event(SDL_Event *ev);
 extern inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym);

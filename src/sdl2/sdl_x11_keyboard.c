@@ -209,6 +209,14 @@ void sdl_x11_keyboard_init(SDL_Window *sw) {
 	update_mapping_tables(display);
 }
 
+void sdl_x11_keyboard_free(SDL_Window *sw) {
+	(void)sw;
+	if (x11_to_sdl_keycode) {
+		free(x11_to_sdl_keycode);
+		x11_to_sdl_keycode = NULL;
+	}
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Called on receipt of an X11 MappingNotify event. Update our tables if

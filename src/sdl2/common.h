@@ -46,7 +46,8 @@ void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
 
 /* X11 keyboard handling. */
 
-void sdl_x11_keyboard_init(SDL_Window *);
+void sdl_x11_keyboard_init(SDL_Window *sw);
+void sdl_x11_keyboard_free(SDL_Window *sw);
 
 void sdl_x11_mapping_notify(XMappingEvent *);
 void sdl_x11_keymap_notify(XKeymapEvent *);
@@ -79,6 +80,13 @@ inline void sdl_os_keyboard_init(SDL_Window *sw) {
 	sdl_x11_keyboard_init(sw);
 #elif defined(WINDOWS32)
 	sdl_windows32_keyboard_init(sw);
+#endif
+}
+
+inline void sdl_os_keyboard_free(SDL_Window *sw) {
+	(void)sw;
+#if defined(HAVE_X11)
+	sdl_x11_keyboard_free(sw);
 #endif
 }
 

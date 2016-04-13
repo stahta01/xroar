@@ -87,9 +87,6 @@ static _Bool init(void) {
 		return 0;
 	}
 
-	/* Initialise keyboard */
-	sdl_os_keyboard_init(sdl_window);
-
 	alloc_colours();
 	vo_sdl_module.window_x = VDG_ACTIVE_LINE_START - 32;
 	vo_sdl_module.window_y = VDG_TOP_BORDER_START + 1;
@@ -175,6 +172,13 @@ static int set_fullscreen(_Bool fullscreen) {
 	vo_sdl_module.is_fullscreen = fullscreen;
 	sdl_window_x = sdl_window_y = 0;
 
+	/* Initialise keyboard */
+	sdl_os_keyboard_init(sdl_window);
+
+	/* Clear out any keydown events queued for the new window */
+	SDL_PumpEvents();
+	SDL_FlushEvent(SDL_KEYDOWN);
+
 	return 0;
 }
 
@@ -182,6 +186,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 static void destroy_window(void) {
 	if (sdl_window) {
+		sdl_os_keyboard_free(sdl_window);
 		SDL_DestroyWindow(sdl_window);
 		sdl_window = NULL;
 	}
