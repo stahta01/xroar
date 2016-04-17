@@ -695,8 +695,7 @@ _Bool xroar_init(int argc, char **argv) {
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	vo_module = (struct vo_module *)module_init_from_list((struct module * const *)vo_module_list, (struct module *)vo_module);
-	if (vo_module == NULL && vo_module_list != NULL) {
+	if (!module_init((struct module *)vo_module)) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
