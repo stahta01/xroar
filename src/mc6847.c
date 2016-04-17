@@ -331,36 +331,28 @@ static void render_scanline(struct MC6847_private *vdg) {
 			}
 		}
 
+		uint8_t c0, c1;
+		switch (vdg->render_mode) {
+		case VDG_RENDER_SG:
+			c0 = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
+			c1 = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
+			break;
+		case VDG_RENDER_CG:
+			c0 = c1 = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
+			break;
+		case VDG_RENDER_RG:
+			c0 = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
+			c1 = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
+			break;
+		}
 		if (vdg->is_32byte) {
-			switch (vdg->render_mode) {
-			case VDG_RENDER_SG:
-				*(pixel) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				*(pixel+1) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				break;
-			case VDG_RENDER_CG:
-				*(pixel) = *(pixel+1) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
-				break;
-			case VDG_RENDER_RG:
-				*(pixel) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
-				*(pixel+1) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
-				break;
-			}
+			*(pixel) = c0;
+			*(pixel+1) = c1;
 			pixel += 2;
 			vdg->beam_pos += 2;
 		} else {
-			switch (vdg->render_mode) {
-			case VDG_RENDER_SG:
-				*(pixel) = *(pixel+1) = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				*(pixel+2) = *(pixel+3) = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
-				break;
-			case VDG_RENDER_CG:
-				*(pixel) = *(pixel+1) = *(pixel+2) = *(pixel+3) = vdg->cg_colours + ((vdg->vram_g_data & 0xc0) >> 6);
-				break;
-			case VDG_RENDER_RG:
-				*(pixel) = *(pixel+1) = (vdg->vram_g_data&0x80) ? vdg->fg_colour : vdg->bg_colour;
-				*(pixel+2) = *(pixel+3) = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
-				break;
-			}
+			*(pixel) = *(pixel+1) = c0;
+			*(pixel+2) = *(pixel+3) = c1;
 			pixel += 4;
 			vdg->beam_pos += 4;
 		}
