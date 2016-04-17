@@ -52,7 +52,6 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809_trace.h"
-#include "mc6847/mc6847.h"
 #include "module.h"
 #include "mpi.h"
 #include "path.h"
@@ -864,7 +863,7 @@ static struct vdg_palette *get_machine_palette(void) {
  */
 
 _Bool xroar_run(void) {
-	switch (machine_run(VDG_LINE_DURATION * 32)) {
+	switch (machine_run(EVENT_MS(5))) {
 	case machine_run_state_timeout:
 		if (vo_module->refresh)
 			vo_module->refresh();
