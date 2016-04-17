@@ -103,32 +103,6 @@ struct MC6847_private {
 	uint8_t text_border_colour;
 };
 
-#define SER_VDG_GM (0x01)
-#define SER_VDG_nA_S (0x02)
-#define SER_VDG_nA_G (0x03)
-#define SER_VDG_EXT (0x04)
-#define SER_VDG_CSS (0x05)
-#define SER_VDG_CSSa (0x06)
-#define SER_VDG_CSSb (0x07)
-#define SER_VDG_ROW (0x08)
-#define SER_VDG_HS_FALL_TIME (0x09)
-#define SER_VDG_HS_RISE_TIME (0x0a)
-#define SER_VDG_SCANLINE_START (0x0b)
-#define SER_VDG_SCANLINE (0x0c)
-#define SER_VDG_VRAM_G_DATA (0x0d)
-#define SER_VDG_VRAM_SG_DATA (0x0e)
-#define SER_VDG_BEAM_POS (0x0f)
-#define SER_VDG_S_FG_COLOUR (0x10)
-#define SER_VDG_S_BG_COLOUR (0x11)
-#define SER_VDG_VRAM_BIT (0x12)
-#define SER_VDG_IS_32BYTE (0x13)
-#define SER_VDG_VRAM (0x14)
-#define SER_VDG_VRAM_INDEX (0x15)
-#define SER_VDG_LBORDER_REMAINING (0x16)
-#define SER_VDG_VRAM_REMAINING (0x17)
-#define SER_VDG_RBORDER_REMAINING (0x18)
-#define SER_VDG_IS_T1 (0x19)
-
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
 static void do_hs_fall_pal(void *);
