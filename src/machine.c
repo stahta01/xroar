@@ -66,7 +66,7 @@ uint8_t machine_ram[0x10000];
 static uint8_t *machine_rom;
 static uint8_t rom0[0x4000];
 static uint8_t rom1[0x4000];
-struct MC6883 *SAM0 = NULL;
+static struct MC6883 *SAM0 = NULL;
 static struct MC6809 *CPU0 = NULL;
 static struct MC6821 *PIA0, *PIA1;
 static struct MC6847 *VDG0;
@@ -962,7 +962,7 @@ void machine_configure(struct machine_config *mc) {
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar_cfg.gdb) {
-		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, CPU0, machine_bp_session);
+		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, CPU0, SAM0, machine_bp_session);
 		gdb_set_debug(gdb_interface, xroar_cfg.debug_gdb);
 	}
 #endif
@@ -1064,25 +1064,20 @@ void machine_set_trace(_Bool trace_on) {
  * Device inspection.
  */
 
-int machine_num_cpus(void) {
-	return 1;
-}
+/* Note, this is SLOW.  Could be sped up by maintaining a hash by component
+ * name, but will only ever be used outside critical path, so don't bother for
+ * now. */
 
-int machine_num_pias(void) {
-	return 2;
-}
-
-struct MC6809 *machine_get_cpu(int n) {
-	if (n != 0)
-		return NULL;
-	return CPU0;
-}
-
-struct MC6821 *machine_get_pia(int n) {
-	if (n == 0)
+void *machine_get_component(const char *cname) {
+	if (0 == strcmp(cname, "CPU0")) {
+		return CPU0;
+	} else if (0 == strcmp(cname, "SAM0")) {
+		return SAM0;
+	} else if (0 == strcmp(cname, "PIA0")) {
 		return PIA0;
-	if (n == 1)
+	} else if (0 == strcmp(cname, "PIA1")) {
 		return PIA1;
+	}
 	return NULL;
 }
 

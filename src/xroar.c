@@ -1023,7 +1023,7 @@ void xroar_set_trace(int mode) {
 	}
 	xroar_cfg.trace_enabled = set_to;
 	machine_set_trace(xroar_cfg.trace_enabled);
-	struct MC6809 *cpu = machine_get_cpu(0);
+	struct MC6809 *cpu = machine_get_component("CPU0");
 	if (xroar_cfg.trace_enabled) {
 		switch (xroar_machine_config->cpu) {
 		case CPU_MC6809: default:

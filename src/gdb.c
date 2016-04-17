@@ -110,6 +110,8 @@
 struct gdb_interface_private {
 	// CPU
 	struct MC6809 *cpu;
+	// SAM
+	struct MC6883 *sam;
 
 	// Breakpoint session
 	struct bp_session *bp_session;
@@ -172,11 +174,12 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct bp_session *bp_session) {
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct MC6883 *sam, struct bp_session *bp_session) {
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
 
 	gip->cpu = cpu;
+	gip->sam = sam;
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 
@@ -788,7 +791,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 			if (gip->debug & GDB_DEBUG_QUERY) {
 				LOG_PRINT("gdb: query: xroar.sam\n");
 			}
-			sprintf(packet, "%04x", sam_get_register(SAM0));
+			sprintf(packet, "%04x", sam_get_register(gip->sam));
 			send_packet(gip, packet, 4);
 		} else {
 			if (gip->debug & GDB_DEBUG_QUERY) {
@@ -818,7 +821,7 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 	if (0 == strncmp(set, "xroar.", 6)) {
 		set += 6;
 		if (0 == strcmp(set, "sam")) {
-			sam_set_register(SAM0, hex16(args));
+			sam_set_register(gip->sam, hex16(args));
 			send_packet_string(gip, "OK");
 			return;
 		}

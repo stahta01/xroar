@@ -120,7 +120,7 @@ int intel_hex_read(const char *filename, int autorun) {
 		log_close(&log_hex);
 	if (exec != 0) {
 		if (autorun) {
-			struct MC6809 *cpu = machine_get_cpu(0);
+			struct MC6809 *cpu = machine_get_component("CPU0");
 			if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 				LOG_PRINT("Intel HEX: EXEC $%04x - autorunning\n", exec);
 			cpu->jump(cpu, exec);
@@ -185,7 +185,7 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 	}
 	log_close(&log_bin);
 	if (autorun) {
-		struct MC6809 *cpu = machine_get_cpu(0);
+		struct MC6809 *cpu = machine_get_component("CPU0");
 		if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 			LOG_PRINT("Dragon BIN: EXEC $%04x - autorunning\n", exec);
 		cpu->jump(cpu, exec);
@@ -235,7 +235,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 				break;
 			}
 			if (autorun) {
-				struct MC6809 *cpu = machine_get_cpu(0);
+				struct MC6809 *cpu = machine_get_component("CPU0");
 				if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 					LOG_PRINT("CoCo BIN: EXEC $%04x - autorunning\n", exec);
 				cpu->jump(cpu, exec);

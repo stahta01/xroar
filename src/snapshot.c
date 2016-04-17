@@ -73,6 +73,8 @@ static const char *old_cart_type_names[] = {
 	"delta",
 };
 
+static const char *pia_component_names[2] = { "PIA0", "PIA1" };
+
 static char *read_string(FILE *fd, int *size) {
 	char *str = NULL;
 	if (*size == 0) {
@@ -206,7 +208,7 @@ int write_snapshot(const char *filename) {
 	// unacknowledged interrupts pending already cleared in the CPU state
 	write_chunk_header(fd, ID_PIA_REGISTERS, 3 * 4);
 	for (int i = 0; i < 2; i++) {
-		struct MC6821 *pia = machine_get_pia(i);
+		struct MC6821 *pia = machine_get_component(pia_component_names[i]);
 		fs_write_uint8(fd, pia->a.direction_register);
 		fs_write_uint8(fd, pia->a.output_register);
 		fs_write_uint8(fd, pia->a.control_register);
@@ -215,7 +217,8 @@ int write_snapshot(const char *filename) {
 		fs_write_uint8(fd, pia->b.control_register);
 	}
 	// CPU state
-	struct MC6809 *cpu = machine_get_cpu(0);
+	struct MC6809 *cpu = machine_get_component("CPU0");
+	struct MC6883 *sam = machine_get_component("SAM0");
 	switch (cpu->variant) {
 	case MC6809_VARIANT_MC6809: default:
 		write_mc6809(fd, cpu);
@@ -226,7 +229,7 @@ int write_snapshot(const char *filename) {
 	}
 	// SAM
 	write_chunk_header(fd, ID_SAM_REGISTERS, 2);
-	fs_write_uint16(fd, sam_get_register(SAM0));
+	fs_write_uint16(fd, sam_get_register(sam));
 
 	// Cartridge
 	if (machine_cart) {
@@ -287,7 +290,7 @@ static const int old_arch_mapping[4] = {
 };
 
 static void old_set_registers(uint8_t *regs) {
-	struct MC6809 *cpu = machine_get_cpu(0);
+	struct MC6809 *cpu = machine_get_component("CPU0");
 	cpu->reg_cc = regs[0];
 	MC6809_REG_A(cpu) = regs[1];
 	MC6809_REG_B(cpu) = regs[2];
@@ -392,7 +395,7 @@ int read_snapshot(const char *filename) {
 				{
 					// MC6809 state
 					if (size < 20) break;
-					struct MC6809 *cpu = machine_get_cpu(0);
+					struct MC6809 *cpu = machine_get_component("CPU0");
 					if (cpu->variant != MC6809_VARIANT_MC6809) {
 						LOG_WARN("CPU mismatch - skipping MC6809 chunk\n");
 						break;
@@ -441,7 +444,7 @@ int read_snapshot(const char *filename) {
 				{
 					// HD6309 state
 					if (size < 27) break;
-					struct MC6809 *cpu = machine_get_cpu(0);
+					struct MC6809 *cpu = machine_get_component("CPU0");
 					if (cpu->variant != MC6809_VARIANT_HD6309) {
 						LOG_WARN("CPU mismatch - skipping HD6309 chunk\n");
 						break;
@@ -508,7 +511,7 @@ int read_snapshot(const char *filename) {
 
 			case ID_PIA_REGISTERS:
 				for (int i = 0; i < 2; i++) {
-					struct MC6821 *pia = machine_get_pia(i);
+					struct MC6821 *pia = machine_get_component(pia_component_names[i]);
 					if (size < 3) break;
 					pia->a.direction_register = fs_read_uint8(fd);
 					pia->a.output_register = fs_read_uint8(fd);
@@ -542,7 +545,10 @@ int read_snapshot(const char *filename) {
 				if (size < 2) break;
 				tmp = fs_read_uint16(fd);
 				size -= 2;
-				sam_set_register(SAM0, tmp);
+				{
+					struct MC6883 *sam = machine_get_component("SAM0");
+					sam_set_register(sam, tmp);
+				}
 				break;
 
 			case ID_SNAPVERSION:

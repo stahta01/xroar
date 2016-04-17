@@ -161,7 +161,6 @@ enum machine_run_state {
 	machine_run_state_timeout,
 };
 
-extern struct MC6883 *SAM0;
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
 extern _Bool has_bas, has_extbas, has_altbas, has_combined;
@@ -205,10 +204,7 @@ void machine_signal(int sig);
 
 void machine_set_trace(_Bool trace_on);
 
-int machine_num_cpus(void);
-int machine_num_pias(void);
-struct MC6809 *machine_get_cpu(int n);
-struct MC6821 *machine_get_pia(int n);
+void *machine_get_component(const char *cname);
 
 /* simplified read & write byte for convenience functions */
 uint8_t machine_read_byte(unsigned A);

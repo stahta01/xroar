@@ -13,6 +13,7 @@
 
 struct bp_session;
 struct MC6809;
+struct MC6883;
 
 enum gdb_run_state {
 	gdb_run_state_stopped = 0,
@@ -23,7 +24,7 @@ enum gdb_run_state {
 
 struct gdb_interface;
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct bp_session *bp_session);
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct MC6883 *sam, struct bp_session *bp_session);
 void gdb_interface_free(struct gdb_interface *gi);
 
 int gdb_run_lock(struct gdb_interface *gi);
