@@ -25,7 +25,6 @@
 #include <gtk/gtkgl.h>
 
 #include "logging.h"
-#include "mc6847.h"
 #include "module.h"
 #include "vo.h"
 #include "vo_opengl.h"

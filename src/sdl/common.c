@@ -35,7 +35,6 @@
 #include "joystick.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6847.h"
 #include "vo.h"
 #include "xroar.h"
 

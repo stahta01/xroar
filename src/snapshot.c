@@ -35,7 +35,7 @@
 #include "machine.h"
 #include "mc6809.h"
 #include "mc6821.h"
-#include "mc6847.h"
+#include "mc6847/mc6847.h"
 #include "sam.h"
 #include "snapshot.h"
 #include "tape.h"

@@ -25,7 +25,6 @@
 #include <SDL_opengl.h>
 
 #include "logging.h"
-#include "mc6847.h"
 #include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"

@@ -28,7 +28,6 @@
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6847.h"
 #include "module.h"
 #include "sam.h"
 #include "ui.h"

@@ -26,8 +26,6 @@ xroar_SOURCES = \
 	dkbd.c dkbd.h \
 	dragondos.c \
 	events.c events.h \
-	font-6847.c font-6847.h \
-	font-6847t1.c font-6847t1.h \
 	fs.c fs.h \
 	hd6309.c hd6309.h \
 	hexs19.c hexs19.h \
@@ -37,7 +35,9 @@ xroar_SOURCES = \
 	machine.c machine.h \
 	mc6809.c mc6809.h \
 	mc6821.c mc6821.h \
-	mc6847.c mc6847.h \
+	mc6847/font-6847.c mc6847/font-6847.h \
+	mc6847/font-6847t1.c mc6847/font-6847t1.h \
+	mc6847/mc6847.c mc6847/mc6847.h \
 	module.c module.h \
 	mpi.c mpi.h \
 	orch90.c \
@@ -62,15 +62,15 @@ xroar_SOURCES = \
 	null/vo_null.c
 
 BUILT_SOURCES += \
-	font-6847.c font-6847.h \
-	font-6847t1.c font-6847t1.h
+	mc6847/font-6847.c mc6847/font-6847.h \
+	mc6847/font-6847t1.c mc6847/font-6847t1.h
 
 xroar_SOURCES += \
 	main_unix.c
 
 EXTRA_DIST += \
-	font-6847.c font-6847.h \
-	font-6847t1.c font-6847t1.h \
+	mc6847/font-6847.c mc6847/font-6847.h \
+	mc6847/font-6847t1.c mc6847/font-6847t1.h \
 	mc6809_common.c mc6809_common.h \
 	vo_generic_ops.c
 
@@ -79,24 +79,24 @@ EXTRA_DIST += \
 
 FONT2C = $(top_builddir)/tools/font2c
 
-font-6847.h:
+mc6847/font-6847.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --header --array font_6847 --type "unsigned char" --vdg $(srcdir)/font-6847.png > $@
+	$(FONT2C) --header --array font_6847 --type "unsigned char" --vdg $(srcdir)/mc6847/font-6847.png > $@
 
-font-6847.c:
+mc6847/font-6847.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --array font_6847 --type "unsigned char" --vdg $(srcdir)/font-6847.png > $@
+	$(FONT2C) --array font_6847 --type "unsigned char" --vdg $(srcdir)/mc6847/font-6847.png > $@
 
-font-6847t1.h:
+mc6847/font-6847t1.h:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --header --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png > $@
+	$(FONT2C) --header --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
 
-font-6847t1.c:
+mc6847/font-6847t1.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
-	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/font-6847t1.png > $@
+	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
 
 EXTRA_DIST += \
-	font-6847.png font-6847t1.png
+	mc6847/font-6847.png mc6847/font-6847t1.png
 
 # ROM paths
 

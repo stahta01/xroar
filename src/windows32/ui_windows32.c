@@ -30,7 +30,6 @@ option) any later version.
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6847.h"
 #include "module.h"
 #include "sam.h"
 #include "tape.h"

@@ -52,7 +52,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809_trace.h"
-#include "mc6847.h"
+#include "mc6847/mc6847.h"
 #include "module.h"
 #include "mpi.h"
 #include "path.h"

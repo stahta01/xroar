@@ -38,7 +38,6 @@
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6847.h"
 #include "module.h"
 #include "ui.h"
 #include "vdrive.h"
