@@ -48,12 +48,13 @@ struct vo_module * const sdl_vo_module_list[] = {
 #ifdef HAVE_SDLGL
 	&vo_sdlgl_module,
 #endif
+	// XXX vo_sdl_module commented out, as current video code does not support it
 #ifdef PREFER_NOYUV
-	&vo_sdl_module,
+	//&vo_sdl_module,
 	&vo_sdlyuv_module,
 #else
 	&vo_sdlyuv_module,
-	&vo_sdl_module,
+	//&vo_sdl_module,
 #endif
 	&vo_null_module,
 	NULL

@@ -83,6 +83,10 @@ static Pixel alloc_and_map(int r, int g, int b) {
 #include "vo_generic_ops.c"
 
 static _Bool init(void) {
+	// XXX
+	// New video code assumes 640x240 layout scaled to 4x3.
+	// This old directly-rendered code does not support this!
+	return 0;
 	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
 	if (set_fullscreen(xroar_ui_cfg.fullscreen))
 		return 0;
@@ -143,9 +147,9 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 320;
+	vo_module->window_w = 640;
 	vo_module->window_h = 240;
 	sdl_window_x = sdl_window_y = 0;
 	sdl_window_w = 320;

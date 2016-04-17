@@ -39,7 +39,7 @@
 struct ser_handle;
 
 // Convert VDG pixels (half-cycles) to event ticks:
-#define EVENT_VDG_PIXELS(c) EVENT_SAM_CYCLES((c) * 2)
+#define EVENT_VDG_PIXELS(c) EVENT_SAM_CYCLES((c))
 
 enum vdg_render_mode {
 	VDG_RENDER_SG,
@@ -234,16 +234,16 @@ static void do_hs_fall_pal(void *data) {
 
 static void render_scanline(struct MC6847_private *vdg) {
 	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_PIXELS(1);
-	if (vdg->is_32byte && beam_to >= (VDG_tHBNK + 8)) {
-		unsigned nbytes = (beam_to - VDG_tHBNK) >> 3;
+	if (vdg->is_32byte && beam_to >= (VDG_tHBNK + 16)) {
+		unsigned nbytes = (beam_to - VDG_tHBNK) >> 4;
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
 			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
-	} else if (!vdg->is_32byte && beam_to >= (VDG_tHBNK + 16)) {
-		unsigned nbytes = (beam_to - VDG_tHBNK) >> 4;
+	} else if (!vdg->is_32byte && beam_to >= (VDG_tHBNK + 32)) {
+		unsigned nbytes = (beam_to - VDG_tHBNK) >> 5;
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
@@ -261,7 +261,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 	while (vdg->lborder_remaining > 0) {
 		*(pixel++) = vdg->border_colour;
 		vdg->beam_pos++;
-		if ((vdg->beam_pos & 7) == 0) {
+		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
 		vdg->lborder_remaining--;
@@ -346,15 +346,15 @@ static void render_scanline(struct MC6847_private *vdg) {
 			break;
 		}
 		if (vdg->is_32byte) {
-			*(pixel) = c0;
-			*(pixel+1) = c1;
-			pixel += 2;
-			vdg->beam_pos += 2;
-		} else {
 			*(pixel) = *(pixel+1) = c0;
 			*(pixel+2) = *(pixel+3) = c1;
 			pixel += 4;
 			vdg->beam_pos += 4;
+		} else {
+			*(pixel) = *(pixel+1) = *(pixel+2) = *(pixel+3) = c0;
+			*(pixel+4) = *(pixel+5) = *(pixel+6) = *(pixel+7) = c1;
+			pixel += 8;
+			vdg->beam_pos += 8;
 		}
 
 		vdg->vram_bit -= 2;
@@ -375,7 +375,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
 		*(pixel++) = vdg->border_colour;
 		vdg->beam_pos++;
-		if ((vdg->beam_pos & 7) == 0) {
+		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
 		vdg->rborder_remaining--;

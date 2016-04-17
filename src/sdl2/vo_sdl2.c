@@ -78,8 +78,8 @@ static void destroy_window(void);
 static void destroy_renderer(void);
 
 static _Bool init(void) {
-	pixels = xmalloc(320 * 240 * sizeof(Pixel));
-	for (int i = 0; i < 320 * 240; i++)
+	pixels = xmalloc(640 * 240 * sizeof(Pixel));
+	for (int i = 0; i < 640 * 240; i++)
 		pixels[i] = MAPCOLOUR(0,0,0);
 
 	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
@@ -88,9 +88,9 @@ static _Bool init(void) {
 	}
 
 	alloc_colours();
-	vo_sdl_module.window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_sdl_module.window_x = VDG_ACTIVE_LINE_START - 64;
 	vo_sdl_module.window_y = VDG_TOP_BORDER_START + 1;
-	vo_sdl_module.window_w = 320;
+	vo_sdl_module.window_w = 640;
 	vo_sdl_module.window_h = 240;
 
 	vsync();
@@ -208,14 +208,14 @@ static int create_renderer(void) {
 		return -1;
 	}
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 320, 240);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 640, 240);
 	if (!texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer();
 		return -1;
 	}
 
-	SDL_RenderSetLogicalSize(renderer, 320, 240);
+	SDL_RenderSetLogicalSize(renderer, 640, 480);
 
 	SDL_RenderClear(renderer);
 	SDL_RenderPresent(renderer);
@@ -247,7 +247,7 @@ static void shutdown(void) {
 }
 
 static void vsync(void) {
-	SDL_UpdateTexture(texture, NULL, pixels, 320 * sizeof(Pixel));
+	SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Pixel));
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);

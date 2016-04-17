@@ -86,16 +86,16 @@ static GLfloat vertices[][2] = {
 };
 
 _Bool vo_opengl_init(void) {
-	screen_tex = xmalloc(320 * 240 * sizeof(Pixel));
+	screen_tex = xmalloc(640 * 240 * sizeof(Pixel));
 	window_width = 640;
 	window_height = 480;
 	vo_opengl_x = vo_opengl_y = 0;
 	filter = xroar_ui_cfg.gl_filter;
 	alloc_colours();
 	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 320;
+	vo_module->window_w = 640;
 	vo_module->window_h = 240;
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	return 1;
@@ -146,7 +146,7 @@ void vo_opengl_set_window_size(unsigned w, unsigned h) {
 	glDeleteTextures(1, &texnum);
 	glGenTextures(1, &texnum);
 	glBindTexture(GL_TEXTURE_2D, texnum);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5, 512, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5, 1024, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	if (filter == UI_GL_FILTER_NEAREST
 	    || (filter == UI_GL_FILTER_AUTO && (vo_opengl_w % 320) == 0 && (vo_opengl_h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -158,10 +158,10 @@ void vo_opengl_set_window_size(unsigned w, unsigned h) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	/* Is there a better way of clearing the texture? */
-	memset(screen_tex, 0, 512 * sizeof(Pixel));
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 320,   0,   1, 256,
+	memset(screen_tex, 0, 1024 * sizeof(Pixel));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 640,   0,    1, 256,
 			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, screen_tex);
-	glTexSubImage2D(GL_TEXTURE_2D, 0,   0, 240, 512,   1,
+	glTexSubImage2D(GL_TEXTURE_2D, 0,   0, 240, 1024,   1,
 			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, screen_tex);
 
 	glColor4f(1.0, 1.0, 1.0, 1.0);
@@ -185,7 +185,7 @@ void vo_opengl_refresh(void) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	/* Draw main window */
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-			320, 240, GL_RGB,
+			640, 240, GL_RGB,
 			GL_UNSIGNED_SHORT_5_6_5, screen_tex);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	/* Video module should now do whatever's required to swap buffers */

@@ -150,17 +150,18 @@ static void render_ccr_simple(uint8_t const *scanline_data) {
 		scanline_data += vo_module->window_x;
 		LOCK_SURFACE;
 		for (int i = vo_module->window_w >> 1; i; i--) {
-			uint8_t c0 = *(scanline_data++);
-			uint8_t c1 = *(scanline_data++);
+			uint8_t c0 = *scanline_data;
+			uint8_t c1 = *(scanline_data+2);
+			scanline_data += 4;
 			if (c0 == VDG_BLACK || c0 == VDG_WHITE) {
 				int aindex = ((c0 != VDG_BLACK) ? 2 : 0)
 					     | ((c1 != VDG_BLACK) ? 1 : 0);
-				*pixel = *(pixel + 1) = artifact_simple[phase][aindex];
+				*pixel = *(pixel+1) = *(pixel+2) = *(pixel+3) = artifact_simple[phase][aindex];
 			} else {
-				*pixel = vdg_colour[c0];
-				*(pixel + 1) = vdg_colour[c1];
+				*pixel = *(pixel+1) = vdg_colour[c0];
+				*(pixel+1) = *(pixel+2) = *(pixel+3) = vdg_colour[c1];
 			}
-			pixel += 2 * XSTEP;
+			pixel += 4*XSTEP;
 		}
 		UNLOCK_SURFACE;
 		pixel += NEXTLINE;
@@ -175,20 +176,21 @@ static void render_ccr_5bit(uint8_t const *scanline_data) {
 		int phase = xroar_machine_config->cross_colour_phase - 1;
 		unsigned aindex = 0;
 		scanline_data += vo_module->window_x;
-		aindex = (*(scanline_data - 2) != VDG_BLACK) ? 14 : 0;
-		aindex |= (*(scanline_data - 1) != VDG_BLACK) ? 1 : 0;
+		aindex = (*(scanline_data - 6) != VDG_BLACK) ? 14 : 0;
+		aindex |= (*(scanline_data - 2) != VDG_BLACK) ? 1 : 0;
 		LOCK_SURFACE;
-		for (int i = vo_module->window_w; i; i--) {
+		for (int i = vo_module->window_w/2; i; i--) {
 			aindex = (aindex << 1) & 31;
-			if (*(scanline_data + 2) != VDG_BLACK)
+			if (*(scanline_data + 4) != VDG_BLACK)
 				aindex |= 1;
-			uint8_t c = *(scanline_data++);
+			uint8_t c = *scanline_data;
+			scanline_data += 2;
 			if (c == VDG_BLACK || c == VDG_WHITE) {
-				*pixel = artifact_5bit[phase][aindex];
+				*pixel = *(pixel+1) = artifact_5bit[phase][aindex];
 			} else {
-				*pixel = vdg_colour[c];
+				*pixel = *(pixel+1) = vdg_colour[c];
 			}
-			pixel += XSTEP;
+			pixel += 2*XSTEP;
 			phase ^= 1;
 		}
 		UNLOCK_SURFACE;

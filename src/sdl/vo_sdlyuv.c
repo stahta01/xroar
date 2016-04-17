@@ -97,7 +97,7 @@ static _Bool init(void) {
 	Uint32 first_successful_format = 0;
 	for (int i = 0; i < NUM_OVERLAY_FORMATS; i++) {
 		overlay_format = try_overlay_format[i];
-		overlay = SDL_CreateYUVOverlay(640, 240, overlay_format, screen);
+		overlay = SDL_CreateYUVOverlay(1280, 240, overlay_format, screen);
 		if (!overlay) {
 			continue;
 		}
@@ -113,7 +113,7 @@ static _Bool init(void) {
 	if (!overlay && first_successful_format != 0) {
 		/* Fall back to the first successful one, unaccelerated */
 		overlay_format = first_successful_format;
-		overlay = SDL_CreateYUVOverlay(640, 240, overlay_format, screen);
+		overlay = SDL_CreateYUVOverlay(1280, 240, overlay_format, screen);
 	}
 	if (!overlay) {
 		LOG_ERROR("Failed to create SDL overlay for display: %s\n", SDL_GetError());
@@ -125,9 +125,9 @@ static _Bool init(void) {
 
 	alloc_colours();
 	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 32;
+	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 320;
+	vo_module->window_w = 640;
 	vo_module->window_h = 240;
 
 	vsync();

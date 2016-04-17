@@ -10,21 +10,21 @@
 
 #include "delegate.h"
 
-// Horizontal timing, all measured in half-VDG-clocks (i.e., pixels)
+// Horizontal timing, all measured in quarter-VDG-clocks (i.e., half-pixels)
 
-#define VDG_tFP   (17)  // 14
-#define VDG_tWHS  (32)  // 35
-#define VDG_tBP   (35)
+#define VDG_tFP   (34)  // 28
+#define VDG_tWHS  (64)  // 70
+#define VDG_tBP   (70)
 #define VDG_tHBNK (VDG_tFP + VDG_tWHS + VDG_tBP)
-#define VDG_tLB   (60)  // 59
-#define VDG_tAV   (256)
-#define VDG_tRB   (56)
+#define VDG_tLB   (120)  // 118
+#define VDG_tAV   (512)
+#define VDG_tRB   (112)
 #define VDG_tAVB  (VDG_tLB + VDG_tAV + VDG_tRB)
 #define VDG_tHST  (VDG_tHBNK + VDG_tAVB)
 // tHCD = time from start of back porch to beginning of colour burst
-#define VDG_tHCD  (7)
+#define VDG_tHCD  (14)
 // tCB = duration of colour burst
-#define VDG_tCB   (21)
+#define VDG_tCB   (42)
 
 /* All horizontal timings shall remain relative to the HS pulse falling edge */
 #define VDG_HS_FALLING_EDGE    (0)
