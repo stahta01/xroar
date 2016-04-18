@@ -64,21 +64,9 @@
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
-static _Bool inverted_text = 0;
-struct tape_interface *tape_interface;
-struct keyboard_interface *keyboard_interface;
-struct printer_interface *printer_interface;
-#ifdef WANT_GDB_TARGET
-static struct gdb_interface *gdb_interface;
-#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-enum machine_ram_organisation {
-	RAM_ORGANISATION_4K,
-	RAM_ORGANISATION_16K,
-	RAM_ORGANISATION_64K
-};
-
-static struct {
+static const struct {
 	const char *bas;
 	const char *extbas;
 	const char *altbas;
@@ -88,7 +76,11 @@ static struct {
 	{ "@coco", "@coco_ext", NULL }
 };
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+enum machine_ram_organisation {
+	RAM_ORGANISATION_4K,
+	RAM_ORGANISATION_16K,
+	RAM_ORGANISATION_64K
+};
 
 struct machine_dragon_interface {
 	struct machine_interface public;
@@ -104,7 +96,17 @@ struct machine_dragon_interface {
 	uint8_t rom1[0x4000];
 	uint8_t ext_charset[0x1000];
 
+	_Bool inverted_text;
 	struct cart *cart;
+
+	int cycles;
+
+	struct bp_session *bp_session;
+	_Bool single_step;
+	int stop_signal;
+#ifdef WANT_GDB_TARGET
+	struct gdb_interface *gdb_interface;
+#endif
 
 	// Useful configuration side-effect tracking
 	_Bool has_bas, has_extbas, has_altbas, has_combined;
@@ -118,18 +120,17 @@ struct machine_dragon_interface {
 	_Bool have_acia;
 };
 
-static int cycles;
+struct tape_interface *tape_interface;
+struct keyboard_interface *keyboard_interface;
+struct printer_interface *printer_interface;
+
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
+static void machine_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
 
 static void initialise_ram(struct machine_dragon_interface *mdi);
-
-struct bp_session *machine_bp_session = NULL;
-static void machine_instruction_posthook(void *);
-static _Bool single_step = 0;
-static int stop_signal = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -667,7 +668,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	}
 	mdi->VDG0->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, mdi);
 	mdi->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler, mdi);
-	mc6847_set_inverted_text(mdi->VDG0, inverted_text);
+	mc6847_set_inverted_text(mdi->VDG0, mdi->inverted_text);
 
 	// Printer
 	printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, mdi);
@@ -938,13 +939,13 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	keyboard_set_keymap(keyboard_interface, xroar_machine_config->keymap);
 
 	// Breakpoint session
-	machine_bp_session = bp_session_new(mdi->CPU0);
+	mdi->bp_session = bp_session_new(mdi->CPU0);
 
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar_cfg.gdb) {
-		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, mi, machine_bp_session);
-		gdb_set_debug(gdb_interface, xroar_cfg.debug_gdb);
+		mdi->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, mi, mdi->bp_session);
+		gdb_set_debug(mdi->gdb_interface, xroar_cfg.debug_gdb);
 	}
 #endif
 
@@ -952,13 +953,13 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 }
 
 static void free_devices(struct machine_dragon_interface *mdi) {
-	if (gdb_interface) {
-		gdb_interface_free(gdb_interface);
-		gdb_interface = NULL;
+	if (mdi->gdb_interface) {
+		gdb_interface_free(mdi->gdb_interface);
+		mdi->gdb_interface = NULL;
 	}
-	if (machine_bp_session) {
-		bp_session_free(machine_bp_session);
-		machine_bp_session = NULL;
+	if (mdi->bp_session) {
+		bp_session_free(mdi->bp_session);
+		mdi->bp_session = NULL;
 	}
 	if (keyboard_interface) {
 		keyboard_interface_free(keyboard_interface);
@@ -1046,29 +1047,29 @@ enum machine_run_state machine_run(struct machine_interface *mi, int ncycles) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 
 #ifdef WANT_GDB_TARGET
-	if (gdb_interface) {
-		switch (gdb_run_lock(gdb_interface)) {
+	if (mdi->gdb_interface) {
+		switch (gdb_run_lock(mdi->gdb_interface)) {
 		case gdb_run_state_timeout:
 			return machine_run_state_timeout;
 		case gdb_run_state_running:
-			stop_signal = 0;
-			cycles += ncycles;
+			mdi->stop_signal = 0;
+			mdi->cycles += ncycles;
 			mdi->CPU0->running = 1;
 			mdi->CPU0->run(mdi->CPU0);
-			if (stop_signal != 0) {
-				gdb_stop(gdb_interface, stop_signal);
+			if (mdi->stop_signal != 0) {
+				gdb_stop(mdi->gdb_interface, mdi->stop_signal);
 			}
 			break;
 		case gdb_run_state_single_step:
 			machine_single_step(mi);
-			gdb_single_step(gdb_interface);
+			gdb_single_step(mdi->gdb_interface);
 			break;
 		}
-		gdb_run_unlock(gdb_interface);
-		return stop_signal ? machine_run_state_stopped : machine_run_state_ok;
+		gdb_run_unlock(mdi->gdb_interface);
+		return mdi->stop_signal ? machine_run_state_stopped : machine_run_state_ok;
 	} else {
 #endif
-		cycles += ncycles;
+		mdi->cycles += ncycles;
 		mdi->CPU0->running = 1;
 		mdi->CPU0->run(mdi->CPU0);
 		return machine_run_state_ok;
@@ -1079,12 +1080,12 @@ enum machine_run_state machine_run(struct machine_interface *mi, int ncycles) {
 
 void machine_single_step(struct machine_interface *mi) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	single_step = 1;
+	mdi->single_step = 1;
 	mdi->CPU0->running = 0;
-	mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi->CPU0);
+	mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi);
 	do {
 		mdi->CPU0->run(mdi->CPU0);
-	} while (single_step);
+	} while (mdi->single_step);
 	update_vdg_mode(mdi);
 	if (xroar_cfg.trace_enabled)
 		mdi->CPU0->instruction_posthook.func = NULL;
@@ -1097,14 +1098,14 @@ void machine_single_step(struct machine_interface *mi) {
 void machine_signal(struct machine_interface *mi, int sig) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	update_vdg_mode(mdi);
-	stop_signal = sig;
+	mdi->stop_signal = sig;
 	mdi->CPU0->running = 0;
 }
 
 void machine_set_trace(struct machine_interface *mi, _Bool trace_on) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	if (trace_on || single_step)
-		mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi->CPU0);
+	if (trace_on || mdi->single_step)
+		mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi);
 	else
 		mdi->CPU0->instruction_posthook.func = NULL;
 }
@@ -1143,18 +1144,18 @@ void *machine_get_component(struct machine_interface *mi, const char *cname) {
  */
 
 static void machine_instruction_posthook(void *sptr) {
-	struct MC6809 *cpu = sptr;
+	struct machine_dragon_interface *mdi = sptr;
 	if (xroar_cfg.trace_enabled) {
-		switch (cpu->variant) {
+		switch (mdi->CPU0->variant) {
 		case MC6809_VARIANT_MC6809: default:
-			mc6809_trace_print(cpu);
+			mc6809_trace_print(mdi->CPU0);
 			break;
 		case MC6809_VARIANT_HD6309:
-			hd6309_trace_print(cpu);
+			hd6309_trace_print(mdi->CPU0);
 			break;
 		}
 	}
-	single_step = 0;
+	mdi->single_step = 0;
 }
 
 static uint16_t decode_Z(struct machine_dragon_interface *mdi, unsigned Z) {
@@ -1287,8 +1288,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	if (!RnW && A >= 0xffc0 && A < 0xffc6) {
 		update_vdg_mode(mdi);
 	}
-	cycles -= ncycles;
-	if (cycles <= 0) mdi->CPU0->running = 0;
+	mdi->cycles -= ncycles;
+	if (mdi->cycles <= 0) mdi->CPU0->running = 0;
 	event_current_tick += ncycles;
 	event_run_queue(&MACHINE_EVENT_LIST);
 	MC6809_IRQ_SET(mdi->CPU0, mdi->PIA0->a.irq | mdi->PIA0->b.irq);
@@ -1308,10 +1309,10 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 			}
 		}
 #endif
-		bp_wp_read_hook(machine_bp_session, A);
+		bp_wp_read_hook(mdi->bp_session, A);
 	} else {
 		write_byte(mdi, A);
-		bp_wp_write_hook(machine_bp_session, A);
+		bp_wp_write_hook(mdi->bp_session, A);
 	}
 }
 
@@ -1422,7 +1423,7 @@ void machine_select_fast_sound(_Bool fast) {
 
 void machine_set_inverted_text(struct machine_interface *mi, _Bool invert) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	inverted_text = invert;
+	mdi->inverted_text = invert;
 	mc6847_set_inverted_text(mdi->VDG0, invert);
 }
 
@@ -1440,7 +1441,7 @@ void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int
 		if ((list[i].add_cond & BP_CRC_BAS) && (!mdi->has_bas || !crclist_match(list[i].cond_crc_bas, mdi->crc_bas)))
 			continue;
 		list[i].bp.handler.sptr = sptr;
-		bp_add(machine_bp_session, &list[i].bp);
+		bp_add(mdi->bp_session, &list[i].bp);
 	}
 }
 
@@ -1448,7 +1449,7 @@ void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, 
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	(void)mdi;
 	for (int i = 0; i < n; i++) {
-		bp_remove(machine_bp_session, &list[i].bp);
+		bp_remove(mdi->bp_session, &list[i].bp);
 	}
 }
 
