@@ -199,14 +199,14 @@ void machine_config_print_all(_Bool all);
 void machine_init(void);
 void machine_shutdown(void);
 
-void machine_reset(_Bool hard);
-enum machine_run_state machine_run(int ncycles);
-void machine_single_step(void);
-void machine_toggle_pause(void);
+void machine_reset(struct machine_interface *mi, _Bool hard);
+enum machine_run_state machine_run(struct machine_interface *mi, int ncycles);
+void machine_single_step(struct machine_interface *mi);
+void machine_toggle_pause(struct machine_interface *mi);
 
-void machine_signal(int sig);
+void machine_signal(struct machine_interface *mi, int sig);
 
-void machine_set_trace(_Bool trace_on);
+void machine_set_trace(struct machine_interface *mi, _Bool trace_on);
 
 void *machine_get_component(struct machine_interface *mi, const char *cname);
 
@@ -229,8 +229,8 @@ void machine_bp_remove_n(struct machine_bp *list, int n);
 #define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
 
 struct cart *machine_get_cart(void);
-void machine_insert_cart(struct cart *c);
-void machine_remove_cart(void);
+void machine_insert_cart(struct machine_interface *mi, struct cart *c);
+void machine_remove_cart(struct machine_interface *mi);
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);
 

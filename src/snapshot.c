@@ -357,7 +357,7 @@ int read_snapshot(const char *filename) {
 	xroar_machine->free(xroar_machine);
 	xroar_machine_config = machine_config_by_arch(ARCH_DRAGON64);
 	xroar_machine = machine_interface_new(xroar_machine_config);
-	machine_reset(RESET_HARD);
+	machine_reset(xroar_machine, RESET_HARD);
 	// If old snapshot, buffer contains register dump
 	if (buffer[0] != 'X') {
 		old_set_registers(buffer + 3);
@@ -376,7 +376,7 @@ int read_snapshot(const char *filename) {
 				xroar_machine_config->architecture = old_arch_mapping[tmp];
 				xroar_machine->free(xroar_machine);
 				xroar_machine = machine_interface_new(xroar_machine_config);
-				machine_reset(RESET_HARD);
+				machine_reset(xroar_machine, RESET_HARD);
 				size--;
 				break;
 			case ID_KEYBOARD_MAP:
@@ -509,7 +509,7 @@ int read_snapshot(const char *filename) {
 				}
 				xroar_machine->free(xroar_machine);
 				xroar_machine = machine_interface_new(xroar_machine_config);
-				machine_reset(RESET_HARD);
+				machine_reset(xroar_machine, RESET_HARD);
 				break;
 
 			case ID_PIA_REGISTERS:

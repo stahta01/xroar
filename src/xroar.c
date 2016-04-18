@@ -868,7 +868,7 @@ static struct vdg_palette *get_machine_palette(void) {
  */
 
 _Bool xroar_run(void) {
-	switch (machine_run(EVENT_MS(5))) {
+	switch (machine_run(xroar_machine, EVENT_MS(5))) {
 	case machine_run_state_timeout:
 		if (vo_module->refresh)
 			vo_module->refresh();
@@ -923,7 +923,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			return read_snapshot(filename);
 		case FILETYPE_ROM: {
 			struct cart_config *cc;
-			machine_remove_cart();
+			machine_remove_cart(xroar_machine);
 			cc = cart_config_by_name(filename);
 			if (cc) {
 				cc->autorun = autorun;
@@ -1027,7 +1027,7 @@ void xroar_set_trace(int mode) {
 			break;
 	}
 	xroar_cfg.trace_enabled = set_to;
-	machine_set_trace(xroar_cfg.trace_enabled);
+	machine_set_trace(xroar_machine, xroar_cfg.trace_enabled);
 	struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
 	if (xroar_cfg.trace_enabled) {
 		switch (xroar_machine_config->cpu) {
@@ -1311,7 +1311,7 @@ void xroar_set_machine(_Bool notify, int id) {
 			new = (id >= 0 ? id : 0);
 			break;
 	}
-	machine_remove_cart();
+	machine_remove_cart(xroar_machine);
 	xroar_machine->free(xroar_machine);
 	xroar_machine_config = machine_config_by_id(new);
 	xroar_machine = machine_interface_new(xroar_machine_config);
@@ -1348,7 +1348,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		return;
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
 		return;
-	machine_remove_cart();
+	machine_remove_cart(xroar_machine);
 
 	struct cart *new_cart = NULL;
 	if (!cc_name) {
@@ -1360,7 +1360,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		}
 		xroar_machine_config->cart_enabled = 1;
 		new_cart = cart_new_named(cc_name);
-		machine_insert_cart(new_cart);
+		machine_insert_cart(xroar_machine, new_cart);
 		if (new_cart->has_interface && new_cart->has_interface(new_cart, "floppy")) {
 			new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
 		}
@@ -1423,11 +1423,11 @@ void xroar_eject_tape_output(void) {
 }
 
 void xroar_soft_reset(void) {
-	machine_reset(RESET_SOFT);
+	machine_reset(xroar_machine, RESET_SOFT);
 }
 
 void xroar_hard_reset(void) {
-	machine_reset(RESET_HARD);
+	machine_reset(xroar_machine, RESET_HARD);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

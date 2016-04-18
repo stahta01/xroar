@@ -272,7 +272,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_h:
 		if (shift)
-			machine_toggle_pause();
+			machine_toggle_pause(xroar_machine);
 		break;
 	case GDK_i:
 		if (shift)
@@ -369,7 +369,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		}
 	}
 	if (keyval == GDK_Pause) {
-		machine_toggle_pause();
+		machine_toggle_pause(xroar_machine);
 		return FALSE;
 	}
 	if (control) {

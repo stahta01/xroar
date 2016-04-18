@@ -304,7 +304,7 @@ static void gdb_machine_single_step(struct gdb_interface_private *gip) {
 static void gdb_machine_signal(struct gdb_interface_private *gip, int sig) {
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_running) {
-		machine_signal(sig);
+		machine_signal(gip->machine_interface, sig);
 		gip->run_state = gdb_run_state_stopped;
 		gdb_handle_signal(gip, sig);
 	}

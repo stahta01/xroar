@@ -45,6 +45,7 @@ static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basi
 struct keyboard_interface_private {
 	struct keyboard_interface public;
 
+	struct machine_interface *machine_interface;
 	struct MC6809 *cpu;
 
 	struct slist *basic_command_list;
@@ -62,11 +63,12 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
 };
 
-struct keyboard_interface *keyboard_interface_new(struct MC6809 *cpu) {
+struct keyboard_interface *keyboard_interface_new(struct machine_interface *mi) {
 	struct keyboard_interface_private *kip = xmalloc(sizeof(*kip));
 	*kip = (struct keyboard_interface_private){0};
 	struct keyboard_interface *ki = &kip->public;
-	kip->cpu = cpu;
+	kip->machine_interface = mi;
+	kip->cpu = machine_get_component(mi, "CPU0");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -264,7 +266,7 @@ static void type_command(void *sptr) {
 		}
 	}
 	/* Use CPU read routine to pull return address back off stack */
-	machine_op_rts(cpu);
+	machine_op_rts(kip->machine_interface);
 }
 
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
