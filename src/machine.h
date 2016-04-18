@@ -14,9 +14,6 @@
 
 struct slist;
 struct cart;
-struct MC6883;
-struct MC6809;
-struct MC6821;
 
 #define RESET_SOFT 0
 #define RESET_HARD 1
