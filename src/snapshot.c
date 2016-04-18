@@ -354,8 +354,9 @@ int read_snapshot(const char *filename) {
 		}
 	}
 	// Default to Dragon 64 for old snapshots
+	xroar_machine->free(xroar_machine);
 	xroar_machine_config = machine_config_by_arch(ARCH_DRAGON64);
-	machine_configure(xroar_machine_config);
+	xroar_machine = machine_interface_new(xroar_machine_config);
 	machine_reset(RESET_HARD);
 	// If old snapshot, buffer contains register dump
 	if (buffer[0] != 'X') {
@@ -373,7 +374,8 @@ int read_snapshot(const char *filename) {
 				tmp = fs_read_uint8(fd);
 				tmp %= 4;
 				xroar_machine_config->architecture = old_arch_mapping[tmp];
-				machine_configure(xroar_machine_config);
+				xroar_machine->free(xroar_machine);
+				xroar_machine = machine_interface_new(xroar_machine_config);
 				machine_reset(RESET_HARD);
 				size--;
 				break;
@@ -505,7 +507,8 @@ int read_snapshot(const char *filename) {
 					xroar_machine_config->cross_colour_phase = fs_read_uint8(fd);
 					size--;
 				}
-				machine_configure(xroar_machine_config);
+				xroar_machine->free(xroar_machine);
+				xroar_machine = machine_interface_new(xroar_machine_config);
 				machine_reset(RESET_HARD);
 				break;
 

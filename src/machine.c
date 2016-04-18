@@ -353,7 +353,7 @@ void machine_config_print_all(_Bool all) {
 	}
 }
 
-/* ---------------------------------------------------------------------- */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void keyboard_update(void *m) {
 	(void)m;
@@ -491,56 +491,6 @@ static void pia1b_control_postwrite(void *m) {
 void machine_init(void) {
 }
 
-static void free_devices(void) {
-	if (gdb_interface) {
-		gdb_interface_free(gdb_interface);
-		gdb_interface = NULL;
-	}
-	if (machine_bp_session) {
-		bp_session_free(machine_bp_session);
-		machine_bp_session = NULL;
-	}
-	if (keyboard_interface) {
-		keyboard_interface_free(keyboard_interface);
-		keyboard_interface = NULL;
-	}
-	if (tape_interface) {
-		tape_interface_free(tape_interface);
-		tape_interface = NULL;
-	}
-	if (printer_interface) {
-		printer_interface_free(printer_interface);
-		printer_interface = NULL;
-	}
-	if (SAM0) {
-		sam_free(SAM0);
-		SAM0 = NULL;
-	}
-	if (CPU0) {
-		CPU0->free(CPU0);
-		CPU0 = NULL;
-	}
-	if (PIA0) {
-		mc6821_free(PIA0);
-		PIA0 = NULL;
-	}
-	if (PIA1) {
-		mc6821_free(PIA1);
-		PIA1 = NULL;
-	}
-	if (VDG0) {
-		mc6847_free(VDG0);
-		VDG0 = NULL;
-	}
-}
-
-void machine_shutdown(void) {
-	machine_remove_cart();
-	free_devices();
-	slist_free_full(config_list, (slist_free_func)machine_config_free);
-	config_list = NULL;
-}
-
 /* VDG edge delegates */
 
 static void vdg_hs(void *sptr, _Bool level) {
@@ -616,13 +566,37 @@ static void cart_halt(void *sptr, _Bool level) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_configure(struct machine_config *mc) {
-	if (!mc) return;
+static struct machine_interface *machine_dragon_new(struct machine_config *mc);
+static void machine_dragon_free(struct machine_interface *mi);
+
+struct machine_interface *machine_interface_new(struct machine_config *mc) {
+	switch (mc->architecture) {
+	default:
+		return machine_dragon_new(mc);
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct machine_dragon_interface {
+	struct machine_interface public;
+};
+
+static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
+	if (!mc)
+		return NULL;
+
+	struct machine_dragon_interface *mdi = xmalloc(sizeof(*mdi));
+	*mdi = (struct machine_dragon_interface){0};
+	struct machine_interface *mi = &mdi->public;
+
+	mi->config = mc;
+	mi->free = machine_dragon_free;
+
 	machine_config_complete(mc);
 	if (mc->description) {
 		LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	}
-	free_devices();
 
 	// SAM
 	SAM0 = sam_new();
@@ -966,7 +940,70 @@ void machine_configure(struct machine_config *mc) {
 		gdb_set_debug(gdb_interface, xroar_cfg.debug_gdb);
 	}
 #endif
+
+	return mi;
 }
+
+static void free_devices(void) {
+	if (gdb_interface) {
+		gdb_interface_free(gdb_interface);
+		gdb_interface = NULL;
+	}
+	if (machine_bp_session) {
+		bp_session_free(machine_bp_session);
+		machine_bp_session = NULL;
+	}
+	if (keyboard_interface) {
+		keyboard_interface_free(keyboard_interface);
+		keyboard_interface = NULL;
+	}
+	if (tape_interface) {
+		tape_interface_free(tape_interface);
+		tape_interface = NULL;
+	}
+	if (printer_interface) {
+		printer_interface_free(printer_interface);
+		printer_interface = NULL;
+	}
+	if (SAM0) {
+		sam_free(SAM0);
+		SAM0 = NULL;
+	}
+	if (CPU0) {
+		CPU0->free(CPU0);
+		CPU0 = NULL;
+	}
+	if (PIA0) {
+		mc6821_free(PIA0);
+		PIA0 = NULL;
+	}
+	if (PIA1) {
+		mc6821_free(PIA1);
+		PIA1 = NULL;
+	}
+	if (VDG0) {
+		mc6847_free(VDG0);
+		VDG0 = NULL;
+	}
+}
+
+void machine_shutdown(void) {
+	slist_free_full(config_list, (slist_free_func)machine_config_free);
+	config_list = NULL;
+}
+
+static void machine_dragon_free(struct machine_interface *mi) {
+	assert(mi != NULL);
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	machine_remove_cart();
+	if (mi->config && mi->config->description) {
+		LOG_DEBUG(1, "Machine shutdown: %s\n", mi->config->description);
+	}
+	free_devices();
+	free(mdi);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void machine_reset(_Bool hard) {
 	xroar_set_keymap(1, xroar_machine_config->keymap);

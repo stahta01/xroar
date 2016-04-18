@@ -148,6 +148,12 @@ struct machine_config {
 	_Bool cart_enabled;
 };
 
+extern struct xconfig_enum machine_arch_list[];
+extern struct xconfig_enum machine_keyboard_list[];
+extern struct xconfig_enum machine_cpu_list[];
+extern struct xconfig_enum machine_tv_type_list[];
+extern struct xconfig_enum machine_vdg_type_list[];
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #define MACHINE_SIGINT (2)
@@ -161,6 +167,13 @@ enum machine_run_state {
 	machine_run_state_timeout,
 };
 
+struct machine_interface {
+	struct machine_config *config;
+	void (*free)(struct machine_interface *mi);
+};
+
+struct machine_interface *machine_interface_new(struct machine_config *mc);
+
 extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
 extern uint8_t machine_ram[0x10000];
 extern _Bool has_bas, has_extbas, has_altbas, has_combined;
@@ -171,12 +184,6 @@ extern struct printer_interface *printer_interface;
 #ifdef WANT_GDB_TARGET
 extern struct gdb_interface *gdb_interface;
 #endif
-
-extern struct xconfig_enum machine_arch_list[];
-extern struct xconfig_enum machine_keyboard_list[];
-extern struct xconfig_enum machine_cpu_list[];
-extern struct xconfig_enum machine_tv_type_list[];
-extern struct xconfig_enum machine_vdg_type_list[];
 
 /* Add a new machine config: */
 struct machine_config *machine_config_new(void);
@@ -194,7 +201,7 @@ void machine_config_print_all(_Bool all);
 
 void machine_init(void);
 void machine_shutdown(void);
-void machine_configure(struct machine_config *mc);  /* apply config */
+
 void machine_reset(_Bool hard);
 enum machine_run_state machine_run(int ncycles);
 void machine_single_step(void);

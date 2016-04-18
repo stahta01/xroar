@@ -197,6 +197,7 @@ _Bool xroar_noratelimit = 0;
 int xroar_frameskip = 0;
 
 struct machine_config *xroar_machine_config;
+struct machine_interface *xroar_machine;
 static struct cart_config *selected_cart_config;
 struct vdg_palette *xroar_vdg_palette;
 
@@ -729,7 +730,7 @@ _Bool xroar_init(int argc, char **argv) {
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	/* Configure machine */
-	machine_configure(xroar_machine_config);
+	xroar_machine = machine_interface_new(xroar_machine_config);
 	if (xroar_machine_config->cart_enabled) {
 		xroar_set_cart(1, xroar_machine_config->default_cart);
 	} else {
@@ -818,6 +819,10 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
+	if (xroar_machine) {
+		xroar_machine->free(xroar_machine);
+		xroar_machine = NULL;
+	}
 	joystick_shutdown();
 	cart_shutdown();
 	machine_shutdown();
@@ -1307,8 +1312,9 @@ void xroar_set_machine(_Bool notify, int id) {
 			break;
 	}
 	machine_remove_cart();
+	xroar_machine->free(xroar_machine);
 	xroar_machine_config = machine_config_by_id(new);
-	machine_configure(xroar_machine_config);
+	xroar_machine = machine_interface_new(xroar_machine_config);
 	if (xroar_machine_config->cart_enabled) {
 		xroar_set_cart(1, xroar_machine_config->default_cart);
 	} else {
