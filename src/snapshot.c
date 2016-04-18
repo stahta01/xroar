@@ -195,14 +195,16 @@ int write_snapshot(const char *filename) {
 	}
 	fs_write_uint8(fd, xroar_machine_config->cross_colour_phase);
 	// RAM page 0
-	int ram0_size = machine_ram_size > 0x8000 ? 0x8000 : machine_ram_size;
+	unsigned ram_size = machine_ram_size(xroar_machine);
+	uint8_t *ram = machine_get_component(xroar_machine, "RAM");
+	int ram0_size = ram_size > 0x8000 ? 0x8000 : ram_size;
 	write_chunk_header(fd, ID_RAM_PAGE0, ram0_size);
-	fwrite(machine_ram, 1, ram0_size, fd);
+	fwrite(ram, 1, ram0_size, fd);
 	// RAM page 1
-	if (machine_ram_size > 0x8000) {
-		int ram1_size = machine_ram_size - 0x8000;
+	if (ram_size > 0x8000) {
+		int ram1_size = ram_size - 0x8000;
 		write_chunk_header(fd, ID_RAM_PAGE1, ram1_size);
-		fwrite(machine_ram + 0x8000, 1, ram1_size, fd);
+		fwrite(ram + 0x8000, 1, ram1_size, fd);
 	}
 	// PIA state written before CPU state because PIA may have
 	// unacknowledged interrupts pending already cleared in the CPU state
@@ -530,17 +532,23 @@ int read_snapshot(const char *filename) {
 				break;
 
 			case ID_RAM_PAGE0:
-				if (size <= (int)sizeof(machine_ram)) {
-					size -= fread(machine_ram, 1, size, fd);
-				} else {
-					size -= fread(machine_ram, 1, sizeof(machine_ram), fd);
+				{
+					uint8_t *ram = machine_get_component(xroar_machine, "RAM");
+					if (size <= 0x10000) {
+						size -= fread(ram, 1, size, fd);
+					} else {
+						size -= fread(ram, 1, 0x10000, fd);
+					}
 				}
 				break;
 			case ID_RAM_PAGE1:
-				if (size <= (int)(sizeof(machine_ram) - 0x8000)) {
-					size -= fread(machine_ram + 0x8000, 1, size, fd);
-				} else {
-					size -= fread(machine_ram + 0x8000, 1, sizeof(machine_ram) - 0x8000, fd);
+				{
+					uint8_t *ram = machine_get_component(xroar_machine, "RAM");
+					if (size <= 0x8000) {
+						size -= fread(ram + 0x8000, 1, size, fd);
+					} else {
+						size -= fread(ram + 0x8000, 1, 0x8000, fd);
+					}
 				}
 				break;
 			case ID_SAM_REGISTERS:

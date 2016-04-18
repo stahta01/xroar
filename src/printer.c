@@ -38,6 +38,7 @@
 struct printer_interface_private {
 	struct printer_interface public;
 
+	struct machine_interface *machine_interface;
 	struct MC6809 *cpu;
 
 	FILE *stream;
@@ -57,10 +58,11 @@ static struct machine_bp coco_print_breakpoint[] = {
 	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_AS0(void, coco_print_byte, NULL) ),
 };
 
-struct printer_interface *printer_interface_new(struct MC6809 *cpu) {
+struct printer_interface *printer_interface_new(struct machine_interface *mi) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
-	pip->cpu = cpu;
+	pip->machine_interface = mi;
+	pip->cpu = machine_get_component(mi, "CPU0");
 	pip->stream = NULL;
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
@@ -79,8 +81,8 @@ void printer_interface_free(struct printer_interface *pi) {
 void printer_reset(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	pip->strobe_state = 1;
-	machine_bp_remove_list(coco_print_breakpoint);
-	machine_bp_add_list(coco_print_breakpoint, pip);
+	machine_bp_remove_list(pip->machine_interface, coco_print_breakpoint);
+	machine_bp_add_list(pip->machine_interface, coco_print_breakpoint, pip);
 }
 
 /* "Open" routines don't directly open the stream.  This way, a file or pipe
@@ -94,7 +96,7 @@ void printer_open_file(struct printer_interface *pi, const char *filename) {
 	pip->stream_dest = xstrdup(filename);
 	pip->is_pipe = 0;
 	pip->busy = 0;
-	machine_bp_add_list(coco_print_breakpoint, pip);
+	machine_bp_add_list(pip->machine_interface, coco_print_breakpoint, pip);
 }
 
 void printer_open_pipe(struct printer_interface *pi, const char *command) {
@@ -104,7 +106,7 @@ void printer_open_pipe(struct printer_interface *pi, const char *command) {
 	pip->stream_dest = xstrdup(command);
 	pip->is_pipe = 1;
 	pip->busy = 0;
-	machine_bp_add_list(coco_print_breakpoint, pip);
+	machine_bp_add_list(pip->machine_interface, coco_print_breakpoint, pip);
 }
 
 void printer_close(struct printer_interface *pi) {
@@ -115,7 +117,7 @@ void printer_close(struct printer_interface *pi) {
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
 	pip->busy = 1;
-	machine_bp_remove_list(coco_print_breakpoint);
+	machine_bp_remove_list(pip->machine_interface, coco_print_breakpoint);
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */

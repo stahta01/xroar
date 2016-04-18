@@ -995,21 +995,21 @@ static struct machine_bp bp_list_rewrite[] = {
 
 static void set_breakpoints(struct tape_interface_private *tip) {
 	/* clear any old breakpoints */
-	machine_bp_remove_list(bp_list_fast);
-	machine_bp_remove_list(bp_list_fast_cbin);
-	machine_bp_remove_list(bp_list_rewrite);
+	machine_bp_remove_list(tip->machine_interface, bp_list_fast);
+	machine_bp_remove_list(tip->machine_interface, bp_list_fast_cbin);
+	machine_bp_remove_list(tip->machine_interface, bp_list_rewrite);
 	if (!tip->motor)
 		return;
 	/* add required breakpoints */
 	if (tip->tape_fast) {
-		machine_bp_add_list(bp_list_fast, tip);
+		machine_bp_add_list(tip->machine_interface, bp_list_fast, tip);
 		/* these are incompatible with the other flags */
 		if (!tip->tape_pad && !tip->tape_rewrite) {
-			machine_bp_add_list(bp_list_fast_cbin, tip);
+			machine_bp_add_list(tip->machine_interface, bp_list_fast_cbin, tip);
 		}
 	}
 	if (tip->tape_pad || tip->tape_rewrite) {
-		machine_bp_add_list(bp_list_rewrite, tip);
+		machine_bp_add_list(tip->machine_interface, bp_list_rewrite, tip);
 	}
 }
 

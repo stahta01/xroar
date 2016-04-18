@@ -174,10 +174,6 @@ struct machine_interface {
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
 
-extern unsigned int machine_ram_size;  /* RAM in bytes, up to 64K */
-extern uint8_t machine_ram[0x10000];
-extern _Bool has_bas, has_extbas, has_altbas, has_combined;
-extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 extern struct tape_interface *tape_interface;
 extern struct keyboard_interface *keyboard_interface;
 extern struct printer_interface *printer_interface;
@@ -208,6 +204,7 @@ void machine_signal(struct machine_interface *mi, int sig);
 
 void machine_set_trace(struct machine_interface *mi, _Bool trace_on);
 
+unsigned machine_ram_size(struct machine_interface *mi);
 void *machine_get_component(struct machine_interface *mi, const char *cname);
 
 /* simplified read & write byte for convenience functions */
@@ -223,10 +220,10 @@ void machine_update_sound(void);
 void machine_set_inverted_text(struct machine_interface *mi, _Bool);
 
 /* Helper function to populate breakpoints from a list. */
-void machine_bp_add_n(struct machine_bp *list, int n, void *sptr);
-void machine_bp_remove_n(struct machine_bp *list, int n);
-#define machine_bp_add_list(list, sptr) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp), sptr)
-#define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
+void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);
+void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n);
+#define machine_bp_add_list(mi, list, sptr) machine_bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
+#define machine_bp_remove_list(mi, list) machine_bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
 
 struct cart *machine_get_cart(struct machine_interface *mi);
 void machine_insert_cart(struct machine_interface *mi, struct cart *c);

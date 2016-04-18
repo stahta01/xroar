@@ -61,16 +61,9 @@
 #include "xconfig.h"
 #include "xroar.h"
 
-unsigned int machine_ram_size = 0x10000;  /* RAM in bytes, up to 64K */
-uint8_t machine_ram[0x10000];
-static uint8_t *machine_rom;
-static uint8_t rom0[0x4000];
-static uint8_t rom1[0x4000];
-_Bool has_bas, has_extbas, has_altbas, has_combined;
-uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
-static uint8_t ext_charset[0x1000];
-_Bool has_ext_charset;
-uint32_t crc_ext_charset;
+static struct slist *config_list = NULL;
+static int next_id = 0;
+
 static _Bool inverted_text = 0;
 struct tape_interface *tape_interface;
 struct keyboard_interface *keyboard_interface;
@@ -79,16 +72,11 @@ struct printer_interface *printer_interface;
 static struct gdb_interface *gdb_interface;
 #endif
 
-/* Useful configuration side-effect tracking */
-static _Bool unexpanded_dragon32 = 0;
-static _Bool relaxed_pia_decode = 0;
-static enum {
+enum machine_ram_organisation {
 	RAM_ORGANISATION_4K,
 	RAM_ORGANISATION_16K,
 	RAM_ORGANISATION_64K
-} ram_organisation = RAM_ORGANISATION_64K;
-static uint16_t ram_mask = 0xffff;
-static _Bool have_acia = 0;
+};
 
 static struct {
 	const char *bas;
@@ -100,11 +88,6 @@ static struct {
 	{ "@coco", "@coco_ext", NULL }
 };
 
-static struct slist *config_list = NULL;
-static int next_id = 0;
-
-static void initialise_ram(void);
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_dragon_interface {
@@ -114,7 +97,25 @@ struct machine_dragon_interface {
 	struct MC6821 *PIA0, *PIA1;
 	struct MC6847 *VDG0;
 
+	unsigned int ram_size;
+	uint8_t ram[0x10000];
+	uint8_t *rom;
+	uint8_t rom0[0x4000];
+	uint8_t rom1[0x4000];
+	uint8_t ext_charset[0x1000];
+
 	struct cart *cart;
+
+	// Useful configuration side-effect tracking
+	_Bool has_bas, has_extbas, has_altbas, has_combined;
+	_Bool has_ext_charset;
+	uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
+	uint32_t crc_ext_charset;
+	enum machine_ram_organisation ram_organisation;
+	uint16_t ram_mask;
+	_Bool unexpanded_dragon32;
+	_Bool relaxed_pia_decode;
+	_Bool have_acia;
 };
 
 static int cycles;
@@ -122,6 +123,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
+
+static void initialise_ram(struct machine_dragon_interface *mdi);
 
 struct bp_session *machine_bp_session = NULL;
 static void machine_instruction_posthook(void *);
@@ -475,10 +478,10 @@ static void pia1b_data_postwrite(void *sptr) {
 	if (IS_DRAGON64) {
 		_Bool is_32k = PIA_VALUE_B(mdi->PIA1) & 0x04;
 		if (is_32k) {
-			machine_rom = rom0;
+			mdi->rom = mdi->rom0;
 			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 		} else {
-			machine_rom = rom1;
+			mdi->rom = mdi->rom1;
 			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
 		}
 	}
@@ -623,7 +626,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	tape_interface = tape_interface_new(mc->architecture, mi, keyboard_interface);
 
 	// Printer interface
-	printer_interface = printer_interface_new(mdi->CPU0);
+	printer_interface = printer_interface_new(mi);
 
 	// PIAs
 	mdi->PIA0 = mc6821_new();
@@ -670,9 +673,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, mdi);
 
 	/* Load appropriate ROMs */
-	memset(rom0, 0, sizeof(rom0));
-	memset(rom1, 0, sizeof(rom1));
-	memset(ext_charset, 0, sizeof(ext_charset));
+	memset(mdi->rom0, 0, sizeof(mdi->rom0));
+	memset(mdi->rom1, 0, sizeof(mdi->rom1));
+	memset(mdi->ext_charset, 0, sizeof(mdi->ext_charset));
 
 	/*
 	 * CoCo ROMs are always considered to be in two parts: BASIC and
@@ -689,25 +692,25 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	 * Dragon 64s also contain a separate 64K mode Extended BASIC.
 	 */
 
-	has_combined = has_extbas = has_bas = has_altbas = 0;
-	crc_combined = crc_extbas = crc_bas = crc_altbas = 0;
-	has_ext_charset = 0;
-	crc_ext_charset = 0;
+	mdi->has_combined = mdi->has_extbas = mdi->has_bas = mdi->has_altbas = 0;
+	mdi->crc_combined = mdi->crc_extbas = mdi->crc_bas = mdi->crc_altbas = 0;
+	mdi->has_ext_charset = 0;
+	mdi->crc_ext_charset = 0;
 
 	/* ... Extended BASIC */
 	if (!mc->noextbas && mc->extbas_rom) {
 		char *tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, rom0, sizeof(rom0));
+			int size = machine_load_rom(tmp, mdi->rom0, sizeof(mdi->rom0));
 			if (size > 0) {
 				if (IS_DRAGON)
-					has_combined = 1;
+					mdi->has_combined = 1;
 				else
-					has_extbas = 1;
+					mdi->has_extbas = 1;
 			}
 			if (size > 0x2000) {
-				if (!has_combined)
-					has_bas = 1;
+				if (!mdi->has_combined)
+					mdi->has_bas = 1;
 			}
 			free(tmp);
 		}
@@ -717,9 +720,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	if (!mc->nobas && mc->bas_rom) {
 		char *tmp = romlist_find(mc->bas_rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, rom0 + 0x2000, sizeof(rom0) - 0x2000);
+			int size = machine_load_rom(tmp, mdi->rom0 + 0x2000, sizeof(mdi->rom0) - 0x2000);
 			if (size > 0)
-				has_bas = 1;
+				mdi->has_bas = 1;
 			free(tmp);
 		}
 	}
@@ -728,86 +731,86 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	if (!mc->noaltbas && mc->altbas_rom) {
 		char *tmp = romlist_find(mc->altbas_rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, rom1, sizeof(rom1));
+			int size = machine_load_rom(tmp, mdi->rom1, sizeof(mdi->rom1));
 			if (size > 0)
-				has_altbas = 1;
+				mdi->has_altbas = 1;
 			free(tmp);
 		}
 	}
-	machine_ram_size = mc->ram * 1024;
+	mdi->ram_size = mc->ram * 1024;
 	/* This will be under PIA control on a Dragon 64 */
-	machine_rom = rom0;
+	mdi->rom = mdi->rom0;
 
 	if (mc->ext_charset_rom) {
 		char *tmp = romlist_find(mc->ext_charset_rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, ext_charset, sizeof(ext_charset));
+			int size = machine_load_rom(tmp, mdi->ext_charset, sizeof(mdi->ext_charset));
 			if (size > 0)
-				has_ext_charset = 1;
+				mdi->has_ext_charset = 1;
 			free(tmp);
 		}
 	}
 
 	/* CRCs */
 
-	if (has_combined) {
+	if (mdi->has_combined) {
 		_Bool forced = 0, valid_crc = 0;
 
-		crc_combined = crc32_block(CRC32_RESET, rom0, 0x4000);
+		mdi->crc_combined = crc32_block(CRC32_RESET, mdi->rom0, 0x4000);
 
 		if (IS_DRAGON64)
-			valid_crc = crclist_match("@d64_1", crc_combined);
+			valid_crc = crclist_match("@d64_1", mdi->crc_combined);
 		else if (IS_DRAGON32)
-			valid_crc = crclist_match("@d32", crc_combined);
+			valid_crc = crclist_match("@d32", mdi->crc_combined);
 
 		if (xroar_cfg.force_crc_match) {
 			if (IS_DRAGON64) {
-				crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
+				mdi->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
 				forced = 1;
 			} else if (IS_DRAGON32) {
-				crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
+				mdi->crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
 				forced = 1;
 			}
 		}
 
 		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", crc_combined, forced ? " (forced)" : "");
+		LOG_DEBUG(1, "\t32K mode BASIC CRC = 0x%08x%s\n", mdi->crc_combined, forced ? " (forced)" : "");
 		if (!valid_crc) {
 			LOG_WARN("Invalid CRC for combined BASIC ROM\n");
 		}
 	}
 
-	if (has_altbas) {
+	if (mdi->has_altbas) {
 		_Bool forced = 0, valid_crc = 0;
 
-		crc_altbas = crc32_block(CRC32_RESET, rom1, 0x4000);
+		mdi->crc_altbas = crc32_block(CRC32_RESET, mdi->rom1, 0x4000);
 
 		if (IS_DRAGON64)
-			valid_crc = crclist_match("@d64_2", crc_altbas);
+			valid_crc = crclist_match("@d64_2", mdi->crc_altbas);
 
 		if (xroar_cfg.force_crc_match) {
 			if (IS_DRAGON64) {
-				crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
+				mdi->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
 				forced = 1;
 			}
 		}
 		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\t64K mode BASIC CRC = 0x%08x%s\n", crc_altbas, forced ? " (forced)" : "");
+		LOG_DEBUG(1, "\t64K mode BASIC CRC = 0x%08x%s\n", mdi->crc_altbas, forced ? " (forced)" : "");
 		if (!valid_crc) {
 			LOG_WARN("Invalid CRC for alternate BASIC ROM\n");
 		}
 	}
 
-	if (has_bas) {
+	if (mdi->has_bas) {
 		_Bool forced = 0, valid_crc = 0, coco4k = 0;
 
-		crc_bas = crc32_block(CRC32_RESET, rom0 + 0x2000, 0x2000);
+		mdi->crc_bas = crc32_block(CRC32_RESET, mdi->rom0 + 0x2000, 0x2000);
 
 		if (IS_COCO) {
 			if (mc->ram > 4) {
-				valid_crc = crclist_match("@coco", crc_bas);
+				valid_crc = crclist_match("@coco", mdi->crc_bas);
 			} else {
-				valid_crc = crclist_match("@bas10", crc_bas);
+				valid_crc = crclist_match("@bas10", mdi->crc_bas);
 				coco4k = 1;
 			}
 		}
@@ -815,15 +818,15 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		if (xroar_cfg.force_crc_match) {
 			if (IS_COCO) {
 				if (mc->ram > 4) {
-					crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
+					mdi->crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
 				} else {
-					crc_bas = 0x00b50aaa;  // CoCo BASIC 1.0
+					mdi->crc_bas = 0x00b50aaa;  // CoCo BASIC 1.0
 				}
 				forced = 1;
 			}
 		}
 		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", crc_bas, forced ? " (forced)" : "");
+		LOG_DEBUG(1, "\tBASIC CRC = 0x%08x%s\n", mdi->crc_bas, forced ? " (forced)" : "");
 		if (!valid_crc) {
 			if (coco4k) {
 				LOG_WARN("Invalid CRC for Colour BASIC 1.0 ROM\n");
@@ -833,34 +836,34 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		}
 	}
 
-	if (has_extbas) {
+	if (mdi->has_extbas) {
 		_Bool forced = 0, valid_crc = 0;
 
-		crc_extbas = crc32_block(CRC32_RESET, rom0, 0x2000);
+		mdi->crc_extbas = crc32_block(CRC32_RESET, mdi->rom0, 0x2000);
 
 		if (IS_COCO) {
-			valid_crc = crclist_match("@cocoext", crc_extbas);
+			valid_crc = crclist_match("@cocoext", mdi->crc_extbas);
 		}
 
 		if (xroar_cfg.force_crc_match) {
 			if (IS_COCO) {
-				crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
+				mdi->crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
 				forced = 1;
 			}
 		}
 		(void)forced;  // avoid warning if no logging
-		LOG_DEBUG(1, "\tExtended BASIC CRC = 0x%08x%s\n", crc_extbas, forced ? " (forced)" : "");
+		LOG_DEBUG(1, "\tExtended BASIC CRC = 0x%08x%s\n", mdi->crc_extbas, forced ? " (forced)" : "");
 		if (!valid_crc) {
 			LOG_WARN("Invalid CRC for Extended Colour BASIC ROM\n");
 		}
 	}
-	if (has_ext_charset) {
-		crc_ext_charset = crc32_block(CRC32_RESET, ext_charset, 0x1000);
-		LOG_DEBUG(1, "\tExternal charset CRC = 0x%08x\n", crc_ext_charset);
+	if (mdi->has_ext_charset) {
+		mdi->crc_ext_charset = crc32_block(CRC32_RESET, mdi->ext_charset, 0x1000);
+		LOG_DEBUG(1, "\tExternal charset CRC = 0x%08x\n", mdi->crc_ext_charset);
 	}
 
 	/* VDG external charset */
-	if (has_ext_charset)
+	if (mdi->has_ext_charset)
 		mdi->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler_chargen, mdi);
 
 	/* Default all PIA connections to unconnected (no source, no sink) */
@@ -874,12 +877,12 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		mdi->PIA1->b.in_source |= (1<<0);
 	}
 	if (IS_DRAGON64) {
-		have_acia = 1;
+		mdi->have_acia = 1;
 		mdi->PIA1->b.in_source |= (1<<2);
-	} else if (IS_COCO && machine_ram_size <= 0x1000) {
+	} else if (IS_COCO && mdi->ram_size <= 0x1000) {
 		/* 4K CoCo ties PB2 of mdi->PIA1 low */
 		mdi->PIA1->b.in_sink &= ~(1<<2);
-	} else if (IS_COCO && machine_ram_size <= 0x4000) {
+	} else if (IS_COCO && mdi->ram_size <= 0x4000) {
 		/* 16K CoCo pulls PB2 of mdi->PIA1 high */
 		mdi->PIA1->b.in_source |= (1<<2);
 	}
@@ -888,7 +891,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		/* Dragons need to poll printer BUSY state */
 		mdi->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, mdi);
 	}
-	if (IS_COCO && machine_ram_size > 0x4000) {
+	if (IS_COCO && mdi->ram_size > 0x4000) {
 		/* 64K CoCo connects PB6 of mdi->PIA0 to PB2 of mdi->PIA1->
 		 * Deal with this through a postwrite. */
 		mdi->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, mdi);
@@ -901,30 +904,30 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_coco_basic);
 	}
 
-	unexpanded_dragon32 = 0;
-	relaxed_pia_decode = 0;
-	ram_mask = 0xffff;
+	mdi->unexpanded_dragon32 = 0;
+	mdi->relaxed_pia_decode = 0;
+	mdi->ram_mask = 0xffff;
 
 	if (IS_COCO) {
-		if (machine_ram_size <= 0x2000) {
-			ram_organisation = RAM_ORGANISATION_4K;
-			ram_mask = 0x3f3f;
-		} else if (machine_ram_size <= 0x4000) {
-			ram_organisation = RAM_ORGANISATION_16K;
+		if (mdi->ram_size <= 0x2000) {
+			mdi->ram_organisation = RAM_ORGANISATION_4K;
+			mdi->ram_mask = 0x3f3f;
+		} else if (mdi->ram_size <= 0x4000) {
+			mdi->ram_organisation = RAM_ORGANISATION_16K;
 		} else {
-			ram_organisation = RAM_ORGANISATION_64K;
-			if (machine_ram_size <= 0x8000)
-				ram_mask = 0x7fff;
+			mdi->ram_organisation = RAM_ORGANISATION_64K;
+			if (mdi->ram_size <= 0x8000)
+				mdi->ram_mask = 0x7fff;
 		}
-		relaxed_pia_decode = 1;
+		mdi->relaxed_pia_decode = 1;
 	}
 
 	if (IS_DRAGON) {
-		ram_organisation = RAM_ORGANISATION_64K;
-		if (IS_DRAGON32 && machine_ram_size <= 0x8000) {
-			unexpanded_dragon32 = 1;
-			relaxed_pia_decode = 1;
-			ram_mask = 0x7fff;
+		mdi->ram_organisation = RAM_ORGANISATION_64K;
+		if (IS_DRAGON32 && mdi->ram_size <= 0x8000) {
+			mdi->unexpanded_dragon32 = 1;
+			mdi->relaxed_pia_decode = 1;
+			mdi->ram_mask = 0x7fff;
 		}
 	}
 
@@ -1021,7 +1024,7 @@ void machine_reset(struct machine_interface *mi, _Bool hard) {
 		break;
 	}
 	if (hard) {
-		initialise_ram();
+		initialise_ram(mdi);
 	}
 	mc6821_reset(mdi->PIA0);
 	mc6821_reset(mdi->PIA1);
@@ -1110,6 +1113,11 @@ void machine_set_trace(struct machine_interface *mi, _Bool trace_on) {
  * Device inspection.
  */
 
+unsigned machine_ram_size(struct machine_interface *mi) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	return mdi->ram_size;
+}
+
 /* Note, this is SLOW.  Could be sped up by maintaining a hash by component
  * name, but will only ever be used outside critical path, so don't bother for
  * now. */
@@ -1124,6 +1132,8 @@ void *machine_get_component(struct machine_interface *mi, const char *cname) {
 		return mdi->PIA0;
 	} else if (0 == strcmp(cname, "PIA1")) {
 		return mdi->PIA1;
+	} else if (0 == strcmp(cname, "RAM")) {
+		return mdi->ram;
 	}
 	return NULL;
 }
@@ -1147,14 +1157,14 @@ static void machine_instruction_posthook(void *sptr) {
 	single_step = 0;
 }
 
-static uint16_t decode_Z(unsigned Z) {
-	switch (ram_organisation) {
+static uint16_t decode_Z(struct machine_dragon_interface *mdi, unsigned Z) {
+	switch (mdi->ram_organisation) {
 	case RAM_ORGANISATION_4K:
 		return (Z & 0x3f) | ((Z & 0x3f00) >> 2) | ((~Z & 0x8000) >> 3);
 	case RAM_ORGANISATION_16K:
 		return (Z & 0x7f) | ((Z & 0x7f00) >> 1) | ((~Z & 0x8000) >> 1);
 	case RAM_ORGANISATION_64K: default:
-		return Z & ram_mask;
+		return Z & mdi->ram_mask;
 	}
 }
 
@@ -1166,27 +1176,27 @@ static void read_byte(struct machine_dragon_interface *mdi, unsigned A) {
 	switch (mdi->SAM0->S) {
 	case 0:
 		if (mdi->SAM0->RAS) {
-			unsigned Z = decode_Z(mdi->SAM0->Z);
-			if (Z < machine_ram_size)
-				mdi->CPU0->D = machine_ram[Z];
+			unsigned Z = decode_Z(mdi, mdi->SAM0->Z);
+			if (Z < mdi->ram_size)
+				mdi->CPU0->D = mdi->ram[Z];
 		}
 		break;
 	case 1:
 	case 2:
-		mdi->CPU0->D = machine_rom[A & 0x3fff];
+		mdi->CPU0->D = mdi->rom[A & 0x3fff];
 		break;
 	case 3:
 		if (mdi->cart)
 			mdi->CPU0->D = mdi->cart->read(mdi->cart, A, 0, mdi->CPU0->D);
 		break;
 	case 4:
-		if (relaxed_pia_decode) {
+		if (mdi->relaxed_pia_decode) {
 			mdi->CPU0->D = mc6821_read(mdi->PIA0, A);
 		} else {
 			if ((A & 4) == 0) {
 				mdi->CPU0->D = mc6821_read(mdi->PIA0, A);
 			} else {
-				if (have_acia) {
+				if (mdi->have_acia) {
 					/* XXX Dummy ACIA reads */
 					switch (A & 3) {
 					default:
@@ -1206,7 +1216,7 @@ static void read_byte(struct machine_dragon_interface *mdi, unsigned A) {
 		}
 		break;
 	case 5:
-		if (relaxed_pia_decode || (A & 4) == 0) {
+		if (mdi->relaxed_pia_decode || (A & 4) == 0) {
 			mdi->CPU0->D = mc6821_read(mdi->PIA1, A);
 		}
 		break;
@@ -1226,18 +1236,18 @@ static void read_byte(struct machine_dragon_interface *mdi, unsigned A) {
 }
 
 static void write_byte(struct machine_dragon_interface *mdi, unsigned A) {
-	if ((mdi->SAM0->S & 4) || unexpanded_dragon32) {
+	if ((mdi->SAM0->S & 4) || mdi->unexpanded_dragon32) {
 		switch (mdi->SAM0->S) {
 		case 1:
 		case 2:
-			mdi->CPU0->D = machine_rom[A & 0x3fff];
+			mdi->CPU0->D = mdi->rom[A & 0x3fff];
 			break;
 		case 3:
 			if (mdi->cart)
 				mdi->cart->write(mdi->cart, A, 0, mdi->CPU0->D);
 			break;
 		case 4:
-			if (IS_COCO || unexpanded_dragon32) {
+			if (IS_COCO || mdi->unexpanded_dragon32) {
 				mc6821_write(mdi->PIA0, A, mdi->CPU0->D);
 			} else {
 				if ((A & 4) == 0) {
@@ -1246,7 +1256,7 @@ static void write_byte(struct machine_dragon_interface *mdi, unsigned A) {
 			}
 			break;
 		case 5:
-			if (relaxed_pia_decode || (A & 4) == 0) {
+			if (mdi->relaxed_pia_decode || (A & 4) == 0) {
 				mc6821_write(mdi->PIA1, A, mdi->CPU0->D);
 			}
 			break;
@@ -1265,8 +1275,8 @@ static void write_byte(struct machine_dragon_interface *mdi, unsigned A) {
 		}
 	}
 	if (mdi->SAM0->RAS) {
-		unsigned Z = decode_Z(mdi->SAM0->Z);
-		machine_ram[Z] = mdi->CPU0->D;
+		unsigned Z = decode_Z(mdi, mdi->SAM0->Z);
+		mdi->ram[Z] = mdi->CPU0->D;
 	}
 }
 
@@ -1321,9 +1331,9 @@ static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest) {
 	while (nbytes > 0) {
 		int n = sam_vdg_bytes(mdi->SAM0, nbytes);
 		if (dest) {
-			uint16_t V = decode_Z(mdi->SAM0->V);
+			uint16_t V = decode_Z(mdi, mdi->SAM0->V);
 			for (int i = n; i; i--) {
-				uint16_t D = machine_ram[V++] | attr;
+				uint16_t D = mdi->ram[V++] | attr;
 				D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
 				*(dest++) = D;
 			}
@@ -1345,14 +1355,14 @@ static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest) {
 	while (nbytes > 0) {
 		int n = sam_vdg_bytes(mdi->SAM0, nbytes);
 		if (dest) {
-			uint16_t V = decode_Z(mdi->SAM0->V);
+			uint16_t V = decode_Z(mdi, mdi->SAM0->V);
 			for (int i = n; i; i--) {
-				uint16_t Dram = machine_ram[V++];;
+				uint16_t Dram = mdi->ram[V++];;
 				_Bool SnA = Dram & 0x80;
 				uint16_t D;
 				if (!GnA && !SnA) {
 					unsigned Aext = (mdi->VDG0->row << 8) | Aram7 | Dram;
-					D = ext_charset[Aext&0xfff] | 0x100;  // set INV
+					D = mdi->ext_charset[Aext&0xfff] | 0x100;  // set INV
 					D |= (~Dram & 0x80) << 3;
 				} else {
 					D = Dram;
@@ -1418,22 +1428,25 @@ void machine_set_inverted_text(struct machine_interface *mi, _Bool invert) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_bp_add_n(struct machine_bp *list, int n, void *sptr) {
+void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	for (int i = 0; i < n; i++) {
 		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
 			continue;
-		if ((list[i].add_cond & BP_CRC_COMBINED) && (!has_combined || !crclist_match(list[i].cond_crc_combined, crc_combined)))
+		if ((list[i].add_cond & BP_CRC_COMBINED) && (!mdi->has_combined || !crclist_match(list[i].cond_crc_combined, mdi->crc_combined)))
 			continue;
-		if ((list[i].add_cond & BP_CRC_EXT) && (!has_extbas || !crclist_match(list[i].cond_crc_extbas, crc_extbas)))
+		if ((list[i].add_cond & BP_CRC_EXT) && (!mdi->has_extbas || !crclist_match(list[i].cond_crc_extbas, mdi->crc_extbas)))
 			continue;
-		if ((list[i].add_cond & BP_CRC_BAS) && (!has_bas || !crclist_match(list[i].cond_crc_bas, crc_bas)))
+		if ((list[i].add_cond & BP_CRC_BAS) && (!mdi->has_bas || !crclist_match(list[i].cond_crc_bas, mdi->crc_bas)))
 			continue;
 		list[i].bp.handler.sptr = sptr;
 		bp_add(machine_bp_session, &list[i].bp);
 	}
 }
 
-void machine_bp_remove_n(struct machine_bp *list, int n) {
+void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	(void)mdi;
 	for (int i = 0; i < n; i++) {
 		bp_remove(machine_bp_session, &list[i].bp);
 	}
@@ -1467,14 +1480,14 @@ void machine_remove_cart(struct machine_interface *mi) {
 }
 
 /* Intialise RAM contents */
-static void initialise_ram(void) {
+static void initialise_ram(struct machine_dragon_interface *mdi) {
 	int loc = 0, val = 0xff;
 	/* Don't know why, but RAM seems to start in this state: */
 	while (loc < 0x10000) {
-		machine_ram[loc++] = val;
-		machine_ram[loc++] = val;
-		machine_ram[loc++] = val;
-		machine_ram[loc++] = val;
+		mdi->ram[loc++] = val;
+		mdi->ram[loc++] = val;
+		mdi->ram[loc++] = val;
+		mdi->ram[loc++] = val;
 		if ((loc & 0xff) != 0)
 			val ^= 0xff;
 	}
