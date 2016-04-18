@@ -81,7 +81,7 @@ struct tape_interface *tape_interface;
 struct keyboard_interface *keyboard_interface;
 struct printer_interface *printer_interface;
 #ifdef WANT_GDB_TARGET
-struct gdb_interface *gdb_interface;
+static struct gdb_interface *gdb_interface;
 #endif
 
 /* Useful configuration side-effect tracking */
@@ -110,9 +110,15 @@ static int next_id = 0;
 
 static void initialise_ram(void);
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct machine_dragon_interface {
+	struct machine_interface public;
+};
+
 static int cycles;
-static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A);
-static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A);
+static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
+static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
 
@@ -121,7 +127,7 @@ static void machine_instruction_posthook(void *);
 static _Bool single_step = 0;
 static int stop_signal = 0;
 
-/**************************************************************************/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config *machine_config_new(void) {
 	struct machine_config *new = xmalloc(sizeof(*new));
@@ -578,10 +584,6 @@ struct machine_interface *machine_interface_new(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_dragon_interface {
-	struct machine_interface public;
-};
-
 static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	if (!mc)
 		return NULL;
@@ -590,17 +592,16 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	*mdi = (struct machine_dragon_interface){0};
 	struct machine_interface *mi = &mdi->public;
 
-	mi->config = mc;
-	mi->free = machine_dragon_free;
-
 	machine_config_complete(mc);
 	if (mc->description) {
 		LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	}
 
+	mi->free = machine_dragon_free;
+
 	// SAM
 	SAM0 = sam_new();
-	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mdi);
 	// CPU
 	switch (mc->cpu) {
 	case CPU_MC6809: default:
@@ -616,7 +617,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	keyboard_interface = keyboard_interface_new(CPU0);
 
 	// Tape interface
-	tape_interface = tape_interface_new(mc->architecture, CPU0, keyboard_interface);
+	tape_interface = tape_interface_new(mc->architecture, mi, keyboard_interface);
 
 	// Printer interface
 	printer_interface = printer_interface_new(CPU0);
@@ -936,7 +937,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar_cfg.gdb) {
-		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, CPU0, SAM0, machine_bp_session);
+		gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, mi, machine_bp_session);
 		gdb_set_debug(gdb_interface, xroar_cfg.debug_gdb);
 	}
 #endif
@@ -993,14 +994,9 @@ void machine_shutdown(void) {
 }
 
 static void machine_dragon_free(struct machine_interface *mi) {
-	assert(mi != NULL);
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	(void)mi;
 	machine_remove_cart();
-	if (mi->config && mi->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", mi->config->description);
-	}
 	free_devices();
-	free(mdi);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1105,7 +1101,8 @@ void machine_set_trace(_Bool trace_on) {
  * name, but will only ever be used outside critical path, so don't bother for
  * now. */
 
-void *machine_get_component(const char *cname) {
+void *machine_get_component(struct machine_interface *mi, const char *cname) {
+	(void)mi;
 	if (0 == strcmp(cname, "CPU0")) {
 		return CPU0;
 	} else if (0 == strcmp(cname, "SAM0")) {
@@ -1148,7 +1145,7 @@ static uint16_t decode_Z(unsigned Z) {
 	}
 }
 
-static void read_byte(unsigned A) {
+static void read_byte(struct machine_dragon_interface *mdi, unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
 	if (SAM0->RAS)
@@ -1260,8 +1257,8 @@ static void write_byte(unsigned A) {
 	}
 }
 
-static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
-	(void)m;
+static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+	struct machine_dragon_interface *mdi = sptr;
 	// Changing the SAM VDG mode can affect its idea of the current VRAM
 	// address, so get the VDG output up to date:
 	if (!RnW && A >= 0xffc0 && A < 0xffc6) {
@@ -1275,7 +1272,7 @@ static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
 	MC6809_FIRQ_SET(CPU0, PIA1->a.irq | PIA1->b.irq);
 
 	if (RnW) {
-		read_byte(A);
+		read_byte(mdi, A);
 #ifdef TRACE
 		if (xroar_cfg.trace_enabled) {
 			switch (CPU0->variant) {
@@ -1295,11 +1292,11 @@ static void cpu_cycle(void *m, int ncycles, _Bool RnW, uint16_t A) {
 	}
 }
 
-static void cpu_cycle_noclock(void *m, int ncycles, _Bool RnW, uint16_t A) {
-	(void)m;
+static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+	struct machine_dragon_interface *mdi = sptr;
 	(void)ncycles;
 	if (RnW) {
-		read_byte(A);
+		read_byte(mdi, A);
 	} else {
 		write_byte(A);
 	}
@@ -1361,28 +1358,31 @@ void machine_toggle_pause(void) {
 
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
-uint8_t machine_read_byte(unsigned A) {
-	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, NULL);
+uint8_t machine_read_byte(struct machine_interface *mi, unsigned A) {
+	struct machine_interface_dragon *mdi = (struct machine_interface_dragon *)mi;
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mdi);
 	sam_mem_cycle(SAM0, 1, A);
-	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mdi);
 	return CPU0->D;
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
-void machine_write_byte(unsigned A, unsigned D) {
+void machine_write_byte(struct machine_interface *mi, unsigned A, unsigned D) {
+	struct machine_interface_dragon *mdi = (struct machine_interface_dragon *)mi;
 	CPU0->D = D;
-	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, NULL);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mdi);
 	sam_mem_cycle(SAM0, 0, A);
-	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, NULL);
+	SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mdi);
 }
 
 /* simulate an RTS without otherwise affecting machine state */
-void machine_op_rts(struct MC6809 *cpu) {
-	unsigned int new_pc = machine_read_byte(cpu->reg_s) << 8;
-	new_pc |= machine_read_byte(cpu->reg_s + 1);
-	cpu->reg_s += 2;
-	cpu->reg_pc = new_pc;
+void machine_op_rts(struct machine_interface *mi) {
+	//struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	unsigned int new_pc = machine_read_byte(mi, CPU0->reg_s) << 8;
+	new_pc |= machine_read_byte(mi, CPU0->reg_s + 1);
+	CPU0->reg_s += 2;
+	CPU0->reg_pc = new_pc;
 }
 
 #ifndef FAST_SOUND

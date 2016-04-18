@@ -108,9 +108,9 @@
 #include "xroar.h"
 
 struct gdb_interface_private {
-	// CPU
+	struct machine_interface *machine_interface;
+
 	struct MC6809 *cpu;
-	// SAM
 	struct MC6883 *sam;
 
 	// Breakpoint session
@@ -174,12 +174,13 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct MC6809 *cpu, struct MC6883 *sam, struct bp_session *bp_session) {
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine_interface *mi, struct bp_session *bp_session) {
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
 
-	gip->cpu = cpu;
-	gip->sam = sam;
+	gip->machine_interface = mi;
+	gip->cpu = machine_get_component(mi, "CPU0");
+	gip->sam = machine_get_component(mi, "SAM0");
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 
@@ -665,7 +666,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 1, 0) < 0)
 		return;
 	for (unsigned i = 0; i < length; i++) {
-		uint8_t b = machine_read_byte(A++);
+		uint8_t b = machine_read_byte(gip->machine_interface, A++);
 		snprintf(packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
@@ -700,7 +701,7 @@ static void set_memory(struct gdb_interface_private *gip, char *args) {
 		int v = hex8(data);
 		if (v < 0)
 			goto error;
-		machine_write_byte(A, v);
+		machine_write_byte(gip->machine_interface, A, v);
 		A++;
 		data += 2;
 	}

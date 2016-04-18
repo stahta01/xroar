@@ -181,9 +181,6 @@ extern uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 extern struct tape_interface *tape_interface;
 extern struct keyboard_interface *keyboard_interface;
 extern struct printer_interface *printer_interface;
-#ifdef WANT_GDB_TARGET
-extern struct gdb_interface *gdb_interface;
-#endif
 
 /* Add a new machine config: */
 struct machine_config *machine_config_new(void);
@@ -211,13 +208,13 @@ void machine_signal(int sig);
 
 void machine_set_trace(_Bool trace_on);
 
-void *machine_get_component(const char *cname);
+void *machine_get_component(struct machine_interface *mi, const char *cname);
 
 /* simplified read & write byte for convenience functions */
-uint8_t machine_read_byte(unsigned A);
-void machine_write_byte(unsigned A, unsigned D);
+uint8_t machine_read_byte(struct machine_interface *mi, unsigned A);
+void machine_write_byte(struct machine_interface *mi, unsigned A, unsigned D);
 /* simulate an RTS without otherwise affecting machine state */
-void machine_op_rts(struct MC6809 *cpu);
+void machine_op_rts(struct machine_interface *mi);
 
 void machine_set_fast_sound(_Bool fast);
 void machine_select_fast_sound(_Bool fast);

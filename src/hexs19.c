@@ -98,7 +98,7 @@ int intel_hex_read(const char *filename, int autorun) {
 			if (type == 0) {
 				if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN_DATA)
 					log_hexdump_byte(log_hex, data);
-				machine_write_byte(addr & 0xffff, data);
+				machine_write_byte(xroar_machine, addr & 0xffff, data);
 				addr++;
 			}
 		}
@@ -120,7 +120,7 @@ int intel_hex_read(const char *filename, int autorun) {
 		log_close(&log_hex);
 	if (exec != 0) {
 		if (autorun) {
-			struct MC6809 *cpu = machine_get_component("CPU0");
+			struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
 			if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 				LOG_PRINT("Intel HEX: EXEC $%04x - autorunning\n", exec);
 			cpu->jump(cpu, exec);
@@ -180,12 +180,12 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 			LOG_WARN("Dragon BIN: short read\n");
 			break;
 		}
-		machine_write_byte((load + i) & 0xffff, data);
+		machine_write_byte(xroar_machine, (load + i) & 0xffff, data);
 		log_hexdump_byte(log_bin, data);
 	}
 	log_close(&log_bin);
 	if (autorun) {
-		struct MC6809 *cpu = machine_get_component("CPU0");
+		struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
 		if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 			LOG_PRINT("Dragon BIN: EXEC $%04x - autorunning\n", exec);
 		cpu->jump(cpu, exec);
@@ -222,7 +222,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 					LOG_WARN("CoCo BIN: short read in data chunk\n");
 					break;
 				}
-				machine_write_byte((load + i) & 0xffff, data);
+				machine_write_byte(xroar_machine, (load + i) & 0xffff, data);
 				log_hexdump_byte(log_bin, data);
 			}
 			log_close(&log_bin);
@@ -235,7 +235,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 				break;
 			}
 			if (autorun) {
-				struct MC6809 *cpu = machine_get_component("CPU0");
+				struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
 				if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN)
 					LOG_PRINT("CoCo BIN: EXEC $%04x - autorunning\n", exec);
 				cpu->jump(cpu, exec);

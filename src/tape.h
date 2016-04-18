@@ -19,6 +19,7 @@
 #define TAPE_AV_BIT_LENGTH ((TAPE_BIT0_LENGTH + TAPE_BIT1_LENGTH) / 2)
 
 struct MC6809;
+struct machine_interface;
 struct keyboard_interface;
 
 struct tape_interface {
@@ -99,7 +100,9 @@ void tape_free(struct tape *t);
 
 /**************************************************************************/
 
-struct tape_interface *tape_interface_new(int machine_arch, struct MC6809 *cpu, struct keyboard_interface *ki);
+struct tape_interface *tape_interface_new(int machine_arch,
+					  struct machine_interface *mi,
+					  struct keyboard_interface *ki);
 void tape_interface_free(struct tape_interface *ti);
 
 void tape_reset(struct tape_interface *ti);
