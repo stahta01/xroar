@@ -179,7 +179,7 @@ int write_snapshot(const char *filename) {
 	fs_write_uint8(fd, xroar_machine_config->keymap);
 	fs_write_uint8(fd, xroar_machine_config->tv_standard);
 	fs_write_uint8(fd, xroar_machine_config->ram);
-	struct cart *machine_cart = machine_get_cart();
+	struct cart *machine_cart = machine_get_cart(xroar_machine);
 	if (machine_cart) {
 		// attempt to keep snapshots >= v1.8 loadable by older versions
 		unsigned old_cart_type = 0;

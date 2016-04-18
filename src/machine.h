@@ -220,7 +220,7 @@ void machine_set_fast_sound(_Bool fast);
 void machine_select_fast_sound(_Bool fast);
 void machine_update_sound(void);
 
-void machine_set_inverted_text(_Bool);
+void machine_set_inverted_text(struct machine_interface *mi, _Bool);
 
 /* Helper function to populate breakpoints from a list. */
 void machine_bp_add_n(struct machine_bp *list, int n, void *sptr);
@@ -228,7 +228,7 @@ void machine_bp_remove_n(struct machine_bp *list, int n);
 #define machine_bp_add_list(list, sptr) machine_bp_add_n(list, sizeof(list) / sizeof(struct machine_bp), sptr)
 #define machine_bp_remove_list(list) machine_bp_remove_n(list, sizeof(list) / sizeof(struct machine_bp))
 
-struct cart *machine_get_cart(void);
+struct cart *machine_get_cart(struct machine_interface *mi);
 void machine_insert_cart(struct machine_interface *mi, struct cart *c);
 void machine_remove_cart(struct machine_interface *mi);
 

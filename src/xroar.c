@@ -1167,7 +1167,7 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 		xroar_cfg.vdg_inverted_text = action;
 		break;
 	}
-	machine_set_inverted_text(xroar_cfg.vdg_inverted_text);
+	machine_set_inverted_text(xroar_machine, xroar_cfg.vdg_inverted_text);
 	if (notify) {
 		ui_module->set_state(ui_tag_vdg_inverse, xroar_cfg.vdg_inverted_text, NULL);
 	}
@@ -1343,7 +1343,7 @@ void xroar_toggle_cart(void) {
 void xroar_set_cart(_Bool notify, const char *cc_name) {
 	assert(xroar_machine_config != NULL);
 
-	struct cart *old_cart = machine_get_cart();
+	struct cart *old_cart = machine_get_cart(xroar_machine);
 	if (!old_cart && !cc_name)
 		return;
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
