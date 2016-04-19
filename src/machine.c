@@ -366,6 +366,26 @@ void machine_config_print_all(_Bool all) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+void machine_init(void) {
+}
+
+void machine_shutdown(void) {
+	slist_free_full(config_list, (slist_free_func)machine_config_free);
+	config_list = NULL;
+}
+
+static struct machine_interface *machine_dragon_new(struct machine_config *mc);
+static void machine_dragon_free(struct machine_interface *mi);
+
+struct machine_interface *machine_interface_new(struct machine_config *mc) {
+	switch (mc->architecture) {
+	default:
+		return machine_dragon_new(mc);
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void keyboard_update(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
 	unsigned buttons = ~(joystick_read_buttons() & 3);
@@ -499,9 +519,6 @@ static void pia1b_control_postwrite(void *sptr) {
 	sound_set_mux_enabled(mdi->PIA1->b.control_register & 0x08);
 }
 
-void machine_init(void) {
-}
-
 /* VDG edge delegates */
 
 static void vdg_hs(void *sptr, _Bool level) {
@@ -578,18 +595,6 @@ static void cart_halt(void *sptr, _Bool level) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct machine_interface *machine_dragon_new(struct machine_config *mc);
-static void machine_dragon_free(struct machine_interface *mi);
-
-struct machine_interface *machine_interface_new(struct machine_config *mc) {
-	switch (mc->architecture) {
-	default:
-		return machine_dragon_new(mc);
-	}
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	if (!mc)
 		return NULL;
@@ -619,6 +624,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		break;
 	}
 	mdi->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, mdi->SAM0);
+
+	// Breakpoint session
+	mdi->bp_session = bp_session_new(mi);
 
 	// Keyboard interface
 	keyboard_interface = keyboard_interface_new(mi);
@@ -938,9 +946,6 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 	keyboard_set_keymap(keyboard_interface, xroar_machine_config->keymap);
 
-	// Breakpoint session
-	mdi->bp_session = bp_session_new(mdi->CPU0);
-
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar_cfg.gdb) {
@@ -952,14 +957,16 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	return mi;
 }
 
-static void free_devices(struct machine_dragon_interface *mdi) {
+static void machine_dragon_free(struct machine_interface *mi) {
+	if (!mi)
+		return;
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	if (mi->config && mi->config->description) {
+		LOG_DEBUG(1, "Machine shutdown: %s\n", mi->config->description);
+	}
+	machine_remove_cart(mi);
 	if (mdi->gdb_interface) {
 		gdb_interface_free(mdi->gdb_interface);
-		mdi->gdb_interface = NULL;
-	}
-	if (mdi->bp_session) {
-		bp_session_free(mdi->bp_session);
-		mdi->bp_session = NULL;
 	}
 	if (keyboard_interface) {
 		keyboard_interface_free(keyboard_interface);
@@ -973,42 +980,25 @@ static void free_devices(struct machine_dragon_interface *mdi) {
 		printer_interface_free(printer_interface);
 		printer_interface = NULL;
 	}
+	if (mdi->bp_session) {
+		bp_session_free(mdi->bp_session);
+	}
 	if (mdi->SAM0) {
 		sam_free(mdi->SAM0);
-		mdi->SAM0 = NULL;
 	}
 	if (mdi->CPU0) {
 		mdi->CPU0->free(mdi->CPU0);
-		mdi->CPU0 = NULL;
 	}
 	if (mdi->PIA0) {
 		mc6821_free(mdi->PIA0);
-		mdi->PIA0 = NULL;
 	}
 	if (mdi->PIA1) {
 		mc6821_free(mdi->PIA1);
-		mdi->PIA1 = NULL;
 	}
 	if (mdi->VDG0) {
 		mc6847_free(mdi->VDG0);
-		mdi->VDG0 = NULL;
 	}
-}
-
-void machine_shutdown(void) {
-	slist_free_full(config_list, (slist_free_func)machine_config_free);
-	config_list = NULL;
-}
-
-static void machine_dragon_free(struct machine_interface *mi) {
-	if (!mi)
-		return;
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	if (mi->config && mi->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", mi->config->description);
-	}
-	machine_remove_cart(mi);
-	free_devices(mdi);
+	free(mdi);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -27,6 +27,7 @@
 
 #include "breakpoint.h"
 #include "logging.h"
+#include "machine.h"
 #include "mc6809.h"
 
 struct bp_session_private {
@@ -35,6 +36,7 @@ struct bp_session_private {
 	struct slist *wp_read_list;
 	struct slist *wp_write_list;
 	struct slist *iter_next;
+	struct machine_interface *machine_interface;
 	struct MC6809 *cpu;
 };
 
@@ -49,11 +51,12 @@ static void bp_instruction_hook(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct bp_session *bp_session_new(struct MC6809 *cpu) {
+struct bp_session *bp_session_new(struct machine_interface *mi) {
 	struct bp_session_private *bpsp = xmalloc(sizeof(*bpsp));
 	*bpsp = (struct bp_session_private){0};
 	struct bp_session *bps = &bpsp->bps;
-	bpsp->cpu = cpu;
+	bpsp->machine_interface = mi;
+	bpsp->cpu = machine_get_component(mi, "CPU0");
 	return bps;
 }
 
