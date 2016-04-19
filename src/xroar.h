@@ -21,15 +21,10 @@ struct vdg_palette;
 struct xroar_timeout;
 
 /* Convenient values for arguments to helper functions */
-#define XROAR_OFF    (0)
-#define XROAR_ON     (1)
-#define XROAR_CLEAR  (0)
-#define XROAR_SET    (1)
-#define XROAR_FALSE  (0)
-#define XROAR_TRUE   (1)
-#define XROAR_AUTO   (-1)
-#define XROAR_TOGGLE (-2)
-#define XROAR_CYCLE  (-3)
+#define XROAR_NEXT (-2)
+#define XROAR_AUTO (-1)
+#define XROAR_OFF  (0)
+#define XROAR_ON   (1)
 
 enum xroar_filetype {
 	FILETYPE_UNKNOWN,

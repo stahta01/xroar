@@ -189,23 +189,23 @@ static void emulator_command(int cmdkey, _Bool shift) {
 		return;
 	case '5': case '6': case '7': case '8':
 		if (shift) {
-			xroar_set_write_back(1, cmdkey - '5', XROAR_TOGGLE);
+			xroar_set_write_back(1, cmdkey - '5', XROAR_NEXT);
 		} else {
-			xroar_set_write_enable(1, cmdkey - '5', XROAR_TOGGLE);
+			xroar_set_write_enable(1, cmdkey - '5', XROAR_NEXT);
 		}
 		return;
-	case 'a': xroar_set_cross_colour(1, XROAR_CYCLE); return;
+	case 'a': xroar_set_cross_colour(1, XROAR_NEXT); return;
 	case 'q': xroar_quit(); return;
 	case 'e': xroar_toggle_cart(); return;
-	case 'f': xroar_set_fullscreen(1, XROAR_TOGGLE); return;
+	case 'f': xroar_set_fullscreen(1, XROAR_NEXT); return;
 	case 'h':
 		     if (shift) {
-			     machine_toggle_pause(xroar_machine);
+			     xroar_machine->pause(xroar_machine, 2);
 		     }
 		     return;
 	case 'i':
 		     if (shift) {
-			     xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+			     xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		     } else {
 			     xroar_run_file(NULL);
 		     }
@@ -217,7 +217,7 @@ static void emulator_command(int cmdkey, _Bool shift) {
 			     xroar_cycle_joysticks(1);
 		     }
 		     return;
-	case 'k': xroar_set_keymap(1, XROAR_CYCLE); return;
+	case 'k': xroar_set_keymap(1, XROAR_NEXT); return;
 	case 'l':
 		     if (shift) {
 			     xroar_run_file(NULL);
@@ -225,7 +225,7 @@ static void emulator_command(int cmdkey, _Bool shift) {
 			     xroar_load_file(NULL);
 		     }
 		     return;
-	case 'm': xroar_set_machine(1, XROAR_CYCLE); return;
+	case 'm': xroar_set_machine(1, XROAR_NEXT); return;
 	case 'p':
 		     if (shift) {
 			     printer_flush(xroar_printer_interface);
@@ -241,9 +241,9 @@ static void emulator_command(int cmdkey, _Bool shift) {
 	case 's': xroar_save_snapshot(); return;
 	case 'w': xroar_select_tape_output(); return;
 #ifdef TRACE
-	case 'v': xroar_set_trace(XROAR_TOGGLE); return;
+	case 'v': xroar_set_trace(XROAR_NEXT); return;
 #endif
-	case 'z': xroar_set_kbd_translate(1, XROAR_TOGGLE); return;
+	case 'z': xroar_set_kbd_translate(1, XROAR_NEXT); return;
 	case '-':
 		     sdl_zoom_out();
 		     return;
@@ -349,7 +349,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		return;
 	case SDLK_F11:
-		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		xroar_set_fullscreen(1, XROAR_NEXT);
 		return;
 	case SDLK_F12:
 		if (shift) {
@@ -367,7 +367,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 		}
 		return;
 	case SDLK_PAUSE:
-		machine_toggle_pause(xroar_machine);
+		xroar_machine->pause(xroar_machine, 2);
 		return;
 	default:
 		break;

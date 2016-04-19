@@ -1016,17 +1016,17 @@ void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 
 void xroar_set_trace(int mode) {
 #ifdef TRACE
-	_Bool set_to;
+	int set_to;
 	switch (mode) {
-		case XROAR_OFF: default:
-			set_to = 0;
-			break;
-		case XROAR_ON:
-			set_to = 1;
-			break;
-		case XROAR_TOGGLE: case XROAR_CYCLE:
-			set_to = !xroar_cfg.trace_enabled;
-			break;
+	case XROAR_OFF: default:
+		set_to = 0;
+		break;
+	case XROAR_ON:
+		set_to = 1;
+		break;
+	case XROAR_NEXT:
+		set_to = !xroar_cfg.trace_enabled;;
+		break;
 	}
 	xroar_cfg.trace_enabled = set_to;
 	machine_set_trace(xroar_machine, xroar_cfg.trace_enabled);
@@ -1107,7 +1107,7 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 		return 0;
 	_Bool new_we = !vd->write_protect;
 	switch (action) {
-	case XROAR_TOGGLE:
+	case XROAR_NEXT:
 		new_we = !new_we;
 		break;
 	default:
@@ -1128,7 +1128,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 		return 0;
 	_Bool new_wb = vd->write_back;
 	switch (action) {
-	case XROAR_TOGGLE:
+	case XROAR_NEXT:
 		new_wb = !new_wb;
 		break;
 	default:
@@ -1144,7 +1144,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 
 void xroar_set_cross_colour(_Bool notify, int action) {
 	switch (action) {
-	case XROAR_CYCLE:
+	case XROAR_NEXT:
 		xroar_machine_config->cross_colour_phase++;
 		xroar_machine_config->cross_colour_phase %= NUM_CROSS_COLOUR_PHASES;
 		break;
@@ -1162,7 +1162,7 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 
 void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 	switch (action) {
-	case XROAR_TOGGLE:
+	case XROAR_NEXT:
 		xroar_cfg.vdg_inverted_text = !xroar_cfg.vdg_inverted_text;
 		break;
 	default:
@@ -1189,7 +1189,7 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 		case XROAR_ON:
 			set_to = 1;
 			break;
-		case XROAR_TOGGLE:
+		case XROAR_NEXT:
 		default:
 			set_to = !vo_module->is_fullscreen;
 			break;
@@ -1219,7 +1219,7 @@ void xroar_run_file(char const * const *exts) {
 void xroar_set_keymap(_Bool notify, int map) {
 	int new;
 	switch (map) {
-		case XROAR_CYCLE:
+		case XROAR_NEXT:
 			// fudge the cycle order...
 			switch (xroar_machine_config->keymap) {
 			case dkbd_layout_dragon:
@@ -1248,7 +1248,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 	switch (kbd_translate) {
-		case XROAR_TOGGLE: case XROAR_CYCLE:
+		case XROAR_NEXT:
 			xroar_cfg.kbd_translate = !xroar_cfg.kbd_translate;
 			break;
 		default:
@@ -1311,7 +1311,7 @@ void xroar_set_machine(_Bool notify, int id) {
 	int new = xroar_machine_config->id;
 	struct slist *mcl, *mcc;
 	switch (id) {
-		case XROAR_CYCLE:
+		case XROAR_NEXT:
 			mcl = machine_config_list();
 			mcc = slist_find(mcl, xroar_machine_config);
 			if (mcc && mcc->next) {

@@ -212,13 +212,13 @@ static void emulator_command(SDLKey sym) {
 		break;
 	case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8:
 		if (shift) {
-			xroar_set_write_back(1, sym - SDLK_5, XROAR_TOGGLE);
+			xroar_set_write_back(1, sym - SDLK_5, XROAR_NEXT);
 		} else {
-			xroar_set_write_enable(1, sym - SDLK_5, XROAR_TOGGLE);
+			xroar_set_write_enable(1, sym - SDLK_5, XROAR_NEXT);
 		}
 		break;
 	case SDLK_a:
-		xroar_set_cross_colour(1, XROAR_CYCLE);
+		xroar_set_cross_colour(1, XROAR_NEXT);
 		break;
 	case SDLK_q:
 		xroar_quit();
@@ -227,7 +227,7 @@ static void emulator_command(SDLKey sym) {
 		xroar_toggle_cart();
 		break;
 	case SDLK_f:
-		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
 	case SDLK_h:
 		if (shift)
@@ -235,7 +235,7 @@ static void emulator_command(SDLKey sym) {
 		break;
 	case SDLK_i:
 		if (shift)
-			xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		else
 			xroar_run_file(NULL);
 		break;
@@ -247,7 +247,7 @@ static void emulator_command(SDLKey sym) {
 		}
 		break;
 	case SDLK_k:
-		xroar_set_keymap(1, XROAR_CYCLE);
+		xroar_set_keymap(1, XROAR_NEXT);
 		break;
 	case SDLK_l:
 		if (shift) {
@@ -257,7 +257,7 @@ static void emulator_command(SDLKey sym) {
 		}
 		break;
 	case SDLK_m:
-		xroar_set_machine(1, XROAR_CYCLE);
+		xroar_set_machine(1, XROAR_NEXT);
 		break;
 	case SDLK_p:
 		if (shift)
@@ -277,11 +277,11 @@ static void emulator_command(SDLKey sym) {
 		break;
 #ifdef TRACE
 	case SDLK_v:
-		xroar_set_trace(XROAR_TOGGLE);
+		xroar_set_trace(XROAR_NEXT);
 		break;
 #endif
 	case SDLK_z: /* running out of letters... */
-		xroar_set_kbd_translate(1, XROAR_TOGGLE);
+		xroar_set_kbd_translate(1, XROAR_NEXT);
 		break;
 	case SDLK_MINUS:
 		sdl_zoom_out();
@@ -333,7 +333,7 @@ void sdl_keypress(SDL_keysym *keysym) {
 		return;
 	}
 	if (sym == SDLK_F11) {
-		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		xroar_set_fullscreen(1, XROAR_NEXT);
 		return;
 	}
 	if (sym == SDLK_F12) {

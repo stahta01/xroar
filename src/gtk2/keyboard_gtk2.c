@@ -256,27 +256,27 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_5: case GDK_6: case GDK_7: case GDK_8:
 		if (shift) {
-			xroar_set_write_back(1, keyval - GDK_5, XROAR_TOGGLE);
+			xroar_set_write_back(1, keyval - GDK_5, XROAR_NEXT);
 		} else {
-			xroar_set_write_enable(1, keyval - GDK_5, XROAR_TOGGLE);
+			xroar_set_write_enable(1, keyval - GDK_5, XROAR_NEXT);
 		}
 		break;
 	case GDK_a:
-		xroar_set_cross_colour(1, XROAR_CYCLE);
+		xroar_set_cross_colour(1, XROAR_NEXT);
 		break;
 	case GDK_e:
 		xroar_toggle_cart();
 		break;
 	case GDK_f:
-		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
 	case GDK_h:
 		if (shift)
-			machine_toggle_pause(xroar_machine);
+			xroar_machine->pause(xroar_machine, 2);
 		break;
 	case GDK_i:
 		if (shift)
-			xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		else
 			xroar_run_file(NULL);
 		break;
@@ -288,10 +288,10 @@ static void emulator_command(guint keyval, int shift) {
 		}
 		break;
 	case GDK_k:
-		xroar_set_keymap(1, XROAR_CYCLE);
+		xroar_set_keymap(1, XROAR_NEXT);
 		break;
 	case GDK_m:
-		xroar_set_machine(1, XROAR_CYCLE);
+		xroar_set_machine(1, XROAR_NEXT);
 		break;
 	case GDK_p:
 		if (shift)
@@ -302,7 +302,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 #ifdef TRACE
 	case GDK_v:
-		xroar_set_trace(XROAR_TOGGLE);  /* toggle */
+		xroar_set_trace(XROAR_NEXT);  /* toggle */
 		break;
 #endif
 	default:
@@ -369,7 +369,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		}
 	}
 	if (keyval == GDK_Pause) {
-		machine_toggle_pause(xroar_machine);
+		xroar_machine->pause(xroar_machine, 2);
 		return FALSE;
 	}
 	if (control) {
