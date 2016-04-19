@@ -356,9 +356,8 @@ int read_snapshot(const char *filename) {
 		}
 	}
 	// Default to Dragon 64 for old snapshots
-	xroar_machine->free(xroar_machine);
-	xroar_machine_config = machine_config_by_arch(ARCH_DRAGON64);
-	xroar_machine = machine_interface_new(xroar_machine_config);
+	struct machine_config *mc = machine_config_by_arch(ARCH_DRAGON64);
+	xroar_configure_machine(mc);
 	machine_reset(xroar_machine, RESET_HARD);
 	// If old snapshot, buffer contains register dump
 	if (buffer[0] != 'X') {
@@ -375,9 +374,8 @@ int read_snapshot(const char *filename) {
 				if (size < 1) break;
 				tmp = fs_read_uint8(fd);
 				tmp %= 4;
-				xroar_machine_config->architecture = old_arch_mapping[tmp];
-				xroar_machine->free(xroar_machine);
-				xroar_machine = machine_interface_new(xroar_machine_config);
+				mc->architecture = old_arch_mapping[tmp];
+				xroar_configure_machine(mc);
 				machine_reset(xroar_machine, RESET_HARD);
 				size--;
 				break;
@@ -489,16 +487,16 @@ int read_snapshot(const char *filename) {
 				if (size < 7) break;
 				(void)fs_read_uint8(fd);  // requested_machine
 				tmp = fs_read_uint8(fd);
-				xroar_machine_config = machine_config_by_arch(tmp);
+				mc = machine_config_by_arch(tmp);
 				tmp = fs_read_uint8(fd);  // was romset
 				if (version_minor >= 7) {
 					// old field not used any more, repurposed
 					// in v1.7 to hold cpu type:
-					xroar_machine_config->cpu = tmp;
+					mc->cpu = tmp;
 				}
-				xroar_machine_config->keymap = fs_read_uint8(fd);  // keymap
-				xroar_machine_config->tv_standard = fs_read_uint8(fd);
-				xroar_machine_config->ram = fs_read_uint8(fd);
+				mc->keymap = fs_read_uint8(fd);  // keymap
+				mc->tv_standard = fs_read_uint8(fd);
+				mc->ram = fs_read_uint8(fd);
 				tmp = fs_read_uint8(fd);  // dos_type
 				if (version_minor < 8) {
 					// v1.8 adds a separate cart chunk
@@ -506,11 +504,10 @@ int read_snapshot(const char *filename) {
 				}
 				size -= 7;
 				if (size > 0) {
-					xroar_machine_config->cross_colour_phase = fs_read_uint8(fd);
+					mc->cross_colour_phase = fs_read_uint8(fd);
 					size--;
 				}
-				xroar_machine->free(xroar_machine);
-				xroar_machine = machine_interface_new(xroar_machine_config);
+				xroar_configure_machine(mc);
 				machine_reset(xroar_machine, RESET_HARD);
 				break;
 

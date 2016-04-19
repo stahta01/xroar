@@ -117,6 +117,9 @@ extern struct event *xroar_machine_events;
 
 extern struct machine_config *xroar_machine_config;
 extern struct machine_interface *xroar_machine;
+extern struct tape_interface *xroar_tape_interface;
+extern struct keyboard_interface *xroar_keyboard_interface;
+extern struct printer_interface *xroar_printer_interface;
 extern struct vdg_palette *xroar_vdg_palette;
 
 extern struct vdrive_interface *xroar_vdrive_interface;
@@ -175,6 +178,7 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);
 void xroar_cycle_joysticks(_Bool notify);
+void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
 void xroar_toggle_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);

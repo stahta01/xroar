@@ -295,7 +295,7 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_p:
 		if (shift)
-			printer_flush(printer_interface);
+			printer_flush(xroar_printer_interface);
 		break;
 	case GDK_w:
 		xroar_select_tape_output();
@@ -346,12 +346,12 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	}
 
 	if (keyval == GDK_Shift_L || keyval == GDK_Shift_R) {
-		KEYBOARD_PRESS_SHIFT(keyboard_interface);
+		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
 		return FALSE;
 	}
 	shift = event->state & GDK_SHIFT_MASK;
 	if (!shift) {
-		KEYBOARD_RELEASE_SHIFT(keyboard_interface);
+		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
 	if (keyval == GDK_F12) {
 		if (shift) {
@@ -381,7 +381,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	if (keyval_priority[keyval_i]) {
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-		keyboard_press(keyboard_interface, keyval_to_dkey[keyval_i]);
+		keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
 	}
 
@@ -406,13 +406,13 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		if (keyval_to_dkey[keyval_i] == DSCAN_SPACE)
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		last_unicode[keycode] = unicode;
-		keyboard_unicode_press(keyboard_interface, unicode);
+		keyboard_unicode_press(xroar_keyboard_interface, unicode);
 		return FALSE;
 	}
 
 	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 		printf("gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-	keyboard_press(keyboard_interface, keyval_to_dkey[keyval_i]);
+	keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 	return FALSE;
 }
 
@@ -449,12 +449,12 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	}
 
 	if (keyval == GDK_Shift_L || keyval == GDK_Shift_R) {
-		KEYBOARD_RELEASE_SHIFT(keyboard_interface);
+		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 		return FALSE;
 	}
 	shift = event->state & GDK_SHIFT_MASK;
 	if (!shift) {
-		KEYBOARD_RELEASE_SHIFT(keyboard_interface);
+		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
 	if (keyval == GDK_F12) {
 		if (!noratelimit_latch) {
@@ -467,7 +467,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	if (keyval_priority[keyval_i]) {
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-		keyboard_release(keyboard_interface, keyval_to_dkey[keyval_i]);
+		keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
 	}
 
@@ -476,18 +476,18 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		guint32 unicode = last_unicode[keycode];
 		if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 			printf("gtk release keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));
-		keyboard_unicode_release(keyboard_interface, unicode);
+		keyboard_unicode_release(xroar_keyboard_interface, unicode);
 		/* Put shift back the way it should be */
 		if (shift)
-			KEYBOARD_PRESS_SHIFT(keyboard_interface);
+			KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
 		else
-			KEYBOARD_RELEASE_SHIFT(keyboard_interface);
+			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 		return FALSE;
 	}
 
 	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT)
 		printf("gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-	keyboard_release(keyboard_interface, keyval_to_dkey[keyval_i]);
+	keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 	return FALSE;
 }
 

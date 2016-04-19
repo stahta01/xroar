@@ -171,10 +171,6 @@ struct machine_interface {
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
 
-extern struct tape_interface *tape_interface;
-extern struct keyboard_interface *keyboard_interface;
-extern struct printer_interface *printer_interface;
-
 /* Add a new machine config: */
 struct machine_config *machine_config_new(void);
 /* For finding known configs: */
@@ -203,6 +199,7 @@ void machine_set_trace(struct machine_interface *mi, _Bool trace_on);
 
 unsigned machine_ram_size(struct machine_interface *mi);
 void *machine_get_component(struct machine_interface *mi, const char *cname);
+void *machine_get_interface(struct machine_interface *mi, const char *ifname);
 
 /* simplified read & write byte for convenience functions */
 uint8_t machine_read_byte(struct machine_interface *mi, unsigned A);

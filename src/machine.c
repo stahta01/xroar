@@ -108,6 +108,10 @@ struct machine_dragon_interface {
 	struct gdb_interface *gdb_interface;
 #endif
 
+	struct tape_interface *tape_interface;
+	struct keyboard_interface *keyboard_interface;
+	struct printer_interface *printer_interface;
+
 	// Useful configuration side-effect tracking
 	_Bool has_bas, has_extbas, has_altbas, has_combined;
 	_Bool has_ext_charset;
@@ -119,10 +123,6 @@ struct machine_dragon_interface {
 	_Bool relaxed_pia_decode;
 	_Bool have_acia;
 };
-
-struct tape_interface *tape_interface;
-struct keyboard_interface *keyboard_interface;
-struct printer_interface *printer_interface;
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -395,7 +395,7 @@ static void keyboard_update(void *sptr) {
 		.col_source = mdi->PIA0->b.out_source,
 		.col_sink = mdi->PIA0->b.out_sink,
 	};
-	keyboard_read_matrix(keyboard_interface, &state);
+	keyboard_read_matrix(mdi->keyboard_interface, &state);
 	mdi->PIA0->a.in_sink = state.row_sink;
 	mdi->PIA0->b.in_source = state.col_source;
 	mdi->PIA0->b.in_sink = state.col_sink;
@@ -460,23 +460,23 @@ static void pia0b_data_preread_coco64k(void *sptr) {
 static void pia1a_data_postwrite(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
 	sound_set_dac_level((float)(PIA_VALUE_A(mdi->PIA1) & 0xfc) / 252.);
-	tape_update_output(tape_interface, mdi->PIA1->a.out_sink & 0xfc);
+	tape_update_output(mdi->tape_interface, mdi->PIA1->a.out_sink & 0xfc);
 	if (IS_DRAGON) {
 		keyboard_update(mdi);
-		printer_strobe(printer_interface, PIA_VALUE_A(mdi->PIA1) & 0x02, PIA_VALUE_B(mdi->PIA0));
+		printer_strobe(mdi->printer_interface, PIA_VALUE_A(mdi->PIA1) & 0x02, PIA_VALUE_B(mdi->PIA0));
 	}
 }
 
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
-	tape_update_motor(tape_interface, mdi->PIA1->a.control_register & 0x08);
+	tape_update_motor(mdi->tape_interface, mdi->PIA1->a.control_register & 0x08);
 }
 
 #define pia1b_data_preread NULL
 
 static void pia1b_data_preread_dragon(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
-	if (printer_busy(printer_interface))
+	if (printer_busy(mdi->printer_interface))
 		mdi->PIA1->b.in_sink |= 0x01;
 	else
 		mdi->PIA1->b.in_sink &= ~0x01;
@@ -500,10 +500,10 @@ static void pia1b_data_postwrite(void *sptr) {
 		_Bool is_32k = PIA_VALUE_B(mdi->PIA1) & 0x04;
 		if (is_32k) {
 			mdi->rom = mdi->rom0;
-			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
+			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 		} else {
 			mdi->rom = mdi->rom1;
-			keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
+			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
 		}
 	}
 	// Single-bit sound
@@ -629,13 +629,13 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mdi->bp_session = bp_session_new(mi);
 
 	// Keyboard interface
-	keyboard_interface = keyboard_interface_new(mi);
+	mdi->keyboard_interface = keyboard_interface_new(mi);
 
 	// Tape interface
-	tape_interface = tape_interface_new(mc->architecture, mi, keyboard_interface);
+	mdi->tape_interface = tape_interface_new(mc->architecture, mi, mdi->keyboard_interface);
 
 	// Printer interface
-	printer_interface = printer_interface_new(mi);
+	mdi->printer_interface = printer_interface_new(mi);
 
 	// PIAs
 	mdi->PIA0 = mc6821_new();
@@ -659,7 +659,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 #endif
 
 	// Tape
-	tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mdi);
+	mdi->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mdi);
 
 	// VDG
 	mdi->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
@@ -679,7 +679,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mc6847_set_inverted_text(mdi->VDG0, mdi->inverted_text);
 
 	// Printer
-	printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, mdi);
+	mdi->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, mdi);
 
 	/* Load appropriate ROMs */
 	memset(mdi->rom0, 0, sizeof(mdi->rom0));
@@ -908,9 +908,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	}
 
 	if (IS_DRAGON) {
-		keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
+		keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
-		keyboard_set_chord_mode(keyboard_interface, keyboard_chord_mode_coco_basic);
+		keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_coco_basic);
 	}
 
 	mdi->unexpanded_dragon32 = 0;
@@ -944,7 +944,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	machine_select_fast_sound(xroar_cfg.fast_sound);
 #endif
 
-	keyboard_set_keymap(keyboard_interface, xroar_machine_config->keymap);
+	keyboard_set_keymap(mdi->keyboard_interface, xroar_machine_config->keymap);
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -968,17 +968,14 @@ static void machine_dragon_free(struct machine_interface *mi) {
 	if (mdi->gdb_interface) {
 		gdb_interface_free(mdi->gdb_interface);
 	}
-	if (keyboard_interface) {
-		keyboard_interface_free(keyboard_interface);
-		keyboard_interface = NULL;
+	if (mdi->keyboard_interface) {
+		keyboard_interface_free(mdi->keyboard_interface);
 	}
-	if (tape_interface) {
-		tape_interface_free(tape_interface);
-		tape_interface = NULL;
+	if (mdi->tape_interface) {
+		tape_interface_free(mdi->tape_interface);
 	}
-	if (printer_interface) {
-		printer_interface_free(printer_interface);
-		printer_interface = NULL;
+	if (mdi->printer_interface) {
+		printer_interface_free(mdi->printer_interface);
 	}
 	if (mdi->bp_session) {
 		bp_session_free(mdi->bp_session);
@@ -1029,8 +1026,8 @@ void machine_reset(struct machine_interface *mi, _Bool hard) {
 	hd6309_trace_reset();
 #endif
 	mc6847_reset(mdi->VDG0);
-	tape_reset(tape_interface);
-	printer_reset(printer_interface);
+	tape_reset(mdi->tape_interface);
+	printer_reset(mdi->printer_interface);
 }
 
 enum machine_run_state machine_run(struct machine_interface *mi, int ncycles) {
@@ -1125,6 +1122,20 @@ void *machine_get_component(struct machine_interface *mi, const char *cname) {
 		return mdi->PIA1;
 	} else if (0 == strcmp(cname, "RAM")) {
 		return mdi->ram;
+	}
+	return NULL;
+}
+
+/* Similarly SLOW.  Used to populate UI. */
+
+void *machine_get_interface(struct machine_interface *mi, const char *ifname) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	if (0 == strcmp(ifname, "tape")) {
+		return mdi->tape_interface;
+	} else if (0 == strcmp(ifname, "keyboard")) {
+		return mdi->keyboard_interface;
+	} else if (0 == strcmp(ifname, "printer")) {
+		return mdi->printer_interface;
 	}
 	return NULL;
 }

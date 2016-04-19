@@ -198,6 +198,9 @@ int xroar_frameskip = 0;
 
 struct machine_config *xroar_machine_config;
 struct machine_interface *xroar_machine;
+struct tape_interface *xroar_tape_interface;
+struct keyboard_interface *xroar_keyboard_interface;
+struct printer_interface *xroar_printer_interface;
 static struct cart_config *selected_cart_config;
 struct vdg_palette *xroar_vdg_palette;
 
@@ -618,7 +621,7 @@ _Bool xroar_init(int argc, char **argv) {
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
 	if (private_cfg.tape_ao_rate > 0)
-		tape_set_ao_rate(tape_interface, private_cfg.tape_ao_rate);
+		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape_ao_rate);
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
 	_Bool definitely_dos = 0;
@@ -730,7 +733,7 @@ _Bool xroar_init(int argc, char **argv) {
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	/* Configure machine */
-	xroar_machine = machine_interface_new(xroar_machine_config);
+	xroar_configure_machine(xroar_machine_config);
 	if (xroar_machine_config->cart_enabled) {
 		xroar_set_cart(1, xroar_machine_config->default_cart);
 	} else {
@@ -738,7 +741,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 	/* Reset everything */
 	xroar_hard_reset();
-	tape_select_state(tape_interface, private_cfg.tape_fast | private_cfg.tape_pad | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
+	tape_select_state(xroar_tape_interface, private_cfg.tape_fast | private_cfg.tape_pad | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
 
 	load_disk_to_drive = 0;
 	while (private_cfg.load_list) {
@@ -785,7 +788,7 @@ _Bool xroar_init(int argc, char **argv) {
 		switch (write_file_type) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
-				tape_open_writing(tape_interface, private_cfg.tape_write);
+				tape_open_writing(xroar_tape_interface, private_cfg.tape_write);
 				ui_module->set_state(ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
@@ -802,14 +805,14 @@ _Bool xroar_init(int argc, char **argv) {
 
 	while (private_cfg.type_list) {
 		char *data = private_cfg.type_list->data;
-		keyboard_queue_basic(keyboard_interface, data);
+		keyboard_queue_basic(xroar_keyboard_interface, data);
 		private_cfg.type_list = slist_remove(private_cfg.type_list, data);
 		free(data);
 	}
 	if (private_cfg.lp_file) {
-		printer_open_file(printer_interface, private_cfg.lp_file);
+		printer_open_file(xroar_printer_interface, private_cfg.lp_file);
 	} else if (private_cfg.lp_pipe) {
-		printer_open_pipe(printer_interface, private_cfg.lp_pipe);
+		printer_open_pipe(xroar_printer_interface, private_cfg.lp_pipe);
 	}
 	return 1;
 }
@@ -908,9 +911,9 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			xroar_insert_disk_file(load_disk_to_drive, filename);
 			if (autorun && vdrive_disk_in_drive(xroar_vdrive_interface, 0)) {
 				if (IS_DRAGON) {
-					keyboard_queue_basic(keyboard_interface, "\033BOOT\r");
+					keyboard_queue_basic(xroar_keyboard_interface, "\033BOOT\r");
 				} else {
-					keyboard_queue_basic(keyboard_interface, "\033DOS\r");
+					keyboard_queue_basic(xroar_keyboard_interface, "\033DOS\r");
 				}
 				return 0;
 			}
@@ -939,9 +942,9 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 		case FILETYPE_WAV:
 		default:
 			if (autorun) {
-				ret = tape_autorun(tape_interface, filename);
+				ret = tape_autorun(xroar_tape_interface, filename);
 			} else {
-				ret = tape_open_reading(tape_interface, filename);
+				ret = tape_open_reading(xroar_tape_interface, filename);
 			}
 			if (ret == 0) {
 				ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
@@ -1237,7 +1240,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 			break;
 	}
 	if (new >= 0 && new < NUM_KEYMAPS) {
-		keyboard_set_keymap(keyboard_interface, new);
+		keyboard_set_keymap(xroar_keyboard_interface, new);
 		if (notify) {
 			ui_module->set_state(ui_tag_keymap, new, NULL);
 		}
@@ -1294,6 +1297,17 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
+void xroar_configure_machine(struct machine_config *mc) {
+	if (xroar_machine) {
+		xroar_machine->free(xroar_machine);
+	}
+	xroar_machine_config = mc;
+	xroar_machine = machine_interface_new(mc);
+	xroar_tape_interface = machine_get_interface(xroar_machine, "tape");
+	xroar_keyboard_interface = machine_get_interface(xroar_machine, "keyboard");
+	xroar_printer_interface = machine_get_interface(xroar_machine, "printer");
+}
+
 void xroar_set_machine(_Bool notify, int id) {
 	int new = xroar_machine_config->id;
 	struct slist *mcl, *mcc;
@@ -1311,12 +1325,10 @@ void xroar_set_machine(_Bool notify, int id) {
 			new = (id >= 0 ? id : 0);
 			break;
 	}
-	machine_remove_cart(xroar_machine);
-	xroar_machine->free(xroar_machine);
-	xroar_machine_config = machine_config_by_id(new);
-	xroar_machine = machine_interface_new(xroar_machine_config);
-	if (xroar_machine_config->cart_enabled) {
-		xroar_set_cart(1, xroar_machine_config->default_cart);
+	struct machine_config *mc = machine_config_by_id(new);
+	xroar_configure_machine(mc);
+	if (mc->cart_enabled) {
+		xroar_set_cart(1, mc->default_cart);
 	} else {
 		xroar_set_cart(1, NULL);
 	}
@@ -1399,26 +1411,26 @@ void xroar_save_snapshot(void) {
 void xroar_select_tape_input(void) {
 	char *filename = filereq_module->load_filename(xroar_tape_exts);
 	if (filename) {
-		tape_open_reading(tape_interface, filename);
+		tape_open_reading(xroar_tape_interface, filename);
 		ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_input(void) {
-	tape_close_reading(tape_interface);
+	tape_close_reading(xroar_tape_interface);
 	ui_module->set_state(ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_select_tape_output(void) {
 	char *filename = filereq_module->save_filename(xroar_tape_exts);
 	if (filename) {
-		tape_open_writing(tape_interface, filename);
+		tape_open_writing(xroar_tape_interface, filename);
 		ui_module->set_state(ui_tag_tape_output_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_output(void) {
-	tape_close_writing(tape_interface);
+	tape_close_writing(xroar_tape_interface);
 	ui_module->set_state(ui_tag_tape_output_filename, 0, NULL);
 }
 
