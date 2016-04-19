@@ -364,15 +364,12 @@ void machine_config_print_all(_Bool all) {
 	}
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void machine_init(void) {
-}
-
-void machine_shutdown(void) {
+void machine_config_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)machine_config_free);
 	config_list = NULL;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct machine_interface *machine_dragon_new(struct machine_config *mc);
 static void machine_dragon_free(struct machine_interface *mi);

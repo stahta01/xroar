@@ -151,6 +151,22 @@ extern struct xconfig_enum machine_cpu_list[];
 extern struct xconfig_enum machine_tv_type_list[];
 extern struct xconfig_enum machine_vdg_type_list[];
 
+/* Add a new machine config: */
+struct machine_config *machine_config_new(void);
+/* For finding known configs: */
+struct machine_config *machine_config_by_id(int id);
+struct machine_config *machine_config_by_name(const char *name);
+struct machine_config *machine_config_by_arch(int arch);
+_Bool machine_config_remove(const char *name);
+struct slist *machine_config_list(void);
+/* Find a working machine by searching available ROMs: */
+struct machine_config *machine_config_first_working(void);
+/* Complete a config replacing ANY_AUTO entries: */
+void machine_config_complete(struct machine_config *mc);
+void machine_config_print_all(_Bool all);
+
+void machine_config_shutdown(void);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #define MACHINE_SIGINT (2)
@@ -166,27 +182,11 @@ enum machine_run_state {
 
 struct machine_interface {
 	struct machine_config *config;
+
 	void (*free)(struct machine_interface *mi);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
-
-/* Add a new machine config: */
-struct machine_config *machine_config_new(void);
-/* For finding known configs: */
-struct machine_config *machine_config_by_id(int id);
-struct machine_config *machine_config_by_name(const char *name);
-struct machine_config *machine_config_by_arch(int arch);
-_Bool machine_config_remove(const char *name);
-struct slist *machine_config_list(void);
-/* Find a working machine by searching available ROMs: */
-struct machine_config *machine_config_first_working(void);
-/* Complete a config replacing ANY_AUTO entries: */
-void machine_config_complete(struct machine_config *mc);
-void machine_config_print_all(_Bool all);
-
-void machine_init(void);
-void machine_shutdown(void);
 
 void machine_reset(struct machine_interface *mi, _Bool hard);
 enum machine_run_state machine_run(struct machine_interface *mi, int ncycles);

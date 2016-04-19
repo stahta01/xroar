@@ -709,7 +709,6 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 	/* ... subsystems */
 	joystick_init();
-	machine_init();
 
 	// Default joystick mapping
 	if (private_cfg.joy_right) {
@@ -828,7 +827,7 @@ void xroar_shutdown(void) {
 	}
 	joystick_shutdown();
 	cart_shutdown();
-	machine_shutdown();
+	machine_config_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)vo_module);
