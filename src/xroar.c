@@ -870,7 +870,7 @@ static struct vdg_palette *get_machine_palette(void) {
  */
 
 _Bool xroar_run(void) {
-	switch (machine_run(xroar_machine, EVENT_MS(5))) {
+	switch (xroar_machine->run(xroar_machine, EVENT_MS(5))) {
 	case machine_run_state_timeout:
 		if (vo_module->refresh)
 			vo_module->refresh();
@@ -1025,11 +1025,10 @@ void xroar_set_trace(int mode) {
 		set_to = 1;
 		break;
 	case XROAR_NEXT:
-		set_to = !xroar_cfg.trace_enabled;;
+		set_to = 2;
 		break;
 	}
-	xroar_cfg.trace_enabled = set_to;
-	machine_set_trace(xroar_machine, xroar_cfg.trace_enabled);
+	xroar_cfg.trace_enabled = xroar_machine->set_trace(xroar_machine, set_to);
 	struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
 	if (xroar_cfg.trace_enabled) {
 		switch (xroar_machine_config->cpu) {
@@ -1434,11 +1433,11 @@ void xroar_eject_tape_output(void) {
 }
 
 void xroar_soft_reset(void) {
-	machine_reset(xroar_machine, RESET_SOFT);
+	xroar_machine->reset(xroar_machine, RESET_SOFT);
 }
 
 void xroar_hard_reset(void) {
-	machine_reset(xroar_machine, RESET_HARD);
+	xroar_machine->reset(xroar_machine, RESET_HARD);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

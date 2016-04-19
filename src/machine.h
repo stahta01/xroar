@@ -184,18 +184,16 @@ struct machine_interface {
 	struct machine_config *config;
 
 	void (*free)(struct machine_interface *mi);
+
+	void (*reset)(struct machine_interface *mi, _Bool hard);
+	enum machine_run_state (*run)(struct machine_interface *mi, int ncycles);
+	void (*single_step)(struct machine_interface *mi);
+	_Bool (*pause)(struct machine_interface *mi, int state);
+	void (*signal)(struct machine_interface *mi, int sig);
+	_Bool (*set_trace)(struct machine_interface *mi, int state);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
-
-void machine_reset(struct machine_interface *mi, _Bool hard);
-enum machine_run_state machine_run(struct machine_interface *mi, int ncycles);
-void machine_single_step(struct machine_interface *mi);
-void machine_toggle_pause(struct machine_interface *mi);
-
-void machine_signal(struct machine_interface *mi, int sig);
-
-void machine_set_trace(struct machine_interface *mi, _Bool trace_on);
 
 unsigned machine_ram_size(struct machine_interface *mi);
 void *machine_get_component(struct machine_interface *mi, const char *cname);
