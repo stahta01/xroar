@@ -180,6 +180,13 @@ enum machine_run_state {
 	machine_run_state_timeout,
 };
 
+/* Used for introspection of RAM blocks: */
+struct machine_memory {
+	unsigned max_size;
+	unsigned size;
+	uint8_t *data;
+};
+
 struct machine_interface {
 	struct machine_config *config;
 
@@ -191,13 +198,11 @@ struct machine_interface {
 	_Bool (*pause)(struct machine_interface *mi, int state);
 	void (*signal)(struct machine_interface *mi, int sig);
 	_Bool (*set_trace)(struct machine_interface *mi, int state);
+	void *(*get_component)(struct machine_interface *mi, const char *cname);
+	void *(*get_interface)(struct machine_interface *mi, const char *ifname);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
-
-unsigned machine_ram_size(struct machine_interface *mi);
-void *machine_get_component(struct machine_interface *mi, const char *cname);
-void *machine_get_interface(struct machine_interface *mi, const char *ifname);
 
 /* simplified read & write byte for convenience functions */
 uint8_t machine_read_byte(struct machine_interface *mi, unsigned A);

@@ -95,6 +95,8 @@ struct machine_dragon_interface {
 	uint8_t rom0[0x4000];
 	uint8_t rom1[0x4000];
 	uint8_t ext_charset[0x1000];
+	struct machine_memory ram0;  // introspection
+	struct machine_memory ram1;  // introspection
 
 	_Bool inverted_text;
 	struct cart *cart;
@@ -413,6 +415,8 @@ static void dragon_single_step(struct machine_interface *mi);
 static _Bool dragon_pause(struct machine_interface *mi, int state);
 static void dragon_signal(struct machine_interface *mi, int sig);
 static _Bool dragon_set_trace(struct machine_interface *mi, int state);
+static void *dragon_get_component(struct machine_interface *mi, const char *cname);
+static void *dragon_get_interface(struct machine_interface *mi, const char *ifname);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -473,6 +477,8 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->pause = dragon_pause;
 	mi->signal = dragon_signal;
 	mi->set_trace = dragon_set_trace;
+	mi->get_component = dragon_get_component;
+	mi->get_interface = dragon_get_interface;
 
 	// SAM
 	mdi->SAM0 = sam_new();
@@ -610,6 +616,12 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		}
 	}
 	mdi->ram_size = mc->ram * 1024;
+	mdi->ram0.max_size = 0x8000;
+	mdi->ram0.size = (mdi->ram_size > 0x8000) ? 0x8000 : mdi->ram_size;
+	mdi->ram0.data = mdi->ram;
+	mdi->ram1.max_size = 0x8000;
+	mdi->ram1.size = (mdi->ram_size > 0x8000) ? (mdi->ram_size - 0x8000) : 0;
+	mdi->ram1.data = mdi->ram + 0x8000;
 	/* This will be under PIA control on a Dragon 64 */
 	mdi->rom = mdi->rom0;
 
@@ -1209,7 +1221,7 @@ unsigned machine_ram_size(struct machine_interface *mi) {
  * name, but will only ever be used outside critical path, so don't bother for
  * now. */
 
-void *machine_get_component(struct machine_interface *mi, const char *cname) {
+static void *dragon_get_component(struct machine_interface *mi, const char *cname) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	if (0 == strcmp(cname, "CPU0")) {
 		return mdi->CPU0;
@@ -1219,15 +1231,17 @@ void *machine_get_component(struct machine_interface *mi, const char *cname) {
 		return mdi->PIA0;
 	} else if (0 == strcmp(cname, "PIA1")) {
 		return mdi->PIA1;
-	} else if (0 == strcmp(cname, "RAM")) {
-		return mdi->ram;
+	} else if (0 == strcmp(cname, "RAM0")) {
+		return &mdi->ram0;
+	} else if (0 == strcmp(cname, "RAM1")) {
+		return &mdi->ram1;
 	}
 	return NULL;
 }
 
 /* Similarly SLOW.  Used to populate UI. */
 
-void *machine_get_interface(struct machine_interface *mi, const char *ifname) {
+static void *dragon_get_interface(struct machine_interface *mi, const char *ifname) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	if (0 == strcmp(ifname, "tape")) {
 		return mdi->tape_interface;

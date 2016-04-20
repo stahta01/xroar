@@ -179,8 +179,8 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	*gip = (struct gdb_interface_private){0};
 
 	gip->machine_interface = mi;
-	gip->cpu = machine_get_component(mi, "CPU0");
-	gip->sam = machine_get_component(mi, "SAM0");
+	gip->cpu = mi->get_component(mi, "CPU0");
+	gip->sam = mi->get_component(mi, "SAM0");
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 

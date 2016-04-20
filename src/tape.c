@@ -148,7 +148,7 @@ struct tape_interface *tape_interface_new(int machine_arch,
 	}
 	tip->machine_interface = mi;
 	tip->keyboard_interface = ki;
-	tip->cpu = machine_get_component(mi, "CPU0");
+	tip->cpu = mi->get_component(mi, "CPU0");
 
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;

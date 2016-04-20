@@ -1029,7 +1029,7 @@ void xroar_set_trace(int mode) {
 		break;
 	}
 	xroar_cfg.trace_enabled = xroar_machine->set_trace(xroar_machine, set_to);
-	struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
+	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
 	if (xroar_cfg.trace_enabled) {
 		switch (xroar_machine_config->cpu) {
 		case CPU_MC6809: default:
@@ -1301,9 +1301,9 @@ void xroar_configure_machine(struct machine_config *mc) {
 	}
 	xroar_machine_config = mc;
 	xroar_machine = machine_interface_new(mc);
-	xroar_tape_interface = machine_get_interface(xroar_machine, "tape");
-	xroar_keyboard_interface = machine_get_interface(xroar_machine, "keyboard");
-	xroar_printer_interface = machine_get_interface(xroar_machine, "printer");
+	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
+	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
+	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
 }
 
 void xroar_set_machine(_Bool notify, int id) {

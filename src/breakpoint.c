@@ -56,7 +56,7 @@ struct bp_session *bp_session_new(struct machine_interface *mi) {
 	*bpsp = (struct bp_session_private){0};
 	struct bp_session *bps = &bpsp->bps;
 	bpsp->machine_interface = mi;
-	bpsp->cpu = machine_get_component(mi, "CPU0");
+	bpsp->cpu = mi->get_component(mi, "CPU0");
 	return bps;
 }
 

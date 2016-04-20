@@ -68,7 +68,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine_interface *mi) 
 	*kip = (struct keyboard_interface_private){0};
 	struct keyboard_interface *ki = &kip->public;
 	kip->machine_interface = mi;
-	kip->cpu = machine_get_component(mi, "CPU0");
+	kip->cpu = mi->get_component(mi, "CPU0");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;

@@ -62,7 +62,7 @@ struct printer_interface *printer_interface_new(struct machine_interface *mi) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
 	pip->machine_interface = mi;
-	pip->cpu = machine_get_component(mi, "CPU0");
+	pip->cpu = mi->get_component(mi, "CPU0");
 	pip->stream = NULL;
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;

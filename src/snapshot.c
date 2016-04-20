@@ -195,22 +195,20 @@ int write_snapshot(const char *filename) {
 	}
 	fs_write_uint8(fd, xroar_machine_config->cross_colour_phase);
 	// RAM page 0
-	unsigned ram_size = machine_ram_size(xroar_machine);
-	uint8_t *ram = machine_get_component(xroar_machine, "RAM");
-	int ram0_size = ram_size > 0x8000 ? 0x8000 : ram_size;
-	write_chunk_header(fd, ID_RAM_PAGE0, ram0_size);
-	fwrite(ram, 1, ram0_size, fd);
+	struct machine_memory *ram0 = xroar_machine->get_component(xroar_machine, "RAM0");
+	write_chunk_header(fd, ID_RAM_PAGE0, ram0->size);
+	fwrite(ram0->data, 1, ram0->size, fd);
 	// RAM page 1
-	if (ram_size > 0x8000) {
-		int ram1_size = ram_size - 0x8000;
-		write_chunk_header(fd, ID_RAM_PAGE1, ram1_size);
-		fwrite(ram + 0x8000, 1, ram1_size, fd);
+	struct machine_memory *ram1 = xroar_machine->get_component(xroar_machine, "RAM1");
+	if (ram1->size > 0) {
+		write_chunk_header(fd, ID_RAM_PAGE1, ram1->size);
+		fwrite(ram1->data, 1, ram1->size, fd);
 	}
 	// PIA state written before CPU state because PIA may have
 	// unacknowledged interrupts pending already cleared in the CPU state
 	write_chunk_header(fd, ID_PIA_REGISTERS, 3 * 4);
 	for (int i = 0; i < 2; i++) {
-		struct MC6821 *pia = machine_get_component(xroar_machine, pia_component_names[i]);
+		struct MC6821 *pia = xroar_machine->get_component(xroar_machine, pia_component_names[i]);
 		fs_write_uint8(fd, pia->a.direction_register);
 		fs_write_uint8(fd, pia->a.output_register);
 		fs_write_uint8(fd, pia->a.control_register);
@@ -219,8 +217,8 @@ int write_snapshot(const char *filename) {
 		fs_write_uint8(fd, pia->b.control_register);
 	}
 	// CPU state
-	struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
-	struct MC6883 *sam = machine_get_component(xroar_machine, "SAM0");
+	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+	struct MC6883 *sam = xroar_machine->get_component(xroar_machine, "SAM0");
 	switch (cpu->variant) {
 	case MC6809_VARIANT_MC6809: default:
 		write_mc6809(fd, cpu);
@@ -292,7 +290,7 @@ static const int old_arch_mapping[4] = {
 };
 
 static void old_set_registers(uint8_t *regs) {
-	struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
+	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
 	cpu->reg_cc = regs[0];
 	MC6809_REG_A(cpu) = regs[1];
 	MC6809_REG_B(cpu) = regs[2];
@@ -397,7 +395,7 @@ int read_snapshot(const char *filename) {
 				{
 					// MC6809 state
 					if (size < 20) break;
-					struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
+					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
 					if (cpu->variant != MC6809_VARIANT_MC6809) {
 						LOG_WARN("CPU mismatch - skipping MC6809 chunk\n");
 						break;
@@ -446,7 +444,7 @@ int read_snapshot(const char *filename) {
 				{
 					// HD6309 state
 					if (size < 27) break;
-					struct MC6809 *cpu = machine_get_component(xroar_machine, "CPU0");
+					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
 					if (cpu->variant != MC6809_VARIANT_HD6309) {
 						LOG_WARN("CPU mismatch - skipping HD6309 chunk\n");
 						break;
@@ -513,7 +511,7 @@ int read_snapshot(const char *filename) {
 
 			case ID_PIA_REGISTERS:
 				for (int i = 0; i < 2; i++) {
-					struct MC6821 *pia = machine_get_component(xroar_machine, pia_component_names[i]);
+					struct MC6821 *pia = xroar_machine->get_component(xroar_machine, pia_component_names[i]);
 					if (size < 3) break;
 					pia->a.direction_register = fs_read_uint8(fd);
 					pia->a.output_register = fs_read_uint8(fd);
@@ -530,22 +528,18 @@ int read_snapshot(const char *filename) {
 
 			case ID_RAM_PAGE0:
 				{
-					uint8_t *ram = machine_get_component(xroar_machine, "RAM");
-					if (size <= 0x10000) {
-						size -= fread(ram, 1, size, fd);
-					} else {
-						size -= fread(ram, 1, 0x10000, fd);
-					}
+					struct machine_memory *ram0 = xroar_machine->get_component(xroar_machine, "RAM0");
+					assert(ram0 != NULL);
+					ram0->size = (size < ram0->max_size) ? size : ram0->max_size;
+					size -= fread(ram0->data, 1, ram0->size, fd);
 				}
 				break;
 			case ID_RAM_PAGE1:
 				{
-					uint8_t *ram = machine_get_component(xroar_machine, "RAM");
-					if (size <= 0x8000) {
-						size -= fread(ram + 0x8000, 1, size, fd);
-					} else {
-						size -= fread(ram + 0x8000, 1, 0x8000, fd);
-					}
+					struct machine_memory *ram1 = xroar_machine->get_component(xroar_machine, "RAM1");
+					assert(ram1 != NULL);
+					ram1->size = (size < ram1->max_size) ? size : ram1->max_size;
+					size -= fread(ram1->data, 1, ram1->size, fd);
 				}
 				break;
 			case ID_SAM_REGISTERS:
@@ -554,7 +548,7 @@ int read_snapshot(const char *filename) {
 				tmp = fs_read_uint16(fd);
 				size -= 2;
 				{
-					struct MC6883 *sam = machine_get_component(xroar_machine, "SAM0");
+					struct MC6883 *sam = xroar_machine->get_component(xroar_machine, "SAM0");
 					sam_set_register(sam, tmp);
 				}
 				break;
