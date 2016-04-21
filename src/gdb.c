@@ -666,7 +666,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 1, 0) < 0)
 		return;
 	for (unsigned i = 0; i < length; i++) {
-		uint8_t b = machine_read_byte(gip->machine_interface, A++);
+		uint8_t b = gip->machine_interface->read_byte(gip->machine_interface, A++);
 		snprintf(packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
@@ -701,7 +701,7 @@ static void set_memory(struct gdb_interface_private *gip, char *args) {
 		int v = hex8(data);
 		if (v < 0)
 			goto error;
-		machine_write_byte(gip->machine_interface, A, v);
+		gip->machine_interface->write_byte(gip->machine_interface, A, v);
 		A++;
 		data += 2;
 	}

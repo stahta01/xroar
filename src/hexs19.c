@@ -98,7 +98,7 @@ int intel_hex_read(const char *filename, int autorun) {
 			if (type == 0) {
 				if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_BIN_DATA)
 					log_hexdump_byte(log_hex, data);
-				machine_write_byte(xroar_machine, addr & 0xffff, data);
+				xroar_machine->write_byte(xroar_machine, addr & 0xffff, data);
 				addr++;
 			}
 		}
@@ -180,7 +180,7 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 			LOG_WARN("Dragon BIN: short read\n");
 			break;
 		}
-		machine_write_byte(xroar_machine, (load + i) & 0xffff, data);
+		xroar_machine->write_byte(xroar_machine, (load + i) & 0xffff, data);
 		log_hexdump_byte(log_bin, data);
 	}
 	log_close(&log_bin);
@@ -222,7 +222,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 					LOG_WARN("CoCo BIN: short read in data chunk\n");
 					break;
 				}
-				machine_write_byte(xroar_machine, (load + i) & 0xffff, data);
+				xroar_machine->write_byte(xroar_machine, (load + i) & 0xffff, data);
 				log_hexdump_byte(log_bin, data);
 			}
 			log_close(&log_bin);

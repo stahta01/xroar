@@ -266,7 +266,7 @@ static void type_command(void *sptr) {
 		}
 	}
 	/* Use CPU read routine to pull return address back off stack */
-	machine_op_rts(kip->machine_interface);
+	kip->machine_interface->op_rts(kip->machine_interface);
 }
 
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {

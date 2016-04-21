@@ -200,15 +200,15 @@ struct machine_interface {
 	_Bool (*set_trace)(struct machine_interface *mi, int state);
 	void *(*get_component)(struct machine_interface *mi, const char *cname);
 	void *(*get_interface)(struct machine_interface *mi, const char *ifname);
+
+	/* simplified read & write byte for convenience functions */
+	uint8_t (*read_byte)(struct machine_interface *mi, unsigned A);
+	void (*write_byte)(struct machine_interface *mi, unsigned A, unsigned D);
+	/* simulate an RTS without otherwise affecting machine state */
+	void (*op_rts)(struct machine_interface *mi);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
-
-/* simplified read & write byte for convenience functions */
-uint8_t machine_read_byte(struct machine_interface *mi, unsigned A);
-void machine_write_byte(struct machine_interface *mi, unsigned A, unsigned D);
-/* simulate an RTS without otherwise affecting machine state */
-void machine_op_rts(struct machine_interface *mi);
 
 void machine_set_fast_sound(_Bool fast);
 void machine_select_fast_sound(_Bool fast);

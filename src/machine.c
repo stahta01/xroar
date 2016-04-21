@@ -417,6 +417,9 @@ static void dragon_signal(struct machine_interface *mi, int sig);
 static _Bool dragon_set_trace(struct machine_interface *mi, int state);
 static void *dragon_get_component(struct machine_interface *mi, const char *cname);
 static void *dragon_get_interface(struct machine_interface *mi, const char *ifname);
+static uint8_t dragon_read_byte(struct machine_interface *mi, unsigned A);
+static void dragon_write_byte(struct machine_interface *mi, unsigned A, unsigned D);
+static void dragon_op_rts(struct machine_interface *mi);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -479,6 +482,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->set_trace = dragon_set_trace;
 	mi->get_component = dragon_get_component;
 	mi->get_interface = dragon_get_interface;
+	mi->read_byte = dragon_read_byte;
+	mi->write_byte = dragon_write_byte;
+	mi->op_rts = dragon_op_rts;
 
 	// SAM
 	mdi->SAM0 = sam_new();
@@ -1212,11 +1218,6 @@ static _Bool dragon_set_trace(struct machine_interface *mi, int state) {
  * Device inspection.
  */
 
-unsigned machine_ram_size(struct machine_interface *mi) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	return mdi->ram_size;
-}
-
 /* Note, this is SLOW.  Could be sped up by maintaining a hash by component
  * name, but will only ever be used outside critical path, so don't bother for
  * now. */
@@ -1492,7 +1493,7 @@ static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest) {
 
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
-uint8_t machine_read_byte(struct machine_interface *mi, unsigned A) {
+static uint8_t dragon_read_byte(struct machine_interface *mi, unsigned A) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	mdi->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mdi);
 	sam_mem_cycle(mdi->SAM0, 1, A);
@@ -1502,7 +1503,7 @@ uint8_t machine_read_byte(struct machine_interface *mi, unsigned A) {
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
-void machine_write_byte(struct machine_interface *mi, unsigned A, unsigned D) {
+static void dragon_write_byte(struct machine_interface *mi, unsigned A, unsigned D) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	mdi->CPU0->D = D;
 	mdi->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mdi);
@@ -1511,10 +1512,10 @@ void machine_write_byte(struct machine_interface *mi, unsigned A, unsigned D) {
 }
 
 /* simulate an RTS without otherwise affecting machine state */
-void machine_op_rts(struct machine_interface *mi) {
+static void dragon_op_rts(struct machine_interface *mi) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	unsigned int new_pc = machine_read_byte(mi, mdi->CPU0->reg_s) << 8;
-	new_pc |= machine_read_byte(mi, mdi->CPU0->reg_s + 1);
+	unsigned int new_pc = mi->read_byte(mi, mdi->CPU0->reg_s) << 8;
+	new_pc |= mi->read_byte(mi, mdi->CPU0->reg_s + 1);
 	mdi->CPU0->reg_s += 2;
 	mdi->CPU0->reg_pc = new_pc;
 }
