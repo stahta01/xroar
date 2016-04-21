@@ -1873,9 +1873,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("ao-buffer-ms", &xroar_cfg.ao_buffer_ms) },
 	{ XC_SET_INT("ao-buffer-frames", &xroar_cfg.ao_buffer_nframes) },
 	{ XC_SET_INT("volume", &private_cfg.volume) },
-#ifndef FAST_SOUND
 	{ XC_SET_BOOL("fast-sound", &xroar_cfg.fast_sound) },
-#endif
 	/* Backwards-compatibility: */
 	{ XC_SET_INT("ao-buffer-samples", &xroar_cfg.ao_buffer_nframes), .deprecated = 1 },
 
@@ -2032,9 +2030,7 @@ static void helptext(void) {
 "  -ao-buffer-ms MS      set total audio buffer size in ms (if supported)\n"
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
 "  -volume VOLUME        audio volume (0 - 100)\n"
-#ifndef FAST_SOUND
 "  -fast-sound           faster but less accurate sound\n"
-#endif
 
 "\n Keyboard:\n"
 "  -keymap CODE          host keyboard type (-keymap help for list)\n"
@@ -2195,9 +2191,7 @@ static void config_print_all(_Bool all) {
 	xroar_cfg_print_int_nz(all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
 	xroar_cfg_print_int_nz(all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
 	xroar_cfg_print_int(all, "volume", private_cfg.volume, 100);
-#ifndef FAST_SOUND
 	xroar_cfg_print_bool(all, "fast-sound", xroar_cfg.fast_sound, 0);
-#endif
 	puts("");
 
 	puts("# Keyboard");

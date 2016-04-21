@@ -529,9 +529,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mdi->PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, mdi);
 
 	// Single-bit sound feedback
-#ifndef FAST_SOUND
 	sound_sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, mdi);
-#endif
 
 	// Tape
 	mdi->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mdi);
@@ -821,9 +819,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		}
 	}
 
-#ifndef FAST_SOUND
 	machine_select_fast_sound(xroar_cfg.fast_sound);
-#endif
 
 	keyboard_set_keymap(mdi->keyboard_interface, xroar_machine_config->keymap);
 
@@ -1520,7 +1516,6 @@ static void dragon_op_rts(struct machine_interface *mi) {
 	mdi->CPU0->reg_pc = new_pc;
 }
 
-#ifndef FAST_SOUND
 void machine_set_fast_sound(_Bool fast) {
 	xroar_cfg.fast_sound = fast;
 }
@@ -1529,7 +1524,6 @@ void machine_select_fast_sound(_Bool fast) {
 	ui_module->set_state(ui_tag_fast_sound, fast, NULL);
 	machine_set_fast_sound(fast);
 }
-#endif
 
 void machine_set_inverted_text(struct machine_interface *mi, _Bool invert) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;

@@ -366,9 +366,7 @@ void sound_update(void) {
 			 + source_offset_v[source][sindex];
 
 	/* Feed back bus level to single bit pin */
-#ifndef FAST_SOUND
 	DELEGATE_SAFE_CALL1(sound_sbs_feedback, sbs_enabled || bus_level >= 1.414);
-#endif
 
 	/* Mix bus & external sound */
 	if (external_audio) {
@@ -404,10 +402,8 @@ void sound_set_mux_enabled(_Bool enabled) {
 	if (mux_enabled == enabled)
 		return;
 	mux_enabled = enabled;
-#ifndef FAST_SOUND
 	if (xroar_cfg.fast_sound)
 		return;
-#endif
 	sound_update();
 }
 
@@ -417,10 +413,8 @@ void sound_set_mux_source(unsigned source) {
 	mux_source = source;
 	if (!mux_enabled)
 		return;
-#ifndef FAST_SOUND
 	if (xroar_cfg.fast_sound)
 		return;
-#endif
 	sound_update();
 }
 
