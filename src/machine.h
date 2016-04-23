@@ -18,9 +18,6 @@ struct cart;
 #define RESET_SOFT 0
 #define RESET_HARD 1
 
-#define IS_PAL (xroar_machine_config->tv_standard == TV_PAL)
-#define IS_NTSC (xroar_machine_config->tv_standard == TV_NTSC)
-
 #define ANY_AUTO (-1)
 #define MACHINE_DRAGON32 (0)
 #define MACHINE_DRAGON64 (1)

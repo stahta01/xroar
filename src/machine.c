@@ -559,9 +559,10 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mdi->VDG0->is_dragon64 = mdi->is_dragon64;
 	mdi->VDG0->is_dragon32 = mdi->is_dragon32;
 	mdi->VDG0->is_coco = !mdi->is_dragon;
-	mdi->VDG0->is_pal = IS_PAL;
+	_Bool is_pal = (mc->tv_standard == TV_PAL);
+	mdi->VDG0->is_pal = is_pal;
 
-	if (!mdi->is_dragon && IS_PAL) {
+	if (!mdi->is_dragon && is_pal) {
 		mdi->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, mdi);
 	} else {
 		mdi->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, mdi);
