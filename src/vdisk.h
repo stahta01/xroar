@@ -49,6 +49,13 @@ struct vdisk {
 	} fmt;
 };
 
+// Global variable determines interleave of subsequently formatted disks.
+void vdisk_default_interleave(_Bool dragon_interleave);
+
+// Global variable to set the "standard" disk size, used when expanding disk images
+// in memory, e.g. set to 40 for Dragon, 35 for CoCo.
+void vdisk_default_ncyls(unsigned ncyls);
+
 struct vdisk *vdisk_blank_disk(unsigned ncyls, unsigned nheads,
 			       unsigned track_length);
 void vdisk_destroy(struct vdisk *disk);

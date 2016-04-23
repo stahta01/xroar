@@ -39,7 +39,6 @@
 #include "crc16.h"
 #include "fs.h"
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "vdisk.h"
 #include "xroar.h"
@@ -65,6 +64,20 @@ static struct {
 	{ FILETYPE_OS9, vdisk_load_os9, vdisk_save_jvc },
 	{ FILETYPE_DMK, vdisk_load_dmk, vdisk_save_dmk },
 };
+
+// Determines interleave of subsequently formatted disks.
+static _Bool default_dragon_interleave = 1;
+
+// "Standard" disk size.
+static unsigned default_ncyls = 40;
+
+void vdisk_default_interleave(_Bool dragon_interleave) {
+	default_dragon_interleave = dragon_interleave;
+}
+
+void vdisk_default_ncyls(unsigned ncyls) {
+	default_ncyls = ncyls;
+}
 
 struct vdisk *vdisk_blank_disk(unsigned ncyls, unsigned nheads,
 			       unsigned track_length) {
@@ -692,11 +705,8 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 	}
 	if (cyl >= ncyls) {
 		// Round amount of tracks up to the next nearest standard size.
-		if (IS_COCO) {
-			// Standard CoCo disk.
-			if (ncyls < 35 && cyl >= ncyls)
-				ncyls = 35;
-		}
+		if (ncyls < default_ncyls && cyl >= ncyls)
+			ncyls = default_ncyls;
 		// Try for exactly 40 or 80 track, but allow 3 tracks more.
 		if (ncyls < 40 && cyl >= ncyls)
 			ncyls = 40;
@@ -837,7 +847,7 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 
 	const uint8_t *sect_interleave = NULL;
 	if (double_density && nsectors == 18) {
-		if (IS_DRAGON)
+		if (default_dragon_interleave)
 			sect_interleave = ddos_sector_interleave;
 		else
 			sect_interleave = rsdos_sector_interleave;

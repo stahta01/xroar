@@ -1303,6 +1303,16 @@ void xroar_configure_machine(struct machine_config *mc) {
 	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
+	switch (mc->architecture) {
+	case ARCH_COCO:
+		vdisk_default_interleave(0);
+		vdisk_default_ncyls(35);
+		break;
+	default:
+		vdisk_default_interleave(1);
+		vdisk_default_ncyls(40);
+		break;
+	}
 }
 
 void xroar_set_machine(_Bool notify, int id) {
