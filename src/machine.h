@@ -187,9 +187,12 @@ struct machine_interface {
 	void (*reset)(struct machine_interface *mi, _Bool hard);
 	enum machine_run_state (*run)(struct machine_interface *mi, int ncycles);
 	void (*single_step)(struct machine_interface *mi);
-	_Bool (*pause)(struct machine_interface *mi, int state);
 	void (*signal)(struct machine_interface *mi, int sig);
-	_Bool (*set_trace)(struct machine_interface *mi, int state);
+
+	_Bool (*set_pause)(struct machine_interface *mi, int action);
+	_Bool (*set_trace)(struct machine_interface *mi, int action);
+	_Bool (*set_fast_sound)(struct machine_interface *mi, int action);
+	_Bool (*set_inverted_text)(struct machine_interface *mi, int action);
 	void *(*get_component)(struct machine_interface *mi, const char *cname);
 	void *(*get_interface)(struct machine_interface *mi, const char *ifname);
 
@@ -198,9 +201,6 @@ struct machine_interface {
 	void (*write_byte)(struct machine_interface *mi, unsigned A, unsigned D);
 	/* simulate an RTS without otherwise affecting machine state */
 	void (*op_rts)(struct machine_interface *mi);
-
-	_Bool (*set_fast_sound)(struct machine_interface *mi, int state);
-	_Bool (*set_inverted_text)(struct machine_interface *mi, int state);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);

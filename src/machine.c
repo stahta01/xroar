@@ -416,16 +416,18 @@ static void dragon_free(struct machine_interface *mi);
 static void dragon_reset(struct machine_interface *mi, _Bool hard);
 static enum machine_run_state dragon_run(struct machine_interface *mi, int ncycles);
 static void dragon_single_step(struct machine_interface *mi);
-static _Bool dragon_pause(struct machine_interface *mi, int state);
 static void dragon_signal(struct machine_interface *mi, int sig);
+
+static _Bool dragon_set_pause(struct machine_interface *mi, int state);
 static _Bool dragon_set_trace(struct machine_interface *mi, int state);
+static _Bool dragon_set_fast_sound(struct machine_interface *mi, int state);
+static _Bool dragon_set_inverted_text(struct machine_interface *mi, int state);
 static void *dragon_get_component(struct machine_interface *mi, const char *cname);
 static void *dragon_get_interface(struct machine_interface *mi, const char *ifname);
+
 static uint8_t dragon_read_byte(struct machine_interface *mi, unsigned A);
 static void dragon_write_byte(struct machine_interface *mi, unsigned A, unsigned D);
 static void dragon_op_rts(struct machine_interface *mi);
-static _Bool dragon_set_fast_sound(struct machine_interface *mi, int state);
-static _Bool dragon_set_inverted_text(struct machine_interface *mi, int state);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -483,16 +485,18 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->reset = dragon_reset;
 	mi->run = dragon_run;
 	mi->single_step = dragon_single_step;
-	mi->pause = dragon_pause;
 	mi->signal = dragon_signal;
+
+	mi->set_pause = dragon_set_pause;
 	mi->set_trace = dragon_set_trace;
+	mi->set_fast_sound = dragon_set_fast_sound;
+	mi->set_inverted_text = dragon_set_inverted_text;
 	mi->get_component = dragon_get_component;
 	mi->get_interface = dragon_get_interface;
+
 	mi->read_byte = dragon_read_byte;
 	mi->write_byte = dragon_write_byte;
 	mi->op_rts = dragon_op_rts;
-	mi->set_fast_sound = dragon_set_fast_sound;
-	mi->set_inverted_text = dragon_set_inverted_text;
 
 	switch (mc->architecture) {
 	case ARCH_DRAGON32:
@@ -1185,7 +1189,20 @@ static void dragon_single_step(struct machine_interface *mi) {
 		mdi->CPU0->instruction_posthook.func = NULL;
 }
 
-static _Bool dragon_pause(struct machine_interface *mi, int state) {
+/*
+ * Stop emulation and set stop_signal to reflect the reason.
+ */
+
+static void dragon_signal(struct machine_interface *mi, int sig) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	update_vdg_mode(mdi);
+	mdi->stop_signal = sig;
+	mdi->CPU0->running = 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static _Bool dragon_set_pause(struct machine_interface *mi, int state) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	switch (state) {
 	case 0: case 1:
@@ -1198,17 +1215,6 @@ static _Bool dragon_pause(struct machine_interface *mi, int state) {
 		break;
 	}
 	return mdi->CPU0->halt;
-}
-
-/*
- * Stop emulation and set stop_signal to reflect the reason.
- */
-
-static void dragon_signal(struct machine_interface *mi, int sig) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	update_vdg_mode(mdi);
-	mdi->stop_signal = sig;
-	mdi->CPU0->running = 0;
 }
 
 static _Bool dragon_set_trace(struct machine_interface *mi, int state) {
@@ -1228,6 +1234,39 @@ static _Bool dragon_set_trace(struct machine_interface *mi, int state) {
 	else
 		mdi->CPU0->instruction_posthook.func = NULL;
 	return mdi->trace;
+}
+
+static _Bool dragon_set_fast_sound(struct machine_interface *mi, int action) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	switch (action) {
+	case 0: case 1:
+		mdi->fast_sound = action;
+		break;
+	case 2:
+		mdi->fast_sound = !mdi->fast_sound;
+		break;
+	default:
+		break;
+	}
+	// TODO: move dragon-specific sound code here
+	xroar_cfg.fast_sound = mdi->fast_sound;
+	return mdi->fast_sound;
+}
+
+static _Bool dragon_set_inverted_text(struct machine_interface *mi, int action) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	switch (action) {
+	case 0: case 1:
+		mdi->inverted_text = action;
+		break;
+	case 2:
+		mdi->inverted_text = !mdi->inverted_text;
+		break;
+	default:
+		break;
+	}
+	mc6847_set_inverted_text(mdi->VDG0, mdi->inverted_text);
+	return mdi->inverted_text;
 }
 
 /*
@@ -1269,6 +1308,8 @@ static void *dragon_get_interface(struct machine_interface *mi, const char *ifna
 	}
 	return NULL;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
  * Used when single-stepping or tracing.
@@ -1534,39 +1575,6 @@ static void dragon_op_rts(struct machine_interface *mi) {
 	new_pc |= mi->read_byte(mi, mdi->CPU0->reg_s + 1);
 	mdi->CPU0->reg_s += 2;
 	mdi->CPU0->reg_pc = new_pc;
-}
-
-static _Bool dragon_set_inverted_text(struct machine_interface *mi, int action) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	switch (action) {
-	case 0: case 1:
-		mdi->inverted_text = action;
-		break;
-	case 2:
-		mdi->inverted_text = !mdi->inverted_text;
-		break;
-	default:
-		break;
-	}
-	mc6847_set_inverted_text(mdi->VDG0, mdi->inverted_text);
-	return mdi->inverted_text;
-}
-
-static _Bool dragon_set_fast_sound(struct machine_interface *mi, int action) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	switch (action) {
-	case 0: case 1:
-		mdi->fast_sound = action;
-		break;
-	case 2:
-		mdi->fast_sound = !mdi->fast_sound;
-		break;
-	default:
-		break;
-	}
-	// TODO: move dragon-specific sound code here
-	xroar_cfg.fast_sound = mdi->fast_sound;
-	return mdi->fast_sound;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

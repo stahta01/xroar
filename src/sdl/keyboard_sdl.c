@@ -231,7 +231,7 @@ static void emulator_command(SDLKey sym) {
 		break;
 	case SDLK_h:
 		if (shift)
-			machine_toggle_pause();
+			xroar_set_pause(1, XROAR_NEXT);
 		break;
 	case SDLK_i:
 		if (shift)
@@ -352,7 +352,7 @@ void sdl_keypress(SDL_keysym *keysym) {
 		}
 	}
 	if (sym == SDLK_PAUSE) {
-		machine_toggle_pause();
+		xroar_set_pause(1, XROAR_NEXT);
 		return;
 	}
 	if (control) {

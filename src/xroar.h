@@ -165,6 +165,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_set_cross_colour(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);
 void xroar_set_fast_sound(_Bool notify, int action);
+void xroar_set_pause(_Bool notify, int action);
 void xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);
 void xroar_load_file(const char * const *exts);

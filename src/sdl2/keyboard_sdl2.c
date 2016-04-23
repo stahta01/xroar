@@ -200,7 +200,7 @@ static void emulator_command(int cmdkey, _Bool shift) {
 	case 'f': xroar_set_fullscreen(1, XROAR_NEXT); return;
 	case 'h':
 		     if (shift) {
-			     xroar_machine->pause(xroar_machine, 2);
+			     xroar_set_pause(1, XROAR_NEXT);
 		     }
 		     return;
 	case 'i':
@@ -367,7 +367,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 		}
 		return;
 	case SDLK_PAUSE:
-		xroar_machine->pause(xroar_machine, 2);
+		xroar_set_pause(1, XROAR_NEXT);
 		return;
 	default:
 		break;

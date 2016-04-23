@@ -1178,6 +1178,13 @@ void xroar_set_fast_sound(_Bool notify, int action) {
 	}
 }
 
+void xroar_set_pause(_Bool notify, int action) {
+	_Bool state = xroar_machine->set_pause(xroar_machine, action);
+	// TODO: UI indication of paused state
+	(void)notify;
+	(void)state;
+}
+
 void xroar_quit(void) {
 	xroar_shutdown();
 	exit(EXIT_SUCCESS);
