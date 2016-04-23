@@ -206,15 +206,12 @@ struct machine_interface {
 	void (*write_byte)(struct machine_interface *mi, unsigned A, unsigned D);
 	/* simulate an RTS without otherwise affecting machine state */
 	void (*op_rts)(struct machine_interface *mi);
+
+	_Bool (*set_fast_sound)(struct machine_interface *mi, int state);
+	_Bool (*set_inverted_text)(struct machine_interface *mi, int state);
 };
 
 struct machine_interface *machine_interface_new(struct machine_config *mc);
-
-void machine_set_fast_sound(_Bool fast);
-void machine_select_fast_sound(_Bool fast);
-void machine_update_sound(void);
-
-void machine_set_inverted_text(struct machine_interface *mi, _Bool);
 
 /* Helper function to populate breakpoints from a list. */
 void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);

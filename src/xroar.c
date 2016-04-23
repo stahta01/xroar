@@ -1160,17 +1160,16 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 }
 
 void xroar_set_vdg_inverted_text(_Bool notify, int action) {
-	switch (action) {
-	case XROAR_NEXT:
-		xroar_cfg.vdg_inverted_text = !xroar_cfg.vdg_inverted_text;
-		break;
-	default:
-		xroar_cfg.vdg_inverted_text = action;
-		break;
-	}
-	machine_set_inverted_text(xroar_machine, xroar_cfg.vdg_inverted_text);
+	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
-		ui_module->set_state(ui_tag_vdg_inverse, xroar_cfg.vdg_inverted_text, NULL);
+		ui_module->set_state(ui_tag_vdg_inverse, state, NULL);
+	}
+}
+
+void xroar_set_fast_sound(_Bool notify, int action) {
+	_Bool state = xroar_machine->set_fast_sound(xroar_machine, action);
+	if (notify) {
+		ui_module->set_state(ui_tag_fast_sound, state, NULL);
 	}
 }
 

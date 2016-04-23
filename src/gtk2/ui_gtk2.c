@@ -309,7 +309,7 @@ static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_
 static void toggle_fast_sound(GtkToggleAction *current, gpointer user_data) {
 	gboolean val = gtk_toggle_action_get_active(current);
 	(void)user_data;
-	machine_set_fast_sound(val);
+	xroar_set_fast_sound(0, val);
 }
 
 static void close_about(GtkDialog *dialog, gint response_id, gpointer data) {

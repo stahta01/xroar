@@ -99,6 +99,7 @@ struct machine_dragon_interface {
 	struct machine_memory ram1;  // introspection
 
 	_Bool inverted_text;
+	_Bool fast_sound;
 	struct cart *cart;
 
 	int cycles;
@@ -420,6 +421,8 @@ static void *dragon_get_interface(struct machine_interface *mi, const char *ifna
 static uint8_t dragon_read_byte(struct machine_interface *mi, unsigned A);
 static void dragon_write_byte(struct machine_interface *mi, unsigned A, unsigned D);
 static void dragon_op_rts(struct machine_interface *mi);
+static _Bool dragon_set_fast_sound(struct machine_interface *mi, int state);
+static _Bool dragon_set_inverted_text(struct machine_interface *mi, int state);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -485,6 +488,8 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->read_byte = dragon_read_byte;
 	mi->write_byte = dragon_write_byte;
 	mi->op_rts = dragon_op_rts;
+	mi->set_fast_sound = dragon_set_fast_sound;
+	mi->set_inverted_text = dragon_set_inverted_text;
 
 	// SAM
 	mdi->SAM0 = sam_new();
@@ -819,7 +824,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		}
 	}
 
-	machine_select_fast_sound(xroar_cfg.fast_sound);
+	mdi->fast_sound = xroar_cfg.fast_sound;
 
 	keyboard_set_keymap(mdi->keyboard_interface, xroar_machine_config->keymap);
 
@@ -1516,19 +1521,37 @@ static void dragon_op_rts(struct machine_interface *mi) {
 	mdi->CPU0->reg_pc = new_pc;
 }
 
-void machine_set_fast_sound(_Bool fast) {
-	xroar_cfg.fast_sound = fast;
-}
-
-void machine_select_fast_sound(_Bool fast) {
-	ui_module->set_state(ui_tag_fast_sound, fast, NULL);
-	machine_set_fast_sound(fast);
-}
-
-void machine_set_inverted_text(struct machine_interface *mi, _Bool invert) {
+static _Bool dragon_set_inverted_text(struct machine_interface *mi, int action) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	mdi->inverted_text = invert;
-	mc6847_set_inverted_text(mdi->VDG0, invert);
+	switch (action) {
+	case 0: case 1:
+		mdi->inverted_text = action;
+		break;
+	case 2:
+		mdi->inverted_text = !mdi->inverted_text;
+		break;
+	default:
+		break;
+	}
+	mc6847_set_inverted_text(mdi->VDG0, mdi->inverted_text);
+	return mdi->inverted_text;
+}
+
+static _Bool dragon_set_fast_sound(struct machine_interface *mi, int action) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	switch (action) {
+	case 0: case 1:
+		mdi->fast_sound = action;
+		break;
+	case 2:
+		mdi->fast_sound = !mdi->fast_sound;
+		break;
+	default:
+		break;
+	}
+	// TODO: move dragon-specific sound code here
+	xroar_cfg.fast_sound = mdi->fast_sound;
+	return mdi->fast_sound;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
