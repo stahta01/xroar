@@ -30,7 +30,6 @@
 #include "xalloc.h"
 
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"

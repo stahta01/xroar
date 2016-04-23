@@ -27,7 +27,6 @@
 
 #include "events.h"
 #include "fs.h"
-#include "machine.h"
 #include "tape.h"
 #include "vdrive.h"
 #include "xroar.h"

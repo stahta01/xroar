@@ -36,7 +36,6 @@
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "printer.h"
 #include "xroar.h"

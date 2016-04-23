@@ -31,7 +31,6 @@
 
 #include "joystick.h"
 #include "logging.h"
-#include "machine.h"
 #include "module.h"
 #include "ui.h"
 #include "xroar.h"
