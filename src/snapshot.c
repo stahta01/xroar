@@ -75,18 +75,25 @@ static const char *old_cart_type_names[] = {
 
 static const char *pia_component_names[2] = { "PIA0", "PIA1" };
 
-static char *read_string(FILE *fd, int *size) {
+static char *read_string(FILE *fd, unsigned *size) {
 	char *str = NULL;
 	if (*size == 0) {
 		return NULL;
 	}
 	int len = fs_read_uint8(fd);
 	(*size)--;
-	if ((len-1) >= *size) {
+	// For whatever reason, I chose to store len+1 as the size field
+	// for strings.  Oh well, this means zero is invalid.
+	if (len < 1) {
+		return NULL;
+	}
+	if ((unsigned)(len-1) >= *size) {
 		return NULL;
 	}
 	str = xzalloc(len);
-	*size -= fread(str, 1, len-1, fd);
+	if (len > 1) {
+		*size -= fread(str, 1, len-1, fd);
+	}
 	return str;
 }
 
@@ -363,7 +370,7 @@ int read_snapshot(const char *filename) {
 	}
 	struct cart_config *cart_config = NULL;
 	while ((section = fs_read_uint8(fd)) >= 0) {
-		int size = fs_read_uint16(fd);
+		unsigned size = fs_read_uint16(fd);
 		if (size == 0) size = 0x10000;
 		LOG_DEBUG(2, "Snapshot read: chunk type %d, size %d\n", section, size);
 		switch (section) {
