@@ -427,10 +427,10 @@ AM_COND_IF([GTKGL], [AC_DEFINE([HAVE_GTKGL], 1, [Use GtkGLExt])])
 
 ### Linux joysticks
 
+unset have_linux_joystick
 AS_IF([test "x$with_joydev" != "xno"], [
 		AC_CHECK_HEADER([linux/joystick.h], [have_linux_joystick=1], :) ])
 
-unset have_linux_joystick
 AM_CONDITIONAL([LINUX_JOYSTICK], [test -n "$have_linux_joystick"])
 AM_COND_IF([LINUX_JOYSTICK], [AC_DEFINE([HAVE_LINUX_JOYSTICK], 1, [Have linux/joystick.h])])
 
