@@ -909,10 +909,15 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 		case FILETYPE_DMK:
 			xroar_insert_disk_file(load_disk_to_drive, filename);
 			if (autorun && vdrive_disk_in_drive(xroar_vdrive_interface, 0)) {
-				if (IS_DRAGON) {
-					keyboard_queue_basic(xroar_keyboard_interface, "\033BOOT\r");
-				} else {
+				/* TODO: more intelligent recognition of the type of DOS
+				 * we're talking to */
+				switch (xroar_machine->config->architecture) {
+				case ARCH_COCO:
 					keyboard_queue_basic(xroar_keyboard_interface, "\033DOS\r");
+					break;
+				default:
+					keyboard_queue_basic(xroar_keyboard_interface, "\033BOOT\r");
+					break;
 				}
 				return 0;
 			}

@@ -123,6 +123,9 @@ struct machine_dragon_interface {
 	uint32_t crc_ext_charset;
 	enum machine_ram_organisation ram_organisation;
 	uint16_t ram_mask;
+	_Bool is_dragon;
+	_Bool is_dragon32;
+	_Bool is_dragon64;
 	_Bool unexpanded_dragon32;
 	_Bool relaxed_pia_decode;
 	_Bool have_acia;
@@ -491,6 +494,17 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->set_fast_sound = dragon_set_fast_sound;
 	mi->set_inverted_text = dragon_set_inverted_text;
 
+	switch (mc->architecture) {
+	case ARCH_DRAGON32:
+		mdi->is_dragon32 = mdi->is_dragon = 1;
+		break;
+	case ARCH_DRAGON64:
+		mdi->is_dragon64 = mdi->is_dragon = 1;
+		break;
+	default:
+		break;
+	}
+
 	// SAM
 	mdi->SAM0 = sam_new();
 	mdi->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mdi);
@@ -542,12 +556,12 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	// VDG
 	mdi->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
 	// XXX kludges that should be handled by machine-specific code
-	mdi->VDG0->is_dragon64 = IS_DRAGON64;
-	mdi->VDG0->is_dragon32 = IS_DRAGON32;
-	mdi->VDG0->is_coco = IS_COCO;
+	mdi->VDG0->is_dragon64 = mdi->is_dragon64;
+	mdi->VDG0->is_dragon32 = mdi->is_dragon32;
+	mdi->VDG0->is_coco = !mdi->is_dragon;
 	mdi->VDG0->is_pal = IS_PAL;
 
-	if (IS_COCO && IS_PAL) {
+	if (!mdi->is_dragon && IS_PAL) {
 		mdi->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, mdi);
 	} else {
 		mdi->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, mdi);
@@ -590,7 +604,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		if (tmp) {
 			int size = machine_load_rom(tmp, mdi->rom0, sizeof(mdi->rom0));
 			if (size > 0) {
-				if (IS_DRAGON)
+				if (mdi->is_dragon)
 					mdi->has_combined = 1;
 				else
 					mdi->has_extbas = 1;
@@ -651,16 +665,16 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 		mdi->crc_combined = crc32_block(CRC32_RESET, mdi->rom0, 0x4000);
 
-		if (IS_DRAGON64)
+		if (mdi->is_dragon64)
 			valid_crc = crclist_match("@d64_1", mdi->crc_combined);
-		else if (IS_DRAGON32)
+		else if (mdi->is_dragon32)
 			valid_crc = crclist_match("@d32", mdi->crc_combined);
 
 		if (xroar_cfg.force_crc_match) {
-			if (IS_DRAGON64) {
+			if (mdi->is_dragon64) {
 				mdi->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
 				forced = 1;
-			} else if (IS_DRAGON32) {
+			} else if (mdi->is_dragon32) {
 				mdi->crc_combined = 0xe3879310;  // Dragon 32 32K mode BASIC
 				forced = 1;
 			}
@@ -678,11 +692,11 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 		mdi->crc_altbas = crc32_block(CRC32_RESET, mdi->rom1, 0x4000);
 
-		if (IS_DRAGON64)
+		if (mdi->is_dragon64)
 			valid_crc = crclist_match("@d64_2", mdi->crc_altbas);
 
 		if (xroar_cfg.force_crc_match) {
-			if (IS_DRAGON64) {
+			if (mdi->is_dragon64) {
 				mdi->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
 				forced = 1;
 			}
@@ -699,7 +713,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 		mdi->crc_bas = crc32_block(CRC32_RESET, mdi->rom0 + 0x2000, 0x2000);
 
-		if (IS_COCO) {
+		if (!mdi->is_dragon) {
 			if (mc->ram > 4) {
 				valid_crc = crclist_match("@coco", mdi->crc_bas);
 			} else {
@@ -709,7 +723,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		}
 
 		if (xroar_cfg.force_crc_match) {
-			if (IS_COCO) {
+			if (!mdi->is_dragon) {
 				if (mc->ram > 4) {
 					mdi->crc_bas = 0xd8f4d15e;  // CoCo BASIC 1.3
 				} else {
@@ -734,12 +748,12 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 		mdi->crc_extbas = crc32_block(CRC32_RESET, mdi->rom0, 0x2000);
 
-		if (IS_COCO) {
+		if (!mdi->is_dragon) {
 			valid_crc = crclist_match("@cocoext", mdi->crc_extbas);
 		}
 
 		if (xroar_cfg.force_crc_match) {
-			if (IS_COCO) {
+			if (!mdi->is_dragon) {
 				mdi->crc_extbas = 0xa82a6254;  // CoCo Extended BASIC 1.1
 				forced = 1;
 			}
@@ -765,33 +779,33 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mdi->PIA0->a.in_sink = mdi->PIA0->b.in_sink = 0xff;
 	mdi->PIA1->a.in_sink = mdi->PIA1->b.in_sink = 0xff;
 	/* Machine-specific PIA connections */
-	if (IS_DRAGON) {
+	if (mdi->is_dragon) {
 		/* Centronics printer port - !BUSY */
 		mdi->PIA1->b.in_source |= (1<<0);
 	}
-	if (IS_DRAGON64) {
+	if (mdi->is_dragon64) {
 		mdi->have_acia = 1;
 		mdi->PIA1->b.in_source |= (1<<2);
-	} else if (IS_COCO && mdi->ram_size <= 0x1000) {
+	} else if (!mdi->is_dragon && mdi->ram_size <= 0x1000) {
 		/* 4K CoCo ties PB2 of mdi->PIA1 low */
 		mdi->PIA1->b.in_sink &= ~(1<<2);
-	} else if (IS_COCO && mdi->ram_size <= 0x4000) {
+	} else if (!mdi->is_dragon && mdi->ram_size <= 0x4000) {
 		/* 16K CoCo pulls PB2 of mdi->PIA1 high */
 		mdi->PIA1->b.in_source |= (1<<2);
 	}
 	mdi->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, mdi);
-	if (IS_DRAGON) {
+	if (mdi->is_dragon) {
 		/* Dragons need to poll printer BUSY state */
 		mdi->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, mdi);
 	}
-	if (IS_COCO && mdi->ram_size > 0x4000) {
+	if (!mdi->is_dragon && mdi->ram_size > 0x4000) {
 		/* 64K CoCo connects PB6 of mdi->PIA0 to PB2 of mdi->PIA1->
 		 * Deal with this through a postwrite. */
 		mdi->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, mdi);
 		mdi->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, mdi);
 	}
 
-	if (IS_DRAGON) {
+	if (mdi->is_dragon) {
 		keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
 		keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_coco_basic);
@@ -801,7 +815,7 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mdi->relaxed_pia_decode = 0;
 	mdi->ram_mask = 0xffff;
 
-	if (IS_COCO) {
+	if (!mdi->is_dragon) {
 		if (mdi->ram_size <= 0x2000) {
 			mdi->ram_organisation = RAM_ORGANISATION_4K;
 			mdi->ram_mask = 0x3f3f;
@@ -815,9 +829,9 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 		mdi->relaxed_pia_decode = 1;
 	}
 
-	if (IS_DRAGON) {
+	if (mdi->is_dragon) {
 		mdi->ram_organisation = RAM_ORGANISATION_64K;
-		if (IS_DRAGON32 && mdi->ram_size <= 0x8000) {
+		if (mdi->is_dragon32 && mdi->ram_size <= 0x8000) {
 			mdi->unexpanded_dragon32 = 1;
 			mdi->relaxed_pia_decode = 1;
 			mdi->ram_mask = 0x7fff;
@@ -948,7 +962,7 @@ static void pia1a_data_postwrite(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
 	sound_set_dac_level((float)(PIA_VALUE_A(mdi->PIA1) & 0xfc) / 252.);
 	tape_update_output(mdi->tape_interface, mdi->PIA1->a.out_sink & 0xfc);
-	if (IS_DRAGON) {
+	if (mdi->is_dragon) {
 		keyboard_update(mdi);
 		printer_strobe(mdi->printer_interface, PIA_VALUE_A(mdi->PIA1) & 0x02, PIA_VALUE_B(mdi->PIA0));
 	}
@@ -981,7 +995,7 @@ static void pia1b_data_preread_coco64k(void *sptr) {
 
 static void pia1b_data_postwrite(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
-	if (IS_DRAGON64) {
+	if (mdi->is_dragon64) {
 		_Bool is_32k = PIA_VALUE_B(mdi->PIA1) & 0x04;
 		if (is_32k) {
 			mdi->rom = mdi->rom0;
@@ -1364,7 +1378,7 @@ static void write_byte(struct machine_dragon_interface *mdi, unsigned A) {
 				mdi->cart->write(mdi->cart, A, 0, mdi->CPU0->D);
 			break;
 		case 4:
-			if (IS_COCO || mdi->unexpanded_dragon32) {
+			if (!mdi->is_dragon || mdi->unexpanded_dragon32) {
 				mc6821_write(mdi->PIA0, A, mdi->CPU0->D);
 			} else {
 				if ((A & 4) == 0) {

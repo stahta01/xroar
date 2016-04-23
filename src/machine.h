@@ -18,11 +18,6 @@ struct cart;
 #define RESET_SOFT 0
 #define RESET_HARD 1
 
-#define IS_DRAGON64 (xroar_machine_config->architecture == ARCH_DRAGON64)
-#define IS_DRAGON32 (xroar_machine_config->architecture == ARCH_DRAGON32)
-#define IS_DRAGON (!IS_COCO)
-#define IS_COCO (xroar_machine_config->architecture == ARCH_COCO)
-
 #define IS_PAL (xroar_machine_config->tv_standard == TV_PAL)
 #define IS_NTSC (xroar_machine_config->tv_standard == TV_NTSC)
 
