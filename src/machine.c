@@ -1299,12 +1299,14 @@ static void *dragon_get_component(struct machine_interface *mi, const char *cnam
 
 static void *dragon_get_interface(struct machine_interface *mi, const char *ifname) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	if (0 == strcmp(ifname, "tape")) {
-		return mdi->tape_interface;
+	if (0 == strcmp(ifname, "cart")) {
+		return mdi->cart;
 	} else if (0 == strcmp(ifname, "keyboard")) {
 		return mdi->keyboard_interface;
 	} else if (0 == strcmp(ifname, "printer")) {
 		return mdi->printer_interface;
+	} else if (0 == strcmp(ifname, "tape")) {
+		return mdi->tape_interface;
 	}
 	return NULL;
 }
@@ -1604,11 +1606,6 @@ void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, 
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-struct cart *machine_get_cart(struct machine_interface *mi) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	return mdi->cart;
-}
 
 void machine_insert_cart(struct machine_interface *mi, struct cart *c) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;

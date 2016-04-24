@@ -1377,7 +1377,7 @@ void xroar_toggle_cart(void) {
 void xroar_set_cart(_Bool notify, const char *cc_name) {
 	assert(xroar_machine_config != NULL);
 
-	struct cart *old_cart = machine_get_cart(xroar_machine);
+	struct cart *old_cart = xroar_machine->get_interface(xroar_machine, "cart");
 	if (!old_cart && !cc_name)
 		return;
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))

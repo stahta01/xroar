@@ -829,11 +829,11 @@ static void update_cartridge_menu(void) {
 	gchar **labels = g_malloc0(num_carts * sizeof(gchar *));
 	/* add these to the ui in reverse order, as each will be
 	   inserted before the previous */
-	struct cart *machine_cart = xroar_machine ? machine_get_cart(xroar_machine) : NULL;
+	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
 	int i = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
 		struct cart_config *cc = iter->data;
-		if (machine_cart && cc == machine_cart->config)
+		if (cart && cc == cart->config)
 			selected = cc->id;
 		names[i] = g_strdup_printf("cart%d", i+1);
 		radio_entries[i].name = names[i];

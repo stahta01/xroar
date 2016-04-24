@@ -186,12 +186,12 @@ int write_snapshot(const char *filename) {
 	fs_write_uint8(fd, xroar_machine_config->keymap);
 	fs_write_uint8(fd, xroar_machine_config->tv_standard);
 	fs_write_uint8(fd, xroar_machine_config->ram);
-	struct cart *machine_cart = machine_get_cart(xroar_machine);
-	if (machine_cart) {
+	struct cart *cart = xroar_machine->get_interface(xroar_machine, "cart");
+	if (cart) {
 		// attempt to keep snapshots >= v1.8 loadable by older versions
 		unsigned old_cart_type = 0;
 		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(old_cart_type_names); i++) {
-			if (c_strcasecmp(machine_cart->config->type, old_cart_type_names[i]) == 0) {
+			if (c_strcasecmp(cart->config->type, old_cart_type_names[i]) == 0) {
 				old_cart_type = i + 1;
 				break;
 			}
@@ -239,8 +239,8 @@ int write_snapshot(const char *filename) {
 	fs_write_uint16(fd, sam_get_register(sam));
 
 	// Cartridge
-	if (machine_cart) {
-		struct cart_config *cc = machine_cart->config;
+	if (cart) {
+		struct cart_config *cc = cart->config;
 		size_t name_len = cc->name ? strlen(cc->name) + 1 : 1;
 		if (name_len > 255) name_len = 255;
 		size_t desc_len = cc->description ? strlen(cc->description) + 1 : 1;

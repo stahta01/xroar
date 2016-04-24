@@ -211,7 +211,6 @@ void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, 
 #define machine_bp_add_list(mi, list, sptr) machine_bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
 #define machine_bp_remove_list(mi, list) machine_bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
 
-struct cart *machine_get_cart(struct machine_interface *mi);
 void machine_insert_cart(struct machine_interface *mi, struct cart *c);
 void machine_remove_cart(struct machine_interface *mi);
 
