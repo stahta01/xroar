@@ -1315,6 +1315,9 @@ void xroar_configure_machine(struct machine_config *mc) {
 	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
+	if (ui_module) {
+		ui_module->set_state(ui_tag_cartridge, -1, NULL);
+	}
 	switch (mc->architecture) {
 	case ARCH_COCO:
 		vdisk_default_interleave(0);
