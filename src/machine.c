@@ -450,7 +450,7 @@ static void printer_ack(void *sptr, _Bool ack);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
-static void machine_instruction_posthook(void *sptr);
+static void dragon_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
 
@@ -1208,7 +1208,7 @@ static void dragon_single_step(struct machine_interface *mi) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	mdi->single_step = 1;
 	mdi->CPU0->running = 0;
-	mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi);
+	mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, mdi);
 	do {
 		mdi->CPU0->run(mdi->CPU0);
 	} while (mdi->single_step);
@@ -1282,7 +1282,7 @@ static _Bool dragon_set_trace(struct machine_interface *mi, int state) {
 		break;
 	}
 	if (mdi->trace || mdi->single_step)
-		mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, machine_instruction_posthook, mdi);
+		mdi->CPU0->instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, mdi);
 	else
 		mdi->CPU0->instruction_posthook.func = NULL;
 	return mdi->trace;
@@ -1369,7 +1369,7 @@ static void *dragon_get_interface(struct machine_interface *mi, const char *ifna
  * Used when single-stepping or tracing.
  */
 
-static void machine_instruction_posthook(void *sptr) {
+static void dragon_instruction_posthook(void *sptr) {
 	struct machine_dragon_interface *mdi = sptr;
 	if (xroar_cfg.trace_enabled) {
 		switch (mdi->CPU0->variant) {
@@ -1630,3 +1630,5 @@ static void dragon_op_rts(struct machine_interface *mi) {
 	mdi->CPU0->reg_s += 2;
 	mdi->CPU0->reg_pc = new_pc;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
