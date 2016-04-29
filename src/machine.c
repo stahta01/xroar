@@ -413,6 +413,8 @@ struct machine_interface *machine_interface_new(struct machine_config *mc) {
 
 static void dragon_free(struct machine_interface *mi);
 
+static void dragon_insert_cart(struct machine_interface *mi, struct cart *c);
+static void dragon_remove_cart(struct machine_interface *mi);
 static void dragon_reset(struct machine_interface *mi, _Bool hard);
 static enum machine_run_state dragon_run(struct machine_interface *mi, int ncycles);
 static void dragon_single_step(struct machine_interface *mi);
@@ -482,6 +484,8 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 
 	mi->config = mc;
 	mi->free = dragon_free;
+	mi->insert_cart = dragon_insert_cart;
+	mi->remove_cart = dragon_remove_cart;
 	mi->reset = dragon_reset;
 	mi->run = dragon_run;
 	mi->single_step = dragon_single_step;
@@ -865,7 +869,7 @@ static void dragon_free(struct machine_interface *mi) {
 	if (mi->config && mi->config->description) {
 		LOG_DEBUG(1, "Machine shutdown: %s\n", mi->config->description);
 	}
-	machine_remove_cart(mi);
+	mi->remove_cart(mi);
 	if (mdi->gdb_interface) {
 		gdb_interface_free(mdi->gdb_interface);
 	}
@@ -1100,6 +1104,26 @@ static void cart_halt(void *sptr, _Bool level) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void dragon_insert_cart(struct machine_interface *mi, struct cart *c) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	mi->remove_cart(mi);
+	if (c) {
+		assert(c->read != NULL);
+		assert(c->write != NULL);
+		mdi->cart = c;
+		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mdi);
+		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mdi);
+		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mdi);
+	}
+}
+
+static void dragon_remove_cart(struct machine_interface *mi) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	(void)mdi;
+	cart_free(mdi->cart);
+	mdi->cart = NULL;
+}
 
 static void dragon_reset(struct machine_interface *mi, _Bool hard) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
@@ -1603,26 +1627,4 @@ void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, 
 	for (int i = 0; i < n; i++) {
 		bp_remove(mdi->bp_session, &list[i].bp);
 	}
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void machine_insert_cart(struct machine_interface *mi, struct cart *c) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	machine_remove_cart(mi);
-	if (c) {
-		assert(c->read != NULL);
-		assert(c->write != NULL);
-		mdi->cart = c;
-		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mdi);
-		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mdi);
-		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mdi);
-	}
-}
-
-void machine_remove_cart(struct machine_interface *mi) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	(void)mdi;
-	cart_free(mdi->cart);
-	mdi->cart = NULL;
 }

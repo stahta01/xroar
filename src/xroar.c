@@ -930,7 +930,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			return read_snapshot(filename);
 		case FILETYPE_ROM: {
 			struct cart_config *cc;
-			machine_remove_cart(xroar_machine);
+			xroar_machine->remove_cart(xroar_machine);
 			cc = cart_config_by_name(filename);
 			if (cc) {
 				cc->autorun = autorun;
@@ -1382,7 +1382,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		return;
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
 		return;
-	machine_remove_cart(xroar_machine);
+	xroar_machine->remove_cart(xroar_machine);
 
 	struct cart *new_cart = NULL;
 	if (!cc_name) {
@@ -1394,7 +1394,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		}
 		xroar_machine_config->cart_enabled = 1;
 		new_cart = cart_new_named(cc_name);
-		machine_insert_cart(xroar_machine, new_cart);
+		xroar_machine->insert_cart(xroar_machine, new_cart);
 		if (new_cart->has_interface && new_cart->has_interface(new_cart, "floppy")) {
 			new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
 		}
