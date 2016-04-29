@@ -419,6 +419,8 @@ static void dragon_reset(struct machine_interface *mi, _Bool hard);
 static enum machine_run_state dragon_run(struct machine_interface *mi, int ncycles);
 static void dragon_single_step(struct machine_interface *mi);
 static void dragon_signal(struct machine_interface *mi, int sig);
+static void dragon_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);
+static void dragon_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n);
 
 static _Bool dragon_set_pause(struct machine_interface *mi, int state);
 static _Bool dragon_set_trace(struct machine_interface *mi, int state);
@@ -490,6 +492,8 @@ static struct machine_interface *machine_dragon_new(struct machine_config *mc) {
 	mi->run = dragon_run;
 	mi->single_step = dragon_single_step;
 	mi->signal = dragon_signal;
+	mi->bp_add_n = dragon_bp_add_n;
+	mi->bp_remove_n = dragon_bp_remove_n;
 
 	mi->set_pause = dragon_set_pause;
 	mi->set_trace = dragon_set_trace;
@@ -1224,6 +1228,30 @@ static void dragon_signal(struct machine_interface *mi, int sig) {
 	mdi->CPU0->running = 0;
 }
 
+static void dragon_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	for (int i = 0; i < n; i++) {
+		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
+			continue;
+		if ((list[i].add_cond & BP_CRC_COMBINED) && (!mdi->has_combined || !crclist_match(list[i].cond_crc_combined, mdi->crc_combined)))
+			continue;
+		if ((list[i].add_cond & BP_CRC_EXT) && (!mdi->has_extbas || !crclist_match(list[i].cond_crc_extbas, mdi->crc_extbas)))
+			continue;
+		if ((list[i].add_cond & BP_CRC_BAS) && (!mdi->has_bas || !crclist_match(list[i].cond_crc_bas, mdi->crc_bas)))
+			continue;
+		list[i].bp.handler.sptr = sptr;
+		bp_add(mdi->bp_session, &list[i].bp);
+	}
+}
+
+static void dragon_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n) {
+	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
+	(void)mdi;
+	for (int i = 0; i < n; i++) {
+		bp_remove(mdi->bp_session, &list[i].bp);
+	}
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static _Bool dragon_set_pause(struct machine_interface *mi, int state) {
@@ -1601,30 +1629,4 @@ static void dragon_op_rts(struct machine_interface *mi) {
 	new_pc |= mi->read_byte(mi, mdi->CPU0->reg_s + 1);
 	mdi->CPU0->reg_s += 2;
 	mdi->CPU0->reg_pc = new_pc;
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	for (int i = 0; i < n; i++) {
-		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
-			continue;
-		if ((list[i].add_cond & BP_CRC_COMBINED) && (!mdi->has_combined || !crclist_match(list[i].cond_crc_combined, mdi->crc_combined)))
-			continue;
-		if ((list[i].add_cond & BP_CRC_EXT) && (!mdi->has_extbas || !crclist_match(list[i].cond_crc_extbas, mdi->crc_extbas)))
-			continue;
-		if ((list[i].add_cond & BP_CRC_BAS) && (!mdi->has_bas || !crclist_match(list[i].cond_crc_bas, mdi->crc_bas)))
-			continue;
-		list[i].bp.handler.sptr = sptr;
-		bp_add(mdi->bp_session, &list[i].bp);
-	}
-}
-
-void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n) {
-	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
-	(void)mdi;
-	for (int i = 0; i < n; i++) {
-		bp_remove(mdi->bp_session, &list[i].bp);
-	}
 }

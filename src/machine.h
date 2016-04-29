@@ -192,6 +192,9 @@ struct machine_interface {
 	void (*single_step)(struct machine_interface *mi);
 	void (*signal)(struct machine_interface *mi, int sig);
 
+	void (*bp_add_n)(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);
+	void (*bp_remove_n)(struct machine_interface *mi, struct machine_bp *list, int n);
+
 	_Bool (*set_pause)(struct machine_interface *mi, int action);
 	_Bool (*set_trace)(struct machine_interface *mi, int action);
 	_Bool (*set_fast_sound)(struct machine_interface *mi, int action);
@@ -209,10 +212,8 @@ struct machine_interface {
 struct machine_interface *machine_interface_new(struct machine_config *mc);
 
 /* Helper function to populate breakpoints from a list. */
-void machine_bp_add_n(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);
-void machine_bp_remove_n(struct machine_interface *mi, struct machine_bp *list, int n);
-#define machine_bp_add_list(mi, list, sptr) machine_bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
-#define machine_bp_remove_list(mi, list) machine_bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
+#define machine_bp_add_list(mi, list, sptr) (mi)->bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
+#define machine_bp_remove_list(mi, list) (mi)->bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);
 
