@@ -909,206 +909,6 @@ static void dragon_free(struct machine_interface *mi) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void keyboard_update(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	unsigned buttons = ~(joystick_read_buttons() & 3);
-	struct keyboard_state state = {
-		.row_source = mdi->PIA0->a.out_sink,
-		.row_sink = mdi->PIA0->a.out_sink & buttons,
-		.col_source = mdi->PIA0->b.out_source,
-		.col_sink = mdi->PIA0->b.out_sink,
-	};
-	keyboard_read_matrix(mdi->keyboard_interface, &state);
-	mdi->PIA0->a.in_sink = state.row_sink;
-	mdi->PIA0->b.in_source = state.col_source;
-	mdi->PIA0->b.in_sink = state.col_sink;
-}
-
-static void joystick_update(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	int port = (mdi->PIA0->b.control_register & 0x08) >> 3;
-	int axis = (mdi->PIA0->a.control_register & 0x08) >> 3;
-	int dac_value = (mdi->PIA1->a.out_sink & 0xfc) + 2;
-	int js_value = joystick_read_axis(port, axis);
-	if (js_value >= dac_value)
-		mdi->PIA0->a.in_sink |= 0x80;
-	else
-		mdi->PIA0->a.in_sink &= 0x7f;
-}
-
-static void update_sound_mux_source(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	unsigned source = ((mdi->PIA0->b.control_register & (1<<3)) >> 2)
-	                  | ((mdi->PIA0->a.control_register & (1<<3)) >> 3);
-	sound_set_mux_source(source);
-}
-
-static void update_vdg_mode(struct machine_dragon_interface *mdi) {
-	unsigned vmode = (mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink) & 0xf8;
-	// ¬INT/EXT = GM0
-	vmode |= (vmode & 0x10) << 4;
-	mc6847_set_mode(mdi->VDG0, vmode);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static void pia0a_data_preread(void *sptr) {
-	(void)sptr;
-	keyboard_update(sptr);
-	joystick_update(sptr);
-}
-
-static void pia0b_data_preread_coco64k(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	keyboard_update(mdi);
-	/* PB6 of mdi->PIA0 is linked to PB2 of mdi->PIA1 on 64K CoCos */
-	if ((mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink) & (1<<2)) {
-		mdi->PIA0->b.in_source |= (1<<6);
-		mdi->PIA0->b.in_sink |= (1<<6);
-	} else {
-		mdi->PIA0->b.in_source &= ~(1<<6);
-		mdi->PIA0->b.in_sink &= ~(1<<6);
-	}
-}
-
-static void pia1a_data_postwrite(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	sound_set_dac_level((float)(PIA_VALUE_A(mdi->PIA1) & 0xfc) / 252.);
-	tape_update_output(mdi->tape_interface, mdi->PIA1->a.out_sink & 0xfc);
-	if (mdi->is_dragon) {
-		keyboard_update(mdi);
-		printer_strobe(mdi->printer_interface, PIA_VALUE_A(mdi->PIA1) & 0x02, PIA_VALUE_B(mdi->PIA0));
-	}
-}
-
-static void pia1a_control_postwrite(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	tape_update_motor(mdi->tape_interface, mdi->PIA1->a.control_register & 0x08);
-}
-
-static void pia1b_data_preread_dragon(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	if (printer_busy(mdi->printer_interface))
-		mdi->PIA1->b.in_sink |= 0x01;
-	else
-		mdi->PIA1->b.in_sink &= ~0x01;
-}
-
-static void pia1b_data_preread_coco64k(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	/* PB6 of mdi->PIA0 is linked to PB2 of mdi->PIA1 on 64K CoCos */
-	if ((mdi->PIA0->b.out_source & mdi->PIA0->b.out_sink) & (1<<6)) {
-		mdi->PIA1->b.in_source |= (1<<2);
-		mdi->PIA1->b.in_sink |= (1<<2);
-	} else {
-		mdi->PIA1->b.in_source &= ~(1<<2);
-		mdi->PIA1->b.in_sink &= ~(1<<2);
-	}
-}
-
-static void pia1b_data_postwrite(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	if (mdi->is_dragon64) {
-		_Bool is_32k = PIA_VALUE_B(mdi->PIA1) & 0x04;
-		if (is_32k) {
-			mdi->rom = mdi->rom0;
-			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
-		} else {
-			mdi->rom = mdi->rom1;
-			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
-		}
-	}
-	// Single-bit sound
-	_Bool sbs_enabled = !((mdi->PIA1->b.out_source ^ mdi->PIA1->b.out_sink) & (1<<1));
-	_Bool sbs_level = mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink & (1<<1);
-	sound_set_sbs(sbs_enabled, sbs_level);
-	// VDG mode
-	update_vdg_mode(mdi);
-}
-
-static void pia1b_control_postwrite(void *sptr) {
-	struct machine_dragon_interface *mdi = sptr;
-	sound_set_mux_enabled(mdi->PIA1->b.control_register & 0x08);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/* VDG edge delegates */
-
-static void vdg_hs(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	mc6821_set_cx1(&mdi->PIA0->a, level);
-	sam_vdg_hsync(mdi->SAM0, level);
-}
-
-// PAL CoCos invert HS
-static void vdg_hs_pal_coco(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	mc6821_set_cx1(&mdi->PIA0->a, !level);
-	sam_vdg_hsync(mdi->SAM0, level);
-}
-
-static void vdg_fs(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	mc6821_set_cx1(&mdi->PIA0->b, level);
-	if (level)
-		sound_update();
-	sam_vdg_fsync(mdi->SAM0, level);
-}
-
-/* Dragon parallel printer line delegate. */
-
-//ACK is active low
-static void printer_ack(void *sptr, _Bool ack) {
-	struct machine_dragon_interface *mdi = sptr;
-	mc6821_set_cx1(&mdi->PIA1->a, !ack);
-}
-
-/* Sound output can feed back into the single bit sound pin when it's
- * configured as an input. */
-
-static void single_bit_feedback(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	if (level) {
-		mdi->PIA1->b.in_source &= ~(1<<1);
-		mdi->PIA1->b.in_sink &= ~(1<<1);
-	} else {
-		mdi->PIA1->b.in_source |= (1<<1);
-		mdi->PIA1->b.in_sink |= (1<<1);
-	}
-}
-
-/* Tape audio delegate */
-
-static void update_audio_from_tape(void *sptr, float value) {
-	struct machine_dragon_interface *mdi = sptr;
-	sound_set_tape_level(value);
-	if (value >= 0.5)
-		mdi->PIA1->a.in_sink &= ~(1<<0);
-	else
-		mdi->PIA1->a.in_sink |= (1<<0);
-}
-
-/* Catridge signalling */
-
-static void cart_firq(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	(void)mdi;
-	mc6821_set_cx1(&mdi->PIA1->b, level);
-}
-
-static void cart_nmi(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	MC6809_NMI_SET(mdi->CPU0, level);
-}
-
-static void cart_halt(void *sptr, _Bool level) {
-	struct machine_dragon_interface *mdi = sptr;
-	MC6809_HALT_SET(mdi->CPU0, level);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static void dragon_insert_cart(struct machine_interface *mi, struct cart *c) {
 	struct machine_dragon_interface *mdi = (struct machine_dragon_interface *)mi;
 	mi->remove_cart(mi);
@@ -1632,3 +1432,201 @@ static void dragon_op_rts(struct machine_interface *mi) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void keyboard_update(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	unsigned buttons = ~(joystick_read_buttons() & 3);
+	struct keyboard_state state = {
+		.row_source = mdi->PIA0->a.out_sink,
+		.row_sink = mdi->PIA0->a.out_sink & buttons,
+		.col_source = mdi->PIA0->b.out_source,
+		.col_sink = mdi->PIA0->b.out_sink,
+	};
+	keyboard_read_matrix(mdi->keyboard_interface, &state);
+	mdi->PIA0->a.in_sink = state.row_sink;
+	mdi->PIA0->b.in_source = state.col_source;
+	mdi->PIA0->b.in_sink = state.col_sink;
+}
+
+static void joystick_update(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	int port = (mdi->PIA0->b.control_register & 0x08) >> 3;
+	int axis = (mdi->PIA0->a.control_register & 0x08) >> 3;
+	int dac_value = (mdi->PIA1->a.out_sink & 0xfc) + 2;
+	int js_value = joystick_read_axis(port, axis);
+	if (js_value >= dac_value)
+		mdi->PIA0->a.in_sink |= 0x80;
+	else
+		mdi->PIA0->a.in_sink &= 0x7f;
+}
+
+static void update_sound_mux_source(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	unsigned source = ((mdi->PIA0->b.control_register & (1<<3)) >> 2)
+	                  | ((mdi->PIA0->a.control_register & (1<<3)) >> 3);
+	sound_set_mux_source(source);
+}
+
+static void update_vdg_mode(struct machine_dragon_interface *mdi) {
+	unsigned vmode = (mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink) & 0xf8;
+	// ¬INT/EXT = GM0
+	vmode |= (vmode & 0x10) << 4;
+	mc6847_set_mode(mdi->VDG0, vmode);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void pia0a_data_preread(void *sptr) {
+	(void)sptr;
+	keyboard_update(sptr);
+	joystick_update(sptr);
+}
+
+static void pia0b_data_preread_coco64k(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	keyboard_update(mdi);
+	/* PB6 of mdi->PIA0 is linked to PB2 of mdi->PIA1 on 64K CoCos */
+	if ((mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink) & (1<<2)) {
+		mdi->PIA0->b.in_source |= (1<<6);
+		mdi->PIA0->b.in_sink |= (1<<6);
+	} else {
+		mdi->PIA0->b.in_source &= ~(1<<6);
+		mdi->PIA0->b.in_sink &= ~(1<<6);
+	}
+}
+
+static void pia1a_data_postwrite(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	sound_set_dac_level((float)(PIA_VALUE_A(mdi->PIA1) & 0xfc) / 252.);
+	tape_update_output(mdi->tape_interface, mdi->PIA1->a.out_sink & 0xfc);
+	if (mdi->is_dragon) {
+		keyboard_update(mdi);
+		printer_strobe(mdi->printer_interface, PIA_VALUE_A(mdi->PIA1) & 0x02, PIA_VALUE_B(mdi->PIA0));
+	}
+}
+
+static void pia1a_control_postwrite(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	tape_update_motor(mdi->tape_interface, mdi->PIA1->a.control_register & 0x08);
+}
+
+static void pia1b_data_preread_dragon(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	if (printer_busy(mdi->printer_interface))
+		mdi->PIA1->b.in_sink |= 0x01;
+	else
+		mdi->PIA1->b.in_sink &= ~0x01;
+}
+
+static void pia1b_data_preread_coco64k(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	/* PB6 of mdi->PIA0 is linked to PB2 of mdi->PIA1 on 64K CoCos */
+	if ((mdi->PIA0->b.out_source & mdi->PIA0->b.out_sink) & (1<<6)) {
+		mdi->PIA1->b.in_source |= (1<<2);
+		mdi->PIA1->b.in_sink |= (1<<2);
+	} else {
+		mdi->PIA1->b.in_source &= ~(1<<2);
+		mdi->PIA1->b.in_sink &= ~(1<<2);
+	}
+}
+
+static void pia1b_data_postwrite(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	if (mdi->is_dragon64) {
+		_Bool is_32k = PIA_VALUE_B(mdi->PIA1) & 0x04;
+		if (is_32k) {
+			mdi->rom = mdi->rom0;
+			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
+		} else {
+			mdi->rom = mdi->rom1;
+			keyboard_set_chord_mode(mdi->keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
+		}
+	}
+	// Single-bit sound
+	_Bool sbs_enabled = !((mdi->PIA1->b.out_source ^ mdi->PIA1->b.out_sink) & (1<<1));
+	_Bool sbs_level = mdi->PIA1->b.out_source & mdi->PIA1->b.out_sink & (1<<1);
+	sound_set_sbs(sbs_enabled, sbs_level);
+	// VDG mode
+	update_vdg_mode(mdi);
+}
+
+static void pia1b_control_postwrite(void *sptr) {
+	struct machine_dragon_interface *mdi = sptr;
+	sound_set_mux_enabled(mdi->PIA1->b.control_register & 0x08);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* VDG edge delegates */
+
+static void vdg_hs(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	mc6821_set_cx1(&mdi->PIA0->a, level);
+	sam_vdg_hsync(mdi->SAM0, level);
+}
+
+// PAL CoCos invert HS
+static void vdg_hs_pal_coco(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	mc6821_set_cx1(&mdi->PIA0->a, !level);
+	sam_vdg_hsync(mdi->SAM0, level);
+}
+
+static void vdg_fs(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	mc6821_set_cx1(&mdi->PIA0->b, level);
+	if (level)
+		sound_update();
+	sam_vdg_fsync(mdi->SAM0, level);
+}
+
+/* Dragon parallel printer line delegate. */
+
+//ACK is active low
+static void printer_ack(void *sptr, _Bool ack) {
+	struct machine_dragon_interface *mdi = sptr;
+	mc6821_set_cx1(&mdi->PIA1->a, !ack);
+}
+
+/* Sound output can feed back into the single bit sound pin when it's
+ * configured as an input. */
+
+static void single_bit_feedback(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	if (level) {
+		mdi->PIA1->b.in_source &= ~(1<<1);
+		mdi->PIA1->b.in_sink &= ~(1<<1);
+	} else {
+		mdi->PIA1->b.in_source |= (1<<1);
+		mdi->PIA1->b.in_sink |= (1<<1);
+	}
+}
+
+/* Tape audio delegate */
+
+static void update_audio_from_tape(void *sptr, float value) {
+	struct machine_dragon_interface *mdi = sptr;
+	sound_set_tape_level(value);
+	if (value >= 0.5)
+		mdi->PIA1->a.in_sink &= ~(1<<0);
+	else
+		mdi->PIA1->a.in_sink |= (1<<0);
+}
+
+/* Catridge signalling */
+
+static void cart_firq(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	(void)mdi;
+	mc6821_set_cx1(&mdi->PIA1->b, level);
+}
+
+static void cart_nmi(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	MC6809_NMI_SET(mdi->CPU0, level);
+}
+
+static void cart_halt(void *sptr, _Bool level) {
+	struct machine_dragon_interface *mdi = sptr;
+	MC6809_HALT_SET(mdi->CPU0, level);
+}
