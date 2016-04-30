@@ -253,21 +253,22 @@ void cart_type_help(void) {
 
 struct cart *cart_new(struct cart_config *cc) {
 	if (!cc) return NULL;
-	if (cc->description) {
-		LOG_DEBUG(1, "Cartridge: %s\n", cc->description);
-	}
 	cart_config_complete(cc);
 	struct cart *c = NULL;
 	const char *req_type = cc->type;
 	for (struct slist *iter = cart_modules; iter; iter = iter->next) {
 		struct cart_module *cm = iter->data;
 		if (c_strcasecmp(req_type, cm->name) == 0) {
+			if (cc->description) {
+				LOG_DEBUG(2, "Cartridge module: %s\n", req_type);
+				LOG_DEBUG(1, "Cartridge: %s\n", cc->description);
+			}
 			c = cm->new(cc);
 			break;
 		}
 	}
 	if (!c) {
-		LOG_WARN("Cartridge module '%s' not found for cartridge '%s'\n", cc->type, cc->name);
+		LOG_WARN("Cartridge module '%s' not found for cartridge '%s'\n", req_type, cc->name);
 		return NULL;
 	}
 	if (c->attach)
