@@ -8,13 +8,13 @@
 
 #include "delegate.h"
 
-struct machine_interface;
+struct machine;
 
 struct printer_interface {
 	DELEGATE_T1(void, bool) signal_ack;
 };
 
-struct printer_interface *printer_interface_new(struct machine_interface *mi);
+struct printer_interface *printer_interface_new(struct machine *m);
 void printer_interface_free(struct printer_interface *pi);
 void printer_reset(struct printer_interface *pi);
 

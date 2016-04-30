@@ -8,7 +8,7 @@
 
 #include "dkbd.h"
 
-struct machine_interface;
+struct machine;
 
 #define NUM_KEYMAPS   (3)
 #define KEYMAP_DRAGON (0)
@@ -74,7 +74,7 @@ enum keyboard_chord_mode {
 	keyboard_chord_mode_coco_basic
 };
 
-struct keyboard_interface *keyboard_interface_new(struct machine_interface *mi);
+struct keyboard_interface *keyboard_interface_new(struct machine *m);
 void keyboard_interface_free(struct keyboard_interface *ki);
 
 void keyboard_set_keymap(struct keyboard_interface *ki, int map);

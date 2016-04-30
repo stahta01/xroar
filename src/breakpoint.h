@@ -8,7 +8,7 @@
 
 #include "delegate.h"
 
-struct machine_interface;
+struct machine;
 
 /*
  * Breakpoint support both for internal hooks and user-added traps (e.g. via
@@ -29,7 +29,7 @@ struct bp_session {
 	DELEGATE_T0(void) trap_handler;
 };
 
-struct bp_session *bp_session_new(struct machine_interface *mi);
+struct bp_session *bp_session_new(struct machine *m);
 void bp_session_free(struct bp_session *);
 
 struct breakpoint {

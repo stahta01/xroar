@@ -197,7 +197,7 @@ _Bool xroar_noratelimit = 0;
 int xroar_frameskip = 0;
 
 struct machine_config *xroar_machine_config;
-struct machine_interface *xroar_machine;
+struct machine *xroar_machine;
 struct tape_interface *xroar_tape_interface;
 struct keyboard_interface *xroar_keyboard_interface;
 struct printer_interface *xroar_printer_interface;
@@ -481,7 +481,7 @@ _Bool xroar_init(int argc, char **argv) {
 	windows32_init();
 #endif
 
-	machine_interface_init();
+	machine_init();
 	cart_init();
 
 	xroar_conf_path = getenv("XROAR_CONF_PATH");
@@ -828,7 +828,7 @@ void xroar_shutdown(void) {
 	}
 	joystick_shutdown();
 	cart_shutdown();
-	machine_interface_shutdown();
+	machine_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)vo_module);
@@ -1312,7 +1312,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		xroar_machine->free(xroar_machine);
 	}
 	xroar_machine_config = mc;
-	xroar_machine = machine_interface_new(mc);
+	xroar_machine = machine_new(mc);
 	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");

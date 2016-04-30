@@ -108,7 +108,7 @@
 #include "xroar.h"
 
 struct gdb_interface_private {
-	struct machine_interface *machine_interface;
+	struct machine *machine;
 
 	struct MC6809 *cpu;
 	struct MC6883 *sam;
@@ -174,13 +174,13 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine_interface *mi, struct bp_session *bp_session) {
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m, struct bp_session *bp_session) {
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
 
-	gip->machine_interface = mi;
-	gip->cpu = mi->get_component(mi, "CPU0");
-	gip->sam = mi->get_component(mi, "SAM0");
+	gip->machine = m;
+	gip->cpu = m->get_component(m, "CPU0");
+	gip->sam = m->get_component(m, "SAM0");
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 
@@ -304,7 +304,7 @@ static void gdb_machine_single_step(struct gdb_interface_private *gip) {
 static void gdb_machine_signal(struct gdb_interface_private *gip, int sig) {
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_running) {
-		gip->machine_interface->signal(gip->machine_interface, sig);
+		gip->machine->signal(gip->machine, sig);
 		gip->run_state = gdb_run_state_stopped;
 		gdb_handle_signal(gip, sig);
 	}
@@ -666,7 +666,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 1, 0) < 0)
 		return;
 	for (unsigned i = 0; i < length; i++) {
-		uint8_t b = gip->machine_interface->read_byte(gip->machine_interface, A++);
+		uint8_t b = gip->machine->read_byte(gip->machine, A++);
 		snprintf(packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
@@ -701,7 +701,7 @@ static void set_memory(struct gdb_interface_private *gip, char *args) {
 		int v = hex8(data);
 		if (v < 0)
 			goto error;
-		gip->machine_interface->write_byte(gip->machine_interface, A, v);
+		gip->machine->write_byte(gip->machine, A, v);
 		A++;
 		data += 2;
 	}

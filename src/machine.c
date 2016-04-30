@@ -214,21 +214,21 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_interface_init(void) {
+void machine_init(void) {
 	// reverse order
 	machine_modules = slist_prepend(machine_modules, &machine_dragon_module);
 }
 
-void machine_interface_shutdown(void) {
+void machine_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)machine_config_free);
 	config_list = NULL;
 	slist_free(machine_modules);
 	machine_modules = NULL;
 }
 
-struct machine_interface *machine_dragon_new(struct machine_config *mc);
+struct machine *machine_dragon_new(struct machine_config *mc);
 
-struct machine_interface *machine_interface_new(struct machine_config *mc) {
+struct machine *machine_new(struct machine_config *mc) {
 	if (!mc) {
 		return NULL;
 	}
@@ -238,7 +238,7 @@ struct machine_interface *machine_interface_new(struct machine_config *mc) {
 		req_type = "dragon";
 		break;
 	}
-	struct machine_interface *mi = NULL;
+	struct machine *m = NULL;
 	for (struct slist *iter = machine_modules; iter; iter = iter->next) {
 		struct machine_module *mm = iter->data;
 		if (c_strcasecmp(req_type, mm->name) == 0) {
@@ -246,13 +246,13 @@ struct machine_interface *machine_interface_new(struct machine_config *mc) {
 				LOG_DEBUG(2, "Machine module: %s\n", req_type);
 				LOG_DEBUG(1, "Machine: %s\n", mc->description);
 			}
-			mi = mm->new(mc);
+			m = mm->new(mc);
 			break;
 		}
 	}
-	if (!mi) {
+	if (!m) {
 		LOG_WARN("Machine module '%s' not found for machine '%s'\n", req_type, mc->name);
 		return NULL;
 	}
-	return mi;
+	return m;
 }

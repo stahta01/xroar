@@ -111,7 +111,7 @@ extern struct event *xroar_ui_events;
 extern struct event *xroar_machine_events;
 
 extern struct machine_config *xroar_machine_config;
-extern struct machine_interface *xroar_machine;
+extern struct machine *xroar_machine;
 extern struct tape_interface *xroar_tape_interface;
 extern struct keyboard_interface *xroar_keyboard_interface;
 extern struct printer_interface *xroar_printer_interface;

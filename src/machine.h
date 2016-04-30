@@ -188,49 +188,49 @@ struct machine_memory {
 	uint8_t *data;
 };
 
-struct machine_interface {
+struct machine {
 	struct machine_config *config;
 
-	void (*free)(struct machine_interface *mi);
+	void (*free)(struct machine *m);
 
-	void (*insert_cart)(struct machine_interface *mi, struct cart *c);
-	void (*remove_cart)(struct machine_interface *mi);
+	void (*insert_cart)(struct machine *m, struct cart *c);
+	void (*remove_cart)(struct machine *m);
 
-	void (*reset)(struct machine_interface *mi, _Bool hard);
-	enum machine_run_state (*run)(struct machine_interface *mi, int ncycles);
-	void (*single_step)(struct machine_interface *mi);
-	void (*signal)(struct machine_interface *mi, int sig);
+	void (*reset)(struct machine *m, _Bool hard);
+	enum machine_run_state (*run)(struct machine *m, int ncycles);
+	void (*single_step)(struct machine *m);
+	void (*signal)(struct machine *m, int sig);
 
-	void (*bp_add_n)(struct machine_interface *mi, struct machine_bp *list, int n, void *sptr);
-	void (*bp_remove_n)(struct machine_interface *mi, struct machine_bp *list, int n);
+	void (*bp_add_n)(struct machine *m, struct machine_bp *list, int n, void *sptr);
+	void (*bp_remove_n)(struct machine *m, struct machine_bp *list, int n);
 
-	_Bool (*set_pause)(struct machine_interface *mi, int action);
-	_Bool (*set_trace)(struct machine_interface *mi, int action);
-	_Bool (*set_fast_sound)(struct machine_interface *mi, int action);
-	_Bool (*set_inverted_text)(struct machine_interface *mi, int action);
-	void *(*get_component)(struct machine_interface *mi, const char *cname);
-	void *(*get_interface)(struct machine_interface *mi, const char *ifname);
+	_Bool (*set_pause)(struct machine *m, int action);
+	_Bool (*set_trace)(struct machine *m, int action);
+	_Bool (*set_fast_sound)(struct machine *m, int action);
+	_Bool (*set_inverted_text)(struct machine *m, int action);
+	void *(*get_component)(struct machine *m, const char *cname);
+	void *(*get_interface)(struct machine *m, const char *ifname);
 
 	/* simplified read & write byte for convenience functions */
-	uint8_t (*read_byte)(struct machine_interface *mi, unsigned A);
-	void (*write_byte)(struct machine_interface *mi, unsigned A, unsigned D);
+	uint8_t (*read_byte)(struct machine *m, unsigned A);
+	void (*write_byte)(struct machine *m, unsigned A, unsigned D);
 	/* simulate an RTS without otherwise affecting machine state */
-	void (*op_rts)(struct machine_interface *mi);
+	void (*op_rts)(struct machine *m);
 };
 
-void machine_interface_init(void);
-void machine_interface_shutdown(void);
+void machine_init(void);
+void machine_shutdown(void);
 
-struct machine_interface *machine_interface_new(struct machine_config *mc);
+struct machine *machine_new(struct machine_config *mc);
 
 /* Helper function to populate breakpoints from a list. */
-#define machine_bp_add_list(mi, list, sptr) (mi)->bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
-#define machine_bp_remove_list(mi, list) (mi)->bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
+#define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
+#define machine_bp_remove_list(m, list) (m)->bp_remove_n(m, list, sizeof(list) / sizeof(struct machine_bp))
 
 struct machine_module {
 	const char *name;
 	const char *description;
-	struct machine_interface *(* const new)(struct machine_config *mc);
+	struct machine *(* const new)(struct machine_config *mc);
 };
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);

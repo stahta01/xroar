@@ -36,7 +36,7 @@ struct bp_session_private {
 	struct slist *wp_read_list;
 	struct slist *wp_write_list;
 	struct slist *iter_next;
-	struct machine_interface *machine_interface;
+	struct machine *machine;
 	struct MC6809 *cpu;
 };
 
@@ -51,12 +51,12 @@ static void bp_instruction_hook(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct bp_session *bp_session_new(struct machine_interface *mi) {
+struct bp_session *bp_session_new(struct machine *m) {
 	struct bp_session_private *bpsp = xmalloc(sizeof(*bpsp));
 	*bpsp = (struct bp_session_private){0};
 	struct bp_session *bps = &bpsp->bps;
-	bpsp->machine_interface = mi;
-	bpsp->cpu = mi->get_component(mi, "CPU0");
+	bpsp->machine = m;
+	bpsp->cpu = m->get_component(m, "CPU0");
 	return bps;
 }
 

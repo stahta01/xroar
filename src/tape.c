@@ -45,7 +45,7 @@ struct tape_interface_private {
 	struct tape_interface public;
 
 	_Bool is_dragon;
-	struct machine_interface *machine_interface;
+	struct machine *machine;
 	struct keyboard_interface *keyboard_interface;
 	struct MC6809 *cpu;
 
@@ -136,7 +136,7 @@ static struct tape_file_autorun autorun_special[] = {
  * should probably become a pointer to the machine it's a part of. */
 
 struct tape_interface *tape_interface_new(int machine_arch,
-					  struct machine_interface *mi,
+					  struct machine *m,
 					  struct keyboard_interface *ki) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
@@ -146,9 +146,9 @@ struct tape_interface *tape_interface_new(int machine_arch,
 	case ARCH_COCO: tip->is_dragon = 0; break;
 	default: tip->is_dragon = 1; break;
 	}
-	tip->machine_interface = mi;
+	tip->machine = m;
 	tip->keyboard_interface = ki;
-	tip->cpu = mi->get_component(mi, "CPU0");
+	tip->cpu = m->get_component(m, "CPU0");
 
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
@@ -670,14 +670,14 @@ static uint8_t op_clr(struct MC6809 *cpu) {
 
 #define BSR(f) do { pskip += 7; f(tip); } while (0)
 #define RTS()  do { pskip += 5; } while (0)
-#define CLR(a) do { pskip += 6; tip->machine_interface->write_byte(tip->machine_interface, (a), 0); } while (0)
-#define DEC(a) do { pskip += 6; tip->machine_interface->write_byte(tip->machine_interface, (a), tip->machine_interface->read_byte(tip->machine_interface, a) - 1); } while (0)
-#define INC(a) do { pskip += 6; tip->machine_interface->write_byte(tip->machine_interface, (a), tip->machine_interface->read_byte(tip->machine_interface, a) + 1); } while (0)
+#define CLR(a) do { pskip += 6; tip->machine->write_byte(tip->machine, (a), 0); } while (0)
+#define DEC(a) do { pskip += 6; tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a) - 1); } while (0)
+#define INC(a) do { pskip += 6; tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a) + 1); } while (0)
 
 static void motor_on(struct tape_interface_private *tip) {
 	int delay = tip->is_dragon ? 0x95 : 0x8a;
 	pskip += 5;  /* LDX <$95 */
-	int i = (tip->machine_interface->read_byte(tip->machine_interface, delay) << 8) | tip->machine_interface->read_byte(tip->machine_interface, delay+1);
+	int i = (tip->machine->read_byte(tip->machine, delay) << 8) | tip->machine->read_byte(tip->machine, delay+1);
 	if (tip->is_dragon)
 		pskip += 5;  /* LBRA delay_X */
 	for (; i; i--) {
@@ -743,7 +743,7 @@ static void L_BDC3(struct tape_interface_private *tip) {
 	int maxpw1200 = tip->is_dragon ? 0x94 : 0x90;
 	pskip += 4;  /* LDB <$82 */
 	pskip += 4;  /* CMPB <$94 */
-	op_sub(tip->cpu, tip->machine_interface->read_byte(tip->machine_interface, pwcount), tip->machine_interface->read_byte(tip->machine_interface, maxpw1200));
+	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount), tip->machine->read_byte(tip->machine, maxpw1200));
 	pskip += 3;  /* BHI L_BDCC */
 	if (!(tip->cpu->reg_cc & 0x05)) {
 		CLR(bcount);
@@ -752,7 +752,7 @@ static void L_BDC3(struct tape_interface_private *tip) {
 		return;
 	}
 	pskip += 4;  /* CMPB <$93 */
-	op_sub(tip->cpu, tip->machine_interface->read_byte(tip->machine_interface, pwcount), tip->machine_interface->read_byte(tip->machine_interface, minpw1200));
+	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount), tip->machine->read_byte(tip->machine, minpw1200));
 	RTS();
 }
 
@@ -794,7 +794,7 @@ L_BDF3:
 	INC(bcount);
 	pskip += 4;  /* LDA <$83 */
 	pskip += 2;  /* CMPA #$60 */
-	store = tip->machine_interface->read_byte(tip->machine_interface, bcount);
+	store = tip->machine->read_byte(tip->machine, bcount);
 	op_sub(tip->cpu, store, 0x60);
 	pskip += 3;  /* BRA L_BE0D */
 	goto L_BE0D;
@@ -813,13 +813,13 @@ L_BE03:
 	DEC(bcount);
 	pskip += 4;  /* LDA <$83 */
 	pskip += 2;  /* ADDA #$60 */
-	store = op_add(tip->cpu, tip->machine_interface->read_byte(tip->machine_interface, bcount), 0x60);
+	store = op_add(tip->cpu, tip->machine->read_byte(tip->machine, bcount), 0x60);
 L_BE0D:
 	pskip += 3;  /* BNE L_BDED */
 	if (!(tip->cpu->reg_cc & 0x04))
 		goto L_BDED;
 	pskip += 4;  /* STA <$84 */
-	tip->machine_interface->write_byte(tip->machine_interface, 0x84, store);
+	tip->machine->write_byte(tip->machine, 0x84, store);
 	RTS();
 }
 
@@ -828,7 +828,7 @@ static void tape_wait_2p(struct tape_interface_private *tip) {
 	CLR(pwcount);
 	pskip += 6;  /* TST <$84 */
 	pskip += 3;  /* BNE tape_wait_p1_p0 */
-	if (tip->machine_interface->read_byte(tip->machine_interface, 0x84)) {
+	if (tip->machine->read_byte(tip->machine, 0x84)) {
 		tape_wait_p1_p0(tip);
 	} else {
 		tape_wait_p0_p1(tip);
@@ -842,7 +842,7 @@ static void bitin(struct tape_interface_private *tip) {
 	pskip += 4;  /* LDB <$82 */
 	pskip += 2;  /* DECB */
 	pskip += 4;  /* CMPB <$92 */
-	op_sub(tip->cpu, tip->machine_interface->read_byte(tip->machine_interface, pwcount) - 1, tip->machine_interface->read_byte(tip->machine_interface, mincw1200));
+	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount) - 1, tip->machine->read_byte(tip->machine, mincw1200));
 	RTS();
 }
 
@@ -861,7 +861,7 @@ static void cbin(struct tape_interface_private *tip) {
 	}
 	RTS();
 	MC6809_REG_A(tip->cpu) = bin;
-	tip->machine_interface->write_byte(tip->machine_interface, bcount, 0);
+	tip->machine->write_byte(tip->machine, bcount, 0);
 }
 
 static void update_pskip(struct tape_interface_private *tip) {
@@ -878,7 +878,7 @@ static void fast_motor_on(void *sptr) {
 	if (!tip->tape_pad) {
 		motor_on(tip);
 	}
-	tip->machine_interface->op_rts(tip->machine_interface);
+	tip->machine->op_rts(tip->machine);
 	pulse_skip(tip);
 }
 
@@ -886,11 +886,11 @@ static void fast_sync_leader(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_pskip(tip);
 	if (tip->tape_pad) {
-		tip->machine_interface->write_byte(tip->machine_interface, 0x84, 0);
+		tip->machine->write_byte(tip->machine, 0x84, 0);
 	} else {
 		sync_leader(tip);
 	}
-	tip->machine_interface->op_rts(tip->machine_interface);
+	tip->machine->op_rts(tip->machine);
 	pulse_skip(tip);
 }
 
@@ -898,7 +898,7 @@ static void fast_bitin(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_pskip(tip);
 	bitin(tip);
-	tip->machine_interface->op_rts(tip->machine_interface);
+	tip->machine->op_rts(tip->machine);
 	pulse_skip(tip);
 	if (tip->tape_rewrite) rewrite_bitin(tip);
 }
@@ -907,7 +907,7 @@ static void fast_cbin(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_pskip(tip);
 	cbin(tip);
-	tip->machine_interface->op_rts(tip->machine_interface);
+	tip->machine->op_rts(tip->machine);
 	pulse_skip(tip);
 }
 
@@ -954,8 +954,8 @@ static void rewrite_tape_on(void *sptr) {
 	tape_desync(tip, 256);
 	/* for audio files, when padding leaders, assume a phase */
 	if (tip->tape_pad && tip->input_skip_sync) {
-		tip->machine_interface->write_byte(tip->machine_interface, 0x84, 0);  /* phase */
-		tip->machine_interface->op_rts(tip->machine_interface);
+		tip->machine->write_byte(tip->machine, 0x84, 0);  /* phase */
+		tip->machine->op_rts(tip->machine);
 	}
 }
 
@@ -995,21 +995,21 @@ static struct machine_bp bp_list_rewrite[] = {
 
 static void set_breakpoints(struct tape_interface_private *tip) {
 	/* clear any old breakpoints */
-	machine_bp_remove_list(tip->machine_interface, bp_list_fast);
-	machine_bp_remove_list(tip->machine_interface, bp_list_fast_cbin);
-	machine_bp_remove_list(tip->machine_interface, bp_list_rewrite);
+	machine_bp_remove_list(tip->machine, bp_list_fast);
+	machine_bp_remove_list(tip->machine, bp_list_fast_cbin);
+	machine_bp_remove_list(tip->machine, bp_list_rewrite);
 	if (!tip->motor)
 		return;
 	/* add required breakpoints */
 	if (tip->tape_fast) {
-		machine_bp_add_list(tip->machine_interface, bp_list_fast, tip);
+		machine_bp_add_list(tip->machine, bp_list_fast, tip);
 		/* these are incompatible with the other flags */
 		if (!tip->tape_pad && !tip->tape_rewrite) {
-			machine_bp_add_list(tip->machine_interface, bp_list_fast_cbin, tip);
+			machine_bp_add_list(tip->machine, bp_list_fast_cbin, tip);
 		}
 	}
 	if (tip->tape_pad || tip->tape_rewrite) {
-		machine_bp_add_list(tip->machine_interface, bp_list_rewrite, tip);
+		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
 	}
 }
 

@@ -45,7 +45,7 @@ static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basi
 struct keyboard_interface_private {
 	struct keyboard_interface public;
 
-	struct machine_interface *machine_interface;
+	struct machine *machine;
 	struct MC6809 *cpu;
 
 	struct slist *basic_command_list;
@@ -63,12 +63,12 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
 };
 
-struct keyboard_interface *keyboard_interface_new(struct machine_interface *mi) {
+struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	struct keyboard_interface_private *kip = xmalloc(sizeof(*kip));
 	*kip = (struct keyboard_interface_private){0};
 	struct keyboard_interface *ki = &kip->public;
-	kip->machine_interface = mi;
-	kip->cpu = mi->get_component(mi, "CPU0");
+	kip->machine = m;
+	kip->cpu = m->get_component(m, "CPU0");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -78,7 +78,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine_interface *mi) 
 
 void keyboard_interface_free(struct keyboard_interface *ki) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	machine_bp_remove_list(kip->machine_interface, basic_command_breakpoint);
+	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	slist_free_full(kip->basic_command_list, (slist_free_func)free);
 	free(kip);
 }
@@ -262,17 +262,17 @@ static void type_command(void *sptr) {
 		if (kip->basic_command_list) {
 			kip->basic_command = kip->basic_command_list->data;
 		} else {
-			machine_bp_remove_list(kip->machine_interface, basic_command_breakpoint);
+			machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 		}
 	}
 	/* Use CPU read routine to pull return address back off stack */
-	kip->machine_interface->op_rts(kip->machine_interface);
+	kip->machine->op_rts(kip->machine);
 }
 
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
 	char *data = NULL;
-	machine_bp_remove_list(kip->machine_interface, basic_command_breakpoint);
+	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	if (s) {
 		data = xstrdup(s);
 		kip->basic_command_list = slist_append(kip->basic_command_list, data);
@@ -281,6 +281,6 @@ void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
 		kip->basic_command = data;
 	}
 	if (kip->basic_command) {
-		machine_bp_add_list(kip->machine_interface, basic_command_breakpoint, kip);
+		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
 	}
 }
