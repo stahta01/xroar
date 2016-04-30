@@ -1,7 +1,16 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2016  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+XRoar, a Dragon 32/64 emulator
+Copyright 2003-2016 Ciaran Anscomb
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 2 of the License, or (at your option) any later
+version.
+
+Machine & machine config handling.
+
+*/
 
 #ifndef XROAR_MACHINE_H_
 #define XROAR_MACHINE_H_
@@ -209,12 +218,21 @@ struct machine_interface {
 	void (*op_rts)(struct machine_interface *mi);
 };
 
+void machine_interface_init(void);
+void machine_interface_shutdown(void);
+
 struct machine_interface *machine_interface_new(struct machine_config *mc);
 
 /* Helper function to populate breakpoints from a list. */
 #define machine_bp_add_list(mi, list, sptr) (mi)->bp_add_n(mi, list, sizeof(list) / sizeof(struct machine_bp), sptr)
 #define machine_bp_remove_list(mi, list) (mi)->bp_remove_n(mi, list, sizeof(list) / sizeof(struct machine_bp))
 
+struct machine_module {
+	const char *name;
+	const char *description;
+	struct machine_interface *(* const new)(struct machine_config *mc);
+};
+
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);
 
-#endif  /* XROAR_MACHINE_H_ */
+#endif

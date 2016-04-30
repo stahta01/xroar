@@ -481,6 +481,7 @@ _Bool xroar_init(int argc, char **argv) {
 	windows32_init();
 #endif
 
+	machine_interface_init();
 	cart_init();
 
 	xroar_conf_path = getenv("XROAR_CONF_PATH");
@@ -827,7 +828,7 @@ void xroar_shutdown(void) {
 	}
 	joystick_shutdown();
 	cart_shutdown();
-	machine_config_shutdown();
+	machine_interface_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
 	module_shutdown((struct module *)vo_module);
@@ -1572,7 +1573,6 @@ static void set_machine(const char *name) {
 			xroar_machine_config->nodos = private_cfg.nodos;
 			private_cfg.nodos = -1;
 		}
-		machine_config_complete(xroar_machine_config);
 	}
 	if (name) {
 		xroar_machine_config = machine_config_by_name(name);

@@ -24,6 +24,7 @@ xroar_SOURCES = \
 	crclist.c crclist.h \
 	deltados.c \
 	dkbd.c dkbd.h \
+	dragon.c \
 	dragondos.c \
 	events.c events.h \
 	fs.c fs.h \
