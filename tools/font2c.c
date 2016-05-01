@@ -22,7 +22,7 @@
 const char *argv0;
 const char *array_name = "font";
 const char *array_type = "unsigned int";
-enum vdg_type { VDG, VDGT1 };
+enum vdg_type { VDG, VDGT1, GIME };
 
 static void print_byte(uint8_t b);
 static void end_line(void);
@@ -61,6 +61,10 @@ int main(int argc, char **argv) {
 		} else if (0 == strcmp(argv[i], "--vdgt1")) {
 			output_mode = VDGT1;
 			nchars = 128;
+			pad_top = 1;
+		} else if (0 == strcmp(argv[i], "--gime")) {
+			output_mode = GIME;
+			nchars = 96;
 			pad_top = 1;
 		} else if (0 == strcmp(argv[i], "--array") && i+1 < argc) {
 			array_name = argv[++i];
@@ -124,6 +128,15 @@ int main(int argc, char **argv) {
 			} else {
 				c = i - 96;
 				invert = 0;
+			}
+			break;
+		case GIME:
+			if (i < 64) {
+				c = i ^ 0x20;
+				invert = 0;
+			} else if (i < 96) {
+				c = i;
+				invert = 0xff;
 			}
 			break;
 		}
