@@ -131,8 +131,6 @@ static struct sym_dkey_mapping keyval_dkey_default[] = {
 	{ GDK_KEY_Shift_L, DSCAN_SHIFT, 1 },
 	{ GDK_KEY_Shift_R, DSCAN_SHIFT, 1 },
 	{ GDK_KEY_space, DSCAN_SPACE, 0 },
-	{ GDK_KEY_F1, DSCAN_F1, 1 },
-	{ GDK_KEY_F2, DSCAN_F2, 1 },
 
         // Not so common
         { GDK_KEY_Break, DSCAN_BREAK, 1 },
@@ -146,6 +144,15 @@ static struct sym_dkey_mapping keyval_dkey_default[] = {
         { GDK_KEY_BackSpace, DSCAN_LEFT, 1 },
         { GDK_KEY_KP_Delete, DSCAN_LEFT, 1 },
         { GDK_KEY_Tab, DSCAN_RIGHT, 1 },
+
+	// CoCo 3
+	{ GDK_KEY_ISO_Level3_Shift, DSCAN_ALT, 1 },
+	{ GDK_KEY_Alt_R, DSCAN_ALT, 1 },
+	{ GDK_KEY_Caps_Lock, DSCAN_CTRL, 1 },
+	{ GDK_KEY_Super_L, DSCAN_CTRL, 1 },
+	{ GDK_KEY_Super_R, DSCAN_CTRL, 1 },
+	{ GDK_KEY_F1, DSCAN_F1, 1 },
+	{ GDK_KEY_F2, DSCAN_F2, 1 },
 
         // Keypad
 	{ GDK_KEY_KP_Up, DSCAN_UP, 1 },
