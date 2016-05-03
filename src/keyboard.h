@@ -24,10 +24,11 @@
 
 struct machine;
 
-#define NUM_KEYMAPS   (3)
+#define NUM_KEYMAPS   (4)
 #define KEYMAP_DRAGON (0)
 #define KEYMAP_COCO   (1)
 #define KEYMAP_DRAGON200E (2)
+#define KEYMAP_COCO3  (3)
 
 #define IS_DRAGON_KEYMAP (xroar_machine_config->keymap == KEYMAP_DRAGON)
 #define IS_COCO_KEYMAP (xroar_machine_config->keymap == KEYMAP_COCO)

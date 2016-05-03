@@ -142,7 +142,8 @@ struct xconfig_enum machine_arch_list[] = {
 struct xconfig_enum machine_keyboard_list[] = {
 	{ XC_ENUM_INT("dragon", dkbd_layout_dragon, "Dragon") },
 	{ XC_ENUM_INT("dragon200e", dkbd_layout_dragon200e, "Dragon 200-E") },
-	{ XC_ENUM_INT("coco", dkbd_layout_coco, "Tandy CoCo") },
+	{ XC_ENUM_INT("coco", dkbd_layout_coco, "Tandy CoCo 1/2") },
+	{ XC_ENUM_INT("coco3", dkbd_layout_coco3, "Tandy CoCo 3") },
 	{ XC_ENUM_END() }
 };
 
