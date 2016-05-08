@@ -526,6 +526,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				cpu->nmi_active = cpu->nmi_latch;
 				cpu->firq_active = cpu->firq_latch;
 				cpu->irq_active = cpu->irq_latch;
+				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_sync;
 				continue;
 			// 0x14 SEXW inherent
@@ -864,7 +865,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				NVMA_CYCLE;
 				hcpu->state = hd6309_state_dispatch_irq;
-				break;
 			} break;
 			// 0x3d MUL inherent
 			case 0x3d: {

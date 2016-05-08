@@ -415,6 +415,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				cpu->nmi_active = cpu->nmi_latch;
 				cpu->firq_active = cpu->firq_latch;
 				cpu->irq_active = cpu->irq_latch;
+				instruction_posthook(cpu);
 				cpu->state = mc6809_state_sync;
 				continue;
 			// 0x14, 0x15 HCF? (illegal)
@@ -730,7 +731,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				NVMA_CYCLE;
 				cpu->state = mc6809_state_dispatch_irq;
-				break;
 			} break;
 			// 0x3d MUL inherent
 			case 0x3d: {
