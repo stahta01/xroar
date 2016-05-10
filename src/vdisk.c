@@ -443,6 +443,11 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	unsigned ssize = 128 << ssize_code;
 	unsigned bytes_per_sector = ssize + sector_attr_flag;
 	unsigned bytes_per_cyl = nsectors * bytes_per_sector * nheads;
+	if (bytes_per_cyl == 0) {
+		LOG_WARN("Bad JVC header in '%s'\n", filename);
+		fclose(fd);
+		return NULL;
+	}
 	unsigned ncyls = file_size / bytes_per_cyl;
 	// Too many tracks is implausible, so assume this (single-sided) means
 	// a 720K disk.
