@@ -1,7 +1,7 @@
 /*
 
 Singly linked lists
-Copyright 2009-2015, Ciaran Anscomb
+Copyright 2009-2016, Ciaran Anscomb
 
 This is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
@@ -82,4 +82,4 @@ struct slist *slist_find(struct slist *, const void *);
 /* Find element using compare function against supplied data. */
 struct slist *slist_find_custom(struct slist *, const void *, slist_cmp_func);
 
-#endif  /* SLIST_H__chqkIizgkKbjw */
+#endif
