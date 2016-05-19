@@ -192,9 +192,12 @@ struct slist *slist_concat(struct slist *list1, struct slist *list2) {
 		return list1;
 	if (!list1)
 		return list2;
-	while (list1->next)
-		list1 = list1->next;
-	list1->next = list2;
+
+	struct slist *l = list1;
+	while (l->next)
+		l = l->next;
+	l->next = list2;
+
 	return list1;
 }
 
