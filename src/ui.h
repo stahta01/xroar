@@ -23,7 +23,8 @@ struct vdisk;
 /* NTSC cross-colour can either be rendered as a simple four colour palette, or
  * with a 5-bit lookup table */
 #define UI_CCR_SIMPLE (0)
-#define UI_CCR_5BIT   (1)
+#define UI_CCR_5BIT (1)
+#define UI_CCR_NTSC (2)
 
 struct ui_cfg {
 	char *vo;  // video output module
