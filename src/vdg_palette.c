@@ -165,7 +165,7 @@ void vdg_palette_RGB(struct vdg_palette *vp, _Bool is_pal, int colour,
 	*Gout += rgb_black_level;
 	*Bout += rgb_black_level;
 
-	if (*Rout < 0.0) *Rout = 0.0; if (*Rout > 1.0) *Rout = 1.0;
-	if (*Gout < 0.0) *Gout = 0.0; if (*Gout > 1.0) *Gout = 1.0;
-	if (*Bout < 0.0) *Bout = 0.0; if (*Bout > 1.0) *Bout = 1.0;
+	if (*Rout < 0.0) { *Rout = 0.0; } if (*Rout > 1.0) { *Rout = 1.0; }
+	if (*Gout < 0.0) { *Gout = 0.0; } if (*Gout > 1.0) { *Gout = 1.0; }
+	if (*Bout < 0.0) { *Bout = 0.0; } if (*Bout > 1.0) { *Bout = 1.0; }
 }

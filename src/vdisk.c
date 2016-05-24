@@ -379,8 +379,6 @@ static int vdisk_save_vdk(struct vdisk *disk) {
  * ends in ".os9", the check is performed regardless.
  */
 
-static uint8_t const jvc_defaults[] = { 18, 1, 1, 1, 0 };
-
 static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	unsigned nsectors = 18;
 	unsigned nheads = 1;

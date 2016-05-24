@@ -333,7 +333,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 		uint8_t c0, c1;
 		switch (vdg->render_mode) {
-		case VDG_RENDER_SG:
+		case VDG_RENDER_SG: default:
 			c0 = (vdg->vram_sg_data&0x80) ? vdg->s_fg_colour : vdg->s_bg_colour;
 			c1 = (vdg->vram_sg_data&0x40) ? vdg->s_fg_colour : vdg->s_bg_colour;
 			break;
