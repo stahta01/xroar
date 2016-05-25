@@ -3,11 +3,13 @@ Version 0.34, unreleased
   * Zoom controls fixed or added where missing.
   * Dragon 200-E "CLS 9" alternate text mode fixed.
   * Control+C to quit removed from SDL UI (use Control+Q as per the docs).
+  * SDL2 support.
+  * -vo help lists video modules by UI.
+  * Large structural changes to support more machine types.
+  * Pixel rate doubled anticipating more machine types (could be slower).
 
   * Work in progress changes:
-  * * WIP: SDL2 support
-  * * WIP: SDL2 X11 translated keyboard handling
-  * * WIP: SDL2 Windows translated keyboard handling
+  * * WIP: NTSC filtering renderer: -ccr ntsc (hue is wrong)
   * * TODO: SDL2 "queued" audio.  Pending Debian including SDL 2.0.4?
   * * TODO: Ensure SDL 1.2 code still builds.
 
