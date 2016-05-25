@@ -262,8 +262,8 @@ static void setup_hardware_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
 	set_state(ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
-	struct cart *machine_cart = machine_get_cart();
-	set_state(ui_tag_cartridge, machine_cart ? machine_cart->config->id : 0, NULL);
+	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
+	set_state(ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
@@ -328,8 +328,8 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			xroar_select_tape_output();
 			break;
 		case ui_action_tape_input_rewind:
-			if (tape_interface && tape_interface->tape_input)
-				tape_rewind(tape_interface->tape_input);
+			if (xroar_tape_interface && xroar_tape_interface->tape_input)
+				tape_rewind(xroar_tape_interface->tape_input);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in();
@@ -360,7 +360,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Cassettes:
 	case ui_tag_tape_flags:
-		tape_select_state(tape_interface, tape_get_state(tape_interface) ^ tag_value);
+		tape_select_state(xroar_tape_interface, tape_get_state(xroar_tape_interface) ^ tag_value);
 		break;
 
 	// Disks:
@@ -371,10 +371,10 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_new_disk(tag_value);
 		break;
 	case ui_tag_disk_write_enable:
-		xroar_set_write_enable(1, tag_value, XROAR_TOGGLE);
+		xroar_set_write_enable(1, tag_value, XROAR_NEXT);
 		break;
 	case ui_tag_disk_write_back:
-		xroar_set_write_back(1, tag_value, XROAR_TOGGLE);
+		xroar_set_write_back(1, tag_value, XROAR_NEXT);
 		break;
 	case ui_tag_disk_eject:
 		xroar_eject_disk(tag_value);
@@ -382,18 +382,18 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Video:
 	case ui_tag_fullscreen:
-		xroar_set_fullscreen(1, XROAR_TOGGLE);
+		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
 	case ui_tag_cross_colour:
 		xroar_set_cross_colour(1, tag_value);
 		break;
 	case ui_tag_vdg_inverse:
-		xroar_set_vdg_inverted_text(1, XROAR_TOGGLE);
+		xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		break;
 
 	// Audio:
 	case ui_tag_fast_sound:
-		machine_select_fast_sound(!xroar_cfg.fast_sound);
+		xroar_set_fast_sound(1, !xroar_cfg.fast_sound);
 		break;
 
 	// Keyboard:
@@ -401,7 +401,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_set_keymap(1, tag_value);
 		break;
 	case ui_tag_kbd_translate:
-		xroar_set_kbd_translate(1, XROAR_TOGGLE);
+		xroar_set_kbd_translate(1, XROAR_NEXT);
 		break;
 
 	// Joysticks:
