@@ -372,7 +372,7 @@ int read_snapshot(const char *filename) {
 	while ((section = fs_read_uint8(fd)) >= 0) {
 		unsigned size = fs_read_uint16(fd);
 		if (size == 0) size = 0x10000;
-		LOG_DEBUG(2, "Snapshot read: chunk type %d, size %d\n", section, size);
+		LOG_DEBUG(2, "Snapshot read: chunk type %d, size %u\n", section, size);
 		switch (section) {
 			case ID_ARCHITECTURE:
 				// Deprecated: Machine architecture
