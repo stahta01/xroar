@@ -111,7 +111,7 @@ struct vdg_palette *vdg_palette_by_name(const char *name) {
 /* ---------------------------------------------------------------------- */
 
 /* Map Y'U'V' from palette to pixel value */
-void vdg_palette_RGB(struct vdg_palette *vp, _Bool is_pal, int colour,
+void vdg_palette_RGB(struct vdg_palette *vp, int colour,
                      float *Rout, float *Gout, float *Bout) {
 	float blank_y = vp->blank_y;
 	float white_y = vp->white_y;
@@ -125,23 +125,12 @@ void vdg_palette_RGB(struct vdg_palette *vp, _Bool is_pal, int colour,
 	float scale_y = 1. / (blank_y - white_y);
 	y = black_level + (blank_y - y) * scale_y;
 
-	float r, g, b;
-	float mlaw;
-	if (is_pal) {
-		float u = 0.493 * b_y;
-		float v = 0.877 * r_y;
-		r = 1.0 * y + 0.000 * u + 1.140 * v;
-		g = 1.0 * y - 0.396 * u - 0.581 * v;
-		b = 1.0 * y + 2.029 * u + 0.000 * v;
-		mlaw = 2.2;
-	} else {
-		float i = -0.27 * b_y + 0.74 * r_y;
-		float q =  0.41 * b_y + 0.48 * r_y;
-		r = 1.0 * y + 0.956 * i + 0.621 * q;
-		g = 1.0 * y - 0.272 * i - 0.647 * q;
-		b = 1.0 * y - 1.105 * i + 1.702 * q;
-		mlaw = 2.2;
-	}
+	float u = 0.493 * b_y;
+	float v = 0.877 * r_y;
+	float r = 1.0 * y + 0.000 * u + 1.140 * v;
+	float g = 1.0 * y - 0.396 * u - 0.581 * v;
+	float b = 1.0 * y + 2.029 * u + 0.000 * v;
+	float mlaw = 2.2;
 
 	/* Those are corrected (non-linear) values, but graphics card
 	 * colourspaces tend to be linear, so un-correct here.  Proper
