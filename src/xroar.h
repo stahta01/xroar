@@ -162,6 +162,7 @@ void xroar_insert_disk(int drive);
 void xroar_eject_disk(int drive);
 _Bool xroar_set_write_enable(_Bool notify, int drive, int action);
 _Bool xroar_set_write_back(_Bool notify, int drive, int action);
+void xroar_set_cross_colour_renderer(_Bool notify, int action);
 void xroar_set_cross_colour(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);
 void xroar_set_fast_sound(_Bool notify, int action);

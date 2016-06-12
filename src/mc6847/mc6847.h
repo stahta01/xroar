@@ -10,6 +10,24 @@
 
 #include "delegate.h"
 
+struct ntsc_palette;
+
+// Output voltages
+
+// Luma
+#define VDG_VBLANK (0.77)
+#define VDG_VBLACK (0.72)
+#define VDG_VWL    (0.65)
+#define VDG_VWM    (0.54)
+#define VDG_VWH    (0.42)
+
+// Chroma
+#define VDG_VIH    (2.00)
+#define VDG_VR     (1.50)
+#define VDG_VOL    (1.00)
+#define VDG_VBURST (1.25)
+#define VDG_CHB    (1.50)
+
 // Horizontal timing, all measured in quarter-VDG-clocks (i.e., half-pixels)
 
 #define VDG_tFP   (34)  // 28
@@ -64,6 +82,9 @@ struct MC6847 {
 	// 16-bit words, second a pointer to a buffer to receive them.
 	DELEGATE_T2(void, int, uint16p) fetch_data;
 
+	// Render line
+	DELEGATE_T2(void, uint8p, unsigned) render_line;
+
 	// Flags to affect behaviour.  Really, these should be handled by
 	// machine-specific code.
 	_Bool is_dragon64;
@@ -85,6 +106,7 @@ void mc6847_free(struct MC6847 *);
 
 void mc6847_reset(struct MC6847 *);
 
+void mc6847_set_palette(struct MC6847 *, const struct ntsc_palette *np);
 void mc6847_set_inverted_text(struct MC6847 *, _Bool);
 
 /*

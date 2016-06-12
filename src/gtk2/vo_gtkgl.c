@@ -35,7 +35,7 @@
 static _Bool init(void);
 static void _shutdown(void);
 static void refresh(void);
-static void vsync(void);
+static void vsync(struct vo_module *vo);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
 
@@ -47,7 +47,7 @@ struct vo_module vo_gtkgl_module = {
 	.vsync = vsync,
 	.render_scanline = vo_opengl_render_scanline,
 	.resize = resize, .set_fullscreen = set_fullscreen,
-	.update_cross_colour_phase = vo_opengl_update_cross_colour_phase,
+	.set_vo_cmp = vo_opengl_set_vo_cmp,
 };
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
@@ -84,7 +84,7 @@ static _Bool init(void) {
 	/* Set fullscreen. */
 	set_fullscreen(xroar_ui_cfg.fullscreen);
 
-	vsync();
+	vsync(&vo_gtkgl_module);
 
 	return 1;
 }
@@ -178,7 +178,7 @@ static void refresh(void) {
 	gdk_gl_drawable_gl_end(gldrawable);
 }
 
-static void vsync(void) {
+static void vsync(struct vo_module *vo) {
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -186,7 +186,7 @@ static void vsync(void) {
 		g_assert_not_reached();
 	}
 
-	vo_opengl_vsync();
+	vo_opengl_vsync(vo);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);

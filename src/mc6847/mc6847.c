@@ -32,8 +32,8 @@
 #include "mc6847/font-6847.h"
 #include "mc6847/font-6847t1.h"
 #include "mc6847/mc6847.h"
+#include "ntsc.h"
 #include "sam.h"
-#include "vo.h"
 #include "xroar.h"
 
 struct ser_handle;
@@ -86,6 +86,8 @@ struct MC6847_private {
 	enum vdg_render_mode render_mode;
 	unsigned pal_padding;
 	uint8_t pixel_data[VDG_LINE_DURATION];
+	const struct ntsc_palette *palette;
+	unsigned burst;
 
 	uint16_t vram[42];
 	unsigned vram_index;
@@ -113,32 +115,44 @@ static void render_scanline(struct MC6847_private *vdg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static inline int encode_pixel(struct MC6847_private *vdg, int colour) {
+	return ntsc_encode_from_palette(vdg->palette, colour);
+}
+
 static void do_hs_fall(void *data) {
 	struct MC6847_private *vdg = data;
 	// Finish rendering previous scanline
 	if (vdg->frame == 0) {
 		if (vdg->scanline < VDG_ACTIVE_AREA_START) {
 			if (vdg->scanline == 0) {
-				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
+				for (unsigned j = VDG_tAVB; j > 0; j--) {
+					*(v++) = encode_pixel(vdg, vdg->border_colour);
+				}
 			}
-			vo_module->render_scanline(vdg->pixel_data);
+			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 			render_scanline(vdg);
 			vdg->public.row++;
 			if (vdg->public.row > 11)
 				vdg->public.row = 0;
-			vo_module->render_scanline(vdg->pixel_data);
+			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
-				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, vdg->border_colour, VDG_tAVB);
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
+				for (unsigned j = VDG_tAVB; j > 0; j--) {
+					*(v++) = encode_pixel(vdg, vdg->border_colour);
+				}
 			}
-			vo_module->render_scanline(vdg->pixel_data);
+			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		}
 	}
 
 	// HS falling edge.
 	DELEGATE_CALL1(vdg->public.signal_hs, 0);
+
+	ntsc_reset_phase();
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
@@ -186,6 +200,7 @@ static void do_hs_fall(void *data) {
 	vdg->lborder_remaining = VDG_tLB;
 	vdg->vram_remaining = vdg->is_32byte ? 32 : 16;
 	vdg->rborder_remaining = VDG_tRB;
+	vdg->burst = !(vdg->nA_G && vdg->CSSa && vdg->GM0);
 
 	if (vdg->scanline == VDG_ACTIVE_AREA_START) {
 		vdg->public.row = 0;
@@ -199,11 +214,6 @@ static void do_hs_fall(void *data) {
 	if (vdg->scanline == VDG_VBLANK_START) {
 		// FS rising edge
 		DELEGATE_CALL1(vdg->public.signal_fs, 1);
-		vdg->frame--;
-		if (vdg->frame < 0)
-			vdg->frame = xroar_frameskip;
-		if (vdg->frame == 0)
-			vo_module->vsync();
 	}
 
 }
@@ -259,7 +269,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos;
 
 	while (vdg->lborder_remaining > 0) {
-		*(pixel++) = vdg->border_colour;
+		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
 		vdg->beam_pos++;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
@@ -346,13 +356,21 @@ static void render_scanline(struct MC6847_private *vdg) {
 			break;
 		}
 		if (vdg->is_32byte) {
-			*(pixel) = *(pixel+1) = c0;
-			*(pixel+2) = *(pixel+3) = c1;
+			*(pixel) = encode_pixel(vdg, c0);
+			*(pixel+1) = encode_pixel(vdg, c0);
+			*(pixel+2) = encode_pixel(vdg, c1);
+			*(pixel+3) = encode_pixel(vdg, c1);
 			pixel += 4;
 			vdg->beam_pos += 4;
 		} else {
-			*(pixel) = *(pixel+1) = *(pixel+2) = *(pixel+3) = c0;
-			*(pixel+4) = *(pixel+5) = *(pixel+6) = *(pixel+7) = c1;
+			*(pixel) = encode_pixel(vdg, c0);
+			*(pixel+1) = encode_pixel(vdg, c0);
+			*(pixel+2) = encode_pixel(vdg, c0);
+			*(pixel+3) = encode_pixel(vdg, c0);
+			*(pixel+4) = encode_pixel(vdg, c1);
+			*(pixel+5) = encode_pixel(vdg, c1);
+			*(pixel+6) = encode_pixel(vdg, c1);
+			*(pixel+7) = encode_pixel(vdg, c1);
 			pixel += 8;
 			vdg->beam_pos += 8;
 		}
@@ -373,7 +391,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
-		*(pixel++) = vdg->border_colour;
+		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
 		vdg->beam_pos++;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
@@ -386,7 +404,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 	// If a program switches to 32 bytes per line mid-scanline, the whole
 	// scanline might not have been rendered:
 	while (vdg->beam_pos < VDG_RIGHT_BORDER_END) {
-		*(pixel++) = VDG_BLACK;
+		*(pixel++) = encode_pixel(vdg, VDG_BLACK);
 		vdg->beam_pos++;
 	}
 
@@ -445,10 +463,8 @@ void mc6847_free(struct MC6847 *vdgp) {
 
 void mc6847_reset(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	vo_module->vsync();
 	memset(vdg->pixel_data, VDG_BLACK, sizeof(vdg->pixel_data));
 	vdg->beam_pos = VDG_LEFT_BORDER_START;
-	vdg->frame = 0;
 	vdg->scanline = 0;
 	vdg->public.row = 0;
 	vdg->scanline_start = event_current_tick;
@@ -464,6 +480,14 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->rborder_remaining = VDG_tRB;
 }
 
+void mc6847_set_palette(struct MC6847 *vdgp, const struct ntsc_palette *np) {
+	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
+	vdg->palette = np;
+	// clear the pixel buffer, as the way its data so far is interpreted
+	// might change, and go out of bounds
+	memset(vdg->pixel_data, 0, sizeof(vdg->pixel_data));
+}
+
 void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 	vdg->inverted_text = invert;
@@ -472,7 +496,7 @@ void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
 void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 	/* Render scanline so far before changing modes */
-	if (vdg->frame == 0 && vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
+	if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 		render_scanline(vdg);
 	}
 

@@ -191,16 +191,16 @@ void vo_opengl_refresh(void) {
 	/* Video module should now do whatever's required to swap buffers */
 }
 
-void vo_opengl_vsync(void) {
+void vo_opengl_vsync(struct vo_module *vo) {
 	vo_opengl_refresh();
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	vo_module->scanline = 0;
+	vo->scanline = 0;
 }
 
-void vo_opengl_render_scanline(uint8_t const *scanline_data) {
-	render_scanline(scanline_data);
+void vo_opengl_render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase) {
+	render_scanline(vo, data, burst, phase);
 }
 
-void vo_opengl_update_cross_colour_phase(void) {
-	update_cross_colour_phase();
+void vo_opengl_set_vo_cmp(struct vo_module *vo, int mode) {
+	set_vo_cmp(vo, mode);
 }

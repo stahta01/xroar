@@ -36,11 +36,11 @@
 static _Bool init(void);
 static void shutdown(void);
 static void alloc_colours(void);
-static void vsync(void);
-static void render_scanline(uint8_t const *scanline_data);
+static void vsync(struct vo_module *vo);
+static void render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
-static void update_cross_colour_phase(void);
+static void set_vo_cmp(struct vo_module *vo, int mode);
 
 struct vo_module vo_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL2 video",
@@ -50,7 +50,7 @@ struct vo_module vo_sdl_module = {
 	.render_scanline = render_scanline,
 	.resize = resize,
 	.set_fullscreen = set_fullscreen,
-	.update_cross_colour_phase = update_cross_colour_phase,
+	.set_vo_cmp = set_vo_cmp,
 };
 
 typedef uint16_t Pixel;
@@ -93,7 +93,7 @@ static _Bool init(void) {
 	vo_sdl_module.window_w = 640;
 	vo_sdl_module.window_h = 240;
 
-	vsync();
+	vsync(&vo_sdl_module);
 
 	return 1;
 }
@@ -246,11 +246,11 @@ static void shutdown(void) {
 	destroy_window();
 }
 
-static void vsync(void) {
+static void vsync(struct vo_module *vo) {
 	SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Pixel));
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	vo_sdl_module.scanline = 0;
+	vo->scanline = 0;
 }

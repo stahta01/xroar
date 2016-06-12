@@ -195,6 +195,12 @@ static void setup_view_menu(void) {
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "Inverse Text");
 
 	submenu = CreatePopupMenu();
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Composite Rendering");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_SIMPLE), "Simple (2-bit LUT)");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_5BIT), "5-bit LUT");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_SIMULATED), "Simulated");
+
+	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cross-colour");
 	for (int i = 0; xroar_cross_colour_list[i].name; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cross_colour, xroar_cross_colour_list[i].value), xroar_cross_colour_list[i].description);
@@ -384,6 +390,9 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	case ui_tag_fullscreen:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
+	case ui_tag_ccr:
+		xroar_set_cross_colour_renderer(1, tag_value);
+		break;
 	case ui_tag_cross_colour:
 		xroar_set_cross_colour(1, tag_value);
 		break;
@@ -474,6 +483,10 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 		break;
 
 	// Video
+
+	case ui_tag_ccr:
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 2), TAGV(tag, value), MF_BYCOMMAND);
+		break;
 
 	case ui_tag_cross_colour:
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 2), TAGV(tag, value), MF_BYCOMMAND);

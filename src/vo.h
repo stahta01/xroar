@@ -19,6 +19,13 @@ Video output module definition.
 
 #include "module.h"
 
+struct ntsc_burst;
+
+#define VO_CMP_PALETTE (0)
+#define VO_CMP_2BIT (1)
+#define VO_CMP_5BIT (2)
+#define VO_CMP_SIMULATED (3)
+
 struct vo_module {
 	struct module common;
 	int scanline;
@@ -28,10 +35,11 @@ struct vo_module {
 	void (* const resize)(unsigned int w, unsigned int h);
 	int (* const set_fullscreen)(_Bool fullscreen);
 	_Bool is_fullscreen;
-	void (*render_scanline)(uint8_t const *scanline_data);
-	void (* const vsync)(void);
+	void (*render_scanline)(struct vo_module *vo, uint8_t const *scanline_data,
+				struct ntsc_burst *burst, unsigned phase);
+	void (* const vsync)(struct vo_module *vo);
 	void (* const refresh)(void);
-	void (* const update_cross_colour_phase)(void);
+	void (* const set_vo_cmp)(struct vo_module *vo, int mode);
 };
 
 extern struct vo_module * const *vo_module_list;

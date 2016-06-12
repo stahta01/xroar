@@ -18,9 +18,9 @@ _Bool vo_opengl_init(void);
 void vo_opengl_shutdown(void);
 void vo_opengl_alloc_colours(void);
 void vo_opengl_refresh(void);
-void vo_opengl_vsync(void);
+void vo_opengl_vsync(struct vo_module *vo);
 void vo_opengl_set_window_size(unsigned w, unsigned h);
-void vo_opengl_render_scanline(uint8_t const *scanline_data);
-void vo_opengl_update_cross_colour_phase(void);
+void vo_opengl_render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
+void vo_opengl_set_vo_cmp(struct vo_module *vo, int mode);
 
 #endif  /* XROAR_VO_OPENGL_H_ */

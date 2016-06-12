@@ -1147,6 +1147,23 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	return new_wb;
 }
 
+void xroar_set_cross_colour_renderer(_Bool notify, int action) {
+	switch (action) {
+	case UI_CCR_SIMPLE:
+	case UI_CCR_5BIT:
+	case UI_CCR_SIMULATED:
+		xroar_ui_cfg.ccr = action;
+		break;
+	default:
+		xroar_ui_cfg.ccr = UI_CCR_5BIT;
+		break;
+	}
+	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
+	if (notify) {
+		ui_module->set_state(ui_tag_ccr, xroar_ui_cfg.ccr, NULL);
+	}
+}
+
 void xroar_set_cross_colour(_Bool notify, int action) {
 	switch (action) {
 	case XROAR_NEXT:
@@ -1157,8 +1174,30 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
-	if (vo_module->update_cross_colour_phase) {
-		vo_module->update_cross_colour_phase();
+	if (xroar_machine->set_vo_cmp && vo_module->set_vo_cmp) {
+		if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_OFF) {
+			xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+			vo_module->set_vo_cmp(vo_module, VO_CMP_PALETTE);
+		} else {
+			switch (xroar_ui_cfg.ccr) {
+			default:
+				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				vo_module->set_vo_cmp(vo_module, VO_CMP_PALETTE);
+				break;
+			case UI_CCR_SIMPLE:
+				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				vo_module->set_vo_cmp(vo_module, VO_CMP_2BIT);
+				break;
+			case UI_CCR_5BIT:
+				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				vo_module->set_vo_cmp(vo_module, VO_CMP_5BIT);
+				break;
+			case UI_CCR_SIMULATED:
+				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_SIMULATED);
+				vo_module->set_vo_cmp(vo_module, VO_CMP_SIMULATED);
+				break;
+			}
+		}
 	}
 	if (notify) {
 		ui_module->set_state(ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
@@ -1312,7 +1351,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		xroar_machine->free(xroar_machine);
 	}
 	xroar_machine_config = mc;
-	xroar_machine = machine_new(mc);
+	xroar_machine = machine_new(mc, vo_module);
 	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
@@ -1329,6 +1368,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 		vdisk_default_ncyls(40);
 		break;
 	}
+	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? CROSS_COLOUR_OFF : CROSS_COLOUR_KBRW;
+	xroar_set_cross_colour_renderer(1, xroar_ui_cfg.ccr);
 }
 
 void xroar_set_machine(_Bool notify, int id) {
@@ -2196,7 +2237,7 @@ static void config_print_all(_Bool all) {
 	puts("# Video");
 	xroar_cfg_print_string(all, "vo", xroar_ui_cfg.vo, NULL);
 	xroar_cfg_print_bool(all, "fs", xroar_ui_cfg.fullscreen, 0);
-	xroar_cfg_print_int_nz(all, "fskip", xroar_frameskip);
+	xroar_cfg_print_int_nz(all, "fskip", xroar_cfg.frameskip);
 	xroar_cfg_print_enum(all, "ccr", xroar_ui_cfg.ccr, UI_CCR_5BIT, ui_ccr_list);
 	xroar_cfg_print_enum(all, "gl-filter", xroar_ui_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
 	xroar_cfg_print_string(all, "geometry", xroar_ui_cfg.geometry, NULL);

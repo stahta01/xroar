@@ -41,6 +41,7 @@ xroar_SOURCES = \
 	mc6847/mc6847.c mc6847/mc6847.h \
 	module.c module.h \
 	mpi.c mpi.h \
+	ntsc.c ntsc.h \
 	orch90.c \
 	path.c path.h \
 	printer.c printer.h \

@@ -247,6 +247,13 @@ static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 	xroar_set_vdg_inverted_text(0, val);
 }
 
+static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	(void)user_data;
+	xroar_set_cross_colour_renderer(0, val);
+}
+
 static void set_cc(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
@@ -363,6 +370,11 @@ static const gchar *ui =
 	    "</menu>"
 	    "<menu name='ViewMenu' action='ViewMenuAction'>"
 	      "<menuitem name='InverseText' action='InverseTextAction'/>"
+	      "<menu name='CCRMenu' action='CCRMenuAction'>"
+	        "<menuitem action='ccr-simple'/>"
+	        "<menuitem action='ccr-5bit'/>"
+	        "<menuitem action='ccr-simulated'/>"
+	      "</menu>"
 	      "<menu name='CrossColourMenu' action='CrossColourMenuAction'>"
 	        "<menuitem action='cc-none'/>"
 	        "<menuitem action='cc-blue-red'/>"
@@ -457,6 +469,7 @@ static GtkActionEntry const ui_entries[] = {
 	  .tooltip = "Quit",
 	  .callback = G_CALLBACK(xroar_quit) },
 	/* View */
+	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
 	{ .name = "CrossColourMenuAction", .label = "_Cross-colour" },
 	{ .name = "ZoomMenuAction", .label = "_Zoom" },
 	{ .name = "zoom_in", .label = "Zoom In",
@@ -519,6 +532,12 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(toggle_fast_sound) },
 };
 static guint ui_n_toggles = G_N_ELEMENTS(ui_toggles);
+
+static GtkRadioActionEntry const ccr_radio_entries[] = {
+	{ .name = "ccr-simple", .label = "Simple (2-bit LUT)", .value = UI_CCR_SIMPLE },
+	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = UI_CCR_5BIT },
+	{ .name = "ccr-simulated", .label = "Simulated", .value = UI_CCR_SIMULATED },
+};
 
 static GtkRadioActionEntry const cross_colour_radio_entries[] = {
 	{ .name = "cc-none", .label = "None", .value = CROSS_COLOUR_OFF },
@@ -592,6 +611,7 @@ static _Bool init(void) {
 	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, 3, 0, (GCallback)set_keymap, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, 5, 0, (GCallback)set_joy_right, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, 5, 0, (GCallback)set_joy_left, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, 3, 0, (GCallback)set_ccr, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, 3, 0, (GCallback)set_cc, NULL);
 
 	/* Menu merge points */
@@ -712,6 +732,11 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 	case ui_tag_vdg_inverse:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/InverseText");
 		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_ccr:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-simple");
+		gtk_radio_action_set_current_value(radio, value);
 		break;
 
 	case ui_tag_cross_colour:

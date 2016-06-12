@@ -39,14 +39,16 @@ Dragon & CoCo 1/2 machine.
 #include "mc6809_trace.h"
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
+#include "ntsc.h"
 #include "printer.h"
 #include "romlist.h"
 #include "sam.h"
 #include "sound.h"
 #include "tape.h"
+#include "vo.h"
 #include "xroar.h"
 
-static struct machine *dragon_new(struct machine_config *mc);
+static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo);
 
 struct machine_module machine_dragon_module = {
 	.name = "dragon",
@@ -79,6 +81,9 @@ struct machine_dragon {
 	struct MC6821 *PIA0, *PIA1;
 	struct MC6847 *VDG0;
 
+	struct vo_module *vo;
+	int frame;  // track frameskip
+
 	unsigned int ram_size;
 	uint8_t ram[0x10000];
 	uint8_t *rom;
@@ -106,6 +111,14 @@ struct machine_dragon {
 	struct keyboard_interface *keyboard_interface;
 	struct printer_interface *printer_interface;
 
+	// NTSC palettes for VDG
+	struct ntsc_palette *ntsc_palette;
+	struct ntsc_palette *dummy_palette;
+
+	// NTSC colour bursts
+	unsigned ntsc_burst_mod;
+	struct ntsc_burst *ntsc_burst[4];
+
 	// Useful configuration side-effect tracking
 	_Bool has_bas, has_extbas, has_altbas, has_combined;
 	_Bool has_ext_charset;
@@ -119,6 +132,33 @@ struct machine_dragon {
 	_Bool unexpanded_dragon32;
 	_Bool relaxed_pia_decode;
 	_Bool have_acia;
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/* For now, duplicate data from vdg_palette.c. */
+
+#define NUM_VDG_COLOURS (12)
+
+struct palette {
+	float y;
+	float b;
+	float a;
+};
+
+static const struct palette vdg_colours[NUM_VDG_COLOURS] = {
+	{ .y = VDG_VWM,    .b = VDG_VOL, .a = VDG_VOL },
+	{ .y = VDG_VWH,    .b = VDG_VOL, .a = VDG_VR  },
+	{ .y = VDG_VWL,    .b = VDG_VIH, .a = VDG_VR  },
+	{ .y = VDG_VWL,    .b = VDG_VR,  .a = VDG_VIH },
+	{ .y = VDG_VWH,    .b = VDG_VR,  .a = VDG_VR  },
+	{ .y = VDG_VWM,    .b = VDG_VR,  .a = VDG_VOL },
+	{ .y = VDG_VWM,    .b = VDG_VIH, .a = VDG_VIH },
+	{ .y = VDG_VWM,    .b = VDG_VOL, .a = VDG_VIH },
+	{ .y = VDG_VBLACK, .b = VDG_VR,  .a = VDG_VR  },
+	{ .y = VDG_VBLACK, .b = VDG_VOL, .a = VDG_VOL },
+	{ .y = VDG_VBLACK, .b = VDG_VOL, .a = VDG_VIH },
+	{ .y = VDG_VWH,    .b = VDG_VOL, .a = VDG_VIH },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -234,6 +274,7 @@ static _Bool dragon_set_fast_sound(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
+static void dragon_set_vo_cmp(struct machine *m, int mode);
 
 static uint8_t dragon_read_byte(struct machine *m, unsigned A);
 static void dragon_write_byte(struct machine *m, unsigned A, unsigned D);
@@ -252,6 +293,7 @@ static void cart_halt(void *sptr, _Bool level);
 static void vdg_hs(void *sptr, _Bool level);
 static void vdg_hs_pal_coco(void *sptr, _Bool level);
 static void vdg_fs(void *sptr, _Bool level);
+static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst);
 static void printer_ack(void *sptr, _Bool ack);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -277,7 +319,7 @@ static void pia1b_data_preread_coco64k(void *sptr);
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
-static struct machine *dragon_new(struct machine_config *mc) {
+static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo) {
 	if (!mc)
 		return NULL;
 
@@ -304,10 +346,13 @@ static struct machine *dragon_new(struct machine_config *mc) {
 	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
+	m->set_vo_cmp = dragon_set_vo_cmp;
 
 	m->read_byte = dragon_read_byte;
 	m->write_byte = dragon_write_byte;
 	m->op_rts = dragon_op_rts;
+
+	md->vo = vo;
 
 	switch (mc->architecture) {
 	case ARCH_DRAGON32:
@@ -319,6 +364,25 @@ static struct machine *dragon_new(struct machine_config *mc) {
 	default:
 		break;
 	}
+
+	md->ntsc_palette = ntsc_palette_new();
+	md->dummy_palette = ntsc_palette_new();
+	for (int j = 0; j < NUM_VDG_COLOURS; j++) {
+		// Y, B-Y, R-Y from VDG voltage tables
+		float y = vdg_colours[j].y;
+		float b_y = vdg_colours[j].b - VDG_CHB;
+		float r_y = vdg_colours[j].a - VDG_CHB;
+		// Scale Y
+		y = (VDG_VBLANK - y) * 2.450;
+		// Add to palette
+		ntsc_palette_add_ybr(md->ntsc_palette, j, y, b_y, r_y);
+		ntsc_palette_add_direct(md->dummy_palette, j);
+	}
+
+	md->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
+	md->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
+	md->ntsc_burst[2] = ntsc_burst_new(33);  // Modified burst (coco hi-res css=1)
+	md->ntsc_burst[3] = ntsc_burst_new(33);  // Forced burst (XXX calculate this)
 
 	// SAM
 	md->SAM0 = sam_new();
@@ -370,6 +434,7 @@ static struct machine *dragon_new(struct machine_config *mc) {
 
 	// VDG
 	md->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
+	mc6847_set_palette(md->VDG0, md->dummy_palette);
 	// XXX kludges that should be handled by machine-specific code
 	md->VDG0->is_dragon64 = md->is_dragon64;
 	md->VDG0->is_dragon32 = md->is_dragon32;
@@ -383,6 +448,7 @@ static struct machine *dragon_new(struct machine_config *mc) {
 		md->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, md);
 	}
 	md->VDG0->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
+	md->VDG0->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
 	md->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler, md);
 	mc6847_set_inverted_text(md->VDG0, md->inverted_text);
 
@@ -707,6 +773,12 @@ static void dragon_free(struct machine *m) {
 	if (md->VDG0) {
 		mc6847_free(md->VDG0);
 	}
+	ntsc_burst_free(md->ntsc_burst[3]);
+	ntsc_burst_free(md->ntsc_burst[2]);
+	ntsc_burst_free(md->ntsc_burst[1]);
+	ntsc_burst_free(md->ntsc_burst[0]);
+	ntsc_palette_free(md->dummy_palette);
+	ntsc_palette_free(md->ntsc_palette);
 	free(md);
 }
 
@@ -964,6 +1036,22 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 		return md->tape_interface;
 	}
 	return NULL;
+}
+
+/* Sets the composite video rendering mode.  This needs to tell the VDG
+ * which palette to use (NTSC encoded or dummy). */
+
+static void dragon_set_vo_cmp(struct machine *m, int mode) {
+	struct machine_dragon *md = (struct machine_dragon *)m;
+	switch (mode) {
+	case MACHINE_VO_CMP_PALETTE:
+	default:
+		mc6847_set_palette(md->VDG0, md->dummy_palette);
+		break;
+	case MACHINE_VO_CMP_SIMULATED:
+		mc6847_set_palette(md->VDG0, md->ntsc_palette);
+		break;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1366,6 +1454,12 @@ static void vdg_hs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level);
 	sam_vdg_hsync(md->SAM0, level);
+	if (!level) {
+		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
+		_Bool GM0 = p1bval & 0x10;
+		_Bool CSS = p1bval & 0x08;
+		md->ntsc_burst_mod = (GM0 && CSS) ? 2 : 0;
+	}
 }
 
 // PAL CoCos invert HS
@@ -1378,9 +1472,23 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 static void vdg_fs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
-	if (level)
-		sound_update();
 	sam_vdg_fsync(md->SAM0, level);
+	if (level) {
+		sound_update();
+		md->frame--;
+		if (md->frame < 0)
+			md->frame = xroar_frameskip;
+		if (md->frame == 0)
+			md->vo->vsync(md->vo);
+	}
+}
+
+static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst) {
+	struct machine_dragon *md = sptr;
+	burst = (burst | md->ntsc_burst_mod) & 3;
+	struct ntsc_burst *nb = md->ntsc_burst[burst];
+	unsigned phase = 2*md->public.config->cross_colour_phase;
+	md->vo->render_scanline(md->vo, data, nb, phase);
 }
 
 /* Dragon parallel printer line delegate. */

@@ -20,11 +20,11 @@ struct vdisk;
 #define UI_GL_FILTER_NEAREST (0)
 #define UI_GL_FILTER_LINEAR  (1)
 
-/* NTSC cross-colour can either be rendered as a simple four colour palette, or
- * with a 5-bit lookup table */
+/* How to render NTSC cross-colour: simple (4-colour palette), 5bit (5-bit LUT)
+ * or simulated (NTSC encoded, filtered, decoded). */
 #define UI_CCR_SIMPLE (0)
 #define UI_CCR_5BIT (1)
-#define UI_CCR_NTSC (2)
+#define UI_CCR_SIMULATED (2)
 
 struct ui_cfg {
 	char *vo;  // video output module
@@ -60,6 +60,7 @@ enum ui_tag {
 	/* Video */
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
+	ui_tag_ccr,
 	ui_tag_cross_colour,
 	/* Audio */
 	ui_tag_fast_sound,
