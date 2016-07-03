@@ -9,7 +9,7 @@ Version 0.34, unreleased
   * Pixel rate doubled anticipating more machine types (could be slower).
 
   * Work in progress changes:
-  * * WIP: NTSC filtering renderer: -ccr ntsc (hue is wrong)
+  * * WIP: NTSC filtering renderer: -ccr simulated
   * * TODO: SDL2 "queued" audio.  Pending Debian including SDL 2.0.4?
   * * TODO: Ensure SDL 1.2 code still builds.
 

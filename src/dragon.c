@@ -382,7 +382,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 	md->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
 	md->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
 	md->ntsc_burst[2] = ntsc_burst_new(33);  // Modified burst (coco hi-res css=1)
-	md->ntsc_burst[3] = ntsc_burst_new(33);  // Forced burst (XXX calculate this)
+	md->ntsc_burst[3] = ntsc_burst_new(66);  // Forced burst (XXX calculate this)
 
 	// SAM
 	md->SAM0 = sam_new();
