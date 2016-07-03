@@ -47,6 +47,7 @@ typedef DELEGATE_S0(unsigned) DELEGATE_T0(unsigned);
 typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
 typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
 typedef DELEGATE_S0(uint8_t *) DELEGATE_T0(uint8p);
+typedef DELEGATE_S2(void, uint8_t *, unsigned) DELEGATE_T2(void, uint8p, unsigned);
 
 /* Convenience function for declaring anonymous structs. */
 
@@ -90,6 +91,7 @@ DELEGATE_DEF_PROTO0(unsigned, unsigned);
 DELEGATE_DEF_PROTO0(uint8_t, uint8);
 DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
 DELEGATE_DEF_PROTO0(uint8_t *, uint8p);
+DELEGATE_DEF_PROTO2(void, void, uint8_t *, uint8p, unsigned, unsigned);
 
 #define DELEGATE_DEFAULT0(N) DELEGATE_AS0(N, DELEGATE_DEFAULT_F0(N), NULL)
 #define DELEGATE_DEFAULT1(N,N0) DELEGATE_AS1(N, N0, DELEGATE_DEFAULT_F1(N, N0), NULL)
