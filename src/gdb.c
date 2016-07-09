@@ -240,6 +240,7 @@ failed:
 void gdb_interface_free(struct gdb_interface *gi) {
 	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
 	pthread_cancel(gip->sock_thread);
+	pthread_join(gip->sock_thread, NULL);
 	if (gip->info)
 		freeaddrinfo(gip->info);
 	pthread_mutex_destroy(&gip->run_state_mt);

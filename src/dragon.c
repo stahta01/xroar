@@ -866,8 +866,9 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 			gdb_single_step(md->gdb_interface);
 			break;
 		}
+		int stop_signal = md->stop_signal;
 		gdb_run_unlock(md->gdb_interface);
-		return md->stop_signal ? machine_run_state_stopped : machine_run_state_ok;
+		return stop_signal ? machine_run_state_stopped : machine_run_state_ok;
 	} else {
 #endif
 		md->cycles += ncycles;
