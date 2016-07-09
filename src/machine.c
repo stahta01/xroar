@@ -137,7 +137,7 @@ struct xconfig_enum machine_cpu_list[] = {
 struct xconfig_enum machine_tv_type_list[] = {
 	{ XC_ENUM_INT("pal", TV_PAL, "PAL (50Hz)") },
 	{ XC_ENUM_INT("ntsc", TV_NTSC, "NTSC (60Hz)") },
-	{ XC_ENUM_INT("pal-m", TV_NTSC, "PAL-M (60Hz)") },
+	{ XC_ENUM_INT("pal-m", TV_PAL_M, "PAL-M (60Hz)") },
 	{ XC_ENUM_END() }
 };
 

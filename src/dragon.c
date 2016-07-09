@@ -116,6 +116,7 @@ struct machine_dragon {
 	struct ntsc_palette *dummy_palette;
 
 	// NTSC colour bursts
+	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artifacting)
 	unsigned ntsc_burst_mod;
 	struct ntsc_burst *ntsc_burst[4];
 
@@ -441,6 +442,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 	md->VDG0->is_coco = !md->is_dragon;
 	_Bool is_pal = (mc->tv_standard == TV_PAL);
 	md->VDG0->is_pal = is_pal;
+	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL_M);
 
 	if (!md->is_dragon && is_pal) {
 		md->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, md);
@@ -812,6 +814,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 		xroar_set_cross_colour(1, CROSS_COLOUR_OFF);
 		break;
 	case TV_NTSC:
+	case TV_PAL_M:
 		xroar_set_cross_colour(1, CROSS_COLOUR_KBRW);
 		break;
 	}
@@ -1459,7 +1462,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
 		_Bool GM0 = p1bval & 0x10;
 		_Bool CSS = p1bval & 0x08;
-		md->ntsc_burst_mod = (GM0 && CSS) ? 2 : 0;
+		md->ntsc_burst_mod = (md->use_ntsc_burst_mod && GM0 && CSS) ? 2 : 0;
 	}
 }
 

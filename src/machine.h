@@ -44,6 +44,7 @@ struct vo_module;
 #define ROMSET_COCO     (2)
 #define TV_PAL  (0)
 #define TV_NTSC (1)
+#define TV_PAL_M (2)
 #define VDG_6847 (0)
 #define VDG_6847T1 (1)
 

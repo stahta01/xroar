@@ -470,7 +470,7 @@ static GtkActionEntry const ui_entries[] = {
 	  .callback = G_CALLBACK(xroar_quit) },
 	/* View */
 	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
-	{ .name = "CrossColourMenuAction", .label = "_Cross-colour" },
+	{ .name = "CrossColourMenuAction", .label = "_Composite Phase" },
 	{ .name = "ZoomMenuAction", .label = "_Zoom" },
 	{ .name = "zoom_in", .label = "Zoom In",
 	  .accelerator = "<control>plus",

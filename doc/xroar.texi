@@ -391,9 +391,9 @@ Indicate the corresponding ROM is not fitted in this machine.
 @item -ext-charset @var{rom}
 ROM image to use for external character generator.
 
-@item -tv-type @var{type}
-One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.  PAL-M support is not complete, and will
-instead be treated the same as NTSC.
+@item -tv-type @var{type} One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.
+PAL-M is treated the same as NTSC, except with magenta-green artifacting
+instead of blue-red (simulated composite rendering only at the moment).
 
 @item -vdg-type @var{type}
 Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
@@ -867,8 +867,9 @@ Start up with inverted text mode.
 
 @item -ccr @var{renderer}
 
-Cross-colour renderer.  Either @samp{simple} (very fast) or @samp{5bit} (fast,
-more accurate).  Default is @samp{5bit}.
+Composite video cross-colour renderer.  One of @samp{simple} (very fast),
+@samp{5bit} (fast, more accurate) or @samp{simulated} (slow, very accurate).
+Default is @samp{5bit}.
 
 @end table
 
