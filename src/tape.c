@@ -49,10 +49,11 @@ struct tape_interface_private {
 	struct keyboard_interface *keyboard_interface;
 	struct MC6809 *cpu;
 
-	int tape_fast;
-	int tape_pad;
-	int tape_pad_auto;
-	int tape_rewrite;
+	_Bool tape_fast;
+	_Bool tape_pad;
+	_Bool tape_pad_auto;
+	_Bool tape_rewrite;
+
 	int in_pulse;
 	int in_pulse_width;
 
@@ -61,8 +62,8 @@ struct tape_interface_private {
 	uint8_t last_tape_output;
 	_Bool motor;
 
-	int input_skip_sync;
-	int rewrite_have_sync;
+	_Bool input_skip_sync;
+	_Bool rewrite_have_sync;
 	int rewrite_leader_count;
 	int rewrite_bit_count;
 
