@@ -135,19 +135,22 @@ static struct tape_file_autorun autorun_special[] = {
 /* For now, creating a tape interface requires a pointer to the CPU.  This
  * should probably become a pointer to the machine it's a part of. */
 
-struct tape_interface *tape_interface_new(int machine_arch,
-					  struct machine *m,
-					  struct keyboard_interface *ki) {
+struct tape_interface *tape_interface_new(struct machine *m) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
-	switch (machine_arch) {
-	case ARCH_COCO: tip->is_dragon = 0; break;
-	default: tip->is_dragon = 1; break;
+	switch (m->config->architecture) {
+	case ARCH_DRAGON32:
+	case ARCH_DRAGON64:
+		tip->is_dragon = 1;
+		break;
+	default:
+		tip->is_dragon = 0;
+		 break;
 	}
 	tip->machine = m;
-	tip->keyboard_interface = ki;
+	tip->keyboard_interface = m->get_interface(m, "keyboard");
 	tip->cpu = m->get_component(m, "CPU0");
 
 	tip->in_pulse = -1;

@@ -100,9 +100,7 @@ void tape_free(struct tape *t);
 
 /**************************************************************************/
 
-struct tape_interface *tape_interface_new(int machine_arch,
-					  struct machine *m,
-					  struct keyboard_interface *ki);
+struct tape_interface *tape_interface_new(struct machine *m);
 void tape_interface_free(struct tape_interface *ti);
 
 void tape_reset(struct tape_interface *ti);

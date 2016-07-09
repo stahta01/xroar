@@ -406,7 +406,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 	md->keyboard_interface = keyboard_interface_new(m);
 
 	// Tape interface
-	md->tape_interface = tape_interface_new(mc->architecture, m, md->keyboard_interface);
+	md->tape_interface = tape_interface_new(m);
 
 	// Printer interface
 	md->printer_interface = printer_interface_new(m);
