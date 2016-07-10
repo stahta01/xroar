@@ -267,6 +267,7 @@ static void dragon_reset(struct machine *m, _Bool hard);
 static enum machine_run_state dragon_run(struct machine *m, int ncycles);
 static void dragon_single_step(struct machine *m);
 static void dragon_signal(struct machine *m, int sig);
+static void dragon_trap(void *sptr);
 static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
@@ -403,6 +404,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
+	md->bp_session->trap_handler = DELEGATE_AS0(void, dragon_trap, m);
 
 	// Keyboard interface
 	md->keyboard_interface = keyboard_interface_new(m);
@@ -901,6 +903,11 @@ static void dragon_signal(struct machine *m, int sig) {
 	update_vdg_mode(md);
 	md->stop_signal = sig;
 	md->CPU0->running = 0;
+}
+
+static void dragon_trap(void *sptr) {
+	struct machine *m = sptr;
+	dragon_signal(m, MACHINE_SIGTRAP);
 }
 
 static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
