@@ -228,7 +228,7 @@ void machine_shutdown(void) {
 
 struct machine *machine_dragon_new(struct machine_config *mc, struct vo_module *vo);
 
-struct machine *machine_new(struct machine_config *mc, struct vo_module *vo) {
+struct machine *machine_new(struct machine_config *mc, struct vo_module *vo, struct tape_interface *ti) {
 	if (!mc) {
 		return NULL;
 	}
@@ -246,7 +246,7 @@ struct machine *machine_new(struct machine_config *mc, struct vo_module *vo) {
 				LOG_DEBUG(2, "Machine module: %s\n", req_type);
 				LOG_DEBUG(1, "Machine: %s\n", mc->description);
 			}
-			m = mm->new(mc, vo);
+			m = mm->new(mc, vo, ti);
 			break;
 		}
 	}

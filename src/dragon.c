@@ -48,7 +48,8 @@ Dragon & CoCo 1/2 machine.
 #include "vo.h"
 #include "xroar.h"
 
-static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo);
+static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo,
+				  struct tape_interface *ti);
 
 struct machine_module machine_dragon_module = {
 	.name = "dragon",
@@ -320,7 +321,8 @@ static void pia1b_data_preread_coco64k(void *sptr);
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
-static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo) {
+static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo,
+				  struct tape_interface *ti) {
 	if (!mc)
 		return NULL;
 
@@ -406,7 +408,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 	md->keyboard_interface = keyboard_interface_new(m);
 
 	// Tape interface
-	md->tape_interface = tape_interface_new(m);
+	md->tape_interface = ti;
 
 	// Printer interface
 	md->printer_interface = printer_interface_new(m);
@@ -429,9 +431,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 
 	// Single-bit sound feedback
 	sound_sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, md);
-
-	// Tape
-	md->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, md);
 
 	// VDG
 	md->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
@@ -751,9 +750,6 @@ static void dragon_free(struct machine *m) {
 	if (md->keyboard_interface) {
 		keyboard_interface_free(md->keyboard_interface);
 	}
-	if (md->tape_interface) {
-		tape_interface_free(md->tape_interface);
-	}
 	if (md->printer_interface) {
 		printer_interface_free(md->printer_interface);
 	}
@@ -1036,8 +1032,8 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 		return md->keyboard_interface;
 	} else if (0 == strcmp(ifname, "printer")) {
 		return md->printer_interface;
-	} else if (0 == strcmp(ifname, "tape")) {
-		return md->tape_interface;
+	} else if (0 == strcmp(ifname, "tape-update-audio")) {
+		return update_audio_from_tape;
 	}
 	return NULL;
 }

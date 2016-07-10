@@ -136,11 +136,32 @@ static struct tape_file_autorun autorun_special[] = {
 /* For now, creating a tape interface requires a pointer to the CPU.  This
  * should probably become a pointer to the machine it's a part of. */
 
-struct tape_interface *tape_interface_new(struct machine *m) {
+struct tape_interface *tape_interface_new(void) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
+	tip->in_pulse = -1;
+	tip->ao_rate = 9600;
+	tip->rewrite_leader_count = 256;
+
+	tape_interface_disconnect_machine(ti);
+
+	event_init(&tip->waggle_event, DELEGATE_AS0(void, waggle_bit, tip));
+	event_init(&tip->flush_event, DELEGATE_AS0(void, flush_output, tip));
+
+	return &tip->public;
+}
+
+void tape_interface_free(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_close_reading(ti);
+	tape_reset(ti);
+	free(tip);
+}
+
+void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	switch (m->config->architecture) {
 	case ARCH_DRAGON32:
 	case ARCH_DRAGON64:
@@ -153,24 +174,16 @@ struct tape_interface *tape_interface_new(struct machine *m) {
 	tip->machine = m;
 	tip->keyboard_interface = m->get_interface(m, "keyboard");
 	tip->cpu = m->get_component(m, "CPU0");
-
-	tip->in_pulse = -1;
-	tip->ao_rate = 9600;
-	tip->rewrite_leader_count = 256;
-
-	ti->update_audio = DELEGATE_DEFAULT1(void, float);
+	ti->update_audio = DELEGATE_AS1(void, float, m->get_interface(m, "tape-update-audio"), m);
 	DELEGATE_CALL1(ti->update_audio, 0.5);
-	event_init(&tip->waggle_event, DELEGATE_AS0(void, waggle_bit, tip));
-	event_init(&tip->flush_event, DELEGATE_AS0(void, flush_output, tip));
-
-	return &tip->public;
 }
 
-void tape_interface_free(struct tape_interface *ti) {
+void tape_interface_disconnect_machine(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	tape_close_reading(ti);
-	tape_reset(ti);
-	free(tip);
+	tip->machine = NULL;
+	tip->keyboard_interface = NULL;
+	tip->cpu = NULL;
+	ti->update_audio = DELEGATE_DEFAULT1(void, float);
 }
 
 int tape_seek(struct tape *t, long offset, int whence) {

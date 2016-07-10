@@ -100,8 +100,10 @@ void tape_free(struct tape *t);
 
 /**************************************************************************/
 
-struct tape_interface *tape_interface_new(struct machine *m);
+struct tape_interface *tape_interface_new(void);
 void tape_interface_free(struct tape_interface *ti);
+void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m);
+void tape_interface_disconnect_machine(struct tape_interface *ti);
 
 void tape_reset(struct tape_interface *ti);
 

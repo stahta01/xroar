@@ -732,6 +732,8 @@ _Bool xroar_init(int argc, char **argv) {
 	ui_module->set_state(ui_tag_fullscreen, xroar_ui_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
+	xroar_tape_interface = tape_interface_new();
+
 	/* Configure machine */
 	xroar_configure_machine(xroar_machine_config);
 	if (xroar_machine_config->cart_enabled) {
@@ -1351,8 +1353,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 		xroar_machine->free(xroar_machine);
 	}
 	xroar_machine_config = mc;
-	xroar_machine = machine_new(mc, vo_module);
-	xroar_tape_interface = xroar_machine->get_interface(xroar_machine, "tape");
+	xroar_machine = machine_new(mc, vo_module, xroar_tape_interface);
+	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
 	if (ui_module) {
@@ -1500,10 +1502,12 @@ void xroar_eject_tape_output(void) {
 
 void xroar_soft_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_SOFT);
+	tape_reset(xroar_tape_interface);
 }
 
 void xroar_hard_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_HARD);
+	tape_reset(xroar_tape_interface);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
