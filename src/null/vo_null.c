@@ -22,8 +22,9 @@
 
 #include "vo.h"
 
-static void no_op(void);
-static void no_op_render(uint8_t const *);
+static void no_op(struct vo_module *vo);
+static void no_op_render(struct vo_module *vo, uint8_t const *scanline_data,
+			 struct ntsc_burst *burst, unsigned phase);
 
 struct vo_module vo_null_module = {
 	.common = { .name = "null", .description = "No video" },
@@ -31,9 +32,14 @@ struct vo_module vo_null_module = {
 	.render_scanline = no_op_render,
 };
 
-static void no_op(void) {
+static void no_op(struct vo_module *vo) {
+	(void)vo;
 }
 
-static void no_op_render(uint8_t const *scanline_data) {
+static void no_op_render(struct vo_module *vo, uint8_t const *scanline_data,
+			 struct ntsc_burst *burst, unsigned phase) {
+	(void)vo;
 	(void)scanline_data;
+	(void)burst;
+	(void)phase;
 }
