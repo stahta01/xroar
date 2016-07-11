@@ -34,11 +34,11 @@
 static _Bool init(void);
 static void shutdown(void);
 static void alloc_colours(void);
-static void vsync(void);
-static void render_scanline(uint8_t const *scanline_data);
+static void vsync(struct vo_module *vo);
+static void render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
-static void update_cross_colour_phase(void);
+static void set_vo_cmp(struct vo_module *vo, int mode);
 
 struct vo_module vo_sdlyuv_module = {
 	.common = { .name = "sdlyuv", .description = "SDL YUV overlay video",
@@ -47,7 +47,7 @@ struct vo_module vo_sdlyuv_module = {
 	.vsync = vsync,
 	.render_scanline = render_scanline,
 	.resize = resize, .set_fullscreen = set_fullscreen,
-	.update_cross_colour_phase = update_cross_colour_phase,
+	.set_vo_cmp = set_vo_cmp,
 };
 
 typedef Uint32 Pixel;
@@ -130,7 +130,7 @@ static _Bool init(void) {
 	vo_module->window_w = 640;
 	vo_module->window_h = 240;
 
-	vsync();
+	vsync(&vo_sdl_module);
 	return 1;
 }
 
@@ -253,7 +253,8 @@ static int set_fullscreen(_Bool fullscreen) {
 	return 0;
 }
 
-static void vsync(void) {
+static void vsync(struct vo_module *vo) {
+	(void)vo;
 	SDL_DisplayYUVOverlay(overlay, &dstrect);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	vo_module->scanline = 0;

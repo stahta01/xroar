@@ -34,7 +34,7 @@
 static _Bool init(void);
 static void shutdown(void);
 static void refresh(void);
-static void vsync(void);
+static void vsync(struct vo_module *vo);
 static void resize(unsigned int w, unsigned int h);
 static int set_fullscreen(_Bool fullscreen);
 
@@ -46,7 +46,7 @@ struct vo_module vo_sdlgl_module = {
 	.vsync = vsync,
 	.render_scanline = vo_opengl_render_scanline,
 	.resize = resize, .set_fullscreen = set_fullscreen,
-	.update_cross_colour_phase = vo_opengl_update_cross_colour_phase,
+	.set_vo_cmp = vo_opengl_set_vo_cmp,
 };
 
 static SDL_Surface *screen;
@@ -73,7 +73,7 @@ static _Bool init(void) {
 	if (set_fullscreen(xroar_ui_cfg.fullscreen))
 		return 0;
 
-	vsync();
+	vsync(&vo_sdlgl_module);
 	return 1;
 }
 
@@ -163,7 +163,7 @@ static void refresh(void) {
 	SDL_GL_SwapBuffers();
 }
 
-static void vsync(void) {
-	vo_opengl_vsync();
+static void vsync(struct vo_module *vo) {
+	vo_opengl_vsync(vo);
 	SDL_GL_SwapBuffers();
 }
