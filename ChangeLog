@@ -7,11 +7,8 @@ Version 0.34, unreleased
   * -vo help lists video modules by UI.
   * Large structural changes to support more machine types.
   * Pixel rate doubled anticipating more machine types (could be slower).
-
-  * Work in progress changes:
-  * * WIP: NTSC filtering renderer: -ccr simulated
-  * * TODO: SDL2 "queued" audio.  Pending Debian including SDL 2.0.4?
-  * * TODO: Ensure SDL 1.2 code still builds.
+  * NTSC filtering renderer: -ccr simulated (note: slower than 5bit)
+  * PAL-M magenta-green artifacting supported with -ccr simulated.
 
 Version 0.33, Fri May 22 2015
 
