@@ -846,7 +846,8 @@ as well as the usual shortcut of @kbd{Ctrl}+@var{key}.
 @item -vo @var{module}
 
 Video output module to use.  Available modules depend on the selected
-user-interface module.  @option{-vo help} for a list.
+user-interface module.  @option{-vo help} gives a complete list for each
+possible user-interface.
 
 @item -fs
 
