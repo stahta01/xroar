@@ -284,10 +284,10 @@ see @ref{Cartridges}, @ref{Cassettes}, or @ref{Disks}.
 
 The keyboard layout of modern machines is not identical to that of the Dragon,
 so XRoar provides two ways of working.  The default, ``untranslated'', is to
-map key @emph{positions} as closely as possible (e.g., the key to the right of
+map key @emph{positions} as closely as possible (e.g. the key to the right of
 @kbd{P} maps to @kbd{@@}).  Pressing @kbd{Ctrl}+@kbd{Z} toggles
 ``translated'' mode, which tries to map key @emph{symbols} closely instead
-(e.g., pressing @kbd{'} will press @kbd{Shift}+@kbd{7} in the emulated
+(e.g. pressing @kbd{'} will press @kbd{Shift}+@kbd{7} in the emulated
 machine).
 
 In addition, a couple of keys aren't always available on modern keyboads, so
@@ -323,7 +323,7 @@ the defaults:
 @end multitable
 
 Note the leading @samp{:} in the Windows default indicates an empty entry,
-meaning it will look in the current working directory first (i.e., you can put
+meaning it will look in the current working directory first (i.e. you can put
 @file{xroar.conf} into the directory from which you run XRoar).
 
 @samp{~} indicates the user's home directory: the @env{HOME} environment
@@ -611,7 +611,7 @@ Select the output frame rate when writing to audio files with
 @option{-tape-ao-rate @var{hz}}.  The default is 9600Hz.
 
 Some debugging actions can be triggered each time the cassette motor switches
-off (e.g., when finished loading).  @xref{Debugging}.
+off (e.g. when finished loading).  @xref{Debugging}.
 
 The @option{-tape-fast} option accelerates tape loading by intercepting ROM
 calls.  Disable with @option{-no-tape-fast}.  On by default.
@@ -780,7 +780,7 @@ version.
 
 A CRC32 value is calculated (and reported) for loaded ROM images.  XRoar uses
 these CRCs to determine automatically whether certain breakpoints can be used
-(e.g., for fast tape loading).  The lists of CRCs matched can be defined in a
+(e.g. for fast tape loading).  The lists of CRCs matched can be defined in a
 similar way to ROM lists using the @option{-crclist
 @var{list}=@var{crc}[,@var{crc}]@dots{}} option.  Each @var{crc} is a 8-digit
 hex number preceeded by @samp{0x}, or the name of a nested list preceeded by
@@ -789,7 +789,7 @@ maintains compatible entry points with an original.  View the current lists
 with @option{-crclist-print}.
 
 Sometimes it may be useful to force CRC matching so that breakpoints apply
-(e.g., you are modifying a ROM image and don't wish to have to add its CRC to
+(e.g. you are modifying a ROM image and don't wish to have to add its CRC to
 the match list each time you modify it).  The @option{-force-crc-match} option
 forces the CRCs to be as if an original ROM image were loaded.
 
@@ -904,7 +904,7 @@ Select audio output module.  @option{-ao help} for a list.
 
 @item -ao-device @var{device}
 
-Module-specific device specifier.  e.g., @file{/dev/dsp} for OSS.
+Module-specific device specifier.  e.g. @file{/dev/dsp} for OSS.
 
 @item -ao-format @var{format}
 
@@ -1068,7 +1068,7 @@ will flush the current stream by closing it (so if the stream is a pipe, the
 filter will complete).  The stream will be re-opened when any new data is sent.
 
 The pipe feature allows you to use useful print filters such as
-@command{enscript}, e.g., @option{-lp-pipe "enscript -B -N r -d
+@command{enscript}, e.g. @option{-lp-pipe "enscript -B -N r -d
 @emph{printer-name}"}.  This will send a job to your printer, using carriage
 returns as line feeds (the Dragon default), each time you press
 @kbd{Ctrl}+@kbd{Shift}+@kbd{P} (or exit the emulator).
