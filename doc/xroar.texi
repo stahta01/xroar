@@ -65,14 +65,14 @@ models 1 & 2.  Some features are:
 @item Provides a GDB target for remote debugging.
 @end itemize
 
-XRoar was originally written to run on Solaris, Linux and the GP32 handheld.
-Later, it was ported to the Nintendo DS.  Support has now been dropped for the
-GP32 and NDS as emulation accuracy, and thus the CPU requirement, has
-increased.
-
 XRoar is easily built from source under Linux, and binary packages are provided
 for Windows.  It should still be possible to build for Mac OS X, but no binary
 packages are currently being provided.
+
+XRoar was originally written to run on Solaris, Linux and the GP32 handheld.
+Later, it was ported to the Nintendo DS.  Support has now been dropped for the
+GP32 and NDS as emulation accuracy, and thus the CPU requirement, has
+increased.  Builds have not been tested under Solaris for some while.
 
 @ifnottex
 @menu
