@@ -476,7 +476,7 @@ static int compar_idams(const void *aa, const void *bb) {
 static void do_index_pulse(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
 	if (!vip->ready_state) {
-		set_index_state(vip, 0);
+		set_index_state(vip, 1);
 		return;
 	}
 	set_index_state(vip, 1);

@@ -9,6 +9,7 @@ Version 0.34, unreleased
   * Pixel rate doubled anticipating more machine types (could be slower).
   * NTSC filtering renderer: -ccr simulated (note: slower than 5bit)
   * PAL-M magenta-green artifacting supported with -ccr simulated.
+  * Fix treatment of empty drives in DOS carts.
 
 Version 0.33, Fri May 22 2015
 

@@ -147,11 +147,13 @@ static void deltados_attach_interface(struct cart *c, const char *ifname, void *
 	d->fdc->next_idam = DELEGATE_AS0(uint8p, d->vdrive_interface->next_idam, d->vdrive_interface);
 	d->fdc->update_connection = DELEGATE_AS0(void, d->vdrive_interface->update_connection, d->vdrive_interface);
 
-	d->vdrive_interface->ready = DELEGATE_AS1(void, bool, wd279x_ready, d->fdc);
 	d->vdrive_interface->tr00 = DELEGATE_AS1(void, bool, wd279x_tr00, d->fdc);
 	d->vdrive_interface->index_pulse = DELEGATE_AS1(void, bool, wd279x_index_pulse, d->fdc);
 	d->vdrive_interface->write_protect = DELEGATE_AS1(void, bool, wd279x_write_protect, d->fdc);
 	wd279x_update_connection(d->fdc);
+
+	// tied high (assumed)
+	wd279x_ready(d->fdc, 1);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
