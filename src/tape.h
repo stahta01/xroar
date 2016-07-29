@@ -18,9 +18,7 @@
 #define TAPE_BIT1_LENGTH (435 * EVENT_SAM_CYCLES(16))
 #define TAPE_AV_BIT_LENGTH ((TAPE_BIT0_LENGTH + TAPE_BIT1_LENGTH) / 2)
 
-struct MC6809;
 struct machine;
-struct keyboard_interface;
 
 struct tape_interface {
 	// Delegate for tape output updates
