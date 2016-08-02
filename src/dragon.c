@@ -731,7 +731,9 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_module *v
 	// GDB
 	if (xroar_cfg.gdb) {
 		md->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, md->bp_session);
-		gdb_set_debug(md->gdb_interface, xroar_cfg.debug_gdb);
+		if (md->gdb_interface) {
+			gdb_set_debug(md->gdb_interface, xroar_cfg.debug_gdb);
+		}
 	}
 #endif
 
