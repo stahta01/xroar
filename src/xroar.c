@@ -873,11 +873,12 @@ static struct vdg_palette *get_machine_palette(void) {
  */
 
 _Bool xroar_run(void) {
-	switch (xroar_machine->run(xroar_machine, EVENT_MS(5))) {
-	case machine_run_state_timeout:
+	switch (xroar_machine->run(xroar_machine, EVENT_MS(10))) {
+	case machine_run_state_stopped:
 		if (vo_module->refresh)
 			vo_module->refresh();
 		break;
+	case machine_run_state_ok:
 	default:
 		break;
 	}
