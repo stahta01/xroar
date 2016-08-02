@@ -254,6 +254,7 @@ int gdb_run_lock(struct gdb_interface *gi) {
 
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_stopped) {
+		// If machine stopped, wait up to 20ms for state to change
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
 		tv.tv_usec += 20000;
@@ -264,7 +265,7 @@ int gdb_run_lock(struct gdb_interface *gi) {
 		ts.tv_nsec = tv.tv_usec * 1000;
 		if (pthread_cond_timedwait(&gip->run_state_cv, &gip->run_state_mt, &ts) == ETIMEDOUT) {
 			pthread_mutex_unlock(&gip->run_state_mt);
-			return gdb_run_state_timeout;
+			return gdb_run_state_stopped;
 		}
 	}
 	return gip->run_state;

@@ -15,10 +15,9 @@ struct bp_session;
 struct machine;
 
 enum gdb_run_state {
-	gdb_run_state_stopped = 0,
+	gdb_run_state_running = 0,
+	gdb_run_state_stopped,
 	gdb_run_state_single_step,
-	gdb_run_state_running,
-	gdb_run_state_timeout,
 };
 
 struct gdb_interface;

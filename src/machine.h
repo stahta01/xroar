@@ -183,9 +183,8 @@ void machine_config_shutdown(void);
 #define MACHINE_SIGFPE (8)
 
 enum machine_run_state {
-	machine_run_state_ok,
+	machine_run_state_ok = 0,
 	machine_run_state_stopped,
-	machine_run_state_timeout,
 };
 
 /* Used for introspection of RAM blocks: */

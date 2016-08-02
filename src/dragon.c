@@ -853,8 +853,8 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		switch (gdb_run_lock(md->gdb_interface)) {
-		case gdb_run_state_timeout:
-			return machine_run_state_timeout;
+		case gdb_run_state_stopped:
+			return machine_run_state_stopped;
 		case gdb_run_state_running:
 			md->stop_signal = 0;
 			md->cycles += ncycles;
@@ -868,10 +868,11 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 			m->single_step(m);
 			gdb_single_step(md->gdb_interface);
 			break;
+		default:
+			break;
 		}
-		int stop_signal = md->stop_signal;
 		gdb_run_unlock(md->gdb_interface);
-		return stop_signal ? machine_run_state_stopped : machine_run_state_ok;
+		return machine_run_state_ok;
 	} else {
 #endif
 		md->cycles += ncycles;
