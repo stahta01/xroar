@@ -222,8 +222,9 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 		goto failed;
 	}
 
+	pthread_mutex_init(&gip->run_state_mt, NULL);
+	pthread_cond_init(&gip->run_state_cv, NULL);
 	pthread_create(&gip->sock_thread, NULL, handle_tcp_sock, gip);
-	pthread_detach(gip->sock_thread);
 
 	LOG_DEBUG(1, "gdb: target listening on %s:%s\n", hostname, portname);
 
@@ -348,6 +349,7 @@ static void *handle_tcp_sock(void *sptr) {
 		if (gip->debug & GDB_DEBUG_CONNECT) {
 			LOG_PRINT("gdb: connection accepted\n");
 		}
+
 		gdb_machine_signal(gip, MACHINE_SIGINT);
 		_Bool attached = 1;
 		while (attached) {
