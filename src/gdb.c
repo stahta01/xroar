@@ -86,6 +86,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -336,7 +337,23 @@ static void *handle_tcp_sock(void *sptr) {
 		 * accept() takes an (int *).  Raises a warning when compiling
 		 * 64-bit. */
 		socklen_t ai_addrlen = gip->info->ai_addrlen;
-		gip->sockfd = accept(gip->listenfd, gip->info->ai_addr, &ai_addrlen);
+
+		/* Work around Windows not killing off accept() with a 200ms
+		 * select() timeout. */
+		while (1) {
+			fd_set fds;
+			struct timeval tv;
+			FD_ZERO(&fds);
+			FD_SET(gip->listenfd, &fds);
+			tv.tv_sec = 0;
+			tv.tv_usec = 200000;
+			pthread_testcancel();
+			int r = select(gip->listenfd+1, &fds, NULL, NULL, &tv);
+			if (r > 0) {
+				gip->sockfd = accept(gip->listenfd, gip->info->ai_addr, &ai_addrlen);
+				break;
+			}
+		}
 
 		if (gip->sockfd < 0) {
 			LOG_WARN("gdb: accept() failed\n");
