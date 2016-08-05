@@ -76,6 +76,7 @@ const uint8_t ide_magic[8] = {
   '1','D','E','D','1','5','C','0'
 };
 
+/*
 static char *charmap(uint8_t v)
 {
   static char cbuf[3];
@@ -106,6 +107,7 @@ static void hexdump(uint8_t *bp)
     fprintf(stderr, "\n");
   }
 }
+*/
 
 static uint16_t le16(uint16_t v)
 {
@@ -197,7 +199,7 @@ static void edd_setup(struct ide_taskfile *tf)
   ready(tf);
 }
 
-void ide_reset(struct ide_controller *c)
+static void ide_reset(struct ide_controller *c)
 {
   if (c->drive[0].present) {
     edd_setup(&c->drive[0].taskfile);
@@ -477,7 +479,7 @@ static uint16_t ide_data_in(struct ide_drive *d, int len)
   return d->taskfile.data;
 }
 
-static void ide_data_out(struct ide_drive *d, uint16_t v, int len)
+static void ide_data_out(struct ide_drive *d, uint16_t v)
 {
   if (d->state != IDE_DATA_OUT) {
     ide_fault(d, "bad data write");
@@ -605,7 +607,7 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
 
   switch(r) {
     case ide_data:
-      ide_data_out(d, v, 1);
+      ide_data_out(d, v);
       break;
     case ide_feature_w:
       t->feature = v;
@@ -664,7 +666,7 @@ void ide_write16(struct ide_controller *c, uint8_t r, uint16_t v)
     return;
   }
   if (r == ide_data)
-    ide_data_out(d, v, 2);
+    ide_data_out(d, v);
   else
     ide_write8(c, r, v);
 }
@@ -851,7 +853,10 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME COYOTE v0.1", 40);
       break;
+    default:
+      return -2;
   }
+
   ident[1] = le16(c);
   ident[3] = le16(h);
   ident[6] = le16(s);
