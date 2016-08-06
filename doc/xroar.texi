@@ -63,6 +63,7 @@ models 1 & 2.  Some features are:
 @item Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
 @item Saves and loads machine snapshots.
 @item Provides a GDB target for remote debugging.
+@item Initial Glenside IDE support.
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
@@ -280,7 +281,7 @@ commands.
 
 If you have trouble with a program, refer to its loading instructions: it may
 require a different series of commands to get going.  If you still have issues,
-see @ref{Cartridges}, @ref{Cassettes}, or @ref{Disks}.
+see @ref{Cartridges}, @ref{Cassettes}, or @ref{Floppy Disks}.
 
 The keyboard layout of modern machines is not identical to that of the Dragon,
 so XRoar provides two ways of working.  The default, ``untranslated'', is to
@@ -463,6 +464,10 @@ ROM is CoCo-only, but the hardware is compatible with the Dragon.
 Multi-Pak Interface.  A CoCo add-on by Tandy that allows up to four
 cartridges to be connected, selectable by software or hardware switch.
 
+@item ide
+
+Glenside IDE interface for hard disks.  See @ref{Hard Disks}.
+
 @end table
 
 You can create new cartridge configurations or reconfigure existing ones.
@@ -566,7 +571,8 @@ See @ref{Running programs} for the methods XRoar will use to autorun a file.
 
 @menu
 * Cassettes::
-* Disks::
+* Floppy Disks::
+* Hard Disks::
 * ROM cartridges::
 * Snapshots::
 * Binary files::
@@ -636,8 +642,8 @@ the beginning of the file, otherwise it is left alone.  Disable with
 Where available, these options can be changed on the fly in the GUI.
 
 
-@node Disks
-@section Disks
+@node Floppy Disks
+@section Floppy Disks
 
 If a disk interface cartridge is selected, XRoar supports virtual disks.  Three
 virtual disk formats are supported:
@@ -684,6 +690,16 @@ headers always ignore this option, however.
 You can create a new blank disk in a virtual drive by pressing
 @kbd{Ctrl}+@kbd{Shift}+@var{[1-4]}.  You will be a prompted for a filename,
 and the extension determines which type of file will be written.
+
+
+@node Hard Disks
+@section Hard Disks
+
+Some initial support is now in place for IDE hard disks.  The @samp{ide}
+cartridge type emulates a Glenside IDE controller mapped to addresses
+$FF50--$FF58.  At the moment, a fixed hard disk image named @file{hd0.img} in
+the current working directory is assumed, and it must have a 512 byte IDENTIFY
+header.
 
 
 @node ROM cartridges
@@ -1308,5 +1324,7 @@ helpful feedback and insight.
 Darren Atkinson's @cite{Motorola 6809 and Hitachi 6309 Programmers Reference}
 has been very useful for 6309 support and fleshing out some of the illegal
 instructions on the 6809.
+
+Alan Cox contributed the IDE code.
 
 @bye
