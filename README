@@ -1,5 +1,5 @@
 XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2015 Ciaran Anscomb <xroar@6809.org.uk>
+Copyright 2003-2016 Ciaran Anscomb <xroar@6809.org.uk>
 
 
 XRoar is a Dragon emulator that runs on a wide variety of platforms.
@@ -16,14 +16,17 @@ Computer (CoCo) models 1 & 2.  Some features are:
    * Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
    * Saves and loads machine snapshots.
    * Provides a GDB target for remote debugging.
+   * Initial Glenside IDE support.
+
+   XRoar is easily built from source under Linux, and binary packages
+are provided for Windows.  It should still be possible to build for Mac
+OS X, but no binary packages are currently being provided.
 
    XRoar was originally written to run on Solaris, Linux and the GP32
 handheld.  Later, it was ported to the Nintendo DS. Support has now been
 dropped for the GP32 and NDS as emulation accuracy, and thus the CPU
-requirement, has increased.
-
-   XRoar is easily built from source under Linux, and binary packages
-are provided for Mac OS X and Windows.
+requirement, has increased.  Builds have not been tested under Solaris
+for some while.
 
 
 XRoar is free software: you can redistribute it and/or modify
@@ -64,10 +67,15 @@ Installation
 Building from source
 ====================
 
+
 Dependencies
 ------------
 
-If there is no binary package for your system, you will have to build
+Please note that the build process under Mac OS X is now _untested_.
+These notes worked for previous versions and are left here in case they
+are still useful.
+
+   If there is no binary package for your system, you will have to build
 from source.  XRoar can use various backend toolkits, and you will need
 to ensure you have their development files installed.  If you're using
 Debian, this can (at the time of writing) be achieved with the following
@@ -95,16 +103,17 @@ used to provide video output.  Otherwise, it can provide a file
 requester for use by other user interfaces.
 
    SDL (http://www.libsdl.org/), Simple Directmedia Layer, provides a
-more basic user experience, with most functionality only available
-through the keyboard shortcuts.  Under Mac OS X, a special case of the
-SDL UI is built that also provides some menus.  Unless you are building
-for Linux, SDL is required to use joysticks.
+slightly more basic user experience.  Menus are added using native code
+under Windows; any other target using SDL will support only keyboard
+shortcuts.  Unless you are building for Linux, SDL is required to use
+joysticks.
 
-   Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio, JACK,
-Sun audio (not tested in quite a while).
+   Other supported audio APIs: OSS, ALSA, PulseAudio.  Some other
+options are still in the code base, but have not been tested in a while.
 
    libsndfile (http://www.mega-nerd.com/libsndfile/) is recommended to
 enable support for using audio files as cassette images.
+
 
 Compilation
 -----------
@@ -112,8 +121,8 @@ Compilation
 Once you have the dependencies, building XRoar follows a familiar
 procedure:
 
-     $ gzip -dc xroar-0.33.tar.gz | tar xvf -
-     $ cd xroar-0.33
+     $ gzip -dc xroar-0.34.tar.gz | tar xvf -
+     $ cd xroar-0.34
      $ ./configure
      $ make
      $ sudo make install
@@ -133,3 +142,10 @@ system.  The executable is called 'xroar'.  ROM images should be placed
 either in your home directory as '~/.xroar/roms/', or under the
 installation _prefix_ as '_prefix_/share/xroar/roms/'.  Any
 configuration file should be created as '~/.xroar/xroar.conf'.
+
+   XRoar can be built on one platform to run on another.  The Windows
+binary package is built like this.  To specify a cross-compile, use the
+'--host=HOST' argument to 'configure'.  For example, to build for
+Windows, you might use './configure --host=i686-w64-mingw32'.  Getting
+everything "just so" for a cross-build can be a tricky procedure, and
+the details are beyond the scope of this manual.
