@@ -92,7 +92,7 @@ The remaining options configure the currently selected cartridge:
 cartridge description
 .TP
 \fB\-cart\-type\fR \fItype\fR
-cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR or \fBorch90\fR)
+cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR, \fBorch90\fR, \fBmpi\fR or \fBide\fR
 .TP
 \fB\-cart\-rom\fR \fIname\fR
 ROM image to load ($C000\-)
@@ -200,7 +200,7 @@ start emulator full\-screen if possible
 frameskip (default: 0)
 .TP
 \fB\-ccr\fR \fIrenderer\fR
-cross\-colour renderer (\fBsimple\fR or \fB5bit\fR)
+cross\-colour renderer (\fBsimple\fR, \fB5bit\fR or \fBsimulated\fR)
 .TP
 \fB\-gl\-filter\fR \fIfilter\fR
 OpenGL texture filter (\fBauto\fR, \fBnearest\fR or \fBlinear\fR)
