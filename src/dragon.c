@@ -1219,8 +1219,8 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	if (md->cycles <= 0) md->CPU0->running = 0;
 	event_current_tick += ncycles;
 	event_run_queue(&MACHINE_EVENT_LIST);
-	MC6809_IRQ_SET(md->CPU0, md->PIA0->a.irq | md->PIA0->b.irq);
-	MC6809_FIRQ_SET(md->CPU0, md->PIA1->a.irq | md->PIA1->b.irq);
+	MC6809_IRQ_SET(md->CPU0, md->PIA0->a.irq || md->PIA0->b.irq);
+	MC6809_FIRQ_SET(md->CPU0, md->PIA1->a.irq || md->PIA1->b.irq);
 
 	if (RnW) {
 		read_byte(md, A);
