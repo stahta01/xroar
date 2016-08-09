@@ -5,11 +5,6 @@
 
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
 #define EXTBANKS 4
-static uint8_t extmem[0x8000 * EXTBANKS];
-static _Bool extmem_map;
-static _Bool extmem_ty;
-static uint8_t extmem_bank;
-static _Bool have_becker;
 
 static struct cart *nx32_new(struct cart_config *);
 
@@ -19,39 +14,62 @@ struct cart_module cart_nx32_module = {
 	.new = nx32_new,
 };
 
+struct nx32 {
+	struct cart cart;
+	uint8_t extmem[0x8000 * EXTBANKS];
+	_Bool extmem_map;
+	_Bool extmem_ty;
+	uint8_t extmem_bank;
+	_Bool have_becker;
+};
+
 static void nx32_reset(struct cart *c);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void nx32_detach(struct cart *c);
 
 struct cart *nx32_new(struct cart_config *cc) {
-	struct cart *c = xmalloc(sizeof(*c));
+	struct nx32 *n = xmalloc(sizeof(*n));
+	*n = (struct nx32){0};
+	struct cart *c = &n->cart;
 
 	c->config = cc;
 	cart_rom_init(c);
-	c->reset = nx32_reset;
 	c->read = nx32_read;
 	c->write = nx32_write;
+	c->reset = nx32_reset;
+	c->detach = nx32_detach;
 
-	have_becker = (cc->becker_port && becker_open());
+	n->have_becker = (cc->becker_port && becker_open());
 
 	return c;
 }
 
 static void nx32_reset(struct cart *c) {
-	extmem_map = 0;
-	extmem_ty = 0;
-	extmem_bank = 0;
-	if (have_becker)
+	struct nx32 *n = (struct nx32 *)c;
+	n->extmem_map = 0;
+	n->extmem_ty = 0;
+	n->extmem_bank = 0;
+	if (n->have_becker)
 		becker_reset();
 }
 
+static void nx32_detach(struct cart *c) {
+	struct nx32 *n = (struct nx32 *)c;
+	if (n->have_becker)
+		becker_close();
+	cart_rom_detach(c);
+}
+
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
-	if (A > 0x7fff && A < 0xff00 && !extmem_ty && extmem_map) {
+	struct nx32 *n = (struct nx32 *)c;
+	(void)R2;
+	if (A > 0x7fff && A < 0xff00 && !n->extmem_ty && n->extmem_map) {
 		c->EXTMEM = 1;
-		return extmem[0x8000 * extmem_bank + (A & 0x7fff)];
+		return n->extmem[0x8000 * n->extmem_bank + (A & 0x7fff)];
 	}
 	c->EXTMEM = 0;
-	if (P2 && have_becker) {
+	if (P2 && n->have_becker) {
 		switch (A & 3) {
 		case 0x1:
 			return becker_read_status();
@@ -61,22 +79,24 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 			break;
 		}
 	}
-	return 0;
+	return D;
 }
 
 static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+	struct nx32 *n = (struct nx32 *)c;
+	(void)R2;
 	if ((A & ~1) == 0xFFDE) {
-		extmem_ty = A & 1;
+		n->extmem_ty = A & 1;
 	} else if ((A & ~1) == 0xFFBE) {
-		extmem_map = A & 1;
-		extmem_bank = D & (EXTBANKS - 1);
-	} else if (A > 0x7fff && A < 0xff00 && !extmem_ty && extmem_map) {
-		extmem[0x8000 * extmem_bank + (A & 0x7fff)] = D;
+		n->extmem_map = A & 1;
+		n->extmem_bank = D & (EXTBANKS - 1);
+	} else if (A > 0x7fff && A < 0xff00 && !n->extmem_ty && n->extmem_map) {
+		n->extmem[0x8000 * n->extmem_bank + (A & 0x7fff)] = D;
 		c->EXTMEM = 1;
 		return;
 	}
 	c->EXTMEM = 0;
-	if (P2 && have_becker) {
+	if (P2 && n->have_becker) {
 		switch (A & 3) {
 		case 0x2:
 			becker_write_data(D);
