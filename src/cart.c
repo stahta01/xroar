@@ -335,6 +335,7 @@ void cart_rom_init(struct cart *c) {
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
+	c->EXTMEM = 0;
 	c->has_interface = cart_rom_has_interface;
 }
 

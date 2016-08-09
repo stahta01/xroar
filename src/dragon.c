@@ -1097,12 +1097,16 @@ static uint16_t decode_Z(struct machine_dragon *md, unsigned Z) {
 }
 
 static void read_byte(struct machine_dragon *md, unsigned A) {
-	if (md->cart)
-		md->CPU0->D = md->cart->read(md->cart, A, 0, 0, md->CPU0->D);
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
 	if (md->SAM0->RAS)
 		md->CPU0->D = 0xff;
+	if (md->cart) {
+		md->CPU0->D = md->cart->read(md->cart, A, 0, 0, md->CPU0->D);
+		if (md->cart->EXTMEM) {
+			return;
+		}
+	}
 	switch (md->SAM0->S) {
 	case 0:
 		if (md->SAM0->RAS) {
@@ -1160,8 +1164,12 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 }
 
 static void write_byte(struct machine_dragon *md, unsigned A) {
-	if (md->cart)
+	if (md->cart) {
 		md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
+		if (md->cart->EXTMEM) {
+			return;
+		}
+	}
 	if ((md->SAM0->S & 4) || md->unexpanded_dragon32) {
 		switch (md->SAM0->S) {
 		case 1:
