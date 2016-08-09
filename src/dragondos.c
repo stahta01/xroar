@@ -62,8 +62,8 @@ struct dragondos {
 };
 
 /* Cart interface */
-static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
-static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
+static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
@@ -118,10 +118,13 @@ static void dragondos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
-	if (!P2) {
+	if (R2) {
 		return c->rom_data[A & 0x3fff];
+	}
+	if (!P2) {
+		return D;
 	}
 	if ((A & 0xc) == 0) {
 		return wd279x_read(d->fdc, A);
@@ -141,8 +144,9 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
 	return D;
 }
 
-static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
+	(void)R2;
 	if (!P2)
 		return;
 	if ((A & 0xc) == 0) {

@@ -43,7 +43,7 @@ struct orch90 {
 	float right;
 };
 
-static void orch90_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
+static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void orch90_reset(struct cart *c);
 static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
@@ -81,9 +81,10 @@ static void orch90_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void orch90_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct orch90 *o = (struct orch90 *)c;
 	(void)P2;
+	(void)R2;
 	if (A == 0xff7a) {
 		o->left = (float)D / 255.;
 		sound_set_external_left(o->left);

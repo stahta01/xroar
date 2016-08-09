@@ -62,8 +62,9 @@ static void idecart_detach(struct cart *c) {
   cart_rom_detach(c);
 }
 
-static void idecart_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static void idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
   struct idecart *ide = (struct idecart *)c;
+  (void)R2;
 
   if (!P2)
     return;
@@ -86,12 +87,15 @@ static void idecart_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
   }
 }
 
-static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
   struct idecart *ide = (struct idecart *)c;
 
   uint8_t r = D;
-  if (!P2)
+  if (R2)
     return c->rom_data[A & 0x3FFF];
+  if (!P2) {
+    return D;
+  }
   if (A == 0xFF58)
     r = ide_read_latched(ide->controller, ide_data_latch);
   else if (A == 0xFF50)

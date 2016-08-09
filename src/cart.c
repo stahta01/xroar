@@ -67,8 +67,8 @@ static struct slist *cart_modules = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
-static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D);
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void do_firq(void *);
 static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
@@ -346,16 +346,18 @@ static struct cart *cart_rom_new(struct cart_config *cc) {
 	return c;
 }
 
-static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
-	if (!P2)
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+	(void)P2;
+	if (R2)
 		return c->rom_data[A & 0x3fff];
 	return D;
 }
 
-static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, uint8_t D) {
+static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)c;
 	(void)A;
 	(void)P2;
+	(void)R2;
 	(void)D;
 }
 

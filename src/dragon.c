@@ -1097,6 +1097,8 @@ static uint16_t decode_Z(struct machine_dragon *md, unsigned Z) {
 }
 
 static void read_byte(struct machine_dragon *md, unsigned A) {
+	if (md->cart)
+		md->CPU0->D = md->cart->read(md->cart, A, 0, 0, md->CPU0->D);
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
 	if (md->SAM0->RAS)
@@ -1115,7 +1117,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		break;
 	case 3:
 		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A, 0, md->CPU0->D);
+			md->CPU0->D = md->cart->read(md->cart, A, 0, 1, md->CPU0->D);
 		break;
 	case 4:
 		if (md->relaxed_pia_decode) {
@@ -1150,13 +1152,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		break;
 	case 6:
 		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A, 1, md->CPU0->D);
-		break;
-		// Should call cart's read() whatever the address and
-		// indicate P2 and CTS.
-	case 7:
-		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A, 0, md->CPU0->D);
+			md->CPU0->D = md->cart->read(md->cart, A, 1, 0, md->CPU0->D);
 		break;
 	default:
 		break;
@@ -1164,6 +1160,8 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 }
 
 static void write_byte(struct machine_dragon *md, unsigned A) {
+	if (md->cart)
+		md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
 	if ((md->SAM0->S & 4) || md->unexpanded_dragon32) {
 		switch (md->SAM0->S) {
 		case 1:
@@ -1172,7 +1170,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		case 3:
 			if (md->cart)
-				md->cart->write(md->cart, A, 0, md->CPU0->D);
+				md->cart->write(md->cart, A, 0, 1, md->CPU0->D);
 			break;
 		case 4:
 			if (!md->is_dragon || md->unexpanded_dragon32) {
@@ -1190,13 +1188,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		case 6:
 			if (md->cart)
-				md->cart->write(md->cart, A, 1, md->CPU0->D);
-			break;
-			// Should call cart's write() whatever the address and
-			// indicate P2 and CTS.
-		case 7:
-			if (md->cart)
-				md->cart->write(md->cart, A, 0, md->CPU0->D);
+				md->cart->write(md->cart, A, 1, 0, md->CPU0->D);
 			break;
 		default:
 			break;
