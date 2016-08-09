@@ -1,3 +1,8 @@
+Version 0.35, unreleased
+
+  * EXTMEM support to inhibit normal device access
+  * New NX32 RAM cartridge [Tormod Volden]
+
 Version 0.34, Sun Aug  7 2016
 
   * Zoom controls fixed or added where missing
