@@ -108,6 +108,8 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
  */
 
 #define REG_CC (cpu->reg_cc)
+#define REG_A (MC6809_REG_A(cpu))
+#define REG_B (MC6809_REG_B(cpu))
 #define REG_D (cpu->reg_d)
 #define REG_DP (cpu->reg_dp)
 #define REG_X (cpu->reg_x)
@@ -115,21 +117,11 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 #define REG_U (cpu->reg_u)
 #define REG_S (cpu->reg_s)
 #define REG_PC (cpu->reg_pc)
+#define REG_E (HD6309_REG_E(hcpu))
+#define REG_F (HD6309_REG_F(hcpu))
 #define REG_W (hcpu->reg_w)
 #define REG_V (hcpu->reg_v)
 #define REG_MD (hcpu->reg_md)
-
-/* Separate read & write for accumulators */
-
-#define RREG_A (REG_D >> 8)
-#define RREG_B (REG_D & 0xff)
-#define WREG_A (MC6809_REG_A(cpu))
-#define WREG_B (MC6809_REG_B(cpu))
-
-#define RREG_E (REG_W >> 8)
-#define RREG_F (REG_W & 0xff)
-#define WREG_E (HD6309_REG_E(hcpu))
-#define WREG_F (HD6309_REG_F(hcpu))
 
 #define RREG_Q ((REG_D << 16) | REG_W)
 
@@ -409,8 +401,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned tmp1;
 				switch ((op >> 4) & 0xf) {
 				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte(cpu, ea); break;
-				case 0x4: ea = 0; tmp1 = RREG_A; break;
-				case 0x5: ea = 0; tmp1 = RREG_B; break;
+				case 0x4: ea = 0; tmp1 = REG_A; break;
+				case 0x5: ea = 0; tmp1 = REG_B; break;
 				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte(cpu, ea); break;
 				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte(cpu, ea); break;
 				default: ea = tmp1 = 0; break;
@@ -443,12 +435,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 						store_byte(cpu, ea, tmp1);
 						break;
 					case 0x4:
-						WREG_A = tmp1;
+						REG_A = tmp1;
 						if (!NATIVE_MODE)
 							peek_byte(cpu, REG_PC);
 						break;
 					case 0x5:
-						WREG_B = tmp1;
+						REG_B = tmp1;
 						if (!NATIVE_MODE)
 							peek_byte(cpu, REG_PC);
 						break;
@@ -566,11 +558,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// 0x19 DAA inherent
 			case 0x19: {
 				unsigned tmp = 0;
-				if ((RREG_A&0x0f) >= 0x0a || REG_CC & CC_H) tmp |= 0x06;
-				if (RREG_A >= 0x90 && (RREG_A&0x0f) >= 0x0a) tmp |= 0x60;
-				if (RREG_A >= 0xa0 || REG_CC & CC_C) tmp |= 0x60;
-				tmp += RREG_A;
-				WREG_A = tmp;
+				if ((REG_A & 0x0f) >= 0x0a || REG_CC & CC_H) tmp |= 0x06;
+				if (REG_A >= 0x90 && (REG_A & 0x0f) >= 0x0a) tmp |= 0x60;
+				if (REG_A >= 0xa0 || REG_CC & CC_C) tmp |= 0x60;
+				tmp += REG_A;
+				REG_A = tmp;
 				// CC.C NOT cleared, only set if appropriate
 				CLR_NZV;
 				SET_NZC8(tmp);
@@ -592,7 +584,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 			// 0x1d SEX inherent
 			case 0x1d:
-				WREG_A = (RREG_B & 0x80) ? 0xff : 0;
+				REG_A = (REG_B & 0x80) ? 0xff : 0;
 				CLR_NZ;
 				SET_NZ16(REG_D);
 				if (!NATIVE_MODE)
@@ -612,12 +604,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: tmp1 = REG_PC; break;
 					case 0x6: tmp1 = REG_W; break;
 					case 0x7: tmp1 = REG_V; break;
-					case 0x8: tmp1 = (RREG_A << 8) | RREG_A; break;
-					case 0x9: tmp1 = (RREG_B << 8) | RREG_B; break;
+					case 0x8: tmp1 = (REG_A << 8) | REG_A; break;
+					case 0x9: tmp1 = (REG_B << 8) | REG_B; break;
 					case 0xa: tmp1 = (REG_CC << 8) | REG_CC; break;
 					case 0xb: tmp1 = (REG_DP << 8) | REG_DP; break;
-					case 0xe: tmp1 = (RREG_E << 8) | RREG_E; break;
-					case 0xf: tmp1 = (RREG_F << 8) | RREG_F; break;
+					case 0xe: tmp1 = (REG_E << 8) | REG_E; break;
+					case 0xf: tmp1 = (REG_F << 8) | REG_F; break;
 					default:  tmp1 = 0; break;
 				}
 				switch (postbyte & 0xf) {
@@ -629,12 +621,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: tmp2 = REG_PC; REG_PC = tmp1; break;
 					case 0x6: tmp2 = REG_W; REG_W = tmp1; break;
 					case 0x7: tmp2 = REG_V; REG_V = tmp1; break;
-					case 0x8: tmp2 = (RREG_A << 8) | RREG_A; WREG_A = tmp1 >> 8; break;
-					case 0x9: tmp2 = (RREG_B << 8) | RREG_B; WREG_B = tmp1; break;
+					case 0x8: tmp2 = (REG_A << 8) | REG_A; REG_A = tmp1 >> 8; break;
+					case 0x9: tmp2 = (REG_B << 8) | REG_B; REG_B = tmp1; break;
 					case 0xa: tmp2 = (REG_CC << 8) | REG_CC; REG_CC = tmp1; break;
 					case 0xb: tmp2 = (REG_DP << 8) | REG_DP; REG_DP = tmp1 >> 8; break;
-					case 0xe: tmp2 = (RREG_E << 8) | RREG_E; WREG_E = tmp1 >> 8; break;
-					case 0xf: tmp2 = (RREG_F << 8) | RREG_F; WREG_F = tmp1; break;
+					case 0xe: tmp2 = (REG_E << 8) | REG_E; REG_E = tmp1 >> 8; break;
+					case 0xf: tmp2 = (REG_F << 8) | REG_F; REG_F = tmp1; break;
 					default:  tmp2 = 0; break;
 				}
 				switch (postbyte >> 4) {
@@ -646,12 +638,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: REG_PC = tmp2; break;
 					case 0x6: REG_W = tmp2; break;
 					case 0x7: REG_V = tmp2; break;
-					case 0x8: WREG_A = tmp2 >> 8; break;
-					case 0x9: WREG_B = tmp2; break;
+					case 0x8: REG_A = tmp2 >> 8; break;
+					case 0x9: REG_B = tmp2; break;
 					case 0xa: REG_CC = tmp2; break;
 					case 0xb: REG_DP = tmp2 >> 8; break;
-					case 0xe: WREG_E = tmp2 >> 8; break;
-					case 0xf: WREG_F = tmp2; break;
+					case 0xe: REG_E = tmp2 >> 8; break;
+					case 0xf: REG_F = tmp2; break;
 					default: break;
 				}
 				NVMA_CYCLE;
@@ -677,12 +669,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: tmp1 = REG_PC; break;
 					case 0x6: tmp1 = REG_W; break;
 					case 0x7: tmp1 = REG_V; break;
-					case 0x8: tmp1 = (RREG_A << 8) | RREG_A; break;
-					case 0x9: tmp1 = (RREG_B << 8) | RREG_B; break;
+					case 0x8: tmp1 = (REG_A << 8) | REG_A; break;
+					case 0x9: tmp1 = (REG_B << 8) | REG_B; break;
 					case 0xa: tmp1 = (REG_CC << 8) | REG_CC; break;
 					case 0xb: tmp1 = (REG_DP << 8) | REG_DP; break;
-					case 0xe: tmp1 = (RREG_E << 8) | RREG_E; break;
-					case 0xf: tmp1 = (RREG_F << 8) | RREG_F; break;
+					case 0xe: tmp1 = (REG_E << 8) | REG_E; break;
+					case 0xf: tmp1 = (REG_F << 8) | REG_F; break;
 					default: tmp1 = 0; break;
 				}
 				switch (postbyte & 0xf) {
@@ -694,12 +686,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: REG_PC = tmp1; break;
 					case 0x6: REG_W = tmp1; break;
 					case 0x7: REG_V = tmp1; break;
-					case 0x8: WREG_A = tmp1 >> 8; break;
-					case 0x9: WREG_B = tmp1; break;
+					case 0x8: REG_A = tmp1 >> 8; break;
+					case 0x9: REG_B = tmp1; break;
 					case 0xa: REG_CC = tmp1; break;
 					case 0xb: REG_DP = tmp1 >> 8; break;
-					case 0xe: WREG_E = tmp1 >> 8; break;
-					case 0xf: WREG_F = tmp1; break;
+					case 0xe: REG_E = tmp1 >> 8; break;
+					case 0xf: REG_F = tmp1; break;
 					default: break;
 				}
 				NVMA_CYCLE;
@@ -761,8 +753,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (postbyte & 0x20) { push_s_word(cpu, REG_Y); }
 					if (postbyte & 0x10) { push_s_word(cpu, REG_X); }
 					if (postbyte & 0x08) { push_s_byte(cpu, REG_DP); }
-					if (postbyte & 0x04) { push_s_byte(cpu, RREG_B); }
-					if (postbyte & 0x02) { push_s_byte(cpu, RREG_A); }
+					if (postbyte & 0x04) { push_s_byte(cpu, REG_B); }
+					if (postbyte & 0x02) { push_s_byte(cpu, REG_A); }
 					if (postbyte & 0x01) { push_s_byte(cpu, REG_CC); }
 				}
 				break;
@@ -774,8 +766,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (!NATIVE_MODE)
 						NVMA_CYCLE;
 					if (postbyte & 0x01) { REG_CC = pull_s_byte(cpu); }
-					if (postbyte & 0x02) { WREG_A = pull_s_byte(cpu); }
-					if (postbyte & 0x04) { WREG_B = pull_s_byte(cpu); }
+					if (postbyte & 0x02) { REG_A = pull_s_byte(cpu); }
+					if (postbyte & 0x04) { REG_B = pull_s_byte(cpu); }
 					if (postbyte & 0x08) { REG_DP = pull_s_byte(cpu); }
 					if (postbyte & 0x10) { REG_X = pull_s_word(cpu); }
 					if (postbyte & 0x20) { REG_Y = pull_s_word(cpu); }
@@ -797,8 +789,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (postbyte & 0x20) { push_u_word(cpu, REG_Y); }
 					if (postbyte & 0x10) { push_u_word(cpu, REG_X); }
 					if (postbyte & 0x08) { push_u_byte(cpu, REG_DP); }
-					if (postbyte & 0x04) { push_u_byte(cpu, RREG_B); }
-					if (postbyte & 0x02) { push_u_byte(cpu, RREG_A); }
+					if (postbyte & 0x04) { push_u_byte(cpu, REG_B); }
+					if (postbyte & 0x02) { push_u_byte(cpu, REG_A); }
 					if (postbyte & 0x01) { push_u_byte(cpu, REG_CC); }
 				}
 				break;
@@ -810,8 +802,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (!NATIVE_MODE)
 						NVMA_CYCLE;
 					if (postbyte & 0x01) { REG_CC = pull_u_byte(cpu); }
-					if (postbyte & 0x02) { WREG_A = pull_u_byte(cpu); }
-					if (postbyte & 0x04) { WREG_B = pull_u_byte(cpu); }
+					if (postbyte & 0x02) { REG_A = pull_u_byte(cpu); }
+					if (postbyte & 0x04) { REG_B = pull_u_byte(cpu); }
 					if (postbyte & 0x08) { REG_DP = pull_u_byte(cpu); }
 					if (postbyte & 0x10) { REG_X = pull_u_word(cpu); }
 					if (postbyte & 0x20) { REG_Y = pull_u_word(cpu); }
@@ -828,7 +820,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				break;
 			// 0x3a ABX inherent
 			case 0x3a:
-				REG_X += RREG_B;
+				REG_X += REG_B;
 				peek_byte(cpu, REG_PC);
 				if (!NATIVE_MODE)
 					NVMA_CYCLE;
@@ -838,11 +830,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 				peek_byte(cpu, REG_PC);
 				REG_CC = pull_s_byte(cpu);
 				if (REG_CC & CC_E) {
-					WREG_A = pull_s_byte(cpu);
-					WREG_B = pull_s_byte(cpu);
+					REG_A = pull_s_byte(cpu);
+					REG_B = pull_s_byte(cpu);
 					if (NATIVE_MODE) {
-						WREG_E = pull_s_byte(cpu);
-						WREG_F = pull_s_byte(cpu);
+						REG_E = pull_s_byte(cpu);
+						REG_F = pull_s_byte(cpu);
 					}
 					REG_DP = pull_s_byte(cpu);
 					REG_X = pull_s_word(cpu);
@@ -868,7 +860,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 			// 0x3d MUL inherent
 			case 0x3d: {
-				unsigned tmp = RREG_A * RREG_B;
+				unsigned tmp = REG_A * REG_B;
 				REG_D = tmp;
 				CLR_ZC;
 				SET_Z(tmp);
@@ -922,7 +914,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0xf4: case 0xf5: case 0xf6:
 			case 0xf8: case 0xf9: case 0xfa: case 0xfb: {
 				unsigned tmp1, tmp2;
-				tmp1 = !(op & 0x40) ? RREG_A : RREG_B;
+				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -944,9 +936,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 				default: break;
 				}
 				if (!(op & 0x40)) {
-					WREG_A = tmp1;
+					REG_A = tmp1;
 				} else {
-					WREG_B = tmp1;
+					REG_B = tmp1;
 				}
 			} break;
 
@@ -1028,7 +1020,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0xd7: case 0xe7: case 0xf7: {
 				uint16_t ea;
 				uint8_t tmp1;
-				tmp1 = !(op & 0x40) ? RREG_A : RREG_B;
+				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
 				case 1: ea = ea_direct(cpu); break;
 				case 2: ea = ea_indexed(cpu); break;
@@ -1188,12 +1180,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 				} else {
 					// 8-bit operation
 					switch (postbyte & 0xf) {
-					case 0x8: tmp1 = RREG_A; break;
-					case 0x9: tmp1 = RREG_B; break;
+					case 0x8: tmp1 = REG_A; break;
+					case 0x9: tmp1 = REG_B; break;
 					case 0xa: tmp1 = REG_CC; break;
 					case 0xb: tmp1 = REG_DP; break;
-					case 0xe: tmp1 = RREG_E; break;
-					case 0xf: tmp1 = RREG_F; break;
+					case 0xe: tmp1 = REG_E; break;
+					case 0xf: tmp1 = REG_F; break;
 					default: tmp1 = 0; break;
 					}
 					switch ((postbyte >> 4) & 0xf) {
@@ -1205,12 +1197,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x5: tmp2 = REG_PC & 0xff; break;
 					case 0x6: tmp2 = REG_W & 0xff; break;
 					case 0x7: tmp2 = REG_V & 0xff; break;
-					case 0x8: tmp2 = RREG_A; break;
-					case 0x9: tmp2 = RREG_B; break;
+					case 0x8: tmp2 = REG_A; break;
+					case 0x9: tmp2 = REG_B; break;
 					case 0xa: tmp2 = REG_CC; break;
 					case 0xb: tmp2 = REG_DP; break;
-					case 0xe: tmp2 = RREG_E; break;
-					case 0xf: tmp2 = RREG_F; break;
+					case 0xe: tmp2 = REG_E; break;
+					case 0xf: tmp2 = REG_F; break;
 					default: tmp2 = 0; break;
 					}
 					switch (op & 0xf) {
@@ -1225,12 +1217,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					default: break;
 					}
 					switch (postbyte & 0xf) {
-					case 0x8: WREG_A = tmp1; break;
-					case 0x9: WREG_B = tmp1; break;
+					case 0x8: REG_A = tmp1; break;
+					case 0x9: REG_B = tmp1; break;
 					case 0xa: REG_CC = tmp1; break;
 					case 0xb: REG_DP = tmp1; break;
-					case 0xe: WREG_E = tmp1; break;
-					case 0xf: WREG_F = tmp1; break;
+					case 0xe: REG_E = tmp1; break;
+					case 0xf: REG_F = tmp1; break;
 					default: break;
 					}
 				}
@@ -1241,29 +1233,29 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x38:
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				push_s_byte(cpu, RREG_F);
-				push_s_byte(cpu, RREG_E);
+				push_s_byte(cpu, REG_F);
+				push_s_byte(cpu, REG_E);
 				break;
 			// 0x1039 PULSW inherent
 			case 0x39:
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				WREG_E = pull_s_byte(cpu);
-				WREG_F = pull_s_byte(cpu);
+				REG_E = pull_s_byte(cpu);
+				REG_F = pull_s_byte(cpu);
 				break;
 			// 0x103a PSHUW inherent
 			case 0x3a:
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				push_u_byte(cpu, RREG_F);
-				push_u_byte(cpu, RREG_E);
+				push_u_byte(cpu, REG_F);
+				push_u_byte(cpu, REG_E);
 				break;
 			// 0x103b PULUW inherent
 			case 0x3b:
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				WREG_E = pull_u_byte(cpu);
-				WREG_F = pull_u_byte(cpu);
+				REG_E = pull_u_byte(cpu);
+				REG_F = pull_u_byte(cpu);
 				break;
 			// 0x103f SWI2 inherent
 			case 0x3f:
@@ -1537,8 +1529,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned reg_val;
 				switch (reg_code) {
 				case 0: reg_val = REG_CC; break;
-				case 1: reg_val = RREG_A; break;
-				case 2: reg_val = RREG_B; break;
+				case 1: reg_val = REG_A; break;
+				case 2: reg_val = REG_B; break;
 				// Invalid register here does *not* trigger an
 				// illegal instruction trap.
 				// TODO: verify if this value is predictable:
@@ -1583,10 +1575,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 						REG_CC = (REG_CC & ~dst_mask) | (out & dst_mask);
 						break;
 					case 1:
-						WREG_A = (RREG_A & ~dst_mask) | (out & dst_mask);
+						REG_A = (REG_A & ~dst_mask) | (out & dst_mask);
 						break;
 					case 2:
-						WREG_B = (RREG_B & ~dst_mask) | (out & dst_mask);
+						REG_B = (REG_B & ~dst_mask) | (out & dst_mask);
 						break;
 					}
 				}
@@ -1682,7 +1674,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x5a:
 			case 0x5c: case 0x5d: case 0x5f: {
 				unsigned tmp1;
-				tmp1 = !(op & 0x10) ? RREG_E : RREG_F;
+				tmp1 = !(op & 0x10) ? REG_E : REG_F;
 				switch (op & 0xf) {
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COME, COMF
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DECE, DECF
@@ -1699,9 +1691,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 					break;
 				default: // the rest need storing
 					if (!(op & 0x10)) {
-						WREG_E = tmp1;
+						REG_E = tmp1;
 					} else {
-						WREG_F = tmp1;
+						REG_F = tmp1;
 					}
 					if (!NATIVE_MODE)
 						NVMA_CYCLE;
@@ -1720,7 +1712,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0xe0: case 0xe1: case 0xe6: case 0xeb:
 			case 0xf0: case 0xf1: case 0xf6: case 0xfb: {
 				unsigned tmp1, tmp2;
-				tmp1 = !(op & 0x40) ? RREG_E : RREG_F;
+				tmp1 = !(op & 0x40) ? REG_E : REG_F;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -1736,9 +1728,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 				default: break;
 				}
 				if (!(op & 0x40)) {
-					WREG_E = tmp1;
+					REG_E = tmp1;
 				} else {
-					WREG_F = tmp1;
+					REG_F = tmp1;
 				}
 			} break;
 
@@ -1793,13 +1785,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				CLR_NZVC;
 				if (quotient >= -256 && quotient < 256) {
-					WREG_B = quotient;
-					WREG_A = stmp1 - (quotient * stmp2);
-					REG_CC |= (RREG_B & 1);
+					REG_B = quotient;
+					REG_A = stmp1 - (quotient * stmp2);
+					REG_CC |= (REG_B & 1);
 					for (int i = 12; i; i--)
 						NVMA_CYCLE;
-					if ((quotient >= 0) == ((RREG_B & 0x80) == 0)) {
-						SET_NZ8(RREG_B);
+					if ((quotient >= 0) == ((REG_B & 0x80) == 0)) {
+						SET_NZ8(REG_B);
 						NVMA_CYCLE;
 					} else {
 						REG_CC |= (CC_N | CC_V);
@@ -1847,7 +1839,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					REG_CC |= (REG_W & 1);
 					for (int i = 21; i; i--)
 						NVMA_CYCLE;
-					if ((quotient >= 0) == ((RREG_E & 0x80) == 0)) {
+					if ((quotient >= 0) == ((REG_E & 0x80) == 0)) {
 						SET_NZ16(REG_W);
 					} else {
 						REG_CC |= (CC_N | CC_V);
@@ -1887,7 +1879,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x97: case 0xa7: case 0xb7:
 			case 0xd7: case 0xe7: case 0xf7: {
 				unsigned ea, tmp1;
-				tmp1 = !(op & 0x40) ? RREG_E : RREG_F;
+				tmp1 = !(op & 0x40) ? REG_E : REG_F;
 				switch ((op >> 4) & 3) {
 				case 1: ea = ea_direct(cpu); break;
 				case 2: ea = ea_indexed(cpu); break;
@@ -1999,12 +1991,12 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		case 0x02: reg -= 1; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
 		case 0x03: reg -= 2; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
 		case 0x04: ea = reg; peek_byte(cpu, REG_PC); break;
-		case 0x05: ea = reg + sex8(RREG_B); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
-		case 0x06: ea = reg + sex8(RREG_A); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
-		case 0x07: ea = reg + sex8(RREG_E); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x05: ea = reg + sex8(REG_B); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x06: ea = reg + sex8(REG_A); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x07: ea = reg + sex8(REG_E); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
 		case 0x08: ea = byte_immediate(cpu); ea = sex8(ea) + reg; NVMA_CYCLE; break;
 		case 0x09: ea = word_immediate(cpu); ea = ea + reg; NVMA_CYCLE; NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
-		case 0x0a: ea = reg + sex8(RREG_F); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
+		case 0x0a: ea = reg + sex8(REG_F); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
 		case 0x0b: ea = reg + REG_D; peek_byte(cpu, REG_PC); peek_byte(cpu, REG_PC + 1); NVMA_CYCLE; if (!NATIVE_MODE) { NVMA_CYCLE; NVMA_CYCLE; } break;
 		case 0x0c: ea = byte_immediate(cpu); ea = sex8(ea) + REG_PC; NVMA_CYCLE; break;
 		case 0x0d: ea = word_immediate(cpu); ea = ea + REG_PC; peek_byte(cpu, REG_PC); NVMA_CYCLE; if (!NATIVE_MODE) { NVMA_CYCLE; NVMA_CYCLE; } break;
@@ -2040,11 +2032,11 @@ static void push_irq_registers(struct MC6809 *cpu) {
 	push_s_word(cpu, REG_X);
 	push_s_byte(cpu, REG_DP);
 	if (NATIVE_MODE) {
-		push_s_byte(cpu, RREG_F);
-		push_s_byte(cpu, RREG_E);
+		push_s_byte(cpu, REG_F);
+		push_s_byte(cpu, REG_E);
 	}
-	push_s_byte(cpu, RREG_B);
-	push_s_byte(cpu, RREG_A);
+	push_s_byte(cpu, REG_B);
+	push_s_byte(cpu, REG_A);
 	push_s_byte(cpu, REG_CC);
 }
 
