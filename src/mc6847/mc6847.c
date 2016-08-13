@@ -309,7 +309,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 					if (!vdg->EXT)
 						vdg->vram_g_data = font_6847[(vdg->vram_g_data&0x3f)*12 + vdg->public.row];
 				}
-				if (INV ^ vdg->inverted_text)
+				if ((unsigned)INV ^ (unsigned)vdg->inverted_text)
 					vdg->vram_g_data = ~vdg->vram_g_data;
 			}
 
