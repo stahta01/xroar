@@ -87,11 +87,13 @@ static _Bool init(void) {
 	// New video code assumes 640x240 layout scaled to 4x3.
 	// This old directly-rendered code does not support this!
 	return 0;
+	/*
 	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
 	if (set_fullscreen(xroar_ui_cfg.fullscreen))
 		return 0;
 	vsync(&vo_sdl_module);
 	return 1;
+	*/
 }
 
 static void shutdown(void) {
