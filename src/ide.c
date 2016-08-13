@@ -17,13 +17,18 @@
  *      along with IDE-emu.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <time.h>
+
+#include "xalloc.h"
 
 #include "ide.h"
 
@@ -679,7 +684,7 @@ struct ide_controller *ide_allocate(const char *name)
   struct ide_controller *c = calloc(1, sizeof(*c));
   if (c == NULL)
     return NULL;
-  c->name = strdup(name);
+  c->name = xstrdup(name);
   if (c->name == NULL) {
     free(c);
     return NULL;
