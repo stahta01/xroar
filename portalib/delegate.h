@@ -51,10 +51,12 @@ typedef DELEGATE_S2(void, uint8_t *, unsigned) DELEGATE_T2(void, uint8p, unsigne
 
 /* Convenience function for declaring anonymous structs. */
 
-#define DELEGATE_AS0(N,f,s) (DELEGATE_T0(N)){f,s}
-#define DELEGATE_AS1(N,N0,f,s) (DELEGATE_T1(N,N0)){f,s}
-#define DELEGATE_AS2(N,N0,N1,f,s) (DELEGATE_T2(N,N0,N1)){f,s}
-#define DELEGATE_AS3(N,N0,N1,N2,f,s) (DELEGATE_T3(N,N0,N1,N2)){f,s}
+#define DELEGATE_INIT(f,s) {f,s}
+
+#define DELEGATE_AS0(N,f,s) (DELEGATE_T0(N))DELEGATE_INIT(f,s)
+#define DELEGATE_AS1(N,N0,f,s) (DELEGATE_T1(N,N0))DELEGATE_INIT(f,s)
+#define DELEGATE_AS2(N,N0,N1,f,s) (DELEGATE_T2(N,N0,N1))DELEGATE_INIT(f,s)
+#define DELEGATE_AS3(N,N0,N1,N2,f,s) (DELEGATE_T3(N,N0,N1,N2))DELEGATE_INIT(f,s)
 
 /* Delegate default function names. */
 
