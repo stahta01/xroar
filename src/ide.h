@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <sys/types.h>
 
 #define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
 #define ACME_COYOTE             2       /* 20MB early IDE drive */
