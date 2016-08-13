@@ -55,12 +55,12 @@ struct keyboard_interface_private {
 static void type_command(void *);
 
 static struct machine_bp basic_command_breakpoint[] = {
-	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_AS0(void, type_command, NULL) ),
-	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_AS0(void, type_command, NULL) ),
-	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_AS0(void, type_command, NULL) ),
-	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
-	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
-	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_AS0(void, type_command, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 };
 
 struct keyboard_interface *keyboard_interface_new(struct machine *m) {

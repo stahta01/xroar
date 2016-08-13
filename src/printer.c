@@ -55,7 +55,7 @@ static void open_stream(struct printer_interface_private *pip);
 static void coco_print_byte(void *);
 
 static struct machine_bp coco_print_breakpoint[] = {
-	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_AS0(void, coco_print_byte, NULL) ),
+	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
 };
 
 struct printer_interface *printer_interface_new(struct machine *m) {
