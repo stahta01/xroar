@@ -452,7 +452,6 @@ static int ide_write_sector(struct ide_drive *d)
 
 static uint16_t ide_data_in(struct ide_drive *d, int len)
 {
-  uint16_t v;
   if (d->state == IDE_DATA_IN) {
     if (d->dptr == d->data + 512) {
       if (ide_read_sector(d) < 0) {
@@ -460,7 +459,7 @@ static uint16_t ide_data_in(struct ide_drive *d, int len)
         return 0xFFFF;          /* and error bits set by read_sector */
       }
     }
-    v = *d->dptr;
+    uint16_t v = *d->dptr;
     if (!d->eightbit) {
       if (len == 2)
         v |= (d->dptr[1] << 8);
