@@ -133,30 +133,35 @@ struct module *module_select_by_arg(struct module * const *list, const char *nam
 struct module *module_init(struct module *module) {
 	if (!module)
 		return NULL;
-	int have_description = (module->description != NULL);
-	if (have_description) {
-		LOG_DEBUG(1, "Module init: %s\n", module->description);
+	const char *description = module->description ? module->description : "(unknown)";
+	LOG_DEBUG(1, "Module init: %s\n", description);
+	// New interface?
+	if (module->new) {
+		void *m = module->new();
+		if (!m) {
+			LOG_DEBUG(1, "Module init failed: %s\n", description);
+		}
+		return m;
 	}
 	if (!module->init || module->init()) {
 		module->initialised = 1;
 		return module;
 	}
-	if (have_description) {
-		LOG_DEBUG(1, "Module init failed: %s\n", module->description);
-	}
+	LOG_DEBUG(1, "Module init failed: %s\n", description);
 	return NULL;
 }
 
 struct module *module_init_from_list(struct module * const *list, struct module *module) {
 	int i;
 	/* First attempt to initialise selected module (if given) */
-	if (module_init(module))
-		return module;
+	void *m = module_init(module);
+	if (m)
+		return m;
 	if (list == NULL)
 		return NULL;
 	/* If that fails, try every *other* module in the list */
 	for (i = 0; list[i]; i++) {
-		if (list[i] != module && (module_init(list[i])))
+		if (list[i] != module && (m = module_init(list[i])))
 			return list[i];
 	}
 	return NULL;

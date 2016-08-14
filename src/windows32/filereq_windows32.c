@@ -33,6 +33,7 @@
 #include "logging.h"
 #include "module.h"
 #include "vo.h"
+#include "xroar.h"
 
 #include "windows32/common_windows32.h"
 
@@ -63,9 +64,9 @@ static char *load_filename(char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = vo_module->is_fullscreen;
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(0);
+	was_fullscreen = xroar_vo_interface->is_fullscreen;
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(xroar_vo_interface, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -87,8 +88,8 @@ static char *load_filename(char const * const *extensions) {
 	if (GetOpenFileName(&ofn)==TRUE) {
 		filename = xstrdup(ofn.lpstrFile);
 	}
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(1);
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(xroar_vo_interface, 1);
 	return filename;
 }
 
@@ -98,9 +99,9 @@ static char *save_filename(char const * const *extensions) {
 	int was_fullscreen;
 
 	(void)extensions;  /* unused */
-	was_fullscreen = vo_module->is_fullscreen;
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(0);
+	was_fullscreen = xroar_vo_interface->is_fullscreen;
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(xroar_vo_interface, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -122,7 +123,7 @@ static char *save_filename(char const * const *extensions) {
 	if (GetSaveFileName(&ofn)==TRUE) {
 		filename = xstrdup(ofn.lpstrFile);
 	}
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(1);
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(xroar_vo_interface, 1);
 	return filename;
 }

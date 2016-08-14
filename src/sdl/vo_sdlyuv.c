@@ -24,6 +24,8 @@
 
 #include <SDL.h>
 
+#include "xalloc.h"
+
 #include "logging.h"
 #include "mc6847/mc6847.h"
 #include "vo.h"
@@ -31,24 +33,20 @@
 
 #include "sdl/common.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void alloc_colours(void);
-static void vsync(struct vo_module *vo);
-static void render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static void resize(unsigned int w, unsigned int h);
-static int set_fullscreen(_Bool fullscreen);
-static void set_vo_cmp(struct vo_module *vo, int mode);
+static void *new(void);
 
-struct vo_module vo_sdlyuv_module = {
-	.common = { .name = "sdlyuv", .description = "SDL YUV overlay video",
-	            .init = init, .shutdown = shutdown },
-	.update_palette = alloc_colours,
-	.vsync = vsync,
-	.render_scanline = render_scanline,
-	.resize = resize, .set_fullscreen = set_fullscreen,
-	.set_vo_cmp = set_vo_cmp,
+struct module vo_sdlyuv_module = {
+	.name = "sdlyuv", .description = "SDL YUV overlay video",
+	.new = new,
 };
+
+static void vo_sdlyuv_free(struct vo_interface *vo);
+static void alloc_colours(struct vo_interface *vo);
+static void vsync(struct vo_interface *vo);
+static void render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
+static void set_vo_cmp(struct vo_interface *vo, int mode);
 
 typedef Uint32 Pixel;
 #define MAPCOLOUR(r,g,b) map_colour((r), (g), (b))
@@ -80,18 +78,31 @@ static const Uint32 try_overlay_format[] = {
 #define NUM_OVERLAY_FORMATS ((int)(sizeof(try_overlay_format)/sizeof(Uint32)))
 static Uint32 overlay_format;
 
-static _Bool init(void) {
+static void *new(void) {
 	const SDL_VideoInfo *video_info;
+
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = vo_sdlyuv_free;
+	vo->update_palette = alloc_colours;
+	vo->vsync = vsync;
+	vo->render_scanline = render_scanline;
+	vo->resize = resize;
+	vo->set_fullscreen = set_fullscreen;
+	vo->set_vo_cmp = set_vo_cmp;
 
 	video_info = SDL_GetVideoInfo();
 	screen_width = video_info->current_w;
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	vo_sdlyuv_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
+	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
 
-	if (set_fullscreen(xroar_ui_cfg.fullscreen))
-		return 0;
+	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+		vo_sdlyuv_free(vo);
+		return NULL;
+	}
 
 	overlay = NULL;
 	Uint32 first_successful_format = 0;
@@ -117,27 +128,29 @@ static _Bool init(void) {
 	}
 	if (!overlay) {
 		LOG_ERROR("Failed to create SDL overlay for display: %s\n", SDL_GetError());
-		return 0;
+		vo_sdlyuv_free(vo);
+		return NULL;
 	}
 	if (overlay->hw_overlay != 1) {
 		LOG_WARN("Warning: SDL overlay is not hardware accelerated\n");
 	}
 
-	alloc_colours();
-	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
-	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 640;
-	vo_module->window_h = 240;
+	alloc_colours(vo);
+	vo->scanline = 0;
+	vo->window_x = VDG_ACTIVE_LINE_START - 64;
+	vo->window_y = VDG_TOP_BORDER_START + 1;
+	vo->window_w = 640;
+	vo->window_h = 240;
 
-	vsync(&vo_sdl_module);
-	return 1;
+	vsync(vo);
+	return vo;
 }
 
-static void shutdown(void) {
-	set_fullscreen(0);
+static void vo_sdlyuv_free(struct vo_interface *vo) {
+	set_fullscreen(vo, 0);
 	SDL_FreeYUVOverlay(overlay);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
+	free(vo);
 }
 
 static Uint32 map_colour(int r, int g, int b) {
@@ -167,19 +180,19 @@ static Uint32 map_colour(int r, int g, int b) {
 	return colour;
 }
 
-static void resize(unsigned int w, unsigned int h) {
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
 	window_width = w;
 	window_height = h;
-	set_fullscreen(vo_sdlyuv_module.is_fullscreen);
+	set_fullscreen(vo, vo->is_fullscreen);
 }
 
-static int set_fullscreen(_Bool fullscreen) {
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !vo_sdlyuv_module.is_fullscreen && fullscreen) {
+	if (screen && !vo->is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(screen);
 	}
 #endif
@@ -205,7 +218,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vo_sdlyuv_module.is_fullscreen && !fullscreen) {
+	if (vo->is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -231,7 +244,7 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo_sdlyuv_module.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 
 	memcpy(&dstrect, &screen->clip_rect, sizeof(SDL_Rect));
 	if (((float)screen->w/(float)screen->h)>(4.0/3.0)) {
@@ -253,9 +266,8 @@ static int set_fullscreen(_Bool fullscreen) {
 	return 0;
 }
 
-static void vsync(struct vo_module *vo) {
-	(void)vo;
+static void vsync(struct vo_interface *vo) {
 	SDL_DisplayYUVOverlay(overlay, &dstrect);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	vo_module->scanline = 0;
+	vo->scanline = 0;
 }

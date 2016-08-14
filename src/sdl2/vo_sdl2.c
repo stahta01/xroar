@@ -33,25 +33,20 @@
 
 #include "sdl2/common.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void alloc_colours(void);
-static void vsync(struct vo_module *vo);
-static void render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static void resize(unsigned int w, unsigned int h);
-static int set_fullscreen(_Bool fullscreen);
-static void set_vo_cmp(struct vo_module *vo, int mode);
+static void *new(void);
 
-struct vo_module vo_sdl_module = {
-	.common = { .name = "sdl", .description = "SDL2 video",
-	            .init = init, .shutdown = shutdown },
-	.update_palette = alloc_colours,
-	.vsync = vsync,
-	.render_scanline = render_scanline,
-	.resize = resize,
-	.set_fullscreen = set_fullscreen,
-	.set_vo_cmp = set_vo_cmp,
+struct module vo_sdl_module = {
+	.name = "sdl", .description = "SDL2 video",
+	.new = new,
 };
+
+static void vo_sdl_free(struct vo_interface *vo);
+static void alloc_colours(struct vo_interface *vo);
+static void vsync(struct vo_interface *vo);
+static void render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
+static void set_vo_cmp(struct vo_interface *vo, int mode);
 
 typedef uint16_t Pixel;
 #define RESET_PALETTE()
@@ -77,45 +72,57 @@ static int create_renderer(void);
 static void destroy_window(void);
 static void destroy_renderer(void);
 
-static _Bool init(void) {
+static void *new(void) {
 	pixels = xmalloc(640 * 240 * sizeof(Pixel));
 	for (int i = 0; i < 640 * 240; i++)
 		pixels[i] = MAPCOLOUR(0,0,0);
 
-	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
-	if (set_fullscreen(xroar_ui_cfg.fullscreen) != 0) {
-		return 0;
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = vo_sdl_free;
+	vo->update_palette = alloc_colours;
+	vo->vsync = vsync;
+	vo->render_scanline = render_scanline;
+	vo->resize = resize;
+	vo->set_fullscreen = set_fullscreen;
+	vo->set_vo_cmp = set_vo_cmp;
+
+	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
+	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+		vo_sdl_free(vo);
+		return NULL;
 	}
 
-	alloc_colours();
-	vo_sdl_module.window_x = VDG_ACTIVE_LINE_START - 64;
-	vo_sdl_module.window_y = VDG_TOP_BORDER_START + 1;
-	vo_sdl_module.window_w = 640;
-	vo_sdl_module.window_h = 240;
+	alloc_colours(vo);
+	vo->window_x = VDG_ACTIVE_LINE_START - 64;
+	vo->window_y = VDG_TOP_BORDER_START + 1;
+	vo->window_w = 640;
+	vo->window_h = 240;
 
-	vsync(&vo_sdl_module);
+	vsync(vo);
 
-	return 1;
+	return vo;
 }
 
 static int window_w = 640;
 static int window_h = 480;
 
-static void resize(unsigned int w, unsigned int h) {
-	if (vo_sdl_module.is_fullscreen)
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
+	if (vo->is_fullscreen)
 		return;
 	window_w = w;
 	window_h = h;
 	create_renderer();
 }
 
-static int set_fullscreen(_Bool fullscreen) {
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	int err;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (sdl_window && !vo_sdl_module.is_fullscreen && fullscreen) {
+	if (sdl_window && !vo->is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(sdl_window);
 	}
 #endif
@@ -142,7 +149,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vo_sdl_module.is_fullscreen && !fullscreen) {
+	if (vo->is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(sdl_window);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -169,7 +176,7 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo_sdl_module.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 	sdl_window_x = sdl_window_y = 0;
 
 	/* Initialise keyboard */
@@ -237,16 +244,17 @@ static void destroy_renderer(void) {
 	}
 }
 
-static void shutdown(void) {
+static void vo_sdl_free(struct vo_interface *vo) {
 	if (pixels) {
 		free(pixels);
 		pixels = NULL;
 	}
 	destroy_renderer();
 	destroy_window();
+	free(vo);
 }
 
-static void vsync(struct vo_module *vo) {
+static void vsync(struct vo_interface *vo) {
 	SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Pixel));
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);

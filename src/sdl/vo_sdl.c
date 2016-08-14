@@ -24,6 +24,8 @@
 
 #include <SDL.h>
 
+#include "xalloc.h"
+
 #include "logging.h"
 #include "mc6847/mc6847.h"
 #include "vo.h"
@@ -31,23 +33,19 @@
 
 #include "sdl/common.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void alloc_colours(void);
-static void vsync(struct vo_module *vo);
-static void render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static int set_fullscreen(_Bool fullscreen);
-static void set_vo_cmp(struct vo_module *vo, int mode);
+static void *new(void);
 
-struct vo_module vo_sdl_module = {
-	.common = { .name = "sdl", .description = "Minimal SDL video",
-	            .init = init, .shutdown = shutdown },
-	.update_palette = alloc_colours,
-	.vsync = vsync,
-	.render_scanline = render_scanline,
-	.set_fullscreen = set_fullscreen,
-	.set_vo_cmp = set_vo_cmp,
+struct module vo_sdl_module = {
+	.name = "sdl", .description = "Minimal SDL video",
+	.new = new,
 };
+
+static void vo_sdl_free(struct vo_interface *vo);
+static void alloc_colours(struct vo_interface *vo);
+static void vsync(struct vo_interface *vo);
+static void render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
+static void set_vo_cmp(struct vo_interface *vo, int mode);
 
 typedef Uint8 Pixel;
 #define RESET_PALETTE() reset_palette()
@@ -82,26 +80,39 @@ static Pixel alloc_and_map(int r, int g, int b) {
 
 #include "vo_generic_ops.c"
 
-static _Bool init(void) {
+static void *new(void) {
 	// XXX
 	// New video code assumes 640x240 layout scaled to 4x3.
 	// This old directly-rendered code does not support this!
-	return 0;
-	/*
-	vo_sdl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
-	if (set_fullscreen(xroar_ui_cfg.fullscreen))
-		return 0;
-	vsync(&vo_sdl_module);
-	return 1;
-	*/
+	if (1)
+		return NULL;
+
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = vo_sdl_free;
+	vo->update_palette = alloc_colours;
+	vo->vsync = vsync;
+	vo->render_scanline = render_scanline;
+	vo->set_fullscreen = set_fullscreen;
+	vo->set_vo_cmp = set_vo_cmp;
+
+	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
+	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+		vo_sdl_free(vo);
+		return NULL;
+	}
+	vsync(vo);
+	return vo;
 }
 
-static void shutdown(void) {
-	set_fullscreen(0);
+static void vo_sdl_free(struct vo_interface *vo) {
+	set_fullscreen(vo, 0);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
+	free(vo);
 }
 
-static int set_fullscreen(_Bool fullscreen) {
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
@@ -145,26 +156,25 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo_sdl_module.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
-	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 640;
-	vo_module->window_h = 240;
+	vo->scanline = 0;
+	vo->window_x = VDG_ACTIVE_LINE_START - 64;
+	vo->window_y = VDG_TOP_BORDER_START + 1;
+	vo->window_w = 640;
+	vo->window_h = 240;
 	sdl_window_x = sdl_window_y = 0;
 	sdl_window_w = 320;
 	sdl_window_h = 240;
 
-	alloc_colours();
+	alloc_colours(vo);
 
 	return 0;
 }
 
-static void vsync(struct vo_module *vo) {
-	(void)vo;
+static void vsync(struct vo_interface *vo) {
 	SDL_UpdateRect(screen, 0, 0, 320, 240);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	vo_module->scanline = 0;
+	vo->scanline = 0;
 }

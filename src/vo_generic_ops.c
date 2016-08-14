@@ -72,7 +72,8 @@ static uint8_t ntsc_ungamma[256];
 
 /* Allocate colours */
 
-static void alloc_colours(void) {
+static void alloc_colours(struct vo_interface *vo) {
+	(void)vo;
 #ifdef RESET_PALETTE
 	RESET_PALETTE();
 #endif
@@ -172,7 +173,7 @@ static void alloc_colours(void) {
 
 /* Render colour line using palette */
 
-static void render_scanline(struct vo_module *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_scanline(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	(void)burst;
 	(void)phase;
 	if (vo->scanline >= vo->window_y &&
@@ -193,7 +194,7 @@ static void render_scanline(struct vo_module *vo, uint8_t const *scanline_data, 
 
 /* Render artifacted colours - simple 4-colour lookup */
 
-static void render_ccr_simple(struct vo_module *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_simple(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
@@ -222,7 +223,7 @@ static void render_ccr_simple(struct vo_module *vo, uint8_t const *scanline_data
 
 /* Render artifacted colours - 5-bit lookup table */
 
-static void render_ccr_5bit(struct vo_module *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_5bit(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
@@ -254,7 +255,7 @@ static void render_ccr_5bit(struct vo_module *vo, uint8_t const *scanline_data, 
 
 /* NTSC composite video simulation */
 
-static void render_ntsc(struct vo_module *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ntsc(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	if (vo->scanline < vo->window_y ||
 	    vo->scanline >= (vo->window_y + vo->window_h)) {
 		vo->scanline++;
@@ -310,7 +311,7 @@ static void render_ntsc(struct vo_module *vo, uint8_t const *scanline_data, stru
 	pixel += NEXTLINE;
 }
 
-static void set_vo_cmp(struct vo_module *vo, int mode) {
+static void set_vo_cmp(struct vo_interface *vo, int mode) {
 	switch (mode) {
 	case VO_CMP_PALETTE:
 		vo->render_scanline = render_scanline;

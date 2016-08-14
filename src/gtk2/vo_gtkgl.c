@@ -24,6 +24,8 @@
 #include <gtk/gtk.h>
 #include <gtk/gtkgl.h>
 
+#include "xalloc.h"
+
 #include "logging.h"
 #include "module.h"
 #include "vo.h"
@@ -32,70 +34,81 @@
 
 #include "gtk2/ui_gtk2.h"
 
-static _Bool init(void);
-static void _shutdown(void);
-static void refresh(void);
-static void vsync(struct vo_module *vo);
-static void resize(unsigned int w, unsigned int h);
-static int set_fullscreen(_Bool fullscreen);
+static void *new(void);
 
-struct vo_module vo_gtkgl_module = {
-	.common = { .name = "gtkgl", .description = "GtkGLExt video",
-	            .init = init, .shutdown = _shutdown },
-	.update_palette = vo_opengl_alloc_colours,
-	.refresh = refresh,
-	.vsync = vsync,
-	.render_scanline = vo_opengl_render_scanline,
-	.resize = resize, .set_fullscreen = set_fullscreen,
-	.set_vo_cmp = vo_opengl_set_vo_cmp,
+struct module vo_gtkgl_module = {
+	.name = "gtkgl", .description = "GtkGLExt video",
+	.new = new,
 };
+
+static void vo_gtkgl_free(struct vo_interface *vo);
+static void refresh(struct vo_interface *vo);
+static void vsync(struct vo_interface *vo);
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 
-static _Bool init(void) {
+static void *new(void) {
 	gtk_gl_init(NULL, NULL);
 
 	if (gdk_gl_query_extension() != TRUE) {
 		LOG_ERROR("OpenGL not available\n");
-		return 0;
+		return NULL;
 	}
-	vo_opengl_init();
+
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = vo_gtkgl_free;
+	vo->update_palette = vo_opengl_alloc_colours;
+	vo->resize = resize;
+	vo->set_fullscreen = set_fullscreen;
+	vo->refresh = refresh;
+	vo->vsync = vsync;
+	vo->render_scanline = vo_opengl_render_scanline;
+	vo->set_vo_cmp = vo_opengl_set_vo_cmp;
+
+	vo_opengl_init(vo);
 
 	/* Configure drawing_area widget */
 	gtk_widget_set_size_request(gtk2_drawing_area, 640, 480);
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
 		LOG_ERROR("Failed to create OpenGL config\n");
-		return 0;
+		vo_gtkgl_free(vo);
+		return NULL;
 	}
 	if (!gtk_widget_set_gl_capability(gtk2_drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
 		LOG_ERROR("Failed to add OpenGL support to GTK widget\n");
-		return 0;
+		vo_gtkgl_free(vo);
+		return NULL;
 	}
 
-	g_signal_connect(gtk2_top_window, "window-state-event", G_CALLBACK(window_state), NULL);
-	g_signal_connect(gtk2_drawing_area, "configure-event", G_CALLBACK(configure), NULL);
+	g_signal_connect(gtk2_top_window, "window-state-event", G_CALLBACK(window_state), vo);
+	g_signal_connect(gtk2_drawing_area, "configure-event", G_CALLBACK(configure), vo);
 
 	/* Show top window first so that drawing area is realised to the
 	 * right size even if we then fullscreen.  */
 	gtk_widget_show(gtk2_top_window);
 	/* Set fullscreen. */
-	set_fullscreen(xroar_ui_cfg.fullscreen);
+	set_fullscreen(vo, xroar_ui_cfg.fullscreen);
 
-	vsync(&vo_gtkgl_module);
+	vsync(vo);
 
-	return 1;
+	return vo;
 }
 
-static void _shutdown(void) {
-	set_fullscreen(0);
-	vo_opengl_shutdown();
+static void vo_gtkgl_free(struct vo_interface *vo) {
+	set_fullscreen(vo, 0);
+	vo_opengl_shutdown(vo);
+	free(vo);
 }
 
-static void resize(unsigned int w, unsigned int h) {
-	if (vo_gtkgl_module.is_fullscreen) {
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
+	if (vo->is_fullscreen) {
 		return;
 	}
 	if (w < 160 || h < 120) {
@@ -117,32 +130,34 @@ static void resize(unsigned int w, unsigned int h) {
 	gtk_window_resize(GTK_WINDOW(gtk2_top_window), w, h);
 }
 
-static int set_fullscreen(_Bool fullscreen) {
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	(void)fullscreen;
 	if (fullscreen) {
 		gtk_window_fullscreen(GTK_WINDOW(gtk2_top_window));
 	} else {
 		gtk_window_unfullscreen(GTK_WINDOW(gtk2_top_window));
 	}
-	vo_gtkgl_module.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 	return 0;
 }
 
 static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer data) {
+	struct vo_interface *vo = data;
 	(void)tw;
 	(void)data;
-	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo_gtkgl_module.is_fullscreen) {
+	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo->is_fullscreen) {
 		gtk_widget_hide(gtk2_menubar);
-		vo_gtkgl_module.is_fullscreen = 1;
+		vo->is_fullscreen = 1;
 	}
-	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && vo_gtkgl_module.is_fullscreen) {
+	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && vo->is_fullscreen) {
 		gtk_widget_show(gtk2_menubar);
-		vo_gtkgl_module.is_fullscreen = 0;
+		vo->is_fullscreen = 0;
 	}
 	return 0;
 }
 
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
+	struct vo_interface *vo = data;
 	(void)event;
 	(void)data;
 
@@ -153,7 +168,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		g_assert_not_reached();
 	}
 
-	vo_opengl_set_window_size(da->allocation.width, da->allocation.height);
+	vo_opengl_set_window_size(vo, da->allocation.width, da->allocation.height);
 	gtk2_window_x = vo_opengl_x;
 	gtk2_window_y = vo_opengl_y;
 	gtk2_window_w = vo_opengl_w;
@@ -164,7 +179,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	return 0;
 }
 
-static void refresh(void) {
+static void refresh(struct vo_interface *vo) {
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -172,13 +187,13 @@ static void refresh(void) {
 		g_assert_not_reached();
 	}
 
-	vo_opengl_refresh();
+	vo_opengl_refresh(vo);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
 }
 
-static void vsync(struct vo_module *vo) {
+static void vsync(struct vo_interface *vo) {
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 

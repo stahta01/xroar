@@ -34,8 +34,8 @@ static FileReqModule * const null_filereq_module_list[] = {
 	&filereq_null_module, NULL
 };
 
-extern struct vo_module vo_null_module;
-static struct vo_module * const null_vo_module_list[] = {
+extern struct module vo_null_module;
+static struct module * const null_vo_module_list[] = {
 	&vo_null_module,
 	NULL
 };

@@ -24,6 +24,7 @@
 #include "fs.h"
 #include "logging.h"
 #include "vo.h"
+#include "xroar.h"
 
 static char *get_filename(char const * const *extensions);
 
@@ -40,14 +41,14 @@ static char *get_filename(char const * const *extensions) {
 	_Bool was_fullscreen;
 	(void)extensions;  /* unused */
 
-	was_fullscreen = vo_module->is_fullscreen;
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(0);
+	was_fullscreen = xroar_vo_interface->is_fullscreen;
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(0);
 	printf("Filename? ");
 	fflush(stdout);
 	in = fgets(fnbuf, sizeof(fnbuf), stdin);
-	if (vo_module->set_fullscreen && was_fullscreen)
-		vo_module->set_fullscreen(1);
+	if (xroar_vo_interface->set_fullscreen && was_fullscreen)
+		xroar_vo_interface->set_fullscreen(1);
 	if (!in)
 		return NULL;
 	cr = strrchr(fnbuf, '\n');

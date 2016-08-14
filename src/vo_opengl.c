@@ -85,32 +85,34 @@ static GLfloat vertices[][2] = {
 	{ 0., 0. }
 };
 
-_Bool vo_opengl_init(void) {
+_Bool vo_opengl_init(struct vo_interface *vo) {
 	screen_tex = xmalloc(640 * 240 * sizeof(Pixel));
 	window_width = 640;
 	window_height = 480;
 	vo_opengl_x = vo_opengl_y = 0;
 	filter = xroar_ui_cfg.gl_filter;
-	alloc_colours();
-	vo_module->scanline = 0;
-	vo_module->window_x = VDG_ACTIVE_LINE_START - 64;
-	vo_module->window_y = VDG_TOP_BORDER_START + 1;
-	vo_module->window_w = 640;
-	vo_module->window_h = 240;
+	alloc_colours(vo);
+	vo->scanline = 0;
+	vo->window_x = VDG_ACTIVE_LINE_START - 64;
+	vo->window_y = VDG_TOP_BORDER_START + 1;
+	vo->window_w = 640;
+	vo->window_h = 240;
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	return 1;
 }
 
-void vo_opengl_shutdown(void) {
+void vo_opengl_shutdown(struct vo_interface *vo) {
+	(void)vo;
 	glDeleteTextures(1, &texnum);
 	free(screen_tex);
 }
 
-void vo_opengl_alloc_colours(void) {
-	alloc_colours();
+void vo_opengl_alloc_colours(struct vo_interface *vo) {
+	alloc_colours(vo);
 }
 
-void vo_opengl_set_window_size(unsigned w, unsigned h) {
+void vo_opengl_set_window_size(struct vo_interface *vo, unsigned w, unsigned h) {
+	(void)vo;
 	window_width = w;
 	window_height = h;
 
@@ -181,7 +183,8 @@ void vo_opengl_set_window_size(unsigned w, unsigned h) {
 	glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
 }
 
-void vo_opengl_refresh(void) {
+void vo_opengl_refresh(struct vo_interface *vo) {
+	(void)vo;
 	glClear(GL_COLOR_BUFFER_BIT);
 	/* Draw main window */
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
@@ -191,16 +194,16 @@ void vo_opengl_refresh(void) {
 	/* Video module should now do whatever's required to swap buffers */
 }
 
-void vo_opengl_vsync(struct vo_module *vo) {
-	vo_opengl_refresh();
+void vo_opengl_vsync(struct vo_interface *vo) {
+	vo_opengl_refresh(vo);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	vo->scanline = 0;
 }
 
-void vo_opengl_render_scanline(struct vo_module *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase) {
+void vo_opengl_render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase) {
 	render_scanline(vo, data, burst, phase);
 }
 
-void vo_opengl_set_vo_cmp(struct vo_module *vo, int mode) {
+void vo_opengl_set_vo_cmp(struct vo_interface *vo, int mode) {
 	set_vo_cmp(vo, mode);
 }

@@ -19,24 +19,44 @@
 #include "config.h"
 
 #include <stdint.h>
+#include <stdlib.h>
+
+#include "xalloc.h"
 
 #include "vo.h"
 
-static void no_op(struct vo_module *vo);
-static void no_op_render(struct vo_module *vo, uint8_t const *scanline_data,
-			 struct ntsc_burst *burst, unsigned phase);
+static void *new(void);
 
-struct vo_module vo_null_module = {
-	.common = { .name = "null", .description = "No video" },
-	.vsync = no_op,
-	.render_scanline = no_op_render,
+struct module vo_null_module = {
+	.name = "null", .description = "No video",
+	.new = new,
 };
 
-static void no_op(struct vo_module *vo) {
+static void null_free(struct vo_interface *vo);
+static void no_op(struct vo_interface *vo);
+static void no_op_render(struct vo_interface *vo, uint8_t const *scanline_data,
+			 struct ntsc_burst *burst, unsigned phase);
+
+static void *new(void) {
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = null_free;
+	vo->vsync = no_op;
+	vo->render_scanline = no_op_render;
+
+	return vo;
+}
+
+static void null_free(struct vo_interface *vo) {
+	free(vo);
+}
+
+static void no_op(struct vo_interface *vo) {
 	(void)vo;
 }
 
-static void no_op_render(struct vo_module *vo, uint8_t const *scanline_data,
+static void no_op_render(struct vo_interface *vo, uint8_t const *scanline_data,
 			 struct ntsc_burst *burst, unsigned phase) {
 	(void)vo;
 	(void)scanline_data;

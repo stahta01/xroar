@@ -48,7 +48,7 @@ Dragon & CoCo 1/2 machine.
 #include "vo.h"
 #include "xroar.h"
 
-static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo,
+static struct machine *dragon_new(struct machine_config *mc, struct vo_interface *vo,
 				  struct tape_interface *ti);
 
 struct machine_module machine_dragon_module = {
@@ -82,7 +82,7 @@ struct machine_dragon {
 	struct MC6821 *PIA0, *PIA1;
 	struct MC6847 *VDG0;
 
-	struct vo_module *vo;
+	struct vo_interface *vo;
 	int frame;  // track frameskip
 
 	unsigned int ram_size;
@@ -322,7 +322,7 @@ static void pia1b_data_preread_coco64k(void *sptr);
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
-static struct machine *dragon_new(struct machine_config *mc, struct vo_module *vo,
+static struct machine *dragon_new(struct machine_config *mc, struct vo_interface *vo,
 				  struct tape_interface *ti) {
 	if (!mc)
 		return NULL;

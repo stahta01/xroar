@@ -226,9 +226,9 @@ void machine_shutdown(void) {
 	machine_modules = NULL;
 }
 
-struct machine *machine_dragon_new(struct machine_config *mc, struct vo_module *vo);
+struct machine *machine_dragon_new(struct machine_config *mc, struct vo_interface *vo);
 
-struct machine *machine_new(struct machine_config *mc, struct vo_module *vo, struct tape_interface *ti) {
+struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo, struct tape_interface *ti) {
 	if (!mc) {
 		return NULL;
 	}

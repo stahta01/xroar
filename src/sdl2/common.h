@@ -17,13 +17,13 @@ extern Uint32 sdl_windowID;
 extern unsigned sdl_window_x, sdl_window_y;
 extern unsigned sdl_window_w, sdl_window_h;
 
-extern struct vo_module vo_sdl_module;
+extern struct module vo_sdl_module;
 
 extern struct joystick_interface sdl_js_if_physical;
 extern struct joystick_interface sdl_js_if_keyboard;
 extern struct joystick_module sdl_js_internal;
 
-extern struct vo_module * const sdl_vo_module_list[];
+extern struct module * const sdl_vo_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
 void sdl_run(void);

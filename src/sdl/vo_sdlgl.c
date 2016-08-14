@@ -24,6 +24,8 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
+#include "xalloc.h"
+
 #include "logging.h"
 #include "vo.h"
 #include "vo_opengl.h"
@@ -31,29 +33,24 @@
 
 #include "sdl/common.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void refresh(void);
-static void vsync(struct vo_module *vo);
-static void resize(unsigned int w, unsigned int h);
-static int set_fullscreen(_Bool fullscreen);
+static void *new(void);
 
-struct vo_module vo_sdlgl_module = {
-	.common = { .name = "sdlgl", .description = "SDL OpenGL video",
-	            .init = init, .shutdown = shutdown },
-	.update_palette = vo_opengl_alloc_colours,
-	.refresh = refresh,
-	.vsync = vsync,
-	.render_scanline = vo_opengl_render_scanline,
-	.resize = resize, .set_fullscreen = set_fullscreen,
-	.set_vo_cmp = vo_opengl_set_vo_cmp,
+struct module vo_sdlgl_module = {
+	.name = "sdlgl", .description = "SDL OpenGL video",
+	.new = new,
 };
+
+static void vo_sdlgl_free(struct vo_interface *vo);
+static void refresh(struct vo_interface *vo);
+static void vsync(struct vo_interface *vo);
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
 
 static SDL_Surface *screen;
 static unsigned int screen_width, screen_height;
 static unsigned int window_width, window_height;
 
-static _Bool init(void) {
+static void *new(void) {
 	const SDL_VideoInfo *video_info;
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   5);
@@ -61,41 +58,56 @@ static _Bool init(void) {
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  5);
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 16);
 
-	vo_opengl_init();
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = vo_sdlgl_free;
+	vo->update_palette = vo_opengl_alloc_colours;
+	vo->refresh = refresh;
+	vo->vsync = vsync;
+	vo->render_scanline = vo_opengl_render_scanline;
+	vo->resize = resize;
+	vo->set_fullscreen = set_fullscreen;
+	vo->set_vo_cmp = vo_opengl_set_vo_cmp;
+
+	vo_opengl_init(vo);
 
 	video_info = SDL_GetVideoInfo();
 	screen_width = video_info->current_w;
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	vo_sdlgl_module.is_fullscreen = !xroar_ui_cfg.fullscreen;
+	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
 
-	if (set_fullscreen(xroar_ui_cfg.fullscreen))
-		return 0;
+	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+		vo_sdlgl_free(vo);
+		return NULL;
+	}
 
-	vsync(&vo_sdlgl_module);
-	return 1;
+	vsync(vo);
+	return vo;
 }
 
-static void shutdown(void) {
-	set_fullscreen(0);
-	vo_opengl_shutdown();
+static void vo_sdlgl_free(struct vo_interface *vo) {
+	set_fullscreen(vo, 0);
+	vo_opengl_shutdown(vo);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
+	free(vo);
 }
 
-static void resize(unsigned int w, unsigned int h) {
+static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
 	window_width = w;
 	window_height = h;
-	set_fullscreen(vo_sdlgl_module.is_fullscreen);
+	set_fullscreen(vo, vo->is_fullscreen);
 }
 
-static int set_fullscreen(_Bool fullscreen) {
+static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !vo_sdlgl_module.is_fullscreen && fullscreen) {
+	if (screen && !vo->is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(screen);
 	}
 #endif
@@ -121,7 +133,7 @@ static int set_fullscreen(_Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vo_sdlgl_module.is_fullscreen && !fullscreen) {
+	if (vo->is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -147,9 +159,9 @@ static int set_fullscreen(_Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo_sdlgl_module.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 
-	vo_opengl_set_window_size(want_width, want_height);
+	vo_opengl_set_window_size(vo, want_width, want_height);
 	sdl_window_x = vo_opengl_x;
 	sdl_window_y = vo_opengl_y;
 	sdl_window_w = vo_opengl_w;
@@ -158,12 +170,12 @@ static int set_fullscreen(_Bool fullscreen) {
 	return 0;
 }
 
-static void refresh(void) {
-	vo_opengl_refresh();
+static void refresh(struct vo_interface *vo) {
+	vo_opengl_refresh(vo);
 	SDL_GL_SwapBuffers();
 }
 
-static void vsync(struct vo_module *vo) {
+static void vsync(struct vo_interface *vo) {
 	vo_opengl_vsync(vo);
 	SDL_GL_SwapBuffers();
 }

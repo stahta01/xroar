@@ -42,7 +42,7 @@
 unsigned sdl_window_x = 0, sdl_window_y = 0;
 unsigned sdl_window_w = 320, sdl_window_h = 240;
 
-struct vo_module * const sdl_vo_module_list[] = {
+struct module * const sdl_vo_module_list[] = {
 #ifdef HAVE_SDLGL
 	&vo_sdlgl_module,
 #endif
@@ -115,8 +115,8 @@ void sdl_run(void) {
 		while (SDL_PollEvent(&event) == 1) {
 			switch(event.type) {
 			case SDL_VIDEORESIZE:
-				if (vo_module->resize) {
-					vo_module->resize(event.resize.w, event.resize.h);
+				if (xroar_vo_interface->resize) {
+					xroar_vo_interface->resize(xroar_vo_interface, event.resize.w, event.resize.h);
 				}
 				break;
 			case SDL_QUIT:

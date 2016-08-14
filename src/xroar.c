@@ -196,6 +196,8 @@ static struct xconfig_option const xroar_options[];
 _Bool xroar_noratelimit = 0;
 int xroar_frameskip = 0;
 
+struct vo_interface *xroar_vo_interface;
+
 struct machine_config *xroar_machine_config;
 struct machine *xroar_machine;
 struct tape_interface *xroar_tape_interface;
@@ -597,7 +599,7 @@ _Bool xroar_init(int argc, char **argv) {
 		sound_module_list = ui_module->sound_module_list;
 	// Select file requester, video & sound modules
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
-	vo_module = (struct vo_module *)module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
+	struct module *vo_module = module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
 	sound_module = (SoundModule *)module_select_by_arg((struct module * const *)sound_module_list, private_cfg.ao);
 
 	/* Check other command-line options */
@@ -709,7 +711,7 @@ _Bool xroar_init(int argc, char **argv) {
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	if (!module_init((struct module *)vo_module)) {
+	if (!(xroar_vo_interface = (struct vo_interface *)module_init(vo_module))) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
@@ -843,7 +845,7 @@ void xroar_shutdown(void) {
 	machine_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
-	module_shutdown((struct module *)vo_module);
+	xroar_vo_interface->free(xroar_vo_interface);
 	module_shutdown((struct module *)filereq_module);
 	module_shutdown((struct module *)ui_module);
 #ifdef WINDOWS32
@@ -885,8 +887,8 @@ static struct vdg_palette *get_machine_palette(void) {
 _Bool xroar_run(void) {
 	switch (xroar_machine->run(xroar_machine, EVENT_MS(10))) {
 	case machine_run_state_stopped:
-		if (vo_module->refresh)
-			vo_module->refresh();
+		if (xroar_vo_interface->refresh)
+			xroar_vo_interface->refresh(xroar_vo_interface);
 		break;
 	case machine_run_state_ok:
 	default:
@@ -1187,27 +1189,27 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
-	if (xroar_machine->set_vo_cmp && vo_module->set_vo_cmp) {
+	if (xroar_machine->set_vo_cmp && xroar_vo_interface->set_vo_cmp) {
 		if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_OFF) {
 			xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-			vo_module->set_vo_cmp(vo_module, VO_CMP_PALETTE);
+			xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_PALETTE);
 		} else {
 			switch (xroar_ui_cfg.ccr) {
 			default:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				vo_module->set_vo_cmp(vo_module, VO_CMP_PALETTE);
+				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_PALETTE);
 				break;
 			case UI_CCR_SIMPLE:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				vo_module->set_vo_cmp(vo_module, VO_CMP_2BIT);
+				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_2BIT);
 				break;
 			case UI_CCR_5BIT:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				vo_module->set_vo_cmp(vo_module, VO_CMP_5BIT);
+				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_5BIT);
 				break;
 			case UI_CCR_SIMULATED:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_SIMULATED);
-				vo_module->set_vo_cmp(vo_module, VO_CMP_SIMULATED);
+				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_SIMULATED);
 				break;
 			}
 		}
@@ -1254,11 +1256,11 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 			break;
 		case XROAR_NEXT:
 		default:
-			set_to = !vo_module->is_fullscreen;
+			set_to = !xroar_vo_interface->is_fullscreen;
 			break;
 	}
-	if (vo_module->set_fullscreen) {
-		vo_module->set_fullscreen(set_to);
+	if (xroar_vo_interface->set_fullscreen) {
+		xroar_vo_interface->set_fullscreen(xroar_vo_interface, set_to);
 	}
 	if (notify) {
 		ui_module->set_state(ui_tag_fullscreen, set_to, NULL);
@@ -1364,7 +1366,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		xroar_machine->free(xroar_machine);
 	}
 	xroar_machine_config = mc;
-	xroar_machine = machine_new(mc, vo_module, xroar_tape_interface);
+	xroar_machine = machine_new(mc, xroar_vo_interface, xroar_tape_interface);
 	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
@@ -1410,8 +1412,8 @@ void xroar_set_machine(_Bool notify, int id) {
 		xroar_set_cart(1, NULL);
 	}
 	xroar_vdg_palette = get_machine_palette();
-	if (vo_module->update_palette) {
-		vo_module->update_palette();
+	if (xroar_vo_interface->update_palette) {
+		xroar_vo_interface->update_palette(xroar_vo_interface);
 	}
 	xroar_hard_reset();
 	if (notify) {

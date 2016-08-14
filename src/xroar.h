@@ -18,6 +18,7 @@ struct event;
 struct machine_config;
 struct slist;
 struct vdg_palette;
+struct vo_interface;
 struct xroar_timeout;
 
 /* Convenient values for arguments to helper functions */
@@ -93,8 +94,6 @@ struct xroar_cfg {
 extern struct xroar_cfg xroar_cfg;
 extern struct ui_cfg xroar_ui_cfg;
 
-/* Emulator interface */
-
 extern struct xconfig_enum xroar_cross_colour_list[];
 
 /**************************************************************************/
@@ -109,6 +108,8 @@ extern const char *xroar_rom_path;
 #define MACHINE_EVENT_LIST xroar_machine_events
 extern struct event *xroar_ui_events;
 extern struct event *xroar_machine_events;
+
+extern struct vo_interface *xroar_vo_interface;
 
 extern struct machine_config *xroar_machine_config;
 extern struct machine *xroar_machine;

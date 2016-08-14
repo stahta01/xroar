@@ -26,23 +26,24 @@ struct ntsc_burst;
 #define VO_CMP_5BIT (2)
 #define VO_CMP_SIMULATED (3)
 
-struct vo_module {
-	struct module common;
+struct vo_interface {
 	int scanline;
 	int window_x, window_y;
 	int window_w, window_h;
-	void (* const update_palette)(void);
-	void (* const resize)(unsigned int w, unsigned int h);
-	int (* const set_fullscreen)(_Bool fullscreen);
 	_Bool is_fullscreen;
-	void (*render_scanline)(struct vo_module *vo, uint8_t const *scanline_data,
+
+	void (*free)(struct vo_interface *vo);
+
+	void (* update_palette)(struct vo_interface *vo);
+	void (* resize)(struct vo_interface *vo, unsigned int w, unsigned int h);
+	int (* set_fullscreen)(struct vo_interface *vo, _Bool fullscreen);
+	void (*render_scanline)(struct vo_interface *vo, uint8_t const *scanline_data,
 				struct ntsc_burst *burst, unsigned phase);
-	void (* const vsync)(struct vo_module *vo);
-	void (* const refresh)(void);
-	void (* const set_vo_cmp)(struct vo_module *vo, int mode);
+	void (* vsync)(struct vo_interface *vo);
+	void (* refresh)(struct vo_interface *vo);
+	void (* set_vo_cmp)(struct vo_interface *vo, int mode);
 };
 
-extern struct vo_module * const *vo_module_list;
-extern struct vo_module *vo_module;
+extern struct module * const *vo_module_list;
 
 #endif

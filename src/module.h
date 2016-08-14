@@ -14,6 +14,9 @@ struct vdisk;
 struct module {
 	const char *name;
 	const char *description;
+	// new interface
+	void *(*new)(void);
+	// old interface
 	_Bool (* const init)(void);
 	_Bool initialised;
 	void (* const shutdown)(void);

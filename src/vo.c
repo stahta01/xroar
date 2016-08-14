@@ -17,11 +17,10 @@ version.
 #include "module.h"
 #include "vo.h"
 
-extern struct vo_module vo_null_module;
-static struct vo_module * const default_vo_module_list[] = {
+extern struct module vo_null_module;
+static struct module * const default_vo_module_list[] = {
 	&vo_null_module,
 	NULL
 };
 
-struct vo_module * const *vo_module_list = default_vo_module_list;
-struct vo_module *vo_module = NULL;
+struct module * const *vo_module_list = default_vo_module_list;

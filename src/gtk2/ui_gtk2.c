@@ -58,9 +58,9 @@ static void run(void);
 unsigned gtk2_window_x = 0, gtk2_window_y = 0;
 unsigned gtk2_window_w = 640, gtk2_window_h = 480;
 
-extern struct vo_module vo_gtkgl_module;
-extern struct vo_module vo_null_module;
-static struct vo_module * const gtk2_vo_module_list[] = {
+extern struct module vo_gtkgl_module;
+extern struct module vo_null_module;
+static struct module * const gtk2_vo_module_list[] = {
 #ifdef HAVE_GTKGL
 	&vo_gtkgl_module,
 #endif
@@ -196,19 +196,19 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 }
 
 static void zoom_1_1(void) {
-	if (vo_module && vo_module->resize) {
-		vo_module->resize(320, 240);
+	if (xroar_vo_interface && xroar_vo_interface->resize) {
+		xroar_vo_interface->resize(xroar_vo_interface, 320, 240);
 	}
 }
 
 static void zoom_2_1(void) {
-	if (vo_module && vo_module->resize) {
-		vo_module->resize(640, 480);
+	if (xroar_vo_interface && xroar_vo_interface->resize) {
+		xroar_vo_interface->resize(xroar_vo_interface, 640, 480);
 	}
 }
 
 static void zoom_in(void) {
-	if (vo_module && vo_module->resize) {
+	if (xroar_vo_interface && xroar_vo_interface->resize) {
 		int xscale = gtk2_window_w / 160;
 		int yscale = gtk2_window_h / 120;
 		int scale = 1;
@@ -220,12 +220,12 @@ static void zoom_in(void) {
 			scale = xscale + 1;
 		if (scale < 1)
 			scale = 1;
-		vo_module->resize(160 * scale, 120 * scale);
+		xroar_vo_interface->resize(xroar_vo_interface, 160 * scale, 120 * scale);
 	}
 }
 
 static void zoom_out(void) {
-	if (vo_module && vo_module->resize) {
+	if (xroar_vo_interface && xroar_vo_interface->resize) {
 		int xscale = gtk2_window_w / 160;
 		int yscale = gtk2_window_h / 120;
 		int scale = 1;
@@ -237,7 +237,7 @@ static void zoom_out(void) {
 			scale = xscale - 1;
 		if (scale < 1)
 			scale = 1;
-		vo_module->resize(160 * scale, 120 * scale);
+		xroar_vo_interface->resize(xroar_vo_interface, 160 * scale, 120 * scale);
 	}
 }
 

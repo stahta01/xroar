@@ -27,6 +27,7 @@
 #include "fs.h"
 #include "logging.h"
 #include "module.h"
+#include "xroar.h"
 
 #include "gtk2/ui_gtk2.h"
 
