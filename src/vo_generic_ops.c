@@ -33,8 +33,6 @@ static Pixel vdg_colour[12];
 static Pixel artifact_5bit[2][32];
 static Pixel artifact_simple[2][4];
 
-static int clamp_uint8(int v);
-
 /* Map VDG palette entry */
 static Pixel map_palette_entry(int i) {
 	float R, G, B;
@@ -326,12 +324,4 @@ static void set_vo_cmp(struct vo_interface *vo, int mode) {
 		vo->render_scanline = render_ntsc;
 		break;
 	}
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static int clamp_uint8(int v) {
-	if (v < 0) return 0;
-	if (v > 255) return 255;
-	return v;
 }

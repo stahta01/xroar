@@ -46,4 +46,10 @@ struct vo_interface {
 
 extern struct module * const *vo_module_list;
 
+inline int clamp_uint8(int v) {
+	if (v < 0) return 0;
+	if (v > 255) return 255;
+	return v;
+}
+
 #endif

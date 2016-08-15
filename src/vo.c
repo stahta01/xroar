@@ -24,3 +24,5 @@ static struct module * const default_vo_module_list[] = {
 };
 
 struct module * const *vo_module_list = default_vo_module_list;
+
+extern inline int clamp_uint8(int v);
