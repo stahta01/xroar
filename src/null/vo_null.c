@@ -32,33 +32,34 @@ struct module vo_null_module = {
 	.new = new,
 };
 
-static void null_free(struct vo_interface *vo);
-static void no_op(struct vo_interface *vo);
-static void no_op_render(struct vo_interface *vo, uint8_t const *scanline_data,
+static void null_free(void *sptr);
+static void no_op(void *sptr);
+static void no_op_render(void *sptr, uint8_t const *scanline_data,
 			 struct ntsc_burst *burst, unsigned phase);
 
 static void *new(void) {
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
 
-	vo->free = null_free;
-	vo->vsync = no_op;
-	vo->render_scanline = no_op_render;
+	vo->free = DELEGATE_AS0(void, null_free, vo);
+	vo->vsync = DELEGATE_AS0(void, no_op, vo);
+	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, no_op_render, vo);
 
 	return vo;
 }
 
-static void null_free(struct vo_interface *vo) {
+static void null_free(void *sptr) {
+	struct vo_interface *vo = sptr;
 	free(vo);
 }
 
-static void no_op(struct vo_interface *vo) {
-	(void)vo;
+static void no_op(void *sptr) {
+	(void)sptr;
 }
 
-static void no_op_render(struct vo_interface *vo, uint8_t const *scanline_data,
+static void no_op_render(void *sptr, uint8_t const *scanline_data,
 			 struct ntsc_burst *burst, unsigned phase) {
-	(void)vo;
+	(void)sptr;
 	(void)scanline_data;
 	(void)burst;
 	(void)phase;

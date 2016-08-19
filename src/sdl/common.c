@@ -115,9 +115,7 @@ void sdl_run(void) {
 		while (SDL_PollEvent(&event) == 1) {
 			switch(event.type) {
 			case SDL_VIDEORESIZE:
-				if (xroar_vo_interface->resize) {
-					xroar_vo_interface->resize(xroar_vo_interface, event.resize.w, event.resize.h);
-				}
+				DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.resize.w, event.resize.h);
 				break;
 			case SDL_QUIT:
 				xroar_quit();

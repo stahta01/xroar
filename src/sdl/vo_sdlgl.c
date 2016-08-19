@@ -40,11 +40,14 @@ struct module vo_sdlgl_module = {
 	.new = new,
 };
 
-static void vo_sdlgl_free(struct vo_interface *vo);
-static void refresh(struct vo_interface *vo);
-static void vsync(struct vo_interface *vo);
-static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
+static void vo_sdlgl_free(void *sptr);
+static void refresh(void *sptr);
+static void vsync(void *sptr);
+static void resize(void *sptr, unsigned int w, unsigned int h);
+static int set_fullscreen(void *sptr, _Bool fullscreen);
+static void vo_sdlgl_set_vo_cmp(void *sptr, int mode);
+
+struct vo_interface *vogl;
 
 static SDL_Surface *screen;
 static unsigned int screen_width, screen_height;
@@ -58,19 +61,22 @@ static void *new(void) {
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  5);
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 16);
 
+	vogl = vo_opengl_new();
+	if (!vogl) {
+		LOG_ERROR("Failed to create OpenGL context\n");
+		return NULL;
+	}
+
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
 
-	vo->free = vo_sdlgl_free;
-	vo->update_palette = vo_opengl_alloc_colours;
-	vo->refresh = refresh;
-	vo->vsync = vsync;
-	vo->render_scanline = vo_opengl_render_scanline;
-	vo->resize = resize;
-	vo->set_fullscreen = set_fullscreen;
-	vo->set_vo_cmp = vo_opengl_set_vo_cmp;
-
-	vo_opengl_init(vo);
+	vo->free = DELEGATE_AS0(void, vo_sdlgl_free, vo);
+	vo->update_palette = vogl->update_palette;
+	vo->refresh = DELEGATE_AS0(void, refresh, vo);
+	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_sdlgl_set_vo_cmp, vo);
 
 	video_info = SDL_GetVideoInfo();
 	screen_width = video_info->current_w;
@@ -88,20 +94,23 @@ static void *new(void) {
 	return vo;
 }
 
-static void vo_sdlgl_free(struct vo_interface *vo) {
+static void vo_sdlgl_free(void *sptr) {
+	struct vo_interface *vo = sptr;
 	set_fullscreen(vo, 0);
-	vo_opengl_shutdown(vo);
+	DELEGATE_CALL0(vogl->free);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
 	free(vo);
 }
 
-static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
+static void resize(void *sptr, unsigned int w, unsigned int h) {
+	struct vo_interface *vo = sptr;
 	window_width = w;
 	window_height = h;
 	set_fullscreen(vo, vo->is_fullscreen);
 }
 
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
+static int set_fullscreen(void *sptr, _Bool fullscreen) {
+	struct vo_interface *vo = sptr;
 	unsigned int want_width, want_height;
 
 #ifdef WINDOWS32
@@ -161,7 +170,7 @@ static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 
 	vo->is_fullscreen = fullscreen;
 
-	vo_opengl_set_window_size(vo, want_width, want_height);
+	DELEGATE_CALL2(vogl->resize, want_width, want_height);
 	sdl_window_x = vo_opengl_x;
 	sdl_window_y = vo_opengl_y;
 	sdl_window_w = vo_opengl_w;
@@ -170,12 +179,22 @@ static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	return 0;
 }
 
-static void refresh(struct vo_interface *vo) {
-	vo_opengl_refresh(vo);
+static void refresh(void *sptr) {
+	struct vo_interface *vo = sptr;
+	(void)vo;
+	DELEGATE_CALL0(vogl->refresh);
 	SDL_GL_SwapBuffers();
 }
 
-static void vsync(struct vo_interface *vo) {
-	vo_opengl_vsync(vo);
+static void vsync(void *sptr) {
+	struct vo_interface *vo = sptr;
+	(void)vo;
+	DELEGATE_CALL0(vogl->vsync);
 	SDL_GL_SwapBuffers();
+}
+
+static void vo_sdlgl_set_vo_cmp(void *sptr, int mode) {
+	struct vo_interface *vo = sptr;
+	DELEGATE_CALL1(vogl->set_vo_cmp, mode);
+	vo->render_scanline = vogl->render_scanline;
 }

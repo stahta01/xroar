@@ -40,12 +40,12 @@ struct module vo_sdl_module = {
 	.new = new,
 };
 
-static void vo_sdl_free(struct vo_interface *vo);
-static void alloc_colours(struct vo_interface *vo);
-static void vsync(struct vo_interface *vo);
-static void render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
-static void set_vo_cmp(struct vo_interface *vo, int mode);
+static void vo_sdl_free(void *sptr);
+static void alloc_colours(void *sptr);
+static void vsync(void *sptr);
+static void render_scanline(void *sptr, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
+static int set_fullscreen(void *sptr, _Bool fullscreen);
+static void set_vo_cmp(void *sptr, int mode);
 
 typedef Uint8 Pixel;
 #define RESET_PALETTE() reset_palette()
@@ -90,12 +90,12 @@ static void *new(void) {
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
 
-	vo->free = vo_sdl_free;
-	vo->update_palette = alloc_colours;
-	vo->vsync = vsync;
-	vo->render_scanline = render_scanline;
-	vo->set_fullscreen = set_fullscreen;
-	vo->set_vo_cmp = set_vo_cmp;
+	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
+	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
+	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
 	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
 	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
@@ -106,13 +106,15 @@ static void *new(void) {
 	return vo;
 }
 
-static void vo_sdl_free(struct vo_interface *vo) {
+static void vo_sdl_free(void *sptr) {
+	struct vo_interface *vo = sptr;
 	set_fullscreen(vo, 0);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
 	free(vo);
 }
 
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
+static int set_fullscreen(void *sptr, _Bool fullscreen) {
+	struct vo_interface *vo = sptr;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
@@ -173,7 +175,8 @@ static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
 	return 0;
 }
 
-static void vsync(struct vo_interface *vo) {
+static void vsync(void *sptr) {
+	struct vo_interface *vo = sptr;
 	SDL_UpdateRect(screen, 0, 0, 320, 240);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	vo->scanline = 0;

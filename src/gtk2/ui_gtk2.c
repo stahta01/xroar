@@ -196,49 +196,49 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 }
 
 static void zoom_1_1(void) {
-	if (xroar_vo_interface && xroar_vo_interface->resize) {
-		xroar_vo_interface->resize(xroar_vo_interface, 320, 240);
-	}
+	if (!xroar_vo_interface)
+		return;
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 320, 240);
 }
 
 static void zoom_2_1(void) {
-	if (xroar_vo_interface && xroar_vo_interface->resize) {
-		xroar_vo_interface->resize(xroar_vo_interface, 640, 480);
-	}
+	if (!xroar_vo_interface)
+		return;
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 640, 480);
 }
 
 static void zoom_in(void) {
-	if (xroar_vo_interface && xroar_vo_interface->resize) {
-		int xscale = gtk2_window_w / 160;
-		int yscale = gtk2_window_h / 120;
-		int scale = 1;
-		if (xscale < yscale)
-			scale = yscale;
-		else if (xscale > yscale)
-			scale = xscale;
-		else
-			scale = xscale + 1;
-		if (scale < 1)
-			scale = 1;
-		xroar_vo_interface->resize(xroar_vo_interface, 160 * scale, 120 * scale);
-	}
+	if (!xroar_vo_interface)
+		return;
+	int xscale = gtk2_window_w / 160;
+	int yscale = gtk2_window_h / 120;
+	int scale = 1;
+	if (xscale < yscale)
+		scale = yscale;
+	else if (xscale > yscale)
+		scale = xscale;
+	else
+		scale = xscale + 1;
+	if (scale < 1)
+		scale = 1;
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160 * scale, 120 * scale);
 }
 
 static void zoom_out(void) {
-	if (xroar_vo_interface && xroar_vo_interface->resize) {
-		int xscale = gtk2_window_w / 160;
-		int yscale = gtk2_window_h / 120;
-		int scale = 1;
-		if (xscale < yscale)
-			scale = xscale;
-		else if (xscale > yscale)
-			scale = yscale;
-		else
-			scale = xscale - 1;
-		if (scale < 1)
-			scale = 1;
-		xroar_vo_interface->resize(xroar_vo_interface, 160 * scale, 120 * scale);
-	}
+	if (!xroar_vo_interface)
+		return;
+	int xscale = gtk2_window_w / 160;
+	int yscale = gtk2_window_h / 120;
+	int scale = 1;
+	if (xscale < yscale)
+		scale = xscale;
+	else if (xscale > yscale)
+		scale = yscale;
+	else
+		scale = xscale - 1;
+	if (scale < 1)
+		scale = 1;
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160 * scale, 120 * scale);
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {

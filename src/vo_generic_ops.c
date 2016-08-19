@@ -70,8 +70,8 @@ static uint8_t ntsc_ungamma[256];
 
 /* Allocate colours */
 
-static void alloc_colours(struct vo_interface *vo) {
-	(void)vo;
+static void alloc_colours(void *sptr) {
+	(void)sptr;
 #ifdef RESET_PALETTE
 	RESET_PALETTE();
 #endif
@@ -171,7 +171,8 @@ static void alloc_colours(struct vo_interface *vo) {
 
 /* Render colour line using palette */
 
-static void render_scanline(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_scanline(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+	struct vo_interface *vo = sptr;
 	(void)burst;
 	(void)phase;
 	if (vo->scanline >= vo->window_y &&
@@ -192,7 +193,8 @@ static void render_scanline(struct vo_interface *vo, uint8_t const *scanline_dat
 
 /* Render artifacted colours - simple 4-colour lookup */
 
-static void render_ccr_simple(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+	struct vo_interface *vo = sptr;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
@@ -221,7 +223,8 @@ static void render_ccr_simple(struct vo_interface *vo, uint8_t const *scanline_d
 
 /* Render artifacted colours - 5-bit lookup table */
 
-static void render_ccr_5bit(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+	struct vo_interface *vo = sptr;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
@@ -253,7 +256,8 @@ static void render_ccr_5bit(struct vo_interface *vo, uint8_t const *scanline_dat
 
 /* NTSC composite video simulation */
 
-static void render_ntsc(struct vo_interface *vo, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+	struct vo_interface *vo = sptr;
 	if (vo->scanline < vo->window_y ||
 	    vo->scanline >= (vo->window_y + vo->window_h)) {
 		vo->scanline++;
@@ -309,19 +313,20 @@ static void render_ntsc(struct vo_interface *vo, uint8_t const *scanline_data, s
 	pixel += NEXTLINE;
 }
 
-static void set_vo_cmp(struct vo_interface *vo, int mode) {
+static void set_vo_cmp(void *sptr, int mode) {
+	struct vo_interface *vo = sptr;
 	switch (mode) {
 	case VO_CMP_PALETTE:
-		vo->render_scanline = render_scanline;
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
 		break;
 	case VO_CMP_2BIT:
-		vo->render_scanline = render_ccr_simple;
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_simple, vo);
 		break;
 	case VO_CMP_5BIT:
-		vo->render_scanline = render_ccr_5bit;
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_5bit, vo);
 		break;
 	case VO_CMP_SIMULATED:
-		vo->render_scanline = render_ntsc;
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ntsc, vo);
 		break;
 	}
 }

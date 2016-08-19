@@ -85,7 +85,24 @@ static GLfloat vertices[][2] = {
 	{ 0., 0. }
 };
 
-_Bool vo_opengl_init(struct vo_interface *vo) {
+static void vo_opengl_free(void *sptr);
+static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h);
+static void vo_opengl_refresh(void *sptr);
+static void vo_opengl_vsync(void *sptr);
+static void vo_opengl_set_vo_cmp(void *sptr, int mode);
+
+struct vo_interface *vo_opengl_new(void) {
+	struct vo_interface *vo = xmalloc(sizeof(*vo));
+	*vo = (struct vo_interface){0};
+
+	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
+	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
+	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
+	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
+	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
+	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_opengl_set_vo_cmp, vo);
+
 	screen_tex = xmalloc(640 * 240 * sizeof(Pixel));
 	window_width = 640;
 	window_height = 480;
@@ -98,20 +115,18 @@ _Bool vo_opengl_init(struct vo_interface *vo) {
 	vo->window_w = 640;
 	vo->window_h = 240;
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
-	return 1;
+	return vo;
 }
 
-void vo_opengl_shutdown(struct vo_interface *vo) {
-	(void)vo;
+static void vo_opengl_free(void *sptr) {
+	struct vo_interface *vo = sptr;
 	glDeleteTextures(1, &texnum);
 	free(screen_tex);
+	free(vo);
 }
 
-void vo_opengl_alloc_colours(struct vo_interface *vo) {
-	alloc_colours(vo);
-}
-
-void vo_opengl_set_window_size(struct vo_interface *vo, unsigned w, unsigned h) {
+static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
+	struct vo_interface *vo = sptr;
 	(void)vo;
 	window_width = w;
 	window_height = h;
@@ -183,7 +198,8 @@ void vo_opengl_set_window_size(struct vo_interface *vo, unsigned w, unsigned h) 
 	glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
 }
 
-void vo_opengl_refresh(struct vo_interface *vo) {
+static void vo_opengl_refresh(void *sptr) {
+	struct vo_interface *vo = sptr;
 	(void)vo;
 	glClear(GL_COLOR_BUFFER_BIT);
 	/* Draw main window */
@@ -194,16 +210,14 @@ void vo_opengl_refresh(struct vo_interface *vo) {
 	/* Video module should now do whatever's required to swap buffers */
 }
 
-void vo_opengl_vsync(struct vo_interface *vo) {
+static void vo_opengl_vsync(void *sptr) {
+	struct vo_interface *vo = sptr;
 	vo_opengl_refresh(vo);
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	vo->scanline = 0;
 }
 
-void vo_opengl_render_scanline(struct vo_interface *vo, uint8_t const *data, struct ntsc_burst *burst, unsigned phase) {
-	render_scanline(vo, data, burst, phase);
-}
-
-void vo_opengl_set_vo_cmp(struct vo_interface *vo, int mode) {
+static void vo_opengl_set_vo_cmp(void *sptr, int mode) {
+	struct vo_interface *vo = sptr;
 	set_vo_cmp(vo, mode);
 }

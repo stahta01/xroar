@@ -41,11 +41,14 @@ struct module vo_gtkgl_module = {
 	.new = new,
 };
 
-static void vo_gtkgl_free(struct vo_interface *vo);
-static void refresh(struct vo_interface *vo);
-static void vsync(struct vo_interface *vo);
-static void resize(struct vo_interface *vo, unsigned int w, unsigned int h);
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen);
+static void vo_gtkgl_free(void *sptr);
+static void refresh(void *sptr);
+static void vsync(void *sptr);
+static void resize(void *sptr, unsigned int w, unsigned int h);
+static int set_fullscreen(void *sptr, _Bool fullscreen);
+static void vo_gtkgl_set_vo_cmp(void *sptr, int mode);
+
+struct vo_interface *vogl;
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 
@@ -59,19 +62,22 @@ static void *new(void) {
 		return NULL;
 	}
 
+	vogl = vo_opengl_new();
+	if (!vogl) {
+		LOG_ERROR("Failed to create OpenGL context\n");
+		return NULL;
+	}
+
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
 
-	vo->free = vo_gtkgl_free;
-	vo->update_palette = vo_opengl_alloc_colours;
-	vo->resize = resize;
-	vo->set_fullscreen = set_fullscreen;
-	vo->refresh = refresh;
-	vo->vsync = vsync;
-	vo->render_scanline = vo_opengl_render_scanline;
-	vo->set_vo_cmp = vo_opengl_set_vo_cmp;
-
-	vo_opengl_init(vo);
+	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
+	vo->update_palette = vogl->update_palette;
+	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
+	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->refresh = DELEGATE_AS0(void, refresh, vo);
+	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_gtkgl_set_vo_cmp, vo);
 
 	/* Configure drawing_area widget */
 	gtk_widget_set_size_request(gtk2_drawing_area, 640, 480);
@@ -101,13 +107,15 @@ static void *new(void) {
 	return vo;
 }
 
-static void vo_gtkgl_free(struct vo_interface *vo) {
+static void vo_gtkgl_free(void *sptr) {
+	struct vo_interface *vo = sptr;
 	set_fullscreen(vo, 0);
-	vo_opengl_shutdown(vo);
+	DELEGATE_CALL0(vogl->free);
 	free(vo);
 }
 
-static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
+static void resize(void *sptr, unsigned int w, unsigned int h) {
+	struct vo_interface *vo = sptr;
 	if (vo->is_fullscreen) {
 		return;
 	}
@@ -130,7 +138,8 @@ static void resize(struct vo_interface *vo, unsigned int w, unsigned int h) {
 	gtk_window_resize(GTK_WINDOW(gtk2_top_window), w, h);
 }
 
-static int set_fullscreen(struct vo_interface *vo, _Bool fullscreen) {
+static int set_fullscreen(void *sptr, _Bool fullscreen) {
+	struct vo_interface *vo = sptr;
 	(void)fullscreen;
 	if (fullscreen) {
 		gtk_window_fullscreen(GTK_WINDOW(gtk2_top_window));
@@ -158,6 +167,7 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
 	struct vo_interface *vo = data;
+	(void)vo;
 	(void)event;
 	(void)data;
 
@@ -168,7 +178,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		g_assert_not_reached();
 	}
 
-	vo_opengl_set_window_size(vo, da->allocation.width, da->allocation.height);
+	DELEGATE_CALL2(vogl->resize, da->allocation.width, da->allocation.height);
 	gtk2_window_x = vo_opengl_x;
 	gtk2_window_y = vo_opengl_y;
 	gtk2_window_w = vo_opengl_w;
@@ -179,7 +189,9 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	return 0;
 }
 
-static void refresh(struct vo_interface *vo) {
+static void refresh(void *sptr) {
+	struct vo_interface *vo = sptr;
+	(void)vo;
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -187,13 +199,15 @@ static void refresh(struct vo_interface *vo) {
 		g_assert_not_reached();
 	}
 
-	vo_opengl_refresh(vo);
+	DELEGATE_CALL0(vogl->refresh);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
 }
 
-static void vsync(struct vo_interface *vo) {
+static void vsync(void *sptr) {
+	struct vo_interface *vo = sptr;
+	(void)vo;
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -201,8 +215,14 @@ static void vsync(struct vo_interface *vo) {
 		g_assert_not_reached();
 	}
 
-	vo_opengl_vsync(vo);
+	DELEGATE_CALL0(vogl->vsync);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
+}
+
+static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
+	struct vo_interface *vo = sptr;
+	DELEGATE_CALL1(vogl->set_vo_cmp, mode);
+	vo->render_scanline = vogl->render_scanline;
 }

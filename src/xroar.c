@@ -845,7 +845,9 @@ void xroar_shutdown(void) {
 	machine_shutdown();
 	xroar_machine_config = NULL;
 	module_shutdown((struct module *)sound_module);
-	xroar_vo_interface->free(xroar_vo_interface);
+	if (xroar_vo_interface) {
+		DELEGATE_SAFE_CALL0(xroar_vo_interface->free);
+	}
 	module_shutdown((struct module *)filereq_module);
 	module_shutdown((struct module *)ui_module);
 #ifdef WINDOWS32
@@ -887,8 +889,7 @@ static struct vdg_palette *get_machine_palette(void) {
 _Bool xroar_run(void) {
 	switch (xroar_machine->run(xroar_machine, EVENT_MS(10))) {
 	case machine_run_state_stopped:
-		if (xroar_vo_interface->refresh)
-			xroar_vo_interface->refresh(xroar_vo_interface);
+		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
 		break;
 	case machine_run_state_ok:
 	default:
@@ -1189,27 +1190,27 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
-	if (xroar_machine->set_vo_cmp && xroar_vo_interface->set_vo_cmp) {
+	if (xroar_machine->set_vo_cmp) {
 		if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_OFF) {
 			xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-			xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_PALETTE);
+			DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
 			switch (xroar_ui_cfg.ccr) {
 			default:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_PALETTE);
+				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 				break;
 			case UI_CCR_SIMPLE:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_2BIT);
+				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
 				break;
 			case UI_CCR_5BIT:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
-				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_5BIT);
+				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
 				break;
 			case UI_CCR_SIMULATED:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_SIMULATED);
-				xroar_vo_interface->set_vo_cmp(xroar_vo_interface, VO_CMP_SIMULATED);
+				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
 				break;
 			}
 		}
@@ -1259,9 +1260,7 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 			set_to = !xroar_vo_interface->is_fullscreen;
 			break;
 	}
-	if (xroar_vo_interface->set_fullscreen) {
-		xroar_vo_interface->set_fullscreen(xroar_vo_interface, set_to);
-	}
+	DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, set_to);
 	if (notify) {
 		ui_module->set_state(ui_tag_fullscreen, set_to, NULL);
 	}
@@ -1412,9 +1411,7 @@ void xroar_set_machine(_Bool notify, int id) {
 		xroar_set_cart(1, NULL);
 	}
 	xroar_vdg_palette = get_machine_palette();
-	if (xroar_vo_interface->update_palette) {
-		xroar_vo_interface->update_palette(xroar_vo_interface);
-	}
+	DELEGATE_SAFE_CALL0(xroar_vo_interface->update_palette);
 	xroar_hard_reset();
 	if (notify) {
 		ui_module->set_state(ui_tag_machine, new, NULL);

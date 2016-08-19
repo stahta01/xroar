@@ -112,9 +112,7 @@ void sdl_run(void) {
 			case SDL_WINDOWEVENT:
 				switch(event.window.event) {
 				case SDL_WINDOWEVENT_RESIZED:
-					if (xroar_vo_interface->resize) {
-						xroar_vo_interface->resize(xroar_vo_interface, event.window.data1, event.window.data2);
-					}
+					DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.window.data1, event.window.data2);
 					break;
 				}
 				break;
@@ -226,9 +224,7 @@ void sdl_zoom_in(void) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
-	if (xroar_vo_interface->resize) {
-		xroar_vo_interface->resize(xroar_vo_interface, 160*scale, 120*scale);
-	}
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }
 
 void sdl_zoom_out(void) {
@@ -244,7 +240,5 @@ void sdl_zoom_out(void) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
-	if (xroar_vo_interface->resize) {
-		xroar_vo_interface->resize(xroar_vo_interface, 160*scale, 120*scale);
-	}
+	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }
