@@ -498,7 +498,30 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 	uint8_t csum = 0;
 	char in_byte;
 	int tmp;
-	while (recv(gip->sockfd, &in_byte, 1, 0) > 0) {
+
+	while (1) {
+
+		// Another Windows workaround - recv() not a cancellation point?
+		while (1) {
+			fd_set fds;
+			struct timeval tv;
+			FD_ZERO(&fds);
+			FD_SET(gip->sockfd, &fds);
+			tv.tv_sec = 0;
+			tv.tv_usec = 200000;
+			pthread_testcancel();
+			int r = select(gip->sockfd+1, &fds, NULL, NULL, &tv);
+			if (r > 0) {
+				break;
+			}
+		}
+
+		int r = recv(gip->sockfd, &in_byte, 1, 0);
+		if (r < 0)
+			return -GDBE_READ_ERROR;
+		if (r == 0)
+			continue;
+
 		switch (state) {
 		case packet_wait:
 			if (in_byte == '$') {
@@ -549,7 +572,9 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 			buffer[length] = 0;
 			return length;
 		}
+
 	}
+
 	return -GDBE_READ_ERROR;
 }
 
