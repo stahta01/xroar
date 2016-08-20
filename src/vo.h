@@ -30,6 +30,11 @@ struct ntsc_burst;
 
 typedef DELEGATE_S3(void, uint8_t const *, struct ntsc_burst *, unsigned) DELEGATE_T3(void, uint8cp, ntscburst, unsigned);
 
+struct vo_rect {
+	int x, y;
+	unsigned w, h;
+};
+
 struct vo_interface {
 	int scanline;
 	int window_x, window_y;
