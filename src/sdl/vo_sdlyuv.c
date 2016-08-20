@@ -50,11 +50,8 @@ static void set_vo_cmp(void *sptr, int mode);
 
 typedef Uint32 Pixel;
 #define MAPCOLOUR(r,g,b) map_colour((r), (g), (b))
-#define VIDEO_SCREENBASE ((Pixel *)overlay->pixels[0])
 #define XSTEP 1
 #define NEXTLINE 0
-#define VIDEO_TOPLEFT (VIDEO_SCREENBASE)
-#define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE SDL_LockYUVOverlay(overlay)
 #define UNLOCK_SURFACE SDL_UnlockYUVOverlay(overlay)
 #define VIDEO_MODULE_NAME vo_sdlyuv_module
@@ -272,6 +269,6 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 static void vsync(void *sptr) {
 	struct vo_interface *vo = sptr;
 	SDL_DisplayYUVOverlay(overlay, &dstrect);
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = (Pixel *)overlay->pixels[0];
 	vo->scanline = 0;
 }

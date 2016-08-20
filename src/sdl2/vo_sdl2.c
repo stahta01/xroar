@@ -49,13 +49,9 @@ static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_vo_cmp(void *sptr, int mode);
 
 typedef uint16_t Pixel;
-#define RESET_PALETTE()
 #define MAPCOLOUR(r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
-#define VIDEO_SCREENBASE (pixels)
 #define XSTEP 1
 #define NEXTLINE 0
-#define VIDEO_TOPLEFT (VIDEO_SCREENBASE)
-#define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE
 #define UNLOCK_SURFACE
 #define VIDEO_MODULE_NAME vo_sdl_module
@@ -64,7 +60,7 @@ SDL_Window *sdl_window = NULL;
 Uint32 sdl_windowID = 0;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
-static uint16_t *pixels = NULL;
+static uint16_t *texture_pixels = NULL;
 
 #include "vo_generic_ops.c"
 
@@ -73,9 +69,9 @@ static void destroy_window(void);
 static void destroy_renderer(void);
 
 static void *new(void) {
-	pixels = xmalloc(640 * 240 * sizeof(Pixel));
+	texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
 	for (int i = 0; i < 640 * 240; i++)
-		pixels[i] = MAPCOLOUR(0,0,0);
+		texture_pixels[i] = MAPCOLOUR(0,0,0);
 
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
@@ -248,9 +244,9 @@ static void destroy_renderer(void) {
 
 static void vo_sdl_free(void *sptr) {
 	struct vo_interface *vo = sptr;
-	if (pixels) {
-		free(pixels);
-		pixels = NULL;
+	if (texture_pixels) {
+		free(texture_pixels);
+		texture_pixels = NULL;
 	}
 	destroy_renderer();
 	destroy_window();
@@ -259,10 +255,10 @@ static void vo_sdl_free(void *sptr) {
 
 static void vsync(void *sptr) {
 	struct vo_interface *vo = sptr;
-	SDL_UpdateTexture(texture, NULL, pixels, 640 * sizeof(Pixel));
+	SDL_UpdateTexture(texture, NULL, texture_pixels, 640 * sizeof(Pixel));
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = texture_pixels;
 	vo->scanline = 0;
 }

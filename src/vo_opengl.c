@@ -51,20 +51,16 @@
 
 typedef uint16_t Pixel;
 #define MAPCOLOUR(r,g,b) ( (((r) & 0xf8) << 8) | (((g) & 0xfc) << 3) | (((b) & 0xf8) >> 3) )
-#define VIDEO_SCREENBASE (screen_tex)
 #define XSTEP 1
 #define NEXTLINE 0
-#define VIDEO_TOPLEFT VIDEO_SCREENBASE
-#define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE
 #define UNLOCK_SURFACE
-
-static Pixel *screen_tex;
 
 #include "vo_generic_ops.c"
 
 /*** ***/
 
+static Pixel *texture_pixels;
 static unsigned window_width, window_height;
 static GLuint texnum = 0;
 static int vo_opengl_x, vo_opengl_y;
@@ -103,7 +99,7 @@ struct vo_interface *vo_opengl_new(void) {
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_opengl_set_vo_cmp, vo);
 
-	screen_tex = xmalloc(640 * 240 * sizeof(Pixel));
+	texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
 	window_width = 640;
 	window_height = 480;
 	vo_opengl_x = vo_opengl_y = 0;
@@ -114,7 +110,7 @@ struct vo_interface *vo_opengl_new(void) {
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
 	vo->window_h = 240;
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = texture_pixels;
 	return vo;
 }
 
@@ -129,7 +125,7 @@ void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp) {
 static void vo_opengl_free(void *sptr) {
 	struct vo_interface *vo = sptr;
 	glDeleteTextures(1, &texnum);
-	free(screen_tex);
+	free(texture_pixels);
 	free(vo);
 }
 
@@ -183,11 +179,11 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	/* Is there a better way of clearing the texture? */
-	memset(screen_tex, 0, 1024 * sizeof(Pixel));
+	memset(texture_pixels, 0, 1024 * sizeof(Pixel));
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 640,   0,    1, 256,
-			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, screen_tex);
+			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, texture_pixels);
 	glTexSubImage2D(GL_TEXTURE_2D, 0,   0, 240, 1024,   1,
-			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, screen_tex);
+			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, texture_pixels);
 
 	glColor4f(1.0, 1.0, 1.0, 1.0);
 
@@ -213,7 +209,7 @@ static void vo_opengl_refresh(void *sptr) {
 	/* Draw main window */
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
 			640, 240, GL_RGB,
-			GL_UNSIGNED_SHORT_5_6_5, screen_tex);
+			GL_UNSIGNED_SHORT_5_6_5, texture_pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	/* Video module should now do whatever's required to swap buffers */
 }
@@ -221,7 +217,7 @@ static void vo_opengl_refresh(void *sptr) {
 static void vo_opengl_vsync(void *sptr) {
 	struct vo_interface *vo = sptr;
 	vo_opengl_refresh(vo);
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = texture_pixels;
 	vo->scanline = 0;
 }
 

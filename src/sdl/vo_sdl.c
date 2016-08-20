@@ -50,11 +50,8 @@ static void set_vo_cmp(void *sptr, int mode);
 typedef Uint8 Pixel;
 #define RESET_PALETTE() reset_palette()
 #define MAPCOLOUR(r,g,b) alloc_and_map(r, g, b)
-#define VIDEO_SCREENBASE ((Pixel *)screen->pixels)
 #define XSTEP 1
 #define NEXTLINE 0
-#define VIDEO_TOPLEFT (VIDEO_SCREENBASE)
-#define VIDEO_VIEWPORT_YOFFSET (0)
 #define LOCK_SURFACE SDL_LockSurface(screen)
 #define UNLOCK_SURFACE SDL_UnlockSurface(screen)
 #define VIDEO_MODULE_NAME vo_sdl_module
@@ -160,7 +157,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	vo->is_fullscreen = fullscreen;
 
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = (Pixel *)screen->pixels;
 	vo->scanline = 0;
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
@@ -178,6 +175,6 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 static void vsync(void *sptr) {
 	struct vo_interface *vo = sptr;
 	SDL_UpdateRect(screen, 0, 0, 320, 240);
-	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
+	pixel = (Pixel *)screen->pixels;
 	vo->scanline = 0;
 }
