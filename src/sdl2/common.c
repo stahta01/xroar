@@ -45,8 +45,12 @@ extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
 extern inline void sdl_os_fix_keyboard_event(SDL_Event *ev);
 extern inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym);
 
-unsigned sdl_window_x = 0, sdl_window_y = 0;
-unsigned sdl_window_w = 320, sdl_window_h = 240;
+struct vo_rect sdl_display = {
+	.x = 0, .y = 0, .w = 320, .h = 240,
+};
+
+SDL_Window *sdl_window = NULL;
+Uint32 sdl_windowID = 0;
 
 struct module * const sdl_vo_module_list[] = {
 	&vo_sdl_module,
@@ -212,8 +216,8 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_zoom_in(void) {
-	int xscale = sdl_window_w / 160;
-	int yscale = sdl_window_h / 120;
+	int xscale = sdl_display.w / 160;
+	int yscale = sdl_display.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -228,8 +232,8 @@ void sdl_zoom_in(void) {
 }
 
 void sdl_zoom_out(void) {
-	int xscale = sdl_window_w / 160;
-	int yscale = sdl_window_h / 120;
+	int xscale = sdl_display.w / 160;
+	int yscale = sdl_display.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = xscale;

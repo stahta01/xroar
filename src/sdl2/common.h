@@ -14,8 +14,7 @@ struct joystick_module;
 extern SDL_Window *sdl_window;
 extern Uint32 sdl_windowID;
 
-extern unsigned sdl_window_x, sdl_window_y;
-extern unsigned sdl_window_w, sdl_window_h;
+extern struct vo_rect sdl_display;
 
 extern struct module vo_sdl_module;
 

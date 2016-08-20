@@ -40,31 +40,39 @@ struct module vo_sdlyuv_module = {
 	.new = new,
 };
 
-static void vo_sdlyuv_free(void *sptr);
-static void alloc_colours(void *sptr);
-static void vsync(void *sptr);
-static void render_scanline(void *sptr, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static void resize(void *sptr, unsigned int w, unsigned int h);
-static int set_fullscreen(void *sptr, _Bool fullscreen);
-static void set_vo_cmp(void *sptr, int mode);
+/*** ***/
+
+static Uint32 map_colour(void *sptr, int r, int g, int b);
+static void lock_surface(void *sptr);
+static void unlock_surface(void *sptr);
 
 typedef Uint32 Pixel;
-#define MAPCOLOUR(r,g,b) map_colour((r), (g), (b))
+#define MAPCOLOUR(vo,r,g,b) map_colour((vo), (r), (g), (b))
 #define XSTEP 1
 #define NEXTLINE 0
-#define LOCK_SURFACE SDL_LockYUVOverlay(overlay)
-#define UNLOCK_SURFACE SDL_UnlockYUVOverlay(overlay)
+#define LOCK_SURFACE(vo) lock_surface(vo)
+#define UNLOCK_SURFACE(vo) unlock_surface(vo)
 #define VIDEO_MODULE_NAME vo_sdlyuv_module
 
-static SDL_Surface *screen;
-static SDL_Overlay *overlay;
-static unsigned int screen_width, screen_height;
-static unsigned int window_width, window_height;
-static SDL_Rect dstrect;
-
-static Uint32 map_colour(int r, int g, int b);
-
 #include "vo_generic_ops.c"
+
+/*** ***/
+
+struct vo_sdlyuv_interface {
+	struct vo_generic_interface generic;
+
+	SDL_Surface *screen;
+	SDL_Overlay *overlay;
+	Uint32 overlay_format;
+	unsigned screen_width, screen_height;
+	unsigned window_width, window_height;
+	SDL_Rect dstrect;
+};
+
+static void vo_sdlyuv_free(void *sptr);
+static void vsync(void *sptr);
+static void resize(void *sptr, unsigned w, unsigned h);
+static int set_fullscreen(void *sptr, _Bool fullscreen);
 
 /* The packed modes supported by SDL: */
 static const Uint32 try_overlay_format[] = {
@@ -73,13 +81,14 @@ static const Uint32 try_overlay_format[] = {
 	SDL_YVYU_OVERLAY,
 };
 #define NUM_OVERLAY_FORMATS ((int)(sizeof(try_overlay_format)/sizeof(Uint32)))
-static Uint32 overlay_format;
 
 static void *new(void) {
 	const SDL_VideoInfo *video_info;
 
-	struct vo_interface *vo = xmalloc(sizeof(*vo));
-	*vo = (struct vo_interface){0};
+	struct vo_sdlyuv_interface *vosdl = xmalloc(sizeof(*vosdl));
+	*vosdl = (struct vo_sdlyuv_interface){0};
+	struct vo_generic_interface *generic = &vosdl->generic;
+	struct vo_interface *vo = &generic->public;
 
 	vo->free = DELEGATE_AS0(void, vo_sdlyuv_free, vo);
 	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
@@ -90,10 +99,10 @@ static void *new(void) {
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
 	video_info = SDL_GetVideoInfo();
-	screen_width = video_info->current_w;
-	screen_height = video_info->current_h;
-	window_width = 640;
-	window_height = 480;
+	vosdl->screen_width = video_info->current_w;
+	vosdl->screen_height = video_info->current_h;
+	vosdl->window_width = 640;
+	vosdl->window_height = 480;
 	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
 
 	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
@@ -101,34 +110,34 @@ static void *new(void) {
 		return NULL;
 	}
 
-	overlay = NULL;
+	vosdl->overlay = NULL;
 	Uint32 first_successful_format = 0;
 	for (int i = 0; i < NUM_OVERLAY_FORMATS; i++) {
-		overlay_format = try_overlay_format[i];
-		overlay = SDL_CreateYUVOverlay(1280, 240, overlay_format, screen);
-		if (!overlay) {
+		vosdl->overlay_format = try_overlay_format[i];
+		vosdl->overlay = SDL_CreateYUVOverlay(1280, 240, vosdl->overlay_format, vosdl->screen);
+		if (!vosdl->overlay) {
 			continue;
 		}
 		if (first_successful_format == 0) {
-			first_successful_format = overlay_format;
+			first_successful_format = vosdl->overlay_format;
 		}
-		if (overlay->hw_overlay == 1) {
+		if (vosdl->overlay->hw_overlay == 1) {
 			break;
 		}
-		SDL_FreeYUVOverlay(overlay);
-		overlay = NULL;
+		SDL_FreeYUVOverlay(vosdl->overlay);
+		vosdl->overlay = NULL;
 	}
-	if (!overlay && first_successful_format != 0) {
+	if (!vosdl->overlay && first_successful_format != 0) {
 		/* Fall back to the first successful one, unaccelerated */
-		overlay_format = first_successful_format;
-		overlay = SDL_CreateYUVOverlay(1280, 240, overlay_format, screen);
+		vosdl->overlay_format = first_successful_format;
+		vosdl->overlay = SDL_CreateYUVOverlay(1280, 240, vosdl->overlay_format, vosdl->screen);
 	}
-	if (!overlay) {
+	if (!vosdl->overlay) {
 		LOG_ERROR("Failed to create SDL overlay for display: %s\n", SDL_GetError());
 		vo_sdlyuv_free(vo);
 		return NULL;
 	}
-	if (overlay->hw_overlay != 1) {
+	if (vosdl->overlay->hw_overlay != 1) {
 		LOG_WARN("Warning: SDL overlay is not hardware accelerated\n");
 	}
 
@@ -144,20 +153,21 @@ static void *new(void) {
 }
 
 static void vo_sdlyuv_free(void *sptr) {
-	struct vo_interface *vo = sptr;
-	set_fullscreen(vo, 0);
-	SDL_FreeYUVOverlay(overlay);
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	set_fullscreen(vosdl, 0);
+	SDL_FreeYUVOverlay(vosdl->overlay);
 	/* Should not be freed by caller: SDL_FreeSurface(screen); */
-	free(vo);
+	free(vosdl);
 }
 
-static Uint32 map_colour(int r, int g, int b) {
+static Uint32 map_colour(void *sptr, int r, int g, int b) {
+	struct vo_sdlyuv_interface *vosdl = sptr;
 	Uint32 colour;
 	uint8_t *d = (uint8_t *)&colour;
 	uint8_t y = 0.299*r + 0.587*g + 0.114*b;
 	uint8_t u = (b-y)*0.565 + 128;
 	uint8_t v = (r-y)*0.713 + 128;
-	switch (overlay_format) {
+	switch (vosdl->overlay_format) {
 	default:
 	case SDL_YUY2_OVERLAY:
 		d[0] = d[2] = y;
@@ -178,55 +188,65 @@ static Uint32 map_colour(int r, int g, int b) {
 	return colour;
 }
 
-static void resize(void *sptr, unsigned int w, unsigned int h) {
-	struct vo_interface *vo = sptr;
-	window_width = w;
-	window_height = h;
-	set_fullscreen(vo, vo->is_fullscreen);
+static void lock_surface(void *sptr) {
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	SDL_LockYUVOverlay(vosdl->overlay);
+}
+
+static void unlock_surface(void *sptr) {
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	SDL_UnlockYUVOverlay(vosdl->overlay);
+}
+
+static void resize(void *sptr, unsigned w, unsigned h) {
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	vosdl->window_width = w;
+	vosdl->window_height = h;
+	set_fullscreen(vosdl, vosdl->generic.public.is_fullscreen);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_interface *vo = sptr;
-	unsigned int want_width, want_height;
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	unsigned want_width, want_height;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (screen && !vo->is_fullscreen && fullscreen) {
-		sdl_windows32_remove_menu(screen);
+	if (vosdl->screen && !vo->is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(vosdl->screen);
 	}
 #endif
 
 	if (fullscreen) {
-		want_width = screen_width;
-		want_height = screen_height;
+		want_width = vosdl->screen_width;
+		want_height = vosdl->screen_height;
 	} else {
-		want_width = window_width;
-		want_height = window_height;
+		want_width = vosdl->window_width;
+		want_height = vosdl->window_height;
 	}
 	if (want_width < 320) want_width = 320;
 	if (want_height < 240) want_height = 240;
 
-	screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_HWSURFACE|SDL_ANYFORMAT|(fullscreen?SDL_FULLSCREEN:SDL_RESIZABLE));
-	if (screen == NULL) {
+	vosdl->screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_HWSURFACE|SDL_ANYFORMAT|(fullscreen?SDL_FULLSCREEN:SDL_RESIZABLE));
+	if (vosdl->screen == NULL) {
 		LOG_ERROR("Failed to allocate SDL surface for display\n");
 		return 1;
 	}
 
 #ifdef WINDOWS32
-	sdl_windows32_set_events_window(screen);
+	sdl_windows32_set_events_window(vosdl->screen);
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
 	if (vo->is_fullscreen && !fullscreen) {
-		sdl_windows32_add_menu(screen);
+		sdl_windows32_add_menu(vosdl->screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
 		 * bit SDL wants to render into. A specified geometry in this
 		 * case should apply to the client area, so we need to resize
 		 * again to account for this. */
 
-		screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_HWSURFACE|SDL_ANYFORMAT|SDL_RESIZABLE);
+		vosdl->screen = SDL_SetVideoMode(want_width, want_height, 0, SDL_HWSURFACE|SDL_ANYFORMAT|SDL_RESIZABLE);
 
 		/* Now purge any resize events this all generated from the
 		 * event queue. Don't want to end up in a resize loop! */
@@ -244,31 +264,31 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo->is_fullscreen = fullscreen;
+	vosdl->generic.public.is_fullscreen = fullscreen;
 
-	memcpy(&dstrect, &screen->clip_rect, sizeof(SDL_Rect));
-	if (((float)screen->w/(float)screen->h)>(4.0/3.0)) {
-		dstrect.w = (((float)screen->h/3.0)*4.0) + 0.5;
-		dstrect.h = screen->h;
-		dstrect.x = (screen->w - dstrect.w)/2;
-		dstrect.y = 0;
+	memcpy(&vosdl->dstrect, &vosdl->screen->clip_rect, sizeof(SDL_Rect));
+	if (((float)vosdl->screen->w/(float)vosdl->screen->h)>(4.0/3.0)) {
+		vosdl->dstrect.w = (((float)vosdl->screen->h/3.0)*4.0) + 0.5;
+		vosdl->dstrect.h = vosdl->screen->h;
+		vosdl->dstrect.x = (vosdl->screen->w - vosdl->dstrect.w)/2;
+		vosdl->dstrect.y = 0;
 	} else {
-		dstrect.w = screen->w;
-		dstrect.h = (((float)screen->w/4.0)*3.0) + 0.5;
-		dstrect.x = 0;
-		dstrect.y = (screen->h - dstrect.h)/2;
+		vosdl->dstrect.w = vosdl->screen->w;
+		vosdl->dstrect.h = (((float)vosdl->screen->w/4.0)*3.0) + 0.5;
+		vosdl->dstrect.x = 0;
+		vosdl->dstrect.y = (vosdl->screen->h - vosdl->dstrect.h)/2;
 	}
-	sdl_display.x = dstrect.x;
-	sdl_display.y = dstrect.y;
-	sdl_display.w = dstrect.w;
-	sdl_display.h = dstrect.h;
+	sdl_display.x = vosdl->dstrect.x;
+	sdl_display.y = vosdl->dstrect.y;
+	sdl_display.w = vosdl->dstrect.w;
+	sdl_display.h = vosdl->dstrect.h;
 
 	return 0;
 }
 
 static void vsync(void *sptr) {
-	struct vo_interface *vo = sptr;
-	SDL_DisplayYUVOverlay(overlay, &dstrect);
-	pixel = (Pixel *)overlay->pixels[0];
-	vo->scanline = 0;
+	struct vo_sdlyuv_interface *vosdl = sptr;
+	SDL_DisplayYUVOverlay(vosdl->overlay, &vosdl->dstrect);
+	vosdl->generic.pixel = (Pixel *)vosdl->overlay->pixels[0];
+	vosdl->generic.public.scanline = 0;
 }

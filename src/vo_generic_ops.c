@@ -28,19 +28,30 @@
 #include "vdg_palette.h"
 #include "mc6847/mc6847.h"
 
-static Pixel *pixel;
-static Pixel vdg_colour[12];
-static Pixel artifact_5bit[2][32];
-static Pixel artifact_simple[2][4];
+struct vo_generic_interface {
+	struct vo_interface public;
+
+	// Palettes
+	Pixel vdg_colour[12];
+	Pixel artifact_5bit[2][32];
+	Pixel artifact_simple[2][4];
+
+	// Current render pointer
+	Pixel *pixel;
+
+	// Gamma LUT
+	uint8_t ntsc_ungamma[256];
+};
 
 /* Map VDG palette entry */
-static Pixel map_palette_entry(int i) {
+static Pixel map_palette_entry(struct vo_generic_interface *generic, int i) {
+	(void)generic;
 	float R, G, B;
 	vdg_palette_RGB(xroar_vdg_palette, i, &R, &G, &B);
 	R *= 255.0;
 	G *= 255.0;
 	B *= 255.0;
-	return MAPCOLOUR((int)R, (int)G, (int)B);
+	return MAPCOLOUR(generic, (int)R, (int)G, (int)B);
 }
 
 /*
@@ -65,18 +76,15 @@ Coefficients scaled for integer maths.  Result should be divided by 32768.
 /* Filter offset */
 #define NOFF (3)
 
-/* Gamma LUTs */
-static uint8_t ntsc_ungamma[256];
-
 /* Allocate colours */
 
 static void alloc_colours(void *sptr) {
-	(void)sptr;
+	struct vo_generic_interface *generic = sptr;
 #ifdef RESET_PALETTE
 	RESET_PALETTE();
 #endif
 	for (int j = 0; j < 12; j++) {
-		vdg_colour[j] = map_palette_entry(j);
+		generic->vdg_colour[j] = map_palette_entry(generic, j);
 	}
 
 	// Populate NTSC inverse gamma LUT
@@ -87,106 +95,107 @@ static void alloc_colours(void *sptr) {
 		} else {
 			c = powf((c+0.099)/(1.+0.099), 2.2);
 		}
-		ntsc_ungamma[j] = (int)(c * 255.0);
+		generic->ntsc_ungamma[j] = (int)(c * 255.0);
 	}
 
 	// 2-bit LUT NTSC cross-colour
-	artifact_simple[0][0] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_simple[0][1] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_simple[0][2] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_simple[0][3] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_simple[1][0] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_simple[1][1] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_simple[1][2] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_simple[1][3] = MAPCOLOUR(0xff, 0xff, 0xff);
+	generic->artifact_simple[0][0] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_simple[0][1] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_simple[0][2] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_simple[0][3] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_simple[1][0] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_simple[1][1] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_simple[1][2] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_simple[1][3] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
 
 	// 5-bit LUT NTSC cross-colour
 	// TODO: generate this using available NTSC decoding
-	artifact_5bit[0][0x00] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[0][0x01] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[0][0x02] = MAPCOLOUR(0x00, 0x32, 0x78);
-	artifact_5bit[0][0x03] = MAPCOLOUR(0x00, 0x28, 0x00);
-	artifact_5bit[0][0x04] = MAPCOLOUR(0xff, 0x8c, 0x64);
-	artifact_5bit[0][0x05] = MAPCOLOUR(0xff, 0x8c, 0x64);
-	artifact_5bit[0][0x06] = MAPCOLOUR(0xff, 0xd2, 0xff);
-	artifact_5bit[0][0x07] = MAPCOLOUR(0xff, 0xf0, 0xc8);
-	artifact_5bit[0][0x08] = MAPCOLOUR(0x00, 0x32, 0x78);
-	artifact_5bit[0][0x09] = MAPCOLOUR(0x00, 0x00, 0x3c);
-	artifact_5bit[0][0x0a] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[0][0x0b] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[0][0x0c] = MAPCOLOUR(0xd2, 0xff, 0xd2);
-	artifact_5bit[0][0x0d] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[0][0x0e] = MAPCOLOUR(0x64, 0xf0, 0xff);
-	artifact_5bit[0][0x0f] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[0][0x10] = MAPCOLOUR(0x3c, 0x00, 0x00);
-	artifact_5bit[0][0x11] = MAPCOLOUR(0x3c, 0x00, 0x00);
-	artifact_5bit[0][0x12] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[0][0x13] = MAPCOLOUR(0x00, 0x28, 0x00);
-	artifact_5bit[0][0x14] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[0][0x15] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[0][0x16] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[0][0x17] = MAPCOLOUR(0xff, 0xf0, 0xc8);
-	artifact_5bit[0][0x18] = MAPCOLOUR(0x28, 0x00, 0x28);
-	artifact_5bit[0][0x19] = MAPCOLOUR(0x28, 0x00, 0x28);
-	artifact_5bit[0][0x1a] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[0][0x1b] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[0][0x1c] = MAPCOLOUR(0xff, 0xf0, 0xc8);
-	artifact_5bit[0][0x1d] = MAPCOLOUR(0xff, 0xf0, 0xc8);
-	artifact_5bit[0][0x1e] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[0][0x1f] = MAPCOLOUR(0xff, 0xff, 0xff);
+	generic->artifact_5bit[0][0x00] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[0][0x01] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[0][0x02] = MAPCOLOUR(generic, 0x00, 0x32, 0x78);
+	generic->artifact_5bit[0][0x03] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
+	generic->artifact_5bit[0][0x04] = MAPCOLOUR(generic, 0xff, 0x8c, 0x64);
+	generic->artifact_5bit[0][0x05] = MAPCOLOUR(generic, 0xff, 0x8c, 0x64);
+	generic->artifact_5bit[0][0x06] = MAPCOLOUR(generic, 0xff, 0xd2, 0xff);
+	generic->artifact_5bit[0][0x07] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
+	generic->artifact_5bit[0][0x08] = MAPCOLOUR(generic, 0x00, 0x32, 0x78);
+	generic->artifact_5bit[0][0x09] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
+	generic->artifact_5bit[0][0x0a] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[0][0x0b] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[0][0x0c] = MAPCOLOUR(generic, 0xd2, 0xff, 0xd2);
+	generic->artifact_5bit[0][0x0d] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[0][0x0e] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
+	generic->artifact_5bit[0][0x0f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[0][0x10] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
+	generic->artifact_5bit[0][0x11] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
+	generic->artifact_5bit[0][0x12] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[0][0x13] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
+	generic->artifact_5bit[0][0x14] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[0][0x15] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[0][0x16] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[0][0x17] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
+	generic->artifact_5bit[0][0x18] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
+	generic->artifact_5bit[0][0x19] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
+	generic->artifact_5bit[0][0x1a] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[0][0x1b] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[0][0x1c] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
+	generic->artifact_5bit[0][0x1d] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
+	generic->artifact_5bit[0][0x1e] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[0][0x1f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
 
-	artifact_5bit[1][0x00] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[1][0x01] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[1][0x02] = MAPCOLOUR(0xb4, 0x3c, 0x1e);
-	artifact_5bit[1][0x03] = MAPCOLOUR(0x28, 0x00, 0x28);
-	artifact_5bit[1][0x04] = MAPCOLOUR(0x46, 0xc8, 0xff);
-	artifact_5bit[1][0x05] = MAPCOLOUR(0x46, 0xc8, 0xff);
-	artifact_5bit[1][0x06] = MAPCOLOUR(0xd2, 0xff, 0xd2);
-	artifact_5bit[1][0x07] = MAPCOLOUR(0x64, 0xf0, 0xff);
-	artifact_5bit[1][0x08] = MAPCOLOUR(0xb4, 0x3c, 0x1e);
-	artifact_5bit[1][0x09] = MAPCOLOUR(0x3c, 0x00, 0x00);
-	artifact_5bit[1][0x0a] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[1][0x0b] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[1][0x0c] = MAPCOLOUR(0xff, 0xd2, 0xff);
-	artifact_5bit[1][0x0d] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[1][0x0e] = MAPCOLOUR(0xff, 0xf0, 0xc8);
-	artifact_5bit[1][0x0f] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[1][0x10] = MAPCOLOUR(0x00, 0x00, 0x3c);
-	artifact_5bit[1][0x11] = MAPCOLOUR(0x00, 0x00, 0x3c);
-	artifact_5bit[1][0x12] = MAPCOLOUR(0x00, 0x00, 0x00);
-	artifact_5bit[1][0x13] = MAPCOLOUR(0x28, 0x00, 0x28);
-	artifact_5bit[1][0x14] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[1][0x15] = MAPCOLOUR(0x00, 0x80, 0xff);
-	artifact_5bit[1][0x16] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[1][0x17] = MAPCOLOUR(0x64, 0xf0, 0xff);
-	artifact_5bit[1][0x18] = MAPCOLOUR(0x00, 0x28, 0x00);
-	artifact_5bit[1][0x19] = MAPCOLOUR(0x00, 0x28, 0x00);
-	artifact_5bit[1][0x1a] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[1][0x1b] = MAPCOLOUR(0xff, 0x80, 0x00);
-	artifact_5bit[1][0x1c] = MAPCOLOUR(0x64, 0xf0, 0xff);
-	artifact_5bit[1][0x1d] = MAPCOLOUR(0x64, 0xf0, 0xff);
-	artifact_5bit[1][0x1e] = MAPCOLOUR(0xff, 0xff, 0xff);
-	artifact_5bit[1][0x1f] = MAPCOLOUR(0xff, 0xff, 0xff);
+	generic->artifact_5bit[1][0x00] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[1][0x01] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[1][0x02] = MAPCOLOUR(generic, 0xb4, 0x3c, 0x1e);
+	generic->artifact_5bit[1][0x03] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
+	generic->artifact_5bit[1][0x04] = MAPCOLOUR(generic, 0x46, 0xc8, 0xff);
+	generic->artifact_5bit[1][0x05] = MAPCOLOUR(generic, 0x46, 0xc8, 0xff);
+	generic->artifact_5bit[1][0x06] = MAPCOLOUR(generic, 0xd2, 0xff, 0xd2);
+	generic->artifact_5bit[1][0x07] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
+	generic->artifact_5bit[1][0x08] = MAPCOLOUR(generic, 0xb4, 0x3c, 0x1e);
+	generic->artifact_5bit[1][0x09] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
+	generic->artifact_5bit[1][0x0a] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[1][0x0b] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[1][0x0c] = MAPCOLOUR(generic, 0xff, 0xd2, 0xff);
+	generic->artifact_5bit[1][0x0d] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[1][0x0e] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
+	generic->artifact_5bit[1][0x0f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[1][0x10] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
+	generic->artifact_5bit[1][0x11] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
+	generic->artifact_5bit[1][0x12] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
+	generic->artifact_5bit[1][0x13] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
+	generic->artifact_5bit[1][0x14] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[1][0x15] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
+	generic->artifact_5bit[1][0x16] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[1][0x17] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
+	generic->artifact_5bit[1][0x18] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
+	generic->artifact_5bit[1][0x19] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
+	generic->artifact_5bit[1][0x1a] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[1][0x1b] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
+	generic->artifact_5bit[1][0x1c] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
+	generic->artifact_5bit[1][0x1d] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
+	generic->artifact_5bit[1][0x1e] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	generic->artifact_5bit[1][0x1f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
 }
 
 /* Render colour line using palette */
 
 static void render_scanline(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
-	struct vo_interface *vo = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	(void)phase;
 	if (vo->scanline >= vo->window_y &&
 	    vo->scanline < (vo->window_y + vo->window_h)) {
 		scanline_data += vo->window_x;
-		LOCK_SURFACE;
+		LOCK_SURFACE(generic);
 		for (int i = vo->window_w >> 1; i; i--) {
 			uint8_t c0 = *scanline_data;
 			scanline_data += 2;
-			*pixel = *(pixel+1) = vdg_colour[c0];
-			pixel += 2*XSTEP;
+			*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
+			generic->pixel += 2*XSTEP;
 		}
-		UNLOCK_SURFACE;
-		pixel += NEXTLINE;
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
 	}
 	vo->scanline++;
 }
@@ -194,13 +203,14 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 /* Render artifacted colours - simple 4-colour lookup */
 
 static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
-	struct vo_interface *vo = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
 	    vo->scanline < (vo->window_y + vo->window_h)) {
 		scanline_data += vo->window_x;
-		LOCK_SURFACE;
+		LOCK_SURFACE(generic);
 		for (int i = vo->window_w / 4; i; i--) {
 			uint8_t c0 = *scanline_data;
 			uint8_t c1 = *(scanline_data+2);
@@ -208,15 +218,15 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 			if (c0 == VDG_BLACK || c0 == VDG_WHITE) {
 				int aindex = ((c0 != VDG_BLACK) ? 2 : 0)
 					     | ((c1 != VDG_BLACK) ? 1 : 0);
-				*pixel = *(pixel+1) = *(pixel+2) = *(pixel+3) = artifact_simple[p][aindex];
+				*(generic->pixel) = *(generic->pixel+1) = *(generic->pixel+2) = *(generic->pixel+3) = generic->artifact_simple[p][aindex];
 			} else {
-				*pixel = *(pixel+1) = vdg_colour[c0];
-				*(pixel+2) = *(pixel+3) = vdg_colour[c1];
+				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
+				*(generic->pixel+2) = *(generic->pixel+3) = generic->vdg_colour[c1];
 			}
-			pixel += 4*XSTEP;
+			generic->pixel += 4*XSTEP;
 		}
-		UNLOCK_SURFACE;
-		pixel += NEXTLINE;
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
 	}
 	vo->scanline++;
 }
@@ -224,7 +234,8 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 /* Render artifacted colours - 5-bit lookup table */
 
 static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
-	struct vo_interface *vo = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (vo->scanline >= vo->window_y &&
@@ -233,7 +244,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 		scanline_data += vo->window_x;
 		aindex = (*(scanline_data - 6) != VDG_BLACK) ? 14 : 0;
 		aindex |= (*(scanline_data - 2) != VDG_BLACK) ? 1 : 0;
-		LOCK_SURFACE;
+		LOCK_SURFACE(generic);
 		for (int i = vo->window_w/2; i; i--) {
 			aindex = (aindex << 1) & 31;
 			if (*(scanline_data + 4) != VDG_BLACK)
@@ -241,15 +252,15 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 			uint8_t c = *scanline_data;
 			scanline_data += 2;
 			if (c == VDG_BLACK || c == VDG_WHITE) {
-				*pixel = *(pixel+1) = artifact_5bit[p][aindex];
+				*(generic->pixel) = *(generic->pixel+1) = generic->artifact_5bit[p][aindex];
 			} else {
-				*pixel = *(pixel+1) = vdg_colour[c];
+				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c];
 			}
-			pixel += 2*XSTEP;
+			generic->pixel += 2*XSTEP;
 			p ^= 1;
 		}
-		UNLOCK_SURFACE;
-		pixel += NEXTLINE;
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
 	}
 	vo->scanline++;
 }
@@ -257,7 +268,8 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 /* NTSC composite video simulation */
 
 static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
-	struct vo_interface *vo = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_interface *vo = &generic->public;
 	if (vo->scanline < vo->window_y ||
 	    vo->scanline >= (vo->window_y + vo->window_h)) {
 		vo->scanline++;
@@ -266,7 +278,7 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 	vo->scanline++;
 	const uint8_t *v = (scanline_data + vo->window_x) - NOFF;
 	phase = ((phase + vo->window_x) + NOFF) & 3;
-	LOCK_SURFACE;
+	LOCK_SURFACE(generic);
 	for (int j = vo->window_w; j; j--) {
 		// Warning: for speed, no bounds checking is performed here.
 		// If video data is out of range, this will read from invalid
@@ -300,21 +312,22 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
-		uint8_t R = ntsc_ungamma[clamp_uint8(r+40)];
-		uint8_t G = ntsc_ungamma[clamp_uint8(g+40)];
-		uint8_t B = ntsc_ungamma[clamp_uint8(b+40)];
+		uint8_t R = generic->ntsc_ungamma[clamp_uint8(r+40)];
+		uint8_t G = generic->ntsc_ungamma[clamp_uint8(g+40)];
+		uint8_t B = generic->ntsc_ungamma[clamp_uint8(b+40)];
 
-		*pixel = MAPCOLOUR(R, G, B);
-		pixel += XSTEP;
+		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
+		generic->pixel += XSTEP;
 		phase = (phase+1) & 3;
 		v++;
 	}
-	UNLOCK_SURFACE;
-	pixel += NEXTLINE;
+	UNLOCK_SURFACE(generic);
+	generic->pixel += NEXTLINE;
 }
 
 static void set_vo_cmp(void *sptr, int mode) {
-	struct vo_interface *vo = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_interface *vo = &generic->public;
 	switch (mode) {
 	case VO_CMP_PALETTE:
 		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);

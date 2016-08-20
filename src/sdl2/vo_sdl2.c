@@ -40,51 +40,61 @@ struct module vo_sdl_module = {
 	.new = new,
 };
 
-static void vo_sdl_free(void *sptr);
-static void alloc_colours(void *sptr);
-static void vsync(void *sptr);
-static void render_scanline(void *sptr, uint8_t const *data, struct ntsc_burst *burst, unsigned phase);
-static void resize(void *sptr, unsigned int w, unsigned int h);
-static int set_fullscreen(void *sptr, _Bool fullscreen);
-static void set_vo_cmp(void *sptr, int mode);
+/*** ***/
 
 typedef uint16_t Pixel;
-#define MAPCOLOUR(r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
+#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
 #define XSTEP 1
 #define NEXTLINE 0
-#define LOCK_SURFACE
-#define UNLOCK_SURFACE
+#define LOCK_SURFACE(vo)
+#define UNLOCK_SURFACE(vo)
 #define VIDEO_MODULE_NAME vo_sdl_module
-
-SDL_Window *sdl_window = NULL;
-Uint32 sdl_windowID = 0;
-static SDL_Renderer *renderer = NULL;
-static SDL_Texture *texture = NULL;
-static uint16_t *texture_pixels = NULL;
 
 #include "vo_generic_ops.c"
 
-static int create_renderer(void);
+/*** ***/
+
+struct vo_sdl_interface {
+	struct vo_generic_interface generic;
+
+	SDL_Renderer *renderer;
+	SDL_Texture *texture;
+	uint16_t *texture_pixels;
+
+	int window_w;
+	int window_h;
+};
+
+static void vo_sdl_free(void *sptr);
+static void vo_sdl_vsync(void *sptr);
+static void resize(void *sptr, unsigned int w, unsigned int h);
+static int set_fullscreen(void *sptr, _Bool fullscreen);
+
+static int create_renderer(struct vo_sdl_interface *vosdl);
 static void destroy_window(void);
-static void destroy_renderer(void);
+static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
 static void *new(void) {
-	texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
-	for (int i = 0; i < 640 * 240; i++)
-		texture_pixels[i] = MAPCOLOUR(0,0,0);
+	struct vo_sdl_interface *vosdl = xmalloc(sizeof(*vosdl));
+	*vosdl = (struct vo_sdl_interface){0};
+	struct vo_generic_interface *generic = &vosdl->generic;
+	struct vo_interface *vo = &generic->public;
 
-	struct vo_interface *vo = xmalloc(sizeof(*vo));
-	*vo = (struct vo_interface){0};
+	vosdl->texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
+	for (int i = 0; i < 640 * 240; i++)
+		vosdl->texture_pixels[i] = MAPCOLOUR(vosdl,0,0,0);
+	vosdl->window_w = 640;
+	vosdl->window_h = 480;
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
 	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
-	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
 	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
-	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
+	vosdl->generic.public.is_fullscreen = !xroar_ui_cfg.fullscreen;
 	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
 		vo_sdl_free(vo);
 		return NULL;
@@ -96,42 +106,39 @@ static void *new(void) {
 	vo->window_w = 640;
 	vo->window_h = 240;
 
-	vsync(vo);
+	vo_sdl_vsync(vo);
 
 	return vo;
 }
 
-static int window_w = 640;
-static int window_h = 480;
-
 static void resize(void *sptr, unsigned int w, unsigned int h) {
-	struct vo_interface *vo = sptr;
-	if (vo->is_fullscreen)
+	struct vo_sdl_interface *vosdl = sptr;
+	if (vosdl->generic.public.is_fullscreen)
 		return;
-	window_w = w;
-	window_h = h;
-	create_renderer();
+	vosdl->window_w = w;
+	vosdl->window_h = h;
+	create_renderer(vosdl);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_interface *vo = sptr;
+	struct vo_sdl_interface *vosdl = sptr;
 	int err;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (sdl_window && !vo->is_fullscreen && fullscreen) {
+	if (sdl_window && !vosdl->generic.public.is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(sdl_window);
 	}
 #endif
 
-	destroy_renderer();
+	destroy_renderer(vosdl);
 	destroy_window();
 
 	if (fullscreen) {
 		sdl_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
-		sdl_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, SDL_WINDOW_RESIZABLE);
+		sdl_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_w, vosdl->window_h, SDL_WINDOW_RESIZABLE);
 	}
 	if (!sdl_window) {
 		LOG_ERROR("Failed to create window\n");
@@ -147,7 +154,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vo->is_fullscreen && !fullscreen) {
+	if (vosdl->generic.public.is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(sdl_window);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -155,7 +162,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 		 * case should apply to the client area, so we need to resize
 		 * again to account for this. */
 
-		SDL_SetWindowSize(sdl_window, window_w, window_h);
+		SDL_SetWindowSize(sdl_window, vosdl->window_w, vosdl->window_h);
 
 		/* Now purge any resize events this all generated from the
 		 * event queue. Don't want to end up in a resize loop! */
@@ -164,7 +171,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	}
 #endif
 
-	if ((err = create_renderer()) != 0) {
+	if ((err = create_renderer(vosdl)) != 0) {
 		destroy_window();
 		return err;
 	}
@@ -174,8 +181,8 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vo->is_fullscreen = fullscreen;
-	sdl_window_x = sdl_window_y = 0;
+	vosdl->generic.public.is_fullscreen = fullscreen;
+	sdl_display.x = sdl_display.y = 0;
 
 	/* Initialise keyboard */
 	sdl_os_keyboard_init(sdl_window);
@@ -197,8 +204,8 @@ static void destroy_window(void) {
 	}
 }
 
-static int create_renderer(void) {
-	destroy_renderer();
+static int create_renderer(struct vo_sdl_interface *vosdl) {
+	destroy_renderer(vosdl);
 	int w, h;
 	SDL_GetWindowSize(sdl_window, &w, &h);
 	if (w % 320 == 0 && h % 240 == 0) {
@@ -207,58 +214,58 @@ static int create_renderer(void) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
-	renderer = SDL_CreateRenderer(sdl_window, -1, 0);
-	if (!renderer) {
+	vosdl->renderer = SDL_CreateRenderer(sdl_window, -1, 0);
+	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
 		return -1;
 	}
 
-	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 640, 240);
-	if (!texture) {
+	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 640, 240);
+	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
-		destroy_renderer();
+		destroy_renderer(vosdl);
 		return -1;
 	}
 
-	SDL_RenderSetLogicalSize(renderer, 640, 480);
+	SDL_RenderSetLogicalSize(vosdl->renderer, 640, 480);
 
-	SDL_RenderClear(renderer);
-	SDL_RenderPresent(renderer);
+	SDL_RenderClear(vosdl->renderer);
+	SDL_RenderPresent(vosdl->renderer);
 
-	sdl_window_w = window_w;
-	sdl_window_h = window_h;
+	sdl_display.w = vosdl->window_w;
+	sdl_display.h = vosdl->window_h;
 
 	return 0;
 }
 
-static void destroy_renderer(void) {
-	if (texture) {
-		SDL_DestroyTexture(texture);
-		texture = NULL;
+static void destroy_renderer(struct vo_sdl_interface *vosdl) {
+	if (vosdl->texture) {
+		SDL_DestroyTexture(vosdl->texture);
+		vosdl->texture = NULL;
 	}
-	if (renderer) {
-		SDL_DestroyRenderer(renderer);
-		renderer = NULL;
+	if (vosdl->renderer) {
+		SDL_DestroyRenderer(vosdl->renderer);
+		vosdl->renderer = NULL;
 	}
 }
 
 static void vo_sdl_free(void *sptr) {
-	struct vo_interface *vo = sptr;
-	if (texture_pixels) {
-		free(texture_pixels);
-		texture_pixels = NULL;
+	struct vo_sdl_interface *vosdl = sptr;
+	if (vosdl->texture_pixels) {
+		free(vosdl->texture_pixels);
+		vosdl->texture_pixels = NULL;
 	}
-	destroy_renderer();
+	destroy_renderer(vosdl);
 	destroy_window();
-	free(vo);
+	free(vosdl);
 }
 
-static void vsync(void *sptr) {
-	struct vo_interface *vo = sptr;
-	SDL_UpdateTexture(texture, NULL, texture_pixels, 640 * sizeof(Pixel));
-	SDL_RenderClear(renderer);
-	SDL_RenderCopy(renderer, texture, NULL, NULL);
-	SDL_RenderPresent(renderer);
-	pixel = texture_pixels;
-	vo->scanline = 0;
+static void vo_sdl_vsync(void *sptr) {
+	struct vo_sdl_interface *vosdl = sptr;
+	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, 640 * sizeof(Pixel));
+	SDL_RenderClear(vosdl->renderer);
+	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
+	SDL_RenderPresent(vosdl->renderer);
+	vosdl->generic.pixel = vosdl->texture_pixels;
+	vosdl->generic.public.scanline = 0;
 }
