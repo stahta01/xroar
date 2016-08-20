@@ -707,15 +707,15 @@ _Bool xroar_init(int argc, char **argv) {
 	event_current_tick = 0;
 	/* ... modules */
 	module_init((struct module *)ui_module);
-	filereq_module = (FileReqModule *)module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module);
+	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	if (!(xroar_vo_interface = (struct vo_interface *)module_init(vo_module))) {
+	if (!(xroar_vo_interface = module_init(vo_module))) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
-	sound_module = (SoundModule *)module_init_from_list((struct module * const *)sound_module_list, (struct module *)sound_module);
+	sound_module = module_init_from_list((struct module * const *)sound_module_list, (struct module *)sound_module);
 	if (sound_module == NULL && sound_module_list != NULL) {
 		LOG_ERROR("No sound module initialised.\n");
 		return 0;

@@ -130,7 +130,7 @@ struct module *module_select_by_arg(struct module * const *list, const char *nam
 	return module_select(list, name);
 }
 
-struct module *module_init(struct module *module) {
+void *module_init(struct module *module) {
 	if (!module)
 		return NULL;
 	const char *description = module->description ? module->description : "(unknown)";
@@ -151,7 +151,7 @@ struct module *module_init(struct module *module) {
 	return NULL;
 }
 
-struct module *module_init_from_list(struct module * const *list, struct module *module) {
+void *module_init_from_list(struct module * const *list, struct module *module) {
 	int i;
 	/* First attempt to initialise selected module (if given) */
 	void *m = module_init(module);
@@ -162,7 +162,7 @@ struct module *module_init_from_list(struct module * const *list, struct module 
 	/* If that fails, try every *other* module in the list */
 	for (i = 0; list[i]; i++) {
 		if (list[i] != module && (m = module_init(list[i])))
-			return list[i];
+			return m;
 	}
 	return NULL;
 }

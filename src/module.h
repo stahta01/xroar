@@ -41,8 +41,8 @@ extern SoundModule *sound_module;
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);
 struct module *module_select_by_arg(struct module * const *list, const char *name);
-struct module *module_init(struct module *module);
-struct module *module_init_from_list(struct module * const *list, struct module *module);
+void *module_init(struct module *module);
+void *module_init_from_list(struct module * const *list, struct module *module);
 void module_shutdown(struct module *module);
 
 #endif  /* XROAR_MODULE_H_ */
