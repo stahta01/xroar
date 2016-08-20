@@ -39,8 +39,9 @@
 
 #include "sdl/common.h"
 
-unsigned sdl_window_x = 0, sdl_window_y = 0;
-unsigned sdl_window_w = 320, sdl_window_h = 240;
+struct vo_rect sdl_display = {
+	.x = 0, .y = 0, .w = 320, .h = 240,
+};
 
 struct module * const sdl_vo_module_list[] = {
 #ifdef HAVE_SDLGL
@@ -145,10 +146,10 @@ static event_ticks last_mouse_update_time;
 static void update_mouse_state(void) {
 	int x, y;
 	Uint8 buttons = SDL_GetMouseState(&x, &y);
-	x = (x - sdl_window_x) * 320;
-	y = (y - sdl_window_y) * 240;
-	float xx = (float)x / (float)sdl_window_w;
-	float yy = (float)y / (float)sdl_window_h;
+	x = (x - sdl_display.x) * 320;
+	y = (y - sdl_display.y) * 240;
+	float xx = (float)x / (float)sdl_display.w;
+	float yy = (float)y / (float)sdl_display.h;
 	xx = (xx - mouse_xoffset) / mouse_xdiv;
 	yy = (yy - mouse_yoffset) / mouse_ydiv;
 	if (xx < 0.0) xx = 0.0;
@@ -230,8 +231,8 @@ static void push_resize_event(unsigned w, unsigned h) {
 }
 
 void sdl_zoom_in(void) {
-	int xscale = sdl_window_w / 160;
-	int yscale = sdl_window_h / 120;
+	int xscale = sdl_display.w / 160;
+	int yscale = sdl_display.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = yscale;
@@ -245,8 +246,8 @@ void sdl_zoom_in(void) {
 }
 
 void sdl_zoom_out(void) {
-	int xscale = sdl_window_w / 160;
-	int yscale = sdl_window_h / 120;
+	int xscale = sdl_display.w / 160;
+	int yscale = sdl_display.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;

@@ -179,10 +179,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	}
 
 	DELEGATE_CALL2(vogl->resize, da->allocation.width, da->allocation.height);
-	gtk2_window_x = vo_opengl_x;
-	gtk2_window_y = vo_opengl_y;
-	gtk2_window_w = vo_opengl_w;
-	gtk2_window_h = vo_opengl_h;
+	vo_opengl_get_display_rect(vogl, &gtk2_display);
 
 	gdk_gl_drawable_gl_end(gldrawable);
 

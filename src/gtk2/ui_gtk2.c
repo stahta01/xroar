@@ -55,8 +55,9 @@ static _Bool init(void);
 static void shutdown(void);
 static void run(void);
 
-unsigned gtk2_window_x = 0, gtk2_window_y = 0;
-unsigned gtk2_window_w = 640, gtk2_window_h = 480;
+struct vo_rect gtk2_display = {
+	.x = 0, .y = 0, .w = 640, .h = 480,
+};
 
 extern struct module vo_gtkgl_module;
 extern struct module vo_null_module;
@@ -210,8 +211,8 @@ static void zoom_2_1(void) {
 static void zoom_in(void) {
 	if (!xroar_vo_interface)
 		return;
-	int xscale = gtk2_window_w / 160;
-	int yscale = gtk2_window_h / 120;
+	int xscale = gtk2_display.w / 160;
+	int yscale = gtk2_display.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = yscale;
@@ -227,8 +228,8 @@ static void zoom_in(void) {
 static void zoom_out(void) {
 	if (!xroar_vo_interface)
 		return;
-	int xscale = gtk2_window_w / 160;
-	int yscale = gtk2_window_h / 120;
+	int xscale = gtk2_display.w / 160;
+	int yscale = gtk2_display.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;
@@ -945,10 +946,10 @@ static void update_mouse_state(void) {
 	GdkModifierType buttons;
 	GdkWindow *window = gtk_widget_get_window(gtk2_drawing_area);
 	gdk_window_get_pointer(window, &x, &y, &buttons);
-	x = (x - gtk2_window_x) * 320;
-	y = (y - gtk2_window_y) * 240;
-	float xx = (float)x / (float)gtk2_window_w;
-	float yy = (float)y / (float)gtk2_window_h;
+	x = (x - gtk2_display.x) * 320;
+	y = (y - gtk2_display.y) * 240;
+	float xx = (float)x / (float)gtk2_display.w;
+	float yy = (float)y / (float)gtk2_display.h;
 	xx = (xx - mouse_xoffset) / mouse_xdiv;
 	yy = (yy - mouse_yoffset) / mouse_ydiv;
 	if (xx < 0.0) xx = 0.0;

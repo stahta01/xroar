@@ -171,10 +171,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	vo->is_fullscreen = fullscreen;
 
 	DELEGATE_CALL2(vogl->resize, want_width, want_height);
-	sdl_window_x = vo_opengl_x;
-	sdl_window_y = vo_opengl_y;
-	sdl_window_w = vo_opengl_w;
-	sdl_window_h = vo_opengl_h;
+	vo_opengl_get_display_rect(vogl, &sdl_display);
 
 	return 0;
 }

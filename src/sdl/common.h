@@ -12,8 +12,7 @@
 #include "vo.h"
 struct joystick_module;
 
-extern unsigned sdl_window_x, sdl_window_y;
-extern unsigned sdl_window_w, sdl_window_h;
+extern struct vo_rect sdl_display;
 
 extern struct module vo_sdlgl_module;
 extern struct module vo_sdlyuv_module;

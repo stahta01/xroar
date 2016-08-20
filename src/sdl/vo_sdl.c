@@ -166,9 +166,9 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
 	vo->window_h = 240;
-	sdl_window_x = sdl_window_y = 0;
-	sdl_window_w = 320;
-	sdl_window_h = 240;
+	sdl_display.x = sdl_display.y = 0;
+	sdl_display.w = 320;
+	sdl_display.h = 240;
 
 	alloc_colours(vo);
 

@@ -12,10 +12,9 @@
 #include <stdint.h>
 
 struct vo_interface;
-
-extern int vo_opengl_x, vo_opengl_y;
-extern int vo_opengl_w, vo_opengl_h;
+struct vo_rect;
 
 struct vo_interface *vo_opengl_new(void);
+void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp);
 
 #endif  /* XROAR_VO_OPENGL_H_ */

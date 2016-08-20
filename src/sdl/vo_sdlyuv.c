@@ -261,10 +261,10 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 		dstrect.x = 0;
 		dstrect.y = (screen->h - dstrect.h)/2;
 	}
-	sdl_window_x = dstrect.x;
-	sdl_window_y = dstrect.y;
-	sdl_window_w = dstrect.w;
-	sdl_window_h = dstrect.h;
+	sdl_display.x = dstrect.x;
+	sdl_display.y = dstrect.y;
+	sdl_display.w = dstrect.w;
+	sdl_display.h = dstrect.h;
 
 	return 0;
 }

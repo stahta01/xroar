@@ -67,8 +67,8 @@ static Pixel *screen_tex;
 
 static unsigned window_width, window_height;
 static GLuint texnum = 0;
-int vo_opengl_x, vo_opengl_y;
-int vo_opengl_w, vo_opengl_h;
+static int vo_opengl_x, vo_opengl_y;
+static unsigned vo_opengl_w, vo_opengl_h;
 static int filter;
 
 static const GLfloat tex_coords[][2] = {
@@ -116,6 +116,14 @@ struct vo_interface *vo_opengl_new(void) {
 	vo->window_h = 240;
 	pixel = VIDEO_TOPLEFT + VIDEO_VIEWPORT_YOFFSET;
 	return vo;
+}
+
+void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp) {
+	(void)vo;
+	disp->x = vo_opengl_x;
+	disp->y = vo_opengl_y;
+	disp->w = vo_opengl_w;
+	disp->h = vo_opengl_h;
 }
 
 static void vo_opengl_free(void *sptr) {
