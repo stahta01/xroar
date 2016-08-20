@@ -36,7 +36,6 @@ struct vo_rect {
 };
 
 struct vo_interface {
-	int scanline;
 	int window_x, window_y;
 	int window_w, window_h;
 	_Bool is_fullscreen;

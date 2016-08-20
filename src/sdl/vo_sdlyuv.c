@@ -142,7 +142,7 @@ static void *new(void) {
 	}
 
 	alloc_colours(vo);
-	vo->scanline = 0;
+	generic_vsync(&vosdl->generic);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
@@ -290,5 +290,5 @@ static void vsync(void *sptr) {
 	struct vo_sdlyuv_interface *vosdl = sptr;
 	SDL_DisplayYUVOverlay(vosdl->overlay, &vosdl->dstrect);
 	vosdl->generic.pixel = (Pixel *)vosdl->overlay->pixels[0];
-	vosdl->generic.public.scanline = 0;
+	generic_vsync(&vosdl->generic);
 }

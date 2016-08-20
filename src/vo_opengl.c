@@ -106,7 +106,7 @@ struct vo_interface *vo_opengl_new(void) {
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
 	vogl->filter = xroar_ui_cfg.gl_filter;
 	alloc_colours(vo);
-	vo->scanline = 0;
+	generic_vsync(generic);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
@@ -217,7 +217,7 @@ static void vo_opengl_vsync(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
 	vo_opengl_refresh(vogl);
 	vogl->generic.pixel = vogl->texture_pixels;
-	vogl->generic.public.scanline = 0;
+	generic_vsync(&vogl->generic);
 }
 
 static void vo_opengl_set_vo_cmp(void *sptr, int mode) {

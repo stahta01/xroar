@@ -38,6 +38,7 @@ struct vo_generic_interface {
 
 	// Current render pointer
 	Pixel *pixel;
+	int scanline;
 
 	// Gamma LUT
 	uint8_t ntsc_ungamma[256];
@@ -184,8 +185,8 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	(void)phase;
-	if (vo->scanline >= vo->window_y &&
-	    vo->scanline < (vo->window_y + vo->window_h)) {
+	if (generic->scanline >= vo->window_y &&
+	    generic->scanline < (vo->window_y + vo->window_h)) {
 		scanline_data += vo->window_x;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w >> 1; i; i--) {
@@ -197,7 +198,7 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
 	}
-	vo->scanline++;
+	generic->scanline++;
 }
 
 /* Render artifacted colours - simple 4-colour lookup */
@@ -207,8 +208,8 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
-	if (vo->scanline >= vo->window_y &&
-	    vo->scanline < (vo->window_y + vo->window_h)) {
+	if (generic->scanline >= vo->window_y &&
+	    generic->scanline < (vo->window_y + vo->window_h)) {
 		scanline_data += vo->window_x;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w / 4; i; i--) {
@@ -228,7 +229,7 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
 	}
-	vo->scanline++;
+	generic->scanline++;
 }
 
 /* Render artifacted colours - 5-bit lookup table */
@@ -238,8 +239,8 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 	struct vo_interface *vo = &generic->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
-	if (vo->scanline >= vo->window_y &&
-	    vo->scanline < (vo->window_y + vo->window_h)) {
+	if (generic->scanline >= vo->window_y &&
+	    generic->scanline < (vo->window_y + vo->window_h)) {
 		unsigned aindex = 0;
 		scanline_data += vo->window_x;
 		aindex = (*(scanline_data - 6) != VDG_BLACK) ? 14 : 0;
@@ -262,7 +263,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
 	}
-	vo->scanline++;
+	generic->scanline++;
 }
 
 /* NTSC composite video simulation */
@@ -270,12 +271,12 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
 	struct vo_interface *vo = &generic->public;
-	if (vo->scanline < vo->window_y ||
-	    vo->scanline >= (vo->window_y + vo->window_h)) {
-		vo->scanline++;
+	if (generic->scanline < vo->window_y ||
+	    generic->scanline >= (vo->window_y + vo->window_h)) {
+		generic->scanline++;
 		return;
 	}
-	vo->scanline++;
+	generic->scanline++;
 	const uint8_t *v = (scanline_data + vo->window_x) - NOFF;
 	phase = ((phase + vo->window_x) + NOFF) & 3;
 	LOCK_SURFACE(generic);
@@ -342,4 +343,9 @@ static void set_vo_cmp(void *sptr, int mode) {
 		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ntsc, vo);
 		break;
 	}
+}
+
+static void generic_vsync(void *sptr) {
+	struct vo_generic_interface *generic = sptr;
+	generic->scanline = 0;
 }

@@ -267,5 +267,5 @@ static void vo_sdl_vsync(void *sptr) {
 	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->renderer);
 	vosdl->generic.pixel = vosdl->texture_pixels;
-	vosdl->generic.public.scanline = 0;
+	generic_vsync(&vosdl->generic.public);
 }
