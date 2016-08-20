@@ -218,7 +218,6 @@ xroar_SOURCES += \
 	sdl/joystick_sdl.c \
 	sdl/keyboard_sdl.c \
 	sdl/ui_sdl.c \
-	sdl/vo_sdl.c \
 	sdl/vo_sdlyuv.c
 endif
 
