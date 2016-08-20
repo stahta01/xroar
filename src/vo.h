@@ -42,17 +42,6 @@ struct vo_interface {
 
 	DELEGATE_T0(void) free;
 
-	/*
-	void (* update_palette)(struct vo_interface *vo);
-	void (* resize)(struct vo_interface *vo, unsigned int w, unsigned int h);
-	int (* set_fullscreen)(struct vo_interface *vo, _Bool fullscreen);
-	void (*render_scanline)(struct vo_interface *vo, uint8_t const *scanline_data,
-				struct ntsc_burst *burst, unsigned phase);
-	void (* vsync)(struct vo_interface *vo);
-	void (* refresh)(struct vo_interface *vo);
-	void (* set_vo_cmp)(struct vo_interface *vo, int mode);
-	*/
-
 	DELEGATE_T0(void) update_palette;
 	DELEGATE_T2(void, unsigned, unsigned) resize;
 	DELEGATE_T1(int, bool) set_fullscreen;
