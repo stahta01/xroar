@@ -33,45 +33,58 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_macosx_module = {
-	.common = { .name = "macosx", .description = "Mac OS X audio",
-		    .init = init, .shutdown = shutdown },
-	.write_buffer = write_buffer,
+struct module ao_macosx_module = {
+	.name = "macosx", .description = "Mac OS X audio",
+	.new = new,
 };
 
-static AudioObjectID device;
+struct ao_macosx_interface {
+	struct ao_interface public;
+
+
+	AudioObjectID device;
 #ifdef MAC_OS_X_VERSION_10_5
-static AudioDeviceIOProcID aprocid;
+	AudioDeviceIOProcID aprocid;
 #endif
 
-static void *callback_buffer;
-static _Bool shutting_down;
+	void *callback_buffer;
+	_Bool shutting_down;
 
-static unsigned nfragments;
-static unsigned fragment_nbytes;
+	unsigned nfragments;
+	unsigned fragment_nbytes;
 
-static pthread_mutex_t fragment_mutex;
-static pthread_cond_t fragment_cv;
-static void **fragment_buffer;
-static unsigned fragment_queue_length;
-static unsigned write_fragment;
-static unsigned play_fragment;
+	pthread_mutex_t fragment_mutex;
+	pthread_cond_t fragment_cv;
+	void **fragment_buffer;
+	unsigned fragment_queue_length;
+	unsigned write_fragment;
+	unsigned play_fragment;
+};
 
 static OSStatus callback(AudioDeviceID, const AudioTimeStamp *, const AudioBufferList *,
 		const AudioTimeStamp *, AudioBufferList *, const AudioTimeStamp *, void *);
 static OSStatus callback_1(AudioDeviceID, const AudioTimeStamp *, const AudioBufferList *,
 		const AudioTimeStamp *, AudioBufferList *, const AudioTimeStamp *, void *);
 
-static _Bool init(void) {
+static void ao_macosx_free(void *sptr);
+static void *ao_macosx_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_macosx_interface *aomacosx = xmalloc(sizeof(*aomacosx));
+	*aomacosx = (struct ao_macosx_interface){0};
+	struct ao_interface *ao = &aomacosx->public;
+
+	ao->free = DELEGATE_AS0(void, ao_macosx_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_macosx_write_buffer, ao);
+
 	AudioObjectPropertyAddress propertyAddress;
 	AudioStreamBasicDescription deviceFormat;
 	UInt32 propertySize;
@@ -80,15 +93,15 @@ static _Bool init(void) {
 	propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
 
-	propertySize = sizeof(device);
-	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &device) != noErr)
+	propertySize = sizeof(aomacosx->device);
+	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &aomacosx->device) != noErr)
 		goto failed;
 
 	propertySize = sizeof(deviceFormat);
 	propertyAddress.mSelector = kAudioDevicePropertyStreamFormat;
 	propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
 	propertyAddress.mElement = 0;
-	if (AudioObjectGetPropertyData(device, &propertyAddress, 0, NULL, &propertySize, &deviceFormat) != noErr)
+	if (AudioObjectGetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, &propertySize, &deviceFormat) != noErr)
 		goto failed;
 
 	if (deviceFormat.mFormatID != kAudioFormatLinearPCM)
@@ -96,9 +109,9 @@ static _Bool init(void) {
 	if (!(deviceFormat.mFormatFlags & kLinearPCMFormatFlagIsFloat))
 		goto failed;
 
-	nfragments = 2;
+	aomacosx->nfragments = 2;
 	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
-		nfragments = xroar_cfg.ao_fragments;
+		aomacosx->nfragments = xroar_cfg.ao_fragments;
 
 	unsigned rate = deviceFormat.mSampleRate;
 	unsigned nchannels = deviceFormat.mChannelsPerFrame;
@@ -120,94 +133,101 @@ static _Bool init(void) {
 		} else {
 			buffer_nframes = 1024;
 		}
-		fragment_nframes = buffer_nframes / nfragments;
+		fragment_nframes = buffer_nframes / aomacosx->nfragments;
 	}
 
 	UInt32 prop_buf_size = fragment_nframes * frame_nbytes;
 	propertySize = sizeof(prop_buf_size);
 	propertyAddress.mSelector = kAudioDevicePropertyBufferSize;
-	if (AudioObjectSetPropertyData(device, &propertyAddress, 0, NULL, propertySize, &prop_buf_size) != kAudioHardwareNoError)
+	if (AudioObjectSetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, propertySize, &prop_buf_size) != kAudioHardwareNoError)
 		goto failed;
 	fragment_nframes = prop_buf_size / frame_nbytes;
 
 #ifdef MAC_OS_X_VERSION_10_5
-	AudioDeviceCreateIOProcID(device, (nfragments == 1) ? callback_1 : callback, NULL, &aprocid);
+	AudioDeviceCreateIOProcID(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback, aomacosx, &aomacosx->aprocid);
 #else
-	AudioDeviceAddIOProc(device, (nfragments == 1) ? callback_1 : callback, NULL);
+	AudioDeviceAddIOProc(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback, aomacosx);
 #endif
 
-	buffer_nframes = fragment_nframes * nfragments;
-	fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
+	buffer_nframes = fragment_nframes * aomacosx->nfragments;
+	aomacosx->fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
 
-	pthread_mutex_init(&fragment_mutex, NULL);
-	pthread_cond_init(&fragment_cv, NULL);
+	pthread_mutex_init(&aomacosx->fragment_mutex, NULL);
+	pthread_cond_init(&aomacosx->fragment_cv, NULL);
 
-	shutting_down = 0;
-	fragment_queue_length = 0;
-	write_fragment = 0;
-	play_fragment = 0;
-	callback_buffer = NULL;
+	aomacosx->shutting_down = 0;
+	aomacosx->fragment_queue_length = 0;
+	aomacosx->write_fragment = 0;
+	aomacosx->play_fragment = 0;
+	aomacosx->callback_buffer = NULL;
 
 	// allocate fragment buffers
-	fragment_buffer = xmalloc(nfragments * sizeof(void *));
-	if (nfragments > 1) {
-		for (unsigned i = 0; i < nfragments; i++) {
-			fragment_buffer[i] = xmalloc(fragment_nbytes);
+	aomacosx->fragment_buffer = xmalloc(aomacosx->nfragments * sizeof(void *));
+	if (aomacosx->nfragments > 1) {
+		for (unsigned i = 0; i < aomacosx->nfragments; i++) {
+			aomacosx->fragment_buffer[i] = xmalloc(aomacosx->fragment_nbytes);
 		}
 	}
 
-	AudioDeviceStart(device, (nfragments == 1) ? callback_1 : callback);
+	AudioDeviceStart(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback);
 
-	if (nfragments == 1) {
-		pthread_mutex_lock(&fragment_mutex);
-		while (callback_buffer == NULL) {
-			pthread_cond_wait(&fragment_cv, &fragment_mutex);
+	if (aomacosx->nfragments == 1) {
+		pthread_mutex_lock(&aomacosx->fragment_mutex);
+		while (aomacosx->callback_buffer == NULL) {
+			pthread_cond_wait(&aomacosx->fragment_cv, &aomacosx->fragment_mutex);
 		}
-		fragment_buffer[0] = callback_buffer;
-		callback_buffer = NULL;
-		pthread_mutex_unlock(&fragment_mutex);
+		aomacosx->fragment_buffer[0] = aomacosx->callback_buffer;
+		aomacosx->callback_buffer = NULL;
+		pthread_mutex_unlock(&aomacosx->fragment_mutex);
 	}
 
-	sound_init(fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
-	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
+	sound_init(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aomacosx->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
-	return 1;
+	return aomacosx;
+
 failed:
-	return 0;
+	if (aomacosx)
+		free(aomacosx);
+	return NULL;
 }
 
-static void shutdown(void) {
-	shutting_down = 1;
+static void ao_macosx_free(void *sptr) {
+	struct ao_macosx_interface *aomacosx = sptr;
+	aomacosx->shutting_down = 1;
 
 	// unblock audio thread
-	pthread_mutex_lock(&fragment_mutex);
-	fragment_queue_length = 1;
-	pthread_cond_signal(&fragment_cv);
-	pthread_mutex_unlock(&fragment_mutex);
+	pthread_mutex_lock(&aomacosx->fragment_mutex);
+	aomacosx->fragment_queue_length = 1;
+	pthread_cond_signal(&aomacosx->fragment_cv);
+	pthread_mutex_unlock(&aomacosx->fragment_mutex);
 
-	AudioDeviceStop(device, (nfragments == 1) ? callback_1 : callback);
+	AudioDeviceStop(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback);
 #ifdef MAC_OS_X_VERSION_10_5
-	AudioDeviceDestroyIOProcID(device, aprocid);
+	AudioDeviceDestroyIOProcID(aomacosx->device, aomacosx->aprocid);
 #else
-	AudioDeviceRemoveIOProc(device, (nfragments == 1) ? callback_1 : callback);
+	AudioDeviceRemoveIOProc(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback);
 #endif
 
-	pthread_mutex_destroy(&fragment_mutex);
-	pthread_cond_destroy(&fragment_cv);
+	pthread_mutex_destroy(&aomacosx->fragment_mutex);
+	pthread_cond_destroy(&aomacosx->fragment_cv);
 
-	if (nfragments > 1) {
-		for (unsigned i = 0; i < nfragments; i++) {
-			free(fragment_buffer[i]);
+	if (aomacosx->nfragments > 1) {
+		for (unsigned i = 0; i < aomacosx->nfragments; i++) {
+			free(aomacosx->fragment_buffer[i]);
 		}
 	}
 
-	free(fragment_buffer);
+	free(aomacosx->fragment_buffer);
+	free(aomacosx);
 }
 
-static void *write_buffer(void *buffer) {
+static void *ao_macosx_write_buffer(void *sptr, void *buffer) {
+	struct ao_macosx_interface *aomacosx = sptr;
+
 	(void)buffer;
 
-	pthread_mutex_lock(&fragment_mutex);
+	pthread_mutex_lock(&aomacosx->fragment_mutex);
 
 	/* For nfragments == 1, a non-NULL buffer means we've finished writing
 	 * to the buffer provided by the callback.  Otherwise, one fragment
@@ -215,30 +235,30 @@ static void *write_buffer(void *buffer) {
 	 * waiting for data to be available. */
 
 	if (buffer) {
-		write_fragment = (write_fragment + 1) % nfragments;
-		fragment_queue_length++;
-		pthread_cond_signal(&fragment_cv);
+		aomacosx->write_fragment = (aomacosx->write_fragment + 1) % aomacosx->nfragments;
+		aomacosx->fragment_queue_length++;
+		pthread_cond_signal(&aomacosx->fragment_cv);
 	}
 
 	if (xroar_noratelimit) {
-		pthread_mutex_unlock(&fragment_mutex);
+		pthread_mutex_unlock(&aomacosx->fragment_mutex);
 		return NULL;
 	}
 
-	if (nfragments == 1) {
+	if (aomacosx->nfragments == 1) {
 		// for nfragments == 1, wait for callback to send buffer
-		while (callback_buffer == NULL)
-			pthread_cond_wait(&fragment_cv, &fragment_mutex);
-		fragment_buffer[0] = callback_buffer;
-		callback_buffer = NULL;
+		while (aomacosx->callback_buffer == NULL)
+			pthread_cond_wait(&aomacosx->fragment_cv, &aomacosx->fragment_mutex);
+		aomacosx->fragment_buffer[0] = aomacosx->callback_buffer;
+		aomacosx->callback_buffer = NULL;
 	} else {
 		// for nfragments > 1, wait until a fragment buffer is available
-		while (fragment_queue_length == nfragments)
-			pthread_cond_wait(&fragment_cv, &fragment_mutex);
+		while (aomacosx->fragment_queue_length == aomacosx->nfragments)
+			pthread_cond_wait(&aomacosx->fragment_cv, &aomacosx->fragment_mutex);
 	}
 
-	pthread_mutex_unlock(&fragment_mutex);
-	return fragment_buffer[write_fragment];
+	pthread_mutex_unlock(&aomacosx->fragment_mutex);
+	return aomacosx->fragment_buffer[aomacosx->write_fragment];
 }
 
 static OSStatus callback(AudioDeviceID inDevice, const AudioTimeStamp *inNow,
@@ -246,6 +266,7 @@ static OSStatus callback(AudioDeviceID inDevice, const AudioTimeStamp *inNow,
 		const AudioTimeStamp *inInputTime,
 		AudioBufferList *outOutputData,
 		const AudioTimeStamp *inOutputTime, void *defptr) {
+	struct ao_macosx_interface *aomacosx = defptr;
 	(void)inDevice;      /* unused */
 	(void)inNow;         /* unused */
 	(void)inInputData;   /* unused */
@@ -253,23 +274,23 @@ static OSStatus callback(AudioDeviceID inDevice, const AudioTimeStamp *inNow,
 	(void)inOutputTime;  /* unused */
 	(void)defptr;        /* unused */
 
-	if (shutting_down)
+	if (aomacosx->shutting_down)
 		return kAudioHardwareNoError;
-	pthread_mutex_lock(&fragment_mutex);
+	pthread_mutex_lock(&aomacosx->fragment_mutex);
 
 	// wait until at least one fragment buffer is filled
-	while (fragment_queue_length == 0)
-		pthread_cond_wait(&fragment_cv, &fragment_mutex);
+	while (aomacosx->fragment_queue_length == 0)
+		pthread_cond_wait(&aomacosx->fragment_cv, &aomacosx->fragment_mutex);
 
 	// copy it to callback buffer
-	memcpy(outOutputData->mBuffers[0].mData, fragment_buffer[play_fragment], fragment_nbytes);
-	play_fragment = (play_fragment + 1) % nfragments;
+	memcpy(outOutputData->mBuffers[0].mData, aomacosx->fragment_buffer[aomacosx->play_fragment], aomacosx->fragment_nbytes);
+	aomacosx->play_fragment = (aomacosx->play_fragment + 1) % aomacosx->nfragments;
 
 	// signal main thread that a fragment buffer is available
-	fragment_queue_length--;
-	pthread_cond_signal(&fragment_cv);
+	aomacosx->fragment_queue_length--;
+	pthread_cond_signal(&aomacosx->fragment_cv);
 
-	pthread_mutex_unlock(&fragment_mutex);
+	pthread_mutex_unlock(&aomacosx->fragment_mutex);
 	return kAudioHardwareNoError;
 }
 
@@ -278,28 +299,28 @@ static OSStatus callback_1(AudioDeviceID inDevice, const AudioTimeStamp *inNow,
 		const AudioTimeStamp *inInputTime,
 		AudioBufferList *outOutputData,
 		const AudioTimeStamp *inOutputTime, void *defptr) {
+	struct ao_macosx_interface *aomacosx = defptr;
 	(void)inDevice;      /* unused */
 	(void)inNow;         /* unused */
 	(void)inInputData;   /* unused */
 	(void)inInputTime;   /* unused */
 	(void)inOutputTime;  /* unused */
-	(void)defptr;        /* unused */
 
-	if (shutting_down)
+	if (aomacosx->shutting_down)
 		return kAudioHardwareNoError;
-	pthread_mutex_lock(&fragment_mutex);
+	pthread_mutex_lock(&aomacosx->fragment_mutex);
 
 	// pass callback buffer to main thread
-	callback_buffer = outOutputData->mBuffers[0].mData;
-	pthread_cond_signal(&fragment_cv);
+	aomacosx->callback_buffer = outOutputData->mBuffers[0].mData;
+	pthread_cond_signal(&aomacosx->fragment_cv);
 
 	// wait until main thread signals filled buffer
-	while (fragment_queue_length == 0)
-		pthread_cond_wait(&fragment_cv, &fragment_mutex);
+	while (aomacosx->fragment_queue_length == 0)
+		pthread_cond_wait(&aomacosx->fragment_cv, &aomacosx->fragment_mutex);
 
 	// set to 0 so next callback will wait
-	fragment_queue_length = 0;
+	aomacosx->fragment_queue_length = 0;
 
-	pthread_mutex_unlock(&fragment_mutex);
+	pthread_mutex_unlock(&aomacosx->fragment_mutex);
 	return kAudioHardwareNoError;
 }

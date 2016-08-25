@@ -13,6 +13,7 @@
 #include "ui.h"
 #include "xconfig.h"
 
+struct ao_interface;
 struct cart;
 struct event;
 struct machine_config;
@@ -110,6 +111,7 @@ extern struct event *xroar_ui_events;
 extern struct event *xroar_machine_events;
 
 extern struct vo_interface *xroar_vo_interface;
+extern struct ao_interface *xroar_ao_interface;
 
 extern struct machine_config *xroar_machine_config;
 extern struct machine *xroar_machine;

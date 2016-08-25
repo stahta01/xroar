@@ -92,9 +92,6 @@ AC_ARG_WITH([oss],
 AC_ARG_WITH([pulse],
 	AS_HELP_STRING([--without-pulse], [don't test for PulseAudio]) )
 
-AC_ARG_WITH([sunaudio],
-	AS_HELP_STRING([--with-sunaudio], [test for Sun audio]) )
-
 AC_ARG_WITH([coreaudio],
 	AS_HELP_STRING([--without-coreaudio], [don't test for Mac OS X Core Audio]) )
 
@@ -282,39 +279,6 @@ int main(int argc, char **argv) { pa_simple *p = pa_simple_new(0,0,0,0,0,0,0,0,0
 
 AM_CONDITIONAL([AO_PULSE], [test -n "$have_pulse"])
 AM_COND_IF([AO_PULSE], [AC_DEFINE([HAVE_PULSE], 1, [Have PulseAudio])])
-
-### Sun audio
-
-AS_IF([test "x$with_sunaudio" = "xyes"], [
-		SUN_AUDIO_CFLAGS=""
-		SUN_AUDIO_LIBS="-lrt"
-		])
-AC_SUBST(SUN_AUDIO_CFLAGS)
-AC_SUBST(SUN_AUDIO_LIBS)
-
-unset have_sunaudio
-AS_IF([test -n "$SUN_AUDIO_LIBS"], [
-		OLD_CFLAGS="$CFLAGS"
-		OLD_LIBS="$LIBS"
-		CFLAGS="$CFLAGS $SUN_AUDIO_CFLAGS"
-		LIBS="$LIBS $SUN_AUDIO_LIBS"
-		AC_MSG_CHECKING([if Sun audio is usable])
-		AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <stdlib.h>
-#include <sys/audioio.h>
-#include <sys/stropts.h>
-#include <time.h>
-int main(int argc, char **argv) { audio_info_t d; int t = AUDIO_ENCODING_LINEAR; t = I_FLUSH; nanosleep(NULL,NULL); return 0; }
-				])], [
-			AC_MSG_RESULT([yes])
-			have_sunaudio=1
-			], [AC_MSG_RESULT([no])] )
-		CFLAGS="$OLD_CFLAGS"
-		LIBS="$OLD_LIBS"
-	 ])
-
-AM_CONDITIONAL([AO_SUN], [test -n "$have_sunaudio"])
-AM_COND_IF([AO_SUN], [AC_DEFINE([HAVE_SUN_AUDIO], 1, [Have Sun Audio])])
 
 ### Mac OS X Core Audio
 

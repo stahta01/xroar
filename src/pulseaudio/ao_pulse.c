@@ -28,27 +28,38 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_pulse_module = {
-	.common = { .name = "pulse", .description = "Pulse audio",
-		    .init = init, .shutdown = shutdown },
-	.write_buffer = write_buffer,
+struct module ao_pulse_module = {
+	.name = "pulse", .description = "Pulse audio",
+	.new = new,
 };
 
-static pa_simple *pa;
-static void *audio_buffer;
+struct ao_pulse_interface {
+	struct ao_interface public;
 
-static size_t fragment_nbytes;
+	pa_simple *pa;
+	size_t fragment_nbytes;
+	void *audio_buffer;
+};
 
-static _Bool init(void) {
+static void ao_pulse_free(void *sptr);
+static void *ao_pulse_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_pulse_interface *aopulse = xmalloc(sizeof(*aopulse));
+	*aopulse = (struct ao_pulse_interface){0};
+	struct ao_interface *ao = &aopulse->public;
+
+	ao->free = DELEGATE_AS0(void, ao_pulse_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
+
 	const char *device = xroar_cfg.ao_device;
 	pa_sample_spec ss = {
 		.format = PA_SAMPLE_S16NE,
@@ -101,33 +112,41 @@ static _Bool init(void) {
 	}
 	ba.tlength = fragment_nframes * frame_nbytes;
 
-	pa = pa_simple_new(NULL, "XRoar", PA_STREAM_PLAYBACK, device,
+	aopulse->pa = pa_simple_new(NULL, "XRoar", PA_STREAM_PLAYBACK, device,
 	                   "output", &ss, NULL, &ba, &error);
-	if (!pa) {
+	if (!aopulse->pa) {
 		LOG_ERROR("Failed to initialise: %s\n", pa_strerror(error));
 		goto failed;
 	}
 
-	fragment_nbytes = fragment_nframes * sample_nbytes * nchannels;
-	audio_buffer = xmalloc(fragment_nbytes);
-	sound_init(audio_buffer, request_fmt, rate, nchannels, fragment_nframes);
+	aopulse->fragment_nbytes = fragment_nframes * sample_nbytes * nchannels;
+	aopulse->audio_buffer = xmalloc(aopulse->fragment_nbytes);
+	sound_init(aopulse->audio_buffer, request_fmt, rate, nchannels, fragment_nframes);
 	LOG_DEBUG(1, "\t%dms (%d samples) buffer\n", (fragment_nframes * 1000) / rate, fragment_nframes);
-	return 1;
+	return aopulse;
+
 failed:
-	return 0;
+	if (aopulse)
+		free(aopulse);
+	return NULL;
 }
 
-static void shutdown(void) {
+static void ao_pulse_free(void *sptr) {
+	struct ao_pulse_interface *aopulse = sptr;
+
 	int error;
-	pa_simple_flush(pa, &error);
-	pa_simple_free(pa);
-	free(audio_buffer);
+	pa_simple_flush(aopulse->pa, &error);
+	pa_simple_free(aopulse->pa);
+	free(aopulse->audio_buffer);
+	free(aopulse);
 }
 
-static void *write_buffer(void *buffer) {
+static void *ao_pulse_write_buffer(void *sptr, void *buffer) {
+	struct ao_pulse_interface *aopulse = sptr;
+
 	int error;
 	if (xroar_noratelimit)
 		return buffer;
-	pa_simple_write(pa, buffer, fragment_nbytes, &error);
+	pa_simple_write(aopulse->pa, buffer, aopulse->fragment_nbytes, &error);
 	return buffer;
 }

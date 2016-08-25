@@ -28,15 +28,8 @@ typedef struct {
 	char *(* const save_filename)(char const * const *extensions);
 } FileReqModule;
 
-typedef struct {
-	struct module common;
-	void *(* const write_buffer)(void *buffer);
-} SoundModule;
-
 extern FileReqModule * const *filereq_module_list;
 extern FileReqModule *filereq_module;
-extern SoundModule * const *sound_module_list;
-extern SoundModule *sound_module;
 
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);

@@ -33,55 +33,67 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void _shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_sdl_module = {
-	.common = { .name = "sdl", .description = "SDL2 audio",
-		    .init = init, .shutdown = _shutdown },
-	.write_buffer = write_buffer,
+struct module ao_sdl_module = {
+	.name = "sdl", .description = "SDL2 audio",
+	.new = new,
 };
 
-static SDL_AudioDeviceID device;
-static SDL_AudioSpec audiospec;
+struct ao_sdl2_interface {
+	struct ao_interface public;
 
-static void *callback_buffer;
-static _Bool shutting_down;
+	SDL_AudioDeviceID device;
+	SDL_AudioSpec audiospec;
 
-static unsigned nfragments;
-static unsigned fragment_nbytes;
+	void *callback_buffer;
+	_Bool shutting_down;
 
-static SDL_mutex *fragment_mutex;
-static SDL_cond *fragment_cv;
-static void **fragment_buffer;
-static unsigned fragment_queue_length;
-static unsigned write_fragment;
-static unsigned play_fragment;
+	unsigned nfragments;
+	unsigned fragment_nbytes;
 
-static unsigned timeout_ms;
+	SDL_mutex *fragment_mutex;
+	SDL_cond *fragment_cv;
+	void **fragment_buffer;
+	unsigned fragment_queue_length;
+	unsigned write_fragment;
+	unsigned play_fragment;
+
+	unsigned timeout_ms;
+};
 
 static void callback(void *, Uint8 *, int);
 static void callback_1(void *, Uint8 *, int);
 
-static _Bool init(void) {
-	static SDL_AudioSpec desired;
+static void ao_sdl2_free(void *sptr);
+static void *ao_sdl2_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	SDL_AudioSpec desired;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
 			LOG_ERROR("Failed to initialise SDL\n");
-			return 0;
+			return NULL;
 		}
 	}
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
 		LOG_ERROR("Failed to initialise SDL audio\n");
-		return 0;
+		return NULL;
 	}
+
+	struct ao_sdl2_interface *aosdl = xmalloc(sizeof(*aosdl));
+	*aosdl = (struct ao_sdl2_interface){0};
+	struct ao_interface *ao = &aosdl->public;
+
+	ao->free = DELEGATE_AS0(void, ao_sdl2_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl2_write_buffer, ao);
 
 	unsigned rate = 48000;
 	unsigned nchannels = 2;
@@ -99,12 +111,12 @@ static _Bool init(void) {
 	/* My threading code doesn't seem to work on Windows, nfragments == 1
 	 * is the only way to get reasonable audio. */
 #ifdef WINDOWS32
-	nfragments = 1;
+	aosdl->nfragments = 1;
 #else
-	nfragments = 2;
+	aosdl->nfragments = 2;
 #endif
 	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
-		nfragments = xroar_cfg.ao_fragments;
+		aosdl->nfragments = xroar_cfg.ao_fragments;
 
 	if (xroar_cfg.ao_fragment_ms > 0) {
 		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
@@ -118,14 +130,14 @@ static _Bool init(void) {
 		} else {
 			buffer_nframes = 1024;
 		}
-		fragment_nframes = buffer_nframes / nfragments;
+		fragment_nframes = buffer_nframes / aosdl->nfragments;
 	}
 
 	desired.freq = rate;
 	desired.channels = nchannels;
 	desired.samples = fragment_nframes;
-	desired.callback = (nfragments == 1) ? callback_1 : callback;
-	desired.userdata = NULL;
+	desired.callback = (aosdl->nfragments == 1) ? callback_1 : callback;
+	desired.userdata = aosdl;
 
 	switch (xroar_cfg.ao_format) {
 	case SOUND_FMT_U8:
@@ -152,17 +164,18 @@ static _Bool init(void) {
 		break;
 	}
 
-	device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
-	if (device == 0) {
+	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	if (aosdl->device == 0) {
 		LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		return 0;
+		free(aosdl);
+		return NULL;
 	}
-	rate = audiospec.freq;
-	nchannels = audiospec.channels;
-	fragment_nframes = audiospec.samples;
+	rate = aosdl->audiospec.freq;
+	nchannels = aosdl->audiospec.channels;
+	fragment_nframes = aosdl->audiospec.samples;
 
-	switch (audiospec.format) {
+	switch (aosdl->audiospec.format) {
 		case AUDIO_U8: sample_fmt = SOUND_FMT_U8; sample_nbytes = 1; break;
 		case AUDIO_S8: sample_fmt = SOUND_FMT_S8; sample_nbytes = 1; break;
 		case AUDIO_S16LSB: sample_fmt = SOUND_FMT_S16_LE; sample_nbytes = 2; break;
@@ -171,73 +184,78 @@ static _Bool init(void) {
 			LOG_WARN("Unhandled audio format.");
 			goto failed;
 	}
-	timeout_ms = (fragment_nframes * 1500) / rate;
+	aosdl->timeout_ms = (fragment_nframes * 1500) / rate;
 
-	buffer_nframes = fragment_nframes * nfragments;
-	fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
+	buffer_nframes = fragment_nframes * aosdl->nfragments;
+	aosdl->fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
 
-	fragment_mutex = SDL_CreateMutex();
-	fragment_cv = SDL_CreateCond();
+	aosdl->fragment_mutex = SDL_CreateMutex();
+	aosdl->fragment_cv = SDL_CreateCond();
 
-	shutting_down = 0;
-	fragment_queue_length = 0;
-	write_fragment = 0;
-	play_fragment = 0;
-	callback_buffer = NULL;
+	aosdl->shutting_down = 0;
+	aosdl->fragment_queue_length = 0;
+	aosdl->write_fragment = 0;
+	aosdl->play_fragment = 0;
+	aosdl->callback_buffer = NULL;
 
 	// allocate fragment buffers
-	fragment_buffer = xmalloc(nfragments * sizeof(void *));
-	if (nfragments == 1) {
-		fragment_buffer[0] = NULL;
+	aosdl->fragment_buffer = xmalloc(aosdl->nfragments * sizeof(void *));
+	if (aosdl->nfragments == 1) {
+		aosdl->fragment_buffer[0] = NULL;
 	} else {
-		for (unsigned i = 0; i < nfragments; i++) {
-			fragment_buffer[i] = xmalloc(fragment_nbytes);
+		for (unsigned i = 0; i < aosdl->nfragments; i++) {
+			aosdl->fragment_buffer[i] = xmalloc(aosdl->fragment_nbytes);
 		}
 	}
 
-	sound_init(fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
-	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
+	sound_init(aosdl->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aosdl->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
-	SDL_PauseAudioDevice(device, 0);
-	return 1;
+	SDL_PauseAudioDevice(aosdl->device, 0);
+	return aosdl;
 
 failed:
-	SDL_CloseAudioDevice(device);
+	SDL_CloseAudioDevice(aosdl->device);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-	return 0;
+	free(aosdl);
+	return NULL;
 }
 
-static void _shutdown(void) {
-	shutting_down = 1;
+static void ao_sdl2_free(void *sptr) {
+	struct ao_sdl2_interface *aosdl = sptr;
+	aosdl->shutting_down = 1;
 
 	// no more audio
-	SDL_PauseAudioDevice(device, 1);
+	SDL_PauseAudioDevice(aosdl->device, 1);
 
 	// unblock audio thread
-	SDL_LockMutex(fragment_mutex);
-	fragment_queue_length = 1;
-	SDL_CondSignal(fragment_cv);
-	SDL_UnlockMutex(fragment_mutex);
+	SDL_LockMutex(aosdl->fragment_mutex);
+	aosdl->fragment_queue_length = 1;
+	SDL_CondSignal(aosdl->fragment_cv);
+	SDL_UnlockMutex(aosdl->fragment_mutex);
 
-	SDL_CloseAudioDevice(device);
+	SDL_CloseAudioDevice(aosdl->device);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
-	SDL_DestroyCond(fragment_cv);
-	SDL_DestroyMutex(fragment_mutex);
+	SDL_DestroyCond(aosdl->fragment_cv);
+	SDL_DestroyMutex(aosdl->fragment_mutex);
 
-	if (nfragments > 1) {
-		for (unsigned i = 0; i < nfragments; i++) {
-			free(fragment_buffer[i]);
+	if (aosdl->nfragments > 1) {
+		for (unsigned i = 0; i < aosdl->nfragments; i++) {
+			free(aosdl->fragment_buffer[i]);
 		}
 	}
 
-	free(fragment_buffer);
+	free(aosdl->fragment_buffer);
+	free(aosdl);
 }
 
-static void *write_buffer(void *buffer) {
+static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
+	struct ao_sdl2_interface *aosdl = sptr;
+
 	(void)buffer;
 
-	SDL_LockMutex(fragment_mutex);
+	SDL_LockMutex(aosdl->fragment_mutex);
 
 	/* For nfragments == 1, a non-NULL buffer means we've finished writing
 	 * to the buffer provided by the callback.  Otherwise, one fragment
@@ -245,87 +263,87 @@ static void *write_buffer(void *buffer) {
 	 * waiting for data to be available. */
 
 	if (buffer) {
-		write_fragment = (write_fragment + 1) % nfragments;
-		fragment_queue_length++;
-		SDL_CondSignal(fragment_cv);
+		aosdl->write_fragment = (aosdl->write_fragment + 1) % aosdl->nfragments;
+		aosdl->fragment_queue_length++;
+		SDL_CondSignal(aosdl->fragment_cv);
 	}
 
 	if (xroar_noratelimit) {
-		SDL_UnlockMutex(fragment_mutex);
+		SDL_UnlockMutex(aosdl->fragment_mutex);
 		return NULL;
 	}
 
-	if (nfragments == 1) {
+	if (aosdl->nfragments == 1) {
 		// for nfragments == 1, wait for callback to send buffer
-		while (callback_buffer == NULL) {
-			if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
-				SDL_UnlockMutex(fragment_mutex);
+		while (aosdl->callback_buffer == NULL) {
+			if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+				SDL_UnlockMutex(aosdl->fragment_mutex);
 				return NULL;
 			}
 		}
-		fragment_buffer[0] = callback_buffer;
-		callback_buffer = NULL;
+		aosdl->fragment_buffer[0] = aosdl->callback_buffer;
+		aosdl->callback_buffer = NULL;
 	} else {
 		// for nfragments > 1, wait until a fragment buffer is available
-		while (fragment_queue_length == nfragments) {
-			if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
-				SDL_UnlockMutex(fragment_mutex);
+		while (aosdl->fragment_queue_length == aosdl->nfragments) {
+			if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+				SDL_UnlockMutex(aosdl->fragment_mutex);
 				return NULL;
 			}
 		}
 	}
 
-	SDL_UnlockMutex(fragment_mutex);
-	return fragment_buffer[write_fragment];
+	SDL_UnlockMutex(aosdl->fragment_mutex);
+	return aosdl->fragment_buffer[aosdl->write_fragment];
 }
 
 static void callback(void *userdata, Uint8 *stream, int len) {
-	(void)userdata;  /* unused */
+	struct ao_sdl2_interface *aosdl = userdata;
 	(void)len;  /* unused */
-	if (shutting_down)
+	if (aosdl->shutting_down)
 		return;
-	SDL_LockMutex(fragment_mutex);
+	SDL_LockMutex(aosdl->fragment_mutex);
 
 	// wait until at least one fragment buffer is filled
-	while (fragment_queue_length == 0) {
-		if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
-			SDL_UnlockMutex(fragment_mutex);
+	while (aosdl->fragment_queue_length == 0) {
+		if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			SDL_UnlockMutex(aosdl->fragment_mutex);
 			return;
 		}
 	}
 
 	// copy it to callback buffer
-	memcpy(stream, fragment_buffer[play_fragment], fragment_nbytes);
-	play_fragment = (play_fragment + 1) % nfragments;
+	memcpy(stream, aosdl->fragment_buffer[aosdl->play_fragment], aosdl->fragment_nbytes);
+	aosdl->play_fragment = (aosdl->play_fragment + 1) % aosdl->nfragments;
 
 	// signal main thread that a fragment buffer is available
-	fragment_queue_length--;
-	SDL_CondSignal(fragment_cv);
+	aosdl->fragment_queue_length--;
+	SDL_CondSignal(aosdl->fragment_cv);
 
-	SDL_UnlockMutex(fragment_mutex);
+	SDL_UnlockMutex(aosdl->fragment_mutex);
 }
 
 static void callback_1(void *userdata, Uint8 *stream, int len) {
-	(void)userdata;  /* unused */
+	struct ao_sdl2_interface *aosdl = userdata;
 	(void)len;  /* unused */
-	if (shutting_down)
+	if (aosdl->shutting_down)
 		return;
-	SDL_LockMutex(fragment_mutex);
+	SDL_LockMutex(aosdl->fragment_mutex);
 
 	// pass callback buffer to main thread
-	callback_buffer = stream;
-	SDL_CondSignal(fragment_cv);
+	aosdl->callback_buffer = stream;
+	SDL_CondSignal(aosdl->fragment_cv);
 
 	// wait until main thread signals filled buffer
-	while (fragment_queue_length == 0) {
-		if (SDL_CondWaitTimeout(fragment_cv, fragment_mutex, timeout_ms) == SDL_MUTEX_TIMEDOUT) {
-			SDL_UnlockMutex(fragment_mutex);
+	while (aosdl->fragment_queue_length == 0) {
+		if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			SDL_UnlockMutex(aosdl->fragment_mutex);
 			return;
 		}
 	}
 
 	// set to 0 so next callback will wait
-	fragment_queue_length = 0;
+	aosdl->fragment_queue_length = 0;
 
-	SDL_UnlockMutex(fragment_mutex);
+	SDL_UnlockMutex(aosdl->fragment_mutex);
 }

@@ -16,6 +16,7 @@ xroar_OBJCFLAGS =
 xroar_LDADD = $(top_builddir)/portalib/libporta.a -lm
 
 xroar_SOURCES = \
+	ao.c ao.h \
 	becker.c becker.h \
 	breakpoint.c breakpoint.h \
 	cart.c cart.h \
@@ -272,14 +273,6 @@ xroar_SOURCES += \
 	pulseaudio/ao_pulse.c
 endif
 
-# Sun audio
-if AO_SUN
-xroar_CFLAGS += $(SUN_AUDIO_CFLAGS)
-xroar_LDADD += $(SUN_AUDIO_LIBS)
-xroar_SOURCES += \
-	sunos/ao_sun.c
-endif
-
 # Mac OS X CoreAudio
 if AO_COREAUDIO
 xroar_CFLAGS += $(COREAUDIO_CFLAGS)
@@ -321,7 +314,6 @@ if MINGW
 xroar_CFLAGS += $(MINGW_CFLAGS)
 xroar_LDADD += $(MINGW_LIBS)
 xroar_SOURCES += \
-	windows32/ao_windows32.c \
 	windows32/common_windows32.c windows32/common_windows32.h \
 	windows32/filereq_windows32.c \
 	windows32/ui_windows32.c \

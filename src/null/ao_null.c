@@ -33,32 +33,47 @@
 #include <sys/time.h>
 #endif
 
+#include "xalloc.h"
+
+#include "ao.h"
 #include "events.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_null_module = {
-	.common = { .name = "null", .description = "No audio",
-		    .init = init, },
-	.write_buffer = write_buffer,
+struct module ao_null_module = {
+	.name = "null", .description = "No audio",
+	.new = new,
 };
 
-static event_ticks last_pause_cycle;
-static unsigned int last_pause_ms;
+struct ao_null_interface {
+	struct ao_interface public;
+
+	event_ticks last_pause_cycle;
+	unsigned int last_pause_ms;
+};
 
 static unsigned int current_time(void);
 static void sleep_ms(unsigned int ms);
 
-static _Bool init(void) {
+static void ao_null_free(void *sptr);
+static void *ao_null_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_null_interface *aonull = xmalloc(sizeof(*aonull));
+	*aonull = (struct ao_null_interface){0};
+	struct ao_interface *ao = &aonull->public;
+
+	ao->free = DELEGATE_AS0(void, ao_null_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_null_write_buffer, ao);
+
 	sound_init(NULL, SOUND_FMT_NULL, 44100, 1, 1024);
-	last_pause_cycle = event_current_tick;
-	last_pause_ms = current_time();
-	return 1;
+	aonull->last_pause_cycle = event_current_tick;
+	aonull->last_pause_ms = current_time();
+	return aonull;
 }
 
 static unsigned int current_time(void) {
@@ -86,21 +101,28 @@ static void sleep_ms(unsigned int ms) {
 #endif
 }
 
-static void *write_buffer(void *buffer) {
-	event_ticks elapsed_cycles = event_current_tick - last_pause_cycle;
+static void ao_null_free(void *sptr) {
+	struct ao_null_interface *aonull = sptr;
+	free(aonull);
+}
+
+static void *ao_null_write_buffer(void *sptr, void *buffer) {
+	struct ao_null_interface *aonull = sptr;
+
+	event_ticks elapsed_cycles = event_current_tick - aonull->last_pause_cycle;
 	unsigned int expected_elapsed_ms = elapsed_cycles / EVENT_MS(1);
 	unsigned int actual_elapsed_ms, difference_ms;
-	actual_elapsed_ms = current_time() - last_pause_ms;
+	actual_elapsed_ms = current_time() - aonull->last_pause_ms;
 	difference_ms = expected_elapsed_ms - actual_elapsed_ms;
 	if (difference_ms >= 10) {
 		if (xroar_noratelimit || difference_ms > 1000) {
-			last_pause_ms = current_time();
-			last_pause_cycle = event_current_tick;
+			aonull->last_pause_ms = current_time();
+			aonull->last_pause_cycle = event_current_tick;
 		} else {
 			sleep_ms(difference_ms);
-			difference_ms = current_time() - last_pause_ms;
-			last_pause_ms += difference_ms;
-			last_pause_cycle += difference_ms * EVENT_MS(1);
+			difference_ms = current_time() - aonull->last_pause_ms;
+			aonull->last_pause_ms += difference_ms;
+			aonull->last_pause_cycle += difference_ms * EVENT_MS(1);
 		}
 	}
 	return buffer;

@@ -29,32 +29,44 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_oss_module = {
-	.common = { .name = "oss", .description = "OSS audio",
-		    .init = init, .shutdown = shutdown },
-	.write_buffer = write_buffer,
+struct module ao_oss_module = {
+	.name = "oss", .description = "OSS audio",
+	.new = new,
 };
 
-static int sound_fd;
-static int fragment_nbytes;
-static void *audio_buffer;
+struct ao_oss_interface {
+	struct ao_interface public;
 
-static _Bool init(void) {
+	int sound_fd;
+	int fragment_nbytes;
+	void *audio_buffer;
+};
+
+static void ao_oss_free(void *sptr);
+static void *ao_oss_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_oss_interface *aooss = xmalloc(sizeof(*aooss));
+	*aooss = (struct ao_oss_interface){0};
+	struct ao_interface *ao = &aooss->public;
+
+	ao->free = DELEGATE_AS0(void, ao_oss_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_oss_write_buffer, ao);
+
 	const char *device = "/dev/dsp";
 	if (xroar_cfg.ao_device)
 		device = xroar_cfg.ao_device;
 
-	sound_fd = open(device, O_WRONLY);
-	if (sound_fd == -1) {
+	aooss->sound_fd = open(device, O_WRONLY);
+	if (aooss->sound_fd == -1) {
 		LOG_ERROR("OSS: failed to open device\n");
 		goto failed;
 	}
@@ -92,7 +104,7 @@ static _Bool init(void) {
 	enum sound_fmt buffer_fmt;
 	int format;
 	int bytes_per_sample;
-	if (ioctl(sound_fd, SNDCTL_DSP_GETFMTS, &format) == -1) {
+	if (ioctl(aooss->sound_fd, SNDCTL_DSP_GETFMTS, &format) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_GETFMTS failed\n");
 		goto failed;
 	}
@@ -125,7 +137,7 @@ static _Bool init(void) {
 		buffer_fmt = SOUND_FMT_U8;
 		bytes_per_sample = 1;
 	}
-	if (ioctl(sound_fd, SNDCTL_DSP_SETFMT, &format) == -1) {
+	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SETFMT, &format) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_SETFMT failed\n");
 		goto failed;
 	}
@@ -134,7 +146,7 @@ static _Bool init(void) {
 	int nchannels = xroar_cfg.ao_channels - 1;
 	if (nchannels < 0 || nchannels > 1)
 		nchannels = 1;
-	if (ioctl(sound_fd, SNDCTL_DSP_STEREO, &nchannels) == -1) {
+	if (ioctl(aooss->sound_fd, SNDCTL_DSP_STEREO, &nchannels) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_STEREO failed\n");
 		goto failed;
 	}
@@ -144,7 +156,7 @@ static _Bool init(void) {
 	unsigned rate = 48000;
 	if (xroar_cfg.ao_rate > 0)
 		rate = xroar_cfg.ao_rate;
-	if (ioctl(sound_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
+	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_SPEED failed\n");
 		goto failed;
 	}
@@ -177,16 +189,16 @@ static _Bool init(void) {
 
 	// frag size selector is 2^N:
 	int fbytes = fragment_nframes * bytes_per_sample * nchannels;
-	fragment_nbytes = 16;
+	aooss->fragment_nbytes = 16;
 	int frag_size_sel = 4;
-	while (fragment_nbytes < fbytes && frag_size_sel < 30) {
+	while (aooss->fragment_nbytes < fbytes && frag_size_sel < 30) {
 		frag_size_sel++;
-		fragment_nbytes <<= 1;
+		aooss->fragment_nbytes <<= 1;
 	}
 
 	// now piece together the ioctl:
 	int frag = (nfragments << 16) | frag_size_sel;
-	if (ioctl(sound_fd, SNDCTL_DSP_SETFRAGMENT, &frag) == -1) {
+	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SETFRAGMENT, &frag) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_SETFRAGMENT failed\n");
 		goto failed;
 	}
@@ -197,32 +209,40 @@ static _Bool init(void) {
 		LOG_ERROR("OSS: returned fragment size too large\n");
 		goto failed;
 	}
-	fragment_nbytes = 1 << frag_size_sel;
-	fragment_nframes = fragment_nbytes / (bytes_per_sample * nchannels);
+	aooss->fragment_nbytes = 1 << frag_size_sel;
+	fragment_nframes = aooss->fragment_nbytes / (bytes_per_sample * nchannels);
 	buffer_nframes = fragment_nframes * nfragments;
 
-	audio_buffer = xmalloc(fragment_nbytes);
-	sound_init(audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
+	aooss->audio_buffer = xmalloc(aooss->fragment_nbytes);
+	sound_init(aooss->audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
 	LOG_DEBUG(1, "\t%d frags * %d frames/frag = %d frames buffer (%.1fms)\n", nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
-	ioctl(sound_fd, SNDCTL_DSP_RESET, 0);
-	return 1;
+	ioctl(aooss->sound_fd, SNDCTL_DSP_RESET, 0);
+	return aooss;
+
 failed:
-	if (sound_fd != -1)
-		close(sound_fd);
-	return 0;
+	if (aooss->sound_fd != -1)
+		close(aooss->sound_fd);
+	if (aooss)
+		free(aooss);
+	return NULL;
 }
 
-static void shutdown(void) {
-	ioctl(sound_fd, SNDCTL_DSP_RESET, 0);
-	close(sound_fd);
-	free(audio_buffer);
+static void ao_oss_free(void *sptr) {
+	struct ao_oss_interface *aooss = sptr;
+
+	ioctl(aooss->sound_fd, SNDCTL_DSP_RESET, 0);
+	close(aooss->sound_fd);
+	free(aooss->audio_buffer);
+	free(aooss);
 }
 
-static void *write_buffer(void *buffer) {
+static void *ao_oss_write_buffer(void *sptr, void *buffer) {
+	struct ao_oss_interface *aooss = sptr;
+
 	if (xroar_noratelimit)
 		return buffer;
-	int r = write(sound_fd, buffer, fragment_nbytes);
+	int r = write(aooss->sound_fd, buffer, aooss->fragment_nbytes);
 	(void)r;
 	return buffer;
 }

@@ -16,6 +16,10 @@
  *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// XXX
+//
+// This was never operational, Windows just uses SDL audio.
+
 #include "config.h"
 
 #include <windows.h>

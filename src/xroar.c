@@ -38,6 +38,7 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "ao.h"
 #include "becker.h"
 #include "cart.h"
 #include "crclist.h"
@@ -197,6 +198,7 @@ _Bool xroar_noratelimit = 0;
 int xroar_frameskip = 0;
 
 struct vo_interface *xroar_vo_interface;
+struct ao_interface *xroar_ao_interface;
 
 struct machine_config *xroar_machine_config;
 struct machine *xroar_machine;
@@ -595,12 +597,12 @@ _Bool xroar_init(int argc, char **argv) {
 		filereq_module_list = ui_module->filereq_module_list;
 	if (ui_module->vo_module_list != NULL)
 		vo_module_list = ui_module->vo_module_list;
-	if (ui_module->sound_module_list != NULL)
-		sound_module_list = ui_module->sound_module_list;
-	// Select file requester, video & sound modules
+	if (ui_module->ao_module_list != NULL)
+		ao_module_list = ui_module->ao_module_list;
+	// Select file requester, video & audio modules
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
 	struct module *vo_module = module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
-	sound_module = (SoundModule *)module_select_by_arg((struct module * const *)sound_module_list, private_cfg.ao);
+	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
 
 	/* Check other command-line options */
 	if (xroar_cfg.frameskip < 0)
@@ -715,9 +717,8 @@ _Bool xroar_init(int argc, char **argv) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
-	sound_module = module_init_from_list((struct module * const *)sound_module_list, (struct module *)sound_module);
-	if (sound_module == NULL && sound_module_list != NULL) {
-		LOG_ERROR("No sound module initialised.\n");
+	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module))) {
+		LOG_ERROR("No audio module initialised.\n");
 		return 0;
 	}
 	/* ... subsystems */
@@ -844,7 +845,9 @@ void xroar_shutdown(void) {
 	cart_shutdown();
 	machine_shutdown();
 	xroar_machine_config = NULL;
-	module_shutdown((struct module *)sound_module);
+	if (xroar_ao_interface) {
+		DELEGATE_SAFE_CALL0(xroar_ao_interface->free);
+	}
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL0(xroar_vo_interface->free);
 	}

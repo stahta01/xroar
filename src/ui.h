@@ -93,7 +93,7 @@ struct ui_module {
 	struct module common;
 	FileReqModule * const *filereq_module_list;
 	struct module * const *vo_module_list;
-	SoundModule * const *sound_module_list;
+	struct module * const *ao_module_list;
 	struct joystick_module * const *joystick_module_list;
 	void (* const run)(void);
 	void (* const set_state)(enum ui_tag, int value, const void *data);

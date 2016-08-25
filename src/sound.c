@@ -24,6 +24,8 @@
 #include <string.h>
 
 #include "delegate.h"
+
+#include "ao.h"
 #include "events.h"
 #include "logging.h"
 #include "module.h"
@@ -219,7 +221,7 @@ static void fill_int8(int nframes) {
 		}
 		buffer_frame += count;
 		if (buffer_frame >= buffer_nframes) {
-			buffer = sound_module->write_buffer(buffer);
+			buffer = DELEGATE_CALL1(xroar_ao_interface->write_buffer, buffer);
 			buffer_frame = 0;
 		}
 	}
@@ -243,7 +245,7 @@ static void fill_int16(int nframes) {
 		}
 		buffer_frame += count;
 		if (buffer_frame >= buffer_nframes) {
-			buffer = sound_module->write_buffer(buffer);
+			buffer = DELEGATE_CALL1(xroar_ao_interface->write_buffer, buffer);
 			buffer_frame = 0;
 		}
 	}
@@ -267,7 +269,7 @@ static void fill_float(int nframes) {
 		}
 		buffer_frame += count;
 		if (buffer_frame >= buffer_nframes) {
-			buffer = sound_module->write_buffer(buffer);
+			buffer = DELEGATE_CALL1(xroar_ao_interface->write_buffer, buffer);
 			buffer_frame = 0;
 		}
 	}
@@ -276,7 +278,7 @@ static void fill_float(int nframes) {
 static void null_frames(int nframes) {
 	buffer_frame += nframes;
 	while (buffer_frame >= buffer_nframes) {
-		buffer = sound_module->write_buffer(buffer);
+		buffer = DELEGATE_CALL1(xroar_ao_interface->write_buffer, buffer);
 		buffer_frame -= buffer_nframes;
 	}
 }

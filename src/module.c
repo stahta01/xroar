@@ -49,54 +49,8 @@ static FileReqModule * const default_filereq_module_list[] = {
 	NULL
 };
 
-/**** Default sound module list ****/
-
-extern SoundModule sound_macosx_module;
-extern SoundModule sound_sun_module;
-extern SoundModule sound_oss_module;
-extern SoundModule sound_windows32_module;
-extern SoundModule sound_pulse_module;
-extern SoundModule sound_sdl_module;
-extern SoundModule sound_alsa_module;
-extern SoundModule sound_jack_module;
-extern SoundModule sound_null_module;
-static SoundModule * const default_sound_module_list[] = {
-#ifdef HAVE_MACOSX_AUDIO
-	&sound_macosx_module,
-#endif
-#ifdef HAVE_SUN_AUDIO
-	&sound_sun_module,
-#endif
-#ifdef HAVE_OSS_AUDIO
-	&sound_oss_module,
-#endif
-/*
-#ifdef WINDOWS32
-	&sound_windows32_module,
-#endif
-*/
-#ifdef HAVE_PULSE
-	&sound_pulse_module,
-#endif
-#if defined(HAVE_SDL2) || defined(HAVE_SDL)
-	&sound_sdl_module,
-#endif
-#ifdef HAVE_ALSA_AUDIO
-	&sound_alsa_module,
-#endif
-#ifdef HAVE_JACK_AUDIO
-	&sound_jack_module,
-#endif
-#ifdef HAVE_NULL_AUDIO
-	&sound_null_module,
-#endif
-	NULL
-};
-
 FileReqModule * const *filereq_module_list = default_filereq_module_list;
 FileReqModule *filereq_module = NULL;
-SoundModule * const *sound_module_list = default_sound_module_list;
-SoundModule *sound_module = NULL;
 
 void module_print_list(struct module * const *list) {
 	int i;

@@ -34,135 +34,155 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_jack_module = {
-	.common = { .name = "jack", .description = "JACK audio",
-		    .init = init, .shutdown = shutdown },
-	.write_buffer = write_buffer,
+struct module ao_jack_module = {
+	.name = "jack", .description = "JACK audio",
+	.new = new,
 };
 
-static jack_client_t *client;
-static jack_port_t *output_port;
+struct ao_jack_interface {
+	struct ao_interface public;
 
-static float *callback_buffer;
-static _Bool shutting_down;
+	jack_client_t *client;
+	jack_port_t *output_port;
 
-static unsigned nfragments;
+	float *callback_buffer;
+	_Bool shutting_down;
 
-static pthread_mutex_t fragment_mutex;
-static pthread_cond_t fragment_cv;
-static float *fragment_buffer;
-static unsigned fragment_queue_length;
-static unsigned write_fragment;
-static unsigned play_fragment;
+	unsigned nfragments;
 
-static unsigned timeout_us;
+	pthread_mutex_t fragment_mutex;
+	pthread_cond_t fragment_cv;
+	float *fragment_buffer;
+	unsigned fragment_queue_length;
+	unsigned write_fragment;
+
+	unsigned timeout_us;
+};
 
 static int callback_1(jack_nframes_t nframes, void *arg);
 
-static _Bool init(void) {
+static void ao_jack_free(void *sptr);
+static void *ao_jack_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_jack_interface *aojack = xmalloc(sizeof(*aojack));
+	*aojack = (struct ao_jack_interface){0};
+	struct ao_interface *ao = &aojack->public;
+
+	ao->free = DELEGATE_AS0(void, ao_jack_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_jack_write_buffer, ao);
+
 	const char **ports;
 
-	if ((client = jack_client_open("XRoar", 0, NULL)) == 0) {
+	if ((aojack->client = jack_client_open("XRoar", 0, NULL)) == 0) {
 		LOG_ERROR("Initialisation failed: JACK server not running?\n");
-		return 0;
+		goto failed;
 	}
 
 	unsigned buffer_nframes;
 	enum sound_fmt sample_fmt = SOUND_FMT_FLOAT;
 
-	jack_set_process_callback(client, callback_1, 0);
-	output_port = jack_port_register(client, "output0", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-	if (jack_activate(client)) {
+	jack_set_process_callback(aojack->client, callback_1, aojack);
+	aojack->output_port = jack_port_register(aojack->client, "output0", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+	if (jack_activate(aojack->client)) {
 		LOG_ERROR("Initialisation failed: Cannot activate client\n");
-		jack_client_close(client);
-		return 0;
+		jack_client_close(aojack->client);
+		goto failed;
 	}
-	if ((ports = jack_get_ports(client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL) {
+	if ((ports = jack_get_ports(aojack->client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL) {
 		LOG_ERROR("Cannot find any physical playback ports\n");
-		jack_client_close(client);
-		return 0;
+		jack_client_close(aojack->client);
+		goto failed;
 	}
 	/* connect up to 2 ports (stereo output) */
 	for (int i = 0; i < 2 && ports[i]; i++) {
-		if (jack_connect(client, jack_port_name(output_port), ports[i])) {
+		if (jack_connect(aojack->client, jack_port_name(aojack->output_port), ports[i])) {
 			LOG_ERROR("Cannot connect output ports\n");
 			free(ports);
-			jack_client_close(client);
-			return 0;
+			jack_client_close(aojack->client);
+			goto failed;
 		}
 	}
 	free(ports);
-	jack_nframes_t rate = jack_get_sample_rate(client);
-	jack_nframes_t fragment_nframes = jack_get_buffer_size(client);
+	jack_nframes_t rate = jack_get_sample_rate(aojack->client);
+	jack_nframes_t fragment_nframes = jack_get_buffer_size(aojack->client);
 
-	nfragments = 1;
+	aojack->nfragments = 1;
 	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
-		nfragments = xroar_cfg.ao_fragments;
+		aojack->nfragments = xroar_cfg.ao_fragments;
 
-	timeout_us = (fragment_nframes * 1500000) / rate;
+	aojack->timeout_us = (fragment_nframes * 1500000) / rate;
 
-	buffer_nframes = fragment_nframes * nfragments;
+	buffer_nframes = fragment_nframes * aojack->nfragments;
 
-	pthread_mutex_init(&fragment_mutex, NULL);
-	pthread_cond_init(&fragment_cv, NULL);
+	pthread_mutex_init(&aojack->fragment_mutex, NULL);
+	pthread_cond_init(&aojack->fragment_cv, NULL);
 
-	shutting_down = 0;
-	fragment_queue_length = 0;
-	write_fragment = 0;
-	play_fragment = 0;
-	callback_buffer = NULL;
+	aojack->shutting_down = 0;
+	aojack->fragment_queue_length = 0;
+	aojack->write_fragment = 0;
+	aojack->callback_buffer = NULL;
 
-	fragment_buffer = NULL;
+	aojack->fragment_buffer = NULL;
 
-	sound_init(fragment_buffer, sample_fmt, rate, 1, fragment_nframes);
-	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
+	sound_init(aojack->fragment_buffer, sample_fmt, rate, 1, fragment_nframes);
+	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aojack->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
-	return 1;
+	return aojack;
+
+failed:
+	if (aojack)
+		free(aojack);
+	return NULL;
 }
 
-static void shutdown(void) {
-	shutting_down = 1;
+static void ao_jack_free(void *sptr) {
+	struct ao_jack_interface *aojack = sptr;
+
+	aojack->shutting_down = 1;
 
 	// unblock audio thread
-	pthread_mutex_lock(&fragment_mutex);
-	fragment_queue_length = 1;
-	pthread_cond_signal(&fragment_cv);
-	pthread_mutex_unlock(&fragment_mutex);
+	pthread_mutex_lock(&aojack->fragment_mutex);
+	aojack->fragment_queue_length = 1;
+	pthread_cond_signal(&aojack->fragment_cv);
+	pthread_mutex_unlock(&aojack->fragment_mutex);
 
-	if (client)
-		jack_client_close(client);
-	client = NULL;
+	if (aojack->client)
+		jack_client_close(aojack->client);
+	aojack->client = NULL;
 
-	pthread_cond_destroy(&fragment_cv);
-	pthread_mutex_destroy(&fragment_mutex);
+	pthread_cond_destroy(&aojack->fragment_cv);
+	pthread_mutex_destroy(&aojack->fragment_mutex);
+	free(aojack);
 }
 
-static void *write_buffer(void *buffer) {
-	pthread_mutex_lock(&fragment_mutex);
+static void *ao_jack_write_buffer(void *sptr, void *buffer) {
+	struct ao_jack_interface *aojack = sptr;
+
+	pthread_mutex_lock(&aojack->fragment_mutex);
 
 	if (buffer) {
-		write_fragment = (write_fragment + 1) % nfragments;
-		fragment_queue_length++;
-		pthread_cond_signal(&fragment_cv);
+		aojack->write_fragment = (aojack->write_fragment + 1) % aojack->nfragments;
+		aojack->fragment_queue_length++;
+		pthread_cond_signal(&aojack->fragment_cv);
 	}
 
 	if (xroar_noratelimit) {
-		pthread_mutex_unlock(&fragment_mutex);
+		pthread_mutex_unlock(&aojack->fragment_mutex);
 		return NULL;
 	}
 
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	tv.tv_usec += timeout_us;
+	tv.tv_usec += aojack->timeout_us;
 	tv.tv_sec += (tv.tv_usec / 1000000);
 	tv.tv_usec %= 1000000;
 	struct timespec ts;
@@ -170,37 +190,37 @@ static void *write_buffer(void *buffer) {
 	ts.tv_nsec = tv.tv_usec * 1000;
 
 	// for nfragments == 1, wait for callback to send buffer
-	while (callback_buffer == NULL) {
-		if (pthread_cond_timedwait(&fragment_cv, &fragment_mutex, &ts) == ETIMEDOUT) {
-			pthread_mutex_unlock(&fragment_mutex);
+	while (aojack->callback_buffer == NULL) {
+		if (pthread_cond_timedwait(&aojack->fragment_cv, &aojack->fragment_mutex, &ts) == ETIMEDOUT) {
+			pthread_mutex_unlock(&aojack->fragment_mutex);
 			return NULL;
 		}
 	}
-	fragment_buffer = callback_buffer;
-	callback_buffer = NULL;
+	aojack->fragment_buffer = aojack->callback_buffer;
+	aojack->callback_buffer = NULL;
 
-	pthread_mutex_unlock(&fragment_mutex);
-	return fragment_buffer;;
+	pthread_mutex_unlock(&aojack->fragment_mutex);
+	return aojack->fragment_buffer;;
 }
 
 static int callback_1(jack_nframes_t nframes, void *arg) {
-	(void)arg;  /* unused */
+	struct ao_jack_interface *aojack = arg;
 
-	if (shutting_down)
+	if (aojack->shutting_down)
 		return -1;
-	pthread_mutex_lock(&fragment_mutex);
+	pthread_mutex_lock(&aojack->fragment_mutex);
 
 	// pass callback buffer to main thread
-	callback_buffer = (float *)jack_port_get_buffer(output_port, nframes);
-	pthread_cond_signal(&fragment_cv);
+	aojack->callback_buffer = (float *)jack_port_get_buffer(aojack->output_port, nframes);
+	pthread_cond_signal(&aojack->fragment_cv);
 
 	// wait until main thread signals filled buffer
-	while (fragment_queue_length == 0)
-		pthread_cond_wait(&fragment_cv, &fragment_mutex);
+	while (aojack->fragment_queue_length == 0)
+		pthread_cond_wait(&aojack->fragment_cv, &aojack->fragment_mutex);
 
 	// set to 0 so next callback will wait
-	fragment_queue_length = 0;
+	aojack->fragment_queue_length = 0;
 
-	pthread_mutex_unlock(&fragment_mutex);
+	pthread_mutex_unlock(&aojack->fragment_mutex);
 	return 0;
 }

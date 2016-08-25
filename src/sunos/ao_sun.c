@@ -25,6 +25,12 @@
  * Needs attention!
  */
 
+// XXX
+//
+// In fact, this is using an old interface that doesn't work any more, so this
+// has been removed from support.  Keeping the source around in case anyone
+// needs to revamp it.
+
 #include "config.h"
 
 #include <errno.h>

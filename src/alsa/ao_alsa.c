@@ -30,28 +30,39 @@
 
 #include "xalloc.h"
 
+#include "ao.h"
 #include "events.h"
 #include "logging.h"
 #include "module.h"
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
-static void shutdown(void);
-static void *write_buffer(void *buffer);
+static void *new(void);
 
-SoundModule sound_alsa_module = {
-	.common = { .name = "alsa", .description = "ALSA audio",
-		    .init = init, .shutdown = shutdown },
-	.write_buffer = write_buffer,
+struct module ao_alsa_module = {
+	.name = "alsa", .description = "ALSA audio",
+	.new = new,
 };
 
-static unsigned rate;
-static snd_pcm_t *pcm_handle;
-static snd_pcm_uframes_t fragment_nframes;
-static void *audio_buffer;
+struct ao_alsa_interface {
+	struct ao_interface public;
 
-static _Bool init(void) {
+	snd_pcm_t *pcm_handle;
+	snd_pcm_uframes_t fragment_nframes;
+	void *audio_buffer;
+};
+
+static void ao_alsa_free(void *sptr);
+static void *ao_alsa_write_buffer(void *sptr, void *buffer);
+
+static void *new(void) {
+	struct ao_alsa_interface *aoalsa = xmalloc(sizeof(*aoalsa));
+	*aoalsa = (struct ao_alsa_interface){0};
+	struct ao_interface *ao = &aoalsa->public;
+
+	ao->free = DELEGATE_AS0(void, ao_alsa_free, ao);
+	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_alsa_write_buffer, ao);
+
 	const char *device = xroar_cfg.ao_device ? xroar_cfg.ao_device : "default";
 	int err;
 	snd_pcm_hw_params_t *hw_params;
@@ -87,37 +98,38 @@ static _Bool init(void) {
 	if (nchannels < 1 || nchannels > 2)
 		nchannels = 2;
 
+	unsigned rate;
 	rate = (xroar_cfg.ao_rate > 0) ? xroar_cfg.ao_rate : 48000;
 
-	if ((err = snd_pcm_open(&pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+	if ((err = snd_pcm_open(&aoalsa->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
 		goto failed;
 
 	if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0)
 		goto failed;
 
-	if ((err = snd_pcm_hw_params_any(pcm_handle, hw_params)) < 0)
+	if ((err = snd_pcm_hw_params_any(aoalsa->pcm_handle, hw_params)) < 0)
 		goto failed;
 
-	if ((err = snd_pcm_hw_params_set_access(pcm_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
+	if ((err = snd_pcm_hw_params_set_access(aoalsa->pcm_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
 		goto failed;
 
-	if ((err = snd_pcm_hw_params_set_format(pcm_handle, hw_params, format)) < 0)
+	if ((err = snd_pcm_hw_params_set_format(aoalsa->pcm_handle, hw_params, format)) < 0)
 		goto failed;
 
-	if ((err = snd_pcm_hw_params_set_rate_near(pcm_handle, hw_params, &rate, 0)) < 0)
+	if ((err = snd_pcm_hw_params_set_rate_near(aoalsa->pcm_handle, hw_params, &rate, 0)) < 0)
 		goto failed;
 
-	if ((err = snd_pcm_hw_params_set_channels_near(pcm_handle, hw_params, &nchannels)) < 0)
+	if ((err = snd_pcm_hw_params_set_channels_near(aoalsa->pcm_handle, hw_params, &nchannels)) < 0)
 		goto failed;
 
-	fragment_nframes = 0;
+	aoalsa->fragment_nframes = 0;
 	if (xroar_cfg.ao_fragment_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
+		aoalsa->fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
 	} else if (xroar_cfg.ao_fragment_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao_fragment_nframes;
+		aoalsa->fragment_nframes = xroar_cfg.ao_fragment_nframes;
 	}
-	if (fragment_nframes > 0) {
-		if ((err = snd_pcm_hw_params_set_period_size_near(pcm_handle, hw_params, &fragment_nframes, NULL)) < 0) {
+	if (aoalsa->fragment_nframes > 0) {
+		if ((err = snd_pcm_hw_params_set_period_size_near(aoalsa->pcm_handle, hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
 			LOG_ERROR("ALSA: snd_pcm_hw_params_set_period_size_near() failed\n");
 			goto failed;
 		}
@@ -129,7 +141,7 @@ static _Bool init(void) {
 		nfragments = xroar_cfg.ao_fragments;
 	}
 	if (nfragments > 0) {
-		if ((err = snd_pcm_hw_params_set_periods_near(pcm_handle, hw_params, &nfragments, NULL)) < 0) {
+		if ((err = snd_pcm_hw_params_set_periods_near(aoalsa->pcm_handle, hw_params, &nfragments, NULL)) < 0) {
 			LOG_ERROR("ALSA: snd_pcm_hw_params_set_periods_near() failed\n");
 			goto failed;
 		}
@@ -145,13 +157,13 @@ static _Bool init(void) {
 	if (nfragments == 0 && buffer_nframes == 0)
 		buffer_nframes = (rate * 20) / 1000;
 	if (buffer_nframes > 0) {
-		if ((err = snd_pcm_hw_params_set_buffer_size_near(pcm_handle, hw_params, &buffer_nframes)) < 0) {
+		if ((err = snd_pcm_hw_params_set_buffer_size_near(aoalsa->pcm_handle, hw_params, &buffer_nframes)) < 0) {
 			LOG_ERROR("ALSA: snd_pcm_hw_params_set_buffer_size_near() failed\n");
 			goto failed;
 		}
 	}
 
-	if ((err = snd_pcm_hw_params(pcm_handle, hw_params)) < 0) {
+	if ((err = snd_pcm_hw_params(aoalsa->pcm_handle, hw_params)) < 0) {
 		LOG_ERROR("ALSA: snd_pcm_hw_params() failed\n");
 		goto failed;
 	}
@@ -163,8 +175,8 @@ static _Bool init(void) {
 		}
 	}
 
-	if (fragment_nframes == 0) {
-		if ((err = snd_pcm_hw_params_get_period_size(hw_params, &fragment_nframes, NULL)) < 0) {
+	if (aoalsa->fragment_nframes == 0) {
+		if ((err = snd_pcm_hw_params_get_period_size(hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
 			LOG_ERROR("ALSA: snd_pcm_hw_params_get_period_size() failed\n");
 			goto failed;
 		}
@@ -179,7 +191,7 @@ static _Bool init(void) {
 
 	snd_pcm_hw_params_free(hw_params);
 
-	if ((err = snd_pcm_prepare(pcm_handle)) < 0) {
+	if ((err = snd_pcm_prepare(aoalsa->pcm_handle)) < 0) {
 		LOG_ERROR("ALSA: snd_pcm_prepare() failed\n");
 		goto failed;
 	}
@@ -212,30 +224,38 @@ static _Bool init(void) {
 			goto failed;
 	}
 
-	unsigned buffer_size = fragment_nframes * nchannels * sample_nbytes;
-	audio_buffer = xmalloc(buffer_size);
-	sound_init(audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
-	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, fragment_nframes, buffer_nframes, (buffer_nframes * 1000) / rate);
+	unsigned buffer_size = aoalsa->fragment_nframes * nchannels * sample_nbytes;
+	aoalsa->audio_buffer = xmalloc(buffer_size);
+	sound_init(aoalsa->audio_buffer, buffer_fmt, rate, nchannels, aoalsa->fragment_nframes);
+	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, aoalsa->fragment_nframes, buffer_nframes, (buffer_nframes * 1000) / rate);
 
-	/* snd_pcm_writei(pcm_handle, buffer, fragment_nframes); */
-	return 1;
+	/* snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes); */
+	return aoalsa;
+
 failed:
 	LOG_ERROR("Failed to initialise ALSA: %s\n", snd_strerror(err));
-	return 0;
+	if (aoalsa)
+		free(aoalsa);
+	return NULL;
 }
 
-static void shutdown(void) {
-	snd_pcm_close(pcm_handle);
+static void ao_alsa_free(void *sptr) {
+	struct ao_alsa_interface *aoalsa = sptr;
+
+	snd_pcm_close(aoalsa->pcm_handle);
 	snd_config_update_free_global();
-	free(audio_buffer);
+	free(aoalsa->audio_buffer);
+	free(aoalsa);
 }
 
-static void *write_buffer(void *buffer) {
+static void *ao_alsa_write_buffer(void *sptr, void *buffer) {
+	struct ao_alsa_interface *aoalsa = sptr;
+
 	if (xroar_noratelimit)
 		return buffer;
-	if (snd_pcm_writei(pcm_handle, buffer, fragment_nframes) < 0) {
-		snd_pcm_prepare(pcm_handle);
-		snd_pcm_writei(pcm_handle, buffer, fragment_nframes);
+	if (snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes) < 0) {
+		snd_pcm_prepare(aoalsa->pcm_handle);
+		snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes);
 	}
 	return buffer;
 }
