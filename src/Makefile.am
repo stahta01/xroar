@@ -226,10 +226,10 @@ xroar_SOURCES += \
 	sdl/vo_sdlgl.c
 endif
 
+endif
+
 EXTRA_DIST += \
 	sdl/keyboard_sdl_mappings.c
-
-endif
 
 # Mac OS X special case SDL user interface
 
