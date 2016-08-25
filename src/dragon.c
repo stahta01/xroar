@@ -748,9 +748,11 @@ static void dragon_free(struct machine *m) {
 		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
 	m->remove_cart(m);
+#ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);
 	}
+#endif
 	if (md->keyboard_interface) {
 		keyboard_interface_free(md->keyboard_interface);
 	}
