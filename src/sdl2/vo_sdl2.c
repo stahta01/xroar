@@ -28,6 +28,7 @@
 
 #include "logging.h"
 #include "mc6847/mc6847.h"
+#include "module.h"
 #include "vo.h"
 #include "xroar.h"
 

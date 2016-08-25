@@ -27,6 +27,7 @@
 #include "xalloc.h"
 
 #include "logging.h"
+#include "module.h"
 #include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"

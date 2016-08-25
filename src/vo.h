@@ -8,7 +8,7 @@ the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 2 of the License, or (at your option) any later
 version.
 
-Video output module definition.
+Video output interface definition.
 
 */
 
@@ -19,8 +19,7 @@ Video output module definition.
 
 #include "delegate.h"
 
-#include "module.h"
-
+struct module;
 struct ntsc_burst;
 
 #define VO_CMP_PALETTE (0)

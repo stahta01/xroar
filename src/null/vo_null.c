@@ -23,6 +23,7 @@
 
 #include "xalloc.h"
 
+#include "module.h"
 #include "vo.h"
 
 static void *new(void);
