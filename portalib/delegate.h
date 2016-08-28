@@ -15,6 +15,8 @@ option) any later version.
 
 #include <stdint.h>
 
+#define DELEGATE_DEFINED(d) ((d).func != NULL)
+
 /* Underlying struct def for delegates. */
 
 #define DELEGATE_S0(T) struct { T (*func)(void *); void *sptr; }
