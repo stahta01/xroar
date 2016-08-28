@@ -509,7 +509,6 @@ static GtkActionEntry const ui_entries[] = {
 	  .label = "_About",
 	  .callback = G_CALLBACK(about) },
 };
-static guint ui_n_entries = G_N_ELEMENTS(ui_entries);
 
 static GtkToggleActionEntry const ui_toggles[] = {
 	/* View */
@@ -532,7 +531,6 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "FastSoundAction", .label = "_Fast Sound",
 	  .callback = G_CALLBACK(toggle_fast_sound) },
 };
-static guint ui_n_toggles = G_N_ELEMENTS(ui_toggles);
 
 static GtkRadioActionEntry const ccr_radio_entries[] = {
 	{ .name = "ccr-simple", .label = "Simple (2-bit LUT)", .value = UI_CCR_SIMPLE },
@@ -607,8 +605,8 @@ static _Bool init(void) {
 	gtk_ui_manager_insert_action_group(gtk2_menu_manager, cart_action_group, 0);
 
 	/* Set up main action group */
-	gtk_action_group_add_actions(main_action_group, ui_entries, ui_n_entries, NULL);
-	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, ui_n_toggles, NULL);
+	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), NULL);
+	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), NULL);
 	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, 3, 0, (GCallback)set_keymap, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, 5, 0, (GCallback)set_joy_right, NULL);
 	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, 5, 0, (GCallback)set_joy_left, NULL);
