@@ -63,7 +63,7 @@ models 1 & 2.  Some features are:
 @item Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
 @item Saves and loads machine snapshots.
 @item Provides a GDB target for remote debugging.
-@item Initial Glenside IDE support.
+@item Experimental Glenside IDE support.
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
@@ -695,11 +695,16 @@ and the extension determines which type of file will be written.
 @node Hard Disks
 @section Hard Disks
 
-Some initial support is now in place for IDE hard disks.  The @samp{ide}
-cartridge type emulates a Glenside IDE controller mapped to addresses
-$FF50--$FF58.  At the moment, a fixed hard disk image named @file{hd0.img} in
-the current working directory is assumed, and it must have a 512 byte IDENTIFY
-header.
+Some experimental support is now in place for IDE hard disk images.  The
+@samp{ide} cartridge type emulates a Glenside IDE controller mapped to
+addresses $FF50--$FF58.
+
+At the moment there are no facilities to create these images, and a fixed image
+file named @file{hd0.img} in the current working directory is assumed.  This
+must consist of a 512 byte identifier block (ASCII string ``1DED15C0'' then all
+zeroes) followed by a 512 byte IDENTIFY header, then the sector data.  In
+examples, the 256 byte sector data of standard CoCo disks is doubled up to fill
+the 512 byte sectors of the hard disk image.
 
 
 @node ROM cartridges
