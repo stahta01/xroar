@@ -68,9 +68,13 @@ static void *new(void) {
 	struct ao_interface *ao = &aonull->public;
 
 	ao->free = DELEGATE_AS0(void, ao_null_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_null_write_buffer, ao);
 
-	sound_init(NULL, SOUND_FMT_NULL, 44100, 1, 1024);
+	ao->sound_interface = sound_interface_new(NULL, SOUND_FMT_NULL, 44100, 1, 1024);
+	if (!ao->sound_interface) {
+		free(aonull);
+		return NULL;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_null_write_buffer, ao);
 	aonull->last_pause_cycle = event_current_tick;
 	aonull->last_pause_ms = current_time();
 	return aonull;

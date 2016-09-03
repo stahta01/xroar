@@ -41,12 +41,15 @@ struct orch90 {
 	struct cart cart;
 	float left;
 	float right;
+	struct sound_interface *snd;
 };
 
 static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void orch90_reset(struct cart *c);
 static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
+static _Bool orch90_has_interface(struct cart *c, const char *ifname);
+static void orch90_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 static struct cart *orch90_new(struct cart_config *cc) {
 	struct orch90 *o = xmalloc(sizeof(*o));
@@ -58,6 +61,8 @@ static struct cart *orch90_new(struct cart_config *cc) {
 	c->reset = orch90_reset;
 	c->attach = orch90_attach;
 	c->detach = orch90_detach;
+	c->has_interface = orch90_has_interface;
+	c->attach_interface = orch90_attach_interface;
 
 	o->left = 0.0;
 	o->right = 0.0;
@@ -67,7 +72,6 @@ static struct cart *orch90_new(struct cart_config *cc) {
 
 static void orch90_reset(struct cart *c) {
 	(void)c;
-	sound_enable_external();
 }
 
 static void orch90_attach(struct cart *c) {
@@ -76,9 +80,22 @@ static void orch90_attach(struct cart *c) {
 }
 
 static void orch90_detach(struct cart *c) {
-	sound_disable_external();
-	sound_set_cart_level(0.0);
+	struct orch90 *o = (struct orch90 *)c;
+	sound_disable_external(o->snd);
+	sound_set_cart_level(o->snd, 0.0);
 	cart_rom_detach(c);
+}
+
+static _Bool orch90_has_interface(struct cart *c, const char *ifname) {
+	return c && (0 == strcmp(ifname, "sound"));
+}
+
+static void orch90_attach_interface(struct cart *c, const char *ifname, void *intf) {
+	if (!c || (0 != strcmp(ifname, "sound")))
+		return;
+	struct orch90 *o = (struct orch90 *)c;
+	o->snd = intf;
+	sound_enable_external(o->snd);
 }
 
 static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -87,12 +104,12 @@ static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	(void)R2;
 	if (A == 0xff7a) {
 		o->left = (float)D / 255.;
-		sound_set_external_left(o->left);
-		sound_set_cart_level((o->left + o->right) / 2.0);
+		sound_set_external_left(o->snd, o->left);
+		sound_set_cart_level(o->snd, (o->left + o->right) / 2.0);
 	}
 	if (A == 0xff7b) {
 		o->right = (float)D / 255.;
-		sound_set_external_right(o->right);
-		sound_set_cart_level((o->left + o->right) / 2.0);
+		sound_set_external_right(o->snd, o->right);
+		sound_set_cart_level(o->snd, (o->left + o->right) / 2.0);
 	}
 }

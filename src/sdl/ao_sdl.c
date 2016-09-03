@@ -92,7 +92,6 @@ static void *new(void) {
 	struct ao_interface *ao = &aosdl->public;
 
 	ao->free = DELEGATE_AS0(void, ao_sdl_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl_write_buffer, ao);
 
 	unsigned rate = 48000;
 	unsigned nchannels = 2;
@@ -206,16 +205,31 @@ static void *new(void) {
 		}
 	}
 
-	sound_init(aosdl->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	ao->sound_interface = sound_interface_new(aosdl->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_ERROR("Failed to initialise SDL audio: XRoar internal error\n");
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aosdl->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	SDL_PauseAudio(0);
 	return aosdl;
 
 failed:
-	SDL_CloseAudio();
+	if (aosdl) {
+		SDL_CloseAudio();
+		if (aosdl->fragment_buffer) {
+			if (aosdl->nfragments > 1) {
+				for (unsigned i = 0; i < aosdl->nfragments; i++) {
+					free(aosdl->fragment_buffer[i]);
+				}
+			}
+			free(aosdl->fragment_buffer);
+		}
+		free(aosdl);
+	}
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-	free(aosdl);
 	return NULL;
 }
 
@@ -237,6 +251,8 @@ static void ao_sdl_free(void *sptr) {
 
 	SDL_DestroyCond(aosdl->fragment_cv);
 	SDL_DestroyMutex(aosdl->fragment_mutex);
+
+	sound_interface_free(aosdl->public.sound_interface);
 
 	if (aosdl->nfragments > 1) {
 		for (unsigned i = 0; i < aosdl->nfragments; i++) {

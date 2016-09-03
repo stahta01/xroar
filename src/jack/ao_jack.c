@@ -22,11 +22,15 @@
 
 #include "config.h"
 
+// for struct timespec, gettimeofday
+#define _POSIX_C_SOURCE 200112L
+
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
 
@@ -78,7 +82,6 @@ static void *new(void) {
 	struct ao_interface *ao = &aojack->public;
 
 	ao->free = DELEGATE_AS0(void, ao_jack_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_jack_write_buffer, ao);
 
 	const char **ports;
 
@@ -133,14 +136,20 @@ static void *new(void) {
 
 	aojack->fragment_buffer = NULL;
 
-	sound_init(aojack->fragment_buffer, sample_fmt, rate, 1, fragment_nframes);
+	ao->sound_interface = sound_interface_new(aojack->fragment_buffer, sample_fmt, rate, 1, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_ERROR("Failed to initialise JACK: XRoar internal error\n");
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_jack_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aojack->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	return aojack;
 
 failed:
-	if (aojack)
+	if (aojack) {
 		free(aojack);
+	}
 	return NULL;
 }
 
@@ -161,6 +170,7 @@ static void ao_jack_free(void *sptr) {
 
 	pthread_cond_destroy(&aojack->fragment_cv);
 	pthread_mutex_destroy(&aojack->fragment_mutex);
+	sound_interface_free(aojack->public.sound_interface);
 	free(aojack);
 }
 

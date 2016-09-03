@@ -59,7 +59,6 @@ static void *new(void) {
 	struct ao_interface *ao = &aooss->public;
 
 	ao->free = DELEGATE_AS0(void, ao_oss_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_oss_write_buffer, ao);
 
 	const char *device = "/dev/dsp";
 	if (xroar_cfg.ao_device)
@@ -214,17 +213,25 @@ static void *new(void) {
 	buffer_nframes = fragment_nframes * nfragments;
 
 	aooss->audio_buffer = xmalloc(aooss->fragment_nbytes);
-	sound_init(aooss->audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
+	ao->sound_interface = sound_interface_new(aooss->audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_ERROR("Failed to initialise OSS: XRoar internal error\n");
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_oss_write_buffer, ao);
 	LOG_DEBUG(1, "\t%d frags * %d frames/frag = %d frames buffer (%.1fms)\n", nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	ioctl(aooss->sound_fd, SNDCTL_DSP_RESET, 0);
 	return aooss;
 
 failed:
-	if (aooss->sound_fd != -1)
-		close(aooss->sound_fd);
-	if (aooss)
+	if (aooss) {
+		if (aooss->audio_buffer)
+			free(aooss->audio_buffer);
+		if (aooss->sound_fd != -1)
+			close(aooss->sound_fd);
 		free(aooss);
+	}
 	return NULL;
 }
 
@@ -233,6 +240,7 @@ static void ao_oss_free(void *sptr) {
 
 	ioctl(aooss->sound_fd, SNDCTL_DSP_RESET, 0);
 	close(aooss->sound_fd);
+	sound_interface_free(aooss->public.sound_interface);
 	free(aooss->audio_buffer);
 	free(aooss);
 }

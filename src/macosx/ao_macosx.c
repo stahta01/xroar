@@ -83,7 +83,6 @@ static void *new(void) {
 	struct ao_interface *ao = &aomacosx->public;
 
 	ao->free = DELEGATE_AS0(void, ao_macosx_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_macosx_write_buffer, ao);
 
 	AudioObjectPropertyAddress propertyAddress;
 	AudioStreamBasicDescription deviceFormat;
@@ -181,14 +180,28 @@ static void *new(void) {
 		pthread_mutex_unlock(&aomacosx->fragment_mutex);
 	}
 
-	sound_init(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	ao->sound_interface = sound_interface_new(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_ERROR("Failed to initialise Mac OS X audio: XRoar internal error\n");
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_macosx_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aomacosx->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	return aomacosx;
 
 failed:
-	if (aomacosx)
+	if (aomacosx) {
+		if (aomacosx->fragment_buffer) {
+			if (aomacosx->nfragments > 1) {
+				for (unsigned i = 0; i < aomacosx->nfragments; i++) {
+					free(aomacosx->fragment_buffer[i]);
+				}
+			}
+			free(aomacosx->fragment_buffer);
+		}
 		free(aomacosx);
+	}
 	return NULL;
 }
 

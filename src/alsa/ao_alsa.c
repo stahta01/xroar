@@ -59,9 +59,9 @@ static void *new(void) {
 	struct ao_alsa_interface *aoalsa = xmalloc(sizeof(*aoalsa));
 	*aoalsa = (struct ao_alsa_interface){0};
 	struct ao_interface *ao = &aoalsa->public;
+	const char *errstr = NULL;
 
 	ao->free = DELEGATE_AS0(void, ao_alsa_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_alsa_write_buffer, ao);
 
 	const char *device = xroar_cfg.ao_device ? xroar_cfg.ao_device : "default";
 	int err;
@@ -220,22 +220,32 @@ static void *new(void) {
 			sample_nbytes = sizeof(float);
 			break;
 		default:
-			LOG_ERROR("Unhandled audio format.\n");
+			errstr = "Unhandled audio format";
 			goto failed;
 	}
 
 	unsigned buffer_size = aoalsa->fragment_nframes * nchannels * sample_nbytes;
 	aoalsa->audio_buffer = xmalloc(buffer_size);
-	sound_init(aoalsa->audio_buffer, buffer_fmt, rate, nchannels, aoalsa->fragment_nframes);
+	ao->sound_interface = sound_interface_new(aoalsa->audio_buffer, buffer_fmt, rate, nchannels, aoalsa->fragment_nframes);
+	if (!ao->sound_interface) {
+		errstr = "XRoar internal error";
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_alsa_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, aoalsa->fragment_nframes, buffer_nframes, (buffer_nframes * 1000) / rate);
 
 	/* snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes); */
 	return aoalsa;
 
 failed:
-	LOG_ERROR("Failed to initialise ALSA: %s\n", snd_strerror(err));
-	if (aoalsa)
+	if (!errstr)
+		errstr = snd_strerror(err);
+	LOG_ERROR("Failed to initialise ALSA: %s\n", errstr);
+	if (aoalsa) {
+		if (aoalsa->audio_buffer)
+			free(aoalsa->audio_buffer);
 		free(aoalsa);
+	}
 	return NULL;
 }
 
@@ -244,6 +254,7 @@ static void ao_alsa_free(void *sptr) {
 
 	snd_pcm_close(aoalsa->pcm_handle);
 	snd_config_update_free_global();
+	sound_interface_free(aoalsa->public.sound_interface);
 	free(aoalsa->audio_buffer);
 	free(aoalsa);
 }

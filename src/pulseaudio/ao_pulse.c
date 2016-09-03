@@ -58,7 +58,6 @@ static void *new(void) {
 	struct ao_interface *ao = &aopulse->public;
 
 	ao->free = DELEGATE_AS0(void, ao_pulse_free, ao);
-	ao->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
 
 	const char *device = xroar_cfg.ao_device;
 	pa_sample_spec ss = {
@@ -115,19 +114,27 @@ static void *new(void) {
 	aopulse->pa = pa_simple_new(NULL, "XRoar", PA_STREAM_PLAYBACK, device,
 	                   "output", &ss, NULL, &ba, &error);
 	if (!aopulse->pa) {
-		LOG_ERROR("Failed to initialise: %s\n", pa_strerror(error));
+		LOG_ERROR("Failed to initialise PulseAudio: %s\n", pa_strerror(error));
 		goto failed;
 	}
 
 	aopulse->fragment_nbytes = fragment_nframes * sample_nbytes * nchannels;
 	aopulse->audio_buffer = xmalloc(aopulse->fragment_nbytes);
-	sound_init(aopulse->audio_buffer, request_fmt, rate, nchannels, fragment_nframes);
+	ao->sound_interface = sound_interface_new(aopulse->audio_buffer, request_fmt, rate, nchannels, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_ERROR("Failed to initialise PulseAudio: XRoar internal error\n");
+		goto failed;
+	}
+	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
 	LOG_DEBUG(1, "\t%dms (%d samples) buffer\n", (fragment_nframes * 1000) / rate, fragment_nframes);
 	return aopulse;
 
 failed:
-	if (aopulse)
+	if (aopulse) {
+		if (aopulse->audio_buffer)
+			free(aopulse->audio_buffer);
 		free(aopulse);
+	}
 	return NULL;
 }
 
@@ -137,6 +144,7 @@ static void ao_pulse_free(void *sptr) {
 	int error;
 	pa_simple_flush(aopulse->pa, &error);
 	pa_simple_free(aopulse->pa);
+	sound_interface_free(aopulse->public.sound_interface);
 	free(aopulse->audio_buffer);
 	free(aopulse);
 }

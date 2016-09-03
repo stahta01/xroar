@@ -20,11 +20,11 @@ Audio output interface definition.
 #include "delegate.h"
 
 struct module;
+struct sound_interface;
 
 struct ao_interface {
 	DELEGATE_T0(void) free;
-
-	DELEGATE_T1(voidp, voidp) write_buffer;
+	struct sound_interface *sound_interface;
 };
 
 extern struct module * const *ao_module_list;

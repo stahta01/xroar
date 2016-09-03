@@ -21,8 +21,9 @@ Machine & machine config handling.
 #include "breakpoint.h"
 #include "xconfig.h"
 
-struct slist;
 struct cart;
+struct slist;
+struct sound_interface;
 struct tape_interface;
 struct vo_interface;
 
@@ -228,7 +229,8 @@ struct machine {
 void machine_init(void);
 void machine_shutdown(void);
 
-struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo, struct tape_interface *ti);
+struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
+			    struct sound_interface *snd, struct tape_interface *ti);
 
 /* Helper function to populate breakpoints from a list. */
 #define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
@@ -237,7 +239,7 @@ struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo, 
 struct machine_module {
 	const char *name;
 	const char *description;
-	struct machine *(* const new)(struct machine_config *mc, struct vo_interface *vo, struct tape_interface *ti);
+	struct machine *(* const new)(struct machine_config *mc, struct vo_interface *vo, struct sound_interface *snd, struct tape_interface *ti);
 };
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);

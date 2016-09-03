@@ -627,7 +627,6 @@ _Bool xroar_init(int argc, char **argv) {
 		private_cfg.run = NULL;
 	}
 
-	sound_set_volume(private_cfg.volume);
 	/* turn off tape_pad_auto if any tape_pad specified */
 	if (private_cfg.tape_pad >= 0)
 		private_cfg.tape_pad_auto = 0;
@@ -721,6 +720,7 @@ _Bool xroar_init(int argc, char **argv) {
 		LOG_ERROR("No audio module initialised.\n");
 		return 0;
 	}
+	sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.volume);
 	/* ... subsystems */
 	joystick_init();
 
@@ -1368,7 +1368,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		xroar_machine->free(xroar_machine);
 	}
 	xroar_machine_config = mc;
-	xroar_machine = machine_new(mc, xroar_vo_interface, xroar_tape_interface);
+	xroar_machine = machine_new(mc, xroar_vo_interface, xroar_ao_interface->sound_interface, xroar_tape_interface);
 	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
@@ -1452,8 +1452,13 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		xroar_machine_config->cart_enabled = 1;
 		new_cart = cart_new_named(cc_name);
 		xroar_machine->insert_cart(xroar_machine, new_cart);
-		if (new_cart->has_interface && new_cart->has_interface(new_cart, "floppy")) {
-			new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
+		if (new_cart->has_interface) {
+			if (new_cart->has_interface(new_cart, "floppy")) {
+				new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
+			}
+			if (new_cart->has_interface(new_cart, "sound")) {
+				new_cart->attach_interface(new_cart, "sound", xroar_ao_interface->sound_interface);
+			}
 		}
 	}
 

@@ -49,6 +49,7 @@ Dragon & CoCo 1/2 machine.
 #include "xroar.h"
 
 static struct machine *dragon_new(struct machine_config *mc, struct vo_interface *vo,
+				  struct sound_interface *snd,
 				  struct tape_interface *ti);
 
 struct machine_module machine_dragon_module = {
@@ -84,6 +85,7 @@ struct machine_dragon {
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
+	struct sound_interface *snd;
 
 	unsigned int ram_size;
 	uint8_t ram[0x10000];
@@ -323,6 +325,7 @@ static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
 static struct machine *dragon_new(struct machine_config *mc, struct vo_interface *vo,
+				  struct sound_interface *snd,
 				  struct tape_interface *ti) {
 	if (!mc)
 		return NULL;
@@ -357,6 +360,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	m->op_rts = dragon_op_rts;
 
 	md->vo = vo;
+	md->snd = snd;
 
 	switch (mc->architecture) {
 	case ARCH_DRAGON32:
@@ -432,7 +436,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, md);
 
 	// Single-bit sound feedback
-	sound_sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, md);
+	md->snd->sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, md);
 
 	// VDG
 	md->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
@@ -1367,7 +1371,7 @@ static void update_sound_mux_source(void *sptr) {
 	struct machine_dragon *md = sptr;
 	unsigned source = ((md->PIA0->b.control_register & (1<<3)) >> 2)
 	                  | ((md->PIA0->a.control_register & (1<<3)) >> 3);
-	sound_set_mux_source(source);
+	sound_set_mux_source(md->snd, source);
 }
 
 static void update_vdg_mode(struct machine_dragon *md) {
@@ -1400,7 +1404,7 @@ static void pia0b_data_preread_coco64k(void *sptr) {
 
 static void pia1a_data_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
-	sound_set_dac_level((float)(PIA_VALUE_A(md->PIA1) & 0xfc) / 252.);
+	sound_set_dac_level(md->snd, (float)(PIA_VALUE_A(md->PIA1) & 0xfc) / 252.);
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 	if (md->is_dragon) {
 		keyboard_update(md);
@@ -1448,14 +1452,14 @@ static void pia1b_data_postwrite(void *sptr) {
 	// Single-bit sound
 	_Bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);
-	sound_set_sbs(sbs_enabled, sbs_level);
+	sound_set_sbs(md->snd, sbs_enabled, sbs_level);
 	// VDG mode
 	update_vdg_mode(md);
 }
 
 static void pia1b_control_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
-	sound_set_mux_enabled(md->PIA1->b.control_register & 0x08);
+	sound_set_mux_enabled(md->snd, md->PIA1->b.control_register & 0x08);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1486,12 +1490,12 @@ static void vdg_fs(void *sptr, _Bool level) {
 	mc6821_set_cx1(&md->PIA0->b, level);
 	sam_vdg_fsync(md->SAM0, level);
 	if (level) {
-		sound_update();
 		md->frame--;
 		if (md->frame < 0)
 			md->frame = xroar_frameskip;
-		if (md->frame == 0)
+		if (md->frame == 0) {
 			DELEGATE_CALL0(md->vo->vsync);
+		}
 	}
 }
 
@@ -1529,7 +1533,7 @@ static void single_bit_feedback(void *sptr, _Bool level) {
 
 static void update_audio_from_tape(void *sptr, float value) {
 	struct machine_dragon *md = sptr;
-	sound_set_tape_level(value);
+	sound_set_tape_level(md->snd, value);
 	if (value >= 0.5)
 		md->PIA1->a.in_sink &= ~(1<<0);
 	else
