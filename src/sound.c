@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "delegate.h"
+#include "pl-endian.h"
 #include "xalloc.h"
 
 #include "events.h"
@@ -128,8 +129,6 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 	snd->scale = 6971;  // full volume
 
-	uint16_t test = 0x0123;
-	_Bool big_endian = (*(uint8_t *)(&test) == 0x01);
 	_Bool fmt_big_endian = 1;
 
 	if (nchannels < 1 || nchannels > 2) {
@@ -140,22 +139,22 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 	if (fmt == SOUND_FMT_S16_BE) {
 		fmt_big_endian = 1;
-		if (big_endian) {
+#if __BYTE_ORDER == __BIG_ENDIAN
 			fmt = SOUND_FMT_S16_HE;
-		} else {
+#else
 			fmt = SOUND_FMT_S16_SE;
-		}
+#endif
 	} else if (fmt == SOUND_FMT_S16_LE) {
 		fmt_big_endian = 0;
-		if (big_endian) {
+#if __BYTE_ORDER == __BIG_ENDIAN
 			fmt = SOUND_FMT_S16_SE;
-		} else {
+#else
 			fmt = SOUND_FMT_S16_HE;
-		}
+#endif
 	} else if (fmt == SOUND_FMT_S16_HE) {
-		fmt_big_endian = big_endian;
+		fmt_big_endian = (__BYTE_ORDER == __BIG_ENDIAN);
 	} else if (fmt == SOUND_FMT_S16_SE) {
-		fmt_big_endian = !big_endian;
+		fmt_big_endian = !(__BYTE_ORDER == __BIG_ENDIAN);
 	}
 
 	(void)fmt_big_endian;  // suppress unused warning
