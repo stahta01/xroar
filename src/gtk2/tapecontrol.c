@@ -23,7 +23,10 @@
 #include <string.h>
 
 #include <glib.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #include <gtk/gtk.h>
+#pragma GCC diagnostic pop
 
 #include "events.h"
 #include "fs.h"
