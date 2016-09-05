@@ -21,6 +21,7 @@
 
 #include "config.h"
 
+// for addrinfo
 #define _POSIX_C_SOURCE 200112L
 
 #include <stdint.h>
