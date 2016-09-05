@@ -74,6 +74,26 @@ inline int ntsc_encode_from_palette(const struct ntsc_palette *np, unsigned c) {
 struct ntsc_burst *ntsc_burst_new(int offset);
 void ntsc_burst_free(struct ntsc_burst *nb);
 
-struct ntsc_xyz ntsc_decode(struct ntsc_burst *nb, const uint8_t *ntsc);
+inline struct ntsc_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc) {
+	struct ntsc_xyz buf;
+	const int *bursti = nb->byphase[(ntsc_phase+1)&3];
+	const int *burstq = nb->byphase[(ntsc_phase+0)&3];
+	int y = NTSC_C3*ntsc[0] + NTSC_C2*ntsc[1] + NTSC_C1*ntsc[2] +
+		NTSC_C0*ntsc[3] +
+		NTSC_C1*ntsc[4] + NTSC_C2*ntsc[5] + NTSC_C3*ntsc[6];
+	int i = bursti[0]*ntsc[0] + bursti[1]*ntsc[1] + bursti[2]*ntsc[2] +
+		bursti[3]*ntsc[3] +
+		bursti[4]*ntsc[4] + bursti[5]*ntsc[5] + bursti[6]*ntsc[6];
+	int q = burstq[0]*ntsc[0] + burstq[1]*ntsc[1] + burstq[2]*ntsc[2] +
+		burstq[3]*ntsc[3] +
+		burstq[4]*ntsc[4] + burstq[5]*ntsc[5] + burstq[6]*ntsc[6];
+	// Integer maths here adds another 7 bits to the result,
+	// so divide by 2^22 rather than 2^15.
+	buf.x = (+128*y +122*i  +79*q) / (1 << 22);  // +1.0*y +0.956*i +0.621*q
+	buf.y = (+128*y  -35*i  -83*q) / (1 << 22);  // +1.0*y -0.272*i -0.647*q
+	buf.z = (+128*y -141*i +218*q) / (1 << 22);  // +1.0*y -1.105*i +1.702*q
+	ntsc_phase = (ntsc_phase + 1) & 3;
+	return buf;
+}
 
 #endif

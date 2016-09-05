@@ -55,28 +55,6 @@ static Pixel map_palette_entry(struct vo_generic_interface *generic, int i) {
 	return MAPCOLOUR(generic, (int)R, (int)G, (int)B);
 }
 
-/*
-
-References:
-    http://www.le.ac.uk/eg/fss1/FIRFILT.C
-
-Low-pass filter, fs=28MHz, cutoff=4.2MHz, rectangular window, M=3.
-
-Coefficients scaled for integer maths.  Result should be divided by 32768.
-
-*/
-
-#define N0 (8307)
-#define N1 (7130)
-#define N2 (4191)
-#define N3 (907)
-
-/* Scale factor */
-#define NSHIFT (15)
-
-/* Filter offset */
-#define NOFF (3)
-
 /* Allocate colours */
 
 static void alloc_colours(void *sptr) {
@@ -277,50 +255,18 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 		return;
 	}
 	generic->scanline++;
-	const uint8_t *v = (scanline_data + vo->window_x) - NOFF;
-	phase = ((phase + vo->window_x) + NOFF) & 3;
+	const uint8_t *v = (scanline_data + vo->window_x) - 3;
+	ntsc_phase = ((phase + vo->window_x) + 3) & 3;
 	LOCK_SURFACE(generic);
 	for (int j = vo->window_w; j; j--) {
-		// Warning: for speed, no bounds checking is performed here.
-		// If video data is out of range, this will read from invalid
-		// addresses.
-		const int *bursti = burst->byphase[(phase+1)&3];
-		const int *burstq = burst->byphase[(phase+0)&3];
-
-		int y, i, q;
-		y = N3*v[NOFF-3] + N2*v[NOFF-2] + N1*v[NOFF-1] +
-		    N0*v[NOFF] +
-		    N1*v[NOFF+1] + N2*v[NOFF+2] + N3*v[NOFF+3];
-		i = bursti[0]*v[NOFF-3] + bursti[1]*v[NOFF-2] +
-		    bursti[2]*v[NOFF-1] +
-		    bursti[3]*v[NOFF] +
-		    bursti[4]*v[NOFF+1] +
-		    bursti[5]*v[NOFF+2] + bursti[6]*v[NOFF+3];
-		q = burstq[0]*v[NOFF-3] + burstq[1]*v[NOFF-2] +
-		    burstq[2]*v[NOFF-1] +
-		    burstq[3]*v[NOFF] +
-		    burstq[4]*v[NOFF+1] +
-		    burstq[5]*v[NOFF+2] + burstq[6]*v[NOFF+3];
-
-		// Integer maths here adds another 7 bits to the result,
-		// so divide by 2^22 rather than 2^15.
-		int r = +128*y +122*i  +79*q;  // +1.0*y +0.956*i +0.621*q
-		int g = +128*y  -35*i  -83*q;  // +1.0*y -0.272*i -0.647*q
-		int b = +128*y -141*i +218*q;  // +1.0*y -1.105*i +1.702*q
-		r /= (1 << 22);
-		g /= (1 << 22);
-		b /= (1 << 22);
-
+		struct ntsc_xyz rgb = ntsc_decode(burst, v++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
-		uint8_t R = generic->ntsc_ungamma[clamp_uint8(r+40)];
-		uint8_t G = generic->ntsc_ungamma[clamp_uint8(g+40)];
-		uint8_t B = generic->ntsc_ungamma[clamp_uint8(b+40)];
-
+		int R = generic->ntsc_ungamma[clamp_uint8(rgb.x+40)];
+		int G = generic->ntsc_ungamma[clamp_uint8(rgb.y+40)];
+		int B = generic->ntsc_ungamma[clamp_uint8(rgb.z+40)];
 		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
 		generic->pixel += XSTEP;
-		phase = (phase+1) & 3;
-		v++;
 	}
 	UNLOCK_SURFACE(generic);
 	generic->pixel += NEXTLINE;
