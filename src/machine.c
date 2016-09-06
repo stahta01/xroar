@@ -14,6 +14,7 @@ Machine & machine config handling.
 
 #include "config.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -226,32 +227,30 @@ void machine_shutdown(void) {
 	machine_modules = NULL;
 }
 
-struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
-			    struct sound_interface *snd, struct tape_interface *ti) {
-	if (!mc) {
-		return NULL;
-	}
+// Determine machine module from config.  Only the one for now...
+static struct machine_module *machine_module(struct machine_config *mc) {
 	const char *req_type = NULL;
 	switch (mc->architecture) {
 	default:
 		req_type = "dragon";
 		break;
 	}
-	struct machine *m = NULL;
 	for (struct slist *iter = machine_modules; iter; iter = iter->next) {
 		struct machine_module *mm = iter->data;
 		if (c_strcasecmp(req_type, mm->name) == 0) {
-			if (mc->description) {
-				LOG_DEBUG(2, "Machine module: %s\n", req_type);
-				LOG_DEBUG(1, "Machine: %s\n", mc->description);
-			}
-			m = mm->new(mc, vo, snd, ti);
-			break;
+			return mm;
 		}
 	}
-	if (!m) {
-		LOG_WARN("Machine module '%s' not found for machine '%s'\n", req_type, mc->name);
-		return NULL;
-	}
+	return NULL;
+}
+
+struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
+			    struct sound_interface *snd, struct tape_interface *ti) {
+	assert(mc != NULL);
+	struct machine_module *mm = machine_module(mc);
+	assert(mm != NULL);
+	LOG_DEBUG(1, "Machine: %s\n", mc->description);
+	LOG_DEBUG(2, "Machine module: %s\n", mm->name);
+	struct machine *m = mm->new(mc, vo, snd, ti);
 	return m;
 }
