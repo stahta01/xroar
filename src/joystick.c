@@ -21,6 +21,7 @@
 // For strsep()
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
+#define _DARWIN_C_SOURCE
 
 #include <stdlib.h>
 #include <string.h>
