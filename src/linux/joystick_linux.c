@@ -107,7 +107,7 @@ static struct device *open_device(int joystick_index) {
 	fd = open(buf, O_NONBLOCK|O_RDONLY);
 	if (fd < 0) {
 		snprintf(buf, sizeof(buf), "/dev/js%d", joystick_index);
-		fd = open(buf, O_RDONLY);
+		fd = open(buf, O_NONBLOCK|O_RDONLY);
 	}
 	if (fd < 0)
 		return NULL;
