@@ -33,7 +33,7 @@ struct joystick_module {
 // The CONTROL-SPEC will vary by interface:
 //
 // Interface    Axis spec                       Button spec
-// phsical      DEVICE-NUMBER,AXIS-NUMBER       DEVICE-NUMER,BUTTON-NUMBER
+// physical     DEVICE-NUMBER,AXIS-NUMBER       DEVICE-NUMER,BUTTON-NUMBER
 // keyboard     KEY-NAME0,KEY-NAME1             KEY-NAME
 // mouse        SCREEN0,SCREEN1                 BUTTON-NUMBER
 //
