@@ -67,7 +67,7 @@ static struct {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static void ui_shutdown(void);
 static void set_state(enum ui_tag tag, int value, const void *data);
 
@@ -100,7 +100,9 @@ static void setup_view_menu(void);
 static void setup_hardware_menu(void);
 static void setup_tool_menu(void);
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	struct ui_cfg *ui_cfg = cfg;
+	(void)ui_cfg;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {

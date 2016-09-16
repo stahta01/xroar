@@ -84,7 +84,7 @@ static const Uint32 try_overlay_format[] = {
 #define NUM_OVERLAY_FORMATS ((int)(sizeof(try_overlay_format)/sizeof(Uint32)))
 
 static void *new(void *cfg) {
-	(void)cfg;
+	struct vo_cfg *vo_cfg = cfg;
 	const SDL_VideoInfo *video_info;
 
 	struct vo_sdlyuv_interface *vosdl = xmalloc(sizeof(*vosdl));
@@ -105,9 +105,9 @@ static void *new(void *cfg) {
 	vosdl->screen_height = video_info->current_h;
 	vosdl->window_width = 640;
 	vosdl->window_height = 480;
-	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
+	vo->is_fullscreen = !vo_cfg->fullscreen;
 
-	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
 		vo_sdlyuv_free(vo);
 		return NULL;
 	}

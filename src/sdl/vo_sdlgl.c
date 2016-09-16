@@ -55,6 +55,7 @@ static unsigned int screen_width, screen_height;
 static unsigned int window_width, window_height;
 
 static void *new(void *cfg) {
+	struct vo_cfg *vo_cfg = cfg;
 	const SDL_VideoInfo *video_info;
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   5);
@@ -62,7 +63,7 @@ static void *new(void *cfg) {
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  5);
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 16);
 
-	vogl = vo_opengl_new(cfg);
+	vogl = vo_opengl_new(vo_cfg);
 	if (!vogl) {
 		LOG_ERROR("Failed to create OpenGL context\n");
 		return NULL;
@@ -84,9 +85,9 @@ static void *new(void *cfg) {
 	screen_height = video_info->current_h;
 	window_width = 640;
 	window_height = 480;
-	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
+	vo->is_fullscreen = !vo_cfg->fullscreen;
 
-	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
 		vo_sdlgl_free(vo);
 		return NULL;
 	}

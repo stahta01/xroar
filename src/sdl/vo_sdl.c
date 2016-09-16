@@ -79,7 +79,7 @@ static Pixel alloc_and_map(int r, int g, int b) {
 #include "vo_generic_ops.c"
 
 static void *new(void *cfg) {
-	(void)cfg;
+	struct vo_cfg *vo_cfg = cfg;
 	// XXX
 	// New video code assumes 640x240 layout scaled to 4x3.
 	// This old directly-rendered code does not support this!
@@ -96,8 +96,8 @@ static void *new(void *cfg) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
-	vo->is_fullscreen = !xroar_ui_cfg.fullscreen;
-	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+	vo->is_fullscreen = !vo_cfg->fullscreen;
+	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
 		vo_sdl_free(vo);
 		return NULL;
 	}

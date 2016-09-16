@@ -27,6 +27,12 @@ struct ntsc_burst;
 #define VO_CMP_5BIT (2)
 #define VO_CMP_SIMULATED (3)
 
+struct vo_cfg {
+	char *geometry;
+	int gl_filter;
+	_Bool fullscreen;
+};
+
 typedef DELEGATE_S3(void, uint8_t const *, struct ntsc_burst *, unsigned) DELEGATE_T3(void, uint8cp, ntscburst, unsigned);
 
 struct vo_rect {

@@ -76,7 +76,7 @@ static void destroy_window(void);
 static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
 static void *new(void *cfg) {
-	(void)cfg;
+	struct vo_cfg *vo_cfg = cfg;
 	struct vo_sdl_interface *vosdl = xmalloc(sizeof(*vosdl));
 	*vosdl = (struct vo_sdl_interface){0};
 	struct vo_generic_interface *generic = &vosdl->generic;
@@ -96,8 +96,8 @@ static void *new(void *cfg) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
-	vosdl->generic.public.is_fullscreen = !xroar_ui_cfg.fullscreen;
-	if (set_fullscreen(vo, xroar_ui_cfg.fullscreen) != 0) {
+	vosdl->generic.public.is_fullscreen = !vo_cfg->fullscreen;
+	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
 		vo_sdl_free(vo);
 		return NULL;
 	}

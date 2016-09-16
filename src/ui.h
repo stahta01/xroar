@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "module.h"
+#include "vo.h"
 #include "xconfig.h"
 
 struct joystick_module;
@@ -27,10 +28,7 @@ struct vdisk;
 
 struct ui_cfg {
 	char *vo;  // video output module
-	char *geometry;
-	int gl_filter;
-	_Bool fullscreen;
-	int ccr;  // cross-colour renderer
+	struct vo_cfg vo_cfg;
 };
 
 extern struct xconfig_enum ui_ccr_list[];

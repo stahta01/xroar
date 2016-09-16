@@ -571,7 +571,7 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 };
 
 static _Bool init(void *cfg) {
-	(void)cfg;
+	struct ui_cfg *ui_cfg = cfg;
 
 	gtk_init(NULL, NULL);
 
@@ -642,8 +642,8 @@ static _Bool init(void *cfg) {
 	gtk_widget_show(gtk2_drawing_area);
 
 	/* Parse initial geometry */
-	if (xroar_ui_cfg.geometry) {
-		gtk_window_parse_geometry(GTK_WINDOW(gtk2_top_window), xroar_ui_cfg.geometry);
+	if (ui_cfg->vo_cfg.geometry) {
+		gtk_window_parse_geometry(GTK_WINDOW(gtk2_top_window), ui_cfg->vo_cfg.geometry);
 	}
 
 	/* Cursor hiding */

@@ -53,7 +53,8 @@ struct ui_module ui_sdl_module = {
 };
 
 static _Bool init(void *cfg) {
-	(void)cfg;
+	struct ui_cfg *ui_cfg = cfg;
+	(void)ui_cfg;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {

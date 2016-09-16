@@ -166,10 +166,13 @@ static struct private_cfg private_cfg = {
 	.tape_pad_auto = 1,
 };
 
-struct ui_cfg xroar_ui_cfg = {
-	.gl_filter = UI_GL_FILTER_AUTO,
-	.ccr = UI_CCR_5BIT,
+static struct ui_cfg xroar_ui_cfg = {
+	.vo_cfg = {
+		.gl_filter = UI_GL_FILTER_AUTO,
+	},
 };
+
+static int ccr = UI_CCR_5BIT;
 
 /* Helper functions used by configuration */
 static void set_machine(const char *name);
@@ -708,12 +711,12 @@ _Bool xroar_init(int argc, char **argv) {
 	/* Initialise everything */
 	event_current_tick = 0;
 	/* ... modules */
-	module_init((struct module *)ui_module, NULL);
+	module_init((struct module *)ui_module, &xroar_ui_cfg);
 	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module, NULL);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	if (!(xroar_vo_interface = module_init(vo_module, NULL))) {
+	if (!(xroar_vo_interface = module_init(vo_module, &xroar_ui_cfg.vo_cfg))) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
@@ -743,7 +746,7 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 
 	/* Notify UI of starting options: */
-	ui_module->set_state(ui_tag_fullscreen, xroar_ui_cfg.fullscreen, NULL);
+	ui_module->set_state(ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	xroar_tape_interface = tape_interface_new();
@@ -1172,15 +1175,15 @@ void xroar_set_cross_colour_renderer(_Bool notify, int action) {
 	case UI_CCR_SIMPLE:
 	case UI_CCR_5BIT:
 	case UI_CCR_SIMULATED:
-		xroar_ui_cfg.ccr = action;
+		ccr = action;
 		break;
 	default:
-		xroar_ui_cfg.ccr = UI_CCR_5BIT;
+		ccr = UI_CCR_5BIT;
 		break;
 	}
 	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
 	if (notify) {
-		ui_module->set_state(ui_tag_ccr, xroar_ui_cfg.ccr, NULL);
+		ui_module->set_state(ui_tag_ccr, ccr, NULL);
 	}
 }
 
@@ -1199,7 +1202,7 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 			xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
 			DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
-			switch (xroar_ui_cfg.ccr) {
+			switch (ccr) {
 			default:
 				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
@@ -1387,7 +1390,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		break;
 	}
 	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? CROSS_COLOUR_OFF : CROSS_COLOUR_KBRW;
-	xroar_set_cross_colour_renderer(1, xroar_ui_cfg.ccr);
+	xroar_set_cross_colour_renderer(1, ccr);
 }
 
 void xroar_set_machine(_Bool notify, int id) {
@@ -1941,12 +1944,12 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Video: */
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
-	{ XC_SET_BOOL("fs", &xroar_ui_cfg.fullscreen) },
+	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
 	{ XC_SET_INT("fskip", &xroar_cfg.frameskip) },
-	{ XC_SET_ENUM("ccr", &xroar_ui_cfg.ccr, ui_ccr_list) },
-	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.gl_filter, ui_gl_filter_list) },
-	{ XC_SET_STRING("geometry", &xroar_ui_cfg.geometry) },
-	{ XC_SET_STRING("g", &xroar_ui_cfg.geometry) },
+	{ XC_SET_ENUM("ccr", &ccr, ui_ccr_list) },
+	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, ui_gl_filter_list) },
+	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
+	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_BOOL("invert-text", &xroar_cfg.vdg_inverted_text) },
 
 	/* Audio: */
@@ -2259,11 +2262,11 @@ static void config_print_all(_Bool all) {
 
 	puts("# Video");
 	xroar_cfg_print_string(all, "vo", xroar_ui_cfg.vo, NULL);
-	xroar_cfg_print_bool(all, "fs", xroar_ui_cfg.fullscreen, 0);
+	xroar_cfg_print_bool(all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
 	xroar_cfg_print_int_nz(all, "fskip", xroar_cfg.frameskip);
-	xroar_cfg_print_enum(all, "ccr", xroar_ui_cfg.ccr, UI_CCR_5BIT, ui_ccr_list);
-	xroar_cfg_print_enum(all, "gl-filter", xroar_ui_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
-	xroar_cfg_print_string(all, "geometry", xroar_ui_cfg.geometry, NULL);
+	xroar_cfg_print_enum(all, "ccr", ccr, UI_CCR_5BIT, ui_ccr_list);
+	xroar_cfg_print_enum(all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
+	xroar_cfg_print_string(all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_bool(all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
 	puts("");
 

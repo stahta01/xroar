@@ -58,6 +58,8 @@ static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 
 static void *new(void *cfg) {
+	struct vo_cfg *vo_cfg = cfg;
+
 	gtk_gl_init(NULL, NULL);
 
 	if (gdk_gl_query_extension() != TRUE) {
@@ -103,7 +105,7 @@ static void *new(void *cfg) {
 	 * right size even if we then fullscreen.  */
 	gtk_widget_show(gtk2_top_window);
 	/* Set fullscreen. */
-	set_fullscreen(vo, xroar_ui_cfg.fullscreen);
+	set_fullscreen(vo, vo_cfg->fullscreen);
 
 	vsync(vo);
 
