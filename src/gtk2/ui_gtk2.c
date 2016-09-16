@@ -55,7 +55,7 @@
 
 #include "gtk2/top_window_glade.h"
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static void shutdown(void);
 static void run(void);
 
@@ -570,7 +570,8 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 	{ .name = "joy_left_mjoy0", .label = "Mouse", .value = 4 },
 };
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	(void)cfg;
 
 	gtk_init(NULL, NULL);
 

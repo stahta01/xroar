@@ -44,7 +44,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_jack_module = {
 	.name = "jack", .description = "JACK audio",
@@ -76,7 +76,8 @@ static int callback_1(jack_nframes_t nframes, void *arg);
 static void ao_jack_free(void *sptr);
 static void *ao_jack_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct ao_jack_interface *aojack = xmalloc(sizeof(*aojack));
 	*aojack = (struct ao_jack_interface){0};
 	struct ao_interface *ao = &aojack->public;

@@ -34,7 +34,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_pulse_module = {
 	.name = "pulse", .description = "Pulse audio",
@@ -52,7 +52,8 @@ struct ao_pulse_interface {
 static void ao_pulse_free(void *sptr);
 static void *ao_pulse_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct ao_pulse_interface *aopulse = xmalloc(sizeof(*aopulse));
 	*aopulse = (struct ao_pulse_interface){0};
 	struct ao_interface *ao = &aopulse->public;

@@ -34,7 +34,7 @@
 
 #include "sdl/common.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_sdl_module = {
 	.name = "sdl", .description = "Minimal SDL video",
@@ -78,7 +78,8 @@ static Pixel alloc_and_map(int r, int g, int b) {
 
 #include "vo_generic_ops.c"
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	// XXX
 	// New video code assumes 640x240 layout scaled to 4x3.
 	// This old directly-rendered code does not support this!

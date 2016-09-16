@@ -708,16 +708,16 @@ _Bool xroar_init(int argc, char **argv) {
 	/* Initialise everything */
 	event_current_tick = 0;
 	/* ... modules */
-	module_init((struct module *)ui_module);
-	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module);
+	module_init((struct module *)ui_module, NULL);
+	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module, NULL);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
-	if (!(xroar_vo_interface = module_init(vo_module))) {
+	if (!(xroar_vo_interface = module_init(vo_module, NULL))) {
 		LOG_ERROR("No video module initialised.\n");
 		return 0;
 	}
-	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module))) {
+	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
 		return 0;
 	}

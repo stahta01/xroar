@@ -34,7 +34,7 @@
 
 #include "sdl/common.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_sdlgl_module = {
 	.name = "sdlgl", .description = "SDL OpenGL video",
@@ -54,7 +54,7 @@ static SDL_Surface *screen;
 static unsigned int screen_width, screen_height;
 static unsigned int window_width, window_height;
 
-static void *new(void) {
+static void *new(void *cfg) {
 	const SDL_VideoInfo *video_info;
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   5);
@@ -62,7 +62,7 @@ static void *new(void) {
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  5);
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 16);
 
-	vogl = vo_opengl_new();
+	vogl = vo_opengl_new(cfg);
 	if (!vogl) {
 		LOG_ERROR("Failed to create OpenGL context\n");
 		return NULL;

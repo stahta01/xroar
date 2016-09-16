@@ -34,7 +34,7 @@
 
 #include "sdl/common.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_sdlyuv_module = {
 	.name = "sdlyuv", .description = "SDL YUV overlay video",
@@ -83,7 +83,8 @@ static const Uint32 try_overlay_format[] = {
 };
 #define NUM_OVERLAY_FORMATS ((int)(sizeof(try_overlay_format)/sizeof(Uint32)))
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	const SDL_VideoInfo *video_info;
 
 	struct vo_sdlyuv_interface *vosdl = xmalloc(sizeof(*vosdl));

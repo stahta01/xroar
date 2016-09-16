@@ -15,9 +15,9 @@ struct module {
 	const char *name;
 	const char *description;
 	// new interface
-	void *(*new)(void);
+	void *(*new)(void *cfg);
 	// old interface
-	_Bool (* const init)(void);
+	_Bool (* const init)(void *cfg);
 	_Bool initialised;
 	void (* const shutdown)(void);
 };
@@ -34,8 +34,8 @@ extern FileReqModule *filereq_module;
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);
 struct module *module_select_by_arg(struct module * const *list, const char *name);
-void *module_init(struct module *module);
-void *module_init_from_list(struct module * const *list, struct module *module);
+void *module_init(struct module *module, void *cfg);
+void *module_init_from_list(struct module * const *list, struct module *module, void *cfg);
 void module_shutdown(struct module *module);
 
 #endif  /* XROAR_MODULE_H_ */

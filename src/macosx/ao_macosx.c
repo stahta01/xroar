@@ -39,7 +39,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_macosx_module = {
 	.name = "macosx", .description = "Mac OS X audio",
@@ -77,7 +77,8 @@ static OSStatus callback_1(AudioDeviceID, const AudioTimeStamp *, const AudioBuf
 static void ao_macosx_free(void *sptr);
 static void *ao_macosx_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct ao_macosx_interface *aomacosx = xmalloc(sizeof(*aomacosx));
 	*aomacosx = (struct ao_macosx_interface){0};
 	struct ao_interface *ao = &aomacosx->public;

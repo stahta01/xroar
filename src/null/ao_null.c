@@ -43,7 +43,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_null_module = {
 	.name = "null", .description = "No audio",
@@ -63,7 +63,8 @@ static void sleep_ms(unsigned int ms);
 static void ao_null_free(void *sptr);
 static void *ao_null_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct ao_null_interface *aonull = xmalloc(sizeof(*aonull));
 	*aonull = (struct ao_null_interface){0};
 	struct ao_interface *ao = &aonull->public;

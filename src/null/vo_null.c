@@ -26,7 +26,7 @@
 #include "module.h"
 #include "vo.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_null_module = {
 	.name = "null", .description = "No video",
@@ -38,7 +38,8 @@ static void no_op(void *sptr);
 static void no_op_render(void *sptr, uint8_t const *scanline_data,
 			 struct ntsc_burst *burst, unsigned phase);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	*vo = (struct vo_interface){0};
 

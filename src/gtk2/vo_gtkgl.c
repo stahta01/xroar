@@ -37,7 +37,7 @@
 
 #include "gtk2/ui_gtk2.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_gtkgl_module = {
 	.name = "gtkgl", .description = "GtkGLExt video",
@@ -57,7 +57,7 @@ static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 
-static void *new(void) {
+static void *new(void *cfg) {
 	gtk_gl_init(NULL, NULL);
 
 	if (gdk_gl_query_extension() != TRUE) {
@@ -65,7 +65,7 @@ static void *new(void) {
 		return NULL;
 	}
 
-	vogl = vo_opengl_new();
+	vogl = vo_opengl_new(cfg);
 	if (!vogl) {
 		LOG_ERROR("Failed to create OpenGL context\n");
 		return NULL;

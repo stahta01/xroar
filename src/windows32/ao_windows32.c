@@ -31,7 +31,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static void _shutdown(void);
 static void *write_buffer(void *buffer);
 
@@ -54,7 +54,8 @@ static int buffer_num;
 static int rate;
 static uint8_t *audio_buffer;
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	(void)cfg;
 	rate = (xroar_cfg.ao_rate > 0) ? xroar_cfg.ao_rate : 48000;
 
 	if (xroar_cfg.ao_buffer_ms > 0) {

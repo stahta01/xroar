@@ -86,7 +86,8 @@ static void vo_opengl_refresh(void *sptr);
 static void vo_opengl_vsync(void *sptr);
 static void vo_opengl_set_vo_cmp(void *sptr, int mode);
 
-struct vo_interface *vo_opengl_new(void) {
+struct vo_interface *vo_opengl_new(void *cfg) {
+	(void)cfg;
 	struct vo_opengl_interface *vogl = xmalloc(sizeof(*vogl));
 	*vogl = (struct vo_opengl_interface){0};
 	struct vo_generic_interface *generic = &vogl->generic;

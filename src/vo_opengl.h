@@ -14,7 +14,7 @@
 struct vo_interface;
 struct vo_rect;
 
-struct vo_interface *vo_opengl_new(void);
+struct vo_interface *vo_opengl_new(void *cfg);
 void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp);
 
 #endif  /* XROAR_VO_OPENGL_H_ */

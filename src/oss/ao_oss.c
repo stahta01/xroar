@@ -35,7 +35,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_oss_module = {
 	.name = "oss", .description = "OSS audio",
@@ -53,7 +53,8 @@ struct ao_oss_interface {
 static void ao_oss_free(void *sptr);
 static void *ao_oss_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct ao_oss_interface *aooss = xmalloc(sizeof(*aooss));
 	*aooss = (struct ao_oss_interface){0};
 	struct ao_interface *ao = &aooss->public;

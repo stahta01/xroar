@@ -39,7 +39,7 @@
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static void shutdown(void);
 static void set_state(enum ui_tag tag, int value, const void *data);
 
@@ -52,7 +52,8 @@ struct ui_module ui_sdl_module = {
 	.set_state = set_state,
 };
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	(void)cfg;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {

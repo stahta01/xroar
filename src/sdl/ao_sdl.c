@@ -39,7 +39,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module ao_sdl_module = {
 	.name = "sdl", .description = "SDL audio",
@@ -73,7 +73,8 @@ static void callback_1(void *, Uint8 *, int);
 static void ao_sdl_free(void *sptr);
 static void *ao_sdl_write_buffer(void *sptr, void *buffer);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	static SDL_AudioSpec desired;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {

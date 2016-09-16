@@ -34,7 +34,7 @@
 
 #include "gtk2/ui_gtk2.h"
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static char *load_filename(char const * const *extensions);
 static char *save_filename(char const * const *extensions);
 
@@ -45,7 +45,8 @@ FileReqModule filereq_gtk2_module = {
 	.save_filename = save_filename
 };
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	(void)cfg;
 	/* Only initialise if not running as part of general GTK+ interface */
 	if (gtk2_top_window == NULL) {
 		gtk_init(NULL, NULL);

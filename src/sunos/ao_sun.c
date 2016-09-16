@@ -49,7 +49,7 @@
 #include "sound.h"
 #include "xroar.h"
 
-static _Bool init(void);
+static _Bool init(void *cfg);
 static void shutdown(void);
 static void flush_frame(void *buffer);
 
@@ -65,7 +65,8 @@ static unsigned int rate;
 static int sound_fd;
 static uint_t samples_written;
 
-static _Bool init(void) {
+static _Bool init(void *cfg) {
+	(void)cfg;
 	const char *device = xroar_cfg.ao_device ? xroar_cfg.ao_device : "/dev/audio";
 	audio_info_t device_info;
 

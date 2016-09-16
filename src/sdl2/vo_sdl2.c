@@ -34,7 +34,7 @@
 
 #include "sdl2/common.h"
 
-static void *new(void);
+static void *new(void *cfg);
 
 struct module vo_sdl_module = {
 	.name = "sdl", .description = "SDL2 video",
@@ -75,7 +75,8 @@ static int create_renderer(struct vo_sdl_interface *vosdl);
 static void destroy_window(void);
 static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
-static void *new(void) {
+static void *new(void *cfg) {
+	(void)cfg;
 	struct vo_sdl_interface *vosdl = xmalloc(sizeof(*vosdl));
 	*vosdl = (struct vo_sdl_interface){0};
 	struct vo_generic_interface *generic = &vosdl->generic;
