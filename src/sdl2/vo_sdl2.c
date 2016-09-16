@@ -61,6 +61,7 @@ struct vo_sdl_interface {
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	uint16_t *texture_pixels;
+	int filter;
 
 	int window_w;
 	int window_h;
@@ -85,6 +86,7 @@ static void *new(void *cfg) {
 	vosdl->texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
 	for (int i = 0; i < 640 * 240; i++)
 		vosdl->texture_pixels[i] = MAPCOLOUR(vosdl,0,0,0);
+	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
 	vosdl->window_h = 480;
 
@@ -210,7 +212,8 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 	destroy_renderer(vosdl);
 	int w, h;
 	SDL_GetWindowSize(sdl_window, &w, &h);
-	if (w % 320 == 0 && h % 240 == 0) {
+	if (vosdl->filter == UI_GL_FILTER_NEAREST
+	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % 320 == 0 && h % 240 == 0))) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 	} else {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
