@@ -214,7 +214,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (vosdl->screen && !vo->is_fullscreen && fullscreen) {
+	if (vosdl->screen && !vosdl->generic.public.is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(vosdl->screen);
 	}
 #endif
@@ -240,7 +240,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vo->is_fullscreen && !fullscreen) {
+	if (vosdl->generic.public.is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(vosdl->screen);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
