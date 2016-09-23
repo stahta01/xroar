@@ -353,7 +353,7 @@ static void about(GtkMenuItem *item, gpointer data) {
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
 
-static const gchar *ui =
+static const gchar *ui_xml_string =
 	"<ui>"
 	  "<accelerator name='InsertDisk1' action='InsertDisk1Action'/>"
 	  "<accelerator name='InsertDisk2' action='InsertDisk2Action'/>"
@@ -599,7 +599,7 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Create a UI from XML */
 	gtk2_menu_manager = gtk_ui_manager_new();
 
-	gtk_ui_manager_add_ui_from_string(gtk2_menu_manager, ui, -1, &error);
+	gtk_ui_manager_add_ui_from_string(gtk2_menu_manager, ui_xml_string, -1, &error);
 	if (error) {
 		g_message("building menus failed: %s", error->message);
 		g_error_free(error);
