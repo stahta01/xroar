@@ -93,12 +93,15 @@ struct ui_module {
 	struct module * const *vo_module_list;
 	struct module * const *ao_module_list;
 	struct joystick_module * const *joystick_module_list;
-	void (* const run)(void);
-	void (* const set_state)(enum ui_tag, int value, const void *data);
+};
+
+struct ui_interface {
+	DELEGATE_T0(void) free;
+	DELEGATE_T0(void) run;
+	DELEGATE_T3(void, int, int, cvoidp) set_state;  // ui_tag, value, data
 };
 
 extern struct ui_module * const *ui_module_list;
-extern struct ui_module *ui_module;
 
 void ui_print_vo_help(void);
 

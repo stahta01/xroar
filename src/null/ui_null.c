@@ -20,6 +20,8 @@
 
 #include <stdlib.h>
 
+#include "xalloc.h"
+
 #include "module.h"
 #include "ui.h"
 #include "vo.h"
@@ -40,13 +42,14 @@ static struct module * const null_vo_module_list[] = {
 	NULL
 };
 
-static void set_state(enum ui_tag tag, int value, const void *data);
+static void set_state(void *sptr, int tag, int value, const void *data);
+
+static void *new(void *cfg);
 
 struct ui_module ui_null_module = {
-	.common = { .name = "null", .description = "No UI" },
+	.common = { .name = "null", .description = "No UI", .new = new, },
 	.filereq_module_list = null_filereq_module_list,
 	.vo_module_list = null_vo_module_list,
-	.set_state = set_state,
 };
 
 /* */
@@ -56,7 +59,26 @@ static char *filereq_noop(char const * const *extensions) {
 	return NULL;
 }
 
-static void set_state(enum ui_tag tag, int value, const void *data) {
+static void null_free(void *sptr);
+
+static void *new(void *cfg) {
+	(void)cfg;
+	struct ui_interface *uinull = xmalloc(sizeof(*uinull));
+	*uinull = (struct ui_interface){0};
+
+	uinull->free = DELEGATE_AS0(void, null_free, uinull);
+	uinull->set_state = DELEGATE_AS3(void, int, int, cvoidp, set_state, uinull);
+
+	return uinull;
+}
+
+static void null_free(void *sptr) {
+	struct ui_interface *uinull = sptr;
+	free(uinull);
+}
+
+static void set_state(void *sptr, int tag, int value, const void *data) {
+	(void)sptr;
 	(void)tag;
 	(void)value;
 	(void)data;

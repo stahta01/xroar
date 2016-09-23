@@ -12,6 +12,8 @@
 #include "events.h"
 #include "sam.h"
 
+struct ui_interface;
+
 /* These are the usual cycle lengths for each bit as written by the Dragon
  * BASIC ROM. */
 #define TAPE_BIT0_LENGTH (813 * EVENT_SAM_CYCLES(16))
@@ -98,7 +100,7 @@ void tape_free(struct tape *t);
 
 /**************************************************************************/
 
-struct tape_interface *tape_interface_new(void);
+struct tape_interface *tape_interface_new(struct ui_interface *ui);
 void tape_interface_free(struct tape_interface *ti);
 void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m);
 void tape_interface_disconnect_machine(struct tape_interface *ti);

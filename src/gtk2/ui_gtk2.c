@@ -55,9 +55,10 @@
 
 #include "gtk2/top_window_glade.h"
 
-static _Bool init(void *cfg);
-static void shutdown(void);
-static void run(void);
+static void *ui_gtk2_new(void *cfg);
+static void ui_gtk2_free(void *sptr);
+static void ui_gtk2_run(void *sptr);
+static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data);
 
 struct vo_rect gtk2_display = {
 	.x = 0, .y = 0, .w = 640, .h = 480,
@@ -112,16 +113,12 @@ static struct joystick_module *gtk2_js_modlist[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Module callbacks */
-static void set_state(enum ui_tag tag, int value, const void *data);
-
 struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+-2 UI",
-	            .init = init, .shutdown = shutdown },
+                    .new = ui_gtk2_new,
+	},
 	.vo_module_list = gtk2_vo_module_list,
 	.joystick_module_list = gtk2_js_modlist,
-	.run = run,
-	.set_state = set_state,
 };
 
 GtkWidget *gtk2_top_window = NULL;
@@ -570,7 +567,7 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 	{ .name = "joy_left_mjoy0", .label = "Mouse", .value = 4 },
 };
 
-static _Bool init(void *cfg) {
+static void *ui_gtk2_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
 	gtk_init(NULL, NULL);
@@ -583,8 +580,15 @@ static _Bool init(void *cfg) {
 	if (!gtk_builder_add_from_string(builder, top_window_glade, -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);
-		return 0;
+		return NULL;
 	}
+
+	struct ui_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
+	*uigtk2 = (struct ui_interface){0};
+
+	uigtk2->free = DELEGATE_AS0(void, ui_gtk2_free, uigtk2);
+	uigtk2->run = DELEGATE_AS0(void, ui_gtk2_run, uigtk2);
+	uigtk2->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, uigtk2);
 
 	/* Fetch top level window */
 	gtk2_top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
@@ -663,11 +667,13 @@ static _Bool init(void *cfg) {
 
 	gtk2_keyboard_init();
 
-	return 1;
+	return uigtk2;
 }
 
-static void shutdown(void) {
+static void ui_gtk2_free(void *sptr) {
+	struct ui_module *uigtk2 = sptr;
 	gtk_widget_destroy(gtk2_top_window);
+	g_free(uigtk2);
 }
 
 static gboolean run_cpu(gpointer data) {
@@ -675,12 +681,14 @@ static gboolean run_cpu(gpointer data) {
 	return xroar_run();
 }
 
-static void run(void) {
+static void ui_gtk2_run(void *sptr) {
+	(void)sptr;
 	g_idle_add(run_cpu, gtk2_top_window);
 	gtk_main();
 }
 
-static void set_state(enum ui_tag tag, int value, const void *data) {
+static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) {
+	(void)sptr;
 	GtkToggleAction *toggle;
 	GtkRadioAction *radio;
 

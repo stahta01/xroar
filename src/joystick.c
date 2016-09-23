@@ -48,6 +48,8 @@ static struct joystick_module * const joystick_module_list[] = {
 	NULL
 };
 
+struct joystick_module * const *ui_joystick_module_list = NULL;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct slist *config_list = NULL;
@@ -198,7 +200,7 @@ static struct joystick_interface *find_if_in_modlist(struct joystick_module * co
 
 static struct joystick_interface *find_if(const char *if_name) {
 	struct joystick_interface *intf;
-	if ((intf = find_if_in_modlist(ui_module->joystick_module_list, if_name)))
+	if ((intf = find_if_in_modlist(ui_joystick_module_list, if_name)))
 		return intf;
 	return find_if_in_modlist(joystick_module_list, if_name);
 }
@@ -214,7 +216,7 @@ static void select_interface(char **spec) {
 		if_name = strsep(spec, ":");
 	}
 	if (mod_name) {
-		struct joystick_module *m = (struct joystick_module *)module_select_by_arg((struct module * const *)ui_module->joystick_module_list, mod_name);
+		struct joystick_module *m = (struct joystick_module *)module_select_by_arg((struct module * const *)ui_joystick_module_list, mod_name);
 		if (!m) {
 			m = (struct joystick_module *)module_select_by_arg((struct module * const *)joystick_module_list, mod_name);
 		}

@@ -23,6 +23,7 @@ option) any later version.
 
 #include "array.h"
 #include "slist.h"
+#include "xalloc.h"
 
 #include "cart.h"
 #include "events.h"
@@ -67,9 +68,9 @@ static struct {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool init(void *cfg);
-static void ui_shutdown(void);
-static void set_state(enum ui_tag tag, int value, const void *data);
+static void *ui_windows32_new(void *cfg);
+static void ui_windows32_free(void *sptr);
+static void ui_windows32_set_state(void *sptr, int tag, int value, const void *data);
 
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
@@ -81,11 +82,10 @@ struct ui_module ui_windows32_module = {
 #else
 		    .description = "Windows SDL UI",
 #endif
-	            .init = init, .shutdown = ui_shutdown },
+	            .new = ui_windows32_new,
+	},
 	.vo_module_list = sdl_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
-	.run = sdl_run,
-	.set_state = set_state,
 };
 
 static HMENU top_menu;
@@ -97,39 +97,48 @@ static WNDPROC sdl_window_proc = NULL;
 
 static void setup_file_menu(void);
 static void setup_view_menu(void);
-static void setup_hardware_menu(void);
+static void setup_hardware_menu(struct ui_interface *uiwindows32);
 static void setup_tool_menu(void);
 
-static _Bool init(void *cfg) {
+static void *ui_windows32_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 	(void)ui_cfg;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
 			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());
-			return 0;
+			return NULL;
 		}
 	}
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
-		return 0;
+		return NULL;
 	}
+
+	struct ui_interface *uiwindows32 = xmalloc(sizeof(*uiwindows32));
+	*uiwindows32 = (struct ui_interface){0};
+
+	uiwindows32->free = DELEGATE_AS0(void, ui_windows32_free, uiwindows32);
+	uiwindows32->run = DELEGATE_AS0(void, ui_sdl_run, uiwindows32);
+	uiwindows32->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_windows32_set_state, uiwindows32);
 
 	top_menu = CreateMenu();
 	setup_file_menu();
 	setup_view_menu();
-	setup_hardware_menu();
+	setup_hardware_menu(uiwindows32);
 	setup_tool_menu();
 
 	sdl_keyboard_init();
 
-	return 1;
+	return uiwindows32;
 }
 
-static void ui_shutdown(void) {
+static void ui_windows32_free(void *sptr) {
+	struct ui_interface *uiwindows32 = sptr;
 	DestroyMenu(top_menu);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	free(uiwindows32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -211,7 +220,7 @@ static void setup_view_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
 }
 
-static void setup_hardware_menu(void) {
+static void setup_hardware_menu(struct ui_interface *uiwindows32) {
 	HMENU hardware_menu;
 	HMENU submenu;
 
@@ -269,9 +278,9 @@ static void setup_hardware_menu(void) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
-	set_state(ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
+	ui_windows32_set_state(uiwindows32, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
 	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
-	set_state(ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
+	ui_windows32_set_state(uiwindows32, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
@@ -430,7 +439,8 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void set_state(enum ui_tag tag, int value, const void *data) {
+static void ui_windows32_set_state(void *sptr, int tag, int value, const void *data) {
+	struct ui_interface *uiwindows32 = sptr;
 	switch (tag) {
 
 	// Simple toggles
@@ -471,8 +481,8 @@ static void set_state(enum ui_tag tag, int value, const void *data) {
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			set_state(ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			set_state(ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			ui_windows32_set_state(uiwindows32, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			ui_windows32_set_state(uiwindows32, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 

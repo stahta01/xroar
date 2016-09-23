@@ -25,6 +25,8 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 
+#include "xalloc.h"
+
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
@@ -39,45 +41,54 @@
 /* Note: prefer the default order for sound and joystick modules, which
  * will include the SDL options. */
 
-static _Bool init(void *cfg);
-static void shutdown(void);
-static void set_state(enum ui_tag tag, int value, const void *data);
+static void *ui_sdl_new(void *cfg);
+static void ui_sdl_free(void *sptr);
+static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data);
 
 struct ui_module ui_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL UI",
-	            .init = init, .shutdown = shutdown },
+	            .new = ui_sdl_new,
+	},
 	.vo_module_list = sdl_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
-	.run = sdl_run,
-	.set_state = set_state,
 };
 
-static _Bool init(void *cfg) {
+static void *ui_sdl_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 	(void)ui_cfg;
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
 			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());
-			return 0;
+			return NULL;
 		}
 	}
 
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
-		return 0;
+		return NULL;
 	}
+
+	struct ui_interface *uisdl = xmalloc(sizeof(*uisdl));
+	*uisdl = (struct ui_interface){0};
+
+	uisdl->free = DELEGATE_AS0(void, ui_sdl_free, uisdl);
+	uisdl->run = DELEGATE_AS0(void, ui_sdl_run, uisdl);
+	uisdl->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_set_state, uisdl);
 
 	sdl_keyboard_init();
 
-	return 1;
+	return uisdl;
 }
 
-static void shutdown(void) {
+static void ui_sdl_free(void *sptr) {
+	struct ui_module *uisdl = sptr;
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	free(uisdl);
 }
 
-static void set_state(enum ui_tag tag, int value, const void *data) {
+static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data) {
+	(void)sptr;
 	(void)data;
 	switch (tag) {
 	case ui_tag_kbd_translate:

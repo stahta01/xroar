@@ -144,7 +144,7 @@ extern struct vdrive_interface *xroar_vdrive_interface;
 /**************************************************************************/
 
 void xroar_getargs(int argc, char **argv);
-_Bool xroar_init(int argc, char **argv);
+struct ui_interface *xroar_init(int argc, char **argv);
 void xroar_shutdown(void);
 
 _Bool xroar_run(void);

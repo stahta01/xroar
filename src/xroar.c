@@ -201,6 +201,7 @@ static struct xconfig_option const xroar_options[];
 _Bool xroar_noratelimit = 0;
 int xroar_frameskip = 0;
 
+static struct ui_interface *xroar_ui_interface;
 struct vo_interface *xroar_vo_interface;
 struct ao_interface *xroar_ao_interface;
 
@@ -467,7 +468,7 @@ static struct vdg_palette *get_machine_palette(void);
 # define CONFPATH "."
 #endif
 
-_Bool xroar_init(int argc, char **argv) {
+struct ui_interface *xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
 	_Bool no_conffile = 0;
@@ -591,7 +592,7 @@ _Bool xroar_init(int argc, char **argv) {
 	xroar_vdrive_interface = vdrive_interface_new();
 
 	// Select a UI module.
-	ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
+	struct ui_module *ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
 	if (ui_module == NULL) {
 		LOG_ERROR("%s: ui module `%s' not found\n", argv[0], private_cfg.ui);
 		exit(EXIT_FAILURE);
@@ -607,6 +608,7 @@ _Bool xroar_init(int argc, char **argv) {
 	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
 	struct module *vo_module = module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
 	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
+	ui_joystick_module_list = ui_module->joystick_module_list;
 
 	/* Check other command-line options */
 	if (xroar_cfg.frameskip < 0)
@@ -711,18 +713,18 @@ _Bool xroar_init(int argc, char **argv) {
 	/* Initialise everything */
 	event_current_tick = 0;
 	/* ... modules */
-	module_init((struct module *)ui_module, &xroar_ui_cfg);
+	xroar_ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
 	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module, NULL);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
 	if (!(xroar_vo_interface = module_init(vo_module, &xroar_ui_cfg.vo_cfg))) {
 		LOG_ERROR("No video module initialised.\n");
-		return 0;
+		return NULL;
 	}
 	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
-		return 0;
+		return NULL;
 	}
 	sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.volume);
 	/* ... subsystems */
@@ -746,10 +748,10 @@ _Bool xroar_init(int argc, char **argv) {
 	}
 
 	/* Notify UI of starting options: */
-	ui_module->set_state(ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
-	xroar_tape_interface = tape_interface_new();
+	xroar_tape_interface = tape_interface_new(xroar_ui_interface);
 
 	/* Configure machine */
 	xroar_configure_machine(xroar_machine_config);
@@ -808,7 +810,7 @@ _Bool xroar_init(int argc, char **argv) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
 				tape_open_writing(xroar_tape_interface, private_cfg.tape_write);
-				ui_module->set_state(ui_tag_tape_output_filename, 0, private_cfg.tape_write);
+				DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
 				break;
@@ -833,7 +835,7 @@ _Bool xroar_init(int argc, char **argv) {
 	} else if (private_cfg.lp_pipe) {
 		printer_open_pipe(xroar_printer_interface, private_cfg.lp_pipe);
 	}
-	return 1;
+	return xroar_ui_interface;
 }
 
 void xroar_shutdown(void) {
@@ -856,7 +858,9 @@ void xroar_shutdown(void) {
 		DELEGATE_SAFE_CALL0(xroar_vo_interface->free);
 	}
 	module_shutdown((struct module *)filereq_module);
-	module_shutdown((struct module *)ui_module);
+	if (xroar_ui_interface) {
+		DELEGATE_SAFE_CALL0(xroar_ui_interface->free);
+	}
 #ifdef WINDOWS32
 	windows32_shutdown();
 #endif
@@ -975,7 +979,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 				ret = tape_open_reading(xroar_tape_interface, filename);
 			}
 			if (ret == 0) {
-				ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
+				DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 			}
 			break;
 	}
@@ -1102,8 +1106,8 @@ void xroar_new_disk(int drive) {
 	new_disk->filename = xstrdup(filename);
 	new_disk->write_back = 1;
 	vdrive_insert_disk(xroar_vdrive_interface, drive, new_disk);
-	if (ui_module) {
-		ui_module->set_state(ui_tag_disk_data, drive, new_disk);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, new_disk);
 	}
 }
 
@@ -1111,8 +1115,8 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar_vdrive_interface, drive, disk);
-	if (ui_module) {
-		ui_module->set_state(ui_tag_disk_data, drive, disk);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, disk);
 	}
 }
 
@@ -1123,8 +1127,8 @@ void xroar_insert_disk(int drive) {
 
 void xroar_eject_disk(int drive) {
 	vdrive_eject_disk(xroar_vdrive_interface, drive);
-	if (ui_module) {
-		ui_module->set_state(ui_tag_disk_data, drive, NULL);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, NULL);
 	}
 }
 
@@ -1143,8 +1147,8 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 		break;
 	}
 	vd->write_protect = !new_we;
-	if (notify && ui_module) {
-		ui_module->set_state(ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
 	}
 	return new_we;
 }
@@ -1164,8 +1168,8 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 		break;
 	}
 	vd->write_back = new_wb;
-	if (notify && ui_module) {
-		ui_module->set_state(ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
 	}
 	return new_wb;
 }
@@ -1183,7 +1187,7 @@ void xroar_set_cross_colour_renderer(_Bool notify, int action) {
 	}
 	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
 	if (notify) {
-		ui_module->set_state(ui_tag_ccr, ccr, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ccr, ccr, NULL);
 	}
 }
 
@@ -1223,21 +1227,21 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		}
 	}
 	if (notify) {
-		ui_module->set_state(ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
 	}
 }
 
 void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
-		ui_module->set_state(ui_tag_vdg_inverse, state, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_vdg_inverse, state, NULL);
 	}
 }
 
 void xroar_set_fast_sound(_Bool notify, int action) {
 	_Bool state = xroar_machine->set_fast_sound(xroar_machine, action);
 	if (notify) {
-		ui_module->set_state(ui_tag_fast_sound, state, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fast_sound, state, NULL);
 	}
 }
 
@@ -1269,7 +1273,7 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 	}
 	DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, set_to);
 	if (notify) {
-		ui_module->set_state(ui_tag_fullscreen, set_to, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fullscreen, set_to, NULL);
 	}
 }
 
@@ -1312,7 +1316,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 	if (new >= 0 && new < NUM_KEYMAPS) {
 		keyboard_set_keymap(xroar_keyboard_interface, new);
 		if (notify) {
-			ui_module->set_state(ui_tag_keymap, new, NULL);
+			DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_keymap, new, NULL);
 		}
 	}
 }
@@ -1327,7 +1331,7 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 			break;
 	}
 	if (notify) {
-		ui_module->set_state(ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
 	}
 }
 
@@ -1336,7 +1340,7 @@ static void update_ui_joysticks(int port) {
 	if (joystick_port_config[port] && joystick_port_config[port]->name) {
 		name = joystick_port_config[port]->name;
 	}
-	ui_module->set_state(ui_tag_joy_right + port, 0, name);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_joy_right + port, 0, name);
 }
 
 void xroar_set_joystick(_Bool notify, int port, const char *name) {
@@ -1376,8 +1380,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
-	if (ui_module) {
-		ui_module->set_state(ui_tag_cartridge, -1, NULL);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
 	}
 	switch (mc->architecture) {
 	case ARCH_COCO:
@@ -1421,7 +1425,7 @@ void xroar_set_machine(_Bool notify, int id) {
 	DELEGATE_SAFE_CALL0(xroar_vo_interface->update_palette);
 	xroar_hard_reset();
 	if (notify) {
-		ui_module->set_state(ui_tag_machine, new, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);
 	}
 }
 
@@ -1468,7 +1472,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 
 	if (notify) {
 		int id = new_cart ? new_cart->config->id : -1;
-		ui_module->set_state(ui_tag_cartridge, id, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cartridge, id, NULL);
 	}
 }
 
@@ -1500,26 +1504,26 @@ void xroar_select_tape_input(void) {
 	char *filename = filereq_module->load_filename(xroar_tape_exts);
 	if (filename) {
 		tape_open_reading(xroar_tape_interface, filename);
-		ui_module->set_state(ui_tag_tape_input_filename, 0, filename);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_input(void) {
 	tape_close_reading(xroar_tape_interface);
-	ui_module->set_state(ui_tag_tape_input_filename, 0, NULL);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_select_tape_output(void) {
 	char *filename = filereq_module->save_filename(xroar_tape_exts);
 	if (filename) {
 		tape_open_writing(xroar_tape_interface, filename);
-		ui_module->set_state(ui_tag_tape_output_filename, 0, filename);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
 	}
 }
 
 void xroar_eject_tape_output(void) {
 	tape_close_writing(xroar_tape_interface);
-	ui_module->set_state(ui_tag_tape_output_filename, 0, NULL);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
 }
 
 void xroar_soft_reset(void) {

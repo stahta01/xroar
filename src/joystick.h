@@ -56,6 +56,7 @@ struct joystick_config {
 };
 
 extern struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
+extern struct joystick_module * const *ui_joystick_module_list;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

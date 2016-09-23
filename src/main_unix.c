@@ -31,10 +31,12 @@
 
 int main(int argc, char **argv) {
 	atexit(xroar_shutdown);
-	if (!xroar_init(argc, argv))
+	struct ui_interface *ui = xroar_init(argc, argv);
+	if (!ui) {
 		exit(EXIT_FAILURE);
-	if (ui_module->run) {
-		ui_module->run();
+	}
+	if (DELEGATE_DEFINED(ui->run)) {
+		DELEGATE_CALL0(ui->run);
 	} else {
 		while (xroar_run())
 			;

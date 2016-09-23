@@ -46,6 +46,7 @@ struct tape_interface_private {
 
 	_Bool is_dragon;
 	struct machine *machine;
+	struct ui_interface *ui;
 	struct keyboard_interface *keyboard_interface;
 	struct MC6809 *cpu;
 
@@ -136,11 +137,12 @@ static struct tape_file_autorun autorun_special[] = {
 /* For now, creating a tape interface requires a pointer to the CPU.  This
  * should probably become a pointer to the machine it's a part of. */
 
-struct tape_interface *tape_interface_new(void) {
+struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
+	tip->ui = ui;
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
 	tip->rewrite_leader_count = 256;
@@ -1042,8 +1044,9 @@ void tape_set_state(struct tape_interface *ti, int flags) {
 
 /* sets state and updates UI */
 void tape_select_state(struct tape_interface *ti, int flags) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_set_state(ti, flags);
-	ui_module->set_state(ui_tag_tape_flags, flags, NULL);
+	DELEGATE_CALL3(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
 }
 
 int tape_get_state(struct tape_interface *ti) {

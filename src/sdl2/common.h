@@ -25,7 +25,7 @@ extern struct joystick_module sdl_js_internal;
 extern struct module * const sdl_vo_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
-void sdl_run(void);
+void ui_sdl_run(void *sptr);
 void sdl_keyboard_init(void);
 void sdl_keyboard_set_translate(_Bool);
 void sdl_keypress(SDL_Keysym *keysym);

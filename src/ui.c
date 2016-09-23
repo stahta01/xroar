@@ -57,7 +57,6 @@ static struct ui_module * const default_ui_module_list[] = {
 };
 
 struct ui_module * const *ui_module_list = default_ui_module_list;
-struct ui_module *ui_module = NULL;
 
 struct xconfig_enum ui_ccr_list[] = {
 	{ XC_ENUM_INT("simple", UI_CCR_SIMPLE, "four colour palette") },
