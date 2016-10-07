@@ -75,6 +75,8 @@ static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 static void mpi_reset(struct cart *c);
 static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
+static _Bool mpi_has_interface(struct cart *c, const char *ifname);
+static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 static void select_slot(struct cart *c, unsigned D);
 
@@ -95,6 +97,8 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	c->reset = mpi_reset;
 	c->attach = mpi_attach;
 	c->detach = mpi_detach;
+	c->has_interface = mpi_has_interface;
+	c->attach_interface = mpi_attach_interface;
 
 	m->switch_enable = 1;
 	m->cts_route = 0;
@@ -143,6 +147,31 @@ static void mpi_detach(struct cart *c) {
 		m->slot[i].cart = NULL;
 	}
 	mpi_active = 0;
+}
+
+static _Bool mpi_has_interface(struct cart *c, const char *ifname) {
+	struct mpi *m = (struct mpi *)c;
+	for (int i = 0; i < 4; i++) {
+		struct cart *c2 = m->slot[i].cart;
+		if (c2 && c2->has_interface) {
+			if (c2->has_interface(c2, ifname))
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf) {
+	struct mpi *m = (struct mpi *)c;
+	for (int i = 0; i < 4; i++) {
+		struct cart *c2 = m->slot[i].cart;
+		if (c2 && c2->has_interface) {
+			if (c2->has_interface(c2, ifname)) {
+				c2->attach_interface(c2, ifname, intf);
+				return;
+			}
+		}
+	}
 }
 
 static void debug_cart_name(struct cart *c) {
