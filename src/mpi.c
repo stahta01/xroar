@@ -52,6 +52,7 @@ struct mpi {
 	_Bool switch_enable;
 	int cts_route;
 	int p2_route;
+	unsigned firq_state;
 	unsigned nmi_state;
 	unsigned halt_state;
 	struct mpi_slot slot[4];
@@ -67,6 +68,7 @@ static char *slot_cart_name[4];
 static unsigned initial_slot = 0;
 
 /* Handle signals from cartridges */
+static void set_firq(void *, _Bool);
 static void set_nmi(void *, _Bool);
 static void set_halt(void *, _Bool);
 
@@ -103,6 +105,7 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	m->switch_enable = 1;
 	m->cts_route = 0;
 	m->p2_route = 0;
+	m->firq_state = 0;
 	m->nmi_state = 0;
 	m->halt_state = 0;
 	for (int i = 0; i < 4; i++) {
@@ -112,20 +115,21 @@ static struct cart *mpi_new(struct cart_config *cc) {
 		if (slot_cart_name[i]) {
 			struct cart *c2 = cart_new_named(slot_cart_name[i]);
 			if (c2) {
-				c2->signal_firq = DELEGATE_DEFAULT1(void, bool);
+				c2->signal_firq = DELEGATE_AS1(void, bool, set_firq, &m->slot[i]);
 				c2->signal_nmi = DELEGATE_AS1(void, bool, set_nmi, &m->slot[i]);
 				c2->signal_halt = DELEGATE_AS1(void, bool, set_halt, &m->slot[i]);
 				m->slot[i].cart = c2;
 			}
 		}
 	}
-	mpi_switch_slot(c, initial_slot);
+	select_slot(c, (initial_slot << 4) | initial_slot);
 
 	return c;
 }
 
 static void mpi_reset(struct cart *c) {
 	struct mpi *m = (struct mpi *)c;
+	m->firq_state = 0;
 	m->nmi_state = 0;
 	m->halt_state = 0;
 	for (int i = 0; i < 4; i++) {
@@ -188,8 +192,6 @@ static void debug_cart_name(struct cart *c) {
 
 static void select_slot(struct cart *c, unsigned D) {
 	struct mpi *m = (struct mpi *)c;
-	if (m->slot[m->cts_route].cart)
-		m->slot[m->cts_route].cart->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	m->cts_route = (D >> 4) & 3;
 	m->p2_route = D & 3;
 	if (log_level >= 2) {
@@ -198,9 +200,6 @@ static void select_slot(struct cart *c, unsigned D) {
 		LOG_PRINT(", IO=");
 		debug_cart_name(m->slot[m->p2_route].cart);
 		LOG_PRINT("\n");
-	}
-	if (m->slot[m->cts_route].cart) {
-		m->slot[m->cts_route].cart->signal_firq = c->signal_firq;
 	}
 }
 
@@ -266,6 +265,18 @@ static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 			}
 		}
 	}
+}
+
+static void set_firq(void *sptr, _Bool value) {
+	struct mpi_slot *ms = sptr;
+	struct mpi *m = ms->mpi;
+	unsigned firq_bit = 1 << ms->id;
+	if (value) {
+		m->firq_state |= firq_bit;
+	} else {
+		m->firq_state &= ~firq_bit;
+	}
+	DELEGATE_CALL1(m->cart.signal_firq, m->firq_state);
 }
 
 static void set_nmi(void *sptr, _Bool value) {
