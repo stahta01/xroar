@@ -203,8 +203,8 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 	}
 	if (!P2 && !R2) {
 		for (unsigned i = 0; i < 4; i++) {
-			if (m->slot[D].cart) {
-				D = m->slot[D].cart->read(m->slot[D].cart, A, 0, 0, D);
+			if (m->slot[i].cart) {
+				D = m->slot[i].cart->read(m->slot[i].cart, A, 0, 0, D);
 			}
 		}
 	}
@@ -232,8 +232,8 @@ static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 	}
 	if (!P2 && !R2) {
 		for (unsigned i = 0; i < 4; i++) {
-			if (m->slot[D].cart) {
-				m->slot[D].cart->write(m->slot[D].cart, A, 0, 0, D);
+			if (m->slot[i].cart) {
+				m->slot[i].cart->write(m->slot[i].cart, A, 0, 0, D);
 			}
 		}
 	}
