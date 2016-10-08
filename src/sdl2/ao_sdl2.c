@@ -324,6 +324,7 @@ static void callback(void *userdata, Uint8 *stream, int len) {
 	// wait until at least one fragment buffer is filled
 	while (aosdl->fragment_queue_length == 0) {
 		if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			memset(stream, 0, aosdl->fragment_nbytes);
 			SDL_UnlockMutex(aosdl->fragment_mutex);
 			return;
 		}
@@ -354,6 +355,7 @@ static void callback_1(void *userdata, Uint8 *stream, int len) {
 	// wait until main thread signals filled buffer
 	while (aosdl->fragment_queue_length == 0) {
 		if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+			memset(stream, 0, aosdl->fragment_nbytes);
 			SDL_UnlockMutex(aosdl->fragment_mutex);
 			return;
 		}
