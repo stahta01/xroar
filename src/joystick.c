@@ -58,7 +58,7 @@ static unsigned next_id = 0;
 // Current configuration, per-port:
 struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
 
-static struct joystick_interface *selected_interface = NULL;
+static struct joystick_submodule *selected_interface = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -177,31 +177,31 @@ struct slist *joystick_config_list(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_interface *find_if_in_mod(struct joystick_module *module, const char *if_name) {
+static struct joystick_submodule *find_if_in_mod(struct joystick_module *module, const char *if_name) {
 	if (!module || !if_name)
 		return NULL;
-	for (unsigned i = 0; module->intf_list[i]; i++) {
-		if (0 == strcmp(module->intf_list[i]->name, if_name))
-			return module->intf_list[i];
+	for (unsigned i = 0; module->submodule_list[i]; i++) {
+		if (0 == strcmp(module->submodule_list[i]->name, if_name))
+			return module->submodule_list[i];
 	}
 	return NULL;
 }
 
-static struct joystick_interface *find_if_in_modlist(struct joystick_module * const *list, const char *if_name) {
+static struct joystick_submodule *find_if_in_modlist(struct joystick_module * const *list, const char *if_name) {
 	if (!list || !if_name)
 		return NULL;
 	for (unsigned i = 0; list[i]; i++) {
-		struct joystick_interface *intf = find_if_in_mod(list[i], if_name);
-		if (intf)
-			return intf;
+		struct joystick_submodule *submod = find_if_in_mod(list[i], if_name);
+		if (submod)
+			return submod;
 	}
 	return NULL;
 }
 
-static struct joystick_interface *find_if(const char *if_name) {
-	struct joystick_interface *intf;
-	if ((intf = find_if_in_modlist(ui_joystick_module_list, if_name)))
-		return intf;
+static struct joystick_submodule *find_if(const char *if_name) {
+	struct joystick_submodule *submod;
+	if ((submod = find_if_in_modlist(ui_joystick_module_list, if_name)))
+		return submod;
 	return find_if_in_modlist(joystick_module_list, if_name);
 }
 
@@ -252,7 +252,7 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		struct joystick_axis *axis = selected_interface->configure_axis(spec, i);
 		j->axes[i] = axis;
 		if (axis) {
-			axis->intf = selected_interface;
+			axis->submod = selected_interface;
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -269,7 +269,7 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		struct joystick_button *button = selected_interface->configure_button(spec, i);
 		j->buttons[i] = button;
 		if (button) {
-			button->intf = selected_interface;
+			button->submod = selected_interface;
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -281,12 +281,12 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 	LOG_DEBUG(1, "Joystick port %u = %s [ ", port, jc->name);
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
 		if (j->axes[i])
-			LOG_DEBUG(1, "%u=%s:", i, j->axes[i]->intf->name);
+			LOG_DEBUG(1, "%u=%s:", i, j->axes[i]->submod->name);
 		LOG_DEBUG(1, ", ");
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
 		if (j->buttons[i])
-			LOG_DEBUG(1, "%u=%s:", i, j->buttons[i]->intf->name);
+			LOG_DEBUG(1, "%u=%s:", i, j->buttons[i]->submod->name);
 		if ((i + 1) < JOYSTICK_NUM_BUTTONS)
 			LOG_DEBUG(1, ", ");
 	}
@@ -306,9 +306,9 @@ void joystick_unmap(unsigned port) {
 	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; a++) {
 		struct joystick_axis *axis = j->axes[a];
 		if (axis) {
-			struct joystick_interface *intf = axis->intf;
-			if (intf->unmap_axis) {
-				intf->unmap_axis(axis);
+			struct joystick_submodule *submod = axis->submod;
+			if (submod->unmap_axis) {
+				submod->unmap_axis(axis);
 			} else {
 				free(j->axes[a]);
 			}
@@ -317,9 +317,9 @@ void joystick_unmap(unsigned port) {
 	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; b++) {
 		struct joystick_button *button = j->buttons[b];
 		if (button) {
-			struct joystick_interface *intf = button->intf;
-			if (intf->unmap_button) {
-				intf->unmap_button(button);
+			struct joystick_submodule *submod = button->submod;
+			if (submod->unmap_button) {
+				submod->unmap_button(button);
 			} else {
 				free(j->buttons[b]);
 			}

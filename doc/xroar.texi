@@ -1063,20 +1063,20 @@ A joystick configuration can be created or configured by selecting it by name
 with @option{-joy @var{name}}, and then configuring its axes with
 @option{-joy-axis @var{index}=@var{spec}} and buttons with @option{-joy-button
 @var{index}=@var{spec}}.  In each case, @var{spec} has the syntax
-@var{interface}:@var{args}, with @var{args} being a comma-separated list, the
-format of which is specific to @var{interface}:
+@var{module}:@var{args}, with @var{args} being a comma-separated list, the
+format of which is specific to @var{module}:
 
 @multitable {physicalxxx} {screen-offset0,screen-offset1xxx} {joystick-index,button-indexxxx}
-@headitem Interface @tab Axis args @tab Button args
+@headitem Module @tab Axis args @tab Button args
 @item @samp{physical} @tab @var{joystick-index},@var{[-]axis-index} @tab @var{joystick-index},@var{button-index}
 @item @samp{keyboard} @tab @var{key-name0},@var{key-name1} @tab @var{key-name}
 @item @samp{mouse} @tab @var{screen-offset0},@var{screen-offset1} @tab @var{button-number}
 @end multitable
 
 For physical joysticks a @samp{-} before the axis index inverts the axis.  Key
-names for the keyboard interface depend on the underlying toolkit.  The default
-screen offsets for the mouse interface are @samp{X=2,254} and
-@samp{Y=1.5,190.5} which gives a nice spread.
+names for the keyboard module depend on the underlying toolkit.  The default
+screen offsets for the mouse module are @samp{X=2,254} and @samp{Y=1.5,190.5}
+which gives reasonable behaviour for some games and utilities.
 
 
 @node Printing

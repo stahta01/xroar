@@ -10,7 +10,7 @@
 #include "vo.h"
 
 extern struct vo_rect gtk2_display;
-extern struct joystick_interface gtk2_js_if_keyboard;
+extern struct joystick_submodule gtk2_js_submod_keyboard;
 
 extern GtkWidget *gtk2_top_window;
 extern GtkWidget *gtk2_drawing_area;

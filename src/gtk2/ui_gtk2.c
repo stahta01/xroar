@@ -79,7 +79,7 @@ static struct module * const gtk2_vo_module_list[] = {
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 
-static struct joystick_interface gtk2_js_if_mouse = {
+static struct joystick_submodule gtk2_js_submod_mouse = {
 	.name = "mouse",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
@@ -95,15 +95,15 @@ static _Bool mouse_button[3] = { 0, 0, 0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_interface *js_iflist[] = {
-	&gtk2_js_if_keyboard,
-	&gtk2_js_if_mouse,
+static struct joystick_submodule *js_submodlist[] = {
+	&gtk2_js_submod_keyboard,
+	&gtk2_js_submod_mouse,
 	NULL
 };
 
 struct joystick_module gtk2_js_internal = {
 	.common = { .name = "gtk2", .description = "GTK+ joystick" },
-	.intf_list = js_iflist,
+	.submodule_list = js_submodlist,
 };
 
 static struct joystick_module *gtk2_js_modlist[] = {

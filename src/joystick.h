@@ -10,27 +10,27 @@
 
 struct slist;
 
-// Each joystick module contains a list of interfaces, with standard names:
+// Each joystick module contains a list of submodules, with standard names:
 //
-// physical - interface reads from a real joystick
-// keyboard - a keyboard module intercepts certain keys to fake a joystick
-// mouse    - mouse position maps to joystick position
+// physical - reads from a real joystick (may be standalone)
+// keyboard - keypresses simulate joystick (provided by UI)
+// mouse    - mouse position maps to joystick position (provided by UI)
 
 // Unlike other types of module, the joystick module list in a UI definition
-// does not override the default, it supplements it.  Interfaces are searched
+// does not override the default, it supplements it.  Submodules are searched
 // for in both lists.  This allows both modules that can exist standalone and
 // modules that require a specific active UI to be available.
 
-struct joystick_interface;
+struct joystick_submodule;
 
 struct joystick_module {
 	struct module common;
-	struct joystick_interface **intf_list;
+	struct joystick_submodule **submodule_list;
 };
 
 // Specs are of the form [[MODULE:]INTERFACE:]CONTROL-SPEC.
 
-// The CONTROL-SPEC will vary by interface:
+// The CONTROL-SPEC will vary by submodule:
 //
 // Interface    Axis spec                       Button spec
 // physical     DEVICE-NUMBER,AXIS-NUMBER       DEVICE-NUMER,BUTTON-NUMBER
@@ -68,16 +68,16 @@ typedef _Bool (*js_read_button_func)(void *);
 struct joystick_axis {
 	js_read_axis_func read;
 	void *data;
-	struct joystick_interface *intf;
+	struct joystick_submodule *submod;
 };
 
 struct joystick_button {
 	js_read_button_func read;
 	void *data;
-	struct joystick_interface *intf;
+	struct joystick_submodule *submod;
 };
 
-struct joystick_interface {
+struct joystick_submodule {
 	const char *name;
 	struct joystick_axis *(* const configure_axis)(char *spec, unsigned jaxis);
 	struct joystick_button *(* const configure_button)(char *spec, unsigned jbutton);

@@ -44,7 +44,7 @@ static struct joystick_button *configure_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
 
-struct joystick_interface sdl_js_if_physical = {
+struct joystick_submodule sdl_js_submod_physical = {
 	.name = "physical",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
@@ -54,15 +54,15 @@ struct joystick_interface sdl_js_if_physical = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_interface *js_iflist[] = {
-	&sdl_js_if_physical,
+static struct joystick_submodule *js_submodlist[] = {
+	&sdl_js_submod_physical,
 	NULL
 };
 
 struct joystick_module sdl_js_mod_exported = {
 	.common = { .name = "sdl", .description = "SDL2 joystick input",
 	            .shutdown = sdl_js_physical_shutdown },
-	.intf_list = js_iflist,
+	.submodule_list = js_submodlist,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

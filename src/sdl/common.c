@@ -65,7 +65,7 @@ struct module * const sdl_vo_module_list[] = {
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 
-static struct joystick_interface sdl_js_if_mouse = {
+static struct joystick_submodule sdl_js_submod_mouse = {
 	.name = "mouse",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
@@ -85,17 +85,17 @@ static void sdl_js_shutdown(void);
 
 // If the SDL UI is active, more joystick interfaces are available
 
-static struct joystick_interface *js_iflist[] = {
-	&sdl_js_if_physical,
-	&sdl_js_if_keyboard,
-	&sdl_js_if_mouse,
+static struct joystick_submodule *js_submodlist[] = {
+	&sdl_js_submod_physical,
+	&sdl_js_submod_keyboard,
+	&sdl_js_submod_mouse,
 	NULL
 };
 
 struct joystick_module sdl_js_internal = {
 	.common = { .name = "sdl", .description = "SDL joystick input",
 	            .shutdown = sdl_js_shutdown },
-	.intf_list = js_iflist,
+	.submodule_list = js_submodlist,
 };
 
 struct joystick_module * const sdl_js_modlist[] = {

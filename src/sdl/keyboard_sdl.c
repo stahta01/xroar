@@ -76,7 +76,7 @@ static struct joystick_button *configure_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
 
-struct joystick_interface sdl_js_if_keyboard = {
+struct joystick_submodule sdl_js_submod_keyboard = {
 	.name = "keyboard",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,

@@ -18,8 +18,8 @@ extern struct vo_rect sdl_display;
 
 extern struct module vo_sdl_module;
 
-extern struct joystick_interface sdl_js_if_physical;
-extern struct joystick_interface sdl_js_if_keyboard;
+extern struct joystick_submodule sdl_js_submod_physical;
+extern struct joystick_submodule sdl_js_submod_keyboard;
 extern struct joystick_module sdl_js_internal;
 
 extern struct module * const sdl_vo_module_list[];

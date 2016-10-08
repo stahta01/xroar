@@ -2173,9 +2173,9 @@ static void helptext(void) {
 "\nWhen configuring a Multi-Pak Interface (MPI), only the last configured DOS\n"
 "cartridge will end up connected to the virtual drives.\n"
 
-"\nJoystick SPECs are of the form [INTERFACE:][ARG[,ARG]...], from:\n"
+"\nJoystick SPECs are of the form [MODULE:][ARG[,ARG]...], from:\n"
 
-"\nINTERFACE       Axis ARGs                       Button ARGs\n"
+"\nMODULE          Axis ARGs                       Button ARGs\n"
 "physical        joystick-index,[-]axis-index    joystick-index,button-index\n"
 "keyboard        key-name0,key-name1             key-name\n"
 "mouse           screen-offset0,screen-offset1   button-number\n"

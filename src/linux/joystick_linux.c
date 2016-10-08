@@ -49,7 +49,7 @@ static struct joystick_button *configure_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
 
-static struct joystick_interface linux_js_if_physical = {
+static struct joystick_submodule linux_js_submod_physical = {
 	.name = "physical",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
@@ -59,14 +59,14 @@ static struct joystick_interface linux_js_if_physical = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_interface *js_iflist[] = {
-	&linux_js_if_physical,
+static struct joystick_submodule *js_submodlist[] = {
+	&linux_js_submod_physical,
 	NULL
 };
 
 struct joystick_module linux_js_mod = {
 	.common = { .name = "linux", .description = "Linux joystick input" },
-	.intf_list = js_iflist,
+	.submodule_list = js_submodlist,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
