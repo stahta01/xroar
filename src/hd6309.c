@@ -145,7 +145,7 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 #define CLR_NVC   ( REG_CC &= ~(CC_N|CC_V|CC_C) )
 #define CLR_ZC    ( REG_CC &= ~(CC_Z|CC_C) )
 
-#define SET_Z(r)          ( REG_CC |= ((r) ? 0 : CC_Z) )
+#define SET_Z(r)          ( (!(r)) ? (REG_CC |= CC_Z) : 0 )
 #define SET_N8(r)         ( REG_CC |= (r&0x80)>>4 )
 #define SET_N16(r)        ( REG_CC |= (r&0x8000)>>12 )
 #define SET_H(a,b,r)      ( REG_CC |= ((a^b^r)&0x10)<<1 )
