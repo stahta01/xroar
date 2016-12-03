@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,8 +67,8 @@ struct sound_interface_private {
 	unsigned ticks_per_buffer;
 	float error_f;
 
-	// Computed by set_volume().  Defaults to scale at full volume.
-	unsigned scale;
+	// Computed by set_gain() or set_volume().  Defaults to -3 dBFS.
+	unsigned gain;
 
 	_Bool external_audio;
 
@@ -127,7 +128,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	struct sound_interface_private *snd = xmalloc(sizeof(*snd));
 	*snd = (struct sound_interface_private){0};
 
-	snd->scale = 6971;  // full volume
+	snd->gain = 4935;  // -3 dBFS
 
 	_Bool fmt_big_endian = 1;
 
@@ -210,11 +211,19 @@ void sound_interface_free(struct sound_interface *sndp) {
 	free(snd);
 }
 
+// -ve dB wrt 0dBFS
+void sound_set_gain(struct sound_interface *sndp, double db) {
+	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
+	double v = pow(10., db / 20.);
+	snd->gain = (unsigned)((32767. * v) / full_scale_v);
+}
+
+// linear scaling 0-100 (but allow up to 200)
 void sound_set_volume(struct sound_interface *sndp, int v) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	if (v < 0) v = 0;
-	if (v > 100) v = 100;
-	snd->scale = (unsigned)((327.67 * (float)v) / full_scale_v);
+	if (v > 200) v = 200;
+	snd->gain = (unsigned)((327.67 * (float)v) / full_scale_v);
 }
 
 static void fill_int8(struct sound_interface_private *snd, int nframes) {
@@ -319,7 +328,13 @@ void sound_update(struct sound_interface *sndp) {
 
 	/* Update output samples */
 	for (int i = 0; i < snd->buffer_nchannels; i++) {
-		unsigned output = snd->output_level[i] * snd->scale;
+		int output = snd->output_level[i] * snd->gain;
+		if (output > 32767) {
+			output = 32767;
+		}
+		if (output < -32767) {
+			output = -32767;
+		}
 		switch (snd->buffer_fmt) {
 		case SOUND_FMT_U8:
 			snd->last_sample.as_int8[i] = (output >> 8) + 0x80;
@@ -392,15 +407,15 @@ void sound_update(struct sound_interface *sndp) {
 
 	/* Mix bus & external sound */
 	if (snd->external_audio) {
-		snd->output_level[0] = (snd->external_level[0]*full_scale_v + bus_level) / 2.0;
-		snd->output_level[1] = (snd->external_level[1]*full_scale_v + bus_level) / 2.0;
+		snd->output_level[0] = snd->external_level[0]*full_scale_v + bus_level;
+		snd->output_level[1] = snd->external_level[1]*full_scale_v + bus_level;
 	} else {
 		snd->output_level[0] = bus_level;
 		snd->output_level[1] = bus_level;
 	}
 	/* Downmix to mono */
 	if (snd->buffer_nchannels == 1)
-		snd->output_level[0] = (snd->output_level[0] + snd->output_level[1]) / 2.0;
+		snd->output_level[0] = snd->output_level[0] + snd->output_level[1];
 
 }
 

@@ -130,6 +130,7 @@ struct private_cfg {
 	char *filereq;
 	char *ao;
 	int volume;
+	double gain;
 	char *joy_right;
 	char *joy_left;
 	char *joy_virtual;
@@ -160,7 +161,9 @@ static struct private_cfg private_cfg = {
 	.nodos = -1,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
-	.volume = 100,
+	// if volume set >=0, use that, else use gain value in dB
+	.volume = -1,
+	.gain = -3.0,
 	.tape_fast = 1,
 	.tape_pad = -1,
 	.tape_pad_auto = 1,
@@ -180,6 +183,7 @@ static void set_pal(void);
 static void set_ntsc(void);
 static void set_cart(const char *name);
 static void set_cart_type(const char *name);
+static void set_gain(double gain);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
 static void set_joystick_button(const char *spec);
@@ -726,7 +730,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		LOG_ERROR("No audio module initialised.\n");
 		return NULL;
 	}
-	sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.volume);
+	if (private_cfg.volume >= 0) {
+		sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.volume);
+	} else {
+		sound_set_gain(xroar_ao_interface->sound_interface, private_cfg.gain);
+	}
 	/* ... subsystems */
 	joystick_init();
 
@@ -1724,6 +1732,11 @@ static void set_cart_type(const char *name) {
 	private_cfg.cart_type = xstrdup(name);
 }
 
+static void set_gain(double gain) {
+	private_cfg.gain = gain;
+	private_cfg.volume = -1;
+}
+
 static void cfg_mpi_slot(int slot) {
 	mpi_set_initial(slot);
 }
@@ -1967,6 +1980,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("ao-fragment-frames", &xroar_cfg.ao_fragment_nframes) },
 	{ XC_SET_INT("ao-buffer-ms", &xroar_cfg.ao_buffer_ms) },
 	{ XC_SET_INT("ao-buffer-frames", &xroar_cfg.ao_buffer_nframes) },
+	{ XC_CALL_DOUBLE("ao-gain", &set_gain) },
 	{ XC_SET_INT("volume", &private_cfg.volume) },
 	{ XC_SET_BOOL("fast-sound", &xroar_cfg.fast_sound) },
 	/* Backwards-compatibility: */
@@ -2285,7 +2299,8 @@ static void config_print_all(_Bool all) {
 	xroar_cfg_print_int_nz(all, "ao-fragment-frames", xroar_cfg.ao_fragment_nframes);
 	xroar_cfg_print_int_nz(all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
 	xroar_cfg_print_int_nz(all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
-	xroar_cfg_print_int(all, "volume", private_cfg.volume, 100);
+	xroar_cfg_print_double(all, "ao-gain", private_cfg.gain, -3.0);
+	xroar_cfg_print_int(all, "volume", private_cfg.volume, -1);
 	xroar_cfg_print_bool(all, "fast-sound", xroar_cfg.fast_sound, 0);
 	puts("");
 
