@@ -2366,11 +2366,7 @@ void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal) {
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent();
-	if (value != 0) {
-		printf("%s %d\n", opt, value);
-		return;
-	}
-	printf("# %s undefined\n", opt);
+	printf("%s %d\n", opt, value);
 }
 
 void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value) {
@@ -2382,6 +2378,13 @@ void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value) {
 		return;
 	}
 	printf("# %s undefined\n", opt);
+}
+
+void xroar_cfg_print_double(_Bool all, char const *opt, double value, double normal) {
+	if (!all && value == normal)
+		return;
+	xroar_cfg_print_indent();
+	printf("%s %.4f\n", opt, value);
 }
 
 void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value) {

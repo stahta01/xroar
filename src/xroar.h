@@ -198,6 +198,7 @@ void xroar_cfg_print_indent(void);
 void xroar_cfg_print_bool(_Bool all, char const *opt, int value, int normal);
 void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal);
 void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value);
+void xroar_cfg_print_double(_Bool all, char const *opt, double value, double normal);
 void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value);
 void xroar_cfg_print_string(_Bool all, char const *opt, char const *value,
 			    char const *normal);
