@@ -21,7 +21,7 @@
 #define XC_CALL_INT(o,d) .type = XCONFIG_INT, .name = (o), .dest.func_int = (d), .call = 1
 #define XC_CALL_INT0(o,d) .type = XCONFIG_INT0, .name = (o), .dest.func_int = (d), .call = 1
 #define XC_CALL_INT1(o,d) .type = XCONFIG_INT1, .name = (o), .dest.func_int = (d), .call = 1
-#define XC_CALL_DOUBLE(o) .type = XCONFIG_DOUBLE, .name = (o), .dest.func_double = (d), .call = 1
+#define XC_CALL_DOUBLE(o,d) .type = XCONFIG_DOUBLE, .name = (o), .dest.func_double = (d), .call = 1
 #define XC_CALL_STRING(o,d) .type = XCONFIG_STRING, .name = (o), .dest.func_string = (xconfig_func_string)(d), .call = 1
 #define XC_CALL_NULL(o,d) .type = XCONFIG_NULL, .name = (o), .dest.func_null = (d), .call = 1
 #define XC_CALL_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.func_int = (d), .call = 1
