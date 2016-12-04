@@ -54,10 +54,10 @@ void mc6821_free(struct MC6821 *pia) {
 	free(pia);
 }
 
-#define INTERRUPT_ENABLED(p) (p.control_register & 0x01)
-#define ACTIVE_TRANSITION(p) (p.control_register & 0x02)
-#define DDR_SELECTED(p)      (!(p.control_register & 0x04))
-#define PDR_SELECTED(p)      (p.control_register & 0x04)
+#define INTERRUPT_ENABLED(p) ((p).control_register & 0x01)
+#define ACTIVE_TRANSITION(p) ((p).control_register & 0x02)
+#define DDR_SELECTED(p)      (!((p).control_register & 0x04))
+#define PDR_SELECTED(p)      ((p).control_register & 0x04)
 
 void mc6821_reset(struct MC6821 *pia) {
 	if (pia == NULL) return;
@@ -76,9 +76,9 @@ void mc6821_reset(struct MC6821 *pia) {
 	mc6821_update_state(pia);
 }
 
-#define PIA_INTERRUPT_ENABLED(s) (s->control_register & 0x01)
-#define PIA_DDR_SELECTED(s)      (!(s->control_register & 0x04))
-#define PIA_PDR_SELECTED(s)      (s->control_register & 0x04)
+#define PIA_INTERRUPT_ENABLED(s) ((s)->control_register & 0x01)
+#define PIA_DDR_SELECTED(s)      (!((s)->control_register & 0x04))
+#define PIA_PDR_SELECTED(s)      ((s)->control_register & 0x04)
 
 void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 	if (level == side->cx1)
@@ -98,14 +98,14 @@ void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 }
 
 #define UPDATE_OUTPUT_A(p) do { \
-		p.out_sink = ~(~p.output_register & p.direction_register); \
-		DELEGATE_SAFE_CALL0(p.data_postwrite); \
+		(p).out_sink = ~(~(p).output_register & (p).direction_register); \
+		DELEGATE_SAFE_CALL0((p).data_postwrite); \
 	} while (0)
 
 #define UPDATE_OUTPUT_B(p) do { \
-		p.out_source = p.output_register & p.direction_register; \
-		p.out_sink = p.output_register | ~p.direction_register; \
-		DELEGATE_SAFE_CALL0(p.data_postwrite); \
+		(p).out_source = (p).output_register & (p).direction_register; \
+		(p).out_sink = (p).output_register | ~(p).direction_register; \
+		DELEGATE_SAFE_CALL0((p).data_postwrite); \
 	} while (0)
 
 void mc6821_update_state(struct MC6821 *pia) {
@@ -116,13 +116,13 @@ void mc6821_update_state(struct MC6821 *pia) {
 }
 
 #define READ_DR(p) do { \
-		DELEGATE_SAFE_CALL0(p.data_preread); \
-		p.interrupt_received = 0; \
-		p.irq = 0; \
+		DELEGATE_SAFE_CALL0((p).data_preread); \
+		(p).interrupt_received = 0; \
+		(p).irq = 0; \
 	} while (0)
 
 #define READ_CR(p) do { \
-		DELEGATE_SAFE_CALL0(p.control_preread); \
+		DELEGATE_SAFE_CALL0((p).control_preread); \
 	} while (0)
 
 uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
@@ -149,23 +149,23 @@ uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 
 #define WRITE_DR(p,v) do { \
 		if (PDR_SELECTED(p)) { \
-			p.output_register = v; \
-			v &= p.direction_register; \
+			(p).output_register = v; \
+			v &= (p).direction_register; \
 		} else { \
-			p.direction_register = v; \
-			v &= p.output_register; \
+			(p).direction_register = v; \
+			v &= (p).output_register; \
 		} \
 	} while (0)
 
 #define WRITE_CR(p,v) do { \
-		p.control_register = v & 0x3f; \
+		(p).control_register = v & 0x3f; \
 		if (INTERRUPT_ENABLED(p)) { \
-			if (p.interrupt_received) \
-				p.irq = 1; \
+			if ((p).interrupt_received) \
+				(p).irq = 1; \
 		} else { \
-			p.irq = 0; \
+			(p).irq = 0; \
 		} \
-		DELEGATE_SAFE_CALL0(p.control_postwrite); \
+		DELEGATE_SAFE_CALL0((p).control_postwrite); \
 	} while (0)
 
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
