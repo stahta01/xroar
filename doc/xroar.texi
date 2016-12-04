@@ -960,13 +960,18 @@ Specify total audio buffer size in milliseconds.
 
 Specify total audio buffer size in frames.
 
-@item -fast-sound
+@item -ao-gain @var{db}
 
-Slightly faster audio support by ignoring certain uncommon state changes.
+Specify audio gain in dB relative to 0 dBFS.  Only negative values really make
+sense here.  The default is @samp{-3.0}.
 
 @item -volume @var{volume}
 
-Specify audio volume (0 - 100).
+Older way to specify volume.  Simple linear scaling, using values 0--100.
+
+@item -fast-sound
+
+Slightly faster audio support by ignoring certain uncommon state changes.
 
 @end table
 
@@ -977,8 +982,12 @@ size will usually have an effect.  Bear in mind that any figures reported by
 XRoar reflect what it was able to request, and won't include any extra
 buffering introduced by the underlying sound system.
 
-When the Orchestra 90-CC cartridge is attached, audio levels will be reduced
-due to the need to mix in a stereo output.
+When the Orchestra 90-CC cartridge is attached, its stereo output needs to be
+mixed with the Dragon's normal audio.  To allow a small amount of headroom for
+this, the default gain is set to @samp{-3.0} (dB relative to full scale), but
+be aware that it would still be possible for this to clip depending on what's
+happening on the internal sound bus.  A setting of @option{-ao-gain -9.0} would
+give plenty of headroom (at the expense of a quieter overall sound).
 
 
 @node Keyboard
