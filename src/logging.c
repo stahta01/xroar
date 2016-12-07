@@ -131,6 +131,15 @@ void log_hexdump_byte(struct log_handle *l, uint8_t b) {
 	l->ctx.hexdump.buf[l->ctx.hexdump.nbytes++] = b;
 }
 
+void log_hexdump_block(struct log_handle *l, uint8_t *buf, unsigned len) {
+	if (!l)
+		return;
+	while (len > 0) {
+		log_hexdump_byte(l, *(buf++));
+		len--;
+	}
+}
+
 void log_hexdump_flag(struct log_handle *l) {
 	if (!l)
 		return;
