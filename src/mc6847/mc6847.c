@@ -85,7 +85,13 @@ struct MC6847_private {
 	int vram_bit;
 	enum vdg_render_mode render_mode;
 	unsigned pal_padding;
-	uint8_t pixel_data[VDG_LINE_DURATION];
+
+	/* Unsafe warning: pixel_data[] needs to be 8 elements longer than a
+	 * full scanline, for the mid-scanline 32 -> 16 byte mode switch case
+	 * where many extra pixels are emitted.  8 is the maximum number of
+	 * elements rendered in render_scanline() between index checks. */
+	uint8_t pixel_data[VDG_LINE_DURATION+8];
+
 	const struct ntsc_palette *palette;
 	unsigned burst;
 
