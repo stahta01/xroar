@@ -53,8 +53,6 @@
 #include "gtk2/tapecontrol.h"
 #include "gtk2/ui_gtk2.h"
 
-#include "gtk2/top_window_glade.h"
-
 static void *ui_gtk2_new(void *cfg);
 static void ui_gtk2_free(void *sptr);
 static void ui_gtk2_run(void *sptr);
@@ -353,92 +351,6 @@ static void about(GtkMenuItem *item, gpointer data) {
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
 
-static const gchar *ui_xml_string =
-	"<ui>"
-	  "<accelerator name='InsertDisk1' action='InsertDisk1Action'/>"
-	  "<accelerator name='InsertDisk2' action='InsertDisk2Action'/>"
-	  "<accelerator name='InsertDisk3' action='InsertDisk3Action'/>"
-	  "<accelerator name='InsertDisk4' action='InsertDisk4Action'/>"
-	  "<menubar name='MainMenu'>"
-	    "<menu name='FileMenu' action='FileMenuAction'>"
-	      "<menuitem name='Run' action='RunAction'/>"
-	      "<menuitem name='Load' action='LoadAction'/>"
-	      "<separator/>"
-	      "<menuitem name='InsertDisk' action='InsertDiskAction'/>"
-	      "<separator/>"
-	      "<menuitem name='SaveSnapshot' action='SaveSnapshotAction'/>"
-	      "<separator/>"
-	      "<menuitem name='Quit' action='QuitAction'/>"
-	    "</menu>"
-	    "<menu name='ViewMenu' action='ViewMenuAction'>"
-	      "<menuitem name='InverseText' action='InverseTextAction'/>"
-	      "<menu name='CCRMenu' action='CCRMenuAction'>"
-	        "<menuitem action='ccr-simple'/>"
-	        "<menuitem action='ccr-5bit'/>"
-	        "<menuitem action='ccr-simulated'/>"
-	      "</menu>"
-	      "<menu name='CrossColourMenu' action='CrossColourMenuAction'>"
-	        "<menuitem action='cc-none'/>"
-	        "<menuitem action='cc-blue-red'/>"
-	        "<menuitem action='cc-red-blue'/>"
-	      "</menu>"
-	      "<separator/>"
-	      "<menu name='ZoomMenu' action='ZoomMenuAction'>"
-	        "<menuitem action='zoom_in'/>"
-	        "<menuitem action='zoom_out'/>"
-	        "<separator/>"
-	        "<menuitem action='zoom_320x240'/>"
-	        "<menuitem action='zoom_640x480'/>"
-	        "<separator/>"
-	        "<menuitem action='zoom_reset'/>"
-	      "</menu>"
-	      "<separator/>"
-	      "<menuitem name='FullScreen' action='FullScreenAction'/>"
-	    "</menu>"
-	    "<menu name='HardwareMenu' action='HardwareMenuAction'>"
-	      "<menu name='MachineMenu' action='MachineMenuAction'>"
-	      "</menu>"
-	      "<separator/>"
-	      "<menu name='CartridgeMenu' action='CartridgeMenuAction'>"
-	      "</menu>"
-	      "<separator/>"
-	      "<menu name='KeymapMenu' action='KeymapMenuAction'>"
-	        "<menuitem action='keymap_dragon'/>"
-	        "<menuitem action='keymap_dragon200e'/>"
-	        "<menuitem action='keymap_coco'/>"
-	      "</menu>"
-	      "<separator/>"
-	      "<menu name='JoyRightMenu' action='JoyRightMenuAction'>"
-	        "<menuitem action='joy_right_none'/>"
-	        "<menuitem action='joy_right_joy0'/>"
-	        "<menuitem action='joy_right_joy1'/>"
-	        "<menuitem action='joy_right_kjoy0'/>"
-	        "<menuitem action='joy_right_mjoy0'/>"
-	      "</menu>"
-	      "<menu name='JoyLeftMenu' action='JoyLeftMenuAction'>"
-	        "<menuitem action='joy_left_none'/>"
-	        "<menuitem action='joy_left_joy0'/>"
-	        "<menuitem action='joy_left_joy1'/>"
-	        "<menuitem action='joy_left_kjoy0'/>"
-	        "<menuitem action='joy_left_mjoy0'/>"
-	      "</menu>"
-	      "<menuitem name='JoySwap' action='JoySwapAction'/>"
-	      "<separator/>"
-	      "<menuitem name='SoftReset' action='SoftResetAction'/>"
-	      "<menuitem name='HardReset' action='HardResetAction'/>"
-	    "</menu>"
-	    "<menu name='ToolMenu' action='ToolMenuAction'>"
-	      "<menuitem name='TranslateKeyboard' action='TranslateKeyboardAction'/>"
-	      "<menuitem name='DriveControl' action='DriveControlAction'/>"
-	      "<menuitem name='TapeControl' action='TapeControlAction'/>"
-	      "<menuitem name='FastSound' action='FastSoundAction'/>"
-	    "</menu>"
-	    "<menu name='HelpMenu' action='HelpMenuAction'>"
-	      "<menuitem name='About' action='AboutAction'/>"
-	    "</menu>"
-	  "</menubar>"
-	"</ui>";
-
 static GtkActionEntry const ui_entries[] = {
 	/* Top level */
 	{ .name = "FileMenuAction", .label = "_File" },
@@ -577,7 +489,9 @@ static void *ui_gtk2_new(void *cfg) {
 	GtkBuilder *builder;
 	GError *error = NULL;
 	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_string(builder, top_window_glade, -1, &error)) {
+
+	GBytes *res_top_window = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/top_window.glade", 0, NULL);
+	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_top_window, NULL), -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);
 		return NULL;
@@ -599,6 +513,17 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Create a UI from XML */
 	gtk2_menu_manager = gtk_ui_manager_new();
 
+	GBytes *res_ui = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/ui.xml", 0, NULL);
+	const gchar *ui_xml_string = g_bytes_get_data(res_ui, NULL);
+
+	// Sigh, glib-compile-resources can strip blanks, but it then forcibly
+	// adds an XML version tag, which gtk_ui_manager_add_ui_from_string()
+	// objects to.  Skip to the second tag...
+	if (ui_xml_string) {
+		do { ui_xml_string++; } while (*ui_xml_string != '<');
+	}
+	// The proper way to do this (for the next five minutes) is probably to
+	// transition to using GtkBuilder.
 	gtk_ui_manager_add_ui_from_string(gtk2_menu_manager, ui_xml_string, -1, &error);
 	if (error) {
 		g_message("building menus failed: %s", error->message);

@@ -142,14 +142,13 @@ xroar_SOURCES += \
 	gtk2/common.c gtk2/common.h \
 	gtk2/drivecontrol.c gtk2/drivecontrol.h \
 	gtk2/filereq_gtk2.c \
+	gtk2/ui_gtk2.gresource.c \
 	gtk2/keyboard_gtk2.c \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
 	gtk2/ui_gtk2.c gtk2/ui_gtk2.h
 
 BUILT_SOURCES += \
-	gtk2/drivecontrol_glade.h \
-	gtk2/tapecontrol_glade.h \
-	gtk2/top_window_glade.h
+	gtk2/ui_gtk2.gresource.c
 
 if GTKGL
 xroar_CFLAGS += $(GTKGL_CFLAGS)
@@ -159,23 +158,22 @@ xroar_SOURCES += \
 endif
 endif
 
-gtk2/drivecontrol.$(OBJEXT): gtk2/drivecontrol_glade.h
-gtk2/tapecontrol.$(OBJEXT): gtk2/tapecontrol_glade.h
-gtk2/ui_gtk2.$(OBJEXT): gtk2/top_window_glade.h
+GTK2_RESOURCES = \
+	gtk2/ui.xml \
+	gtk2/drivecontrol.glade \
+	gtk2/tapecontrol.glade \
+	gtk2/top_window.glade
 
 EXTRA_DIST += \
-	gtk2/drivecontrol_glade.glade \
-	gtk2/tapecontrol_glade.glade \
-	gtk2/top_window_glade.glade \
-	gtk2/drivecontrol_glade.h \
-	gtk2/tapecontrol_glade.h \
-	gtk2/top_window_glade.h \
+	$(GTK2_RESOURCES) \
+	gtk2/ui_gtk2.gresource.c \
+	gtk2/ui_gtk2.gresource.xml \
 	gtk2/keyboard_gtk2_mappings.c
 
-.glade.h:
-	echo "static const gchar *$(@:%.h=%) =" | sed 's/\*.*\//\*/'> $@
-	$(SED) 's/"/'\''/g;s/^\( *\)/\1"/;s/$$/"/;' $< >> $@
-	echo ";" >> $@
+gtk2/ui_gtk2.gresource.c: $(GTK2_RESOURCES)
+
+gtk2/ui_gtk2.gresource.c: gtk2/ui_gtk2.gresource.xml
+	$(GLIB_COMPILE_RESOURCES) $< --target=$@ --sourcedir=gtk2 --generate-source
 
 # SDL2 user interface
 

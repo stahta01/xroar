@@ -344,6 +344,9 @@ int main(int argc, char **argv) { gtk_init(&argc, &argv); return 0; }
 AM_CONDITIONAL([GTK2], [test -n "$have_gtk2"])
 AM_COND_IF([GTK2], [AC_DEFINE([HAVE_GTK2], 1, [Use GTK+ 2])])
 
+GLIB_COMPILE_RESOURCES=`$PKG_CONFIG --variable glib_compile_resources gio-2.0`
+AC_SUBST(GLIB_COMPILE_RESOURCES)
+
 ### GtkGLExt
 
 AS_IF([test "x$with_gtkgl" != "xno"], [

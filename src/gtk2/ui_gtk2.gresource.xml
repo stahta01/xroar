@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+   <gresource prefix="/uk/org/6809/xroar/ui_gtk2">
+      <file preprocess="xml-stripblanks">ui.xml</file>
+      <file preprocess="xml-stripblanks">top_window.glade</file>
+      <file preprocess="xml-stripblanks">tapecontrol.glade</file>
+      <file preprocess="xml-stripblanks">drivecontrol.glade</file>
+   </gresource>
+</gresources>

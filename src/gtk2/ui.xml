@@ -1,0 +1,84 @@
+<ui>
+  <accelerator name='InsertDisk1' action='InsertDisk1Action'/>
+  <accelerator name='InsertDisk2' action='InsertDisk2Action'/>
+  <accelerator name='InsertDisk3' action='InsertDisk3Action'/>
+  <accelerator name='InsertDisk4' action='InsertDisk4Action'/>
+  <menubar name='MainMenu'>
+    <menu name='FileMenu' action='FileMenuAction'>
+      <menuitem name='Run' action='RunAction'/>
+      <menuitem name='Load' action='LoadAction'/>
+      <separator/>
+      <menuitem name='InsertDisk' action='InsertDiskAction'/>
+      <separator/>
+      <menuitem name='SaveSnapshot' action='SaveSnapshotAction'/>
+      <separator/>
+      <menuitem name='Quit' action='QuitAction'/>
+    </menu>
+    <menu name='ViewMenu' action='ViewMenuAction'>
+      <menuitem name='InverseText' action='InverseTextAction'/>
+      <menu name='CCRMenu' action='CCRMenuAction'>
+        <menuitem action='ccr-simple'/>
+        <menuitem action='ccr-5bit'/>
+        <menuitem action='ccr-simulated'/>
+      </menu>
+      <menu name='CrossColourMenu' action='CrossColourMenuAction'>
+        <menuitem action='cc-none'/>
+        <menuitem action='cc-blue-red'/>
+        <menuitem action='cc-red-blue'/>
+      </menu>
+      <separator/>
+      <menu name='ZoomMenu' action='ZoomMenuAction'>
+        <menuitem action='zoom_in'/>
+        <menuitem action='zoom_out'/>
+        <separator/>
+        <menuitem action='zoom_320x240'/>
+        <menuitem action='zoom_640x480'/>
+        <separator/>
+        <menuitem action='zoom_reset'/>
+      </menu>
+      <separator/>
+      <menuitem name='FullScreen' action='FullScreenAction'/>
+    </menu>
+    <menu name='HardwareMenu' action='HardwareMenuAction'>
+      <menu name='MachineMenu' action='MachineMenuAction'>
+      </menu>
+      <separator/>
+      <menu name='CartridgeMenu' action='CartridgeMenuAction'>
+      </menu>
+      <separator/>
+      <menu name='KeymapMenu' action='KeymapMenuAction'>
+        <menuitem action='keymap_dragon'/>
+        <menuitem action='keymap_dragon200e'/>
+        <menuitem action='keymap_coco'/>
+      </menu>
+      <separator/>
+      <menu name='JoyRightMenu' action='JoyRightMenuAction'>
+        <menuitem action='joy_right_none'/>
+        <menuitem action='joy_right_joy0'/>
+        <menuitem action='joy_right_joy1'/>
+        <menuitem action='joy_right_kjoy0'/>
+        <menuitem action='joy_right_mjoy0'/>
+      </menu>
+      <menu name='JoyLeftMenu' action='JoyLeftMenuAction'>
+        <menuitem action='joy_left_none'/>
+        <menuitem action='joy_left_joy0'/>
+        <menuitem action='joy_left_joy1'/>
+        <menuitem action='joy_left_kjoy0'/>
+        <menuitem action='joy_left_mjoy0'/>
+      </menu>
+      <menuitem name='JoySwap' action='JoySwapAction'/>
+      <separator/>
+      <menuitem name='SoftReset' action='SoftResetAction'/>
+      <menuitem name='HardReset' action='HardResetAction'/>
+    </menu>
+    <menu name='ToolMenu' action='ToolMenuAction'>
+      <menuitem name='TranslateKeyboard' action='TranslateKeyboardAction'/>
+      <menuitem name='DriveControl' action='DriveControlAction'/>
+      <menuitem name='TapeControl' action='TapeControlAction'/>
+      <menuitem name='FastSound' action='FastSoundAction'/>
+    </menu>
+    <menu name='HelpMenu' action='HelpMenuAction'>
+      <menuitem name='About' action='AboutAction'/>
+    </menu>
+  </menubar>
+</ui>

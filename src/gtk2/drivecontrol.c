@@ -36,8 +36,6 @@
 #include "gtk2/drivecontrol.h"
 #include "gtk2/ui_gtk2.h"
 
-#include "gtk2/drivecontrol_glade.h"
-
 /* Module callbacks */
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
 
@@ -94,7 +92,9 @@ void gtk2_create_dc_window(void) {
 	GError *error = NULL;
 	int i;
 	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_string(builder, drivecontrol_glade, -1, &error)) {
+
+	GBytes *res_drivecontrol = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/drivecontrol.glade", 0, NULL);
+	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_drivecontrol, NULL), -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);
 		return;

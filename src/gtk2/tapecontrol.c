@@ -38,8 +38,6 @@
 #include "gtk2/tapecontrol.h"
 #include "gtk2/ui_gtk2.h"
 
-#include "gtk2/tapecontrol_glade.h"
-
 /* UI events */
 static void update_tape_counters(void *);
 static struct event update_tape_counters_event;
@@ -105,7 +103,9 @@ void gtk2_create_tc_window(void) {
 	GtkWidget *widget;
 	GError *error = NULL;
 	builder = gtk_builder_new();
-	if (!gtk_builder_add_from_string(builder, tapecontrol_glade, -1, &error)) {
+
+	GBytes *res_tapecontrol = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/tapecontrol.glade", 0, NULL);
+	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_tapecontrol, NULL), -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);
 		return;
