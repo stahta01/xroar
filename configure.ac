@@ -318,24 +318,6 @@ int main(int argc, char **argv) { jack_client_t *c; jack_activate(c); return 0; 
 AM_CONDITIONAL([AO_JACK], [test -n "$JACK_LIBS"])
 AM_COND_IF([AO_JACK], [AC_DEFINE([HAVE_JACK_AUDIO], 1, [Use JACK audio])])
 
-### OpenGL
-
-AX_CHECK_GL
-AS_IF([test -z "$GL_LIBS"], [
-		OLD_LIBS="$LIBS"
-		LIBS="$LIBS -framework OpenGL"
-		AC_MSG_CHECKING([if -framework OpenGL works instead])
-		AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <OpenGL/gl.h>
-int main(int argc, char **argv) { GLuint t; glGenTextures(1, &t); return 0; }
-				])], [
-			AC_MSG_RESULT([yes])
-			GL_LIBS="-framework OpenGL"
-			], [AC_MSG_RESULT([no])] )
-		LIBS="$OLD_LIBS"
-		])
-AM_CONDITIONAL([OPENGL], [test -n "$GL_LIBS"])
-
 ### GTK+-2
 
 AS_IF([test "x$with_gtk2" != "xno"], [
@@ -388,6 +370,28 @@ int main(int argc, char **argv) { gtk_gl_init(&argc, &argv); return 0; }
 
 AM_CONDITIONAL([GTKGL], [test -n "$have_gtkgl"])
 AM_COND_IF([GTKGL], [AC_DEFINE([HAVE_GTKGL], 1, [Use GtkGLExt])])
+
+### OpenGL
+
+AS_IF([test -n "$have_gtkgl"], [
+		AM_CONDITIONAL([OPENGL], [true])
+	], [
+		AX_CHECK_GL
+		AS_IF([test -z "$GL_LIBS"], [
+				OLD_LIBS="$LIBS"
+				LIBS="$LIBS -framework OpenGL"
+				AC_MSG_CHECKING([if -framework OpenGL works instead])
+				AC_LINK_IFELSE([AC_LANG_SOURCE([
+		#include <OpenGL/gl.h>
+		int main(int argc, char **argv) { GLuint t; glGenTextures(1, &t); return 0; }
+						])], [
+					AC_MSG_RESULT([yes])
+					GL_LIBS="-framework OpenGL"
+					], [AC_MSG_RESULT([no])] )
+				LIBS="$OLD_LIBS"
+				])
+		AM_CONDITIONAL([OPENGL], [test -n "$GL_LIBS"])
+	])
 
 ### Linux joysticks
 
