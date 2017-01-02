@@ -92,7 +92,7 @@ The remaining options configure the currently selected cartridge:
 cartridge description
 .TP
 \fB\-cart\-type\fR \fItype\fR
-cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR, \fBorch90\fR, \fBmpi\fR or \fBide\fR
+cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR, \fBorch90\fR, \fBmpi\fR or \fBide\fR)
 .TP
 \fB\-cart\-rom\fR \fIname\fR
 ROM image to load ($C000\-)
@@ -105,6 +105,15 @@ autorun cartridge
 .TP
 \fB\-cart\-becker\fR
 enable becker port where supported
+
+.SS Multi-Pak Interface:
+
+.TP
+\fB\-mpi\-slot\fR \fIslot\fR
+initially select slot (0\-3)
+.TP
+\fB\-mpi\-load\-cart\fR \fI[slot=]name\fR
+insert cartridge into next or numbered slot
 
 .SS Becker port:
 
@@ -159,6 +168,9 @@ default to enabling write\-back for disk images
 .TP
 \fB\-no\-disk\-auto\-os9\fR
 don't try to detect headerless OS\-9 JVC disk images
+.TP
+\fB\-no\-disk\-auto\-sd\fR
+don't assume single density for 10 sec/track disks
 
 .SS Firmware ROM images:
 
