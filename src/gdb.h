@@ -1,6 +1,6 @@
 /*
  * XRoar - a Dragon/Tandy Coco emulator
- * Copyright (C) 2003-2016  Ciaran Anscomb
+ * Copyright (C) 2003-2017  Ciaran Anscomb
  *
  * See COPYING.GPL for redistribution conditions.
  */

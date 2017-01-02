@@ -1,7 +1,7 @@
 /*
 
 XRoar, Dragon and Tandy CoCo 1/2 emulator
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2017 Ciaran Anscomb
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the

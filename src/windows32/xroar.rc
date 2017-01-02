@@ -20,7 +20,7 @@ BEGIN
       VALUE "FileDescription", "Dragon/Tandy CoCo emulator"
       VALUE "FileVersion", to_str(RC_VERSION)
       VALUE "InternalName", "xroar"
-      VALUE "LegalCopyright", "Copyright 2003-2016 Ciaran Anscomb.  GNU GPL 2 or later."
+      VALUE "LegalCopyright", "Copyright 2003-2017 Ciaran Anscomb.  GNU GPL 2 or later."
       VALUE "OriginalFilename", "xroar.exe"
       VALUE "ProductName", "XRoar"
       VALUE "ProductVersion", to_str(RC_VERSION)
