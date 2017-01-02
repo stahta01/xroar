@@ -230,6 +230,6 @@ void bp_wp_read_hook(struct bp_session *bps, unsigned address) {
 
 void bp_wp_write_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (wp_read_list)
+	if (wp_write_list)
 		bp_hook(bpsp, wp_write_list, address);
 }
