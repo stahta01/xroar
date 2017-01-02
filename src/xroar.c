@@ -2138,7 +2138,8 @@ static void helptext(void) {
 "  -ao-fragment-frames N set audio fragment size in samples (if supported)\n"
 "  -ao-buffer-ms MS      set total audio buffer size in ms (if supported)\n"
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
-"  -volume VOLUME        audio volume (0 - 100)\n"
+"  -ao-gain DB           audio gain in dB relative to 0 dBFS [-3.0]\n"
+"  -volume VOLUME        older way to specify audio volume, linear (0-100)\n"
 "  -fast-sound           faster but less accurate sound\n"
 
 "\n Keyboard:\n"
