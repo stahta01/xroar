@@ -219,7 +219,7 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
-	vosdl->renderer = SDL_CreateRenderer(sdl_window, -1, 0);
+	vosdl->renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
 		return -1;
