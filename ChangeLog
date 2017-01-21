@@ -3,6 +3,7 @@ Version 0.35, unreleased
   * EXTMEM support to inhibit normal device access
   * New NX32 RAM cartridge [Tormod Volden]
   * Fix buffer overrun in MC6847 code
+  * New option -ao-gain (specify volume in dBFS)
 
 Version 0.34, Sun Aug  7 2016
 
