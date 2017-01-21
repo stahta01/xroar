@@ -1490,6 +1490,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 	mc6821_set_cx1(&md->PIA0->b, level);
 	sam_vdg_fsync(md->SAM0, level);
 	if (level) {
+		sound_update(md->snd);
 		md->frame--;
 		if (md->frame < 0)
 			md->frame = xroar_frameskip;
