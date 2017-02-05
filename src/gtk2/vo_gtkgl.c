@@ -25,6 +25,10 @@
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic pop
+#ifdef HAVE_X11
+#include <gdk/gdkx.h>
+#include <GL/glx.h>
+#endif
 #include <gtk/gtkgl.h>
 
 #include "xalloc.h"
@@ -54,8 +58,8 @@ static void vo_gtkgl_set_vo_cmp(void *sptr, int mode);
 struct vo_interface *vogl;
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
-
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
+static void vo_gtkgl_set_vsync(int val);
 
 static void *new(void *cfg) {
 	struct vo_cfg *vo_cfg = cfg;
@@ -185,6 +189,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 
 	DELEGATE_CALL2(vogl->resize, da->allocation.width, da->allocation.height);
 	vo_opengl_get_display_rect(vogl, &gtk2_display);
+	vo_gtkgl_set_vsync(1);
 
 	gdk_gl_drawable_gl_end(gldrawable);
 
@@ -227,4 +232,37 @@ static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
 	struct vo_interface *vo = sptr;
 	DELEGATE_CALL1(vogl->set_vo_cmp, mode);
 	vo->render_scanline = vogl->render_scanline;
+}
+
+static void vo_gtkgl_set_vsync(int val) {
+
+#ifdef HAVE_X11
+
+	PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");
+	if (glXSwapIntervalEXT) {
+		Display *dpy = gdk_x11_drawable_get_xdisplay(GTK_WIDGET(gtk2_drawing_area)->window);
+		Window win = gdk_x11_drawable_get_xid(GTK_WIDGET(gtk2_drawing_area)->window);
+		if (dpy && win) {
+			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %p, %d)\n", dpy, win, val);
+			glXSwapIntervalEXT(dpy, win, val);
+			return;
+		}
+	}
+
+	PFNGLXSWAPINTERVALMESAPROC glXSwapIntervalMESA = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalMESA");
+	if (glXSwapIntervalMESA) {
+		LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalMESA(%d)\n", val);
+		glXSwapIntervalMESA(val);
+		return;
+	}
+
+	PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
+	if (glXSwapIntervalSGI) {
+		LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalSGI(%d)\n", val);
+		glXSwapIntervalSGI(val);
+	}
+
+#endif
+
+	LOG_DEBUG(3, "vo_gtkgl: Found no way to set swap interval\n", val);
 }
