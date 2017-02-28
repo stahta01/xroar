@@ -1483,6 +1483,15 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, !level);
 	sam_vdg_hsync(md->SAM0, level);
+	// PAL uses palletised output so this wouldn't technically matter, but
+	// user is able to cycle to a faux-NTSC colourscheme, so update phase
+	// here as in NTSC code:
+	if (level) {
+		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
+		_Bool GM0 = p1bval & 0x10;
+		_Bool CSS = p1bval & 0x08;
+		md->ntsc_burst_mod = (md->use_ntsc_burst_mod && GM0 && CSS) ? 2 : 0;
+	}
 }
 
 static void vdg_fs(void *sptr, _Bool level) {
