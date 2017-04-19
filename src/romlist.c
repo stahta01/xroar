@@ -159,28 +159,32 @@ char *romlist_find(const char *name) {
 }
 
 static void print_romlist_entry(struct romlist *list, void *user_data) {
+	FILE *f = user_data;
 	struct slist *jter;
+	if (!f) {
+		user_data = stdout;
+	}
 	if (user_data) {
-		printf("romlist %s=", list->name);
+		fprintf(f, "romlist %s=", list->name);
 	} else {
 		if (strlen(list->name) > 15) {
-			printf("\t%s\n\t%16s", list->name, "");
+			fprintf(f, "\t%s\n\t%16s", list->name, "");
 		} else {
-			printf("\t%-15s ", list->name);
+			fprintf(f, "\t%-15s ", list->name);
 		}
 	}
 	for (jter = list->list; jter; jter = jter->next) {
-		printf("%s", (char *)jter->data);
+		fprintf(f, "%s", (char *)jter->data);
 		if (jter->next) {
-			putchar(',');
+			fputc(',', f);
 		}
 	}
-	printf("\n");
+	fprintf(f, "\n");
 }
 
 /* Print a list of defined ROM lists to stdout */
-void romlist_print_all(void) {
-	slist_foreach(romlist_list, (slist_iter_func)print_romlist_entry, (void *)1);
+void romlist_print_all(FILE *f) {
+	slist_foreach(romlist_list, (slist_iter_func)print_romlist_entry, (void *)f);
 }
 
 /* Print list and exit */

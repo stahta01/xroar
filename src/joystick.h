@@ -6,6 +6,8 @@
 #ifndef XROAR_JOYSTICK_H_
 #define XROAR_JOYSTICK_H_
 
+#include <stdio.h>
+
 #include "module.h"
 
 struct slist;
@@ -90,7 +92,7 @@ struct joystick_submodule {
 struct joystick_config *joystick_config_new(void);
 struct joystick_config *joystick_config_by_id(unsigned i);
 struct joystick_config *joystick_config_by_name(const char *name);
-void joystick_config_print_all(_Bool all);
+void joystick_config_print_all(FILE *f, _Bool all);
 _Bool joystick_config_remove(const char *name);
 struct slist *joystick_config_list(void);
 

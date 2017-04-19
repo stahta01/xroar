@@ -123,26 +123,26 @@ struct joystick_config *joystick_config_by_name(const char *name) {
 	return NULL;
 }
 
-void joystick_config_print_all(_Bool all) {
+void joystick_config_print_all(FILE *f, _Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct joystick_config *jc = l->data;
-		printf("joy %s\n", jc->name);
+		fprintf(f, "joy %s\n", jc->name);
 		xroar_cfg_print_inc_indent();
-		xroar_cfg_print_string(all, "joy-desc", jc->description, NULL);
+		xroar_cfg_print_string(f, all, "joy-desc", jc->description, NULL);
 		for (int i = 0 ; i < JOYSTICK_NUM_AXES; i++) {
 			if (jc->axis_specs[i]) {
-				xroar_cfg_print_indent();
-				printf("joy-axis %d=%s\n", i, jc->axis_specs[i]);
+				xroar_cfg_print_indent(f);
+				fprintf(f, "joy-axis %d=%s\n", i, jc->axis_specs[i]);
 			}
 		}
 		for (int i = 0 ; i < JOYSTICK_NUM_BUTTONS; i++) {
 			if (jc->button_specs[i]) {
-				xroar_cfg_print_indent();
-				printf("joy-button %d=%s\n", i, jc->button_specs[i]);
+				xroar_cfg_print_indent(f);
+				fprintf(f, "joy-button %d=%s\n", i, jc->button_specs[i]);
 			}
 		}
 		xroar_cfg_print_dec_indent();
-		printf("\n");
+		fprintf(f, "\n");
 	}
 }
 

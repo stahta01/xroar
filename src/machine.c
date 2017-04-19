@@ -156,30 +156,30 @@ static struct slist *machine_modules = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_config_print_all(_Bool all) {
+void machine_config_print_all(FILE *f, _Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
-		printf("machine %s\n", mc->name);
+		fprintf(f, "machine %s\n", mc->name);
 		xroar_cfg_print_inc_indent();
-		xroar_cfg_print_string(all, "machine-desc", mc->description, NULL);
-		xroar_cfg_print_enum(all, "machine-arch", mc->architecture, ANY_AUTO, machine_arch_list);
-		xroar_cfg_print_enum(all, "machine-keyboard", mc->keymap, ANY_AUTO, machine_keyboard_list);
-		xroar_cfg_print_enum(all, "machine-cpu", mc->cpu, CPU_MC6809, machine_cpu_list);
-		xroar_cfg_print_string(all, "machine-palette", mc->vdg_palette, "ideal");
-		xroar_cfg_print_string(all, "bas", mc->bas_rom, NULL);
-		xroar_cfg_print_string(all, "extbas", mc->extbas_rom, NULL);
-		xroar_cfg_print_string(all, "altbas", mc->altbas_rom, NULL);
-		xroar_cfg_print_bool(all, "nobas", mc->nobas, 0);
-		xroar_cfg_print_bool(all, "noextbas", mc->noextbas, 0);
-		xroar_cfg_print_bool(all, "noaltbas", mc->noaltbas, 0);
-		xroar_cfg_print_string(all, "ext-charset", mc->ext_charset_rom, NULL);
-		xroar_cfg_print_enum(all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
-		xroar_cfg_print_enum(all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
-		xroar_cfg_print_int_nz(all, "ram", mc->ram);
-		xroar_cfg_print_string(all, "machine-cart", mc->default_cart, NULL);
-		xroar_cfg_print_bool(all, "nodos", mc->nodos, 0);
+		xroar_cfg_print_string(f, all, "machine-desc", mc->description, NULL);
+		xroar_cfg_print_enum(f, all, "machine-arch", mc->architecture, ANY_AUTO, machine_arch_list);
+		xroar_cfg_print_enum(f, all, "machine-keyboard", mc->keymap, ANY_AUTO, machine_keyboard_list);
+		xroar_cfg_print_enum(f, all, "machine-cpu", mc->cpu, CPU_MC6809, machine_cpu_list);
+		xroar_cfg_print_string(f, all, "machine-palette", mc->vdg_palette, "ideal");
+		xroar_cfg_print_string(f, all, "bas", mc->bas_rom, NULL);
+		xroar_cfg_print_string(f, all, "extbas", mc->extbas_rom, NULL);
+		xroar_cfg_print_string(f, all, "altbas", mc->altbas_rom, NULL);
+		xroar_cfg_print_bool(f, all, "nobas", mc->nobas, 0);
+		xroar_cfg_print_bool(f, all, "noextbas", mc->noextbas, 0);
+		xroar_cfg_print_bool(f, all, "noaltbas", mc->noaltbas, 0);
+		xroar_cfg_print_string(f, all, "ext-charset", mc->ext_charset_rom, NULL);
+		xroar_cfg_print_enum(f, all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
+		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
+		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
+		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL);
+		xroar_cfg_print_bool(f, all, "nodos", mc->nodos, 0);
 		xroar_cfg_print_dec_indent();
-		printf("\n");
+		fprintf(f, "\n");
 	}
 }
 

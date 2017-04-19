@@ -208,19 +208,19 @@ struct slist *cart_config_list(void) {
 	return config_list;
 }
 
-void cart_config_print_all(_Bool all) {
+void cart_config_print_all(FILE *f, _Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
-		printf("cart %s\n", cc->name);
+		fprintf(f, "cart %s\n", cc->name);
 		xroar_cfg_print_inc_indent();
-		xroar_cfg_print_string(all, "cart-desc", cc->description, NULL);
-		xroar_cfg_print_string(all, "cart-type", cc->type, NULL);
-		xroar_cfg_print_string(all, "cart-rom", cc->rom, NULL);
-		xroar_cfg_print_string(all, "cart-rom2", cc->rom2, NULL);
-		xroar_cfg_print_bool(all, "cart-autorun", cc->autorun, (strcmp(cc->type, "rom") == 0));
-		xroar_cfg_print_bool(all, "cart-becker", cc->becker_port, 0);
+		xroar_cfg_print_string(f, all, "cart-desc", cc->description, NULL);
+		xroar_cfg_print_string(f, all, "cart-type", cc->type, NULL);
+		xroar_cfg_print_string(f, all, "cart-rom", cc->rom, NULL);
+		xroar_cfg_print_string(f, all, "cart-rom2", cc->rom2, NULL);
+		xroar_cfg_print_bool(f, all, "cart-autorun", cc->autorun, (strcmp(cc->type, "rom") == 0));
+		xroar_cfg_print_bool(f, all, "cart-becker", cc->becker_port, 0);
 		xroar_cfg_print_dec_indent();
-		printf("\n");
+		fprintf(f, "\n");
 	}
 }
 

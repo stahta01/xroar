@@ -6,6 +6,8 @@
 #ifndef XROAR_ROMLIST_H_
 #define XROAR_ROMLIST_H_
 
+#include <stdio.h>
+
 /* Parse an assignment string of the form "LIST=ROMNAME[,ROMNAME]..." */
 void romlist_assign(const char *astring);
 
@@ -13,8 +15,8 @@ void romlist_assign(const char *astring);
  * list for the first accessible entry, otherwise search for a single entry. */
 char *romlist_find(const char *name);
 
-/* Print a list of defined ROM lists to stdout */
-void romlist_print_all(void);
+/* Print a list of defined ROM lists */
+void romlist_print_all(FILE *f);
 /* Print list and exit */
 void romlist_print(void);
 

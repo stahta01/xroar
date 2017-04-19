@@ -7,6 +7,7 @@
 #define XROAR_XROAR_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "config.h"
 
@@ -194,16 +195,16 @@ void xroar_soft_reset(void);
 /* Helper functions for config printing */
 void xroar_cfg_print_inc_indent(void);
 void xroar_cfg_print_dec_indent(void);
-void xroar_cfg_print_indent(void);
-void xroar_cfg_print_bool(_Bool all, char const *opt, int value, int normal);
-void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal);
-void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value);
-void xroar_cfg_print_double(_Bool all, char const *opt, double value, double normal);
-void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value);
-void xroar_cfg_print_string(_Bool all, char const *opt, char const *value,
+void xroar_cfg_print_indent(FILE *f);
+void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int(FILE *f, _Bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int_nz(FILE *f, _Bool all, char const *opt, int value);
+void xroar_cfg_print_double(FILE *f, _Bool all, char const *opt, double value, double normal);
+void xroar_cfg_print_flags(FILE *f, _Bool all, char const *opt, unsigned value);
+void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *value,
 			    char const *normal);
-void xroar_cfg_print_enum(_Bool all, char const *opt, int value, int normal,
+void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int normal,
 			  struct xconfig_enum const *e);
-void xroar_cfg_print_string_list(_Bool all, char const *opt, struct slist *l);
+void xroar_cfg_print_string_list(FILE *f, _Bool all, char const *opt, struct slist *l);
 
 #endif  /* XROAR_XROAR_H_ */

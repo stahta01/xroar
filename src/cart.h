@@ -7,6 +7,7 @@
 #define XROAR_CART_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "delegate.h"
 #include "xconfig.h"
@@ -56,7 +57,7 @@ _Bool cart_config_remove(const char *name);
 struct slist *cart_config_list(void);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
-void cart_config_print_all(_Bool all);
+void cart_config_print_all(FILE *f, _Bool all);
 
 void cart_init(void);
 void cart_shutdown(void);

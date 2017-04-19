@@ -191,7 +191,7 @@ static void set_joystick_button(const char *spec);
 /* Help texts */
 static void helptext(void);
 static void versiontext(void);
-static void config_print_all(_Bool);
+static void config_print_all(FILE *f, _Bool all);
 
 static int load_disk_to_drive = 0;
 
@@ -582,11 +582,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		exit(EXIT_SUCCESS);
 	}
 	if (private_cfg.config_print) {
-		config_print_all(0);
+		config_print_all(stdout, 0);
 		exit(EXIT_SUCCESS);
 	}
 	if (private_cfg.config_print_all) {
-		config_print_all(1);
+		config_print_all(stdout, 1);
 		exit(EXIT_SUCCESS);
 	}
 
@@ -2231,120 +2231,120 @@ static void versiontext(void) {
  * a default changes or new options are added.  Be careful!
  */
 
-static void config_print_all(_Bool all) {
-	puts("# Machines\n");
-	xroar_cfg_print_string(all, "default-machine", private_cfg.default_machine, NULL);
-	puts("");
-	machine_config_print_all(all);
+static void config_print_all(FILE *f, _Bool all) {
+	fputs("# Machines\n\n", f);
+	xroar_cfg_print_string(f, all, "default-machine", private_cfg.default_machine, NULL);
+	fputs("\n", f);
+	machine_config_print_all(f, all);
 
-	puts("# Cartridges\n");
-	cart_config_print_all(all);
-	puts("# Becker port");
-	xroar_cfg_print_bool(all, "becker", xroar_cfg.becker, 0);
-	xroar_cfg_print_string(all, "becker-ip", xroar_cfg.becker_ip, BECKER_IP_DEFAULT);
-	xroar_cfg_print_string(all, "becker-port", xroar_cfg.becker_port, BECKER_PORT_DEFAULT);
-	puts("");
+	fputs("# Cartridges\n\n", f);
+	cart_config_print_all(f, all);
+	fputs("# Becker port\n", f);
+	xroar_cfg_print_bool(f, all, "becker", xroar_cfg.becker, 0);
+	xroar_cfg_print_string(f, all, "becker-ip", xroar_cfg.becker_ip, BECKER_IP_DEFAULT);
+	xroar_cfg_print_string(f, all, "becker-port", xroar_cfg.becker_port, BECKER_PORT_DEFAULT);
+	fputs("\n", f);
 
-	puts("# Files");
-	xroar_cfg_print_string_list(all, "load", private_cfg.load_list);
-	xroar_cfg_print_string(all, "run", private_cfg.run, NULL);
-	puts("");
+	fputs("# Files\n", f);
+	xroar_cfg_print_string_list(f, all, "load", private_cfg.load_list);
+	xroar_cfg_print_string(f, all, "run", private_cfg.run, NULL);
+	fputs("\n", f);
 
-	puts("# Cassettes");
-	xroar_cfg_print_string(all, "tape-write", private_cfg.tape_write, NULL);
-	xroar_cfg_print_enum(all, "tape-channel-mode", xroar_cfg.tape_channel_mode, tape_channel_mix, tape_channel_mode_list);
+	fputs("# Cassettes\n", f);
+	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
+	xroar_cfg_print_enum(f, all, "tape-channel-mode", xroar_cfg.tape_channel_mode, tape_channel_mix, tape_channel_mode_list);
 
-	xroar_cfg_print_bool(all, "tape-fast", private_cfg.tape_fast, 1);
-	xroar_cfg_print_bool(all, "tape-pad", private_cfg.tape_pad, -1);
-	xroar_cfg_print_bool(all, "tape-pad-auto", private_cfg.tape_pad_auto, 1);
-	xroar_cfg_print_bool(all, "tape-rewrite", private_cfg.tape_rewrite, 0);
-	xroar_cfg_print_int_nz(all, "tape-ao-rate", private_cfg.tape_ao_rate);
-	puts("");
+	xroar_cfg_print_bool(f, all, "tape-fast", private_cfg.tape_fast, 1);
+	xroar_cfg_print_bool(f, all, "tape-pad", private_cfg.tape_pad, -1);
+	xroar_cfg_print_bool(f, all, "tape-pad-auto", private_cfg.tape_pad_auto, 1);
+	xroar_cfg_print_bool(f, all, "tape-rewrite", private_cfg.tape_rewrite, 0);
+	xroar_cfg_print_int_nz(f, all, "tape-ao-rate", private_cfg.tape_ao_rate);
+	fputs("\n", f);
 
-	puts("# Disks");
-	xroar_cfg_print_bool(all, "disk-write-back", xroar_cfg.disk_write_back, 0);
-	xroar_cfg_print_bool(all, "disk-auto-os9", xroar_cfg.disk_auto_os9, 1);
-	xroar_cfg_print_bool(all, "disk-auto-sd", xroar_cfg.disk_auto_sd, 1);
-	puts("");
+	fputs("# Disks\n", f);
+	xroar_cfg_print_bool(f, all, "disk-write-back", xroar_cfg.disk_write_back, 0);
+	xroar_cfg_print_bool(f, all, "disk-auto-os9", xroar_cfg.disk_auto_os9, 1);
+	xroar_cfg_print_bool(f, all, "disk-auto-sd", xroar_cfg.disk_auto_sd, 1);
+	fputs("\n", f);
 
-	puts("# Firmware ROM images");
-	xroar_cfg_print_string(all, "rompath", xroar_rom_path, NULL);
-	romlist_print_all();
-	crclist_print_all();
-	xroar_cfg_print_bool(all, "force-crc-match", xroar_cfg.force_crc_match, 0);
-	puts("");
+	fputs("# Firmware ROM images\n", f);
+	xroar_cfg_print_string(f, all, "rompath", xroar_rom_path, NULL);
+	romlist_print_all(f);
+	crclist_print_all(f);
+	xroar_cfg_print_bool(f, all, "force-crc-match", xroar_cfg.force_crc_match, 0);
+	fputs("\n", f);
 
-	puts("# User interface");
-	xroar_cfg_print_string(all, "ui", private_cfg.ui, NULL);
-	xroar_cfg_print_string(all, "filereq", private_cfg.filereq, NULL);
-	puts("");
+	fputs("# User interface\n", f);
+	xroar_cfg_print_string(f, all, "ui", private_cfg.ui, NULL);
+	xroar_cfg_print_string(f, all, "filereq", private_cfg.filereq, NULL);
+	fputs("\n", f);
 
-	puts("# Video");
-	xroar_cfg_print_string(all, "vo", xroar_ui_cfg.vo, NULL);
-	xroar_cfg_print_bool(all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
-	xroar_cfg_print_int_nz(all, "fskip", xroar_cfg.frameskip);
-	xroar_cfg_print_enum(all, "ccr", ccr, UI_CCR_5BIT, ui_ccr_list);
-	xroar_cfg_print_enum(all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
-	xroar_cfg_print_string(all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
-	xroar_cfg_print_bool(all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
-	puts("");
+	fputs("# Video\n", f);
+	xroar_cfg_print_string(f, all, "vo", xroar_ui_cfg.vo, NULL);
+	xroar_cfg_print_bool(f, all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
+	xroar_cfg_print_int_nz(f, all, "fskip", xroar_cfg.frameskip);
+	xroar_cfg_print_enum(f, all, "ccr", ccr, UI_CCR_5BIT, ui_ccr_list);
+	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
+	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
+	xroar_cfg_print_bool(f, all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
+	fputs("\n", f);
 
-	puts("# Audio");
-	xroar_cfg_print_string(all, "ao", private_cfg.ao, NULL);
-	xroar_cfg_print_string(all, "ao-device", xroar_cfg.ao_device, NULL);
-	xroar_cfg_print_enum(all, "ao-format", xroar_cfg.ao_format, SOUND_FMT_NULL, ao_format_list);
-	xroar_cfg_print_int_nz(all, "ao-rate", xroar_cfg.ao_rate);
-	xroar_cfg_print_int_nz(all, "ao-channels", xroar_cfg.ao_channels);
-	xroar_cfg_print_int_nz(all, "ao-fragments", xroar_cfg.ao_fragments);
-	xroar_cfg_print_int_nz(all, "ao-fragment-ms", xroar_cfg.ao_fragment_ms);
-	xroar_cfg_print_int_nz(all, "ao-fragment-frames", xroar_cfg.ao_fragment_nframes);
-	xroar_cfg_print_int_nz(all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
-	xroar_cfg_print_int_nz(all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
-	xroar_cfg_print_double(all, "ao-gain", private_cfg.gain, -3.0);
-	xroar_cfg_print_int(all, "volume", private_cfg.volume, -1);
-	xroar_cfg_print_bool(all, "fast-sound", xroar_cfg.fast_sound, 0);
-	puts("");
+	fputs("# Audio\n", f);
+	xroar_cfg_print_string(f, all, "ao", private_cfg.ao, NULL);
+	xroar_cfg_print_string(f, all, "ao-device", xroar_cfg.ao_device, NULL);
+	xroar_cfg_print_enum(f, all, "ao-format", xroar_cfg.ao_format, SOUND_FMT_NULL, ao_format_list);
+	xroar_cfg_print_int_nz(f, all, "ao-rate", xroar_cfg.ao_rate);
+	xroar_cfg_print_int_nz(f, all, "ao-channels", xroar_cfg.ao_channels);
+	xroar_cfg_print_int_nz(f, all, "ao-fragments", xroar_cfg.ao_fragments);
+	xroar_cfg_print_int_nz(f, all, "ao-fragment-ms", xroar_cfg.ao_fragment_ms);
+	xroar_cfg_print_int_nz(f, all, "ao-fragment-frames", xroar_cfg.ao_fragment_nframes);
+	xroar_cfg_print_int_nz(f, all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
+	xroar_cfg_print_int_nz(f, all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
+	xroar_cfg_print_double(f, all, "ao-gain", private_cfg.gain, -3.0);
+	xroar_cfg_print_int(f, all, "volume", private_cfg.volume, -1);
+	xroar_cfg_print_bool(f, all, "fast-sound", xroar_cfg.fast_sound, 0);
+	fputs("\n", f);
 
-	puts("# Keyboard");
-	xroar_cfg_print_string(all, "keymap", xroar_cfg.keymap, "uk");
-	xroar_cfg_print_bool(all, "kbd-translate", xroar_cfg.kbd_translate, 0);
+	fputs("# Keyboard\n", f);
+	xroar_cfg_print_string(f, all, "keymap", xroar_cfg.keymap, "uk");
+	xroar_cfg_print_bool(f, all, "kbd-translate", xroar_cfg.kbd_translate, 0);
 	for (struct slist *l = private_cfg.type_list; l; l = l->next) {
 		const char *s = l->data;
-		printf("type %s\n", s);
+		fprintf(f, "type %s\n", s);
 	}
-	puts("");
+	fputs("\n", f);
 
-	puts("# Joysticks");
-	joystick_config_print_all(all);
-	xroar_cfg_print_string(all, "joy-right", private_cfg.joy_right, "joy0");
-	xroar_cfg_print_string(all, "joy-left", private_cfg.joy_left, "joy1");
-	xroar_cfg_print_string(all, "joy-virtual", private_cfg.joy_virtual, "kjoy0");
-	puts("");
+	fputs("# Joysticks\n", f);
+	joystick_config_print_all(f, all);
+	xroar_cfg_print_string(f, all, "joy-right", private_cfg.joy_right, "joy0");
+	xroar_cfg_print_string(f, all, "joy-left", private_cfg.joy_left, "joy1");
+	xroar_cfg_print_string(f, all, "joy-virtual", private_cfg.joy_virtual, "kjoy0");
+	fputs("\n", f);
 
-	puts("# Printing");
-	xroar_cfg_print_string(all, "lp-file", private_cfg.lp_file, NULL);
-	xroar_cfg_print_string(all, "lp-pipe", private_cfg.lp_pipe, NULL);
-	puts("");
+	fputs("# Printing\n", f);
+	xroar_cfg_print_string(f, all, "lp-file", private_cfg.lp_file, NULL);
+	xroar_cfg_print_string(f, all, "lp-pipe", private_cfg.lp_pipe, NULL);
+	fputs("\n", f);
 
-	puts("# Debugging");
+	fputs("# Debugging\n", f);
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_bool(all, "gdb", xroar_cfg.gdb, 0);
-	xroar_cfg_print_string(all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
-	xroar_cfg_print_string(all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
+	xroar_cfg_print_bool(f, all, "gdb", xroar_cfg.gdb, 0);
+	xroar_cfg_print_string(f, all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
+	xroar_cfg_print_string(f, all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
 #endif
 #ifdef TRACE
-	xroar_cfg_print_bool(all, "trace", xroar_cfg.trace_enabled, 0);
+	xroar_cfg_print_bool(f, all, "trace", xroar_cfg.trace_enabled, 0);
 #endif
-	xroar_cfg_print_flags(all, "debug-ui", xroar_cfg.debug_ui);
-	xroar_cfg_print_flags(all, "debug-file", xroar_cfg.debug_file);
-	xroar_cfg_print_flags(all, "debug-fdc", xroar_cfg.debug_fdc);
+	xroar_cfg_print_flags(f, all, "debug-ui", xroar_cfg.debug_ui);
+	xroar_cfg_print_flags(f, all, "debug-file", xroar_cfg.debug_file);
+	xroar_cfg_print_flags(f, all, "debug-fdc", xroar_cfg.debug_fdc);
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_flags(all, "debug-gdb", xroar_cfg.debug_gdb);
+	xroar_cfg_print_flags(f, all, "debug-gdb", xroar_cfg.debug_gdb);
 #endif
-	xroar_cfg_print_string(all, "timeout", private_cfg.timeout, NULL);
-	xroar_cfg_print_string(all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
-	xroar_cfg_print_string(all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);
-	puts("");
+	xroar_cfg_print_string(f, all, "timeout", private_cfg.timeout, NULL);
+	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
+	xroar_cfg_print_string(f, all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);
+	fputs("\n", f);
 }
 
 /* Helper functions for config printing */
@@ -2360,91 +2360,91 @@ void xroar_cfg_print_dec_indent(void) {
 	cfg_print_indent_level--;
 }
 
-void xroar_cfg_print_indent(void) {
+void xroar_cfg_print_indent(FILE *f) {
 	for (int i = 0; i < cfg_print_indent_level; i++)
-		printf("  ");
+		fprintf(f, "  ");
 }
 
-void xroar_cfg_print_bool(_Bool all, char const *opt, int value, int normal) {
+void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int normal) {
 	if (!all && value == normal)
 		return;
-	xroar_cfg_print_indent();
+	xroar_cfg_print_indent(f);
 	if (value >= 0) {
 		if (!value)
-			printf("no-");
-		puts(opt);
+			fprintf(f, "no-");
+		fprintf(f, "%s\n", opt);
 		return;
 	}
-	printf("# %s undefined\n", opt);
+	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_int(_Bool all, char const *opt, int value, int normal) {
+void xroar_cfg_print_int(FILE *f, _Bool all, char const *opt, int value, int normal) {
 	if (!all && value == normal)
 		return;
-	xroar_cfg_print_indent();
-	printf("%s %d\n", opt, value);
+	xroar_cfg_print_indent(f);
+	fprintf(f, "%s %d\n", opt, value);
 }
 
-void xroar_cfg_print_int_nz(_Bool all, char const *opt, int value) {
+void xroar_cfg_print_int_nz(FILE *f, _Bool all, char const *opt, int value) {
 	if (!all && value == 0)
 		return;
-	xroar_cfg_print_indent();
+	xroar_cfg_print_indent(f);
 	if (value != 0) {
-		printf("%s %d\n", opt, value);
+		fprintf(f, "%s %d\n", opt, value);
 		return;
 	}
-	printf("# %s undefined\n", opt);
+	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_double(_Bool all, char const *opt, double value, double normal) {
+void xroar_cfg_print_double(FILE *f, _Bool all, char const *opt, double value, double normal) {
 	if (!all && value == normal)
 		return;
-	xroar_cfg_print_indent();
-	printf("%s %.4f\n", opt, value);
+	xroar_cfg_print_indent(f);
+	fprintf(f, "%s %.4f\n", opt, value);
 }
 
-void xroar_cfg_print_flags(_Bool all, char const *opt, unsigned value) {
+void xroar_cfg_print_flags(FILE *f, _Bool all, char const *opt, unsigned value) {
 	if (!all && value == 0)
 		return;
-	xroar_cfg_print_indent();
-	printf("%s 0x%x\n", opt, value);
+	xroar_cfg_print_indent(f);
+	fprintf(f, "%s 0x%x\n", opt, value);
 }
 
-void xroar_cfg_print_string(_Bool all, char const *opt, char const *value, char const *normal) {
+void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *value, char const *normal) {
 	if (!all && !value)
 		return;
-	xroar_cfg_print_indent();
+	xroar_cfg_print_indent(f);
 	if (value || normal) {
 		char const *tmp = value ? value : normal;
-		printf("%s %s\n", opt, tmp);
+		fprintf(f, "%s %s\n", opt, tmp);
 		return;
 	}
-	printf("# %s undefined\n", opt);
+	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_enum(_Bool all, char const *opt, int value, int normal, struct xconfig_enum const *e) {
+void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int normal, struct xconfig_enum const *e) {
 	if (!all && value == normal)
 		return;
-	xroar_cfg_print_indent();
+	xroar_cfg_print_indent(f);
 	for (int i = 0; e[i].name; i++) {
 		if (value == e[i].value) {
-			printf("%s %s\n", opt, e[i].name);
+			fprintf(f, "%s %s\n", opt, e[i].name);
 			return;
 		}
 	}
-	printf("# %s undefined\n", opt);
+	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_string_list(_Bool all, char const *opt, struct slist *l) {
+void xroar_cfg_print_string_list(FILE *f, _Bool all, char const *opt, struct slist *l) {
 	if (!all  && !l)
 		return;
-	xroar_cfg_print_indent();
+	xroar_cfg_print_indent(f);
 	if (l) {
 		for (; l; l = l->next) {
 			char const *s = l->data;
-			printf("%s %s\n", opt, s);
+			fprintf(f, "%s %s\n", opt, s);
 		}
 		return;
 	}
-	printf("# %s undefined\n", opt);
+	fprintf(f, "# %s undefined\n", opt);
 }

@@ -7,6 +7,7 @@
 #define XROAR_CRCLIST_H_
 
 #include <stdint.h>
+#include <stdio.h>
 
 /* Parse an assignment string of the form "LIST=CRC[,CRC]..." */
 void crclist_assign(const char *astring);
@@ -16,7 +17,7 @@ void crclist_assign(const char *astring);
 int crclist_match(const char *name, uint32_t crc);
 
 /* Print a list of defined CRC lists to stdout */
-void crclist_print_all(void);
+void crclist_print_all(FILE *f);
 /* Print list and exit */
 void crclist_print(void);
 
