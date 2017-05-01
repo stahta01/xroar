@@ -45,6 +45,7 @@ static uint8_t op_dec(struct MC6809 *cpu, uint8_t in);
 static uint8_t op_inc(struct MC6809 *cpu, uint8_t in);
 static uint8_t op_tst(struct MC6809 *cpu, uint8_t in);
 static uint8_t op_clr(struct MC6809 *cpu, uint8_t in);
+static uint8_t op_daa(struct MC6809 *cpu, uint8_t in);
 
 /* 8-bit arithmetic operations */
 

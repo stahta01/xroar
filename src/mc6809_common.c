@@ -198,6 +198,18 @@ static uint8_t op_clr(struct MC6809 *cpu, uint8_t in) {
 	return 0;
 }
 
+static uint8_t op_daa(struct MC6809 *cpu, uint8_t in) {
+	unsigned out = 0;
+	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) out |= 0x06;
+	if (in >= 0x90 && (in & 0x0f) >= 0x0a) out |= 0x60;
+	if (in >= 0xa0 || REG_CC & CC_C) out |= 0x60;
+	out += in;
+	// CC.C NOT cleared, only set if appropriate
+	CLR_NZV;
+	SET_NZC8(out);
+	return out;
+}
+
 /* 8-bit arithmetic operations */
 
 static uint8_t op_sub(struct MC6809 *cpu, uint8_t a, uint8_t b) {

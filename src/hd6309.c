@@ -556,18 +556,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				REG_PC = ea;
 			} break;
 			// 0x19 DAA inherent
-			case 0x19: {
-				unsigned tmp = 0;
-				if ((REG_A & 0x0f) >= 0x0a || REG_CC & CC_H) tmp |= 0x06;
-				if (REG_A >= 0x90 && (REG_A & 0x0f) >= 0x0a) tmp |= 0x60;
-				if (REG_A >= 0xa0 || REG_CC & CC_C) tmp |= 0x60;
-				tmp += REG_A;
-				REG_A = tmp;
-				// CC.C NOT cleared, only set if appropriate
-				CLR_NZV;
-				SET_NZC8(tmp);
+			case 0x19:
+				REG_A = op_daa(cpu, REG_A);
 				peek_byte(cpu, REG_PC);
-			} break;
+				break;
 			// 0x1a ORCC immediate
 			case 0x1a: {
 				unsigned data;
