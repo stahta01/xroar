@@ -138,6 +138,7 @@ static void mpi_reset(struct cart *c) {
 			c2->reset(c2);
 		}
 	}
+	m->cart.EXTMEM = 0;
 }
 
 static void mpi_attach(struct cart *c) {
@@ -214,6 +215,7 @@ void mpi_switch_slot(struct cart *c, unsigned slot) {
 
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
+	m->cart.EXTMEM = 0;
 	if (A == 0xff7f) {
 		return (m->cts_route << 4) | m->p2_route;
 	}
@@ -233,6 +235,7 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 		for (unsigned i = 0; i < 4; i++) {
 			if (m->slot[i].cart) {
 				D = m->slot[i].cart->read(m->slot[i].cart, A, 0, 0, D);
+				m->cart.EXTMEM |= m->slot[i].cart->EXTMEM;
 			}
 		}
 	}
@@ -241,6 +244,7 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 
 static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
+	m->cart.EXTMEM = 0;
 	if (A == 0xff7f) {
 		m->switch_enable = 0;
 		select_slot(c, D);
@@ -262,6 +266,7 @@ static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 		for (unsigned i = 0; i < 4; i++) {
 			if (m->slot[i].cart) {
 				m->slot[i].cart->write(m->slot[i].cart, A, 0, 0, D);
+				m->cart.EXTMEM |= m->slot[i].cart->EXTMEM;
 			}
 		}
 	}
