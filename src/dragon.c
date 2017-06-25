@@ -1172,7 +1172,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 static void write_byte(struct machine_dragon *md, unsigned A) {
 	if (md->cart) {
 		md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
-		if (md->cart->EXTMEM) {
+		if (md->cart->EXTMEM && 0 < md->SAM0->S && md->SAM0->S < 7) {
 			return;
 		}
 	}
