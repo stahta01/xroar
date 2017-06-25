@@ -4,7 +4,7 @@
 #include "becker.h"
 
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
-#define EXTBANKS 4
+#define EXTBANKS 16
 
 static struct cart *nx32_new(struct cart_config *);
 
