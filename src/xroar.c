@@ -1467,13 +1467,15 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		}
 		xroar_machine_config->cart_enabled = 1;
 		new_cart = cart_new_named(cc_name);
-		xroar_machine->insert_cart(xroar_machine, new_cart);
-		if (new_cart->has_interface) {
-			if (new_cart->has_interface(new_cart, "floppy")) {
-				new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
-			}
-			if (new_cart->has_interface(new_cart, "sound")) {
-				new_cart->attach_interface(new_cart, "sound", xroar_ao_interface->sound_interface);
+		if (new_cart) {
+			xroar_machine->insert_cart(xroar_machine, new_cart);
+			if (new_cart->has_interface) {
+				if (new_cart->has_interface(new_cart, "floppy")) {
+					new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
+				}
+				if (new_cart->has_interface(new_cart, "sound")) {
+					new_cart->attach_interface(new_cart, "sound", xroar_ao_interface->sound_interface);
+				}
 			}
 		}
 	}
