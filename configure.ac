@@ -66,6 +66,9 @@ AC_ARG_WITH([gtkgl],
 	AS_HELP_STRING([--without-gtkgl], [don't test for GtkGLExt]) )
 test "x$with_gtk2" = "xno" && with_gtkgl=no
 
+AC_ARG_ENABLE([kbd_translate],
+	AS_HELP_STRING([--disable-kbd-translate], [don't support keyboard translation]) )
+
 AC_ARG_WITH([sdl2],
 	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
 
@@ -538,6 +541,9 @@ AM_CONDITIONAL([GDB], [test -n "$have_gdb_target"])
 AM_COND_IF([GDB], [AC_DEFINE([WANT_GDB_TARGET], 1, [GDB target])])
 
 ### Misc minor features
+
+AM_CONDITIONAL([KBD_TRANSLATE], [test "x$enable_kbd_translate" != "xno"])
+AM_COND_IF([KBD_TRANSLATE], [AC_DEFINE([HAVE_KBD_TRANSLATE], 1, [Support keyboard translation])])
 
 AM_CONDITIONAL([AO_NULL], [test "x$enable_ao_null" != "xno"])
 AM_COND_IF([AO_NULL], [AC_DEFINE([HAVE_NULL_AUDIO], 1, [Include null audio driver])])

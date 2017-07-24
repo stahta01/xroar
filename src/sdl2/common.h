@@ -45,6 +45,7 @@ void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
 
 /* X11 keyboard handling. */
 
+#ifdef HAVE_KBD_TRANSLATE
 void sdl_x11_keyboard_init(SDL_Window *sw);
 void sdl_x11_keyboard_free(SDL_Window *sw);
 
@@ -53,13 +54,16 @@ void sdl_x11_keymap_notify(XKeymapEvent *);
 
 void sdl_x11_fix_keyboard_event(SDL_Event *);
 int sdl_x11_keysym_to_unicode(SDL_Keysym *);
+#endif
 
 #endif
 
 #ifdef WINDOWS32
 
+#ifdef HAVE_KBD_TRANSLATE
 void sdl_windows32_keyboard_init(SDL_Window *);
 int sdl_windows32_keysym_to_unicode(SDL_Keysym *);
+#endif
 
 /* These functions will be in the windows32-specific code. */
 
@@ -75,41 +79,51 @@ void sdl_windows32_remove_menu(SDL_Window *);
 
 inline void sdl_os_keyboard_init(SDL_Window *sw) {
 	(void)sw;
+#ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	sdl_x11_keyboard_init(sw);
 #elif defined(WINDOWS32)
 	sdl_windows32_keyboard_init(sw);
 #endif
+#endif
 }
 
 inline void sdl_os_keyboard_free(SDL_Window *sw) {
 	(void)sw;
+#ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	sdl_x11_keyboard_free(sw);
+#endif
 #endif
 }
 
 inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	(void)wmmsg;
+#ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);
 #elif defined(WINDOWS32)
 	sdl_windows32_handle_syswmevent(wmmsg);
 #endif
+#endif
 }
 
 inline void sdl_os_fix_keyboard_event(SDL_Event *ev) {
 	(void)ev;
+#ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	sdl_x11_fix_keyboard_event(ev);
+#endif
 #endif
 }
 
 inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
+#ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	return sdl_x11_keysym_to_unicode(keysym);
 #elif defined(WINDOWS32)
 	return sdl_windows32_keysym_to_unicode(keysym);
+#endif
 #endif
 	return keysym->sym;
 }
