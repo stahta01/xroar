@@ -161,8 +161,8 @@ char *romlist_find(const char *name) {
 static void print_romlist_entry(struct romlist *list, void *user_data) {
 	FILE *f = user_data;
 	struct slist *jter;
-	if (!f) {
-		user_data = stdout;
+	if (!user_data) {
+		f = stdout;
 	}
 	if (user_data) {
 		fprintf(f, "romlist %s=", list->name);

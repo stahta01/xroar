@@ -146,7 +146,7 @@ int crclist_match(const char *name, uint32_t crc) {
 static void print_crclist_entry(struct crclist *list, void *user_data) {
 	FILE *f = user_data;
 	struct slist *jter;
-	if (!f) {
+	if (!user_data) {
 		f = stdout;
 	}
 	if (user_data) {
