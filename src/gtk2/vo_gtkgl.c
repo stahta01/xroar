@@ -243,7 +243,7 @@ static void vo_gtkgl_set_vsync(int val) {
 		Display *dpy = gdk_x11_drawable_get_xdisplay(GTK_WIDGET(gtk2_drawing_area)->window);
 		Window win = gdk_x11_drawable_get_xid(GTK_WIDGET(gtk2_drawing_area)->window);
 		if (dpy && win) {
-			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %p, %d)\n", dpy, win, val);
+			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			return;
 		}
@@ -264,5 +264,5 @@ static void vo_gtkgl_set_vsync(int val) {
 
 #endif
 
-	LOG_DEBUG(3, "vo_gtkgl: Found no way to set swap interval\n", val);
+	LOG_DEBUG(3, "vo_gtkgl: Found no way to set swap interval\n");
 }
