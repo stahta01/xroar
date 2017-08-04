@@ -218,6 +218,9 @@ static void latch_write(struct rsdos *d, unsigned D) {
 		new_drive_select = 1;
 	} else if (D & 0x04) {
 		new_drive_select = 2;
+	} else if (D & 0x40) {
+		new_drive_select = 3;
+		D &= ~0x40;  // prevent interpreting as side select
 	}
 	d->vdrive_interface->set_sso(d->vdrive_interface, (D & 0x40) ? 1 : 0);
 	if (D != d->latch_old) {
