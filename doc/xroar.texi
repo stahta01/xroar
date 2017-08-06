@@ -256,7 +256,7 @@ the details are beyond the scope of this manual.
 
 Images of ROM cartridges, cassettes and disks can all be attached by pressing
 @kbd{Ctrl}+@kbd{L}.  Cassettes will be positioned at the beginning of the
-``tape'' and disks will be inserted into @w{Drive 1}.
+``tape'' and disks will be inserted into the first drive.
 
 To attach an image and try to automatically start it, press
 @kbd{Ctrl}+@kbd{Shift}+@kbd{L} instead.  XRoar will try and start the
@@ -689,6 +689,10 @@ headers always ignore this option, however.
 You can create a new blank disk in a virtual drive by pressing
 @kbd{Ctrl}+@kbd{Shift}+@var{[1-4]}.  You will be a prompted for a filename,
 and the extension determines which type of file will be written.
+
+Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
+instead of one, so when you perform operations on Drive 1, from the CoCo's
+point of view, that will be Drive 0.
 
 
 @node Hard Disks
