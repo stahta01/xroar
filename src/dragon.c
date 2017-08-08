@@ -951,7 +951,7 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 	case 0: case 1:
 		md->CPU0->halt = state;
 		break;
-	case 2:
+	case XROAR_NEXT:
 		md->CPU0->halt = !md->CPU0->halt;
 		break;
 	default:
