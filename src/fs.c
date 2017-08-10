@@ -62,3 +62,30 @@ int fs_read_uint16_le(FILE *stream) {
 		return -1;
 	return (in[1] << 8) | in[0];
 }
+
+/* Read a variable-length max 31-bit unsigned int. */
+
+int fs_read_vl_uint31(FILE *stream) {
+	int val0 = fs_read_uint8(stream);
+	if (val0 < 0)
+		return -1;
+	int tmp = val0;
+	int shift = 0;
+	int mask = 0xff;
+	int val1 = 0;
+	while ((tmp & 0x80) == 0x80) {
+		tmp <<= 1;
+		shift += 8;
+		mask >>= 1;
+		int in = fs_read_uint8(stream);
+		if (in < 0)
+			return -1;
+		if (shift > 24) {
+			in &= 0x7f;
+			mask = 0;  // ignore val0
+			tmp = 0;  // no more
+		}
+		val1 = (val1 << 8) | in;
+	}
+	return ((val0 & mask) << shift) | val1;
+}
