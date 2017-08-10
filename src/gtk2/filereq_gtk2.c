@@ -92,7 +92,7 @@ static char *save_filename(char const * const *extensions) {
 		save_dialog = gtk_file_chooser_dialog_new("Save file",
 		    GTK_WINDOW(gtk2_top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
 		    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-		    GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT, NULL);
+		    GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT, NULL);
 		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(save_dialog), TRUE);
 	}
 	if (gtk_dialog_run(GTK_DIALOG(save_dialog)) == GTK_RESPONSE_ACCEPT) {
