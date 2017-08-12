@@ -117,6 +117,10 @@ static uint16_t pull_u_word(struct MC6809 *cpu) {
 /* 8-bit inherent operations */
 
 static uint8_t op_neg(struct MC6809 *cpu, uint8_t in) {
+	// This appears to be correct: CC.C is the inverse of what you might
+	// expect from an increment being involved.  'in' is promoted to
+	// unsigned before inverting here, which inverts the carry result of
+	// the increment.
 	unsigned out = ~in + 1;
 	CLR_NZVC;
 	SET_NZVC8(0, in, out);
