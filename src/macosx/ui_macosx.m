@@ -500,12 +500,7 @@ static void setup_file_menu(void) {
 	[submenu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Leader Padding" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_TAPE_FLAGS | TAPE_PAD)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Automatic Padding" action:@selector(do_set_state:) keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"CAS Padding" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_TAPE_FLAGS | TAPE_PAD_AUTO)];
 	[submenu addItem:item];
 	[item release];

@@ -51,9 +51,9 @@ struct tape_interface_private {
 	struct MC6809 *cpu;
 
 	_Bool tape_fast;
-	_Bool tape_pad;
 	_Bool tape_pad_auto;
 	_Bool tape_rewrite;
+	_Bool short_leader;
 
 	int in_pulse;
 	int in_pulse_width;
@@ -63,7 +63,6 @@ struct tape_interface_private {
 	uint8_t last_tape_output;
 	_Bool motor;
 
-	_Bool input_skip_sync;
 	_Bool rewrite_have_sync;
 	int rewrite_leader_count;
 	int rewrite_bit_count;
@@ -381,8 +380,8 @@ void tape_set_ao_rate(struct tape_interface *ti, int rate) {
 int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_close_reading(ti);
-	tip->input_skip_sync = 0;
 	int type = xroar_filetype_by_ext(filename);
+	tip->short_leader = 0;
 	switch (type) {
 	case FILETYPE_CAS:
 		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
@@ -390,12 +389,10 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 			return -1;
 		}
 		if (tip->tape_pad_auto) {
-			int flags = tape_get_state(ti) & ~TAPE_PAD;
 			if (tip->is_dragon && ti->tape_input->leader_count < 114)
-				flags |= TAPE_PAD;
+				tip->short_leader = 1;
 			if (!tip->is_dragon && ti->tape_input->leader_count < 130)
-				flags |= TAPE_PAD;
-			tape_select_state(ti, flags);
+				tip->short_leader = 1;
 		}
 		break;
 	case FILETYPE_ASC:
@@ -410,11 +407,6 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 			LOG_WARN("Failed to open '%s'\n", filename);
 			return -1;
 		}
-		if (tip->tape_pad_auto) {
-			int flags = tape_get_state(ti) & ~TAPE_PAD;
-			tape_select_state(ti, flags);
-		}
-		tip->input_skip_sync = 1;
 		break;
 #else
 		LOG_WARN("Failed to open '%s'\n", filename);
@@ -569,7 +561,7 @@ void tape_update_motor(struct tape_interface *ti, _Bool state) {
 		if (ti->tape_output && ti->tape_output->module->motor_off) {
 			ti->tape_output->module->motor_off(ti->tape_output);
 		}
-		if (tip->tape_pad || tip->tape_rewrite) {
+		if (tip->tape_rewrite) {
 			tape_desync(tip, 256);
 		}
 	}
@@ -895,7 +887,7 @@ static void update_pskip(struct tape_interface_private *tip) {
 static void fast_motor_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_pskip(tip);
-	if (!tip->tape_pad) {
+	if (!tip->short_leader) {
 		motor_on(tip);
 	}
 	tip->machine->op_rts(tip->machine);
@@ -905,9 +897,7 @@ static void fast_motor_on(void *sptr) {
 static void fast_sync_leader(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_pskip(tip);
-	if (tip->tape_pad) {
-		tip->machine->write_byte(tip->machine, 0x84, 0);
-	} else {
+	if (!tip->short_leader) {
 		sync_leader(tip);
 	}
 	tip->machine->op_rts(tip->machine);
@@ -972,11 +962,6 @@ static void rewrite_tape_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	/* desync with long leader */
 	tape_desync(tip, 256);
-	/* for audio files, when padding leaders, assume a phase */
-	if (tip->tape_pad && tip->input_skip_sync) {
-		tip->machine->write_byte(tip->machine, 0x84, 0);  /* phase */
-		tip->machine->op_rts(tip->machine);
-	}
 }
 
 static void rewrite_end_of_block(void *sptr) {
@@ -1024,11 +1009,11 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	if (tip->tape_fast) {
 		machine_bp_add_list(tip->machine, bp_list_fast, tip);
 		/* these are incompatible with the other flags */
-		if (!tip->tape_pad && !tip->tape_rewrite) {
+		if (!tip->tape_rewrite) {
 			machine_bp_add_list(tip->machine, bp_list_fast_cbin, tip);
 		}
 	}
-	if (tip->tape_pad || tip->tape_rewrite) {
+	if (tip->tape_rewrite) {
 		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
 	}
 }
@@ -1037,7 +1022,6 @@ void tape_set_state(struct tape_interface *ti, int flags) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	/* set flags */
 	tip->tape_fast = flags & TAPE_FAST;
-	tip->tape_pad = flags & TAPE_PAD;
 	tip->tape_pad_auto = flags & TAPE_PAD_AUTO;
 	tip->tape_rewrite = flags & TAPE_REWRITE;
 	set_breakpoints(tip);
@@ -1054,7 +1038,6 @@ int tape_get_state(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int flags = 0;
 	if (tip->tape_fast) flags |= TAPE_FAST;
-	if (tip->tape_pad) flags |= TAPE_PAD;
 	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
 	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
 	return flags;

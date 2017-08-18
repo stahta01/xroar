@@ -121,7 +121,6 @@ void tape_update_motor(struct tape_interface *ti, _Bool state);
 void tape_update_output(struct tape_interface *ti, uint8_t value);
 
 #define TAPE_FAST (1 << 0)
-#define TAPE_PAD (1 << 1)
 #define TAPE_PAD_AUTO (1 << 2)
 #define TAPE_REWRITE (1 << 3)
 

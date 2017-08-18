@@ -161,8 +161,7 @@ static void setup_file_menu(void) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input_rewind), "Rewind Input Tape");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_FAST), "Fast Loading");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD), "Leader Padding");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "Automatic Padding");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "CAS padding");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_REWRITE), "Rewrite");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);

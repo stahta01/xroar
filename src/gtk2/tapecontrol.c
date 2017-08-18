@@ -55,7 +55,7 @@ static GtkListStore *tc_input_list_store = NULL;
 static GtkScrollbar *tc_input_progress = NULL;
 static GtkScrollbar *tc_output_progress = NULL;
 static GtkToggleButton *tc_fast = NULL;
-static GtkToggleButton *tc_pad = NULL;
+static GtkToggleButton *tc_pad_auto = NULL;
 static GtkToggleButton *tc_rewrite = NULL;
 
 static void hide_tc_window(void);
@@ -91,7 +91,7 @@ static void input_file_selected(GtkTreeView *tree_view, GtkTreePath *path, GtkTr
 }
 
 static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data);
-static void tc_toggled_pad(GtkToggleButton *togglebutton, gpointer user_data);
+static void tc_toggled_pad_auto(GtkToggleButton *togglebutton, gpointer user_data);
 static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data);
 static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
 static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data);
@@ -124,7 +124,7 @@ void gtk2_create_tc_window(void) {
 	tc_input_progress = GTK_SCROLLBAR(gtk_builder_get_object(builder, "input_file_progress"));
 	tc_output_progress = GTK_SCROLLBAR(gtk_builder_get_object(builder, "output_file_progress"));
 	tc_fast = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast"));
-	tc_pad = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "pad"));
+	tc_pad_auto = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "pad_auto"));
 	tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "rewrite"));
 
 	/* Connect signals */
@@ -134,7 +134,7 @@ void gtk2_create_tc_window(void) {
 	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
 	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);
 	g_signal_connect(tc_fast, "toggled", G_CALLBACK(tc_toggled_fast), NULL);
-	g_signal_connect(tc_pad, "toggled", G_CALLBACK(tc_toggled_pad), NULL);
+	g_signal_connect(tc_pad_auto, "toggled", G_CALLBACK(tc_toggled_pad_auto), NULL);
 	g_signal_connect(tc_rewrite, "toggled", G_CALLBACK(tc_toggled_rewrite), NULL);
 
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "input_rewind"));
@@ -291,10 +291,10 @@ static void tc_toggled_fast(GtkToggleButton *togglebutton, gpointer user_data) {
 	tape_set_state(xroar_tape_interface, flags);
 }
 
-static void tc_toggled_pad(GtkToggleButton *togglebutton, gpointer user_data) {
+static void tc_toggled_pad_auto(GtkToggleButton *togglebutton, gpointer user_data) {
 	(void)user_data;
-	int set = gtk_toggle_button_get_active(togglebutton) ? TAPE_PAD : 0;
-	int flags = (tape_get_state(xroar_tape_interface) & ~TAPE_PAD) | set;
+	int set = gtk_toggle_button_get_active(togglebutton) ? TAPE_PAD_AUTO : 0;
+	int flags = (tape_get_state(xroar_tape_interface) & ~TAPE_PAD_AUTO) | set;
 	tape_set_state(xroar_tape_interface, flags);
 }
 
@@ -307,7 +307,7 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 
 void gtk2_update_tape_state(int flags) {
 	gtk_toggle_button_set_active(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE);
-	gtk_toggle_button_set_active(tc_pad, (flags & TAPE_PAD) ? TRUE : FALSE);
+	gtk_toggle_button_set_active(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE);
 	gtk_toggle_button_set_active(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE);
 }
 

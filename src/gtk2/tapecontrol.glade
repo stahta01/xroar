@@ -148,8 +148,8 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkCheckButton" id="pad">
-                    <property name="label" translatable="yes">Leader padding</property>
+                  <object class="GtkCheckButton" id="pad_auto">
+                    <property name="label" translatable="yes">CAS padding</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>

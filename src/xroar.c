@@ -136,7 +136,6 @@ struct private_cfg {
 	char *joy_virtual;
 	char *joy_desc;
 	int tape_fast;
-	int tape_pad;
 	int tape_pad_auto;
 	int tape_rewrite;
 	int tape_ao_rate;
@@ -165,7 +164,6 @@ static struct private_cfg private_cfg = {
 	.volume = -1,
 	.gain = -3.0,
 	.tape_fast = 1,
-	.tape_pad = -1,
 	.tape_pad_auto = 1,
 };
 
@@ -637,12 +635,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		private_cfg.run = NULL;
 	}
 
-	/* turn off tape_pad_auto if any tape_pad specified */
-	if (private_cfg.tape_pad >= 0)
-		private_cfg.tape_pad_auto = 0;
-	private_cfg.tape_fast = private_cfg.tape_fast ? TAPE_FAST : 0;
-	private_cfg.tape_pad = (private_cfg.tape_pad > 0) ? TAPE_PAD : 0;
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
+	private_cfg.tape_fast = private_cfg.tape_fast ? TAPE_FAST : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
@@ -770,7 +764,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 	/* Reset everything */
 	xroar_hard_reset();
-	tape_select_state(xroar_tape_interface, private_cfg.tape_fast | private_cfg.tape_pad | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
+	tape_select_state(xroar_tape_interface, private_cfg.tape_fast | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
 
 	load_disk_to_drive = 0;
 	while (private_cfg.load_list) {
@@ -1871,7 +1865,10 @@ static struct xconfig_enum ao_format_list[] = {
 
 /* Configuration directives */
 
-static _Bool dummy_bool;
+static union {
+	_Bool v_bool;
+	int v_int;
+} dummy_value;
 
 static struct xconfig_option const xroar_options[] = {
 	/* Machines: */
@@ -1934,19 +1931,19 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("tape-write", &private_cfg.tape_write) },
 	{ XC_SET_ENUM("tape-channel-mode", &xroar_cfg.tape_channel_mode, tape_channel_mode_list) },
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
-	{ XC_SET_INT1("tape-pad", &private_cfg.tape_pad) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
 	{ XC_SET_INT1("tape-rewrite", &private_cfg.tape_rewrite) },
 	{ XC_SET_INT("tape-ao-rate", &private_cfg.tape_ao_rate) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT1("tapehack", &private_cfg.tape_rewrite), .deprecated = 1 },
+	{ XC_SET_INT1("tape-pad", &dummy_value.v_int), .deprecated = 1 },
 
 	/* Disks: */
 	{ XC_SET_BOOL("disk-write-back", &xroar_cfg.disk_write_back) },
 	{ XC_SET_BOOL("disk-auto-os9", &xroar_cfg.disk_auto_os9) },
 	{ XC_SET_BOOL("disk-auto-sd", &xroar_cfg.disk_auto_sd) },
 	/* Backwards-compatibility: */
-	{ XC_SET_BOOL("disk-jvc-hack", &dummy_bool), .deprecated = 1 },
+	{ XC_SET_BOOL("disk-jvc-hack", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Firmware ROM images: */
 	{ XC_SET_STRING("rompath", &xroar_rom_path) },
@@ -2099,8 +2096,7 @@ static void helptext(void) {
 "  -tape-write FILE          open FILE for tape writing\n"
 "  -tape-channel-mode MODE   select stereo input channel (mix, left, right)\n"
 "  -no-tape-fast             disable fast tape loading\n"
-"  -tape-pad                 force tape leader padding\n"
-"  -no-tape-pad-auto         disable automatic leader padding\n"
+"  -no-tape-pad-auto         disable CAS file short leader workaround\n"
 "  -tape-rewrite             enable tape rewriting\n"
 "  -tape-ao-rate HZ          set tape writing frame rate\n"
 
@@ -2257,7 +2253,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_enum(f, all, "tape-channel-mode", xroar_cfg.tape_channel_mode, tape_channel_mix, tape_channel_mode_list);
 
 	xroar_cfg_print_bool(f, all, "tape-fast", private_cfg.tape_fast, 1);
-	xroar_cfg_print_bool(f, all, "tape-pad", private_cfg.tape_pad, -1);
 	xroar_cfg_print_bool(f, all, "tape-pad-auto", private_cfg.tape_pad_auto, 1);
 	xroar_cfg_print_bool(f, all, "tape-rewrite", private_cfg.tape_rewrite, 0);
 	xroar_cfg_print_int_nz(f, all, "tape-ao-rate", private_cfg.tape_ao_rate);
