@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sndfile.h>
 
@@ -63,44 +64,53 @@ struct tape_module tape_sndfile_module = {
 };
 
 struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate) {
-	struct tape *t;
-	struct tape_sndfile *sndfile;
-	t = tape_new(ti);
-	t->module = &tape_sndfile_module;
-	sndfile = xmalloc(sizeof(*sndfile));
-	t->data = sndfile;
-	/* initialise sndfile */
-	sndfile->info.format = 0;
-	if (mode[0] == 'w') {
-		sndfile->writing = 1;
-		sndfile->info.samplerate = rate;
-		sndfile->info.channels = 1;
-		sndfile->info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
-		sndfile->fd = sf_open(filename, SFM_WRITE, &sndfile->info);
+	SF_INFO sf_info;
+	SNDFILE *sfd = NULL;
+	_Bool writing = (mode[0] == 'w');
+
+	sf_info.format = 0;
+	if (writing) {
+		sf_info.samplerate = rate;
+		sf_info.channels = 1;
+		sf_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
+		sfd = sf_open(filename, SFM_WRITE, &sf_info);
 	} else {
-		sndfile->writing = 0;
-		sndfile->fd = sf_open(filename, SFM_READ, &sndfile->info);
+		sfd = sf_open(filename, SFM_READ, &sf_info);
 	}
-	if (!sndfile->fd) {
+	if (!sfd) {
+		sf_info.samplerate = 0;
+		sf_info.channels = 0;
 		LOG_WARN("libsndfile error: %s\n", sf_strerror(NULL));
-		free(sndfile);
-		tape_free(t);
 		return NULL;
 	}
-	if (sndfile->info.samplerate == 0 || sndfile->info.channels < 1) {
-		sndfile_close(t);
+	if (sf_info.samplerate == 0 || sf_info.channels < 1) {
+		sf_close(sfd);
+		LOG_WARN("Bad samplerate or channel count in audio file.\n");
 		return NULL;
 	}
+
+	struct tape *t = tape_new(ti);
+	t->module = &tape_sndfile_module;
+	struct tape_sndfile *sndfile = xmalloc(sizeof(*sndfile));
+	*sndfile = (struct tape_sndfile){0};
+	t->data = sndfile;
+
+	/* initialise sndfile */
+	sndfile->fd = sfd;
+	memcpy(&sndfile->info, &sf_info, sizeof(sndfile->info));
+	sndfile->writing = writing;
 	sndfile->cycles_per_frame = EVENT_TICK_RATE / sndfile->info.samplerate;
 	sndfile->block = xmalloc(BLOCK_LENGTH * sizeof(*sndfile->block) * sndfile->info.channels);
 	sndfile->block_length = 0;
 	sndfile->cursor = 0;
 	sndfile->channel_mode = tape_channel_mix;
+
 	/* find size */
 	long size = sf_seek(sndfile->fd, 0, SEEK_END);
 	if (size >= 0) {
 		t->size = size;
 	}
+
 	/* rewind to start */
 	sf_seek(sndfile->fd, 0, SEEK_SET);
 	t->offset = 0;
