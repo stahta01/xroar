@@ -351,7 +351,8 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f) {
 /**************************************************************************/
 
 struct tape *tape_new(struct tape_interface *ti) {
-	struct tape *new = xzalloc(sizeof(*new));
+	struct tape *new = xmalloc(sizeof(*new));
+	*new = (struct tape){0};
 	new->tape_interface = ti;
 	return new;
 }
