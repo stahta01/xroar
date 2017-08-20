@@ -644,8 +644,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	private_cfg.tape_pad = (private_cfg.tape_pad > 0) ? TAPE_PAD : 0;
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
-	if (private_cfg.tape_ao_rate > 0)
-		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape_ao_rate);
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
 	_Bool definitely_dos = 0;
@@ -760,6 +758,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	xroar_tape_interface = tape_interface_new(xroar_ui_interface);
+	if (private_cfg.tape_ao_rate > 0)
+		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape_ao_rate);
 
 	/* Configure machine */
 	xroar_configure_machine(xroar_machine_config);
