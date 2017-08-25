@@ -1415,6 +1415,7 @@ static void pia1a_data_postwrite(void *sptr) {
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
 	tape_update_motor(md->tape_interface, md->PIA1->a.control_register & 0x08);
+	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 }
 
 static void pia1b_data_preread_dragon(void *sptr) {
