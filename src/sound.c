@@ -123,6 +123,8 @@ static const float source_offset_v[NUM_SOURCES][3] = {
 	{ 0.0, 0.0, 3.9 }  // Single-bit
 };
 
+static float bus_level = 0.0;
+
 struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsigned rate,
 					    unsigned nchannels, unsigned nframes) {
 	struct sound_interface_private *snd = xmalloc(sizeof(*snd));
@@ -377,7 +379,6 @@ void sound_update(struct sound_interface *sndp) {
 	snd->last_cycle = event_current_tick;
 
 	/* Mix internal sound sources to bus */
-	float bus_level = 0.0;
 	unsigned sindex = snd->sbs_enabled ? (snd->sbs_level ? 2 : 1) : 0;
 	enum sound_source source;
 	if (snd->mux_enabled) {
@@ -395,12 +396,13 @@ void sound_update(struct sound_interface *sndp) {
 			bus_level = snd->cart_level;
 			break;
 		}
-	} else {
+		bus_level = (bus_level * source_gain_v[source][sindex])
+		             + source_offset_v[source][sindex];
+	} else if (sindex > 0) {
+		// single-bit enabled
 		source = SOURCE_SINGLE_BIT;
-		bus_level = 0.0;
+		bus_level = source_offset_v[SOURCE_SINGLE_BIT][sindex];
 	}
-	bus_level = (bus_level * source_gain_v[source][sindex])
-			 + source_offset_v[source][sindex];
 
 	/* Feed back bus level to single bit pin */
 	DELEGATE_SAFE_CALL1(snd->public.sbs_feedback, snd->sbs_enabled || bus_level >= 1.414);
