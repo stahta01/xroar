@@ -157,6 +157,7 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 void tape_interface_free(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_close_reading(ti);
+	tape_close_writing(ti);
 	tape_reset(ti);
 	free(tip);
 }
@@ -423,8 +424,9 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 }
 
 void tape_close_reading(struct tape_interface *ti) {
-	if (ti->tape_input)
-		tape_close(ti->tape_input);
+	if (!ti->tape_input)
+		return;
+	tape_close(ti->tape_input);
 	ti->tape_input = NULL;
 }
 
@@ -461,6 +463,8 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 
 void tape_close_writing(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	if (!ti->tape_output)
+		return;
 	if (tip->tape_rewrite) {
 		tape_byte_out(ti->tape_output, 0x55);
 		tape_byte_out(ti->tape_output, 0x55);
@@ -1004,6 +1008,11 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	machine_bp_remove_list(tip->machine, bp_list_fast_cbin);
 	machine_bp_remove_list(tip->machine, bp_list_rewrite);
 	if (!tip->motor)
+		return;
+	// don't intercept calls if there's no input tape.  the optimisations
+	// are only for reading.  also, this helps works around missing
+	// silences...
+	if (!tip->public.tape_input)
 		return;
 	/* add required breakpoints */
 	if (tip->tape_fast) {
