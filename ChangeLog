@@ -4,6 +4,7 @@ Version 0.35, unreleased
   * New NX32 RAM cartridge [Tormod Volden]
   * Fix buffer overrun in MC6847 code
   * New option -ao-gain (specify volume in dBFS)
+  * CAS CUE support
 
 Version 0.34, Sun Aug  7 2016
 
