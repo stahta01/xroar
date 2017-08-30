@@ -769,7 +769,7 @@ static const uint8_t ddos_sector_interleave[18] =
 	{ 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17 };
 
 static const uint8_t rsdos_sector_interleave[18] =
-	{ 0, 6, 12, 1, 7, 13, 2, 8, 14, 3, 9, 15, 4, 10, 16, 5, 11, 17 };
+	{ 0, 7, 15, 4, 12, 1, 8, 9, 5, 13, 2, 16, 10, 6, 14, 3, 17, 11 };
 
 /* Oddball single-density sector interleave from Delta: */
 
