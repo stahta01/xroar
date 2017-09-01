@@ -888,8 +888,14 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 
 	} else {
 
+		// gap heuristics based on example 18 and 20 sector formats
+		int gap = disk->track_length - ((ssize + 58) * nsectors) - 87;
+		int pigap = 8 + (gap * 46) / 584;
+		int gap2 = 16 + (gap * 76) / (584 * nsectors);
+		int gap3 = 1 + (gap * 412) / (584 * nsectors);
+
 		/* Double density */
-		write_bytes(54, 0x4e);
+		write_bytes(pigap, 0x4e);
 		write_bytes(9, 0x00);
 		write_bytes(3, 0xc2);
 		write_bytes(1, 0xfc);
@@ -906,14 +912,14 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 			write_bytes(1, sect + first_sector);
 			write_bytes(1, ssize_code);
 			write_crc();
-			write_bytes(22, 0x4e);
+			write_bytes(gap2, 0x4e);
 			write_bytes(12, 0x00);
 			mem_crc = CRC16_RESET;
 			write_bytes(3, 0xa1);
 			write_bytes(1, 0xfb);
 			write_bytes(ssize, 0xe5);
 			write_crc();
-			write_bytes(24, 0x4e);
+			write_bytes(gap3, 0x4e);
 		}
 		/* fill to end of disk */
 		while (mem_offset != 128) {
