@@ -201,7 +201,7 @@ static void tc_seek(struct tape *tape, GtkScrollType scroll, gdouble value) {
 				seekms = tape_to_ms(tape, tape->offset) - 1000;
 				break;
 			case GTK_SCROLL_STEP_FORWARD:
-				seekms = tape_to_ms(tape, tape->offset) - 1000;
+				seekms = tape_to_ms(tape, tape->offset) + 1000;
 				break;
 			case GTK_SCROLL_PAGE_BACKWARD:
 				seekms = tape_to_ms(tape, tape->offset) - 5000;
