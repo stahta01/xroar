@@ -82,6 +82,7 @@ enum ui_action {
 	ui_action_tape_input,
 	ui_action_tape_output,
 	ui_action_tape_input_rewind,
+	ui_action_tape_output_rewind,
 	ui_action_zoom_in,
 	ui_action_zoom_out,
 	ui_action_joystick_swap,
