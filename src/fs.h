@@ -3,20 +3,28 @@
  *
  *  See COPYING.GPL for redistribution conditions. */
 
+/* Some file handling convenience functions */
+
 #ifndef XROAR_FS_H_
 #define XROAR_FS_H_
 
 #include <stdio.h>
+#include <sys/types.h>
 
-/* Some file handling convenience functions */
+off_t fs_file_size(FILE *fd);
 
-int fs_write_uint8(FILE *stream, int value);
-int fs_write_uint16(FILE *stream, int value);
-int fs_write_uint16_le(FILE *stream, int value);
-int fs_read_uint8(FILE *stream);
-int fs_read_uint16(FILE *stream);
-int fs_read_uint16_le(FILE *stream);
-int fs_read_vl_uint31(FILE *stream);  // variable-length uint31
+// unlike ftruncate(), this leaves file position at new EOF
+int fs_truncate(FILE *fd, off_t length);
+
+int fs_write_uint8(FILE *fd, int value);
+int fs_write_uint16(FILE *fd, int value);
+int fs_write_uint16_le(FILE *fd, int value);
+int fs_write_uint31(FILE *fd, int value);
+int fs_read_uint8(FILE *fd);
+int fs_read_uint16(FILE *fd);
+int fs_read_uint16_le(FILE *fd);
+int fs_read_uint31(FILE *fd);
+int fs_read_vl_uint31(FILE *fd);  // variable-length uint31
 
 /* Variable-length uint31 defined as:
  * 7-bit        0nnnnnnn
