@@ -157,8 +157,10 @@ static void setup_file_menu(void) {
 	submenu = CreatePopupMenu();
 	AppendMenu(file_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cassette");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input), "Input Tape...");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output), "Output Tape...");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input_rewind), "Rewind Input Tape");
+	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output), "Output Tape...");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output_rewind), "Rewind Output Tape");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_FAST), "Fast Loading");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "CAS padding");
@@ -340,12 +342,16 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		case ui_action_tape_input:
 			xroar_select_tape_input();
 			break;
-		case ui_action_tape_output:
-			xroar_select_tape_output();
-			break;
 		case ui_action_tape_input_rewind:
 			if (xroar_tape_interface && xroar_tape_interface->tape_input)
 				tape_rewind(xroar_tape_interface->tape_input);
+			break;
+		case ui_action_tape_output:
+			xroar_select_tape_output();
+			break;
+		case ui_action_tape_output_rewind:
+			if (xroar_tape_interface && xroar_tape_interface->tape_output)
+				tape_rewind(xroar_tape_interface->tape_output);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in();
