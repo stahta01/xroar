@@ -155,6 +155,8 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 }
 
 void tape_interface_free(struct tape_interface *ti) {
+	if (!ti)
+		return;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_close_reading(ti);
 	tape_close_writing(ti);

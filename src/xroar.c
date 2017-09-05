@@ -877,6 +877,7 @@ void xroar_shutdown(void) {
 			free(private_cfg.joy_button[i]);
 	}
 	vdrive_interface_free(xroar_vdrive_interface);
+	tape_interface_free(xroar_tape_interface);
 	xconfig_shutdown(xroar_options);
 }
 
