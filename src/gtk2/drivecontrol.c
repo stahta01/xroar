@@ -99,6 +99,7 @@ void gtk2_create_dc_window(void) {
 		g_error_free(error);
 		return;
 	}
+	g_bytes_unref(res_drivecontrol);
 
 	/* Extract UI elements modified elsewhere */
 	dc_window = GTK_WIDGET(gtk_builder_get_object(builder, "dc_window"));

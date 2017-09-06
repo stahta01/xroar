@@ -110,6 +110,7 @@ void gtk2_create_tc_window(void) {
 		g_error_free(error);
 		return;
 	}
+	g_bytes_unref(res_tapecontrol);
 
 	/* Extract UI elements modified elsewhere */
 	tc_window = GTK_WIDGET(gtk_builder_get_object(builder, "tc_window"));

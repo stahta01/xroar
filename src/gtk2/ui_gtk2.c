@@ -496,6 +496,7 @@ static void *ui_gtk2_new(void *cfg) {
 		g_error_free(error);
 		return NULL;
 	}
+	g_bytes_unref(res_top_window);
 
 	struct ui_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_interface){0};
@@ -529,6 +530,7 @@ static void *ui_gtk2_new(void *cfg) {
 		g_message("building menus failed: %s", error->message);
 		g_error_free(error);
 	}
+	g_bytes_unref(res_ui);
 
 	/* Action groups */
 	main_action_group = gtk_action_group_new("Main");
@@ -597,6 +599,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 static void ui_gtk2_free(void *sptr) {
 	struct ui_module *uigtk2 = sptr;
+	gtk_widget_destroy(gtk2_drawing_area);
 	gtk_widget_destroy(gtk2_top_window);
 	g_free(uigtk2);
 }
