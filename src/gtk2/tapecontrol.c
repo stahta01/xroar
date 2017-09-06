@@ -187,7 +187,7 @@ static gchar *ms_to_string(int ms) {
 	int min, sec;
 	sec = ms / 1000;
 	min = sec / 60;
-	sec -= min * 60;
+	sec %= 60;
 	min %= 60;
 	snprintf(timestr, sizeof(timestr), "%02d:%02d", min, sec);
 	return timestr;

@@ -603,7 +603,7 @@ static int send_packet(struct gdb_interface_private *gip, const char *buffer, un
 			break;
 		}
 	}
-	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", csum);
+	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", (unsigned)csum);
 	if (send(gip->sockfd, tmpbuf, 3, 0) < 0)
 		return -GDBE_WRITE_ERROR;
 	// the reply ("+" or "-") will be discarded by the next read_packet
