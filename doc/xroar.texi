@@ -588,7 +588,8 @@ XRoar supports three types of cassette image:
 @headitem Extension @tab Description
 @item @file{.cas}
 @tab Cassette file.  Simple binary representation of data contained on a
-tape.  Cannot represent silence, or some custom encodings.
+tape.  CUE support appends metadata describing cycle widths and representing
+silence.
 @item @file{.wav}
 @tab Cassette audio file.  XRoar can read sampled audio from original
 cassettes.
@@ -599,15 +600,16 @@ for loading in ASCII mode.  Read-only.
 
 To create a cassette image for writing (with the @command{CSAVE} or
 @command{CSAVEM} BASIC commands, for example), use the @option{-tape-write
-@var{filename}} option, or press @kbd{Ctrl}+@kbd{W}.  Created files will be
-truncated to zero length, so be careful not to overwrite any existing files
-with this command.
+@var{filename}} option, or press @kbd{Ctrl}+@kbd{W}.  If a file already exists,
+new data will be appended to it.  Rewind the output take to overwrite it.  Note
+a slight behaviour difference: CAS files can only be overwritten or appended
+to, WAV files can overwrite existing data (leaving later data intact).
 
 The currently open tape files used for reading and writing are distinct.
 
 Some cassette tapes are distributed with only one of the stereo channels
-containing data, and these can cause loading issues.  How stereo audio files
-are read can be adjusted with the @option{-tape-channel-mode @var{mode}}
+containing data, and these sometimes cause loading issues.  How stereo audio
+files are read can be adjusted with the @option{-tape-channel-mode @var{mode}}
 option, where @var{mode} is one of: @samp{mix} - mix two channels into one (the
 default), @samp{left} - read only the left channel, @samp{right} - read only
 the right channel.
@@ -621,22 +623,15 @@ off (e.g. when finished loading).  @xref{Debugging}.
 The @option{-tape-fast} option accelerates tape loading by intercepting ROM
 calls.  Disable with @option{-no-tape-fast}.  On by default.
 
+When fast loading is enabled, the @option{-tape-pad-auto} option will, for
+@file{.cas} files, ignore the motor delay when insufficient initial leader
+bytes are detected.  This helps with old tape images that would not load on
+real hardware if simply converted to an audio file.  On by default; switch off
+with @option{-no-tape-pad-auto}.
+
 The @option{-tape-rewrite} option enables rewriting of anything read from the
 input tape to the output tape.  This is useful for creating ``well formed''
 @file{.cas} files.
-
-The remaining options affect how XRoar attempts to cope with bad tape images
-(images that, were they simply converted to audio files, would not load on a
-real Dragon):
-
-The @option{-tape-pad} option tries to make loading more reliable by
-intercepting ROM calls and assuming extra leader bytes where appropriate.
-Disable with @option{-no-tape-pad}.
-
-The @option{-tape-pad-auto} option will, for @file{.cas} files, automatically
-switch on leader padding when insufficient initial leader bytes are found at
-the beginning of the file, otherwise it is left alone.  Disable with
-@option{-no-tape-pad-auto}.  On by default.
 
 Where available, these options can be changed on the fly in the GUI.
 
