@@ -73,7 +73,7 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 		sf_info.samplerate = rate;
 		sf_info.channels = 1;
 		sf_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_U8;
-		sfd = sf_open(filename, SFM_WRITE, &sf_info);
+		sfd = sf_open(filename, SFM_RDWR, &sf_info);
 	} else {
 		sfd = sf_open(filename, SFM_READ, &sf_info);
 	}
@@ -95,7 +95,7 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 	*sndfile = (struct tape_sndfile){0};
 	t->data = sndfile;
 
-	/* initialise sndfile */
+	// initialise sndfile
 	sndfile->fd = sfd;
 	memcpy(&sndfile->info, &sf_info, sizeof(sndfile->info));
 	sndfile->writing = writing;
@@ -105,15 +105,19 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 	sndfile->cursor = 0;
 	sndfile->channel_mode = tape_channel_mix;
 
-	/* find size */
+	// find size
 	long size = sf_seek(sndfile->fd, 0, SEEK_END);
 	if (size >= 0) {
 		t->size = size;
+		t->offset = size;
 	}
 
-	/* rewind to start */
-	sf_seek(sndfile->fd, 0, SEEK_SET);
-	t->offset = 0;
+	// rewind to start if not writing (else append)
+	if (!writing) {
+		sf_seek(sndfile->fd, 0, SEEK_SET);
+		t->offset = 0;
+	}
+
 	return t;
 }
 
