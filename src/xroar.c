@@ -1104,7 +1104,7 @@ void xroar_new_disk(int drive) {
 	int filetype = xroar_filetype_by_ext(filename);
 	xroar_eject_disk(drive);
 	// Default to 34T 1H.  Will be auto-expanded as necessary.
-	struct vdisk *new_disk = vdisk_blank_disk(34, 1, VDISK_LENGTH_5_25);
+	struct vdisk *new_disk = vdisk_new(250000, 300);
 	if (new_disk == NULL)
 		return;
 	LOG_DEBUG(1, "Creating blank disk in drive %d\n", 1 + drive);
@@ -1401,12 +1401,12 @@ void xroar_configure_machine(struct machine_config *mc) {
 	}
 	switch (mc->architecture) {
 	case ARCH_COCO:
-		vdisk_default_interleave(0);
-		vdisk_default_ncyls(35);
+		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 3);
+		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 3);
 		break;
 	default:
-		vdisk_default_interleave(1);
-		vdisk_default_ncyls(40);
+		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 2);
+		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 		break;
 	}
 	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? CROSS_COLOUR_OFF : CROSS_COLOUR_KBRW;

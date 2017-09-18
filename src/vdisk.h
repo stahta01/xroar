@@ -10,9 +10,6 @@
 
 #include "xroar.h"
 
-#define VDISK_LENGTH_5_25 (0x1900)
-#define VDISK_LENGTH_8    (0x2940)
-
 #define VDISK_DOUBLE_DENSITY (0x8000)
 #define VDISK_SINGLE_DENSITY (0x0000)
 
@@ -49,16 +46,11 @@ struct vdisk {
 	} fmt;
 };
 
-// Global variable determines interleave of subsequently formatted disks.
-void vdisk_default_interleave(_Bool dragon_interleave);
+// Set interleave of subsequently formatted disks.
+void vdisk_set_interleave(int density, int interleave);
 
-// Global variable to set the "standard" disk size, used when expanding disk images
-// in memory, e.g. set to 40 for Dragon, 35 for CoCo.
-void vdisk_default_ncyls(unsigned ncyls);
-
-struct vdisk *vdisk_blank_disk(unsigned ncyls, unsigned nheads,
-			       unsigned track_length);
-void vdisk_destroy(struct vdisk *disk);
+struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm);
+void vdisk_free(struct vdisk *disk);
 
 struct vdisk *vdisk_load(const char *filename);
 int vdisk_save(struct vdisk *disk, _Bool force);
@@ -77,6 +69,7 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		       unsigned cyl, unsigned head,
 		       unsigned nsectors, unsigned first_sector, unsigned ssize_code);
 int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
+		      unsigned ncyls, unsigned nheads,
 		      unsigned nsectors, unsigned first_sector, unsigned ssize_code);
 int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
 			unsigned sector, unsigned sector_length, uint8_t *buf);

@@ -54,6 +54,8 @@ static int vdisk_save_vdk(struct vdisk *disk);
 static int vdisk_save_jvc(struct vdisk *disk);
 static int vdisk_save_dmk(struct vdisk *disk);
 
+#define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
+
 static struct {
 	enum xroar_filetype filetype;
 	struct vdisk *(* const load_func)(const char *);
@@ -65,75 +67,50 @@ static struct {
 	{ FILETYPE_DMK, vdisk_load_dmk, vdisk_save_dmk },
 };
 
-// Determines interleave of subsequently formatted disks.
-static _Bool default_dragon_interleave = 1;
+// Configured interleave for single and double density
+static int interleave_sd = 1;
+static int interleave_dd = 1;
 
-// "Standard" disk size.
-static unsigned default_ncyls = 40;
-
-void vdisk_default_interleave(_Bool dragon_interleave) {
-	default_dragon_interleave = dragon_interleave;
+void vdisk_set_interleave(int density, int interleave) {
+	if (density == VDISK_SINGLE_DENSITY) {
+		interleave_sd = interleave;
+	} else {
+		interleave_dd = interleave;
+	}
 }
 
-void vdisk_default_ncyls(unsigned ncyls) {
-	default_ncyls = ncyls;
-}
+struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm) {
+	unsigned track_length = IDIV_ROUND(data_rate * 60, 8 * rpm);
+	// round up to the nearest 32 bytes
+	track_length += (32 - (track_length % 32)) % 32;
+	// account for track header bytes
+	track_length += 128;
 
-struct vdisk *vdisk_blank_disk(unsigned ncyls, unsigned nheads,
-			       unsigned track_length) {
-	struct vdisk *disk;
-	uint8_t **side_data;
-	/* Ensure multiples of track_length will stay 16-bit aligned */
-	if ((track_length % 2) != 0)
-		track_length++;
-	if (nheads < 1 || nheads > MAX_HEADS
-			|| ncyls < 1 || ncyls > MAX_CYLINDERS
-			|| track_length < 129 || track_length > 0x2940) {
-		return NULL;
-	}
-	if (!(disk = malloc(sizeof(*disk))))
-		return NULL;
-	if (!(side_data = calloc(nheads, sizeof(*side_data))))
-		goto cleanup;
-	unsigned side_length = ncyls * track_length;
-	for (unsigned i = 0; i < nheads; i++) {
-		if (!(side_data[i] = calloc(side_length, 1)))
-			goto cleanup_sides;
-	}
+	// sensible limits
+	if (track_length < 0x1640)
+		track_length = 0x1640;
+	if (track_length > 0x2940)
+		track_length = 0x2940;
+
+	struct vdisk *disk = xmalloc(sizeof(*disk));
+	*disk = (struct vdisk){0};
+	disk->side_data = xmalloc(MAX_HEADS * sizeof(*disk->side_data));
+	for (unsigned i = 0; i < MAX_HEADS; i++)
+		disk->side_data[i] = NULL;
 	disk->filetype = FILETYPE_DMK;
-	disk->filename = NULL;
-	disk->fmt.vdk.extra_length = 0;
-	disk->fmt.vdk.filename_length = 0;
-	disk->fmt.vdk.extra = NULL;
 	disk->write_back = xroar_cfg.disk_write_back;
-	disk->write_protect = 0;
-	disk->num_cylinders = ncyls;
-	disk->num_heads = nheads;
 	disk->track_length = track_length;
-	disk->side_data = side_data;
 	return disk;
-cleanup_sides:
-	for (unsigned i = 0; i < nheads; i++) {
-		if (side_data[i])
-			free(side_data[i]);
-	}
-	free(side_data);
-cleanup:
-	free(disk);
-	return NULL;
 }
 
-void vdisk_destroy(struct vdisk *disk) {
-	if (disk == NULL) return;
-	if (disk->filename) {
+void vdisk_free(struct vdisk *disk) {
+	if (!disk)
+		return;
+	if (disk->filename)
 		free(disk->filename);
-		disk->filename = NULL;
-	}
-	if (disk->fmt.vdk.extra) {
+	if (disk->fmt.vdk.extra)
 		free(disk->fmt.vdk.extra);
-		disk->fmt.vdk.extra_length = 0;
-	}
-	for (unsigned i = 0; i < disk->num_heads; i++) {
+	for (unsigned i = 0; i < MAX_HEADS; i++) {
 		if (disk->side_data[i])
 			free(disk->side_data[i]);
 	}
@@ -264,11 +241,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 		}
 	}
 	ssize = 128 << ssize_code;
-	disk = vdisk_blank_disk(ncyls, nheads, VDISK_LENGTH_5_25);
-	if (!disk) {
-		fclose(fd);
-		return NULL;
-	}
+	disk = vdisk_new(250000, 300);
 	disk->filetype = FILETYPE_VDK;
 	disk->filename = xstrdup(filename);
 	disk->write_protect = write_protect;
@@ -276,9 +249,9 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	disk->fmt.vdk.filename_length = vdk_filename_length;
 	disk->fmt.vdk.extra = vdk_extra;
 
-	if (vdisk_format_disk(disk, 1, nsectors, 1, ssize_code) != 0) {
+	if (vdisk_format_disk(disk, 1, ncyls, nheads, nsectors, 1, ssize_code) != 0) {
 		fclose(fd);
-		vdisk_destroy(disk);
+		vdisk_free(disk);
 		return NULL;
 	}
 	LOG_DEBUG(1, "Loading VDK virtual disk: %uC %uH %uS (%u-byte)\n", ncyls, nheads, nsectors, ssize);
@@ -294,6 +267,25 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	}
 	fclose(fd);
 	return disk;
+}
+
+// Round disk size in cylinders up to the next "standard" size.
+
+static unsigned standard_disk_size(unsigned ncyls) {
+	if (ncyls <= 35)
+		return 35;  // RS-DOS
+	if (ncyls <= 36)
+		return 36;  // RS-DOS with boot track
+	if (ncyls <= 40)
+		return 40;  // 40-track disk
+	if (ncyls <= 43)
+		return 43;  // 40-track disk with extra sectors
+	if (ncyls <= 80)
+		return 80;  // 80-track disk
+	if (ncyls <= 83)
+		return 83;  // 80-track disk with extra sectors
+	// otherwise just go with what we're given
+	return ncyls;
 }
 
 static int vdisk_save_vdk(struct vdisk *disk) {
@@ -323,7 +315,8 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	if (disk->fmt.vdk.extra_length > 0) {
 		fwrite(disk->fmt.vdk.extra, disk->fmt.vdk.extra_length, 1, fd);
 	}
-	for (unsigned cyl = 0; cyl < disk->num_cylinders; cyl++) {
+	unsigned ncyls = standard_disk_size(disk->num_cylinders);
+	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < disk->num_heads; head++) {
 			for (unsigned sector = 0; sector < 18; sector++) {
 				vdisk_fetch_sector(disk, cyl, head, sector + 1, 256, buf);
@@ -462,17 +455,13 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	if (xroar_cfg.disk_auto_sd && nsectors == 10)
 		double_density = 0;
 
-	struct vdisk *disk = vdisk_blank_disk(ncyls, nheads, VDISK_LENGTH_5_25);
-	if (!disk) {
-		fclose(fd);
-		return NULL;
-	}
+	struct vdisk *disk = vdisk_new(250000, 300);
 	disk->filetype = FILETYPE_JVC;
 	disk->filename = xstrdup(filename);
 	disk->fmt.jvc.headerless_os9 = headerless_os9;
-	if (vdisk_format_disk(disk, double_density, nsectors, first_sector, ssize_code) != 0) {
+	if (vdisk_format_disk(disk, double_density, ncyls, nheads, nsectors, first_sector, ssize_code) != 0) {
 		fclose(fd);
-		vdisk_destroy(disk);
+		vdisk_free(disk);
 		return NULL;
 	}
 	if (headerless_os9) {
@@ -533,7 +522,8 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 		fwrite(buf, header_size, 1, fd);
 	}
 
-	for (unsigned cyl = 0; cyl < disk->num_cylinders; cyl++) {
+	unsigned ncyls = standard_disk_size(disk->num_cylinders);
+	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < disk->num_heads; head++) {
 			for (unsigned sector = 0; sector < nsectors; sector++) {
 				vdisk_fetch_sector(disk, cyl, head, sector + 1, 256, buf);
@@ -606,11 +596,7 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 		LOG_WARN("DMK is flagged density-agnostic\n");
 	file_size -= 16;
 	(void)file_size;  // TODO: check this matches what's going to be read
-	disk = vdisk_blank_disk(ncyls, nheads, VDISK_LENGTH_5_25);
-	if (disk == NULL) {
-		fclose(fd);
-		return NULL;
-	}
+	disk = vdisk_new(250000, 300);
 	LOG_DEBUG(1, "Loading DMK virtual disk: %uC %uH (%u-byte)\n", ncyls, nheads, track_length);
 	disk->filetype = FILETYPE_DMK;
 	disk->filename = xstrdup(filename);
@@ -707,29 +693,13 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 		nheads = head + 1;
 	}
 	if (cyl >= ncyls) {
-		// Round amount of tracks up to the next nearest standard size.
-		if (ncyls < default_ncyls && cyl >= ncyls)
-			ncyls = default_ncyls;
-		// Try for exactly 40 or 80 track, but allow 3 tracks more.
-		if (ncyls < 40 && cyl >= ncyls)
-			ncyls = 40;
-		if (ncyls < 43 && cyl >= ncyls)
-			ncyls = 43;
-		if (ncyls < 80 && cyl >= ncyls)
-			ncyls = 80;
-		if (ncyls < 83 && cyl >= ncyls)
-			ncyls = 83;
-		// If that's still not enough, just increase to new size.
-		if (cyl >= ncyls)
-			ncyls = cyl + 1;
+		ncyls = cyl + 1;
 	}
 	if (nheads > disk->num_heads || ncyls > disk->num_cylinders) {
 		if (ncyls > disk->num_cylinders) {
 			// Allocate and clear new tracks
 			for (unsigned s = 0; s < disk->num_heads; s++) {
 				uint8_t *new_side = xrealloc(side_data[s], ncyls * tlength);
-				if (!new_side)
-					return NULL;
 				side_data[s] = new_side;
 				for (unsigned t = disk->num_cylinders; t < ncyls; t++) {
 					uint8_t *dest = new_side + t * tlength;
@@ -739,16 +709,9 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 			disk->num_cylinders = ncyls;
 		}
 		if (nheads > disk->num_heads) {
-			// Increase size of side_data array
-			side_data = xrealloc(side_data, nheads * sizeof(*side_data));
-			if (!side_data)
-				return NULL;
-			disk->side_data = side_data;
 			// Allocate new empty side data
 			for (unsigned s = disk->num_heads; s < nheads; s++) {
-				side_data[s] = calloc(ncyls, tlength);
-				if (!side_data[s])
-					return NULL;
+				side_data[s] = xzalloc(ncyls * tlength);
 			}
 			disk->num_heads = nheads;
 		}
@@ -761,20 +724,6 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 /*
  * Helper functions for dealing with the in-memory disk images.
  */
-
-/* DragonDOS gets pretty good performance using 2:1 interleave, RS-DOS is a bit
- * slower and needs 3:1. */
-
-static const uint8_t ddos_sector_interleave[18] =
-	{ 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17 };
-
-static const uint8_t rsdos_sector_interleave[18] =
-	{ 0, 7, 15, 4, 12, 1, 8, 9, 5, 13, 2, 16, 10, 6, 14, 3, 17, 11 };
-
-/* Oddball single-density sector interleave from Delta: */
-
-static const uint8_t delta_sector_interleave[18] =
-	{ 2, 6, 3, 7, 0, 4, 8, 1, 5, 9 };
 
 /* Keep track of these separately for direct access to memory image: */
 
@@ -836,8 +785,13 @@ static _Bool read_crc(void) {
 int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		       unsigned cyl, unsigned head,
 		       unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
-	if (!disk || cyl > 255 || nsectors > 64 || ssize_code > 3)
+
+	if (!disk || cyl > 255 || nsectors > 64 || ssize_code > 3) {
+		LOG_DEBUG(0, "vdisk_format_track(): XXX\n");
 		return -1;
+	}
+
+	LOG_DEBUG(0, "vdisk_format_track(): C%d H%d\n", cyl, head);
 
 	uint16_t *idams = vdisk_extend_disk(disk, cyl, head);
 	unsigned idam = 0;
@@ -848,14 +802,16 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 	mem_offset = 128;
 	mem_double_density = double_density;
 
-	const uint8_t *sect_interleave = NULL;
-	if (double_density && nsectors == 18) {
-		if (default_dragon_interleave)
-			sect_interleave = ddos_sector_interleave;
-		else
-			sect_interleave = rsdos_sector_interleave;
-	} else if (!double_density && nsectors == 10) {
-		sect_interleave = delta_sector_interleave;
+	int interleave = double_density ? interleave_dd : interleave_sd;
+	int sector_id[nsectors];
+	int idx = -interleave;
+	for (unsigned i = 0; i < nsectors; i++)
+		sector_id[i] = -1;
+	for (unsigned i = 0; i < nsectors; i++) {
+		idx = (idx + interleave) % nsectors;
+		while (sector_id[idx] >= 0)
+			idx = (idx + 1) % nsectors;
+		sector_id[idx] = i;
 	}
 
 	if (!double_density) {
@@ -863,7 +819,7 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		/* Single density */
 		write_bytes(20, 0xff);
 		for (unsigned sector = 0; sector < nsectors; sector++) {
-			uint8_t sect = sect_interleave ? sect_interleave[sector] : sector;
+			int sect = sector_id[sector];
 			write_bytes(6, 0x00);
 			mem_crc = CRC16_RESET;
 			idams[idam++] = mem_offset | VDISK_SINGLE_DENSITY;
@@ -901,7 +857,8 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		write_bytes(1, 0xfc);
 		write_bytes(32, 0x4e);
 		for (unsigned sector = 0; sector < nsectors; sector++) {
-			uint8_t sect = sect_interleave ? sect_interleave[sector] : sector;
+			int sect = sector_id[sector];
+			LOG_DEBUG(0, "%2d ", sect + first_sector);
 			write_bytes(8, 0x00);
 			mem_crc = CRC16_RESET;
 			write_bytes(3, 0xa1);
@@ -921,6 +878,7 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 			write_crc();
 			write_bytes(gap3, 0x4e);
 		}
+		LOG_DEBUG(0, "\n");
 		/* fill to end of disk */
 		while (mem_offset != 128) {
 			write_bytes(1, 0x4e);
@@ -931,10 +889,11 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 }
 
 int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
+		      unsigned ncyls, unsigned nheads,
 		      unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
 	if (disk == NULL) return 0;
-	for (unsigned cyl = 0; cyl < disk->num_cylinders; cyl++) {
-		for (unsigned head = 0; head < disk->num_heads; head++) {
+	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
+		for (unsigned head = 0; head < nheads; head++) {
 			int ret = vdisk_format_track(disk, double_density, cyl, head, nsectors, first_sector, ssize_code);
 			if (ret != 0)
 				return ret;
@@ -1020,6 +979,10 @@ int vdisk_fetch_sector(struct vdisk const *disk, unsigned cyl, unsigned head,
 	unsigned ssize, i;
 	if (!disk)
 		return -1;
+	if (cyl >= disk->num_cylinders) {
+		memset(buf, 0xe5, sector_length);
+		return -1;
+	}
 	idams = vdisk_track_base(disk, cyl, head);
 	if (!idams)
 		return -1;

@@ -182,7 +182,7 @@ void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive) {
 	if (!vip->drives[drive].disk)
 		return;
 	vdisk_save(vip->drives[drive].disk, 0);
-	vdisk_destroy(vip->drives[drive].disk);
+	vdisk_free(vip->drives[drive].disk);
 	vip->drives[drive].disk = NULL;
 	update_signals(vip);
 }
