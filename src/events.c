@@ -25,9 +25,11 @@
 #include "events.h"
 #include "logging.h"
 
+extern inline int event_tick_delta(event_ticks t0, event_ticks t1);
 extern inline _Bool event_pending(struct event **list);
 extern inline void event_dispatch_next(struct event **list);
 extern inline void event_run_queue(struct event **list);
+
 
 event_ticks event_current_tick = 0;
 
@@ -58,7 +60,7 @@ void event_queue(struct event **list, struct event *event) {
 	event->list = list;
 	event->queued = 1;
 	for (entry = list; *entry; entry = &((*entry)->next)) {
-		if ((event->at_tick - (*entry)->at_tick) > (EVENT_TICK_MAX/2)) {
+		if (event_tick_delta(event->at_tick, (*entry)->at_tick) < 0) {
 			event->next = *entry;
 			*entry = event;
 			return;

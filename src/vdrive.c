@@ -320,12 +320,12 @@ void vdrive_write_idam(void *sptr) {
 unsigned vdrive_time_to_next_byte(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
 	event_ticks next_cycle = vip->track_start_cycle + (vip->head_pos - 128) * BYTE_TIME;
-	unsigned to_time = next_cycle - event_current_tick;
-	if (to_time > (UINT_MAX/2)) {
+	int to_time = event_tick_delta(next_cycle, event_current_tick);
+	if (to_time < 0) {
 		LOG_DEBUG(3, "Negative time to next byte!\n");
 		return 1;
 	}
-	return to_time;
+	return (unsigned)to_time;
 }
 
 /* Calculates the number of cycles it would take to get from the current head
@@ -352,8 +352,8 @@ unsigned vdrive_time_to_next_idam(void *sptr) {
 		return vip->index_pulse_event.at_tick - event_current_tick;
 	}
 	next_cycle = vip->track_start_cycle + (next_head_pos - 128) * BYTE_TIME;
-	unsigned to_time = next_cycle - event_current_tick;
-	if (to_time > (UINT_MAX/2)) {
+	int to_time = event_tick_delta(next_cycle, event_current_tick);
+	if (to_time < 0) {
 		LOG_DEBUG(3, "Negative time to next IDAM!\n");
 		return 1;
 	}

@@ -18,7 +18,6 @@
 
 #include "config.h"
 
-#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -317,9 +316,9 @@ static void null_frames(struct sound_interface_private *snd, int nframes) {
  * update() function if buffer is full. */
 void sound_update(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	unsigned elapsed = (event_current_tick - snd->last_cycle);
+	int elapsed = event_tick_delta(event_current_tick, snd->last_cycle);
 	unsigned nframes = 0;
-	if (elapsed <= (UINT_MAX/2)) {
+	if (elapsed >= 0) {
 		float nframes_f = elapsed / snd->ticks_per_frame;
 		nframes = nframes_f;
 		snd->error_f += (nframes_f - nframes);

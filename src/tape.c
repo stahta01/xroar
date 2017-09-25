@@ -884,9 +884,9 @@ static void cbin(struct tape_interface_private *tip) {
 
 static void update_pskip(struct tape_interface_private *tip) {
 	event_ticks skip = tip->waggle_event.at_tick - event_current_tick;
-	skip = tip->in_pulse_width - skip;
-	if (skip <= (EVENT_TICK_MAX/2)) {
-		do_pulse_skip(tip, skip);
+	int s = event_tick_delta(tip->in_pulse_width, skip);
+	if (s >= 0) {
+		do_pulse_skip(tip, s);
 	}
 }
 
