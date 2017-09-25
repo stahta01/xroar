@@ -8,6 +8,7 @@ Version 0.35, unreleased
   * Added -C option to allocate debug console in Windows
   * Fix use of AltGr key in translated mode on Windows (SDL2)
   * Preliminary MOOH support, subject to change [Tormod Volden]
+  * Support reading JVC/DSK files with non-standard sectors per track
 
 Version 0.34, Sun Aug  7 2016
 
