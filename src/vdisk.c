@@ -71,6 +71,29 @@ static struct {
 static int interleave_sd = 1;
 static int interleave_dd = 1;
 
+const char *vdisk_errlist[] = {
+	"No error",
+	"Internal error",
+	"Bad geometry",
+	"Too many sectors",
+	"Track missing",
+	"Sector not found",
+	"IDAM not found",
+	"DAM not found",
+	"Bad sector size",
+	"Bad IDAM",
+	"Bad sector size code",
+	"IDAM CRC error",
+	"Data CRC error",
+	"Unknown error"
+};
+
+const char *vdisk_strerror(int errnum) {
+	if (errnum < 0 || errnum > vdisk_err_max)
+		errnum = vdisk_err_max;
+	return vdisk_errlist[errnum];
+}
+
 void vdisk_set_interleave(int density, int interleave) {
 	if (density == VDISK_SINGLE_DENSITY) {
 		interleave_sd = interleave;
@@ -95,6 +118,7 @@ struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm) {
 	struct vdisk *disk = xmalloc(sizeof(*disk));
 	*disk = (struct vdisk){0};
 	disk->side_data = xmalloc(MAX_HEADS * sizeof(*disk->side_data));
+	disk->ref_count = 1;
 	for (unsigned i = 0; i < MAX_HEADS; i++)
 		disk->side_data[i] = NULL;
 	disk->filetype = FILETYPE_DMK;
@@ -103,8 +127,17 @@ struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm) {
 	return disk;
 }
 
-void vdisk_free(struct vdisk *disk) {
-	if (!disk)
+struct vdisk *vdisk_ref(struct vdisk *disk) {
+	assert(disk != NULL);
+	disk->ref_count++;
+	return disk;
+}
+
+void vdisk_unref(struct vdisk *disk) {
+	assert(disk != NULL);
+	assert(disk->ref_count > 0);
+	disk->ref_count--;
+	if (disk->ref_count > 0)
 		return;
 	if (disk->filename)
 		free(disk->filename);
@@ -200,11 +233,16 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	uint8_t buf[1024];
 	FILE *fd;
 	struct stat statbuf;
-	if (stat(filename, &statbuf) != 0)
+
+	if (stat(filename, &statbuf) != 0) {
+		LOG_WARN("Failed to stat '%s'\n", filename);
 		return NULL;
+	}
 	file_size = statbuf.st_size;
-	if (!(fd = fopen(filename, "rb")))
+	if (!(fd = fopen(filename, "rb"))) {
+		LOG_WARN("Failed to open '%s'\n", filename);
 		return NULL;
+	}
 	if (fread(buf, 12, 1, fd) < 1) {
 		LOG_WARN("Failed to read VDK header in '%s'\n", filename);
 		fclose(fd);
@@ -213,6 +251,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	file_size -= 12;
 	(void)file_size;  // TODO: check this matches what's going to be read
 	if (buf[0] != 'd' || buf[1] != 'k') {
+		LOG_WARN("Bad VDK header in '%s'\n", filename);
 		fclose(fd);
 		return NULL;
 	}
@@ -228,11 +267,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	vdk_filename_length = buf[11] >> 3;
 	uint8_t *vdk_extra = NULL;
 	if (header_size > 0) {
-		vdk_extra = malloc(header_size);
-		if (!vdk_extra) {
-			fclose(fd);
-			return NULL;
-		}
+		vdk_extra = xmalloc(header_size);
 		if (fread(vdk_extra, header_size, 1, fd) < 1) {
 			LOG_WARN("Failed to read VDK header in '%s'\n", filename);
 			free(vdk_extra);
@@ -249,9 +284,12 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	disk->fmt.vdk.filename_length = vdk_filename_length;
 	disk->fmt.vdk.extra = vdk_extra;
 
-	if (vdisk_format_disk(disk, 1, ncyls, nheads, nsectors, 1, ssize_code) != 0) {
+	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
+
+	if (!vdisk_format_disk(ctx, 1, ncyls, nheads, nsectors, 1, ssize_code)) {
 		fclose(fd);
-		vdisk_free(disk);
+		vdisk_ctx_free(ctx);
+		vdisk_unref(disk);
 		return NULL;
 	}
 	LOG_DEBUG(1, "Loading VDK virtual disk: %uC %uH %uS (%u-byte)\n", ncyls, nheads, nsectors, ssize);
@@ -261,11 +299,18 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 				if (fread(buf, ssize, 1, fd) < 1) {
 					memset(buf, 0, ssize);
 				}
-				vdisk_update_sector(disk, cyl, head, sector + 1, ssize, buf);
+				if (!vdisk_write_sector(ctx, cyl, head, sector + 1, ssize, buf)) {
+					LOG_WARN("Failed writing C%d H%d S%d: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					fclose(fd);
+					vdisk_ctx_free(ctx);
+					vdisk_unref(disk);
+					return NULL;
+				}
 			}
 		}
 	}
 	fclose(fd);
+	vdisk_ctx_free(ctx);
 	return disk;
 }
 
@@ -295,6 +340,7 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 		return -1;
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
+	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
 	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%u-byte)\n", disk->num_cylinders, disk->num_heads, disk->track_length);
 	uint16_t header_length = 12;
 	buf[0] = 'd';   // magic
@@ -319,11 +365,12 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < disk->num_heads; head++) {
 			for (unsigned sector = 0; sector < 18; sector++) {
-				vdisk_fetch_sector(disk, cyl, head, sector + 1, 256, buf);
+				vdisk_read_sector(ctx, cyl, head, sector + 1, 256, buf);
 				fwrite(buf, 256, 1, fd);
 			}
 		}
 	}
+	vdisk_ctx_free(ctx);
 	fclose(fd);
 	return 0;
 }
@@ -459,9 +506,11 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	disk->filetype = FILETYPE_JVC;
 	disk->filename = xstrdup(filename);
 	disk->fmt.jvc.headerless_os9 = headerless_os9;
-	if (vdisk_format_disk(disk, double_density, ncyls, nheads, nsectors, first_sector, ssize_code) != 0) {
+	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
+	if (!vdisk_format_disk(ctx, double_density, ncyls, nheads, nsectors, first_sector, ssize_code)) {
 		fclose(fd);
-		vdisk_free(disk);
+		vdisk_ctx_free(ctx);
+		vdisk_unref(disk);
 		return NULL;
 	}
 	if (headerless_os9) {
@@ -480,11 +529,18 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 				if (fread(buf, ssize, 1, fd) < 1) {
 					memset(buf, 0, ssize);
 				}
-				vdisk_update_sector(disk, cyl, head, sector + first_sector, ssize, buf);
+				if (!vdisk_write_sector(ctx, cyl, head, sector + first_sector, ssize, buf)) {
+					LOG_WARN("Failed writing C%d H%d S%d: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					fclose(fd);
+					vdisk_ctx_free(ctx);
+					vdisk_unref(disk);
+					return NULL;
+				}
 			}
 		}
 	}
 	fclose(fd);
+	vdisk_ctx_free(ctx);
 	return disk;
 }
 
@@ -504,6 +560,7 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 		return -1;
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
+	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
 	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%u-byte)\n", disk->num_cylinders, disk->num_heads, disk->track_length);
 
 	// TODO: scan the disk to potentially correct these assumptions
@@ -526,12 +583,13 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < disk->num_heads; head++) {
 			for (unsigned sector = 0; sector < nsectors; sector++) {
-				vdisk_fetch_sector(disk, cyl, head, sector + 1, 256, buf);
+				vdisk_read_sector(ctx, cyl, head, sector + 1, 256, buf);
 				fwrite(buf, 256, 1, fd);
 			}
 		}
 	}
 	fclose(fd);
+	vdisk_ctx_free(ctx);
 	return 0;
 }
 
@@ -664,6 +722,61 @@ static int vdisk_save_dmk(struct vdisk *disk) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
+ * Helper functions for dealing with the in-memory disk images.
+ */
+
+struct vdisk_ctx *vdisk_ctx_new(struct vdisk *disk) {
+	struct vdisk_ctx *ctx = xmalloc(sizeof(*ctx));
+	*ctx = (struct vdisk_ctx){0};
+	ctx->disk = vdisk_ref(disk);
+	return ctx;
+}
+
+void vdisk_ctx_free(struct vdisk_ctx *ctx) {
+	vdisk_unref(ctx->disk);
+	free(ctx);
+}
+
+static _Bool vdisk_ctx_check(struct vdisk_ctx *ctx) {
+	if (!ctx) {
+		vdisk_errno = vdisk_err_internal;
+		return 0;
+	}
+	if (!ctx->disk) {
+		vdisk_errno = vdisk_err_internal;
+		return 0;
+	}
+	return 1;
+}
+
+static _Bool vdisk_ctx_check_geometry(unsigned cyl, unsigned head) {
+	if (cyl >= MAX_CYLINDERS || head >= MAX_HEADS) {
+		vdisk_errno = vdisk_err_bad_geometry;
+		return 0;
+	}
+	return 1;
+}
+
+_Bool vdisk_ctx_seek(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head) {
+	if (!vdisk_ctx_check(ctx))
+		return 0;
+	if (!vdisk_ctx_check_geometry(cyl, head))
+		return 0;
+	ctx->cyl = cyl;
+	ctx->head = head;
+	void *track_data = NULL;
+	if (extend) {
+		track_data = vdisk_extend_disk(ctx->disk, cyl, head);
+	} else {
+		track_data = vdisk_track_base(ctx->disk, cyl, head);
+	}
+	ctx->idam_data = track_data;
+	ctx->track_data = track_data;
+	ctx->head_pos = 128;
+	return (track_data != NULL);
+}
+
+/*
  * Returns a pointer to the beginning of the specified track.  Return type is
  * (void *) because track data is manipulated in 8-bit and 16-bit chunks.
  */
@@ -681,8 +794,7 @@ void *vdisk_track_base(struct vdisk const *disk, unsigned cyl, unsigned head) {
  */
 
 void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
-	if (!disk)
-		return NULL;
+	assert(disk != NULL);
 	if (cyl >= MAX_CYLINDERS)
 		return NULL;
 	uint8_t **side_data = disk->side_data;
@@ -721,88 +833,79 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Helper functions for dealing with the in-memory disk images.
- */
-
-/* Keep track of these separately for direct access to memory image: */
-
-static unsigned mem_track_length;
-static uint8_t *mem_track_base;
-static unsigned mem_offset;
-static _Bool mem_double_density;
-static uint16_t mem_crc;
-
 /* Write 'repeat' bytes of 'data', update CRC */
 
-static void write_bytes(unsigned repeat, uint8_t data) {
-	assert(mem_offset >= 128);
-	assert(mem_offset < mem_track_length);
-	unsigned nbytes = mem_double_density ? 1 : 2;
+static void write_bytes(struct vdisk_ctx *ctx, unsigned repeat, uint8_t data) {
+	assert(ctx->head_pos >= 128);
+	assert(ctx->head_pos < ctx->disk->track_length);
+	unsigned nbytes = ctx->dden ? 1 : 2;
 	for ( ; repeat; repeat--) {
 		for (unsigned i = nbytes; i; i--) {
-			mem_track_base[mem_offset++] = data;
-			if (mem_offset >= mem_track_length)
-				mem_offset = 128;
+			ctx->track_data[ctx->head_pos++] = data;
+			if (ctx->head_pos >= ctx->disk->track_length)
+				ctx->head_pos = 128;
 		}
-		mem_crc = crc16_byte(mem_crc, data);
+		ctx->crc = crc16_byte(ctx->crc, data);
 	}
 }
 
-/* Write CRC, should leave mem_crc == 0 */
+/* Write CRC, should leave ctx->crc == 0 */
 
-static void write_crc(void) {
-	uint8_t hi = mem_crc >> 8;
-	uint8_t lo = mem_crc & 0xff;
-	write_bytes(1, hi);
-	write_bytes(1, lo);
+static void write_crc(struct vdisk_ctx *ctx) {
+	uint8_t hi = ctx->crc >> 8;
+	uint8_t lo = ctx->crc & 0xff;
+	write_bytes(ctx, 1, hi);
+	write_bytes(ctx, 1, lo);
 }
 
 /* Read a byte, update CRC */
 
-static uint8_t read_byte(void) {
-	assert(mem_offset >= 128);
-	assert(mem_offset < mem_track_length);
-	int nbytes = mem_double_density ? 1 : 2;
-	uint8_t data = mem_track_base[mem_offset];
-	mem_crc = crc16_byte(mem_crc, data);
+static uint8_t read_byte(struct vdisk_ctx *ctx) {
+	if (!ctx->track_data)
+		return 0;
+	assert(ctx->head_pos >= 128);
+	assert(ctx->head_pos < ctx->disk->track_length);
+	int nbytes = ctx->dden ? 1 : 2;
+	uint8_t data = ctx->track_data[ctx->head_pos];
+	ctx->crc = crc16_byte(ctx->crc, data);
 	for (int i = 0; i < nbytes; i++) {
-		mem_offset++;
-		if (mem_offset >= mem_track_length)
-			mem_offset = 128;
+		ctx->head_pos++;
+		if (ctx->head_pos >= ctx->disk->track_length)
+			ctx->head_pos = 128;
 	}
 	return data;
 }
 
 /* Read CRC bytes and return 1 if valid */
 
-static _Bool read_crc(void) {
-	(void)read_byte();
-	(void)read_byte();
-	return mem_crc == 0;
+static _Bool read_crc(struct vdisk_ctx *ctx) {
+	(void)read_byte(ctx);
+	(void)read_byte(ctx);
+	return ctx->crc == 0;
 }
 
-int vdisk_format_track(struct vdisk *disk, _Bool double_density,
-		       unsigned cyl, unsigned head,
-		       unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
+_Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
+			 unsigned cyl, unsigned head,
+			 unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
 
-	if (!disk || cyl > 255 || nsectors > 64 || ssize_code > 3) {
-		LOG_DEBUG(0, "vdisk_format_track(): XXX\n");
-		return -1;
+	if (!vdisk_ctx_seek(ctx, 1, cyl, head))
+		return 0;
+
+	if (cyl > 255 || nsectors > 64 || ssize_code > 3) {
+		vdisk_errno = vdisk_err_bad_geometry;
+		return 0;
 	}
 
-	LOG_DEBUG(0, "vdisk_format_track(): C%d H%d\n", cyl, head);
+	struct vdisk *disk = ctx->disk;
 
-	uint16_t *idams = vdisk_extend_disk(disk, cyl, head);
+	vdisk_ctx_seek(ctx, 1, cyl, head);
 	unsigned idam = 0;
 	unsigned ssize = 128 << ssize_code;
 
-	mem_track_length = disk->track_length;
-	mem_track_base = (uint8_t *)idams;
-	mem_offset = 128;
-	mem_double_density = double_density;
+	ctx->head_pos = 128;
+	ctx->dden = dden;
 
-	int interleave = double_density ? interleave_dd : interleave_sd;
+	int interleave = dden ? interleave_dd : interleave_sd;
 	int sector_id[nsectors];
 	int idx = -interleave;
 	for (unsigned i = 0; i < nsectors; i++)
@@ -814,32 +917,32 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		sector_id[idx] = i;
 	}
 
-	if (!double_density) {
+	if (!dden) {
 
 		/* Single density */
-		write_bytes(20, 0xff);
+		write_bytes(ctx, 20, 0xff);
 		for (unsigned sector = 0; sector < nsectors; sector++) {
 			int sect = sector_id[sector];
-			write_bytes(6, 0x00);
-			mem_crc = CRC16_RESET;
-			idams[idam++] = mem_offset | VDISK_SINGLE_DENSITY;
-			write_bytes(1, 0xfe);
-			write_bytes(1, cyl);
-			write_bytes(1, head);
-			write_bytes(1, sect + first_sector);
-			write_bytes(1, ssize_code);
-			write_crc();
-			write_bytes(11, 0xff);
-			write_bytes(6, 0x00);
-			mem_crc = CRC16_RESET;
-			write_bytes(1, 0xfb);
-			write_bytes(ssize, 0xe5);
-			write_crc();
-			write_bytes(12, 0xff);
+			write_bytes(ctx, 6, 0x00);
+			ctx->crc = CRC16_RESET;
+			ctx->idam_data[idam++] = ctx->head_pos | VDISK_SINGLE_DENSITY;
+			write_bytes(ctx, 1, 0xfe);
+			write_bytes(ctx, 1, cyl);
+			write_bytes(ctx, 1, head);
+			write_bytes(ctx, 1, sect + first_sector);
+			write_bytes(ctx, 1, ssize_code);
+			write_crc(ctx);
+			write_bytes(ctx, 11, 0xff);
+			write_bytes(ctx, 6, 0x00);
+			ctx->crc = CRC16_RESET;
+			write_bytes(ctx, 1, 0xfb);
+			write_bytes(ctx, ssize, 0xe5);
+			write_crc(ctx);
+			write_bytes(ctx, 12, 0xff);
 		}
 		/* fill to end of disk */
-		while (mem_offset != 128) {
-			write_bytes(1, 0xff);
+		while (ctx->head_pos != 128) {
+			write_bytes(ctx, 1, 0xff);
 		}
 
 	} else {
@@ -851,55 +954,55 @@ int vdisk_format_track(struct vdisk *disk, _Bool double_density,
 		int gap3 = 1 + (gap * 412) / (584 * nsectors);
 
 		/* Double density */
-		write_bytes(pigap, 0x4e);
-		write_bytes(9, 0x00);
-		write_bytes(3, 0xc2);
-		write_bytes(1, 0xfc);
-		write_bytes(32, 0x4e);
+		write_bytes(ctx, pigap, 0x4e);
+		write_bytes(ctx, 9, 0x00);
+		write_bytes(ctx, 3, 0xc2);
+		write_bytes(ctx, 1, 0xfc);
+		write_bytes(ctx, 32, 0x4e);
 		for (unsigned sector = 0; sector < nsectors; sector++) {
 			int sect = sector_id[sector];
-			LOG_DEBUG(0, "%2d ", sect + first_sector);
-			write_bytes(8, 0x00);
-			mem_crc = CRC16_RESET;
-			write_bytes(3, 0xa1);
-			idams[idam++] = mem_offset | VDISK_DOUBLE_DENSITY;
-			write_bytes(1, 0xfe);
-			write_bytes(1, cyl);
-			write_bytes(1, head);
-			write_bytes(1, sect + first_sector);
-			write_bytes(1, ssize_code);
-			write_crc();
-			write_bytes(gap2, 0x4e);
-			write_bytes(12, 0x00);
-			mem_crc = CRC16_RESET;
-			write_bytes(3, 0xa1);
-			write_bytes(1, 0xfb);
-			write_bytes(ssize, 0xe5);
-			write_crc();
-			write_bytes(gap3, 0x4e);
+			write_bytes(ctx, 8, 0x00);
+			ctx->crc = CRC16_RESET;
+			write_bytes(ctx, 3, 0xa1);
+			ctx->idam_data[idam++] = ctx->head_pos | VDISK_DOUBLE_DENSITY;
+			write_bytes(ctx, 1, 0xfe);
+			write_bytes(ctx, 1, cyl);
+			write_bytes(ctx, 1, head);
+			write_bytes(ctx, 1, sect + first_sector);
+			write_bytes(ctx, 1, ssize_code);
+			write_crc(ctx);
+			write_bytes(ctx, gap2, 0x4e);
+			write_bytes(ctx, 12, 0x00);
+			ctx->crc = CRC16_RESET;
+			write_bytes(ctx, 3, 0xa1);
+			write_bytes(ctx, 1, 0xfb);
+			write_bytes(ctx, ssize, 0xe5);
+			write_crc(ctx);
+			write_bytes(ctx, gap3, 0x4e);
 		}
-		LOG_DEBUG(0, "\n");
 		/* fill to end of disk */
-		while (mem_offset != 128) {
-			write_bytes(1, 0x4e);
+		while (ctx->head_pos != 128) {
+			write_bytes(ctx, 1, 0x4e);
 		}
 
 	}
-	return 0;
+	return 1;
 }
 
-int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
-		      unsigned ncyls, unsigned nheads,
-		      unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
-	if (disk == NULL) return 0;
+_Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
+			unsigned ncyls, unsigned nheads,
+			unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
+	assert(ctx != NULL);
+	assert(ctx->disk != NULL);
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < nheads; head++) {
-			int ret = vdisk_format_track(disk, double_density, cyl, head, nsectors, first_sector, ssize_code);
-			if (ret != 0)
-				return ret;
+			if (!vdisk_format_track(ctx, dden, cyl, head, nsectors, first_sector, ssize_code)) {
+				LOG_WARN("Track format failed: %s\n", vdisk_strerror(vdisk_errno));
+				return 0;
+			}
 		}
 	}
-	return 0;
+	return 1;
 }
 
 /*
@@ -907,65 +1010,47 @@ int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
  * from that provided.
  */
 
-int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
-			unsigned sector, unsigned sector_length, uint8_t *buf) {
-	uint16_t *idams;
-	unsigned ssize, i;
+_Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+			 unsigned sector, unsigned ssize, uint8_t *buf) {
 
-	if (disk == NULL)
-		return -1;
-	idams = vdisk_extend_disk(disk, cyl, head);
-	if (idams == NULL)
-		return -1;
-	mem_track_length = disk->track_length;
-	mem_track_base = (uint8_t *)idams;
-	for (i = 0; i < 64; i++) {
-		mem_offset = idams[i] & 0x3fff;
-		mem_double_density = idams[i] & VDISK_DOUBLE_DENSITY;
-		mem_crc = CRC16_RESET;
-		if (mem_double_density) {
-			for (unsigned j = 3; j; j--)
-				mem_crc = crc16_byte(mem_crc, 0xa1);
+	struct vdisk_idam vidam;
+
+	for (unsigned i = 0; i < 64; i++) {
+		if (!vdisk_read_idam(ctx, &vidam, cyl, head, i))
+			return 0;
+		if (!vidam.valid)
+			continue;
+
+		// not currently testing that stored track number matches
+		if (vidam.sector == sector) {
+			ctx->idam_crc_error = (vidam.crc != 0);
+			if (ctx->dden) {
+				for (unsigned j = 0; j < 22; j++)
+					(void)read_byte(ctx);
+				write_bytes(ctx, 12, 0);
+				ctx->crc = CRC16_RESET;
+				write_bytes(ctx, 3, 0xa1);
+			} else {
+				for (unsigned j = 0; j < 11; j++)
+					(void)read_byte(ctx);
+				write_bytes(ctx, 6, 0);
+				ctx->crc = CRC16_RESET;
+			}
+			write_bytes(ctx, 1, 0xfb);
+			unsigned vseclen = 128 << vidam.ssize_code;
+			unsigned j = 0;
+			while (j < ssize && j < vseclen)
+				write_bytes(ctx, 1, buf[j++]);
+			while (j < vseclen)
+				write_bytes(ctx, 1, 0);
+			write_crc(ctx);
+			ctx->data_crc_error = 0;
+			write_bytes(ctx, 1, 0xfe);
+			return 1;
 		}
-		(void)read_byte();
-		if (read_byte() == cyl && read_byte() == head && read_byte() == sector) {
-			break;
-		}
-	}
-	if (i >= 64)
-		return -1;
-
-	unsigned ssize_code = read_byte();
-	if (ssize_code > 3)
-		return -1;
-	ssize = 128 << ssize_code;
-
-	(void)read_crc();  // discard CRC result for now
-
-	if (mem_double_density) {
-		for (i = 0; i < 22; i++)
-			(void)read_byte();
-		write_bytes(12, 0x00);
-		mem_crc = CRC16_RESET;
-		write_bytes(3, 0xa1);
-	} else {
-		for (i = 0; i < 11; i++)
-			(void)read_byte();
-		write_bytes(6, 0x00);
-		mem_crc = CRC16_RESET;
 	}
 
-	write_bytes(1, 0xfb);
-	for (i = 0; i < sector_length; i++) {
-		if (i < ssize)
-			write_bytes(1, buf[i]);
-	}
-	// On-disk sector size may differ from provided sector_length
-	for ( ; i < ssize; i++)
-		write_bytes(1, 0x00);
-	write_crc();
-	write_bytes(1, 0xfe);
-
+	vdisk_errno = vdisk_err_sector_not_found;
 	return 0;
 }
 
@@ -973,57 +1058,88 @@ int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
  * Similarly, locate a sector and copy out its data.
  */
 
-int vdisk_fetch_sector(struct vdisk const *disk, unsigned cyl, unsigned head,
-		       unsigned sector, unsigned sector_length, uint8_t *buf) {
-	uint16_t *idams;
-	unsigned ssize, i;
-	if (!disk)
-		return -1;
-	if (cyl >= disk->num_cylinders) {
-		memset(buf, 0xe5, sector_length);
-		return -1;
-	}
-	idams = vdisk_track_base(disk, cyl, head);
-	if (!idams)
-		return -1;
-	mem_track_length = disk->track_length;
-	mem_track_base = (uint8_t *)idams;
-	for (i = 0; i < 64; i++) {
-		mem_offset = idams[i] & 0x3fff;
-		mem_double_density = idams[i] & VDISK_DOUBLE_DENSITY;
-		mem_crc = CRC16_RESET;
-		if (mem_double_density) {
-			for (unsigned j = 3; j; j--)
-				mem_crc = crc16_byte(mem_crc, 0xa1);
+_Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+			unsigned sector, unsigned ssize, uint8_t *buf) {
+
+	struct vdisk_idam vidam;
+
+	memset(buf, 0, ssize);
+	for (unsigned i = 0; i < 64; i++) {
+		if (!vdisk_read_idam(ctx, &vidam, cyl, head, i))
+			return 0;
+		if (!vidam.valid)
+			continue;
+
+		// not currently testing that stored track number matches
+		if (vidam.sector == sector) {
+			ctx->idam_crc_error = (vidam.crc != 0);
+			unsigned j;
+			for (j = 0; j < 43; j++) {
+				if (read_byte(ctx) == 0xfb)
+					break;
+			}
+			if (j >= 43) {
+				vdisk_errno = vdisk_err_dam_not_found;
+				return 0;
+			}
+			unsigned vseclen = 128 << vidam.ssize_code;
+			j = 0;
+			while (j < ssize && j < vseclen)
+				buf[j++] = read_byte(ctx);
+			while (j < vseclen)
+				(void)read_byte(ctx);
+			ctx->data_crc_error = !read_crc(ctx);
+			return 1;
 		}
-		(void)read_byte();
-		if (read_byte() == cyl && read_byte() == head && read_byte() == sector)
-			break;
-	}
-	if (i >= 64) {
-		memset(buf, 0, sector_length);
-		return -1;
 	}
 
-	unsigned ssize_code = read_byte();
-	if (ssize_code > 3)
-		return -1;
-	ssize = 128 << ssize_code;
-	if (ssize > sector_length)
-		ssize = sector_length;
-
-	(void)read_crc();  // discard CRC result for now
-
-	for (i = 0; i < 43; i++) {
-		if (read_byte() == 0xfb)
-			break;
-	}
-	if (i >= 43)
-		return -1;
-	for (i = 0; i < ssize; i++) {
-		buf[i] = read_byte();
-	}
-	(void)read_crc();  // discard CRC result for now
-
+	vdisk_errno = vdisk_err_sector_not_found;
 	return 0;
+}
+
+/*
+ * Read numbered IDAM from specified track.  Returns true only if information
+ * has been populated.  Doesn't verify data, but sets crc_error if necessary.
+ */
+
+_Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
+		      unsigned cyl, unsigned head, unsigned idam) {
+
+	if (cyl >= MAX_CYLINDERS || head >= MAX_HEADS || idam >= 64) {
+		vdisk_errno = vdisk_err_internal;
+		return 0;
+	}
+
+	if (!vdisk_ctx_seek(ctx, 0, cyl, head))
+		return 0;
+
+	if (ctx->idam_data[idam] == 0) {
+		vidam->valid = 0;
+		return 1;
+	}
+
+	unsigned head_pos = ctx->idam_data[idam] & 0x3fff;
+	if (head_pos < 128 || head_pos >= ctx->disk->track_length) {
+		vdisk_errno = vdisk_err_bad_idam;
+		return 0;
+	}
+	ctx->dden = ctx->idam_data[idam] & VDISK_DOUBLE_DENSITY;
+	ctx->head_pos = head_pos;
+
+	(void)read_byte(ctx);  // skip idam byte
+	ctx->crc = CRC16_RESET;
+	if (ctx->dden) {
+		ctx->crc = crc16_byte(ctx->crc, 0xa1);
+		ctx->crc = crc16_byte(ctx->crc, 0xa1);
+		ctx->crc = crc16_byte(ctx->crc, 0xa1);
+	}
+	vidam->valid = 1;
+	vidam->track = read_byte(ctx);
+	vidam->side = read_byte(ctx);
+	vidam->sector = read_byte(ctx);
+	vidam->ssize_code = read_byte(ctx);
+	vidam->crc = read_byte(ctx) << 8;
+	vidam->crc |= read_byte(ctx);
+
+	return 1;
 }

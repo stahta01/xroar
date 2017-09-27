@@ -13,6 +13,23 @@
 #define VDISK_DOUBLE_DENSITY (0x8000)
 #define VDISK_SINGLE_DENSITY (0x0000)
 
+enum vdisk_err {
+	vdisk_ok = 0,
+	vdisk_err_internal,
+	vdisk_err_bad_geometry,  // invalid cylinder or head
+	vdisk_err_too_many_sectors,
+	vdisk_err_track_missing,  // may be valid
+	vdisk_err_sector_not_found,
+	vdisk_err_idam_not_found,
+	vdisk_err_dam_not_found,
+	vdisk_err_bad_sector_size,
+	vdisk_err_bad_idam,
+	vdisk_err_bad_ssize_code,
+	vdisk_err_idam_crc,
+	vdisk_err_data_crc,
+	vdisk_err_max
+} vdisk_errno;
+
 /*
  * If write_back is not set, the image file will not be updated when the disk
  * is ejected or flushed.
@@ -25,6 +42,8 @@
  */
 
 struct vdisk {
+	unsigned ref_count;
+
 	enum xroar_filetype filetype;
 	char *filename;
 	_Bool write_back;
@@ -46,11 +65,59 @@ struct vdisk {
 	} fmt;
 };
 
+/*
+ * struct vdisk_ctx used to track various data while manipulating a disk image.
+ */
+
+struct vdisk_ctx {
+	struct vdisk *disk;
+
+	unsigned cyl;
+	unsigned head;
+	uint16_t *idam_data;
+	uint8_t *track_data;
+
+	_Bool dden;
+	unsigned head_pos;
+	unsigned crc;
+
+	_Bool idam_crc_error;
+	_Bool data_crc_error;
+};
+
+struct vdisk_idam {
+	_Bool valid;
+	unsigned track;
+	unsigned side;
+	unsigned sector;
+	unsigned ssize_code;
+	unsigned crc;
+};
+
+enum vdisk_density {
+	vdisk_density_single,
+	vdisk_density_double,
+	vdisk_density_mixed,
+};
+
+// vdisk_get_disk_info() populates this struct:
+
+struct vdisk_info {
+	unsigned num_cylinders;
+	unsigned num_heads;
+	unsigned num_sectors;
+	unsigned first_sector_id;
+	enum vdisk_density density;
+};
+
+const char *vdisk_strerror(int errnum);
+
 // Set interleave of subsequently formatted disks.
 void vdisk_set_interleave(int density, int interleave);
 
 struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm);
-void vdisk_free(struct vdisk *disk);
+struct vdisk *vdisk_ref(struct vdisk *disk);
+void vdisk_unref(struct vdisk *disk);
 
 struct vdisk *vdisk_load(const char *filename);
 int vdisk_save(struct vdisk *disk, _Bool force);
@@ -65,15 +132,28 @@ int vdisk_save(struct vdisk *disk, _Bool force);
 void *vdisk_track_base(struct vdisk const *disk, unsigned cyl, unsigned head);
 void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head);
 
-int vdisk_format_track(struct vdisk *disk, _Bool double_density,
-		       unsigned cyl, unsigned head,
-		       unsigned nsectors, unsigned first_sector, unsigned ssize_code);
-int vdisk_format_disk(struct vdisk *disk, _Bool double_density,
-		      unsigned ncyls, unsigned nheads,
-		      unsigned nsectors, unsigned first_sector, unsigned ssize_code);
-int vdisk_update_sector(struct vdisk *disk, unsigned cyl, unsigned head,
+struct vdisk_ctx *vdisk_ctx_new(struct vdisk *disk);
+void vdisk_ctx_free(struct vdisk_ctx *ctx);
+
+_Bool vdisk_ctx_seek(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head);
+
+_Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
+			 unsigned cyl, unsigned head,
+			 unsigned nsectors, unsigned first_sector, unsigned ssize_code);
+_Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
+			unsigned ncyls, unsigned nheads,
+			unsigned nsectors, unsigned first_sector, unsigned ssize_code);
+
+_Bool vdisk_set_track(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head);
+
+_Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+			 unsigned sector, unsigned sector_length, uint8_t *buf);
+_Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			unsigned sector, unsigned sector_length, uint8_t *buf);
-int vdisk_fetch_sector(struct vdisk const *disk, unsigned cyl, unsigned head,
-		       unsigned sector, unsigned sector_length, uint8_t *buf);
+
+// Return information about a particular IDAM.
+
+_Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
+		      unsigned cyl, unsigned head, unsigned idam);
 
 #endif  /* XROAR_VDISK_H_ */
