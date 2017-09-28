@@ -34,35 +34,42 @@ Extended keyboard handling for Windows32 using SDL.
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Map Windows32 scancode to SDL_Keycode. */
-static int *windows32_to_sdl_keycode = NULL;
+static int windows32_to_sdl_keycode[NVSC][NLEVELS];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void update_mapping_tables(void) {
 	// Build the vsc to SDL_Keycode mapping table.
-	if (windows32_to_sdl_keycode)
-		free(windows32_to_sdl_keycode);
-	windows32_to_sdl_keycode = xmalloc(sizeof(int) * NLEVELS * NVSC);
 	BYTE state[256];
 	memset(state, 0, sizeof(state));
 
-	for (int i = 0; i < NVSC * NLEVELS; i++) {
-		windows32_to_sdl_keycode[i] = SDLK_UNKNOWN;
+	for (int i = 0; i < NVSC; i++) {
+		for (int j = 0; j < NLEVELS; j++) {
+			windows32_to_sdl_keycode[i][j] = SDLK_UNKNOWN;
+		}
 	}
+
+	// Under Wine, SDL ends up thinking my AltGr (ISO_Level3_Shift) is F16.
+	// Odd.  However, all this is now tested on a real Windows box, and
+	// AltGr characters seem to be correctly determined.
 
 	for (int i = 0; i < NVSC; i++) {
 		UINT vsc = windows_vsc_table[i];
+		UINT vk = MapVirtualKey(vsc, MAPVK_VSC_TO_VK);
 		for (int j = 0; j < NLEVELS; j++) {
-			int k = i*NLEVELS + j;
 			state[VK_SHIFT] = (j & 1) ? 0x80 : 0;
-			// Wine seems to take the host input method rather than
-			// simulate AltGr+key, so I can't test this. SDL ends
-			// up thinking my AltGr (ISO_Level3_Shift) is F16.
+			state[VK_LSHIFT] = (j & 1) ? 0x80 : 0;
+			state[VK_MENU] = (j & 2) ? 0x80 : 0;
 			state[VK_RMENU] = (j & 2) ? 0x80 : 0;
-			Uint16 wchars[2];
-			UINT vk = MapVirtualKey(vsc, MAPVK_VSC_TO_VK);
-			if (ToUnicode(vk, vsc, state, wchars, sizeof(wchars)/sizeof(wchars[0]), 0) > 0) {
-				windows32_to_sdl_keycode[k] = wchars[0];
+			state[VK_CONTROL] = (j & 2) ? 0x80 : 0;
+			state[VK_LCONTROL] = (j & 2) ? 0x80 : 0;
+			Uint16 wchar;
+			// Request the key twice.  This way, dead keys should
+			// be mapped into the symbol representing the diacritic
+			// and the dead state cleared before the next mapping.
+			(void)ToUnicode(vk, vsc, state, &wchar, 1, 0);
+			if (ToUnicode(vk, vsc, state, &wchar, 1, 0) > 0) {
+				windows32_to_sdl_keycode[i][j] = wchar;
 			}
 		}
 	}
@@ -79,10 +86,11 @@ void sdl_windows32_keyboard_init(SDL_Window *sw) {
  * This includes the symbols on modified keys. */
 
 int sdl_windows32_keysym_to_unicode(SDL_Keysym *keysym) {
-	int shift_level = (keysym->mod & KMOD_RALT) ? 2 : 0;
-	shift_level |= (keysym->mod & (KMOD_LSHIFT|KMOD_RSHIFT)) ? 1 : 0;
+	if (keysym->scancode < 0 || keysym->scancode >= NVSC)
+		return SDLK_UNKNOWN;
 
 	// Determine expanded SDL_Keycode based on shift level.
-	int k = (keysym->scancode * NLEVELS) + shift_level;
-	return windows32_to_sdl_keycode[k];
+	int level = (keysym->mod & KMOD_RALT) ? 2 : 0;
+	level |= (keysym->mod & (KMOD_LSHIFT|KMOD_RSHIFT)) ? 1 : 0;
+	return windows32_to_sdl_keycode[keysym->scancode][level];
 }

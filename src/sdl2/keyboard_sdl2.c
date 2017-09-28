@@ -54,7 +54,6 @@ struct scancode_dkey_mapping {
 // symbol instead of their position.
 _Bool translation_mode = 0;
 
-static _Bool control = 0;
 static _Bool noratelimit_latch = 0;
 
 static int8_t scancode_to_dkey[SDL_NUM_SCANCODES];
@@ -337,7 +336,8 @@ void sdl_keypress(SDL_Keysym *keysym) {
 	}
 
 	_Bool shift = mod & KMOD_SHIFT;
-	control = mod & KMOD_CTRL;
+	_Bool ralt = mod & KMOD_RALT;
+	_Bool control = !ralt && (mod & KMOD_CTRL);
 
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
@@ -379,7 +379,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 	}
 
 	// If scancode has priority, never do a unicode lookup.
-	if (scancode_priority[scancode]) {
+	if (!ralt && scancode_priority[scancode]) {
 		keyboard_press(xroar_keyboard_interface, scancode_to_dkey[scancode]);
 		return;
 	}
@@ -448,7 +448,8 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 	}
 
 	_Bool shift = mod & KMOD_SHIFT;
-	control = mod & KMOD_CTRL;
+	_Bool ralt = mod & KMOD_RALT;
+	_Bool control = !ralt && (mod & KMOD_CTRL);
 
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
@@ -476,7 +477,7 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 		return;
 	}
 
-	if (translation_mode) {
+	if (!ralt && translation_mode) {
 		int unicode;
 		if (scancode >= SDL_NUM_SCANCODES)
 			return;

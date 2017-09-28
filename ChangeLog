@@ -6,6 +6,7 @@ Version 0.35, unreleased
   * New option -ao-gain (specify volume in dBFS)
   * CAS CUE support
   * Added -C option to allocate debug console in Windows
+  * Fix use of AltGr key in translated mode on Windows (SDL2)
 
 Version 0.34, Sun Aug  7 2016
 
