@@ -10,7 +10,7 @@
 
 extern HWND windows32_main_hwnd;
 
-int windows32_init(void);
+int windows32_init(_Bool alloc_console);
 void windows32_shutdown(void);
 
 void windows32_handle_wm_command(WPARAM wParam, LPARAM lParam);

@@ -473,6 +473,7 @@ static struct vdg_palette *get_machine_palette(void);
 struct ui_interface *xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
+	_Bool alloc_console = 0;
 	_Bool no_conffile = 0;
 	_Bool no_builtin = 0;
 
@@ -489,6 +490,14 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			// -no-c, disable conffile
 			no_conffile = 1;
 			argn++;
+		} else if (argn < argc && 0 == strcmp(argv[argn], "-C")) {
+			// Windows allocate console option
+			alloc_console = 1;
+			argn++;
+		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-C")) {
+			// Windows allocate console option
+			alloc_console = 0;
+			argn++;
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-builtin")) {
 			// -no-builtin, disable builtin config
 			no_builtin = 1;
@@ -499,7 +508,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 #ifdef WINDOWS32
-	windows32_init();
+	windows32_init(alloc_console);
 #endif
 
 	machine_init();
@@ -2044,11 +2053,15 @@ static struct xconfig_option const xroar_options[] = {
 static void helptext(void) {
 #ifdef LOGGING
 	puts(
-"Usage: xroar [-c CONFFILE] [OPTION]...\n"
+"Usage: xroar [STARTUP-OPTION]... [OPTION]...\n"
 "XRoar is a Dragon emulator.  Due to hardware similarities, XRoar also\n"
 "emulates the Tandy Colour Computer (CoCo) models 1 & 2.\n"
 
-"\n  -c CONFFILE     specify a configuration file\n"
+"\n Startup options:\n"
+#ifdef WINDOWS32
+"  -C              allocate a console window\n"
+#endif
+"  -c CONFFILE     specify a configuration file\n"
 
 "\n Machines:\n"
 "  -default-machine NAME   default machine on startup\n"

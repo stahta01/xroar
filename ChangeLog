@@ -5,6 +5,7 @@ Version 0.35, unreleased
   * Fix buffer overrun in MC6847 code
   * New option -ao-gain (specify volume in dBFS)
   * CAS CUE support
+  * Added -C option to allocate debug console in Windows
 
 Version 0.34, Sun Aug  7 2016
 

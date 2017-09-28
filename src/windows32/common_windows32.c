@@ -26,10 +26,14 @@
 #include "logging.h"
 
 #include "windows32/common_windows32.h"
+#include "windows32/guicon.h"
 
 HWND windows32_main_hwnd = NULL;
 
-int windows32_init(void) {
+int windows32_init(_Bool alloc_console) {
+	if (alloc_console) {
+		redirect_io_to_console(1024);
+	}
 	// Windows needs this to do networking
 	WORD wVersionRequested;
 	WSADATA wsaData;
