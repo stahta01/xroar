@@ -23,7 +23,7 @@
 /* Log levels:
  * 0 - Quiet, 1 - Info, 2 - Events, 3 - Debug */
 
-#define LOG_DEBUG(l,...) do { if (log_level >= l) { fprintf(stderr, __VA_ARGS__); } } while (0)
+#define LOG_DEBUG(l,...) do { if (log_level >= l) { printf(__VA_ARGS__); } } while (0)
 #define LOG_PRINT(...) printf(__VA_ARGS__)
 #define LOG_WARN(...) fprintf(stderr, "WARNING: " __VA_ARGS__)
 #define LOG_ERROR(...) fprintf(stderr, "ERROR: " __VA_ARGS__)
