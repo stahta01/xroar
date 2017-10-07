@@ -95,6 +95,7 @@ struct vdisk_idam {
 };
 
 enum vdisk_density {
+	vdisk_density_unknown,
 	vdisk_density_single,
 	vdisk_density_double,
 	vdisk_density_mixed,
@@ -107,6 +108,7 @@ struct vdisk_info {
 	unsigned num_heads;
 	unsigned num_sectors;
 	unsigned first_sector_id;
+	int ssize_code;  // 0-3, or -1 if more than one size detected
 	enum vdisk_density density;
 };
 
@@ -155,5 +157,9 @@ _Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 
 _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 		      unsigned cyl, unsigned head, unsigned idam);
+
+// Scan disk and return information about its structure.
+
+_Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo);
 
 #endif  /* XROAR_VDISK_H_ */

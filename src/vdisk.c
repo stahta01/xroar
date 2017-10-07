@@ -334,14 +334,48 @@ static unsigned standard_disk_size(unsigned ncyls) {
 }
 
 static int vdisk_save_vdk(struct vdisk *disk) {
-	uint8_t buf[1024];
+	uint8_t buf[256];
 	FILE *fd;
 	if (disk == NULL)
 		return -1;
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
 	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
-	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%u-byte)\n", disk->num_cylinders, disk->num_heads, disk->track_length);
+
+	// scan disk geometry
+	struct vdisk_info vinfo;
+	if (!vdisk_get_info(ctx, &vinfo)) {
+		LOG_WARN("VDISK/VDK/WRITE: failed reading disk geometry: %s\n", vdisk_strerror(vdisk_errno));
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+	if (vinfo.density == vdisk_density_mixed) {
+		LOG_WARN("VDISK/VDK/WRITE: not writing: mixed density not supported\n");
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+	if (vinfo.ssize_code != 1) {
+		LOG_WARN("VDISK/VDK/WRITE: not writing: only 256 byte sectors supported\n");
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+	if (vinfo.num_sectors != 18) {
+		LOG_WARN("VDISK/VDK/WRITE: not writing: only 18 sectors per track supported\n");
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+
+	unsigned ssize = 128 << vinfo.ssize_code;
+
+	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%d x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
+	if (vinfo.first_sector_id != 1) {
+		LOG_WARN("VDISK/VDK/WRITE: first sector id of %d may render image unreadable\n", vinfo.first_sector_id);
+	}
+
 	uint16_t header_length = 12;
 	buf[0] = 'd';   // magic
 	buf[1] = 'k';   // magic
@@ -349,8 +383,8 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	buf[5] = 0x10;  // VDK backwards compatibility version
 	buf[6] = 'X';   // file source - 'X' for XRoar
 	buf[7] = 0;     // version of file source
-	buf[8] = disk->num_cylinders;
-	buf[9] = disk->num_heads;
+	buf[8] = vinfo.num_cylinders;
+	buf[9] = vinfo.num_heads;
 	buf[10] = 0;    // flags
 	buf[11] = disk->fmt.vdk.filename_length << 3;  // name length & compression flag
 	if (disk->fmt.vdk.extra_length > 0)
@@ -361,9 +395,10 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	if (disk->fmt.vdk.extra_length > 0) {
 		fwrite(disk->fmt.vdk.extra, disk->fmt.vdk.extra_length, 1, fd);
 	}
-	unsigned ncyls = standard_disk_size(disk->num_cylinders);
+
+	unsigned ncyls = standard_disk_size(vinfo.num_cylinders);
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
-		for (unsigned head = 0; head < disk->num_heads; head++) {
+		for (unsigned head = 0; head < vinfo.num_heads; head++) {
 			for (unsigned sector = 0; sector < 18; sector++) {
 				vdisk_read_sector(ctx, cyl, head, sector + 1, 256, buf);
 				fwrite(buf, 256, 1, fd);
@@ -553,7 +588,6 @@ static struct vdisk *vdisk_load_os9(const char *filename) {
 }
 
 static int vdisk_save_jvc(struct vdisk *disk) {
-	unsigned nsectors = 18;
 	uint8_t buf[1024];
 	FILE *fd;
 	if (!disk)
@@ -561,30 +595,62 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
 	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
-	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%u-byte)\n", disk->num_cylinders, disk->num_heads, disk->track_length);
 
-	// TODO: scan the disk to potentially correct these assumptions
-	buf[0] = nsectors;  // assumed
-	buf[1] = disk->num_heads;
-	buf[2] = 1;  // assumed 256 byte sectors
-	buf[3] = 1;  // assumed first sector == 1
-	buf[4] = 0;
+	// scan disk geometry
+	struct vdisk_info vinfo;
+	if (!vdisk_get_info(ctx, &vinfo)) {
+		LOG_WARN("VDISK/JVC/WRITE: failed reading disk geometry: %s\n", vdisk_strerror(vdisk_errno));
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+	if (vinfo.density == vdisk_density_mixed) {
+		LOG_WARN("VDISK/JVC/WRITE: not writing: mixed density not supported\n");
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+	if (vinfo.ssize_code == -1) {
+		LOG_WARN("VDISK/JVC/WRITE: not writing: mixed sector size not supported\n");
+		fclose(fd);
+		vdisk_ctx_free(ctx);
+		return -1;
+	}
+
+	// populate geometry information
+	buf[0] = vinfo.num_sectors;
+	buf[1] = vinfo.num_heads;
+	buf[2] = vinfo.ssize_code;
+	buf[3] = vinfo.first_sector_id;
+	buf[4] = 0;  // sector attribute flag currently unused
+	unsigned ssize = 128 << vinfo.ssize_code;
+
+	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%d x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
 
 	// don't write a header if OS-9 detection didn't find one
 	unsigned header_size = 0;
-	if (disk->num_heads != 1 && !disk->fmt.jvc.headerless_os9)
+	if (vinfo.num_sectors != 18)
+		header_size = 1;
+	if (vinfo.num_heads != 1)
 		header_size = 2;
+	if (vinfo.ssize_code != 1)
+		header_size = 3;
+	if (vinfo.first_sector_id != 1)
+		header_size = 4;
+
+	if (disk->fmt.jvc.headerless_os9)
+		header_size = 0;
 
 	if (header_size > 0) {
 		fwrite(buf, header_size, 1, fd);
 	}
 
-	unsigned ncyls = standard_disk_size(disk->num_cylinders);
+	unsigned ncyls = standard_disk_size(vinfo.num_cylinders);
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
-		for (unsigned head = 0; head < disk->num_heads; head++) {
-			for (unsigned sector = 0; sector < nsectors; sector++) {
-				vdisk_read_sector(ctx, cyl, head, sector + 1, 256, buf);
-				fwrite(buf, 256, 1, fd);
+		for (unsigned head = 0; head < vinfo.num_heads; head++) {
+			for (unsigned sector = 0; sector < vinfo.num_sectors; sector++) {
+				vdisk_read_sector(ctx, cyl, head, sector + vinfo.first_sector_id, ssize, buf);
+				fwrite(buf, ssize, 1, fd);
 			}
 		}
 	}
@@ -1140,6 +1206,66 @@ _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 	vidam->ssize_code = read_byte(ctx);
 	vidam->crc = read_byte(ctx) << 8;
 	vidam->crc |= read_byte(ctx);
+
+	return 1;
+}
+
+_Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo) {
+	if (!vdisk_ctx_check(ctx))
+		return 0;
+	struct vdisk *disk = ctx->disk;
+	assert(vinfo != NULL);
+
+	_Bool have_sden = 0;
+	_Bool have_dden = 0;
+	unsigned first_sector = 256;
+	unsigned last_sector = 0;
+	int ssize_code = -2;
+
+	for (unsigned c = 0; c < disk->num_cylinders; c++) {
+		for (unsigned h = 0; h < disk->num_heads; h++) {
+			if (!vdisk_ctx_seek(ctx, 0, c, h))
+				return 0;
+			for (unsigned i = 0; i < 64; i++) {
+				struct vdisk_idam vidam;
+				if (!vdisk_read_idam(ctx, &vidam, c, h, i))
+					return 0;
+				if (!vidam.valid)
+					break;
+				if (vidam.sector > last_sector)
+					last_sector = vidam.sector;
+				if (vidam.sector < first_sector)
+					first_sector = vidam.sector;
+				if (ctx->dden)
+					have_dden = 1;
+				else
+					have_sden = 1;
+				if (ssize_code == -2)
+					ssize_code = vidam.ssize_code;
+				else if (ssize_code != (int)vidam.ssize_code)
+					ssize_code = -1;
+			}
+		}
+	}
+
+	if (last_sector <= first_sector) {
+		vdisk_errno = vdisk_err_sector_not_found;
+		return 0;
+	}
+	vinfo->num_cylinders = disk->num_cylinders;
+	vinfo->num_heads = disk->num_heads;
+	vinfo->num_sectors = (last_sector + 1) - first_sector;
+	vinfo->first_sector_id = first_sector;
+	vinfo->ssize_code = ssize_code;
+	if (have_sden && have_dden) {
+		vinfo->density  = vdisk_density_mixed;
+	} else if (have_sden) {
+		vinfo->density  = vdisk_density_single;
+	} else if (have_dden) {
+		vinfo->density  = vdisk_density_double;
+	} else {
+		vinfo->density  = vdisk_density_unknown;
+	}
 
 	return 1;
 }
