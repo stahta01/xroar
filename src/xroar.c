@@ -477,9 +477,11 @@ static struct vdg_palette *get_machine_palette(void);
 struct ui_interface *xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
-	_Bool alloc_console = 0;
 	_Bool no_conffile = 0;
 	_Bool no_builtin = 0;
+#ifdef WINDOWS32
+	_Bool alloc_console = 0;
+#endif
 
 	/* Options that must come first on the command line, as they affect
 	 * initial config & config file. */
@@ -494,6 +496,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			// -no-c, disable conffile
 			no_conffile = 1;
 			argn++;
+		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-builtin")) {
+			// -no-builtin, disable builtin config
+			no_builtin = 1;
+			argn++;
+#ifdef WINDOWS32
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-C")) {
 			// Windows allocate console option
 			alloc_console = 1;
@@ -502,10 +509,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			// Windows allocate console option
 			alloc_console = 0;
 			argn++;
-		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-builtin")) {
-			// -no-builtin, disable builtin config
-			no_builtin = 1;
-			argn++;
+#endif
 		} else {
 			break;
 		}
