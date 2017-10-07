@@ -379,7 +379,7 @@ void sdl_keypress(SDL_Keysym *keysym) {
 	}
 
 	// If scancode has priority, never do a unicode lookup.
-	if (!ralt && scancode_priority[scancode]) {
+	if (scancode_priority[scancode]) {
 		keyboard_press(xroar_keyboard_interface, scancode_to_dkey[scancode]);
 		return;
 	}
@@ -448,8 +448,8 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 	}
 
 	_Bool shift = mod & KMOD_SHIFT;
-	_Bool ralt = mod & KMOD_RALT;
-	_Bool control = !ralt && (mod & KMOD_CTRL);
+	//_Bool ralt = mod & KMOD_RALT;
+	//_Bool control = !ralt && (mod & KMOD_CTRL);
 
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
@@ -477,7 +477,7 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 		return;
 	}
 
-	if (!ralt && translation_mode) {
+	if (translation_mode) {
 		int unicode;
 		if (scancode >= SDL_NUM_SCANCODES)
 			return;
