@@ -87,7 +87,7 @@ struct vdisk_ctx {
 
 struct vdisk_idam {
 	_Bool valid;
-	unsigned track;
+	unsigned cyl;
 	unsigned side;
 	unsigned sector;
 	unsigned ssize_code;

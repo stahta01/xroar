@@ -1200,7 +1200,7 @@ _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 		ctx->crc = crc16_byte(ctx->crc, 0xa1);
 	}
 	vidam->valid = 1;
-	vidam->track = read_byte(ctx);
+	vidam->cyl = read_byte(ctx);
 	vidam->side = read_byte(ctx);
 	vidam->sector = read_byte(ctx);
 	vidam->ssize_code = read_byte(ctx);
