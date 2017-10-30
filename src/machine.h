@@ -167,6 +167,7 @@ struct machine_config *machine_config_new(void);
 struct machine_config *machine_config_by_id(int id);
 struct machine_config *machine_config_by_name(const char *name);
 struct machine_config *machine_config_by_arch(int arch);
+void machine_config_complete(struct machine_config *mc);
 _Bool machine_config_remove(const char *name);
 struct slist *machine_config_list(void);
 /* Find a working machine by searching available ROMs: */

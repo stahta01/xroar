@@ -1666,6 +1666,7 @@ static void set_machine(const char *name) {
 			xroar_machine_config->nodos = private_cfg.nodos;
 			private_cfg.nodos = -1;
 		}
+		machine_config_complete(xroar_machine_config);
 	}
 	if (name) {
 		xroar_machine_config = machine_config_by_name(name);

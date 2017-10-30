@@ -82,6 +82,12 @@ struct machine_config *machine_config_by_arch(int arch) {
 	return NULL;
 }
 
+void machine_config_complete(struct machine_config *mc) {
+	if (!mc->description) {
+		mc->description = xstrdup(mc->name);
+	}
+}
+
 static void machine_config_free(struct machine_config *mc) {
 	if (mc->name)
 		free(mc->name);
