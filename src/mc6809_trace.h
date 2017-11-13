@@ -8,9 +8,14 @@
 
 #include "mc6809.h"
 
-void mc6809_trace_reset(void);
-void mc6809_trace_byte(uint8_t byte, uint16_t pc);
-void mc6809_trace_irq(void *sptr, int vector);
-void mc6809_trace_print(struct MC6809 *cpu);
+struct mc6809_trace;
+
+struct mc6809_trace *mc6809_trace_new(struct MC6809 *cpu);
+void mc6809_trace_free(struct mc6809_trace *tracer);
+
+void mc6809_trace_reset(struct mc6809_trace *tracer);
+void mc6809_trace_byte(struct mc6809_trace *tracer, uint8_t byte, uint16_t pc);
+void mc6809_trace_irq(struct mc6809_trace *tracer, int vector);
+void mc6809_trace_print(struct mc6809_trace *tracer);
 
 #endif  /* XROAR_MC6809_TRACE_H_ */

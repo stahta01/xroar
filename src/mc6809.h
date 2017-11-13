@@ -14,6 +14,8 @@
 
 #include "delegate.h"
 
+struct mc6809_trace;
+
 #define MC6809_VARIANT_MC6809 (0x00006809)
 
 #define MC6809_INT_VEC_RESET (0xfffe)
@@ -63,6 +65,9 @@ struct MC6809 {
 	void (*reset)(struct MC6809 *cpu);
 	void (*run)(struct MC6809 *cpu);
 	void (*jump)(struct MC6809 *cpu, uint16_t pc);
+#ifdef TRACE
+	void (*set_trace)(struct MC6809 *cpu, _Bool state);
+#endif
 
 	/* External handlers */
 
@@ -72,13 +77,15 @@ struct MC6809 {
 	DELEGATE_T0(void) instruction_hook;
 	/* Called after instruction is executed */
 	DELEGATE_T0(void) instruction_posthook;
-	/* Called just before an interrupt vector is read */
-	DELEGATE_T1(void, int) interrupt_hook;
 
 	/* Internal state */
 
 	enum mc6809_state state;
 	_Bool running;
+#ifdef TRACE
+	_Bool trace;
+	struct mc6809_trace *tracer;
+#endif
 
 	/* Registers */
 	uint8_t reg_cc, reg_dp;

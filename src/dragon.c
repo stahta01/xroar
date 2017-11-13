@@ -30,13 +30,11 @@ Dragon & CoCo 1/2 machine.
 #include "crclist.h"
 #include "gdb.h"
 #include "hd6309.h"
-#include "hd6309_trace.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
-#include "mc6809_trace.h"
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
 #include "ntsc.h"
@@ -844,10 +842,6 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	}
 	sam_reset(md->SAM0);
 	md->CPU0->reset(md->CPU0);
-#ifdef TRACE
-	mc6809_trace_reset();
-	hd6309_trace_reset();
-#endif
 	mc6847_reset(md->VDG0);
 	tape_reset(md->tape_interface);
 	printer_reset(md->printer_interface);
@@ -899,8 +893,6 @@ static void dragon_single_step(struct machine *m) {
 		md->CPU0->run(md->CPU0);
 	} while (md->single_step);
 	update_vdg_mode(md);
-	if (xroar_cfg.trace_enabled)
-		md->CPU0->instruction_posthook.func = NULL;
 }
 
 /*
@@ -961,6 +953,9 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 }
 
 static _Bool dragon_set_trace(struct machine *m, int state) {
+#ifndef TRACE
+	return 0;
+#else
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	switch (state) {
 	case 0: case 1:
@@ -972,11 +967,9 @@ static _Bool dragon_set_trace(struct machine *m, int state) {
 	default:
 		break;
 	}
-	if (md->trace || md->single_step)
-		md->CPU0->instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
-	else
-		md->CPU0->instruction_posthook.func = NULL;
+	md->CPU0->set_trace(md->CPU0, md->trace);
 	return md->trace;
+#endif
 }
 
 static _Bool dragon_set_fast_sound(struct machine *m, int action) {
@@ -1078,16 +1071,6 @@ static void dragon_set_vo_cmp(struct machine *m, int mode) {
 
 static void dragon_instruction_posthook(void *sptr) {
 	struct machine_dragon *md = sptr;
-	if (xroar_cfg.trace_enabled) {
-		switch (md->CPU0->variant) {
-		case MC6809_VARIANT_MC6809: default:
-			mc6809_trace_print(md->CPU0);
-			break;
-		case MC6809_VARIANT_HD6309:
-			hd6309_trace_print(md->CPU0);
-			break;
-		}
-	}
 	md->single_step = 0;
 }
 
@@ -1230,18 +1213,6 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		read_byte(md, A);
-#ifdef TRACE
-		if (xroar_cfg.trace_enabled) {
-			switch (md->CPU0->variant) {
-			case MC6809_VARIANT_MC6809: default:
-				mc6809_trace_byte(md->CPU0->D, A);
-				break;
-			case MC6809_VARIANT_HD6309:
-				hd6309_trace_byte(md->CPU0->D, A);
-				break;
-			}
-		}
-#endif
 		bp_wp_read_hook(md->bp_session, A);
 	} else {
 		write_byte(md, A);

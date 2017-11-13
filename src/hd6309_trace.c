@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "xalloc.h"
+
 #include "hd6309.h"
 #include "hd6309_trace.h"
 
@@ -886,7 +888,7 @@ enum {
 
 /* Sequences of expected bytes */
 
-static int const state_list_irq[] = { WANT_VALUE, WANT_NOTHING, WANT_PRINT };
+static int const state_list_irq[] = { WANT_VALUE, WANT_PRINT };
 static int const state_list_inherent[] = { WANT_PRINT };
 static int const state_list_idx[] = { WANT_IDX_POSTBYTE };
 static int const state_list_imm8[] = { WANT_VALUE, WANT_PRINT };
@@ -984,20 +986,40 @@ static char const * const irq_names[8] = {
 
 /* Current state */
 
-static int state, page;
-static uint16_t instr_pc;
 #define BYTES_BUF_SIZE 5
-static int bytes_count;
-static uint8_t bytes_buf[BYTES_BUF_SIZE];
 
-static const char *mnemonic;
-static char operand_text[19];
+struct hd6309_trace {
+	struct HD6309 *hcpu;
 
-static void trace_print_short(void);
+	int state;
+	int page;
+	uint16_t instr_pc;
+	int bytes_count;
+	uint8_t bytes_buf[BYTES_BUF_SIZE];
 
-#define STACK_PRINT(r) do { \
-		if (not_first) { strcat(operand_text, "," r); } \
-		else { strcat(operand_text, r); not_first = 1; } \
+	const char *mnemonic;
+	char operand_text[19];
+
+	int ins_type;
+	const int *state_list;
+	uint32_t value;
+	int idx_mode;
+	const char *idx_reg;
+	_Bool idx_indirect;
+
+	uint32_t im_value;
+	const char *membit_reg;
+	int membit_sbit;
+	int membit_dbit;
+	const char *tfm_fmt;
+};
+
+static void reset_state(struct hd6309_trace *tracer);
+static void trace_print_short(struct hd6309_trace *tracer);
+
+#define STACK_PRINT(t,r) do { \
+		if (not_first) { strcat((t)->operand_text, "," r); } \
+		else { strcat((t)->operand_text, r); not_first = 1; } \
 	} while (0)
 
 #define sex5(v) ((int)((v) & 0x0f) - (int)((v) & 0x10))
@@ -1005,148 +1027,161 @@ static void trace_print_short(void);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void reset_state(void) {
-	state = WANT_INSTRUCTION;
-	page = PAGE0;
-	bytes_count = 0;
-	mnemonic = "*";
-	operand_text[0] = '*';
-	operand_text[1] = '\0';
+struct hd6309_trace *hd6309_trace_new(struct HD6309 *hcpu) {
+	struct hd6309_trace *tracer = xmalloc(sizeof(*tracer));
+	*tracer = (struct hd6309_trace){0};
+	tracer->hcpu = hcpu;
+	reset_state(tracer);
+	return tracer;
 }
 
-void hd6309_trace_reset(void) {
-	reset_state();
-	hd6309_trace_irq(NULL, 0xfffe);
+void hd6309_trace_free(struct hd6309_trace *tracer) {
+	free(tracer);
+}
+
+void hd6309_trace_reset(struct hd6309_trace *tracer) {
+	reset_state(tracer);
+	hd6309_trace_irq(tracer, 0xfffe);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void reset_state(struct hd6309_trace *tracer) {
+	tracer->state = WANT_INSTRUCTION;
+	tracer->page = PAGE0;
+	tracer->bytes_count = 0;
+	tracer->mnemonic = "*";
+	strcpy(tracer->operand_text, "*");
+
+	tracer->ins_type = PAGE0;
+	tracer->state_list = NULL;
+	tracer->idx_mode = 0;
+	tracer->idx_reg = "";
+	tracer->idx_indirect = 0;
+	tracer->membit_reg = "";
+	tracer->membit_sbit = 0;
+	tracer->membit_dbit = 0;
+	tracer->tfm_fmt = "";
 }
 
 /* Called for each memory read */
 
-void hd6309_trace_byte(uint8_t byte, uint16_t pc) {
-	static int ins_type = PAGE0;
-	static const int *state_list = NULL;
-	static uint32_t value;
-	static int idx_mode = 0;
-	static const char *idx_reg = "";
-	static _Bool idx_indirect = 0;
-	static uint32_t im_value;
-	static const char *membit_reg = "";
-	static int membit_sbit = 0, membit_dbit = 0;
-	static const char *tfm_fmt = "";
+void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 
 	// Record PC of instruction
-	if (bytes_count == 0) {
-		instr_pc = pc;
+	if (tracer->bytes_count == 0) {
+		tracer->instr_pc = pc;
 	}
 
 	// Record byte if considered part of instruction
-	if (bytes_count < BYTES_BUF_SIZE && state != WANT_PRINT && state != WANT_NOTHING) {
-		bytes_buf[bytes_count++] = byte;
+	if (tracer->bytes_count < BYTES_BUF_SIZE && tracer->state != WANT_PRINT && tracer->state != WANT_NOTHING) {
+		tracer->bytes_buf[tracer->bytes_count++] = byte;
 	}
 
-	switch (state) {
+	switch (tracer->state) {
 
 		// Instruction fetch
 		default:
 		case WANT_INSTRUCTION:
-			value = 0;
-			im_value = 0;
-			state_list = NULL;
-			mnemonic = instructions[page][byte].mnemonic;
-			ins_type = instructions[page][byte].type;
-			switch (ins_type) {
+			tracer->value = 0;
+			tracer->im_value = 0;
+			tracer->state_list = NULL;
+			tracer->mnemonic = instructions[tracer->page][byte].mnemonic;
+			tracer->ins_type = instructions[tracer->page][byte].type;
+			switch (tracer->ins_type) {
 				// Change page, stay in WANT_INSTRUCTION state
 				case PAGE2: case PAGE3:
-					page = ins_type;
+					tracer->page = tracer->ins_type;
 					break;
 				// Otherwise use an appropriate state list:
 				default: case ILLEGAL: case INHERENT:
-					state_list = state_list_inherent;
+					tracer->state_list = state_list_inherent;
 					break;
 				case IMMEDIATE: case DIRECT: case RELATIVE:
 				case STACKS: case STACKU: case REGISTER:
-					state_list = state_list_imm8;
+					tracer->state_list = state_list_imm8;
 					break;
 				case INDEXED:
-					state_list = state_list_idx;
+					tracer->state_list = state_list_idx;
 					break;
 				case WORD_IMMEDIATE: case EXTENDED:
 				case LONG_RELATIVE:
-					state_list = state_list_imm16;
+					tracer->state_list = state_list_imm16;
 					break;
 				case TFMPP: case TFMMM: case TFMP0: case TFM0P:
-					tfm_fmt = tfm_fmts[byte & 3];
-					state_list = state_list_imm8;
+					tracer->tfm_fmt = tfm_fmts[byte & 3];
+					tracer->state_list = state_list_imm8;
 					break;
 				case MEMBIT:
-					state_list = state_list_mb;
+					tracer->state_list = state_list_mb;
 					break;
 				case QUAD_IMMEDIATE:
-					state_list = state_list_imm32;
+					tracer->state_list = state_list_imm32;
 					break;
 				case INMEM_DIRECT:
-					state_list = state_list_inmem8;
+					tracer->state_list = state_list_inmem8;
 					break;
 				case INMEM_INDEXED:
-					state_list = state_list_inmem_idx;
+					tracer->state_list = state_list_inmem_idx;
 					break;
 				case INMEM_EXTENDED:
-					state_list = state_list_inmem16;
+					tracer->state_list = state_list_inmem16;
 					break;
 			}
 			break;
 
 		// First byte of an IRQ vector
 		case WANT_IRQ_VECTOR:
-			value = byte;
-			ins_type = IRQVECTOR;
-			state_list = state_list_irq;
+			tracer->value = byte;
+			tracer->ins_type = IRQVECTOR;
+			tracer->state_list = state_list_irq;
 			break;
 
 		// Building a value byte by byte
 		case WANT_VALUE:
-			value = (value << 8) | byte;
+			tracer->value = (tracer->value << 8) | byte;
 			break;
 
 		// Indexed postbyte - record relevant details
 		case WANT_IDX_POSTBYTE:
-			idx_reg = idx_regs[(byte>>5)&3];
-			idx_indirect = byte & 0x10;
-			idx_mode = byte & 0x0f;
+			tracer->idx_reg = idx_regs[(byte>>5)&3];
+			tracer->idx_indirect = byte & 0x10;
+			tracer->idx_mode = byte & 0x0f;
 			if ((byte & 0x80) == 0) {
-				idx_indirect = 0;
-				idx_mode = IDX_OFF5;
-				value = byte & 0x1f;
+				tracer->idx_indirect = 0;
+				tracer->idx_mode = IDX_OFF5;
+				tracer->value = byte & 0x1f;
 			} else if (byte == 0x8f || byte == 0x90) {
-				idx_reg = "W";
-				idx_mode = IDX_OFF0;
+				tracer->idx_reg = "W";
+				tracer->idx_mode = IDX_OFF0;
 			} else if (byte == 0xaf || byte == 0xb0) {
-				idx_reg = "W";
-				idx_mode = IDX_OFF16;
+				tracer->idx_reg = "W";
+				tracer->idx_mode = IDX_OFF16;
 			} else if (byte == 0xcf || byte == 0xd0) {
-				idx_reg = "W";
-				idx_mode = IDX_PI2;
+				tracer->idx_reg = "W";
+				tracer->idx_mode = IDX_PI2;
 			} else if (byte == 0xef || byte == 0xf0) {
-				idx_reg = "W";
-				idx_mode = IDX_PD2;
+				tracer->idx_reg = "W";
+				tracer->idx_mode = IDX_PD2;
 			}
-			state_list = idx_state_lists[idx_mode];
+			tracer->state_list = idx_state_lists[tracer->idx_mode];
 			break;
 
 		// Postbyte for "memory with bit" instructions
 		case WANT_MEMBIT_POSTBYTE:
-			membit_reg = membit_regs[(byte>>6) & 3];
-			membit_sbit = (byte>>3) & 7;
-			membit_dbit = byte & 7;
+			tracer->membit_reg = membit_regs[(byte>>6) & 3];
+			tracer->membit_sbit = (byte>>3) & 7;
+			tracer->membit_dbit = byte & 7;
 			break;
 
 		// Separate immediate value for "in memory" instructions
 		case WANT_IM_VALUE:
-			im_value = (im_value << 8) | byte;
+			tracer->im_value = (tracer->im_value << 8) | byte;
 			break;
 
 		// Expecting CPU code to call trace_print
 		case WANT_PRINT:
-			state_list = NULL;
+			tracer->state_list = NULL;
 			return;
 
 		// This byte is to be ignored (used following IRQ vector fetch)
@@ -1155,117 +1190,117 @@ void hd6309_trace_byte(uint8_t byte, uint16_t pc) {
 	}
 
 	// Get next state from state list
-	if (state_list)
-		state = *(state_list++);
+	if (tracer->state_list)
+		tracer->state = *(tracer->state_list++);
 
-	if (state != WANT_PRINT)
+	if (tracer->state != WANT_PRINT)
 		return;
 
 	// If the next state is WANT_PRINT, we're done with the instruction, so
 	// prep the operand text for printing.
 
-	state_list = NULL;
+	tracer->state_list = NULL;
 
-	operand_text[0] = '\0';
-	switch (ins_type) {
+	tracer->operand_text[0] = '\0';
+	switch (tracer->ins_type) {
 		case ILLEGAL: case INHERENT:
 			break;
 
 		case IMMEDIATE:
-			snprintf(operand_text, sizeof(operand_text), "#$%02x", value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x", tracer->value);
 			break;
 
 		case DIRECT:
-			snprintf(operand_text, sizeof(operand_text), "<$%02x", value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "<$%02x", tracer->value);
 			break;
 
 		case WORD_IMMEDIATE:
-			snprintf(operand_text, sizeof(operand_text), "#$%04x", value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%04x", tracer->value);
 			break;
 
 		case EXTENDED:
-			snprintf(operand_text, sizeof(operand_text), "$%04x", value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", tracer->value);
 			break;
 
 		case STACKS: {
 			_Bool not_first = 0;
-			if (value & 0x01) { STACK_PRINT("CC"); }
-			if (value & 0x02) { STACK_PRINT("A"); }
-			if (value & 0x04) { STACK_PRINT("B"); }
-			if (value & 0x08) { STACK_PRINT("DP"); }
-			if (value & 0x10) { STACK_PRINT("X"); }
-			if (value & 0x20) { STACK_PRINT("Y"); }
-			if (value & 0x40) { STACK_PRINT("U"); }
-			if (value & 0x80) { STACK_PRINT("PC"); }
+			if (tracer->value & 0x01) { STACK_PRINT(tracer, "CC"); }
+			if (tracer->value & 0x02) { STACK_PRINT(tracer, "A"); }
+			if (tracer->value & 0x04) { STACK_PRINT(tracer, "B"); }
+			if (tracer->value & 0x08) { STACK_PRINT(tracer, "DP"); }
+			if (tracer->value & 0x10) { STACK_PRINT(tracer, "X"); }
+			if (tracer->value & 0x20) { STACK_PRINT(tracer, "Y"); }
+			if (tracer->value & 0x40) { STACK_PRINT(tracer, "U"); }
+			if (tracer->value & 0x80) { STACK_PRINT(tracer, "PC"); }
 		} break;
 
 		case STACKU: {
 			_Bool not_first = 0;
-			if (value & 0x01) { STACK_PRINT("CC"); }
-			if (value & 0x02) { STACK_PRINT("A"); }
-			if (value & 0x04) { STACK_PRINT("B"); }
-			if (value & 0x08) { STACK_PRINT("DP"); }
-			if (value & 0x10) { STACK_PRINT("X"); }
-			if (value & 0x20) { STACK_PRINT("Y"); }
-			if (value & 0x40) { STACK_PRINT("S"); }
-			if (value & 0x80) { STACK_PRINT("PC"); }
+			if (tracer->value & 0x01) { STACK_PRINT(tracer, "CC"); }
+			if (tracer->value & 0x02) { STACK_PRINT(tracer, "A"); }
+			if (tracer->value & 0x04) { STACK_PRINT(tracer, "B"); }
+			if (tracer->value & 0x08) { STACK_PRINT(tracer, "DP"); }
+			if (tracer->value & 0x10) { STACK_PRINT(tracer, "X"); }
+			if (tracer->value & 0x20) { STACK_PRINT(tracer, "Y"); }
+			if (tracer->value & 0x40) { STACK_PRINT(tracer, "S"); }
+			if (tracer->value & 0x80) { STACK_PRINT(tracer, "PC"); }
 		} break;
 
 		case REGISTER:
-			snprintf(operand_text, sizeof(operand_text), "%s,%s",
-					tfr_regs[(value>>4)&15],
-					tfr_regs[value&15]);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s,%s",
+					tfr_regs[(tracer->value>>4)&15],
+					tfr_regs[tracer->value&15]);
 			break;
 
 		case INDEXED:
 		case INMEM_INDEXED:
 			{
 			char tmp_text[19];
-			const char *pre = idx_indirect ? "[" : "";
-			const char *post = idx_indirect ? "]" : "";
-			int value8 = sex8(value);
-			int value5 = sex5(value);
+			const char *pre = tracer->idx_indirect ? "[" : "";
+			const char *post = tracer->idx_indirect ? "]" : "";
+			int value8 = sex8(tracer->value);
+			int value5 = sex5(tracer->value);
 
-			switch (idx_mode) {
+			switch (tracer->idx_mode) {
 			default:
 			case IDX_PI1: case IDX_PI2: case IDX_PD1: case IDX_PD2:
 			case IDX_OFF0: case IDX_OFFB: case IDX_OFFA: case IDX_OFFE:
 			case IDX_OFFF: case IDX_OFFD: case IDX_OFFW:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, idx_reg, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->idx_reg, post);
 				break;
 			case IDX_OFF5:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, value5, idx_reg, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, value5, tracer->idx_reg, post);
 				break;
 			case IDX_OFF8:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, idx_reg, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, tracer->idx_reg, post);
 				break;
 			case IDX_OFF16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, value, idx_reg, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, tracer->idx_reg, post);
 				break;
 			case IDX_PCR8:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, post);
 				break;
 			case IDX_PCR16: case IDX_EXT16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[idx_mode], pre, value, post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, post);
 				break;
 			}
 
-			if (ins_type == INDEXED) {
-				snprintf(operand_text, sizeof(operand_text), "%s", tmp_text);
+			if (tracer->ins_type == INDEXED) {
+				snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s", tmp_text);
 			} else {
-				snprintf(operand_text, sizeof(operand_text), "#$%02x,%s", im_value, tmp_text);
+				snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,%s", tracer->im_value, tmp_text);
 			}
 
 			} break;
 
 		case RELATIVE:
-			pc = (pc + 1 + sex8(value)) & 0xffff;
-			snprintf(operand_text, sizeof(operand_text), "$%04x", pc);
+			pc = (pc + 1 + sex8(tracer->value)) & 0xffff;
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", pc);
 			break;
 
 		case LONG_RELATIVE:
-			pc = (pc + 1 + value) & 0xffff;
-			snprintf(operand_text, sizeof(operand_text), "$%04x", pc);
+			pc = (pc + 1 + tracer->value) & 0xffff;
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", pc);
 			break;
 
 		// CPU code will not call trace_print after IRQ vector fetch
@@ -1274,34 +1309,34 @@ void hd6309_trace_byte(uint8_t byte, uint16_t pc) {
 		// prints the trace line early.
 
 		case IRQVECTOR:
-			trace_print_short();
+			trace_print_short(tracer);
 			printf("\n");
 			fflush(stdout);
 			break;
 
 		case QUAD_IMMEDIATE:
-			snprintf(operand_text, sizeof(operand_text), "#$%08x", value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%08x", tracer->value);
 			break;
 
 		case INMEM_DIRECT:
-			snprintf(operand_text, sizeof(operand_text), "#$%02x,<$%02x", im_value, value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,<$%02x", tracer->im_value, tracer->value);
 			break;
 
 		case INMEM_EXTENDED:
-			snprintf(operand_text, sizeof(operand_text), "#$%02x,$%04x", im_value, value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,$%04x", tracer->im_value, tracer->value);
 			break;
 
 		case TFMPP: case TFMMM: case TFMP0: case TFM0P:
-			if ((value >> 4) > 4 || (value & 15) > 4)
-				mnemonic = "TFM*";
-			snprintf(operand_text, sizeof(operand_text), tfm_fmt,
-				 tfr_regs[(value>>4)&15],
-				 tfr_regs[value&15]);
+			if ((tracer->value >> 4) > 4 || (tracer->value & 15) > 4)
+				tracer->mnemonic = "TFM*";
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), tracer->tfm_fmt,
+				 tfr_regs[(tracer->value>>4)&15],
+				 tfr_regs[tracer->value&15]);
 			break;
 
 		case MEMBIT:
-			snprintf(operand_text, sizeof(operand_text), "%s,%d,%d,<$%02x",
-					membit_reg, membit_sbit, membit_dbit, value);
+			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s,%d,%d,<$%02x",
+					tracer->membit_reg, tracer->membit_sbit, tracer->membit_dbit, tracer->value);
 			break;
 
 		default:
@@ -1311,20 +1346,20 @@ void hd6309_trace_byte(uint8_t byte, uint16_t pc) {
 
 /* Called just before an IRQ vector fetch */
 
-void hd6309_trace_irq(void *sptr, int vector) {
-	(void)sptr;
-	reset_state();
-	state = WANT_IRQ_VECTOR;
-	bytes_count = 0;
-	mnemonic = irq_names[(vector & 15) >> 1];
+void hd6309_trace_irq(struct hd6309_trace *tracer, int vector) {
+	reset_state(tracer);
+	tracer->state = WANT_IRQ_VECTOR;
+	tracer->bytes_count = 0;
+	tracer->mnemonic = irq_names[(vector & 15) >> 1];
 }
 
 /* Called after each instruction */
 
-void hd6309_trace_print(struct MC6809 *cpu) {
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (state != WANT_PRINT) return;
-	trace_print_short();
+void hd6309_trace_print(struct hd6309_trace *tracer) {
+	struct HD6309 *hcpu = tracer->hcpu;
+	struct MC6809 *cpu = &hcpu->mc6809;
+	if (tracer->state != WANT_PRINT) return;
+	trace_print_short(tracer);
 	printf("cc=%02x a=%02x b=%02x e=%02x "
 	       "f=%02x dp=%02x x=%04x y=%04x "
 	       "u=%04x s=%04x v=%04x\n",
@@ -1332,15 +1367,15 @@ void hd6309_trace_print(struct MC6809 *cpu) {
 	       HD6309_REG_F(hcpu), cpu->reg_dp, cpu->reg_x, cpu->reg_y,
 	       cpu->reg_u, cpu->reg_s, hcpu->reg_v);
 	fflush(stdout);
-	reset_state();
+	reset_state(tracer);
 }
 
-static void trace_print_short(void) {
+static void trace_print_short(struct hd6309_trace *tracer) {
 	char bytes_string[(BYTES_BUF_SIZE*2)+1];
-	if (bytes_count == 0) return;
-	for (int i = 0; i < bytes_count; i++) {
-		snprintf(bytes_string + i*2, 3, "%02x", bytes_buf[i]);
+	if (tracer->bytes_count == 0) return;
+	for (int i = 0; i < tracer->bytes_count; i++) {
+		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes_buf[i]);
 	}
-	printf("%04x| %-12s%-8s%-20s", instr_pc, bytes_string, mnemonic, operand_text);
-	reset_state();
+	printf("%04x| %-12s%-8s%-20s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
+	reset_state(tracer);
 }

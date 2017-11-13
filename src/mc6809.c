@@ -38,6 +38,10 @@
 #include "delegate.h"
 #include "mc6809.h"
 
+#ifdef TRACE
+#include "mc6809_trace.h"
+#endif
+
 extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val);
@@ -51,6 +55,9 @@ static void mc6809_free(struct MC6809 *cpu);
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
+#ifdef TRACE
+static void mc6809_set_trace(struct MC6809 *cpu, _Bool state);
+#endif
 
 /*
  * Common 6809 functions
@@ -61,6 +68,11 @@ static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
 /*
  * Data reading & writing
  */
+
+/* Wrap common fetches */
+
+static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
 
 /* Compute effective address */
 
@@ -155,6 +167,9 @@ struct MC6809 *mc6809_new(void) {
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
+#ifdef TRACE
+	cpu->set_trace = mc6809_set_trace;
+#endif
 	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 	mc6809_reset(cpu);
@@ -162,6 +177,11 @@ struct MC6809 *mc6809_new(void) {
 }
 
 static void mc6809_free(struct MC6809 *cpu) {
+#ifdef TRACE
+	if (cpu->tracer) {
+		mc6809_trace_free(cpu->tracer);
+	}
+#endif
 	free(cpu);
 }
 
@@ -191,6 +211,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			cpu->state = mc6809_state_reset_check_halt;
+#ifdef TRACE
+			if (cpu->trace) {
+				mc6809_trace_irq(cpu->tracer, MC6809_INT_VEC_RESET);
+			}
+#endif
 			// fall through
 
 		case mc6809_state_reset_check_halt:
@@ -330,11 +355,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 				uint16_t ea;
 				unsigned tmp1;
 				switch ((op >> 4) & 0xf) {
-				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte(cpu, ea); break;
+				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
 				case 0x4: ea = 0; tmp1 = REG_A; break;
 				case 0x5: ea = 0; tmp1 = REG_B; break;
-				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte(cpu, ea); break;
-				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte(cpu, ea); break;
+				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
+				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
 				default: ea = tmp1 = 0; break;
 				}
 				switch (op & 0xf) {
@@ -930,7 +955,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x8f: case 0xcf: {
 				unsigned tmp1;
 				tmp1 = !(op & 0x40) ? REG_X : REG_U;
-				(void)fetch_byte(cpu, REG_PC);
+				(void)fetch_byte_notrace(cpu, REG_PC);
 				REG_PC++;
 				store_byte(cpu, REG_PC, tmp1);
 				REG_PC++;
@@ -1118,6 +1143,17 @@ static void mc6809_jump(struct MC6809 *cpu, uint16_t pc) {
 	REG_PC = pc;
 }
 
+#ifdef TRACE
+static void mc6809_set_trace(struct MC6809 *cpu, _Bool state) {
+	cpu->trace = state;
+	if (state) {
+		if (!cpu->tracer) {
+			cpu->tracer = mc6809_trace_new(cpu);
+		}
+	}
+}
+#endif
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
@@ -1129,6 +1165,33 @@ static void mc6809_jump(struct MC6809 *cpu, uint16_t pc) {
 /*
  * Data reading & writing
  */
+
+/* Wrap common fetches */
+
+static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
+	uint8_t v = fetch_byte_notrace(cpu, a);
+#ifdef TRACE
+	if (cpu->trace) {
+		mc6809_trace_byte(cpu->tracer, v, a);
+	}
+#endif
+	return v;
+}
+
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
+#ifndef TRACE
+	return fetch_word_notrace(cpu, a);
+#else
+	if (!cpu->trace) {
+		return fetch_word_notrace(cpu, a);
+	}
+	unsigned v0 = fetch_byte_notrace(cpu, a);
+	mc6809_trace_byte(cpu->tracer, v0, a);
+	unsigned v1 = fetch_byte_notrace(cpu, a+1);
+	mc6809_trace_byte(cpu->tracer, v1, a+1);
+	return (v0 << 8) | v1;
+#endif
+}
 
 /* Compute effective address */
 
@@ -1181,7 +1244,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		default: ea = 0; break;
 	}
 	if (postbyte & 0x10) {
-		ea = fetch_word(cpu, ea);
+		ea = fetch_word_notrace(cpu, ea);
 		NVMA_CYCLE;
 	}
 	switch ((postbyte >> 5) & 3) {
@@ -1230,12 +1293,21 @@ static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
-	DELEGATE_SAFE_CALL1(cpu->interrupt_hook, vec);
+#ifdef TRACE
+	if (cpu->trace) {
+		mc6809_trace_irq(cpu->tracer, vec);
+	}
+#endif
 	REG_PC = fetch_word(cpu, vec);
 	NVMA_CYCLE;
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
+#ifdef TRACE
+	if (cpu->trace) {
+		mc6809_trace_print(cpu->tracer);
+	}
+#endif
 	DELEGATE_SAFE_CALL0(cpu->instruction_posthook);
 }
 

@@ -9,6 +9,7 @@ Version 0.35, unreleased
   * Fix use of AltGr key in translated mode on Windows (SDL2)
   * Preliminary MOOH support, subject to change [Tormod Volden]
   * Support JVC/DSK files with non-standard sectors per track
+  * Integrate tracing into CPU code
 
 Version 0.34, Sun Aug  7 2016
 

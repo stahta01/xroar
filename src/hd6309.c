@@ -39,6 +39,10 @@
 #include "hd6309.h"
 #include "mc6809.h"
 
+#ifdef TRACE
+#include "hd6309_trace.h"
+#endif
+
 /*
  * External interface
  */
@@ -47,6 +51,9 @@ static void hd6309_free(struct MC6809 *cpu);
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
+#ifdef TRACE
+static void hd6309_set_trace(struct MC6809 *cpu, _Bool state);
+#endif
 
 /*
  * Common 6809 functions
@@ -57,6 +64,11 @@ static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
 /*
  * Data reading & writing
  */
+
+/* Wrap common fetches */
+
+static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
 
 /* Compute effective address */
 
@@ -183,6 +195,9 @@ struct MC6809 *hd6309_new(void) {
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
+#ifdef TRACE
+	cpu->set_trace = hd6309_set_trace;
+#endif
 	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 	hd6309_reset(cpu);
@@ -191,6 +206,11 @@ struct MC6809 *hd6309_new(void) {
 
 static void hd6309_free(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+#ifdef TRACE
+	if (hcpu->tracer) {
+		hd6309_trace_free(hcpu->tracer);
+	}
+#endif
 	free(hcpu);
 }
 
@@ -221,6 +241,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
+#ifdef TRACE
+			if (cpu->trace) {
+				hd6309_trace_irq(hcpu->tracer, MC6809_INT_VEC_RESET);
+			}
+#endif
 			// fall through
 
 		case hd6309_state_reset_check_halt:
@@ -326,7 +351,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_tfm:
 			// order is read, NVMA, write
-			hcpu->tfm_data = fetch_byte(cpu, *hcpu->tfm_src);
+			hcpu->tfm_data = fetch_byte_notrace(cpu, *hcpu->tfm_src);
 			NVMA_CYCLE;
 			hcpu->state = hd6309_state_tfm_write;
 			continue;
@@ -399,11 +424,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 				uint16_t ea;
 				unsigned tmp1;
 				switch ((op >> 4) & 0xf) {
-				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte(cpu, ea); break;
+				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
 				case 0x4: ea = 0; tmp1 = REG_A; break;
 				case 0x5: ea = 0; tmp1 = REG_B; break;
-				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte(cpu, ea); break;
-				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte(cpu, ea); break;
+				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
+				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
 				default: ea = tmp1 = 0; break;
 				}
 				switch (op & 0xf) {
@@ -451,7 +476,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			 * computing effective address don't seem to apply to
 			 * these instructions, so in theory an extra cycles
 			 * needs to be inserted to account for that.  Needs
-			 * real hardware rest. */
+			 * real hardware test. */
 
 			// 0x01, 0x61, 0x71 OIM
 			// 0x02, 0x62, 0x72 AIM
@@ -465,9 +490,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 				tmp2 = byte_immediate(cpu);
 				switch ((op >> 4) & 0xf) {
 				default:
-				case 0x0: a = ea_direct(cpu); tmp1 = fetch_byte(cpu, a); break;
-				case 0x6: a = ea_indexed(cpu); tmp1 = fetch_byte(cpu, a); break;
-				case 0x7: a = ea_extended(cpu); tmp1 = fetch_byte(cpu, a); break;
+				case 0x0: a = ea_direct(cpu); tmp1 = fetch_byte_notrace(cpu, a); break;
+				case 0x6: a = ea_indexed(cpu); tmp1 = fetch_byte_notrace(cpu, a); break;
+				case 0x7: a = ea_extended(cpu); tmp1 = fetch_byte_notrace(cpu, a); break;
 				}
 				switch (op & 0xf) {
 				default:
@@ -1450,8 +1475,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: ea = ea_extended(cpu); break;
 				default: ea = 0; break;
 				}
-				REG_D = fetch_word(cpu, ea);
-				REG_W = fetch_word(cpu, ea+2);
+				REG_D = fetch_word_notrace(cpu, ea);
+				REG_W = fetch_word_notrace(cpu, ea+2);
 				CLR_NZV;
 				SET_N16(REG_D);
 				if (REG_D == 0 && REG_W == 0)
@@ -1511,7 +1536,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned ea;
 				postbyte = byte_immediate(cpu);
 				ea = ea_direct(cpu);
-				mem_byte = fetch_byte(cpu, ea);
+				mem_byte = fetch_byte_notrace(cpu, ea);
 				int dest_bit = postbyte & 7;
 				int src_bit = (postbyte >> 3) & 7;
 				int src_lsl = dest_bit - src_bit;
@@ -1911,6 +1936,18 @@ static void hd6309_jump(struct MC6809 *cpu, uint16_t pc) {
 	REG_PC = pc;
 }
 
+#ifdef TRACE
+static void hd6309_set_trace(struct MC6809 *cpu, _Bool state) {
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	cpu->trace = state;
+	if (state) {
+		if (!hcpu->tracer) {
+			hcpu->tracer = hd6309_trace_new(hcpu);
+		}
+	}
+}
+#endif
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
@@ -1922,6 +1959,35 @@ static void hd6309_jump(struct MC6809 *cpu, uint16_t pc) {
 /*
  * Data reading & writing
  */
+
+/* Wrap common fetches */
+
+static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
+	uint8_t v = fetch_byte_notrace(cpu, a);
+#ifdef TRACE
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (cpu->trace) {
+		hd6309_trace_byte(hcpu->tracer, v, a);
+	}
+#endif
+	return v;
+}
+
+static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
+#ifndef TRACE
+	return fetch_word_notrace(cpu, a);
+#else
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (!cpu->trace) {
+		return fetch_word_notrace(cpu, a);
+	}
+	unsigned v0 = fetch_byte_notrace(cpu, a);
+	hd6309_trace_byte(hcpu->tracer, v0, a);
+	unsigned v1 = fetch_byte_notrace(cpu, a+1);
+	hd6309_trace_byte(hcpu->tracer, v1, a+1);
+	return (v0 << 8) | v1;
+#endif
+}
 
 /* Compute effective address */
 
@@ -1996,7 +2062,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		default: ea = 0; break;
 	}
 	if (postbyte & 0x10) {
-		ea = fetch_word(cpu, ea);
+		ea = fetch_word_notrace(cpu, ea);
 		NVMA_CYCLE;
 	}
 	switch ((postbyte >> 5) & 3) {
@@ -2050,12 +2116,23 @@ static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
-	DELEGATE_SAFE_CALL1(cpu->interrupt_hook, vec);
+#ifdef TRACE
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (cpu->trace) {
+		hd6309_trace_irq(hcpu->tracer, vec);
+	}
+#endif
 	REG_PC = fetch_word(cpu, vec);
 	NVMA_CYCLE;
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
+#ifdef TRACE
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (cpu->trace) {
+		hd6309_trace_print(hcpu->tracer);
+	}
+#endif
 	DELEGATE_SAFE_CALL0(cpu->instruction_posthook);
 }
 

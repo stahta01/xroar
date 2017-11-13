@@ -1082,21 +1082,6 @@ void xroar_set_trace(int mode) {
 		break;
 	}
 	xroar_cfg.trace_enabled = xroar_machine->set_trace(xroar_machine, set_to);
-	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
-	if (xroar_cfg.trace_enabled) {
-		switch (xroar_machine_config->cpu) {
-		case CPU_MC6809: default:
-			cpu->interrupt_hook = DELEGATE_AS1(void, int, mc6809_trace_irq, NULL);
-			break;
-		case CPU_HD6309:
-			cpu->interrupt_hook = DELEGATE_AS1(void, int, hd6309_trace_irq, NULL);
-			break;
-		}
-	} else {
-		cpu->interrupt_hook.func = NULL;
-	}
-#else
-	cpu->interrupt_hook.func = NULL;
 #endif
 }
 

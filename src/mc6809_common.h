@@ -1,9 +1,9 @@
 /* Memory interface */
 
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
+static uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a);
+static uint16_t fetch_word_notrace(struct MC6809 *cpu, uint16_t a);
 static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d);
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
-#define peek_byte(c,a) ((void)fetch_byte(c,a))
+#define peek_byte(c,a) ((void)fetch_byte_notrace(c,a))
 #define NVMA_CYCLE (peek_byte(cpu, 0xffff))
 
 /* Read & write various addressing modes */

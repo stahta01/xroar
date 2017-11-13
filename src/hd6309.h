@@ -10,6 +10,8 @@
 
 #include "mc6809.h"
 
+struct hd6309_trace;
+
 #define MC6809_VARIANT_HD6309 (0x00006309)
 
 #define HD6309_INT_VEC_ILLEGAL (0xfff0)
@@ -37,6 +39,9 @@ struct HD6309 {
 	struct MC6809 mc6809;
 	// Separate state variable for the sake of debugging
 	enum hd6309_state state;
+#ifdef TRACE
+	struct hd6309_trace *tracer;
+#endif
 	// Extra registers
 	uint16_t reg_w;
 	uint8_t reg_md;
