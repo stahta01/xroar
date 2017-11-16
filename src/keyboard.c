@@ -182,6 +182,8 @@ static void type_command(void *sptr) {
 			chr = *(kip->basic_command++);
 			switch (chr) {
 				case '0': chr = '\0'; break;
+				case 'b': chr = '\010'; break;
+				case 't': chr = '\011'; break;
 				case 'e': chr = '\003'; break;
 				case 'f': chr = '\f'; break;
 				case 'n':
