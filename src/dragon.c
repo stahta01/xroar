@@ -892,6 +892,7 @@ static void dragon_single_step(struct machine *m) {
 	do {
 		md->CPU0->run(md->CPU0);
 	} while (md->single_step);
+	md->CPU0->instruction_posthook.func = NULL;
 	update_vdg_mode(md);
 }
 
@@ -1065,9 +1066,7 @@ static void dragon_set_vo_cmp(struct machine *m, int mode) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Used when single-stepping or tracing.
- */
+// Used when single-stepping.
 
 static void dragon_instruction_posthook(void *sptr) {
 	struct machine_dragon *md = sptr;
