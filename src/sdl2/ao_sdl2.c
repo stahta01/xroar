@@ -181,7 +181,7 @@ static void *new(void *cfg) {
 		case AUDIO_S16LSB: sample_fmt = SOUND_FMT_S16_LE; sample_nbytes = 2; break;
 		case AUDIO_S16MSB: sample_fmt = SOUND_FMT_S16_BE; sample_nbytes = 2; break;
 		default:
-			LOG_WARN("Unhandled audio format.");
+			LOG_WARN("Unhandled audio format 0x%x.\n", aosdl->audiospec.format);
 			goto failed;
 	}
 	aosdl->timeout_ms = (fragment_nframes * 1500) / rate;
