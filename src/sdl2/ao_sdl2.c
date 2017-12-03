@@ -162,6 +162,9 @@ static void *new(void *cfg) {
 		else
 			desired.format = AUDIO_S16LSB;
 		break;
+	case SOUND_FMT_FLOAT:
+		desired.format = AUDIO_F32SYS;
+		break;
 	}
 
 	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
@@ -180,6 +183,7 @@ static void *new(void *cfg) {
 		case AUDIO_S8: sample_fmt = SOUND_FMT_S8; sample_nbytes = 1; break;
 		case AUDIO_S16LSB: sample_fmt = SOUND_FMT_S16_LE; sample_nbytes = 2; break;
 		case AUDIO_S16MSB: sample_fmt = SOUND_FMT_S16_BE; sample_nbytes = 2; break;
+		case AUDIO_F32SYS: sample_fmt = SOUND_FMT_FLOAT; sample_nbytes = 4; break;
 		default:
 			LOG_WARN("Unhandled audio format 0x%x.\n", aosdl->audiospec.format);
 			goto failed;
