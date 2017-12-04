@@ -188,7 +188,7 @@ static void *new(void *cfg) {
 			LOG_WARN("Unhandled audio format 0x%x.\n", aosdl->audiospec.format);
 			goto failed;
 	}
-	aosdl->timeout_ms = (fragment_nframes * 1500) / rate;
+	aosdl->timeout_ms = (fragment_nframes * 2000) / rate;
 
 	buffer_nframes = fragment_nframes * aosdl->nfragments;
 	aosdl->fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
