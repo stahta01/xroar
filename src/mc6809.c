@@ -983,6 +983,86 @@ static void mc6809_run(struct MC6809 *cpu) {
 			op = byte_immediate(cpu);
 			switch (op) {
 
+			// XXX UNVERIFIED whether *all* of these operations
+			// work when prefixed by 0x10.
+
+			// 0x1000 - 0x100f direct mode ops illegal
+			// 0x1040 - 0x104f inherent A register ops illegal
+			// 0x1050 - 0x105f inherent B register ops illegal
+			// 0x1060 - 0x106f indexed mode ops illegal
+			// 0x1070 - 0x107f extended mode ops illegal
+			case 0x00: case 0x01: case 0x02: case 0x03:
+			case 0x04: case 0x05: case 0x06: case 0x07:
+			case 0x08: case 0x09: case 0x0a: case 0x0b:
+			case 0x0c: case 0x0d: case 0x0f:
+			case 0x40: case 0x41: case 0x42: case 0x43:
+			case 0x44: case 0x45: case 0x46: case 0x47:
+			case 0x48: case 0x49: case 0x4a: case 0x4b:
+			case 0x4c: case 0x4d: case 0x4f:
+			case 0x50: case 0x51: case 0x52: case 0x53:
+			case 0x54: case 0x55: case 0x56: case 0x57:
+			case 0x58: case 0x59: case 0x5a: case 0x5b:
+			case 0x5c: case 0x5d: case 0x5f:
+			case 0x60: case 0x61: case 0x62: case 0x63:
+			case 0x64: case 0x65: case 0x66: case 0x67:
+			case 0x68: case 0x69: case 0x6a: case 0x6b:
+			case 0x6c: case 0x6d: case 0x6f:
+			case 0x70: case 0x71: case 0x72: case 0x73:
+			case 0x74: case 0x75: case 0x76: case 0x77:
+			case 0x78: case 0x79: case 0x7a: case 0x7b:
+			case 0x7c: case 0x7d: case 0x7f: {
+				uint16_t ea;
+				unsigned tmp1;
+				switch ((op >> 4) & 0xf) {
+				case 0x0: ea = ea_direct(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
+				case 0x4: ea = 0; tmp1 = REG_A; break;
+				case 0x5: ea = 0; tmp1 = REG_B; break;
+				case 0x6: ea = ea_indexed(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
+				case 0x7: ea = ea_extended(cpu); tmp1 = fetch_byte_notrace(cpu, ea); break;
+				default: ea = tmp1 = 0; break;
+				}
+				switch (op & 0xf) {
+				case 0x1: // NEG illegal
+				case 0x0: tmp1 = op_neg(cpu, tmp1); break; // NEG, NEGA, NEGB
+				case 0x2: tmp1 = op_negcom(cpu, tmp1); break; // NEGCOM illegal
+				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
+				case 0x5: // LSR illegal
+				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
+				case 0x6: tmp1 = op_ror(cpu, tmp1); break; // ROR, RORA, RORB
+				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
+				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
+				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
+				case 0xb: // DEC illegal
+				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
+				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
+				case 0xd: tmp1 = op_tst(cpu, tmp1); break; // TST, TSTA, TSTB
+				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
+				default: break;
+				}
+				switch (op & 0xf) {
+				case 0xd: // TST
+					NVMA_CYCLE;
+					NVMA_CYCLE;
+					break;
+				default: // the rest need storing
+					switch ((op >> 4) & 0xf) {
+					default:
+					case 0x0: case 0x6: case 0x7:
+						NVMA_CYCLE;
+						store_byte(cpu, ea, tmp1);
+						break;
+					case 0x4:
+						REG_A = tmp1;
+						peek_byte(cpu, REG_PC);
+						break;
+					case 0x5:
+						REG_B = tmp1;
+						peek_byte(cpu, REG_PC);
+						break;
+					}
+				}
+			} break;
+
 			// 0x10, 0x11 Page 2
 			case 0x10:
 			case 0x11:
