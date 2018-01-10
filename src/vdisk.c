@@ -71,7 +71,7 @@ static struct {
 static int interleave_sd = 1;
 static int interleave_dd = 1;
 
-const char *vdisk_errlist[] = {
+static const char *vdisk_errlist[] = {
 	"No error",
 	"Internal error",
 	"Bad geometry",
@@ -86,6 +86,19 @@ const char *vdisk_errlist[] = {
 	"IDAM CRC error",
 	"Data CRC error",
 	"Unknown error"
+};
+
+static const uint8_t vdk_header[12] = {
+	0x64, 0x6b,  // 'dk' magic
+	0x00, 0x00,  // header length, populated later
+	0x10,  // VDK version
+	0x10,  // VDK backwards compatibility version
+	0x58,  // file source - 'X' for XRoar
+	0x00,  // version of file source
+	0x00,  // number of cylinders, populated later
+	0x00,  // number of heads, populated later
+	0x00,  // flags
+	0x00,  // name length & compression flag, populated later
 };
 
 const char *vdisk_strerror(int errnum) {
@@ -255,6 +268,11 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 		fclose(fd);
 		return NULL;
 	}
+	if (buf[5] > 0x10) {
+		LOG_WARN("VDK backwards compatibility version 0x%02x not supported.\n", buf[5]);
+		fclose(fd);
+		return NULL;
+	}
 	if ((buf[11] & 7) != 0) {
 		LOG_WARN("Compressed VDK not supported: '%s'\n", filename);
 		fclose(fd);
@@ -377,20 +395,14 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	}
 
 	uint16_t header_length = 12;
-	buf[0] = 'd';   // magic
-	buf[1] = 'k';   // magic
-	buf[4] = 0x10;  // VDK version
-	buf[5] = 0x10;  // VDK backwards compatibility version
-	buf[6] = 'X';   // file source - 'X' for XRoar
-	buf[7] = 0;     // version of file source
-	buf[8] = vinfo.num_cylinders;
-	buf[9] = vinfo.num_heads;
-	buf[10] = 0;    // flags
-	buf[11] = disk->fmt.vdk.filename_length << 3;  // name length & compression flag
 	if (disk->fmt.vdk.extra_length > 0)
 		header_length += disk->fmt.vdk.extra_length;
+	memcpy(buf, vdk_header, sizeof(vdk_header));
 	buf[2] = header_length & 0xff;
 	buf[3] = header_length >> 8;
+	buf[8] = vinfo.num_cylinders;
+	buf[9] = vinfo.num_heads;
+	buf[11] = disk->fmt.vdk.filename_length << 3;  // name length & compression flag
 	fwrite(buf, 12, 1, fd);
 	if (disk->fmt.vdk.extra_length > 0) {
 		fwrite(disk->fmt.vdk.extra, disk->fmt.vdk.extra_length, 1, fd);
