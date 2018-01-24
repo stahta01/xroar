@@ -139,7 +139,7 @@ static uint8_t op_lsr(struct MC6809 *cpu, uint8_t in) {
 	unsigned out = in >> 1;
 	CLR_NZC;
 	REG_CC |= (in & 1);
-	SET_Z(out);
+	SET_Z8(out);
 	return out;
 }
 

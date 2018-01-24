@@ -139,19 +139,20 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
 #define CLR_NVC   ( REG_CC &= ~(CC_N|CC_V|CC_C) )
 #define CLR_ZC    ( REG_CC &= ~(CC_Z|CC_C) )
 
-#define SET_Z(r)          ( (!(r)) ? (REG_CC |= CC_Z) : 0 )
-#define SET_N8(r)         ( REG_CC |= (r&0x80)>>4 )
-#define SET_N16(r)        ( REG_CC |= (r&0x8000)>>12 )
-#define SET_H(a,b,r)      ( REG_CC |= ((a^b^r)&0x10)<<1 )
-#define SET_C8(r)         ( REG_CC |= (r&0x100)>>8 )
-#define SET_C16(r)        ( REG_CC |= (r&0x10000)>>16 )
-#define SET_V8(a,b,r)     ( REG_CC |= ((a^b^r^(r>>1))&0x80)>>6 )
-#define SET_V16(a,b,r)    ( REG_CC |= ((a^b^r^(r>>1))&0x8000)>>14 )
-#define SET_NZ8(r)        ( SET_N8(r), SET_Z(r&0xff) )
-#define SET_NZ16(r)       ( SET_N16(r), SET_Z(r&0xffff) )
-#define SET_NZC8(r)       ( SET_N8(r), SET_Z(r&0xff), SET_C8(r) )
-#define SET_NZVC8(a,b,r)  ( SET_N8(r), SET_Z(r&0xff), SET_V8(a,b,r), SET_C8(r) )
-#define SET_NZVC16(a,b,r) ( SET_N16(r), SET_Z(r&0xffff), SET_V16(a,b,r), SET_C16(r) )
+#define SET_Z8(r)         ( (!((r)&0xff)) ? (REG_CC |= CC_Z) : 0 )
+#define SET_Z16(r)        ( (!((r)&0xffff)) ? (REG_CC |= CC_Z) : 0 )
+#define SET_N8(r)         ( REG_CC |= (((r) >> 4) & CC_N) )
+#define SET_N16(r)        ( REG_CC |= (((r) >> 12) & CC_N) )
+#define SET_H(a,b,r)      ( REG_CC |= ((((a)^(b)^(r))<<1) & CC_H) )
+#define SET_C8(r)         ( REG_CC |= (((r)>>8) & CC_C) )
+#define SET_C16(r)        ( REG_CC |= (((r)>>16) & CC_C) )
+#define SET_V8(a,b,r)     ( REG_CC |= ((((a)^(b)^(r)^((r)>>1))>>6) & CC_V) )
+#define SET_V16(a,b,r)    ( REG_CC |= ((((a)^(b)^(r)^((r)>>1))>>14) & CC_V) )
+#define SET_NZ8(r)        ( SET_N8(r), SET_Z8((r)&0xff) )
+#define SET_NZ16(r)       ( SET_N16(r), SET_Z16((r)&0xffff) )
+#define SET_NZC8(r)       ( SET_N8(r), SET_Z8((r)&0xff), SET_C8(r) )
+#define SET_NZVC8(a,b,r)  ( SET_N8(r), SET_Z8((r)&0xff), SET_V8(a,b,r), SET_C8(r) )
+#define SET_NZVC16(a,b,r) ( SET_N16(r), SET_Z16((r)&0xffff), SET_V16(a,b,r), SET_C16(r) )
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -602,14 +603,14 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x30:
 				REG_X = ea_indexed(cpu);
 				CLR_Z;
-				SET_Z(REG_X);
+				SET_Z16(REG_X);
 				NVMA_CYCLE;
 				break;
 			// 0x31 LEAY indexed
 			case 0x31:
 				REG_Y = ea_indexed(cpu);
 				CLR_Z;
-				SET_Z(REG_Y);
+				SET_Z16(REG_Y);
 				NVMA_CYCLE;
 				break;
 			// 0x32 LEAS indexed
@@ -748,7 +749,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				unsigned tmp = REG_A * REG_B;
 				REG_D = tmp;
 				CLR_ZC;
-				SET_Z(tmp);
+				SET_Z16(tmp);
 				if (tmp & 0x80)
 					REG_CC |= CC_C;
 				peek_byte(cpu, REG_PC);
