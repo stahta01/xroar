@@ -1,4 +1,4 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
+/*  Copyright 2003-2018 Ciaran Anscomb
  *
  *  This file is part of XRoar.
  *
