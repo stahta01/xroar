@@ -25,4 +25,11 @@ static struct module * const default_vo_module_list[] = {
 
 struct module * const *vo_module_list = default_vo_module_list;
 
+struct xconfig_enum vo_ntsc_phase_list[] = {
+	{ XC_ENUM_INT("none", VO_PHASE_OFF, "None") },
+	{ XC_ENUM_INT("blue-red", VO_PHASE_KBRW, "Blue-red") },
+	{ XC_ENUM_INT("red-blue", VO_PHASE_KRBW, "Red-blue") },
+	{ XC_ENUM_END() }
+};
+
 extern inline int clamp_uint8(int v);

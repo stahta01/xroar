@@ -1200,32 +1200,32 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 	switch (action) {
 	case XROAR_NEXT:
 		xroar_machine_config->cross_colour_phase++;
-		xroar_machine_config->cross_colour_phase %= NUM_CROSS_COLOUR_PHASES;
+		xroar_machine_config->cross_colour_phase %= NUM_VO_PHASES;
 		break;
 	default:
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
 	if (xroar_machine->set_vo_cmp) {
-		if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_OFF) {
-			xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+		if (xroar_machine_config->cross_colour_phase == VO_PHASE_OFF) {
+			xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 			DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
 			switch (ccr) {
 			default:
-				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 				break;
 			case UI_CCR_SIMPLE:
-				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
 				break;
 			case UI_CCR_5BIT:
-				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_PALETTE);
+				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
 				break;
 			case UI_CCR_SIMULATED:
-				xroar_machine->set_vo_cmp(xroar_machine, MACHINE_VO_CMP_SIMULATED);
+				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_SIMULATED);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
 				break;
 			}
@@ -1398,7 +1398,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 		break;
 	}
-	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? CROSS_COLOUR_OFF : CROSS_COLOUR_KBRW;
+	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? VO_PHASE_OFF : VO_PHASE_KBRW;
 	xroar_set_cross_colour_renderer(1, ccr);
 }
 
@@ -1846,13 +1846,6 @@ static struct xconfig_enum tape_channel_mode_list[] = {
 	{ XC_ENUM_INT("mix", tape_channel_mix, "downmix to mono") },
 	{ XC_ENUM_INT("left", tape_channel_left, "left channel only") },
 	{ XC_ENUM_INT("right", tape_channel_right, "right channel only") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum xroar_cross_colour_list[] = {
-	{ XC_ENUM_INT("none", CROSS_COLOUR_OFF, "None") },
-	{ XC_ENUM_INT("blue-red", CROSS_COLOUR_KBRW, "Blue-red") },
-	{ XC_ENUM_INT("red-blue", CROSS_COLOUR_KRBW, "Red-blue") },
 	{ XC_ENUM_END() }
 };
 

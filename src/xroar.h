@@ -95,8 +95,6 @@ struct xroar_cfg {
 
 extern struct xroar_cfg xroar_cfg;
 
-extern struct xconfig_enum xroar_cross_colour_list[];
-
 /**************************************************************************/
 /* Global flags */
 

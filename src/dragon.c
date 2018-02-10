@@ -815,11 +815,11 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	xroar_set_keymap(1, xroar_machine_config->keymap);
 	switch (xroar_machine_config->tv_standard) {
 	case TV_PAL: default:
-		xroar_set_cross_colour(1, CROSS_COLOUR_OFF);
+		xroar_set_cross_colour(1, VO_PHASE_OFF);
 		break;
 	case TV_NTSC:
 	case TV_PAL_M:
-		xroar_set_cross_colour(1, CROSS_COLOUR_KBRW);
+		xroar_set_cross_colour(1, VO_PHASE_KBRW);
 		break;
 	}
 	if (hard) {
@@ -1054,11 +1054,11 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 static void dragon_set_vo_cmp(struct machine *m, int mode) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	switch (mode) {
-	case MACHINE_VO_CMP_PALETTE:
+	case VO_CMP_PALETTE:
 	default:
 		mc6847_set_palette(md->VDG0, md->dummy_palette);
 		break;
-	case MACHINE_VO_CMP_SIMULATED:
+	case VO_CMP_SIMULATED:
 		mc6847_set_palette(md->VDG0, md->ntsc_palette);
 		break;
 	}

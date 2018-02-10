@@ -51,24 +51,12 @@ struct vo_interface;
 #define VDG_6847 (0)
 #define VDG_6847T1 (1)
 
-// Video output is either palette based or simulated analogue
-#define MACHINE_VO_CMP_PALETTE (0)
-#define MACHINE_VO_CMP_SIMULATED (1)
-
 /* These are now purely for backwards-compatibility with old snapshots.
  * Cartridge types are now more generic: see cart.h.  */
 #define DOS_NONE      (0)
 #define DOS_DRAGONDOS (1)
 #define DOS_RSDOS     (2)
 #define DOS_DELTADOS  (3)
-
-/* NTSC cross-colour can either be switched off, or sychronised to one
- * of two phases (a real CoCo does not emit a colour burst in high resolution
- * mode, so NTSC televisions sync to one at random on machine reset) */
-#define NUM_CROSS_COLOUR_PHASES (3)
-#define CROSS_COLOUR_OFF  (0)
-#define CROSS_COLOUR_KBRW (1)
-#define CROSS_COLOUR_KRBW (2)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -52,7 +52,7 @@ struct ntsc_xyz {
 extern unsigned ntsc_phase;
 
 inline void ntsc_reset_phase(void) {
-	if (xroar_machine_config->cross_colour_phase == CROSS_COLOUR_KRBW) {
+	if (xroar_machine_config->cross_colour_phase == VO_PHASE_KRBW) {
 		ntsc_phase = 1;
 	} else {
 		ntsc_phase = 3;

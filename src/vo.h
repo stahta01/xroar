@@ -19,13 +19,27 @@ Video output interface definition.
 
 #include "delegate.h"
 
+#include "xconfig.h"
+
 struct module;
 struct ntsc_burst;
+
+// Composite NTSC artifacting can be rendered to various degrees of accuracy.
+// Additionally, VO_CMP_PALETTE and VO_CMP_SIMULATED values are used to
+// distinguish between the palette-based and the arithmetic-based approaches.
 
 #define VO_CMP_PALETTE (0)
 #define VO_CMP_2BIT (1)
 #define VO_CMP_5BIT (2)
 #define VO_CMP_SIMULATED (3)
+
+// NTSC cross-colour can either be switched off, or sychronised to one of two
+// phases.
+
+#define NUM_VO_PHASES (3)
+#define VO_PHASE_OFF  (0)
+#define VO_PHASE_KBRW (1)
+#define VO_PHASE_KRBW (2)
 
 struct vo_cfg {
 	char *geometry;
@@ -57,6 +71,8 @@ struct vo_interface {
 };
 
 extern struct module * const *vo_module_list;
+
+extern struct xconfig_enum vo_ntsc_phase_list[];
 
 inline int clamp_uint8(int v) {
 	if (v < 0) return 0;

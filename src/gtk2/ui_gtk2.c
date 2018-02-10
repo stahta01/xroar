@@ -452,9 +452,9 @@ static GtkRadioActionEntry const ccr_radio_entries[] = {
 };
 
 static GtkRadioActionEntry const cross_colour_radio_entries[] = {
-	{ .name = "cc-none", .label = "None", .value = CROSS_COLOUR_OFF },
-	{ .name = "cc-blue-red", .label = "Blue-red", .value = CROSS_COLOUR_KBRW },
-	{ .name = "cc-red-blue", .label = "Red-blue", .value = CROSS_COLOUR_KRBW },
+	{ .name = "cc-none", .label = "None", .value = VO_PHASE_OFF },
+	{ .name = "cc-blue-red", .label = "Blue-red", .value = VO_PHASE_KBRW },
+	{ .name = "cc-red-blue", .label = "Red-blue", .value = VO_PHASE_KRBW },
 };
 
 static GtkRadioActionEntry const keymap_radio_entries[] = {

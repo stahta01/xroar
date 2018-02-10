@@ -214,8 +214,8 @@ static void setup_view_menu(void) {
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cross-colour");
-	for (int i = 0; xroar_cross_colour_list[i].name; i++) {
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cross_colour, xroar_cross_colour_list[i].value), xroar_cross_colour_list[i].description);
+	for (int i = 0; vo_ntsc_phase_list[i].name; i++) {
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cross_colour, vo_ntsc_phase_list[i].value), vo_ntsc_phase_list[i].description);
 	}
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
