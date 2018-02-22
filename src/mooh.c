@@ -131,7 +131,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 			bank = n->taskreg[segment][n->task];
 		}
 
-		if (bank != 0x3F || crm) {
+		if (bank != 0x3F || crm || (A & 0xE000) == 0xE000 ) {
 			c->EXTMEM = 1;
 			return n->extmem[bank * 0x2000 + offset];
 		}
@@ -191,7 +191,7 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 			bank = n->taskreg[segment][n->task];
 		}
 
-		if (bank != 0x3F || crm) {
+		if (bank != 0x3F || crm || (A & 0xE000) == 0xE000) {
 			n->extmem[bank * 0x2000 + offset] = D;
 			c->EXTMEM = 1;
 		}
