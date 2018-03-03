@@ -6,6 +6,11 @@
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
 #define EXTBANKS 16
 
+/* 65SPI interface on Spinx-512 boards */
+uint8_t spi65_read(uint8_t reg);
+void spi65_write(uint8_t reg, uint8_t value);
+void spi65_reset(void);
+
 static struct cart *nx32_new(struct cart_config *);
 
 struct cart_module cart_nx32_module = {
@@ -52,6 +57,7 @@ static void nx32_reset(struct cart *c) {
 	n->extmem_bank = 0;
 	if (n->have_becker)
 		becker_reset();
+	spi65_reset();
 }
 
 static void nx32_detach(struct cart *c) {
@@ -65,6 +71,10 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	struct nx32 *n = (struct nx32 *)c;
 	(void)R2;
 	c->EXTMEM = 0;
+
+	if ((A & 0xFFFC) == 0xFF6C)
+		return spi65_read(A & 3);
+
 	if (A > 0x7fff && A < 0xff00 && !n->extmem_ty && n->extmem_map) {
 		c->EXTMEM = 1;
 		return n->extmem[0x8000 * n->extmem_bank + (A & 0x7fff)];
@@ -86,6 +96,10 @@ static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 	struct nx32 *n = (struct nx32 *)c;
 	(void)R2;
 	c->EXTMEM = 0;
+
+	if ((A & 0xFFFC) == 0xFF6C)
+		spi65_write(A & 3, D);
+
 	if ((A & ~1) == 0xFFDE) {
 		n->extmem_ty = A & 1;
 	} else if ((A & ~1) == 0xFFBE) {

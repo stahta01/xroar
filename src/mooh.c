@@ -1,6 +1,9 @@
 /*
- *  Emulation of MOOH memory expansion (DAT)
- *  2016 Tormod Volden
+ *  Emulation of MOOH memory & SPI board
+ *
+ *  Copyright 2016-2018 Tormod Volden
+ *
+ *  See COPYING.GPL for redistribution conditions.
  */
 
 #include <xalloc.h>
@@ -11,6 +14,10 @@
 /* Number of 8KB mappable RAM pages in cartridge */
 #define MEMPAGES 0x40
 #define TASK_MASK 0x3F	/* 6 bit task registers */
+
+uint8_t spi65_read(uint8_t reg);
+void spi65_write(uint8_t reg, uint8_t value);
+void spi65_reset(void);
 
 struct mooh {
 	struct cart cart;
@@ -65,6 +72,8 @@ static void mooh_reset(struct cart *c) {
 	if (n->have_becker)
 		becker_reset();
 	n->crt9128_reg_addr = 0;
+
+	spi65_reset();
 }
 
 static void mooh_detach(struct cart *c) {
@@ -82,6 +91,10 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 	(void)R2;
 	c->EXTMEM = 0;
+
+	if ((A & 0xFFFC) == 0xFF6C)
+		return spi65_read(A & 3);
+
 	if ((A & 0xFFF0) == 0xFFA0) {
 		return n->taskreg[A & 7][(A & 8) >> 3];
 #if 0
@@ -133,6 +146,10 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 
 	(void)R2;
 	c->EXTMEM = 0;
+
+
+	if ((A & 0xFFFC) == 0xFF6C)
+		spi65_write(A & 3, D);
 
 	/* poor man's CRT9128 Wordpak emulation */
 	if (A == 0xFF7D)
