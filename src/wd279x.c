@@ -643,9 +643,10 @@ static void state_machine(void *sptr) {
 				LOG_DEBUG(3, "WD279X: Read sector data tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
 				fdc->status_register |= STATUS_CRC_ERROR;
 			}
-			/* TODO: M == 1 */
 			if (fdc->command_register & 0x10) {
-				LOG_DEBUG(3, "WD279X: TODO: multi-sector read will fail.\n");
+				/* XXX what happens on overflow here? */
+				fdc->sector_register++;
+				GOTO_STATE(WD279X_state_type2_1);
 			}
 			fdc->status_register &= ~(STATUS_BUSY);
 			SET_INTRQ;
@@ -731,7 +732,11 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_write_sector_6:
 			_vdrive_write(fdc, 0xfe);
-			/* TODO: M = 1 */
+			if (fdc->command_register & 0x10) {
+				/* XXX what happens on overflow here? */
+				fdc->sector_register++;
+				GOTO_STATE(WD279X_state_type2_1);
+			}
 			fdc->status_register &= ~(STATUS_BUSY);
 			SET_INTRQ;
 			return;
