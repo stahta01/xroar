@@ -633,10 +633,10 @@ static void setup_view_menu(void) {
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Cross-colour"];
 
-	for (i = 0; xroar_cross_colour_list[i].name; i++) {
-		NSString *s = [[NSString alloc] initWithUTF8String:xroar_cross_colour_list[i].description];
+	for (i = 0; vo_ntsc_phase_list[i].name; i++) {
+		NSString *s = [[NSString alloc] initWithUTF8String:vo_ntsc_phase_list[i].description];
 		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_CROSS_COLOUR | xroar_cross_colour_list[i].value)];
+		[item setTag:(TAG_CROSS_COLOUR | vo_ntsc_phase_list[i].value)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[submenu addItem:item];
 		[item release];
