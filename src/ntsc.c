@@ -25,10 +25,9 @@ NTSC encoding & decoding.
 #include "xalloc.h"
 
 #include "ntsc.h"
+#include "vo.h"
 
 unsigned ntsc_phase = 0;
-
-static int clamp_uint8(int v);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -116,11 +115,3 @@ void ntsc_burst_free(struct ntsc_burst *nb) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 extern inline struct ntsc_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc);
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static int clamp_uint8(int v) {
-	if (v < 0) return 0;
-	if (v > 255) return 255;
-	return v;
-}
