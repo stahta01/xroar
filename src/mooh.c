@@ -89,8 +89,10 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	int bank;
 	int crm;
 
-	(void)R2;
 	c->EXTMEM = 0;
+
+        if (R2)
+                return c->rom_data[A & 0x3fff];
 
 	if ((A & 0xFFFC) == 0xFF6C)
 		return spi65_read(A & 3);
