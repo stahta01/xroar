@@ -53,7 +53,7 @@ static void read_image(uint8_t *buffer, uint32_t lba)
 		}
 		fseek(sd_image, lba * 512, SEEK_SET);
 		// fprintf(stderr, "\nReading SD card image %s at LBA %d\n", SDIMAGE, lba);
-		if (fread(blkbuf, 512, 1, sd_image) != 1)
+		if (fread(buffer, 512, 1, sd_image) != 1)
 			fprintf(stderr, "Short read from SD card image %s\n", SDIMAGE);
 		fclose(sd_image);
 }
@@ -67,7 +67,7 @@ static void write_image(uint8_t *buffer, uint32_t lba)
 			fprintf(stderr, "Error opening SD card image %s\n", SDIMAGE);
 		fseek(sd_image, lba * 512, SEEK_SET);
 		// fprintf(stderr, "\nWriting SD card image %s at LBA %d\n", SDIMAGE, lba);
-		if (fwrite(blkbuf, 512, 1, sd_image) != 1)
+		if (fwrite(buffer, 512, 1, sd_image) != 1)
 			fprintf(stderr, "Short write to SD card image %s\n", SDIMAGE);
 		fclose(sd_image);
 }

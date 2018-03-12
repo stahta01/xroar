@@ -30,7 +30,7 @@ static uint8_t ss_ie;
 
 uint8_t spi65_read(uint8_t reg)
 {
-	uint8_t value;
+	uint8_t value = 0;
 
 	switch (reg) {
 	case SPIDATA:
