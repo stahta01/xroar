@@ -1,20 +1,14 @@
-/*  Copyright 2003-2018 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+*/
 
 #include "config.h"
 
@@ -306,6 +300,11 @@ static char const * const default_config[] = {
 	"cart-type rsdos",
 	"cart-rom @rsdos_becker",
 	"cart-becker",
+	// Games Master Cartridge
+	"cart gmc",
+	"cart-desc Games Master Cartridge",
+	"cart-type gmc",
+	"cart-autorun",
 	// Orchestra 90
 	"cart orch90",
 	"cart-desc Orchestra-90 CC",

@@ -29,6 +29,7 @@ xroar_SOURCES = \
 	dragondos.c \
 	events.c events.h \
 	fs.c fs.h \
+	gmc.c \
 	hd6309.c hd6309.h \
 	hexs19.c hexs19.h \
 	ide.c ide.h \

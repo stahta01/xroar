@@ -1,7 +1,14 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2018  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+*/
 
 #ifndef XROAR_XROAR_H_
 #define XROAR_XROAR_H_
@@ -205,4 +212,4 @@ void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int no
 			  struct xconfig_enum const *e);
 void xroar_cfg_print_string_list(FILE *f, _Bool all, char const *opt, struct slist *l);
 
-#endif  /* XROAR_XROAR_H_ */
+#endif

@@ -55,6 +55,7 @@ static struct cart_module cart_rom_module = {
 extern struct cart_module cart_dragondos_module;
 extern struct cart_module cart_deltados_module;
 extern struct cart_module cart_rsdos_module;
+extern struct cart_module cart_gmc_module;
 extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
 extern struct cart_module cart_ide_module;
@@ -230,6 +231,7 @@ void cart_init(void) {
 	cart_modules = slist_prepend(cart_modules, &cart_ide_module);
 	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);
 	cart_modules = slist_prepend(cart_modules, &cart_orch90_module);
+	cart_modules = slist_prepend(cart_modules, &cart_gmc_module);
 	cart_modules = slist_prepend(cart_modules, &cart_rsdos_module);
 	cart_modules = slist_prepend(cart_modules, &cart_deltados_module);
 	cart_modules = slist_prepend(cart_modules, &cart_dragondos_module);
