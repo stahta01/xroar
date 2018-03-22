@@ -1,7 +1,16 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+Dragon/CoCo cartridge support.
+
+*/
 
 #ifndef XROAR_CART_H_
 #define XROAR_CART_H_
@@ -35,6 +44,7 @@ struct cart {
 	void (*attach)(struct cart *c);
 	void (*detach)(struct cart *c);
 	uint8_t *rom_data;
+	uint16_t rom_bank;
 	DELEGATE_T1(void, bool) signal_firq;
 	DELEGATE_T1(void, bool) signal_nmi;
 	DELEGATE_T1(void, bool) signal_halt;
@@ -68,7 +78,9 @@ struct cart *cart_new_named(const char *cc_name);
 void cart_free(struct cart *c);
 
 void cart_rom_init(struct cart *c);
+void cart_rom_reset(struct cart *c);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
+void cart_rom_select_bank(struct cart *c, uint16_t bank);
 
-#endif  /* XROAR_CART_H_ */
+#endif

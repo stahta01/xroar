@@ -1,20 +1,16 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+Dragon/CoCo cartridge support.
+
+*/
 
 #include "config.h"
 
@@ -304,14 +300,15 @@ void cart_rom_init(struct cart *c) {
 	assert(cc != NULL);
 	c->read = cart_rom_read;
 	c->write = cart_rom_write;
-	c->reset = dummy_cart;
+	c->reset = cart_rom_reset;
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
-	c->rom_data = xzalloc(0x4000);
+	c->rom_data = xzalloc(0x10000);
+	c->rom_bank = 0;
 	if (cc->rom) {
 		char *tmp = romlist_find(cc->rom);
 		if (tmp) {
-			int size = machine_load_rom(tmp, c->rom_data, 0x4000);
+			int size = machine_load_rom(tmp, c->rom_data, 0x10000);
 			(void)size;  // avoid warnings if...
 #ifdef LOGGING
 			if (size > 0) {
@@ -354,7 +351,7 @@ static struct cart *cart_rom_new(struct cart_config *cc) {
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
-		return c->rom_data[A & 0x3fff];
+		return c->rom_data[c->rom_bank | (A & 0x3fff)];
 	return D;
 }
 
@@ -364,6 +361,10 @@ static void cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8
 	(void)P2;
 	(void)R2;
 	(void)D;
+}
+
+void cart_rom_reset(struct cart *c) {
+	c->rom_bank = 0;
 }
 
 void cart_rom_attach(struct cart *c) {
@@ -387,6 +388,10 @@ void cart_rom_detach(struct cart *c) {
 		free(c->rom_data);
 		c->rom_data = NULL;
 	}
+}
+
+void cart_rom_select_bank(struct cart *c, uint16_t bank) {
+	c->rom_bank = bank;
 }
 
 static void do_firq(void *data) {
