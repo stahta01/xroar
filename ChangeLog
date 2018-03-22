@@ -12,6 +12,7 @@ Version 0.35, unreleased
   * Integrate tracing into CPU code
   * 6809: Assume certain page2 illegal ops clone those from page0 [David Ladd]
   * WD279x: implement multiple-sector type 2 ops
+  * SN76489 sound chip support
 
 Version 0.34, Sun Aug  7 2016
 

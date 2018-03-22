@@ -47,6 +47,7 @@ xroar_SOURCES = \
 	ntsc.c ntsc.h \
 	nx32.c \
 	mooh.c \
+	sn76489.c sn76489.h \
 	spi65.c \
 	spi_sdcard.c \
 	orch90.c \
