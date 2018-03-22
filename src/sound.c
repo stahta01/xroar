@@ -1,20 +1,17 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+Dragon/CoCo sound interface.  Audio modules provide a buffer to write
+into.  Sound interface provides Dragon/CoCo-specific means to write to it.
+
+*/
 
 #include "config.h"
 
@@ -34,51 +31,64 @@
 #include "tape.h"
 #include "xroar.h"
 
-union sample_t {
-	uint8_t as_int8[2];
-	uint16_t as_int16[2];
-	float as_float[2];
-};
-
 static void flush_frame(void *sptr);
-
-/* XXX this still conflates general sound buffer management with
- * Dragon/CoCo-specific writing routines.  Need to separate the two. */
 
 struct sound_interface_private {
 
 	struct sound_interface public;
 
-	struct event flush_event;
-
-	/* Describes the buffer: */
-	enum sound_fmt buffer_fmt;
-	int buffer_nchannels;
+	// Describes the mix & output buffers:
 	unsigned buffer_nframes;
-	void *buffer;
-	/* Current index into the buffer */
+	float *mix_buffer;  // mix buffer
+	int output_nchannels;
+	enum sound_fmt output_fmt;
+	void *output_buffer;  // final output may not be floats
+
+	// Current index into the buffer
 	unsigned buffer_frame;
 
-	float output_level[2];
-	union sample_t last_sample;
-	event_ticks last_cycle;
+	// Track error dividing frames by ticks.
+	float frameerror;
 	float ticks_per_frame;
+	event_ticks last_cycle;
+
+	// Schedule periodic flushes to the audio output module.
 	unsigned ticks_per_buffer;
-	float error_f;
+	struct event flush_event;
 
-	// Computed by set_gain() or set_volume().  Defaults to -3 dBFS.
-	unsigned gain;
-
-	_Bool external_audio;
-
-	_Bool sbs_enabled;
-	_Bool sbs_level;
-	_Bool mux_enabled;
-	unsigned mux_source;
 	float dac_level;
 	float tape_level;
-	float cart_level;
-	float external_level[2];
+
+	// Audio circuit state
+	struct {
+		// Single-bit sound
+		_Bool sbs_enabled;
+		_Bool sbs_level;
+		// Analogue multiplexer
+		_Bool mux_enabled;
+		unsigned mux_source;
+		// External audio, potentially stereo
+		float external[2];
+	} current, next;
+
+	// Inputs to audio mux.  Suitable for mixing to the output buffer, so
+	// may have been filtered.
+	float *mux_input[4];
+
+	// The unfiltered "current" values of those inputs.  Suitable for
+	// feeding back to the single bit sound pin as an input.
+	float mux_input_raw[4];
+
+	// Scale & offset to apply to the audio mux.  Intended to simulate the
+	// changing characteristics when enabling or disabling single-bit
+	// sound.
+	float mux_gain;
+	float bus_offset;
+
+	// Overall gain to output buffer.  Computed by set_gain() or
+	// set_volume().  Defaults to -3 dBFS.
+	float gain;
+
 };
 
 enum sound_source {
@@ -102,34 +112,35 @@ enum sound_source {
  */
 
 // Maximum measured voltage:
-static const float full_scale_v = 4.7;
+#define MAX_V (4.70)
+
+// TODO: cart levels & gain are assumed here.
 
 // Source gains
 static const float source_gain_v[NUM_SOURCES][3] = {
-	{ 4.5, 2.84, 3.4 },  // DAC
-	{ 0.5, 0.4, 0.5 },  // Tape
-	{ 0.0, 0.0, 0.0 },  // Cart
-	{ 0.0, 0.0, 0.0 },  // None
-	{ 0.0, 0.0, 0.0 }  // Single-bit
+	{ 4.50/MAX_V, 2.84/MAX_V, 3.40/MAX_V },  // DAC
+	{ 0.50/MAX_V, 0.40/MAX_V, 0.50/MAX_V },  // Tape
+	{ 4.70/MAX_V, 2.84/MAX_V, 3.40/MAX_V },  // Cart
+	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V },  // None
+	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V }   // Single-bit
 };
 
 // Source offsets
 static const float source_offset_v[NUM_SOURCES][3] = {
-	{ 0.2, 0.18, 1.3 },  // DAC
-	{ 2.05, 1.6, 2.35 },  // Tape
-	{ 0.0, 0.0, 3.9 },  // Cart
-	{ 0.0, 0.0, 0.01 },  // None
-	{ 0.0, 0.0, 3.9 }  // Single-bit
+	{ 0.20/MAX_V, 0.18/MAX_V, 1.30/MAX_V },  // DAC
+	{ 2.05/MAX_V, 1.60/MAX_V, 2.35/MAX_V },  // Tape
+	{ 0.00/MAX_V, 0.18/MAX_V, 1.30/MAX_V },  // Cart
+	{ 0.00/MAX_V, 0.00/MAX_V, 0.00/MAX_V },  // None
+	{ 0.00/MAX_V, 0.00/MAX_V, 3.90/MAX_V }   // Single-bit
 };
-
-static float bus_level = 0.0;
 
 struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsigned rate,
 					    unsigned nchannels, unsigned nframes) {
 	struct sound_interface_private *snd = xmalloc(sizeof(*snd));
 	*snd = (struct sound_interface_private){0};
+	struct sound_interface *sndp = &snd->public;
 
-	snd->gain = 4935;  // -3 dBFS
+	sound_set_gain(sndp, -3.0);
 
 	_Bool fmt_big_endian = 1;
 
@@ -142,16 +153,16 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	if (fmt == SOUND_FMT_S16_BE) {
 		fmt_big_endian = 1;
 #if __BYTE_ORDER == __BIG_ENDIAN
-			fmt = SOUND_FMT_S16_HE;
+		fmt = SOUND_FMT_S16_HE;
 #else
-			fmt = SOUND_FMT_S16_SE;
+		fmt = SOUND_FMT_S16_SE;
 #endif
 	} else if (fmt == SOUND_FMT_S16_LE) {
 		fmt_big_endian = 0;
 #if __BYTE_ORDER == __BIG_ENDIAN
-			fmt = SOUND_FMT_S16_SE;
+		fmt = SOUND_FMT_S16_SE;
 #else
-			fmt = SOUND_FMT_S16_HE;
+		fmt = SOUND_FMT_S16_HE;
 #endif
 	} else if (fmt == SOUND_FMT_S16_HE) {
 		fmt_big_endian = (__BYTE_ORDER == __BIG_ENDIAN);
@@ -189,14 +200,25 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 		}
 		LOG_DEBUG(1, "%uHz\n", rate);
 	}
-	snd->output_level[0] = snd->output_level[1] = 0.0;
 
-	snd->buffer = buf;
+	sndp->framerate = rate;
+	snd->output_buffer = buf;
+	snd->mix_buffer = xmalloc(nframes * nchannels * sizeof(float));
 	snd->buffer_nframes = nframes;
-	snd->buffer_fmt = fmt;
-	snd->buffer_nchannels = nchannels;
+	snd->output_fmt = fmt;
+	snd->output_nchannels = nchannels;
+
+	snd->current.mux_source = 0;
+	snd->next.mux_source = 0;
+	for (unsigned i = 0; i < 4; i++) {
+		snd->mux_input[i] = xmalloc(nframes * sizeof(float));
+		for (unsigned j = 0; j < nframes; j++) {
+			snd->mux_input[i][j] = 0.0;
+		}
+	}
+
 	snd->ticks_per_frame = (float)EVENT_TICK_RATE / (float)rate;
-	snd->ticks_per_buffer = snd->ticks_per_frame * nframes;
+	snd->ticks_per_buffer = ((long)nframes * EVENT_TICK_RATE) / rate;
 	snd->last_cycle = event_current_tick;
 
 	event_init(&snd->flush_event, DELEGATE_AS0(void, flush_frame, snd));
@@ -209,241 +231,202 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 void sound_interface_free(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	event_dequeue(&snd->flush_event);
+	free(snd->mix_buffer);
+	for (unsigned i = 0; i < 4; i++) {
+		free(snd->mux_input[i]);
+	}
 	free(snd);
 }
 
-// -ve dB wrt 0dBFS
-void sound_set_gain(struct sound_interface *sndp, double db) {
-	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	double v = pow(10., db / 20.);
-	snd->gain = (unsigned)((32767. * v) / full_scale_v);
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// linear scaling 0-100 (but allow up to 200)
-void sound_set_volume(struct sound_interface *sndp, int v) {
-	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	if (v < 0) v = 0;
-	if (v > 200) v = 200;
-	snd->gain = (unsigned)((327.67 * (float)v) / full_scale_v);
-}
-
-static void fill_int8(struct sound_interface_private *snd, int nframes) {
-	while (nframes > 0) {
-		int count;
-		if ((snd->buffer_frame + nframes) > snd->buffer_nframes)
-			count = snd->buffer_nframes - snd->buffer_frame;
-		else
-			count = nframes;
-		nframes -= count;
-		if (snd->buffer) {
-			uint8_t *ptr = (uint8_t *)snd->buffer + snd->buffer_frame * snd->buffer_nchannels;
-			if (snd->buffer_nchannels == 1) {
-				/* special case for single channel 8-bit */
-				memset(ptr, snd->last_sample.as_int8[0], count);
-			} else {
-				for (int i = 0; i < count; i++) {
-					for (int j = 0; j < snd->buffer_nchannels; j++) {
-						*(ptr++) = snd->last_sample.as_int8[j];
-					}
-				}
+// convert buffer to desired output format and send it to audio module
+static void send_buffer(struct sound_interface_private *snd) {
+	int nsamples = snd->output_nchannels * snd->buffer_nframes;
+	float *input = snd->mix_buffer;
+	if (snd->output_buffer) {
+		switch (snd->output_fmt) {
+		case SOUND_FMT_U8: {
+			int8_t *output = snd->output_buffer;
+			for (int i = nsamples; i; i--)
+				*(output++) = *(input++) * 0x7f + 0x80;
+		} break;
+		case SOUND_FMT_S8: {
+			uint8_t *output = snd->output_buffer;
+			for (int i = nsamples; i; i--)
+				*(output++) = *(input++) * 0x7f;
+		} break;
+		case SOUND_FMT_S16_HE: {
+			int16_t *output = snd->output_buffer;
+			for (int i = nsamples; i; i--)
+				*(output++) = *(input++) * 0x7fff;
+		} break;
+		case SOUND_FMT_S16_SE: {
+			uint8_t *output = snd->output_buffer;
+			for (int i = nsamples; i; i--) {
+				int16_t v = *(input++) * 0x7fff;
+				*(output++) = *((uint8_t *)&v+1);
+				*(output++) = *(uint8_t *)&v;
 			}
-		}
-		snd->buffer_frame += count;
-		if (snd->buffer_frame >= snd->buffer_nframes) {
-			snd->buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->buffer);
-			snd->buffer_frame = 0;
-		}
-	}
-}
-
-static void fill_int16(struct sound_interface_private *snd, int nframes) {
-	while (nframes > 0) {
-		int count;
-		if ((snd->buffer_frame + nframes) > snd->buffer_nframes)
-			count = snd->buffer_nframes - snd->buffer_frame;
-		else
-			count = nframes;
-		nframes -= count;
-		if (snd->buffer) {
-			uint16_t *ptr = (uint16_t *)snd->buffer + snd->buffer_frame * snd->buffer_nchannels;
-			for (int i = 0; i < count; i++) {
-				for (int j = 0; j < snd->buffer_nchannels; j++) {
-					*(ptr++) = snd->last_sample.as_int16[j];
-				}
-			}
-		}
-		snd->buffer_frame += count;
-		if (snd->buffer_frame >= snd->buffer_nframes) {
-			snd->buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->buffer);
-			snd->buffer_frame = 0;
+		} break;
+		case SOUND_FMT_FLOAT: {
+			float *output = snd->output_buffer;
+			for (int i = nsamples; i; i--)
+				*(output++) = *(input++);
+		} break;
+		default:
+			break;
 		}
 	}
+	snd->output_buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->output_buffer);
+	snd->buffer_frame = 0;
 }
 
-static void fill_float(struct sound_interface_private *snd, int nframes) {
-	while (nframes > 0) {
-		int count;
-		if ((snd->buffer_frame + nframes) > snd->buffer_nframes)
-			count = snd->buffer_nframes - snd->buffer_frame;
-		else
-			count = nframes;
-		nframes -= count;
-		if (snd->buffer) {
-			float *ptr = (float *)snd->buffer + snd->buffer_frame * snd->buffer_nchannels;
-			for (int i = 0; i < count; i++) {
-				for (int j = 0; j < snd->buffer_nchannels; j++) {
-					*(ptr++) = snd->last_sample.as_float[j];
-				}
-			}
-		}
-		snd->buffer_frame += count;
-		if (snd->buffer_frame >= snd->buffer_nframes) {
-			snd->buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->buffer);
-			snd->buffer_frame = 0;
-		}
-	}
-}
+// Fill sound buffer to current point in time, sending to audio module when full.
 
-static void null_frames(struct sound_interface_private *snd, int nframes) {
-	snd->buffer_frame += nframes;
-	while (snd->buffer_frame >= snd->buffer_nframes) {
-		snd->buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->buffer);
-		snd->buffer_frame -= snd->buffer_nframes;
-	}
-}
-
-/* Fill sound buffer to current point in time, call sound module's
- * update() function if buffer is full. */
 void sound_update(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
+
 	int elapsed = event_tick_delta(event_current_tick, snd->last_cycle);
 	unsigned nframes = 0;
 	if (elapsed >= 0) {
 		float nframes_f = elapsed / snd->ticks_per_frame;
 		nframes = nframes_f;
-		snd->error_f += (nframes_f - nframes);
-		unsigned error = snd->error_f;
+		snd->frameerror += (nframes_f - nframes);
+		unsigned error = snd->frameerror;
 		nframes += error;
-		snd->error_f -= error;
+		snd->frameerror -= error;
 	}
-
-	/* Update output samples */
-	for (int i = 0; i < snd->buffer_nchannels; i++) {
-		int output = snd->output_level[i] * snd->gain;
-		if (output > 32767) {
-			output = 32767;
-		}
-		if (output < -32767) {
-			output = -32767;
-		}
-		switch (snd->buffer_fmt) {
-		case SOUND_FMT_U8:
-			snd->last_sample.as_int8[i] = (output >> 8) + 0x80;
-			break;
-		case SOUND_FMT_S8:
-			snd->last_sample.as_int8[i] = output >> 8;
-			break;
-		case SOUND_FMT_S16_HE:
-			snd->last_sample.as_int16[i] = output;
-			break;
-		case SOUND_FMT_S16_SE:
-			snd->last_sample.as_int16[i] = (output & 0xff) << 8 | ((output >> 8) & 0xff);
-			break;
-		case SOUND_FMT_FLOAT:
-			snd->last_sample.as_float[i] = (float)output / 32767.;
-			break;
-		default:
-			break;
-		}
-	}
-
-	/* Fill buffer */
-	switch (snd->buffer_fmt) {
-	case SOUND_FMT_U8:
-	case SOUND_FMT_S8:
-		fill_int8(snd, nframes);
-		break;
-	case SOUND_FMT_S16_HE:
-	case SOUND_FMT_S16_SE:
-		fill_int16(snd, nframes);
-		break;
-	case SOUND_FMT_FLOAT:
-		fill_float(snd, nframes);
-		break;
-	default:
-		null_frames(snd, nframes);
-		break;
-	}
-
 	snd->last_cycle = event_current_tick;
 
-	/* Mix internal sound sources to bus */
-	unsigned sindex = snd->sbs_enabled ? (snd->sbs_level ? 2 : 1) : 0;
-	enum sound_source source;
-	if (snd->mux_enabled) {
-		source = snd->mux_source;
-		switch (source) {
-		case SOURCE_DAC:
-			bus_level = snd->dac_level;
-			break;
-		case SOURCE_TAPE:
-			bus_level = snd->tape_level;
-			break;
-		default:
-		case SOURCE_CART:
-		case SOURCE_NONE:
-			bus_level = snd->cart_level;
-			break;
+	// Always run external sources so they're up to date, even though we'll
+	// only use one of them.
+	if (DELEGATE_DEFINED(sndp->get_tape_audio)) {
+		snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, snd->mux_input[SOURCE_TAPE]);
+	}
+	if (DELEGATE_DEFINED(sndp->get_cart_audio)) {
+		snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, snd->mux_input[SOURCE_CART]);
+	}
+
+	// Only fill DAC buffer if it's selected
+	if (snd->current.mux_enabled && snd->current.mux_source == SOURCE_DAC) {
+		for (unsigned i = 0; i < nframes; i++) {
+			snd->mux_input[SOURCE_DAC][i] = snd->mux_input_raw[SOURCE_DAC];
 		}
-		bus_level = (bus_level * source_gain_v[source][sindex])
-		             + source_offset_v[source][sindex];
-	} else if (sindex > 0) {
-		// single-bit enabled
-		source = SOURCE_SINGLE_BIT;
-		bus_level = source_offset_v[SOURCE_SINGLE_BIT][sindex];
+		snd->mux_input_raw[SOURCE_DAC] = snd->dac_level;
 	}
 
-	/* Feed back bus level to single bit pin */
-	DELEGATE_SAFE_CALL1(snd->public.sbs_feedback, snd->sbs_enabled || bus_level >= 1.414);
+	// Fill tape buffer.  This functionality should be pushed out into the
+	// get_tape_audio delegate.
+	if (!DELEGATE_DEFINED(sndp->get_tape_audio) && snd->current.mux_enabled && snd->current.mux_source == SOURCE_TAPE) {
+		for (unsigned i = 0; i < nframes; i++) {
+			snd->mux_input[SOURCE_TAPE][i] = snd->mux_input_raw[SOURCE_TAPE];
+		}
+		snd->mux_input_raw[SOURCE_TAPE] = snd->tape_level;
+	}
 
-	/* Mix bus & external sound */
-	if (snd->external_audio) {
-		snd->output_level[0] = snd->external_level[0]*full_scale_v + bus_level;
-		snd->output_level[1] = snd->external_level[1]*full_scale_v + bus_level;
+	// Select appropriate mux output, or none
+	float *mux_output;
+	if (snd->current.mux_enabled) {
+		mux_output = snd->mux_input[snd->current.mux_source];
 	} else {
-		snd->output_level[0] = bus_level;
-		snd->output_level[1] = bus_level;
+		mux_output = snd->mux_input[SOURCE_NONE];
 	}
-	/* Downmix to mono */
-	if (snd->buffer_nchannels == 1)
-		snd->output_level[0] = snd->output_level[0] + snd->output_level[1];
+
+	// Mix audio, send when buffer full
+	while (nframes > 0) {
+		int count;
+		if ((snd->buffer_frame + nframes) > snd->buffer_nframes)
+			count = snd->buffer_nframes - snd->buffer_frame;
+		else
+			count = nframes;
+		nframes -= count;
+		if (snd->output_buffer) {
+			float *ptr = (float *)snd->mix_buffer + snd->buffer_frame * snd->output_nchannels;
+			for (int i = 0; i < count; i++) {
+				float mix_sample = (*(mux_output++) * snd->mux_gain) + snd->bus_offset;
+				for (int j = 0; j < snd->output_nchannels; j++) {
+					*(ptr++) = (mix_sample + snd->current.external[j]) * snd->gain;
+				}
+			}
+		}
+		snd->buffer_frame += count;
+		if (snd->buffer_frame >= snd->buffer_nframes) {
+			send_buffer(snd);
+		}
+	}
+
+	// Now that audio has been dealt with up to the current point in time,
+	// update sources.
+
+	snd->current.sbs_enabled = snd->next.sbs_enabled;
+	snd->current.sbs_level = snd->next.sbs_level;
+	snd->current.mux_enabled = snd->next.mux_enabled;
+	snd->current.mux_source = snd->next.mux_source;
+
+	// Copy external audio, downmix to mono if necessary.
+	if (snd->output_nchannels == 1) {
+		snd->current.external[0] = snd->next.external[0] + snd->next.external[1];
+	} else {
+		snd->current.external[0] = snd->next.external[0];
+		snd->current.external[1] = snd->next.external[1];
+	}
+
+	// Different configurations of single-bit sound have different effects
+	// on the mux output.  Gain & DC offset updated here.
+	float mux_output_raw;
+	unsigned sindex = snd->current.sbs_enabled ? (snd->current.sbs_level ? 2 : 1) : 0;
+	if (snd->current.mux_enabled) {
+		mux_output_raw = snd->mux_input_raw[snd->current.mux_source];
+		snd->mux_gain = source_gain_v[snd->current.mux_source][sindex];
+		snd->bus_offset = source_offset_v[snd->current.mux_source][sindex];
+	} else {
+		mux_output_raw = 0.0;
+		if (snd->current.sbs_enabled) {
+			int sindex = snd->current.sbs_level ? 2 : 1;
+			snd->mux_gain = 0.0;
+			snd->bus_offset = source_offset_v[SOURCE_SINGLE_BIT][sindex];
+		}
+	}
+
+	// Feed back bus level to single bit pin.
+	float bus_level = (mux_output_raw * snd->mux_gain) + snd->bus_offset;
+	DELEGATE_SAFE_CALL1(snd->public.sbs_feedback, snd->current.sbs_enabled || bus_level >= 1.414);
 
 }
 
-void sound_enable_external(struct sound_interface *sndp) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Sets the overall gain applied after mixing sources.  Generally a negative
+// number relative to 0dBFS.
+void sound_set_gain(struct sound_interface *sndp, double db) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	snd->external_audio = 1;
+	float v = powf(10., db / 20.);
+	snd->gain = v;
 }
 
-void sound_disable_external(struct sound_interface *sndp) {
+// Old way to set the gain by specifying a percentage of full scale (linear).
+void sound_set_volume(struct sound_interface *sndp, int v) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	snd->external_audio = 0;
+	if (v < 0) v = 0;
+	if (v > 200) v = 200;
+	snd->gain = (float)v / 100.;
 }
 
 void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	if (snd->sbs_enabled == enabled && snd->sbs_level == level)
+	if (snd->next.sbs_enabled == enabled && snd->next.sbs_level == level)
 		return;
-	snd->sbs_enabled = enabled;
-	snd->sbs_level = level;
+	snd->next.sbs_enabled = enabled;
+	snd->next.sbs_level = level;
 	sound_update(sndp);
 }
 
 void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	if (snd->mux_enabled == enabled)
+	if (snd->next.mux_enabled == enabled)
 		return;
-	snd->mux_enabled = enabled;
+	snd->next.mux_enabled = enabled;
 	if (xroar_cfg.fast_sound)
 		return;
 	sound_update(sndp);
@@ -451,10 +434,10 @@ void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled) {
 
 void sound_set_mux_source(struct sound_interface *sndp, unsigned source) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	if (snd->mux_source == source)
+	if (snd->next.mux_source == source)
 		return;
-	snd->mux_source = source;
-	if (!snd->mux_enabled)
+	snd->next.mux_source = source;
+	if (!snd->next.mux_enabled)
 		return;
 	if (xroar_cfg.fast_sound)
 		return;
@@ -464,36 +447,27 @@ void sound_set_mux_source(struct sound_interface *sndp, unsigned source) {
 void sound_set_dac_level(struct sound_interface *sndp, float level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	snd->dac_level = level;
-	if (snd->mux_enabled && snd->mux_source == SOURCE_DAC)
+	if (snd->next.mux_enabled && snd->next.mux_source == SOURCE_DAC)
 		sound_update(sndp);
 }
 
 void sound_set_tape_level(struct sound_interface *sndp, float level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	snd->tape_level = level;
-	if (snd->mux_enabled && snd->mux_source == SOURCE_TAPE)
-		sound_update(sndp);
-}
-
-void sound_set_cart_level(struct sound_interface *sndp, float level) {
-	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	snd->cart_level = level;
-	if (snd->mux_enabled && snd->mux_source == SOURCE_CART)
+	if (snd->next.mux_enabled && snd->next.mux_source == SOURCE_TAPE)
 		sound_update(sndp);
 }
 
 void sound_set_external_left(struct sound_interface *sndp, float level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	snd->external_level[0] = level;
-	if (snd->external_audio)
-		sound_update(sndp);
+	snd->next.external[0] = level;
+	sound_update(sndp);
 }
 
 void sound_set_external_right(struct sound_interface *sndp, float level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	snd->external_level[1] = level;
-	if (snd->external_audio)
-		sound_update(sndp);
+	snd->next.external[1] = level;
+	sound_update(sndp);
 }
 
 static void flush_frame(void *sptr) {

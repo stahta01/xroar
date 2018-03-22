@@ -1,20 +1,16 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+Orchestra-90 CC support.
+
+*/
 
 #include "config.h"
 
@@ -81,8 +77,6 @@ static void orch90_attach(struct cart *c) {
 
 static void orch90_detach(struct cart *c) {
 	struct orch90 *o = (struct orch90 *)c;
-	sound_disable_external(o->snd);
-	sound_set_cart_level(o->snd, 0.0);
 	cart_rom_detach(c);
 }
 
@@ -95,7 +89,6 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 		return;
 	struct orch90 *o = (struct orch90 *)c;
 	o->snd = intf;
-	sound_enable_external(o->snd);
 }
 
 static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -105,11 +98,9 @@ static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	if (A == 0xff7a) {
 		o->left = (float)D / 255.;
 		sound_set_external_left(o->snd, o->left);
-		sound_set_cart_level(o->snd, (o->left + o->right) / 2.0);
 	}
 	if (A == 0xff7b) {
 		o->right = (float)D / 255.;
 		sound_set_external_right(o->snd, o->right);
-		sound_set_cart_level(o->snd, (o->left + o->right) / 2.0);
 	}
 }

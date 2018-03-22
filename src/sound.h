@@ -1,7 +1,7 @@
 /*
 
 XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2017, Ciaran Anscomb
+Copyright 2003-2018, Ciaran Anscomb
 
 This is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
@@ -30,7 +30,10 @@ enum sound_fmt {
 };
 
 struct sound_interface {
+	int framerate;  // output rate
 	DELEGATE_T1(void, bool) sbs_feedback;  // single-bit sound feedback
+	DELEGATE_T3(float, uint32, int, floatp) get_tape_audio;
+	DELEGATE_T3(float, uint32, int, floatp) get_cart_audio;
 	DELEGATE_T1(voidp, voidp) write_buffer;
 };
 
@@ -43,8 +46,6 @@ void sound_set_gain(struct sound_interface *sndp, double db);  // -ve wrt 0dBFS
 void sound_set_volume(struct sound_interface *sndp, int v);  // linear 0-100
 
 void sound_update(struct sound_interface *sndp);
-void sound_enable_external(struct sound_interface *sndp);
-void sound_disable_external(struct sound_interface *sndp);
 
 // Dragon/CoCo-specific manipulation
 void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level);
@@ -52,8 +53,7 @@ void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled);
 void sound_set_mux_source(struct sound_interface *sndp, unsigned source);
 void sound_set_dac_level(struct sound_interface *sndp, float level);
 void sound_set_tape_level(struct sound_interface *sndp, float level);
-void sound_set_cart_level(struct sound_interface *sndp, float level);
 void sound_set_external_left(struct sound_interface *sndp, float level);
 void sound_set_external_right(struct sound_interface *sndp, float level);
 
-#endif  /* XROAR_SOUND_H_ */
+#endif
