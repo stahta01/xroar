@@ -14,6 +14,7 @@ Version 0.35, unreleased
   * WD279x: implement multiple-sector type 2 ops
   * SN76489 sound chip support
   * Games Master Cartridge support (-cart gmc)
+  * Use SDL2 audio queueing interface where -ao-fragments > 1
 
 Version 0.34, Sun Aug  7 2016
 
