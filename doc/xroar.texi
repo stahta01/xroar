@@ -33,7 +33,7 @@
 This manual is for XRoar (version @value{VERSION}), a Dragon and
 Tandy Colour Computer emulator.
 
-Copyright @copyright{} 2017
+Copyright @copyright{} 2018
 Ciaran Anscomb.
 @end copying
 
@@ -63,7 +63,9 @@ models 1 & 2.  Some features are:
 @item Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
 @item Saves and loads machine snapshots.
 @item Provides a GDB target for remote debugging.
+@item Games Master Cartridge support, including SN76489 sound chip.
 @item Experimental Glenside IDE support.
+@item Experimental MOOH RAM expansion + SPI support.
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
@@ -453,19 +455,35 @@ Delta System, Premier Microsystems' disk interface cartridge for the Dragon.
 RSDOS, Tandy's disk interface cartridge for use with the CoCo.  Based on the
 WD1793 controller.
 
+@item gmc
+
+John Linville's Games Master Cartridge provides the ability to bank switch up
+to 64K of cartridge ROM, along with an on-board SN76489 sound chip.  Be aware
+that as provided, the cartridge is designed to auto-start an on-board ROM, and
+XRoar reflects this use.  If you want to use it as a standalone cartridge,
+you'll need to use the @option{-no-cart-autorun} option.
+
 @item orch90
 
 The Orchestra 90-CC cartridge provides stereo 8-bit audio output.  The default
 ROM is CoCo-only, but the hardware is compatible with the Dragon.
 
+@item ide
+
+Glenside IDE interface for hard disks.  See @ref{Hard Disks}.
+
+@item nx32
+
+Tormod Volden's NX32 RAM expansion cartridge.
+
+@item mooh
+
+Tormod Volden's MOOH RAM expansion cartridge.
+
 @item mpi
 
 Multi-Pak Interface.  A CoCo add-on by Tandy that allows up to four
 cartridges to be connected, selectable by software or hardware switch.
-
-@item ide
-
-Glenside IDE interface for hard disks.  See @ref{Hard Disks}.
 
 @end table
 
@@ -1293,20 +1311,6 @@ default machine: Dragon 64, Dragon 32, CoCo.
 @image{xroar-screens, 4.15625in,, Emulator with and without BASIC ROM, png}
 @caption{Emulator with and without BASIC ROM}
 @end float
-
-@itemize @bullet
-@item A black window appears.  Commands typed blind appear
-to work.
-@end itemize
-
-This has cropped up a few times for people using Windows.
-
-By default, XRoar tries to use OpenGL for its video output.  Windows versions
-even as late as Windows 7 have been reported to come with drivers that do not
-even support basic texture rendering (OpenGL Extension Viewer reports ``Max
-texture image units: 0'').  If this is the case, try running with the
-@option{-vo sdl} option, which should select an unaccelerated, non-scalable
-output.
 
 @itemize @bullet
 @item This program is supposed to be in colour, but all I see is black & white.

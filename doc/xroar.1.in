@@ -92,7 +92,7 @@ The remaining options configure the currently selected cartridge:
 cartridge description
 .TP
 \fB\-cart\-type\fR \fItype\fR
-cartridge base type (\fBrom\fR, \fBdragondos\fR, \fBdelta\fR, \fBrsdos\fR, \fBorch90\fR, \fBmpi\fR or \fBide\fR)
+cartridge base type (\fB-cart-type help\fR for list)
 .TP
 \fB\-cart\-rom\fR \fIname\fR
 ROM image to load ($C000\-)
@@ -233,7 +233,7 @@ audio module (\fB\-ao help\fR for list)
 device to use for audio module
 .TP
 \fB\-ao\-format\fR \fIfmt\fR
-set audio sample format (\fBu8\fR, \fBs8\fR, \fBs16\fR, \fBs16se\fR, \fBs16be\fR, \fBs16le\fR or \fBfloat\fR)
+set audio sample format (\fB-ao-format help\fR for list)
 .TP
 \fB\-ao\-rate\fR \fIhz\fR
 set audio frame rate (if supported by module)

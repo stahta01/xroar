@@ -5,7 +5,7 @@ AC_PREREQ(2.61)
 AC_INIT([xroar], [0.34])
 AM_INIT_AUTOMAKE([foreign])
 
-MANPAGE_DATE="January 2017"
+MANPAGE_DATE="March 2018"
 AC_SUBST(MANPAGE_DATE)
 
 AC_CONFIG_SRCDIR([src/xroar.c])
