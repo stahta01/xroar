@@ -1,23 +1,17 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
 
-/* OpenGL code is common to several video modules.  All the stuff that's not
- * toolkit-specific goes in here. */
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+OpenGL code is common to several video modules.  All the stuff that's
+not toolkit-specific goes in here.
+
+*/
 
 #include "config.h"
 
@@ -50,18 +44,9 @@
 /* Define stuff required for vo_generic_ops and include it */
 
 typedef uint16_t Pixel;
-#define MAPCOLOUR(vo,r,g,b) ( (((r) & 0xf8) << 8) | (((g) & 0xfc) << 3) | (((b) & 0xf8) >> 3) )
-#define XSTEP 1
-#define NEXTLINE 0
-#define LOCK_SURFACE(vo)
-#define UNLOCK_SURFACE(vo)
-
-#include "vo_generic_ops.c"
-
-/*** ***/
 
 struct vo_opengl_interface {
-	struct vo_generic_interface generic;
+	struct vo_interface public;
 
 	Pixel *texture_pixels;
 	unsigned window_width, window_height;
@@ -72,6 +57,17 @@ struct vo_opengl_interface {
 
 	GLfloat vertices[4][2];
 };
+
+#define VO_MODULE_INTERFACE struct vo_opengl_interface
+#define MAPCOLOUR(vo,r,g,b) ( (((r) & 0xf8) << 8) | (((g) & 0xfc) << 3) | (((b) & 0xf8) >> 3) )
+#define XSTEP 1
+#define NEXTLINE 0
+#define LOCK_SURFACE(vo)
+#define UNLOCK_SURFACE(vo)
+
+#include "vo_generic_ops.c"
+
+/*** ***/
 
 static const GLfloat tex_coords[][2] = {
 	{ 0.0, 0.0 },
@@ -87,10 +83,10 @@ static void vo_opengl_vsync(void *sptr);
 static void vo_opengl_set_vo_cmp(void *sptr, int mode);
 
 struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
-	struct vo_opengl_interface *vogl = xmalloc(sizeof(*vogl));
-	*vogl = (struct vo_opengl_interface){0};
-	struct vo_generic_interface *generic = &vogl->generic;
-	struct vo_interface *vo = &generic->public;
+	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
+	struct vo_opengl_interface *vogl = &generic->module;
+	struct vo_interface *vo = &vogl->public;
+	*generic = (struct vo_generic_interface){0};
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
 	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
@@ -214,13 +210,16 @@ static void vo_opengl_refresh(void *sptr) {
 }
 
 static void vo_opengl_vsync(void *sptr) {
-	struct vo_opengl_interface *vogl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_opengl_interface *vogl = &generic->module;
 	vo_opengl_refresh(vogl);
-	vogl->generic.pixel = vogl->texture_pixels;
-	generic_vsync(&vogl->generic);
+	generic->pixel = vogl->texture_pixels;
+	generic_vsync(generic);
 }
 
 static void vo_opengl_set_vo_cmp(void *sptr, int mode) {
-	struct vo_opengl_interface *vogl = sptr;
-	set_vo_cmp(&vogl->generic.public, mode);
+	struct vo_generic_interface *generic = sptr;
+	struct vo_opengl_interface *vogl = &generic->module;
+	struct vo_interface *vo = &vogl->public;
+	set_vo_cmp(vo, mode);
 }

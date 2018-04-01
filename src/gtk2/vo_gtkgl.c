@@ -1,20 +1,16 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+GtkGLExt video.
+
+*/
 
 #include "config.h"
 
@@ -48,14 +44,22 @@ struct module vo_gtkgl_module = {
 	.new = new,
 };
 
+// - - -
+
+struct vo_gtkgl_interface {
+	struct vo_interface public;
+
+	struct vo_interface *vogl;  // OpenGL generic interface
+};
+
+// - - -
+
 static void vo_gtkgl_free(void *sptr);
 static void refresh(void *sptr);
 static void vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void vo_gtkgl_set_vo_cmp(void *sptr, int mode);
-
-struct vo_interface *vogl;
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
@@ -71,14 +75,16 @@ static void *new(void *cfg) {
 		return NULL;
 	}
 
-	vogl = vo_opengl_new(cfg);
+	struct vo_interface *vogl = vo_opengl_new(cfg);
 	if (!vogl) {
 		LOG_ERROR("Failed to create OpenGL context\n");
 		return NULL;
 	}
 
-	struct vo_interface *vo = xmalloc(sizeof(*vo));
-	*vo = (struct vo_interface){0};
+	struct vo_gtkgl_interface *vogtkgl = xmalloc(sizeof(*vogtkgl));
+	struct vo_interface *vo = &vogtkgl->public;
+	*vogtkgl = (struct vo_gtkgl_interface){0};
+	vogtkgl->vogl = vogl;
 
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
 	vo->update_palette = vogl->update_palette;
@@ -117,14 +123,16 @@ static void *new(void *cfg) {
 }
 
 static void vo_gtkgl_free(void *sptr) {
-	struct vo_interface *vo = sptr;
-	set_fullscreen(vo, 0);
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vogl = vogtkgl->vogl;
+	set_fullscreen(vogtkgl, 0);
 	DELEGATE_CALL0(vogl->free);
-	free(vo);
+	free(vogtkgl);
 }
 
 static void resize(void *sptr, unsigned int w, unsigned int h) {
-	struct vo_interface *vo = sptr;
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
 	if (vo->is_fullscreen) {
 		return;
 	}
@@ -148,7 +156,8 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_interface *vo = sptr;
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
 	(void)fullscreen;
 	if (fullscreen) {
 		gtk_window_fullscreen(GTK_WINDOW(gtk2_top_window));
@@ -175,10 +184,9 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 }
 
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
-	struct vo_interface *vo = data;
-	(void)vo;
+	struct vo_gtkgl_interface *vogtkgl = data;
+	struct vo_interface *vogl = vogtkgl->vogl;
 	(void)event;
-	(void)data;
 
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(da);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(da);
@@ -197,8 +205,8 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 }
 
 static void refresh(void *sptr) {
-	struct vo_interface *vo = sptr;
-	(void)vo;
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vogl = vogtkgl->vogl;
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -213,8 +221,8 @@ static void refresh(void *sptr) {
 }
 
 static void vsync(void *sptr) {
-	struct vo_interface *vo = sptr;
-	(void)vo;
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vogl = vogtkgl->vogl;
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
 
@@ -229,7 +237,9 @@ static void vsync(void *sptr) {
 }
 
 static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
-	struct vo_interface *vo = sptr;
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_interface *vogl = vogtkgl->vogl;
 	DELEGATE_CALL1(vogl->set_vo_cmp, mode);
 	vo->render_scanline = vogl->render_scanline;
 }

@@ -1,24 +1,18 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
 
-/* This file contains generic scanline rendering routines.  It is included
- * into various video module source files and makes use of macros defined in
- * those files (eg, LOCK_SURFACE and XSTEP) */
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+This file contains generic scanline rendering routines.  It is included
+into various video module source files and makes use of macros defined
+in those files (eg, LOCK_SURFACE and XSTEP)
+
+*/
 
 #include <math.h>
 
@@ -29,7 +23,7 @@
 #include "mc6847/mc6847.h"
 
 struct vo_generic_interface {
-	struct vo_interface public;
+	VO_MODULE_INTERFACE module;
 
 	// Palettes
 	Pixel vdg_colour[12];
@@ -160,7 +154,8 @@ static void alloc_colours(void *sptr) {
 
 static void render_scanline(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
-	struct vo_interface *vo = &generic->public;
+	VO_MODULE_INTERFACE *vom = &generic->module;
+	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	(void)phase;
 	if (generic->scanline >= vo->window_y &&
@@ -183,7 +178,8 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 
 static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
-	struct vo_interface *vo = &generic->public;
+	VO_MODULE_INTERFACE *vom = &generic->module;
+	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (generic->scanline >= vo->window_y &&
@@ -214,7 +210,8 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 
 static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
-	struct vo_interface *vo = &generic->public;
+	VO_MODULE_INTERFACE *vom = &generic->module;
+	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
 	if (generic->scanline >= vo->window_y &&
@@ -248,7 +245,8 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 
 static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
-	struct vo_interface *vo = &generic->public;
+	VO_MODULE_INTERFACE *vom = &generic->module;
+	struct vo_interface *vo = &vom->public;
 	if (generic->scanline < vo->window_y ||
 	    generic->scanline >= (vo->window_y + vo->window_h)) {
 		generic->scanline++;
@@ -274,7 +272,8 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 
 static void set_vo_cmp(void *sptr, int mode) {
 	struct vo_generic_interface *generic = sptr;
-	struct vo_interface *vo = &generic->public;
+	VO_MODULE_INTERFACE *vom = &generic->module;
+	struct vo_interface *vo = &vom->public;
 	switch (mode) {
 	case VO_CMP_PALETTE:
 		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);

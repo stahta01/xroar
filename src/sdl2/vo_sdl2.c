@@ -1,20 +1,16 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+SDL2 video.
+
+*/
 
 #include "config.h"
 
@@ -44,28 +40,30 @@ struct module vo_sdl_module = {
 /*** ***/
 
 typedef uint16_t Pixel;
-#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
-#define XSTEP 1
-#define NEXTLINE 0
-#define LOCK_SURFACE(vo)
-#define UNLOCK_SURFACE(vo)
-#define VIDEO_MODULE_NAME vo_sdl_module
-
-#include "vo_generic_ops.c"
-
-/*** ***/
 
 struct vo_sdl_interface {
-	struct vo_generic_interface generic;
+	struct vo_interface public;
 
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
-	uint16_t *texture_pixels;
+	Pixel *texture_pixels;
 	int filter;
 
 	int window_w;
 	int window_h;
 };
+
+#define VO_MODULE_INTERFACE struct vo_sdl_interface
+#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
+#define XSTEP 1
+#define NEXTLINE 0
+#define LOCK_SURFACE(generic)
+#define UNLOCK_SURFACE(generic)
+#define VIDEO_MODULE_NAME vo_sdl_module
+
+#include "vo_generic_ops.c"
+
+/*** ***/
 
 static void vo_sdl_free(void *sptr);
 static void vo_sdl_vsync(void *sptr);
@@ -78,14 +76,15 @@ static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
 static void *new(void *cfg) {
 	struct vo_cfg *vo_cfg = cfg;
-	struct vo_sdl_interface *vosdl = xmalloc(sizeof(*vosdl));
-	*vosdl = (struct vo_sdl_interface){0};
-	struct vo_generic_interface *generic = &vosdl->generic;
-	struct vo_interface *vo = &generic->public;
+	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
+	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+	*generic = (struct vo_generic_interface){0};
 
 	vosdl->texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
 	for (int i = 0; i < 640 * 240; i++)
 		vosdl->texture_pixels[i] = MAPCOLOUR(vosdl,0,0,0);
+
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
 	vosdl->window_h = 480;
@@ -98,7 +97,7 @@ static void *new(void *cfg) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
-	vosdl->generic.public.is_fullscreen = !vo_cfg->fullscreen;
+	vo->is_fullscreen = !vo_cfg->fullscreen;
 	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
 		vo_sdl_free(vo);
 		return NULL;
@@ -116,8 +115,10 @@ static void *new(void *cfg) {
 }
 
 static void resize(void *sptr, unsigned int w, unsigned int h) {
-	struct vo_sdl_interface *vosdl = sptr;
-	if (vosdl->generic.public.is_fullscreen)
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+	if (vo->is_fullscreen)
 		return;
 	vosdl->window_w = w;
 	vosdl->window_h = h;
@@ -125,13 +126,15 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
 	int err;
 
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (sdl_window && !vosdl->generic.public.is_fullscreen && fullscreen) {
+	if (sdl_window && !vo->is_fullscreen && fullscreen) {
 		sdl_windows32_remove_menu(sdl_window);
 	}
 #endif
@@ -158,7 +161,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
-	if (vosdl->generic.public.is_fullscreen && !fullscreen) {
+	if (vo->is_fullscreen && !fullscreen) {
 		sdl_windows32_add_menu(sdl_window);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
@@ -185,7 +188,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vosdl->generic.public.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 	sdl_display.x = sdl_display.y = 0;
 
 	/* Initialise keyboard */
@@ -266,11 +269,13 @@ static void vo_sdl_free(void *sptr) {
 }
 
 static void vo_sdl_vsync(void *sptr) {
-	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
 	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, 640 * sizeof(Pixel));
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->renderer);
-	vosdl->generic.pixel = vosdl->texture_pixels;
-	generic_vsync(&vosdl->generic.public);
+	generic->pixel = vosdl->texture_pixels;
+	generic_vsync(vo);
 }
