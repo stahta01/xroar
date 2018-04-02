@@ -22,6 +22,23 @@ in those files (eg, LOCK_SURFACE and XSTEP)
 #include "vdg_palette.h"
 #include "mc6847/mc6847.h"
 
+// - - - - - - -
+
+#ifdef WANT_SIMULATED_NTSC
+
+#define SCALE_PIXELS (1)
+#define PIXEL_DENSITY (2)
+
+#else
+
+// Trades off speed for accuracy by halving the video data rate.
+#define SCALE_PIXELS (2)
+#define PIXEL_DENSITY (1)
+
+#endif
+
+// - - - - - - -
+
 struct vo_generic_interface {
 	VO_MODULE_INTERFACE module;
 
@@ -160,13 +177,17 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 	(void)phase;
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x;
+		scanline_data += vo->window_x/SCALE_PIXELS;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w >> 1; i; i--) {
 			uint8_t c0 = *scanline_data;
-			scanline_data += 2;
+			scanline_data += PIXEL_DENSITY;
+#ifdef WANT_SIMULATED_NTSC
 			*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
-			generic->pixel += 2*XSTEP;
+#else
+			*(generic->pixel) = generic->vdg_colour[c0];
+#endif
+			generic->pixel += PIXEL_DENSITY*XSTEP;
 		}
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
@@ -184,21 +205,30 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 	unsigned p = (phase >> 2) & 1;
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x;
+		scanline_data += vo->window_x/SCALE_PIXELS;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w / 4; i; i--) {
 			uint8_t c0 = *scanline_data;
-			uint8_t c1 = *(scanline_data+2);
-			scanline_data += 4;
+			uint8_t c1 = *(scanline_data+PIXEL_DENSITY);
+			scanline_data += 2*PIXEL_DENSITY;
 			if (c0 == VDG_BLACK || c0 == VDG_WHITE) {
 				int aindex = ((c0 != VDG_BLACK) ? 2 : 0)
 					     | ((c1 != VDG_BLACK) ? 1 : 0);
+#ifdef WANT_SIMULATED_NTSC
 				*(generic->pixel) = *(generic->pixel+1) = *(generic->pixel+2) = *(generic->pixel+3) = generic->artifact_simple[p][aindex];
+#else
+				*(generic->pixel) = *(generic->pixel+1) = generic->artifact_simple[p][aindex];
+#endif
 			} else {
+#ifdef WANT_SIMULATED_NTSC
 				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
 				*(generic->pixel+2) = *(generic->pixel+3) = generic->vdg_colour[c1];
+#else
+				*(generic->pixel) = generic->vdg_colour[c0];
+				*(generic->pixel+1) = generic->vdg_colour[c1];
+#endif
 			}
-			generic->pixel += 4*XSTEP;
+			generic->pixel += 2*PIXEL_DENSITY*XSTEP;
 		}
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
@@ -217,22 +247,30 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
 		unsigned aindex = 0;
-		scanline_data += vo->window_x;
-		aindex = (*(scanline_data - 6) != VDG_BLACK) ? 14 : 0;
-		aindex |= (*(scanline_data - 2) != VDG_BLACK) ? 1 : 0;
+		scanline_data += vo->window_x/SCALE_PIXELS;
+		aindex = (*(scanline_data - 3*PIXEL_DENSITY) != VDG_BLACK) ? 14 : 0;
+		aindex |= (*(scanline_data - 1*PIXEL_DENSITY) != VDG_BLACK) ? 1 : 0;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w/2; i; i--) {
 			aindex = (aindex << 1) & 31;
-			if (*(scanline_data + 4) != VDG_BLACK)
+			if (*(scanline_data + 2*PIXEL_DENSITY) != VDG_BLACK)
 				aindex |= 1;
 			uint8_t c = *scanline_data;
-			scanline_data += 2;
+			scanline_data += PIXEL_DENSITY;
 			if (c == VDG_BLACK || c == VDG_WHITE) {
+#ifdef WANT_SIMULATED_NTSC
 				*(generic->pixel) = *(generic->pixel+1) = generic->artifact_5bit[p][aindex];
+#else
+				*(generic->pixel) = generic->artifact_5bit[p][aindex];
+#endif
 			} else {
+#ifdef WANT_SIMULATED_NTSC
 				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c];
+#else
+				*(generic->pixel) = generic->vdg_colour[c];
+#endif
 			}
-			generic->pixel += 2*XSTEP;
+			generic->pixel += 1*PIXEL_DENSITY*XSTEP;
 			p ^= 1;
 		}
 		UNLOCK_SURFACE(generic);

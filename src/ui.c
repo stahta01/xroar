@@ -61,7 +61,9 @@ struct ui_module * const *ui_module_list = default_ui_module_list;
 struct xconfig_enum ui_ccr_list[] = {
 	{ XC_ENUM_INT("simple", UI_CCR_SIMPLE, "four colour palette") },
 	{ XC_ENUM_INT("5bit", UI_CCR_5BIT, "5-bit lookup table") },
+#ifdef WANT_SIMULATED_NTSC
 	{ XC_ENUM_INT("simulated", UI_CCR_SIMULATED, "simulated filtered analogue") },
+#endif
 	{ XC_ENUM_END() }
 };
 

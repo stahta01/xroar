@@ -39,6 +39,14 @@ not toolkit-specific goes in here.
 #include "vo_opengl.h"
 #include "xroar.h"
 
+#ifdef WANT_SIMULATED_NTSC
+#define TEXTURE_PITCH (1024)
+#define TEXTURE_WIDTH (640)
+#else
+#define TEXTURE_PITCH (512)
+#define TEXTURE_WIDTH (320)
+#endif
+
 /*** ***/
 
 /* Define stuff required for vo_generic_ops and include it */
@@ -96,7 +104,7 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_opengl_set_vo_cmp, vo);
 
-	vogl->texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
+	vogl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
 	vogl->window_width = 640;
 	vogl->window_height = 480;
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
@@ -163,7 +171,7 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	glDeleteTextures(1, &vogl->texnum);
 	glGenTextures(1, &vogl->texnum);
 	glBindTexture(GL_TEXTURE_2D, vogl->texnum);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5, 1024, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5, TEXTURE_PITCH, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	if (vogl->filter == UI_GL_FILTER_NEAREST
 	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->vo_opengl_w % 320) == 0 && (vogl->vo_opengl_h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -175,10 +183,10 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	/* Is there a better way of clearing the texture? */
-	memset(vogl->texture_pixels, 0, 1024 * sizeof(Pixel));
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 640,   0,    1, 256,
+	memset(vogl->texture_pixels, 0, TEXTURE_PITCH * sizeof(Pixel));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, TEXTURE_WIDTH,   0,    1, 256,
 			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, vogl->texture_pixels);
-	glTexSubImage2D(GL_TEXTURE_2D, 0,   0, 240, 1024,   1,
+	glTexSubImage2D(GL_TEXTURE_2D, 0,   0, 240, TEXTURE_PITCH,   1,
 			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, vogl->texture_pixels);
 
 	glColor4f(1.0, 1.0, 1.0, 1.0);
@@ -203,7 +211,7 @@ static void vo_opengl_refresh(void *sptr) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	/* Draw main window */
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-			640, 240, GL_RGB,
+			TEXTURE_WIDTH, 240, GL_RGB,
 			GL_UNSIGNED_SHORT_5_6_5, vogl->texture_pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	/* Video module should now do whatever's required to swap buffers */

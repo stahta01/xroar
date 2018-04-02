@@ -30,6 +30,12 @@ SDL2 video.
 
 #include "sdl2/common.h"
 
+#ifdef WANT_SIMULATED_NTSC
+#define TEXTURE_WIDTH (640)
+#else
+#define TEXTURE_WIDTH (320)
+#endif
+
 static void *new(void *cfg);
 
 struct module vo_sdl_module = {
@@ -81,8 +87,8 @@ static void *new(void *cfg) {
 	struct vo_interface *vo = &vosdl->public;
 	*generic = (struct vo_generic_interface){0};
 
-	vosdl->texture_pixels = xmalloc(640 * 240 * sizeof(Pixel));
-	for (int i = 0; i < 640 * 240; i++)
+	vosdl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
+	for (int i = 0; i < TEXTURE_WIDTH * 240; i++)
 		vosdl->texture_pixels[i] = MAPCOLOUR(vosdl,0,0,0);
 
 	vosdl->filter = vo_cfg->gl_filter;
@@ -228,7 +234,7 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 		return -1;
 	}
 
-	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 640, 240);
+	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, TEXTURE_WIDTH, 240);
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer(vosdl);
@@ -272,7 +278,7 @@ static void vo_sdl_vsync(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
 	struct vo_sdl_interface *vosdl = &generic->module;
 	struct vo_interface *vo = &vosdl->public;
-	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, 640 * sizeof(Pixel));
+	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEXTURE_WIDTH * sizeof(Pixel));
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->renderer);

@@ -15,6 +15,7 @@ Version 0.35, unreleased
   * SN76489 sound chip support
   * Games Master Cartridge support (-cart gmc)
   * Use SDL2 audio queueing interface where -ao-fragments > 1
+  * Optional --disable-simulated-ntsc configure option for speed
 
 Version 0.34, Sun Aug  7 2016
 

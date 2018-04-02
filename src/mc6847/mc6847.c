@@ -1,20 +1,16 @@
-/*  Copyright 2003-2017 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+Motorola MC6487 Video Display Generator (VDG).
+
+*/
 
 #include "config.h"
 
@@ -120,9 +116,24 @@ static void render_scanline(struct MC6847_private *vdg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+#ifdef WANT_SIMULATED_NTSC
+
+#define SCALE_PIXELS (1)
+
 static inline int encode_pixel(struct MC6847_private *vdg, int colour) {
 	return ntsc_encode_from_palette(vdg->palette, colour);
 }
+
+#else
+
+// Trades off speed for accuracy by halving the video data rate.
+
+#define SCALE_PIXELS (2)
+#define encode_pixel(vdg,colour) (colour)
+
+#endif
+
+// - - - - - - -
 
 static void do_hs_fall(void *data) {
 	struct MC6847_private *vdg = data;
@@ -130,8 +141,8 @@ static void do_hs_fall(void *data) {
 	if (vdg->frame == 0) {
 		if (vdg->scanline < VDG_ACTIVE_AREA_START) {
 			if (vdg->scanline == 0) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
-				for (unsigned j = VDG_tAVB; j > 0; j--) {
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START/SCALE_PIXELS;
+				for (unsigned j = VDG_tAVB/SCALE_PIXELS; j > 0; j--) {
 					*(v++) = encode_pixel(vdg, vdg->border_colour);
 				}
 			}
@@ -145,8 +156,8 @@ static void do_hs_fall(void *data) {
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
-				for (unsigned j = VDG_tAVB; j > 0; j--) {
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START/SCALE_PIXELS;
+				for (unsigned j = VDG_tAVB/SCALE_PIXELS; j > 0; j--) {
 					*(v++) = encode_pixel(vdg, vdg->border_colour);
 				}
 			}
@@ -271,15 +282,15 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 	if (vdg->beam_pos >= beam_to)
 		return;
-	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos;
+	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos/SCALE_PIXELS;
 
 	while (vdg->lborder_remaining > 0) {
 		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-		vdg->beam_pos++;
+		vdg->beam_pos += SCALE_PIXELS;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
-		vdg->lborder_remaining--;
+		vdg->lborder_remaining -= SCALE_PIXELS;
 		if (vdg->beam_pos >= beam_to)
 			return;
 	}
@@ -361,22 +372,28 @@ static void render_scanline(struct MC6847_private *vdg) {
 			break;
 		}
 		if (vdg->is_32byte) {
-			*(pixel) = encode_pixel(vdg, c0);
-			*(pixel+1) = encode_pixel(vdg, c0);
-			*(pixel+2) = encode_pixel(vdg, c1);
-			*(pixel+3) = encode_pixel(vdg, c1);
-			pixel += 4;
+			*(pixel++) = encode_pixel(vdg, c0);
+#ifdef WANT_SIMULATED_NTSC
+			*(pixel++) = encode_pixel(vdg, c0);
+#endif
+			*(pixel++) = encode_pixel(vdg, c1);
+#ifdef WANT_SIMULATED_NTSC
+			*(pixel++) = encode_pixel(vdg, c1);
+#endif
 			vdg->beam_pos += 4;
 		} else {
-			*(pixel) = encode_pixel(vdg, c0);
-			*(pixel+1) = encode_pixel(vdg, c0);
-			*(pixel+2) = encode_pixel(vdg, c0);
-			*(pixel+3) = encode_pixel(vdg, c0);
-			*(pixel+4) = encode_pixel(vdg, c1);
-			*(pixel+5) = encode_pixel(vdg, c1);
-			*(pixel+6) = encode_pixel(vdg, c1);
-			*(pixel+7) = encode_pixel(vdg, c1);
-			pixel += 8;
+			*(pixel++) = encode_pixel(vdg, c0);
+			*(pixel++) = encode_pixel(vdg, c0);
+#ifdef WANT_SIMULATED_NTSC
+			*(pixel++) = encode_pixel(vdg, c0);
+			*(pixel++) = encode_pixel(vdg, c0);
+#endif
+			*(pixel++) = encode_pixel(vdg, c1);
+			*(pixel++) = encode_pixel(vdg, c1);
+#ifdef WANT_SIMULATED_NTSC
+			*(pixel++) = encode_pixel(vdg, c1);
+			*(pixel++) = encode_pixel(vdg, c1);
+#endif
 			vdg->beam_pos += 8;
 		}
 
@@ -397,11 +414,11 @@ static void render_scanline(struct MC6847_private *vdg) {
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
 		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-		vdg->beam_pos++;
+		vdg->beam_pos += SCALE_PIXELS;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
-		vdg->rborder_remaining--;
+		vdg->rborder_remaining -= SCALE_PIXELS;
 		if (vdg->beam_pos >= beam_to)
 			return;
 	}

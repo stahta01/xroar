@@ -210,7 +210,9 @@ static void setup_view_menu(void) {
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Composite Rendering");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_SIMPLE), "Simple (2-bit LUT)");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_5BIT), "5-bit LUT");
+#ifdef WANT_SIMULATED_NTSC
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, UI_CCR_SIMULATED), "Simulated");
+#endif
 
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cross-colour");
