@@ -1,20 +1,16 @@
-/*  Copyright 2003-2018 Ciaran Anscomb
- *
- *  This file is part of XRoar.
- *
- *  XRoar is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  XRoar is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XRoar.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+
+XRoar - a Dragon/Tandy Coco emulator
+Copyright 2003-2018, Ciaran Anscomb
+
+This is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+GTK+ user-interface.
+
+*/
 
 #include "config.h"
 
@@ -543,11 +539,11 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Set up main action group */
 	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), NULL);
 	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), NULL);
-	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, 3, 0, (GCallback)set_keymap, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, 5, 0, (GCallback)set_joy_right, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, 5, 0, (GCallback)set_joy_left, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, 3, 0, (GCallback)set_ccr, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, 3, 0, (GCallback)set_cc, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, NULL);
+	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, G_N_ELEMENTS(cross_colour_radio_entries), 0, (GCallback)set_cc, NULL);
 
 	/* Menu merge points */
 	merge_machines = gtk_ui_manager_new_merge_id(gtk2_menu_manager);
