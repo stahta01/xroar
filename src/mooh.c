@@ -36,6 +36,7 @@ struct mooh {
 	_Bool crm_enable;
 	uint8_t taskreg[8][2];
 	uint8_t task;
+	uint8_t rom_conf;
 	_Bool have_becker;
 	char crt9128_reg_addr;
 };
@@ -51,6 +52,7 @@ struct cart_module cart_mooh_module = {
 static void mooh_reset(struct cart *c);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
 
 struct cart *mooh_new(struct cart_config *cc) {
@@ -79,6 +81,8 @@ static void mooh_reset(struct cart *c) {
 	n->task = 0;
 	for (i = 0; i < 8; i++)
 		n->taskreg[i][0] = n->taskreg[i][1] = 0xFF & TASK_MASK;
+	cart_rom_reset(c);
+	n->rom_conf = 0;
 	if (n->have_becker)
 		becker_reset();
 	n->crt9128_reg_addr = 0;
@@ -86,8 +90,15 @@ static void mooh_reset(struct cart *c) {
 	spi65_reset();
 }
 
+static void mooh_attach(struct cart *c) {
+	struct mooh *n = (struct mooh *)c;
+	cart_rom_attach(c);
+	mooh_reset(c);
+}
+
 static void mooh_detach(struct cart *c) {
 	struct mooh *n = (struct mooh *)c;
+	cart_rom_detach(c);
 	if (n->have_becker)
 		becker_close();
 }
@@ -101,8 +112,12 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 	c->EXTMEM = 0;
 
-        if (R2)
-                return c->rom_data[A & 0x3fff];
+        if (R2) {
+		if (n->rom_conf & 8)
+			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff)];
+		else
+			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff)];
+	}
 
 	if ((A & 0xFFFC) == 0xFF6C)
 		return spi65_read(A & 3);
@@ -159,6 +174,8 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 	(void)R2;
 	c->EXTMEM = 0;
 
+	if (A == 0xFF64 && (n->rom_conf & 16) == 0)
+		n->rom_conf = D & 31;
 
 	if ((A & 0xFFFC) == 0xFF6C)
 		spi65_write(A & 3, D);
