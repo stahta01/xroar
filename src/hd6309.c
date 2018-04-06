@@ -359,19 +359,15 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_tfm_write:
 			if (cpu->nmi_active) {
-				cpu->nmi = 0;
-				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_NMI);
-				hcpu->state = hd6309_state_label_a;
+				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
 			if (!(REG_CC & CC_F) && cpu->firq_active) {
-				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_FIRQ);
-				hcpu->state = hd6309_state_label_a;
+				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
 			if (!(REG_CC & CC_I) && cpu->irq_active) {
-				take_interrupt(cpu, CC_I, MC6809_INT_VEC_IRQ);
-				hcpu->state = hd6309_state_label_a;
+				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
 			store_byte(cpu, *hcpu->tfm_dest, hcpu->tfm_data);

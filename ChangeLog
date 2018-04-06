@@ -16,6 +16,7 @@ Version 0.35, unreleased
   * New Games Master Cartridge support (-cart gmc)
   * Use SDL2 audio queueing interface where -ao-fragments > 1
   * Optional --disable-simulated-ntsc configure option for speed
+  * HD6309: Fix interrupt handling during TFM instruction [David Ladd]
 
 Version 0.34, Sun Aug  7 2016
 
