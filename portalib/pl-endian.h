@@ -1,20 +1,25 @@
 /*
 
 Missing endian.h
-Copyright 2014-2015, Ciaran Anscomb
 
-This is free software; you can redistribute it and/or modify it under
+Copyright 2014 Ciaran Anscomb
+
+This file is part of Portalib.
+
+Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
 Free Software Foundation; either version 2.1 of the License, or (at your
 option) any later version.
+
+See COPYING.LGPL-2.1 for redistribution conditions.
 
 If endian.h was not found by configure, it should have performed a test
 or made an assumption, and HAVE_BIG_ENDIAN will be defined accordingly.
 
 */
 
-#ifndef PL_ENDIAN_H__ubnPKXx9bODus
-#define PL_ENDIAN_H__ubnPKXx9bODus
+#ifndef PORTALIB_PL_ENDIAN_H_
+#define PORTALIB_PL_ENDIAN_H_
 
 #ifdef HAVE_ENDIAN_H
 #include <endian.h>
@@ -35,4 +40,4 @@ or made an assumption, and HAVE_BIG_ENDIAN will be defined accordingly.
 #endif
 #endif
 
-#endif  /* PL_ENDIAN_H__ubnPKXx9bODus */
+#endif

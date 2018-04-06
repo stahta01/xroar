@@ -1,17 +1,24 @@
 /*
 
 Delegates in C
-Copyright 2014-2015, Ciaran Anscomb
 
-This is free software; you can redistribute it and/or modify it under
+Copyright 2014-2018 Ciaran Anscomb
+
+This file is part of Portalib.
+
+Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
 Free Software Foundation; either version 2.1 of the License, or (at your
 option) any later version.
 
+See COPYING.LGPL-2.1 for redistribution conditions.
+
+Implements the default no-op functions for defined delegate types.
+
 */
 
-#ifndef DELEGATE_H__oeW3udTBnzIVk
-#define DELEGATE_H__oeW3udTBnzIVk
+#ifndef PORTALIB_DELEGATE_H_
+#define PORTALIB_DELEGATE_H_
 
 #include <stdint.h>
 
@@ -127,4 +134,4 @@ DELEGATE_DEF_PROTO3(float, float, uint32_t, uint32, int, int, float *, floatp);
 #define DELEGATE_SAFE_CALL2(d,v0,v1) do { if ((d).func) { DELEGATE_CALL2((d),(v0),(v1)); } } while (0)
 #define DELEGATE_SAFE_CALL3(d,v0,v1,v2) do { if ((d).func) { DELEGATE_CALL3((d),(v0),(v1),(v2)); } } while (0)
 
-#endif  /* DELEGATE_H__oeW3udTBnzIVk */
+#endif

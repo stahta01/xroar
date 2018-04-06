@@ -1,12 +1,17 @@
 /*
 
-Taken from musl libc v0.8.10
+strsep() from musl libc v0.8.10
+
 Copyright 2005-2012 Rich Felker
 
-This is free software; you can redistribute it and/or modify it under
+This file is part of Portalib.
+
+Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
 Free Software Foundation; either version 2.1 of the License, or (at your
 option) any later version.
+
+See COPYING.LGPL-2.1 for redistribution conditions.
 
 */
 

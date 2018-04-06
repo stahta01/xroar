@@ -1,12 +1,17 @@
 /*
 
 Singly linked lists
-Copyright 2009-2017, Ciaran Anscomb
 
-This is free software; you can redistribute it and/or modify it under
+Copyright 2014 Ciaran Anscomb
+
+This file is part of Portalib.
+
+Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
 Free Software Foundation; either version 2.1 of the License, or (at your
 option) any later version.
+
+See COPYING.LGPL-2.1 for redistribution conditions.
 
 A simple singly-linked list implementation.  The interfaces are similar
 to other such implementations, but are implemented from scratch.  A list
@@ -16,8 +21,8 @@ been performed.  Exceptions to this include copying.
 
 */
 
-#ifndef SLIST_H__chqkIizgkKbjw
-#define SLIST_H__chqkIizgkKbjw
+#ifndef PORTALIB_SLIST_H_
+#define PORTALIB_SLIST_H_
 
 /* Each list element is of this deliberately transparent type. */
 struct slist {

@@ -1,12 +1,17 @@
 /*
 
 Missing string handling functions
-Copyright 2012-2015, Ciaran Anscomb
 
-This is free software; you can redistribute it and/or modify it under
+Copyright 2014 Ciaran Anscomb
+
+This file is part of Portalib.
+
+Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
 Free Software Foundation; either version 2.1 of the License, or (at your
 option) any later version.
+
+See COPYING.LGPL-2.1 for redistribution conditions.
 
 Supplies prototypes for string utility functions that were found to be
 missing in the target's libc.
@@ -16,8 +21,8 @@ _BSD_SOURCE) before inclusion to get the right set of prototypes.
 
 */
 
-#ifndef PL_STRING_H__7RCESJQ89DzWE
-#define PL_STRING_H__7RCESJQ89DzWE
+#ifndef PORTALIB_PL_STRING_H_
+#define PORTALIB_PL_STRING_H_
 
 #include "config.h"
 
@@ -29,4 +34,4 @@ char *strsep(char **, const char *);
 
 #endif
 
-#endif  /* PL_STRING_H__7RCESJQ89DzWE */
+#endif
