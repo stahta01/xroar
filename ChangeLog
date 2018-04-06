@@ -1,19 +1,19 @@
 Version 0.35, unreleased
 
-  * EXTMEM support to inhibit normal device access
-  * New NX32 RAM cartridge [Tormod Volden]
+  * New EXTMEM/SLENB support allows cartridges to inhibit normal device select
+  * New NX32 RAM cartridge [by Tormod Volden]
   * Fix buffer overrun in MC6847 code
-  * New option -ao-gain (specify volume in dBFS)
-  * CAS CUE support
-  * Added -C option to allocate debug console in Windows
+  * New option -ao-gain specifies volume in dBFS
+  * New CAS CUE support
+  * New -C option allocates debug console in Windows (must be first option)
   * Fix use of AltGr key in translated mode on Windows (SDL2)
-  * Preliminary MOOH support, subject to change [Tormod Volden]
+  * New preliminary MOOH support, subject to change [by Tormod Volden]
   * Support JVC/DSK files with non-standard sectors per track
   * Integrate tracing into CPU code
-  * 6809: Assume certain page2 illegal ops clone those from page0 [David Ladd]
+  * MC6809: Assume certain page2 illegal ops are same as page0 [David Ladd]
   * WD279x: implement multiple-sector type 2 ops
-  * SN76489 sound chip support
-  * Games Master Cartridge support (-cart gmc)
+  * New SN76489 sound chip support
+  * New Games Master Cartridge support (-cart gmc)
   * Use SDL2 audio queueing interface where -ao-fragments > 1
   * Optional --disable-simulated-ntsc configure option for speed
 
@@ -30,7 +30,7 @@ Version 0.34, Sun Aug  7 2016
   * Add cross-colour rendering menu to GUI
   * PAL-M magenta-green artifacting supported with -ccr simulated
   * Fix treatment of empty drives in DOS carts
-  * Initial IDE code [Alan Cox]
+  * Initial IDE code [by Alan Cox]
 
 Version 0.33, Fri May 22 2015
 
