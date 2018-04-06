@@ -1,14 +1,17 @@
 /*
 
-XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2018, Ciaran Anscomb
+Orchestra 90-CC sound cartridge
 
-This is free software: you can redistribute it and/or modify it under
+Copyright 2013-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 2 of the License, or (at your option)
 any later version.
 
-Orchestra-90 CC support.
+See COPYING.GPL for redistribution conditions.
 
 */
 

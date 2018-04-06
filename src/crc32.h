@@ -10,4 +10,4 @@
 
 uint32_t crc32_block(uint32_t crc, uint8_t *block, unsigned int length);
 
-#endif  /* XROAR_CRC32_H_ */
+#endif

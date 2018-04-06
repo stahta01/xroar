@@ -1,24 +1,19 @@
 /*
 
-XRoar, a Dragon 32/64 emulator
-Copyright 2003-2018 Ciaran Anscomb
+NTSC encoding & decoding
 
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 2 of the License, or (at your option) any later
-version.
+Copyright 2016-2018 Ciaran Anscomb
 
-NTSC encoding & decoding.
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
 
 */
-
-#ifndef XROAR_NTSC_H_
-#define XROAR_NTSC_H_
-
-#include "machine.h"
-#include "xroar.h"
-
-#define NTSC_NPHASES (4)
 
 /*
 
@@ -30,6 +25,14 @@ Low-pass filter, fs=28MHz, cutoff=4.2MHz, rectangular window, M=3.
 Coefficients scaled for integer maths.  Result should be divided by 32768.
 
 */
+
+#ifndef XROAR_NTSC_H_
+#define XROAR_NTSC_H_
+
+#include "machine.h"
+#include "xroar.h"
+
+#define NTSC_NPHASES (4)
 
 #define NTSC_C0 (8307)
 #define NTSC_C1 (7130)

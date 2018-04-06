@@ -1,10 +1,30 @@
-/*  SDLMain.m - main entry point for our Cocoa-ized SDL app
- *
- *  Initial Version: Darrell Walisser <dwaliss1@purdue.edu>
- *  Non-NIB-Code & other changes: Max Horn <max@quendi.de>
- *
- *  Feel free to customize this file to suit your needs
- */
+/*
+
+SDLMain.m - main entry point for our Cocoa-ized SDL app
+
+Initial Version: Darrell Walisser <dwaliss1@purdue.edu>
+Non-NIB-Code & other changes: Max Horn <max@quendi.de>
+
+Feel free to customize this file to suit your needs
+
+*/
+
+/*
+
+Mac OS X user-interface module
+
+Copyright 2011-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #include "config.h"
 

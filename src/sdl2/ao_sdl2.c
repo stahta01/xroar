@@ -1,14 +1,17 @@
 /*
 
-XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2018, Ciaran Anscomb
+SDL2 sound module
 
-This is free software: you can redistribute it and/or modify it under
+Copyright 2015-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 2 of the License, or (at your option)
 any later version.
 
-SDL2 audio module.
+See COPYING.GPL for redistribution conditions.
 
 */
 

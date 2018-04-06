@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2018  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Motorola MC6809 CPU
+
+Copyright 2003-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_MC6809_H_
 #define XROAR_MC6809_H_
@@ -126,4 +138,4 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 
 struct MC6809 *mc6809_new(void);
 
-#endif  /* XROAR_MC6809_H_ */
+#endif

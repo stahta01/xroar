@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Generic module support
+
+Copyright 2003-2016 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_MODULE_H_
 #define XROAR_MODULE_H_
@@ -38,4 +50,4 @@ void *module_init(struct module *module, void *cfg);
 void *module_init_from_list(struct module * const *list, struct module *module, void *cfg);
 void module_shutdown(struct module *module);
 
-#endif  /* XROAR_MODULE_H_ */
+#endif

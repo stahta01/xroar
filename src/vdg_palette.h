@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+VDG measured voltage "palette"s
+
+Copyright 2011-2016 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_VDG_PALETTE_H_
 #define XROAR_VDG_PALETTE_H_
@@ -30,4 +42,4 @@ struct vdg_palette *vdg_palette_by_name(const char *name);
 void vdg_palette_RGB(struct vdg_palette *vp, int colour,
                      float *Rout, float *Gout, float *Bout);
 
-#endif  /* XROAR_VDG_PALETTE_H_ */
+#endif

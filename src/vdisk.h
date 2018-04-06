@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2018  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Virtual floppy disks
+
+Copyright 2003-2017 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_VDISK_H_
 #define XROAR_VDISK_H_
@@ -162,4 +174,4 @@ _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 
 _Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo);
 
-#endif  /* XROAR_VDISK_H_ */
+#endif

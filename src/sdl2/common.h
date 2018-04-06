@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+SDL2 user-interface common functions
+
+Copyright 2015-2017 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_SDL2_COMMON_H_
 #define XROAR_SDL2_COMMON_H_
@@ -128,4 +140,4 @@ inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
 	return keysym->sym;
 }
 
-#endif  /* XROAR_SDL2_COMMON_H_ */
+#endif

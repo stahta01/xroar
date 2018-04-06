@@ -1,14 +1,17 @@
 /*
 
-XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2018, Ciaran Anscomb
+Motorola MC6847 Video Display Generator (VDG)
 
-This is free software: you can redistribute it and/or modify it under
+Copyright 2003-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 2 of the License, or (at your option)
 any later version.
 
-Motorola MC6487 Video Display Generator (VDG).
+See COPYING.GPL for redistribution conditions.
 
 */
 

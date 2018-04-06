@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+WD279x Floppy Drive Controller
+
+Copyright 2003-2016 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_WD279X_H_
 #define XROAR_WD279X_H_
@@ -125,4 +137,4 @@ void wd279x_set_dden(WD279X *fdc, _Bool dden);  /* 1 = Double density, 0 = Singl
 uint8_t wd279x_read(WD279X *fdc, uint16_t A);
 void wd279x_write(WD279X *fdc, uint16_t A, uint8_t D);
 
-#endif  /* XROAR_WD279X_H_ */
+#endif

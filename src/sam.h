@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Motorola SN74LS783/MC6883 Synchronous Address Multiplexer
+
+Copyright 2003-2015 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_SAM_H_
 #define XROAR_SAM_H_
@@ -31,4 +43,4 @@ int sam_vdg_bytes(struct MC6883 *, int nbytes);
 void sam_set_register(struct MC6883 *, unsigned int value);
 unsigned int sam_get_register(struct MC6883 *);
 
-#endif  /* XROAR_SAM_H_ */
+#endif

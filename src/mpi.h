@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Multi-Pak Interface (MPI) support
+
+Copyright 2014-2015 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_MPI_H_
 #define XROAR_MPI_H_
@@ -13,4 +25,4 @@ void mpi_switch_slot(struct cart *c, unsigned slot);
 void mpi_set_initial(int slot);
 void mpi_set_cart(int slot, const char *name);
 
-#endif  /* XROAR_MPI_H_ */
+#endif

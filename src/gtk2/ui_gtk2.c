@@ -1,14 +1,17 @@
 /*
 
-XRoar - a Dragon/Tandy Coco emulator
-Copyright 2003-2018, Ciaran Anscomb
+GTK+2 user-interface module
 
-This is free software: you can redistribute it and/or modify it under
+Copyright 2010-2018 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 2 of the License, or (at your option)
 any later version.
 
-GTK+ user-interface.
+See COPYING.GPL for redistribution conditions.
 
 */
 
@@ -329,7 +332,7 @@ static void about(GtkMenuItem *item, gpointer data) {
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © 2003–2018 Ciaran Anscomb <xroar@6809.org.uk>");
 	gtk_about_dialog_set_license(dialog,
-"XRoar is free software: you can redistribute it and/or modify it under\n"
+"XRoar is free software; you can redistribute it and/or modify it under\n"
 "the terms of the GNU General Public License as published by the Free\n"
 "Software Foundation, either version 2 of the License, or (at your option)\n"
 "any later version.\n"

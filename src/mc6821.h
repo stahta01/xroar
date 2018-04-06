@@ -1,7 +1,19 @@
-/*  XRoar - a Dragon/Tandy Coco emulator
- *  Copyright (C) 2003-2017  Ciaran Anscomb
- *
- *  See COPYING.GPL for redistribution conditions. */
+/*
+
+Motorola MC6821 Peripheral Interface Adaptor
+
+Copyright 2003-2015 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #ifndef XROAR_MC6821_H_
 #define XROAR_MC6821_H_
@@ -64,4 +76,4 @@ void mc6821_update_state(struct MC6821 *pia);
 uint8_t mc6821_read(struct MC6821 *pia, uint16_t A);
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D);
 
-#endif  /* XROAR_MC6821_H_ */
+#endif
