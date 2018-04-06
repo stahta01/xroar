@@ -1,3 +1,23 @@
+/*
+
+IDE Emulation Layer for retro-style PIO interfaces
+
+Copyright 2015 Alan Cox
+
+This file is part of XRoar.
+
+XRoar is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
+
+#ifndef XROAR_IDE_H_
+#define XROAR_IDE_H_
+
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -27,40 +47,40 @@
 #define         ide_data_latch  9
 
 struct ide_taskfile {
-  uint16_t data;
-  uint8_t error;
-  uint8_t feature;
-  uint8_t count;
-  uint8_t lba1;
-  uint8_t lba2;
-  uint8_t lba3;
-  uint8_t lba4;
-  uint8_t status;
-  uint8_t command;
-  uint8_t devctrl;
-  struct ide_drive *drive;
+	uint16_t data;
+	uint8_t error;
+	uint8_t feature;
+	uint8_t count;
+	uint8_t lba1;
+	uint8_t lba2;
+	uint8_t lba3;
+	uint8_t lba4;
+	uint8_t status;
+	uint8_t command;
+	uint8_t devctrl;
+	struct ide_drive *drive;
 };
 
 struct ide_drive {
-  struct ide_controller *controller;
-  struct ide_taskfile taskfile;
-  unsigned int present:1, intrq:1, failed:1, lba:1, eightbit:1;
-  uint16_t cylinders;
-  uint8_t heads, sectors;
-  uint8_t data[512];
-  uint16_t identify[256];
-  uint8_t *dptr;
-  int state;
-  int fd;
-  off_t offset;
-  int length;
+	struct ide_controller *controller;
+	struct ide_taskfile taskfile;
+	unsigned int present:1, intrq:1, failed:1, lba:1, eightbit:1;
+	uint16_t cylinders;
+	uint8_t heads, sectors;
+	uint8_t data[512];
+	uint16_t identify[256];
+	uint8_t *dptr;
+	int state;
+	int fd;
+	off_t offset;
+	int length;
 };
 
 struct ide_controller {
-  struct ide_drive drive[2];
-  int selected;
-  const char *name;
-  uint16_t data_latch;
+	struct ide_drive drive[2];
+	int selected;
+	const char *name;
+	uint16_t data_latch;
 };
 
 extern const uint8_t ide_magic[8];
@@ -79,3 +99,5 @@ void ide_detach(struct ide_drive *d);
 void ide_free(struct ide_controller *c);
 
 int ide_make_drive(uint8_t type, int fd);
+
+#endif

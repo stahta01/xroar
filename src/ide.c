@@ -1,21 +1,20 @@
 /*
- *      IDE Emulation Layer for retro-style PIO interfaces
- *
- *      (c) Copyright Alan Cox, 2015
- *
- *      IDE-emu is free software: you can redistribute it and/or modify
- *      it under the terms of the GNU General Public License as published by
- *      the Free Software Foundation, either version 2 of the License, or
- *      (at your option) any later version.
- *
- *      IDE-emu is distributed in the hope that it will be useful,
- *      but WITHOUT ANY WARRANTY; without even the implied warranty of
- *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *      GNU General Public License for more details.
- *
- *      You should have received a copy of the GNU General Public License
- *      along with IDE-emu.  If not, see <http://www.gnu.org/licenses/>.
- */
+
+IDE Emulation Layer for retro-style PIO interfaces
+
+Copyright 2015 Alan Cox
+Copyright 2016-2017 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #include "config.h"
 

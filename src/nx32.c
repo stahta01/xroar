@@ -1,3 +1,20 @@
+/*
+
+NX32 RAM expansion cartridge
+
+Copyright 2016-2018 Tormod Volden
+Copyright 2016 Ciaran Anscomb
+
+This file is part of XRoar.
+
+XRoar is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option)
+any later version.
+
+See COPYING.GPL for redistribution conditions.
+
+*/
 
 #include <xalloc.h>
 #include "cart.h"
