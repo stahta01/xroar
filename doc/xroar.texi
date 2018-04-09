@@ -64,8 +64,8 @@ models 1 & 2.  Some features are:
 @item Saves and loads machine snapshots.
 @item Provides a GDB target for remote debugging.
 @item Games Master Cartridge support, including SN76489 sound chip.
+@item MOOH RAM expansion + SPI support.
 @item Experimental Glenside IDE support.
-@item Experimental MOOH RAM expansion + SPI support.
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
