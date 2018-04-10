@@ -7,7 +7,7 @@ Version 0.35, unreleased
   * New CAS CUE support
   * New -C option allocates debug console in Windows (must be first option)
   * Fix use of AltGr key in translated mode on Windows (SDL2)
-  * New preliminary MOOH support, subject to change [by Tormod Volden]
+  * New MOOH RAM + SD card cartridge [by Tormod Volden]
   * Support JVC/DSK files with non-standard sectors per track
   * Integrate tracing into CPU code
   * MC6809: Assume certain page2 illegal ops are same as page0 [David Ladd]
