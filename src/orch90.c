@@ -79,7 +79,6 @@ static void orch90_attach(struct cart *c) {
 }
 
 static void orch90_detach(struct cart *c) {
-	struct orch90 *o = (struct orch90 *)c;
 	cart_rom_detach(c);
 }
 

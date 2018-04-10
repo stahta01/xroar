@@ -52,7 +52,7 @@ struct cart_module cart_mooh_module = {
 static void mooh_reset(struct cart *c);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void mooh_attach(struct cart *c);
+// static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
 
 struct cart *mooh_new(struct cart_config *cc) {
@@ -90,11 +90,10 @@ static void mooh_reset(struct cart *c) {
 	spi65_reset();
 }
 
+/* unused for now...
 static void mooh_attach(struct cart *c) {
-	struct mooh *n = (struct mooh *)c;
-	cart_rom_attach(c);
 	mooh_reset(c);
-}
+} */
 
 static void mooh_detach(struct cart *c) {
 	struct mooh *n = (struct mooh *)c;
