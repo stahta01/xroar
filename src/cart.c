@@ -298,8 +298,6 @@ void cart_free(struct cart *c) {
 
 /* ROM cart routines */
 
-static void dummy_cart(struct cart *c) { (void)c; }
-
 void cart_rom_init(struct cart *c) {
 	struct cart_config *cc = c->config;
 	assert(cc != NULL);
