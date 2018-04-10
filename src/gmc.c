@@ -117,5 +117,6 @@ static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 	}
 
 	// 76489 sound register
+	sound_update(gmc->snd);
 	sn76489_write(gmc->csg, event_current_tick, D);
 }
