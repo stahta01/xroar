@@ -55,6 +55,7 @@ AC_FUNC_REALLOC
 AC_FUNC_STAT
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([atexit gettimeofday memset putenv setenv socket strchr strcspn strerror strrchr strsep strtol strtoul])
+AX_GCC_BUILTIN(__builtin_parity)
 
 ### Options
 
