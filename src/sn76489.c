@@ -46,16 +46,27 @@ See COPYING.GPL for redistribution conditions.
 #define IIR_P1 (-1.4470540195)
 #define IIR_P2 (2.0037974774)
 
-/* TODO: Determine initial state of 76489 by measuring frequency.  For each
- * channel, power on, turn OFF all other channels, determine output.  Docs
- * suggest this is random, but I always seem to hear the same tone...  */
+/*
+ * Initial state doesn't seem to be quite random.  First two channels seem to
+ * be on, with first generating very high tone, and second at lowest frequency.
+ * Volume not maxed out.  There may be more state to explore here.
+ *
+ * All channels - including noise - contribute either zero or a +ve offset to
+ * the signal.
+ *
+ * f=0 on tones is equivalent to f=1024.
+ *
+ * No special-casing for f=1 on tones.  Doc suggests some variants produce DC
+ * for this, but Stewart Orchard has better measure-fu than me and proved it
+ * yields 125kHz as predicted.
+ */
 
 // attenuation lookup table, 10 ^ (-i / 10)
 static const float attenuation[16] = {
-	1.000000, 0.794328, 0.630957, 0.501187,
-	0.398107, 0.316228, 0.251189, 0.199526,
-	0.158489, 0.125893, 0.100000, 0.079433,
-	0.063096, 0.050119, 0.039811, 0.000000 };
+	1.000000/4.0, 0.794328/4.0, 0.630957/4.0, 0.501187/4.0,
+	0.398107/4.0, 0.316228/4.0, 0.251189/4.0, 0.199526/4.0,
+	0.158489/4.0, 0.125893/4.0, 0.100000/4.0, 0.079433/4.0,
+	0.063096/4.0, 0.050119/4.0, 0.039811/4.0, 0.000000/4.0 };
 
 struct SN76489_private {
 	struct SN76489 public;
@@ -113,11 +124,12 @@ struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t t
 	csg_->tickrate = tickrate;
 	csg_->last_fragment_tick = tick;
 
+	csg_->frequency[0] = csg_->counter[0] = 0x001;
+	csg_->frequency[1] = csg_->counter[1] = 0x400;
+	csg_->frequency[2] = csg_->counter[2] = 0x400;
+	csg_->frequency[3] = csg_->counter[3] = 0x010;
 	for (int c = 0; c < 4; c++) {
-		csg_->frequency[c] = 0x400;
-		csg_->counter[c] = 0x400;
-		csg_->amplitude[c][1] = attenuation[0] / 2.0;
-		csg_->amplitude[c][0] = -csg_->amplitude[c][1];
+		csg_->amplitude[c][1] = attenuation[4];
 	}
 
 	// 76489 needs 32 cycles of its reference clock between writes.
@@ -179,8 +191,9 @@ void sn76489_write(struct SN76489 *csg, uint32_t tick, uint8_t D) {
 	csg_->reg_val[reg_sel] = reg_val;
 
 	if (reg_sel & 1) {
-		csg_->amplitude[c][1] = attenuation[reg_val] / 2.0;
-		csg_->amplitude[c][0] = -csg_->amplitude[c][1];
+		csg_->amplitude[c][1] = attenuation[reg_val];
+		_Bool state = csg_->state[c];
+		csg_->level[c] = csg_->amplitude[c][state];
 	} else {
 		if (c < 3) {
 			if (reg_val == 0) {
@@ -204,13 +217,19 @@ void sn76489_write(struct SN76489 *csg, uint32_t tick, uint8_t D) {
 				break;
 			default:
 			case 3:
-				csg_->noise_lfsr = 0x8000;
+				csg_->noise_lfsr = 0x4000;
 				break;
 			}
 		}
 	}
 
 }
+
+#ifdef HAVE___BUILTIN_PARITY
+
+#define parity(v) (unsigned)__builtin_parity(v)
+
+#else
 
 static unsigned parity(unsigned val) {
 	val ^= val >> 8;
@@ -219,6 +238,8 @@ static unsigned parity(unsigned val) {
 	val ^= val >> 1;
 	return val & 1;
 }
+
+#endif
 
 float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 	struct SN76489_private *csg_ = sptr;
@@ -242,7 +263,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 	float yv2 = csg_->yv2;
 
 	// if previous call overran
-	if (csg_->overrun) {
+	if (csg_->overrun && nframes > 0) {
 		*(buf++) = output;
 		nframes--;
 		csg_->overrun = 0;
@@ -257,10 +278,10 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 			csg_->frameerror -= csg_->refrate;
 			if (nframes > 0) {
 				*(buf++) = output;
+				nframes--;
 			} else {
 				csg_->overrun = 1;
 			}
-			nframes--;
 		}
 
 		// tickrate may be higher than refrate: calculate remainder.
@@ -303,15 +324,15 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 			// input transition to high clocks the LFSR
 			csg_->noise_lfsr = (csg_->noise_lfsr >> 1) |
 			                   (csg_->noise_white
-					    ? parity(csg_->noise_lfsr & 0x0006) << 15
+					    ? parity(csg_->noise_lfsr & 0x0003) << 14
 					    : (csg_->noise_lfsr & 1) << 14);
 			_Bool state = csg_->noise_lfsr & 1;
 			csg_->level[3] = csg_->amplitude[3][state];
 		}
 
 		// sum the output channels
-		new_output = (csg_->level[0] + csg_->level[1] +
-		              csg_->level[2] + csg_->level[3]) / 4.0;
+		new_output = csg_->level[0] + csg_->level[1] +
+		             csg_->level[2] + csg_->level[3];
 
 		// apply butterworth low-pass filter
 		float xv0 = xv1;
