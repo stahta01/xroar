@@ -18,9 +18,9 @@ See COPYING.GPL for redistribution conditions.
 /*
 
 References:
-    http://www.le.ac.uk/eg/fss1/FIRFILT.C
+    https://www.arc.id.au/FilterDesign.html
 
-Low-pass filter, fs=28MHz, cutoff=4.2MHz, rectangular window, M=3.
+Low-pass, Fs=14.318MHz, Fb=2.15MHz, Kaiser-Bessel windows, 21dB att, M=7 (Np=3).
 
 Coefficients scaled for integer maths.  Result should be divided by 32768.
 
@@ -34,10 +34,10 @@ Coefficients scaled for integer maths.  Result should be divided by 32768.
 
 #define NTSC_NPHASES (4)
 
-#define NTSC_C0 (8307)
-#define NTSC_C1 (7130)
-#define NTSC_C2 (4191)
-#define NTSC_C3 (907)
+#define NTSC_C0 (8316)
+#define NTSC_C1 (7136)
+#define NTSC_C2 (4189)
+#define NTSC_C3 (899)
 
 struct ntsc_palette {
 	unsigned ncolours;
