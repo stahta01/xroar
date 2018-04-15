@@ -53,8 +53,7 @@ struct sound_interface_private {
 	unsigned buffer_frame;
 
 	// Track error dividing frames by ticks.
-	float frameerror;
-	float ticks_per_frame;
+	int frameerror;
 	event_ticks last_cycle;
 
 	// Schedule periodic flushes to the audio output module.
@@ -222,7 +221,6 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 		}
 	}
 
-	snd->ticks_per_frame = (float)EVENT_TICK_RATE / (float)rate;
 	snd->ticks_per_buffer = ((long)nframes * EVENT_TICK_RATE) / rate;
 	snd->last_cycle = event_current_tick;
 
@@ -292,15 +290,13 @@ static void send_buffer(struct sound_interface_private *snd) {
 void sound_update(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 
-	int elapsed = event_tick_delta(event_current_tick, snd->last_cycle);
 	unsigned nframes = 0;
-	if (elapsed >= 0) {
-		float nframes_f = elapsed / snd->ticks_per_frame;
-		nframes = nframes_f;
-		snd->frameerror += (nframes_f - nframes);
-		unsigned error = snd->frameerror;
-		nframes += error;
-		snd->frameerror -= error;
+	int64_t elapsed = event_tick_delta(event_current_tick, snd->last_cycle);
+	if (elapsed > 0) {
+		int64_t fe = snd->frameerror + elapsed * sndp->framerate;
+		nframes = fe / EVENT_TICK_RATE;
+		fe -= nframes * EVENT_TICK_RATE;
+		snd->frameerror = fe;
 	}
 	snd->last_cycle = event_current_tick;
 
