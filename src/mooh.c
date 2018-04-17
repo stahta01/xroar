@@ -45,7 +45,7 @@ static struct cart *mooh_new(struct cart_config *);
 
 struct cart_module cart_mooh_module = {
 	.name = "mooh",
-	.description = "mooh memory cartridge",
+	.description = "MOOH memory cartridge",
 	.new = mooh_new,
 };
 
