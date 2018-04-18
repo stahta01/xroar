@@ -29,32 +29,22 @@ AC_CHECK_TOOL(RC, windres, :)
 # Checks for libraries.
 
 # Checks for header files.
-AC_FUNC_ALLOCA
-AC_HEADER_DIRENT
-AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h endian.h fcntl.h limits.h malloc.h netdb.h stdint.h stdlib.h string.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([endian.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_C_INLINE
 AC_TYPE_INT16_T
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_INT8_T
+AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
-AC_HEADER_TIME
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_PROG_GCC_TRADITIONAL
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
-AC_FUNC_STAT
-AC_FUNC_STRTOD
-AC_CHECK_FUNCS([atexit gettimeofday memset putenv setenv socket strchr strcspn strerror strrchr strsep strtol strtoul])
+AC_CHECK_FUNCS([strsep])
 AX_GCC_BUILTIN(__builtin_parity)
 
 ### Options
