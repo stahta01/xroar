@@ -44,7 +44,7 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([strsep])
+AC_CHECK_FUNCS([strnlen strsep])
 AX_GCC_BUILTIN(__builtin_parity)
 
 ### Options

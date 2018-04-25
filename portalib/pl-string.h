@@ -2,7 +2,7 @@
 
 Missing string handling functions
 
-Copyright 2014 Ciaran Anscomb
+Copyright 2014-2018 Ciaran Anscomb
 
 This file is part of Portalib.
 
@@ -27,6 +27,10 @@ _BSD_SOURCE) before inclusion to get the right set of prototypes.
 #include "config.h"
 
 #ifdef _BSD_SOURCE
+
+#ifndef HAVE_STRNLEN
+size_t strnlen(const char *, size_t);
+#endif
 
 #ifndef HAVE_STRSEP
 char *strsep(char **, const char *);

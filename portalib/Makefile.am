@@ -12,6 +12,7 @@ libporta_a_SOURCES = \
 	pl-endian.h \
 	pl-string.h \
 	slist.c slist.h \
+	strnlen.c \
 	strsep.c \
 	xalloc.h \
 	xmalloc.c
