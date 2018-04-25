@@ -2,7 +2,7 @@
 
 Memory allocation with checking
 
-Copyright 2014 Ciaran Anscomb
+Copyright 2014-2018 Ciaran Anscomb
 
 This file is part of Portalib.
 
@@ -21,6 +21,7 @@ See COPYING.LGPL-2.1 for redistribution conditions.
 #include <stdio.h>
 #include <string.h>
 
+#include "pl-string.h"
 #include "xalloc.h"
 
 void *xmalloc(size_t s) {
@@ -57,4 +58,12 @@ void *xmemdup(const void *p, size_t s) {
 
 char *xstrdup(const char *str) {
 	return xmemdup(str, strlen(str) + 1);
+}
+
+char *xstrndup(const char *str, size_t s) {
+	size_t len = strnlen(str, s);
+	char *r = xmalloc(len+1);
+	memcpy(r, str, len);
+	r[len] = 0;
+	return r;
 }

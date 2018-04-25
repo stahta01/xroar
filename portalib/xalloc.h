@@ -2,7 +2,7 @@
 
 Memory allocation with checking
 
-Copyright 2014 Ciaran Anscomb
+Copyright 2014-2018 Ciaran Anscomb
 
 This file is part of Portalib.
 
@@ -29,5 +29,6 @@ void *xrealloc(void *p, size_t s);
 
 void *xmemdup(const void *p, size_t s);
 char *xstrdup(const char *str);
+char *xstrndup(const char *str, size_t s);
 
 #endif
