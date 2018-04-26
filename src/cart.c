@@ -293,7 +293,10 @@ void cart_free(struct cart *c) {
 	if (!c) return;
 	if (c->detach)
 		c->detach(c);
-	free(c);
+	if (c->free)
+		c->free(c);
+	else
+		free(c);
 }
 
 /* ROM cart routines */

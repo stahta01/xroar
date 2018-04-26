@@ -41,19 +41,44 @@ struct cart_config {
 
 struct cart {
 	struct cart_config *config;
-	uint8_t (*read)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-	void (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-	void (*reset)(struct cart *c);
+
+	// Notify that the cartridge has been attached or detached (e.g. to set
+	// up or destroy timed events).
 	void (*attach)(struct cart *c);
 	void (*detach)(struct cart *c);
-	uint8_t *rom_data;
-	uint16_t rom_bank;
+
+	// Destroy cartridge.
+	void (*free)(struct cart *c);
+
+	// Read & write cycles.  Called every cycle before decode.  If EXTMEM
+	// is not asserted, called again when cartridge IO (P2) or ROM (R2)
+	// areas are accessed.
+	uint8_t (*read)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+	void (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+
+	// Reset line.
+	void (*reset)(struct cart *c);
+
+	// Cartridge asserts this to inhibit usual address decode by host.
+	_Bool EXTMEM;
+
+	// Ways for the cartridge to signal interrupt events to the host.
 	DELEGATE_T1(void, bool) signal_firq;
 	DELEGATE_T1(void, bool) signal_nmi;
 	DELEGATE_T1(void, bool) signal_halt;
+
+	// ROM data.  Not a necessary feature of a cartridge, but included here
+	// to avoid having to create a "cart_rom" struct that adds little else.
+	uint8_t *rom_data;
+	uint16_t rom_bank;
+
+	// Used to schedule regular FIRQs when an "autorun" cartridge is
+	// configured.
 	struct event *firq_event;
-	_Bool EXTMEM;
+
+	// Query if cartridge supports a named interface.
 	_Bool (*has_interface)(struct cart *c, const char *ifname);
+	// Connect a named interface.
 	void (*attach_interface)(struct cart *c, const char *ifname, void *intf);
 };
 
