@@ -2,7 +2,7 @@
 
 DragonDOS cartridge
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -65,6 +65,7 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
+static void dragondos_free(struct cart *c);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -84,10 +85,14 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 
 	c->config = cc;
 	cart_rom_init(c);
+
+	c->detach = dragondos_detach;
+	c->free = dragondos_free;
+
 	c->read = dragondos_read;
 	c->write = dragondos_write;
 	c->reset = dragondos_reset;
-	c->detach = dragondos_detach;
+
 	c->has_interface = dragondos_has_interface;
 	c->attach_interface = dragondos_attach_interface;
 
@@ -110,11 +115,15 @@ static void dragondos_detach(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
 	vdrive_disconnect(d->vdrive_interface);
 	wd279x_disconnect(d->fdc);
-	wd279x_free(d->fdc);
-	d->fdc = NULL;
 	if (d->have_becker)
 		becker_close();
 	cart_rom_detach(c);
+}
+
+static void dragondos_free(struct cart *c) {
+	struct dragondos *d = (struct dragondos *)c;
+	wd279x_free(d->fdc);
+	cart_rom_free(c);
 }
 
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

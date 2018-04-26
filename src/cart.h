@@ -109,6 +109,7 @@ void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
+void cart_rom_free(struct cart *c);
 void cart_rom_select_bank(struct cart *c, uint16_t bank);
 
 #endif

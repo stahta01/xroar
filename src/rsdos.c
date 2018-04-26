@@ -2,7 +2,7 @@
 
 RS-DOS Tandy CoCo disk controller
 
-Copyright 2005-2016 Ciaran Anscomb
+Copyright 2005-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -63,6 +63,7 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
+static void rsdos_free(struct cart *c);
 static _Bool rsdos_has_interface(struct cart *c, const char *ifname);
 static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -84,10 +85,14 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 
 	c->config = cc;
 	cart_rom_init(c);
+
+	c->detach = rsdos_detach;
+	c->free = rsdos_free;
+
 	c->read = rsdos_read;
 	c->write = rsdos_write;
 	c->reset = rsdos_reset;
-	c->detach = rsdos_detach;
+
 	c->has_interface = rsdos_has_interface;
 	c->attach_interface = rsdos_attach_interface;
 
@@ -112,11 +117,15 @@ static void rsdos_detach(struct cart *c) {
 	struct rsdos *d = (struct rsdos *)c;
 	vdrive_disconnect(d->vdrive_interface);
 	wd279x_disconnect(d->fdc);
-	wd279x_free(d->fdc);
-	d->fdc = NULL;
 	if (d->have_becker)
 		becker_close();
 	cart_rom_detach(c);
+}
+
+static void rsdos_free(struct cart *c) {
+	struct rsdos *d = (struct rsdos *)c;
+	wd279x_free(d->fdc);
+	cart_rom_free(c);
 }
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

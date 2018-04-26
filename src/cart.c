@@ -296,7 +296,7 @@ void cart_free(struct cart *c) {
 	if (c->free)
 		c->free(c);
 	else
-		free(c);
+		cart_rom_free(c);
 }
 
 /* ROM cart routines */
@@ -309,6 +309,7 @@ void cart_rom_init(struct cart *c) {
 	c->reset = cart_rom_reset;
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
+	c->free = cart_rom_free;
 	c->rom_data = xzalloc(0x10000);
 	c->rom_bank = 0;
 	if (cc->rom) {
@@ -390,10 +391,13 @@ void cart_rom_detach(struct cart *c) {
 		event_free(c->firq_event);
 		c->firq_event = NULL;
 	}
+}
+
+void cart_rom_free(struct cart *c) {
 	if (c->rom_data) {
 		free(c->rom_data);
-		c->rom_data = NULL;
 	}
+	free(c);
 }
 
 void cart_rom_select_bank(struct cart *c, uint16_t bank) {

@@ -2,7 +2,7 @@
 
 Premier Microsystems' Delta disk system
 
-Copyright 2007-2016 Ciaran Anscomb
+Copyright 2007-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -61,6 +61,7 @@ static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 static void deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
+static void deltados_free(struct cart *c);
 static _Bool deltados_has_interface(struct cart *c, const char *ifname);
 static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -77,10 +78,14 @@ static struct cart *deltados_new(struct cart_config *cc) {
 
 	c->config = cc;
 	cart_rom_init(c);
+
+	c->detach = deltados_detach;
+	c->free = deltados_free;
+
 	c->read = deltados_read;
 	c->write = deltados_write;
 	c->reset = deltados_reset;
-	c->detach = deltados_detach;
+
 	c->has_interface = deltados_has_interface;
 	c->attach_interface = deltados_attach_interface;
 
@@ -100,9 +105,13 @@ static void deltados_detach(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
 	vdrive_disconnect(d->vdrive_interface);
 	wd279x_disconnect(d->fdc);
-	wd279x_free(d->fdc);
-	d->fdc = NULL;
 	cart_rom_detach(c);
+}
+
+static void deltados_free(struct cart *c) {
+	struct deltados *d = (struct deltados *)c;
+	wd279x_free(d->fdc);
+	cart_rom_free(c);
 }
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

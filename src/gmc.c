@@ -52,10 +52,11 @@ struct gmc {
 	struct sound_interface *snd;
 };
 
-static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void gmc_reset(struct cart *c);
 static void gmc_attach(struct cart *c);
 static void gmc_detach(struct cart *c);
+static void gmc_free(struct cart *c);
+static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void gmc_reset(struct cart *c);
 static _Bool gmc_has_interface(struct cart *c, const char *ifname);
 static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -65,10 +66,14 @@ static struct cart *gmc_new(struct cart_config *cc) {
 
 	c->config = cc;
 	cart_rom_init(c);
-	c->write = gmc_write;
-	c->reset = gmc_reset;
+
 	c->attach = gmc_attach;
 	c->detach = gmc_detach;
+	c->free = gmc_free;
+
+	c->write = gmc_write;
+	c->reset = gmc_reset;
+
 	c->has_interface = gmc_has_interface;
 	c->attach_interface = gmc_attach_interface;
 
@@ -86,8 +91,16 @@ static void gmc_attach(struct cart *c) {
 
 static void gmc_detach(struct cart *c) {
 	struct gmc *gmc = (struct gmc *)c;
-	cart_rom_detach(c);
 	gmc->snd->get_cart_audio.func = NULL;
+	cart_rom_detach(c);
+}
+
+static void gmc_free(struct cart *c) {
+	struct gmc *gmc = (struct gmc *)c;
+	if (gmc->csg) {
+		sn76489_free(gmc->csg);
+	}
+	cart_rom_free(c);
 }
 
 static _Bool gmc_has_interface(struct cart *c, const char *ifname) {

@@ -2,7 +2,7 @@
 
 Multi-Pak Interface (MPI) support
 
-Copyright 2014-2017 Ciaran Anscomb
+Copyright 2014-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -71,11 +71,12 @@ static void set_firq(void *, _Bool);
 static void set_nmi(void *, _Bool);
 static void set_halt(void *, _Bool);
 
+static void mpi_attach(struct cart *c);
+static void mpi_detach(struct cart *c);
+static void mpi_free(struct cart *c);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_reset(struct cart *c);
-static void mpi_attach(struct cart *c);
-static void mpi_detach(struct cart *c);
 static _Bool mpi_has_interface(struct cart *c, const char *ifname);
 static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -93,11 +94,15 @@ static struct cart *mpi_new(struct cart_config *cc) {
 
 	c->config = cc;
 	cart_rom_init(c);
+
+	c->attach = mpi_attach;
+	c->detach = mpi_detach;
+	c->free = mpi_free;
+
 	c->read = mpi_read;
 	c->write = mpi_write;
 	c->reset = mpi_reset;
-	c->attach = mpi_attach;
-	c->detach = mpi_detach;
+
 	c->has_interface = mpi_has_interface;
 	c->attach_interface = mpi_attach_interface;
 
@@ -141,15 +146,31 @@ static void mpi_reset(struct cart *c) {
 }
 
 static void mpi_attach(struct cart *c) {
-	(void)c;
+	struct mpi *m = (struct mpi *)c;
+	for (int i = 0; i < 4; i++) {
+		if (m->slot[i].cart && m->slot[i].cart->attach) {
+			m->slot[i].cart->attach(m->slot[i].cart);
+		}
+	}
 }
 
 static void mpi_detach(struct cart *c) {
 	struct mpi *m = (struct mpi *)c;
 	for (int i = 0; i < 4; i++) {
-		cart_free(m->slot[i].cart);
-		m->slot[i].cart = NULL;
+		if (m->slot[i].cart && m->slot[i].cart->detach) {
+			m->slot[i].cart->detach(m->slot[i].cart);
+		}
 	}
+}
+
+static void mpi_free(struct cart *c) {
+	struct mpi *m = (struct mpi *)c;
+	for (int i = 0; i < 4; i++) {
+		if (m->slot[i].cart && m->slot[i].cart->free) {
+			m->slot[i].cart->free(m->slot[i].cart);
+		}
+	}
+	free(m);
 	mpi_active = 0;
 }
 
