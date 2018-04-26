@@ -2,7 +2,7 @@
 
 Becker port support
 
-Copyright 2012-2014 Ciaran Anscomb
+Copyright 2012-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -25,11 +25,13 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 #define BECKER_IP_DEFAULT "127.0.0.1"
 #define BECKER_PORT_DEFAULT "65504"
 
-_Bool becker_open(void);
-void becker_close(void);
-void becker_reset(void);
-uint8_t becker_read_status(void);
-uint8_t becker_read_data(void);
-void becker_write_data(uint8_t D);
+struct becker;
+
+struct becker *becker_new(void);
+void becker_free(struct becker *becker);
+void becker_reset(struct becker *becker);
+uint8_t becker_read_status(struct becker *becker);
+uint8_t becker_read_data(struct becker *becker);
+void becker_write_data(struct becker *becker, uint8_t D);
 
 #endif

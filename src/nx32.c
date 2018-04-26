@@ -3,7 +3,7 @@
 NX32 RAM expansion cartridge
 
 Copyright 2016-2018 Tormod Volden
-Copyright 2016 Ciaran Anscomb
+Copyright 2016-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -42,13 +42,14 @@ struct nx32 {
 	_Bool extmem_map;
 	_Bool extmem_ty;
 	uint8_t extmem_bank;
-	_Bool have_becker;
+	struct becker *becker;
 };
 
 static void nx32_reset(struct cart *c);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
+static void nx32_free(struct cart *c);
 
 struct cart *nx32_new(struct cart_config *cc) {
 	struct nx32 *n = xmalloc(sizeof(*n));
@@ -61,8 +62,11 @@ struct cart *nx32_new(struct cart_config *cc) {
 	c->write = nx32_write;
 	c->reset = nx32_reset;
 	c->detach = nx32_detach;
+	c->free = nx32_free;
 
-	n->have_becker = (cc->becker_port && becker_open());
+	if (cc->becker_port) {
+		n->becker = becker_new();
+	}
 
 	return c;
 }
@@ -72,16 +76,23 @@ static void nx32_reset(struct cart *c) {
 	n->extmem_map = 0;
 	n->extmem_ty = 0;
 	n->extmem_bank = 0;
-	if (n->have_becker)
-		becker_reset();
+	if (n->becker)
+		becker_reset(n->becker);
 	spi65_reset();
 }
 
 static void nx32_detach(struct cart *c) {
 	struct nx32 *n = (struct nx32 *)c;
-	if (n->have_becker)
-		becker_close();
+	if (n->becker)
+		becker_reset(n->becker);
 	cart_rom_detach(c);
+}
+
+static void nx32_free(struct cart *c) {
+	struct nx32 *n = (struct nx32 *)c;
+	if (n->becker)
+		becker_free(n->becker);
+	cart_rom_free(c);
 }
 
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -96,12 +107,12 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 		c->EXTMEM = 1;
 		return n->extmem[0x8000 * n->extmem_bank + (A & 0x7fff)];
 	}
-	if (P2 && n->have_becker) {
+	if (P2 && n->becker) {
 		switch (A & 3) {
 		case 0x1:
-			return becker_read_status();
+			return becker_read_status(n->becker);
 		case 0x2:
-			return becker_read_data();
+			return becker_read_data(n->becker);
 		default:
 			break;
 		}
@@ -127,10 +138,10 @@ static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 		n->extmem[0x8000 * n->extmem_bank + (A & 0x7fff)] = D;
 		c->EXTMEM = 1;
 	}
-	if (P2 && n->have_becker) {
+	if (P2 && n->becker) {
 		switch (A & 3) {
 		case 0x2:
-			becker_write_data(D);
+			becker_write_data(n->becker, D);
 			break;
 		default:
 			break;

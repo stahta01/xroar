@@ -44,25 +44,27 @@ struct cart_module cart_ide_module = {
 struct idecart {
 	struct cart cart;
 	struct ide_controller *controller;
-	_Bool have_becker;
+	struct becker *becker;
 };
 
 static void idecart_reset(struct cart *c) {
 	struct idecart *ide = (struct idecart *)c;
-	if (ide->have_becker)
-		becker_reset();
+	if (ide->becker)
+		becker_reset(ide->becker);
 	ide_reset_begin(ide->controller);
 }
 
 static void idecart_detach(struct cart *c) {
 	struct idecart *ide = (struct idecart *)c;
-	if (ide->have_becker)
-		becker_close();
+	if (ide->becker)
+		becker_reset(ide->becker);
 	cart_rom_detach(c);
 }
 
 static void idecart_free(struct cart *c) {
 	struct idecart *ide = (struct idecart *)c;
+	if (ide->becker)
+		becker_free(ide->becker);
 	ide_free(ide->controller);
 	cart_rom_free(c);
 }
@@ -86,9 +88,9 @@ static void idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 		ide_write_latched(ide->controller, (A - 0xff50), D);
 		return;
 	}
-	if (ide->have_becker) {
+	if (ide->becker) {
 		if (A == 0xff42)
-			becker_write_data(D);
+			becker_write_data(ide->becker, D);
 	}
 }
 
@@ -107,12 +109,12 @@ static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 		D = ide_read_latched(ide->controller, ide_data);
 	} else if (A > 0xff50 && A < 0xff58) {
 		D = ide_read_latched(ide->controller, A - 0xff50);
-	} else if (ide->have_becker) {
+	} else if (ide->becker) {
 		// Becker port
 		if (A == 0xff41)
-			D = becker_read_status();
+			D = becker_read_status(ide->becker);
 		else if (A == 0xff42)
-			D = becker_read_data();
+			D = becker_read_data(ide->becker);
 	}
 	return D;
 }
@@ -131,7 +133,9 @@ static void idecart_init(struct idecart *ide) {
 	c->write = idecart_write;
 	c->reset = idecart_reset;
 
-	ide->have_becker = (cc->becker_port && becker_open());
+	if (cc->becker_port) {
+		ide->becker = becker_new();
+	}
 
 	ide->controller = ide_allocate("ide0");
 	if (ide->controller == NULL) {

@@ -37,7 +37,7 @@ struct mooh {
 	uint8_t taskreg[8][2];
 	uint8_t task;
 	uint8_t rom_conf;
-	_Bool have_becker;
+	struct becker *becker;
 	char crt9128_reg_addr;
 };
 
@@ -54,6 +54,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 // static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
+static void mooh_free(struct cart *c);
 
 struct cart *mooh_new(struct cart_config *cc) {
 	struct mooh *n = xmalloc(sizeof(*n));
@@ -66,8 +67,11 @@ struct cart *mooh_new(struct cart_config *cc) {
 	c->write = mooh_write;
 	c->reset = mooh_reset;
 	c->detach = mooh_detach;
+	c->free = mooh_free;
 
-	n->have_becker = (cc->becker_port && becker_open());
+	if (cc->becker_port) {
+		n->becker = becker_new();
+	}
 
 	return c;
 }
@@ -83,8 +87,8 @@ static void mooh_reset(struct cart *c) {
 		n->taskreg[i][0] = n->taskreg[i][1] = 0xFF & TASK_MASK;
 	cart_rom_reset(c);
 	n->rom_conf = 0;
-	if (n->have_becker)
-		becker_reset();
+	if (n->becker)
+		becker_reset(n->becker);
 	n->crt9128_reg_addr = 0;
 
 	spi65_reset();
@@ -97,9 +101,16 @@ static void mooh_attach(struct cart *c) {
 
 static void mooh_detach(struct cart *c) {
 	struct mooh *n = (struct mooh *)c;
+	if (n->becker)
+		becker_reset(n->becker);
 	cart_rom_detach(c);
-	if (n->have_becker)
-		becker_close();
+}
+
+static void mooh_free(struct cart *c) {
+	struct mooh *n = (struct mooh *)c;
+	if (n->becker)
+		becker_free(n->becker);
+	cart_rom_free(c);
 }
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -150,12 +161,12 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 			return n->extmem[bank * 0x2000 + offset];
 		}
 	}
-	if (P2 && n->have_becker) {
+	if (P2 && n->becker) {
 		switch (A & 3) {
 		case 0x1:
-			return becker_read_status();
+			return becker_read_status(n->becker);
 		case 0x2:
-			return becker_read_data();
+			return becker_read_data(n->becker);
 		default:
 			break;
 		}
@@ -212,10 +223,10 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 			c->EXTMEM = 1;
 		}
 	}
-	if (P2 && n->have_becker) {
+	if (P2 && n->becker) {
 		switch (A & 3) {
 		case 0x2:
-			becker_write_data(D);
+			becker_write_data(n->becker, D);
 			break;
 		default:
 			break;

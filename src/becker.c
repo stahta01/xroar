@@ -2,7 +2,7 @@
 
 Becker port support
 
-Copyright 2012-2016 Ciaran Anscomb
+Copyright 2012-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -44,6 +44,8 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 
 #endif
 
+#include "xalloc.h"
+
 #include "becker.h"
 #include "logging.h"
 #include "xroar.h"
@@ -53,27 +55,31 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 #define INPUT_BUFFER_SIZE 262
 #define OUTPUT_BUFFER_SIZE 16
 
-static int sockfd = -1;
-static char input_buf[INPUT_BUFFER_SIZE];
-static int input_buf_ptr = 0;
-static int input_buf_length = 0;
-static char output_buf[OUTPUT_BUFFER_SIZE];
-static int output_buf_ptr = 0;
-static int output_buf_length = 0;
+struct becker {
+	int sockfd;
+	char input_buf[INPUT_BUFFER_SIZE];
+	int input_buf_ptr;
+	int input_buf_length;
+	char output_buf[OUTPUT_BUFFER_SIZE];
+	int output_buf_ptr;
+	int output_buf_length;
+
+	// Debugging
+	struct log_handle *log_data_in_hex;
+	struct log_handle *log_data_out_hex;
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Debugging
 
-struct log_handle *log_data_in_hex = NULL;
-struct log_handle *log_data_out_hex = NULL;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-_Bool becker_open(void) {
+struct becker *becker_new(void) {
+	struct becker *becker = xmalloc(sizeof(*becker));
+	*becker = (struct becker){0};
 
 	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
 	const char *portname = xroar_cfg.becker_port ? xroar_cfg.becker_port : BECKER_PORT_DEFAULT;
+
+	int sockfd = -1;
 
 	// Find the server
 	memset(&hints, 0, sizeof(hints));
@@ -115,95 +121,96 @@ _Bool becker_open(void) {
 	}
 #endif
 
-	becker_reset();
+	becker->sockfd = sockfd;
 
-	return 1;
+	becker_reset(becker);
+	return becker;
 
 failed:
 	if (sockfd != -1) {
 		close(sockfd);
-		sockfd = -1;
 	}
 	if (info)
 		freeaddrinfo(info);
-	return 0;
+	free(becker);
+	return NULL;
 }
 
-void becker_close(void) {
-	close(sockfd);
-	sockfd = -1;
-	if (log_data_in_hex)
-		log_close(&log_data_in_hex);
-	if (log_data_out_hex)
-		log_close(&log_data_out_hex);
+void becker_free(struct becker *becker) {
+	close(becker->sockfd);
+	if (becker->log_data_in_hex)
+		log_close(&becker->log_data_in_hex);
+	if (becker->log_data_out_hex)
+		log_close(&becker->log_data_out_hex);
+	free(becker);
 }
 
-void becker_reset(void) {
+void becker_reset(struct becker *becker) {
 	if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
-		log_open_hexdump(&log_data_in_hex, "BECKER IN ");
-		log_open_hexdump(&log_data_out_hex, "BECKER OUT");
+		log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
+		log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
 	}
 }
 
-static void fetch_input(void) {
-	if (input_buf_ptr == 0) {
-		ssize_t new = recv(sockfd, input_buf, INPUT_BUFFER_SIZE, 0);
+static void fetch_input(struct becker *becker) {
+	if (becker->input_buf_ptr == 0) {
+		ssize_t new = recv(becker->sockfd, becker->input_buf, INPUT_BUFFER_SIZE, 0);
 		if (new > 0) {
-			input_buf_length = new;
+			becker->input_buf_length = new;
 			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
 				// flush & reopen output hexdump
-				log_open_hexdump(&log_data_out_hex, "BECKER OUT");
+				log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
 				for (unsigned i = 0; i < (unsigned)new; i++)
-					log_hexdump_byte(log_data_in_hex, input_buf[i]);
+					log_hexdump_byte(becker->log_data_in_hex, becker->input_buf[i]);
 			}
 		}
 	}
 }
 
-static void write_output(void) {
-	if (output_buf_length > 0) {
-		ssize_t sent = send(sockfd, output_buf + output_buf_ptr, output_buf_length - output_buf_ptr, 0);
+static void write_output(struct becker *becker) {
+	if (becker->output_buf_length > 0) {
+		ssize_t sent = send(becker->sockfd, becker->output_buf + becker->output_buf_ptr, becker->output_buf_length - becker->output_buf_ptr, 0);
 		if (sent > 0) {
 			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
 				// flush & reopen input hexdump
-				log_open_hexdump(&log_data_in_hex, "BECKER IN ");
+				log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
 				for (unsigned i = 0; i < (unsigned)sent; i++)
-					log_hexdump_byte(log_data_out_hex, output_buf[output_buf_ptr + i]);
+					log_hexdump_byte(becker->log_data_out_hex, becker->output_buf[becker->output_buf_ptr + i]);
 			}
-			output_buf_ptr += sent;
-			if (output_buf_ptr >= output_buf_length) {
-				output_buf_ptr = output_buf_length = 0;
+			becker->output_buf_ptr += sent;
+			if (becker->output_buf_ptr >= becker->output_buf_length) {
+				becker->output_buf_ptr = becker->output_buf_length = 0;
 			}
 		}
 	}
 }
 
-uint8_t becker_read_status(void) {
+uint8_t becker_read_status(struct becker *becker) {
 	if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
 		// flush both hexdump logs
-		log_hexdump_line(log_data_in_hex);
-		log_hexdump_line(log_data_out_hex);
+		log_hexdump_line(becker->log_data_in_hex);
+		log_hexdump_line(becker->log_data_out_hex);
 	}
-	fetch_input();
-	if (input_buf_length > 0)
+	fetch_input(becker);
+	if (becker->input_buf_length > 0)
 		return 0x02;
 	return 0x00;
 }
 
-uint8_t becker_read_data(void) {
-	fetch_input();
-	if (input_buf_length == 0)
+uint8_t becker_read_data(struct becker *becker) {
+	fetch_input(becker);
+	if (becker->input_buf_length == 0)
 		return 0x00;
-	uint8_t r = input_buf[input_buf_ptr++];
-	if (input_buf_ptr == input_buf_length) {
-		input_buf_ptr = input_buf_length = 0;
+	uint8_t r = becker->input_buf[becker->input_buf_ptr++];
+	if (becker->input_buf_ptr == becker->input_buf_length) {
+		becker->input_buf_ptr = becker->input_buf_length = 0;
 	}
 	return r;
 }
 
-void becker_write_data(uint8_t D) {
-	if (output_buf_length < OUTPUT_BUFFER_SIZE) {
-		output_buf[output_buf_length++] = D;
+void becker_write_data(struct becker *becker, uint8_t D) {
+	if (becker->output_buf_length < OUTPUT_BUFFER_SIZE) {
+		becker->output_buf[becker->output_buf_length++] = D;
 	}
-	write_output();
+	write_output(becker);
 }

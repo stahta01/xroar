@@ -52,7 +52,7 @@ struct rsdos {
 	_Bool drq_flag;
 	_Bool intrq_flag;
 	_Bool halt_enable;
-	_Bool have_becker;
+	struct becker *becker;
 	WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
@@ -96,7 +96,9 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 	c->has_interface = rsdos_has_interface;
 	c->attach_interface = rsdos_attach_interface;
 
-	d->have_becker = (cc->becker_port && becker_open());
+	if (cc->becker_port) {
+		d->becker = becker_new();
+	}
 	d->fdc = wd279x_new(WD2793);
 
 	return c;
@@ -109,22 +111,24 @@ static void rsdos_reset(struct cart *c) {
 	d->latch_drive_select = -1;
 	d->drq_flag = d->intrq_flag = 0;
 	latch_write(d, 0);
-	if (d->have_becker)
-		becker_reset();
+	if (d->becker)
+		becker_reset(d->becker);
 }
 
 static void rsdos_detach(struct cart *c) {
 	struct rsdos *d = (struct rsdos *)c;
 	vdrive_disconnect(d->vdrive_interface);
 	wd279x_disconnect(d->fdc);
-	if (d->have_becker)
-		becker_close();
+	if (d->becker)
+		becker_reset(d->becker);
 	cart_rom_detach(c);
 }
 
 static void rsdos_free(struct cart *c) {
 	struct rsdos *d = (struct rsdos *)c;
 	wd279x_free(d->fdc);
+	if (d->becker)
+		becker_free(d->becker);
 	cart_rom_free(c);
 }
 
@@ -139,12 +143,12 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	if (A & 0x8) {
 		return wd279x_read(d->fdc, A);
 	}
-	if (d->have_becker) {
+	if (d->becker) {
 		switch (A & 3) {
 		case 0x1:
-			return becker_read_status();
+			return becker_read_status(d->becker);
 		case 0x2:
-			return becker_read_data();
+			return becker_read_data(d->becker);
 		default:
 			break;
 		}
@@ -161,7 +165,7 @@ static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 		wd279x_write(d->fdc, A, D);
 		return;
 	}
-	if (d->have_becker) {
+	if (d->becker) {
 		/* XXX not exactly sure in what way anyone has tightened up the
 		 * address decoding for the becker port */
 		switch (A & 3) {
@@ -169,7 +173,7 @@ static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 			latch_write(d, D);
 			break;
 		case 0x2:
-			becker_write_data(D);
+			becker_write_data(d->becker, D);
 			break;
 		default:
 			break;

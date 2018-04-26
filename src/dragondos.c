@@ -55,7 +55,7 @@ struct dragondos {
 	_Bool latch_precomp_enable;
 	_Bool latch_density;
 	_Bool latch_nmi_enable;
-	_Bool have_becker;
+	struct becker *becker;
 	WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
@@ -96,7 +96,9 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 	c->has_interface = dragondos_has_interface;
 	c->attach_interface = dragondos_attach_interface;
 
-	d->have_becker = (cc->becker_port && becker_open());
+	if (cc->becker_port) {
+		d->becker = becker_new();
+	}
 	d->fdc = wd279x_new(WD2797);
 
 	return c;
@@ -107,21 +109,23 @@ static void dragondos_reset(struct cart *c) {
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	latch_write(d, 0);
-	if (d->have_becker)
-		becker_reset();
+	if (d->becker)
+		becker_reset(d->becker);
 }
 
 static void dragondos_detach(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
 	vdrive_disconnect(d->vdrive_interface);
 	wd279x_disconnect(d->fdc);
-	if (d->have_becker)
-		becker_close();
+	if (d->becker)
+		becker_reset(d->becker);
 	cart_rom_detach(c);
 }
 
 static void dragondos_free(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
+	if (d->becker)
+		becker_free(d->becker);
 	wd279x_free(d->fdc);
 	cart_rom_free(c);
 }
@@ -139,12 +143,12 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	}
 	if (!(A & 8))
 		return D;
-	if (d->have_becker) {
+	if (d->becker) {
 		switch (A & 3) {
 		case 0x1:
-			return becker_read_status();
+			return becker_read_status(d->becker);
 		case 0x2:
-			return becker_read_data();
+			return becker_read_data(d->becker);
 		default:
 			break;
 		}
@@ -163,13 +167,13 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 	}
 	if (!(A & 8))
 		return;
-	if (d->have_becker) {
+	if (d->becker) {
 		switch (A & 3) {
 		case 0x0:
 			latch_write(d, D);
 			break;
 		case 0x2:
-			becker_write_data(D);
+			becker_write_data(d->becker, D);
 			break;
 		default:
 			break;
