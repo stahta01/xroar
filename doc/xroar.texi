@@ -309,7 +309,10 @@ This manual details the options available for configuring XRoar.  Each option
 can be passed on the command line or placed in a configuration file called
 @file{xroar.conf}.  @file{xroar.conf} is read first, and any command line
 options then take precedence.  Directives are listed in @file{xroar.conf} one
-per line, and the leading dashes may be omitted.
+per line, and the leading dashes may be omitted.  If the argument to a
+directive contains spaces, quote marks, or backslashes, be sure to escape them
+either by surrounding the whole string in quotes, or by preceding the special
+character with a backslash.
 
 The installation and compilation sections above list good default locations for
 @file{xroar.conf}, but it is actually searched for in a list of directories.

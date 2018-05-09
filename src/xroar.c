@@ -223,25 +223,25 @@ struct vdrive_interface *xroar_vdrive_interface;
 static char const * const default_config[] = {
 	// Dragon 32
 	"machine dragon32",
-	"machine-desc Dragon 32",
+	"machine-desc 'Dragon 32'",
 	"machine-arch dragon32",
 	"tv-type pal",
 	"ram 32",
 	// Dragon 64
 	"machine dragon64",
-	"machine-desc Dragon 64",
+	"machine-desc 'Dragon 64'",
 	"machine-arch dragon64",
 	"tv-type pal",
 	"ram 64",
 	// Tano Dragon
 	"machine tano",
-	"machine-desc Tano Dragon (NTSC)",
+	"machine-desc 'Tano Dragon (NTSC)'",
 	"machine-arch dragon64",
 	"tv-type ntsc",
 	"ram 64",
 	// Dragon 200-E
 	"machine dragon200e",
-	"machine-desc Dragon 200-E",
+	"machine-desc 'Dragon 200-E'",
 	"machine-arch dragon64",
 	"machine-keyboard dragon200e",
 	"extbas @dragon200e",
@@ -251,33 +251,33 @@ static char const * const default_config[] = {
 	"ram 64",
 	// CoCo
 	"machine coco",
-	"machine-desc Tandy CoCo (PAL)",
+	"machine-desc 'Tandy CoCo (PAL)'",
 	"machine-arch coco",
 	"tv-type pal",
 	"ram 64",
 	// CoCo (US)
 	"machine cocous",
-	"machine-desc Tandy CoCo (NTSC)",
+	"machine-desc 'Tandy CoCo (NTSC)'",
 	"machine-arch coco",
 	"tv-type ntsc",
 	"ram 64",
 	// CoCo 2B
 	"machine coco2b",
-	"machine-desc Tandy CoCo 2B (PAL,T1)",
+	"machine-desc 'Tandy CoCo 2B (PAL,T1)'",
 	"machine-arch coco",
 	"tv-type pal",
 	"vdg-type 6847t1",
 	"ram 64",
 	// CoCo 2B (US)
 	"machine coco2bus",
-	"machine-desc Tandy CoCo 2B (NTSC,T1)",
+	"machine-desc 'Tandy CoCo 2B (NTSC,T1)'",
 	"machine-arch coco",
 	"tv-type ntsc",
 	"vdg-type 6847t1",
 	"ram 64",
 	// Dynacom MX-1600
 	"machine mx1600",
-	"machine-desc Dynacom MX-1600",
+	"machine-desc 'Dynacom MX-1600'",
 	"machine-arch coco",
 	"bas @mx1600",
 	"extbas @mx1600ext",
@@ -296,52 +296,52 @@ static char const * const default_config[] = {
 	"cart-rom @rsdos",
 	// Delta
 	"cart delta",
-	"cart-desc Delta System",
+	"cart-desc 'Delta System'",
 	"cart-type delta",
 	"cart-rom @delta",
 	// RSDOS w/ Becker port
 	"cart becker",
-	"cart-desc RS-DOS with becker port",
+	"cart-desc 'RS-DOS with becker port'",
 	"cart-type rsdos",
 	"cart-rom @rsdos_becker",
 	"cart-becker",
 	// Games Master Cartridge
 	"cart gmc",
-	"cart-desc Games Master Cartridge",
+	"cart-desc 'Games Master Cartridge'",
 	"cart-type gmc",
 	"cart-autorun",
 	// Orchestra 90
 	"cart orch90",
-	"cart-desc Orchestra-90 CC",
+	"cart-desc 'Orchestra-90 CC'",
 	"cart-type orch90",
 	"cart-rom orch90",
 	"cart-autorun",
 	// Multi-Pak Interface
 	"cart mpi",
-	"cart-desc Multi-Pak Interface",
+	"cart-desc 'Multi-Pak Interface'",
 	"cart-type mpi",
 	// IDE Cartridge
 	"cart ide",
-	"cart-desc IDE Interface",
+	"cart-desc 'IDE Interface'",
 	"cart-type ide",
 	"cart-rom @hdblba",
 	"cart-becker",
 	// nx32 memory cartridge
 	"cart nx32",
-	"cart-desc NX32 memory cartridge",
+	"cart-desc 'NX32 memory cartridge'",
 	"cart-type nx32",
 	// mooh memory cartridge
 	"cart mooh",
-	"cart-desc MOOH memory cartridge",
+	"cart-desc 'MOOH memory cartridge'",
 	"cart-type mooh",
 
 	// ROM lists
 
 	// Fallback Dragon BASIC
 	"romlist dragon=dragon",
-	"romlist d64_1=d64_1,d64rom1,Dragon Data Ltd - Dragon 64 - IC17,Dragon Data Ltd - TANO IC18,Eurohard S.A. - Dragon 200 IC18,dragrom",
-	"romlist d64_2=d64_2,d64rom2,Dragon Data Ltd - Dragon 64 - IC18,Dragon Data Ltd - TANO IC17,Eurohard S.A. - Dragon 200 IC17",
-	"romlist d32=d32,dragon32,d32rom,Dragon Data Ltd - Dragon 32 - IC17",
+	"romlist d64_1=d64_1,d64rom1,'Dragon Data Ltd - Dragon 64 - IC17','Dragon Data Ltd - TANO IC18','Eurohard S.A. - Dragon 200 IC18',dragrom",
+	"romlist d64_2='d64_2,d64rom2,Dragon Data Ltd - Dragon 64 - IC18','Dragon Data Ltd - TANO IC17','Eurohard S.A. - Dragon 200 IC17'",
+	"romlist d32='d32,dragon32,d32rom,Dragon Data Ltd - Dragon 32 - IC17'",
 	"romlist d200e_1=d200e_1,d200e_rom1,ic18_v1.4e.ic34",
 	"romlist d200e_2=d200e_2,d200e_rom2,ic17_v1.4e.ic37",
 	// Specific Dragon BASIC
@@ -352,7 +352,7 @@ static char const * const default_config[] = {
 	"romlist dragon200e_alt=@d200e_2,@d64_2",
 	"romlist dragon200e_charset=d200e_26,rom26.ic1",
 	// Fallback CoCo BASIC
-	"romlist coco=bas13,bas12,Color Basic v1.2 (1982)(Tandy),bas11,bas10",
+	"romlist coco='bas13,bas12,Color Basic v1.2 (1982)(Tandy),bas11,bas10'",
 	"romlist coco_ext=extbas11,extbas10,coco,COCO",
 	// Specific CoCo BASIC
 	"romlist coco1=bas10,@coco",
@@ -365,15 +365,15 @@ static char const * const default_config[] = {
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
 	// DragonDOS
-	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,Dragon Data Ltd - DragonDOS 1.0",
+	"romlist dragondos='ddos12a,ddos12,ddos40,ddos15,ddos10,Dragon Data Ltd - DragonDOS 1.0'",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
-	"romlist superdos=sdose6,PNP - SuperDOS E6,sdose5,sdose4",
+	"romlist superdos='sdose6,PNP - SuperDOS E6,sdose5,sdose4'",
 	"romlist cumana=cdos20,CDOS20",
 	"romlist dragondos_compat=@dosplus,@superdos,@dragondos,@cumana",
 	// RSDOS
 	"romlist rsdos=disk11,disk10",
 	// Delta
-	"romlist delta=delta,deltados,Premier Micros - DeltaDOS",
+	"romlist delta='delta,deltados,Premier Micros - DeltaDOS'",
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
 
@@ -403,25 +403,25 @@ static char const * const default_config[] = {
 
 	// Joysticks
 	"joy joy0",
-	"joy-desc Physical joystick 0",
+	"joy-desc 'Physical joystick 0'",
 	"joy-axis 0=physical:0,0",
 	"joy-axis 1=physical:0,1",
 	"joy-button 0=physical:0,0",
 	"joy-button 1=physical:0,1",
 	"joy joy1",
-	"joy-desc Physical joystick 1",
+	"joy-desc 'Physical joystick 1'",
 	"joy-axis 0=physical:1,0",
 	"joy-axis 1=physical:1,1",
 	"joy-button 0=physical:1,0",
 	"joy-button 1=physical:1,1",
 	"joy kjoy0",
-	"joy-desc Virtual joystick 0",
+	"joy-desc 'Virtual joystick 0'",
 	"joy-axis 0=keyboard:",
 	"joy-axis 1=keyboard:",
 	"joy-button 0=keyboard:",
 	"joy-button 1=keyboard:",
 	"joy mjoy0",
-	"joy-desc Mouse-joystick 0",
+	"joy-desc 'Mouse-joystick 0'",
 	"joy-axis 0=mouse:",
 	"joy-axis 1=mouse:",
 	"joy-button 0=mouse:",

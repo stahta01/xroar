@@ -2,7 +2,7 @@
 
 Command-line and file-based configuration options
 
-Copyright 2009-2015 Ciaran Anscomb
+Copyright 2009-2018 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -23,11 +23,14 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
 #include "logging.h"
 #include "xconfig.h"
+
+static _Bool warned_autoconcat = 0;
 
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
 		const char *opt) {
@@ -232,49 +235,31 @@ enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 
 enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, const char *line) {
 	struct xconfig_option const *option;
-	char *opt, *arg;
-	size_t line_len = strlen(line) + 1;
-	char cline_buf[line_len];
-	char *cline = cline_buf;
-	strncpy(cline, line, line_len);
-	cline[line_len-1] = 0;
-	while (isspace((int)*cline))
-		cline++;
-	if (*cline == 0 || *cline == '#')
+
+	int argc;
+	sds *args = sdssplitargs(line, &argc);
+	if (argc == 0 || args[0][0] == '#') {
+		sdsfreesplitres(args, argc);
 		return XCONFIG_OK;
-	opt = strtok(cline, "\t\n\v\f\r =");
-	if (opt == NULL) return XCONFIG_OK;
+	}
+
+	char *opt = args[0];
 	while (*opt == '-') opt++;
 	option = find_option(options, opt);
 	if (option == NULL) {
+		enum xconfig_result r = XCONFIG_BAD_OPTION;
 		if (0 == strncmp(opt, "no-", 3)) {
 			option = find_option(options, opt + 3);
 			if (option && unset_option(option) == 0) {
-				return XCONFIG_OK;
+				r = XCONFIG_OK;
 			}
 		}
-		return XCONFIG_BAD_OPTION;
+		sdsfreesplitres(args, argc);
+		return r;
 	}
+
 	if (option->deprecated) {
 		LOG_WARN("Deprecated option `%s'\n", opt);
-	}
-	if (option->type == XCONFIG_STRING || option->type == XCONFIG_STRING_LIST) {
-		/* preserve spaces */
-		arg = strtok(NULL, "\n\v\f\r");
-		if (arg) {
-			while (isspace((int)*arg) || *arg == '=') {
-				arg++;
-			}
-		}
-	} else {
-		arg = strtok(NULL, "\n\v\f\r");
-		if (arg) {
-			int i;
-			for (i = strlen(arg)-1; i >= 0; i--) {
-				if (isspace(arg[i]))
-					arg[i] = 0;
-			}
-		}
 	}
 	if (option->type == XCONFIG_BOOL ||
 	    option->type == XCONFIG_BOOL0 ||
@@ -282,13 +267,30 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	    option->type == XCONFIG_INT1 ||
 	    option->type == XCONFIG_NULL) {
 		set_option(option, NULL);
+		sdsfreesplitres(args, argc);
 		return XCONFIG_OK;
 	}
-	if (arg == NULL) {
+	if (argc < 2) {
 		LOG_ERROR("Missing argument to `%s'\n", opt);
+		sdsfreesplitres(args, argc);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(option, arg);
+	// Kludge to support old behaviour: multiple string arguments are
+	// concatenated together with spaces!  But print a deprecation warning,
+	// as I want to get rid of this.
+	if (argc > 2 && (option->type == XCONFIG_STRING ||
+			 option->type == XCONFIG_STRING_LIST)) {
+		if (!warned_autoconcat) {
+			LOG_WARN("Please quote strings or escape spaces, auto-concat is deprecated.\n");
+			warned_autoconcat = 1;
+		}
+		sds arg = sdsjoinsds(args+1, argc-1, " ", 1);
+		set_option(option, arg);
+		sdsfree(arg);
+	} else {
+		set_option(option, args[1]);
+	}
+	sdsfreesplitres(args, argc);
 	return XCONFIG_OK;
 }
 
