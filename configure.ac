@@ -46,6 +46,7 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_CHECK_FUNCS([strnlen strsep])
 AX_GCC_BUILTIN(__builtin_parity)
+AX_GCC_VAR_ATTRIBUTE(packed)
 
 ### Options
 
