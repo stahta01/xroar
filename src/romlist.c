@@ -22,6 +22,7 @@ See COPYING.GPL for redistribution conditions.
 #include <string.h>
 
 #include "array.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -173,7 +174,14 @@ static void print_romlist_entry(struct romlist *list, void *user_data) {
 		}
 	}
 	for (jter = list->list; jter; jter = jter->next) {
-		fprintf(f, "%s", (char *)jter->data);
+		char *str = jter->data;
+		if (user_data) {
+			sds out = sdscatrepr(sdsempty(), str, strlen(str));
+			fprintf(f, "%s", out);
+			sdsfree(out);
+		} else {
+			fprintf(f, "%s", str);
+		}
 		if (jter->next) {
 			fputc(',', f);
 		}

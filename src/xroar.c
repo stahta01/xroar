@@ -35,6 +35,7 @@ See COPYING.GPL for redistribution conditions.
 #include "array.h"
 #include "c-strcase.h"
 #include "pl-string.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -2418,7 +2419,9 @@ void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *val
 	xroar_cfg_print_indent(f);
 	if (value || normal) {
 		char const *tmp = value ? value : normal;
-		fprintf(f, "%s %s\n", opt, tmp);
+		sds str = sdscatrepr(sdsempty(), tmp, strlen(tmp));
+		fprintf(f, "%s %s\n", opt, str);
+		sdsfree(str);
 		return;
 	}
 	fprintf(f, "# %s undefined\n", opt);
