@@ -138,6 +138,14 @@ struct cart_config *cart_config_by_name(const char *name) {
 		if (rom_cart_config->rom) free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
 		rom_cart_config->autorun = 1;
+		FILE *fd = fopen(name, "rb");
+		if (fd) {
+			off_t fsize = fs_file_size(fd);
+			if (fsize > 0x4000) {
+				rom_cart_config->type = xstrdup("gmc");
+			}
+			fclose(fd);
+		}
 		return rom_cart_config;
 	}
 	return NULL;
