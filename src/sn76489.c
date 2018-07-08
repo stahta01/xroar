@@ -92,6 +92,7 @@ struct SN76489_private {
 	unsigned counter[4];  // current counter value
 	_Bool state[4];  // current output state (0/1, indexes amplitude)
 	float level[4];  // set from amplitude[], decays over time
+	_Bool nstate;  // separate state toggle for noise channel
 
 	// noise-specific state
 	_Bool noise_white;  // 0 = periodic, 1 = white
@@ -131,6 +132,7 @@ struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t t
 	for (int c = 0; c < 4; c++) {
 		csg_->amplitude[c][1] = attenuation[4];
 	}
+	csg_->noise_lfsr = 0x4000;
 
 	// 76489 needs 32 cycles of its reference clock between writes.
 	// Compute this (approximately) wrt system "ticks".
@@ -216,10 +218,10 @@ void sn76489_write(struct SN76489 *csg, uint32_t tick, uint8_t D) {
 				csg_->frequency[3] = 0x40;
 				break;
 			default:
-			case 3:
-				csg_->noise_lfsr = 0x4000;
 				break;
 			}
+			// always reset shift register
+			csg_->noise_lfsr = 0x4000;
 		}
 	}
 
@@ -314,9 +316,9 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 		if (!csg_->noise_tone3) {
 			// noise channel clocked independently
 			if (--csg_->counter[3] == 0) {
-				csg_->state[3] = !csg_->state[3];
+				csg_->nstate = !csg_->nstate;
 				csg_->counter[3] = csg_->frequency[3];
-				noise_clock = csg_->state[3];
+				noise_clock = csg_->nstate;
 			}
 		}
 
@@ -327,6 +329,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 					    ? parity(csg_->noise_lfsr & 0x0003) << 14
 					    : (csg_->noise_lfsr & 1) << 14);
 			_Bool state = csg_->noise_lfsr & 1;
+			csg_->state[3] = state;
 			csg_->level[3] = csg_->amplitude[3][state];
 		}
 
