@@ -128,6 +128,11 @@ static struct tape_file_autorun autorun_special[] = {
 	  .size = 15, .crc = 0xeb14,
 	  .run = "\003CLEAR10:CLOADM\\r\\0EXEC\\r",
 	},
+	{
+	  .name = "Galacticans",
+	  .size = 15, .crc = 0xd39b,
+	  .run = "\003PCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
+	},
 };
 
 /**************************************************************************/
