@@ -32,6 +32,7 @@ See COPYING.GPL for redistribution conditions.
 #include "crc32.h"
 #include "delegate.h"
 #include "events.h"
+#include "fs.h"
 #include "idecart.h"
 #include "logging.h"
 #include "machine.h"
