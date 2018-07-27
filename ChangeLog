@@ -1,4 +1,4 @@
-Version 0.35, unreleased
+Version 0.35, Fri Jun 27 2018
 
   * New EXTMEM/SLENB support allows cartridges to inhibit normal device select
   * New NX32 RAM cartridge [by Tormod Volden]
