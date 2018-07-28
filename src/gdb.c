@@ -110,6 +110,7 @@
 #include "mc6809.h"
 #include "sam.h"
 #include "xroar.h"
+#include "events.h"
 
 struct gdb_interface_private {
 	struct machine *machine;
@@ -638,6 +639,17 @@ static int send_packet_string(struct gdb_interface_private *gip, const char *str
 	return send_packet(gip, string, count);
 }
 
+static int send_packet_hexstring(struct gdb_interface_private *gip, const char *string) {
+	unsigned count = strlen(string);
+	char *hs = xmalloc(count * 2);
+	char *hsp = hs;
+	for (unsigned i = 0; i < count; i++)
+		hsp += sprintf(hsp, "%02x", string[i]);
+	int ret = send_packet(gip, hs, count * 2);
+	free(hs);
+	return ret;
+}
+
 static int send_char(struct gdb_interface_private *gip, char c) {
 	if (send(gip->sockfd, &c, 1, 0) < 0)
 		return -GDBE_WRITE_ERROR;
@@ -839,7 +851,54 @@ error:
 	send_packet_string(gip, "E00");
 }
 
+static int qRcmd(struct gdb_interface_private *gip, char *args) {
+	if (!*args) {
+		/* no words received, print usage */
+		send_packet_hexstring(gip, "monitor cycles [STRING]\n");
+		return 0;
+	}
+
+	/* decode hex string in place */
+	char *p;
+	char *np;
+	for (p = np = args; *p; p += 2) {
+		if (!p[1])
+			return 1; /* odd number of hex digits */
+		int v = hex8(p);
+		if (v < 0)
+			return 1;
+		*np++ = v;
+	}
+	*np = '\0';
+
+	/* parse our own gdb "monitor" command */
+	char *cmd = strsep(&args, " ");
+	if (!args)		/* no arguments to our cmd */
+		args = "";	/* always printable below */
+
+	char reply[255];
+	*reply = '\0';
+	if (0 == strcmp(cmd, "cycles")) {
+		sprintf(reply, "%u cycles %s\n", (uint32_t) event_current_tick / 16, args);
+	} else {
+		sprintf(reply, "unknown monitor command\n");
+	}
+
+	if (*reply)
+		send_packet_hexstring(gip, reply);
+	else
+		send_packet_string(gip, "OK");
+	return 0;
+}
+
 static void general_query(struct gdb_interface_private *gip, char *args) {
+	if (0 == strncmp(args, "Rcmd", 4)) {
+		/* this query uses comma instead of colon as separator */
+		strsep(&args, ",");
+		if (!args || qRcmd(gip, args))
+			send_packet_string(gip, "E00");
+		return;
+	}
 	char *query = strsep(&args, ":");
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
