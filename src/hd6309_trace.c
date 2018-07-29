@@ -997,7 +997,7 @@ struct hd6309_trace {
 	uint8_t bytes_buf[BYTES_BUF_SIZE];
 
 	const char *mnemonic;
-	char operand_text[19];
+	char operand_text[30];  // too large, but avoids gcc8 warnings
 
 	int ins_type;
 	const int *state_list;
