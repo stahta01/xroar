@@ -406,7 +406,7 @@ Indicate the corresponding ROM is not fitted in this machine.
 ROM image to use for external character generator.
 
 @item -tv-type @var{type} One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.
-PAL-M is treated the same as NTSC, except with magenta-green artifacting
+PAL-M is treated the same as NTSC, except with magenta-green artefacting
 instead of blue-red (simulated composite rendering only at the moment).
 
 @item -vdg-type @var{type}
@@ -1324,9 +1324,9 @@ is that you're used to running the program on an NTSC machine, and it makes use
 of cross-colour, but XRoar is emulating a PAL machine.  Try starting with
 @option{-default-machine tano} or @option{-default-machine cocous}.
 
-@float Figure,fig:artifacts
-@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artifact modes, png}
-@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artifact modes}
+@float Figure,fig:artefacts
+@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artefact modes, png}
+@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artefact modes}
 @end float
 
 
