@@ -133,7 +133,8 @@ static void ide_xlate_errno(struct ide_taskfile *t, int len)
 
 static void ide_fault(struct ide_drive *d, const char *p)
 {
-  fprintf(stderr, "ide: %s: %s\n", d->controller->name, p);
+  fprintf(stderr, "ide: %s: %d: %s\n", d->controller->name,
+                    (int)(d - d->controller->drive), p);
 }
 
 /* Disk translation */
@@ -144,10 +145,10 @@ static off_t xlate_block(struct ide_taskfile *t)
 /*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n",
       t->lba4, t->lba3, t->lba2, t->lba1);*/
     if (d->lba)
-      return ((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1;
+      return 2 + (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
     ide_fault(d, "LBA on non LBA drive");
   }
-  return ((t->lba4 & DEVH_HEAD) * d->cylinders + ((t->lba3 << 8) + t->lba2)) * d->sectors + t->lba1;
+  return 2 + (((t->lba4 & DEVH_HEAD) * d->cylinders + ((t->lba3 << 8) + t->lba2)) * d->sectors + t->lba1);
 }
 
 /* Indicate the drive is ready */
@@ -177,7 +178,9 @@ static void data_in_state(struct ide_taskfile *tf)
   struct ide_drive *d = tf->drive;
   d->state = IDE_DATA_IN;
   d->dptr = d->data + 512;
-  tf->status &= ~ (ST_BSY|ST_DRDY);
+  /* We don't clear DRDY here, drives may well accept a command at this
+     point and at least one firmware for RC2014 assumes this */
+  tf->status &= ~ST_BSY;
   tf->status |= ST_DRQ;
   d->intrq = 1;                 /* Double check */
 }
@@ -289,12 +292,16 @@ static void cmd_readsectors_complete(struct ide_taskfile *tf)
     return;
   }
   d->offset = xlate_block(tf);
-  tf->status |= ST_DRQ;
+  /* DRDY is not guaranteed here but at least one buggy RC2014 firmware
+     expects it */
+  tf->status |= ST_DRQ | ST_DSC | ST_DRDY;
+  tf->status &= ~ST_BSY;
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
 /*  fprintf(stderr, "READ %d SECTORS @ %ld\n", d->length, d->offset); */
-  if (d->offset == -1 ||  lseek(d->fd, 1024 + 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 ||  lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
     tf->status |= ST_ERR;
+    tf->status &= ~ST_DSC;
     tf->error |= ERR_IDNF;
     /* return null data */
     completed(tf);
@@ -315,10 +322,12 @@ static void cmd_verifysectors_complete(struct ide_taskfile *tf)
   d->offset = xlate_block(tf);
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
-  if (lseek(d->fd, 1024 + 512 * (d->offset + d->length - 1), SEEK_SET) == -1) {
+  if (lseek(d->fd, 512 * (d->offset + d->length - 1), SEEK_SET) == -1) {
+    tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
   }
+  tf->status |= ST_DSC;
   completed(tf);
 }
 
@@ -328,9 +337,11 @@ static void cmd_recalibrate_complete(struct ide_taskfile *tf)
   if (d->failed)
     drive_failed(tf);
   if (xlate_block(tf) != 0L) {
+    tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_ABRT;
   }
+  tf->status |= ST_DSC;
   completed(tf);
 }
 
@@ -340,10 +351,12 @@ static void cmd_seek_complete(struct ide_taskfile *tf)
   if (d->failed)
     drive_failed(tf);
   d->offset = xlate_block(tf);
-  if (d->offset == -1 || lseek(d->fd, 1024 + 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 || lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
+    tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
   }
+  tf->status |= ST_DSC;
   completed(tf);
 }
 
@@ -384,9 +397,10 @@ static void cmd_writesectors_complete(struct ide_taskfile *tf)
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
 /*  fprintf(stderr, "WRITE %d SECTORS @ %ld\n", d->length, d->offset); */
-  if (d->offset == -1 ||  lseek(d->fd, 1024 + 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 ||  lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
+    tf->status &= ~ST_DSC;
     /* return null data */
     completed(tf);
     return;
@@ -426,6 +440,7 @@ static int ide_read_sector(struct ide_drive *d)
   if ((len = read(d->fd, d->data, 512)) != 512) {
     perror("ide_read_sector");
     d->taskfile.status |= ST_ERR;
+    d->taskfile.status &= ~ST_DSC;
     ide_xlate_errno(&d->taskfile, len);
     return -1;
   }
@@ -441,6 +456,7 @@ static int ide_write_sector(struct ide_drive *d)
   d->dptr = d->data;
   if ((len = write(d->fd, d->data, 512)) != 512) {
     d->taskfile.status |= ST_ERR;
+    d->taskfile.status &= ~ST_DSC;
     ide_xlate_errno(&d->taskfile, len);
     return -1;
   }
@@ -505,6 +521,7 @@ static void ide_data_out(struct ide_drive *d, uint16_t v)
       d->intrq = 1;
       if (d->length == 0) {
         d->state = IDE_IDLE;
+        d->taskfile.status |= ST_DSC;
         completed(&d->taskfile);
       }
     }
@@ -603,7 +620,7 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
       return;
     }
     /* Not clear this is the right emulation */
-    if (d->present == 0) {
+    if (d->present == 0 && r != ide_lba_top) {
       ide_fault(d, "not present");
       return;
     }
@@ -629,21 +646,24 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
       t->lba3 = v;
       break;
     case ide_lba_top:
-      t->lba4 = v & (DEVH_HEAD|DEVH_DEV|DEVH_LBA);
       c->selected = (v & DEVH_DEV) ? 1 : 0;
+      c->drive[c->selected].taskfile.lba4 = v & (DEVH_HEAD|DEVH_DEV|DEVH_LBA);
       break;
     case ide_command_w:
       t->command = v;
       ide_issue_command(t);
       break;
     case ide_devctrl_w:
+      /* ATA: "When the Device Control register is written, both devices
+         respond to the write regardless of which device is selected" */
       if ((v ^ t->devctrl) & DCL_SRST) {
         if (v & DCL_SRST)
           ide_srst_begin(c);
         else
           ide_srst_end(c);
       }
-      t->devctrl = v;   /* Check versus real h/w does this end up cleared */
+      c->drive[0].taskfile.devctrl = v;
+      c->drive[1].taskfile.devctrl = v;
       break;
   }
 }
