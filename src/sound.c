@@ -300,6 +300,10 @@ void sound_update(struct sound_interface *sndp) {
 	}
 	snd->last_cycle = event_current_tick;
 
+	// TODO: add a flag to the delegates to indicate whether result is
+	// used.  may save some calls to sample-rate conversion / low-pass
+	// filtering.
+
 	// Always run external sources so they're up to date, even though we'll
 	// only use one of them.
 	if (DELEGATE_DEFINED(sndp->get_tape_audio)) {
