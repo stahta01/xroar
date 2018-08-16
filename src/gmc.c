@@ -113,7 +113,9 @@ static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf)
 	struct gmc *gmc = (struct gmc *)c;
 	gmc->snd = intf;
 	gmc->csg = sn76489_new(4000000, gmc->snd->framerate, EVENT_TICK_RATE, event_current_tick);
-	gmc->snd->get_cart_audio = DELEGATE_AS3(float, uint32, int, floatp, sn76489_get_audio, gmc->csg);
+	if (gmc->csg) {
+		gmc->snd->get_cart_audio = DELEGATE_AS3(float, uint32, int, floatp, sn76489_get_audio, gmc->csg);
+	}
 }
 
 static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -131,5 +133,7 @@ static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 
 	// 76489 sound register
 	sound_update(gmc->snd);
-	sn76489_write(gmc->csg, event_current_tick, D);
+	if (gmc->csg) {
+		sn76489_write(gmc->csg, event_current_tick, D);
+	}
 }
