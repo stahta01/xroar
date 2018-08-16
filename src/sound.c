@@ -307,10 +307,10 @@ void sound_update(struct sound_interface *sndp) {
 	// Always run external sources so they're up to date, even though we'll
 	// only use one of them.
 	if (DELEGATE_DEFINED(sndp->get_tape_audio)) {
-		snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, snd->mux_input[SOURCE_TAPE]);
+		snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, xroar_noratelimit ? NULL : snd->mux_input[SOURCE_TAPE]);
 	}
 	if (DELEGATE_DEFINED(sndp->get_cart_audio)) {
-		snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, snd->mux_input[SOURCE_CART]);
+		snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, xroar_noratelimit ? NULL : snd->mux_input[SOURCE_CART]);
 	}
 
 	// Only fill DAC buffer if it's selected
