@@ -37,7 +37,7 @@ struct tape_sndfile {
 	SNDFILE *fd;
 	_Bool writing;
 	int cycles_per_frame;
-	short *block;
+	float *block;
 	sf_count_t block_length;
 	sf_count_t cursor;
 	int cycles_to_write;
@@ -156,17 +156,17 @@ static long sndfile_ms_to(struct tape const *t, int ms) {
 	return (long)pos;
 }
 
-static sf_count_t read_sample(struct tape_sndfile *sndfile, short *s) {
+static sf_count_t read_sample(struct tape_sndfile *sndfile, float *s) {
 	if (sndfile->cursor >= sndfile->block_length) {
-		sndfile->block_length = sf_readf_short(sndfile->fd, sndfile->block, BLOCK_LENGTH);
+		sndfile->block_length = sf_readf_float(sndfile->fd, sndfile->block, BLOCK_LENGTH);
 		sndfile->cursor = 0;
 	}
 	if (sndfile->cursor >= sndfile->block_length) {
 		return 0;
 	}
 	if (sndfile->info.channels == 2) {
-		short s0 = sndfile->block[sndfile->cursor * 2];
-		short s1 = sndfile->block[sndfile->cursor * 2 + 1];
+		float s0 = sndfile->block[sndfile->cursor * 2];
+		float s1 = sndfile->block[sndfile->cursor * 2 + 1];
 		switch (sndfile->channel_mode) {
 		case tape_channel_left:
 			*s = s0;
@@ -196,7 +196,7 @@ static sf_count_t read_sample(struct tape_sndfile *sndfile, short *s) {
 
 static int sndfile_pulse_in(struct tape *t, int *pulse_width) {
 	struct tape_sndfile *sndfile = t->data;
-	short sample;
+	float sample;
 	if (!read_sample(sndfile, &sample))
 		return -1;
 	t->offset++;
@@ -218,9 +218,9 @@ static int sndfile_pulse_in(struct tape *t, int *pulse_width) {
 
 /* Writing */
 
-static int write_sample(struct tape *t, short s) {
+static int write_sample(struct tape *t, float s) {
 	struct tape_sndfile *sndfile = t->data;
-	short *dest = sndfile->block + (sndfile->block_length * sndfile->info.channels);
+	float *dest = sndfile->block + (sndfile->block_length * sndfile->info.channels);
 	int i;
 	/* write frame */
 	for (i = 0; i < sndfile->info.channels; i++) {
@@ -229,7 +229,7 @@ static int write_sample(struct tape *t, short s) {
 	sndfile->block_length++;
 	/* write full blocks */
 	if (sndfile->block_length >= BLOCK_LENGTH) {
-		sf_count_t written = sf_writef_short(sndfile->fd, sndfile->block, sndfile->block_length);
+		sf_count_t written = sf_writef_float(sndfile->fd, sndfile->block, sndfile->block_length);
 		if (written >= 0)
 			t->offset += written;
 		sndfile->block_length = 0;
@@ -243,7 +243,7 @@ static int write_sample(struct tape *t, short s) {
 
 static int sndfile_sample_out(struct tape *t, uint8_t sample, int length) {
 	struct tape_sndfile *sndfile = t->data;
-	short sample_out = ((int)sample - 0x80) * 256;
+	float sample_out = ((float)sample - 128.) / 181.;
 	sndfile->cycles_to_write += length;
 	while (sndfile->cycles_to_write > sndfile->cycles_per_frame) {
 		sndfile->cycles_to_write -= sndfile->cycles_per_frame;
@@ -258,7 +258,7 @@ static void sndfile_motor_off(struct tape *t) {
 	if (!sndfile->writing) return;
 	/* flush output block */
 	if (sndfile->block_length > 0) {
-		sf_count_t written = sf_writef_short(sndfile->fd, sndfile->block, sndfile->block_length);
+		sf_count_t written = sf_writef_float(sndfile->fd, sndfile->block, sndfile->block_length);
 		if (written >= 0)
 			t->offset += written;
 		sndfile->block_length = 0;
