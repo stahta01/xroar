@@ -131,27 +131,40 @@ void vdg_palette_RGB(struct vdg_palette *vp, int colour,
 	float b = 1.0 * y + 2.029 * u + 0.000 * v;
 	float mlaw = 2.2;
 
-	/* Those are corrected (non-linear) values, but graphics card
-	 * colourspaces tend to be linear, so un-correct here.  Proper
-	 * colourspace conversion (e.g., to sRGB) to come later.  */
-	if (r <= (0.018 * 4.5)) {
-		*Rout = r / 4.5;
+	/* These values directly relate to voltages fed to a modulator which,
+	 * I'm assuming, does nothing further to correct for the non-linearity
+	 * of the display device.  Therefore, these can be considered "gamma
+	 * corrected" values, and to work with them in linear RGB, we need to
+	 * undo the assumed characteristics of the display.  NTSC was
+	 * originally defined differently, but most SD televisions that people
+	 * will have used any time recently are probably close to Rec. 601, so
+	 * use that transfer function:
+	 *
+	 * L = V/4.5                        for V <  0.081
+	 * L = ((V + 0.099) / 1.099) ^ 2.2  for V >= 0.081
+	 *
+	 * Note: the same transfer function is specified for Rec. 709.
+	 */
+
+	if (r < (0.018 * 4.5)) {
+		r = r / 4.5;
 	} else {
-		*Rout = powf((r+0.099)/(1.+0.099), mlaw);
+		r = powf((r+0.099)/(1.+0.099), mlaw);
 	}
-	if (g <= (0.018 * 4.5)) {
-		*Gout = g / 4.5;
+	if (g < (0.018 * 4.5)) {
+		g = g / 4.5;
 	} else {
-		*Gout = powf((g+0.099)/(1.+0.099), mlaw);
+		g = powf((g+0.099)/(1.+0.099), mlaw);
 	}
-	if (b <= (0.018 * 4.5)) {
-		*Bout = b / 4.5;
+	if (b < (0.018 * 4.5)) {
+		b = b / 4.5;
 	} else {
-		*Bout = powf((b+0.099)/(1.+0.099), mlaw);
+		b = powf((b+0.099)/(1.+0.099), mlaw);
 	}
-	*Rout += rgb_black_level;
-	*Gout += rgb_black_level;
-	*Bout += rgb_black_level;
+
+	*Rout = r + rgb_black_level;
+	*Gout = g + rgb_black_level;
+	*Bout = b + rgb_black_level;
 
 	if (*Rout < 0.0) { *Rout = 0.0; } if (*Rout > 1.0) { *Rout = 1.0; }
 	if (*Gout < 0.0) { *Gout = 0.0; } if (*Gout > 1.0) { *Gout = 1.0; }
