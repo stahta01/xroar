@@ -21,6 +21,7 @@ See COPYING.GPL for redistribution conditions.
 #include <string.h>
 
 #include "delegate.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -48,7 +49,8 @@ struct keyboard_interface_private {
 	struct MC6809 *cpu;
 
 	struct slist *basic_command_list;
-	const char *basic_command;
+	sds basic_command;
+	int command_index;
 };
 
 static void type_command(void *);
@@ -78,7 +80,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 void keyboard_interface_free(struct keyboard_interface *ki) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
 	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
-	slist_free_full(kip->basic_command_list, (slist_free_func)free);
+	slist_free_full(kip->basic_command_list, (slist_free_func)sdsfree);
 	free(kip);
 }
 
@@ -176,9 +178,41 @@ static void type_command(void *sptr) {
 	struct keyboard_interface *ki = &kip->public;
 	struct MC6809 *cpu = kip->cpu;
 	if (kip->basic_command) {
-		int chr = *(kip->basic_command++);
+		MC6809_REG_A(cpu) = kip->basic_command[kip->command_index++];
+		// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
+		// as otherwise BASIC will skip it.
+		cpu->reg_cc &= ~4;
+		if (kip->command_index >= sdslen(kip->basic_command)) {
+			kip->basic_command = NULL;
+			kip->command_index = 0;
+		}
+	}
+	if (!kip->basic_command) {
+		if (kip->basic_command_list) {
+			void *data = kip->basic_command_list->data;
+			kip->basic_command_list = slist_remove(kip->basic_command_list, data);
+			sdsfree(data);
+		}
+		if (kip->basic_command_list) {
+			kip->basic_command = kip->basic_command_list->data;
+			kip->command_index = 0;
+		} else {
+			machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+		}
+	}
+	/* Use CPU read routine to pull return address back off stack */
+	kip->machine->op_rts(kip->machine);
+}
+
+static sds parse_string(const char *s, enum dkbd_layout layout) {
+	if (!s)
+		return NULL;
+	sds new = sdsempty();
+	int chr;
+	while (chr = *(s++)) {
+
 		if (chr == '\\') {
-			chr = *(kip->basic_command++);
+			chr = *(s++);
 			switch (chr) {
 				case '0': chr = '\0'; break;
 				case 'b': chr = '\010'; break;
@@ -187,26 +221,29 @@ static void type_command(void *sptr) {
 				case 'f': chr = '\f'; break;
 				case 'n':
 				case 'r': chr = '\r'; break;
+				case 0: chr = -1; s--; break;
 				default: break;
 			}
 		}
-		if (ki->keymap.layout == dkbd_layout_dragon200e) {
+		if (layout == dkbd_layout_dragon200e) {
 			switch (chr) {
 			case '[': chr = 0x00; break;
 			case ']': chr = 0x01; break;
 			case '\\': chr = 0x0b; break;
+			// some very partial utf-8 decoding:
 			case 0xc2:
-				chr = *(kip->basic_command++);
+				chr = *(s++);
 				switch (chr) {
 				case 0xa1: chr = 0x5b; break; // ¡
 				case 0xa7: chr = 0x13; break; // §
 				case 0xba: chr = 0x14; break; // º
 				case 0xbf: chr = 0x5d; break; // ¿
+				case 0: chr = -1; s--; break;
 				default: chr = -1; break;
 				}
 				break;
 			case 0xc3:
-				chr = *(kip->basic_command++);
+				chr = *(s++);
 				switch (chr) {
 				case 0x80: case 0xa0: chr = 0x1b; break; // à
 				case 0x81: case 0xa1: chr = 0x16; break; // á
@@ -234,52 +271,41 @@ static void type_command(void *sptr) {
 				case 0x9f: chr = 0x02; break; // ß (also β)
 				case 0xb1: chr = 0x7c; break; // ñ
 				case 0xbc: chr = 0x7b; break; // ü
+				case 0: chr = -1; s--; break;
 				default: chr = -1; break;
 				}
 				break;
 			case 0xce:
-				chr = *(kip->basic_command++);
+				chr = *(s++);
 				switch (chr) {
 				case 0xb1: case 0x91: chr = 0x04; break; // α
 				case 0xb2: case 0x92: chr = 0x02; break; // β (also ß)
+				case 0: chr = -1; break;
 				default: chr = -1; break;
 				}
 				break;
+			default: break;
 			}
 		}
+
 		if (chr >= 0) {
-			MC6809_REG_A(cpu) = chr;
-			cpu->reg_cc &= ~4;
-		}
-		if (*kip->basic_command == 0)
-			kip->basic_command = NULL;
-	}
-	if (!kip->basic_command) {
-		if (kip->basic_command_list) {
-			void *data = kip->basic_command_list->data;
-			kip->basic_command_list = slist_remove(kip->basic_command_list, data);
-			free(data);
-		}
-		if (kip->basic_command_list) {
-			kip->basic_command = kip->basic_command_list->data;
-		} else {
-			machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+			new = sdscatlen(new, &chr, 1);
 		}
 	}
-	/* Use CPU read routine to pull return address back off stack */
-	kip->machine->op_rts(kip->machine);
+	return new;
 }
 
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	char *data = NULL;
+	sds data = NULL;
 	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	if (s) {
-		data = xstrdup(s);
+		data = parse_string(s, ki->keymap.layout);
 		kip->basic_command_list = slist_append(kip->basic_command_list, data);
 	}
 	if (!kip->basic_command) {
 		kip->basic_command = data;
+		kip->command_index = 0;
 	}
 	if (kip->basic_command) {
 		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
