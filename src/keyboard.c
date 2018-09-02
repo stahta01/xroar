@@ -177,29 +177,26 @@ static void type_command(void *sptr) {
 	struct keyboard_interface_private *kip = sptr;
 	struct keyboard_interface *ki = &kip->public;
 	struct MC6809 *cpu = kip->cpu;
-	if (kip->basic_command) {
-		MC6809_REG_A(cpu) = kip->basic_command[kip->command_index++];
-		// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
-		// as otherwise BASIC will skip it.
-		cpu->reg_cc &= ~4;
-		if (kip->command_index >= sdslen(kip->basic_command)) {
-			kip->basic_command = NULL;
-			kip->command_index = 0;
-		}
+
+	if (!kip->basic_command && kip->basic_command_list) {
+		kip->basic_command = kip->basic_command_list->data;
+		kip->command_index = 0;
+		kip->basic_command_list = slist_remove(kip->basic_command_list, kip->basic_command);
 	}
 	if (!kip->basic_command) {
-		if (kip->basic_command_list) {
-			void *data = kip->basic_command_list->data;
-			kip->basic_command_list = slist_remove(kip->basic_command_list, data);
-			sdsfree(data);
-		}
-		if (kip->basic_command_list) {
-			kip->basic_command = kip->basic_command_list->data;
-			kip->command_index = 0;
-		} else {
-			machine_bp_remove_list(kip->machine, basic_command_breakpoint);
-		}
+		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+		return;
 	}
+
+	MC6809_REG_A(cpu) = kip->basic_command[kip->command_index++];
+	// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
+	// as otherwise BASIC will skip it.
+	cpu->reg_cc &= ~4;
+	if (kip->command_index >= sdslen(kip->basic_command)) {
+		sdsfree(kip->basic_command);
+		kip->basic_command = NULL;
+	}
+
 	/* Use CPU read routine to pull return address back off stack */
 	kip->machine->op_rts(kip->machine);
 }
@@ -303,11 +300,7 @@ void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
 		data = parse_string(s, ki->keymap.layout);
 		kip->basic_command_list = slist_append(kip->basic_command_list, data);
 	}
-	if (!kip->basic_command) {
-		kip->basic_command = data;
-		kip->command_index = 0;
-	}
-	if (kip->basic_command) {
+	if (kip->basic_command_list) {
 		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
 	}
 }
