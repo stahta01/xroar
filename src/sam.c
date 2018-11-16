@@ -112,20 +112,18 @@ void sam_reset(struct MC6883 *samp) {
  * the access is to a RAM area, 0 otherwise. */
 
 static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
-static unsigned const rom_S[4] = { 1, 2, 3, 3 };
+static unsigned const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
 void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
-	_Bool is_io = (A >> 8) == 0xff;
-	_Bool is_ram = !is_io && (!(A & 0x8000) || sam->map_type_1);
-	_Bool is_rom = !is_io && !is_ram;
 
-	samp->RAS = is_ram;
-	if (is_io) {
+	if ((A >> 8) == 0xff) {
+		// I/O area
 		samp->S = io_S[(A >> 5) & 7];
+		samp->RAS = 0;
 		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
 		if (samp->S == 7 && !RnW && A >= 0xffc0) {
 			unsigned b = 1 << ((A >> 1) & 0x0f);
@@ -136,11 +134,13 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			}
 			update_from_register(sam);
 		}
-	} else if (is_rom) {
-		samp->S = rom_S[(A >> 13) & 3];
-		fast_cycle = sam->mpu_rate_fast || (!sam->map_type_1 && sam->mpu_rate_ad);
+	} else if ((A & 0x8000) && !sam->map_type_1) {
+		samp->S = data_S[A >> 13];
+		samp->RAS = 0;
+		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
 	} else {
-		samp->S = RnW ? 0 : 7;
+		samp->S = RnW ? 0 : data_S[A >> 13];;
+		samp->RAS = 1;
 		samp->Z = RAM_TRANSLATE(A);
 		fast_cycle = sam->mpu_rate_fast;
 	}
