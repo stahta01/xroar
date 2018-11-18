@@ -175,10 +175,16 @@ EXTRA_DIST += \
 	gtk2/ui_gtk2.gresource.xml \
 	gtk2/keyboard_gtk2_mappings.c
 
-gtk2/ui_gtk2.gresource.c: $(GTK2_RESOURCES)
+.INTERMEDIATE: gtk2/ui_gtk2.gresource.tmp
 
-gtk2/ui_gtk2.gresource.c: gtk2/ui_gtk2.gresource.xml
+gtk2/ui_gtk2.gresource.tmp: $(GTK2_RESOURCES)
+
+gtk2/ui_gtk2.gresource.tmp: gtk2/ui_gtk2.gresource.xml
 	$(GLIB_COMPILE_RESOURCES) $< --target=$@ --sourcedir=gtk2 --generate-source
+
+gtk2/ui_gtk2.gresource.c: gtk2/ui_gtk2.gresource.tmp
+	echo "#include \"config.h\"" > $@
+	cat $< >> $@
 
 # SDL2 user interface
 

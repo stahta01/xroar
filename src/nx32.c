@@ -16,6 +16,8 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#include "config.h"
+
 #include <xalloc.h>
 #include "cart.h"
 #include "becker.h"
