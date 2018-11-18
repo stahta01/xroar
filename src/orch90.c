@@ -43,7 +43,7 @@ struct orch90 {
 	struct sound_interface *snd;
 };
 
-static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void orch90_reset(struct cart *c);
 static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
@@ -93,7 +93,7 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 	o->snd = intf;
 }
 
-static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct orch90 *o = (struct orch90 *)c;
 	(void)P2;
 	(void)R2;
@@ -105,4 +105,5 @@ static void orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 		o->right = (float)D / 255.;
 		sound_set_external_right(o->snd, o->right);
 	}
+	return D;
 }

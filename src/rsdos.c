@@ -60,7 +60,7 @@ struct rsdos {
 /* Cart interface */
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
 static void rsdos_free(struct cart *c);
@@ -156,14 +156,17 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	return D;
 }
 
-static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
-	(void)R2;
-	if (!P2)
-		return;
+	if (R2) {
+		return c->rom_data[A & 0x3fff];
+	}
+	if (!P2) {
+		return D;
+	}
 	if (A & 0x8) {
 		wd279x_write(d->fdc, A, D);
-		return;
+		return D;
 	}
 	if (d->becker) {
 		/* XXX not exactly sure in what way anyone has tightened up the
@@ -182,6 +185,7 @@ static void rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 		if (!(A & 8))
 			latch_write(d, D);
 	}
+	return D;
 }
 
 static _Bool rsdos_has_interface(struct cart *c, const char *ifname) {

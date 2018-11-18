@@ -62,7 +62,7 @@ struct dragondos {
 
 /* Cart interface */
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
 static void dragondos_free(struct cart *c);
@@ -156,17 +156,21 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	return D;
 }
 
-static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	(void)R2;
-	if (!P2)
-		return;
+	if (R2) {
+		return c->rom_data[A & 0x3fff];
+	}
+	if (!P2) {
+		return D;
+	}
 	if ((A & 0xc) == 0) {
 		wd279x_write(d->fdc, A, D);
-		return;
+		return D;
 	}
 	if (!(A & 8))
-		return;
+		return D;
 	if (d->becker) {
 		switch (A & 3) {
 		case 0x0:
@@ -181,6 +185,7 @@ static void dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 	} else {
 		latch_write(d, D);
 	}
+	return D;
 }
 
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname) {

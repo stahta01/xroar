@@ -54,7 +54,7 @@ struct cart {
 	// is not asserted, called again when cartridge IO (P2) or ROM (R2)
 	// areas are accessed.
 	uint8_t (*read)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-	void (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+	uint8_t (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 
 	// Reset line.
 	void (*reset)(struct cart *c);

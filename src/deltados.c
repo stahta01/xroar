@@ -58,7 +58,7 @@ struct deltados {
 /* Cart interface */
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
 static void deltados_free(struct cart *c);
@@ -127,13 +127,21 @@ static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 	return D;
 }
 
-static void deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct deltados *d = (struct deltados *)c;
 	(void)R2;
-	if (!P2)
-		return;
-	if ((A & 4) == 0) wd279x_write(d->fdc, A, D);
-	if (A & 4) latch_write(d, D);
+	if (R2) {
+		return c->rom_data[A & 0x3fff];
+	}
+	if (!P2) {
+		return D;
+	}
+	if ((A & 4) == 0) {
+		wd279x_write(d->fdc, A, D);
+	} else {
+		latch_write(d, D);
+	}
+	return D;
 }
 
 static _Bool deltados_has_interface(struct cart *c, const char *ifname) {

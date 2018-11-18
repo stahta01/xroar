@@ -47,7 +47,7 @@ struct nx32 {
 
 static void nx32_reset(struct cart *c);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
 static void nx32_free(struct cart *c);
 
@@ -120,7 +120,7 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
-static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct nx32 *n = (struct nx32 *)c;
 	(void)R2;
 	c->EXTMEM = 0;
@@ -147,4 +147,5 @@ static void nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 			break;
 		}
 	}
+	return D;
 }

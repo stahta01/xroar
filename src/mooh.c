@@ -51,7 +51,7 @@ struct cart_module cart_mooh_module = {
 
 static void mooh_reset(struct cart *c);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 // static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
 static void mooh_free(struct cart *c);
@@ -174,7 +174,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
-static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mooh *n = (struct mooh *)c;
 	int segment;
 	int offset;
@@ -183,6 +183,13 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 
 	(void)R2;
 	c->EXTMEM = 0;
+
+        if (R2) {
+		if (n->rom_conf & 8)
+			return c->rom_data[((n->rom_conf & 6) << 13) | (A & 0x3fff)];
+		else
+			return c->rom_data[((n->rom_conf & 7) << 13) | (A & 0x1fff)];
+	}
 
 	if (A == 0xFF64 && (n->rom_conf & 16) == 0)
 		n->rom_conf = D & 31;
@@ -232,4 +239,6 @@ static void mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D
 			break;
 		}
 	}
+
+	return D;
 }

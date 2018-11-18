@@ -75,7 +75,7 @@ static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
 static void mpi_free(struct cart *c);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_reset(struct cart *c);
 static _Bool mpi_has_interface(struct cart *c, const char *ifname);
 static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
@@ -262,34 +262,35 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 	return D;
 }
 
-static void mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
 	m->cart.EXTMEM = 0;
 	if (A == 0xff7f) {
 		m->switch_enable = 0;
 		select_slot(c, D);
-		return;
+		return D;
 	}
 	if (P2) {
 		struct cart *p2c = m->slot[m->p2_route].cart;
 		if (p2c) {
-			p2c->write(p2c, A, 1, R2, D);
+			D = p2c->write(p2c, A, 1, R2, D);
 		}
 	}
 	if (R2) {
 		struct cart *r2c = m->slot[m->cts_route].cart;
 		if (r2c) {
-			r2c->write(r2c, A, P2, 1, D);
+			D = r2c->write(r2c, A, P2, 1, D);
 		}
 	}
 	if (!P2 && !R2) {
 		for (unsigned i = 0; i < 4; i++) {
 			if (m->slot[i].cart) {
-				m->slot[i].cart->write(m->slot[i].cart, A, 0, 0, D);
+				D = m->slot[i].cart->write(m->slot[i].cart, A, 0, 0, D);
 				m->cart.EXTMEM |= m->slot[i].cart->EXTMEM;
 			}
 		}
 	}
+	return D;
 }
 
 static void set_firq(void *sptr, _Bool value) {

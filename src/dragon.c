@@ -1156,7 +1156,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 
 static void write_byte(struct machine_dragon *md, unsigned A) {
 	if (md->cart) {
-		md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
+		md->CPU0->D = md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
 		if (md->cart->EXTMEM && 0 < md->SAM0->S && md->SAM0->S < 7) {
 			return;
 		}
@@ -1169,7 +1169,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		case 3:
 			if (md->cart)
-				md->cart->write(md->cart, A, 0, 1, md->CPU0->D);
+				md->CPU0->D = md->cart->write(md->cart, A, 0, 1, md->CPU0->D);
 			break;
 		case 4:
 			if (!md->is_dragon || md->unexpanded_dragon32) {
@@ -1187,7 +1187,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		case 6:
 			if (md->cart)
-				md->cart->write(md->cart, A, 1, 0, md->CPU0->D);
+				md->CPU0->D = md->cart->write(md->cart, A, 1, 0, md->CPU0->D);
 			break;
 		default:
 			break;

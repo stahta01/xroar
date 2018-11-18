@@ -55,7 +55,7 @@ struct gmc {
 static void gmc_attach(struct cart *c);
 static void gmc_detach(struct cart *c);
 static void gmc_free(struct cart *c);
-static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void gmc_reset(struct cart *c);
 static _Bool gmc_has_interface(struct cart *c, const char *ifname);
 static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf);
@@ -118,17 +118,22 @@ static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf)
 	}
 }
 
-static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct gmc *gmc = (struct gmc *)c;
 	(void)R2;
 
-	if (!P2)
-		return;
+	if (R2) {
+		return c->rom_data[A & 0x3fff];
+	}
+
+	if (!P2) {
+		return D;
+	}
 
 	if ((A & 1) == 0) {
 		// bank switch
 		cart_rom_select_bank(c, (D & 3) << 14);
-		return;
+		return D;
 	}
 
 	// 76489 sound register
@@ -136,4 +141,5 @@ static void gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D)
 	if (gmc->csg) {
 		sn76489_write(gmc->csg, event_current_tick, D);
 	}
+	return D;
 }
