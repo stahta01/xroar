@@ -159,13 +159,19 @@ static void *new(void *cfg) {
 		break;
 	}
 
-	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	// Call once not allowing any changes (try best to get something we can use)
+	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, 0);
 	if (aosdl->device == 0) {
-		LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		free(aosdl);
-		return NULL;
+		// If failed, allow changes, check that it's something sensible later
+		aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+		if (aosdl->device == 0) {
+			LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
+			SDL_QuitSubSystem(SDL_INIT_AUDIO);
+			free(aosdl);
+			return NULL;
+		}
 	}
+
 	rate = aosdl->audiospec.freq;
 	nchannels = aosdl->audiospec.channels;
 	fragment_nframes = aosdl->audiospec.samples;

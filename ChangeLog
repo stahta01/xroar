@@ -2,6 +2,7 @@ Version 0.36, unreleased
 
   * SN76489: Use libsamplerate instead of DIY low-pass filter
   * Fix SAM S output in map type 1 [Pere Serrat]
+  * Work around Windows audio failure when 5.1 is available [Gerald Stefan]
 
 Version 0.35, Fri Jun 27 2018
 
