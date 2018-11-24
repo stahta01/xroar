@@ -222,8 +222,8 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	return FALSE;
 }
 
-void gtk2_keyboard_init(void) {
-	const char *keymap_option = xroar_cfg.keymap;
+void gtk2_keyboard_init(struct ui_cfg *ui_cfg) {
+	const char *keymap_option = ui_cfg->keymap;
 	struct keymap *selected_keymap = &keymaps[0];
 	if (keymap_option) {
 		if (0 == strcmp(keymap_option, "help")) {

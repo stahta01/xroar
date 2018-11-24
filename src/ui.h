@@ -39,8 +39,11 @@ struct vdisk;
 #define UI_CCR_SIMULATED (2)
 
 struct ui_cfg {
+	// Video
 	char *vo;  // video output module
 	struct vo_cfg vo_cfg;
+	// Keyboard
+	char *keymap;
 };
 
 extern struct xconfig_enum ui_ccr_list[];

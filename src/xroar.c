@@ -1988,7 +1988,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("ao-buffer-samples", &xroar_cfg.ao_buffer_nframes), .deprecated = 1 },
 
 	/* Keyboard: */
-	{ XC_SET_STRING("keymap", &xroar_cfg.keymap) },
+	{ XC_SET_STRING("keymap", &xroar_ui_cfg.keymap) },
 	{ XC_SET_BOOL("kbd-translate", &xroar_cfg.kbd_translate) },
 	{ XC_SET_STRING_LIST("type", &private_cfg.type_list) },
 
@@ -2309,7 +2309,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Keyboard\n", f);
-	xroar_cfg_print_string(f, all, "keymap", xroar_cfg.keymap, "uk");
+	xroar_cfg_print_string(f, all, "keymap", xroar_ui_cfg.keymap, "uk");
 	xroar_cfg_print_bool(f, all, "kbd-translate", xroar_cfg.kbd_translate, 0);
 	for (struct slist *l = private_cfg.type_list; l; l = l->next) {
 		const char *s = l->data;

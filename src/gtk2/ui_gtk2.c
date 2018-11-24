@@ -593,7 +593,7 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Create (hidden) tape control window */
 	gtk2_create_tc_window();
 
-	gtk2_keyboard_init();
+	gtk2_keyboard_init(ui_cfg);
 
 	return uigtk2;
 }

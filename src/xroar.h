@@ -78,7 +78,6 @@ struct xroar_cfg {
 	_Bool fast_sound;
 #endif
 	// Keyboard
-	char *keymap;
 	_Bool kbd_translate;
 	// Cartridges
 	_Bool becker;

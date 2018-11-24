@@ -20,7 +20,9 @@ See COPYING.GPL for redistribution conditions.
 
 #include <gtk/gtk.h>
 
-void gtk2_keyboard_init(void);
+struct ui_cfg;
+
+void gtk2_keyboard_init(struct ui_cfg *ui_cfg);
 gboolean gtk2_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
 
 #endif
