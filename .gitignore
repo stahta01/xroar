@@ -1,5 +1,7 @@
 *~
 *.swp
+## debian build rules
+/debian/
 ## autoconf files
 .deps/
 Makefile
