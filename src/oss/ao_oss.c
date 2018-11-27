@@ -248,7 +248,7 @@ static void ao_oss_free(void *sptr) {
 static void *ao_oss_write_buffer(void *sptr, void *buffer) {
 	struct ao_oss_interface *aooss = sptr;
 
-	if (xroar_noratelimit)
+	if (!aooss->public.sound_interface->ratelimit)
 		return buffer;
 	int r = write(aooss->sound_fd, buffer, aooss->fragment_nbytes);
 	(void)r;

@@ -318,6 +318,12 @@ static void toggle_fast_sound(GtkToggleAction *current, gpointer user_data) {
 	xroar_set_fast_sound(0, val);
 }
 
+static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
+	gboolean val = gtk_toggle_action_get_active(current);
+	(void)user_data;
+	xroar_set_ratelimit_latch(0, val);
+}
+
 static void close_about(GtkDialog *dialog, gint response_id, gpointer data) {
 	(void)response_id;
 	(void)data;
@@ -442,6 +448,8 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(gtk2_toggle_tc_window) },
 	{ .name = "FastSoundAction", .label = "_Fast Sound",
 	  .callback = G_CALLBACK(toggle_fast_sound) },
+	{ .name = "RateLimitAction", .label = "_Rate Limit",
+	  .callback = G_CALLBACK(toggle_ratelimit) },
 };
 
 static GtkRadioActionEntry const ccr_radio_entries[] = {
@@ -689,6 +697,11 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 
 	case ui_tag_fast_sound:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/FastSound");
+		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_ratelimit:
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/RateLimit");
 		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
 		break;
 

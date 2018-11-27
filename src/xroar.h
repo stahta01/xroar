@@ -109,9 +109,6 @@ extern struct xroar_cfg xroar_cfg;
 /**************************************************************************/
 /* Global flags */
 
-extern _Bool xroar_noratelimit;
-extern int xroar_frameskip;
-
 extern const char *xroar_rom_path;
 
 #define UI_EVENT_LIST xroar_ui_events
@@ -178,6 +175,8 @@ void xroar_set_cross_colour_renderer(_Bool notify, int action);
 void xroar_set_cross_colour(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);
 void xroar_set_fast_sound(_Bool notify, int action);
+void xroar_set_ratelimit(int action);
+void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);
 void xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);

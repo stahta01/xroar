@@ -200,8 +200,13 @@ static struct xconfig_option const xroar_options[];
 /**************************************************************************/
 /* Global flags */
 
-_Bool xroar_noratelimit = 0;
-int xroar_frameskip = 0;
+struct xroar_state {
+	_Bool noratelimit_latch;
+};
+
+static struct xroar_state xroar_state = {
+	.noratelimit_latch = 0,
+};
 
 static struct ui_interface *xroar_ui_interface;
 struct vo_interface *xroar_vo_interface;
@@ -637,7 +642,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	/* Check other command-line options */
 	if (xroar_cfg.frameskip < 0)
 		xroar_cfg.frameskip = 0;
-	xroar_frameskip = xroar_cfg.frameskip;
 
 	// Remaining command line arguments are files.
 	while (argn < argc) {
@@ -843,6 +847,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	xroar_set_trace(xroar_cfg.trace_enabled);
 	xroar_set_vdg_inverted_text(1, xroar_cfg.vdg_inverted_text);
+	xroar_set_ratelimit_latch(1, XROAR_ON);
 
 	if (private_cfg.timeout) {
 		(void)xroar_set_timeout(private_cfg.timeout);
@@ -1252,6 +1257,45 @@ void xroar_set_fast_sound(_Bool notify, int action) {
 	_Bool state = xroar_machine->set_fast_sound(xroar_machine, action);
 	if (notify) {
 		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fast_sound, state, NULL);
+	}
+}
+
+void xroar_set_ratelimit(int action) {
+	if (xroar_state.noratelimit_latch)
+		return;
+	if (action) {
+		xroar_machine->set_frameskip(xroar_machine, xroar_cfg.frameskip);
+		xroar_machine->set_ratelimit(xroar_machine, 1);
+	} else {
+		xroar_machine->set_frameskip(xroar_machine, 10);
+		xroar_machine->set_ratelimit(xroar_machine, 0);
+	}
+}
+
+void xroar_set_ratelimit_latch(_Bool notify, int action) {
+	_Bool state = !xroar_state.noratelimit_latch;
+	switch (action) {
+	case XROAR_ON:
+	default:
+		state = 1;
+		break;
+	case XROAR_OFF:
+		state = 0;
+		break;
+	case XROAR_NEXT:
+		state = !state;
+		break;
+	}
+	xroar_state.noratelimit_latch = !state;
+	if (state) {
+		xroar_machine->set_frameskip(xroar_machine, xroar_cfg.frameskip);
+		xroar_machine->set_ratelimit(xroar_machine, 1);
+	} else {
+		xroar_machine->set_frameskip(xroar_machine, 10);
+		xroar_machine->set_ratelimit(xroar_machine, 0);
+	}
+	if (notify) {
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ratelimit, state, NULL);
 	}
 }
 

@@ -59,7 +59,6 @@ struct keymap {
 #include "keyboard_sdl_mappings.c"
 
 static _Bool control = 0, shift = 0;
-static _Bool noratelimit_latch = 0;
 
 static int8_t sym_to_dkey[SDLK_LAST];
 static _Bool sym_priority[SDLK_LAST];
@@ -337,17 +336,9 @@ void sdl_keypress(SDL_keysym *keysym) {
 	}
 	if (sym == SDLK_F12) {
 		if (shift) {
-			noratelimit_latch = !noratelimit_latch;
-			if (noratelimit_latch) {
-				xroar_noratelimit = 1;
-				xroar_frameskip = 10;
-			} else {
-				xroar_noratelimit = 0;
-				xroar_frameskip = xroar_cfg.frameskip;
-			}
-		} else if (!noratelimit_latch) {
-			xroar_noratelimit = 1;
-			xroar_frameskip = 10;
+			xroar_set_ratelimit_latch(1, XROAR_NEXT);
+		} else {
+			xroar_set_ratelimit(0);
 		}
 	}
 	if (sym == SDLK_PAUSE) {
@@ -428,10 +419,7 @@ void sdl_keyrelease(SDL_keysym *keysym) {
 	}
 	if (sym == SDLK_LCTRL || sym == SDLK_RCTRL) { control = 0; return; }
 	if (sym == SDLK_F12) {
-		if (!noratelimit_latch) {
-			xroar_noratelimit = 0;
-			xroar_frameskip = xroar_cfg.frameskip;
-		}
+		xroar_set_ratelimit(1);
 	}
 
 	if (sym_priority[sym]) {

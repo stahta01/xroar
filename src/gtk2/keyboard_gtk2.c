@@ -99,8 +99,6 @@ struct keymap {
 
 #include "keyboard_gtk2_mappings.c"
 
-static _Bool noratelimit_latch = 0;
-
 /*
  * Groups of 256 keyvals:
  * 0x0000-0x00ff ... 0x0000-0x00ff
@@ -357,17 +355,9 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	}
 	if (keyval == GDK_F12) {
 		if (shift) {
-			noratelimit_latch = !noratelimit_latch;
-			if (noratelimit_latch) {
-				xroar_noratelimit = 1;
-				xroar_frameskip = 10;
-			} else {
-				xroar_noratelimit = 0;
-				xroar_frameskip = xroar_cfg.frameskip;
-			}
-		} else if (!noratelimit_latch) {
-			xroar_noratelimit = 1;
-			xroar_frameskip = 10;
+			xroar_set_ratelimit_latch(1, XROAR_NEXT);
+		} else {
+			xroar_set_ratelimit(0);
 		}
 	}
 	if (keyval == GDK_Pause) {
@@ -459,10 +449,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
 	if (keyval == GDK_F12) {
-		if (!noratelimit_latch) {
-			xroar_noratelimit = 0;
-			xroar_frameskip = xroar_cfg.frameskip;
-		}
+		xroar_set_ratelimit(1);
 	}
 
 	int keyval_i = keyval_index(keyval);

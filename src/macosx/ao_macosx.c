@@ -253,7 +253,7 @@ static void *ao_macosx_write_buffer(void *sptr, void *buffer) {
 		pthread_cond_signal(&aomacosx->fragment_cv);
 	}
 
-	if (xroar_noratelimit) {
+	if (!aomacosx->public.sound_interface->ratelimit) {
 		pthread_mutex_unlock(&aomacosx->fragment_mutex);
 		return NULL;
 	}

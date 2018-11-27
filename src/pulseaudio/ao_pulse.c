@@ -153,7 +153,7 @@ static void *ao_pulse_write_buffer(void *sptr, void *buffer) {
 	struct ao_pulse_interface *aopulse = sptr;
 
 	int error;
-	if (xroar_noratelimit)
+	if (!aopulse->public.sound_interface->ratelimit)
 		return buffer;
 	pa_simple_write(aopulse->pa, buffer, aopulse->fragment_nbytes, &error);
 	return buffer;

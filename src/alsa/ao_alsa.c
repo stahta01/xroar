@@ -262,7 +262,7 @@ static void ao_alsa_free(void *sptr) {
 static void *ao_alsa_write_buffer(void *sptr, void *buffer) {
 	struct ao_alsa_interface *aoalsa = sptr;
 
-	if (xroar_noratelimit)
+	if (!aoalsa->public.sound_interface->ratelimit)
 		return buffer;
 	if (snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes) < 0) {
 		snd_pcm_prepare(aoalsa->pcm_handle);

@@ -185,7 +185,7 @@ static void *ao_jack_write_buffer(void *sptr, void *buffer) {
 		pthread_cond_signal(&aojack->fragment_cv);
 	}
 
-	if (xroar_noratelimit) {
+	if (!aojack->public.sound_interface->ratelimit) {
 		pthread_mutex_unlock(&aojack->fragment_mutex);
 		return NULL;
 	}

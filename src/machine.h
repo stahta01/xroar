@@ -211,6 +211,8 @@ struct machine {
 	void *(*get_component)(struct machine *m, const char *cname);
 	void *(*get_interface)(struct machine *m, const char *ifname);
 	void (*set_vo_cmp)(struct machine *m, int mode);
+	void (*set_frameskip)(struct machine *m, unsigned fskip);
+	void (*set_ratelimit)(struct machine *m, _Bool ratelimit);
 
 	/* simplified read & write byte for convenience functions */
 	uint8_t (*read_byte)(struct machine *m, unsigned A);

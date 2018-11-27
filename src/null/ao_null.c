@@ -120,7 +120,7 @@ static void *ao_null_write_buffer(void *sptr, void *buffer) {
 	actual_elapsed_ms = current_time() - aonull->last_pause_ms;
 	difference_ms = expected_elapsed_ms - actual_elapsed_ms;
 	if (difference_ms >= 10) {
-		if (xroar_noratelimit || difference_ms > 1000) {
+		if (!aonull->public.sound_interface->ratelimit || difference_ms > 1000) {
 			aonull->last_pause_ms = current_time();
 			aonull->last_pause_cycle = event_current_tick;
 		} else {

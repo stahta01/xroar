@@ -53,8 +53,6 @@ struct scancode_dkey_mapping {
 // symbol instead of their position.
 _Bool translation_mode = 0;
 
-static _Bool noratelimit_latch = 0;
-
 static int8_t scancode_to_dkey[SDL_NUM_SCANCODES];
 static _Bool scancode_priority[SDL_NUM_SCANCODES];
 
@@ -352,17 +350,9 @@ void sdl_keypress(SDL_Keysym *keysym) {
 		return;
 	case SDLK_F12:
 		if (shift) {
-			noratelimit_latch = !noratelimit_latch;
-			if (noratelimit_latch) {
-				xroar_noratelimit = 1;
-				xroar_frameskip = 10;
-			} else {
-				xroar_noratelimit = 0;
-				xroar_frameskip = xroar_cfg.frameskip;
-			}
-		} else if (!noratelimit_latch) {
-			xroar_noratelimit = 1;
-			xroar_frameskip = 10;
+			xroar_set_ratelimit_latch(1, XROAR_NEXT);
+		} else {
+			xroar_set_ratelimit(0);
 		}
 		return;
 	case SDLK_PAUSE:
@@ -461,10 +451,7 @@ void sdl_keyrelease(SDL_Keysym *keysym) {
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		return;
 	case SDLK_F12:
-		if (!noratelimit_latch) {
-			xroar_noratelimit = 0;
-			xroar_frameskip = xroar_cfg.frameskip;
-		}
+		xroar_set_ratelimit(1);
 		return;
 	default:
 		break;

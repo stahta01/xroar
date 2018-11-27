@@ -288,7 +288,7 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 			SDL_CondSignal(aosdl->fragment_cv);
 		}
 
-		if (xroar_noratelimit) {
+		if (!aosdl->public.sound_interface->ratelimit) {
 			SDL_UnlockMutex(aosdl->fragment_mutex);
 			return NULL;
 		}
@@ -305,7 +305,7 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 
 		SDL_UnlockMutex(aosdl->fragment_mutex);
 	} else {
-		if (xroar_noratelimit) {
+		if (!aosdl->public.sound_interface->ratelimit) {
 			return NULL;
 		}
 		Uint32 qbytes;

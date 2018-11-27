@@ -100,6 +100,7 @@ struct machine_dragon {
 	_Bool inverted_text;
 	_Bool fast_sound;
 	struct cart *cart;
+	unsigned frameskip;
 
 	int cycles;
 
@@ -281,6 +282,8 @@ static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
 static void dragon_set_vo_cmp(struct machine *m, int mode);
+static void dragon_set_frameskip(struct machine *m, unsigned fskip);
+static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
 
 static uint8_t dragon_read_byte(struct machine *m, unsigned A);
 static void dragon_write_byte(struct machine *m, unsigned A, unsigned D);
@@ -355,6 +358,8 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
 	m->set_vo_cmp = dragon_set_vo_cmp;
+	m->set_frameskip = dragon_set_frameskip;
+	m->set_ratelimit = dragon_set_ratelimit;
 
 	m->read_byte = dragon_read_byte;
 	m->write_byte = dragon_write_byte;
@@ -1067,6 +1072,16 @@ static void dragon_set_vo_cmp(struct machine *m, int mode) {
 	}
 }
 
+static void dragon_set_frameskip(struct machine *m, unsigned fskip) {
+	struct machine_dragon *md = (struct machine_dragon *)m;
+	md->frameskip = fskip;
+}
+
+static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit) {
+	struct machine_dragon *md = (struct machine_dragon *)m;
+	sound_set_ratelimit(md->snd, ratelimit);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Used when single-stepping.
@@ -1476,7 +1491,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 		sound_update(md->snd);
 		md->frame--;
 		if (md->frame < 0)
-			md->frame = xroar_frameskip;
+			md->frame = md->frameskip;
 		if (md->frame == 0) {
 			DELEGATE_CALL0(md->vo->vsync);
 		}
