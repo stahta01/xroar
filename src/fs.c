@@ -111,7 +111,7 @@ int fs_read_uint31(FILE *fd) {
 
 /* Read a variable-length max 31-bit unsigned int. */
 
-int fs_read_vl_uint31(FILE *fd) {
+int fs_read_vuint31(FILE *fd) {
 	int val0 = fs_read_uint8(fd);
 	if (val0 < 0)
 		return -1;

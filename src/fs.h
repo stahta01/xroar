@@ -34,7 +34,7 @@ int fs_read_uint8(FILE *fd);
 int fs_read_uint16(FILE *fd);
 int fs_read_uint16_le(FILE *fd);
 int fs_read_uint31(FILE *fd);
-int fs_read_vl_uint31(FILE *fd);  // variable-length uint31
+int fs_read_vuint31(FILE *fd);  // variable-length uint31
 
 /* Variable-length uint31 defined as:
  * 7-bit        0nnnnnnn
