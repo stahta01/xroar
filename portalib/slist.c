@@ -21,7 +21,6 @@ See COPYING.LGPL-2.1 for redistribution conditions.
 #include <stdlib.h>
 
 #include "slist.h"
-#include "xalloc.h"
 
 /* Wrap data in a new list container */
 static struct slist *slist_new(void *data) {
