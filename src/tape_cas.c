@@ -1064,6 +1064,10 @@ failed:
 
 // Write CUE data at end of current file (file length in cas->size).  Does not
 // write internal CUE entry types (block type).
+//
+// NOTE: you'll see no vuint31 writes here, as all current chunks are actually
+// < 128 bytes long (where the vuint31 representation is identical to the
+// uint8).
 
 static void write_cue_data(struct tape_cas *cas) {
 	assert(cas != NULL);
@@ -1131,8 +1135,7 @@ static void write_cue_data(struct tape_cas *cas) {
 	}
 
 	// CUE start offset
-	fs_write_uint16(fd, cue_start >> 16);
-	fs_write_uint16(fd, cue_start);
+	fs_write_uint31(fd, cue_start);
 	// CUE end marker
 	fwrite("CUE]", 1, 4, fd);
 
