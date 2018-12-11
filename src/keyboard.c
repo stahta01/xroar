@@ -50,7 +50,7 @@ struct keyboard_interface_private {
 
 	struct slist *basic_command_list;
 	sds basic_command;
-	int command_index;
+	unsigned command_index;
 };
 
 static void type_command(void *);
@@ -175,7 +175,6 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 
 static void type_command(void *sptr) {
 	struct keyboard_interface_private *kip = sptr;
-	struct keyboard_interface *ki = &kip->public;
 	struct MC6809 *cpu = kip->cpu;
 
 	if (!kip->basic_command && kip->basic_command_list) {
@@ -206,7 +205,7 @@ static sds parse_string(const char *s, enum dkbd_layout layout) {
 		return NULL;
 	sds new = sdsempty();
 	int chr;
-	while (chr = *(s++)) {
+	while ((chr = *(s++))) {
 
 		if (chr == '\\') {
 			chr = *(s++);
