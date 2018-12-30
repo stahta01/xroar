@@ -44,21 +44,23 @@ xroar_SOURCES = \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \
 	mc6847/mc6847.c mc6847/mc6847.h \
 	module.c module.h \
+	mooh.c \
 	mpi.c mpi.h \
 	ntsc.c ntsc.h \
+	null/ui_null.c \
+	null/vo_null.c \
 	nx32.c \
-	mooh.c \
-	sn76489.c sn76489.h \
-	spi65.c \
-	spi_sdcard.c \
 	orch90.c \
 	path.c path.h \
 	printer.c printer.h \
 	romlist.c romlist.h \
 	rsdos.c \
 	sam.c sam.h \
+	sn76489.c sn76489.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
+	spi65.c \
+	spi_sdcard.c \
 	tape.c tape.h \
 	tape_cas.c \
 	ui.c ui.h \
@@ -68,9 +70,7 @@ xroar_SOURCES = \
 	vo.c vo.h \
 	wd279x.c wd279x.h \
 	xconfig.c xconfig.h \
-	xroar.c xroar.h \
-	null/ui_null.c \
-	null/vo_null.c
+	xroar.c xroar.h
 
 BUILT_SOURCES += \
 	mc6847/font-6847.c mc6847/font-6847.h \
