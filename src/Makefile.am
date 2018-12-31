@@ -51,6 +51,7 @@ xroar_SOURCES = \
 	null/vo_null.c \
 	nx32.c \
 	orch90.c \
+	part.c part.h \
 	path.c path.h \
 	printer.c printer.h \
 	romlist.c romlist.h \
