@@ -2,7 +2,7 @@
 
 Motorola MC6809 CPU
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,9 +22,10 @@ See COPYING.GPL for redistribution conditions.
 
 #include <stdint.h>
 
+#include "delegate.h"
 #include "pl-endian.h"
 
-#include "delegate.h"
+#include "part.h"
 
 struct mc6809_trace;
 
@@ -65,7 +66,10 @@ enum mc6809_state {
 
 /* Interface shared with all 6809-compatible CPUs */
 struct MC6809 {
-	// Variant
+	// Part metadata
+	struct part part;
+
+	// Variant - XXX, part metadata should allow us to ID this in future
 	uint32_t variant;
 
 	/* Interrupt lines */

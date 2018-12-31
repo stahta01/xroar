@@ -2,7 +2,7 @@
 
 Hitach HD6309 CPU
 
-Copyright 2012-2018 Ciaran Anscomb
+Copyright 2012-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -32,11 +32,12 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
-#include "delegate.h"
 #include "hd6309.h"
 #include "mc6809.h"
+#include "part.h"
 
 #ifdef TRACE
 #include "hd6309_trace.h"
@@ -46,7 +47,7 @@ See COPYING.GPL for redistribution conditions.
  * External interface
  */
 
-static void hd6309_free(struct MC6809 *cpu);
+static void hd6309_free(struct part *p);
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
@@ -187,11 +188,14 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
  */
 
 struct MC6809 *hd6309_new(void) {
-	struct HD6309 *hcpu = xmalloc(sizeof(*hcpu));
+	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
 	*hcpu = (struct HD6309){.state=0};
+	part_init((struct part *)hcpu, "HD6309");
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
+	cpu->part.free = hd6309_free;
+	// XXX variant shouldn't be needed as part name identifies
 	cpu->variant = MC6809_VARIANT_HD6309;
-	cpu->free = hd6309_free;
+	//cpu->free = hd6309_free;
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
@@ -204,14 +208,13 @@ struct MC6809 *hd6309_new(void) {
 	return cpu;
 }
 
-static void hd6309_free(struct MC6809 *cpu) {
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+static void hd6309_free(struct part *p) {
+	struct HD6309 *hcpu = (struct HD6309 *)p;
 #ifdef TRACE
 	if (hcpu->tracer) {
 		hd6309_trace_free(hcpu->tracer);
 	}
 #endif
-	free(hcpu);
 }
 
 static void hd6309_reset(struct MC6809 *cpu) {

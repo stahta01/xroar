@@ -2,7 +2,7 @@
 
 Dragon and Tandy Colour Computer machines
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -753,7 +753,7 @@ static void dragon_free(struct machine *m) {
 		sam_free(md->SAM0);
 	}
 	if (md->CPU0) {
-		md->CPU0->free(md->CPU0);
+		part_free(&md->CPU0->part);
 	}
 	if (md->PIA0) {
 		mc6821_free(md->PIA0);

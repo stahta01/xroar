@@ -2,7 +2,7 @@
 
 Motorola MC6809 CPU
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -32,10 +32,11 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
-#include "delegate.h"
 #include "mc6809.h"
+#include "part.h"
 
 #ifdef TRACE
 #include "mc6809_trace.h"
@@ -50,7 +51,7 @@ extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
  * External interface
  */
 
-static void mc6809_free(struct MC6809 *cpu);
+static void mc6809_free(struct part *p);
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
@@ -160,10 +161,13 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
  */
 
 struct MC6809 *mc6809_new(void) {
-	struct MC6809 *cpu = xmalloc(sizeof(*cpu));
+	struct MC6809 *cpu = part_new(sizeof(*cpu));
 	*cpu = (struct MC6809){0};
+	part_init((struct part *)cpu, "MC6809");
+	cpu->part.free = mc6809_free;
+	// XXX variant shouldn't be needed as part name identifies
 	cpu->variant = MC6809_VARIANT_MC6809;
-	cpu->free = mc6809_free;
+	//cpu->free = mc6809_free;
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
@@ -176,13 +180,13 @@ struct MC6809 *mc6809_new(void) {
 	return cpu;
 }
 
-static void mc6809_free(struct MC6809 *cpu) {
+static void mc6809_free(struct part *p) {
+	struct MC6809 *cpu = (struct MC6809 *)p;
 #ifdef TRACE
 	if (cpu->tracer) {
 		mc6809_trace_free(cpu->tracer);
 	}
 #endif
-	free(cpu);
 }
 
 static void mc6809_reset(struct MC6809 *cpu) {
