@@ -2,7 +2,7 @@
 
 Dragon sound interface
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -36,7 +36,7 @@ Dragon/CoCo-specific means to write to it.
 #include "tape.h"
 #include "xroar.h"
 
-static void flush_frame(void *sptr);
+static void flush_buffer(void *sptr);
 
 struct sound_interface_private {
 
@@ -56,8 +56,10 @@ struct sound_interface_private {
 	int frameerror;
 	event_ticks last_cycle;
 
+	// Similarly track error dividing buffer by ticks.
+	int buferror;
+
 	// Schedule periodic flushes to the audio output module.
-	unsigned ticks_per_buffer;
 	struct event flush_event;
 
 	float dac_level;
@@ -221,12 +223,12 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 		}
 	}
 
-	snd->ticks_per_buffer = ((long)nframes * EVENT_TICK_RATE) / rate;
 	snd->last_cycle = event_current_tick;
 
-	event_init(&snd->flush_event, DELEGATE_AS0(void, flush_frame, snd));
-	snd->flush_event.at_tick = event_current_tick + snd->ticks_per_buffer;
-	event_queue(&MACHINE_EVENT_LIST, &snd->flush_event);
+	event_init(&snd->flush_event, DELEGATE_AS0(void, flush_buffer, snd));
+	snd->flush_event.at_tick = event_current_tick;
+	// process zero frames, but set up buffer flusher:
+	flush_buffer(snd);
 
 	return &snd->public;
 }
@@ -480,9 +482,16 @@ void sound_set_external_right(struct sound_interface *sndp, float level) {
 	sound_update(sndp);
 }
 
-static void flush_frame(void *sptr) {
+static void flush_buffer(void *sptr) {
 	struct sound_interface_private *snd = sptr;
+	struct sound_interface *sndp = &snd->public;
 	sound_update(&snd->public);
-	snd->flush_event.at_tick += snd->ticks_per_buffer;
+	// calculate exact number of cycles to end of buffer
+	int64_t elapsed_frames = snd->buffer_nframes - snd->buffer_frame;
+	int64_t fe = snd->buferror + elapsed_frames * EVENT_TICK_RATE;
+	unsigned nticks = fe / sndp->framerate;
+	fe -= nticks * sndp->framerate;
+	snd->buferror = fe;
+	snd->flush_event.at_tick = snd->last_cycle + nticks;
 	event_queue(&MACHINE_EVENT_LIST, &snd->flush_event);
 }
