@@ -2,7 +2,7 @@
 
 PulseAudio sound module
 
-Copyright 2010-2016 Ciaran Anscomb
+Copyright 2010-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -107,9 +107,14 @@ static void *new(void *cfg) {
 	} else if (xroar_cfg.ao_buffer_nframes > 0) {
 		fragment_nframes = xroar_cfg.ao_buffer_nframes;
 	} else {
-		fragment_nframes = 512;
+		fragment_nframes = 1024;
 	}
-	ba.tlength = fragment_nframes * frame_nbytes;
+
+	int nfragments = 2;
+	if (xroar_cfg.ao_fragments > 0) {
+		nfragments = xroar_cfg.ao_fragments;
+	}
+	ba.tlength = fragment_nframes * nfragments * frame_nbytes;
 
 	aopulse->pa = pa_simple_new(NULL, "XRoar", PA_STREAM_PLAYBACK, device,
 	                   "output", &ss, NULL, &ba, &error);
@@ -126,7 +131,7 @@ static void *new(void *cfg) {
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
-	LOG_DEBUG(1, "\t%dms (%d samples) buffer\n", (fragment_nframes * 1000) / rate, fragment_nframes);
+	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, fragment_nframes, nfragments * fragment_nframes, (nfragments * fragment_nframes * 1000) / rate);
 	return aopulse;
 
 failed:
