@@ -217,8 +217,8 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	snd->current.mux_source = 0;
 	snd->next.mux_source = 0;
 	for (unsigned i = 0; i < 4; i++) {
-		snd->mux_input[i] = xmalloc(nframes * sizeof(float));
-		for (unsigned j = 0; j < nframes; j++) {
+		snd->mux_input[i] = xmalloc((nframes + 1) * sizeof(float));
+		for (unsigned j = 0; j < (nframes + 1); j++) {
 			snd->mux_input[i][j] = 0.0;
 		}
 	}
