@@ -2,7 +2,7 @@
 
 Virtual floppy drives
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -152,6 +152,7 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 			vdrive_eject_disk(vi, i);
 		}
 	}
+	free(vip);
 }
 
 void vdrive_disconnect(struct vdrive_interface *vi) {
