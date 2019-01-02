@@ -2,7 +2,7 @@
 
 Dragon/CoCo cartridge support.
 
-Copyright 2005-2018 Ciaran Anscomb
+Copyright 2005-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -253,6 +253,8 @@ void cart_init(void) {
 void cart_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)cart_config_free);
 	config_list = NULL;
+	slist_free(cart_modules);
+	cart_modules = NULL;
 }
 
 static void cart_type_help_func(struct cart_module *cm, void *udata) {
