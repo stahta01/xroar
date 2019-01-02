@@ -2,7 +2,7 @@
 
 GtkGLExt video output module
 
-Copyright 2010-2018 Ciaran Anscomb
+Copyright 2010-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -107,9 +107,11 @@ static void *new(void *cfg) {
 	}
 	if (!gtk_widget_set_gl_capability(gtk2_drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
 		LOG_ERROR("Failed to add OpenGL support to GTK widget\n");
+		g_object_unref(glconfig);
 		vo_gtkgl_free(vo);
 		return NULL;
 	}
+	g_object_unref(glconfig);
 
 	g_signal_connect(gtk2_top_window, "window-state-event", G_CALLBACK(window_state), vo);
 	g_signal_connect(gtk2_drawing_area, "configure-event", G_CALLBACK(configure), vo);
