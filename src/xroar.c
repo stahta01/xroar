@@ -768,7 +768,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	 * arch if not already chosen. */
 	if (private_cfg.dos_option) {
 		if (!selected_cart_config) {
-			if (xroar_machine_config->architecture == ARCH_COCO) {
+			if (xroar_machine_config->architecture == ARCH_COCO || xroar_machine_config->architecture == ARCH_COCO3) {
 				selected_cart_config = cart_config_by_name("rsdos");
 			} else {
 				selected_cart_config = cart_config_by_name("dragondos");

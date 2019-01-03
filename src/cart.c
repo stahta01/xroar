@@ -161,7 +161,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 	sds tmp = NULL;
 	struct cart_config *cc = NULL;
-	if (!mc || mc->architecture != ARCH_COCO) {
+	if (!mc || (mc->architecture != ARCH_COCO && mc->architecture != ARCH_COCO3)) {
 		if ((tmp = romlist_find("@dragondos_compat"))) {
 			cc = cart_config_by_name("dragondos");
 		} else if ((tmp = romlist_find("@delta"))) {

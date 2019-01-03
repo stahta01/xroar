@@ -45,6 +45,7 @@ struct vo_interface;
 #define ARCH_DRAGON32 (0)
 #define ARCH_DRAGON64 (1)
 #define ARCH_COCO     (2)
+#define ARCH_COCO3    (3)
 #define CPU_MC6809 (0)
 #define CPU_HD6309 (1)
 #define ROMSET_DRAGON32 (0)
