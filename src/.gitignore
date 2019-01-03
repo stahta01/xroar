@@ -14,6 +14,7 @@
 /sdl/*.o
 /sdl2/*.o
 /sunos/*.o
+/tcc1014/*.o
 /wasm/*.o
 /windows32/*.o
 /windows32/*.res

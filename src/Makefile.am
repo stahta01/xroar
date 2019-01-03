@@ -20,6 +20,7 @@ xroar_SOURCES = \
 	becker.c becker.h \
 	breakpoint.c breakpoint.h \
 	cart.c cart.h \
+	coco3.c \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
@@ -64,6 +65,8 @@ xroar_SOURCES = \
 	spi_sdcard.c spi_sdcard.h \
 	tape.c tape.h \
 	tape_cas.c \
+	tcc1014/font-gime.c tcc1014/font-gime.h \
+	tcc1014/tcc1014.c tcc1014/tcc1014.h \
 	ui.c ui.h \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
@@ -75,7 +78,8 @@ xroar_SOURCES = \
 
 BUILT_SOURCES += \
 	mc6847/font-6847.c mc6847/font-6847.h \
-	mc6847/font-6847t1.c mc6847/font-6847t1.h
+	mc6847/font-6847t1.c mc6847/font-6847t1.h \
+	tcc1014/font-gime.c tcc1014/font-gime.h
 
 xroar_SOURCES += \
 	main_unix.c
@@ -84,6 +88,7 @@ EXTRA_DIST += \
 	mc6847/font-6847.c mc6847/font-6847.h \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \
 	mc6809_common.c mc6809_common.h \
+	tcc1014/font-gime.c tcc1014/font-gime.h \
 	vo_generic_ops.c
 
 # VDG bitmaps should be distributed, but can be generated from font image files
@@ -107,8 +112,16 @@ mc6847/font-6847t1.c:
 	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
 	$(FONT2C) --array font_6847t1 --type "unsigned char" --vdgt1 $(srcdir)/mc6847/font-6847t1.png > $@
 
+tcc1014/font-gime.h:
+	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
+	$(FONT2C) --header --array font_gime --type "unsigned char" --gime $(srcdir)/tcc1014/font-gime.png > $@
+
+tcc1014/font-gime.c:
+	test -f "$(FONT2C)" || make -C $(top_builddir)/tools font2c
+	$(FONT2C) --array font_gime --type "unsigned char" --gime $(srcdir)/tcc1014/font-gime.png > $@
+
 EXTRA_DIST += \
-	mc6847/font-6847.png mc6847/font-6847t1.png
+	mc6847/font-6847.png mc6847/font-6847t1.png tcc1014/font-gime.png
 
 # ROM paths
 
