@@ -306,6 +306,21 @@ static char const * const default_config[] = {
 	"tv-type ntsc",
 	"vdg-type 6847t1",
 	"ram 64",
+	// CoCo 3
+	"machine coco3",
+	"machine-desc 'Tandy CoCo 3'",
+	"machine-arch coco3",
+	"tv-type ntsc",
+	"vdg-type gime1986",
+	"ram 128",
+	// CoCo 3 PAL
+	"machine coco3p",
+	"machine-desc 'Tandy CoCo 3 (PAL)'",
+	"machine-arch coco3",
+	"tv-type pal",
+	"vdg-type gime1986",
+	"extbas @coco3p",
+	"ram 128",
 	// Dynacom MX-1600
 	"machine mx1600",
 	"machine-desc 'Dynacom MX-1600'",
@@ -400,6 +415,8 @@ static char const * const default_config[] = {
 	"romlist coco2=bas12,@coco",
 	"romlist coco2_ext=extbas11,@coco_ext",
 	"romlist coco2b=bas13,@coco",
+	"romlist coco3=coco3",
+	"romlist coco3p=coco3p",
 	// MX-1600 and zephyr-patched version
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
@@ -439,6 +456,7 @@ static char const * const default_config[] = {
 	"crclist mx1600ext=0x322a3d58",
 	"crclist cocoext=@extbas11,@extbas10,@mx1600ext",
 	"crclist coco_combined=@mx1600",
+	"crclist coco3=0xb4c88d6c,0xff050d80",
 
 	// Joysticks
 	"joy joy0",
