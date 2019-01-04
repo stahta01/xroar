@@ -2,7 +2,7 @@
 
 GTK+2 tape control window
 
-Copyright 2011-2017 Ciaran Anscomb
+Copyright 2011-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 

@@ -2,7 +2,7 @@
 
 GTK+2 user-interface common functions
 
-Copyright 2014-2016 Ciaran Anscomb
+Copyright 2014-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
