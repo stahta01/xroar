@@ -25,4 +25,15 @@ struct ui_cfg;
 void gtk2_keyboard_init(struct ui_cfg *ui_cfg);
 gboolean gtk2_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
 
+// Wrappers for notify-only updating of UI elements.  Blocks callback so that
+// no further action is taken.
+
+void uigtk2_notify_toggle_button_set(GtkToggleButton *o, gboolean v,
+				     gpointer func, gpointer data);
+
+void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
+				     gpointer func, gpointer data);
+
+void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data);
+
 #endif

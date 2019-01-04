@@ -35,3 +35,26 @@ gboolean gtk2_dummy_keypress(GtkWidget *widget, GdkEventKey *event, gpointer use
 	}
 	return FALSE;
 }
+
+// Wrappers for notify-only updating of UI elements.  Blocks callback so that
+// no further action is taken.
+
+void uigtk2_notify_toggle_button_set(GtkToggleButton *o, gboolean v,
+				     gpointer func, gpointer data) {
+	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
+	gtk_toggle_button_set_active(o, v);
+	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
+}
+
+void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
+				     gpointer func, gpointer data) {
+	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
+	gtk_toggle_action_set_active(o, v);
+	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
+}
+
+void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data) {
+	g_signal_handlers_block_by_func(o, G_CALLBACK(func), data);
+	gtk_radio_action_set_current_value(o, v);
+	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
+}

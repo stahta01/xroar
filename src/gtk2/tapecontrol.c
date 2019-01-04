@@ -306,9 +306,9 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 }
 
 void gtk2_update_tape_state(int flags) {
-	gtk_toggle_button_set_active(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE);
-	gtk_toggle_button_set_active(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE);
-	gtk_toggle_button_set_active(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE);
+	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
+	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, NULL);
+	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
 }
 
 /* Tape Control - Signal Handlers */

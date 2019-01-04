@@ -635,12 +635,12 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 
 	case ui_tag_machine:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine1");
-		gtk_radio_action_set_current_value(radio, value);
+		uigtk2_notify_radio_action_set(radio, value, set_machine, NULL);
 		break;
 
 	case ui_tag_cartridge:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart0");
-		gtk_radio_action_set_current_value(radio, value);
+		uigtk2_notify_radio_action_set(radio, value, set_cart, NULL);
 		break;
 
 	/* Tape */
@@ -675,57 +675,61 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 
 	case ui_tag_fullscreen:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/FullScreen");
-		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, set_fullscreen, NULL);
 		break;
 
 	case ui_tag_vdg_inverse:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/InverseText");
-		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_inverse_text, NULL);
 		break;
 
 	case ui_tag_ccr:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-simple");
-		gtk_radio_action_set_current_value(radio, value);
+		uigtk2_notify_radio_action_set(radio, value, set_ccr, NULL);
 		break;
 
 	case ui_tag_cross_colour:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
-		gtk_radio_action_set_current_value(radio, value);
+		uigtk2_notify_radio_action_set(radio, value, set_cc, NULL);
 		break;
 
 	/* Audio */
 
 	case ui_tag_fast_sound:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/FastSound");
-		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_fast_sound, NULL);
 		break;
 
 	case ui_tag_ratelimit:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/RateLimit");
-		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_ratelimit, NULL);
 		break;
 
 	/* Keyboard */
 
 	case ui_tag_keymap:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
-		gtk_radio_action_set_current_value(radio, value);
+		uigtk2_notify_radio_action_set(radio, value, set_keymap, NULL);
 		break;
 
 	case ui_tag_kbd_translate:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
-		gtk_toggle_action_set_active(toggle, value ? TRUE : FALSE);
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_keyboard_translation, NULL);
 		break;
 
 	/* Joysticks */
 
 	case ui_tag_joy_right:
 	case ui_tag_joy_left:
-		if (tag == ui_tag_joy_right)
-			radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
-		else
-			radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
 		{
+			gpointer func;
+			if (tag == ui_tag_joy_right) {
+				radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
+				func = set_joy_right;
+			} else {
+				radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
+				func = set_joy_left;
+			}
 			int joy = 0;
 			if (data) {
 				for (int i = 1; i < 5; i++) {
@@ -735,7 +739,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 					}
 				}
 			}
-			gtk_radio_action_set_current_value(radio, joy);
+			uigtk2_notify_radio_action_set(radio, joy, func, NULL);
 		}
 		break;
 
