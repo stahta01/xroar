@@ -169,8 +169,9 @@ static void map_keyboard(struct keymap *keymap) {
 }
 
 void sdl_keyboard_init(void) {
-	const char *keymap_option = xroar_cfg.keymap;
+	//const char *keymap_option = xroar_cfg.keymap;
 	struct keymap *selected_keymap = &keymaps[0];
+	/*
 	if (keymap_option) {
 		if (0 == strcmp(keymap_option, "help")) {
 			for (unsigned i = 0; i < ARRAY_N_ELEMENTS(keymaps); i++) {
@@ -186,6 +187,7 @@ void sdl_keyboard_init(void) {
 			}
 		}
 	}
+	*/
 	map_keyboard(selected_keymap);
 	SDL_EnableUNICODE(xroar_cfg.kbd_translate);
 
