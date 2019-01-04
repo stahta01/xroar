@@ -115,6 +115,8 @@ struct ui_module {
 struct ui_interface {
 	DELEGATE_T0(void) free;
 	DELEGATE_T0(void) run;
+	// set_state updates the UI to reflect a change in state.  It should
+	// not itself cause state to change.
 	DELEGATE_T3(void, int, int, cvoidp) set_state;  // ui_tag, value, data
 };
 
