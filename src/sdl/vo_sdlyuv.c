@@ -47,6 +47,19 @@ static void lock_surface(void *sptr);
 static void unlock_surface(void *sptr);
 
 typedef Uint32 Pixel;
+
+struct vo_sdlyuv_interface {
+	struct vo_interface public;
+
+	SDL_Surface *screen;
+	SDL_Overlay *overlay;
+	Uint32 overlay_format;
+	unsigned screen_width, screen_height;
+	unsigned window_width, window_height;
+	SDL_Rect dstrect;
+};
+
+#define VO_MODULE_INTERFACE struct vo_sdlyuv_interface
 #define MAPCOLOUR(vo,r,g,b) map_colour((vo), (r), (g), (b))
 #define XSTEP 1
 #define NEXTLINE 0
@@ -58,19 +71,8 @@ typedef Uint32 Pixel;
 
 /*** ***/
 
-struct vo_sdlyuv_interface {
-	struct vo_generic_interface generic;
-
-	SDL_Surface *screen;
-	SDL_Overlay *overlay;
-	Uint32 overlay_format;
-	unsigned screen_width, screen_height;
-	unsigned window_width, window_height;
-	SDL_Rect dstrect;
-};
-
 static void vo_sdlyuv_free(void *sptr);
-static void vsync(void *sptr);
+static void vo_sdlyuv_vsync(void *sptr);
 static void resize(void *sptr, unsigned w, unsigned h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 
@@ -86,14 +88,14 @@ static void *new(void *cfg) {
 	struct vo_cfg *vo_cfg = cfg;
 	const SDL_VideoInfo *video_info;
 
-	struct vo_sdlyuv_interface *vosdl = xmalloc(sizeof(*vosdl));
-	*vosdl = (struct vo_sdlyuv_interface){0};
-	struct vo_generic_interface *generic = &vosdl->generic;
-	struct vo_interface *vo = &generic->public;
+	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
+	struct vo_sdlyuv_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+	*generic = (struct vo_generic_interface){0};
 
 	vo->free = DELEGATE_AS0(void, vo_sdlyuv_free, vo);
 	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
-	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->vsync = DELEGATE_AS0(void, vo_sdlyuv_vsync, vo);
 	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
@@ -143,13 +145,13 @@ static void *new(void *cfg) {
 	}
 
 	alloc_colours(vo);
-	generic_vsync(&vosdl->generic);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
 	vo->window_h = 240;
 
-	vsync(vo);
+	vo_sdlyuv_vsync(vo);
+
 	return vo;
 }
 
@@ -200,14 +202,20 @@ static void unlock_surface(void *sptr) {
 }
 
 static void resize(void *sptr, unsigned w, unsigned h) {
-	struct vo_sdlyuv_interface *vosdl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdlyuv_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+
 	vosdl->window_width = w;
 	vosdl->window_height = h;
-	set_fullscreen(vosdl, vosdl->generic.public.is_fullscreen);
+	set_fullscreen(vosdl, vo->is_fullscreen);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_sdlyuv_interface *vosdl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdlyuv_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+
 	unsigned want_width, want_height;
 
 #ifdef WINDOWS32
@@ -265,7 +273,7 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	else
 		SDL_ShowCursor(SDL_ENABLE);
 
-	vosdl->generic.public.is_fullscreen = fullscreen;
+	vo->is_fullscreen = fullscreen;
 
 	memcpy(&vosdl->dstrect, &vosdl->screen->clip_rect, sizeof(SDL_Rect));
 	if (((float)vosdl->screen->w/(float)vosdl->screen->h)>(4.0/3.0)) {
@@ -287,9 +295,12 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	return 0;
 }
 
-static void vsync(void *sptr) {
-	struct vo_sdlyuv_interface *vosdl = sptr;
+static void vo_sdlyuv_vsync(void *sptr) {
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdlyuv_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+
 	SDL_DisplayYUVOverlay(vosdl->overlay, &vosdl->dstrect);
-	vosdl->generic.pixel = (Pixel *)vosdl->overlay->pixels[0];
-	generic_vsync(&vosdl->generic);
+	generic->pixel = (Pixel *)vosdl->overlay->pixels[0];
+	generic_vsync(vo);
 }
