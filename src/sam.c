@@ -2,7 +2,7 @@
 
 Motorola SN74LS783/MC6883 Synchronous Address Multiplexer
 
-Copyright 2003-2015 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,9 +20,10 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
-#include "delegate.h"
+#include "part.h"
 #include "sam.h"
 
 /* Constants for tracking VDG address counter */
@@ -78,15 +79,11 @@ struct MC6883_private {
 static void update_from_register(struct MC6883_private *);
 
 struct MC6883 *sam_new(void) {
-	struct MC6883_private *sam = xmalloc(sizeof(*sam));
-	*sam = (struct MC6883_private){.public={0}};
+	struct MC6883_private *sam = part_new(sizeof(*sam));
+	*sam = (struct MC6883_private){0};
+	part_init((struct part *)sam, "SN74LS783");
 	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	return (struct MC6883 *)sam;
-}
-
-void sam_free(struct MC6883 *samp) {
-	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	free(sam);
 }
 
 void sam_reset(struct MC6883 *samp) {

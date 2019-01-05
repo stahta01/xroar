@@ -2,7 +2,7 @@
 
 Motorola SN74LS783/MC6883 Synchronous Address Multiplexer
 
-Copyright 2003-2015 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,9 +22,13 @@ See COPYING.GPL for redistribution conditions.
 
 #include "delegate.h"
 
+#include "part.h"
+
 #define EVENT_SAM_CYCLES(c) (c)
 
 struct MC6883 {
+	struct part part;
+
 	unsigned S;
 	unsigned Z;
 	unsigned V;
@@ -33,7 +37,6 @@ struct MC6883 {
 };
 
 struct MC6883 *sam_new(void);
-void sam_free(struct MC6883 *);
 
 void sam_reset(struct MC6883 *);
 void sam_mem_cycle(void *, _Bool RnW, uint16_t A);

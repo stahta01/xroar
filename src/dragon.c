@@ -380,6 +380,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 
 	// SAM
 	md->SAM0 = sam_new();
+	part_add_component(&m->part, (struct part *)md->SAM0, "SAM");
 	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	// CPU
 	switch (mc->cpu) {
@@ -752,9 +753,6 @@ static void dragon_free(struct part *p) {
 	}
 	if (md->bp_session) {
 		bp_session_free(md->bp_session);
-	}
-	if (md->SAM0) {
-		sam_free(md->SAM0);
 	}
 	if (md->PIA0) {
 		mc6821_free(md->PIA0);
