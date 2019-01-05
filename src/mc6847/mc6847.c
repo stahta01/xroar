@@ -2,7 +2,7 @@
 
 Motorola MC6847 Video Display Generator (VDG)
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -21,9 +21,9 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
-#include "delegate.h"
 #include "events.h"
 #include "logging.h"
 #include "mc6809.h"
@@ -31,6 +31,7 @@ See COPYING.GPL for redistribution conditions.
 #include "mc6847/font-6847t1.h"
 #include "mc6847/mc6847.h"
 #include "ntsc.h"
+#include "part.h"
 #include "sam.h"
 #include "xroar.h"
 
@@ -108,6 +109,8 @@ struct MC6847_private {
 	_Bool text_border;
 	uint8_t text_border_colour;
 };
+
+void mc6847_free(struct part *p);
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
@@ -466,8 +469,10 @@ static void update_vdg(struct MC6847_private *vdg) {
 }
 
 struct MC6847 *mc6847_new(_Bool t1) {
-	struct MC6847_private *vdg = xmalloc(sizeof(*vdg));
-	*vdg = (struct MC6847_private){.public={0}};
+	struct MC6847_private *vdg = part_new(sizeof(*vdg));
+	*vdg = (struct MC6847_private){0};
+	part_init((struct part *)vdg, t1 ? "MC6847T1" : "MC6847");
+	vdg->public.part.free = mc6847_free;
 	vdg->is_t1 = t1;
 	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
@@ -479,11 +484,10 @@ struct MC6847 *mc6847_new(_Bool t1) {
 	return (struct MC6847 *)vdg;
 }
 
-void mc6847_free(struct MC6847 *vdgp) {
-	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
+void mc6847_free(struct part *p) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
 	event_dequeue(&vdg->hs_fall_event);
 	event_dequeue(&vdg->hs_rise_event);
-	free(vdg);
 }
 
 void mc6847_reset(struct MC6847 *vdgp) {

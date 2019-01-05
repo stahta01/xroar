@@ -430,6 +430,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 
 	// VDG
 	md->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
+	part_add_component(&m->part, (struct part *)md->VDG0, "VDG");
 	mc6847_set_palette(md->VDG0, md->dummy_palette);
 	// XXX kludges that should be handled by machine-specific code
 	md->VDG0->is_dragon64 = md->is_dragon64;
@@ -755,9 +756,6 @@ static void dragon_free(struct part *p) {
 	}
 	if (md->bp_session) {
 		bp_session_free(md->bp_session);
-	}
-	if (md->VDG0) {
-		mc6847_free(md->VDG0);
 	}
 	ntsc_burst_free(md->ntsc_burst[3]);
 	ntsc_burst_free(md->ntsc_burst[2]);

@@ -22,6 +22,8 @@ See COPYING.GPL for redistribution conditions.
 
 #include "delegate.h"
 
+#include "part.h"
+
 struct ntsc_palette;
 
 // Output voltages
@@ -83,6 +85,8 @@ enum vdg_colour {
 };
 
 struct MC6847 {
+	struct part part;
+
 	// Text row (0-11). In reality, this would be external circuitry
 	// clocked by HS and cleared by RP, but provided here for now.
 	unsigned row;
@@ -114,7 +118,6 @@ struct MC6847 {
  */
 
 struct MC6847 *mc6847_new(_Bool t1);
-void mc6847_free(struct MC6847 *);
 
 void mc6847_reset(struct MC6847 *);
 
