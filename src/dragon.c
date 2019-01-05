@@ -409,6 +409,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 
 	// PIAs
 	md->PIA0 = mc6821_new();
+	part_add_component(&m->part, (struct part *)md->PIA0, "PIA0");
 	md->PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, md);
 	md->PIA0->a.data_postwrite = DELEGATE_AS0(void, pia0a_data_postwrite, md);
 	md->PIA0->a.control_postwrite = DELEGATE_AS0(void, pia0a_control_postwrite, md);
@@ -416,6 +417,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->PIA0->b.data_postwrite = DELEGATE_AS0(void, pia0b_data_postwrite, md);
 	md->PIA0->b.control_postwrite = DELEGATE_AS0(void, pia0b_control_postwrite, md);
 	md->PIA1 = mc6821_new();
+	part_add_component(&m->part, (struct part *)md->PIA1, "PIA1");
 	md->PIA1->a.data_preread = DELEGATE_AS0(void, pia1a_data_preread, md);
 	md->PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite, md);
 	md->PIA1->a.control_postwrite = DELEGATE_AS0(void, pia1a_control_postwrite, md);
@@ -753,12 +755,6 @@ static void dragon_free(struct part *p) {
 	}
 	if (md->bp_session) {
 		bp_session_free(md->bp_session);
-	}
-	if (md->PIA0) {
-		mc6821_free(md->PIA0);
-	}
-	if (md->PIA1) {
-		mc6821_free(md->PIA1);
 	}
 	if (md->VDG0) {
 		mc6847_free(md->VDG0);

@@ -2,7 +2,7 @@
 
 Motorola MC6821 Peripheral Interface Adaptor
 
-Copyright 2003-2015 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -21,7 +21,9 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 
 #include "delegate.h"
+
 #include "events.h"
+#include "part.h"
 
 /* Two "sides" per PIA (A & B), with slightly different characteristics.  A
  * side represented as output and input sink (the struct used is common to both
@@ -57,6 +59,7 @@ struct MC6821_side {
 };
 
 struct MC6821 {
+	struct part part;
 	struct MC6821_side a, b;
 };
 
@@ -67,8 +70,6 @@ struct MC6821 {
 #define PIA_VALUE_B(p) (((p)->b.out_source | (p)->b.in_source) & (p)->b.out_sink & (p)->b.in_sink)
 
 struct MC6821 *mc6821_new(void);
-void mc6821_init(struct MC6821 *pia);
-void mc6821_free(struct MC6821 *pia);
 
 void mc6821_reset(struct MC6821 *pia);
 void mc6821_set_cx1(struct MC6821_side *side, _Bool level);

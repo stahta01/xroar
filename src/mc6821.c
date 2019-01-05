@@ -2,7 +2,7 @@
 
 Motorola MC6821 Peripheral Interface Adaptor
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,37 +20,40 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
-#include "delegate.h"
 #include "events.h"
 #include "mc6821.h"
+#include "part.h"
 #include "xroar.h"
 
+static void mc6821_free(struct part *p);
+static void do_irq(void *sptr);
+
 struct MC6821 *mc6821_new(void) {
-	struct MC6821 *new = xmalloc(sizeof(*new));
-	mc6821_init(new);
-	return new;
-}
+	struct MC6821 *pia = part_new(sizeof(*pia));
+	*pia = (struct MC6821){0};
+	part_init((struct part *)pia, "MC6821");
+	pia->part.free = mc6821_free;
 
-static void do_irq(void *data) {
-	struct MC6821_side *side = data;
-	side->irq = 1;
-}
-
-void mc6821_init(struct MC6821 *pia) {
-	memset(pia, 0, sizeof(*pia));
 	pia->a.in_sink = 0xff;
 	pia->b.in_sink = 0xff;
 	event_init(&pia->a.irq_event, DELEGATE_AS0(void, do_irq, &pia->a));
 	event_init(&pia->b.irq_event, DELEGATE_AS0(void, do_irq, &pia->b));
+
+	return pia;
 }
 
-void mc6821_free(struct MC6821 *pia) {
-	if (pia == NULL) return;
+static void do_irq(void *sptr) {
+	struct MC6821_side *side = sptr;
+	side->irq = 1;
+}
+
+static void mc6821_free(struct part *p) {
+	struct MC6821 *pia = (struct MC6821 *)p;
 	event_dequeue(&pia->a.irq_event);
 	event_dequeue(&pia->b.irq_event);
-	free(pia);
 }
 
 #define INTERRUPT_ENABLED(p) ((p).control_register & 0x01)
