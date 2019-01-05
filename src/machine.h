@@ -2,7 +2,7 @@
 
 Machine configuration
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -23,6 +23,7 @@ See COPYING.GPL for redistribution conditions.
 #include <sys/types.h>
 
 #include "breakpoint.h"
+#include "part.h"
 #include "xconfig.h"
 
 struct cart;
@@ -189,9 +190,9 @@ struct machine_memory {
 };
 
 struct machine {
-	struct machine_config *config;
+	struct part part;
 
-	void (*free)(struct machine *m);
+	struct machine_config *config;
 
 	void (*insert_cart)(struct machine *m, struct cart *c);
 	void (*remove_cart)(struct machine *m);

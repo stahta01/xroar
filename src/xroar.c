@@ -56,6 +56,7 @@ See COPYING.GPL for redistribution conditions.
 #include "mc6809_trace.h"
 #include "module.h"
 #include "mpi.h"
+#include "part.h"
 #include "path.h"
 #include "printer.h"
 #include "romlist.h"
@@ -886,7 +887,7 @@ void xroar_shutdown(void) {
 		return;
 	shutting_down = 1;
 	if (xroar_machine) {
-		xroar_machine->free(xroar_machine);
+		part_free((struct part *)xroar_machine);
 		xroar_machine = NULL;
 	}
 	joystick_shutdown();
@@ -1442,7 +1443,7 @@ void xroar_cycle_joysticks(_Bool notify) {
 
 void xroar_configure_machine(struct machine_config *mc) {
 	if (xroar_machine) {
-		xroar_machine->free(xroar_machine);
+		part_free((struct part *)xroar_machine);
 	}
 	xroar_machine_config = mc;
 	xroar_machine = machine_new(mc, xroar_vo_interface, xroar_ao_interface->sound_interface, xroar_tape_interface);

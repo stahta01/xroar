@@ -24,7 +24,6 @@ See COPYING.GPL for redistribution conditions.
 #include <sys/types.h>
 #include <unistd.h>
 
-
 #include "delegate.h"
 #include "xalloc.h"
 
@@ -41,6 +40,7 @@ See COPYING.GPL for redistribution conditions.
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
 #include "ntsc.h"
+#include "part.h"
 #include "printer.h"
 #include "romlist.h"
 #include "sam.h"
@@ -81,7 +81,8 @@ enum machine_ram_organisation {
 };
 
 struct machine_dragon {
-	struct machine public;
+	struct machine public;  // first element in turn is part
+
 	struct MC6809 *CPU0;
 	struct MC6883 *SAM0;
 	struct MC6821 *PIA0, *PIA1;
@@ -236,7 +237,7 @@ static void dragon_config_complete(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon_free(struct machine *m);
+static void dragon_free(struct part *p);
 
 static void dragon_insert_cart(struct machine *m, struct cart *c);
 static void dragon_remove_cart(struct machine *m);
@@ -307,14 +308,16 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	if (!mc)
 		return NULL;
 
-	struct machine_dragon *md = xmalloc(sizeof(*md));
+	struct machine_dragon *md = part_new(sizeof(*md));
 	*md = (struct machine_dragon){0};
 	struct machine *m = &md->public;
+
+	part_init(&m->part, "dragon");
+	m->part.free = dragon_free;
 
 	dragon_config_complete(mc);
 
 	m->config = mc;
-	m->free = dragon_free;
 	m->insert_cart = dragon_insert_cart;
 	m->remove_cart = dragon_remove_cart;
 	m->reset = dragon_reset;
@@ -387,6 +390,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 		md->CPU0 = hd6309_new();
 		break;
 	}
+	part_add_component(&m->part, (struct part *)md->CPU0, "CPU");
 	md->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM0);
 
 	// Breakpoint session
@@ -727,10 +731,10 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	return m;
 }
 
-static void dragon_free(struct machine *m) {
-	if (!m)
-		return;
-	struct machine_dragon *md = (struct machine_dragon *)m;
+// Called from part_free(), which handles freeing the struct itself
+static void dragon_free(struct part *p) {
+	struct machine_dragon *md = (struct machine_dragon *)p;
+	struct machine *m = &md->public;
 	if (m->config && m->config->description) {
 		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
@@ -752,9 +756,6 @@ static void dragon_free(struct machine *m) {
 	if (md->SAM0) {
 		sam_free(md->SAM0);
 	}
-	if (md->CPU0) {
-		part_free(&md->CPU0->part);
-	}
 	if (md->PIA0) {
 		mc6821_free(md->PIA0);
 	}
@@ -770,7 +771,6 @@ static void dragon_free(struct machine *m) {
 	ntsc_burst_free(md->ntsc_burst[0]);
 	ntsc_palette_free(md->dummy_palette);
 	ntsc_palette_free(md->ntsc_palette);
-	free(md);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
