@@ -2,7 +2,7 @@
 
 Orchestra 90-CC sound cartridge
 
-Copyright 2013-2018 Ciaran Anscomb
+Copyright 2013-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -25,6 +25,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "cart.h"
 #include "logging.h"
+#include "part.h"
 #include "sound.h"
 #include "xroar.h"
 
@@ -51,8 +52,11 @@ static _Bool orch90_has_interface(struct cart *c, const char *ifname);
 static void orch90_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 static struct cart *orch90_new(struct cart_config *cc) {
-	struct orch90 *o = xmalloc(sizeof(*o));
+	struct orch90 *o = part_new(sizeof(*o));
 	struct cart *c = &o->cart;
+	*o = (struct orch90){0};
+	part_init(&c->part, "orchestra-90");
+	c->part.free = cart_rom_free;
 
 	c->config = cc;
 	cart_rom_init(c);

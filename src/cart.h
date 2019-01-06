@@ -2,7 +2,7 @@
 
 Dragon/CoCo cartridge support.
 
-Copyright 2005-2018 Ciaran Anscomb
+Copyright 2005-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -24,6 +24,8 @@ See COPYING.GPL for redistribution conditions.
 #include "delegate.h"
 #include "xconfig.h"
 
+#include "part.h"
+
 struct slist;
 struct machine_config;
 struct event;
@@ -40,6 +42,8 @@ struct cart_config {
 };
 
 struct cart {
+	struct part part;
+
 	struct cart_config *config;
 
 	// Notify that the cartridge has been attached or detached (e.g. to set
@@ -109,7 +113,7 @@ void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
-void cart_rom_free(struct cart *c);
+void cart_rom_free(struct part *p);
 void cart_rom_select_bank(struct cart *c, uint16_t bank);
 
 #endif

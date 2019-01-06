@@ -25,18 +25,19 @@ See COPYING.GPL for redistribution conditions.
 
 #include "array.h"
 #include "c-strcase.h"
+#include "delegate.h"
 #include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
 #include "cart.h"
 #include "crc32.h"
-#include "delegate.h"
 #include "events.h"
 #include "fs.h"
 #include "idecart.h"
 #include "logging.h"
 #include "machine.h"
+#include "part.h"
 #include "romlist.h"
 #include "xconfig.h"
 #include "xroar.h"
@@ -301,16 +302,6 @@ struct cart *cart_new_named(const char *cc_name) {
 	return cart_new(cc);
 }
 
-void cart_free(struct cart *c) {
-	if (!c) return;
-	if (c->detach)
-		c->detach(c);
-	if (c->free)
-		c->free(c);
-	else
-		cart_rom_free(c);
-}
-
 /* ROM cart routines */
 
 void cart_rom_init(struct cart *c) {
@@ -321,7 +312,6 @@ void cart_rom_init(struct cart *c) {
 	c->reset = cart_rom_reset;
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
-	c->free = cart_rom_free;
 	c->rom_data = xzalloc(0x10000);
 	c->rom_bank = 0;
 	if (cc->rom) {
@@ -361,9 +351,12 @@ void cart_rom_init(struct cart *c) {
 
 static struct cart *cart_rom_new(struct cart_config *cc) {
 	if (!cc) return NULL;
-	struct cart *c = xmalloc(sizeof(*c));
+	struct cart *c = part_new(sizeof(*c));
+	*c = (struct cart){0};
 	c->config = cc;
 	cart_rom_init(c);
+	part_init((struct part *)c, "dragon-romcart");
+	c->part.free = cart_rom_free;
 	return c;
 }
 
@@ -412,11 +405,14 @@ void cart_rom_detach(struct cart *c) {
 	}
 }
 
-void cart_rom_free(struct cart *c) {
+void cart_rom_free(struct part *p) {
+	struct cart *c = (struct cart *)p;
+	if (c->detach) {
+		c->detach(c);
+	}
 	if (c->rom_data) {
 		free(c->rom_data);
 	}
-	free(c);
 }
 
 void cart_rom_select_bank(struct cart *c, uint16_t bank) {

@@ -2,7 +2,7 @@
 
 Games Master Cartridge support
 
-Copyright 2018 Ciaran Anscomb
+Copyright 2018-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -34,6 +34,7 @@ SN76489 sound chip.
 #include "cart.h"
 #include "events.h"
 #include "logging.h"
+#include "part.h"
 #include "sn76489.h"
 #include "sound.h"
 #include "xroar.h"
@@ -54,22 +55,24 @@ struct gmc {
 
 static void gmc_attach(struct cart *c);
 static void gmc_detach(struct cart *c);
-static void gmc_free(struct cart *c);
+static void gmc_free(struct part *p);
 static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void gmc_reset(struct cart *c);
 static _Bool gmc_has_interface(struct cart *c, const char *ifname);
 static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 static struct cart *gmc_new(struct cart_config *cc) {
-	struct gmc *gmc = xmalloc(sizeof(*gmc));
+	struct gmc *gmc = part_new(sizeof(*gmc));
 	struct cart *c = &gmc->cart;
+	*gmc = (struct gmc){0};
+	part_init(&c->part, "games-master");
+	c->part.free = gmc_free;
 
 	c->config = cc;
 	cart_rom_init(c);
 
 	c->attach = gmc_attach;
 	c->detach = gmc_detach;
-	c->free = gmc_free;
 
 	c->write = gmc_write;
 	c->reset = gmc_reset;
@@ -95,12 +98,12 @@ static void gmc_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void gmc_free(struct cart *c) {
-	struct gmc *gmc = (struct gmc *)c;
+static void gmc_free(struct part *p) {
+	struct gmc *gmc = (struct gmc *)p;
+	cart_rom_free(p);
 	if (gmc->csg) {
 		sn76489_free(gmc->csg);
 	}
-	cart_rom_free(c);
 }
 
 static _Bool gmc_has_interface(struct cart *c, const char *ifname) {

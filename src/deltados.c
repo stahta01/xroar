@@ -2,7 +2,7 @@
 
 Premier Microsystems' Delta disk system
 
-Copyright 2007-2018 Ciaran Anscomb
+Copyright 2007-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -28,11 +28,12 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
 #include "cart.h"
-#include "delegate.h"
 #include "logging.h"
+#include "part.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
@@ -61,7 +62,7 @@ static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
-static void deltados_free(struct cart *c);
+static void deltados_free(struct part *p);
 static _Bool deltados_has_interface(struct cart *c, const char *ifname);
 static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -72,15 +73,16 @@ static void latch_write(struct deltados *d, unsigned D);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct cart *deltados_new(struct cart_config *cc) {
-	struct deltados *d = xmalloc(sizeof(*d));
+	struct deltados *d = part_new(sizeof(*d));
 	struct cart *c = &d->cart;
 	*d = (struct deltados){0};
+	part_init(&c->part, "delta");
+	c->part.free = deltados_free;
 
 	c->config = cc;
 	cart_rom_init(c);
 
 	c->detach = deltados_detach;
-	c->free = deltados_free;
 
 	c->read = deltados_read;
 	c->write = deltados_write;
@@ -108,10 +110,10 @@ static void deltados_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void deltados_free(struct cart *c) {
-	struct deltados *d = (struct deltados *)c;
+static void deltados_free(struct part *p) {
+	struct deltados *d = (struct deltados *)p;
+	cart_rom_free(p);
 	wd279x_free(d->fdc);
-	cart_rom_free(c);
 }
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

@@ -28,6 +28,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "cart.h"
 #include "logging.h"
+#include "part.h"
 #include "xroar.h"
 
 #include "becker.h"
@@ -61,12 +62,12 @@ static void idecart_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void idecart_free(struct cart *c) {
-	struct idecart *ide = (struct idecart *)c;
+static void idecart_free(struct part *p) {
+	struct idecart *ide = (struct idecart *)p;
+	cart_rom_free(p);
 	if (ide->becker)
 		becker_free(ide->becker);
 	ide_free(ide->controller);
-	cart_rom_free(c);
 }
 
 static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -129,10 +130,12 @@ static void idecart_init(struct idecart *ide) {
 	struct cart_config *cc = c->config;
 	int fd;
 
+	part_init(&c->part, "ide");
+	c->part.free = idecart_free;
+
 	cart_rom_init(c);
 
 	c->detach = idecart_detach;
-	c->free = idecart_free;
 
 	c->read = idecart_read;
 	c->write = idecart_write;
@@ -166,7 +169,7 @@ static void idecart_init(struct idecart *ide) {
 }
 
 static struct cart *idecart_new(struct cart_config *cc) {
-	struct idecart *ide = xmalloc(sizeof(*ide));
+	struct idecart *ide = part_new(sizeof(*ide));
 	ide->cart.config = cc;
 	idecart_init(ide);
 	return &ide->cart;

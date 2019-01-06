@@ -3,7 +3,7 @@
 Emulation of MOOH memory & SPI board
 
 Copyright 2016-2018 Tormod Volden
-Copyright 2018 Ciaran Anscomb
+Copyright 2018-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -18,10 +18,13 @@ See COPYING.GPL for redistribution conditions.
 
 #include "config.h"
 
-#include <xalloc.h>
 #include <stdio.h>
-#include "cart.h"
+
+#include <xalloc.h>
+
 #include "becker.h"
+#include "cart.h"
+#include "part.h"
 
 /* Number of 8KB mappable RAM pages in cartridge */
 #define MEMPAGES 0x40
@@ -56,12 +59,14 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 // static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
-static void mooh_free(struct cart *c);
+static void mooh_free(struct part *p);
 
 struct cart *mooh_new(struct cart_config *cc) {
-	struct mooh *n = xmalloc(sizeof(*n));
+	struct mooh *n = part_new(sizeof(*n));
 	*n = (struct mooh){0};
 	struct cart *c = &n->cart;
+	part_init(&c->part, "mooh");
+	c->part.free = mooh_free;
 
 	c->config = cc;
 	cart_rom_init(c);
@@ -69,7 +74,6 @@ struct cart *mooh_new(struct cart_config *cc) {
 	c->write = mooh_write;
 	c->reset = mooh_reset;
 	c->detach = mooh_detach;
-	c->free = mooh_free;
 
 	if (cc->becker_port) {
 		n->becker = becker_new();
@@ -108,11 +112,11 @@ static void mooh_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void mooh_free(struct cart *c) {
-	struct mooh *n = (struct mooh *)c;
+static void mooh_free(struct part *p) {
+	struct mooh *n = (struct mooh *)p;
+	cart_rom_free(p);
 	if (n->becker)
 		becker_free(n->becker);
-	cart_rom_free(c);
 }
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

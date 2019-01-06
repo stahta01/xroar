@@ -3,7 +3,7 @@
 NX32 RAM expansion cartridge
 
 Copyright 2016-2018 Tormod Volden
-Copyright 2016-2018 Ciaran Anscomb
+Copyright 2016-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -19,8 +19,10 @@ See COPYING.GPL for redistribution conditions.
 #include "config.h"
 
 #include <xalloc.h>
-#include "cart.h"
+
 #include "becker.h"
+#include "cart.h"
+#include "part.h"
 
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
 #define EXTBANKS 16
@@ -51,12 +53,14 @@ static void nx32_reset(struct cart *c);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
-static void nx32_free(struct cart *c);
+static void nx32_free(struct part *p);
 
 struct cart *nx32_new(struct cart_config *cc) {
-	struct nx32 *n = xmalloc(sizeof(*n));
+	struct nx32 *n = part_new(sizeof(*n));
 	*n = (struct nx32){0};
 	struct cart *c = &n->cart;
+	part_init(&c->part, "nx32");
+	c->part.free = nx32_free;
 
 	c->config = cc;
 	cart_rom_init(c);
@@ -64,7 +68,6 @@ struct cart *nx32_new(struct cart_config *cc) {
 	c->write = nx32_write;
 	c->reset = nx32_reset;
 	c->detach = nx32_detach;
-	c->free = nx32_free;
 
 	if (cc->becker_port) {
 		n->becker = becker_new();
@@ -90,11 +93,11 @@ static void nx32_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void nx32_free(struct cart *c) {
-	struct nx32 *n = (struct nx32 *)c;
+static void nx32_free(struct part *p) {
+	struct nx32 *n = (struct nx32 *)p;
+	cart_rom_free(p);
 	if (n->becker)
 		becker_free(n->becker);
-	cart_rom_free(c);
 }
 
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

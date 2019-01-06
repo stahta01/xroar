@@ -2,7 +2,7 @@
 
 DragonDOS cartridge
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -29,12 +29,13 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
 #include "becker.h"
 #include "cart.h"
-#include "delegate.h"
 #include "logging.h"
+#include "part.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
@@ -65,7 +66,7 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
-static void dragondos_free(struct cart *c);
+static void dragondos_free(struct part *p);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -79,15 +80,16 @@ static void latch_write(struct dragondos *d, unsigned D);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct cart *dragondos_new(struct cart_config *cc) {
-	struct dragondos *d = xmalloc(sizeof(*d));
+	struct dragondos *d = part_new(sizeof(*d));
 	*d = (struct dragondos){0};
 	struct cart *c = &d->cart;
+	part_init(&c->part, "dragondos");
+	c->part.free = dragondos_free;
 
 	c->config = cc;
 	cart_rom_init(c);
 
 	c->detach = dragondos_detach;
-	c->free = dragondos_free;
 
 	c->read = dragondos_read;
 	c->write = dragondos_write;
@@ -122,12 +124,12 @@ static void dragondos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static void dragondos_free(struct cart *c) {
-	struct dragondos *d = (struct dragondos *)c;
+static void dragondos_free(struct part *p) {
+	struct dragondos *d = (struct dragondos *)p;
+	cart_rom_free(p);
 	if (d->becker)
 		becker_free(d->becker);
 	wd279x_free(d->fdc);
-	cart_rom_free(c);
 }
 
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

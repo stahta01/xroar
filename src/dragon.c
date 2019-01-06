@@ -742,7 +742,7 @@ static void dragon_free(struct part *p) {
 	if (m->config && m->config->description) {
 		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
-	m->remove_cart(m);
+	//m->remove_cart(m);
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);
@@ -777,13 +777,14 @@ static void dragon_insert_cart(struct machine *m, struct cart *c) {
 		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, md);
 		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, md);
 		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, md);
+		part_add_component(&m->part, (struct part *)c, "CART");
 	}
 }
 
 static void dragon_remove_cart(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	(void)md;
-	cart_free(md->cart);
+	part_free((struct part *)md->cart);
 	md->cart = NULL;
 }
 
