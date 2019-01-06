@@ -32,6 +32,7 @@ See COPYING.GPL for redistribution conditions.
 #include "crc16.h"
 #include "events.h"
 #include "logging.h"
+#include "part.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
@@ -94,6 +95,10 @@ static int const sector_size[2][4] = {
 	{ 128, 256, 512, 1024 }
 };
 
+static const char *wd279x_type_name[4] = {
+	"WD2791", "WD2793", "WD2795", "WD2797"
+};
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Debugging
 
@@ -116,6 +121,8 @@ static void _vdrive_write(WD279X *fdc, uint8_t b) {
 	fdc->crc = crc16_byte(fdc->crc, b);
 }
 
+static void wd279x_free(struct part *p);
+
 #define VDRIVE_WRITE_CRC16 do { \
 		uint16_t tmp = fdc->crc; \
 		_vdrive_write(fdc, tmp >> 8); \
@@ -123,8 +130,11 @@ static void _vdrive_write(WD279X *fdc, uint8_t b) {
 	} while (0)
 
 WD279X *wd279x_new(enum WD279X_type type) {
-	WD279X *fdc = xmalloc(sizeof(*fdc));
+	assert(type >= WD2791 && type <= WD2797);
+	WD279X *fdc = part_new(sizeof(*fdc));
 	*fdc = (WD279X){0};
+	part_init(&fdc->part, wd279x_type_name[type]);
+	fdc->part.free = wd279x_free;
 
 	fdc->type = type;
 	fdc->has_sso = (type == WD2795 || type == WD2797);
@@ -138,10 +148,9 @@ WD279X *wd279x_new(enum WD279X_type type) {
 	return fdc;
 }
 
-void wd279x_free(WD279X *fdc) {
-	assert(fdc != NULL);
+static void wd279x_free(struct part *p) {
+	WD279X *fdc = (WD279X *)p;
 	event_dequeue(&fdc->state_event);
-	free(fdc);
 }
 
 void wd279x_disconnect(WD279X *fdc) {

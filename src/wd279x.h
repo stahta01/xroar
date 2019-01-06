@@ -2,7 +2,7 @@
 
 WD279x Floppy Drive Controller
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -21,6 +21,7 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 
 #include "delegate.h"
+
 #include "events.h"
 
 enum WD279X_type {
@@ -59,6 +60,8 @@ enum WD279X_state {
 
 typedef struct WD279X WD279X;
 struct WD279X {
+	struct part part;
+
 	enum WD279X_type type;
 
 	/* Registers */
@@ -122,7 +125,6 @@ struct WD279X {
 };
 
 WD279X *wd279x_new(enum WD279X_type type);
-void wd279x_free(WD279X *fdc);
 void wd279x_reset(WD279X *fdc);
 void wd279x_disconnect(WD279X *fdc);
 

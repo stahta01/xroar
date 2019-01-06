@@ -102,6 +102,7 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 		d->becker = becker_new();
 	}
 	d->fdc = wd279x_new(WD2797);
+	part_add_component(&c->part, (struct part *)d->fdc, "FDC");
 
 	return c;
 }
@@ -129,7 +130,6 @@ static void dragondos_free(struct part *p) {
 	cart_rom_free(p);
 	if (d->becker)
 		becker_free(d->becker);
-	wd279x_free(d->fdc);
 }
 
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

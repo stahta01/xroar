@@ -92,6 +92,7 @@ static struct cart *deltados_new(struct cart_config *cc) {
 	c->attach_interface = deltados_attach_interface;
 
 	d->fdc = wd279x_new(WD2791);
+	part_add_component(&c->part, (struct part *)d->fdc, "FDC");
 
 	return c;
 }
@@ -111,9 +112,7 @@ static void deltados_detach(struct cart *c) {
 }
 
 static void deltados_free(struct part *p) {
-	struct deltados *d = (struct deltados *)p;
 	cart_rom_free(p);
-	wd279x_free(d->fdc);
 }
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
