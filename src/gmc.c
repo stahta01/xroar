@@ -99,11 +99,7 @@ static void gmc_detach(struct cart *c) {
 }
 
 static void gmc_free(struct part *p) {
-	struct gmc *gmc = (struct gmc *)p;
 	cart_rom_free(p);
-	if (gmc->csg) {
-		sn76489_free(gmc->csg);
-	}
 }
 
 static _Bool gmc_has_interface(struct cart *c, const char *ifname) {
@@ -116,6 +112,7 @@ static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf)
 	struct gmc *gmc = (struct gmc *)c;
 	gmc->snd = intf;
 	gmc->csg = sn76489_new(4000000, gmc->snd->framerate, EVENT_TICK_RATE, event_current_tick);
+	part_add_component(&c->part, (struct part *)gmc->csg, "CSG");
 	if (gmc->csg) {
 		gmc->snd->get_cart_audio = DELEGATE_AS3(float, uint32, int, floatp, sn76489_get_audio, gmc->csg);
 	}

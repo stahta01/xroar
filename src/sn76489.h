@@ -2,7 +2,7 @@
 
 TI SN76489 sound chip
 
-Copyright 2018 Ciaran Anscomb
+Copyright 2018-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -18,11 +18,14 @@ See COPYING.GPL for redistribution conditions.
 #ifndef XROAR_SN76489_H_
 #define XROAR_SN76489_H_
 
+#include "part.h"
+
 // 76489 has two outputs: a READY line and the audio output itself.  Audio
 // output buffers are populated with sn76489_get_audio(), so only READY
 // remains.
 
 struct SN76489 {
+	struct part part;
 	_Bool ready;
 };
 
@@ -32,10 +35,6 @@ struct SN76489 {
 // 14318180).  tick indicates time of creation.
 
 struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t tick);
-
-// Free up when done.
-
-void sn76489_free(struct SN76489 *csg);
 
 // Register write.  Current system time required to update 'ready' state.
 

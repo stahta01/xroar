@@ -29,6 +29,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "xalloc.h"
 
+#include "part.h"
 #include "sn76489.h"
 
 // Butterworth IIR, order 3, fs 250kHz, -3dB at 20kHz.  Generated here:
@@ -105,6 +106,8 @@ struct SN76489_private {
 	float yv1, yv2;
 };
 
+static void sn76489_free(struct part *p);
+
 // C integer type-safe delta between two unsigned values that may overflow.
 // Depends on 2's-complement behaviour (guaranteed by C99 spec where types are
 // available).
@@ -115,9 +118,11 @@ static int tick_delta(uint32_t t0, uint32_t t1) {
 }
 
 struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t tick) {
-	struct SN76489_private *csg_ = xmalloc(sizeof(*csg_));
+	struct SN76489_private *csg_ = part_new(sizeof(*csg_));
 	struct SN76489 *csg = &csg_->public;
-	*csg_ = (struct SN76489_private){.public={0}};
+	*csg_ = (struct SN76489_private){0};
+	part_init(&csg->part, "SN76489");
+	csg->part.free = sn76489_free;
 
 	csg->ready = 1;
 	csg_->refrate = refrate >> 4;
@@ -142,8 +147,8 @@ struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t t
 	return csg;
 }
 
-void sn76489_free(struct SN76489 *csg) {
-	free(csg);
+static void sn76489_free(struct part *p) {
+	(void)p;
 }
 
 static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
