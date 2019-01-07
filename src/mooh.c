@@ -77,6 +77,7 @@ struct cart *mooh_new(struct cart_config *cc) {
 
 	if (cc->becker_port) {
 		n->becker = becker_new();
+		part_add_component(&c->part, (struct part *)n->becker, "becker");
 	}
 
 	return c;
@@ -113,10 +114,7 @@ static void mooh_detach(struct cart *c) {
 }
 
 static void mooh_free(struct part *p) {
-	struct mooh *n = (struct mooh *)p;
 	cart_rom_free(p);
-	if (n->becker)
-		becker_free(n->becker);
 }
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

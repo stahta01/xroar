@@ -2,7 +2,7 @@
 
 Becker port support
 
-Copyright 2012-2018 Ciaran Anscomb
+Copyright 2012-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -28,7 +28,6 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 struct becker;
 
 struct becker *becker_new(void);
-void becker_free(struct becker *becker);
 void becker_reset(struct becker *becker);
 uint8_t becker_read_status(struct becker *becker);
 uint8_t becker_read_data(struct becker *becker);

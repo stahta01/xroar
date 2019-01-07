@@ -65,8 +65,6 @@ static void idecart_detach(struct cart *c) {
 static void idecart_free(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
 	cart_rom_free(p);
-	if (ide->becker)
-		becker_free(ide->becker);
 	ide_free(ide->controller);
 }
 
@@ -143,6 +141,7 @@ static void idecart_init(struct idecart *ide) {
 
 	if (cc->becker_port) {
 		ide->becker = becker_new();
+		part_add_component(&c->part, (struct part *)ide->becker, "becker");
 	}
 
 	ide->controller = ide_allocate("ide0");

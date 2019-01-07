@@ -2,7 +2,7 @@
 
 Becker port support
 
-Copyright 2012-2018 Ciaran Anscomb
+Copyright 2012-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -48,6 +48,7 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 
 #include "becker.h"
 #include "logging.h"
+#include "part.h"
 #include "xroar.h"
 
 /* In theory no reponse should be longer than this (though it doesn't actually
@@ -56,6 +57,8 @@ The "becker port" is an IP version of the usually-serial DriveWire protocol.
 #define OUTPUT_BUFFER_SIZE 16
 
 struct becker {
+	struct part part;
+
 	int sockfd;
 	char input_buf[INPUT_BUFFER_SIZE];
 	int input_buf_ptr;
@@ -69,11 +72,15 @@ struct becker {
 	struct log_handle *log_data_out_hex;
 };
 
+static void becker_free(struct part *p);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct becker *becker_new(void) {
-	struct becker *becker = xmalloc(sizeof(*becker));
+	struct becker *becker = part_new(sizeof(*becker));
 	*becker = (struct becker){0};
+	part_init(&becker->part, "becker");
+	becker->part.free = becker_free;
 
 	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
@@ -136,13 +143,13 @@ failed:
 	return NULL;
 }
 
-void becker_free(struct becker *becker) {
+static void becker_free(struct part *p) {
+	struct becker *becker = (struct becker *)p;
 	close(becker->sockfd);
 	if (becker->log_data_in_hex)
 		log_close(&becker->log_data_in_hex);
 	if (becker->log_data_out_hex)
 		log_close(&becker->log_data_out_hex);
-	free(becker);
 }
 
 void becker_reset(struct becker *becker) {

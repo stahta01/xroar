@@ -100,6 +100,7 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 
 	if (cc->becker_port) {
 		d->becker = becker_new();
+		part_add_component(&c->part, (struct part *)d->becker, "becker");
 	}
 	d->fdc = wd279x_new(WD2793);
 	part_add_component(&c->part, (struct part *)d->fdc, "FDC");
@@ -128,10 +129,7 @@ static void rsdos_detach(struct cart *c) {
 }
 
 static void rsdos_free(struct part *p) {
-	struct rsdos *d = (struct rsdos *)p;
 	cart_rom_free(p);
-	if (d->becker)
-		becker_free(d->becker);
 }
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
