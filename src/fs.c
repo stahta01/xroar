@@ -2,7 +2,7 @@
 
 File operations
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -19,11 +19,15 @@ See COPYING.GPL for redistribution conditions.
 
 #define _POSIX_C_SOURCE 200112L
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include "xalloc.h"
 
 #include "fs.h"
 
@@ -134,4 +138,21 @@ int fs_read_vuint31(FILE *fd) {
 		val1 = (val1 << 8) | in;
 	}
 	return ((val0 & mask) << shift) | val1;
+}
+
+char *fs_getcwd(void) {
+	size_t buflen = 4096;
+	char *buf = xmalloc(buflen);
+	while (1) {
+		char *cwd = getcwd(buf, buflen);
+		if (cwd) {
+			return cwd;
+		}
+		if (errno != ERANGE) {
+			free(buf);
+			return NULL;
+		}
+		buflen += 1024;
+		buf = xrealloc(buf, buflen);
+	}
 }

@@ -2,7 +2,7 @@
 
 File operations
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -43,5 +43,9 @@ int fs_read_vuint31(FILE *fd);  // variable-length uint31
  * 28-bit       1110nnnn nnnnnnnn nnnnnnnn nnnnnnnn
  * 31-bit       11110XXX Xnnnnnnn nnnnnnnn nnnnnnnn nnnnnnnn
  */
+
+// Wrap getcwd(), automatically allocating a buffer.  May still return NULL for
+// other reasons, so check errno (check getcwd manpage).
+char *fs_getcwd(void);
 
 #endif
