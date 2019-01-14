@@ -38,7 +38,6 @@ See COPYING.GPL for redistribution conditions.
 #include "crc16.h"
 #include "fs.h"
 #include "logging.h"
-#include "module.h"
 #include "vdisk.h"
 #include "xroar.h"
 
@@ -184,14 +183,8 @@ int vdisk_save(struct vdisk *disk, _Bool force) {
 		// This is the requested behaviour, so success:
 		return 0;
 	}
-	if (disk->filename == NULL) {
-		disk->filename = filereq_module->save_filename(NULL);
-		if (disk->filename == NULL) {
-			 LOG_WARN("No filename given: not writing disk file.\n");
-			 return -1;
-		}
-		disk->filetype = xroar_filetype_by_ext(disk->filename);
-	}
+	// This should never happen:
+	assert(disk->filename != NULL);
 	for (i = 0; dispatch[i].filetype >= 0 && dispatch[i].filetype != disk->filetype; i++);
 	if (dispatch[i].save_func == NULL) {
 		LOG_WARN("No writer for virtual disk file type.\n");
