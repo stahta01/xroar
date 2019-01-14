@@ -717,6 +717,21 @@ sds sdstrim(sds s, const char *cset) {
     return s;
 }
 
+/* MODIFIED.  New function not in original SDSL.  As sdstrim(), but only
+ * operates on the right of the string. */
+sds sdsrtrim(sds s, const char *cset) {
+    size_t len = sdslen(s);
+    char *ep = s + len - 1;
+
+    while (len > 0 && strchr(cset, *ep)) {
+	    ep--;
+	    len--;
+    }
+    s[len] = '\0';
+    sdssetlen(s, len);
+    return s;
+}
+
 /* Turn the string into a smaller (or equal) string containing only the
  * substring specified by the 'start' and 'end' indexes.
  *
