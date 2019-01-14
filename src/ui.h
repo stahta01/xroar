@@ -2,7 +2,7 @@
 
 User-interface modules & interfaces
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -106,7 +106,7 @@ enum ui_action {
 
 struct ui_module {
 	struct module common;
-	FileReqModule * const *filereq_module_list;
+	struct module * const *filereq_module_list;
 	struct module * const *vo_module_list;
 	struct module * const *ao_module_list;
 	struct joystick_module * const *joystick_module_list;

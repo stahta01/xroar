@@ -2,7 +2,7 @@
 
 Null user-interface module
 
-Copyright 2011-2016 Ciaran Anscomb
+Copyright 2011-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -25,13 +25,15 @@ See COPYING.GPL for redistribution conditions.
 #include "ui.h"
 #include "vo.h"
 
-static char *filereq_noop(char const * const *extensions);
-FileReqModule filereq_null_module = {
-	.common = { .name = "null", .description = "No file requester" },
-	.load_filename = filereq_noop, .save_filename = filereq_noop
+static void *filereq_null_new(void *cfg);
+static void filereq_null_free(void *sptr);
+
+struct module filereq_null_module = {
+	.name = "null", .description = "No file requester",
+	.new = filereq_null_new
 };
 
-static FileReqModule * const null_filereq_module_list[] = {
+static struct module * const null_filereq_module_list[] = {
 	&filereq_null_module, NULL
 };
 
@@ -53,7 +55,8 @@ struct ui_module ui_null_module = {
 
 /* */
 
-static char *filereq_noop(char const * const *extensions) {
+static char *filereq_noop(void *sptr, char const * const *extensions) {
+	(void)sptr;
 	(void)extensions;
 	return NULL;
 }
@@ -81,4 +84,19 @@ static void set_state(void *sptr, int tag, int value, const void *data) {
 	(void)tag;
 	(void)value;
 	(void)data;
+}
+
+static void *filereq_null_new(void *cfg) {
+	(void)cfg;
+	struct filereq_interface *frnull = xmalloc(sizeof(*frnull));
+	*frnull = (struct filereq_interface){0};
+	frnull->free = DELEGATE_AS0(void, filereq_null_free, frnull);
+	frnull->load_filename = DELEGATE_AS1(charp, charcpcp, filereq_noop, frnull);
+	frnull->save_filename = DELEGATE_AS1(charp, charcpcp, filereq_noop, frnull);
+	return frnull;
+}
+
+static void filereq_null_free(void *sptr) {
+	struct filereq_interface *frnull = sptr;
+	free(frnull);
 }

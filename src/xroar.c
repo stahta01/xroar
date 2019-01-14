@@ -2,7 +2,7 @@
 
 XRoar - a Dragon/Tandy Coco emulator
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -209,6 +209,7 @@ static struct xroar_state xroar_state = {
 };
 
 static struct ui_interface *xroar_ui_interface;
+static struct filereq_interface *xroar_filereq_interface;
 struct vo_interface *xroar_vo_interface;
 struct ao_interface *xroar_ao_interface;
 
@@ -634,7 +635,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (ui_module->ao_module_list != NULL)
 		ao_module_list = ui_module->ao_module_list;
 	// Select file requester, video & audio modules
-	filereq_module = (FileReqModule *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
+	struct module *filereq_module = (struct module *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
 	struct module *vo_module = module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
 	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
 	ui_joystick_module_list = ui_module->joystick_module_list;
@@ -736,7 +737,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	event_current_tick = 0;
 	/* ... modules */
 	xroar_ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
-	filereq_module = module_init_from_list((struct module * const *)filereq_module_list, (struct module *)filereq_module, NULL);
+	xroar_filereq_interface = module_init(filereq_module, NULL);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
 	}
@@ -886,7 +887,9 @@ void xroar_shutdown(void) {
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL0(xroar_vo_interface->free);
 	}
-	module_shutdown((struct module *)filereq_module);
+	if (xroar_filereq_interface) {
+		DELEGATE_SAFE_CALL0(xroar_filereq_interface->free);
+	}
 	if (xroar_ui_interface) {
 		DELEGATE_SAFE_CALL0(xroar_ui_interface->free);
 	}
@@ -1096,7 +1099,7 @@ void xroar_set_trace(int mode) {
 }
 
 void xroar_new_disk(int drive) {
-	char *filename = filereq_module->save_filename(xroar_disk_exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_disk_exts);
 
 	if (filename == NULL)
 		return;
@@ -1136,7 +1139,7 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 }
 
 void xroar_insert_disk(int drive) {
-	char *filename = filereq_module->load_filename(xroar_disk_exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_disk_exts);
 	xroar_insert_disk_file(drive, filename);
 }
 
@@ -1332,14 +1335,14 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 }
 
 void xroar_load_file(char const * const *exts) {
-	char *filename = filereq_module->load_filename(exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, exts);
 	if (filename) {
 		xroar_load_file_by_type(filename, 0);
 	}
 }
 
 void xroar_run_file(char const * const *exts) {
-	char *filename = filereq_module->load_filename(exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, exts);
 	if (filename) {
 		xroar_load_file_by_type(filename, 1);
 	}
@@ -1550,14 +1553,14 @@ void xroar_set_dos(int dos_type) {
 }
 
 void xroar_save_snapshot(void) {
-	char *filename = filereq_module->save_filename(xroar_snap_exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_snap_exts);
 	if (filename) {
 		write_snapshot(filename);
 	}
 }
 
 void xroar_select_tape_input(void) {
-	char *filename = filereq_module->load_filename(xroar_tape_exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_tape_exts);
 	if (filename) {
 		tape_open_reading(xroar_tape_interface, filename);
 		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
@@ -1570,7 +1573,7 @@ void xroar_eject_tape_input(void) {
 }
 
 void xroar_select_tape_output(void) {
-	char *filename = filereq_module->save_filename(xroar_tape_exts);
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_tape_exts);
 	if (filename) {
 		tape_open_writing(xroar_tape_interface, filename);
 		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);

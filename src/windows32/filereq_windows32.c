@@ -2,7 +2,7 @@
 
 Windows file requester module
 
-Copyright 2005-2016 Ciaran Anscomb
+Copyright 2005-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -36,17 +36,38 @@ See COPYING.GPL for redistribution conditions.
 
 #include "windows32/common_windows32.h"
 
-static char *load_filename(char const * const *extensions);
-static char *save_filename(char const * const *extensions);
+static void *filereq_windows32_new(void *cfg);
 
-FileReqModule filereq_windows32_module = {
-	.common = { .name = "windows32",
-	            .description = "Windows file requester" },
-	.load_filename = load_filename,
-	.save_filename = save_filename
+struct module filereq_windows32_module = {
+	.name = "windows32", .description = "Windows file requester",
+	.new = filereq_windows32_new
 };
 
-static char *filename = NULL;
+struct windows32_filereq_interface {
+	struct filereq_interface public;
+
+	char *filename;
+};
+
+static void filereq_windows32_free(void *sptr);
+static char *load_filename(void *sptr, char const * const *extensions);
+static char *save_filename(void *sptr, char const * const *extensions);
+
+static void *filereq_windows32_new(void *cfg) {
+	(void)cfg;
+	struct windows32_filereq_interface *frw32 = xmalloc(sizeof(*frw32));
+	*frw32 = (struct windows32_filereq_interface){0};
+	frw32->public.free = DELEGATE_AS0(void, filereq_windows32_free, frw32);
+	frw32->public.load_filename = DELEGATE_AS1(charp, charcpcp, load_filename, frw32);
+	frw32->public.save_filename = DELEGATE_AS1(charp, charcpcp, save_filename, frw32);
+	return frw32;
+}
+
+static void filereq_windows32_free(void *sptr) {
+	struct windows32_filereq_interface *frw32 = sptr;
+	free(frw32->filename);
+	free(frw32);
+}
 
 static const char *lpstrFilter =
 	"All\0"             "*.*\0"
@@ -57,7 +78,8 @@ static const char *lpstrFilter =
 	"Snapshots\0"       "*.SNA\0"
 	;
 
-static char *load_filename(char const * const *extensions) {
+static char *load_filename(void *sptr, char const * const *extensions) {
+	struct windows32_filereq_interface *frw32 = sptr;
 	OPENFILENAME ofn;
 	char fn_buf[260];
 	int was_fullscreen;
@@ -81,18 +103,19 @@ static char *load_filename(char const * const *extensions) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
 		| OFN_HIDEREADONLY;
 
-	if (filename)
-		free(filename);
-	filename = NULL;
+	if (frw32->filename)
+		free(frw32->filename);
+	frw32->filename = NULL;
 	if (GetOpenFileName(&ofn)==TRUE) {
-		filename = xstrdup(ofn.lpstrFile);
+		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 1);
-	return filename;
+	return frw32->filename;
 }
 
-static char *save_filename(char const * const *extensions) {
+static char *save_filename(void *sptr, char const * const *extensions) {
+	struct windows32_filereq_interface *frw32 = sptr;
 	OPENFILENAME ofn;
 	char fn_buf[260];
 	int was_fullscreen;
@@ -116,13 +139,13 @@ static char *save_filename(char const * const *extensions) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY
 		| OFN_OVERWRITEPROMPT;
 
-	if (filename)
-		free(filename);
-	filename = NULL;
+	if (frw32->filename)
+		free(frw32->filename);
+	frw32->filename = NULL;
 	if (GetSaveFileName(&ofn)==TRUE) {
-		filename = xstrdup(ofn.lpstrFile);
+		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
 		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 1);
-	return filename;
+	return frw32->filename;
 }

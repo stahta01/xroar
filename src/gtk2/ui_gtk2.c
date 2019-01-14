@@ -71,6 +71,36 @@ static struct module * const gtk2_vo_module_list[] = {
 	NULL
 };
 
+// The GTK+ file-requester module can act standalone, but here we abstract it
+// to pass the UI's top window to its initialiser.
+
+// TODO: query UI module for appropriate interface and then try filereq
+// modules.
+
+static void *filereq_ui_gtk2_new(void *cfg);
+
+struct module filereq_ui_gtk2_module = {
+	.name = "gtk2", .description = "GTK+-2 file requester",
+	.new = filereq_ui_gtk2_new
+};
+extern struct module filereq_gtk2_module;
+extern struct module filereq_cli_module;
+extern struct module filereq_null_module;
+
+static struct module * const gtk2_filereq_module_list[] = {
+	&filereq_ui_gtk2_module,
+#ifdef HAVE_CLI
+	&filereq_cli_module,
+#endif
+	&filereq_null_module,
+	NULL
+};
+
+static void *filereq_ui_gtk2_new(void *cfg) {
+	(void)cfg;
+	return filereq_gtk2_module.new(gtk2_top_window);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *, unsigned);
@@ -114,6 +144,7 @@ struct ui_module ui_gtk2_module = {
 	.common = { .name = "gtk2", .description = "GTK+-2 UI",
                     .new = ui_gtk2_new,
 	},
+	.filereq_module_list = gtk2_filereq_module_list,
 	.vo_module_list = gtk2_vo_module_list,
 	.joystick_module_list = gtk2_js_modlist,
 };

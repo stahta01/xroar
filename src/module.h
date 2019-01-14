@@ -2,7 +2,7 @@
 
 Generic module support
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,6 +20,8 @@ See COPYING.GPL for redistribution conditions.
 
 #include <stdint.h>
 
+#include "delegate.h"
+
 struct joystick_module;
 struct vdisk;
 
@@ -34,14 +36,16 @@ struct module {
 	void (* const shutdown)(void);
 };
 
-typedef struct {
-	struct module common;
-	char *(* const load_filename)(char const * const *extensions);
-	char *(* const save_filename)(char const * const *extensions);
-} FileReqModule;
+typedef DELEGATE_S1(char *, char const * const *) DELEGATE_T1(charp, charcpcp);
 
-extern FileReqModule * const *filereq_module_list;
-extern FileReqModule *filereq_module;
+struct filereq_interface {
+	DELEGATE_T0(void) free;
+	DELEGATE_T1(charp, charcpcp) load_filename;
+	DELEGATE_T1(charp, charcpcp) save_filename;
+};
+
+extern struct module * const *filereq_module_list;
+extern struct filereq_interface *filereq_interface;
 
 void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);

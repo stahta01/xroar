@@ -2,7 +2,7 @@
 
 Generic module support
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -26,12 +26,12 @@ See COPYING.GPL for redistribution conditions.
 
 /**** Default file requester module list ****/
 
-extern FileReqModule filereq_cocoa_module;
-extern FileReqModule filereq_windows32_module;
-extern FileReqModule filereq_gtk2_module;
-extern FileReqModule filereq_cli_module;
-extern FileReqModule filereq_null_module;
-static FileReqModule * const default_filereq_module_list[] = {
+extern struct module filereq_cocoa_module;
+extern struct module filereq_windows32_module;
+extern struct module filereq_gtk2_module;
+extern struct module filereq_cli_module;
+extern struct module filereq_null_module;
+static struct module * const default_filereq_module_list[] = {
 #ifdef HAVE_COCOA
 	&filereq_cocoa_module,
 #endif
@@ -48,8 +48,8 @@ static FileReqModule * const default_filereq_module_list[] = {
 	NULL
 };
 
-FileReqModule * const *filereq_module_list = default_filereq_module_list;
-FileReqModule *filereq_module = NULL;
+struct module * const *filereq_module_list = default_filereq_module_list;
+struct module *filereq_module = NULL;
 
 void module_print_list(struct module * const *list) {
 	int i;
@@ -86,22 +86,18 @@ struct module *module_select_by_arg(struct module * const *list, const char *nam
 void *module_init(struct module *module, void *cfg) {
 	if (!module)
 		return NULL;
-	const char *description = module->description ? module->description : "(unknown)";
-	LOG_DEBUG(1, "Module init: %s\n", description);
+	const char *description = module->description ? module->description : "unknown";
+	LOG_DEBUG(1, "%s: init: %s\n", module->name, description);
 	// New interface?
 	if (module->new) {
 		void *m = module->new(cfg);
 		if (!m) {
-			LOG_DEBUG(1, "Module init failed: %s\n", description);
+			LOG_DEBUG(1, "%s: init failed: %s\n", module->name, description);
 		}
 		return m;
 	}
-	if (!module->init || module->init(cfg)) {
-		module->initialised = 1;
-		return module;
-	}
-	LOG_DEBUG(1, "Module init failed: %s\n", description);
-	return NULL;
+	LOG_ERROR("%s: old module interface called\n", module->name);
+	abort();
 }
 
 void *module_init_from_list(struct module * const *list, struct module *module, void *cfg) {
