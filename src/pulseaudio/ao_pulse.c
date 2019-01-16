@@ -131,7 +131,7 @@ static void *new(void *cfg) {
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);
-	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, fragment_nframes, nfragments * fragment_nframes, (nfragments * fragment_nframes * 1000) / rate);
+	LOG_DEBUG(1, "\t%u frags * %d frames/frag = %d frames buffer (%dms)\n", nfragments, fragment_nframes, nfragments * fragment_nframes, (nfragments * fragment_nframes * 1000) / rate);
 	return aopulse;
 
 failed:
