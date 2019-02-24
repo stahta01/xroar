@@ -2,7 +2,7 @@
 
 Multi-Pak Interface (MPI) support
 
-Copyright 2014-2015 Ciaran Anscomb
+Copyright 2014-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -24,5 +24,6 @@ void mpi_switch_slot(struct cart *c, unsigned slot);
 
 void mpi_set_initial(int slot);
 void mpi_set_cart(int slot, const char *name);
+void mpi_shutdown(void);
 
 #endif

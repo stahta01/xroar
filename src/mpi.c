@@ -2,7 +2,7 @@
 
 Multi-Pak Interface (MPI) support
 
-Copyright 2014-2018 Ciaran Anscomb
+Copyright 2014-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -348,4 +348,15 @@ void mpi_set_cart(int slot, const char *name) {
 		free(slot_cart_name[slot]);
 	}
 	slot_cart_name[slot] = xstrdup(name);
+}
+
+// parts management frees attached carts, but for now there's still some
+// housekeeping to do:
+void mpi_shutdown(void) {
+	for (int i = 0; i < 4; i++) {
+		if (slot_cart_name[i]) {
+			free(slot_cart_name[i]);
+			slot_cart_name[i] = NULL;
+		}
+	}
 }

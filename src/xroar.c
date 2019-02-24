@@ -879,6 +879,7 @@ void xroar_shutdown(void) {
 	}
 	joystick_shutdown();
 	cart_shutdown();
+	mpi_shutdown();
 	machine_shutdown();
 	xroar_machine_config = NULL;
 	if (xroar_ao_interface) {
