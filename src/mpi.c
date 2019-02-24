@@ -26,8 +26,9 @@ See COPYING.GPL for redistribution conditions.
 #include "becker.h"
 #include "cart.h"
 #include "delegate.h"
-#include "mpi.h"
 #include "logging.h"
+#include "mpi.h"
+#include "part.h"
 #include "xroar.h"
 
 static struct cart *mpi_new(struct cart_config *);
@@ -73,7 +74,7 @@ static void set_halt(void *, _Bool);
 
 static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
-static void mpi_free(struct cart *c);
+static void mpi_free(struct part *p);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_reset(struct cart *c);
@@ -89,14 +90,16 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	}
 	mpi_active = 1;
 
-	struct mpi *m = xmalloc(sizeof(*m));
+	struct mpi *m = part_new(sizeof(*m));
+	*m = (struct mpi){0};
 	struct cart *c = &m->cart;
+	part_init(&c->part, "mpi");
+	c->part.free = mpi_free;
 
 	c->config = cc;
 
 	c->attach = mpi_attach;
 	c->detach = mpi_detach;
-	c->free = mpi_free;
 
 	c->read = mpi_read;
 	c->write = mpi_write;
@@ -116,7 +119,9 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	m->firq_state = 0;
 	m->nmi_state = 0;
 	m->halt_state = 0;
+	char id[] = { 's', 'l', 'o', 't', '0', 0 };
 	for (int i = 0; i < 4; i++) {
+		*(id+4) = '0' + i;
 		m->slot[i].mpi = m;
 		m->slot[i].id = i;
 		m->slot[i].cart = NULL;
@@ -127,6 +132,7 @@ static struct cart *mpi_new(struct cart_config *cc) {
 				c2->signal_nmi = DELEGATE_AS1(void, bool, set_nmi, &m->slot[i]);
 				c2->signal_halt = DELEGATE_AS1(void, bool, set_halt, &m->slot[i]);
 				m->slot[i].cart = c2;
+				part_add_component(&c->part, (struct part *)c2, id);
 			}
 		}
 	}
@@ -167,14 +173,8 @@ static void mpi_detach(struct cart *c) {
 	}
 }
 
-static void mpi_free(struct cart *c) {
-	struct mpi *m = (struct mpi *)c;
-	for (int i = 0; i < 4; i++) {
-		if (m->slot[i].cart && m->slot[i].cart->free) {
-			m->slot[i].cart->free(m->slot[i].cart);
-		}
-	}
-	free(m);
+static void mpi_free(struct part *p) {
+	(void)p;
 	mpi_active = 0;
 }
 
