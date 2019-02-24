@@ -93,7 +93,6 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	struct cart *c = &m->cart;
 
 	c->config = cc;
-	cart_rom_init(c);
 
 	c->attach = mpi_attach;
 	c->detach = mpi_detach;
@@ -102,6 +101,11 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	c->read = mpi_read;
 	c->write = mpi_write;
 	c->reset = mpi_reset;
+
+	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
+	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
+	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
+	c->EXTMEM = 0;
 
 	c->has_interface = mpi_has_interface;
 	c->attach_interface = mpi_attach_interface;
