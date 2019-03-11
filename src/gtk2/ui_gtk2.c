@@ -391,7 +391,7 @@ static GtkActionEntry const ui_entries[] = {
 	/* Top level */
 	{ .name = "FileMenuAction", .label = "_File" },
 	{ .name = "ViewMenuAction", .label = "_View" },
-	{ .name = "HardwareMenuAction", .label = "_Hardware" },
+	{ .name = "HardwareMenuAction", .label = "H_ardware" },
 	{ .name = "ToolMenuAction", .label = "_Tool" },
 	{ .name = "HelpMenuAction", .label = "_Help" },
 	/* File */
