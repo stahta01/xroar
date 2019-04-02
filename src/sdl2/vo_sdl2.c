@@ -237,6 +237,20 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 		return -1;
 	}
 
+	if (log_level >= 3) {
+		SDL_RendererInfo renderer_info;
+		if (SDL_GetRendererInfo(vosdl->renderer, &renderer_info) == 0) {
+			LOG_PRINT("SDL_GetRendererInfo()\n");
+			LOG_PRINT("\tname = %s\n", renderer_info.name);
+			LOG_PRINT("\tflags = 0x%x\n", renderer_info.flags);
+			for (unsigned i = 0; i < renderer_info.num_texture_formats; i++) {
+				LOG_PRINT("\ttexture_formats[%u] = %s\n", i, SDL_GetPixelFormatName(renderer_info.texture_formats[i]));
+			}
+			LOG_PRINT("\tmax_texture_width = %d\n", renderer_info.max_texture_width);
+			LOG_PRINT("\tmax_texture_height = %d\n", renderer_info.max_texture_height);
+		}
+	}
+
 	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, TEXTURE_WIDTH, 240);
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
