@@ -4,6 +4,7 @@ Version 0.36, unreleased
   * Fix SAM S output in map type 1 [Pere Serrat]
   * Work around Windows audio failure when 5.1 is available [Gerald Stefan]
   * Cleaner PulseAudio output
+  * Try harder to find working SDL2 audio format
 
 Version 0.35, Fri Jun 27 2018
 

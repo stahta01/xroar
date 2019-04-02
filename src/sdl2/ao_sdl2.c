@@ -145,7 +145,6 @@ static void *new(void *cfg) {
 		desired.format = AUDIO_S16LSB;
 		break;
 	case SOUND_FMT_S16_HE:
-	default:
 		desired.format = AUDIO_S16SYS;
 		break;
 	case SOUND_FMT_S16_SE:
@@ -155,14 +154,37 @@ static void *new(void *cfg) {
 			desired.format = AUDIO_S16LSB;
 		break;
 	case SOUND_FMT_FLOAT:
+	default:
 		desired.format = AUDIO_F32SYS;
 		break;
 	}
 
-	// Call once not allowing any changes (try best to get something we can use)
-	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, 0);
+	// First allow format changes, if format not explicitly specified
+	int allowed_changes = 0;
+	if (xroar_cfg.ao_format == SOUND_FMT_NULL) {
+		allowed_changes = SDL_AUDIO_ALLOW_FORMAT_CHANGE;
+	}
+	aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, allowed_changes);
+
+	// Check the format is supported
 	if (aosdl->device == 0) {
-		// If failed, allow changes, check that it's something sensible later
+		LOG_DEBUG(3, "First open audio failed: %s\n", SDL_GetError());
+	} else {
+		switch (aosdl->audiospec.format) {
+		case AUDIO_U8: case AUDIO_S8:
+		case AUDIO_S16LSB: case AUDIO_S16MSB:
+		case AUDIO_F32SYS:
+			break;
+		default:
+			LOG_DEBUG(3, "First open audio returned unknown format: retrying\n");
+			SDL_CloseAudioDevice(aosdl->device);
+			aosdl->device = 0;
+			break;
+		}
+	}
+
+	// One last try, allowing any changes.  Check the format is sensible later.
+	if (aosdl->device == 0) {
 		aosdl->device = SDL_OpenAudioDevice(xroar_cfg.ao_device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
 		if (aosdl->device == 0) {
 			LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
