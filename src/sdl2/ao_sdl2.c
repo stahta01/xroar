@@ -30,6 +30,7 @@ See COPYING.GPL for redistribution conditions.
 #include <SDL.h>
 #include <SDL_thread.h>
 
+#include "c-strcase.h"
 #include "xalloc.h"
 
 #include "ao.h"
@@ -82,10 +83,42 @@ static void *new(void *cfg) {
 			return NULL;
 		}
 	}
+
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
 		LOG_ERROR("Failed to initialise SDL audio\n");
 		return NULL;
 	}
+
+	const char *driver_name = SDL_GetCurrentAudioDriver();
+
+#ifdef WINDOWS32
+	// Avoid using wasapi backend - it's buggy!
+	if (c_strcasecmp("wasapi", driver_name) == 0) {
+		_Bool have_driver = 0;
+		for (int i = 0; i < SDL_GetNumAudioDrivers(); i++) {
+			driver_name = SDL_GetAudioDriver(i);
+			if (c_strcasecmp("wasapi", driver_name) != 0) {
+				if (SDL_AudioInit(driver_name) == 0) {
+					have_driver = 1;
+					break;
+				}
+			}
+		}
+		if (!have_driver) {
+			driver_name = "wasapi";
+			if (SDL_AudioInit(driver_name) == 0) {
+				LOG_WARN("Fallback to known problematic wasapi backend\n");
+			} else {
+				// shouldn't happen
+				LOG_ERROR("Failed to initialise fallback SDL audio\n");
+				SDL_QuitSubSystem(SDL_INIT_AUDIO);
+				return NULL;
+			}
+		}
+	}
+#endif
+
+	LOG_DEBUG(3, "SDL_GetCurrentAudioDriver(): %s\n", driver_name);
 
 	struct ao_sdl2_interface *aosdl = xmalloc(sizeof(*aosdl));
 	*aosdl = (struct ao_sdl2_interface){0};
