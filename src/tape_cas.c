@@ -1096,7 +1096,18 @@ static void write_cue_data(struct tape_cas *cas) {
 
 		case cue_silence:
 			{
-				int ms = IDIV_ROUND(entry->nsamples, SAMPLES_PER_MS);
+				int nsamples = entry->nsamples;
+
+				// coalesce silence
+				while (iter->next) {
+					struct cue_entry *nentry = iter->next->data;
+					if (nentry->type != cue_silence)
+						break;
+					iter = iter->next;
+					nsamples += nentry->nsamples;
+				}
+
+				int ms = IDIV_ROUND(nsamples, SAMPLES_PER_MS);
 				fs_write_uint8(fd, CUE_SILENCE);
 				fs_write_uint8(fd, 2);
 				fs_write_uint16(fd, ms);
