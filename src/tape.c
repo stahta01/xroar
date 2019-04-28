@@ -473,7 +473,7 @@ void tape_close_writing(struct tape_interface *ti) {
 		return;
 	if (tip->tape_rewrite) {
 		tape_byte_out(ti->tape_output, 0x55);
-		tape_byte_out(ti->tape_output, 0x55);
+		tape_sample_out(ti->tape_output, 0x7c, EVENT_MS(200));
 	}
 	if (ti->tape_output) {
 		event_dequeue(&tip->flush_event);
@@ -970,7 +970,11 @@ static void rewrite_bitin(void *sptr) {
 static void rewrite_tape_on(void *sptr) {
 	/* CSRDON */
 	struct tape_interface_private *tip = sptr;
+	struct tape_interface *ti = &tip->public;
 	/* desync with long leader */
+	if (tip->tape_rewrite && ti->tape_output) {
+		tape_sample_out(ti->tape_output, 0x7c, EVENT_MS(500));
+	}
 	tape_desync(tip, 256);
 }
 
