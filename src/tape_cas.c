@@ -561,7 +561,7 @@ static int cas_pulse_in(struct tape *t, int *pulse_width) {
 			}
 			if (entry->type == cue_silence) {
 				int remain = (entry->time + entry->nsamples) - t->offset;
-				int wait = (remain < SAMPLES_PER_MS) ? remain : SAMPLES_PER_MS;
+				int wait = (remain < (CAS_RATE/100)) ? remain : (CAS_RATE/100);
 				*pulse_width = wait * TICKS_PER_SAMPLE;
 				t->offset += wait;
 				return 1;
