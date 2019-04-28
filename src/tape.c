@@ -845,49 +845,86 @@ static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
 // Replicates the ROM routine that detects leaders.  Waits for two
 // complementary bits in sequence.  Also detects inverted phase.
 
+enum {
+	L_BDED,
+	L_BDEF,
+	L_BDF3,
+	L_BDFF,
+	L_BE03,
+	L_BE0D
+};
+
 static void sync_leader(struct tape_interface_private *tip) {
 	int bcount = tip->is_dragon ? 0x83 : 0x82;
-	int phase;
-L_BDED:
-	BSR(tip, tape_wait_p0_p1);
-	if (tip->in_pulse < 0) return;
-L_BDEF:
-	BSR(tip, tape_cmp_p1_1200);
-	if (tip->in_pulse < 0) return;
-	if (BHI(tip))
-		goto L_BDFF;  // BHI L_BDFF
-L_BDF3:
-	BSR(tip, tape_cmp_p0_1200);
-	if (tip->in_pulse < 0) return;
-	if (BLO(tip))
-		goto L_BE03; //  BLO L_BE03
-	INC(tip, bcount);
-	CPUSKIP(tip, 4);  // LDA <$83
-	CPUSKIP(tip, 2);  // CMPA #$60
-	phase = tip->machine->read_byte(tip->machine, bcount);
-	op_sub(tip->cpu, phase, 0x60);
-	BRA(tip);  // BRA L_BE0D
-	goto L_BE0D;
-L_BDFF:
-	BSR(tip, tape_cmp_p0_1200);
-	if (tip->in_pulse < 0) return;
-	if (BHI(tip))  // BHI L_BDEF
-		goto L_BDEF;
-L_BE03:
-	BSR(tip, tape_cmp_p1_1200);
-	if (tip->in_pulse < 0) return;
-	if (BCS(tip))  // BCS L_BDF3
-		goto L_BDF3;
-	DEC(tip, bcount);
-	CPUSKIP(tip, 4);  // LDA <$83
-	CPUSKIP(tip, 2);  // ADDA #$60
-	phase = op_add(tip->cpu, tip->machine->read_byte(tip->machine, bcount), 0x60);
-L_BE0D:
-	if (BNE(tip))  // BNE L_BDED
-		goto L_BDED;
-	CPUSKIP(tip, 4);  // STA <$84
-	tip->machine->write_byte(tip->machine, 0x84, phase);
-	RTS(tip);
+	int phase = 0;
+	int state = L_BDED;
+	_Bool done = 0;
+
+	while (!done && tip->in_pulse >= 0) {
+		switch (state) {
+		case L_BDED:
+			BSR(tip, tape_wait_p0_p1);
+			state = L_BDEF;  // fall through to L_BDEF
+			break;
+
+		case L_BDEF:
+			BSR(tip, tape_cmp_p1_1200);
+			if (BHI(tip)) {
+				state = L_BDFF;  // BHI L_BDFF
+				break;
+			}
+			state = L_BDF3;  // fall through to L_BDF3
+			break;
+
+		case L_BDF3:
+			BSR(tip, tape_cmp_p0_1200);
+			if (BLO(tip)) {
+				state = L_BE03;  // BLO L_BE03
+				break;
+			}
+			INC(tip, bcount);
+			CPUSKIP(tip, 4);  // LDA <$83
+			CPUSKIP(tip, 2);  // CMPA #$60
+			phase = tip->machine->read_byte(tip->machine, bcount);
+			op_sub(tip->cpu, phase, 0x60);
+			BRA(tip);
+			state = L_BE0D;  // BRA L_BE0D
+			break;
+
+		case L_BDFF:
+			BSR(tip, tape_cmp_p0_1200);
+			if (BHI(tip)) {
+				state = L_BDEF;  // BHI L_BDEF
+				break;
+			}
+			state = L_BE03;  // fall through to L_BE03
+			break;
+
+		case L_BE03:
+			BSR(tip, tape_cmp_p1_1200);
+			if (BCS(tip)) {
+				state = L_BDF3;  // BCS L_BDF3
+				break;
+			}
+			DEC(tip, bcount);
+			CPUSKIP(tip, 4);  // LDA <$83
+			CPUSKIP(tip, 2);  // ADDA #$60
+			phase = op_add(tip->cpu, tip->machine->read_byte(tip->machine, bcount), 0x60);
+			state = L_BE0D;
+			break;
+
+		case L_BE0D:
+			if (BNE(tip)) {
+				state = L_BDED;  // BNE L_BDED
+				break;
+			}
+			CPUSKIP(tip, 4);  // STA <$84
+			tip->machine->write_byte(tip->machine, 0x84, phase);
+			RTS(tip);
+			done = 1;
+			break;
+		}
+	}
 }
 
 static void tape_wait_2p(struct tape_interface_private *tip) {
