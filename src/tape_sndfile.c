@@ -41,7 +41,7 @@ struct tape_sndfile {
 	sf_count_t block_length;
 	sf_count_t cursor;
 	int cycles_to_write;
-	enum tape_channel channel_mode;
+	float pan;
 };
 
 static void sndfile_close(struct tape *t);
@@ -52,14 +52,14 @@ static long sndfile_ms_to(struct tape const *t, int ms);
 static int sndfile_pulse_in(struct tape *t, int *pulse_width);
 static int sndfile_sample_out(struct tape *t, uint8_t sample, int length);
 static void sndfile_motor_off(struct tape *t);
-static void sndfile_set_channel_mode(struct tape *, enum tape_channel);
+static void sndfile_set_panning(struct tape *, float pan);
 
 struct tape_module tape_sndfile_module = {
 	.close = sndfile_close, .tell = sndfile_tell, .seek = sndfile_seek,
 	.to_ms = sndfile_to_ms, .ms_to = sndfile_ms_to,
 	.pulse_in = sndfile_pulse_in, .sample_out = sndfile_sample_out,
 	.motor_off = sndfile_motor_off,
-	.set_channel_mode = sndfile_set_channel_mode,
+	.set_panning = sndfile_set_panning,
 };
 
 struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate) {
@@ -102,7 +102,7 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 	sndfile->block = xmalloc(BLOCK_LENGTH * sizeof(*sndfile->block) * sndfile->info.channels);
 	sndfile->block_length = 0;
 	sndfile->cursor = 0;
-	sndfile->channel_mode = tape_channel_mix;
+	sndfile->pan = 0.5;
 
 	// find size
 	long size = sf_seek(sndfile->fd, 0, SEEK_END);
@@ -167,26 +167,7 @@ static sf_count_t read_sample(struct tape_sndfile *sndfile, float *s) {
 	if (sndfile->info.channels == 2) {
 		float s0 = sndfile->block[sndfile->cursor * 2];
 		float s1 = sndfile->block[sndfile->cursor * 2 + 1];
-		switch (sndfile->channel_mode) {
-		case tape_channel_left:
-			*s = s0;
-			break;
-		case tape_channel_right:
-			*s = s1;
-			break;
-		case tape_channel_mix: default:
-			{
-				float f0 = s0 / 32767.;
-				float f1 = s1 / 32767.;
-				float ftmp = (f0 + f1) / 1.414;
-				if (ftmp > 1.0)
-					ftmp = 1.0;
-				if (ftmp < -1.0)
-					ftmp = -1.0;
-				*s = ftmp * 32767;
-			}
-			break;
-		}
+		*s = (s0 * (1.0 - sndfile->pan)) + (s1 * sndfile->pan);
 	} else {
 		*s = sndfile->block[sndfile->cursor * sndfile->info.channels];
 	}
@@ -266,7 +247,7 @@ static void sndfile_motor_off(struct tape *t) {
 	}
 }
 
-static void sndfile_set_channel_mode(struct tape *t, enum tape_channel mode) {
+static void sndfile_set_panning(struct tape *t, float pan) {
 	struct tape_sndfile *sndfile = t->data;
-	sndfile->channel_mode = mode;
+	sndfile->pan = pan;
 }

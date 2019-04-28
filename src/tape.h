@@ -44,12 +44,6 @@ struct tape_interface {
 
 struct tape_module;
 
-enum tape_channel {
-	tape_channel_mix,
-	tape_channel_left,
-	tape_channel_right
-};
-
 struct tape {
 	struct tape_module *module;
 	struct tape_interface *tape_interface;
@@ -69,7 +63,7 @@ struct tape_module {
 	int (* const pulse_in)(struct tape *t, int *pulse_width);
 	int (* const sample_out)(struct tape *t, uint8_t sample, int length);
 	void (* const motor_off)(struct tape *t);
-	void (* const set_channel_mode)(struct tape *, enum tape_channel);
+	void (* const set_panning)(struct tape *, float pan);  // 0.0 (L) .. 1.0 (R)
 };
 
 #define tape_close(t) (t)->module->close(t)

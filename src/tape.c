@@ -420,8 +420,8 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		return -1;
 #endif
 	}
-	if (ti->tape_input->module->set_channel_mode)
-		ti->tape_input->module->set_channel_mode(ti->tape_input, xroar_cfg.tape_channel_mode);
+	if (ti->tape_input->module->set_panning)
+		ti->tape_input->module->set_panning(ti->tape_input, xroar_cfg.tape_pan);
 
 	tape_desync(tip, 256);
 	tape_update_motor(ti, tip->motor);
