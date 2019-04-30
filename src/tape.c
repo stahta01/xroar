@@ -64,9 +64,15 @@ struct tape_interface_private {
 	uint8_t last_tape_output;
 	_Bool motor;
 
+	// Whether a sync byte has been detected yet.  If false, we're still
+	// reading the leader.
 	_Bool rewrite_have_sync;
+	// Amount of leader bytes to write when the next sync byte is detected
 	int rewrite_leader_count;
+	// Track number of bits written and keep things byte-aligned
 	int rewrite_bit_count;
+	// Track the fractional sample part when rewriting to tape
+	int rewrite_sremain;
 
 	struct event waggle_event;
 	struct event flush_event;
