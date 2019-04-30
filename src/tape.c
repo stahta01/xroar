@@ -73,6 +73,9 @@ struct tape_interface_private {
 	int rewrite_bit_count;
 	// Track the fractional sample part when rewriting to tape
 	int rewrite_sremain;
+	// Was the last thing rewritten silence?  If so, any subsequent motor
+	// events won't trigger a trailer byte.
+	_Bool rewrite_silence;
 
 	struct event waggle_event;
 	struct event flush_event;
@@ -154,6 +157,7 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
 	tip->rewrite_leader_count = 256;
+	tip->rewrite_silence = 1;
 
 	tape_interface_disconnect_machine(ti);
 
@@ -250,27 +254,58 @@ static int tape_byte_in(struct tape *t) {
 	return byte;
 }
 
-/* Tape waveform is similar to the one in ROM, but higher precision, offset
- * slightly, with peaks reduced. */
+// Precalculated reasonably high resolution half sine wave.  Slightly offset so
+// that there's always a zero crossing.
 
-static uint8_t const bit_out_waveform[] = {
-	0x82, 0x97, 0xab, 0xbd, 0xce, 0xdc, 0xe8, 0xf0,
-	0xf5, 0xf6, 0xf4, 0xee, 0xe5, 0xd9, 0xca, 0xb9,
-	0xa6, 0x92, 0x7e, 0x69, 0x55, 0x43, 0x32, 0x24,
-	0x18, 0x10, 0x0b, 0x0a, 0x0c, 0x12, 0x1b, 0x27,
-	0x36, 0x47, 0x5a, 0x6e
+static const double half_sin[64] = {
+	0.074, 0.122, 0.171, 0.219, 0.267, 0.314, 0.360, 0.405,
+	0.450, 0.493, 0.535, 0.576, 0.615, 0.653, 0.690, 0.724,
+	0.757, 0.788, 0.818, 0.845, 0.870, 0.893, 0.914, 0.933,
+	0.950, 0.964, 0.976, 0.985, 0.992, 0.997, 1.000, 1.000,
+	0.997, 0.992, 0.985, 0.976, 0.964, 0.950, 0.933, 0.914,
+	0.893, 0.870, 0.845, 0.818, 0.788, 0.757, 0.724, 0.690,
+	0.653, 0.615, 0.576, 0.535, 0.493, 0.450, 0.405, 0.360,
+	0.314, 0.267, 0.219, 0.171, 0.122, 0.074, 0.025, -0.025
 };
+
+// Silence is close to zero, but held just over for half the duration, then
+// just under for the rest.  This way, the first bit of any subsequent leader
+// is recognised in its entirety if processed further.
+
+static void write_silence(struct tape *t, int duration) {
+	tape_sample_out(t, 0x81, duration / 2);
+	tape_sample_out(t, 0x7f, duration / 2);
+}
+
+static void write_pulse(struct tape *t, int pulse_width, double scale) {
+	struct tape_interface *ti = t->tape_interface;
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	for (int i = 0; i < 64; i++) {
+		unsigned sr = tip->rewrite_sremain + pulse_width;
+		unsigned nticks = sr / 64;
+		tip->rewrite_sremain = sr - (nticks * 64);
+		int sample = (half_sin[i] * scale * 128.) + 128;
+		tape_sample_out(t, sample, nticks);
+	}
+}
 
 static void tape_bit_out(struct tape *t, int bit) {
 	if (!t) return;
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	int sample_length = bit ? 176 : 352;
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(bit_out_waveform); i++) {
-		tape_sample_out(t, bit_out_waveform[i], sample_length);
+	// Magic numbers?  These are the pulse widths (in SAM cycles) that fall
+	// in the middle of what is recognised by the ROM read routines, and as
+	// such should prove to be the most robust.
+	if (bit) {
+		write_pulse(t, 3984, 0.7855);
+		write_pulse(t, 2992, -0.7855);
+	} else {
+		write_pulse(t, 6896, 0.7855);
+		write_pulse(t, 5904, -0.7855);
 	}
 	tip->rewrite_bit_count = (tip->rewrite_bit_count + 1) & 7;
 	tip->last_tape_output = 0;
+	tip->rewrite_silence = 0;
 }
 
 static void tape_byte_out(struct tape *t, int byte) {
@@ -473,6 +508,7 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 
 	tape_update_motor(ti, tip->motor);
 	tip->rewrite_bit_count = 0;
+	tip->rewrite_silence = 1;
 	LOG_DEBUG(1, "Tape: Attached '%s' for writing.\n", filename);
 	return 0;
 }
@@ -482,8 +518,13 @@ void tape_close_writing(struct tape_interface *ti) {
 	if (!ti->tape_output)
 		return;
 	if (tip->tape_rewrite) {
-		tape_byte_out(ti->tape_output, 0x55);
-		tape_sample_out(ti->tape_output, 0x7c, EVENT_MS(200));
+		// Writes a trailing byte where appropriate
+		tape_desync(tip, 1);
+		// Ensure the tape ends with a short duration of silence
+		if (!tip->rewrite_silence) {
+			write_silence(ti->tape_output, EVENT_MS(200));
+			tip->rewrite_silence = 1;
+		}
 	}
 	if (ti->tape_output) {
 		event_dequeue(&tip->flush_event);
@@ -1033,8 +1074,8 @@ static void tape_desync(struct tape_interface_private *tip, int leader) {
 		while (tip->rewrite_bit_count) {
 			tape_bit_out(ti->tape_output, ~tip->rewrite_bit_count & 1);
 		}
-		// one byte of trailer before any silence
-		if (leader > 0) {
+		// one byte of trailer before any silence (but not following silence)
+		if (leader > 0 && !tip->rewrite_silence) {
 			tape_byte_out(ti->tape_output, 0x55);
 			leader--;
 		}
@@ -1081,10 +1122,12 @@ static void rewrite_tape_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
 	/* desync with long leader */
-	if (tip->tape_rewrite && ti->tape_output) {
-		tape_sample_out(ti->tape_output, 0x7c, EVENT_MS(500));
-	}
 	tape_desync(tip, 256);
+	if (tip->tape_rewrite && ti->tape_output) {
+		tape_sample_out(ti->tape_output, 0x81, EVENT_MS(250));
+		tape_sample_out(ti->tape_output, 0x7f, EVENT_MS(250));
+		tip->rewrite_silence = 1;
+	}
 }
 
 // When finished reading a block, flag the stream as desynced expecting a short
