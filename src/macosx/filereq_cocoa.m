@@ -23,46 +23,73 @@ See COPYING.GPL for redistribution conditions.
 
 #include "module.h"
 
-static char *load_filename(char const * const *extensions);
-static char *save_filename(char const * const *extensions);
+static void *filereq_cocoa_new(void *cfg);
 
-FileReqModule filereq_cocoa_module = {
-	.common = { .name = "cocoa", .description = "Cocoa file requester" },
-	.load_filename = load_filename,
-	.save_filename = save_filename
+struct module filereq_cocoa_module = {
+	.name = "cocoa", .description = "Cocoa file requester",
+	.new = filereq_cocoa_new
 };
 
 extern int cocoa_super_all_keys;
-static char *filename = NULL;
+
+struct cocoa_filereq_interface {
+	struct filereq_interface public;
+
+	char *filename;
+};
+
+static void filereq_cocoa_free(void *sptr);
+static char *load_filename(void *sptr, char const * const *extensions);
+static char *save_filename(void *sptr, char const * const *extensions);
+
+static void *filereq_cocoa_new(void *cfg) {
+	(void)cfg;
+	struct cocoa_filereq_interface *frcocoa = xmalloc(sizeof(*frcocoa));
+	*frcocoa = (struct cocoa_filereq_interface){0};
+	frcocoa->public.free = DELEGATE_AS0(void, filereq_cocoa_free, frcocoa);
+	frcocoa->public.load_filename = DELEGATE_AS1(charp, charcpcp, load_filename, frcocoa);
+	frcocoa->public.save_filename = DELEGATE_AS1(charp, charcpcp, save_filename, frcocoa);
+	return frcocoa;
+}
+
+static void filereq_cocoa_free(void *sptr) {
+	struct cocoa_filereq_interface *frcocoa = sptr;
+	if (frcocoa->filename) {
+		free(frcocoa->filename);
+	}
+	free(frcocoa);
+}
 
 /* Assuming filenames are UTF8 strings seems to do the job */
 
-static char *load_filename(char const * const *extensions) {
+static char *load_filename(void *sptr, char const * const *extensions) {
+	struct cocoa_filereq_interface *frcocoa = sptr;
 	NSOpenPanel *dialog = [NSOpenPanel openPanel];
 	(void)extensions;
 	cocoa_super_all_keys = 1;
-	if (filename) {
-		free(filename);
-		filename = NULL;
+	if (frcocoa->filename) {
+		free(frcocoa->filename);
+		frcocoa->filename = NULL;
 	}
 	if ([dialog runModal] == NSFileHandlingPanelOKButton) {
-		filename = xstrdup([[[[dialog URLs] objectAtIndex:0] path] UTF8String]);
+		frcocoa->filename = xstrdup([[[[dialog URLs] objectAtIndex:0] path] UTF8String]);
 	}
 	cocoa_super_all_keys = 0;
-	return filename;
+	return frcocoa->filename;
 }
 
-static char *save_filename(char const * const *extensions) {
+static char *save_filename(void *sptr, char const * const *extensions) {
+	struct cocoa_filereq_interface *frcocoa = sptr;
 	NSSavePanel *dialog = [NSSavePanel savePanel];
 	(void)extensions;
 	cocoa_super_all_keys = 1;
-	if (filename) {
-		free(filename);
-		filename = NULL;
+	if (frcocoa->filename) {
+		free(frcocoa->filename);
+		frcocoa->filename = NULL;
 	}
 	if ([dialog runModal] == NSFileHandlingPanelOKButton) {
-		filename = xstrdup([[[dialog URL] path] UTF8String]);
+		frcocoa->filename = xstrdup([[[dialog URL] path] UTF8String]);
 	}
 	cocoa_super_all_keys = 0;
-	return filename;
+	return frcocoa->filename;
 }
