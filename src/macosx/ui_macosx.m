@@ -36,6 +36,7 @@ See COPYING.GPL for redistribution conditions.
 //#import <AppKit/AppKit.h>
 
 #include "slist.h"
+#include "xalloc.h"
 
 #include "logging.h"
 #include "cart.h"
@@ -312,7 +313,7 @@ int cocoa_super_all_keys = 0;
 	/* Audio: */
 	case TAG_FAST_SOUND:
 		is_fast_sound = !is_fast_sound;
-		machine_set_fast_sound(is_fast_sound);
+		xroar_set_fast_sound(0, is_fast_sound);
 		break;
 
 	/* Keyboard: */
@@ -1054,12 +1055,12 @@ static void update_cartridge_menu(void) {
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	struct slist *iter;
-	struct cart *machine_cart = machine_get_cart();
+	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
 	while ([cartridge_menu numberOfItems] > 0)
 		[cartridge_menu removeItem:[cartridge_menu itemAtIndex:0]];
 	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		if (machine_cart && cc == machine_cart->config)
+		if (cart && cc == cart->config)
 			current_cartridge = TAG_CARTRIDGE | cc->id;
 		NSString *description = [[NSString alloc] initWithUTF8String:cc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
@@ -1101,8 +1102,8 @@ static void ui_macosx_set_state(void *sptr, int tag, int value, const void *data
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			set_state(ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			set_state(ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			ui_macosx_set_state(sptr, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			ui_macosx_set_state(sptr, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 
