@@ -98,7 +98,7 @@ enum {
 	TAG_JOY_SWAP,
 };
 
-@interface SDLMain : NSObject
+@interface SDLMain : NSObject <NSApplicationDelegate>
 @end
 
 /* For some reaon, Apple removed setAppleMenu from the headers in 10.4, but the
@@ -193,8 +193,8 @@ int cocoa_super_all_keys = 0;
 @implementation SDLApplication
 
 - (void)sendEvent:(NSEvent *)anEvent {
-	if (NSKeyDown == [anEvent type] || NSKeyUp == [anEvent type]) {
-		if (cocoa_super_all_keys || ([anEvent modifierFlags] & NSCommandKeyMask))
+	if (NSEventTypeKeyDown == [anEvent type] || NSEventTypeKeyUp == [anEvent type]) {
+		if (cocoa_super_all_keys || ([anEvent modifierFlags] & NSEventModifierFlagCommand))
 			[super sendEvent:anEvent];
 	} else {
 		[super sendEvent:anEvent];
@@ -443,7 +443,7 @@ static void setApplicationMenu(void) {
 	[apple_menu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
 
 	item = (NSMenuItem *)[apple_menu addItemWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
-	[item setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
+	[item setKeyEquivalentModifierMask:(NSEventModifierFlagOption|NSEventModifierFlagCommand)];
 
 	[apple_menu addItemWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""];
 
@@ -558,7 +558,7 @@ static void setup_file_menu(void) {
 
 		tmp = [NSString stringWithFormat:@"New Disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:key1];
-		[item setKeyEquivalentModifierMask:NSCommandKeyMask|NSShiftKeyMask];
+		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 		[item setTag:(TAG_NEW_DISK | drive)];
 		[submenu addItem:item];
 		[item release];
@@ -572,7 +572,7 @@ static void setup_file_menu(void) {
 		[item release];
 
 		item = [[NSMenuItem alloc] initWithTitle:@"Write Back" action:@selector(do_set_state:) keyEquivalent:key2];
-		[item setKeyEquivalentModifierMask:NSCommandKeyMask|NSShiftKeyMask];
+		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 		[item setTag:(TAG_WRITE_BACK | drive)];
 		[submenu addItem:item];
 		[item release];
@@ -649,7 +649,7 @@ static void setup_view_menu(void) {
 	[view_menu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Inverse Text" action:@selector(do_set_state:) keyEquivalent:@"i"];
-	[item setKeyEquivalentModifierMask:NSCommandKeyMask|NSShiftKeyMask];
+	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:TAG_VDG_INVERSE];
 	[view_menu addItem:item];
 	[item release];
