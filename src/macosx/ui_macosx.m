@@ -323,7 +323,7 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_KBD_TRANSLATE:
 		is_kbd_translate = !is_kbd_translate;
-		xroar_set_kbd_translate(0, is_kbd_translate);
+		xroar_set_kbd_translate(1, is_kbd_translate);
 		break;
 
 	/* Joysticks: */
