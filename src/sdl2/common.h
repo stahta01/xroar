@@ -79,6 +79,7 @@ void sdl_zoom_out(struct ui_sdl2_interface *uisdl2);
 
 /* Platform-specific support */
 
+void cocoa_register_app(void);
 void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data);
 void cocoa_update_machine_menu(void *sptr);
 void cocoa_update_cartridge_menu(void *sptr);
@@ -101,6 +102,13 @@ void sdl_x11_keymap_notify(XKeymapEvent *);
 void sdl_x11_fix_keyboard_event(SDL_Event *);
 int sdl_x11_keysym_to_unicode(SDL_Keysym *);
 #endif
+
+#endif
+
+#ifdef HAVE_COCOA
+
+void sdl_cocoa_keyboard_init(SDL_Window *);
+int sdl_cocoa_keysym_to_unicode(SDL_Keysym *keysym);
 
 #endif
 
@@ -128,6 +136,8 @@ inline void sdl_os_keyboard_init(SDL_Window *sw) {
 #ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	sdl_x11_keyboard_init(sw);
+#elif defined(HAVE_COCOA)
+	sdl_cocoa_keyboard_init(sw);
 #elif defined(WINDOWS32)
 	sdl_windows32_keyboard_init(sw);
 #endif
@@ -167,6 +177,8 @@ inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym) {
 #ifdef HAVE_KBD_TRANSLATE
 #if defined(HAVE_X11)
 	return sdl_x11_keysym_to_unicode(keysym);
+#elif defined(HAVE_COCOA)
+	return sdl_cocoa_keysym_to_unicode(keysym);
 #elif defined(WINDOWS32)
 	return sdl_windows32_keysym_to_unicode(keysym);
 #endif

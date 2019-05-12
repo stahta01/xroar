@@ -78,6 +78,10 @@ static void *ui_sdl_new(void *cfg) {
 	// Be sure we've not made more than one of these
 	assert(global_uisdl2 == NULL);
 
+#ifdef HAVE_COCOA
+	cocoa_register_app();
+#endif
+
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
 			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());

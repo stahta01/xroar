@@ -263,7 +263,7 @@ EXTRA_DIST += \
 
 # Mac OS X special case SDL user interface
 
-if UI_SDL
+if UI_SDL2
 if UI_COCOA
 xroar_CFLAGS += $(COCOA_CFLAGS)
 xroar_OBJCFLAGS += $(COCOA_CFLAGS) $(SDL_CFLAGS)
@@ -271,6 +271,10 @@ xroar_LDADD += $(COCOA_LIBS)
 xroar_SOURCES += \
 	macosx/filereq_cocoa.m \
 	macosx/ui_macosx.m
+if KBD_TRANSLATE
+xroar_SOURCES += \
+	sdl2/sdl_cocoa_keyboard.c
+endif
 endif
 endif
 

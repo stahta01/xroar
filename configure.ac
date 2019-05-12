@@ -80,7 +80,7 @@ test "x$with_sdl" = "xno" && with_sdlgl=no
 
 AC_ARG_WITH([cocoa],
 	AS_HELP_STRING([--without-cocoa], [don't test for Mac OS X Cocoa]) )
-test "x$with_sdl" = "xno" && with_cocoa=no
+test "x$with_sdl2" = "xno" && with_cocoa=no
 
 AC_ARG_ENABLE([filereq_cli],
 	AS_HELP_STRING([--enable-filereq-cli], [include command-line file requester]) )
@@ -517,8 +517,8 @@ AM_COND_IF([VO_SDLGL], [AC_DEFINE([HAVE_SDLGL], 1, [Have SDL OpenGL support])])
 
 unset have_cocoa
 if test "x$ac_cv_objc_compiler_gnu" = "xyes"; then
-	AM_COND_IF([UI_SDL], [AS_IF([test "x$with_cocoa" != "xno"], [
-		    COCOA_LIBS="-framework Cocoa"
+	AM_COND_IF([UI_SDL2], [AS_IF([test "x$with_cocoa" != "xno"], [
+		    COCOA_LIBS="-framework Cocoa -framework Carbon"
 		    AC_LANG_PUSH([Objective C])
 		    AC_CHECK_HEADER([Cocoa/Cocoa.h], [
 				     have_cocoa=1

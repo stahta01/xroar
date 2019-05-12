@@ -13,7 +13,7 @@ Feel free to customize this file to suit your needs
 
 Mac OS X user-interface module
 
-Copyright 2011-2018 Ciaran Anscomb
+Copyright 2011-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -49,7 +49,7 @@ See COPYING.GPL for redistribution conditions.
 #include "vdisk.h"
 #include "vo.h"
 #include "xroar.h"
-#include "sdl/common.h"
+#include "sdl2/common.h"
 
 #define TAG(ui_tag,value) ((((ui_tag) & 0x7f) << 24) | ((value) & 0xffffff))
 #define TAG_TYPE(t) (((t) >> 24) & 0x7f)
@@ -107,23 +107,6 @@ enum {
 @interface NSApplication(SDL_Missing_Methods)
 - (void)setAppleMenu:(NSMenu *)menu;
 @end
-
-/* Use this flag to determine whether we use CPS (docking) or not */
-#define SDL_USE_CPS 1
-
-#ifdef SDL_USE_CPS
-
-/* Portions of CPS.h */
-typedef struct CPSProcessSerNum {
-	UInt32 lo;
-	UInt32 hi;
-} CPSProcessSerNum;
-
-extern OSErr CPSGetCurrentProcess(CPSProcessSerNum *psn);
-extern OSErr CPSEnableForegroundOperation(CPSProcessSerNum *psn, UInt32 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
-extern OSErr CPSSetFrontProcess(CPSProcessSerNum *psn);
-
-#endif  /* SDL_USE_CPS */
 
 static int gArgc;
 static char **gArgv;
@@ -184,27 +167,48 @@ static int selected_joystick(unsigned port) {
 
 /* Setting this to true is a massive hack so that cocoa file dialogues receive
  * keypresses.  Ideally, need to sort SDL out or turn this into a regular
- * OpenGL application. */
+ * OpenGL application.  SDL2 in 2019 note: not sure if this is needed now?  */
 int cocoa_super_all_keys = 0;
 
-@interface SDLApplication : NSApplication
+@interface XRoarApplication : NSApplication
 @end
 
-@implementation SDLApplication
+@implementation XRoarApplication
 
 - (void)sendEvent:(NSEvent *)anEvent {
-	if (NSEventTypeKeyDown == [anEvent type] || NSEventTypeKeyUp == [anEvent type]) {
-		if (cocoa_super_all_keys || ([anEvent modifierFlags] & NSEventModifierFlagCommand))
+	switch ([anEvent type]) {
+		case NSEventTypeKeyDown:
+		case NSEventTypeKeyUp:
+			if (cocoa_super_all_keys || ([anEvent modifierFlags] & NSEventModifierFlagCommand)) {
+				[super sendEvent:anEvent];
+			}
+			break;
+		default:
 			[super sendEvent:anEvent];
-	} else {
-		[super sendEvent:anEvent];
+			break;
 	}
+}
+
++ (void)registerUserDefaults {
+	NSDictionary *appDefaults = [[NSDictionary alloc] initWithObjectsAndKeys:
+		[NSNumber numberWithBool:NO], @"AppleMomentumScrollSupported",
+		[NSNumber numberWithBool:NO], @"ApplePressAndHoldEnabled",
+		[NSNumber numberWithBool:YES], @"ApplePersistenceIgnoreState",
+		nil];
+	[[NSUserDefaults standardUserDefaults] registerDefaults:appDefaults];
+	[appDefaults release];
 }
 
 - (void)do_set_state:(id)sender {
 	int tag = [sender tag];
 	int tag_type = tag & TAG_TYPE_MASK;
 	int tag_value = tag & TAG_VALUE_MASK;
+
+	// Try and ensure that the keydown event that (maybe) caused this
+	// menuitem dispatch is not then handled by the main loop as well.
+	SDL_PumpEvents();
+	SDL_FlushEvent(SDL_KEYDOWN);
+
 	switch (tag_type) {
 
 	/* Simple actions: */
@@ -244,10 +248,10 @@ int cocoa_super_all_keys = 0;
 			}
 			break;
 		case TAG_ZOOM_IN:
-			sdl_zoom_in();
+			sdl_zoom_in(global_uisdl2);
 			break;
 		case TAG_ZOOM_OUT:
-			sdl_zoom_out();
+			sdl_zoom_out(global_uisdl2);
 			break;
 		case TAG_JOY_SWAP:
 			joystick_swap();
@@ -836,6 +840,7 @@ static void setup_window_menu(void) {
 	[window_menu_item release];
 }
 
+#if 0
 /* Replacement for NSApplicationMain */
 static void CustomApplicationMain(int argc, char **argv) {
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -843,29 +848,6 @@ static void CustomApplicationMain(int argc, char **argv) {
 
 	(void)argc;
 	(void)argv;
-
-	/* Ensure the application object is initialised */
-	[SDLApplication sharedApplication];
-
-#ifdef SDL_USE_CPS
-	{
-		CPSProcessSerNum PSN;
-		/* Tell the dock about us */
-		if (!CPSGetCurrentProcess(&PSN))
-			if (!CPSEnableForegroundOperation(&PSN,0x03,0x3C,0x2C,0x1103))
-				if (!CPSSetFrontProcess(&PSN))
-					[SDLApplication sharedApplication];
-	}
-#endif /* SDL_USE_CPS */
-
-	/* Set up the menubar */
-	[NSApp setMainMenu:[[NSMenu alloc] init]];
-	setApplicationMenu();
-	setup_file_menu();
-	setup_view_menu();
-	setup_hardware_menu();
-	setup_tool_menu();
-	setup_window_menu();
 
 	/* Create SDLMain and make it the app delegate */
 	sdlMain = [[SDLMain alloc] init];
@@ -877,7 +859,7 @@ static void CustomApplicationMain(int argc, char **argv) {
 	[sdlMain release];
 	[pool release];
 }
-
+#endif
 
 /*
  * Catch document open requests...this lets us notice files when the app was
@@ -929,23 +911,51 @@ static void CustomApplicationMain(int argc, char **argv) {
 
 /* Called when the internal event loop has just started running */
 - (void)applicationDidFinishLaunching: (NSNotification *)note {
-	int status;
-
 	(void)note;
-	/* Set the working directory to the .app's parent directory */
+	// Set the working directory to the .app's parent directory
 	[self setupWorkingDirectory:gFinderLaunch];
-	/* Pass keypresses etc. to Cocoa */
-	setenv("SDL_ENABLEAPPEVENTS", "1", 1);
-	/* Hand off to main application code */
+	/* Doesn't seem present in SDL2:
+	// Pass keypresses etc. to Cocoa
+	setenv("SDL_ENABLEAPPEVENTS", "1", 1); */
+	// Hand off to main application code
 	gCalledAppMainline = TRUE;
-	status = SDL_main (gArgc, gArgv);
-	/* We're done, thank you for playing */
-	exit(status);
+
+	// Seems to be necessary to make the menu bar work (without it, you
+	// have to focus something else then return).  I'm sure there's a good
+	// reason for that.
+	[NSApp activateIgnoringOtherApps:YES];
+	[XRoarApplication registerUserDefaults];
 }
 
 @end
 
+/* Called from ui_sdl_new() _before_ initialising SDL video. */
+void cocoa_register_app(void) {
 
+	// Ensure the application object is initialised
+	[XRoarApplication sharedApplication];
+	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+
+	// Set up the menubar
+	[NSApp setMainMenu:[[NSMenu alloc] init]];
+	setApplicationMenu();
+	setup_file_menu();
+	setup_view_menu();
+	setup_hardware_menu();
+	setup_tool_menu();
+	setup_window_menu();
+
+	[NSApp finishLaunching];
+
+	// More recent macosx adds some weird tab bar stuff to the view menu by
+	// default.  I'm sure they had a good reason...
+	[NSWindow setAllowsAutomaticWindowTabbing: NO];
+
+	SDLMain *appDelegate = [[SDLMain alloc] init];
+	[(NSApplication *)NSApp setDelegate:appDelegate];
+}
+
+#if 0
 #ifdef main
 #  undef main
 #endif
@@ -973,6 +983,7 @@ int main(int argc, char **argv) {
 	CustomApplicationMain(argc, argv);
 	return 0;
 }
+#endif
 
 /**************************************************************************/
 
