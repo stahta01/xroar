@@ -74,7 +74,8 @@ See COPYING.GPL for redistribution conditions.
 
 #define TAG_FULLSCREEN (9 << 24)
 #define TAG_VDG_INVERSE (16 << 24)
-#define TAG_CROSS_COLOUR (10 << 24)
+#define TAG_COMPOSITE_RENDERER (18 << 24)
+#define TAG_COMPOSITE_PHASE (10 << 24)
 
 #define TAG_FAST_SOUND (11 << 24)
 
@@ -128,6 +129,7 @@ static NSString *get_application_name(void) {
 	return app_name;
 }
 
+static int current_ccr = 0;
 static int current_cc = 0;
 static int current_machine = 0;
 static int current_cartridge = 0;
@@ -306,7 +308,11 @@ int cocoa_super_all_keys = 0;
 		is_fullscreen = !is_fullscreen;
 		xroar_set_fullscreen(0, is_fullscreen);
 		break;
-	case TAG_CROSS_COLOUR:
+	case TAG_COMPOSITE_RENDERER:
+		current_ccr = tag;
+		xroar_set_cross_colour_renderer(0, tag_value);
+		break;
+	case TAG_COMPOSITE_PHASE:
 		current_cc = tag;
 		xroar_set_cross_colour(0, tag_value);
 		break;
@@ -382,7 +388,10 @@ int cocoa_super_all_keys = 0;
 	case TAG_VDG_INVERSE:
 		[item setState:(xroar_cfg.vdg_inverted_text ? NSOnState : NSOffState)];
 		break;
-	case TAG_CROSS_COLOUR:
+	case TAG_COMPOSITE_RENDERER:
+		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
+		break;
+	case TAG_COMPOSITE_PHASE:
 		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
 		break;
 
@@ -658,19 +667,43 @@ static void setup_view_menu(void) {
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Cross-colour"];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Simple (2-bit LUT)" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_SIMPLE)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"5-bit LUT" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_5BIT)];
+	[submenu addItem:item];
+	[item release];
+
+#ifdef WANT_SIMULATED_NTSC
+	item = [[NSMenuItem alloc] initWithTitle:@"Simulated" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_SIMULATED)];
+	[submenu addItem:item];
+	[item release];
+#endif
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite Phase"];
 
 	for (i = 0; vo_ntsc_phase_list[i].name; i++) {
 		NSString *s = [[NSString alloc] initWithUTF8String:vo_ntsc_phase_list[i].description];
 		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_CROSS_COLOUR | vo_ntsc_phase_list[i].value)];
+		[item setTag:(TAG_COMPOSITE_PHASE | vo_ntsc_phase_list[i].value)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[submenu addItem:item];
 		[item release];
 		[s release];
 	}
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Cross-colour" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite Phase" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
@@ -1085,8 +1118,12 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 		is_fullscreen = value ? 1 : 0;
 		break;
 
+	case ui_tag_ccr:
+		current_ccr = TAG_COMPOSITE_RENDERER | value;
+		break;
+
 	case ui_tag_cross_colour:
-		current_cc = TAG_CROSS_COLOUR | value;
+		current_cc = TAG_COMPOSITE_PHASE | value;
 		break;
 
 	/* Audio */
