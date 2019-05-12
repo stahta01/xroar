@@ -10,6 +10,7 @@ Version 0.36, unreleased
   * WebAssembly target support
   * MC6809: LEA instructions work in page 1 [Stewart Orchard]
   * Recognise .dgn and .cco as potential binary files
+  * Migrated Mac OS X UI to SDL2
 
 Version 0.35, Fri Jun 27 2018
 
