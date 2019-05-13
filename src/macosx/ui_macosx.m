@@ -135,6 +135,7 @@ static int current_machine = 0;
 static int current_cartridge = 0;
 static int current_keymap = 0;
 static int is_fullscreen = 0;
+static int vdg_inverted = 0;
 static int is_kbd_translate = 0;
 static _Bool is_fast_sound = 0;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
@@ -317,7 +318,8 @@ int cocoa_super_all_keys = 0;
 		xroar_set_cross_colour(0, tag_value);
 		break;
 	case TAG_VDG_INVERSE:
-		xroar_set_vdg_inverted_text(0, XROAR_NEXT);
+		vdg_inverted = !vdg_inverted;
+		xroar_set_vdg_inverted_text(0, vdg_inverted);
 		break;
 
 	/* Audio: */
@@ -386,7 +388,7 @@ int cocoa_super_all_keys = 0;
 		[item setState:(is_fullscreen ? NSOnState : NSOffState)];
 		break;
 	case TAG_VDG_INVERSE:
-		[item setState:(xroar_cfg.vdg_inverted_text ? NSOnState : NSOffState)];
+		[item setState:(vdg_inverted ? NSOnState : NSOffState)];
 		break;
 	case TAG_COMPOSITE_RENDERER:
 		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
@@ -1116,6 +1118,10 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_fullscreen:
 		is_fullscreen = value ? 1 : 0;
+		break;
+
+	case ui_tag_vdg_inverse:
+		vdg_inverted = value ? 1 : 0;
 		break;
 
 	case ui_tag_ccr:
