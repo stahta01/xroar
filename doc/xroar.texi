@@ -113,31 +113,31 @@ original machine.  The originals were part-written by Microsoft, so they are
 not distributed in the XRoar packages.
 
 
-@c @subsection Mac OS X binary package
-@c
-@c Download the appropriate @file{.dmg} image for your system.  Open the image and
-@c drag the application icon to @file{/Applications/}.
-@c
-@c For troubleshooting or testing options, it's often a good idea to run from the
-@c command line, but application packages don't make that trivial.  A symbolic
-@c link to somewhere in your @env{PATH} is all that's required.  e.g.:
-@c
-@c @example
-@c $ sudo ln -s /Applications/XRoar.app/Contents/MacOS/xroar \
-        @c /usr/local/bin/xroar
-@c @end example
-@c
-@c After this, you can start the emulator by simply typing @command{xroar}
-@c followed by any command line options.
-@c
-@c ROM images should be placed in a directory you create under your @env{HOME}
-@c named @file{~/Library/XRoar/roms/} (not the system directory,
-@c @file{/Library/}).  Name any configuration file you create
-@c @file{~/Library/XRoar/xroar.conf}.
-@c
-@c The Mac OS X build provides a menu for access to certain features, and often
-@c accepts the more familiar @kbd{Command}+@var{key} in place of the
-@c @kbd{Ctrl}+@var{key} shortcuts listed in this manual.
+@subsection Mac OS X binary package
+
+Download and unzip the appropriate @file{.zip} distribution for your system.
+Drag the application icon to @file{/Applications/}.
+
+For troubleshooting or testing options, it's often a good idea to run from the
+command line, but application packages don't make that trivial.  A symbolic
+link to somewhere in your @env{PATH} is all that's required.  e.g.:
+
+@example
+$ sudo ln -s /Applications/XRoar.app/Contents/MacOS/xroar \
+        /usr/local/bin/xroar
+@end example
+
+After this, you can start the emulator by simply typing @command{xroar}
+followed by any command line options.
+
+ROM images should be placed in a directory you create under your @env{HOME}
+named @file{~/Library/XRoar/roms/} (not the system directory,
+@file{/Library/}).  Name any configuration file you create
+@file{~/Library/XRoar/xroar.conf}.
+
+The Mac OS X build provides a menu for access to certain features, and often
+accepts the more familiar @kbd{Command}+@var{key} in place of the
+@kbd{Ctrl}+@var{key} shortcuts listed in this manual.
 
 
 @subsection Windows binary package
@@ -167,10 +167,6 @@ The Windows build provides menu-based access to certain features.
 @node Dependencies
 @subsection Dependencies
 
-Please note that the build process under Mac OS X is now @emph{untested}.
-These notes worked for previous versions and are left here in case they are
-still useful.
-
 If there is no binary package for your system, you will have to build from
 source.  XRoar can use various backend toolkits, and you will need to ensure
 you have their development files installed.  If you're using Debian, this can
@@ -189,7 +185,7 @@ then ensure you have XRoar's dependencies available is to use a system like
 command will install the required dependencies:
 
 @example
-$ brew install libsndfile sdl
+$ brew install libsndfile sdl2
 @end example
 
 Otherwise, you'll have to do a bit of platform-specific research to ensure you
@@ -201,17 +197,13 @@ full-featured user interface.  It is only usable as such if you also have
 used to provide video output.  Otherwise, it can provide a file requester for
 use by other user interfaces.
 
-@c Menus were also for Mac OS X
-
 @myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code under
-Windows; any other target using SDL will support only keyboard
+Mac OS X and Windows; any other target using SDL will support only keyboard
 shortcuts.  Unless you are building for Linux, SDL is required to use
 joysticks.
 
-@c CoreAudio was in this list
-
-Other supported audio APIs: OSS, ALSA, PulseAudio.  Some other
+Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some other
 options are still in the code base, but have not been tested in a while.
 
 @myuref{http://www.mega-nerd.com/libsndfile/, libsndfile} is recommended to
@@ -323,7 +315,7 @@ the defaults:
 @multitable {Mac OS X.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
 @item Unix/Linux @tab ~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
-@c @item Mac OS X @tab ~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
+@item Mac OS X @tab ~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
 @item Windows @tab :~/Local Settings/Application Data/XRoar:~/Application Data/XRoar
 @end multitable
 
@@ -873,10 +865,8 @@ Only one video module is usable with this user interface: @samp{gtkgl}.
 
 @subsection SDL user interface
 
-@c @option{-ui macosx} (Mac OS X menus)
-
-Select with @option{-ui windows32} (Windows menus) or @option{-ui sdl} (no
-menus).
+Select with @option{-ui macosx} (Mac OS X menus), @option{-ui windows32}
+(Windows menus) or @option{-ui sdl} (no menus).
 
 A more limited interface requiring the use of keyboard shortcuts for most
 functionality.  The Windows variant also includes some menu-based control.
@@ -885,8 +875,8 @@ Provides three video output modules: @samp{sdlgl} (OpenGL, preferred),
 sdl} is the least capable, but most compatible; try this if you are having
 problems with OpenGL.
 
-@c Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
-@c as well as the usual shortcut of @kbd{Ctrl}+@var{key}.
+Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
+as well as the usual shortcut of @kbd{Ctrl}+@var{key}.
 
 
 @node Video output
