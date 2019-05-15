@@ -243,8 +243,8 @@ void gtk2_keyboard_init(struct ui_cfg *ui_cfg) {
 	map_keyboard(gdk_keymap, selected_keymap);
 	g_signal_connect(G_OBJECT(gdk_keymap), "keys-changed", G_CALLBACK(map_keyboard), selected_keymap);
 	/* Connect GTK key press/release signals to handlers */
-	g_signal_connect(G_OBJECT(gtk2_top_window), "key-press-event", G_CALLBACK(keypress), NULL);
-	g_signal_connect(G_OBJECT(gtk2_top_window), "key-release-event", G_CALLBACK(keyrelease), NULL);
+	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-press-event", G_CALLBACK(keypress), NULL);
+	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-release-event", G_CALLBACK(keyrelease), NULL);
 }
 
 static void emulator_command(guint keyval, int shift) {
@@ -315,7 +315,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	int control, shift;
 	(void)widget;
 	(void)user_data;
-	if (gtk_window_activate_key(GTK_WINDOW(gtk2_top_window), event) == TRUE) {
+	if (gtk_window_activate_key(GTK_WINDOW(global_uigtk2->top_window), event) == TRUE) {
 		return TRUE;
 	}
 	if (event->hardware_keycode >= MAX_KEYCODE) {

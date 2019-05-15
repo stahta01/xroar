@@ -25,12 +25,15 @@ See COPYING.GPL for redistribution conditions.
 
 #include "gtk2/common.h"
 
-extern GtkWidget *gtk2_top_window;
+// Eventually, everything should be delegated properly, but for now assure
+// there is only ever one instantiation of ui_gtk2 and make it available
+// globally.
+struct ui_gtk2_interface *global_uigtk2 = NULL;
 
 gboolean gtk2_dummy_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
 	(void)widget;
-	(void)user_data;
-	if (gtk_window_activate_key(GTK_WINDOW(gtk2_top_window), event) == TRUE) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	if (gtk_window_activate_key(GTK_WINDOW(uigtk2->top_window), event) == TRUE) {
 		return TRUE;
 	}
 	return FALSE;

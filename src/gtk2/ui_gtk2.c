@@ -22,6 +22,7 @@ See COPYING.GPL for redistribution conditions.
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,10 +57,6 @@ static void *ui_gtk2_new(void *cfg);
 static void ui_gtk2_free(void *sptr);
 static void ui_gtk2_run(void *sptr);
 static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data);
-
-struct vo_rect gtk2_display = {
-	.x = 0, .y = 0, .w = 640, .h = 480,
-};
 
 extern struct module vo_gtkgl_module;
 extern struct module vo_null_module;
@@ -98,7 +95,7 @@ static struct module * const gtk2_filereq_module_list[] = {
 
 static void *filereq_ui_gtk2_new(void *cfg) {
 	(void)cfg;
-	return filereq_gtk2_module.new(gtk2_top_window);
+	return filereq_gtk2_module.new(global_uigtk2->top_window);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -111,14 +108,6 @@ static struct joystick_submodule gtk2_js_submod_mouse = {
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
 };
-
-static float mouse_xoffset = 34.0;
-static float mouse_yoffset = 25.5;
-static float mouse_xdiv = 252.;
-static float mouse_ydiv = 189.;
-
-static unsigned mouse_axis[2] = { 0, 0 };
-static _Bool mouse_button[3] = { 0, 0, 0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -149,23 +138,11 @@ struct ui_module ui_gtk2_module = {
 	.joystick_module_list = gtk2_js_modlist,
 };
 
-GtkWidget *gtk2_top_window = NULL;
-static GtkWidget *vbox;
-GtkUIManager *gtk2_menu_manager;
-GtkWidget *gtk2_menubar;
-GtkWidget *gtk2_drawing_area;
-
 /* Dynamic menus */
-static GtkActionGroup *main_action_group;
-static GtkActionGroup *machine_action_group;
-static GtkActionGroup *cart_action_group;
-static guint merge_machines, merge_carts;
-static void update_machine_menu(void);
-static void update_cartridge_menu(void);
+static void update_machine_menu(struct ui_gtk2_interface *uigtk2);
+static void update_cartridge_menu(struct ui_gtk2_interface *uigtk2);
 
 /* for hiding cursor: */
-static int cursor_hidden = 0;
-static GdkCursor *old_cursor, *blank_cursor;
 static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data);
 static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data);
 
@@ -174,74 +151,67 @@ static gboolean run_cpu(gpointer data);
 /* Helpers */
 static char *escape_underscores(const char *str);
 
-static void insert_disk(int drive) {
-	static GtkFileChooser *file_dialog = NULL;
-	static GtkComboBox *drive_combo = NULL;
-	if (!file_dialog) {
-		file_dialog = GTK_FILE_CHOOSER(
-		    gtk_file_chooser_dialog_new("Insert Disk",
-			GTK_WINDOW(gtk2_top_window),
-			GTK_FILE_CHOOSER_ACTION_OPEN, GTK_STOCK_CANCEL,
-			GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN,
-			GTK_RESPONSE_ACCEPT, NULL));
-	}
-	if (!drive_combo) {
-		drive_combo = GTK_COMBO_BOX(gtk_combo_box_new_text());
-		gtk_combo_box_append_text(drive_combo, "Drive 1");
-		gtk_combo_box_append_text(drive_combo, "Drive 2");
-		gtk_combo_box_append_text(drive_combo, "Drive 3");
-		gtk_combo_box_append_text(drive_combo, "Drive 4");
-		gtk_file_chooser_set_extra_widget(file_dialog, GTK_WIDGET(drive_combo));
-	}
-	if (drive < 0 || drive > 3) drive = 0;
-	gtk_combo_box_set_active(GTK_COMBO_BOX(drive_combo), drive);
-	if (gtk_dialog_run(GTK_DIALOG(file_dialog)) == GTK_RESPONSE_ACCEPT) {
-		char *filename = gtk_file_chooser_get_filename(file_dialog);
-		drive = gtk_combo_box_get_active(GTK_COMBO_BOX(drive_combo));
-		if (drive < 0 || drive > 3) drive = 0;
-		if (filename) {
-			xroar_insert_disk_file(drive, filename);
-			g_free(filename);
-		}
-	}
-	gtk_widget_hide(GTK_WIDGET(file_dialog));
-}
-
 /* This is just stupid... */
-static void insert_disk1(void) { gtk2_insert_disk(0); }
-static void insert_disk2(void) { gtk2_insert_disk(1); }
-static void insert_disk3(void) { gtk2_insert_disk(2); }
-static void insert_disk4(void) { gtk2_insert_disk(3); }
+static void insert_disk(GtkEntry *entry, gpointer user_data) { (void)entry; gtk2_insert_disk(user_data, -1); }
+static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; gtk2_insert_disk(user_data, 0); }
+static void insert_disk2(GtkEntry *entry, gpointer user_data) { (void)entry; gtk2_insert_disk(user_data, 1); }
+static void insert_disk3(GtkEntry *entry, gpointer user_data) { (void)entry; gtk2_insert_disk(user_data, 2); }
+static void insert_disk4(GtkEntry *entry, gpointer user_data) { (void)entry; gtk2_insert_disk(user_data, 3); }
 
-static void save_snapshot(void) {
-	g_idle_remove_by_data(gtk2_top_window);
+static void save_snapshot(GtkEntry *entry, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)entry;
+	g_idle_remove_by_data(uigtk2->top_window);
 	xroar_save_snapshot();
-	g_idle_add(run_cpu, gtk2_top_window);
+	g_idle_add(run_cpu, uigtk2->top_window);
 }
 
-static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
-	gboolean val = gtk_toggle_action_get_active(current);
-	(void)user_data;
-	xroar_set_fullscreen(0, val);
+static void do_quit(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	xroar_quit();
 }
 
-static void zoom_1_1(void) {
+static void do_soft_reset(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	xroar_soft_reset();
+}
+
+static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	xroar_hard_reset();
+}
+
+static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	if (!xroar_vo_interface)
 		return;
 	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 320, 240);
 }
 
-static void zoom_2_1(void) {
+static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	if (!xroar_vo_interface)
 		return;
 	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 640, 480);
 }
 
-static void zoom_in(void) {
+static void zoom_in(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = gtk2_display.w / 160;
-	int yscale = gtk2_display.h / 120;
+	int xscale = uigtk2->display_rect.w / 160;
+	int yscale = uigtk2->display_rect.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = yscale;
@@ -254,11 +224,13 @@ static void zoom_in(void) {
 	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160 * scale, 120 * scale);
 }
 
-static void zoom_out(void) {
+static void zoom_out(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = gtk2_display.w / 160;
-	int yscale = gtk2_display.h / 120;
+	int xscale = uigtk2->display_rect.w / 160;
+	int yscale = uigtk2->display_rect.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;
@@ -272,44 +244,57 @@ static void zoom_out(void) {
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gboolean val = gtk_toggle_action_get_active(current);
-	(void)user_data;
 	xroar_set_vdg_inverted_text(0, val);
 }
 
+static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	gboolean val = gtk_toggle_action_get_active(current);
+	xroar_set_fullscreen(0, val);
+}
+
 static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	(void)user_data;
 	xroar_set_cross_colour_renderer(0, val);
 }
 
 static void set_cc(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	(void)user_data;
 	xroar_set_cross_colour(0, val);
 }
 
 static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	(void)user_data;
 	xroar_set_machine(0, val);
 }
 
 static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	(void)user_data;
 	struct cart_config *cc = cart_config_by_id(val);
 	xroar_set_cart(0, cc ? cc->name : NULL);
 }
 
 static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	(void)user_data;
 	xroar_set_keymap(0, val);
 }
 
@@ -333,7 +318,9 @@ static void set_joy_left(GtkRadioAction *action, GtkRadioAction *current, gpoint
 		xroar_set_joystick(0, 1, joystick_name[val]);
 }
 
-static void swap_joysticks(void) {
+static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
 	xroar_swap_joysticks(1);
 }
 
@@ -355,16 +342,18 @@ static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
 	xroar_set_ratelimit_latch(0, val);
 }
 
-static void close_about(GtkDialog *dialog, gint response_id, gpointer data) {
+static void close_about(GtkDialog *dialog, gint response_id, gpointer user_data) {
 	(void)response_id;
-	(void)data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	gtk_widget_hide(GTK_WIDGET(dialog));
 	gtk_widget_destroy(GTK_WIDGET(dialog));
 }
 
-static void about(GtkMenuItem *item, gpointer data) {
+static void about(GtkMenuItem *item, gpointer user_data) {
 	(void)item;
-	(void)data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © 2003–2019 Ciaran Anscomb <xroar@6809.org.uk>");
@@ -383,9 +372,12 @@ static void about(GtkMenuItem *item, gpointer data) {
 "with XRoar.  If not, see <http://www.gnu.org/licenses/>."
 	);
 	gtk_about_dialog_set_website(dialog, "http://www.6809.org.uk/xroar/");
-	g_signal_connect(dialog, "response", G_CALLBACK(close_about), NULL);
+	g_signal_connect(dialog, "response", G_CALLBACK(close_about), uigtk2);
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
+
+static void do_load_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_load_file(NULL); }
+static void do_run_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_run_file(NULL); }
 
 static GtkActionEntry const ui_entries[] = {
 	/* Top level */
@@ -398,11 +390,11 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "RunAction", .stock_id = GTK_STOCK_EXECUTE, .label = "_Run",
 	  .accelerator = "<shift><control>L",
 	  .tooltip = "Load and attempt to autorun a file",
-	  .callback = G_CALLBACK(xroar_run_file) },
+	  .callback = G_CALLBACK(do_run_file) },
 	{ .name = "LoadAction", .stock_id = GTK_STOCK_OPEN, .label = "_Load",
 	  .accelerator = "<control>L",
 	  .tooltip = "Load a file",
-	  .callback = G_CALLBACK(xroar_load_file) },
+	  .callback = G_CALLBACK(do_load_file) },
 	{ .name = "InsertDiskAction",
 	  .label = "Insert _Disk",
 	  .tooltip = "Load a virtual disk image",
@@ -417,7 +409,7 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "QuitAction", .stock_id = GTK_STOCK_QUIT, .label = "_Quit",
 	  .accelerator = "<control>Q",
 	  .tooltip = "Quit",
-	  .callback = G_CALLBACK(xroar_quit) },
+	  .callback = G_CALLBACK(do_quit) },
 	/* View */
 	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
 	{ .name = "CrossColourMenuAction", .label = "_Composite Phase" },
@@ -447,12 +439,12 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "SoftResetAction", .label = "_Soft Reset",
 	  .accelerator = "<control>R",
 	  .tooltip = "Soft Reset",
-	  .callback = G_CALLBACK(xroar_soft_reset) },
+	  .callback = G_CALLBACK(do_soft_reset) },
 	{ .name = "HardResetAction",
 	  .label = "_Hard Reset",
 	  .accelerator = "<shift><control>R",
 	  .tooltip = "Hard Reset",
-	  .callback = G_CALLBACK(xroar_hard_reset) },
+	  .callback = G_CALLBACK(do_hard_reset) },
 	/* Help */
 	{ .name = "AboutAction", .stock_id = GTK_STOCK_ABOUT,
 	  .label = "_About",
@@ -522,6 +514,9 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 static void *ui_gtk2_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
+	// Be sure we've not made more than one of these
+	assert(global_uigtk2 == NULL);
+
 	gtk_init(NULL, NULL);
 
 	g_set_application_name("XRoar");
@@ -538,21 +533,24 @@ static void *ui_gtk2_new(void *cfg) {
 	}
 	g_bytes_unref(res_top_window);
 
-	struct ui_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
-	*uigtk2 = (struct ui_interface){0};
+	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
+	*uigtk2 = (struct ui_gtk2_interface){0};
+	struct ui_interface *ui = &uigtk2->public;
+	// Make available globally for other GTK+2 code
+	global_uigtk2 = uigtk2;
 
-	uigtk2->free = DELEGATE_AS0(void, ui_gtk2_free, uigtk2);
-	uigtk2->run = DELEGATE_AS0(void, ui_gtk2_run, uigtk2);
-	uigtk2->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, uigtk2);
+	ui->free = DELEGATE_AS0(void, ui_gtk2_free, ui);
+	ui->run = DELEGATE_AS0(void, ui_gtk2_run, ui);
+	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, ui);
 
 	/* Fetch top level window */
-	gtk2_top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
+	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
 
 	/* Fetch vbox */
-	vbox = GTK_WIDGET(gtk_builder_get_object(builder, "vbox1"));
+	GtkWidget *vbox = GTK_WIDGET(gtk_builder_get_object(builder, "vbox1"));
 
 	/* Create a UI from XML */
-	gtk2_menu_manager = gtk_ui_manager_new();
+	uigtk2->menu_manager = gtk_ui_manager_new();
 
 	GBytes *res_ui = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/ui.xml", 0, NULL);
 	const gchar *ui_xml_string = g_bytes_get_data(res_ui, NULL);
@@ -565,7 +563,7 @@ static void *ui_gtk2_new(void *cfg) {
 	}
 	// The proper way to do this (for the next five minutes) is probably to
 	// transition to using GtkBuilder.
-	gtk_ui_manager_add_ui_from_string(gtk2_menu_manager, ui_xml_string, -1, &error);
+	gtk_ui_manager_add_ui_from_string(uigtk2->menu_manager, ui_xml_string, -1, &error);
 	if (error) {
 		g_message("building menus failed: %s", error->message);
 		g_error_free(error);
@@ -573,74 +571,84 @@ static void *ui_gtk2_new(void *cfg) {
 	g_bytes_unref(res_ui);
 
 	/* Action groups */
-	main_action_group = gtk_action_group_new("Main");
-	machine_action_group = gtk_action_group_new("Machine");
-	cart_action_group = gtk_action_group_new("Cartridge");
-	gtk_ui_manager_insert_action_group(gtk2_menu_manager, main_action_group, 0);
-	gtk_ui_manager_insert_action_group(gtk2_menu_manager, machine_action_group, 0);
-	gtk_ui_manager_insert_action_group(gtk2_menu_manager, cart_action_group, 0);
+	GtkActionGroup *main_action_group = gtk_action_group_new("Main");
+	uigtk2->machine_action_group = gtk_action_group_new("Machine");
+	uigtk2->cart_action_group = gtk_action_group_new("Cartridge");
+	gtk_ui_manager_insert_action_group(uigtk2->menu_manager, main_action_group, 0);
+	gtk_ui_manager_insert_action_group(uigtk2->menu_manager, uigtk2->machine_action_group, 0);
+	gtk_ui_manager_insert_action_group(uigtk2->menu_manager, uigtk2->cart_action_group, 0);
 
 	/* Set up main action group */
-	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), NULL);
-	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), NULL);
-	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, NULL);
-	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, G_N_ELEMENTS(cross_colour_radio_entries), 0, (GCallback)set_cc, NULL);
+	gtk_action_group_add_actions(main_action_group, ui_entries, G_N_ELEMENTS(ui_entries), uigtk2);
+	gtk_action_group_add_toggle_actions(main_action_group, ui_toggles, G_N_ELEMENTS(ui_toggles), uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, G_N_ELEMENTS(cross_colour_radio_entries), 0, (GCallback)set_cc, uigtk2);
 
 	/* Menu merge points */
-	merge_machines = gtk_ui_manager_new_merge_id(gtk2_menu_manager);
-	merge_carts = gtk_ui_manager_new_merge_id(gtk2_menu_manager);
+	uigtk2->merge_machines = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
+	uigtk2->merge_carts = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
 
 	/* Update all dynamic menus */
-	update_machine_menu();
-	update_cartridge_menu();
+	update_machine_menu(uigtk2);
+	update_cartridge_menu(uigtk2);
 
 	/* Extract menubar widget and add to vbox */
-	gtk2_menubar = gtk_ui_manager_get_widget(gtk2_menu_manager, "/MainMenu");
-	gtk_box_pack_start(GTK_BOX(vbox), gtk2_menubar, FALSE, FALSE, 0);
-	gtk_window_add_accel_group(GTK_WINDOW(gtk2_top_window), gtk_ui_manager_get_accel_group(gtk2_menu_manager));
-	gtk_box_reorder_child(GTK_BOX(vbox), gtk2_menubar, 0);
+	uigtk2->menubar = gtk_ui_manager_get_widget(uigtk2->menu_manager, "/MainMenu");
+	gtk_box_pack_start(GTK_BOX(vbox), uigtk2->menubar, FALSE, FALSE, 0);
+	gtk_window_add_accel_group(GTK_WINDOW(uigtk2->top_window), gtk_ui_manager_get_accel_group(uigtk2->menu_manager));
+	gtk_box_reorder_child(GTK_BOX(vbox), uigtk2->menubar, 0);
 
 	/* Create drawing_area widget, add to vbox */
-	gtk2_drawing_area = GTK_WIDGET(gtk_builder_get_object(builder, "drawing_area"));
+	uigtk2->drawing_area = GTK_WIDGET(gtk_builder_get_object(builder, "drawing_area"));
 	GdkGeometry hints = {
 		.min_width = 160, .min_height = 120,
 		.base_width = 0, .base_height = 0,
 	};
-	gtk_window_set_geometry_hints(GTK_WINDOW(gtk2_top_window), GTK_WIDGET(gtk2_drawing_area), &hints, GDK_HINT_MIN_SIZE | GDK_HINT_BASE_SIZE);
-	gtk_widget_show(gtk2_drawing_area);
+	gtk_window_set_geometry_hints(GTK_WINDOW(uigtk2->top_window), GTK_WIDGET(uigtk2->drawing_area), &hints, GDK_HINT_MIN_SIZE | GDK_HINT_BASE_SIZE);
+	gtk_widget_show(uigtk2->drawing_area);
 
 	/* Parse initial geometry */
 	if (ui_cfg->vo_cfg.geometry) {
-		gtk_window_parse_geometry(GTK_WINDOW(gtk2_top_window), ui_cfg->vo_cfg.geometry);
+		gtk_window_parse_geometry(GTK_WINDOW(uigtk2->top_window), ui_cfg->vo_cfg.geometry);
 	}
 
 	/* Cursor hiding */
-	blank_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
-	gtk_widget_add_events(gtk2_drawing_area, GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
-	g_signal_connect(G_OBJECT(gtk2_top_window), "key-press-event", G_CALLBACK(hide_cursor), NULL);
-	g_signal_connect(G_OBJECT(gtk2_drawing_area), "motion-notify-event", G_CALLBACK(show_cursor), NULL);
+	uigtk2->blank_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
+	gtk_widget_add_events(uigtk2->drawing_area, GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
+	g_signal_connect(G_OBJECT(uigtk2->top_window), "key-press-event", G_CALLBACK(hide_cursor), uigtk2);
+	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "motion-notify-event", G_CALLBACK(show_cursor), uigtk2);
 
-	gtk_builder_connect_signals(builder, NULL);
+	gtk_builder_connect_signals(builder, uigtk2);
 	g_object_unref(builder);
 
 	/* Create (hidden) drive control window */
-	gtk2_create_dc_window();
+	gtk2_create_dc_window(uigtk2);
 
 	/* Create (hidden) tape control window */
-	gtk2_create_tc_window();
+	gtk2_create_tc_window(uigtk2);
 
 	gtk2_keyboard_init(ui_cfg);
 
-	return uigtk2;
+	// Window geometry sensible defaults
+	uigtk2->display_rect.w = 640;
+	uigtk2->display_rect.h = 480;
+
+	// Mouse tracking
+	uigtk2->mouse_xoffset = 34.0;
+	uigtk2->mouse_yoffset = 25.5;
+	uigtk2->mouse_xdiv = 252.;
+	uigtk2->mouse_ydiv = 189.;
+
+	return ui;
 }
 
 static void ui_gtk2_free(void *sptr) {
-	struct ui_module *uigtk2 = sptr;
-	gtk_widget_destroy(gtk2_drawing_area);
-	gtk_widget_destroy(gtk2_top_window);
+	struct ui_gtk2_interface *uigtk2 = sptr;
+	gtk_widget_destroy(uigtk2->drawing_area);
+	gtk_widget_destroy(uigtk2->top_window);
 	g_free(uigtk2);
 }
 
@@ -650,13 +658,13 @@ static gboolean run_cpu(gpointer data) {
 }
 
 static void ui_gtk2_run(void *sptr) {
-	(void)sptr;
-	g_idle_add(run_cpu, gtk2_top_window);
+	struct ui_gtk2_interface *uigtk2 = sptr;
+	g_idle_add(run_cpu, uigtk2->top_window);
 	gtk_main();
 }
 
 static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) {
-	(void)sptr;
+	struct ui_gtk2_interface *uigtk2 = sptr;
 	GtkToggleAction *toggle;
 	GtkRadioAction *radio;
 
@@ -665,27 +673,27 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	/* Hardware */
 
 	case ui_tag_machine:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine1");
-		uigtk2_notify_radio_action_set(radio, value, set_machine, NULL);
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/MachineMenu/machine1");
+		uigtk2_notify_radio_action_set(radio, value, set_machine, uigtk2);
 		break;
 
 	case ui_tag_cartridge:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart0");
-		uigtk2_notify_radio_action_set(radio, value, set_cart, NULL);
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/CartridgeMenu/cart0");
+		uigtk2_notify_radio_action_set(radio, value, set_cart, uigtk2);
 		break;
 
 	/* Tape */
 
 	case ui_tag_tape_flags:
-		gtk2_update_tape_state(value);
+		gtk2_update_tape_state(uigtk2, value);
 		break;
 
 	case ui_tag_tape_input_filename:
-		gtk2_input_tape_filename_cb((const char *)data);
+		gtk2_input_tape_filename_cb(uigtk2, (const char *)data);
 		break;
 
 	case ui_tag_tape_output_filename:
-		gtk2_output_tape_filename_cb((const char *)data);
+		gtk2_output_tape_filename_cb(uigtk2, (const char *)data);
 		break;
 
 	/* Disk */
@@ -705,47 +713,47 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	/* Video */
 
 	case ui_tag_fullscreen:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/FullScreen");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, set_fullscreen, NULL);
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/FullScreen");
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, set_fullscreen, uigtk2);
 		break;
 
 	case ui_tag_vdg_inverse:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/InverseText");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_inverse_text, NULL);
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/InverseText");
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_inverse_text, uigtk2);
 		break;
 
 	case ui_tag_ccr:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-simple");
-		uigtk2_notify_radio_action_set(radio, value, set_ccr, NULL);
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-simple");
+		uigtk2_notify_radio_action_set(radio, value, set_ccr, uigtk2);
 		break;
 
 	case ui_tag_cross_colour:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
-		uigtk2_notify_radio_action_set(radio, value, set_cc, NULL);
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
+		uigtk2_notify_radio_action_set(radio, value, set_cc, uigtk2);
 		break;
 
 	/* Audio */
 
 	case ui_tag_fast_sound:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/FastSound");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_fast_sound, NULL);
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/FastSound");
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_fast_sound, uigtk2);
 		break;
 
 	case ui_tag_ratelimit:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/RateLimit");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_ratelimit, NULL);
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/RateLimit");
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_ratelimit, uigtk2);
 		break;
 
 	/* Keyboard */
 
 	case ui_tag_keymap:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
-		uigtk2_notify_radio_action_set(radio, value, set_keymap, NULL);
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/KeymapMenu/keymap_dragon");
+		uigtk2_notify_radio_action_set(radio, value, set_keymap, uigtk2);
 		break;
 
 	case ui_tag_kbd_translate:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_keyboard_translation, NULL);
+		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TranslateKeyboard");
+		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_keyboard_translation, uigtk2);
 		break;
 
 	/* Joysticks */
@@ -755,10 +763,10 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		{
 			gpointer func;
 			if (tag == ui_tag_joy_right) {
-				radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
+				radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/JoyRightMenu/joy_right_none");
 				func = set_joy_right;
 			} else {
-				radio = (GtkRadioAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
+				radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/HardwareMenu/JoyLeftMenu/joy_left_none");
 				func = set_joy_left;
 			}
 			int joy = 0;
@@ -770,7 +778,7 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 					}
 				}
 			}
-			uigtk2_notify_radio_action_set(radio, joy, func, NULL);
+			uigtk2_notify_radio_action_set(radio, joy, func, uigtk2);
 		}
 		break;
 
@@ -792,12 +800,12 @@ static void free_action_group(GtkActionGroup *action_group) {
 }
 
 /* Dynamic machine menu */
-static void update_machine_menu(void) {
+static void update_machine_menu(struct ui_gtk2_interface *uigtk2) {
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	int num_machines = slist_length(mcl);
 	int selected = -1;
-	free_action_group(machine_action_group);
-	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_machines);
+	free_action_group(uigtk2->machine_action_group);
+	gtk_ui_manager_remove_ui(uigtk2->menu_manager, uigtk2->merge_machines);
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
 	// jump through alloc hoops just to avoid const-ness warnings
 	gchar **names = g_malloc0(num_machines * sizeof(gchar *));
@@ -814,9 +822,9 @@ static void update_machine_menu(void) {
 		labels[i] = escape_underscores(mc->description);
 		radio_entries[i].label = labels[i];
 		radio_entries[i].value = mc->id;
-		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(uigtk2->menu_manager, uigtk2->merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
-	gtk_action_group_add_radio_actions(machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
+	gtk_action_group_add_radio_actions(uigtk2->machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, uigtk2);
 	// back through the hoops
 	for (i = 0; i < num_machines; i++) {
 		g_free(names[i]);
@@ -829,12 +837,12 @@ static void update_machine_menu(void) {
 }
 
 /* Dynamic cartridge menu */
-static void update_cartridge_menu(void) {
+static void update_cartridge_menu(struct ui_gtk2_interface *uigtk2) {
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	int num_carts = slist_length(ccl);
 	int selected = 0;
-	free_action_group(cart_action_group);
-	gtk_ui_manager_remove_ui(gtk2_menu_manager, merge_carts);
+	free_action_group(uigtk2->cart_action_group);
+	gtk_ui_manager_remove_ui(uigtk2->menu_manager, uigtk2->merge_carts);
 	GtkRadioActionEntry *radio_entries = g_malloc0((num_carts+1) * sizeof(*radio_entries));
 	// jump through alloc hoops just to avoid const-ness warnings
 	// note: final entry's name & label is const, no need to allow space
@@ -854,13 +862,13 @@ static void update_cartridge_menu(void) {
 		labels[i] = escape_underscores(cc->description);
 		radio_entries[i].label = labels[i];
 		radio_entries[i].value = cc->id;
-		gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		gtk_ui_manager_add_ui(uigtk2->menu_manager, uigtk2->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	radio_entries[num_carts].name = "cart0";
 	radio_entries[num_carts].label = "None";
 	radio_entries[num_carts].value = -1;
-	gtk_ui_manager_add_ui(gtk2_menu_manager, merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, NULL);
+	gtk_ui_manager_add_ui(uigtk2->menu_manager, uigtk2->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+	gtk_action_group_add_radio_actions(uigtk2->cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, uigtk2);
 	// back through the hoops
 	for (i = 0; i < num_carts; i++) {
 		g_free(names[i]);
@@ -874,31 +882,31 @@ static void update_cartridge_menu(void) {
 
 /* Cursor hiding */
 
-static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data) {
+static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
 	(void)widget;
 	(void)event;
-	(void)data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 #ifndef WINDOWS32
-	if (cursor_hidden)
+	if (uigtk2->cursor_hidden)
 		return FALSE;
-	GdkWindow *window = gtk_widget_get_window(gtk2_drawing_area);
-	old_cursor = gdk_window_get_cursor(window);
-	gdk_window_set_cursor(window, blank_cursor);
-	cursor_hidden = 1;
+	GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
+	uigtk2->old_cursor = gdk_window_get_cursor(window);
+	gdk_window_set_cursor(window, uigtk2->blank_cursor);
+	uigtk2->cursor_hidden = 1;
 #endif
 	return FALSE;
 }
 
-static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data) {
+static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
 	(void)widget;
 	(void)event;
-	(void)data;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 #ifndef WINDOWS32
-	if (!cursor_hidden)
+	if (!uigtk2->cursor_hidden)
 		return FALSE;
-	GdkWindow *window = gtk_widget_get_window(gtk2_drawing_area);
-	gdk_window_set_cursor(window, old_cursor);
-	cursor_hidden = 0;
+	GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
+	gdk_window_set_cursor(window, uigtk2->old_cursor);
+	uigtk2->cursor_hidden = 0;
 #endif
 	return FALSE;
 }
@@ -927,40 +935,38 @@ static char *escape_underscores(const char *str) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static event_ticks last_mouse_update_time;
-
-static void update_mouse_state(void) {
+static void update_mouse_state(struct ui_gtk2_interface *uigtk2) {
 	int x, y;
 	GdkModifierType buttons;
-	GdkWindow *window = gtk_widget_get_window(gtk2_drawing_area);
+	GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
 	gdk_window_get_pointer(window, &x, &y, &buttons);
-	x = (x - gtk2_display.x) * 320;
-	y = (y - gtk2_display.y) * 240;
-	float xx = (float)x / (float)gtk2_display.w;
-	float yy = (float)y / (float)gtk2_display.h;
-	xx = (xx - mouse_xoffset) / mouse_xdiv;
-	yy = (yy - mouse_yoffset) / mouse_ydiv;
+	x = (x - uigtk2->display_rect.x) * 320;
+	y = (y - uigtk2->display_rect.y) * 240;
+	float xx = (float)x / (float)uigtk2->display_rect.w;
+	float yy = (float)y / (float)uigtk2->display_rect.h;
+	xx = (xx - uigtk2->mouse_xoffset) / uigtk2->mouse_xdiv;
+	yy = (yy - uigtk2->mouse_yoffset) / uigtk2->mouse_ydiv;
 	if (xx < 0.0) xx = 0.0;
 	if (xx > 1.0) xx = 1.0;
 	if (yy < 0.0) yy = 0.0;
 	if (yy > 1.0) yy = 1.0;
-	mouse_axis[0] = xx * 255.;
-	mouse_axis[1] = yy * 255.;
-	mouse_button[0] = buttons & GDK_BUTTON1_MASK;
-	mouse_button[1] = buttons & GDK_BUTTON2_MASK;
-	mouse_button[2] = buttons & GDK_BUTTON3_MASK;
-	last_mouse_update_time = event_current_tick;
+	uigtk2->mouse_axis[0] = xx * 255.;
+	uigtk2->mouse_axis[1] = yy * 255.;
+	uigtk2->mouse_button[0] = buttons & GDK_BUTTON1_MASK;
+	uigtk2->mouse_button[1] = buttons & GDK_BUTTON2_MASK;
+	uigtk2->mouse_button[2] = buttons & GDK_BUTTON3_MASK;
+	uigtk2->last_mouse_update_time = event_current_tick;
 }
 
 static unsigned read_axis(unsigned *a) {
-	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
-		update_mouse_state();
+	if ((event_current_tick - global_uigtk2->last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state(global_uigtk2);
 	return *a;
 }
 
 static _Bool read_button(_Bool *b) {
-	if ((event_current_tick - last_mouse_update_time) >= EVENT_MS(10))
-		update_mouse_state();
+	if ((event_current_tick - global_uigtk2->last_mouse_update_time) >= EVENT_MS(10))
+		update_mouse_state(global_uigtk2);
 	return *b;
 }
 
@@ -980,18 +986,18 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	if (jaxis == 0) {
 		if (off0 < -32.0) off0 = -32.0;
 		if (off1 > 288.0) off0 = 288.0;
-		mouse_xoffset = off0 + 32.0;
-		mouse_xdiv = off1 - off0;
+		global_uigtk2->mouse_xoffset = off0 + 32.0;
+		global_uigtk2->mouse_xdiv = off1 - off0;
 	} else {
 		if (off0 < -24.0) off0 = -24.0;
 		if (off1 > 216.0) off0 = 216.0;
-		mouse_yoffset = off0 + 24.0;
-		mouse_ydiv = off1 - off0;
+		global_uigtk2->mouse_yoffset = off0 + 24.0;
+		global_uigtk2->mouse_ydiv = off1 - off0;
 	}
 	struct joystick_axis *axis = g_malloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
-	axis->data = &mouse_axis[jaxis];
-	last_mouse_update_time = event_current_tick - EVENT_MS(10);
+	axis->data = &global_uigtk2->mouse_axis[jaxis];
+	global_uigtk2->last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return axis;
 }
 
@@ -1003,7 +1009,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 		return NULL;
 	struct joystick_button *button = g_malloc(sizeof(*button));
 	button->read = (js_read_button_func)read_button;
-	button->data = &mouse_button[jbutton];
-	last_mouse_update_time = event_current_tick - EVENT_MS(10);
+	button->data = &global_uigtk2->mouse_button[jbutton];
+	global_uigtk2->last_mouse_update_time = event_current_tick - EVENT_MS(10);
 	return button;
 }

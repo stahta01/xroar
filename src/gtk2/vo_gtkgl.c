@@ -38,6 +38,7 @@ See COPYING.GPL for redistribution conditions.
 #include "vo_opengl.h"
 #include "xroar.h"
 
+#include "gtk2/common.h"
 #include "gtk2/ui_gtk2.h"
 
 static void *new(void *cfg);
@@ -98,14 +99,14 @@ static void *new(void *cfg) {
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_gtkgl_set_vo_cmp, vo);
 
 	/* Configure drawing_area widget */
-	gtk_widget_set_size_request(gtk2_drawing_area, 640, 480);
+	gtk_widget_set_size_request(global_uigtk2->drawing_area, 640, 480);
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
 		LOG_ERROR("Failed to create OpenGL config\n");
 		vo_gtkgl_free(vo);
 		return NULL;
 	}
-	if (!gtk_widget_set_gl_capability(gtk2_drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
+	if (!gtk_widget_set_gl_capability(global_uigtk2->drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
 		LOG_ERROR("Failed to add OpenGL support to GTK widget\n");
 		g_object_unref(glconfig);
 		vo_gtkgl_free(vo);
@@ -113,12 +114,12 @@ static void *new(void *cfg) {
 	}
 	g_object_unref(glconfig);
 
-	g_signal_connect(gtk2_top_window, "window-state-event", G_CALLBACK(window_state), vo);
-	g_signal_connect(gtk2_drawing_area, "configure-event", G_CALLBACK(configure), vo);
+	g_signal_connect(global_uigtk2->top_window, "window-state-event", G_CALLBACK(window_state), vo);
+	g_signal_connect(global_uigtk2->drawing_area, "configure-event", G_CALLBACK(configure), vo);
 
 	/* Show top window first so that drawing area is realised to the
 	 * right size even if we then fullscreen.  */
-	gtk_widget_show(gtk2_top_window);
+	gtk_widget_show(global_uigtk2->top_window);
 	/* Set fullscreen. */
 	set_fullscreen(vo, vo_cfg->fullscreen);
 
@@ -151,13 +152,13 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	 * containing window, or indeed ask it to.  This will hopefully work
 	 * consistently.  It seems to be basically how GIMP "shrink wrap"s its
 	 * windows.  */
-	gint oldw = gtk2_top_window->allocation.width;
-	gint oldh = gtk2_top_window->allocation.height;
-	gint woff = oldw - gtk2_drawing_area->allocation.width;
-	gint hoff = oldh - gtk2_drawing_area->allocation.height;
+	gint oldw = global_uigtk2->top_window->allocation.width;
+	gint oldh = global_uigtk2->top_window->allocation.height;
+	gint woff = oldw - global_uigtk2->drawing_area->allocation.width;
+	gint hoff = oldh - global_uigtk2->drawing_area->allocation.height;
 	w += woff;
 	h += hoff;
-	gtk_window_resize(GTK_WINDOW(gtk2_top_window), w, h);
+	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w, h);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
@@ -165,9 +166,9 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	struct vo_interface *vo = &vogtkgl->public;
 	(void)fullscreen;
 	if (fullscreen) {
-		gtk_window_fullscreen(GTK_WINDOW(gtk2_top_window));
+		gtk_window_fullscreen(GTK_WINDOW(global_uigtk2->top_window));
 	} else {
-		gtk_window_unfullscreen(GTK_WINDOW(gtk2_top_window));
+		gtk_window_unfullscreen(GTK_WINDOW(global_uigtk2->top_window));
 	}
 	vo->is_fullscreen = fullscreen;
 	return 0;
@@ -178,11 +179,11 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 	(void)tw;
 	(void)data;
 	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo->is_fullscreen) {
-		gtk_widget_hide(gtk2_menubar);
+		gtk_widget_hide(global_uigtk2->menubar);
 		vo->is_fullscreen = 1;
 	}
 	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && vo->is_fullscreen) {
-		gtk_widget_show(gtk2_menubar);
+		gtk_widget_show(global_uigtk2->menubar);
 		vo->is_fullscreen = 0;
 	}
 	return 0;
@@ -201,7 +202,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	}
 
 	DELEGATE_CALL2(vogl->resize, da->allocation.width, da->allocation.height);
-	vo_opengl_get_display_rect(vogl, &gtk2_display);
+	vo_opengl_get_display_rect(vogl, &global_uigtk2->display_rect);
 	vo_gtkgl_set_vsync(1);
 
 	gdk_gl_drawable_gl_end(gldrawable);
@@ -212,8 +213,8 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 static void refresh(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vogl = vogtkgl->vogl;
-	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
-	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
+	GdkGLContext *glcontext = gtk_widget_get_gl_context(global_uigtk2->drawing_area);
+	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(global_uigtk2->drawing_area);
 
 	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext)) {
 		g_assert_not_reached();
@@ -228,8 +229,8 @@ static void refresh(void *sptr) {
 static void vsync(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vogl = vogtkgl->vogl;
-	GdkGLContext *glcontext = gtk_widget_get_gl_context(gtk2_drawing_area);
-	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(gtk2_drawing_area);
+	GdkGLContext *glcontext = gtk_widget_get_gl_context(global_uigtk2->drawing_area);
+	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(global_uigtk2->drawing_area);
 
 	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext)) {
 		g_assert_not_reached();
@@ -255,8 +256,8 @@ static void vo_gtkgl_set_vsync(int val) {
 
 	PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");
 	if (glXSwapIntervalEXT) {
-		Display *dpy = gdk_x11_drawable_get_xdisplay(GTK_WIDGET(gtk2_drawing_area)->window);
-		Window win = gdk_x11_drawable_get_xid(GTK_WIDGET(gtk2_drawing_area)->window);
+		Display *dpy = gdk_x11_drawable_get_xdisplay(GTK_WIDGET(global_uigtk2->drawing_area)->window);
+		Window win = gdk_x11_drawable_get_xid(GTK_WIDGET(global_uigtk2->drawing_area)->window);
 		if (dpy && win) {
 			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);

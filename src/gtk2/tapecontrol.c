@@ -57,7 +57,7 @@ static GtkToggleButton *tc_fast = NULL;
 static GtkToggleButton *tc_pad_auto = NULL;
 static GtkToggleButton *tc_rewrite = NULL;
 
-static void hide_tc_window(void);
+static void hide_tc_window(GtkEntry *entry, gpointer user_data);
 static void tc_input_rewind(GtkButton *button, gpointer user_data);
 static void tc_output_rewind(GtkButton *button, gpointer user_data);
 static void tc_input_insert(GtkButton *button, gpointer user_data);
@@ -97,7 +97,7 @@ static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll,
 
 /* Tape control */
 
-void gtk2_create_tc_window(void) {
+void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	GtkBuilder *builder;
 	GtkWidget *widget;
 	GError *error = NULL;
@@ -128,33 +128,33 @@ void gtk2_create_tc_window(void) {
 	tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "rewrite"));
 
 	/* Connect signals */
-	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), NULL);
-	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), NULL);
-	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), NULL);
-	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
-	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);
-	g_signal_connect(tc_fast, "toggled", G_CALLBACK(tc_toggled_fast), NULL);
-	g_signal_connect(tc_pad_auto, "toggled", G_CALLBACK(tc_toggled_pad_auto), NULL);
-	g_signal_connect(tc_rewrite, "toggled", G_CALLBACK(tc_toggled_rewrite), NULL);
+	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), uigtk2);
+	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
+	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), uigtk2);
+	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), uigtk2);
+	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), uigtk2);
+	g_signal_connect(tc_fast, "toggled", G_CALLBACK(tc_toggled_fast), uigtk2);
+	g_signal_connect(tc_pad_auto, "toggled", G_CALLBACK(tc_toggled_pad_auto), uigtk2);
+	g_signal_connect(tc_rewrite, "toggled", G_CALLBACK(tc_toggled_rewrite), uigtk2);
 
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "input_rewind"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_rewind), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_rewind), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "input_insert"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_insert), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_insert), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "input_eject"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_eject), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_input_eject), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "output_rewind"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_rewind), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_rewind), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "output_insert"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_insert), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_insert), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "output_eject"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_eject), NULL);
+	g_signal_connect(widget, "clicked", G_CALLBACK(tc_output_eject), uigtk2);
 
 	/* In case any signals remain... */
-	gtk_builder_connect_signals(builder, NULL);
+	gtk_builder_connect_signals(builder, uigtk2);
 	g_object_unref(builder);
 
-	event_init(&update_tape_counters_event, DELEGATE_AS0(void, update_tape_counters, NULL));
+	event_init(&update_tape_counters_event, DELEGATE_AS0(void, update_tape_counters, uigtk2));
 	update_tape_counters_event.at_tick = event_current_tick + EVENT_MS(500);
 	event_queue(&UI_EVENT_LIST, &update_tape_counters_event);
 }
@@ -262,8 +262,8 @@ static void update_tape_counters(void *data) {
 
 /* Tape Control - UI callbacks */
 
-void gtk2_input_tape_filename_cb(const char *filename) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TapeControl");
+void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_label_set_text(GTK_LABEL(tc_input_filename), filename);
 	GtkTreeIter iter;
 	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tc_input_list_store), &iter)) {
@@ -280,7 +280,8 @@ void gtk2_input_tape_filename_cb(const char *filename) {
 	}
 }
 
-void gtk2_output_tape_filename_cb(const char *filename) {
+void gtk2_output_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
+	(void)uigtk2;
 	gtk_label_set_text(GTK_LABEL(tc_output_filename), filename);
 }
 
@@ -305,10 +306,10 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 	tape_set_state(xroar_tape_interface, flags);
 }
 
-void gtk2_update_tape_state(int flags) {
-	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
-	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, NULL);
-	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
+void gtk2_update_tape_state(struct ui_gtk2_interface *uigtk2, int flags) {
+	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, uigtk2);
+	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, uigtk2);
+	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, uigtk2);
 }
 
 /* Tape Control - Signal Handlers */
@@ -324,8 +325,10 @@ void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 	}
 }
 
-static void hide_tc_window(void) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(gtk2_menu_manager, "/MainMenu/ToolMenu/TapeControl");
+static void hide_tc_window(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_toggle_action_set_active(toggle, 0);
 }
 

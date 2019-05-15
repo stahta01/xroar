@@ -18,10 +18,12 @@ See COPYING.GPL for redistribution conditions.
 #ifndef XROAR_GTK2_DRIVECONTROL_H_
 #define XROAR_GTK2_DRIVECONTROL_H_
 
+struct ui_gtk2_interface;
+
 struct vdisk;
 
-void gtk2_insert_disk(int drive);
-void gtk2_create_dc_window(void);
+void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive);
+void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2);
 void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data);
 
 void gtk2_update_drive_disk(int drive, const struct vdisk *disk);
