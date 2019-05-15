@@ -67,6 +67,10 @@ extern struct ui_gtk2_interface *global_uigtk2;
 void gtk2_keyboard_init(struct ui_cfg *ui_cfg);
 gboolean gtk2_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
 
+extern struct joystick_module *gtk2_js_modlist[];
+
+void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2);
+
 // Wrappers for notify-only updating of UI elements.  Blocks callback so that
 // no further action is taken.
 
