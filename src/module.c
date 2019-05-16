@@ -115,13 +115,3 @@ void *module_init_from_list(struct module * const *list, struct module *module, 
 	}
 	return NULL;
 }
-
-void module_shutdown(struct module *module) {
-	if (!module || !module->initialised)
-		return;
-	if (module->description) {
-		LOG_DEBUG(1, "Module shutdown: %s\n", module->description);
-	}
-	if (module->shutdown)
-		module->shutdown();
-}

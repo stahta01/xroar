@@ -59,8 +59,7 @@ static struct joystick_submodule *js_submodlist[] = {
 };
 
 struct joystick_module sdl_js_mod_exported = {
-	.common = { .name = "sdl", .description = "SDL2 joystick input",
-	            .shutdown = sdl_js_physical_shutdown },
+	.common = { .name = "sdl", .description = "SDL2 joystick input" },
 	.submodule_list = js_submodlist,
 };
 
@@ -100,13 +99,6 @@ static void sdl_js_physical_init(void) {
 		LOG_DEBUG(1, "\t%u joysticks found\n", num_joysticks);
 	}
 	initialised = 1;
-}
-
-void sdl_js_physical_shutdown(void) {
-	if (initialised) {
-		SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-		initialised = 0;
-	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

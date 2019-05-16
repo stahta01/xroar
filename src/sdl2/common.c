@@ -78,8 +78,6 @@ static _Bool mouse_button[3] = { 0, 0, 0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void sdl_js_shutdown(void);
-
 // If the SDL UI is active, more joystick interfaces are available
 
 static struct joystick_submodule *js_submodlist[] = {
@@ -90,8 +88,7 @@ static struct joystick_submodule *js_submodlist[] = {
 };
 
 struct joystick_module sdl_js_internal = {
-	.common = { .name = "sdl", .description = "SDL2 joystick input",
-	            .shutdown = sdl_js_shutdown },
+	.common = { .name = "sdl", .description = "SDL2 joystick input" },
 	.submodule_list = js_submodlist,
 };
 
@@ -99,12 +96,6 @@ struct joystick_module * const sdl_js_modlist[] = {
 	&sdl_js_internal,
 	NULL
 };
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void sdl_js_shutdown(void) {
-	sdl_js_physical_shutdown();
-}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
