@@ -306,39 +306,55 @@ void sound_update(struct sound_interface *sndp) {
 	// used.  may save some calls to sample-rate conversion / low-pass
 	// filtering.
 
+	_Bool mux_enabled = snd->current.mux_enabled;
+	unsigned mux_source = snd->current.mux_source;
+	if (!mux_enabled) {
+		mux_source = SOURCE_NONE;
+	}
+
 	// Always run external sources so they're up to date, even though we'll
 	// only use one of them.
 	if (DELEGATE_DEFINED(sndp->get_tape_audio)) {
-		snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, sndp->ratelimit ? snd->mux_input[SOURCE_TAPE] : NULL);
-	}
-	if (DELEGATE_DEFINED(sndp->get_cart_audio)) {
-		snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, sndp->ratelimit ? snd->mux_input[SOURCE_CART] : NULL);
-	}
-
-	// Only fill DAC buffer if it's selected
-	if (snd->current.mux_enabled && snd->current.mux_source == SOURCE_DAC) {
-		for (unsigned i = 0; i < nframes; i++) {
-			snd->mux_input[SOURCE_DAC][i] = snd->mux_input_raw[SOURCE_DAC];
+		if (mux_source == SOURCE_TAPE && sndp->ratelimit) {
+			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, snd->mux_input[SOURCE_TAPE]);
+		} else {
+			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, NULL);
+			if (mux_source == SOURCE_TAPE) {
+				mux_source = SOURCE_NONE;
+			}
 		}
-		snd->mux_input_raw[SOURCE_DAC] = snd->dac_level;
-	}
-
-	// Fill tape buffer.  This functionality should be pushed out into the
-	// get_tape_audio delegate.
-	if (!DELEGATE_DEFINED(sndp->get_tape_audio) && snd->current.mux_enabled && snd->current.mux_source == SOURCE_TAPE) {
+	} else if (mux_source == SOURCE_TAPE) {
+		// Fill tape buffer.  This functionality should be pushed out into the
+		// get_tape_audio delegate.
 		for (unsigned i = 0; i < nframes; i++) {
 			snd->mux_input[SOURCE_TAPE][i] = snd->mux_input_raw[SOURCE_TAPE];
 		}
 		snd->mux_input_raw[SOURCE_TAPE] = snd->tape_level;
 	}
 
-	// Select appropriate mux output, or none
-	float *mux_output;
-	if (snd->current.mux_enabled) {
-		mux_output = snd->mux_input[snd->current.mux_source];
+	if (DELEGATE_DEFINED(sndp->get_cart_audio)) {
+		if (mux_source == SOURCE_CART && sndp->ratelimit) {
+			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, snd->mux_input[SOURCE_CART]);
+		} else {
+			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, NULL);
+			if (mux_source == SOURCE_CART) {
+				mux_source = SOURCE_NONE;
+			}
+		}
 	} else {
-		mux_output = snd->mux_input[SOURCE_NONE];
+		snd->mux_input_raw[SOURCE_CART] = 0.0;
 	}
+
+	// Only fill DAC buffer if it's selected
+	if (mux_source == SOURCE_DAC) {
+		for (unsigned i = 0; i < nframes; i++) {
+			snd->mux_input[SOURCE_DAC][i] = snd->mux_input_raw[SOURCE_DAC];
+		}
+	}
+	snd->mux_input_raw[SOURCE_DAC] = snd->dac_level;
+
+	// Select appropriate mux output, or none
+	float *mux_output = snd->mux_input[mux_source];
 
 	// Mix audio, send when buffer full
 	while (nframes > 0) {
