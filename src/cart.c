@@ -384,6 +384,14 @@ void cart_rom_reset(struct cart *c) {
 	c->rom_bank = 0;
 }
 
+// The general approach taken by autostarting carts is to tie the CART FIRQ
+// line to the Q clock, providing a continuous series of edge triggers to the
+// PIA.  Emulating that would be quite CPU intensive, so split the difference
+// by scheduling a trigger every 100ms.  Technically, this does mean that more
+// time passes than would happen on a real machine (so the BASIC interpreter
+// will have initialised more), but it hasn't been a problem for anything so
+// far.
+
 void cart_rom_attach(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->autorun) {
