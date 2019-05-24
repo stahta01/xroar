@@ -39,18 +39,16 @@ See COPYING.GPL for redistribution conditions.
 
 #include "sdl2/common.h"
 
+// Eventually, everything should be delegated properly, but for now assure
+// there is only ever one instantiation of ui_sdl2 and make it available
+// globally.
+struct ui_sdl2_interface *global_uisdl2 = NULL;
+
 extern inline void sdl_os_keyboard_init(SDL_Window *sw);
 extern inline void sdl_os_keyboard_free(SDL_Window *sw);
 extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
 extern inline void sdl_os_fix_keyboard_event(SDL_Event *ev);
 extern inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym);
-
-struct vo_rect sdl_display = {
-	.x = 0, .y = 0, .w = 320, .h = 240,
-};
-
-SDL_Window *sdl_window = NULL;
-Uint32 sdl_windowID = 0;
 
 struct module * const sdl_vo_module_list[] = {
 	&vo_sdl_module,
@@ -100,8 +98,7 @@ struct joystick_module * const sdl_js_modlist[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void ui_sdl_run(void *sptr) {
-	struct ui_interface *uisdl = sptr;
-	(void)uisdl;
+	struct ui_sdl2_interface *uisdl2 = sptr;
 	while (xroar_run()) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event) == 1) {
@@ -118,14 +115,14 @@ void ui_sdl_run(void *sptr) {
 				break;
 			case SDL_KEYDOWN:
 				sdl_os_fix_keyboard_event(&event);
-				sdl_keypress(&event.key.keysym);
+				sdl_keypress(uisdl2, &event.key.keysym);
 				break;
 			case SDL_KEYUP:
 				sdl_os_fix_keyboard_event(&event);
-				sdl_keyrelease(&event.key.keysym);
+				sdl_keyrelease(uisdl2, &event.key.keysym);
 				break;
 			case SDL_MOUSEMOTION:
-				if (event.motion.windowID == sdl_windowID) {
+				if (event.motion.windowID == uisdl2->vo_window_id) {
 					float x = ((float)event.motion.x - mouse_xoffset) / mouse_xdiv;
 					float y = ((float)event.motion.y - mouse_yoffset) / mouse_ydiv;
 					if (x < 0.0) x = 0.0;
@@ -208,9 +205,9 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void sdl_zoom_in(void) {
-	int xscale = sdl_display.w / 160;
-	int yscale = sdl_display.h / 120;
+void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
+	int xscale = uisdl2->display_rect.w / 160;
+	int yscale = uisdl2->display_rect.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -220,13 +217,13 @@ void sdl_zoom_in(void) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
-	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
+	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
 	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }
 
-void sdl_zoom_out(void) {
-	int xscale = sdl_display.w / 160;
-	int yscale = sdl_display.h / 120;
+void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
+	int xscale = uisdl2->display_rect.w / 160;
+	int yscale = uisdl2->display_rect.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = xscale;
@@ -236,6 +233,6 @@ void sdl_zoom_out(void) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
-	SDL_SetWindowSize(sdl_window, 160*scale, 120*scale);
+	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
 	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }

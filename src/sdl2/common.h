@@ -20,13 +20,38 @@ See COPYING.GPL for redistribution conditions.
 
 #include <SDL_syswm.h>
 
+#include "ui.h"
 #include "vo.h"
+
 struct joystick_module;
+struct keyboard_sdl2_state;
 
-extern SDL_Window *sdl_window;
-extern Uint32 sdl_windowID;
+struct ui_sdl2_interface {
+	struct ui_interface public;
 
-extern struct vo_rect sdl_display;
+	// Shared SDL2 data
+	SDL_Window *vo_window;
+	Uint32 vo_window_id;
+
+	// Window geometry
+	struct vo_rect display_rect;
+
+	// Keyboard state
+	struct {
+		// Map according to unicode value, not key position
+		_Bool translate;
+		// Translate scancode into emulator key
+		int8_t scancode_to_dkey[SDL_NUM_SCANCODES];
+		// Scancode overrides unicode translation
+		_Bool scancode_priority[SDL_NUM_SCANCODES];
+		// Last unicode value determined for each scancode
+		int unicode_last_scancode[SDL_NUM_SCANCODES];
+	} keyboard;
+};
+
+extern struct ui_sdl2_interface *global_uisdl2;
+
+//extern struct vo_rect sdl_display;
 
 extern struct module vo_sdl_module;
 
@@ -38,14 +63,13 @@ extern struct module * const sdl_vo_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
 void ui_sdl_run(void *sptr);
-void sdl_keyboard_init(void);
-void sdl_keyboard_set_translate(_Bool);
-void sdl_keypress(SDL_Keysym *keysym);
-void sdl_keyrelease(SDL_Keysym *keysym);
+void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2);
+void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
+void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_js_physical_shutdown(void);
 
-void sdl_zoom_in(void);
-void sdl_zoom_out(void);
+void sdl_zoom_in(struct ui_sdl2_interface *uisdl2);
+void sdl_zoom_out(struct ui_sdl2_interface *uisdl2);
 
 /* Platform-specific support */
 

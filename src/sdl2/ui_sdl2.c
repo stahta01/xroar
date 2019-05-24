@@ -17,6 +17,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "config.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,6 +57,9 @@ static void *ui_sdl_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 	(void)ui_cfg;
 
+	// Be sure we've not made more than one of these
+	assert(global_uisdl2 == NULL);
+
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
 			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());
@@ -68,34 +72,42 @@ static void *ui_sdl_new(void *cfg) {
 		return NULL;
 	}
 
-	struct ui_interface *uisdl = xmalloc(sizeof(*uisdl));
-	*uisdl = (struct ui_interface){0};
+	struct ui_sdl2_interface *uisdl2 = xmalloc(sizeof(*uisdl2));
+	*uisdl2 = (struct ui_sdl2_interface){0};
+	struct ui_interface *ui = &uisdl2->public;
+	// Make available globally for other SDL2 code
+	global_uisdl2 = uisdl2;
 
-	uisdl->free = DELEGATE_AS0(void, ui_sdl_free, uisdl);
-	uisdl->run = DELEGATE_AS0(void, ui_sdl_run, uisdl);
-	uisdl->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_set_state, uisdl);
+	ui->free = DELEGATE_AS0(void, ui_sdl_free, uisdl2);
+	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
+	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_set_state, uisdl2);
 
 #ifdef HAVE_X11
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 
-	sdl_keyboard_init();
+	sdl_keyboard_init(uisdl2);
 
-	return uisdl;
+	// Window geometry sensible defaults
+	uisdl2->display_rect.w = 320;
+	uisdl2->display_rect.h = 240;
+
+	return ui;
 }
 
 static void ui_sdl_free(void *sptr) {
-	struct ui_module *uisdl = sptr;
+	struct ui_sdl2_interface *uisdl2 = sptr;
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	free(uisdl);
+	global_uisdl2 = NULL;
+	free(uisdl2);
 }
 
 static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data) {
-	(void)sptr;
+	struct ui_sdl2_interface *uisdl2 = sptr;
 	(void)data;
 	switch (tag) {
 	case ui_tag_kbd_translate:
-		sdl_keyboard_set_translate(value);
+		uisdl2->keyboard.translate = value;
 		break;
 	default:
 		break;

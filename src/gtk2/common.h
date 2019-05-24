@@ -20,9 +20,9 @@ See COPYING.GPL for redistribution conditions.
 
 #include <gtk/gtk.h>
 
-#include <events.h>
-#include <ui.h>
-#include <vo.h>
+#include "events.h"
+#include "ui.h"
+#include "vo.h"
 
 struct ui_cfg;
 

@@ -143,8 +143,8 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 #ifdef WINDOWS32
 	/* Remove menubar if transitioning from windowed to fullscreen. */
 
-	if (sdl_window && !vo->is_fullscreen && fullscreen) {
-		sdl_windows32_remove_menu(sdl_window);
+	if (global_uisdl2->vo_window && !vo->is_fullscreen && fullscreen) {
+		sdl_windows32_remove_menu(global_uisdl2->vo_window);
 	}
 #endif
 
@@ -152,33 +152,33 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	destroy_window();
 
 	if (fullscreen) {
-		sdl_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		global_uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	} else {
-		sdl_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_w, vosdl->window_h, SDL_WINDOW_RESIZABLE);
+		global_uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_w, vosdl->window_h, SDL_WINDOW_RESIZABLE);
 	}
-	if (!sdl_window) {
+	if (!global_uisdl2->vo_window) {
 		LOG_ERROR("Failed to create window\n");
 		return -1;
 	}
-	sdl_windowID = SDL_GetWindowID(sdl_window);
+	global_uisdl2->vo_window_id = SDL_GetWindowID(global_uisdl2->vo_window);
 	if (!fullscreen) {
-		SDL_SetWindowMinimumSize(sdl_window, 160, 120);
+		SDL_SetWindowMinimumSize(global_uisdl2->vo_window, 160, 120);
 	}
 
 #ifdef WINDOWS32
-	sdl_windows32_set_events_window(sdl_window);
+	sdl_windows32_set_events_window(global_uisdl2->vo_window);
 
 	/* Add menubar if transitioning from fullscreen to windowed. */
 
 	if (vo->is_fullscreen && !fullscreen) {
-		sdl_windows32_add_menu(sdl_window);
+		sdl_windows32_add_menu(global_uisdl2->vo_window);
 
 		/* Adding the menubar will resize the *client area*, i.e., the
 		 * bit SDL wants to render into. A specified geometry in this
 		 * case should apply to the client area, so we need to resize
 		 * again to account for this. */
 
-		SDL_SetWindowSize(sdl_window, vosdl->window_w, vosdl->window_h);
+		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_w, vosdl->window_h);
 
 		/* Now purge any resize events this all generated from the
 		 * event queue. Don't want to end up in a resize loop! */
@@ -198,10 +198,10 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 		SDL_ShowCursor(SDL_ENABLE);
 
 	vo->is_fullscreen = fullscreen;
-	sdl_display.x = sdl_display.y = 0;
+	global_uisdl2->display_rect.x = global_uisdl2->display_rect.y = 0;
 
 	/* Initialise keyboard */
-	sdl_os_keyboard_init(sdl_window);
+	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
 	/* Clear out any keydown events queued for the new window */
 	SDL_PumpEvents();
@@ -213,17 +213,17 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 /* In Windows, the renderer and textures need recreating quite frequently */
 
 static void destroy_window(void) {
-	if (sdl_window) {
-		sdl_os_keyboard_free(sdl_window);
-		SDL_DestroyWindow(sdl_window);
-		sdl_window = NULL;
+	if (global_uisdl2->vo_window) {
+		sdl_os_keyboard_free(global_uisdl2->vo_window);
+		SDL_DestroyWindow(global_uisdl2->vo_window);
+		global_uisdl2->vo_window = NULL;
 	}
 }
 
 static int create_renderer(struct vo_sdl_interface *vosdl) {
 	destroy_renderer(vosdl);
 	int w, h;
-	SDL_GetWindowSize(sdl_window, &w, &h);
+	SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
 	if (vosdl->filter == UI_GL_FILTER_NEAREST
 	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % 320 == 0 && h % 240 == 0))) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
@@ -231,7 +231,7 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
-	vosdl->renderer = SDL_CreateRenderer(sdl_window, -1, SDL_RENDERER_PRESENTVSYNC);
+	vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
 		return -1;
@@ -263,8 +263,8 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderPresent(vosdl->renderer);
 
-	sdl_display.w = vosdl->window_w;
-	sdl_display.h = vosdl->window_h;
+	global_uisdl2->display_rect.w = vosdl->window_w;
+	global_uisdl2->display_rect.h = vosdl->window_h;
 
 	return 0;
 }
