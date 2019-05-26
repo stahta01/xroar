@@ -46,6 +46,7 @@ See COPYING.GPL for redistribution conditions.
 #include "sam.h"
 #include "sound.h"
 #include "tape.h"
+#include "vdg_palette.h"
 #include "vo.h"
 #include "xroar.h"
 
@@ -138,33 +139,6 @@ struct machine_dragon {
 	_Bool unexpanded_dragon32;
 	_Bool relaxed_pia_decode;
 	_Bool have_acia;
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/* For now, duplicate data from vdg_palette.c. */
-
-#define NUM_VDG_COLOURS (12)
-
-struct palette {
-	float y;
-	float b;
-	float a;
-};
-
-static const struct palette vdg_colours[NUM_VDG_COLOURS] = {
-	{ .y = VDG_VWM,    .b = VDG_VOL, .a = VDG_VOL },
-	{ .y = VDG_VWH,    .b = VDG_VOL, .a = VDG_VR  },
-	{ .y = VDG_VWL,    .b = VDG_VIH, .a = VDG_VR  },
-	{ .y = VDG_VWL,    .b = VDG_VR,  .a = VDG_VIH },
-	{ .y = VDG_VWH,    .b = VDG_VR,  .a = VDG_VR  },
-	{ .y = VDG_VWM,    .b = VDG_VR,  .a = VDG_VOL },
-	{ .y = VDG_VWM,    .b = VDG_VIH, .a = VDG_VIH },
-	{ .y = VDG_VWM,    .b = VDG_VOL, .a = VDG_VIH },
-	{ .y = VDG_VBLACK, .b = VDG_VR,  .a = VDG_VR  },
-	{ .y = VDG_VBLACK, .b = VDG_VOL, .a = VDG_VOL },
-	{ .y = VDG_VBLACK, .b = VDG_VOL, .a = VDG_VIH },
-	{ .y = VDG_VWH,    .b = VDG_VOL, .a = VDG_VIH },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -379,13 +353,17 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 		break;
 	}
 
+	struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);
+	if (!palette) {
+		palette = vdg_palette_by_name("ideal");
+	}
 	md->ntsc_palette = ntsc_palette_new();
 	md->dummy_palette = ntsc_palette_new();
 	for (int j = 0; j < NUM_VDG_COLOURS; j++) {
 		// Y, B-Y, R-Y from VDG voltage tables
-		float y = vdg_colours[j].y;
-		float b_y = vdg_colours[j].b - VDG_CHB;
-		float r_y = vdg_colours[j].a - VDG_CHB;
+		float y = palette->palette[j].y;
+		float b_y = palette->palette[j].b - VDG_CHB;
+		float r_y = palette->palette[j].a - VDG_CHB;
 		// Scale Y
 		y = (VDG_VBLANK - y) * 2.450;
 		// Add to palette

@@ -18,6 +18,8 @@ See COPYING.GPL for redistribution conditions.
 #ifndef XROAR_VDG_PALETTE_H_
 #define XROAR_VDG_PALETTE_H_
 
+#define NUM_VDG_COLOURS (12)
+
 struct vdg_colour_entry {
 	float y, chb, b, a;
 };
@@ -30,7 +32,7 @@ struct vdg_palette {
 	float white_y;
 	float black_level;
 	float rgb_black_level;
-	struct vdg_colour_entry palette[12];
+	struct vdg_colour_entry palette[NUM_VDG_COLOURS];
 };
 
 struct vdg_palette *vdg_palette_new(void);
