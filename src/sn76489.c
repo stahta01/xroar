@@ -266,7 +266,9 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 
 	// if previous call overran
 	if (csg_->overrun && nframes > 0) {
-		*(buf++) = output;
+		if (buf) {
+			*(buf++) = output;
+		}
 		nframes--;
 		csg_->overrun = 0;
 	}
@@ -279,7 +281,9 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 		if (csg_->frameerror >= csg_->refrate) {
 			csg_->frameerror -= csg_->refrate;
 			if (nframes > 0) {
-				*(buf++) = output;
+				if (buf) {
+					*(buf++) = output;
+				}
 				nframes--;
 			} else {
 				csg_->overrun = 1;
@@ -353,9 +357,11 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 	csg_->nticks = nticks;
 
 	// in case of underrun
-	while (nframes > 0) {
-		*(buf++) = output;
-		nframes--;
+	if (buf) {
+		while (nframes > 0) {
+			*(buf++) = output;
+			nframes--;
+		}
 	}
 
 	csg_->output = output;
