@@ -978,59 +978,9 @@ int main(int argc, char **argv) {
 
 /* XRoar UI definition */
 
-static void *ui_macosx_new(void *cfg);
-static void ui_macosx_free(void *sptr);
-static void ui_macosx_set_state(void *sptr, int tag, int value, const void *data);
-
-static void update_machine_menu(void);
-static void update_cartridge_menu(void);
-
-struct ui_module ui_macosx_module = {
-	.common = { .name = "macosx", .description = "Mac OS X SDL UI",
-	            .new = ui_macosx_new,
-	},
-	.vo_module_list = sdl_vo_module_list,
-	.joystick_module_list = sdl_js_modlist,
-};
-
-static void *ui_macosx_new(void *cfg) {
-	struct ui_cfg *ui_cfg = cfg;
-	(void)ui_cfg;
-
-	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
-		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
-			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());
-			return NULL;
-		}
-	}
-
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
-		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
-		return NULL;
-	}
-
-	struct ui_interface *uimacosx = xmalloc(sizeof(*uimacosx));
-	*uimacosx = (struct ui_interface){0};
-
-	uimacosx->free = DELEGATE_AS0(void, ui_macosx_free, uimacosx);
-	uimacosx->run = DELEGATE_AS0(void, ui_sdl_run, uimacosx);
-	uimacosx->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_macosx_set_state, uimacosx);
-
-	update_machine_menu();
-	update_cartridge_menu();
-
-	sdl_keyboard_init();
-
-	return uimacosx;
-}
-
-static void ui_macosx_free(void *sptr) {
-	struct ui_module *uimacosx = sptr;
-	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	free(uimacosx);
-}
-
-static void update_machine_menu(void) {
+void cocoa_update_machine_menu(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
 	NSMenuItem *item;
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	struct slist *iter;
@@ -1051,7 +1001,9 @@ static void update_machine_menu(void) {
 	slist_free(mcl);
 }
 
-static void update_cartridge_menu(void) {
+void cocoa_update_cartridge_menu(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
 	NSMenuItem *item;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	struct slist *iter;
@@ -1077,8 +1029,9 @@ static void update_cartridge_menu(void) {
 	slist_free(ccl);
 }
 
-static void ui_macosx_set_state(void *sptr, int tag, int value, const void *data) {
-	(void)sptr;
+void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
 
 	switch (tag) {
 
@@ -1102,8 +1055,8 @@ static void ui_macosx_set_state(void *sptr, int tag, int value, const void *data
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			ui_macosx_set_state(sptr, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			ui_macosx_set_state(sptr, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			cocoa_ui_set_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			cocoa_ui_set_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 
@@ -1138,11 +1091,11 @@ static void ui_macosx_set_state(void *sptr, int tag, int value, const void *data
 		break;
 
 	case ui_tag_kbd_translate:
-		is_kbd_translate = value ? 1 : 0;
-		sdl_keyboard_set_translate(is_kbd_translate);
+		uisdl2->keyboard.translate = value;
 		break;
 
-	default: break;
+	default:
+		break;
 
 	}
 

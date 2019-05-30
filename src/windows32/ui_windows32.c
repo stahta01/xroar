@@ -19,6 +19,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include <windows.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,7 +90,7 @@ struct ui_module ui_windows32_module = {
 #endif
 	            .new = ui_windows32_new,
 	},
-	.vo_module_list = sdl_vo_module_list,
+	.vo_module_list = sdl2_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 };
 
@@ -102,12 +103,14 @@ static WNDPROC sdl_window_proc = NULL;
 
 static void setup_file_menu(void);
 static void setup_view_menu(void);
-static void setup_hardware_menu(struct ui_interface *uiwindows32);
+static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2);
 static void setup_tool_menu(void);
 
 static void *ui_windows32_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
-	(void)ui_cfg;
+
+	// Be sure we've not made more than one of these
+	assert(global_uisdl2 == NULL);
 
 	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
 		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
@@ -121,29 +124,43 @@ static void *ui_windows32_new(void *cfg) {
 		return NULL;
 	}
 
-	struct ui_interface *uiwindows32 = xmalloc(sizeof(*uiwindows32));
-	*uiwindows32 = (struct ui_interface){0};
+	struct ui_sdl2_interface *uisdl2 = xmalloc(sizeof(*uisdl2));
+	*uisdl2 = (struct ui_sdl2_interface){0};
+	struct ui_interface *ui = &uisdl2->public;
+	// Make available globally for other SDL2 code
+	global_uisdl2 = uisdl2;
+	uisdl2->cfg = cfg;
 
-	uiwindows32->free = DELEGATE_AS0(void, ui_windows32_free, uiwindows32);
-	uiwindows32->run = DELEGATE_AS0(void, ui_sdl_run, uiwindows32);
-	uiwindows32->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_windows32_set_state, uiwindows32);
+	ui->free = DELEGATE_AS0(void, ui_windows32_free, uisdl2);
+	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
+	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_windows32_set_state, uisdl2);
 
 	top_menu = CreateMenu();
 	setup_file_menu();
 	setup_view_menu();
-	setup_hardware_menu(uiwindows32);
+	setup_hardware_menu(uisdl2);
 	setup_tool_menu();
 
-	sdl_keyboard_init();
+	// Window geometry sensible defaults
+	uisdl2->display_rect.w = 320;
+	uisdl2->display_rect.h = 240;
 
-	return uiwindows32;
+	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)sdl2_vo_module_list, uisdl2->cfg->vo);
+	if (!(uisdl2->public.vo_interface = module_init(vo_mod, uisdl2))) {
+		return NULL;
+	}
+
+	sdl_keyboard_init(uisdl2);
+
+	return ui;
 }
 
 static void ui_windows32_free(void *sptr) {
-	struct ui_interface *uiwindows32 = sptr;
+	struct ui_sdl2_interface *uisdl2 = sptr;
 	DestroyMenu(top_menu);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	free(uiwindows32);
+	global_uisdl2 = NULL;
+	free(uisdl2);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -228,7 +245,7 @@ static void setup_view_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
 }
 
-static void setup_hardware_menu(struct ui_interface *uiwindows32) {
+static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 	HMENU hardware_menu;
 	HMENU submenu;
 
@@ -286,9 +303,9 @@ static void setup_hardware_menu(struct ui_interface *uiwindows32) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
-	ui_windows32_set_state(uiwindows32, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
+	ui_windows32_set_state(uisdl2, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
 	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
-	ui_windows32_set_state(uiwindows32, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
+	ui_windows32_set_state(uisdl2, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
@@ -361,10 +378,10 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 				tape_rewind(xroar_tape_interface->tape_output);
 			break;
 		case ui_action_zoom_in:
-			sdl_zoom_in();
+			sdl_zoom_in(global_uisdl2);
 			break;
 		case ui_action_zoom_out:
-			sdl_zoom_out();
+			sdl_zoom_out(global_uisdl2);
 			break;
 		case ui_action_joystick_swap:
 			xroar_swap_joysticks(1);
@@ -452,7 +469,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void ui_windows32_set_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_interface *uiwindows32 = sptr;
+	struct ui_sdl2_interface *uisdl2 = sptr;
 	switch (tag) {
 
 	// Simple toggles
@@ -493,8 +510,8 @@ static void ui_windows32_set_state(void *sptr, int tag, int value, const void *d
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			ui_windows32_set_state(uiwindows32, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			ui_windows32_set_state(uiwindows32, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			ui_windows32_set_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			ui_windows32_set_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 
@@ -524,7 +541,7 @@ static void ui_windows32_set_state(void *sptr, int tag, int value, const void *d
 
 	case ui_tag_kbd_translate:
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		sdl_keyboard_set_translate(value);
+		uisdl2->keyboard.translate = value;
 		break;
 
 	// Joysticks

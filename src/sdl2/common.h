@@ -29,6 +29,8 @@ struct keyboard_sdl2_state;
 struct ui_sdl2_interface {
 	struct ui_interface public;
 
+	struct ui_cfg *cfg;
+
 	// Shared SDL2 data
 	SDL_Window *vo_window;
 	Uint32 vo_window_id;
@@ -59,7 +61,7 @@ extern struct joystick_submodule sdl_js_submod_physical;
 extern struct joystick_submodule sdl_js_submod_keyboard;
 extern struct joystick_module sdl_js_internal;
 
-extern struct module * const sdl_vo_module_list[];
+extern struct module * const sdl2_vo_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
 void ui_sdl_run(void *sptr);
@@ -72,6 +74,10 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2);
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2);
 
 /* Platform-specific support */
+
+void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data);
+void cocoa_update_machine_menu(void *sptr);
+void cocoa_update_cartridge_menu(void *sptr);
 
 #ifdef HAVE_X11
 

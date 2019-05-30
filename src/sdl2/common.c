@@ -50,11 +50,6 @@ extern inline void sdl_os_handle_syswmevent(SDL_SysWMmsg *wmmsg);
 extern inline void sdl_os_fix_keyboard_event(SDL_Event *ev);
 extern inline int sdl_os_keysym_to_unicode(SDL_Keysym *keysym);
 
-struct module * const sdl_vo_module_list[] = {
-	&vo_sdl_module,
-	NULL
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *, unsigned);

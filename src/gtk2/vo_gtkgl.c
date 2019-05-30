@@ -69,8 +69,9 @@ static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 static void vo_gtkgl_set_vsync(int val);
 
-static void *new(void *cfg) {
-	struct vo_cfg *vo_cfg = cfg;
+static void *new(void *sptr) {
+	struct ui_gtk2_interface *uigtk2 = sptr;
+	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
 
 	gtk_gl_init(NULL, NULL);
 
@@ -79,7 +80,7 @@ static void *new(void *cfg) {
 		return NULL;
 	}
 
-	struct vo_interface *vogl = vo_opengl_new(cfg);
+	struct vo_interface *vogl = vo_opengl_new(vo_cfg);
 	if (!vogl) {
 		LOG_ERROR("Failed to create OpenGL context\n");
 		return NULL;

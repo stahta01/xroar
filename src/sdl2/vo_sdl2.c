@@ -83,8 +83,10 @@ static int create_renderer(struct vo_sdl_interface *vosdl);
 static void destroy_window(void);
 static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
-static void *new(void *cfg) {
-	struct vo_cfg *vo_cfg = cfg;
+static void *new(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
+
 	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
 	struct vo_sdl_interface *vosdl = &generic->module;
 	struct vo_interface *vo = &vosdl->public;

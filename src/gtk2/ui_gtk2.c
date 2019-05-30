@@ -504,6 +504,7 @@ static void *ui_gtk2_new(void *cfg) {
 	struct ui_interface *ui = &uigtk2->public;
 	// Make available globally for other GTK+2 code
 	global_uigtk2 = uigtk2;
+	uigtk2->cfg = cfg;
 
 	ui->free = DELEGATE_AS0(void, ui_gtk2_free, ui);
 	ui->run = DELEGATE_AS0(void, ui_gtk2_run, ui);
@@ -596,12 +597,17 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Create (hidden) tape control window */
 	gtk2_create_tc_window(uigtk2);
 
-	gtk2_keyboard_init(ui_cfg);
-	gtk2_joystick_init(uigtk2);
-
 	// Window geometry sensible defaults
 	uigtk2->display_rect.w = 640;
 	uigtk2->display_rect.h = 480;
+
+	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)gtk2_vo_module_list, uigtk2->cfg->vo);
+	if (!(uigtk2->public.vo_interface = module_init(vo_mod, uigtk2))) {
+		return NULL;
+	}
+
+	gtk2_keyboard_init(ui_cfg);
+	gtk2_joystick_init(uigtk2);
 
 	return ui;
 }

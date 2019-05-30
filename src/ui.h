@@ -118,6 +118,12 @@ struct ui_interface {
 	// set_state updates the UI to reflect a change in state.  It should
 	// not itself cause state to change.
 	DELEGATE_T3(void, int, int, cvoidp) set_state;  // ui_tag, value, data
+
+	// called at startup, or when these lists change
+	DELEGATE_T0(void) update_machine_menu;
+	DELEGATE_T0(void) update_cartridge_menu;
+
+	struct vo_interface *vo_interface;
 };
 
 extern struct ui_module * const *ui_module_list;

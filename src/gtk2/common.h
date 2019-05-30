@@ -24,10 +24,10 @@ See COPYING.GPL for redistribution conditions.
 #include "ui.h"
 #include "vo.h"
 
-struct ui_cfg;
-
 struct ui_gtk2_interface {
 	struct ui_interface public;
+
+	struct ui_cfg *cfg;
 
 	// Shared GTK+2 objects
 	GtkWidget *top_window;

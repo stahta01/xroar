@@ -45,17 +45,24 @@ static void *ui_sdl_new(void *cfg);
 static void ui_sdl_free(void *sptr);
 static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data);
 
+extern struct module vo_sdl_module;
+extern struct module vo_null_module;
+struct module * const sdl2_vo_module_list[] = {
+	&vo_sdl_module,
+	&vo_null_module,
+	NULL
+};
+
 struct ui_module ui_sdl_module = {
 	.common = { .name = "sdl", .description = "SDL2 UI",
 	            .new = ui_sdl_new,
 	},
-	.vo_module_list = sdl_vo_module_list,
+	.vo_module_list = sdl2_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 };
 
 static void *ui_sdl_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
-	(void)ui_cfg;
 
 	// Be sure we've not made more than one of these
 	assert(global_uisdl2 == NULL);
@@ -77,7 +84,9 @@ static void *ui_sdl_new(void *cfg) {
 	struct ui_interface *ui = &uisdl2->public;
 	// Make available globally for other SDL2 code
 	global_uisdl2 = uisdl2;
+	uisdl2->cfg = ui_cfg;
 
+	// defaults - may be overridden by platform-specific versions below
 	ui->free = DELEGATE_AS0(void, ui_sdl_free, uisdl2);
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
 	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_set_state, uisdl2);
@@ -86,11 +95,22 @@ static void *ui_sdl_new(void *cfg) {
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 
-	sdl_keyboard_init(uisdl2);
+#ifdef HAVE_COCOA
+	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_set_state, uisdl2);
+	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
+#endif
 
 	// Window geometry sensible defaults
 	uisdl2->display_rect.w = 320;
 	uisdl2->display_rect.h = 240;
+
+	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)sdl2_vo_module_list, uisdl2->cfg->vo);
+	if (!(uisdl2->public.vo_interface = module_init(vo_mod, uisdl2))) {
+		return NULL;
+	}
+
+	sdl_keyboard_init(uisdl2);
 
 	return ui;
 }

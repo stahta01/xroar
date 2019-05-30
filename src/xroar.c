@@ -636,7 +636,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		ao_module_list = ui_module->ao_module_list;
 	// Select file requester, video & audio modules
 	struct module *filereq_module = (struct module *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
-	struct module *vo_module = module_select_by_arg((struct module * const *)vo_module_list, xroar_ui_cfg.vo);
 	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
 	ui_joystick_module_list = ui_module->joystick_module_list;
 
@@ -737,13 +736,14 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	event_current_tick = 0;
 	/* ... modules */
 	xroar_ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
+	if (!xroar_ui_interface) {
+		LOG_ERROR("No UI module initialised.\n");
+		return NULL;
+	}
+	xroar_vo_interface = xroar_ui_interface->vo_interface;
 	xroar_filereq_interface = module_init(filereq_module, NULL);
 	if (filereq_module == NULL && filereq_module_list != NULL) {
 		LOG_WARN("No file requester module initialised.\n");
-	}
-	if (!(xroar_vo_interface = module_init(vo_module, &xroar_ui_cfg.vo_cfg))) {
-		LOG_ERROR("No video module initialised.\n");
-		return NULL;
 	}
 	if (!(xroar_ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
 		LOG_ERROR("No audio module initialised.\n");
