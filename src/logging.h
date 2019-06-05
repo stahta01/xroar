@@ -25,6 +25,7 @@ See COPYING.GPL for redistribution conditions.
 #ifndef LOGGING
 
 #define LOG_DEBUG(...) do {} while (0)
+#define LOG_PRINT(...) do {} while (0)
 #define LOG_WARN(...) do {} while (0)
 #define LOG_ERROR(...) do {} while (0)
 
