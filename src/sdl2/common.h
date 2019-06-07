@@ -2,7 +2,7 @@
 
 SDL2 user-interface common functions
 
-Copyright 2015-2017 Ciaran Anscomb
+Copyright 2015-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -67,6 +67,7 @@ extern struct joystick_module sdl_js_internal;
 extern struct module * const sdl2_vo_module_list[];
 extern struct joystick_module * const sdl_js_modlist[];
 
+void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2);
 void ui_sdl_run(void *sptr);
 void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2);
 void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);

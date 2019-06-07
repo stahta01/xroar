@@ -1,0 +1,17 @@
+[
+	'_main',
+	'_wasm_load_file',
+	'_wasm_queue_basic',
+	'_wasm_resize',
+	'_wasm_set_joystick',
+	'_wasm_set_machine_cart',
+	'_xroar_eject_disk',
+	'_xroar_eject_input_tape',
+	'_xroar_hard_reset',
+	'_xroar_set_cart_by_id',
+	'_xroar_set_cross_colour',
+	'_xroar_set_cross_colour_renderer',
+	'_xroar_set_joystick',
+	'_xroar_set_machine',
+	'_xroar_soft_reset'
+]

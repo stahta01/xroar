@@ -1,0 +1,27 @@
+/* CSS for WebAssembly build of XRoar. */
+
+/* Because styling inputs is hard for reasons I don't understand, file inputs
+ * are surrounded by a label (with class button, see below), and the actual
+ * input itself is hidden. */
+
+input[type="file"] { display: none; }
+
+/* Trivial multi-column. */
+
+.column { float: left; }
+.breakfloat { clear: both; height: 0; }
+
+/* Make buttons look a bit more like Firefox's default drop-downs. */
+
+.button {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 3px;
+	background-color: #eeeeee;
+	cursor: pointer;
+	font: caption;
+	margin-top: 1px;
+	margin-bottom: 1px;
+}
+.button:hover { background-color: #ffffff; }
+

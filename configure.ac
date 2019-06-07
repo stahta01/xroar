@@ -52,6 +52,9 @@ AX_GCC_VAR_ATTRIBUTE(packed)
 
 AC_ARG_ENABLE([snapshot],[])
 
+AC_ARG_ENABLE([wasm],
+	AS_HELP_STRING([--enable-wasm], [build for WebAssembly using emscripten]) )
+
 AC_ARG_WITH([gtk2],
 	AS_HELP_STRING([--without-gtk2], [don't test for GTK+-2]) )
 
@@ -120,6 +123,35 @@ AC_ARG_WITH([zlib],
 
 AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
+
+### WebAssembly
+
+AM_CONDITIONAL([WASM], [test "x$enable_wasm" = "xyes"])
+AM_COND_IF([WASM], [
+		AC_DEFINE([HAVE_WASM], 1, [WebAssembly build])
+		WASM_CFLAGS="-s WASM=1 -O3 -s"
+		WASM_LIBS="[-s WASM=1 -O3 -s BINARYEN_TRAP_MODE='clamp' -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"
+		test -z "$SDL_CFLAGS" && SDL_CFLAGS="-s USE_SDL=2"
+		test -z "$SDL_LIBS" && SDL_LIBS="-s USE_SDL=2"
+		test -z "$enable_trace" && enable_trace=no
+		test -z "$enable_ao_null" && enable_ao_null=no
+		test -z "$enable_gdb_target" && enable_gdb_target=no
+		test -z "$with_gtk2" && with_gtk2=no
+		test -z "$with_sdl" && with_sdl=no
+		test -z "$with_cocoa" && with_cocoa=no
+		test -z "$with_alsa" && with_alsa=no
+		test -z "$with_oss" && with_oss=no
+		test -z "$with_pulse" && with_pulse=no
+		test -z "$with_coreaudio" && with_coreaudio=no
+		test -z "$with_joydev" && with_joydev=no
+		test -z "$with_sndfile" && with_sndfile=no
+		test -z "$with_pthreads" && with_pthreads=no
+		test -z "$with_zlib" && with_zlib=no
+		EXEEXT=".js"
+		OBJC="$CC"
+		])
+AC_SUBST(WASM_CFLAGS)
+AC_SUBST(WASM_LIBS)
 
 ### MinGW
 

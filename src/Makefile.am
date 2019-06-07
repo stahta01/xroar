@@ -111,6 +111,10 @@ EXTRA_DIST += \
 
 # ROM paths
 
+if WASM
+xroar_CFLAGS += -DROMPATH=\".\"
+xroar_CFLAGS += -DCONFPATH=\".\"
+else
 if MINGW
 xroar_CFLAGS += -DROMPATH=\":~/Local\ Settings/Application\ Data/XRoar/roms:~/Application\ Data/XRoar/roms\"
 xroar_CFLAGS += -DCONFPATH=\":~/Local\ Settings/Application\ Data/XRoar:~/Application\ Data/XRoar\"
@@ -123,6 +127,17 @@ xroar_CFLAGS += -DROMPATH=\"~/.xroar/roms:$(datadir)/xroar/roms:\"
 xroar_CFLAGS += -DCONFPATH=\"~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 endif
 endif
+endif
+
+if WASM
+xroar_CFLAGS += $(WASM_CFLAGS)
+xroar_LDADD += $(WASM_LIBS)
+xroar_SOURCES += \
+	wasm/wasm.c wasm/wasm.h
+EXTRA_xroar_DEPENDENCIES = \
+	wasm/exported_functions
+endif
+EXTRA_DIST += wasm/exported_functions
 
 if ZLIB
 xroar_CFLAGS += $(ZLIB_CFLAGS)

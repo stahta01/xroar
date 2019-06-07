@@ -2,7 +2,7 @@
 
 SDL2 sound module
 
-Copyright 2015-2018 Ciaran Anscomb
+Copyright 2015-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -142,6 +142,12 @@ static void *new(void *cfg) {
 	aosdl->nfragments = 3;
 	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
 		aosdl->nfragments = xroar_cfg.ao_fragments;
+#ifdef HAVE_WASM
+	// The special case where nfragments == 1 requires threads which we're
+	// not using in Wasm, so never pick that.
+	if (aosdl->nfragments == 1)
+		aosdl->nfragments++;
+#endif
 
 	if (xroar_cfg.ao_fragment_ms > 0) {
 		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
@@ -161,7 +167,11 @@ static void *new(void *cfg) {
 	desired.freq = rate;
 	desired.channels = nchannels;
 	desired.samples = fragment_nframes;
+#ifndef HAVE_WASM
 	desired.callback = (aosdl->nfragments == 1) ? callback_1 : NULL;
+#else
+	desired.callback = NULL;
+#endif
 	desired.userdata = aosdl;
 
 	switch (xroar_cfg.ao_format) {
@@ -365,10 +375,18 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 		}
 		Uint32 qbytes;
 		if ((qbytes = SDL_GetQueuedAudioSize(aosdl->device)) > aosdl->qbytes_threshold) {
+#ifndef HAVE_WASM
 			int ms = ((qbytes - aosdl->qbytes_threshold) * 1000) / aosdl->qdelay_divisor;
 			if (ms >= 10) {
 				SDL_Delay(ms);
 			}
+#else
+			// In Wasm, rather then wait on too much audio, discard
+			// it - if the timer is accurate this should never
+			// happen, but opening/closing console windows seems to
+			// cause glitches...
+			SDL_ClearQueuedAudio(aosdl->device);
+#endif
 		}
 		SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
 	}
@@ -376,6 +394,8 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 	return aosdl->fragment_buffer;
 }
 
+#ifndef HAVE_WASM
+// Callback for nfragments == 1.  Never used for Wasm builds.
 static void callback_1(void *userdata, Uint8 *stream, int len) {
 	struct ao_sdl2_interface *aosdl = userdata;
 	(void)len;  /* unused */
@@ -401,3 +421,4 @@ static void callback_1(void *userdata, Uint8 *stream, int len) {
 
 	SDL_UnlockMutex(aosdl->fragment_mutex);
 }
+#endif

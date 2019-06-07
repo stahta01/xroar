@@ -2,7 +2,7 @@
 
 SDL2 user-interface common functions
 
-Copyright 2015-2016 Ciaran Anscomb
+Copyright 2015-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 

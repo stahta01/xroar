@@ -43,6 +43,9 @@ See COPYING.GPL for redistribution conditions.
 
 #include "sdl2/common.h"
 
+// Note that a lot of shortcuts are omitted in WebAssembly builds - browsers
+// tend to steal all those keys for themselves.
+
 struct scancode_dkey_mapping {
 	SDL_Scancode scancode;
 	int8_t dkey;
@@ -274,7 +277,9 @@ static void control_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysy
 
 	if (cmdkey == 0)
 		return;
+#ifndef HAVE_WASM
 	emulator_command(uisdl2, cmdkey, shift);
+#endif
 }
 
 
@@ -336,6 +341,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
 		return;
+#ifndef HAVE_WASM
 	case SDLK_F11:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		return;
@@ -346,6 +352,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 			xroar_set_ratelimit(0);
 		}
 		return;
+#endif
 	case SDLK_PAUSE:
 		xroar_set_pause(1, XROAR_NEXT);
 		return;

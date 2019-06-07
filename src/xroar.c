@@ -68,6 +68,7 @@ See COPYING.GPL for redistribution conditions.
 #include "vdisk.h"
 #include "vdrive.h"
 #include "vo.h"
+#include "wasm/wasm.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -306,12 +307,14 @@ static char const * const default_config[] = {
 	"cart-desc 'Delta System'",
 	"cart-type delta",
 	"cart-rom @delta",
+#ifndef HAVE_WASM
 	// RSDOS w/ Becker port
 	"cart becker",
 	"cart-desc 'RS-DOS with becker port'",
 	"cart-type rsdos",
 	"cart-rom @rsdos_becker",
 	"cart-becker",
+#endif
 	// Games Master Cartridge
 	"cart gmc",
 	"cart-desc 'Games Master Cartridge'",
@@ -323,6 +326,7 @@ static char const * const default_config[] = {
 	"cart-type orch90",
 	"cart-rom orch90",
 	"cart-autorun",
+#ifndef HAVE_WASM
 	// Multi-Pak Interface
 	"cart mpi",
 	"cart-desc 'Multi-Pak Interface'",
@@ -341,6 +345,7 @@ static char const * const default_config[] = {
 	"cart mooh",
 	"cart-desc 'MOOH memory cartridge'",
 	"cart-type mooh",
+#endif
 
 	// ROM lists
 
@@ -865,6 +870,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	} else if (private_cfg.lp_pipe) {
 		printer_open_pipe(xroar_printer_interface, private_cfg.lp_pipe);
 	}
+#ifdef HAVE_WASM
+	if (xroar_machine_config) {
+		xroar_set_machine(1, xroar_machine_config->id);
+	}
+#endif
 	return xroar_ui_interface;
 }
 
@@ -1472,6 +1482,15 @@ void xroar_set_machine(_Bool notify, int id) {
 			break;
 	}
 	struct machine_config *mc = machine_config_by_id(new);
+#ifdef HAVE_WASM
+	if (!wasm_ui_prepare_machine(mc)) {
+		if (mc->default_cart) {
+			struct cart_config *cc = cart_config_by_name(mc->default_cart);
+			wasm_ui_prepare_cartridge(cc);
+		}
+		return;
+	}
+#endif
 	xroar_configure_machine(mc);
 	if (mc->cart_enabled) {
 		xroar_set_cart(1, mc->default_cart);
@@ -1494,6 +1513,17 @@ void xroar_toggle_cart(void) {
 	} else {
 		xroar_set_cart(1, NULL);
 	}
+}
+
+void xroar_set_cart_by_id(_Bool notify, int id) {
+	struct cart_config *cc = cart_config_by_id(id);
+	const char *name = cc ? cc->name : NULL;
+#ifdef HAVE_WASM
+	if (!wasm_ui_prepare_cartridge(cc)) {
+		return;
+	}
+#endif
+	xroar_set_cart(notify, name);
 }
 
 void xroar_set_cart(_Bool notify, const char *cc_name) {

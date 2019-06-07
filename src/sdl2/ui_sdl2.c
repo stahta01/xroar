@@ -2,7 +2,7 @@
 
 SDL2 user-interface module
 
-Copyright 2015-2016 Ciaran Anscomb
+Copyright 2015-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,11 +22,17 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_WASM
+#include <emscripten.h>
+#endif
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 
+#include "slist.h"
 #include "xalloc.h"
 
+#include "cart.h"
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
@@ -34,8 +40,8 @@ See COPYING.GPL for redistribution conditions.
 #include "sam.h"
 #include "ui.h"
 #include "vo.h"
+#include "wasm/wasm.h"
 #include "xroar.h"
-
 #include "sdl2/common.h"
 
 /* Note: prefer the default order for sound and joystick modules, which
@@ -60,6 +66,11 @@ struct ui_module ui_sdl_module = {
 	.vo_module_list = sdl2_vo_module_list,
 	.joystick_module_list = sdl_js_modlist,
 };
+
+#ifdef HAVE_WASM
+static void sdl2_wasm_update_machine_menu(struct ui_sdl2_interface *uisdl2);
+static void sdl2_wasm_update_cartridge_menu(struct ui_sdl2_interface *uisdl2);
+#endif
 
 static void *ui_sdl_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -101,6 +112,11 @@ static void *ui_sdl_new(void *cfg) {
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
 #endif
 
+#ifdef HAVE_WASM
+	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_set_state, uisdl2);
+	ui->run = DELEGATE_AS0(void, wasm_ui_run, uisdl2);
+#endif
+
 	// Window geometry sensible defaults
 	uisdl2->display_rect.w = 320;
 	uisdl2->display_rect.h = 240;
@@ -111,6 +127,11 @@ static void *ui_sdl_new(void *cfg) {
 	}
 
 	sdl_keyboard_init(uisdl2);
+
+#ifdef HAVE_WASM
+	sdl2_wasm_update_machine_menu(uisdl2);
+	sdl2_wasm_update_cartridge_menu(uisdl2);
+#endif
 
 	return ui;
 }
@@ -133,3 +154,24 @@ static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data) {
 		break;
 	}
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#ifdef HAVE_WASM
+static void sdl2_wasm_update_machine_menu(struct ui_sdl2_interface *uisdl2) {
+	for (struct slist *iter = machine_config_list(); iter; iter = iter->next) {
+		struct machine_config *mc = iter->data;
+		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
+	}
+	if (xroar_machine_config) {
+		EM_ASM_({ ui_update_machine($0); }, xroar_machine_config->id);
+	}
+}
+
+static void sdl2_wasm_update_cartridge_menu(struct ui_sdl2_interface *uisdl2) {
+	for (struct slist *iter = cart_config_list(); iter; iter = iter->next) {
+		struct cart_config *cc = iter->data;
+		EM_ASM_({ ui_add_cart($0, $1); }, cc->id, cc->description);
+	}
+}
+#endif

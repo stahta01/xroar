@@ -2,7 +2,7 @@
 
 XRoar - a Dragon/Tandy Coco emulator
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -191,6 +191,7 @@ void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
 void xroar_toggle_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);
+void xroar_set_cart_by_id(_Bool notify, int id);
 void xroar_set_dos(int dos_type);  /* for old snapshots only */
 void xroar_save_snapshot(void);
 void xroar_insert_input_tape_file(const char *filename);

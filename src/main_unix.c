@@ -2,7 +2,7 @@
 
 main() function
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,8 +20,8 @@ See COPYING.GPL for redistribution conditions.
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef HAVE_SDL
-# include <SDL.h>
+#ifdef HAVE_WASM
+#include <emscripten.h>
 #endif
 
 #include "events.h"
@@ -35,6 +35,12 @@ int main(int argc, char **argv) {
 	if (!ui) {
 		exit(EXIT_FAILURE);
 	}
+
+#ifdef HAVE_WASM
+	EM_ASM( ui_done_initialising(); );
+	emscripten_set_main_loop_arg(ui->run.func, ui->run.sptr, 0, 0);
+	// In Wasm, main() will now return!
+#else
 	if (DELEGATE_DEFINED(ui->run)) {
 		DELEGATE_CALL0(ui->run);
 	} else {
@@ -42,5 +48,6 @@ int main(int argc, char **argv) {
 			xroar_run(EVENT_MS(10));
 		}
 	}
+#endif
 	return 0;
 }

@@ -72,6 +72,10 @@ XRoar is easily built from source under Linux, and binary packages are provided
 for Windows.  It should still be possible to build for Mac OS X, but no binary
 packages are currently being provided.
 
+XRoar can also be compiled to WebAssembly, and redistributing it in this form
+may provide a convenient way for users to run your Dragon software.  See
+@myuref{http://www.6809.org.uk/xroar/online/, XRoar Online} for an example.
+
 XRoar is free software; you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
@@ -251,6 +255,13 @@ package is built like this.  To specify a cross-compile, use the
 build for Windows, you might use @samp{./configure --host=i686-w64-mingw32}.
 Getting everything ``just so'' for a cross-build can be a tricky procedure, and
 the details are beyond the scope of this manual.
+
+XRoar can be built to a WebAssembly target using
+@myuref{https://emscripten.org/, Emscripten}.  With the SDK installed, run
+@command{emconfigure ./configure --enable-wasm} to set up the build
+environment.  Build with @command{emmake make}.  HTML/JavaScript and CSS
+examples for interfacing to the output are included in the @file{wasm/}
+subdirectory.
 
 
 @node Running programs
