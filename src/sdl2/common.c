@@ -92,57 +92,61 @@ struct joystick_module * const sdl_js_modlist[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ui_sdl_run(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	while (xroar_run()) {
-		SDL_Event event;
-		while (SDL_PollEvent(&event) == 1) {
-			switch(event.type) {
-			case SDL_WINDOWEVENT:
-				switch(event.window.event) {
-				case SDL_WINDOWEVENT_RESIZED:
-					DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.window.data1, event.window.data2);
-					break;
-				}
-				break;
-			case SDL_QUIT:
-				xroar_quit();
-				break;
-			case SDL_KEYDOWN:
-				sdl_os_fix_keyboard_event(&event);
-				sdl_keypress(uisdl2, &event.key.keysym);
-				break;
-			case SDL_KEYUP:
-				sdl_os_fix_keyboard_event(&event);
-				sdl_keyrelease(uisdl2, &event.key.keysym);
-				break;
-			case SDL_MOUSEMOTION:
-				if (event.motion.windowID == uisdl2->vo_window_id) {
-					float x = ((float)event.motion.x - mouse_xoffset) / mouse_xdiv;
-					float y = ((float)event.motion.y - mouse_yoffset) / mouse_ydiv;
-					if (x < 0.0) x = 0.0;
-					if (x > 1.0) x = 1.0;
-					if (y < 0.0) y = 0.0;
-					if (y > 1.0) y = 1.0;
-					mouse_axis[0] = x * 255.;
-					mouse_axis[1] = y * 255.;
-				}
-				break;
-			case SDL_MOUSEBUTTONUP:
-			case SDL_MOUSEBUTTONDOWN:
-				if (event.button.button >= 1 && event.button.button <= 3) {
-					mouse_button[event.button.button-1] = event.button.state;
-				}
-				break;
-
-			case SDL_SYSWMEVENT:
-				sdl_os_handle_syswmevent(event.syswm.msg);
-				break;
-
-			default:
+void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
+	SDL_Event event;
+	while (SDL_PollEvent(&event) == 1) {
+		switch(event.type) {
+		case SDL_WINDOWEVENT:
+			switch(event.window.event) {
+			case SDL_WINDOWEVENT_RESIZED:
+				DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.window.data1, event.window.data2);
 				break;
 			}
+			break;
+		case SDL_QUIT:
+			xroar_quit();
+			break;
+		case SDL_KEYDOWN:
+			sdl_os_fix_keyboard_event(&event);
+			sdl_keypress(uisdl2, &event.key.keysym);
+			break;
+		case SDL_KEYUP:
+			sdl_os_fix_keyboard_event(&event);
+			sdl_keyrelease(uisdl2, &event.key.keysym);
+			break;
+		case SDL_MOUSEMOTION:
+			if (event.motion.windowID == uisdl2->vo_window_id) {
+				float x = ((float)event.motion.x - mouse_xoffset) / mouse_xdiv;
+				float y = ((float)event.motion.y - mouse_yoffset) / mouse_ydiv;
+				if (x < 0.0) x = 0.0;
+				if (x > 1.0) x = 1.0;
+				if (y < 0.0) y = 0.0;
+				if (y > 1.0) y = 1.0;
+				mouse_axis[0] = x * 255.;
+				mouse_axis[1] = y * 255.;
+			}
+			break;
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+			if (event.button.button >= 1 && event.button.button <= 3) {
+				mouse_button[event.button.button-1] = event.button.state;
+			}
+			break;
+
+		case SDL_SYSWMEVENT:
+			sdl_os_handle_syswmevent(event.syswm.msg);
+			break;
+
+		default:
+			break;
 		}
+	}
+}
+
+void ui_sdl_run(void *sptr) {
+	struct ui_sdl2_interface *uisdl2 = sptr;
+	while (xroar_run(EVENT_MS(10))) {
+		run_sdl_event_loop(uisdl2);
 	}
 }
 

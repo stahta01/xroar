@@ -931,8 +931,8 @@ static struct vdg_palette *get_machine_palette(void) {
  * Returns 1 for as long as the machine is active.
  */
 
-_Bool xroar_run(void) {
-	switch (xroar_machine->run(xroar_machine, EVENT_MS(10))) {
+_Bool xroar_run(int ncycles) {
+	switch (xroar_machine->run(xroar_machine, ncycles)) {
 	case machine_run_state_stopped:
 		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
 		break;

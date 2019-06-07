@@ -113,7 +113,7 @@ void sdl_js_shutdown(void) {
 void ui_sdl_run(void *sptr) {
 	struct ui_interface *uisdl = sptr;
 	(void)uisdl;
-	while (xroar_run()) {
+	while (xroar_run(EVENT_MS(10))) {
 		SDL_Event event;
 		while (SDL_PollEvent(&event) == 1) {
 			switch(event.type) {

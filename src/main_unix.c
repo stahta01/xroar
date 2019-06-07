@@ -24,6 +24,7 @@ See COPYING.GPL for redistribution conditions.
 # include <SDL.h>
 #endif
 
+#include "events.h"
 #include "ui.h"
 #include "xroar.h"
 #include "logging.h"
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
 	if (DELEGATE_DEFINED(ui->run)) {
 		DELEGATE_CALL0(ui->run);
 	} else {
-		while (xroar_run())
+		while (xroar_run(EVENT_MS(10)))
 			;
 	}
 	return 0;

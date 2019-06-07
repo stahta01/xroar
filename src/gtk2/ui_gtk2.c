@@ -621,7 +621,7 @@ static void ui_gtk2_free(void *sptr) {
 
 static gboolean run_cpu(gpointer data) {
 	(void)data;
-	return xroar_run();
+	return xroar_run(EVENT_MS(10));
 }
 
 static void ui_gtk2_run(void *sptr) {

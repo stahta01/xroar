@@ -154,7 +154,7 @@ void xroar_getargs(int argc, char **argv);
 struct ui_interface *xroar_init(int argc, char **argv);
 void xroar_shutdown(void);
 
-_Bool xroar_run(void);
+_Bool xroar_run(int ncycles);
 
 int xroar_filetype_by_ext(const char *filename);
 int xroar_load_file_by_type(const char *filename, int autorun);
