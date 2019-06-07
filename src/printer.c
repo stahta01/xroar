@@ -125,7 +125,9 @@ void printer_flush(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	if (!pip->stream) return;
 	if (pip->is_pipe) {
+#ifdef HAVE_POPEN
 		pclose(pip->stream);
+#endif
 	} else {
 		fclose(pip->stream);
 	}
@@ -169,7 +171,9 @@ static void open_stream(struct printer_interface_private *pip) {
 	struct printer_interface *pi = &pip->public;
 	if (!pip->stream_dest) return;
 	if (pip->is_pipe) {
+#ifdef HAVE_POPEN
 		pip->stream = popen(pip->stream_dest, "w");
+#endif
 	} else {
 		pip->stream = fopen(pip->stream_dest, "ab");
 	}

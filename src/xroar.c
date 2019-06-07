@@ -2203,7 +2203,9 @@ static void helptext(void) {
 
 "\n Printing:\n"
 "  -lp-file FILE         append Dragon printer output to FILE\n"
+#ifdef HAVE_POPEN
 "  -lp-pipe COMMAND      pipe Dragon printer output to COMMAND\n"
+#endif
 
 "\n Debugging:\n"
 #ifdef WANT_GDB_TARGET
