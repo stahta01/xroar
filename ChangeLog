@@ -6,6 +6,7 @@ Version 0.36, unreleased
   * Cleaner PulseAudio output
   * Try harder to find working SDL2 audio format
   * Avoid buggy 'wasapi' SDL audio backend under Windows
+  * HD6309: Clear MD register on reset [Pere Serrat]
 
 Version 0.35, Fri Jun 27 2018
 

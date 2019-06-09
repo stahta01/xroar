@@ -234,6 +234,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 		switch (hcpu->state) {
 
 		case hd6309_state_reset:
+			REG_MD = 0;
 			REG_DP = 0;
 			REG_CC |= (CC_F | CC_I);
 			cpu->nmi_armed = 0;
