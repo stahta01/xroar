@@ -70,6 +70,10 @@ static void *new(void *cfg) {
 
 	uinull->free = DELEGATE_AS0(void, null_free, uinull);
 	uinull->set_state = DELEGATE_AS3(void, int, int, cvoidp, set_state, uinull);
+	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)null_vo_module_list, NULL);
+	if (!(uinull->vo_interface = module_init(vo_mod, uinull))) {
+		return NULL;
+	}
 
 	return uinull;
 }
