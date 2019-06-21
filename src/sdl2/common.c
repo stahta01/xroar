@@ -145,8 +145,9 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 
 void ui_sdl_run(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
-	while (xroar_run(EVENT_MS(10))) {
+	for (;;) {
 		run_sdl_event_loop(uisdl2);
+		xroar_run(EVENT_MS(10));
 	}
 }
 

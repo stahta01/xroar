@@ -926,12 +926,13 @@ static struct vdg_palette *get_machine_palette(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Called either by main() in a loop, or by a UI module's run() member.
- * Returns 1 for as long as the machine is active.
- */
+// Called either by main() in a loop, or by a UI module's run().  Processes the
+// UI event queue, then runs the machine for specified number of cycles.
 
-_Bool xroar_run(int ncycles) {
+void xroar_run(int ncycles) {
+	event_run_queue(&UI_EVENT_LIST);
+	if (!xroar_machine)
+		return;
 	switch (xroar_machine->run(xroar_machine, ncycles)) {
 	case machine_run_state_stopped:
 		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
@@ -940,8 +941,6 @@ _Bool xroar_run(int ncycles) {
 	default:
 		break;
 	}
-	event_run_queue(&UI_EVENT_LIST);
-	return 1;
 }
 
 int xroar_filetype_by_ext(const char *filename) {
