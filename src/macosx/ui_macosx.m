@@ -233,10 +233,10 @@ int cocoa_super_all_keys = 0;
 			xroar_save_snapshot();
 			break;
 		case TAG_TAPE_INPUT:
-			xroar_select_tape_input();
+			xroar_insert_input_tape();
 			break;
 		case TAG_TAPE_OUTPUT:
-			xroar_select_tape_output();
+			xroar_insert_output_tape();
 			break;
 		case TAG_TAPE_INPUT_REWIND:
 			if (xroar_tape_interface->tape_input) {

@@ -352,13 +352,13 @@ static void tc_input_rewind(GtkButton *button, gpointer user_data) {
 static void tc_input_insert(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	xroar_select_tape_input();
+	xroar_insert_input_tape();
 }
 
 static void tc_input_eject(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	xroar_eject_tape_input();
+	xroar_eject_input_tape();
 }
 
 static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll, gdouble value, gpointer user_data) {
@@ -379,11 +379,11 @@ static void tc_output_rewind(GtkButton *button, gpointer user_data) {
 static void tc_output_insert(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	xroar_select_tape_output();
+	xroar_insert_output_tape();
 }
 
 static void tc_output_eject(GtkButton *button, gpointer user_data) {
 	(void)button;
 	(void)user_data;
-	xroar_eject_tape_output();
+	xroar_eject_output_tape();
 }

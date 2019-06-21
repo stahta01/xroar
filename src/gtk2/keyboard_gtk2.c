@@ -298,7 +298,7 @@ static void emulator_command(guint keyval, int shift) {
 			printer_flush(xroar_printer_interface);
 		break;
 	case GDK_w:
-		xroar_select_tape_output();
+		xroar_insert_output_tape();
 		break;
 #ifdef TRACE
 	case GDK_v:

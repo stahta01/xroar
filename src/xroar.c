@@ -1560,28 +1560,34 @@ void xroar_save_snapshot(void) {
 	}
 }
 
-void xroar_select_tape_input(void) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_tape_exts);
-	if (filename) {
-		tape_open_reading(xroar_tape_interface, filename);
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
-	}
+void xroar_insert_input_tape_file(const char *filename) {
+	if (!filename) return;
+	tape_open_reading(xroar_tape_interface, filename);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 }
 
-void xroar_eject_tape_input(void) {
+void xroar_insert_input_tape(void) {
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_tape_exts);
+	xroar_insert_input_tape_file(filename);
+}
+
+void xroar_eject_input_tape(void) {
 	tape_close_reading(xroar_tape_interface);
 	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, NULL);
 }
 
-void xroar_select_tape_output(void) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_tape_exts);
-	if (filename) {
-		tape_open_writing(xroar_tape_interface, filename);
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
-	}
+void xroar_insert_output_tape_file(const char *filename) {
+	if (!filename) return;
+	tape_open_writing(xroar_tape_interface, filename);
+	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
 }
 
-void xroar_eject_tape_output(void) {
+void xroar_insert_output_tape(void) {
+	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_tape_exts);
+	xroar_insert_output_tape_file(filename);
+}
+
+void xroar_eject_output_tape(void) {
 	tape_close_writing(xroar_tape_interface);
 	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
 }

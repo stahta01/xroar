@@ -364,14 +364,14 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 			xroar_save_snapshot();
 			break;
 		case ui_action_tape_input:
-			xroar_select_tape_input();
+			xroar_insert_input_tape();
 			break;
 		case ui_action_tape_input_rewind:
 			if (xroar_tape_interface && xroar_tape_interface->tape_input)
 				tape_rewind(xroar_tape_interface->tape_input);
 			break;
 		case ui_action_tape_output:
-			xroar_select_tape_output();
+			xroar_insert_output_tape();
 			break;
 		case ui_action_tape_output_rewind:
 			if (xroar_tape_interface && xroar_tape_interface->tape_output)

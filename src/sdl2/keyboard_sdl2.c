@@ -221,7 +221,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		     }
 		     return;
 	case 's': xroar_save_snapshot(); return;
-	case 'w': xroar_select_tape_output(); return;
+	case 'w': xroar_insert_output_tape(); return;
 #ifdef TRACE
 	case 'v': xroar_set_trace(XROAR_NEXT); return;
 #endif
