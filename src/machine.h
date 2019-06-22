@@ -234,6 +234,7 @@ struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
 struct machine_module {
 	const char *name;
 	const char *description;
+	void (*config_complete)(struct machine_config *mc);
 	struct machine *(* const new)(struct machine_config *mc, struct vo_interface *vo, struct sound_interface *snd, struct tape_interface *ti);
 };
 

@@ -53,10 +53,12 @@ See COPYING.GPL for redistribution conditions.
 static struct machine *dragon_new(struct machine_config *mc, struct vo_interface *vo,
 				  struct sound_interface *snd,
 				  struct tape_interface *ti);
+static void dragon_config_complete(struct machine_config *mc);
 
 struct machine_module machine_dragon_module = {
 	.name = "dragon",
 	.description = "Dragon & CoCo 1/2 machines",
+	.config_complete = dragon_config_complete,
 	.new = dragon_new,
 };
 
@@ -171,9 +173,6 @@ struct machine_config *machine_config_first_working(void) {
 
 
 static void dragon_config_complete(struct machine_config *mc) {
-	if (!mc->description) {
-		mc->description = xstrdup(mc->name);
-	}
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->vdg_type == ANY_AUTO)

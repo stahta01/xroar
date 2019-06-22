@@ -37,6 +37,8 @@ See COPYING.GPL for redistribution conditions.
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
+static struct machine_module *machine_module(struct machine_config *mc);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config *machine_config_new(void) {
@@ -89,6 +91,9 @@ void machine_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
+	struct machine_module *mm = machine_module(mc);
+	assert(mm != NULL);
+	mm->config_complete(mc);
 }
 
 static void machine_config_free(struct machine_config *mc) {
