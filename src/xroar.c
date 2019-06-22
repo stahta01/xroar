@@ -1403,7 +1403,7 @@ static void update_ui_joysticks(int port) {
 void xroar_set_joystick(_Bool notify, int port, const char *name) {
 	if (port < 0 || port > 1)
 		return;
-	if (name) {
+	if (name && *name) {
 		joystick_map(joystick_config_by_name(name), port);
 	} else {
 		joystick_unmap(port);
