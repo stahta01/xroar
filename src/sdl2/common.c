@@ -61,6 +61,8 @@ static struct joystick_submodule sdl_js_submod_mouse = {
 	.configure_button = configure_button,
 };
 
+static float mouse_xscale = 1.0;
+static float mouse_yscale = 1.0;
 static float mouse_xoffset = 34.0;
 static float mouse_yoffset = 25.5;
 static float mouse_xdiv = 252.;
@@ -116,8 +118,8 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			break;
 		case SDL_MOUSEMOTION:
 			if (event.motion.windowID == uisdl2->vo_window_id) {
-				float x = ((float)event.motion.x - mouse_xoffset) / mouse_xdiv;
-				float y = ((float)event.motion.y - mouse_yoffset) / mouse_ydiv;
+				float x = (((float)event.motion.x * mouse_xscale) - mouse_xoffset) / mouse_xdiv;
+				float y = (((float)event.motion.y * mouse_yscale) - mouse_yoffset) / mouse_ydiv;
 				if (x < 0.0) x = 0.0;
 				if (x > 1.0) x = 1.0;
 				if (y < 0.0) y = 0.0;
@@ -188,6 +190,8 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
+	mouse_xscale = 320. / global_uisdl2->display_rect.w;
+	mouse_yscale = 240. / global_uisdl2->display_rect.h;
 	return axis;
 }
 
