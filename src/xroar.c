@@ -1011,7 +1011,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 			} else {
 				ret = tape_open_reading(xroar_tape_interface, filename);
 			}
-			if (ret == 0) {
+			if (ret != -1) {
 				DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 			}
 			break;
