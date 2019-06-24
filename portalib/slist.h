@@ -8,10 +8,10 @@ This file is part of Portalib.
 
 Portalib is free software; you can redistribute it and/or modify it under
 the terms of the GNU Lesser General Public License as published by the
-Free Software Foundation; either version 2.1 of the License, or (at your
+Free Software Foundation; either version 3 of the License, or (at your
 option) any later version.
 
-See COPYING.LGPL-2.1 for redistribution conditions.
+See COPYING.LGPL and COPYING.GPL for redistribution conditions.
 
 A simple singly-linked list implementation.  The interfaces are similar
 to other such implementations, but are implemented from scratch.  A list

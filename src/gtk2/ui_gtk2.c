@@ -7,9 +7,9 @@ Copyright 2010-2019 Ciaran Anscomb
 This file is part of XRoar.
 
 XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free
-Software Foundation, either version 2 of the License, or (at your option)
-any later version.
+the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
 
 See COPYING.GPL for redistribution conditions.
 
@@ -325,8 +325,8 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 	gtk_about_dialog_set_copyright(dialog, "Copyright © 2003–2019 Ciaran Anscomb <xroar@6809.org.uk>");
 	gtk_about_dialog_set_license(dialog,
 "XRoar is free software; you can redistribute it and/or modify it under\n"
-"the terms of the GNU General Public License as published by the Free\n"
-"Software Foundation, either version 2 of the License, or (at your option)\n"
+"the terms of the GNU General Public License as published by the Free Free\n"
+"Software Foundation, either version 3 of the License, or (at your option)\n"
 "any later version.\n"
 "\n"
 "XRoar is distributed in the hope that it will be useful, but WITHOUT\n"
@@ -335,7 +335,7 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 "for more details.\n"
 "\n"
 "You should have received a copy of the GNU General Public License along\n"
-"with XRoar.  If not, see <http://www.gnu.org/licenses/>."
+"with XRoar.  If not, see <https://www.gnu.org/licenses/>."
 	);
 	gtk_about_dialog_set_website(dialog, "http://www.6809.org.uk/xroar/");
 	g_signal_connect(dialog, "response", G_CALLBACK(close_about), uigtk2);
