@@ -19,6 +19,7 @@ See COPYING.GPL for redistribution conditions.
 #define XROAR_EVENT_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "delegate.h"
 
@@ -41,6 +42,7 @@ struct event {
 	event_ticks at_tick;
 	DELEGATE_T0(void) delegate;
 	_Bool queued;
+	_Bool autofree;
 	struct event **list;
 	struct event *next;
 };
@@ -54,6 +56,10 @@ void event_init(struct event *event, DELEGATE_T0(void));
 void event_free(struct event *event);
 void event_queue(struct event **list, struct event *event);
 void event_dequeue(struct event *event);
+
+// Allocate an event and queue it, flagged to autofree.  Event will be
+// scheduled for current time + dt.
+void event_queue_auto(struct event **list, DELEGATE_T0(void), int dt);
 
 /* In theory, C99 6.5:7 combined with the fact that fixed width integers are
  * guaranteed 2s complement should make this safe.  Kinda hard to tell, though.
@@ -73,6 +79,8 @@ inline void event_dispatch_next(struct event **list) {
 	*list = e->next;
 	e->queued = 0;
 	DELEGATE_CALL0(e->delegate);
+	if (e->autofree)
+		free(e);
 }
 
 inline void event_run_queue(struct event **list) {

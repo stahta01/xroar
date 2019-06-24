@@ -40,11 +40,9 @@ struct event *event_new(DELEGATE_T0(void) delegate) {
 
 void event_init(struct event *event, DELEGATE_T0(void) delegate) {
 	if (event == NULL) return;
+	*event = (struct event){0};
 	event->at_tick = event_current_tick;
 	event->delegate = delegate;
-	event->queued = 0;
-	event->list = NULL;
-	event->next = NULL;
 }
 
 void event_free(struct event *event) {
@@ -67,6 +65,13 @@ void event_queue(struct event **list, struct event *event) {
 	}
 	*entry = event;
 	event->next = NULL;
+}
+
+void event_queue_auto(struct event **list, DELEGATE_T0(void) delegate, int dt) {
+	struct event *e = event_new(delegate);
+	e->at_tick += dt;
+	e->autofree = 1;
+	event_queue(list, e);
 }
 
 void event_dequeue(struct event *event) {
