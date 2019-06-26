@@ -44,7 +44,7 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([popen strnlen strsep])
+AC_CHECK_FUNCS([getaddrinfo popen strnlen strsep])
 AX_GCC_BUILTIN(__builtin_parity)
 AX_GCC_VAR_ATTRIBUTE(packed)
 
