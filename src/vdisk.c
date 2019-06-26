@@ -310,7 +310,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 					memset(buf, 0, ssize);
 				}
 				if (!vdisk_write_sector(ctx, cyl, head, sector + 1, ssize, buf)) {
-					LOG_WARN("Failed writing C%d H%d S%d: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					LOG_WARN("Failed writing C%u H%u S%u: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
 					fclose(fd);
 					vdisk_ctx_free(ctx);
 					vdisk_unref(disk);
@@ -381,9 +381,9 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 
 	unsigned ssize = 128 << vinfo.ssize_code;
 
-	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%d x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
+	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%u x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
 	if (vinfo.first_sector_id != 1) {
-		LOG_WARN("VDISK/VDK/WRITE: first sector id of %d may render image unreadable\n", vinfo.first_sector_id);
+		LOG_WARN("VDISK/VDK/WRITE: first sector id of %u may render image unreadable\n", vinfo.first_sector_id);
 	}
 
 	uint16_t header_length = 12;
@@ -529,7 +529,6 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	// Too many tracks is implausible, so assume this (single-sided) means
 	// a 720K disk.
 	if (ncyls >= 88 && nheads == 1) {
-		ncyls <<= 1;
 		nheads++;
 		bytes_per_cyl = nsectors * bytes_per_sector * nheads;
 		ncyls = file_size / bytes_per_cyl;
@@ -569,7 +568,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 					memset(buf, 0, ssize);
 				}
 				if (!vdisk_write_sector(ctx, cyl, head, sector + first_sector, ssize, buf)) {
-					LOG_WARN("Failed writing C%d H%d S%d: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					LOG_WARN("Failed writing C%u H%u S%u: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
 					fclose(fd);
 					vdisk_ctx_free(ctx);
 					vdisk_unref(disk);
@@ -629,7 +628,7 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	buf[4] = 0;  // sector attribute flag currently unused
 	unsigned ssize = 128 << vinfo.ssize_code;
 
-	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%d x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
+	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%u x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
 
 	// don't write a header if OS-9 detection didn't find one
 	unsigned header_size = 0;
@@ -776,9 +775,9 @@ static int vdisk_save_dmk(struct vdisk *disk) {
 	for (unsigned cyl = 0; cyl < disk->num_cylinders; cyl++) {
 		for (unsigned head = 0; head < disk->num_heads; head++) {
 			uint16_t *idams = vdisk_track_base(disk, cyl, head);
+			if (idams == NULL) continue;
 			uint8_t *buf = (uint8_t *)idams + 128;
 			int i;
-			if (idams == NULL) continue;
 			for (i = 0; i < 64; i++) {
 				fs_write_uint16_le(fd, idams[i]);
 			}

@@ -994,7 +994,8 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 		case CUE_TIMING: {
 			int bit0_hz = fs_read_uint16(fd);
 			int bit1_hz = fs_read_uint16(fd);
-			if (bit0_hz < 0 || bit1_hz < 0)
+			// zero is also invalid, as we'll be dividing by it!
+			if (bit0_hz <= 0 || bit1_hz <= 0)
 				goto read_failed;
 			elength -= 4;
 			int bit0_cw = IDIV_ROUND(CAS_RATE, bit0_hz);

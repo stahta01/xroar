@@ -123,26 +123,26 @@ void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
 	/* Connect signals */
 	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
 	for (i = 0; i < 4; i++) {
-		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (char *)0 + i);
-		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (char *)0 + i);
+		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
+		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
 	}
 	g_signal_connect(dc_window, "delete-event", G_CALLBACK(hide_dc_window), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive1"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (char *)0);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)0);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive2"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (char *)0 + 1);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)1);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive3"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (char *)0 + 2);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive4"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (char *)0 + 3);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)3);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive1"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (char *)0 + 0);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)0);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive2"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (char *)0 + 1);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)1);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive3"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (char *)0 + 2);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "insert_drive4"));
-	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (char *)0 + 3);
+	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)3);
 
 	/* In case any signals remain... */
 	gtk_builder_connect_signals(builder, uigtk2);

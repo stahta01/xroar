@@ -129,7 +129,7 @@ static void *ui_windows32_new(void *cfg) {
 	struct ui_interface *ui = &uisdl2->public;
 	// Make available globally for other SDL2 code
 	global_uisdl2 = uisdl2;
-	uisdl2->cfg = cfg;
+	uisdl2->cfg = ui_cfg;
 
 	ui->free = DELEGATE_AS0(void, ui_windows32_free, uisdl2);
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);

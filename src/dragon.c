@@ -811,7 +811,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 		/* Intialise RAM contents */
 		int loc = 0, val = 0xff;
 		/* Don't know why, but RAM seems to start in this state: */
-		while (loc < 0x10000) {
+		while (loc <= 0xfffc) {
 			md->ram[loc++] = val;
 			md->ram[loc++] = val;
 			md->ram[loc++] = val;

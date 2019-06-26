@@ -398,15 +398,15 @@ void sound_update(struct sound_interface *sndp) {
 	// Different configurations of single-bit sound have different effects
 	// on the mux output.  Gain & DC offset updated here.
 	float mux_output_raw;
-	unsigned sindex = snd->current.sbs_enabled ? (snd->current.sbs_level ? 2 : 1) : 0;
 	if (snd->current.mux_enabled) {
+		unsigned sindex = snd->current.sbs_enabled ? (snd->current.sbs_level ? 2 : 1) : 0;
 		mux_output_raw = snd->mux_input_raw[snd->current.mux_source];
 		snd->mux_gain = source_gain_v[snd->current.mux_source][sindex];
 		snd->bus_offset = source_offset_v[snd->current.mux_source][sindex];
 	} else {
 		mux_output_raw = 0.0;
 		if (snd->current.sbs_enabled) {
-			int sindex = snd->current.sbs_level ? 2 : 1;
+			unsigned sindex = snd->current.sbs_level ? 2 : 1;
 			snd->mux_gain = 0.0;
 			snd->bus_offset = source_offset_v[SOURCE_SINGLE_BIT][sindex];
 		}
