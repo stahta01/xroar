@@ -72,10 +72,18 @@ XRoar is easily built from source under Linux, and binary packages are provided
 for Windows.  It should still be possible to build for Mac OS X, but no binary
 packages are currently being provided.
 
-XRoar was originally written to run on Solaris, Linux and the GP32 handheld.
-Later, it was ported to the Nintendo DS.  Support has now been dropped for the
-GP32 and NDS as emulation accuracy, and thus the CPU requirement, has
-increased.  Builds have not been tested under Solaris for some while.
+XRoar is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+XRoar is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
 @ifnottex
 @menu
