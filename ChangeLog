@@ -1,12 +1,13 @@
 Version 0.36, unreleased
 
-  * SN76489: Use libsamplerate instead of DIY low-pass filter
   * Fix SAM S output in map type 1 [Pere Serrat]
   * Work around Windows audio failure when 5.1 is available [Gerald Stefan]
   * Cleaner PulseAudio output
   * Try harder to find working SDL2 audio format
   * Avoid buggy 'wasapi' SDL audio backend under Windows
   * HD6309: Clear MD register on reset [Pere Serrat]
+  * Relicensed to GPLv3+
+  * WebAssembly target support
 
 Version 0.35, Fri Jun 27 2018
 
