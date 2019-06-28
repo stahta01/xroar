@@ -49,6 +49,9 @@ struct ui_sdl2_interface {
 		// Last unicode value determined for each scancode
 		int unicode_last_scancode[SDL_NUM_SCANCODES];
 	} keyboard;
+
+	// Pointer state
+	_Bool mouse_hidden;
 };
 
 extern struct ui_sdl2_interface *global_uisdl2;

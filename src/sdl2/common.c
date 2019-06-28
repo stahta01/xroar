@@ -117,6 +117,10 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			sdl_keyrelease(uisdl2, &event.key.keysym);
 			break;
 		case SDL_MOUSEMOTION:
+			if (uisdl2->mouse_hidden) {
+				SDL_ShowCursor(SDL_ENABLE);
+				uisdl2->mouse_hidden = 0;
+			}
 			if (event.motion.windowID == uisdl2->vo_window_id) {
 				float x = (((float)event.motion.x * mouse_xscale) - mouse_xoffset) / mouse_xdiv;
 				float y = (((float)event.motion.y * mouse_yscale) - mouse_yoffset) / mouse_ydiv;

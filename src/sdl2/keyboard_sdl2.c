@@ -290,6 +290,11 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	if (sym == SDL_SCANCODE_UNKNOWN)
 		return;
 
+	if (!uisdl2->mouse_hidden) {
+		SDL_ShowCursor(SDL_DISABLE);
+		uisdl2->mouse_hidden = 1;
+	}
+
 	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT) {
 		int unicode = sdl_os_keysym_to_unicode(keysym);
 		if (unicode & 0x40000000)
