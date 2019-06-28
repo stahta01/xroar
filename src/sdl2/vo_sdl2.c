@@ -60,6 +60,10 @@ struct vo_sdl_interface {
 
 	int window_w;
 	int window_h;
+
+#ifdef WINDOWS32
+	_Bool showing_menu;
+#endif
 };
 
 #define VO_MODULE_INTERFACE struct vo_sdl_interface
@@ -79,7 +83,7 @@ static void vo_sdl_vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 
-static int create_renderer(struct vo_sdl_interface *vosdl);
+static _Bool create_renderer(struct vo_sdl_interface *vosdl);
 static void destroy_window(void);
 static void destroy_renderer(struct vo_sdl_interface *vosdl);
 
@@ -108,11 +112,26 @@ static void *new(void *sptr) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
-	vo->is_fullscreen = !vo_cfg->fullscreen;
-	if (set_fullscreen(vo, vo_cfg->fullscreen) != 0) {
+	Uint32 wflags = SDL_WINDOW_RESIZABLE;
+	if (vo_cfg->fullscreen) {
+		wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, wflags);
+	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
+	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
+	if (!create_renderer(vosdl)) {
 		vo_sdl_free(vo);
 		return NULL;
 	}
+
+#ifdef WINDOWS32
+	// Need an event handler to prevent events backing up while menus are
+	// being used.
+	sdl_windows32_set_events_window(uisdl2->vo_window);
+#endif
+
+	// Initialise keyboard
+	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
 	alloc_colours(vo);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
@@ -126,93 +145,38 @@ static void *new(void *sptr) {
 }
 
 static void resize(void *sptr, unsigned int w, unsigned int h) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_sdl_interface *vosdl = &generic->module;
-	struct vo_interface *vo = &vosdl->public;
-	if (vo->is_fullscreen)
-		return;
-	vosdl->window_w = w;
-	vosdl->window_h = h;
+	struct vo_sdl_interface *vosdl = sptr;
+	(void)w;
+	(void)h;
 	create_renderer(vosdl);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_sdl_interface *vosdl = &generic->module;
-	struct vo_interface *vo = &vosdl->public;
-	int err;
+	struct vo_sdl_interface *vosdl = sptr;
 
-#ifdef WINDOWS32
-	/* Remove menubar if transitioning from windowed to fullscreen. */
-
-	if (global_uisdl2->vo_window && !vo->is_fullscreen && fullscreen) {
-		sdl_windows32_remove_menu(global_uisdl2->vo_window);
-	}
+#ifdef HAVE_WASM
+	// Until WebAssembly fullscreen interaction becomes a little more
+	// predictable, we just don't support it.
+	return 0;
 #endif
 
-	destroy_renderer(vosdl);
-	destroy_window();
+	_Bool is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-	if (fullscreen) {
-		global_uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	} else {
-		global_uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_w, vosdl->window_h, SDL_WINDOW_RESIZABLE);
+	if (is_fullscreen == fullscreen) {
+		return 0;
 	}
-	if (!global_uisdl2->vo_window) {
-		LOG_ERROR("Failed to create window\n");
-		return -1;
-	}
-	global_uisdl2->vo_window_id = SDL_GetWindowID(global_uisdl2->vo_window);
+
+	SDL_SetWindowFullscreen(global_uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+
 	if (!fullscreen) {
-		SDL_SetWindowMinimumSize(global_uisdl2->vo_window, 160, 120);
-	}
-
-#ifdef WINDOWS32
-	sdl_windows32_set_events_window(global_uisdl2->vo_window);
-
-	/* Add menubar if transitioning from fullscreen to windowed. */
-
-	if (vo->is_fullscreen && !fullscreen) {
-		sdl_windows32_add_menu(global_uisdl2->vo_window);
-
-		/* Adding the menubar will resize the *client area*, i.e., the
-		 * bit SDL wants to render into. A specified geometry in this
-		 * case should apply to the client area, so we need to resize
-		 * again to account for this. */
-
+		// Testing under Wine, returning from fullscreen doesn't
+		// _always_ set it back to the original geometry.  I have no
+		// idea why, so force it:
 		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_w, vosdl->window_h);
-
-		/* Now purge any resize events this all generated from the
-		 * event queue. Don't want to end up in a resize loop! */
-
-		SDL_FlushEvent(SDL_WINDOWEVENT);
 	}
-#endif
-
-	if ((err = create_renderer(vosdl)) != 0) {
-		destroy_window();
-		return err;
-	}
-
-	if (fullscreen)
-		SDL_ShowCursor(SDL_DISABLE);
-	else
-		SDL_ShowCursor(SDL_ENABLE);
-
-	vo->is_fullscreen = fullscreen;
-	global_uisdl2->display_rect.x = global_uisdl2->display_rect.y = 0;
-
-	/* Initialise keyboard */
-	sdl_os_keyboard_init(global_uisdl2->vo_window);
-
-	/* Clear out any keydown events queued for the new window */
-	SDL_PumpEvents();
-	SDL_FlushEvent(SDL_KEYDOWN);
 
 	return 0;
 }
-
-/* In Windows, the renderer and textures need recreating quite frequently */
 
 static void destroy_window(void) {
 	if (global_uisdl2->vo_window) {
@@ -222,10 +186,51 @@ static void destroy_window(void) {
 	}
 }
 
-static int create_renderer(struct vo_sdl_interface *vosdl) {
+// Whenever the window size changes, we recreate the renderer and texture.
+
+static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
+	struct vo_interface *vo = &vosdl->public;
+
+	// Remove old renderer & texture, if they exist
 	destroy_renderer(vosdl);
+
 	int w, h;
 	SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
+
+	vo->is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+	_Bool resize_again = 0;
+
+#ifdef WINDOWS32
+	// Also take the opportunity to add (windowed) or remove (fullscreen) a
+	// menubar under windows.
+	if (!vosdl->showing_menu && !vo->is_fullscreen) {
+		sdl_windows32_add_menu(global_uisdl2->vo_window);
+		vosdl->showing_menu = 1;
+		// Adding menubar steals space from client area, so reset size
+		// to get that back.
+		resize_again = 1;
+	} else if (vosdl->showing_menu && vo->is_fullscreen) {
+		sdl_windows32_remove_menu(global_uisdl2->vo_window);
+		vosdl->showing_menu = 0;
+	}
+#endif
+
+	if (!vo->is_fullscreen) {
+		if (w < 160 || h < 120) {
+			w = 160;
+			h = 120;
+			resize_again = 1;
+		}
+		vosdl->window_w = w;
+		vosdl->window_h = h;
+	}
+
+	if (resize_again) {
+		SDL_SetWindowSize(global_uisdl2->vo_window, w, h);
+	}
+
+	// Set scaling method according to options and window dimensions
 	if (vosdl->filter == UI_GL_FILTER_NEAREST
 	    || (vosdl->filter == UI_GL_FILTER_AUTO && (w % 320 == 0 && h % 240 == 0))) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
@@ -236,7 +241,7 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 	vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
-		return -1;
+		return 0;
 	}
 
 	if (log_level >= 3) {
@@ -257,7 +262,7 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer(vosdl);
-		return -1;
+		return 0;
 	}
 
 	SDL_RenderSetLogicalSize(vosdl->renderer, 640, 480);
@@ -265,10 +270,11 @@ static int create_renderer(struct vo_sdl_interface *vosdl) {
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderPresent(vosdl->renderer);
 
-	global_uisdl2->display_rect.w = vosdl->window_w;
-	global_uisdl2->display_rect.h = vosdl->window_h;
+	global_uisdl2->display_rect.x = global_uisdl2->display_rect.y = 0;
+	global_uisdl2->display_rect.w = w;
+	global_uisdl2->display_rect.h = h;
 
-	return 0;
+	return 1;
 }
 
 static void destroy_renderer(struct vo_sdl_interface *vosdl) {

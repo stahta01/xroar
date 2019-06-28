@@ -100,6 +100,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 		switch(event.type) {
 		case SDL_WINDOWEVENT:
 			switch(event.window.event) {
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
 			case SDL_WINDOWEVENT_RESIZED:
 				DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.window.data1, event.window.data2);
 				break;
@@ -226,7 +227,6 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }
 
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
@@ -242,5 +242,4 @@ void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
 	if (scale < 1)
 		scale = 1;
 	SDL_SetWindowSize(uisdl2->vo_window, 160*scale, 120*scale);
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160*scale, 120*scale);
 }
