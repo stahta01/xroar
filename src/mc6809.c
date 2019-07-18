@@ -1082,6 +1082,32 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
+			// 0x1030 LEAX indexed illegal
+			case 0x30:
+				REG_X = ea_indexed(cpu);
+				CLR_Z;
+				SET_Z16(REG_X);
+				NVMA_CYCLE;
+				break;
+			// 0x1031 LEAY indexed illegal
+			case 0x31:
+				REG_Y = ea_indexed(cpu);
+				CLR_Z;
+				SET_Z16(REG_Y);
+				NVMA_CYCLE;
+				break;
+			// 0x1032 LEAS indexed illegal
+			case 0x32:
+				REG_S = ea_indexed(cpu);
+				NVMA_CYCLE;
+				cpu->nmi_armed = 1;  // XXX: Really?
+				break;
+			// 0x1033 LEAU indexed illegal
+			case 0x33:
+				REG_U = ea_indexed(cpu);
+				NVMA_CYCLE;
+				break;
+
 			// 0x103f SWI2 inherent
 			case 0x3f:
 				peek_byte(cpu, REG_PC);

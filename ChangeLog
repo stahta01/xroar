@@ -8,6 +8,7 @@ Version 0.36, unreleased
   * HD6309: Clear MD register on reset [Pere Serrat]
   * Relicensed to GPLv3+
   * WebAssembly target support
+  * MC6809: LEA instructions work in page 1 [Stewart Orchard]
 
 Version 0.35, Fri Jun 27 2018
 
