@@ -468,6 +468,8 @@ static struct {
 	{ "OS9", FILETYPE_OS9 },
 	{ "DMK", FILETYPE_DMK },
 	{ "BIN", FILETYPE_BIN },
+	{ "DGN", FILETYPE_BIN },
+	{ "CCO", FILETYPE_BIN },
 	{ "HEX", FILETYPE_HEX },
 	{ "CAS", FILETYPE_CAS },
 	{ "WAV", FILETYPE_WAV },

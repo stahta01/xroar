@@ -9,6 +9,7 @@ Version 0.36, unreleased
   * Relicensed to GPLv3+
   * WebAssembly target support
   * MC6809: LEA instructions work in page 1 [Stewart Orchard]
+  * Recognise .dgn and .cco as potential binary files
 
 Version 0.35, Fri Jun 27 2018
 
