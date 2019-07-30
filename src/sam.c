@@ -26,31 +26,56 @@ See COPYING.GPL for redistribution conditions.
 #include "part.h"
 #include "sam.h"
 
-/* Constants for tracking VDG address counter */
-static int const vdg_mod_xdivs[8] = { 1, 3, 1, 2, 1, 1, 1, 1 };
-static int const vdg_mod_ydivs[8] = { 12, 1, 3, 1, 2, 1, 1, 1 };
-static int const vdg_mod_adds[8] = { 16, 8, 16, 8, 16, 8, 16, 0 };
-static uint16_t const vdg_mod_clears[8] = { ~30, ~14, ~30, ~14, ~30, ~14, ~30, ~0 };
+// Constants for address multiplexer
+// SAM Data Sheet,
+//   Figure 6 - Signal routing for address multiplexer
 
-/* Constants for address multiplexer
- * SAM Data Sheet,
- *   Figure 6 - Signal routing for address multiplexer */
 static uint16_t const ram_row_masks[4] = { 0x007f, 0x007f, 0x00ff, 0x00ff };
 static int const ram_col_shifts[4] = { 2, 1, 0, 0 };
 static uint16_t const ram_col_masks[4] = { 0x3f00, 0x7f00, 0xff00, 0xff00 };
 static uint16_t const ram_ras1_bits[4] = { 0x1000, 0x4000, 0, 0 };
 
+// VDG X & Y divider configurations and HSync clear mode.
+
+#define DIV1  (0)
+#define DIV2  (1)
+#define DIV3  (2)
+#define DIV12 (3)
+
+#define CLR_B4_1 (0)
+#define CLR_B3_1 (1)
+#define CLR_NONE (2)
+
+static int const vdg_xdiv_modes[8] = {  DIV1, DIV3, DIV1, DIV2, DIV1, DIV1, DIV1, DIV1 };
+static int const vdg_ydiv_modes[8] = { DIV12, DIV1, DIV3, DIV1, DIV2, DIV1, DIV1, DIV1 };
+static int const vdg_clr_modes[8] = {
+	CLR_B4_1, CLR_B3_1, CLR_B4_1, CLR_B3_1,
+	CLR_B4_1, CLR_B3_1, CLR_B4_1, CLR_NONE };
+
+// Duty cycles for VDG X and Y dividers.  Iterator advances through the 24
+// entries each time the _input_ to the divider changes state, meaning the ÷1
+// passthrough can be implemented without a special case.
+
+static int const div_duty[4][24] = {
+	{ 0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1 }, // ÷1 - passthrough
+	{ 0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1 }, // ÷2
+	{ 0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1 }, // ÷3
+	{ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1 }, // ÷12
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct MC6883_private {
 
 	struct MC6883 public;
 
-	/* SAM control register */
+	// SAM control register
 	uint_fast16_t reg;
 
-	/* Address decode */
+	// Address decode
 	_Bool map_type_1;
 
-	/* Address multiplexer */
+	// Address multiplexer
 	uint16_t ram_row_mask;
 	int ram_col_shift;
 	uint16_t ram_col_mask;
@@ -58,21 +83,30 @@ struct MC6883_private {
 	uint16_t ram_ras1;
 	uint16_t ram_page_bit;
 
-	/* MPU rate */
+	// MPU rate
 	_Bool mpu_rate_fast;
 	_Bool mpu_rate_ad;
 	_Bool running_fast;
 	_Bool extend_slow_cycle;
 
-	/* VDG address counter */
-	uint16_t vdg_base;
-	uint16_t vdg_address;
-	int vdg_mod_xdiv;
-	int vdg_mod_ydiv;
-	int vdg_mod_add;
-	uint16_t vdg_mod_clear;
-	int vdg_xcount;
-	int vdg_ycount;
+	struct {
+		unsigned v;  // video mode
+		uint16_t f;  // VDG address bits 15..9 latched on FSync
+
+		// these are set according to mode
+		int xdiv;  // DIV1, DIV2 or DIV3
+		int ydiv;  // DIV1, DIV2, DIV3 or DIV12
+		int clr_mode;  // CLR_B4_1, CLR_B3_1 or CLR_NONE
+
+		// address counters
+		uint16_t b15_5;  // top 11 bits follow Ydiv
+		uint16_t b4;     // bit 4 follows Xdiv
+		uint16_t b3_0;   // bits 0-3
+
+		// index into duty cycle arrays
+		int xduty;
+		int yduty;
+	} vdg;
 
 };
 
@@ -115,6 +149,7 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
+	_Bool want_register_update = 0;
 
 	if ((A >> 8) == 0xff) {
 		// I/O area
@@ -128,7 +163,7 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			} else {
 				sam->reg &= ~b;
 			}
-			update_from_register(sam);
+			want_register_update = 1;
 		}
 	} else if ((A & 0x8000) && !sam->map_type_1) {
 		samp->S = data_S[A >> 13];
@@ -172,62 +207,124 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	}
 
 	DELEGATE_CALL3(samp->cpu_cycle, ncycles, RnW, A);
-}
 
-static void vdg_address_add(struct MC6883_private *sam, int n) {
-	uint16_t new_B = sam->vdg_address + n;
-	if ((sam->vdg_address ^ new_B) & 0x10) {
-		sam->vdg_xcount = (sam->vdg_xcount + 1) % sam->vdg_mod_xdiv;
-		if (sam->vdg_xcount != 0) {
-			new_B -= 0x10;
-		} else {
-			if ((sam->vdg_address ^ new_B) & 0x20) {
-				sam->vdg_ycount = (sam->vdg_ycount + 1) % sam->vdg_mod_ydiv;
-				if (sam->vdg_ycount != 0) {
-					new_B -= 0x20;
-				}
-			}
-		}
+	if (want_register_update) {
+		update_from_register(sam);
 	}
-	sam->vdg_address = new_B;
+
 }
 
 void sam_vdg_hsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (level)
 		return;
-	/* The top cleared bit will, if a transition to low occurs, increment
-	 * the bits above it.  This dummy fetch will achieve the same effective
-	 * result. */
-	vdg_address_add(sam, sam->vdg_mod_add);
-	sam->vdg_address &= sam->vdg_mod_clear;
+
+	_Bool old_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+	_Bool old_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+
+	switch (sam->vdg.clr_mode) {
+
+	case CLR_B4_1:
+		// clear bits 4..1
+		if (sam->vdg.b3_0 & 0x8) {
+			sam->vdg.xduty = (sam->vdg.xduty + 1) % 24;
+		}
+		sam->vdg.b3_0 &= ~0xe;
+		if (sam->vdg.b4) {
+			sam->vdg.yduty = (sam->vdg.yduty + 1) % 24;
+			_Bool new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+			if (old_ydiv_out && !new_ydiv_out) {
+				sam->vdg.b15_5 += 0x20;
+			}
+		}
+		sam->vdg.b4 = 0;
+		break;
+
+	case CLR_B3_1:
+		// clear bits 3..1
+		if (sam->vdg.b3_0 & 0x8) {
+			sam->vdg.xduty = (sam->vdg.xduty + 1) % 24;
+			_Bool new_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+			if (old_xdiv_out && !new_xdiv_out) {
+				sam->vdg.b4 ^= 0x10;
+				sam->vdg.yduty = (sam->vdg.yduty + 1) % 24;
+				_Bool new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+				if (old_ydiv_out && !new_ydiv_out) {
+					sam->vdg.b15_5 += 0x20;
+				}
+			}
+		}
+		sam->vdg.b3_0 &= ~0xe;
+		break;
+
+	default:
+		break;
+	}
+
 }
 
 void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	if (!level)
+	if (!level) {
 		return;
-	sam->vdg_address = sam->vdg_base;
-	sam->vdg_xcount = 0;
-	sam->vdg_ycount = 0;
+	}
+	sam->vdg.b15_5 = sam->vdg.f;
+	sam->vdg.b4 = 0;
+	sam->vdg.b3_0 = 0;
+	sam->vdg.xduty = 0;
+	sam->vdg.yduty = 0;
 }
 
-/* Called with the number of bytes of video data required, this implements the
- * divide-by-X and divide-by-Y parts of the SAM video address counter.  Updates
- * 'V' to the base address of available data and returns the actual number of
- * bytes available.  As the next byte may not be sequential, continue calling
- * until all required data is fetched. */
+// Called with the number of bytes of video data required.  Any one call will
+// provide data up to a limit of the next 16-byte boundary, meaning multiple
+// calls may be required.  Updates V to the translated base address of the
+// available data, and returns the number of bytes available there.
+//
+// When the 16-byte boundary is reached, there is a falling edge on the input
+// to the X divider (bit 3 transitions from 1 to 0), which may affect its
+// output, thus advancing bit 4.  This in turn alters the input to the Y
+// divider.
 
 int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	uint16_t b3_0 = sam->vdg_address & 0xf;
-	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(sam->vdg_address);
-	if ((b3_0 + nbytes) < 16) {
-		sam->vdg_address += nbytes;
+
+	// In fast mode, there's no time to latch video RAM, so just point at
+	// whatever was being access by the CPU.  This won't be terribly
+	// accurate, as this function is called a lot less frequently than the
+	// CPU address changes.
+	uint16_t V = sam->vdg.b15_5 | sam->vdg.b4 | sam->vdg.b3_0;
+	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(V);
+
+	// Either way, need to advance the VDG address pointer.
+
+	// Simple case is where nbytes takes us to below the next 16-byte
+	// boundary.  Need to record any rising edge of bit 3 (as input to X
+	// divisor), but it will never fall here, so don't need to check for
+	// that.
+	if ((sam->vdg.b3_0 + nbytes) < 16) {
+		sam->vdg.b3_0 += nbytes;
+		sam->vdg.xduty |= (sam->vdg.b3_0 >> 3);  // potential rising edge
 		return nbytes;
 	}
-	nbytes = 16 - b3_0;
-	vdg_address_add(sam, nbytes);
+
+	// Otherwise we have reached the boundary.  Bit 3 will always provide a
+	// falling edge to the X divider, so work through how that affects
+	// subsequent address bits.
+	nbytes = 16 - sam->vdg.b3_0;
+	sam->vdg.b3_0 = 0;
+	sam->vdg.xduty |= 1;  // in case this was skipped past
+	_Bool old_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+	sam->vdg.xduty = (sam->vdg.xduty + 1) % 24;
+	_Bool new_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+	if (old_xdiv_out && !new_xdiv_out) {
+		sam->vdg.b4 ^= 0x10;
+		_Bool old_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+		sam->vdg.yduty = (sam->vdg.yduty + 1) % 24;
+		_Bool new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+		if (old_ydiv_out && !new_ydiv_out) {
+			sam->vdg.b15_5 += 0x20;
+		}
+	}
 	return nbytes;
 }
 
@@ -243,12 +340,32 @@ unsigned int sam_get_register(struct MC6883 *samp) {
 }
 
 static void update_from_register(struct MC6883_private *sam) {
-	int vdg_mode = sam->reg & 7;
-	sam->vdg_base = (sam->reg & 0x03f8) << 6;
-	sam->vdg_mod_xdiv = vdg_mod_xdivs[vdg_mode];
-	sam->vdg_mod_ydiv = vdg_mod_ydivs[vdg_mode];
-	sam->vdg_mod_add = vdg_mod_adds[vdg_mode];
-	sam->vdg_mod_clear = vdg_mod_clears[vdg_mode];
+	_Bool old_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+	_Bool old_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+
+	sam->vdg.v = sam->reg & 7;
+	sam->vdg.f = (sam->reg & 0x03f8) << 6;
+	sam->vdg.clr_mode = vdg_clr_modes[sam->vdg.v];
+	sam->vdg.xdiv = vdg_xdiv_modes[sam->vdg.v];
+
+	_Bool new_xdiv_out = div_duty[sam->vdg.xdiv][sam->vdg.xduty];
+	_Bool new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+
+	if (old_xdiv_out && !new_xdiv_out) {
+		sam->vdg.b4 ^= 0x10;
+		sam->vdg.yduty = (sam->vdg.yduty + 1) % 24;
+		new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+		if (old_ydiv_out && !new_ydiv_out) {
+			sam->vdg.b15_5 += 0x20;
+		}
+		old_ydiv_out = new_ydiv_out;
+	}
+
+	sam->vdg.ydiv = vdg_ydiv_modes[sam->vdg.v];
+	new_ydiv_out = div_duty[sam->vdg.ydiv][sam->vdg.yduty];
+	if (old_ydiv_out && !new_ydiv_out) {
+		sam->vdg.b15_5 += 0x20;
+	}
 
 	int memory_size = (sam->reg >> 13) & 3;
 	sam->ram_row_mask = ram_row_masks[memory_size];
@@ -256,14 +373,14 @@ static void update_from_register(struct MC6883_private *sam) {
 	sam->ram_col_mask = ram_col_masks[memory_size];
 	sam->ram_ras1_bit = ram_ras1_bits[memory_size];
 	switch (memory_size) {
-		case 0: /* 4K */
-		case 1: /* 16K */
+		case 0: // 4K
+		case 1: // 16K
 			sam->ram_page_bit = 0;
 			sam->ram_ras1 = 0x8080;
 			break;
 		default:
 		case 2:
-		case 3: /* 64K */
+		case 3: // 64K
 			sam->ram_page_bit = (sam->reg & 0x0400) << 5;
 			sam->ram_ras1 = 0;
 			break;
