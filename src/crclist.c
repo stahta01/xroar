@@ -2,7 +2,7 @@
 
 ROM CRC database
 
-Copyright 2012-2017 Ciaran Anscomb
+Copyright 2012-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,6 +22,7 @@ See COPYING.GPL for redistribution conditions.
 #include <stdlib.h>
 #include <string.h>
 
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -74,10 +75,12 @@ static struct crclist *find_crclist(const char *name) {
  * Overwrites any existing list with name LIST. */
 void crclist_assign(const char *astring) {
 	if (!astring) return;
-	char tmp[strlen(astring) + 1];
-	strcpy(tmp, astring);
+	sds tmp = sdsnew(astring);
 	char *name = strtok(tmp, "=");
-	if (!name) return;
+	if (!name) {
+		sdsfree(tmp);
+		return;
+	}
 	struct crclist *new_list = new_crclist(name);
 	/* find if there's an old list with this name */
 	struct crclist *old_list = find_crclist(name);
@@ -103,6 +106,7 @@ void crclist_assign(const char *astring) {
 	}
 	/* add new list to crclist_list */
 	crclist_list = slist_append(crclist_list, new_list);
+	sdsfree(tmp);
 }
 
 /* convert a string to integer and compare against CRC */

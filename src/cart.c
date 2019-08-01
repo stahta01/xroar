@@ -25,6 +25,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "array.h"
 #include "c-strcase.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -117,8 +118,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 			free(rom_cart_config->description);
 		}
 		/* Make up a description from filename */
-		char tmp_name[strlen(name) + 1];
-		strcpy(tmp_name, name);
+		sds tmp_name = sdsnew(name);
 		char *bname = basename(tmp_name);
 		if (bname && *bname) {
 			char *sep;
@@ -136,6 +136,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 		} else {
 			rom_cart_config->description = xstrdup("ROM cartridge");
 		}
+		sdsfree(tmp_name);
 		if (rom_cart_config->rom) free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
 		rom_cart_config->autorun = 1;

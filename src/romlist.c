@@ -2,7 +2,7 @@
 
 ROM filename database
 
-Copyright 2012-2017 Ciaran Anscomb
+Copyright 2012-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -80,10 +80,12 @@ static struct romlist *find_romlist(const char *name) {
  * Overwrites any existing list with name LIST. */
 void romlist_assign(const char *astring) {
 	if (!astring) return;
-	char tmp[strlen(astring) + 1];
-	strcpy(tmp, astring);
+	sds tmp = sdsnew(astring);
 	char *name = strtok(tmp, "=");
-	if (!name) return;
+	if (!name) {
+		sdsfree(tmp);
+		return;
+	}
 	struct romlist *new_list = new_romlist(name);
 	/* find if there's an old list with this name */
 	struct romlist *old_list = find_romlist(name);
@@ -109,19 +111,22 @@ void romlist_assign(const char *astring) {
 	}
 	/* add new list to romlist_list */
 	romlist_list = slist_append(romlist_list, new_list);
+	sdsfree(tmp);
 }
 
 /* Find a ROM within ROMPATH */
 static char *find_rom(const char *romname) {
 	char *path = NULL;
 	if (!romname) return NULL;
-	char filename[strlen(romname) + 5];
+	sds filename = sdsnew(romname);
+	size_t filename_len = sdslen(filename);
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(rom_extensions); i++) {
-		strcpy(filename, romname);
-		strcat(filename, rom_extensions[i]);
+		sdssetlen(filename, filename_len);
+		filename = sdscat(filename, rom_extensions[i]);
 		path = find_in_path(xroar_rom_path, filename);
 		if (path) break;
 	}
+	sdsfree(filename);
 	return path;
 }
 

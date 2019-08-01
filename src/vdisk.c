@@ -32,6 +32,7 @@ See COPYING.GPL for redistribution conditions.
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "sds.h"
 #include "xalloc.h"
 
 #include "array.h"
@@ -190,14 +191,13 @@ int vdisk_save(struct vdisk *disk, _Bool force) {
 		LOG_WARN("No writer for virtual disk file type.\n");
 		return -1;
 	}
-	int bf_len = strlen(disk->filename) + 5;
-	char backup_filename[bf_len];
-	// Rename old file to filename.bak if that .bak does not already exist
-	snprintf(backup_filename, bf_len, "%s.bak", disk->filename);
+	sds backup_filename = sdsnew(disk->filename);
+	backup_filename = sdscat(backup_filename, ".bak");
 	struct stat statbuf;
 	if (stat(backup_filename, &statbuf) != 0) {
 		rename(disk->filename, backup_filename);
 	}
+	sdsfree(backup_filename);
 	return dispatch[i].save_func(disk);
 }
 
@@ -975,7 +975,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 	ctx->dden = dden;
 
 	int interleave = dden ? interleave_dd : interleave_sd;
-	int sector_id[nsectors];
+	int *sector_id = xmalloc(nsectors * sizeof(*sector_id));
 	int idx = -interleave;
 	for (unsigned i = 0; i < nsectors; i++)
 		sector_id[i] = -1;
@@ -1055,6 +1055,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 		}
 
 	}
+	free(sector_id);
 	return 1;
 }
 
