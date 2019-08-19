@@ -466,11 +466,11 @@ static void update_from_register(struct MC6883_private *sam) {
 			if (old_ydiv == DIV3) {
 				// 'glitch'
 				sam->vdg.b15_5.input_from = (struct vcounter *)&ground;
-				update_b15_5_input(sam);;
+				update_b15_5_input(sam);
 			} else if (old_ydiv == DIV2) {
-				// 'glitch' incorrect
+				// 'glitch'
 				sam->vdg.b15_5.input_from = &sam->vdg.b4;
-				update_b15_5_input(sam);;
+				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv4;
 			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
@@ -481,7 +481,7 @@ static void update_from_register(struct MC6883_private *sam) {
 			if (old_ydiv == DIV12) {
 				// 'glitch'
 				sam->vdg.b15_5.input_from = (struct vcounter *)&ground;
-				update_b15_5_input(sam);;
+				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv3;
 			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
@@ -492,7 +492,7 @@ static void update_from_register(struct MC6883_private *sam) {
 			if (old_ydiv == DIV12) {
 				// 'glitch'
 				sam->vdg.b15_5.input_from = &sam->vdg.b4;
-				update_b15_5_input(sam);;
+				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv2;
 			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
@@ -515,11 +515,21 @@ static void update_from_register(struct MC6883_private *sam) {
 	if (new_xdiv != old_xdiv) {
 		switch (new_xdiv) {
 		case DIV3:
+			if (old_xdiv == DIV2) {
+				// 'glitch'
+				sam->vdg.b4.input_from = (struct vcounter *)&ground;
+				update_b4_input(sam);
+			}
 			sam->vdg.b4.input_from = &sam->vdg.xdiv3;
 			sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
 			sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
 			break;
 		case DIV2:
+			if (old_xdiv == DIV3) {
+				// 'glitch'
+				sam->vdg.b4.input_from = (struct vcounter *)&ground;
+				update_b4_input(sam);
+			}
 			sam->vdg.b4.input_from = &sam->vdg.xdiv2;
 			sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
 			sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
