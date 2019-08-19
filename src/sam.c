@@ -139,7 +139,7 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		samp->RAS = 0;
 		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
 	} else {
-		samp->S = RnW ? 0 : data_S[A >> 13];;
+		samp->S = RnW ? 0 : data_S[A >> 13];
 		samp->RAS = 1;
 		samp->Z = RAM_TRANSLATE(A);
 		fast_cycle = sam->mpu_rate_fast;
