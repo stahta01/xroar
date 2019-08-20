@@ -115,11 +115,7 @@ static void *new(void *cfg) {
 	if (format & desired_format) {
 		format = desired_format;
 	}
-	if (format & AFMT_S16_NE) {
-		format = AFMT_S16_NE;
-		buffer_fmt = SOUND_FMT_S16_HE;
-		bytes_per_sample = 2;
-	} else if (format & AFMT_S16_BE) {
+	if (format & AFMT_S16_BE) {
 		format = AFMT_S16_BE;
 		buffer_fmt = SOUND_FMT_S16_BE;
 		bytes_per_sample = 2;
