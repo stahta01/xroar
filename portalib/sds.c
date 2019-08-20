@@ -116,29 +116,29 @@ sds sdsnewlen(const void *init, size_t initlen) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            sh->len = initlen;
-            sh->alloc = initlen;
+            shdr->len = initlen;
+            shdr->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            sh->len = initlen;
-            sh->alloc = initlen;
+            shdr->len = initlen;
+            shdr->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            sh->len = initlen;
-            sh->alloc = initlen;
+            shdr->len = initlen;
+            shdr->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            sh->len = initlen;
-            sh->alloc = initlen;
+            shdr->len = initlen;
+            shdr->alloc = initlen;
             *fp = type;
             break;
         }
@@ -345,26 +345,26 @@ void sdsIncrLen(sds s, ssize_t incr) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            assert((incr >= 0 && sh->alloc-sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
+            assert((incr >= 0 && shdr->alloc-shdr->len >= incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
+            len = (shdr->len += incr);
             break;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            assert((incr >= 0 && sh->alloc-sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
+            assert((incr >= 0 && shdr->alloc-shdr->len >= incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
+            len = (shdr->len += incr);
             break;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            assert((incr >= 0 && sh->alloc-sh->len >= (unsigned int)incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
-            len = (sh->len += incr);
+            assert((incr >= 0 && shdr->alloc-shdr->len >= (unsigned int)incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
+            len = (shdr->len += incr);
             break;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            assert((incr >= 0 && sh->alloc-sh->len >= (uint64_t)incr) || (incr < 0 && sh->len >= (uint64_t)(-incr)));
-            len = (sh->len += incr);
+            assert((incr >= 0 && shdr->alloc-shdr->len >= (uint64_t)incr) || (incr < 0 && shdr->len >= (uint64_t)(-incr)));
+            len = (shdr->len += incr);
             break;
         }
         default: len = 0; /* Just to avoid compilation warnings. */

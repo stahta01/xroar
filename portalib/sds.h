@@ -99,7 +99,7 @@ struct ATTRIBUTE_PACKED sdshdr64 {
 #define SDS_TYPE_64 4
 #define SDS_TYPE_MASK 7
 #define SDS_TYPE_BITS 3
-#define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));
+#define SDS_HDR_VAR(T,s) struct sdshdr##T *shdr = (void*)((s)-(sizeof(struct sdshdr##T)));
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)
 
@@ -128,19 +128,19 @@ static inline size_t sdsavail(const sds s) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            return sh->alloc - sh->len;
+            return shdr->alloc - shdr->len;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            return sh->alloc - sh->len;
+            return shdr->alloc - shdr->len;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            return sh->alloc - sh->len;
+            return shdr->alloc - shdr->len;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            return sh->alloc - sh->len;
+            return shdr->alloc - shdr->len;
         }
     }
     return 0;
