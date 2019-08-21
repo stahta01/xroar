@@ -1256,7 +1256,7 @@ static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest) {
 		if (dest) {
 			uint16_t V = decode_Z(md, md->SAM0->V);
 			for (int i = n; i; i--) {
-				uint16_t Dram = md->ram[V++];;
+				uint16_t Dram = md->ram[V++];
 				_Bool SnA = Dram & 0x80;
 				uint16_t D;
 				if (!GnA && !SnA) {
