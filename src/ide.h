@@ -2,7 +2,7 @@
 
 IDE Emulation Layer for retro-style PIO interfaces
 
-Copyright 2015 Alan Cox
+Copyright 2015-2019 Alan Cox
 
 This file is part of XRoar.
 
@@ -25,8 +25,10 @@ See COPYING.GPL for redistribution conditions.
 #define ACME_COYOTE             2       /* 20MB early IDE drive */
 #define ACME_NEMESIS            3       /* 20MB LBA capable drive */
 #define ACME_ULTRASONICUS       4       /* 40MB LBA capable drive */
+#define ACME_ACCELLERATTI	5       /* 128MB LBA capable drive */
+#define ACME_ZIPPIBUS		6       /* 256MB LBA capable drive */
 
-#define MAX_DRIVE_TYPE          4
+#define MAX_DRIVE_TYPE          6
 
 #define         ide_data        0
 #define         ide_error_r     1

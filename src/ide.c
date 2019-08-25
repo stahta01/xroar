@@ -2,7 +2,7 @@
 
 IDE Emulation Layer for retro-style PIO interfaces
 
-Copyright 2015 Alan Cox
+Copyright 2015-2019 Alan Cox
 Copyright 2016-2017 Ciaran Anscomb
 
 This file is part of XRoar.
@@ -134,13 +134,15 @@ static void ide_xlate_errno(struct ide_taskfile *t, int len)
 static void ide_fault(struct ide_drive *d, const char *p)
 {
   fprintf(stderr, "ide: %s: %d: %s\n", d->controller->name,
-                    (int)(d - d->controller->drive), p);
+			(int)(d - d->controller->drive), p);
 }
 
 /* Disk translation */
 static off_t xlate_block(struct ide_taskfile *t)
 {
   struct ide_drive *d = t->drive;
+  uint16_t cyl;
+
   if (t->lba4 & DEVH_LBA) {
 /*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n",
       t->lba4, t->lba3, t->lba2, t->lba1);*/
@@ -148,7 +150,22 @@ static off_t xlate_block(struct ide_taskfile *t)
       return 2 + (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
     ide_fault(d, "LBA on non LBA drive");
   }
-  return 2 + (((t->lba4 & DEVH_HEAD) * d->cylinders + ((t->lba3 << 8) + t->lba2)) * d->sectors + t->lba1);
+
+  /* Some well known software asks for 0/0/0 when it means 0/0/1. Drives appear
+     to interpret sector 0 as sector 1 */
+  if (t->lba1 == 0) {
+    fprintf(stderr, "[Bug: request for sector offset 0].\n");
+    t->lba1 = 1;
+  }
+  cyl = (t->lba3 << 8) | t->lba2;
+  /* fprintf(stderr, "(H %d C %d S %d)\n", t->lba4 & DEVH_HEAD, cyl, t->lba1); */
+  if (t->lba1 == 0 || t->lba1 > d->sectors || t->lba4 >= d->heads || cyl >= d->cylinders) {
+    return -1;
+  }
+  /* Sector 1 is first */
+  /* Images generally go cylinder/head/sector. This also matters if we ever
+     implement more advanced geometry setting */
+  return 1 + ((cyl * d->heads) + (t->lba4 & DEVH_HEAD)) * d->sectors + t->lba1;
 }
 
 /* Indicate the drive is ready */
@@ -273,10 +290,12 @@ static void cmd_initparam_complete(struct ide_taskfile *tf)
 {
   struct ide_drive *d = tf->drive;
   /* We only support the current mapping */
-  if (tf->count != d->sectors || (tf->lba4 & DEVH_HEAD) != d->heads) {
+  if (tf->count != d->sectors || (tf->lba4 & DEVH_HEAD) + 1 != d->heads) {
     tf->status |= ST_ERR;
     tf->error |= ERR_ABRT;
     tf->drive->failed = 1;              /* Report ID NF until fixed */
+/*    fprintf(stderr, "geo is %d %d, asked for %d %d\n",
+      d->sectors, d->heads, tf->count, (tf->lba4 & DEVH_HEAD) + 1); */
     ide_fault(d, "invalid geometry");
   } else if (tf->drive->failed == 1)
     tf->drive->failed = 0;              /* Valid translation */
@@ -322,7 +341,7 @@ static void cmd_verifysectors_complete(struct ide_taskfile *tf)
   d->offset = xlate_block(tf);
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
-  if (lseek(d->fd, 512 * (d->offset + d->length - 1), SEEK_SET) == -1) {
+  if (d->offset == -1 || lseek(d->fd, 512 * (d->offset + d->length - 1), SEEK_SET) == -1) {
     tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
@@ -336,7 +355,7 @@ static void cmd_recalibrate_complete(struct ide_taskfile *tf)
   struct ide_drive *d = tf->drive;
   if (d->failed)
     drive_failed(tf);
-  if (xlate_block(tf) != 0L) {
+  if (d->offset == -1 || xlate_block(tf) != 0L) {
     tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_ABRT;
@@ -662,7 +681,7 @@ void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v)
         else
           ide_srst_end(c);
       }
-      c->drive[0].taskfile.devctrl = v;
+      c->drive[0].taskfile.devctrl = v;	/* Check versus real h/w does this end up cleared */
       c->drive[1].taskfile.devctrl = v;
       break;
   }
@@ -726,6 +745,7 @@ int ide_attach(struct ide_controller *c, int drive, int fd)
     return -1;
   }
   d->fd = fd;
+  lseek(fd, 0, SEEK_SET);
   if (read(d->fd, d->data, 512) != 512 ||
       read(d->fd, d->identify, 512) != 512) {
     ide_fault(d, "i/o error on attach");
@@ -737,6 +757,9 @@ int ide_attach(struct ide_controller *c, int drive, int fd)
   }
   d->fd = fd;
   d->present = 1;
+  d->heads = d->identify[3];
+  d->sectors = d->identify[6];
+  d->cylinders = le16(d->identify[1]);
   if (d->identify[49] & le16(1 << 9))
     d->lba = 1;
   else
@@ -876,6 +899,22 @@ int ide_make_drive(uint8_t type, int fd)
       s = 16;
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME COYOTE v0.1", 40);
+      break;
+    case ACME_ACCELLERATTI:
+      c = 1024;
+      h = 16;
+      s = 16;
+      ident[49] = le16(1 << 9); /* LBA */
+      make_ascii(ident + 23, "A001.001", 8);
+      make_ascii(ident + 27, "ACME ACCELLERATTI INCREDIBILUS v0.1", 40);
+      break;
+    case ACME_ZIPPIBUS:
+      c = 1024;
+      h = 16;
+      s = 32;
+      ident[49] = le16(1 << 9); /* LBA */
+      make_ascii(ident + 23, "A001.001", 8);
+      make_ascii(ident + 27, "ACME ZIPPIBUS v0.1", 40);
       break;
     default:
       return -2;

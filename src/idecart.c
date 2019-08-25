@@ -2,7 +2,7 @@
 
 "Glenside" IDE cartridge support
 
-Copyright 2015 Alan Cox
+Copyright 2015-2019 Alan Cox
 Copyright 2015-2018 Ciaran Anscomb
 
 This file is part of XRoar.
@@ -149,8 +149,17 @@ static void idecart_init(struct idecart *ide) {
 	}
 	fd = open("hd0.img", O_RDWR);
 	if (fd == -1) {
-		perror("hd0.img");
-		return;
+		fd = open("hd0.img", O_RDWR|O_CREAT|O_TRUNC|O_EXCL, 0600);
+		if (fd == -1) {
+			perror("hd0.img");
+			return;
+		}
+		if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
+			fprintf(stderr, "Unable to create hd0.img.\n");
+			close(fd);
+			return;
+		}
+
 	}
 	ide_attach(ide->controller, 0, fd);
 	ide_reset_begin(ide->controller);
