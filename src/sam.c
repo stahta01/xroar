@@ -105,11 +105,10 @@ void sam_reset(struct MC6883 *samp) {
 
 #define RAM_TRANSLATE(a) (VRAM_TRANSLATE(a) | sam->ram_page_bit)
 
-/* The primary function of the SAM: translates an address (A) plus Read/!Write
- * flag (RnW) into an S value and RAM address (Z).  Writes to the SAM control
- * register will update the configuration.  The number of (SAM) cycles the CPU
- * clock would be use for this access is written to ncycles.  Returns 1 when
- * the access is to a RAM area, 0 otherwise. */
+// The primary function of the SAM: translates an address (A) plus Read/!Write
+// flag (RnW) into an S value and RAM address (Z).  Writes to the SAM control
+// register will update the internal configuration.  The CPU delegate is called
+// with the number of (SAM) cycles elapsed, RnW flag and translated address.
 
 static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static unsigned const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
