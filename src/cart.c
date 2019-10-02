@@ -388,7 +388,7 @@ void cart_rom_reset(struct cart *c) {
 // The general approach taken by autostarting carts is to tie the CART FIRQ
 // line to the Q clock, providing a continuous series of edge triggers to the
 // PIA.  Emulating that would be quite CPU intensive, so split the difference
-// by scheduling a trigger every 100ms.  Technically, this does mean that more
+// by scheduling a toggle every 100ms.  Technically, this does mean that more
 // time passes than would happen on a real machine (so the BASIC interpreter
 // will have initialised more), but it hasn't been a problem for anything so
 // far.
@@ -423,11 +423,14 @@ void cart_rom_select_bank(struct cart *c, uint16_t bank) {
 	c->rom_bank = bank;
 }
 
+// Toggles the cartridge interrupt line.
 static void do_firq(void *data) {
+	static _Bool level = 0;
 	struct cart *c = data;
-	DELEGATE_SAFE_CALL1(c->signal_firq, 1);
+	DELEGATE_SAFE_CALL1(c->signal_firq, level);
 	c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
 	event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+	level = !level;
 }
 
 /* Default has_interface() - no interfaces supported */
