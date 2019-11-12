@@ -118,7 +118,8 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 Pre-built binary packages are available from the
 @myuref{http://www.6809.org.uk/xroar/, XRoar home page}.  If one is not
 available for your architecture, you will need to build from source.  XRoar
-should build and run on any POSIX-like system for which SDL is available.
+should build and run on any POSIX-like system for which SDL version 2 is
+available.
 
 You will also need BASIC ROM images---binary dumps of the firmware from an
 original machine.  The originals were part-written by Microsoft, so they are
@@ -213,7 +214,7 @@ use by other user interfaces.
 slightly more basic user experience.  Menus are added using native code under
 Mac OS X and Windows; any other target using SDL will support only keyboard
 shortcuts.  Unless you are building for Linux, SDL is required to use
-joysticks.
+joysticks.  Version 2 required.
 
 Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some other
 options are still in the code base, but have not been tested in a while.
@@ -887,12 +888,8 @@ Only one video module is usable with this user interface: @samp{gtkgl}.
 Select with @option{-ui macosx} (Mac OS X menus), @option{-ui windows32}
 (Windows menus) or @option{-ui sdl} (no menus).
 
-A more limited interface requiring the use of keyboard shortcuts for most
-functionality.  The Windows variant also includes some menu-based control.
-Provides three video output modules: @samp{sdlgl} (OpenGL, preferred),
-@samp{sdlyuv} (YUV, often accelerated under X11) and @samp{sdl}.  @option{-vo
-sdl} is the least capable, but most compatible; try this if you are having
-problems with OpenGL.
+More limited than the GTK+ interface, providing keyboard shortcuts and, in
+the Mac OS X and Windows variants, some basic menus.
 
 Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
 as well as the usual shortcut of @kbd{Ctrl}+@var{key}.
