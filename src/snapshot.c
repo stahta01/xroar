@@ -117,7 +117,13 @@ static void write_mc6809(FILE *fd, struct MC6809 *cpu) {
 	fs_write_uint8(fd, cpu->nmi);
 	fs_write_uint8(fd, cpu->firq);
 	fs_write_uint8(fd, cpu->irq);
-	fs_write_uint8(fd, cpu->state);
+	if (cpu->state == mc6809_state_next_instruction && cpu->page == 0x0200) {
+		fs_write_uint8(fd, mc6809_state_instruction_page_2);
+	} else if (cpu->state == mc6809_state_next_instruction && cpu->page == 0x0300) {
+		fs_write_uint8(fd, mc6809_state_instruction_page_3);
+	} else {
+		fs_write_uint8(fd, cpu->state);
+	}
 	fs_write_uint8(fd, cpu->nmi_armed);
 }
 
@@ -435,6 +441,17 @@ int read_snapshot(const char *filename) {
 						size--;
 					} else {
 						cpu->state = fs_read_uint8(fd);
+						// Two otherwise-unused MC6809 states are
+						// used to indicate instruction page.
+						cpu->page = 0;
+						if (cpu->state == mc6809_state_instruction_page_2) {
+							cpu->page = 0x0200;
+							cpu->state = mc6809_state_next_instruction;
+						}
+						if (cpu->state == mc6809_state_instruction_page_3) {
+							cpu->page = 0x0300;
+							cpu->state = mc6809_state_next_instruction;
+						}
 					}
 					cpu->nmi_armed = fs_read_uint8(fd);
 					size -= 20;

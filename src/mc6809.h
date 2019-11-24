@@ -54,6 +54,7 @@ enum mc6809_state {
 	mc6809_state_reset,
 	mc6809_state_reset_check_halt,
 	mc6809_state_next_instruction,
+	// page states not used in emulation, but kept for use in snapshots:
 	mc6809_state_instruction_page_2,
 	mc6809_state_instruction_page_3,
 	mc6809_state_cwai_check_halt,
@@ -94,6 +95,7 @@ struct MC6809 {
 
 	enum mc6809_state state;
 	_Bool running;
+	uint16_t page;  // 0, 0x200, or 0x300
 #ifdef TRACE
 	_Bool trace;
 	struct mc6809_trace *tracer;
