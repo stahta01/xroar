@@ -71,13 +71,6 @@ AC_ARG_ENABLE([simulated_ntsc],
 AC_ARG_WITH([sdl2],
 	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
 
-AC_ARG_WITH([sdl],
-	AS_HELP_STRING([--without-sdl], [don't test for SDL]) )
-
-AC_ARG_WITH([sdlgl],
-	AS_HELP_STRING([--without-sdlgl], [don't test for SDL OpenGL support]) )
-test "x$with_sdl" = "xno" && with_sdlgl=no
-
 AC_ARG_WITH([cocoa],
 	AS_HELP_STRING([--without-cocoa], [don't test for Mac OS X Cocoa]) )
 test "x$with_sdl2" = "xno" && with_cocoa=no
@@ -137,7 +130,6 @@ AM_COND_IF([WASM], [
 		test -z "$enable_ao_null" && enable_ao_null=no
 		test -z "$enable_gdb_target" && enable_gdb_target=no
 		test -z "$with_gtk2" && with_gtk2=no
-		test -z "$with_sdl" && with_sdl=no
 		test -z "$with_cocoa" && with_cocoa=no
 		test -z "$with_alsa" && with_alsa=no
 		test -z "$with_oss" && with_oss=no
@@ -462,56 +454,6 @@ int main(int argc, char **argv) { SDL_Init(0); return 0; }
 
 AM_CONDITIONAL([UI_SDL2], [test -n "$have_sdl2"])
 AM_COND_IF([UI_SDL2], [AC_DEFINE([HAVE_SDL2], 1, [Have SDL2])])
-
-### SDL
-
-AS_IF([test -z "$have_sdl2" -a "x$with_sdl" != "xno"], [
-		AM_PATH_SDL([1.2.0], :) ], :)
-
-unset have_sdl
-AS_IF([test -z "$have_sdl2" -a -n "$SDL_LIBS"], [
-		OLD_CFLAGS="$CFLAGS"
-		OLD_LIBS="$LIBS"
-		CFLAGS="$CFLAGS $SDL_CFLAGS"
-		LIBS="$LIBS $SDL_LIBS"
-		AC_MSG_CHECKING([if SDL is usable])
-		AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <SDL.h>
-#include <SDL_syswm.h>
-int main(int argc, char **argv) { SDL_Init(0); return 0; }
-				])], [
-			AC_MSG_RESULT([yes])
-			have_sdl=1
-			], [AC_MSG_RESULT([no])] )
-		CFLAGS="$OLD_CFLAGS"
-		LIBS="$OLD_LIBS"
-		])
-
-AM_CONDITIONAL([UI_SDL], [test -n "$have_sdl"])
-AM_COND_IF([UI_SDL], [AC_DEFINE([HAVE_SDL], 1, [Have SDL])])
-
-unset have_sdlgl
-AM_COND_IF([UI_SDL], [AM_COND_IF([OPENGL], [
-		AS_IF([test "x$with_sdlgl" != "xno"], [
-			OLD_CFLAGS="$CFLAGS"
-			OLD_LIBS="$LIBS"
-			CFLAGS="$CFLAGS $SDL_CFLAGS $GL_CFLAGS"
-			LIBS="$LIBS $SDL_LIBS $GL_LIBS"
-			AC_MSG_CHECKING([for OpenGL support in SDL])
-			AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <SDL.h>
-#include <SDL_opengl.h>
-int main(int argc, char **argv) { SDL_GL_SetAttribute(0, 5); glGenTextures(0,0); }
-					])], [
-				AC_MSG_RESULT([yes])
-				have_sdlgl=1
-				], [AC_MSG_RESULT([no])] )
-			CFLAGS="$OLD_CFLAGS"
-			LIBS="$OLD_LIBS"
-			]) ]) ])
-
-AM_CONDITIONAL([VO_SDLGL], [test -n "$have_sdlgl"])
-AM_COND_IF([VO_SDLGL], [AC_DEFINE([HAVE_SDLGL], 1, [Have SDL OpenGL support])])
 
 ### Mac OS X Cocoa
 

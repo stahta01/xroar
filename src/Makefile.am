@@ -236,31 +236,7 @@ xroar_SOURCES += \
 endif
 endif
 
-else
-
-# SDL user interface - incompatible with SDL2
-
-if UI_SDL
-xroar_CFLAGS += $(SDL_CFLAGS)
-xroar_LDADD += $(SDL_LIBS)
-xroar_SOURCES += \
-	sdl/ao_sdl.c \
-	sdl/common.c sdl/common.h \
-	sdl/joystick_sdl.c \
-	sdl/keyboard_sdl.c \
-	sdl/ui_sdl.c \
-	sdl/vo_sdlyuv.c
 endif
-
-if VO_SDLGL
-xroar_SOURCES += \
-	sdl/vo_sdlgl.c
-endif
-
-endif
-
-EXTRA_DIST += \
-	sdl/keyboard_sdl_mappings.c
 
 # Mac OS X special case SDL user interface
 
