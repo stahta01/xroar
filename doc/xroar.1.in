@@ -14,6 +14,9 @@ Options are first read from a configuration file
 any found in the configuration file.
 .PP
 .TP
+\fB\-C\fR
+allocate a console window (Windows only)
+.TP
 \fB\-c\fR \fIconffile\fR
 specify a configuration file
 
@@ -92,7 +95,7 @@ The remaining options configure the currently selected cartridge:
 cartridge description
 .TP
 \fB\-cart\-type\fR \fItype\fR
-cartridge base type (\fB-cart-type help\fR for list)
+cartridge base type (\fB\-cart\-type help\fR for list)
 .TP
 \fB\-cart\-rom\fR \fIname\fR
 ROM image to load ($C000\-)
@@ -106,7 +109,7 @@ autorun cartridge
 \fB\-cart\-becker\fR
 enable becker port where supported
 
-.SS Multi-Pak Interface:
+.SS Multi\-Pak Interface:
 
 .TP
 \fB\-mpi\-slot\fR \fIslot\fR
@@ -142,14 +145,11 @@ load or attach \fIfile\fR and attempt autorun
 \fB\-tape\-write\fR \fIfile\fR
 open \fIfile\fR for tape writing
 .TP
-\fB\-tape\-channel\-mode\fR \fImode\fR
-select stereo input channel (\fBmix\fR, \fBleft\fR, \fBright\fR)
+\fB\-tape\-pan\fR \fIpanning\fR
+pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
 .TP
 \fB\-no\-tape\-fast\fR
 disable fast tape loading
-.TP
-\fB\-tape\-pad\fR
-force tape leader padding
 .TP
 \fB\-no\-tape\-pad\-auto\fR
 disable automatic leader padding
@@ -233,7 +233,7 @@ audio module (\fB\-ao help\fR for list)
 device to use for audio module
 .TP
 \fB\-ao\-format\fR \fIfmt\fR
-set audio sample format (\fB-ao-format help\fR for list)
+set audio sample format (\fB\-ao\-format help\fR for list)
 .TP
 \fB\-ao\-rate\fR \fIhz\fR
 set audio frame rate (if supported by module)
@@ -256,7 +256,7 @@ set total audio buffer size in ms (if supported)
 \fB\-ao\-buffer\-frames\fR \fIn\fR
 set total audio buffer size in samples (if supported)
 .TP
-\fB\-ao-gain\fR \fIdb\fR
+\fB\-ao\-gain\fR \fIdb\fR
 audio gain in dB relative to 0 dBFS [\-3.0]
 .TP
 \fB\-volume\fR \fIvolume\fR
