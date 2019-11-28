@@ -161,10 +161,9 @@ The easiest way forward is to simply run it from this directory.
 Copy ROM images to the same directory, and if you create a configuration file,
 simply name if @file{xroar.conf} and put it in the same directory.
 
-Note when troubleshooting that the Windows packages are built using
-@myuref{http://www.mingw.org/, MinGW} (Minimalist GNU for Windows), and instead
-of printing to the console, useful information will end up in files called
-@file{stdout.txt} or @file{stderr.txt}.
+Note when troubleshooting that the logging from the Windows binary is probably
+only going to be visible if you run it with the @option{-C} option (must be the
+first option) to allocate a console.
 
 The Windows build provides menu-based access to certain features.
 
@@ -1246,6 +1245,9 @@ Similarly, a snapshot can be automatically written after loading with the
 @option{-snap-motoroff @var{file}} option.   The file is overwritten each time
 the motor transitions to off.  This can be used to help analyse the machine
 state immediately after loading, before any autorun code has taken effect.
+
+To see debug output from the pre-built Windows binary, run it with @option{-C}
+as the first option to allocate a console.
 
 
 @node Keyboard shortcuts
