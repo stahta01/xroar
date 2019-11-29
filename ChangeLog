@@ -12,6 +12,7 @@ Version 0.36, unreleased
   * Recognise .dgn and .cco as potential binary files
   * Migrated Mac OS X UI to SDL2
   * Updates for IDE and IDE cartridge [by Alan Cox]
+  * SAM VDG counter switching behaviour updates [with Stewart Orchard]
 
 Version 0.35, Fri Jun 27 2018
 
