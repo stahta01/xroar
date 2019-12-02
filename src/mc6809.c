@@ -265,6 +265,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				continue;
 			}
 			cpu->state = mc6809_state_next_instruction;
+			cpu->page = 0;
 			// Instruction fetch hook called here so that machine
 			// can be stopped beforehand.
 			DELEGATE_SAFE_CALL0(cpu->instruction_hook);
@@ -455,6 +456,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x1010, 0x1011 Page 2
 			case 0x0210:
 			case 0x0211:
+				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0x200;
 				continue;
 			// 0x11 Page 3
@@ -462,6 +464,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x0310:
 			case 0x0311:
 			case 0x11:
+				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0x300;
 				continue;
 
@@ -635,19 +638,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				if (branch_condition(cpu, op))
 					REG_PC += tmp;
-			} break;
-
-			// 0x1020 - 0x102f long branches
-			case 0x0220: case 0x0221: case 0x0222: case 0x0223:
-			case 0x0224: case 0x0225: case 0x0226: case 0x0227:
-			case 0x0228: case 0x0229: case 0x022a: case 0x022b:
-			case 0x022c: case 0x022d: case 0x022e: case 0x022f: {
-				unsigned tmp = word_immediate(cpu);
-				if (branch_condition(cpu, op)) {
-					REG_PC += tmp;
-					NVMA_CYCLE;
-				}
-				NVMA_CYCLE;
 			} break;
 
 			// 0x30 LEAX indexed
@@ -853,26 +843,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				cpu->state = mc6809_state_label_a;
 				continue;
 
-			// 0x103f SWI2 inherent
-			case 0x023f:
-				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
-				instruction_posthook(cpu);
-				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
-				cpu->state = mc6809_state_label_a;
-				cpu->page = 0;
-				continue;
-
-			// 0x113F SWI3 inherent
-			case 0x033f:
-				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
-				instruction_posthook(cpu);
-				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI3);
-				cpu->state = mc6809_state_label_a;
-				cpu->page = 0;
-				continue;
-
 			// 0x80 - 0xbf A register arithmetic ops
 			// 0xc0 - 0xff B register arithmetic ops
 			case 0x80: case 0x81: case 0x82:
@@ -943,9 +913,9 @@ static void mc6809_run(struct MC6809 *cpu) {
 				default: tmp2 = 0; break;
 				}
 				switch (op & 0x40) {
+				default:
 				case 0x00: tmp1 = op_sub16(cpu, tmp1, tmp2); break; // SUBD
 				case 0x40: tmp1 = op_add16(cpu, tmp1, tmp2); break; // ADDD
-				default: break;
 				}
 				NVMA_CYCLE;
 				REG_D = tmp1;
@@ -963,7 +933,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x038c: case 0x039c: case 0x03ac: case 0x03bc: {
 				unsigned tmp1, tmp2;
 				switch (op & 0x0308) {
-				default: tmp1 = REG_X; break;
+				default:
+				case 0x0000: tmp1 = REG_X; break;
 				case 0x0200: tmp1 = REG_D; break;
 				case 0x0208: tmp1 = REG_Y; break;
 				case 0x0300: tmp1 = REG_U; break;
@@ -1014,13 +985,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 				default: tmp2 = 0; break;
 				}
 				tmp1 = op_ld16(cpu, 0, tmp2);
-				switch (op & 0x0342) {
-				case 0x0002: REG_X = tmp1; break;
-				case 0x0040: REG_D = tmp1; break;
-				case 0x0042: REG_U = tmp1; break;
-				case 0x0202: REG_Y = tmp1; break;
-				case 0x0242: REG_S = tmp1; cpu->nmi_armed = 1; break;
-				default: break;
+				switch (op & 0x034e) {
+				default:
+				case 0x000e: REG_X = tmp1; break;
+				case 0x004c: REG_D = tmp1; break;
+				case 0x004e: REG_U = tmp1; break;
+				case 0x020e: REG_Y = tmp1; break;
+				case 0x024e: REG_S = tmp1; cpu->nmi_armed = 1; break;
 				}
 			} break;
 
@@ -1067,13 +1038,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x029f: case 0x02af: case 0x02bf:
 			case 0x02df: case 0x02ef: case 0x02ff: {
 				uint16_t ea, tmp1;
-				switch (op & 0x0342) {
-				case 0x0002: tmp1 = REG_X; break;
-				case 0x0040: tmp1 = REG_D; break;
-				case 0x0042: tmp1 = REG_U; break;
-				case 0x0202: tmp1 = REG_Y; break;
-				case 0x0242: tmp1 = REG_S; break;
-				default: tmp1 = 0; break;
+				switch (op & 0x034e) {
+				default:
+				case 0x000e: tmp1 = REG_X; break;
+				case 0x004c: tmp1 = REG_D; break;
+				case 0x004e: tmp1 = REG_U; break;
+				case 0x020e: tmp1 = REG_Y; break;
+				case 0x024e: tmp1 = REG_S; break;
 				}
 				switch ((op >> 4) & 3) {
 				case 1: ea = ea_direct(cpu); break;
@@ -1092,13 +1063,43 @@ static void mc6809_run(struct MC6809 *cpu) {
 				cpu->state = mc6809_state_hcf;
 				break;
 
+			// 0x1020 - 0x102f long branches
+			case 0x0220: case 0x0221: case 0x0222: case 0x0223:
+			case 0x0224: case 0x0225: case 0x0226: case 0x0227:
+			case 0x0228: case 0x0229: case 0x022a: case 0x022b:
+			case 0x022c: case 0x022d: case 0x022e: case 0x022f: {
+				unsigned tmp = word_immediate(cpu);
+				if (branch_condition(cpu, op)) {
+					REG_PC += tmp;
+					NVMA_CYCLE;
+				}
+				NVMA_CYCLE;
+			} break;
+
+			// 0x103f SWI2 inherent
+			case 0x023f:
+				peek_byte(cpu, REG_PC);
+				stack_irq_registers(cpu, 1);
+				instruction_posthook(cpu);
+				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
+				cpu->state = mc6809_state_label_a;
+				continue;
+
+			// 0x113f SWI3 inherent
+			case 0x033f:
+				peek_byte(cpu, REG_PC);
+				stack_irq_registers(cpu, 1);
+				instruction_posthook(cpu);
+				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI3);
+				cpu->state = mc6809_state_label_a;
+				continue;
+
 			// Illegal instruction
 			default:
 				NVMA_CYCLE;
 				break;
 			}
 
-			cpu->page = 0;
 			break;
 			}
 
