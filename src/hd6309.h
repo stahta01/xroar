@@ -38,6 +38,7 @@ enum hd6309_state {
 	hd6309_state_reset,
 	hd6309_state_reset_check_halt,
 	hd6309_state_next_instruction,
+	// page states not used in emulation, but kept for use in snapshots:
 	hd6309_state_instruction_page_2,
 	hd6309_state_instruction_page_3,
 	hd6309_state_cwai_check_halt,

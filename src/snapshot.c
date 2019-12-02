@@ -117,13 +117,7 @@ static void write_mc6809(FILE *fd, struct MC6809 *cpu) {
 	fs_write_uint8(fd, cpu->nmi);
 	fs_write_uint8(fd, cpu->firq);
 	fs_write_uint8(fd, cpu->irq);
-	if (cpu->state == mc6809_state_next_instruction && cpu->page == 0x0200) {
-		fs_write_uint8(fd, mc6809_state_instruction_page_2);
-	} else if (cpu->state == mc6809_state_next_instruction && cpu->page == 0x0300) {
-		fs_write_uint8(fd, mc6809_state_instruction_page_3);
-	} else {
-		fs_write_uint8(fd, cpu->state);
-	}
+	fs_write_uint8(fd, cpu->state);
 	fs_write_uint8(fd, cpu->nmi_armed);
 }
 
@@ -158,7 +152,8 @@ static void write_hd6309(FILE *fd, struct HD6309 *hcpu) {
 	fs_write_uint8(fd, cpu->nmi);
 	fs_write_uint8(fd, cpu->firq);
 	fs_write_uint8(fd, cpu->irq);
-	fs_write_uint8(fd, hcpu->state);  // 6309-specific
+	// 6309-specific state
+	fs_write_uint8(fd, hcpu->state);
 	fs_write_uint8(fd, cpu->nmi_armed);
 	// 6309-specific extras:
 	fs_write_uint8(fd, HD6309_REG_E(hcpu));
@@ -441,8 +436,8 @@ int read_snapshot(const char *filename) {
 						size--;
 					} else {
 						cpu->state = fs_read_uint8(fd);
-						// Two otherwise-unused MC6809 states are
-						// used to indicate instruction page.
+						// Translate old otherwise-unused MC6809
+						// states indicating instruction page.
 						cpu->page = 0;
 						if (cpu->state == mc6809_state_instruction_page_2) {
 							cpu->page = 0x0200;
@@ -487,6 +482,17 @@ int read_snapshot(const char *filename) {
 					cpu->firq = fs_read_uint8(fd);
 					cpu->irq = fs_read_uint8(fd);
 					hcpu->state = fs_read_uint8(fd);
+					// Translate old otherwise-unused HD6309
+					// states indicating instruction page.
+					cpu->page = 0;
+					if (hcpu->state == hd6309_state_instruction_page_2) {
+						cpu->page = 0x0200;
+						hcpu->state = hd6309_state_next_instruction;
+					}
+					if (cpu->state == hd6309_state_instruction_page_3) {
+						cpu->page = 0x0300;
+						hcpu->state = hd6309_state_next_instruction;
+					}
 					cpu->nmi_armed = fs_read_uint8(fd);
 					HD6309_REG_E(hcpu) = fs_read_uint8(fd);
 					HD6309_REG_F(hcpu) = fs_read_uint8(fd);
