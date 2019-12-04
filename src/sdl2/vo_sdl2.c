@@ -79,6 +79,7 @@ struct vo_sdl_interface {
 /*** ***/
 
 static void vo_sdl_free(void *sptr);
+static void vo_sdl_refresh(void *sptr);
 static void vo_sdl_vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
@@ -106,6 +107,7 @@ static void *new(void *sptr) {
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
 	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
+	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
 	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
@@ -299,14 +301,19 @@ static void vo_sdl_free(void *sptr) {
 	free(vosdl);
 }
 
-static void vo_sdl_vsync(void *sptr) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_sdl_interface *vosdl = &generic->module;
-	struct vo_interface *vo = &vosdl->public;
+static void vo_sdl_refresh(void *sptr) {
+	struct vo_sdl_interface *vosdl = sptr;
 	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEXTURE_WIDTH * sizeof(Pixel));
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->renderer);
+}
+
+static void vo_sdl_vsync(void *sptr) {
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_interface *vo = &vosdl->public;
+	vo_sdl_refresh(vosdl);
 	generic->pixel = vosdl->texture_pixels;
 	generic_vsync(vo);
 }
