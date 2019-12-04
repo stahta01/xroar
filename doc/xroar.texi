@@ -885,8 +885,7 @@ Only one video module is usable with this user interface: @samp{gtkgl}.
 
 @subsection SDL user interface
 
-Select with @option{-ui macosx} (Mac OS X menus), @option{-ui windows32}
-(Windows menus) or @option{-ui sdl} (no menus).
+Select with @option{-ui sdl}.
 
 More limited than the GTK+ interface, providing keyboard shortcuts and, in
 the Mac OS X and Windows variants, some basic menus.
