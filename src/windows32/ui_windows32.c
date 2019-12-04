@@ -2,7 +2,7 @@
 
 Windows user-interface module
 
-Copyright 2014-2018 Ciaran Anscomb
+Copyright 2014-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -618,6 +618,10 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		event.syswm.msg = &wmmsg;
 		SDL_PushEvent(&event);
 		break;
+
+	case WM_UNINITMENUPOPUP:
+		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
+		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	default:
 		// Fall back to original SDL handler for anything else -
