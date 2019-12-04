@@ -27,7 +27,6 @@ See COPYING.GPL for redistribution conditions.
 extern struct ui_module ui_gtk2_module;
 extern struct ui_module ui_null_module;
 extern struct ui_module ui_sdl_module;
-extern struct ui_module ui_windows32_module;
 static struct ui_module * const default_ui_module_list[] = {
 #ifdef HAVE_GTK2
 #ifdef HAVE_GTKGL
@@ -35,15 +34,6 @@ static struct ui_module * const default_ui_module_list[] = {
 #endif
 #endif
 #ifdef HAVE_SDL2
-#ifdef WINDOWS32
-	&ui_windows32_module,
-#endif
-	&ui_sdl_module,
-#endif
-#ifdef HAVE_SDL
-#ifdef WINDOWS32
-	&ui_windows32_module,
-#endif
 	&ui_sdl_module,
 #endif
 	&ui_null_module,
