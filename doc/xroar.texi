@@ -69,8 +69,7 @@ models 1 & 2.  Some features are:
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
-for Windows.  It should still be possible to build for Mac OS X, but no binary
-packages are currently being provided.
+for Mac OS X and Windows.
 
 XRoar can also be compiled to WebAssembly, and redistributing it in this form
 may provide a convenient way for users to run your Dragon software.  See
