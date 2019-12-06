@@ -594,9 +594,9 @@ popular server application used to provide such facilities.
 @chapter Files
 
 In general, files can be attached on the command line with @option{-load
-@var{filename}}, or by pressing @kbd{Ctrl}+@kbd{L}.  XRoar judges the type
-of file based on its extension.  To attempt to intelligently autorun a file,
-use @option{-run @var{filename}} or press @kbd{Ctrl}+@kbd{Shift}+@kbd{L}.
+@var{filename}}, or by pressing @kbd{Ctrl}+@kbd{L}.  XRoar judges the type of
+file based on its filename extension.  To attempt to intelligently autorun a
+file, use @option{-run @var{filename}} or press @kbd{Ctrl}+@kbd{Shift}+@kbd{L}.
 See @ref{Running programs} for the methods XRoar will use to autorun a file.
 
 @menu
@@ -676,10 +676,9 @@ virtual disk formats are supported:
 @multitable @columnfractions .20 .75
 @headitem Extension @tab Description
 @item @file{.dmk}
-@tab Disk image file in a format defined by David Keil.  They store a lot of
+@tab Disk image file in a format defined by David Keil.  These images store a lot of
 information about the structure of a disk and support both single and double
-density data.  All disk images are manipulated internally in (near enough) this
-format.
+density data.
 @item @file{.jvc}, @file{.os9}, @file{.dsk}
 @tab Disk image file in a basic sector-by-sector format with optional
 header information.
@@ -703,18 +702,18 @@ Where available, these options can also be changed on the fly in the GUI.
 Write back can be set to default to on with the @option{-disk-write-back}
 command line option.
 
-The JVC format specifies that the default number of sides in a headerless image
-is 1, but some disk images are distributed without headers that are
-double-sided.  These cannot normally be distinguished from a single-sided disk
-with double the number of tracks, but if an OS-9 filesystem is present, the
-information is contained within the first sector.  Because this information may
-be confused with other valid disk contents, the behaviour can be disabled with
-@option{-no-disk-auto-os9}.  Disk images with the extension @file{.os9} without
-headers always ignore this option, however.
+The JVC format specifies that the disk images without headers are single-sided,
+but some double-sided disk images have been made available without headers.
+These cannot normally be distinguished from a single-sided disk that happens to
+have twice the number of tracks.  If an OS-9 filesystem is present, the
+identification sector is inspected to determine the correct disk structure.
+This step will always be performed for headerless images with the @file{.os9}
+filename extension, but may be disabled for the other valid JVC filename
+extensions with @option{-no-disk-auto-os9}.
 
 You can create a new blank disk in a virtual drive by pressing
 @kbd{Ctrl}+@kbd{Shift}+@var{[1-4]}.  You will be a prompted for a filename,
-and the extension determines which type of file will be written.
+and the filename extension determines which type of file will be written.
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
 instead of one, so when you perform operations on Drive 1, from the CoCo's
@@ -728,21 +727,21 @@ Some support is now in place for IDE hard disk images.  The @samp{ide}
 cartridge type emulates a Glenside IDE controller mapped to addresses
 $FF50--$FF58.
 
-A fixed image file named @file{hd0.img} in the current working directory
-is assumed.  If the image does not exist when you try to use the IDE
-cartridge, it is created.  The image consists of a 512 byte identifier
-block (ASCII string ``1DED15C0'' then all zeroes) followed by a 512 byte
-IDENTIFY header, then the sector data.  In examples, the 256 byte sector
-data of standard CoCo disks is doubled up to fill the 512 byte sectors
-of the hard disk image.
+A fixed image file named @file{hd0.img} in the current working directory is
+assumed.  If the image does not exist when you try to use the IDE cartridge, a
+new 256MB image is created.  Images consists of a 512 byte identifier block
+(ASCII string ``1DED15C0'' then all zeroes) followed by a 512 byte IDENTIFY
+header, then the sector data.  In examples, the 256 byte sector data of
+standard CoCo disks is doubled up to fill the 512 byte sectors of the hard disk
+image.
 
 
 @node ROM cartridges
 @section ROM cartridges
 
-ROM cartridge images have a @file{.rom} or @file{.ccc} extension.  Because
-XRoar supports other types of cartridge, loading a ROM image actually just
-creates a cartridge instance of type @samp{rom}.  @xref{Cartridges}.
+ROM cartridge images have a @file{.rom} or @file{.ccc} filename extension.
+Because XRoar supports other types of cartridge, loading a ROM image actually
+just creates a cartridge instance of type @samp{rom}.  @xref{Cartridges}.
 
 
 @node Snapshots
@@ -784,12 +783,13 @@ where in memory to load it.  Read-only
 @section Firmware ROM images
 
 Firmware ROM image files are configured as part of a machine or a cartridge.
-They have an extension of @file{.rom} or @file{.dgn}, and can be specified as:
+They have a filename extension of @file{.rom} or @file{.dgn}, and can be
+specified as:
 
 @itemize @bullet
 @item Complete path to a file.
 @item Base filename of an image, to be discovered within a search path.
-@item Base filename of an image, omitting the extension.  XRoar will search as above, appending the known ROM file extensions.
+@item Base filename of an image, omitting the extension.  XRoar will search as above, appending the known ROM filename extensions.
 @item An @samp{@@} character followed by the name of a ROM list.
 @end itemize
 
@@ -829,10 +829,10 @@ The @env{XROAR_ROM_PATH} environment variable can also be used to specify the
 search path, but this behaviour is deprecated and may be removed in a future
 version.
 
-A CRC32 value is calculated (and reported) for loaded ROM images.  XRoar uses
-these CRCs to determine automatically whether certain breakpoints can be used
-(e.g. for fast tape loading).  The lists of CRCs matched can be defined in a
-similar way to ROM lists using the @option{-crclist
+A CRC32 value is calculated and reported for each ROM image loaded.  XRoar
+uses these CRCs to determine whether certain breakpoints can be used (e.g. for
+fast tape loading).  The lists of CRCs matched can be defined in a similar way
+to ROM lists using the @option{-crclist
 @var{list}=@var{crc}[,@var{crc}]@dots{}} option.  Each @var{crc} is a 8-digit
 hex number preceeded by @samp{0x}, or the name of a nested list preceeded by
 @samp{@@}.  Use this if you have a modified version of a BASIC ROM that
