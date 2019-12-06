@@ -110,6 +110,7 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 
 static void dragondos_reset(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
+	cart_rom_reset(c);
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	latch_write(d, 0);

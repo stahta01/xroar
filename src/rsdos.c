@@ -110,6 +110,7 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 
 static void rsdos_reset(struct cart *c) {
 	struct rsdos *d = (struct rsdos *)c;
+	cart_rom_reset(c);
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	d->latch_drive_select = -1;

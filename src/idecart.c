@@ -3,7 +3,7 @@
 "Glenside" IDE cartridge support
 
 Copyright 2015-2019 Alan Cox
-Copyright 2015-2018 Ciaran Anscomb
+Copyright 2015-2019 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -50,6 +50,7 @@ struct idecart {
 
 static void idecart_reset(struct cart *c) {
 	struct idecart *ide = (struct idecart *)c;
+	cart_rom_reset(c);
 	if (ide->becker)
 		becker_reset(ide->becker);
 	ide_reset_begin(ide->controller);

@@ -99,6 +99,7 @@ static struct cart *deltados_new(struct cart_config *cc) {
 
 static void deltados_reset(struct cart *c) {
 	struct deltados *d = (struct deltados *)c;
+	cart_rom_reset(c);
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	latch_write(d, 0);

@@ -74,12 +74,11 @@ static struct cart *orch90_new(struct cart_config *cc) {
 }
 
 static void orch90_reset(struct cart *c) {
-	(void)c;
+	cart_rom_reset(c);
 }
 
 static void orch90_attach(struct cart *c) {
 	cart_rom_attach(c);
-	orch90_reset(c);
 }
 
 static void orch90_detach(struct cart *c) {

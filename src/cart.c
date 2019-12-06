@@ -314,34 +314,7 @@ void cart_rom_init(struct cart *c) {
 	c->detach = cart_rom_detach;
 	c->rom_data = xzalloc(0x10000);
 	c->rom_bank = 0;
-	if (cc->rom) {
-		char *tmp = romlist_find(cc->rom);
-		if (tmp) {
-			int size = machine_load_rom(tmp, c->rom_data, 0x10000);
-			(void)size;  // avoid warnings if...
-#ifdef LOGGING
-			if (size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, size);
-				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
-			}
-#endif
-			free(tmp);
-		}
-	}
-	if (cc->rom2) {
-		char *tmp = romlist_find(cc->rom2);
-		if (tmp) {
-			int size = machine_load_rom(tmp, c->rom_data + 0x2000, 0x2000);
-			(void)size;  // avoid warnings if...
-#ifdef LOGGING
-			if (size > 0) {
-				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data + 0x2000, size);
-				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
-			}
-#endif
-			free(tmp);
-		}
-	}
+
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
@@ -375,6 +348,35 @@ static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 }
 
 void cart_rom_reset(struct cart *c) {
+	struct cart_config *cc = c->config;
+	if (cc->rom) {
+		char *tmp = romlist_find(cc->rom);
+		if (tmp) {
+			int size = machine_load_rom(tmp, c->rom_data, 0x10000);
+			(void)size;  // avoid warnings if...
+#ifdef LOGGING
+			if (size > 0) {
+				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data, size);
+				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
+			}
+#endif
+			free(tmp);
+		}
+	}
+	if (cc->rom2) {
+		char *tmp = romlist_find(cc->rom2);
+		if (tmp) {
+			int size = machine_load_rom(tmp, c->rom_data + 0x2000, 0x2000);
+			(void)size;  // avoid warnings if...
+#ifdef LOGGING
+			if (size > 0) {
+				uint32_t crc = crc32_block(CRC32_RESET, c->rom_data + 0x2000, size);
+				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
+			}
+#endif
+			free(tmp);
+		}
+	}
 	c->rom_bank = 0;
 }
 

@@ -79,6 +79,7 @@ struct cart *nx32_new(struct cart_config *cc) {
 
 static void nx32_reset(struct cart *c) {
 	struct nx32 *n = (struct nx32 *)c;
+	cart_rom_reset(c);
 	n->extmem_map = 0;
 	n->extmem_ty = 0;
 	n->extmem_bank = 0;

@@ -89,7 +89,6 @@ static void gmc_reset(struct cart *c) {
 
 static void gmc_attach(struct cart *c) {
 	cart_rom_attach(c);
-	gmc_reset(c);
 }
 
 static void gmc_detach(struct cart *c) {

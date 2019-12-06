@@ -87,6 +87,8 @@ static void mooh_reset(struct cart *c) {
 	struct mooh *n = (struct mooh *)c;
 	int i;
 
+	cart_rom_reset(c);
+
 	n->mmu_enable = 0;
 	n->crm_enable = 0;
 	n->task = 0;
