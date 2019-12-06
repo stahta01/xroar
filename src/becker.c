@@ -139,7 +139,7 @@ failed:
 	}
 	if (info)
 		freeaddrinfo(info);
-	free(becker);
+	part_free(&becker->part);
 	return NULL;
 }
 
