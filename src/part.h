@@ -93,9 +93,8 @@ struct intf {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void *part_new(size_t psize) {
-	return xmalloc(psize < sizeof(struct part) ? sizeof(struct part) : psize);
-}
+// allocate a new part
+void *part_new(size_t psize);
 
 // part_init() sets up part metadata
 void part_init(struct part *p, const char *name);

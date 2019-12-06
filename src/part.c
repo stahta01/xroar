@@ -33,7 +33,12 @@ struct part_component {
 	struct part *p;
 };
 
-extern inline void *part_new(size_t);
+void *part_new(size_t psize) {
+	void *m = xmalloc(psize < sizeof(struct part) ? sizeof(struct part) : psize);
+	struct part *p = m;
+	*p = (struct part){0};
+	return m;
+}
 
 void part_init(struct part *p, const char *name) {
 	p->name = xstrdup(name);
