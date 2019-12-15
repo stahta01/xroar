@@ -314,7 +314,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 				return;
 			}
 			if (sym == enabled_axis[i]->key1) {
-				enabled_axis[i]->value = 255;
+				enabled_axis[i]->value = 65535;
 				return;
 			}
 		}
@@ -415,13 +415,13 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (sym == enabled_axis[i]->key0) {
-				if (enabled_axis[i]->value < 129)
-					enabled_axis[i]->value = 129;
+				if (enabled_axis[i]->value < 32768)
+					enabled_axis[i]->value = 32767;
 				return;
 			}
 			if (sym == enabled_axis[i]->key1) {
-				if (enabled_axis[i]->value > 130)
-					enabled_axis[i]->value = 130;
+				if (enabled_axis[i]->value >= 32768)
+					enabled_axis[i]->value = 32768;
 				return;
 			}
 		}
@@ -525,7 +525,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct axis *axis_data = xmalloc(sizeof(*axis_data));
 	axis_data->key0 = key0;
 	axis_data->key1 = key1;
-	axis_data->value = 127;
+	axis_data->value = 32767;
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = axis_data;

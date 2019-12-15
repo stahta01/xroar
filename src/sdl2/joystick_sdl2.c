@@ -138,9 +138,9 @@ static void close_device(struct device *d) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static unsigned read_axis(struct control *c) {
-	unsigned ret = (SDL_JoystickGetAxis(c->device->joystick, c->control) + 32768) >> 8;
+	unsigned ret = SDL_JoystickGetAxis(c->device->joystick, c->control) + 32768;
 	if (c->inverted)
-		ret ^= 0xff;
+		ret ^= 0xffff;
 	return ret;
 }
 

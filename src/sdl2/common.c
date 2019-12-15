@@ -129,8 +129,8 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 				if (x > 1.0) x = 1.0;
 				if (y < 0.0) y = 0.0;
 				if (y > 1.0) y = 1.0;
-				mouse_axis[0] = x * 255.;
-				mouse_axis[1] = y * 255.;
+				mouse_axis[0] = x * 65535.;
+				mouse_axis[1] = y * 65535.;
 			}
 			break;
 		case SDL_MOUSEBUTTONUP:

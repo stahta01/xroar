@@ -158,7 +158,7 @@ static void poll_devices(void) {
 			switch (e.type) {
 			case JS_EVENT_AXIS:
 				if (e.number < d->num_axes) {
-					d->axis_value[e.number] = ((e.value) + 32768) >> 8;
+					d->axis_value[e.number] = (e.value) + 32768;
 				}
 				break;
 			case JS_EVENT_BUTTON:
@@ -179,7 +179,7 @@ static unsigned read_axis(struct control *c) {
 	poll_devices();
 	unsigned ret = c->device->axis_value[c->control];
 	if (c->inverted)
-		ret ^= 0xff;
+		ret ^= 0xffff;
 	return ret;
 }
 

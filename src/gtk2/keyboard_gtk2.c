@@ -331,7 +331,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 				return FALSE;
 			}
 			if (keyval == enabled_axis[i]->key1) {
-				enabled_axis[i]->value = 255;
+				enabled_axis[i]->value = 65535;
 				return FALSE;
 			}
 		}
@@ -420,13 +420,13 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (keyval == enabled_axis[i]->key0) {
-				if (enabled_axis[i]->value < 129)
-					enabled_axis[i]->value = 129;
+				if (enabled_axis[i]->value < 32768)
+					enabled_axis[i]->value = 32767;
 				return FALSE;
 			}
 			if (keyval == enabled_axis[i]->key1) {
-				if (enabled_axis[i]->value > 130)
-					enabled_axis[i]->value = 130;
+				if (enabled_axis[i]->value >= 32768)
+					enabled_axis[i]->value = 32768;
 				return FALSE;
 			}
 		}
@@ -521,7 +521,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct axis *axis_data = g_malloc(sizeof(*axis_data));
 	axis_data->key0 = key0;
 	axis_data->key1 = key1;
-	axis_data->value = 127;
+	axis_data->value = 32767;
 	struct joystick_axis *axis = g_malloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = axis_data;

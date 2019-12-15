@@ -375,7 +375,7 @@ int joystick_read_axis(int port, int axis) {
 	if (j && j->axes[axis]) {
 		return j->axes[axis]->read(j->axes[axis]->data);
 	}
-	return 127;
+	return 32767;
 }
 
 int joystick_read_buttons(void) {

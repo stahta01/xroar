@@ -99,8 +99,8 @@ static void update_mouse_state(struct ui_gtk2_interface *uigtk2) {
 	if (xx > 1.0) xx = 1.0;
 	if (yy < 0.0) yy = 0.0;
 	if (yy > 1.0) yy = 1.0;
-	uigtk2->mouse_axis[0] = xx * 255.;
-	uigtk2->mouse_axis[1] = yy * 255.;
+	uigtk2->mouse_axis[0] = xx * 65535.;
+	uigtk2->mouse_axis[1] = yy * 65535.;
 	uigtk2->mouse_button[0] = buttons & GDK_BUTTON1_MASK;
 	uigtk2->mouse_button[1] = buttons & GDK_BUTTON2_MASK;
 	uigtk2->mouse_button[2] = buttons & GDK_BUTTON3_MASK;
