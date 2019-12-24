@@ -489,7 +489,7 @@ int read_snapshot(const char *filename) {
 						cpu->page = 0x0200;
 						hcpu->state = hd6309_state_next_instruction;
 					}
-					if (cpu->state == hd6309_state_instruction_page_3) {
+					if (hcpu->state == hd6309_state_instruction_page_3) {
 						cpu->page = 0x0300;
 						hcpu->state = hd6309_state_next_instruction;
 					}
