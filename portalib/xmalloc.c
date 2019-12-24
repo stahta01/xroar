@@ -17,6 +17,9 @@ See COPYING.LGPL and COPYING.GPL for redistribution conditions.
 
 #include "config.h"
 
+// for strnlen
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
