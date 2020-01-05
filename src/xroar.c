@@ -632,8 +632,15 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Select a UI module.
 	struct ui_module *ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui);
 	if (ui_module == NULL) {
-		LOG_ERROR("%s: ui module `%s' not found\n", argv[0], private_cfg.ui);
-		exit(EXIT_FAILURE);
+		if (ui_module_list) {
+			ui_module = ui_module_list[0];
+		}
+		if (ui_module) {
+			LOG_WARN("UI module `%s' not found: trying '%s'\n", private_cfg.ui, ui_module->common.name);
+		} else {
+			LOG_ERROR("UI module `%s' not found\n", private_cfg.ui);
+			exit(EXIT_FAILURE);
+		}
 	}
 	// Override other module lists if UI has an entry.
 	if (ui_module->filereq_module_list != NULL)
