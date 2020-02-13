@@ -185,6 +185,7 @@ static void cue_add_raw_section(struct tape_cas *cas, int size, off_t offset, ui
 static void cue_add_block(struct tape_cas *cas, int type, int size, _Bool ascii,
 			  off_t offset, uint8_t *data);
 
+static void cue_list_free(struct tape_cas *cas);
 static long cue_data_size(struct tape_cas *cas);
 static _Bool cue_next(struct tape_cas *cas);
 
@@ -352,7 +353,7 @@ static void cas_close(struct tape *t) {
 	struct tape_cas *cas = t->data;
 	cas_motor_off(t);
 	fclose(cas->fd);
-	slist_free_full(cas->cue.list, (slist_free_func)cue_entry_free);
+	cue_list_free(cas);
 	free(cas->cue.builder);
 	free(cas);
 	tape_free(t);
@@ -597,8 +598,7 @@ static void rewind_tape(struct tape *t) {
 		return;
 	}
 	cas->cue.builder->bit_av_pw = 0;
-	slist_free_full(cas->cue.list, (slist_free_func)cue_entry_free);
-	cas->cue.list = NULL;
+	cue_list_free(cas);
 	cas->cue.next = NULL;
 	cas->cue.entry = NULL;
 	cas->size = 0;
@@ -848,6 +848,13 @@ static void cue_entry_free(struct cue_entry *entry) {
 	free(entry);
 }
 
+static void cue_list_free(struct tape_cas *cas) {
+	if (cas && cas->cue.list) {
+		slist_free_full(cas->cue.list, (slist_free_func)cue_entry_free);
+		cas->cue.list = NULL;
+	}
+}
+
 static void cue_entry_append(struct tape_cas *cas, struct cue_entry *entry) {
 	entry->time = cas->cue.builder->time;
 	cas->cue.builder->time += entry->nsamples;
@@ -1028,8 +1035,10 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 
 		default:
 			LOG_WARN("TAPE/CAS/read_cue_data(): unexpected entry type: %d (%d bytes)\n", type, elength);
-			if (fseeko(fd, elength, SEEK_CUR) < 0)
-				goto failed;
+			if (fseeko(fd, elength, SEEK_CUR) < 0) {
+				cue_list_free(cas);
+				return 0;
+			}
 			elength = 0;
 		}
 
@@ -1038,8 +1047,7 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 				LOG_WARN("TAPE/CAS/read_cue_data(): read underrun: %d bytes\n", elength);
 			else
 				LOG_WARN("TAPE/CAS/read_cue_data(): read overrun: %d bytes\n", -elength);
-			slist_free_full(cas->cue.list, (slist_free_func)cue_entry_free);
-			cas->cue.list = NULL;
+			cue_list_free(cas);
 			return 0;
 		}
 	}
@@ -1051,15 +1059,12 @@ read_failed:
 	} else if (ferror(fd)) {
 		LOG_WARN("TAPE/CAS/read_cue_data(): error reading CUE data\n");
 	}
-	goto failed;
+	cue_list_free(cas);
+	return 0;
 
 seek_failed:
 	LOG_WARN("TAPE/CAS/read_cue_data(): seek failed: %s\n", strerror(errno));
-	// fall through to failed
-
-failed:
-	slist_free_full(cas->cue.list, (slist_free_func)cue_entry_free);
-	cas->cue.list = NULL;
+	cue_list_free(cas);
 	return 0;
 }
 
