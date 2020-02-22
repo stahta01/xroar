@@ -21,9 +21,6 @@ See COPYING.GPL for redistribution conditions.
 struct machine_config;
 struct cart_config;
 
-// If this is >0, main loop will yield to emscripten to handle async downloads.
-int wasm_waiting_files;
-
 // Called once per frame.
 void wasm_ui_run(void *sptr);
 
