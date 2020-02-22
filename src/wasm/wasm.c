@@ -228,9 +228,15 @@ static void wasm_wget(const char *file) {
 			x++;
 		char old = *x;
 		*x = 0;
-		if (*dir == '.' && *(dir+1) == 0) {
-			continue;
+		// Skip attempt to create if already exists as directory
+		struct stat statbuf;
+		if (stat(dir, &statbuf) == 0) {
+			if (statbuf.st_mode & S_IFDIR) {
+				*x = old;
+				continue;
+			}
 		}
+		// Anything we still can't deal with is a hard fail
 		if (mkdir(dir, 0700) == -1) {
 			perror(dir);
 			free(filecp);
