@@ -473,9 +473,6 @@ static void update_from_register(struct MC6883_private *sam) {
 				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv4;
-			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
-			sam->vdg.ydiv3.input_from = &sam->vdg.b4;
-			sam->vdg.ydiv2.input_from = &sam->vdg.b4;
 			break;
 		case DIV3:
 			if (old_ydiv == DIV12) {
@@ -484,9 +481,6 @@ static void update_from_register(struct MC6883_private *sam) {
 				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv3;
-			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
-			sam->vdg.ydiv3.input_from = &sam->vdg.b4;
-			sam->vdg.ydiv2.input_from = &sam->vdg.b4;
 			break;
 		case DIV2:
 			if (old_ydiv == DIV12) {
@@ -495,15 +489,9 @@ static void update_from_register(struct MC6883_private *sam) {
 				update_b15_5_input(sam);
 			}
 			sam->vdg.b15_5.input_from = &sam->vdg.ydiv2;
-			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
-			sam->vdg.ydiv3.input_from = &sam->vdg.b4;
-			sam->vdg.ydiv2.input_from = &sam->vdg.b4;
 			break;
 		case DIV1: default:
 			sam->vdg.b15_5.input_from = &sam->vdg.b4;
-			sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
-			sam->vdg.ydiv3.input_from = &sam->vdg.b4;
-			sam->vdg.ydiv2.input_from = &sam->vdg.b4;
 			break;
 		}
 		update_ydiv2_input(sam);
@@ -521,8 +509,6 @@ static void update_from_register(struct MC6883_private *sam) {
 				update_b4_input(sam);
 			}
 			sam->vdg.b4.input_from = &sam->vdg.xdiv3;
-			sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
-			sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
 			break;
 		case DIV2:
 			if (old_xdiv == DIV3) {
@@ -531,13 +517,9 @@ static void update_from_register(struct MC6883_private *sam) {
 				update_b4_input(sam);
 			}
 			sam->vdg.b4.input_from = &sam->vdg.xdiv2;
-			sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
-			sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
 			break;
 		case DIV1: default:
 			sam->vdg.b4.input_from = &sam->vdg.b3_0;
-			sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
-			sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
 			break;
 		}
 		update_xdiv2_input(sam);
