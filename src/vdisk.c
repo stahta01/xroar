@@ -45,6 +45,8 @@ See COPYING.GPL for redistribution conditions.
 #define MAX_CYLINDERS (256)
 #define MAX_HEADS (2)
 
+static enum vdisk_err vdisk_errno;
+
 static struct vdisk *vdisk_load_vdk(const char *filename);
 static struct vdisk *vdisk_load_jvc(const char *filename);
 static struct vdisk *vdisk_load_os9(const char *filename);

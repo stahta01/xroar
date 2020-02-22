@@ -40,7 +40,7 @@ enum vdisk_err {
 	vdisk_err_idam_crc,
 	vdisk_err_data_crc,
 	vdisk_err_max
-} vdisk_errno;
+};
 
 /*
  * If write_back is not set, the image file will not be updated when the disk
