@@ -110,6 +110,11 @@ static struct tape_file_autorun autorun_special[] = {
 	  .run = "\003CLEAR20\\r\\0CLOADM\\r",
 	},
 	{
+	  .name = "Galacticans",
+	  .size = 15, .crc = 0xd39b,
+	  .run = "\003PCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
+	},
+	{
 	  .name = "Lucifer's Kingdom",
 	  .size = 15, .crc = 0x7f34,
 	  .run = "\003CLEAR1,32767:CLOADM\\r",
@@ -135,14 +140,14 @@ static struct tape_file_autorun autorun_special[] = {
 	  .run = "\003CLEAR10\\r\\0CLOADM\\r",
 	},
 	{
+	  .name = "Ultrapede",
+	  .size = 15, .crc = 0x337a,
+	  .run = "\003CLOADM\\r",
+	},
+	{
 	  .name = "Utopia",
 	  .size = 15, .crc = 0xeb14,
 	  .run = "\003CLEAR10:CLOADM\\r\\0EXEC\\r",
-	},
-	{
-	  .name = "Galacticans",
-	  .size = 15, .crc = 0xd39b,
-	  .run = "\003PCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
 	},
 };
 
