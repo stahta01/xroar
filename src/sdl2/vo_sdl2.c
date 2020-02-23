@@ -193,8 +193,29 @@ static void destroy_window(void) {
 static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	struct vo_interface *vo = &vosdl->public;
 
+	// XXX 2020-02-23
+	//
+	// There currently seems to be a bug in the Emscripten GL support,
+	// manifesting in SDL2:
+	//
+	// https://github.com/emscripten-ports/SDL2/issues/92
+	//
+	// But probably due to a more low-level bug:
+	//
+	// https://github.com/emscripten-core/emscripten/pull/9803
+	//
+	// Until this is fixed, we do NOT destroy the renderer in Wasm builds.
+	// This is ok (for now), as the window is fixed size.  However if you
+	// try the (unsupported, unexposed in UI) toggle_fullscreen() call in
+	// the JS console, you'll notice scaling errors).
+	//
+	// Extra bug points: this doesn't actually seem to fix mousemotion
+	// events in Chromium!  Though button presses are getting through.
+
+#ifndef HAVE_WASM
 	// Remove old renderer & texture, if they exist
 	destroy_renderer(vosdl);
+#endif
 
 	int w, h;
 	SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
@@ -240,6 +261,10 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 
+#ifdef HAVE_WASM
+	// XXX see above
+	if (!vosdl->renderer)
+#endif
 	vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
@@ -260,6 +285,10 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 		}
 	}
 
+#ifdef HAVE_WASM
+	// XXX see above
+	if (!vosdl->texture)
+#endif
 	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, TEXTURE_WIDTH, 240);
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
