@@ -50,12 +50,17 @@ struct slist *slist_insert_before(struct slist *list, struct slist *before, void
 	ent->next = before;
 	if (before == list) return ent;
 	for (iter = list; iter; iter = iter->next) {
-		if (!iter->next || iter->next == before) {
+		if (iter->next == before) {
 			iter->next = ent;
-			break;
+			return list;
+		}
+		if (!iter->next) {
+			ent->next = NULL;
+			iter->next = ent;
+			return list;
 		}
 	}
-	return list;
+	abort();
 }
 
 /* Remove list entry containing data. */
