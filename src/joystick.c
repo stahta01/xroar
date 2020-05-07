@@ -151,12 +151,16 @@ static void joystick_config_free(struct joystick_config *jc) {
 	if (jc->description)
 		free(jc->description);
 	for (int i = 0; i < JOYSTICK_NUM_AXES; i++) {
-		if (jc->axis_specs[i])
+		if (jc->axis_specs[i]) {
 			free(jc->axis_specs[i]);
+			jc->axis_specs[i] = NULL;
+		}
 	}
 	for (int i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
-		if (jc->button_specs[i])
+		if (jc->button_specs[i]) {
 			free(jc->button_specs[i]);
+			jc->button_specs[i] = NULL;
+		}
 	}
 	free(jc);
 }
@@ -310,6 +314,7 @@ void joystick_unmap(unsigned port) {
 				submod->unmap_axis(axis);
 			} else {
 				free(j->axes[a]);
+				j->axes[a] = NULL;
 			}
 		}
 	}
@@ -321,6 +326,7 @@ void joystick_unmap(unsigned port) {
 				submod->unmap_button(button);
 			} else {
 				free(j->buttons[b]);
+				j->buttons[b] = NULL;
 			}
 		}
 	}

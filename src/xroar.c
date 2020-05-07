@@ -1542,6 +1542,8 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 	struct cart *old_cart = xroar_machine->get_interface(xroar_machine, "cart");
 	if (!old_cart && !cc_name)
 		return;
+	// This trips GCC-10's static analyser at the moment, as it doesn't
+	// seem to account for the short-circuit "&&".
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
 		return;
 	xroar_machine->remove_cart(xroar_machine);

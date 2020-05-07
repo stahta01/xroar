@@ -100,6 +100,8 @@ struct vdg_palette *vdg_palette_by_name(const char *name) {
 	count = vdg_palette_count();
 	for (i = 0; i < count; i++) {
 		struct vdg_palette *vp = vdg_palette_index(i);
+		if (!vp)
+			return NULL;
 		if (0 == strcmp(vp->name, name)) {
 			return vp;
 		}

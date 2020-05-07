@@ -46,7 +46,10 @@ void ntsc_palette_free(struct ntsc_palette *np) {
 	if (!np)
 		return;
 	for (unsigned p = 0; p < NTSC_NPHASES; p++) {
-		free(np->byphase[p]);
+		if (np->byphase[p]) {
+			free(np->byphase[p]);
+			np->byphase[p] = NULL;
+		}
 	}
 	free(np);
 }
