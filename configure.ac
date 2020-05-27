@@ -180,7 +180,7 @@ AS_IF([test -n "$ZLIB_LIBS"], [
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <stdlib.h>
 #include <zlib.h>
-int main(int argc, char **argv) { (void)crc32(0L, NULL, 0); (void)gzopen("", ""); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; (void)crc32(0L, NULL, 0); (void)gzopen("", ""); return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_zlib=1
@@ -207,8 +207,9 @@ AS_IF([test -n "$X11_LIBS"], [
 		AC_MSG_CHECKING([if xlib is usable])
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <stdlib.h>
+#include <X11/Xlib.h>
 #include <X11/keysym.h>
-int main(int argc, char **argv) { (void)XKeysymToKeycode(NULL, 0); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; (void)XKeysymToKeycode(NULL, 0); return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_xlib=1
@@ -239,7 +240,7 @@ AS_IF([test -n "PTHREADS_LIBS"], [
 		AC_MSG_CHECKING([POSIX threads])
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <pthread.h>
-int main(int argc, char **argv) { pthread_create(0,0,0,0); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; pthread_create((void *)1,0,(void *)2,0); return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_pthreads=1
@@ -290,7 +291,7 @@ AS_IF([test -n "$PULSE_LIBS"], [
 		AC_MSG_CHECKING([if PulseAudio is usable])
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <pulse/simple.h>
-int main(int argc, char **argv) { pa_simple *p = pa_simple_new(0,0,0,0,0,0,0,0,0); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; pa_simple *p = pa_simple_new(0,0,0,0,0,0,0,0,0); (void)p; return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_pulse=1
@@ -328,7 +329,7 @@ AS_IF([test -n "$JACK_LIBS"], [
 		AC_MSG_CHECKING([if JACK is usable])
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <jack/jack.h>
-int main(int argc, char **argv) { jack_client_t *c; jack_activate(c); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; jack_client_t *c; jack_activate(c); return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_jack=1
@@ -408,7 +409,7 @@ AS_IF([test -n "$have_gtkgl"], [
 				AC_MSG_CHECKING([if -framework OpenGL works instead])
 				AC_LINK_IFELSE([AC_LANG_SOURCE([
 		#include <OpenGL/gl.h>
-		int main(int argc, char **argv) { GLuint t; glGenTextures(1, &t); return 0; }
+		int main(int argc, char **argv) { (void)argc; (void)argv; GLuint t; glGenTextures(1, &t); return 0; }
 						])], [
 					AC_MSG_RESULT([yes])
 					GL_LIBS="-framework OpenGL"
@@ -442,7 +443,7 @@ AS_IF([test -n "$SDL_LIBS"], [
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <SDL.h>
 #include <SDL_syswm.h>
-int main(int argc, char **argv) { SDL_Init(0); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; SDL_Init(0); return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_sdl2=1
@@ -486,7 +487,7 @@ AS_IF([test -n "$SNDFILE_LIBS"], [
 	AC_MSG_CHECKING([if libsndfile is usable])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <sndfile.h>
-int main(int argc, char **argv) { SNDFILE *f; SF_INFO i; f = sf_open("", SFM_READ, &i); return 0; }
+int main(int argc, char **argv) { (void)argc; (void)argv; SNDFILE *f; SF_INFO i; f = sf_open("", SFM_READ, &i); (void)f; return 0; }
 				])], [
 			AC_MSG_RESULT([yes])
 			have_sndfile=1
