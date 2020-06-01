@@ -13,6 +13,7 @@ libporta_a_SOURCES = \
 	pl-regex.h \
 	pl-string.h \
 	sds.c sds.h sdsalloc.h \
+	sdsx.c sdsx.h \
 	slist.c slist.h \
 	strnlen.c \
 	strsep.c \
