@@ -34,8 +34,7 @@ static _Bool warned_autoconcat = 0;
 
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
 		const char *opt) {
-	int i;
-	for (i = 0; options[i].type != XCONFIG_END; i++) {
+	for (int i = 0; options[i].type != XCONFIG_END; i++) {
 		if (0 == strcmp(options[i].name, opt)) {
 			return &options[i];
 		}
@@ -44,15 +43,14 @@ static struct xconfig_option const *find_option(struct xconfig_option const *opt
 }
 
 static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_value) {
-	int i;
-	for (i = 0; list[i].name; i++) {
+	for (int i = 0; list[i].name; i++) {
 		if (0 == strcmp(name, list[i].name)) {
 			return list[i].value;
 		}
 	}
 	/* Only check this afterwards, as "help" could be a valid name */
 	if (0 == strcmp(name, "help")) {
-		for (i = 0; list[i].name; i++) {
+		for (int i = 0; list[i].name; i++) {
 			printf("\t%-10s %s\n", list[i].name, list[i].description);
 		}
 		exit(EXIT_SUCCESS);
