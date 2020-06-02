@@ -10,6 +10,7 @@ libporta_a_SOURCES = \
 	c-strncasecmp.c \
 	delegate.c delegate.h \
 	pl-endian.h \
+	pl-regex.h \
 	pl-string.h \
 	sds.c sds.h sdsalloc.h \
 	slist.c slist.h \

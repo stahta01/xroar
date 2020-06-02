@@ -28,7 +28,7 @@ AC_CHECK_TOOL(RC, windres, :)
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([endian.h])
+AC_CHECK_HEADERS([endian.h regex.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT16_T
@@ -101,6 +101,9 @@ AC_ARG_WITH([joydev],
 AC_ARG_WITH([sndfile],
 	AS_HELP_STRING([--without-sndfile], [don't test for libsndfile]) )
 
+AC_ARG_WITH([tre],
+	AS_HELP_STRING([--with-tre], [test for TRE]) )
+
 AC_ARG_ENABLE([logging],
 	AS_HELP_STRING([--disable-logging], [disable logging output]) )
 
@@ -115,6 +118,8 @@ AC_ARG_WITH([zlib],
 
 AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
+
+#'
 
 ### WebAssembly
 
@@ -136,6 +141,7 @@ AM_COND_IF([WASM], [
 		test -z "$with_coreaudio" && with_coreaudio=no
 		test -z "$with_joydev" && with_joydev=no
 		test -z "$with_sndfile" && with_sndfile=no
+		test -z "$with_tre" && with_tre=no
 		test -z "$with_pthreads" && with_pthreads=no
 		test -z "$with_zlib" && with_zlib=no
 		EXEEXT=".js"
@@ -498,6 +504,35 @@ int main(int argc, char **argv) { (void)argc; (void)argv; SNDFILE *f; SF_INFO i;
 
 AM_CONDITIONAL([SNDFILE], [test -n "$have_sndfile"])
 AM_COND_IF([SNDFILE], [AC_DEFINE([HAVE_SNDFILE], 1, [Use libsndfile])])
+
+### TRE
+
+if test "x$ac_cv_header_regex_h" != "xyes" -a "x$with_tre" != "xno"; then
+	with_tre=yes
+fi
+
+AS_IF([test "x$with_tre" = "xyes"], [
+       TRE_LIBS="-ltre"
+       ])
+AC_SUBST(TRE_LIBS)
+
+unset have_tre
+AS_IF([test -n "$TRE_LIBS"], [
+		OLD_LIBS="$LIBS"
+		LIBS="$LIBS $TRE_LIBS"
+		AC_MSG_CHECKING([TRE])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <tre/regex.h>
+int main(int argc, char **argv) { (void)argc; (void)argv; regcomp(0,0,REG_EXTENDED); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_tre=1
+			], [AC_MSG_RESULT([no])] )
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([TRE], [test -n "$have_tre"])
+AM_COND_IF([TRE], [AC_DEFINE([HAVE_TRE], 1, [TRE])])
 
 ### GDB target
 

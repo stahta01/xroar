@@ -358,6 +358,10 @@ xroar_SOURCES += \
 	gdb.c gdb.h
 endif
 
+if TRE
+xroar_LDADD += $(TRE_LIBS)
+endif
+
 if FILEREQ_CLI
 xroar_SOURCES += \
 	filereq_cli.c
