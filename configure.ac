@@ -240,7 +240,7 @@ AS_IF([test "x$with_pthreads" != "xno"], [
 AC_SUBST(PTHREADS_LIBS)
 
 unset have_pthreads
-AS_IF([test -n "PTHREADS_LIBS"], [
+AS_IF([test -n "$PTHREADS_LIBS"], [
 		OLD_LIBS="$LIBS"
 		LIBS="$LIBS $PTHREADS_LIBS"
 		AC_MSG_CHECKING([POSIX threads])
