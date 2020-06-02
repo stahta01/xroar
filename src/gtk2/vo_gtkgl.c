@@ -252,6 +252,7 @@ static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
 }
 
 static void vo_gtkgl_set_vsync(int val) {
+	(void)val;
 
 #ifdef HAVE_X11
 
