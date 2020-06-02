@@ -2,7 +2,7 @@
 
 Command-line file requester
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -26,6 +26,7 @@ See COPYING.GPL for redistribution conditions.
 #include <sys/types.h>
 
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -156,7 +157,7 @@ static char *get_filename(struct cli_filereq_interface *frcli, char const * cons
 			frcli->path = sdscat(frcli->path, in);
 		}
 		// remove any trailing dir separator
-		frcli->path = sdsrtrim(frcli->path, SEPSET);
+		frcli->path = sdsx_rtrim(frcli->path, SEPSET);
 
 		struct stat statbuf;
 		if (stat(frcli->path, &statbuf) == 0) {
