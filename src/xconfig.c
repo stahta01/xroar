@@ -2,7 +2,7 @@
 
 Command-line and file-based configuration options
 
-Copyright 2009-2018 Ciaran Anscomb
+Copyright 2009-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -24,13 +24,12 @@ See COPYING.GPL for redistribution conditions.
 #include <string.h>
 
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
 #include "logging.h"
 #include "xconfig.h"
-
-static _Bool warned_autoconcat = 0;
 
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
 		const char *opt) {
@@ -58,7 +57,11 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 	return undef_value;
 }
 
-static void set_option(struct xconfig_option const *option, char *arg) {
+// Handle simple zero or one argument option setting (ie, not XCONFIG_ASSIGN).
+// 'arg' should be parsed to handle any quoting or escape sequences by this
+// point.
+
+static void set_option(struct xconfig_option const *option, sds arg) {
 	switch (option->type) {
 		case XCONFIG_BOOL:
 			if (option->call)
@@ -113,7 +116,7 @@ static void set_option(struct xconfig_option const *option, char *arg) {
 			break;
 		case XCONFIG_STRING_LIST:
 			assert(!option->call);
-			*(struct slist **)option->dest.object = slist_append(*(struct slist **)option->dest.object, xstrdup(arg));
+			*(struct slist **)option->dest.object = slist_append(*(struct slist **)option->dest.object, sdsdup(arg));
 			break;
 		case XCONFIG_NULL:
 			if (option->call)
@@ -171,7 +174,7 @@ static int unset_option(struct xconfig_option const *option) {
 		assert(!option->call);
 		/* providing an argument to remove here might more sense, but
 		 * for now just remove the entire list: */
-		slist_free_full(*(struct slist **)option->dest.object, (slist_free_func)free);
+		slist_free_full(*(struct slist **)option->dest.object, (slist_free_func)sdsfree);
 		*(struct slist **)option->dest.object = NULL;
 		return 0;
 	default:
@@ -180,8 +183,12 @@ static int unset_option(struct xconfig_option const *option) {
 	return -1;
 }
 
+// Convenience function to manually set an option.  Only handles simple zero-
+// or one-argument options.  'arg' will be parsed to process escape sequences,
+// but should not contain quoted sections.
+
 enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
-				       const char *opt, char *arg) {
+				       const char *opt, const char *arg) {
 	struct xconfig_option const *option = find_option(options, opt);
 	if (option == NULL) {
 		if (0 == strncmp(opt, "no-", 3)) {
@@ -208,22 +215,22 @@ enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
 		LOG_ERROR("Missing argument to `%s'\n", opt);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(option, arg);
+	set_option(option, sdsx_parse_str(arg));
 	return XCONFIG_OK;
 }
 
 /* Simple parser: one directive per line, "option argument" */
 enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 		const char *filename) {
-	char *line;
 	FILE *cfg;
-	char buf[256];
 	int ret = XCONFIG_OK;
 
 	cfg = fopen(filename, "r");
 	if (cfg == NULL) return XCONFIG_FILE_ERROR;
-	while ((line = fgets(buf, sizeof(buf), cfg))) {
+	sds line;
+	while ((line = sdsx_fgets(cfg))) {
 		enum xconfig_result r = xconfig_parse_line(options, line);
+		sdsfree(line);
 		if (r != XCONFIG_OK)
 			ret = r;
 	}
@@ -231,19 +238,23 @@ enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 	return ret;
 }
 
-enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, const char *line) {
-	struct xconfig_option const *option;
+// Parse whole config lines, usually from a file.
+// Lines are of the form: KEY [=] [VALUE [,VALUE]...]
 
-	int argc;
-	sds *args = sdssplitargs(line, &argc);
-	if (argc == 0 || args[0][0] == '#') {
-		sdsfreesplitres(args, argc);
+enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, const char *line) {
+	sds input = sdsx_trim_qe(sdsnew(line), NULL);
+	if (input[0] == '#') {
+		sdsfree(input);
 		return XCONFIG_OK;
 	}
 
-	char *opt = args[0];
-	while (*opt == '-') opt++;
-	option = find_option(options, opt);
+	sds opt = sdsx_ltrim(sdsx_tok(input, "([ \t]*=[ \t]*|[ \t]+)", 1), "-");
+	if (!opt) {
+		sdsfree(input);
+		return XCONFIG_OK;
+	}
+
+	struct xconfig_option const *option = find_option(options, opt);
 	if (option == NULL) {
 		enum xconfig_result r = XCONFIG_BAD_OPTION;
 		if (0 == strncmp(opt, "no-", 3)) {
@@ -252,12 +263,14 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 				r = XCONFIG_OK;
 			}
 		}
-		sdsfreesplitres(args, argc);
+		sdsfree(opt);
+		sdsfree(input);
 		return r;
 	}
+	sdsfree(opt);
 
 	if (option->deprecated) {
-		LOG_WARN("Deprecated option `%s'\n", opt);
+		LOG_WARN("Deprecated option `%s'\n", option->name);
 	}
 	if (option->type == XCONFIG_BOOL ||
 	    option->type == XCONFIG_BOOL0 ||
@@ -265,30 +278,38 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	    option->type == XCONFIG_INT1 ||
 	    option->type == XCONFIG_NULL) {
 		set_option(option, NULL);
-		sdsfreesplitres(args, argc);
+		sdsfree(input);
 		return XCONFIG_OK;
 	}
-	if (argc < 2) {
-		LOG_ERROR("Missing argument to `%s'\n", opt);
-		sdsfreesplitres(args, argc);
+
+	if (option->type == XCONFIG_ASSIGN) {
+		// first part is key separated by '=' (or whitespace for now)
+		sds key = sdsx_tok(input, "([ \t]*=[ \t]*|[ \t]+)", 1);
+		if (!key) {
+			LOG_ERROR("Missing argument to `%s'\n", option->name);
+			sdsfree(input);
+			return XCONFIG_MISSING_ARG;
+		}
+		// parse rest as comma-separated list
+		struct sdsx_list *values = sdsx_split(input, "[ \t]*,[ \t]*", 1);
+		option->dest.func_assign(key, values);
+		sdsx_list_free(values);
+		sdsfree(key);
+		sdsfree(input);
+		return XCONFIG_OK;
+	}
+
+	// parse rest as comma-separated list
+	struct sdsx_list *values = sdsx_split(input, "[ \t]*,[ \t]*", 1);
+	if (!values) {
+		LOG_ERROR("Missing argument to `%s'\n", option->name);
+		sdsfree(input);
 		return XCONFIG_MISSING_ARG;
 	}
-	// Kludge to support old behaviour: multiple string arguments are
-	// concatenated together with spaces!  But print a deprecation warning,
-	// as I want to get rid of this.
-	if (argc > 2 && (option->type == XCONFIG_STRING ||
-			 option->type == XCONFIG_STRING_LIST)) {
-		if (!warned_autoconcat) {
-			LOG_WARN("Please quote strings or escape spaces, auto-concat is deprecated.\n");
-			warned_autoconcat = 1;
-		}
-		sds arg = sdsjoinsds(args+1, argc-1, " ", 1);
-		set_option(option, arg);
-		sdsfree(arg);
-	} else {
-		set_option(option, args[1]);
-	}
-	sdsfreesplitres(args, argc);
+
+	set_option(option, values->elem[0]);
+	sdsx_list_free(values);
+	sdsfree(input);
 	return XCONFIG_OK;
 }
 
@@ -330,12 +351,40 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 			_argn++;
 			continue;
 		}
+
 		if ((_argn + 1) >= argc) {
 			if (argn) *argn = _argn;
 			LOG_ERROR("Missing argument to `%s'\n", opt);
 			return XCONFIG_MISSING_ARG;
 		}
-		set_option(option, argv[_argn+1]);
+
+		if (option->type == XCONFIG_ASSIGN) {
+			const char *str = argv[_argn+1];
+			size_t len = strlen(str);
+			// first part is key separated by '=' (NO whitespace)
+			sds key = sdsx_tok_str_len(&str, &len, "=", 0);
+			if (!key) {
+				if (argn) *argn = _argn;
+				LOG_ERROR("Missing argument to `%s'\n", option->name);
+				return XCONFIG_MISSING_ARG;
+			}
+			// tokenise rest as comma-separated list, unparsed
+			struct sdsx_list *values = sdsx_split_str_len(str, len, ",", 0);
+			// parse individual elements separately, as parsing in
+			// sdsx_split() would also have processed quoting.
+			for (unsigned i = 0; i < values->len; i++) {
+				sds new = sdsx_parse(values->elem[i]);
+				sdsfree(values->elem[i]);
+				values->elem[i] = new;
+			}
+			option->dest.func_assign(key, values);
+			sdsx_list_free(values);
+			sdsfree(key);
+		} else {
+			sds arg = sdsx_parse_str(argv[_argn+1]);
+			set_option(option, arg);
+			sdsfree(arg);
+		}
 		_argn += 2;
 	}
 	if (argn) *argn = _argn;
@@ -350,7 +399,7 @@ void xconfig_shutdown(struct xconfig_option const *options) {
 				*(char **)options[i].dest.object = NULL;
 			}
 		} else if (options[i].type == XCONFIG_STRING_LIST) {
-			slist_free_full(*(struct slist **)options[i].dest.object, (slist_free_func)free);
+			slist_free_full(*(struct slist **)options[i].dest.object, (slist_free_func)sdsfree);
 			*(struct slist **)options[i].dest.object = NULL;
 		}
 	}

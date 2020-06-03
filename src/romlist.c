@@ -2,7 +2,7 @@
 
 ROM filename database
 
-Copyright 2012-2019 Ciaran Anscomb
+Copyright 2012-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -23,6 +23,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "array.h"
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -76,27 +77,28 @@ static struct romlist *find_romlist(const char *name) {
 	return entry->data;
 }
 
-/* Parse an assignment string of the form "LIST=ROMNAME[,ROMNAME]...".
- * Overwrites any existing list with name LIST. */
-void romlist_assign(const char *astring) {
-	if (!astring) return;
-	sds tmp = sdsnew(astring);
-	char *name = strtok(tmp, "=");
-	if (!name) {
-		sdsfree(tmp);
+// Assign a romlist.  Overwrites any existing list with provided name.
+void romlist_assign(const char *name, struct sdsx_list *values) {
+	if (!name)
 		return;
-	}
-	struct romlist *new_list = new_romlist(name);
-	/* find if there's an old list with this name */
+
+	// find if there's an old list with this name
 	struct romlist *old_list = find_romlist(name);
 	if (old_list) {
-		/* if so, remove its reference in romlist_list */
+		// if so, remove its reference in romlist_list
 		romlist_list = slist_remove(romlist_list, old_list);
 	}
-	char *value;
-	while ((value = strtok(NULL, "\n\v\f\r,"))) {
+
+	// if supplied list is empty, we're done (deleted any old entry)
+	if (!values || values->len == 0)
+		return;
+
+	struct romlist *new_list = new_romlist(name);
+
+	for (unsigned i = 0; i < values->len; i++) {
+		const char *value = values->elem[i];
 		if (value[0] == '@' && 0 == strcmp(value+1, name)) {
-			/* reference to this list - append current contents */
+			// reference to this list - append current contents
 			if (old_list) {
 				new_list->list = slist_concat(new_list->list, old_list->list);
 				old_list->list = NULL;
@@ -109,9 +111,8 @@ void romlist_assign(const char *astring) {
 	if (old_list) {
 		free_romlist(old_list);
 	}
-	/* add new list to romlist_list */
+	// add new list to romlist_list
 	romlist_list = slist_append(romlist_list, new_list);
-	sdsfree(tmp);
 }
 
 /* Find a ROM within ROMPATH */
@@ -181,7 +182,7 @@ static void print_romlist_entry(struct romlist *list, void *user_data) {
 	for (jter = list->list; jter; jter = jter->next) {
 		char *str = jter->data;
 		if (user_data) {
-			sds out = sdscatrepr(sdsempty(), str, strlen(str));
+			sds out = sdsx_quote_str(str);
 			fprintf(f, "%s", out);
 			sdsfree(out);
 		} else {

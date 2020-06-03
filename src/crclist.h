@@ -21,8 +21,10 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 #include <stdio.h>
 
-/* Parse an assignment string of the form "LIST=CRC[,CRC]..." */
-void crclist_assign(const char *astring);
+struct sdsx_list;
+
+// Assign a crclist.  Overwrites any existing list with provided name.
+void crclist_assign(const char *name, struct sdsx_list *values);
 
 /* Attempt to find a CRC image.  If name starts with '@', search the named
  * list for the first accessible entry, otherwise search for a single entry. */

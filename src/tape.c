@@ -107,47 +107,47 @@ static struct tape_file_autorun autorun_special[] = {
 	{
 	  .name = "Electronic Author",
 	  .size = 15, .crc = 0x8866,
-	  .run = "\003CLEAR20\\r\\0CLOADM\\r",
+	  .run = "\\eCLEAR20\\r\\0CLOADM\\r",
 	},
 	{
 	  .name = "Galacticans",
 	  .size = 15, .crc = 0xd39b,
-	  .run = "\003PCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
+	  .run = "\\ePCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
 	},
 	{
 	  .name = "Lucifer's Kingdom",
 	  .size = 15, .crc = 0x7f34,
-	  .run = "\003CLEAR1,32767:CLOADM\\r",
+	  .run = "\\eCLEAR1,32767:CLOADM\\r",
 	},
 	{
 	  .name = "North-Sea Action",
 	  .size = 15, .crc = 0x9c2b,
-	  .run = "\003CLEAR20\\r\\0CLOADM\\r\\0EXEC\\r",
+	  .run = "\\eCLEAR20\\r\\0CLOADM\\r\\0EXEC\\r",
 	},
 	{
 	  .name = "Speak Up!",
 	  .size = 15, .crc = 0x7bff,
-	  .run = "\003CLEAR200,25448\\r\\0CLOADM\\r\\0EXEC\\r",
+	  .run = "\\eCLEAR200,25448\\r\\0CLOADM\\r\\0EXEC\\r",
 	},
 	{
 	  .name = "Spy Against Spy",
 	  .size = 15, .crc = 0x48a0,
-	  .run = "\003CLEAR20:CLOADM\\r",
+	  .run = "\\eCLEAR20:CLOADM\\r",
 	},
 	{
 	  .name = "Tanglewood",
 	  .size = 115, .crc = 0x7e5e,
-	  .run = "\003CLEAR10\\r\\0CLOADM\\r",
+	  .run = "\\eCLEAR10\\r\\0CLOADM\\r",
 	},
 	{
 	  .name = "Ultrapede",
 	  .size = 15, .crc = 0x337a,
-	  .run = "\003CLOADM\\r",
+	  .run = "\\eCLOADM\\r",
 	},
 	{
 	  .name = "Utopia",
 	  .size = 15, .crc = 0xeb14,
-	  .run = "\003CLEAR10:CLOADM\\r\\0EXEC\\r",
+	  .run = "\\eCLEAR10:CLOADM\\r\\0EXEC\\r",
 	},
 };
 
@@ -585,13 +585,13 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 		switch (type) {
 			case 0:
-				keyboard_queue_basic(tip->keyboard_interface, "\003CLOAD\\r\\0RUN\\r");
+				keyboard_queue_basic(tip->keyboard_interface, "\\eCLOAD\\r\\0RUN\\r");
 				break;
 			case 2:
 				if (need_exec) {
-					keyboard_queue_basic(tip->keyboard_interface, "\003CLOADM:EXEC\\r");
+					keyboard_queue_basic(tip->keyboard_interface, "\\eCLOADM:EXEC\\r");
 				} else {
-					keyboard_queue_basic(tip->keyboard_interface, "\003CLOADM\\r");
+					keyboard_queue_basic(tip->keyboard_interface, "\\eCLOADM\\r");
 				}
 				break;
 			default:

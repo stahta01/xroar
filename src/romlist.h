@@ -20,8 +20,10 @@ See COPYING.GPL for redistribution conditions.
 
 #include <stdio.h>
 
-/* Parse an assignment string of the form "LIST=ROMNAME[,ROMNAME]..." */
-void romlist_assign(const char *astring);
+struct sdsx_list;
+
+// Assign a romlist.  Overwrites any existing list with provided name.
+void romlist_assign(const char *name, struct sdsx_list *values);
 
 /* Attempt to find a ROM image.  If name starts with '@', search the named
  * list for the first accessible entry, otherwise search for a single entry. */

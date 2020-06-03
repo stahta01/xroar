@@ -2,7 +2,7 @@
 
 XRoar - a Dragon/Tandy Coco emulator
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -36,6 +36,7 @@ See COPYING.GPL for redistribution conditions.
 #include "c-strcase.h"
 #include "pl-string.h"
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -353,8 +354,8 @@ static char const * const default_config[] = {
 	// Fallback Dragon BASIC
 	"romlist dragon=dragon",
 	"romlist d64_1=d64_1,d64rom1,'Dragon Data Ltd - Dragon 64 - IC17','Dragon Data Ltd - TANO IC18','Eurohard S.A. - Dragon 200 IC18',dragrom",
-	"romlist d64_2='d64_2,d64rom2,Dragon Data Ltd - Dragon 64 - IC18','Dragon Data Ltd - TANO IC17','Eurohard S.A. - Dragon 200 IC17'",
-	"romlist d32='d32,dragon32,d32rom,Dragon Data Ltd - Dragon 32 - IC17'",
+	"romlist d64_2=d64_2,d64rom2,'Dragon Data Ltd - Dragon 64 - IC18','Dragon Data Ltd - TANO IC17','Eurohard S.A. - Dragon 200 IC17'",
+	"romlist d32=d32,dragon32,d32rom,'Dragon Data Ltd - Dragon 32 - IC17'",
 	"romlist d200e_1=d200e_1,d200e_rom1,ic18_v1.4e.ic34",
 	"romlist d200e_2=d200e_2,d200e_rom2,ic17_v1.4e.ic37",
 	// Specific Dragon BASIC
@@ -365,7 +366,7 @@ static char const * const default_config[] = {
 	"romlist dragon200e_alt=@d200e_2,@d64_2",
 	"romlist dragon200e_charset=d200e_26,rom26.ic1",
 	// Fallback CoCo BASIC
-	"romlist coco='bas13,bas12,Color Basic v1.2 (1982)(Tandy),bas11,bas10'",
+	"romlist coco=bas13,bas12,'Color Basic v1.2 (1982)(Tandy)',bas11,bas10'",
 	"romlist coco_ext=extbas11,extbas10,coco,COCO",
 	// Specific CoCo BASIC
 	"romlist coco1=bas10,@coco",
@@ -378,15 +379,15 @@ static char const * const default_config[] = {
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
 	// DragonDOS
-	"romlist dragondos='ddos12a,ddos12,ddos40,ddos15,ddos10,Dragon Data Ltd - DragonDOS 1.0'",
+	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,'Dragon Data Ltd - DragonDOS 1.0'",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
-	"romlist superdos='sdose6,PNP - SuperDOS E6,sdose5,sdose4'",
+	"romlist superdos=sdose6,'PNP - SuperDOS E6',sdose5,sdose4",
 	"romlist cumana=cdos20,CDOS20",
 	"romlist dragondos_compat=@dosplus,@superdos,@dragondos,@cumana",
 	// RSDOS
 	"romlist rsdos=disk11,disk10",
 	// Delta
-	"romlist delta='delta,deltados,Premier Micros - DeltaDOS'",
+	"romlist delta=delta,deltados,'Premier Micros - DeltaDOS'",
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
 
@@ -810,14 +811,14 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	load_disk_to_drive = 0;
 	while (private_cfg.load_list) {
-		char *load_file = private_cfg.load_list->data;
+		sds load_file = private_cfg.load_list->data;
 		int load_file_type = xroar_filetype_by_ext(load_file);
 		// inhibit autorun if a -type option was given
 		_Bool autorun = !private_cfg.type_list && autorun_last && !private_cfg.load_list->next;
 		switch (load_file_type) {
 		// cart will already be loaded (will autorun even with -type)
 		case FILETYPE_ROM:
-			free(load_file);
+			sdsfree(load_file);
 			break;
 		// delay loading binary files by 2s
 		case FILETYPE_BIN:
@@ -836,12 +837,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			load_disk_to_drive++;
 			if (load_disk_to_drive > 3)
 				load_disk_to_drive = 3;
-			free(load_file);
+			sdsfree(load_file);
 			break;
 		// the rest can be loaded straight off
 		default:
 			xroar_load_file_by_type(load_file, autorun);
-			free(load_file);
+			sdsfree(load_file);
 			break;
 		}
 		private_cfg.load_list = slist_remove(private_cfg.load_list, private_cfg.load_list->data);
@@ -870,10 +871,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	while (private_cfg.type_list) {
-		char *data = private_cfg.type_list->data;
-		keyboard_queue_basic(xroar_keyboard_interface, data);
+		sds data = private_cfg.type_list->data;
+		keyboard_queue_basic_sds(xroar_keyboard_interface, data);
 		private_cfg.type_list = slist_remove(private_cfg.type_list, data);
-		free(data);
+		sdsfree(data);
 	}
 	if (private_cfg.lp_file) {
 		printer_open_file(xroar_printer_interface, private_cfg.lp_file);
@@ -994,10 +995,10 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 				 * we're talking to */
 				switch (xroar_machine->config->architecture) {
 				case ARCH_COCO:
-					keyboard_queue_basic(xroar_keyboard_interface, "\033DOS\r");
+					keyboard_queue_basic(xroar_keyboard_interface, "\\eDOS\\r");
 					break;
 				default:
-					keyboard_queue_basic(xroar_keyboard_interface, "\033BOOT\r");
+					keyboard_queue_basic(xroar_keyboard_interface, "\\eBOOT\\r");
 					break;
 				}
 				return 0;
@@ -1040,9 +1041,9 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 }
 
 static void do_load_file(void *data) {
-	char *load_file = data;
+	sds load_file = data;
 	xroar_load_file_by_type(load_file, autorun_loaded_file);
-	free(load_file);
+	sdsfree(load_file);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2059,9 +2060,9 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Firmware ROM images: */
 	{ XC_SET_STRING("rompath", &xroar_rom_path) },
-	{ XC_CALL_STRING("romlist", &romlist_assign) },
+	{ XC_CALL_ASSIGN("romlist", &romlist_assign) },
 	{ XC_CALL_NULL("romlist-print", &romlist_print) },
-	{ XC_CALL_STRING("crclist", &crclist_assign) },
+	{ XC_CALL_ASSIGN("crclist", &crclist_assign) },
 	{ XC_CALL_NULL("crclist-print", &crclist_print) },
 	{ XC_SET_BOOL("force-crc-match", &xroar_cfg.force_crc_match) },
 
@@ -2424,8 +2425,9 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "keymap", xroar_ui_cfg.keymap, "uk");
 	xroar_cfg_print_bool(f, all, "kbd-translate", xroar_cfg.kbd_translate, 0);
 	for (struct slist *l = private_cfg.type_list; l; l = l->next) {
-		const char *s = l->data;
+		sds s = sdsx_quote(l->data);
 		fprintf(f, "type %s\n", s);
+		sdsfree(s);
 	}
 	fputs("\n", f);
 
@@ -2531,7 +2533,7 @@ void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *val
 	xroar_cfg_print_indent(f);
 	if (value || normal) {
 		char const *tmp = value ? value : normal;
-		sds str = sdscatrepr(sdsempty(), tmp, strlen(tmp));
+		sds str = sdsx_quote_str(tmp);
 		fprintf(f, "%s %s\n", opt, str);
 		sdsfree(str);
 		return;

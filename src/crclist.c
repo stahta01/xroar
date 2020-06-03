@@ -2,7 +2,7 @@
 
 ROM CRC database
 
-Copyright 2012-2019 Ciaran Anscomb
+Copyright 2012-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -23,6 +23,7 @@ See COPYING.GPL for redistribution conditions.
 #include <string.h>
 
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -71,42 +72,39 @@ static struct crclist *find_crclist(const char *name) {
 	return entry->data;
 }
 
-/* Parse an assignment string of the form "LIST=ROMNAME[,ROMNAME]...".
- * Overwrites any existing list with name LIST. */
-void crclist_assign(const char *astring) {
-	if (!astring) return;
-	sds tmp = sdsnew(astring);
-	char *name = strtok(tmp, "=");
+// Assign a crclist.  Overwrites any existing list with provided name.
+void crclist_assign(const char *name, struct sdsx_list *values) {
 	if (!name) {
-		sdsfree(tmp);
 		return;
 	}
-	struct crclist *new_list = new_crclist(name);
-	/* find if there's an old list with this name */
+
+	// find if there's an old list with this name
 	struct crclist *old_list = find_crclist(name);
 	if (old_list) {
-		/* if so, remove its reference in crclist_list */
+		// if so, remove its reference in crclist_list
 		crclist_list = slist_remove(crclist_list, old_list);
 	}
-	char *value;
-	while ((value = strtok(NULL, "\n\v\f\r,"))) {
+
+	struct crclist *new_list = new_crclist(name);
+
+	for (unsigned i = 0; i < values->len; i++) {
+		const char *value = values->elem[i];
 		if (value[0] == '@' && 0 == strcmp(value+1, name)) {
-			/* reference to this list - append current contents */
+			// reference to this list - append current contents
 			if (old_list) {
 				new_list->list = slist_concat(new_list->list, old_list->list);
 				old_list->list = NULL;
 			}
 		} else {
-			/* otherwise just add a new entry */
+			// otherwise just add a new entry
 			new_list->list = slist_append(new_list->list, xstrdup(value));
 		}
 	}
 	if (old_list) {
 		free_crclist(old_list);
 	}
-	/* add new list to crclist_list */
+	// add new list to crclist_list
 	crclist_list = slist_append(crclist_list, new_list);
-	sdsfree(tmp);
 }
 
 /* convert a string to integer and compare against CRC */

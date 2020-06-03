@@ -104,14 +104,14 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 @chapter Getting started
 
 @menu
-* Installation & running::
+* Installation::
 * Building from source::
 * Running programs::
-* Configuration file::
+* Configuration::
 @end menu
 
 
-@node Installation & running
+@node Installation
 @section Installation & running
 
 Pre-built binary packages are available from the
@@ -214,6 +214,10 @@ Mac OS X and Windows; any other target using SDL will support only keyboard
 shortcuts.  Unless you are building for Linux, SDL is required to use
 joysticks.  Version 2 required.
 
+POSIX Regular Expressions are used in option parsing, so
+@myuref{https://laurikari.net/tre/about/, TRE} is required on non-POSIX
+platforms (e.g. Windows).
+
 Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some other
 options are still in the code base, but have not been tested in a while.
 
@@ -312,19 +316,75 @@ three emulation modes: No joystick emulation (default), Right joystick, Left
 joystick.  @xref{Joysticks}.
 
 
-@node Configuration file
-@section Configuration file
+@node Configuration
+@section Configuration
 
 This manual details the options available for configuring XRoar.  Each option
 can be passed on the command line or placed in a configuration file called
 @file{xroar.conf}.  @file{xroar.conf} is read first, and any command line
 options then take precedence.  Directives are listed in @file{xroar.conf} one
-per line, and the leading dashes may be omitted.  If the argument to a
-directive contains spaces, quote marks, or backslashes, be sure to escape them
-either by surrounding the whole string in quotes, or by preceding the special
-character with a backslash.
+per line.
 
-The installation and compilation sections above list good default locations for
+Lines in the configuration file are either of the form:
+
+@verbatim
+	OPTION [VALUE [, VALUE]...]
+@end verbatim
+
+Or, for list assignment (e.g. ROM lists):
+
+@verbatim
+	OPTION KEY = [VALUE [, VALUE]...]
+@end verbatim
+
+Each @samp{OPTION}, @samp{KEY} or @samp{VALUE} may be surrounded by whitespace,
+include quoted sections (text surrounded by single or double quote characters
+to protect special characters), and include escape sequences (special sequences
+prefixed with a backslash, see the table below).  There is no special
+distinction between single- and double-quotes, and escape sequences may still
+occur within either.  Currently, an @samp{=} symbol may follow an
+@samp{OPTION}, but this is entirely optional, and deprecated (may be removed in
+a future version).
+
+Empty lines are skipped, and any line where the first non-whitespace character
+is a @samp{#} is treated as a comment.
+
+An @samp{OPTION} may be preceded by leading dashes as from the command line,
+but within the configuration file they are not necessary.  Most options may be
+preceded by @samp{no-} to invert their meaning or clear an option.
+
+@multitable @columnfractions .13 .83
+@headitem Sequence @tab Description
+@item @samp{\0} @tab Null (NUL), ASCII 0.  Note that this is only permitted when
+@emph{not} followed by another octal digit, as it may be confused with an octal
+byte, so it may be preferable to use @samp{\x00} instead.
+@item @samp{\a} @tab Bell (BEL), ASCII 7, no equivalent on the Dragon keyboard.
+@item @samp{\b} @tab Backspace (BS), ASCII 8, @kbd{LEFT}.
+@item @samp{\e} @tab Escape (ESC), ASCII 27, no equivalent on the Dragon keyboard, but
+mapped to @kbd{BREAK} by the @option{-type} option.
+@item @samp{\f} @tab Form Feed (FF), ASCII 12, @kbd{CLEAR}.
+@item @samp{\n} @tab Newline (NL), ASCII 10, @kbd{DOWN}.  Not usually used by the
+Dragon as a line ending, instead try @samp{\r}.
+@item @samp{\r} @tab Carriage Return (CR), ASCII 13, @kbd{ENTER}.
+@item @samp{\t} @tab Horizontal Tab (HT), ASCII 9, @kbd{RIGHT}.
+@item @samp{\v} @tab Vertical Tab (VT), ASCII 11, no equivalent on the Dragon keyboard.
+@item @samp{\x@emph{nnn}} @tab 8-bit byte with value specified as a three-digit octal
+number, @emph{nnn}.
+@item @samp{\x@emph{hh}} @tab 8-bit byte with value specified as a two-digit
+hexadecimal number, @emph{hh}.
+@item @samp{\u@emph{hhhh}} @tab 16-bit Unicode codepoint specified as a four-digit
+hexadecimal number, @emph{hhhh}.  Internally, this will be encoded as UTF-8.
+@end multitable
+
+Any other character following a backslash is included verbatim.
+
+Note that when specifying options on the command line, it is assumed that your
+shell will be handling any quoting, thus quote characters that make it through
+to XRoar are included verbatim.  For similar reasons, leading and trailing
+whitespace is also included verbatim.  However, the escape sequences documented
+above may still be included.
+
+@ref{Installation} and @ref{Compilation} list good default locations for
 @file{xroar.conf}, but it is actually searched for in a list of directories.
 You can override this search path with the @env{XROAR_CONF_PATH} environment
 variable, which contains a @samp{:}-separated list of directories.  Here are
@@ -1032,8 +1092,8 @@ on a PC keyboard are translated into the equivalent keystrokes on the Dragon.
 Use the @option{-kbd-translate} option to default to this mode.  Press
 @kbd{Ctrl}+@kbd{Z} at any time to toggle between the two modes.
 
-In translated mode, @kbd{Shift}+@kbd{Enter} is mapped to the Caps Lock
-combination (@kbd{Shift}+@kbd{0} usually, @kbd{Shift}+@kbd{Enter} on the Dragon
+In translated mode, @kbd{Shift}+@kbd{Return} is mapped to the Caps Lock
+combination (@kbd{Shift}+@kbd{0} usually, @kbd{Shift}+@kbd{ENTER} on the Dragon
 200-E).  Similarly, @kbd{Shift}+@kbd{Space} is mapped to the ``pause output''
 combination (@kbd{Shift}+@kbd{@@} usually, @kbd{Shift}+@kbd{Space} on the
 Dragon 200-E).

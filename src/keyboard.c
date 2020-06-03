@@ -2,7 +2,7 @@
 
 Dragon keyboard
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,6 +22,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "delegate.h"
 #include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -200,27 +201,23 @@ static void type_command(void *sptr) {
 	kip->machine->op_rts(kip->machine);
 }
 
-static sds parse_string(const char *s, enum dkbd_layout layout) {
+static sds parse_string(sds s, enum dkbd_layout layout) {
 	if (!s)
 		return NULL;
+	// treat everything as unsigned char
+	const unsigned char *p = (unsigned char *)s;
+	size_t len = sdslen(s);
 	sds new = sdsempty();
-	int chr;
-	while ((chr = *(s++))) {
+	while (len > 0) {
+		unsigned char chr = *(p++);
+		len--;
 
-		if (chr == '\\') {
-			chr = *(s++);
-			switch (chr) {
-				case '0': chr = '\0'; break;
-				case 'b': chr = '\010'; break;
-				case 't': chr = '\011'; break;
-				case 'e': chr = '\003'; break;
-				case 'f': chr = '\f'; break;
-				case 'n':
-				case 'r': chr = '\r'; break;
-				case 0: chr = -1; s--; break;
-				default: break;
-			}
+		// Most translations here are for the Dragon 200-E keyboard,
+		// but we map '\e' specially to BREAK:
+		if (chr == 0x1b) {
+			chr = 0x03;
 		}
+
 		if (layout == dkbd_layout_dragon200e) {
 			switch (chr) {
 			case '[': chr = 0x00; break;
@@ -228,78 +225,85 @@ static sds parse_string(const char *s, enum dkbd_layout layout) {
 			case '\\': chr = 0x0b; break;
 			// some very partial utf-8 decoding:
 			case 0xc2:
-				chr = *(s++);
-				switch (chr) {
-				case 0xa1: chr = 0x5b; break; // ¡
-				case 0xa7: chr = 0x13; break; // §
-				case 0xba: chr = 0x14; break; // º
-				case 0xbf: chr = 0x5d; break; // ¿
-				case 0: chr = -1; s--; break;
-				default: chr = -1; break;
+				if (len > 0) {
+					len--;
+					switch (*(p++)) {
+					case 0xa1: chr = 0x5b; break; // ¡
+					case 0xa7: chr = 0x13; break; // §
+					case 0xba: chr = 0x14; break; // º
+					case 0xbf: chr = 0x5d; break; // ¿
+					default: p--; len++; break;
+					}
 				}
 				break;
 			case 0xc3:
-				chr = *(s++);
-				switch (chr) {
-				case 0x80: case 0xa0: chr = 0x1b; break; // à
-				case 0x81: case 0xa1: chr = 0x16; break; // á
-				case 0x82: case 0xa2: chr = 0x0e; break; // â
-				case 0x83: case 0xa3: chr = 0x0a; break; // ã
-				case 0x84: case 0xa4: chr = 0x05; break; // ä
-				case 0x87: case 0xa7: chr = 0x7d; break; // ç
-				case 0x88: case 0xa8: chr = 0x1c; break; // è
-				case 0x89: case 0xa9: chr = 0x17; break; // é
-				case 0x8a: case 0xaa: chr = 0x0f; break; // ê
-				case 0x8b: case 0xab: chr = 0x06; break; // ë
-				case 0x8c: case 0xac: chr = 0x1d; break; // ì
-				case 0x8d: case 0xad: chr = 0x18; break; // í
-				case 0x8e: case 0xae: chr = 0x10; break; // î
-				case 0x8f: case 0xaf: chr = 0x09; break; // ï
-				case 0x91: chr = 0x5c; break; // Ñ
-				case 0x92: case 0xb2: chr = 0x1e; break; // ò
-				case 0x93: case 0xb3: chr = 0x19; break; // ó
-				case 0x94: case 0xb4: chr = 0x11; break; // ô
-				case 0x96: case 0xb6: chr = 0x07; break; // ö
-				case 0x99: case 0xb9: chr = 0x1f; break; // ù
-				case 0x9a: case 0xba: chr = 0x1a; break; // ú
-				case 0x9b: case 0xbb: chr = 0x12; break; // û
-				case 0x9c: chr = 0x7f; break; // Ü
-				case 0x9f: chr = 0x02; break; // ß (also β)
-				case 0xb1: chr = 0x7c; break; // ñ
-				case 0xbc: chr = 0x7b; break; // ü
-				case 0: chr = -1; s--; break;
-				default: chr = -1; break;
+				if (len > 0) {
+					len--;
+					switch (*(p++)) {
+					case 0x80: case 0xa0: chr = 0x1b; break; // à
+					case 0x81: case 0xa1: chr = 0x16; break; // á
+					case 0x82: case 0xa2: chr = 0x0e; break; // â
+					case 0x83: case 0xa3: chr = 0x0a; break; // ã
+					case 0x84: case 0xa4: chr = 0x05; break; // ä
+					case 0x87: case 0xa7: chr = 0x7d; break; // ç
+					case 0x88: case 0xa8: chr = 0x1c; break; // è
+					case 0x89: case 0xa9: chr = 0x17; break; // é
+					case 0x8a: case 0xaa: chr = 0x0f; break; // ê
+					case 0x8b: case 0xab: chr = 0x06; break; // ë
+					case 0x8c: case 0xac: chr = 0x1d; break; // ì
+					case 0x8d: case 0xad: chr = 0x18; break; // í
+					case 0x8e: case 0xae: chr = 0x10; break; // î
+					case 0x8f: case 0xaf: chr = 0x09; break; // ï
+					case 0x91: chr = 0x5c; break; // Ñ
+					case 0x92: case 0xb2: chr = 0x1e; break; // ò
+					case 0x93: case 0xb3: chr = 0x19; break; // ó
+					case 0x94: case 0xb4: chr = 0x11; break; // ô
+					case 0x96: case 0xb6: chr = 0x07; break; // ö
+					case 0x99: case 0xb9: chr = 0x1f; break; // ù
+					case 0x9a: case 0xba: chr = 0x1a; break; // ú
+					case 0x9b: case 0xbb: chr = 0x12; break; // û
+					case 0x9c: chr = 0x7f; break; // Ü
+					case 0x9f: chr = 0x02; break; // ß (also β)
+					case 0xb1: chr = 0x7c; break; // ñ
+					case 0xbc: chr = 0x7b; break; // ü
+					default: p--; len++; break;
+					}
 				}
 				break;
 			case 0xce:
-				chr = *(s++);
-				switch (chr) {
-				case 0xb1: case 0x91: chr = 0x04; break; // α
-				case 0xb2: case 0x92: chr = 0x02; break; // β (also ß)
-				case 0: chr = -1; break;
-				default: chr = -1; break;
+				if (len > 0) {
+					len--;
+					switch (*(p++)) {
+					case 0xb1: case 0x91: chr = 0x04; break; // α
+					case 0xb2: case 0x92: chr = 0x02; break; // β (also ß)
+					default: p--; len++; break;
+					}
 				}
 				break;
 			default: break;
 			}
 		}
 
-		if (chr >= 0) {
-			new = sdscatlen(new, &chr, 1);
-		}
+		new = sdscatlen(new, (char *)&chr, 1);
 	}
 	return new;
 }
 
-void keyboard_queue_basic(struct keyboard_interface *ki, const char *s) {
+void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	sds data = NULL;
 	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	if (s) {
-		data = parse_string(s, ki->keymap.layout);
-		kip->basic_command_list = slist_append(kip->basic_command_list, data);
+		s = parse_string(s, ki->keymap.layout);
+		kip->basic_command_list = slist_append(kip->basic_command_list, s);
 	}
 	if (kip->basic_command_list) {
 		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
 	}
+}
+
+void keyboard_queue_basic(struct keyboard_interface *ki, const char *str) {
+	sds s = str ? sdsx_parse_str(str): NULL;
+	keyboard_queue_basic_sds(ki, s);
+	if (s)
+		sdsfree(s);
 }
