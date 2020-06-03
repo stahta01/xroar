@@ -30,62 +30,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Copyright 2018 Ciaran Anscomb
- *
- * The version of SDS included in XRoar is modified from the original.
- * Behaviour has changed.  If you want to re-use, it may be better if you
- * acquire the original.  Available here at time of writing:
- *
- * https://github.com/antirez/sds
- *
- * Changed sections are flagged with the word MODIFIED.
- */
-
-#ifndef SDS_H_
-#define SDS_H_
+#ifndef __SDS_H
+#define __SDS_H
 
 #define SDS_MAX_PREALLOC (1024*1024)
+extern const char *SDS_NOINIT;
 
 #include <sys/types.h>
 #include <stdarg.h>
 #include <stdint.h>
 
-/* MODIFIED - don't use packed attribute unless found by configure test. */
-
-#ifdef HAVE_VAR_ATTRIBUTE_PACKED
-#define ATTRIBUTE_PACKED __attribute__ ((__packed__))
-#else
-#define ATTRIBUTE_PACKED
-#endif
-
 typedef char *sds;
 
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
-struct ATTRIBUTE_PACKED sdshdr5 {
+struct __attribute__ ((__packed__)) sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
 };
-struct ATTRIBUTE_PACKED sdshdr8 {
+struct __attribute__ ((__packed__)) sdshdr8 {
     uint8_t len; /* used */
     uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct ATTRIBUTE_PACKED sdshdr16 {
+struct __attribute__ ((__packed__)) sdshdr16 {
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct ATTRIBUTE_PACKED sdshdr32 {
+struct __attribute__ ((__packed__)) sdshdr32 {
     uint32_t len; /* used */
     uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct ATTRIBUTE_PACKED sdshdr64 {
+struct __attribute__ ((__packed__)) sdshdr64 {
     uint64_t len; /* used */
     uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
@@ -99,7 +80,7 @@ struct ATTRIBUTE_PACKED sdshdr64 {
 #define SDS_TYPE_64 4
 #define SDS_TYPE_MASK 7
 #define SDS_TYPE_BITS 3
-#define SDS_HDR_VAR(T,s) struct sdshdr##T *shdr = (void*)((s)-(sizeof(struct sdshdr##T)));
+#define SDS_HDR_VAR(T,s) struct sdshdr##T *sh = (void*)((s)-(sizeof(struct sdshdr##T)));
 #define SDS_HDR(T,s) ((struct sdshdr##T *)((s)-(sizeof(struct sdshdr##T))))
 #define SDS_TYPE_5_LEN(f) ((f)>>SDS_TYPE_BITS)
 
@@ -128,19 +109,19 @@ static inline size_t sdsavail(const sds s) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            return shdr->alloc - shdr->len;
+            return sh->alloc - sh->len;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            return shdr->alloc - shdr->len;
+            return sh->alloc - sh->len;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            return shdr->alloc - shdr->len;
+            return sh->alloc - sh->len;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            return shdr->alloc - shdr->len;
+            return sh->alloc - sh->len;
         }
     }
     return 0;
@@ -256,7 +237,6 @@ sds sdscatprintf(sds s, const char *fmt, ...);
 
 sds sdscatfmt(sds s, char const *fmt, ...);
 sds sdstrim(sds s, const char *cset);
-sds sdsrtrim(sds s, const char *cset);  // MODIFIED.  New function.
 void sdsrange(sds s, ssize_t start, ssize_t end);
 void sdsupdatelen(sds s);
 void sdsclear(sds s);
@@ -286,5 +266,9 @@ void *sdsAllocPtr(sds s);
 void *sds_malloc(size_t size);
 void *sds_realloc(void *ptr, size_t size);
 void sds_free(void *ptr);
+
+#ifdef REDIS_TEST
+int sdsTest(int argc, char *argv[]);
+#endif
 
 #endif

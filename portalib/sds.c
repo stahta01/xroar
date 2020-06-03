@@ -30,31 +30,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Copyright 2018 Ciaran Anscomb
- *
- * This version is modified from the distributed version of SDS specifically
- * for XRoar.  Behaviour has changed.  If you want to re-use, it may be better
- * if you acquire the original.  Changed sections are flagged with the word
- * MODIFIED.
- */
-
-#include "config.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
 #include <limits.h>
-
 #include "sds.h"
 #include "sdsalloc.h"
 
-/* MODIFIED.  Declared static, and removed from header.  Only used within
- * functions declared here, and the header declaration would have made a new
- * pointer value anywhere that used it anyway. */
-static const char *SDS_NOINIT = "SDS_NOINIT";
+const char *SDS_NOINIT = "SDS_NOINIT";
 
 static inline int sdsHdrSize(char type) {
     switch(type&SDS_TYPE_MASK) {
@@ -102,7 +87,7 @@ static inline char sdsReqType(size_t string_size) {
  * end of the string. However the string is binary safe and can contain
  * \0 characters in the middle, as the length is stored in the sds header. */
 sds sdsnewlen(const void *init, size_t initlen) {
-    void *sh;
+    void *newsh;
     sds s;
     char type = sdsReqType(initlen);
     /* Empty strings are usually created in order to append. Use type 8
@@ -111,13 +96,13 @@ sds sdsnewlen(const void *init, size_t initlen) {
     int hdrlen = sdsHdrSize(type);
     unsigned char *fp; /* flags pointer. */
 
-    sh = s_malloc(hdrlen+initlen+1);
-    if (sh == NULL) return NULL;
+    newsh = s_malloc(hdrlen+initlen+1);
+    if (newsh == NULL) return NULL;
     if (init==SDS_NOINIT)
         init = NULL;
     else if (!init)
-        memset(sh, 0, hdrlen+initlen+1);
-    s = (char*)sh+hdrlen;
+        memset(newsh, 0, hdrlen+initlen+1);
+    s = (char*)newsh+hdrlen;
     fp = ((unsigned char*)s)-1;
     switch(type) {
         case SDS_TYPE_5: {
@@ -126,29 +111,29 @@ sds sdsnewlen(const void *init, size_t initlen) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            shdr->len = initlen;
-            shdr->alloc = initlen;
+            sh->len = initlen;
+            sh->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            shdr->len = initlen;
-            shdr->alloc = initlen;
+            sh->len = initlen;
+            sh->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            shdr->len = initlen;
-            shdr->alloc = initlen;
+            sh->len = initlen;
+            sh->alloc = initlen;
             *fp = type;
             break;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            shdr->len = initlen;
-            shdr->alloc = initlen;
+            sh->len = initlen;
+            sh->alloc = initlen;
             *fp = type;
             break;
         }
@@ -359,26 +344,26 @@ void sdsIncrLen(sds s, ssize_t incr) {
         }
         case SDS_TYPE_8: {
             SDS_HDR_VAR(8,s);
-            assert((incr >= 0 && shdr->alloc-shdr->len >= incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
-            len = (shdr->len += incr);
+            assert((incr >= 0 && sh->alloc-sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
         }
         case SDS_TYPE_16: {
             SDS_HDR_VAR(16,s);
-            assert((incr >= 0 && shdr->alloc-shdr->len >= incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
-            len = (shdr->len += incr);
+            assert((incr >= 0 && sh->alloc-sh->len >= incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
         }
         case SDS_TYPE_32: {
             SDS_HDR_VAR(32,s);
-            assert((incr >= 0 && shdr->alloc-shdr->len >= (unsigned int)incr) || (incr < 0 && shdr->len >= (unsigned int)(-incr)));
-            len = (shdr->len += incr);
+            assert((incr >= 0 && sh->alloc-sh->len >= (unsigned int)incr) || (incr < 0 && sh->len >= (unsigned int)(-incr)));
+            len = (sh->len += incr);
             break;
         }
         case SDS_TYPE_64: {
             SDS_HDR_VAR(64,s);
-            assert((incr >= 0 && shdr->alloc-shdr->len >= (uint64_t)incr) || (incr < 0 && shdr->len >= (uint64_t)(-incr)));
-            len = (shdr->len += incr);
+            assert((incr >= 0 && sh->alloc-sh->len >= (uint64_t)incr) || (incr < 0 && sh->len >= (uint64_t)(-incr)));
+            len = (sh->len += incr);
             break;
         }
         default: len = 0; /* Just to avoid compilation warnings. */
@@ -735,21 +720,6 @@ sds sdstrim(sds s, const char *cset) {
     return s;
 }
 
-/* MODIFIED.  New function not in original SDSL.  As sdstrim(), but only
- * operates on the right of the string. */
-sds sdsrtrim(sds s, const char *cset) {
-    size_t len = sdslen(s);
-    char *ep = s + len - 1;
-
-    while (len > 0 && strchr(cset, *ep)) {
-	    ep--;
-	    len--;
-    }
-    s[len] = '\0';
-    sdssetlen(s, len);
-    return s;
-}
-
 /* Turn the string into a smaller (or equal) string containing only the
  * substring specified by the 'start' and 'end' indexes.
  *
@@ -936,6 +906,13 @@ sds sdscatrepr(sds s, const char *p, size_t len) {
     return sdscatlen(s,"\"",1);
 }
 
+/* Helper function for sdssplitargs() that returns non zero if 'c'
+ * is a valid hex digit. */
+int is_hex_digit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+           (c >= 'A' && c <= 'F');
+}
+
 /* Helper function for sdssplitargs() that converts a hex digit into an
  * integer from 0 to 15 */
 int hex_digit_to_int(char c) {
@@ -998,8 +975,8 @@ sds *sdssplitargs(const char *line, int *argc) {
             while(!done) {
                 if (inq) {
                     if (*p == '\\' && *(p+1) == 'x' &&
-                                             isxdigit(*(p+2)) &&
-                                             isxdigit(*(p+3)))
+                                             is_hex_digit(*(p+2)) &&
+                                             is_hex_digit(*(p+3)))
                     {
                         unsigned char byte;
 
@@ -1021,9 +998,10 @@ sds *sdssplitargs(const char *line, int *argc) {
                         }
                         current = sdscatlen(current,&c,1);
                     } else if (*p == '"') {
-                        // MODIFIED - original SDS does not allow string to
-                        // continue after a quoted section.
-                        inq=0;
+                        /* closing quote must be followed by a space or
+                         * nothing at all. */
+                        if (*(p+1) && !isspace(*(p+1))) goto err;
+                        done=1;
                     } else if (!*p) {
                         /* unterminated quotes */
                         goto err;
@@ -1035,9 +1013,10 @@ sds *sdssplitargs(const char *line, int *argc) {
                         p++;
                         current = sdscatlen(current,"'",1);
                     } else if (*p == '\'') {
-                        // MODIFIED - original SDS does not allow string to
-                        // continue after a quoted section.
-                        insq=0;
+                        /* closing quote must be followed by a space or
+                         * nothing at all. */
+                        if (*(p+1) && !isspace(*(p+1))) goto err;
+                        done=1;
                     } else if (!*p) {
                         /* unterminated quotes */
                         goto err;
@@ -1045,12 +1024,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         current = sdscatlen(current,p,1);
                     }
                 } else {
-                    if (*p == '\\' && *(p+1)) {
-                        // MODIFIED - original SDS doesn't support arbitrary
-                        // escaped chars outside quotes
-                        p++;
-                        current = sdscatlen(current,p,1);
-                    } else switch(*p) {
+                    switch(*p) {
                     case ' ':
                     case '\n':
                     case '\r':
