@@ -15,6 +15,7 @@ Version 0.36, unreleased
   * SAM VDG counter switching behaviour updates [with Stewart Orchard]
   * Reload cartridge ROMs on each reset to aid test cycle [Steve Bamford]
   * Try first listed UI module if user-specified one not found
+  * New configuration parsing with quotes and escape sequences
 
 Version 0.35, Fri Jun 27 2018
 
