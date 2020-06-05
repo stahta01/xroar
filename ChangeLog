@@ -17,7 +17,7 @@ Version 0.36, unreleased
   * Try first listed UI module if user-specified one not found
   * New configuration parsing with quotes and escape sequences
 
-Version 0.35, Fri Jun 27 2018
+Version 0.35, Fri Jul 27 2018
 
   * New EXTMEM/SLENB support allows cartridges to inhibit normal device select
   * New NX32 RAM cartridge [by Tormod Volden]
