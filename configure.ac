@@ -565,17 +565,15 @@ AM_COND_IF([LOGGING], [AC_DEFINE([LOGGING], 1, [Logging])])
 AM_CONDITIONAL([TRACE], [test "x$enable_trace" != "xno"])
 AM_COND_IF([TRACE], [AC_DEFINE([TRACE], 1, [Support trace mode])])
 
+AM_CONDITIONAL([ENABLE_SNAPSHOT], [test "x$enable_snapshot" = "xyes"])
+AM_COND_IF([ENABLE_SNAPSHOT], [AC_DEFINE([ENABLE_SNAPSHOT], 1, [Snapshot build])])
+
 # Version information for Windows resource file
-RC_VER_MAJOR=`echo $VERSION|cut -d. -f1`
-RC_VER_MINOR=`echo $VERSION|cut -d. -f2`
-test -z "$RC_REV_MAJOR" && RC_REV_MAJOR=`date +%Y`
-if test -z "$RC_REV_MINOR"; then
-	tmp_m=`date +%m`
-	tmp_d=`date +%d`
-	tmp_H=`date +%H`
-	tmp_M=`date +%M`
-	RC_REV_MINOR=`expr $tmp_m \* 4096 + $tmp_d \* 128 + $tmp_H \* 4 + $tmp_M / 15`
-fi
+test -z "$RC_VER_MAJOR" && RC_VER_MAJOR=`echo $VERSION|cut -d. -f1`
+test -z "$RC_VER_MINOR" && RC_VER_MINOR=`echo $VERSION|cut -d. -f2`
+test -z "$RC_REV_MAJOR" && RC_REV_MAJOR=`echo $VERSION|cut -d. -f3`
+test -z "$RC_REV_MAJOR" && RC_REV_MAJOR="0"
+test -z "$RC_REV_MINOR" && RC_REV_MINOR="0"
 RC_VER_MAJOR=`expr $RC_VER_MAJOR + 0`
 RC_VER_MINOR=`expr $RC_VER_MINOR + 0`
 RC_REV_MAJOR=`expr $RC_REV_MAJOR + 0`
@@ -588,9 +586,6 @@ AC_SUBST(RC_REV_MINOR)
 AC_SUBST(RC_VERSION)
 AC_DEFINE_UNQUOTED([RC_REV_MAJOR], [$RC_REV_MAJOR], [Snapshot major])
 AC_DEFINE_UNQUOTED([RC_REV_MINOR], [$RC_REV_MINOR], [Snapshot minor])
-
-AM_CONDITIONAL([ENABLE_SNAPSHOT], [test "x$enable_snapshot" = "xyes"])
-AM_COND_IF([ENABLE_SNAPSHOT], [AC_DEFINE([ENABLE_SNAPSHOT], 1, [Snapshot build])])
 
 ### Write everything out
 
