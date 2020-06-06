@@ -16,6 +16,8 @@ Version 0.36, unreleased
   * Reload cartridge ROMs on each reset to aid test cycle [Steve Bamford]
   * Try first listed UI module if user-specified one not found
   * New configuration parsing with quotes and escape sequences
+  * In Windows, search Documents/XRoar/ (for config file) and
+    Documents/XRoar/roms/ (for ROM images).
 
 Version 0.35, Fri Jul 27 2018
 

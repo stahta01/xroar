@@ -155,10 +155,14 @@ accepts the more familiar @kbd{Command}+@var{key} in place of the
 @subsection Windows binary package
 
 Download and unzip the appropriate @file{.zip} distribution for your system.
-The easiest way forward is to simply run it from this directory.
 
-Copy ROM images to the same directory, and if you create a configuration file,
-simply name if @file{xroar.conf} and put it in the same directory.
+The easiest way forward is to simply put ROM images into the directory created
+when you unzip the distribution, and then run the @file{.exe} straight from
+there.  You can also put any configuration file (@file{xroar.conf}) here.
+
+However, if you want to avoid having to move files around each time you
+upgrade, you can create @file{Documents/XRoar} to contain your configuration
+file, and a subdirectory of that, @file{Documents/XRoar/roms} for ROM images.
 
 Note when troubleshooting that the logging from the Windows binary is probably
 only going to be visible if you run it with the @option{-C} option (must be the
@@ -394,7 +398,7 @@ the defaults:
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
 @item Unix/Linux @tab ~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
 @item Mac OS X @tab ~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
-@item Windows @tab :~/Local Settings/Application Data/XRoar:~/Application Data/XRoar
+@item Windows @tab :~/Documents/XRoar:~/AppData/Local/XRoar:~/AppData/Roaming/XRoar
 @end multitable
 
 Note the leading @samp{:} in the Windows default indicates an empty entry,

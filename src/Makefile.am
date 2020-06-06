@@ -117,8 +117,8 @@ xroar_CFLAGS += -DROMPATH=\".\"
 xroar_CFLAGS += -DCONFPATH=\".\"
 else
 if MINGW
-xroar_CFLAGS += -DROMPATH=\":~/Local\ Settings/Application\ Data/XRoar/roms:~/Application\ Data/XRoar/roms\"
-xroar_CFLAGS += -DCONFPATH=\":~/Local\ Settings/Application\ Data/XRoar:~/Application\ Data/XRoar\"
+xroar_CFLAGS += -DROMPATH=\":~/Documents/XRoar/roms:~/AppData/Local/XRoar/roms:~/AppData/Roaming/XRoar/roms\"
+xroar_CFLAGS += -DCONFPATH=\":~/Documents/XRoar:~/AppData/Local/XRoar:~/AppData/Roaming/XRoar\"
 else
 if UI_COCOA
 xroar_CFLAGS += -DROMPATH=\"~/Library/XRoar/roms:~/.xroar/roms:$(datadir)/xroar/roms:\"
