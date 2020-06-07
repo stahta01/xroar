@@ -2,7 +2,7 @@
 
 Windows user-interface module
 
-Copyright 2014-2019 Ciaran Anscomb
+Copyright 2014-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -78,7 +78,9 @@ static struct {
 static HMENU top_menu;
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static HWND about_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
+static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -86,6 +88,7 @@ static void setup_file_menu(void);
 static void setup_view_menu(void);
 static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2);
 static void setup_tool_menu(void);
+static void setup_help_menu(void);
 
 void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	top_menu = CreateMenu();
@@ -93,6 +96,7 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	setup_view_menu();
 	setup_hardware_menu(uisdl2);
 	setup_tool_menu();
+	setup_help_menu();
 }
 
 void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2) {
@@ -254,10 +258,20 @@ static void setup_tool_menu(void) {
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
 }
 
+static void setup_help_menu(void) {
+	HMENU help_menu;
+
+	help_menu = CreatePopupMenu();
+	AppendMenu(help_menu, MF_STRING, TAG(ui_tag_about), "About");
+
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)help_menu, "&Help");
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 #ifdef HAVE_SDL2
+	HWND hwnd = wmmsg->msg.win.hwnd;
 	UINT msg = wmmsg->msg.win.msg;
 	WPARAM wParam = wmmsg->msg.win.wParam;
 #else
@@ -395,6 +409,14 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 	case ui_tag_joy_left:
 		xroar_set_joystick(1, 1, joystick_names[tag_value].name);
+		break;
+
+	// Help:
+	case ui_tag_about:
+		if (!IsWindow(about_dialog)) {
+			about_dialog = CreateDialog(NULL, MAKEINTRESOURCE(1), hwnd, (DLGPROC)about_proc);
+			ShowWindow(about_dialog, SW_SHOW);
+		}
 		break;
 
 	default:
@@ -605,4 +627,28 @@ void sdl_windows32_add_menu(SDL_Window *sw) {
 void sdl_windows32_remove_menu(SDL_Window *sw) {
 	HWND hwnd = get_hwnd(sw);
 	SetMenu(hwnd, NULL);
+}
+
+static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	switch (msg) {
+
+	case WM_INITDIALOG:
+		return TRUE;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDOK:
+			EndDialog(hwnd, IDOK);
+			about_dialog = NULL;
+			return TRUE;
+
+		default:
+			break;
+		}
+		return TRUE;
+
+	default:
+		break;
+	}
+	return FALSE;
 }
