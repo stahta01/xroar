@@ -2,7 +2,7 @@
 
 User-interface modules & interfaces
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -53,36 +53,38 @@ extern struct xconfig_enum ui_gl_filter_list[];
  * bits, and values are 16 bits wide. */
 
 enum ui_tag {
-	/* Simple action */
+	// Simple action
 	ui_tag_action = 1,
-	/* Hardware */
+	// Hardware
 	ui_tag_machine,
 	ui_tag_cartridge,
-	/* Tape */
+	// Tape
 	ui_tag_tape_flags,
 	ui_tag_tape_input_filename,  // .data = filename
 	ui_tag_tape_output_filename,  // .data = filename
-	/* Disk */
+	// Disk
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
 	ui_tag_disk_eject,
 	ui_tag_disk_write_enable,
 	ui_tag_disk_write_back,
 	ui_tag_disk_data,  // .data = struct vdisk
-	/* Video */
+	// Video
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
 	ui_tag_ccr,
 	ui_tag_cross_colour,
-	/* Audio */
+	// Audio
 	ui_tag_fast_sound,
 	ui_tag_ratelimit,
-	/* Keyboard */
+	// Keyboard
 	ui_tag_keymap,
 	ui_tag_kbd_translate,
-	/* Joysticks */
+	// Joysticks
 	ui_tag_joy_right,
 	ui_tag_joy_left,
+	// Misc
+	ui_tag_about,
 };
 
 /* Actions (simple responses to user input) are probably handled internally,
