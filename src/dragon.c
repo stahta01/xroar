@@ -974,7 +974,7 @@ static _Bool dragon_set_inverted_text(struct machine *m, int action) {
 	case 0: case 1:
 		md->inverted_text = action;
 		break;
-	case 2:
+	case -2:
 		md->inverted_text = !md->inverted_text;
 		break;
 	default:
