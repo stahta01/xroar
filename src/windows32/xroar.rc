@@ -30,7 +30,7 @@ BEGIN
       VALUE "FileDescription", "Dragon/Tandy CoCo emulator"
       VALUE "FileVersion", to_str(RC_VERSION)
       VALUE "InternalName", "xroar"
-      VALUE "LegalCopyright", "Copyright 2003-2018 Ciaran Anscomb.  GNU GPL 2 or later."
+      VALUE "LegalCopyright", "Copyright 2003-2020 Ciaran Anscomb.  GNU GPL 3 or later."
       VALUE "OriginalFilename", "xroar.exe"
       VALUE "ProductName", "XRoar"
       VALUE "ProductVersion", to_str(RC_VERSION)
@@ -52,8 +52,11 @@ CAPTION "About XRoar"
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 FONT 9, "Arial"
 BEGIN
-   CTEXT "XRoar 0.36", IDC_STATIC, 16, 10, 192, 12
-   CTEXT "Copyright \xa9 2003-2020 Ciaran Anscomb <xroar@6809.org.uk>", IDC_STATIC, 16, 28, 192, 12
-   CONTROL "<a href=""http://www.6809.org.uk/xroar/"">http://www.6809.org.uk/xroar/</a>", 103, "SysLink", WS_CHILD | WS_VISIBLE | WS_GROUP | 0x1, 68, 46, 88, 12
+   CTEXT "XRoar 0.35", IDC_STATIC, 16, 10, 192, 12
+   CTEXT "Copyright \xa9 2003-2020 Ciaran Anscomb <xroar@6809.org.uk>", IDC_STATIC, 8, 28, 208, 12
+   // Apparently this "requires v6 of comctl32".  Don't know how to do that in
+   // MinGW yet.
+   //CONTROL "<a href=""http://www.6809.org.uk/xroar/"">http://www.6809.org.uk/xroar/</a>", 103, "SysLink", WS_CHILD | WS_VISIBLE | WS_GROUP | 0x1, 64, 46, 96, 12
+   CTEXT "http://www.6809.org.uk/xroar/", IDC_STATIC, 64, 46, 96, 12
    CONTROL "&Close", IDOK, "BUTTON", BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 164, 64, 44, 14
 END

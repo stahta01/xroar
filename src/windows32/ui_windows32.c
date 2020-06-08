@@ -415,7 +415,9 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 	case ui_tag_about:
 		if (!IsWindow(about_dialog)) {
 			about_dialog = CreateDialog(NULL, MAKEINTRESOURCE(1), hwnd, (DLGPROC)about_proc);
-			ShowWindow(about_dialog, SW_SHOW);
+			if (about_dialog) {
+				ShowWindow(about_dialog, SW_SHOW);
+			}
 		}
 		break;
 
@@ -638,14 +640,14 @@ static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case IDOK:
-			EndDialog(hwnd, IDOK);
+		case IDCANCEL:
+			DestroyWindow(hwnd);
 			about_dialog = NULL;
 			return TRUE;
 
 		default:
 			break;
 		}
-		return TRUE;
 
 	default:
 		break;
