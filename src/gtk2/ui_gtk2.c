@@ -322,7 +322,7 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 	(void)uigtk2;
 	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
 	gtk_about_dialog_set_version(dialog, VERSION);
-	gtk_about_dialog_set_copyright(dialog, "Copyright © 2003–2020 Ciaran Anscomb <xroar@6809.org.uk>");
+	gtk_about_dialog_set_copyright(dialog, "Copyright © " PACKAGE_YEAR " Ciaran Anscomb <xroar@6809.org.uk>");
 	gtk_about_dialog_set_license(dialog,
 "XRoar is free software; you can redistribute it and/or modify it under\n"
 "the terms of the GNU General Public License as published by the Free Free\n"
