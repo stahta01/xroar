@@ -118,6 +118,8 @@ static void *ui_sdl_new(void *cfg) {
 	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_set_state, uisdl2);
 	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
+	cocoa_update_machine_menu(uisdl2);
+	cocoa_update_cartridge_menu(uisdl2);
 #endif
 
 #ifdef WINDOWS32
