@@ -52,7 +52,7 @@ CAPTION "About XRoar"
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 FONT 9, "Arial"
 BEGIN
-   CTEXT "XRoar 0.35", IDC_STATIC, 16, 10, 192, 12
+   CTEXT to_str(PACKAGE_TEXT), IDC_STATIC, 16, 10, 192, 12
    CTEXT "Copyright \xa9 2003-2020 Ciaran Anscomb <xroar@6809.org.uk>", IDC_STATIC, 8, 28, 208, 12
    // Apparently this "requires v6 of comctl32".  Don't know how to do that in
    // MinGW yet.
