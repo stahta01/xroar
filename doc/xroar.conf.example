@@ -1,0 +1,51 @@
+### Configuration file for XRoar
+
+# This file contains configuration examples.  Everything in here is commented
+# out, so remove the leading '#' character to try something.  This is certainly
+# not an exhaustive list.  Consult the manual for more information.
+
+## Set user-interface options:
+
+#ao-gain -6
+#ccr simulated
+#kbd-translate
+
+## Maybe print to a network printer?
+
+#lp-pipe "enscript -B -N r -d myprinter"
+
+## Listen for GDB connections?
+
+#gdb
+#gdb-ip 127.0.0.1
+#gdb-port 65520
+
+## New machine definition:
+
+#machine pippin
+#  machine-desc "Dragon Pippin (prototype)"
+#  machine-arch dragon32
+#  ram 16
+#  nodos
+
+## Or override the defaults of one of the built-in definitions:
+
+#machine coco
+#  ram 4
+#  bas @coco1
+#  noextbas
+#  nodos
+
+## New cartridge definition:
+
+#cart dunjunz
+#  cart-desc "Dunjunz GMC"
+#  cart-type gmc
+#  cart-autorun
+#  cart-rom /home/ciarana/src/dunjunz/dunjunz.rom
+
+## Or again, override built-in defaults:
+
+#cart ide
+#  cart-rom yados
+

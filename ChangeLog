@@ -1,4 +1,4 @@
-Version 0.36, unreleased
+Version 0.36, Mon Jun  8 2020
 
   * Fix SAM S output in map type 1 [Pere Serrat]
   * Work around Windows audio failure when 5.1 is available [Gerald Stefan]
