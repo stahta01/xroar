@@ -28,14 +28,3 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
----
-
-Copyright 2018 Ciaran Anscomb
-
-The version of SDS included in XRoar is modified from the original.
-Behaviour has changed.  If you want to re-use, it may be better if you
-acquire the original.  Available here at time of writing:
-
-https://github.com/antirez/sds
-
