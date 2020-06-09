@@ -181,8 +181,8 @@ struct MC6809 *mc6809_new(void) {
 }
 
 static void mc6809_free(struct part *p) {
-	struct MC6809 *cpu = (struct MC6809 *)p;
 #ifdef TRACE
+	struct MC6809 *cpu = (struct MC6809 *)p;
 	if (cpu->tracer) {
 		mc6809_trace_free(cpu->tracer);
 	}
