@@ -209,8 +209,8 @@ struct MC6809 *hd6309_new(void) {
 }
 
 static void hd6309_free(struct part *p) {
-	struct HD6309 *hcpu = (struct HD6309 *)p;
 #ifdef TRACE
+	struct HD6309 *hcpu = (struct HD6309 *)p;
 	if (hcpu->tracer) {
 		hd6309_trace_free(hcpu->tracer);
 	}
