@@ -15,7 +15,9 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 /* This Windows32 code is probably all wrong, but it does seem to work */
 

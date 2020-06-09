@@ -21,7 +21,9 @@ See COPYING.GPL for redistribution conditions.
  * maintain a queue of fragment buffers; the callback takes the next filled
  * buffer from the queue and copies its data into place. */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <signal.h>
 #include <stdlib.h>

@@ -23,7 +23,9 @@ SN76489 sound chip.
  *         https://drive.google.com/drive/folders/1FWSpWshl_GJevk85hsm54b62SGGojyB1
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>

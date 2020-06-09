@@ -21,7 +21,9 @@ Initial version.  Doesn't know anything about keymap updates yet.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <SDL.h>
 #include <SDL_syswm.h>

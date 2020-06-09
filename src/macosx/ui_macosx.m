@@ -26,7 +26,9 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <SDL.h>
 #include <sys/param.h> /* for MAXPATHLEN */

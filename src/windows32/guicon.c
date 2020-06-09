@@ -17,6 +17,10 @@ See COPYING.GPL for redistribution conditions.
 
 // Console redirection adapted from example by "luke" on stackoverflow.com
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <windows.h>
 #include <stdio.h>
 #include <fcntl.h>

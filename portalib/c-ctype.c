@@ -17,7 +17,9 @@ See COPYING.LGPL and COPYING.GPL for redistribution conditions.
 
 // Assumes ASCII.
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include "c-ctype.h"
 

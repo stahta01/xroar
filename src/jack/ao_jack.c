@@ -19,7 +19,9 @@ See COPYING.GPL for redistribution conditions.
  * sufficiently different that new code will be needed to properly support
  * stereo, so nchannels == 1 too. */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 // for struct timespec, gettimeofday
 #define _POSIX_C_SOURCE 200112L

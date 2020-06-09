@@ -20,7 +20,9 @@ See COPYING.GPL for redistribution conditions.
  *         http://www.swtpc.com/mholley/DC_5/TMS279X_DataSheet.pdf
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdint.h>

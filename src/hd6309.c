@@ -26,7 +26,9 @@ See COPYING.GPL for redistribution conditions.
  *         2009 Darren Atkinson
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>

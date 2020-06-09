@@ -15,7 +15,9 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 // for struct timespec, gettimeofday, nanosleep
 #define _POSIX_C_SOURCE 200112L

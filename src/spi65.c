@@ -16,6 +16,10 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "cart.h"
 
 uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active);

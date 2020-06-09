@@ -17,7 +17,9 @@ Includes experimental CUE support.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 // for off_t based functions
 #define _POSIX_C_SOURCE 200112L

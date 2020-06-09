@@ -19,7 +19,9 @@ See COPYING.GPL for redistribution conditions.
 //
 // This was never operational, Windows just uses SDL audio.
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <windows.h>
 

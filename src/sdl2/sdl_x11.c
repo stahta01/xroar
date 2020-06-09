@@ -23,7 +23,9 @@ KeymapNotify events used to update internal modifier state.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <SDL.h>
 #include <SDL_syswm.h>

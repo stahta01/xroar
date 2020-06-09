@@ -20,7 +20,9 @@ See COPYING.GPL for redistribution conditions.
  *         http://www.coco3.com/unravalled/disk-basic-unravelled.pdf
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -18,8 +18,6 @@ See COPYING.GPL for redistribution conditions.
 #ifndef XROAR_MC6809_H_
 #define XROAR_MC6809_H_
 
-#include "config.h"
-
 #include <stdint.h>
 
 #include "delegate.h"

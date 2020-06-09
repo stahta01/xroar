@@ -20,8 +20,6 @@ See COPYING.GPL for redistribution conditions.
 
 #include <stdint.h>
 
-#include "config.h"
-
 #ifndef LOGGING
 
 #define LOG_DEBUG(...) do {} while (0)

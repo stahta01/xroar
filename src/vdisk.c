@@ -22,7 +22,9 @@ See COPYING.GPL for redistribution conditions.
  * collection of all the tracks addressable by one head.
  */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdint.h>

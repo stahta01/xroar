@@ -15,7 +15,9 @@ See COPYING.GPL for redistribution conditions.
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 /* Windows has a habit of making include order important: */
 #include <winsock2.h>

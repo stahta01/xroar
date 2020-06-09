@@ -20,7 +20,9 @@ under the 3-clause "Modified BSD License".
 
 */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 // for regex, strspn
 #define _POSIX_C_SOURCE 200112L

@@ -21,8 +21,6 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 #include <stdio.h>
 
-#include "config.h"
-
 #include "ui.h"
 #include "xconfig.h"
 

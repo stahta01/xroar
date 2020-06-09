@@ -24,8 +24,6 @@ _BSD_SOURCE) before inclusion to get the right set of prototypes.
 #ifndef PORTALIB_PL_STRING_H_
 #define PORTALIB_PL_STRING_H_
 
-#include "config.h"
-
 #ifdef _BSD_SOURCE
 
 #ifndef HAVE_STRNLEN

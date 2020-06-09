@@ -23,7 +23,9 @@ See COPYING.GPL for redistribution conditions.
 /* TODO: I've hacked in an optional "becker port" at $FF49/$FF4A.  Is this the
  * best place for it? */
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>
