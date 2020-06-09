@@ -503,9 +503,9 @@ new machine could be selected with @option{-default-machine pippin}:
 
 @example
 machine pippin
-machine-desc Dragon Pippin (prototype)
-machine-arch dragon32
-ram 16
+  machine-desc "Dragon Pippin (prototype)"
+  machine-arch dragon32
+  ram 16
 @end example
 
 
@@ -602,10 +602,10 @@ example:
 
 @example
 cart sdose6
-cart-desc SuperDOS E6
-cart-type dragondos
-cart-rom sdose6.rom
-cart-rom2 dosdream.rom
+  cart-desc "SuperDOS E6"
+  cart-type dragondos
+  cart-rom sdose6.rom
+  cart-rom2 dosdream.rom
 @end example
 
 This will define a cartridge called @samp{sdose6} as a DragonDOS cartridge with
