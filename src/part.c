@@ -42,18 +42,11 @@ void *part_new(size_t psize) {
 
 void part_init(struct part *p, const char *name) {
 	p->name = xstrdup(name);
-#ifdef PART_DEBUG
-	LOG_PRINT("%s: part_init()\n", name);
-#endif
 }
 
 void part_free(struct part *p) {
 	if (!p)
 		return;
-#ifdef PART_DEBUG
-	const char *n = p->name ? p->name : "INVALID";
-	LOG_PRINT("%s: part_free()\n", n);
-#endif
 
 	if (p->parent) {
 		part_remove_component(p->parent, p);
@@ -64,17 +57,9 @@ void part_free(struct part *p) {
 	// before interfaces & components are destroyed.  mustn't actually free
 	// the structure itself.
 	if (p->free) {
-#ifdef PART_DEBUG
-		LOG_PRINT("%s: calling %s->free()\n", n, n);
-#endif
 		p->free(p);
 	}
 
-#ifdef PART_DEBUG
-	if (p->interfaces) {
-		LOG_PRINT("%s: freeing interfaces\n", n);
-	}
-#endif
 	slist_free_full(p->interfaces, (slist_free_func)intf_free);
 
 	// slist_free_full() does not permit freeing functions to modify the list,
@@ -82,9 +67,6 @@ void part_free(struct part *p) {
 	while (p->components) {
 		struct part_component *pc = p->components->data;
 		struct part *c = pc->p;
-#ifdef PART_DEBUG
-		LOG_PRINT("%s: freeing sub-component: %s (%s)\n", n, pc->id, c->name);
-#endif
 		p->components = slist_remove(p->components, pc);
 		free(pc->id);
 		free(pc);
