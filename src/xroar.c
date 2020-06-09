@@ -1569,10 +1569,10 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 					new_cart->attach_interface(new_cart, "sound", xroar_ao_interface->sound_interface);
 				}
 			}
+			// Reset the cart once all interfaces are attached
+			if (new_cart->reset)
+				new_cart->reset(new_cart);
 		}
-		// Reset the cart once all interfaces are attached
-		if (new_cart->reset)
-			new_cart->reset(new_cart);
 	}
 
 	if (notify) {
