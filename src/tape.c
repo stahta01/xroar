@@ -2,7 +2,7 @@
 
 Tape support
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -450,6 +450,8 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 				tip->short_leader = 1;
 			if (!tip->is_dragon && ti->tape_input->leader_count < 130)
 				tip->short_leader = 1;
+			// leader padding needs breakpoints set
+			set_breakpoints(tip);
 		}
 		break;
 	case FILETYPE_ASC:
@@ -1159,6 +1161,16 @@ static struct machine_bp bp_list_fast[] = {
 	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 };
 
+// Need to enable these two aspects of fast loading if tape padding turned on
+// and short leader detected.
+
+static struct machine_bp bp_list_pad[] = {
+	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
+	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+};
+
 // Intercepting CBIN for fast loading isn't compatible with tape-rewriting, so
 // listed separately.
 
@@ -1201,6 +1213,8 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 		if (!tip->tape_rewrite) {
 			machine_bp_add_list(tip->machine, bp_list_fast_cbin, tip);
 		}
+	} else if (tip->short_leader) {
+		machine_bp_add_list(tip->machine, bp_list_pad, tip);
 	}
 	if (tip->tape_rewrite) {
 		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
