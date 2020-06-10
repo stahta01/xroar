@@ -1,3 +1,6 @@
+Version 0.36.x, unreleased
+
+
 Version 0.36, Mon Jun  8 2020
 
   * Fix SAM S output in map type 1 [Pere Serrat]
