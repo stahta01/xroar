@@ -382,11 +382,11 @@ hexadecimal number, @emph{hhhh}.  Internally, this will be encoded as UTF-8.
 
 Any other character following a backslash is included verbatim.
 
-Note that when specifying options on the command line, it is assumed that your
-shell will be handling any quoting, thus quote characters that make it through
-to XRoar are included verbatim.  For similar reasons, leading and trailing
-whitespace is also included verbatim.  However, the escape sequences documented
-above may still be included.
+On the command line, it is assumed that your shell will handle argument
+quoting, thus any quote characters will be included verbatim.  Escape sequences
+are still parsed, except in the instance that an option expects a filename, as
+shells often use their own escaping mechanisms when autocompleting filenames as
+arguments.
 
 @ref{Installation} and @ref{Compilation} list good default locations for
 @file{xroar.conf}, but it is actually searched for in a list of directories.

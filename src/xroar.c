@@ -662,7 +662,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Remaining command line arguments are files.
 	while (argn < argc) {
 		if ((argn+1) < argc) {
-			xconfig_set_option(xroar_options, "load", argv[argn]);
+			// important to set this as a command-line option
+			char *opt[] = { "-load", argv[argn] };
+			xconfig_parse_cli(xroar_options, 2, opt, NULL);
 		} else {
 			// Autorun last file given.
 			private_cfg.run = argv[argn];
@@ -671,7 +673,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 	_Bool autorun_last = 0;
 	if (private_cfg.run) {
-		xconfig_set_option(xroar_options, "load", private_cfg.run);
+		// important to set this as a command-line option
+		char *opt[] = { "-load", private_cfg.run };
+		xconfig_parse_cli(xroar_options, 2, opt, NULL);
 		autorun_last = 1;
 		// XXX???  free(private_cfg.run);
 		private_cfg.run = NULL;
@@ -1991,13 +1995,13 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("machine-arch", &private_cfg.machine_arch, machine_arch_list) },
 	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, machine_keyboard_list) },
 	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, machine_cpu_list) },
-	{ XC_SET_STRING("bas", &private_cfg.bas) },
-	{ XC_SET_STRING("extbas", &private_cfg.extbas) },
-	{ XC_SET_STRING("altbas", &private_cfg.altbas) },
+	{ XC_SET_STRING_F("bas", &private_cfg.bas) },
+	{ XC_SET_STRING_F("extbas", &private_cfg.extbas) },
+	{ XC_SET_STRING_F("altbas", &private_cfg.altbas) },
 	{ XC_SET_INT1("nobas", &private_cfg.nobas) },
 	{ XC_SET_INT1("noextbas", &private_cfg.noextbas) },
 	{ XC_SET_INT1("noaltbas", &private_cfg.noaltbas) },
-	{ XC_SET_STRING("ext-charset", &private_cfg.ext_charset) },
+	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset) },
 	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_INT("ram", &private_cfg.ram) },
@@ -2013,13 +2017,13 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
 	{ XC_CALL_STRING("cart-type", &set_cart_type) },
-	{ XC_SET_STRING("cart-rom", &private_cfg.cart_rom) },
-	{ XC_SET_STRING("cart-rom2", &private_cfg.cart_rom2) },
+	{ XC_SET_STRING_F("cart-rom", &private_cfg.cart_rom) },
+	{ XC_SET_STRING_F("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
 	/* Backwards compatibility: */
 	{ XC_SET_STRING("dostype", &private_cfg.cart_type), .deprecated = 1 },
-	{ XC_SET_STRING("dos", &private_cfg.dos_option), .deprecated = 1 },
+	{ XC_SET_STRING_F("dos", &private_cfg.dos_option), .deprecated = 1 },
 
 	/* Multi-Pak Interface: */
 	{ XC_CALL_INT("mpi-slot", &cfg_mpi_slot) },
@@ -2034,14 +2038,14 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("dw4-port", &xroar_cfg.becker_port), .deprecated = 1 },
 
 	/* Files: */
-	{ XC_SET_STRING_LIST("load", &private_cfg.load_list) },
-	{ XC_SET_STRING("run", &private_cfg.run) },
+	{ XC_SET_STRING_LIST_F("load", &private_cfg.load_list) },
+	{ XC_SET_STRING_F("run", &private_cfg.run) },
 	/* Backwards-compatibility: */
-	{ XC_SET_STRING_LIST("cartna", &private_cfg.load_list), .deprecated = 1 },
-	{ XC_SET_STRING_LIST("snap", &private_cfg.load_list), .deprecated = 1 },
+	{ XC_SET_STRING_LIST_F("cartna", &private_cfg.load_list), .deprecated = 1 },
+	{ XC_SET_STRING_LIST_F("snap", &private_cfg.load_list), .deprecated = 1 },
 
 	/* Cassettes: */
-	{ XC_SET_STRING("tape-write", &private_cfg.tape_write) },
+	{ XC_SET_STRING_F("tape-write", &private_cfg.tape_write) },
 	{ XC_SET_DOUBLE("tape-pan", &xroar_cfg.tape_pan) },
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
@@ -2059,8 +2063,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("disk-jvc-hack", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Firmware ROM images: */
-	{ XC_SET_STRING("rompath", &xroar_rom_path) },
-	{ XC_CALL_ASSIGN("romlist", &romlist_assign) },
+	{ XC_SET_STRING_F("rompath", &xroar_rom_path) },
+	{ XC_CALL_ASSIGN_F("romlist", &romlist_assign) },
 	{ XC_CALL_NULL("romlist-print", &romlist_print) },
 	{ XC_CALL_ASSIGN("crclist", &crclist_assign) },
 	{ XC_CALL_NULL("crclist-print", &crclist_print) },

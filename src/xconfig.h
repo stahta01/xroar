@@ -30,23 +30,33 @@ struct sdsx_list;
 #define XC_SET_DOUBLE(o,d) .type = XCONFIG_DOUBLE, .name = (o), .dest.object = (d)
 #define XC_SET_STRING(o,d) .type = XCONFIG_STRING, .name = (o), .dest.object = (d)
 #define XC_SET_STRING_LIST(o,d) .type = XCONFIG_STRING_LIST, .name = (o), .dest.object = (d)
+#define XC_SET_STRING_F(o,d) .type = XCONFIG_STRING, .name = (o), .dest.object = (d), .flags = XCONFIG_FLAG_CLI_NOESC
+#define XC_SET_STRING_LIST_F(o,d) .type = XCONFIG_STRING_LIST, .name = (o), .dest.object = (d), .flags = XCONFIG_FLAG_CLI_NOESC
 #define XC_SET_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.object = (d)
 
-#define XC_CALL_BOOL(o,d) .type = XCONFIG_BOOL, .name = (o), .dest.func_bool = (d), .call = 1
-#define XC_CALL_BOOL0(o,d) .type = XCONFIG_BOOL0, .name = (o), .dest.func_bool = (d), .call = 1
-#define XC_CALL_INT(o,d) .type = XCONFIG_INT, .name = (o), .dest.func_int = (d), .call = 1
-#define XC_CALL_INT0(o,d) .type = XCONFIG_INT0, .name = (o), .dest.func_int = (d), .call = 1
-#define XC_CALL_INT1(o,d) .type = XCONFIG_INT1, .name = (o), .dest.func_int = (d), .call = 1
-#define XC_CALL_DOUBLE(o,d) .type = XCONFIG_DOUBLE, .name = (o), .dest.func_double = (d), .call = 1
-#define XC_CALL_STRING(o,d) .type = XCONFIG_STRING, .name = (o), .dest.func_string = (xconfig_func_string)(d), .call = 1
-#define XC_CALL_ASSIGN(o,d) .type = XCONFIG_ASSIGN, .name = (o), .dest.func_assign = (xconfig_func_assign)(d), .call = 1
-#define XC_CALL_NULL(o,d) .type = XCONFIG_NULL, .name = (o), .dest.func_null = (d), .call = 1
-#define XC_CALL_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.func_int = (d), .call = 1
+#define XC_CALL_BOOL(o,d) .type = XCONFIG_BOOL, .name = (o), .dest.func_bool = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_BOOL0(o,d) .type = XCONFIG_BOOL0, .name = (o), .dest.func_bool = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_INT(o,d) .type = XCONFIG_INT, .name = (o), .dest.func_int = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_INT0(o,d) .type = XCONFIG_INT0, .name = (o), .dest.func_int = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_INT1(o,d) .type = XCONFIG_INT1, .name = (o), .dest.func_int = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_DOUBLE(o,d) .type = XCONFIG_DOUBLE, .name = (o), .dest.func_double = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_STRING(o,d) .type = XCONFIG_STRING, .name = (o), .dest.func_string = (xconfig_func_string)(d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_ASSIGN(o,d) .type = XCONFIG_ASSIGN, .name = (o), .dest.func_assign = (xconfig_func_assign)(d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_STRING_F(o,d) .type = XCONFIG_STRING, .name = (o), .dest.func_string = (xconfig_func_string)(d), .flags = XCONFIG_FLAG_CALL | XCONFIG_FLAG_CLI_NOESC
+#define XC_CALL_ASSIGN_F(o,d) .type = XCONFIG_ASSIGN, .name = (o), .dest.func_assign = (xconfig_func_assign)(d), .flags = XCONFIG_FLAG_CALL | XCONFIG_FLAG_CLI_NOESC
+#define XC_CALL_NULL(o,d) .type = XCONFIG_NULL, .name = (o), .dest.func_null = (d), .flags = XCONFIG_FLAG_CALL
+#define XC_CALL_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.func_int = (d), .flags = XCONFIG_FLAG_CALL
 
 #define XC_OPT_END() .type = XCONFIG_END
 
 #define XC_ENUM_INT(k,v,d) .name = (k), .value = (v), .description = (d)
 #define XC_ENUM_END() .name = NULL
+
+// Option passes data to supplied function instead of setting directly
+#define XCONFIG_FLAG_CALL      (1 << 0)
+// Option will _not_ be parsed for escape sequences if passed on the command
+// line (a kludge for Windows, basically)
+#define XCONFIG_FLAG_CLI_NOESC (1 << 1)
 
 enum xconfig_result {
 	XCONFIG_OK = 0,
@@ -90,7 +100,7 @@ struct xconfig_option {
 		xconfig_func_null func_null;
 	} dest;
 	void *ref;
-	_Bool call;
+	unsigned flags;
 	_Bool deprecated;
 };
 
