@@ -367,8 +367,8 @@ hexadecimal number, @emph{hhhh}.  Internally, this will be encoded as UTF-8.
 @end multitable
 
 Any other character following a backslash---including another backslash---is
-included verbatim.  For example, under Windows, you will need to double up
-backslashes in file paths, as it uses this character for its directory
+included verbatim.  For example, this will be necessary in the configuration
+file under Windows when file paths include the backslash as a directory
 separator.
 
 However, on the command line, it is assumed that your shell will handle
@@ -385,9 +385,9 @@ the defaults:
 
 @multitable {Mac OS X.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
-@item Unix/Linux @tab ~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
-@item Mac OS X @tab ~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar
-@item Windows @tab :~/Documents/XRoar:~/AppData/Local/XRoar:~/AppData/Roaming/XRoar
+@item Unix/Linux @tab @file{~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
+@item Mac OS X @tab @file{~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
+@item Windows @tab @file{:~\Documents\XRoar:~\AppData\Local\XRoar:~\AppData\Roaming\XRoar}
 @end multitable
 
 Note the leading @samp{:} in the Windows default indicates an empty entry,
