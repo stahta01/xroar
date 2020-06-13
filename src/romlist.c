@@ -118,8 +118,8 @@ void romlist_assign(const char *name, struct sdsx_list *values) {
 }
 
 /* Find a ROM within ROMPATH */
-static char *find_rom(const char *romname) {
-	char *path = NULL;
+static sds find_rom(const char *romname) {
+	sds path = NULL;
 	if (!romname) return NULL;
 	sds filename = sdsnew(romname);
 	size_t filename_len = sdslen(filename);
@@ -135,9 +135,9 @@ static char *find_rom(const char *romname) {
 
 /* Attempt to find a ROM image.  If name starts with '@', search the named
  * list for the first accessible entry, otherwise search for a single entry. */
-char *romlist_find(const char *name) {
+sds romlist_find(const char *name) {
 	if (!name) return NULL;
-	char *path = NULL;
+	sds path = NULL;
 	/* not prefixed with an '@'?  then it's not a list! */
 	if (name[0] != '@') {
 		return find_rom(name);

@@ -2,7 +2,7 @@
 
 ROM filename database
 
-Copyright 2012-2017 Ciaran Anscomb
+Copyright 2012-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,6 +20,8 @@ See COPYING.GPL for redistribution conditions.
 
 #include <stdio.h>
 
+#include "sds.h"
+
 struct sdsx_list;
 
 // Assign a romlist.  Overwrites any existing list with provided name.
@@ -27,7 +29,7 @@ void romlist_assign(const char *name, struct sdsx_list *values);
 
 /* Attempt to find a ROM image.  If name starts with '@', search the named
  * list for the first accessible entry, otherwise search for a single entry. */
-char *romlist_find(const char *name);
+sds romlist_find(const char *name);
 
 /* Print a list of defined ROM lists */
 void romlist_print_all(FILE *f);

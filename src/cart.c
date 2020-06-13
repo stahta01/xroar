@@ -2,7 +2,7 @@
 
 Dragon/CoCo cartridge support.
 
-Copyright 2005-2019 Ciaran Anscomb
+Copyright 2005-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -157,7 +157,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 }
 
 struct cart_config *cart_find_working_dos(struct machine_config *mc) {
-	char *tmp = NULL;
+	sds tmp = NULL;
 	struct cart_config *cc = NULL;
 	if (!mc || mc->architecture != ARCH_COCO) {
 		if ((tmp = romlist_find("@dragondos_compat"))) {
@@ -175,7 +175,7 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 		}
 	}
 	if (tmp)
-		free(tmp);
+		sdsfree(tmp);
 	return cc;
 }
 
@@ -352,7 +352,7 @@ static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 void cart_rom_reset(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->rom) {
-		char *tmp = romlist_find(cc->rom);
+		sds tmp = romlist_find(cc->rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, c->rom_data, 0x10000);
 			(void)size;  // avoid warnings if...
@@ -362,11 +362,11 @@ void cart_rom_reset(struct cart *c) {
 				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
 			}
 #endif
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 	if (cc->rom2) {
-		char *tmp = romlist_find(cc->rom2);
+		sds tmp = romlist_find(cc->rom2);
 		if (tmp) {
 			int size = machine_load_rom(tmp, c->rom_data + 0x2000, 0x2000);
 			(void)size;  // avoid warnings if...
@@ -376,7 +376,7 @@ void cart_rom_reset(struct cart *c) {
 				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
 			}
 #endif
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 	c->rom_bank = 0;

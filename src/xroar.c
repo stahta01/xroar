@@ -511,8 +511,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		if ((argn+1) < argc && 0 == strcmp(argv[argn], "-c")) {
 			// -c, override conffile
 			if (conffile)
-				free(conffile);
-			conffile = xstrdup(argv[argn+1]);
+				sdsfree(conffile);
+			conffile = sdsnew(argv[argn+1]);
 			argn += 2;
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-c")) {
 			// -no-c, disable conffile
@@ -573,7 +573,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			conffile = find_in_path(xroar_conf_path, "xroar.conf");
 		if (conffile) {
 			(void)xconfig_parse_file(xroar_options, conffile);
-			free(conffile);
+			sdsfree(conffile);
 		}
 	}
 	// Finish any machine or cart config in config file.

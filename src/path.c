@@ -2,7 +2,7 @@
 
 File path searching
 
-Copyright 2009-2014 Ciaran Anscomb
+Copyright 2009-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -27,113 +27,89 @@ See COPYING.GPL for redistribution conditions.
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "xalloc.h"
+#include "sds.h"
+#include "sdsx.h"
 
 #include "path.h"
 
-static char *strcattoc_esc(char *dst, const char *src, char c);
+#ifdef WINDOWS32
+#define PSEPARATORS "/\\"
+#define PSEP "\\"
+#define HOMEDIR "USERPROFILE"
+#else
+#define PSEPARATORS "/"
+#define PSEP "/"
+#define HOMEDIR "HOME"
+#endif
 
 /* Find file within supplied colon-separated path.  In path elements, "~/" at
- * the start is expanded to "$HOME/" and "\" escapes the following character
+ * the start is expanded to "$HOME/".
  * (e.g., "\:" to stop a colon being seen as a path separator).
  *
  * Files are only considered if they are regular files (not sockets,
  * directories, etc.) and are readable by the user.  This is not intended as a
  * security check, just a convenience. */
 
-char *find_in_path(const char *path, const char *filename) {
+sds find_in_path(const char *path, const char *filename) {
 	struct stat statbuf;
 	const char *home;
-	char *buf;
-	int buf_size;
 
 	if (filename == NULL)
 		return NULL;
-	/* If no path or filename contains a directory, just test file */
-	if (path == NULL || *path == 0 || strchr(filename, '/')
-#ifdef WINDOWS32
-			|| strchr(filename, '\\')
-#endif
-			) {
+	// If no path or filename contains a directory, just test file
+	if (path == NULL || *path == 0 || strpbrk(filename, PSEPARATORS)) {
+		// Only consider a file if user has read access.  This is NOT a
+		// security check, it's purely for usability.
 		if (stat(filename, &statbuf) == 0) {
 			if (S_ISREG(statbuf.st_mode)) {
-				/* Only consider a file if user has read
-				 * access.  This is NOT a security check, it's
-				 * purely for usability. */
 				if (access(filename, R_OK) == 0) {
-					return xstrdup(filename);
+					return sdsnew(filename);
 				}
 			}
 		}
 		return NULL;
 	}
-#ifdef WINDOWS32
-	home = getenv("USERPROFILE");
-#else
-	home = getenv("HOME");
-#endif
-	/* Buffer at most could hold <path> (or ".") + '/' + <filename> + NUL.
-	 * Two characters in <path> may be replaced with $HOME + '/'. */
-	buf_size = strlen(path) + strlen(filename) + 3;
-	if (home) {
-		buf_size += strlen(home) - 1;
-	}
-	buf = malloc(buf_size);
-	if (buf == NULL)
-		return NULL;
-	for (;;) {
-		*buf = 0;
-		/* Prefix $HOME if path elem starts "~/" */
-		if (home && *path == '~' && *(path+1) == '/') {
-			strcpy(buf, home);
-			path += 2;
-			if (buf[strlen(buf) - 1] != '/')
-				strcat(buf, "/");
+
+	home = getenv(HOMEDIR);
+	if (*home == 0)
+		home = NULL;
+
+	const char *p = path;
+	size_t plen = strlen(p);
+	sds s = sdsempty();
+
+	while (p) {
+		sdssetlen(s, 0);
+		sds pathelem = sdsx_tok_str_len(&p, &plen, ":", 0);
+
+		// Prefix $HOME if path elem starts "~/"
+		if (home && *pathelem == '~' && strspn(pathelem+1, PSEPARATORS) > 0) {
+			s = sdscat(s, home);
+			pathelem = sdsx_replace_substr(pathelem, 2, -1);
+			if (strspn(s + sdslen(s) - 1, PSEPARATORS) == 0) {
+				s = sdscat(s, PSEP);
+			}
 		}
-		/* Now append path element, "/" if required and the
-		 * filename */
-		strcattoc_esc(buf, path, ':');
-		if (*buf == 0)
-			strcpy(buf, "./");
-		else if (buf[strlen(buf) - 1] != '/')
-			strcat(buf, "/");
-		strcat(buf, filename);
-		/* Return this one if file is valid */
-		if (stat(buf, &statbuf) == 0)
-			if (S_ISREG(statbuf.st_mode))
-				if (access(buf, R_OK) == 0) {
-					return buf;
+
+		// Append a '/' if required, then the filename
+		s = sdscatsds(s, pathelem);
+		if (sdslen(s) == 0) {
+			s = sdscat(s, "." PSEP);
+		} else if (strspn(s + sdslen(s) - 1, PSEPARATORS) == 0) {
+			s = sdscat(s, PSEP);
+		}
+		sdsfree(pathelem);
+		s = sdscat(s, filename);
+
+		// Return this one if file is valid
+		if (stat(s, &statbuf) == 0) {
+			if (S_ISREG(statbuf.st_mode)) {
+				if (access(s, R_OK) == 0) {
+					return s;
 				}
-		/* Skip to next path element */
-		while (*path && *path != ':') {
-			if (*path == '\\' && *(path+1) != 0)
-				path++;  /* skip escaped char */
-			path++;
+			}
 		}
-		if (*path != ':')
-			break;
-		path++;
 	}
-	free(buf);
+	sdsfree(s);
 	return NULL;
-}
-
-/* Helper function appends src to the end of dst until the first occurence of
- * c.  "\" escapes the following character. */
-
-static char *strcattoc_esc(char *dst, const char *src, char c) {
-	char *ret = dst;
-	while (*dst != 0)
-		dst++;
-	while (*src && *src != c) {
-		if (*src == '\\') {
-			src++;
-			if (*src)
-				*(dst++) = *(src++);
-		} else {
-			*(dst++) = *(src++);
-		}
-	}
-	*dst = 0;
-	return ret;
 }

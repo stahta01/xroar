@@ -2,7 +2,7 @@
 
 Dragon and Tandy Colour Computer machines
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -27,6 +27,7 @@ See COPYING.GPL for redistribution conditions.
 #include <unistd.h>
 
 #include "delegate.h"
+#include "sds.h"
 #include "xalloc.h"
 
 #include "cart.h"
@@ -150,7 +151,7 @@ struct machine_dragon {
 
 static int find_working_arch(void) {
 	int arch;
-	char *tmp = NULL;
+	sds tmp = NULL;
 	if ((tmp = romlist_find("@dragon64"))) {
 		arch = ARCH_DRAGON64;
 	} else if ((tmp = romlist_find("@dragon32"))) {
@@ -163,7 +164,7 @@ static int find_working_arch(void) {
 		arch = ARCH_DRAGON64;
 	}
 	if (tmp)
-		free(tmp);
+		sdsfree(tmp);
 	return arch;
 }
 
@@ -482,7 +483,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 
 	/* ... Extended BASIC */
 	if (!mc->noextbas && mc->extbas_rom) {
-		char *tmp = romlist_find(mc->extbas_rom);
+		sds tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom0, sizeof(md->rom0));
 			if (size > 0) {
@@ -495,29 +496,29 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 				if (!md->has_combined)
 					md->has_bas = 1;
 			}
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 
 	/* ... BASIC */
 	if (!mc->nobas && mc->bas_rom) {
-		char *tmp = romlist_find(mc->bas_rom);
+		sds tmp = romlist_find(mc->bas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom0 + 0x2000, sizeof(md->rom0) - 0x2000);
 			if (size > 0)
 				md->has_bas = 1;
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 
 	/* ... 64K mode Extended BASIC */
 	if (!mc->noaltbas && mc->altbas_rom) {
-		char *tmp = romlist_find(mc->altbas_rom);
+		sds tmp = romlist_find(mc->altbas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom1, sizeof(md->rom1));
 			if (size > 0)
 				md->has_altbas = 1;
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 	md->ram_size = mc->ram * 1024;
@@ -531,12 +532,12 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->rom = md->rom0;
 
 	if (mc->ext_charset_rom) {
-		char *tmp = romlist_find(mc->ext_charset_rom);
+		sds tmp = romlist_find(mc->ext_charset_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->ext_charset, sizeof(md->ext_charset));
 			if (size > 0)
 				md->has_ext_charset = 1;
-			free(tmp);
+			sdsfree(tmp);
 		}
 	}
 
