@@ -346,16 +346,14 @@ include quoted sections (text surrounded by single or double quote characters
 to protect special characters), and include escape sequences (special sequences
 prefixed with a backslash, see the table below).  There is no special
 distinction between single- and double-quotes, and escape sequences may still
-occur within either.  Currently, an @samp{=} symbol may follow an
-@samp{OPTION}, but this is entirely optional, and deprecated (may be removed in
-a future version).
+occur within either.
 
 Empty lines are skipped, and any line where the first non-whitespace character
 is a @samp{#} is treated as a comment.
 
 An @samp{OPTION} may be preceded by leading dashes as from the command line,
 but within the configuration file they are not necessary.  Most options may be
-preceded by @samp{no-} to invert their meaning or clear an option.
+preceded by @samp{no-} to invert their meaning or clear their value.
 
 @multitable @columnfractions .13 .83
 @headitem Sequence @tab Description
