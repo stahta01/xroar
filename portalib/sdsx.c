@@ -343,6 +343,64 @@ sds sdsx_trim_qe(sds s, const char *cset) {
 	return s;
 }
 
+// Helper for substr() functions.  Calculates substring bounds based on
+// well-known semantics: negative index means count from the right, negative
+// length means until end of string.  Updates index and sublen such that
+// they always refer to a valid string slice.
+
+static void calc_valid_substr(size_t len, ssize_t index, ssize_t sublen,
+			      size_t *valid_index, size_t *valid_sublen) {
+	size_t start, end;
+
+	if (index < 0) {
+		if ((size_t)-index < len) {
+			start = len + index;
+		} else {
+			start = 0;
+		}
+	} else {
+		start = index;
+	}
+
+	if (sublen < 0) {
+		end = len + (sublen + 1);
+	} else {
+		end = start + sublen;
+	}
+
+	if (start > len) {
+		start = end = len;
+	} else if (start > end) {
+		end = start;
+	} else if (end > len) {
+		end = len;
+	}
+
+	*valid_index = start;
+	*valid_sublen = end - start;
+}
+
+// Return a new substring of SDS.
+
+sds sdsx_substr(sds s, ssize_t index, ssize_t sublen) {
+	size_t valid_index, valid_sublen;
+	calc_valid_substr(sdslen(s), index, sublen, &valid_index, &valid_sublen);
+	return sdsnewlen(s + valid_index, valid_sublen);
+}
+
+// Replace an SDS with a substring of itself (address will not change).
+
+sds sdsx_replace_substr(sds s, ssize_t index, ssize_t sublen) {
+	size_t valid_index, valid_sublen;
+	calc_valid_substr(sdslen(s), index, sublen, &valid_index, &valid_sublen);
+	if (valid_index != 0 && valid_sublen > 0) {
+		memmove(s, s+valid_index, valid_sublen);
+	}
+	s[valid_sublen] = '\0';
+	sdssetlen(s, valid_sublen);
+	return s;
+}
+
 // Quote a string to be suitable for the tokenising process.  An alternative to
 // sdscatrepr().  Appends results to 's'.
 

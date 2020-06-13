@@ -74,6 +74,16 @@ sds sdsx_rtrim(sds s, const char *cset);
 
 sds sdsx_trim_qe(sds s, const char *cset);
 
+// Substring functions use well-known semantics: negative index means count
+// from the right, negative length means to end of string (-1 being the very
+// end, -2 being one character before, etc.).
+
+// Return a new substring of SDS.
+sds sdsx_substr(sds s, ssize_t index, ssize_t sublen);
+
+// Replace an SDS with a substring of itself (address will not change).
+sds sdsx_replace_substr(sds s, ssize_t index, ssize_t sublen);
+
 // Quote a string to be suitable for the tokenising process.  An alternative to
 // sdscatrepr().  Appends results to 's'.
 
