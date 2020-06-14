@@ -688,13 +688,13 @@ static void set_general_registers(struct gdb_interface_private *gip, char *args)
 	if ((tmp = hex16(args+24)) >= 0)
 		gip->cpu->reg_pc = tmp;
 	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
-		if ((tmp = hex8(args)) >= 0)
+		if ((tmp = hex8(args+28)) >= 0)
 			((struct HD6309 *)gip->cpu)->reg_md = tmp;
-		if ((tmp = hex8(args)) >= 0)
+		if ((tmp = hex8(args+30)) >= 0)
 			HD6309_REG_E(((struct HD6309 *)gip->cpu)) = tmp;
-		if ((tmp = hex8(args)) >= 0)
+		if ((tmp = hex8(args+32)) >= 0)
 			HD6309_REG_F(((struct HD6309 *)gip->cpu)) = tmp;
-		if ((tmp = hex16(args)) >= 0)
+		if ((tmp = hex16(args+34)) >= 0)
 			((struct HD6309 *)gip->cpu)->reg_v = tmp;
 	}
 	send_packet_string(gip, "OK");
