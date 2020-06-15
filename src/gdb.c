@@ -246,6 +246,9 @@ void gdb_interface_free(struct gdb_interface *gi) {
 		freeaddrinfo(gip->info);
 	pthread_mutex_destroy(&gip->run_state_mt);
 	pthread_cond_destroy(&gip->run_state_cv);
+	if (gip->listenfd != -1) {
+		close(gip->listenfd);
+	}
 	free(gip);
 }
 

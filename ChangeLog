@@ -3,6 +3,7 @@ Version 0.36.x, unreleased
   * Support CAS padding without fast loading enabled
   * Don't escape option arguments if they expect a filename [".mad."]
   * Fix setting 6309 registers from GDB
+  * Fix GDB listen on machine reconfigure (eg snapshot load) [Pere Serrat]
 
 Version 0.36, Mon Jun  8 2020
 
