@@ -26,6 +26,8 @@ See COPYING.GPL for redistribution conditions.
 #include <string.h>
 
 #include "pl-string.h"
+#include "sds.h"
+#include "sdsx.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -131,13 +133,17 @@ void joystick_config_print_all(FILE *f, _Bool all) {
 		for (int i = 0 ; i < JOYSTICK_NUM_AXES; i++) {
 			if (jc->axis_specs[i]) {
 				xroar_cfg_print_indent(f);
-				fprintf(f, "joy-axis %d=%s\n", i, jc->axis_specs[i]);
+				sds str = sdsx_quote_str(jc->axis_specs[i]);
+				fprintf(f, "joy-axis %d=%s\n", i, str);
+				sdsfree(str);
 			}
 		}
 		for (int i = 0 ; i < JOYSTICK_NUM_BUTTONS; i++) {
 			if (jc->button_specs[i]) {
 				xroar_cfg_print_indent(f);
-				fprintf(f, "joy-button %d=%s\n", i, jc->button_specs[i]);
+				sds str = sdsx_quote_str(jc->button_specs[i]);
+				fprintf(f, "joy-button %d=%s\n", i, str);
+				sdsfree(str);
 			}
 		}
 		xroar_cfg_print_dec_indent();
