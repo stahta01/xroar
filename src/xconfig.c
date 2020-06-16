@@ -264,17 +264,19 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	}
 
 	struct xconfig_option const *option = find_option(options, opt);
-	if (option == NULL) {
-		enum xconfig_result r = XCONFIG_BAD_OPTION;
+	if (!option) {
 		if (0 == strncmp(opt, "no-", 3)) {
 			option = find_option(options, opt + 3);
 			if (option && unset_option(option) == 0) {
-				r = XCONFIG_OK;
+				sdsfree(opt);
+				sdsfree(input);
+				return XCONFIG_OK;
 			}
 		}
+		LOG_ERROR("Unrecognised option `%s'\n", opt);
 		sdsfree(opt);
 		sdsfree(input);
-		return r;
+		return XCONFIG_BAD_OPTION;
 	}
 	sdsfree(opt);
 
