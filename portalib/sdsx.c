@@ -544,17 +544,19 @@ sds sdsx_cat_parse_str_len(sds s, const char *str, size_t len) {
 // translated, otherwise you get the results with those sequences still in
 // place.
 //
-// Returns a new SDS containing the token.
+// Returns a new SDS containing the token.  Return string will be empty if
+// there are no tokens, or NULL on error (e.g. unterminated quotes).
 
 sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse) {
 	// default delimiter, space/tab
 	if (!ere)
 		ere = "[ \t]+";
 
+	sds r = sdsempty();
 	const char *p = *s;
 	size_t len = *lenp;
 	if (len == 0)
-		return NULL;
+		return r;
 
 	int errcode;
 	regex_t preg;
@@ -564,7 +566,6 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 		abort();
 	}
 
-	sds r = sdsempty();
 	int quote = 0;
 
 	// Track spans of characters to process with normal escape sequence
@@ -669,30 +670,34 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse) {
 	size_t len = sdslen(s);
 	sds r = sdsx_tok_str_len(&p, &len, ere, parse);
 
+	if (!r)
+		return NULL;
+
 	// move remaining data to beginning of string
 	if (s != p && len > 0) {
 		memmove(s, p, len);
 	}
 	s[len] = '\0';
 	sdssetlen(s, len);
-
 	return r;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Split a source string separated by a supplied POSIX Extended Regular
-// Expression into a list of SDS strings.  Returns NULL if there are no strings
-// to return.
+// Expression into a list of SDS strings.  Returns NULL on parsing error.
 
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *ere,
 				     _Bool parse) {
-	struct sdsx_list *sl = NULL;
-	const char *p = str;
-	sds t;
-	while ((t = sdsx_tok_str_len(&p, &len, ere, parse))) {
-		if (!sl) {
-			sl = sdsx_list_new((sdsx_list_free_func)sdsfree);
+
+	struct sdsx_list *sl = sdsx_list_new((sdsx_list_free_func)sdsfree);
+
+	while (len > 0) {
+		sds t = sdsx_tok_str_len(&str, &len, ere, parse);
+		if (!t) {
+			// tokenising error
+			sdsx_list_free(sl);
+			return NULL;
 		}
 		sl = sdsx_list_push(sl, t);
 	}
