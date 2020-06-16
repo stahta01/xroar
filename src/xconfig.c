@@ -244,14 +244,21 @@ enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 // Lines are of the form: KEY [=] [VALUE [,VALUE]...]
 
 enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, const char *line) {
+	// Trim leading and trailing whitespace, accounting for quotes & escapes
 	sds input = sdsx_trim_qe(sdsnew(line), NULL);
-	if (input[0] == '#') {
+
+	// Ignore empty lines and comments
+	if (!*input || *input == '#') {
 		sdsfree(input);
 		return XCONFIG_OK;
 	}
 
 	sds opt = sdsx_ltrim(sdsx_tok(input, "([ \t]*=[ \t]*|[ \t]+)", 1), "-");
 	if (!opt) {
+		sdsfree(input);
+		return XCONFIG_BAD_VALUE;
+	}
+	if (!*opt) {
 		sdsfree(input);
 		return XCONFIG_OK;
 	}
@@ -288,12 +295,24 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 		// first part is key separated by '=' (or whitespace for now)
 		sds key = sdsx_tok(input, "([ \t]*=[ \t]*|[ \t]+)", 1);
 		if (!key) {
+			LOG_ERROR("Bad argument to '%s'\n", option->name);
+			sdsfree(input);
+			return XCONFIG_BAD_VALUE;
+		}
+		if (!*key) {
 			LOG_ERROR("Missing argument to `%s'\n", option->name);
+			sdsfree(key);
 			sdsfree(input);
 			return XCONFIG_MISSING_ARG;
 		}
 		// parse rest as comma-separated list
 		struct sdsx_list *values = sdsx_split(input, "[ \t]*,[ \t]*", 1);
+		if (!values) {
+			LOG_ERROR("Bad argument to '%s'\n", option->name);
+			sdsfree(key);
+			sdsfree(input);
+			return XCONFIG_BAD_VALUE;
+		}
 		option->dest.func_assign(key, values);
 		sdsx_list_free(values);
 		sdsfree(key);
@@ -301,17 +320,20 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 		return XCONFIG_OK;
 	}
 
-	// parse rest as comma-separated list
-	struct sdsx_list *values = sdsx_split(input, "[ \t]*,[ \t]*", 1);
-	if (!values) {
+	// the rest of the string constitutes the value - parse it
+	sds value = sdsx_tok(input, "[ \t]*$", 1);
+	sdsfree(input);
+	if (!value) {
+		LOG_ERROR("Bad argument to '%s'\n", option->name);
+		return XCONFIG_BAD_VALUE;
+	}
+	if (!*value) {
 		LOG_ERROR("Missing argument to `%s'\n", option->name);
-		sdsfree(input);
+		sdsfree(value);
 		return XCONFIG_MISSING_ARG;
 	}
-
-	set_option(option, values->elem[0]);
-	sdsx_list_free(values);
-	sdsfree(input);
+	set_option(option, value);
+	sdsfree(value);
 	return XCONFIG_OK;
 }
 
