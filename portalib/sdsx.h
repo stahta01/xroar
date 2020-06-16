@@ -133,11 +133,11 @@ static inline sds sdsx_parse_str(const char *str) {
 //
 // Returns a new SDS containing the token.
 
-sds sdsx_tok_str_len(const char **s, size_t *len, const char *cset, _Bool parse);
+sds sdsx_tok_str_len(const char **s, size_t *len, const char *ere, _Bool parse);
 
 // In the SDS version, the supplied string is consumed (though not freed when
 // no more tokens remain):
-sds sdsx_tok(sds s, const char *cset, _Bool parse);
+sds sdsx_tok(sds s, const char *ere, _Bool parse);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
