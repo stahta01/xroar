@@ -26,6 +26,8 @@ See COPYING.GPL for redistribution conditions.
 
 #include "array.h"
 #include "delegate.h"
+#include "sds.h"
+#include "sdsx.h"
 #include "xalloc.h"
 
 #include "breakpoint.h"
@@ -564,13 +566,30 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	_Bool done = 0;
 
 	if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_TAPE_FNBLOCK) {
-		LOG_PRINT("\tname:  %s\n", f->name);
-		LOG_PRINT("\ttype:  %d\n", f->type);
-		LOG_PRINT("\tascii: %s\n", f->ascii_flag ? "true" : "false");
-		LOG_PRINT("\tgap:   %s\n", f->gap_flag ? "true" : "false");
-		LOG_PRINT("\tstart: %04x\n", f->start_address);
-		LOG_PRINT("\tload:  %04x\n", f->load_address);
-		LOG_PRINT("\tfnblock: .size = %d, .crc = %04x\n", f->fnblock_size, f->fnblock_crc);
+		sds name = sdsx_quote_str(f->name);
+		LOG_PRINT("\tname %s\n", name);
+		sdsfree(name);
+		struct sdsx_list *optlist = sdsx_list_new(NULL);
+		switch (f->type) {
+		case 0: optlist = sdsx_list_push(optlist, "basic"); break;
+		case 1: optlist = sdsx_list_push(optlist, "data"); break;
+		case 2: optlist = sdsx_list_push(optlist, "binary"); break;
+		default: break;
+		}
+		if (f->ascii_flag)
+			optlist = sdsx_list_push(optlist, "ascii");
+		if (f->gap_flag)
+			optlist = sdsx_list_push(optlist, "gap");
+		if (optlist->len) {
+			sds opts = sdsx_join_str(optlist, ",");
+			LOG_PRINT("\toptions %s\n", opts);
+			sdsfree(opts);
+		}
+		sdsx_list_free(optlist);
+		LOG_PRINT("\tload 0x%04x\n", f->load_address);
+		LOG_PRINT("\texec 0x%04x\n", f->start_address);
+		LOG_PRINT("\tsize %d\n", f->fnblock_size);
+		LOG_PRINT("\tcrc 0x%04x\n", f->fnblock_crc);
 	}
 
 	// Check list of known programs:
