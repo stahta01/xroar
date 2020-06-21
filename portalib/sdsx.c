@@ -762,3 +762,29 @@ struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *er
 	}
 	return sl;
 }
+
+// Join a list of SDS strings using a common separator.
+
+sds sdsx_join(struct sdsx_list *sl, const char *sep) {
+	sds s = sdsempty();
+	for (unsigned i = 0; i < sl->len; i++) {
+		if (sl->elem[i])
+			s = sdscatsds(s, (const sds)(sl->elem[i]));
+		if (sep && (i+1) < sl->len)
+			s = sdscat(s, sep);
+	}
+	return s;
+}
+
+// Join a list of C strings using a common separator.
+
+sds sdsx_join_str(struct sdsx_list *sl, const char *sep) {
+	sds s = sdsempty();
+	for (unsigned i = 0; i < sl->len; i++) {
+		if (sl->elem[i])
+			s = sdscat(s, (char *)(sl->elem[i]));
+		if (sep && (i+1) < sl->len)
+			s = sdscat(s, sep);
+	}
+	return s;
+}

@@ -168,4 +168,12 @@ static inline struct sdsx_list *sdsx_split_str(const char *str, const char *cset
 	return sdsx_split_str_len(str, strlen(str), cset, parse);
 }
 
+// Join a list of SDS strings using a common separator.
+
+sds sdsx_join(struct sdsx_list *sl, const char *sep);
+
+// Join a list of C strings using a common separator.
+
+sds sdsx_join_str(struct sdsx_list *sl, const char *sep);
+
 #endif
