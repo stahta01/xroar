@@ -134,7 +134,8 @@ void sdsx_list_free(struct sdsx_list *sl) {
 		return;
 	for (unsigned i = 0; i < sl->len; i++) {
 		if (sl->elem[i]) {
-			sl->free_func(sl->elem[i]);
+			if (sl->free_func)
+				sl->free_func(sl->elem[i]);
 			sl->elem[i] = NULL;
 		}
 	}
