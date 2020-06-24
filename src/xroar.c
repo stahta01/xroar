@@ -2119,7 +2119,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("joy-virtual", &private_cfg.joy_virtual) },
 
 	/* Printing: */
-	{ XC_SET_STRING("lp-file", &private_cfg.lp_file) },
+	{ XC_SET_STRING_F("lp-file", &private_cfg.lp_file) },
 	{ XC_SET_STRING("lp-pipe", &private_cfg.lp_pipe) },
 
 	/* Debugging: */

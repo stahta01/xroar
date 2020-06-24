@@ -1,5 +1,7 @@
 Version 0.36.2, unreleased
 
+  * Fix -lp-file option [Pere Serrat]
+
 Version 0.36.1, Thu Jun 18 2020
 
   * Support CAS padding without fast loading enabled
