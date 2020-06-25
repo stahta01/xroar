@@ -207,9 +207,8 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	// https://github.com/emscripten-core/emscripten/pull/9803
 	//
 	// Until this is fixed, we do NOT destroy the renderer in Wasm builds.
-	// This is ok (for now), as the window is fixed size.  However if you
-	// try the (unsupported, unexposed in UI) toggle_fullscreen() call in
-	// the JS console, you'll notice scaling errors).
+	// We do recreate the texture though, as that seems to still work and
+	// then the new scale hints are respected.
 	//
 	// Extra bug points: this doesn't actually seem to fix mousemotion
 	// events in Chromium!  Though button presses are getting through.
@@ -217,6 +216,11 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 #ifndef HAVE_WASM
 	// Remove old renderer & texture, if they exist
 	destroy_renderer(vosdl);
+#else
+	if (vosdl->texture) {
+		SDL_DestroyTexture(vosdl->texture);
+		vosdl->texture = NULL;
+	}
 #endif
 
 	int w, h;
