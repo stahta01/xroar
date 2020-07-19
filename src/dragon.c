@@ -662,17 +662,18 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->PIA1->a.in_sink = md->PIA1->b.in_sink = 0xff;
 	/* Machine-specific PIA connections */
 	if (md->is_dragon) {
-		/* Centronics printer port - !BUSY */
+		// Pull-up resistor on centronics !BUSY (PIA1 PB2)
 		md->PIA1->b.in_source |= (1<<0);
 	}
 	if (md->is_dragon64) {
 		md->have_acia = 1;
+		// Pull-up resistor on ROMSEL (PIA1 PB2)
 		md->PIA1->b.in_source |= (1<<2);
 	} else if (!md->is_dragon && md->ram_size <= 0x1000) {
-		/* 4K CoCo ties PB2 of md->PIA1 low */
+		// 4K CoCo ties PIA1 PB2 low
 		md->PIA1->b.in_sink &= ~(1<<2);
 	} else if (!md->is_dragon && md->ram_size <= 0x4000) {
-		/* 16K CoCo pulls PB2 of md->PIA1 high */
+		// 16K CoCo pulls PIA1 PB2 high
 		md->PIA1->b.in_source |= (1<<2);
 	}
 	md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, md);
@@ -681,8 +682,8 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, md);
 	}
 	if (!md->is_dragon && md->ram_size > 0x4000) {
-		/* 64K CoCo connects PB6 of md->PIA0 to PB2 of md->PIA1->
-		 * Deal with this through a postwrite. */
+		// 64K CoCo connects PIA0 PB6 to PIA1 PB2:
+		// Deal with this through a postwrite.
 		md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, md);
 		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, md);
 	}
@@ -1352,7 +1353,7 @@ static void pia0a_data_preread(void *sptr) {
 static void pia0b_data_preread_coco64k(void *sptr) {
 	struct machine_dragon *md = sptr;
 	keyboard_update(md);
-	/* PB6 of md->PIA0 is linked to PB2 of md->PIA1 on 64K CoCos */
+	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
 	if ((md->PIA1->b.out_source & md->PIA1->b.out_sink) & (1<<2)) {
 		md->PIA0->b.in_source |= (1<<6);
 		md->PIA0->b.in_sink |= (1<<6);
@@ -1388,7 +1389,7 @@ static void pia1b_data_preread_dragon(void *sptr) {
 
 static void pia1b_data_preread_coco64k(void *sptr) {
 	struct machine_dragon *md = sptr;
-	/* PB6 of md->PIA0 is linked to PB2 of md->PIA1 on 64K CoCos */
+	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
 	if ((md->PIA0->b.out_source & md->PIA0->b.out_sink) & (1<<6)) {
 		md->PIA1->b.in_source |= (1<<2);
 		md->PIA1->b.in_sink |= (1<<2);
