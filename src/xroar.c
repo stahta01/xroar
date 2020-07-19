@@ -1469,8 +1469,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 	}
 	switch (mc->architecture) {
 	case ARCH_COCO:
-		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 3);
-		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 3);
+		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 5);
+		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 5);
 		break;
 	default:
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 2);

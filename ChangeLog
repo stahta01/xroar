@@ -1,6 +1,7 @@
 Version 0.36.2, unreleased
 
   * Fix -lp-file option [Pere Serrat]
+  * Change default CoCo disk interleave to 5 [Simon Jonassen]
 
 Version 0.36.1, Thu Jun 18 2020
 
