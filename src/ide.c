@@ -3,7 +3,6 @@
 IDE Emulation Layer for retro-style PIO interfaces
 
 Copyright 2015-2019 Alan Cox
-Copyright 2016-2017 Ciaran Anscomb
 
 This file is part of XRoar.
 
