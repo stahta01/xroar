@@ -141,8 +141,8 @@ static inline sds sdsx_parse_str(const char *str) {
 // translated, otherwise you get the results with those sequences still in
 // place.
 //
-// Returns a new SDS containing the token.  Return string will be empty if
-// there are no tokens, or NULL on error (e.g. unterminated quotes).
+// Returns a new SDS containing the token, or NULL on error (e.g. unterminated
+// quotes).  Supplied string will become NULL when no more tokens are found.
 
 sds sdsx_tok_str_len(const char **s, size_t *len, const char *ere, _Bool parse);
 
@@ -155,7 +155,8 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Split a source string separated by a supplied POSIX Extended Regular
-// Expression into a list of SDS strings.  Returns NULL on parsing error.
+// Expression into a list of SDS strings.  Returns NULL on parsing error, else
+// the list will contain at least one (potentially empty) element.
 
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *cset,
 				     _Bool parse);

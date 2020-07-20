@@ -603,8 +603,8 @@ sds sdsx_cat_parse_str_len(sds s, const char *str, size_t len) {
 // translated, otherwise you get the results with those sequences still in
 // place.
 //
-// Returns a new SDS containing the token.  Return string will be empty if
-// there are no tokens, or NULL on error (e.g. unterminated quotes).
+// Returns a new SDS containing the token, or NULL on error (e.g. unterminated
+// quotes).  Supplied string will become NULL when no more tokens are found.
 
 sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse) {
 	// default delimiter, space/tab
@@ -612,10 +612,12 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 		ere = "[ \t]+";
 
 	sds r = sdsempty();
-	const char *p = *s;
 	size_t len = *lenp;
-	if (len == 0)
+	if (len == 0) {
+		*s = NULL;
 		return r;
+	}
+	const char *p = *s;
 
 	int errcode;
 	regex_t preg;
@@ -643,6 +645,8 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 				quote = 0;
 				if (parse)
 					sp = p;
+				if (len == 0)
+					*s = NULL;
 				continue;
 			}
 		} else {
@@ -671,6 +675,8 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 				len--;
 				if (parse)
 					sp = p;
+				if (len == 0)
+					*s = NULL;
 				continue;
 			}
 		}
@@ -696,6 +702,9 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 			break;
 		}
 
+		if (len == 0)
+			*s = NULL;
+
 	} while (len > 0);
 
 	regfree(&preg);
@@ -715,7 +724,9 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 			r = sdscatlen(r, sp, p - sp);
 	}
 
-	*s = p;
+	// only update string pointer if it wasn't previously set to NULL
+	if (*s)
+		*s = p;
 	*lenp = len;
 
 	return r;
@@ -733,7 +744,7 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse) {
 		return NULL;
 
 	// move remaining data to beginning of string
-	if (s != p && len > 0) {
+	if (p && s != p && len > 0) {
 		memmove(s, p, len);
 	}
 	s[len] = '\0';
@@ -744,14 +755,15 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Split a source string separated by a supplied POSIX Extended Regular
-// Expression into a list of SDS strings.  Returns NULL on parsing error.
+// Expression into a list of SDS strings.  Returns NULL on parsing error, else
+// the list will contain at least one (potentially empty) element.
 
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *ere,
 				     _Bool parse) {
 
 	struct sdsx_list *sl = sdsx_list_new((sdsx_list_free_func)sdsfree);
 
-	while (len > 0) {
+	do {
 		sds t = sdsx_tok_str_len(&str, &len, ere, parse);
 		if (!t) {
 			// tokenising error
@@ -759,7 +771,7 @@ struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *er
 			return NULL;
 		}
 		sl = sdsx_list_push(sl, t);
-	}
+	} while (str);
 	return sl;
 }
 
