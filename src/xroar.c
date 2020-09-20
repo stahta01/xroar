@@ -1133,7 +1133,7 @@ void xroar_new_disk(int drive) {
 	int filetype = xroar_filetype_by_ext(filename);
 	xroar_eject_disk(drive);
 	// Default to 34T 1H.  Will be auto-expanded as necessary.
-	struct vdisk *new_disk = vdisk_new(250000, 300);
+	struct vdisk *new_disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
 	if (new_disk == NULL)
 		return;
 	LOG_DEBUG(1, "Creating blank disk in drive %d\n", 1 + drive);

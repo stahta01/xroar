@@ -2,7 +2,7 @@
 
 Virtual floppy disks
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -56,8 +56,6 @@ static struct vdisk *vdisk_load_dmk(const char *filename);
 static int vdisk_save_vdk(struct vdisk *disk);
 static int vdisk_save_jvc(struct vdisk *disk);
 static int vdisk_save_dmk(struct vdisk *disk);
-
-#define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
 
 static struct {
 	enum xroar_filetype filetype;
@@ -118,18 +116,12 @@ void vdisk_set_interleave(int density, int interleave) {
 	}
 }
 
-struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm) {
-	unsigned track_length = IDIV_ROUND(data_rate * 60, 8 * rpm);
-	// round up to the nearest 32 bytes
-	track_length += (32 - (track_length % 32)) % 32;
-	// account for track header bytes
-	track_length += 128;
-
+struct vdisk *vdisk_new(unsigned track_length) {
 	// sensible limits
-	if (track_length < 0x1640)
-		track_length = 0x1640;
+	if (track_length < 0x0cc0)
+		track_length = 0x0cc0;  // SD 300RPM
 	if (track_length > 0x2940)
-		track_length = 0x2940;
+		track_length = 0x2940;  // HD 360RPM
 
 	struct vdisk *disk = xmalloc(sizeof(*disk));
 	*disk = (struct vdisk){0};
@@ -290,7 +282,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 		}
 	}
 	ssize = 128 << ssize_code;
-	disk = vdisk_new(250000, 300);
+	disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
 	disk->filetype = FILETYPE_VDK;
 	disk->filename = xstrdup(filename);
 	disk->write_protect = write_protect;
@@ -544,7 +536,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	if (xroar_cfg.disk_auto_sd && nsectors == 10)
 		double_density = 0;
 
-	struct vdisk *disk = vdisk_new(250000, 300);
+	struct vdisk *disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
 	disk->filetype = FILETYPE_JVC;
 	disk->filename = xstrdup(filename);
 	disk->fmt.jvc.headerless_os9 = headerless_os9;
@@ -720,6 +712,11 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 	}
 	ncyls = header[1];
 	track_length = (header[3] << 8) | header[2];  // yes, little-endian!
+	if (track_length < 0x0cc0 || track_length > 0x2940) {
+		LOG_WARN("Invalid DMK track length in '%s'\n", filename);
+		fclose(fd);
+		return NULL;
+	}
 	nheads = (header[4] & 0x10) ? 1 : 2;
 	if (header[4] & 0x40)
 		LOG_WARN("DMK is flagged single-density only\n");
@@ -727,7 +724,7 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 		LOG_WARN("DMK is flagged density-agnostic\n");
 	file_size -= 16;
 	(void)file_size;  // TODO: check this matches what's going to be read
-	disk = vdisk_new(250000, 300);
+	disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
 	LOG_DEBUG(1, "Loading DMK virtual disk: %uC %uH (%u-byte)\n", ncyls, nheads, track_length);
 	disk->filetype = FILETYPE_DMK;
 	disk->filename = xstrdup(filename);

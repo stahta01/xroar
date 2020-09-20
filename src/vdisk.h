@@ -2,7 +2,7 @@
 
 Virtual floppy disks
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -21,6 +21,10 @@ See COPYING.GPL for redistribution conditions.
 #include <stdint.h>
 
 #include "xroar.h"
+
+#define VDISK_TRACK_LENGTH_SD300 (0x0cc0)
+#define VDISK_TRACK_LENGTH_DD300 (0x1900)
+#define VDISK_TRACK_LENGTH_HD360 (0x2940)
 
 #define VDISK_DOUBLE_DENSITY (0x8000)
 #define VDISK_SINGLE_DENSITY (0x0000)
@@ -129,7 +133,7 @@ const char *vdisk_strerror(int errnum);
 // Set interleave of subsequently formatted disks.
 void vdisk_set_interleave(int density, int interleave);
 
-struct vdisk *vdisk_new(unsigned data_rate, unsigned rpm);
+struct vdisk *vdisk_new(unsigned track_length);
 struct vdisk *vdisk_ref(struct vdisk *disk);
 void vdisk_unref(struct vdisk *disk);
 
