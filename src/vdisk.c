@@ -513,7 +513,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 		unsigned dd_fmt_sides = (dd_fmt & 1) + 1;
 		unsigned dd_spt = (buf[0x100+0x11] << 8) | buf[0x100+0x12];
 
-		if (os9_file_size >= file_size && dd_tks == dd_spt) {
+		if (os9_file_size >= file_size && dd_tks == dd_spt && dd_tks > 0) {
 			nsectors = dd_tks;
 			nheads = dd_fmt_sides;
 			headerless_os9 = 1;
