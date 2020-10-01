@@ -2,7 +2,7 @@
 
 Virtual floppy drives
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -193,6 +193,17 @@ struct vdisk *vdrive_disk_in_drive(struct vdrive_interface *vi, unsigned drive) 
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
 	assert(drive < MAX_DRIVES);
 	return vip->drives[drive].disk;
+}
+
+// Save each disk (with write-back enabled) to backing file without ejecting.
+
+void vdrive_flush(struct vdrive_interface *vi) {
+	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+	for (unsigned drive = 0; drive < MAX_DRIVES; drive++) {
+		if (vip->drives[drive].disk) {
+			vdisk_save(vip->drives[drive].disk, 0);
+		}
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

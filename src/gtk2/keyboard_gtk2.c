@@ -2,7 +2,7 @@
 
 GTK+2 keyboard support
 
-Copyright 2010-2016 Ciaran Anscomb
+Copyright 2010-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -43,6 +43,7 @@ See COPYING.GPL for redistribution conditions.
 #include "logging.h"
 #include "module.h"
 #include "printer.h"
+#include "vdrive.h"
 #include "xroar.h"
 
 #include "gtk2/common.h"
@@ -265,6 +266,11 @@ static void emulator_command(guint keyval, int shift) {
 		break;
 	case GDK_a:
 		xroar_set_cross_colour(1, XROAR_NEXT);
+		break;
+	case GDK_d:
+		if (shift) {
+			vdrive_flush(xroar_vdrive_interface);
+		}
 		break;
 	case GDK_e:
 		xroar_toggle_cart();

@@ -2,7 +2,7 @@
 
 SDL2 keyboard module
 
-Copyright 2015-2017 Ciaran Anscomb
+Copyright 2015-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -41,6 +41,7 @@ See COPYING.GPL for redistribution conditions.
 #include "logging.h"
 #include "module.h"
 #include "printer.h"
+#include "vdrive.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
@@ -182,7 +183,11 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		}
 		return;
 	case 'a': xroar_set_cross_colour(1, XROAR_NEXT); return;
-	case 'q': xroar_quit(); return;
+	case 'd':
+		     if (shift) {
+			     vdrive_flush(xroar_vdrive_interface);
+		     }
+		     return;
 	case 'e': xroar_toggle_cart(); return;
 	case 'f': xroar_set_fullscreen(1, XROAR_NEXT); return;
 	case 'h':
@@ -218,6 +223,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			     printer_flush(xroar_printer_interface);
 		     }
 		     return;
+	case 'q': xroar_quit(); return;
 	case 'r':
 		     if (shift) {
 			     xroar_hard_reset();

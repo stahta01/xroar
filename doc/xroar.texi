@@ -755,6 +755,9 @@ Where available, these options can also be changed on the fly in the GUI.
 Write back can be set to default to on with the @option{-disk-write-back}
 command line option.
 
+To flush any changes made to in-memory disk images to their backing file (but
+only those with write back enabled), press @kbd{Ctrl}+@kbd{Shift}+@kbd{D}.
+
 The JVC format specifies that the disk images without headers are single-sided,
 but some double-sided disk images have been made available without headers.
 These cannot normally be distinguished from a single-sided disk that happens to
@@ -1311,6 +1314,8 @@ A summary of commonly available shortcuts.
 Cycle through cross-colour video modes (hi-res only).
 @item @kbd{Ctrl}+@kbd{D}
 Open disk control dialogue (GTK+ only).
+@item @kbd{Ctrl}+@kbd{Shift}+@kbd{D}
+Flush disk images.
 @item @kbd{Ctrl}+@kbd{E}
 Toggle DOS emulation on/off - reset to take effect.
 @item @kbd{Ctrl}+@kbd{F}, @kbd{F11}

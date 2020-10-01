@@ -2,7 +2,7 @@
 
 Virtual floppy drives
 
-Copyright 2003-2016 Ciaran Anscomb
+Copyright 2003-2020 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -68,5 +68,7 @@ void vdrive_disconnect(struct vdrive_interface *vi);
 void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk);
 void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive);
 struct vdisk *vdrive_disk_in_drive(struct vdrive_interface *vi, unsigned drive);
+
+void vdrive_flush(struct vdrive_interface *vi);
 
 #endif
