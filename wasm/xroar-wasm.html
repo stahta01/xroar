@@ -12,7 +12,7 @@ Functions starting ui_ are callbacks from WebAssembly used to update UI
 elements.  These need to exist!
 
 TODO: Currently there are calls to resumeAudio() sprinkled all over the code so
-that as many things as possible trigger working around Chrome's disabling of
+that as many things as possible trigger working around Chromium's disabling of
 audio by default.  I completely sympathise with Google's intentions there
 (nobody wants advertisers yelling at them without permission), but there has to
 be a better way to make this usable...
@@ -240,7 +240,11 @@ be a better way to make this usable...
 		}
 
 		if ('autorun' in program) {
-			wasm_load_file(program.autorun, 1, 0);
+			if (program.autorun.split('.').pop().localeCompare('bin')) {
+				setTimeout(wasm_load_file, 2000, program.autorun, 1, 0);
+			} else {
+				wasm_load_file(program.autorun, 1, 0);
+			}
 		}
 
 		if ('tape' in program) {
@@ -428,7 +432,7 @@ be a better way to make this usable...
 
 	// Called when XRoar has finished initialising, before the main loop
 	function ui_done_initialising() {
-		// Do the initial resize that Chrome/Linux seems to require
+		// Do the initial resize that Chromium/Linux seems to require
 		var program = {};
 		if (!Module.initial_resize) {
 			Module.initial_resize = 1;
@@ -436,10 +440,16 @@ be a better way to make this usable...
 		}
 		let args = window.location.search.substr(1).split('&');
 		for (let arg of args) {
-			arg = decodeURI(arg);
 			if (arg.includes('=')) {
 				let [k, v] = arg.split('=');
-				program[k] = v;
+				v = decodeURIComponent(v.replace(/\+/g, '%20'));
+				if (k === 'nodos') {
+					Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ v, null, null, null ]);
+				} else {
+					program[k] = v;
+				}
+			} else if (arg === 'nodos') {
+				Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ 'dragon32', null, null, null ]);
 			} else if (arg === 'fs') {
 				set_fullscreen(1);
 			}
