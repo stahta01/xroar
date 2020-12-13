@@ -183,6 +183,8 @@ static void do_hs_fall(void *data) {
 	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_HS_RISING_EDGE);
 	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
 
+	vdg->scanline = SCANLINE(vdg->scanline + 1);
+
 	/* On PAL machines, the clock to the VDG is interrupted at two points
 	 * in every frame to fake up some extra scanlines, padding the signal
 	 * from 262 lines to 312 lines.  Dragons do not generate an HS-related
@@ -191,22 +193,22 @@ static void do_hs_fall(void *data) {
 
 	if (vdg->public.is_pal) {
 		if (vdg->public.is_dragon64) {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
-			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
+			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
 				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
 			}
 		} else if (vdg->public.is_dragon32) {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 23)
-			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 31)) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
+			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
 				vdg->pal_padding = 25;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
 		} else if (vdg->public.is_coco) {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 25)) {
+			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 26)) {
 				vdg->pal_padding = 26;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
-			} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 47)) {
+			} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 48)) {
 				vdg->pal_padding = 24;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
@@ -216,8 +218,6 @@ static void do_hs_fall(void *data) {
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
 
-	// Next scanline
-	vdg->scanline = SCANLINE(vdg->scanline + 1);
 	vdg->vram_nbytes = 0;
 	vdg->vram_index = 0;
 	vdg->vram_bit = 0;
