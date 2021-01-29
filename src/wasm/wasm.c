@@ -351,11 +351,13 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 	if (mc->default_cart) {
 		free(mc->default_cart);
 		mc->default_cart = NULL;
+		mc->nodos = 1;
 	}
 	mc->cart_enabled = 0;
 	if (cc && cc->name) {
 		mc->default_cart = xstrdup(cc->name);
 		mc->cart_enabled = 1;
+		mc->nodos = 0;
 		if (cart_rom) {
 			if (cc->rom) {
 				free(cc->rom);
