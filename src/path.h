@@ -20,10 +20,15 @@ See COPYING.GPL for redistribution conditions.
 
 #include "sds.h"
 
-/* Try to find regular file within one of the directories supplied.  Returns
- * allocated memory containing full path to file if found, NULL otherwise.
- * Directory separator occuring within filename just causes that one file to be
- * checked. */
+// Interpolate variables into a path element or filename (only considers
+// leading "~/" for now).
+
+sds path_interp(const char *filename);
+
+// Try to find regular file within one of the directories supplied.  Returns
+// allocated memory containing full path to file if found, NULL otherwise.
+// Directory separator occuring within filename just causes that one file to be
+// checked.
 
 sds find_in_path(const char *path, const char *filename);
 

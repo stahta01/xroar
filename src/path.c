@@ -42,33 +42,63 @@ See COPYING.GPL for redistribution conditions.
 #define HOMEDIR "HOME"
 #endif
 
-/* Find file within supplied colon-separated path.  In path elements, "~/" at
- * the start is expanded to "$HOME/".
- * (e.g., "\:" to stop a colon being seen as a path separator).
- *
- * Files are only considered if they are regular files (not sockets,
- * directories, etc.) and are readable by the user.  This is not intended as a
- * security check, just a convenience. */
+// Interpolate variables into a path element or filename (only considers
+// leading "~/" for now).
+
+sds path_interp(const char *filename) {
+	if (!filename)
+		return NULL;
+
+	const char *home = getenv(HOMEDIR);
+	if (*home == 0)
+		home = NULL;
+
+	sds s = sdsempty();
+
+	if (home && *filename == '~' && strspn(filename+1, PSEPARATORS) > 0) {
+		s = sdscat(s, home);
+		s = sdscat(s, PSEP);
+		filename++;
+		filename += strspn(filename, PSEPARATORS);
+	}
+	s = sdscat(s, filename);
+	return s;
+}
+
+// Find file within supplied colon-separated path.  In path elements, "~/" at
+// the start is expanded to "$HOME/".  (e.g., "\:" to stop a colon being seen
+// as a path separator).
+//
+// Files are only considered if they are regular files (not sockets,
+// directories, etc.) and are readable by the user.  This is not intended as a
+// security check, just a convenience.
 
 sds find_in_path(const char *path, const char *filename) {
 	struct stat statbuf;
 	const char *home;
 
-	if (filename == NULL)
+	if (!filename)
 		return NULL;
+
+	sds f = path_interp(filename);
+	if (!f)
+		return NULL;
+
 	// If no path or filename contains a directory, just test file
-	if (path == NULL || *path == 0 || strpbrk(filename, PSEPARATORS)) {
+	if (path == NULL || *path == 0 || strpbrk(f, PSEPARATORS)) {
 		// Only consider a file if user has read access.  This is NOT a
 		// security check, it's purely for usability.
-		if (stat(filename, &statbuf) == 0) {
+		if (stat(f, &statbuf) == 0) {
 			if (S_ISREG(statbuf.st_mode)) {
-				if (access(filename, R_OK) == 0) {
-					return sdsnew(filename);
+				if (access(f, R_OK) == 0) {
+					return f;
 				}
 			}
 		}
+		sdsfree(f);
 		return NULL;
 	}
+	sdsfree(f);
 
 	home = getenv(HOMEDIR);
 	if (*home == 0)
