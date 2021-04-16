@@ -693,10 +693,14 @@ The currently open tape files used for reading and writing are distinct.
 
 Some cassette tapes are distributed with only one of the stereo channels
 containing data, and these sometimes cause loading issues.  How stereo audio
-files are read can be adjusted with the @option{-tape-channel-mode @var{mode}}
-option, where @var{mode} is one of: @samp{mix} - mix two channels into one (the
-default), @samp{left} - read only the left channel, @samp{right} - read only
-the right channel.
+files are read can be adjusted with the @option{-tape-pan @var{value}} option,
+where @var{value} is a number from 0.0 to 1.0.  0.0 will fully pan towards the
+left channel, while 1.0 will fully pan to the right.  The default is 0.5 (equal
+parts from both channels).
+
+A certain amount of hysteresis is applied to the input when reading audio
+files.  By default this is 1%, but this can be changed with the
+@option{-tape-hysteresis @var{percent}} option.
 
 Select the output frame rate when writing to audio files with
 @option{-tape-ao-rate @var{hz}}.  The default is 9600Hz.
