@@ -478,6 +478,8 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	}
 	if (ti->tape_input->module->set_panning)
 		ti->tape_input->module->set_panning(ti->tape_input, xroar_cfg.tape_pan);
+	if (ti->tape_input->module->set_hysteresis)
+		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar_cfg.tape_hysteresis);
 
 	tape_desync(tip, 256);
 	tape_update_motor(ti, tip->motor);

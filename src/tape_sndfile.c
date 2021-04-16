@@ -44,6 +44,7 @@ struct tape_sndfile {
 	sf_count_t cursor;
 	int cycles_to_write;
 	float pan;
+	float hysteresis;
 };
 
 static void sndfile_close(struct tape *t);
@@ -55,6 +56,7 @@ static int sndfile_pulse_in(struct tape *t, int *pulse_width);
 static int sndfile_sample_out(struct tape *t, uint8_t sample, int length);
 static void sndfile_motor_off(struct tape *t);
 static void sndfile_set_panning(struct tape *, float pan);
+static void sndfile_set_hysteresis(struct tape *, float hysteresis);
 
 struct tape_module tape_sndfile_module = {
 	.close = sndfile_close, .tell = sndfile_tell, .seek = sndfile_seek,
@@ -62,6 +64,7 @@ struct tape_module tape_sndfile_module = {
 	.pulse_in = sndfile_pulse_in, .sample_out = sndfile_sample_out,
 	.motor_off = sndfile_motor_off,
 	.set_panning = sndfile_set_panning,
+	.set_hysteresis = sndfile_set_hysteresis,
 };
 
 struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate) {
@@ -186,7 +189,10 @@ static int sndfile_pulse_in(struct tape *t, int *pulse_width) {
 	int sign = (sample < 0);
 	unsigned length = sndfile->cycles_per_frame;
 	while (read_sample(sndfile, &sample)) {
-		if ((sample < 0) != sign) {
+		if (sign && sample >= sndfile->hysteresis) {
+			sndfile->cursor--;
+			break;
+		} else if (!sign && sample <= -sndfile->hysteresis) {
 			sndfile->cursor--;
 			break;
 		}
@@ -252,4 +258,9 @@ static void sndfile_motor_off(struct tape *t) {
 static void sndfile_set_panning(struct tape *t, float pan) {
 	struct tape_sndfile *sndfile = t->data;
 	sndfile->pan = pan;
+}
+
+static void sndfile_set_hysteresis(struct tape *t, float hysteresis) {
+	struct tape_sndfile *sndfile = t->data;
+	sndfile->hysteresis = hysteresis / 100.0;
 }

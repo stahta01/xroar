@@ -83,6 +83,7 @@ struct xroar_cfg {
 	char *becker_port;
 	// Cassettes
 	double tape_pan;
+	double tape_hysteresis;
 	// Disks
 	_Bool disk_write_back;
 	_Bool disk_auto_os9;

@@ -87,6 +87,8 @@ See COPYING.GPL for redistribution conditions.
 struct xroar_cfg xroar_cfg = {
 	.disk_auto_os9 = 1,
 	.disk_auto_sd = 1,
+	.tape_pan = 0.5,
+	.tape_hysteresis = 1.0,
 };
 
 // Private
@@ -2049,6 +2051,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Cassettes: */
 	{ XC_SET_STRING_F("tape-write", &private_cfg.tape_write) },
 	{ XC_SET_DOUBLE("tape-pan", &xroar_cfg.tape_pan) },
+	{ XC_SET_DOUBLE("tape-hysteresis", &xroar_cfg.tape_hysteresis) },
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
 	{ XC_SET_INT1("tape-rewrite", &private_cfg.tape_rewrite) },
@@ -2216,12 +2219,13 @@ static void helptext(void) {
 "  -run FILE             load or attach FILE and attempt autorun\n"
 
 "\n Cassettes:\n"
-"  -tape-write FILE    open FILE for tape writing\n"
-"  -tape-pan PANNING   pan stereo input (0.0 = full left, 1.0 = full right) [0.5]\n"
-"  -no-tape-fast       disable fast tape loading\n"
-"  -no-tape-pad-auto   disable CAS file short leader workaround\n"
-"  -tape-rewrite       enable tape rewriting\n"
-"  -tape-ao-rate HZ    set tape writing frame rate\n"
+"  -tape-write FILE     open FILE for tape writing\n"
+"  -tape-pan PANNING    pan stereo input (0.0 = full left, 1.0 = full right) [0.5]\n"
+"  -tape-hysteresis H   read hysteresis as % of full scale [1]\n"
+"  -no-tape-fast        disable fast tape loading\n"
+"  -no-tape-pad-auto    disable CAS file short leader workaround\n"
+"  -tape-rewrite        enable tape rewriting\n"
+"  -tape-ao-rate HZ     set tape writing frame rate\n"
 
 "\n Disks:\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"
@@ -2373,6 +2377,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("# Cassettes\n", f);
 	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
 	xroar_cfg_print_double(f, all, "tape-pan", xroar_cfg.tape_pan, 0.5);
+	xroar_cfg_print_double(f, all, "tape-hysteresis", xroar_cfg.tape_hysteresis, 1.0);
 
 	xroar_cfg_print_bool(f, all, "tape-fast", private_cfg.tape_fast, 1);
 	xroar_cfg_print_bool(f, all, "tape-pad-auto", private_cfg.tape_pad_auto, 1);

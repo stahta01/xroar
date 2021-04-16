@@ -64,6 +64,7 @@ struct tape_module {
 	int (* const sample_out)(struct tape *t, uint8_t sample, int length);
 	void (* const motor_off)(struct tape *t);
 	void (* const set_panning)(struct tape *, float pan);  // 0.0 (L) .. 1.0 (R)
+	void (* const set_hysteresis)(struct tape *, float hysteresis);  // % full swing
 };
 
 #define tape_close(t) (t)->module->close(t)
