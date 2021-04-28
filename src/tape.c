@@ -44,6 +44,9 @@ See COPYING.GPL for redistribution conditions.
 #include "ui.h"
 #include "xroar.h"
 
+// maximum number of pulses to buffer for frequency analysis:
+#define PULSE_BUFFER_SIZE (400)
+
 struct tape_interface_private {
 	struct tape_interface public;
 
@@ -68,18 +71,30 @@ struct tape_interface_private {
 	uint8_t last_tape_output;
 	_Bool motor;
 
-	// Whether a sync byte has been detected yet.  If false, we're still
-	// reading the leader.
-	_Bool rewrite_have_sync;
-	// Amount of leader bytes to write when the next sync byte is detected
-	int rewrite_leader_count;
-	// Track number of bits written and keep things byte-aligned
-	int rewrite_bit_count;
-	// Track the fractional sample part when rewriting to tape
-	int rewrite_sremain;
-	// Was the last thing rewritten silence?  If so, any subsequent motor
-	// events won't trigger a trailer byte.
-	_Bool rewrite_silence;
+	struct {
+		// Whether a sync byte has been detected yet.  If false, we're still
+		// reading the leader.
+		_Bool have_sync;
+		// Amount of leader bytes to write when the next sync byte is detected
+		int leader_count;
+		// Track number of bits written and keep things byte-aligned
+		int bit_count;
+		// Track the fractional sample part when rewriting to tape
+		int sremain;
+		// Was the last thing rewritten silence?  If so, any subsequent motor
+		// events won't trigger a trailer byte.
+		_Bool silence;
+
+		// Input pulse buffer during sync.  When synced, contents will
+		// be analysed for average pulse widths then writes will use
+		// those widths.
+		int pulse_buffer_index;
+		int pulse_buffer[PULSE_BUFFER_SIZE];
+
+		_Bool have_pulse_widths;
+		int bit0_pwt;
+		int bit1_pwt;
+	} rewrite;
 
 	struct event waggle_event;
 	struct event flush_event;
@@ -93,6 +108,10 @@ static void rewrite_sync(void *sptr);
 static void rewrite_bitin(void *sptr);
 static void rewrite_tape_on(void *sptr);
 static void rewrite_end_of_block(void *sptr);
+
+#define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
+static int int_cmp(const void *a, const void *b);
+static int int_mean(int *values, int nvalues);
 
 static void set_breakpoints(struct tape_interface_private *tip);
 
@@ -165,8 +184,10 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	tip->ui = ui;
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
-	tip->rewrite_leader_count = 256;
-	tip->rewrite_silence = 1;
+	tip->rewrite.leader_count = 256;
+	tip->rewrite.silence = 1;
+	tip->rewrite.bit0_pwt = 6403;
+	tip->rewrite.bit1_pwt = 3489;
 
 	tape_interface_disconnect_machine(ti);
 
@@ -232,7 +253,14 @@ int tape_seek(struct tape *t, long offset, int whence) {
 
 static int tape_pulse_in(struct tape *t, int *pulse_width) {
 	if (!t) return -1;
-	return t->module->pulse_in(t, pulse_width);
+	struct tape_interface *ti = t->tape_interface;
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	int r = t->module->pulse_in(t, pulse_width);
+	if (tip->tape_rewrite) {
+		tip->rewrite.pulse_buffer[tip->rewrite.pulse_buffer_index] = *pulse_width;
+		tip->rewrite.pulse_buffer_index = (tip->rewrite.pulse_buffer_index + 1) % PULSE_BUFFER_SIZE;
+	}
+	return r;
 }
 
 static int tape_bit_in(struct tape *t) {
@@ -290,9 +318,9 @@ static void write_pulse(struct tape *t, int pulse_width, double scale) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	for (int i = 0; i < 64; i++) {
-		unsigned sr = tip->rewrite_sremain + pulse_width;
+		unsigned sr = tip->rewrite.sremain + pulse_width;
 		unsigned nticks = sr / 64;
-		tip->rewrite_sremain = sr - (nticks * 64);
+		tip->rewrite.sremain = sr - (nticks * 64);
 		int sample = (half_sin[i] * scale * 128.) + 128;
 		tape_sample_out(t, sample, nticks);
 	}
@@ -306,15 +334,15 @@ static void tape_bit_out(struct tape *t, int bit) {
 	// in the middle of what is recognised by the ROM read routines, and as
 	// such should prove to be the most robust.
 	if (bit) {
-		write_pulse(t, 3984, 0.7855);
-		write_pulse(t, 2992, -0.7855);
+		write_pulse(t, tip->rewrite.bit1_pwt + 496, 0.7855);
+		write_pulse(t, tip->rewrite.bit1_pwt - 496, -0.7855);
 	} else {
-		write_pulse(t, 6896, 0.7855);
-		write_pulse(t, 5904, -0.7855);
+		write_pulse(t, tip->rewrite.bit0_pwt + 496, 0.7855);
+		write_pulse(t, tip->rewrite.bit0_pwt - 496, -0.7855);
 	}
-	tip->rewrite_bit_count = (tip->rewrite_bit_count + 1) & 7;
+	tip->rewrite.bit_count = (tip->rewrite.bit_count + 1) & 7;
 	tip->last_tape_output = 0;
-	tip->rewrite_silence = 0;
+	tip->rewrite.silence = 0;
 }
 
 static void tape_byte_out(struct tape *t, int byte) {
@@ -520,8 +548,8 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	}
 
 	tape_update_motor(ti, tip->motor);
-	tip->rewrite_bit_count = 0;
-	tip->rewrite_silence = 1;
+	tip->rewrite.bit_count = 0;
+	tip->rewrite.silence = 1;
 	LOG_DEBUG(1, "Tape: Attached '%s' for writing.\n", filename);
 	return 0;
 }
@@ -534,9 +562,9 @@ void tape_close_writing(struct tape_interface *ti) {
 		// Writes a trailing byte where appropriate
 		tape_desync(tip, 1);
 		// Ensure the tape ends with a short duration of silence
-		if (!tip->rewrite_silence) {
+		if (!tip->rewrite.silence) {
 			write_silence(ti->tape_output, EVENT_MS(200));
-			tip->rewrite_silence = 1;
+			tip->rewrite.silence = 1;
 		}
 	}
 	if (ti->tape_output) {
@@ -1101,17 +1129,19 @@ static void tape_desync(struct tape_interface_private *tip, int leader) {
 	struct tape_interface *ti = &tip->public;
 	if (tip->tape_rewrite) {
 		// pad last byte with trailer pattern
-		while (tip->rewrite_bit_count) {
-			tape_bit_out(ti->tape_output, ~tip->rewrite_bit_count & 1);
+		while (tip->rewrite.bit_count) {
+			tape_bit_out(ti->tape_output, ~tip->rewrite.bit_count & 1);
 		}
 		// one byte of trailer before any silence (but not following silence)
-		if (leader > 0 && !tip->rewrite_silence) {
+		if (leader > 0 && !tip->rewrite.silence) {
 			tape_byte_out(ti->tape_output, 0x55);
 			leader--;
 		}
 		// desync tape rewrite - will continue once a sync byte is read
-		tip->rewrite_have_sync = 0;
-		tip->rewrite_leader_count = leader;
+		tip->rewrite.have_sync = 0;
+		tip->rewrite.leader_count = leader;
+		if (leader > 2)
+			tip->rewrite.have_pulse_widths = 0;
 	}
 }
 
@@ -1123,13 +1153,47 @@ static void rewrite_sync(void *sptr) {
 	/* BLKIN, having read sync byte $3C */
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
-	if (tip->rewrite_have_sync) return;
-	if (tip->tape_rewrite) {
-		for (int i = 0; i < tip->rewrite_leader_count; i++)
-			tape_byte_out(ti->tape_output, 0x55);
-		tape_byte_out(ti->tape_output, 0x3c);
-		tip->rewrite_have_sync = 1;
+	if (tip->rewrite.have_sync) return;
+
+	if (!tip->tape_rewrite) return;
+
+	// Scan pulse buffer to determine average pulse widths.
+	if (!tip->rewrite.have_pulse_widths) {
+		int npulses = PULSE_BUFFER_SIZE;
+		int pulsebuf[PULSE_BUFFER_SIZE];
+		memcpy(pulsebuf, tip->rewrite.pulse_buffer, sizeof(pulsebuf));
+		qsort(pulsebuf, npulses, sizeof(int), int_cmp);
+		int mean = int_mean(pulsebuf, npulses);
+		int a1 = 0, b1 = 0;
+		for ( ; b1 < npulses && pulsebuf[b1] < mean; b1++);
+		int a0 = b1, b0 = npulses;
+		int drop0 = (b0 - a0) / 20;
+		a0 += drop0;
+		b0 -= drop0;
+		int count0 = b0 - a0;
+
+		int drop1 = (b1 - a1) / 20;
+		a1 += drop1;
+		b1 -= drop1;
+		int count1 = b1 - a1;
+
+		int bit0_pwt = int_mean(pulsebuf + a0, count0);
+		int bit1_pwt = int_mean(pulsebuf + a1, count1);
+		if (bit0_pwt <= 0)
+			bit0_pwt = (bit1_pwt > 0) ? bit1_pwt * 2 : 6403;
+		if (bit1_pwt <= 0)
+			bit1_pwt = (bit0_pwt >= 2) ? bit0_pwt / 2 : 3489;
+
+		tip->rewrite.bit0_pwt = bit0_pwt;
+		tip->rewrite.bit1_pwt = bit1_pwt;
+		printf("%d %d\n", bit0_pwt, bit1_pwt);
+		tip->rewrite.have_pulse_widths = 1;
 	}
+
+	for (int i = 0; i < tip->rewrite.leader_count; i++)
+		tape_byte_out(ti->tape_output, 0x55);
+	tape_byte_out(ti->tape_output, 0x3c);
+	tip->rewrite.have_sync = 1;
 }
 
 // Rewrites bits returned by the BITIN routine, but only while flagged as
@@ -1139,7 +1203,7 @@ static void rewrite_bitin(void *sptr) {
 	/* RTS from BITIN */
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
-	if (tip->tape_rewrite && tip->rewrite_have_sync) {
+	if (tip->tape_rewrite && tip->rewrite.have_sync) {
 		tape_bit_out(ti->tape_output, tip->cpu->reg_cc & 0x01);
 	}
 }
@@ -1156,7 +1220,7 @@ static void rewrite_tape_on(void *sptr) {
 	if (tip->tape_rewrite && ti->tape_output) {
 		tape_sample_out(ti->tape_output, 0x81, EVENT_MS(250));
 		tape_sample_out(ti->tape_output, 0x7f, EVENT_MS(250));
-		tip->rewrite_silence = 1;
+		tip->rewrite.silence = 1;
 	}
 }
 
@@ -1271,4 +1335,24 @@ int tape_get_state(struct tape_interface *ti) {
 	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
 	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
 	return flags;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static int int_cmp(const void *a, const void *b) {
+	const int *aa = a;
+	const int *bb = b;
+	if (*aa == *bb)
+		return 0;
+	if (*aa < *bb)
+		return -1;
+	return 1;
+}
+
+static int int_mean(int *values, int nvalues) {
+	float sum = 0.0;
+	for (int i = 0; i < nvalues; i++) {
+		sum += values[i];
+	}
+	return IDIV_ROUND(sum, nvalues);
 }
