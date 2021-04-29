@@ -2,7 +2,7 @@
 
 CAS format tape images
 
-Copyright 2003-2017 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -31,6 +31,7 @@ Includes experimental CUE support.
 #include <string.h>
 #include <sys/stat.h>
 
+#include "intfuncs.h"
 #include "slist.h"
 #include "xalloc.h"
 
@@ -150,8 +151,6 @@ struct tape_cas {
 	} output;
 };
 
-#define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
-
 static void cas_close(struct tape *t);
 static long cas_tell(struct tape const *t);
 static int cas_seek(struct tape *t, long offset, int whence);
@@ -193,11 +192,6 @@ static _Bool cue_next(struct tape_cas *cas);
 
 static _Bool read_cue_data(struct tape_cas *cas);
 static void write_cue_data(struct tape_cas *cas);
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static int int_cmp(const void *a, const void *b);
-static int int_mean(int *values, int nvalues);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -733,27 +727,11 @@ static void process_pulse_buffer(struct tape *t) {
 		return;
 	cas->output.num_buffered_pulses = 0;
 
-	int pulsebuf[PULSE_BUFFER_SIZE];
-	memcpy(pulsebuf, cas->output.pulse_buffer, sizeof(pulsebuf));
-
-	qsort(pulsebuf, npulses, sizeof(int), int_cmp);
-	int mean = int_mean(pulsebuf, npulses);
-	int a1 = 0, b1 = 0;
-	for ( ; b1 < npulses && pulsebuf[b1] < mean; b1++);
-	int a0 = b1, b0 = npulses;
-
-	int drop0 = (b0 - a0) / 20;
-	a0 += drop0;
-	b0 -= drop0;
-	int count0 = b0 - a0;
-
-	int drop1 = (b1 - a1) / 20;
-	a1 += drop1;
-	b1 -= drop1;
-	int count1 = b1 - a1;
-
-	int bit0_pwt = int_mean(pulsebuf + a0, count0);
-	int bit1_pwt = int_mean(pulsebuf + a1, count1);
+	int bit0_pwt;
+	int bit1_pwt;
+	// We need to write out the contents of pulse_buffer, so can't use
+	// int_split_inplace here:
+	int_split(cas->output.pulse_buffer, npulses, &bit1_pwt, &bit0_pwt);
 	if (bit0_pwt <= 0)
 		bit0_pwt = (bit1_pwt > 0) ? bit1_pwt * 2 : 6403;
 	if (bit1_pwt <= 0)
@@ -1160,24 +1138,4 @@ static void write_cue_data(struct tape_cas *cas) {
 
 	// return file position to end of actual data
 	fseeko(cas->fd, cue_start, SEEK_SET);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static int int_cmp(const void *a, const void *b) {
-	const int *aa = a;
-	const int *bb = b;
-	if (*aa == *bb)
-		return 0;
-	if (*aa < *bb)
-		return -1;
-	return 1;
-}
-
-static int int_mean(int *values, int nvalues) {
-	float sum = 0.0;
-	for (int i = 0; i < nvalues; i++) {
-		sum += values[i];
-	}
-	return IDIV_ROUND(sum, nvalues);
 }

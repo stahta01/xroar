@@ -2,7 +2,7 @@
 
 Video output module generic operations
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -20,6 +20,8 @@ in those files (eg, LOCK_SURFACE and XSTEP)
 */
 
 #include <math.h>
+
+#include "intfuncs.h"
 
 #include "machine.h"
 #include "module.h"
@@ -303,9 +305,9 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 		struct ntsc_xyz rgb = ntsc_decode(burst, v++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
-		int R = generic->ntsc_ungamma[clamp_uint8(rgb.x+40)];
-		int G = generic->ntsc_ungamma[clamp_uint8(rgb.y+40)];
-		int B = generic->ntsc_ungamma[clamp_uint8(rgb.z+40)];
+		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];
+		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y+40)];
+		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z+40)];
 		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
 		generic->pixel += XSTEP;
 	}

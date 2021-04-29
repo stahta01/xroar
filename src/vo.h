@@ -2,7 +2,7 @@
 
 Video ouput modules & interfaces
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -76,11 +76,5 @@ struct vo_interface {
 extern struct module * const *vo_module_list;
 
 extern struct xconfig_enum vo_ntsc_phase_list[];
-
-inline int clamp_uint8(int v) {
-	if (v < 0) return 0;
-	if (v > 255) return 255;
-	return v;
-}
 
 #endif

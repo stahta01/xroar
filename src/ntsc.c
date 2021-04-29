@@ -2,7 +2,7 @@
 
 NTSC encoding & decoding
 
-Copyright 2016-2018 Ciaran Anscomb
+Copyright 2016-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -27,10 +27,10 @@ See COPYING.GPL for redistribution conditions.
 # define M_PI 3.14159265358979323846
 #endif
 
+#include "intfuncs.h"
 #include "xalloc.h"
 
 #include "ntsc.h"
-#include "vo.h"
 
 unsigned ntsc_phase = 0;
 
@@ -68,10 +68,10 @@ void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
 	}
 	float i = -0.27 * b_y + 0.74 * r_y;
 	float q =  0.41 * b_y + 0.48 * r_y;
-	np->byphase[0][c] = clamp_uint8(255.*(y+i));
-	np->byphase[1][c] = clamp_uint8(255.*(y+q));
-	np->byphase[2][c] = clamp_uint8(255.*(y-i));
-	np->byphase[3][c] = clamp_uint8(255.*(y-q));
+	np->byphase[0][c] = int_clamp_u8(255.*(y+i));
+	np->byphase[1][c] = int_clamp_u8(255.*(y+q));
+	np->byphase[2][c] = int_clamp_u8(255.*(y-i));
+	np->byphase[3][c] = int_clamp_u8(255.*(y-q));
 }
 
 void ntsc_palette_add_direct(struct ntsc_palette *np, unsigned c) {

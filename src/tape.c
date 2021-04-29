@@ -2,7 +2,7 @@
 
 Tape support
 
-Copyright 2003-2020 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -26,6 +26,7 @@ See COPYING.GPL for redistribution conditions.
 
 #include "array.h"
 #include "delegate.h"
+#include "intfuncs.h"
 #include "sds.h"
 #include "sdsx.h"
 #include "xalloc.h"
@@ -108,10 +109,6 @@ static void rewrite_sync(void *sptr);
 static void rewrite_bitin(void *sptr);
 static void rewrite_tape_on(void *sptr);
 static void rewrite_end_of_block(void *sptr);
-
-#define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
-static int int_cmp(const void *a, const void *b);
-static int int_mean(int *values, int nvalues);
 
 static void set_breakpoints(struct tape_interface_private *tip);
 
@@ -1159,26 +1156,12 @@ static void rewrite_sync(void *sptr) {
 
 	// Scan pulse buffer to determine average pulse widths.
 	if (!tip->rewrite.have_pulse_widths) {
-		int npulses = PULSE_BUFFER_SIZE;
-		int pulsebuf[PULSE_BUFFER_SIZE];
-		memcpy(pulsebuf, tip->rewrite.pulse_buffer, sizeof(pulsebuf));
-		qsort(pulsebuf, npulses, sizeof(int), int_cmp);
-		int mean = int_mean(pulsebuf, npulses);
-		int a1 = 0, b1 = 0;
-		for ( ; b1 < npulses && pulsebuf[b1] < mean; b1++);
-		int a0 = b1, b0 = npulses;
-		int drop0 = (b0 - a0) / 20;
-		a0 += drop0;
-		b0 -= drop0;
-		int count0 = b0 - a0;
-
-		int drop1 = (b1 - a1) / 20;
-		a1 += drop1;
-		b1 -= drop1;
-		int count1 = b1 - a1;
-
-		int bit0_pwt = int_mean(pulsebuf + a0, count0);
-		int bit1_pwt = int_mean(pulsebuf + a1, count1);
+		int bit0_pwt;
+		int bit1_pwt;
+		// Can use int_split_inplace here, as we don't care about the
+		// contents of this buffer (it's all leader pulses that will be
+		// rewritten consistently anyway).
+		int_split_inplace(tip->rewrite.pulse_buffer, PULSE_BUFFER_SIZE, &bit1_pwt, &bit0_pwt);
 		if (bit0_pwt <= 0)
 			bit0_pwt = (bit1_pwt > 0) ? bit1_pwt * 2 : 6403;
 		if (bit1_pwt <= 0)
@@ -1186,7 +1169,6 @@ static void rewrite_sync(void *sptr) {
 
 		tip->rewrite.bit0_pwt = bit0_pwt;
 		tip->rewrite.bit1_pwt = bit1_pwt;
-		printf("%d %d\n", bit0_pwt, bit1_pwt);
 		tip->rewrite.have_pulse_widths = 1;
 	}
 
@@ -1335,24 +1317,4 @@ int tape_get_state(struct tape_interface *ti) {
 	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
 	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
 	return flags;
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static int int_cmp(const void *a, const void *b) {
-	const int *aa = a;
-	const int *bb = b;
-	if (*aa == *bb)
-		return 0;
-	if (*aa < *bb)
-		return -1;
-	return 1;
-}
-
-static int int_mean(int *values, int nvalues) {
-	float sum = 0.0;
-	for (int i = 0; i < nvalues; i++) {
-		sum += values[i];
-	}
-	return IDIV_ROUND(sum, nvalues);
 }

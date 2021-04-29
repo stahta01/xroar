@@ -2,7 +2,7 @@
 
 Video ouput modules & interfaces
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -38,5 +38,3 @@ struct xconfig_enum vo_ntsc_phase_list[] = {
 	{ XC_ENUM_INT("red-blue", VO_PHASE_KRBW, "Red-blue") },
 	{ XC_ENUM_END() }
 };
-
-extern inline int clamp_uint8(int v);
