@@ -4,6 +4,7 @@ Version 0.36.3, unreleased
  * Support leading "~/" in filenames, not just path elements
  * New option -tape-hysteresis (with new default of 1% tape input hysteresis)
  * Document previously added option -tape-pan
+ * Detect pulse widths for CUE data when using -tape-rewrite
 
 Version 0.36.2, Wed Jul 22 2020
 
