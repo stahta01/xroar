@@ -9,6 +9,7 @@ libporta_a_SOURCES = \
 	c-strcasecmp.c \
 	c-strncasecmp.c \
 	delegate.c delegate.h \
+	intfuncs.c intfuncs.h \
 	pl-endian.h \
 	pl-regex.h \
 	pl-string.h \
