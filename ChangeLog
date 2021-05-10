@@ -3,6 +3,8 @@ Version 0.36.3, unreleased
  * Add Control+Shift+D to flush disk images
  * Support leading "~/" in filenames, not just path elements
  * New option -tape-hysteresis (with new default of 1% tape input hysteresis)
+ * New option -tape-rewrite-gap-ms _ms_ sets gap length during rewrite
+ * New option -tape-rewrite-leader _bytes_ sets leader length during rewrite
  * Document previously added option -tape-pan
  * Detect pulse widths for CUE data when using -tape-rewrite
 

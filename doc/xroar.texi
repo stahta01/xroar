@@ -719,7 +719,10 @@ with @option{-no-tape-pad-auto}.
 
 The @option{-tape-rewrite} option enables rewriting of anything read from the
 input tape to the output tape.  This is useful for creating ``well formed''
-@file{.cas} files.
+@file{.cas} files.  Use the @option{-tape-rewrite-gap-ms @var{ms}} option to
+set the inter-block gap in milliseconds (default 500ms).  You can set the
+leader length following gaps with the @option{-tape-rewrite-leader @var{bytes}}
+option (default 256 bytes).
 
 Where available, these options can be changed on the fly in the GUI.
 

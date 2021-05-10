@@ -181,7 +181,7 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	tip->ui = ui;
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
-	tip->rewrite.leader_count = 256;
+	tip->rewrite.leader_count = xroar_cfg.tape_rewrite_leader;
 	tip->rewrite.silence = 1;
 	tip->rewrite.bit0_pwt = 6403;
 	tip->rewrite.bit1_pwt = 3489;
@@ -243,7 +243,7 @@ int tape_seek(struct tape *t, long offset, int whence) {
 	// If seeking to beginning of tape, ensure any fake leader etc.
 	// is set up properly.
 	if (r >= 0 && t->offset == 0) {
-		tape_desync(tip, 256);
+		tape_desync(tip, xroar_cfg.tape_rewrite_leader);
 	}
 	return r;
 }
@@ -506,7 +506,7 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	if (ti->tape_input->module->set_hysteresis)
 		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar_cfg.tape_hysteresis);
 
-	tape_desync(tip, 256);
+	tape_desync(tip, xroar_cfg.tape_rewrite_leader);
 	tape_update_motor(ti, tip->motor);
 	LOG_DEBUG(1, "Tape: Attached '%s' for reading\n", filename);
 	return 0;
@@ -680,7 +680,7 @@ void tape_update_motor(struct tape_interface *ti, _Bool state) {
 			ti->tape_output->module->motor_off(ti->tape_output);
 		}
 		if (tip->tape_rewrite) {
-			tape_desync(tip, 256);
+			tape_desync(tip, xroar_cfg.tape_rewrite_leader);
 		}
 	}
 	if (tip->motor != state) {
@@ -1198,10 +1198,9 @@ static void rewrite_tape_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
 	/* desync with long leader */
-	tape_desync(tip, 256);
+	tape_desync(tip, xroar_cfg.tape_rewrite_leader);
 	if (tip->tape_rewrite && ti->tape_output) {
-		tape_sample_out(ti->tape_output, 0x81, EVENT_MS(250));
-		tape_sample_out(ti->tape_output, 0x7f, EVENT_MS(250));
+		tape_sample_out(ti->tape_output, 0x80, EVENT_MS(xroar_cfg.tape_rewrite_gap_ms));
 		tip->rewrite.silence = 1;
 	}
 }

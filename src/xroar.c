@@ -89,6 +89,8 @@ struct xroar_cfg xroar_cfg = {
 	.disk_auto_sd = 1,
 	.tape_pan = 0.5,
 	.tape_hysteresis = 1.0,
+	.tape_rewrite_gap_ms = 500,
+	.tape_rewrite_leader = 256,
 };
 
 // Private
@@ -688,6 +690,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	private_cfg.tape_pad_auto = private_cfg.tape_pad_auto ? TAPE_PAD_AUTO : 0;
 	private_cfg.tape_fast = private_cfg.tape_fast ? TAPE_FAST : 0;
 	private_cfg.tape_rewrite = private_cfg.tape_rewrite ? TAPE_REWRITE : 0;
+	if (xroar_cfg.tape_rewrite_gap_ms <= 0 || xroar_cfg.tape_rewrite_gap_ms > 5000) {
+		xroar_cfg.tape_rewrite_gap_ms = 500;
+	}
+	if (xroar_cfg.tape_rewrite_leader <= 0 || xroar_cfg.tape_rewrite_leader > 2048) {
+		xroar_cfg.tape_rewrite_leader = 256;
+	}
 
 	_Bool no_auto_dos = xroar_machine_config->nodos;
 	_Bool definitely_dos = 0;
@@ -2055,6 +2063,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
 	{ XC_SET_INT1("tape-pad-auto", &private_cfg.tape_pad_auto) },
 	{ XC_SET_INT1("tape-rewrite", &private_cfg.tape_rewrite) },
+	{ XC_SET_INT("tape-rewrite-gap-ms", &xroar_cfg.tape_rewrite_gap_ms) },
+	{ XC_SET_INT("tape-rewrite-leader", &xroar_cfg.tape_rewrite_leader) },
 	{ XC_SET_INT("tape-ao-rate", &private_cfg.tape_ao_rate) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT1("tapehack", &private_cfg.tape_rewrite), .deprecated = 1 },
@@ -2219,13 +2229,15 @@ static void helptext(void) {
 "  -run FILE             load or attach FILE and attempt autorun\n"
 
 "\n Cassettes:\n"
-"  -tape-write FILE     open FILE for tape writing\n"
-"  -tape-pan PANNING    pan stereo input (0.0 = full left, 1.0 = full right) [0.5]\n"
-"  -tape-hysteresis H   read hysteresis as % of full scale [1]\n"
-"  -no-tape-fast        disable fast tape loading\n"
-"  -no-tape-pad-auto    disable CAS file short leader workaround\n"
-"  -tape-rewrite        enable tape rewriting\n"
-"  -tape-ao-rate HZ     set tape writing frame rate\n"
+"  -tape-write FILE          open FILE for tape writing\n"
+"  -tape-pan PANNING         pan stereo input (0.0 = left, 1.0 = right) [0.5]\n"
+"  -tape-hysteresis H        read hysteresis as % of full scale [1]\n"
+"  -no-tape-fast             disable fast tape loading\n"
+"  -no-tape-pad-auto         disable CAS file short leader workaround\n"
+"  -tape-rewrite             enable tape rewriting\n"
+"  -tape-rewrite-gap-ms MS   gap length during tape rewriting (1-5000ms) [500]\n"
+"  -tape-rewrite-leader B    rewrite leader length in bytes (1-2048) [256]\n"
+"  -tape-ao-rate HZ          set tape writing frame rate\n"
 
 "\n Disks:\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"

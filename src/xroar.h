@@ -84,6 +84,8 @@ struct xroar_cfg {
 	// Cassettes
 	double tape_pan;
 	double tape_hysteresis;
+	int tape_rewrite_gap_ms;
+	int tape_rewrite_leader;
 	// Disks
 	_Bool disk_write_back;
 	_Bool disk_auto_os9;
