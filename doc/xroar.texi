@@ -331,8 +331,8 @@ per line.
 
 Lines in the configuration file each contain an option followed by whitespace
 followed by a value.  Trailing whitespace is ignored.  Empty lines are skipped,
-and any line where the first non-whitespace character is a @samp{#} is treated
-as a comment.
+and any line where the first non-whitespace character is a hash (@samp{#}) is
+treated as a comment.
 
 An option may be preceded by leading dashes as from the command line, but
 within the configuration file they are not necessary.  Most options may be
@@ -380,8 +380,8 @@ filename arguments.
 @ref{Installation} and @ref{Compilation} list good default locations for
 @file{xroar.conf}, but it is actually searched for in a list of directories.
 You can override this search path with the @env{XROAR_CONF_PATH} environment
-variable, which contains a @samp{:}-separated list of directories.  Here are
-the defaults:
+variable, which contains a colon-separated (@samp{:}) list of directories.
+Here are the defaults:
 
 @multitable {Mac OS X.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
@@ -390,13 +390,14 @@ the defaults:
 @item Windows @tab @file{:~\Documents\XRoar:~\AppData\Local\XRoar:~\AppData\Roaming\XRoar}
 @end multitable
 
-Note the leading @samp{:} in the Windows default indicates an empty entry,
+Note the leading colon (@samp{:}) in the Windows default indicates an empty entry,
 meaning it will look in the current working directory first (i.e. you can put
 @file{xroar.conf} into the directory from which you run XRoar).
 
-@samp{~} indicates the user's home directory: the @env{HOME} environment
-variable on Unix systems, or @env{USERPROFILE} on Windows.  @emph{prefix} is
-the installation prefix, which is usually @file{/usr/local}.
+A leading tilde character (@samp{~}) indicates the user's home directory: the
+@env{HOME} environment variable on Unix systems, or @env{USERPROFILE} on
+Windows.  @emph{prefix} is the installation prefix, which is usually
+@file{/usr/local}.
 
 To bypass the search path and start XRoar using a specific configuration file,
 pass @option{-c @var{filename}} as the very first option to XRoar.
