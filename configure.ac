@@ -126,8 +126,8 @@ AC_ARG_ENABLE([gdb_target],
 AM_CONDITIONAL([WASM], [test "x$enable_wasm" = "xyes"])
 AM_COND_IF([WASM], [
 		AC_DEFINE([HAVE_WASM], 1, [WebAssembly build])
-		WASM_CFLAGS="-s WASM=1 -O3 -s"
-		WASM_LIBS="[-s WASM=1 -O3 -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"
+		WASM_CFLAGS=""
+		WASM_LIBS="[-s WASM=1 -s EXPORTED_FUNCTIONS='@wasm/exported_functions' -s EXPORTED_RUNTIME_METHODS=\"['FS','ccall','cwrap']\"]"
 		test -z "$SDL_CFLAGS" && SDL_CFLAGS="-s USE_SDL=2"
 		test -z "$SDL_LIBS" && SDL_LIBS="-s USE_SDL=2"
 		test -z "$enable_trace" && enable_trace=no
@@ -146,6 +146,7 @@ AM_COND_IF([WASM], [
 		test -z "$with_zlib" && with_zlib=no
 		EXEEXT=".js"
 		OBJC="$CC"
+		OBJCFLAGS="$CFLAGS"
 		])
 AC_SUBST(WASM_CFLAGS)
 AC_SUBST(WASM_LIBS)
