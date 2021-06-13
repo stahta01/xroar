@@ -723,6 +723,9 @@ static void waggle_bit(void *sptr) {
 	case -1:
 		DELEGATE_CALL1(ti->update_audio, 0.5);
 		event_dequeue(&tip->waggle_event);
+		if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
+			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		}
 		return;
 	case 0:
 		DELEGATE_CALL1(ti->update_audio, 0.0);
@@ -765,6 +768,9 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
 		if (tip->in_pulse < 0) {
 			event_dequeue(&tip->waggle_event);
+			if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
+				motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+			}
 			return;
 		}
 	}
