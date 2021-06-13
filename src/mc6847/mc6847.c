@@ -2,7 +2,7 @@
 
 Motorola MC6847 Video Display Generator (VDG)
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -37,10 +37,12 @@ See COPYING.GPL for redistribution conditions.
 #include "sam.h"
 #include "xroar.h"
 
-struct ser_handle;
+// Convert VDG timings (measured in quarter-VDG-cycles) to event ticks:
+#define EVENT_VDG_TIME(c) EVENT_SAM_CYCLES((c))
 
-// Convert VDG pixels (half-cycles) to event ticks:
-#define EVENT_VDG_PIXELS(c) EVENT_SAM_CYCLES((c))
+// How video data is interpreted by the VDG.  As soon as mode changes take
+// effect (which on a Dragon or CoCo typically happens partway through a byte),
+// this changes immediately, so the rest of the byte is rendered differently.
 
 enum vdg_render_mode {
 	VDG_RENDER_SG,
@@ -120,6 +122,7 @@ static void do_hs_fall_pal(void *);
 
 static void render_scanline(struct MC6847_private *vdg);
 
+// Canonify scanline numbers:
 #define SCANLINE(s) ((s) % VDG_FRAME_DURATION)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -134,7 +137,7 @@ static inline int encode_pixel(struct MC6847_private *vdg, int colour) {
 
 #else
 
-// Trades off speed for accuracy by halving the video data rate.
+// Trades off speed for accuracy by halving the generated video data rate.
 
 #define SCALE_PIXELS (2)
 #define encode_pixel(vdg,colour) (colour)
@@ -176,27 +179,28 @@ static void do_hs_fall(void *data) {
 	// HS falling edge.
 	DELEGATE_CALL1(vdg->public.signal_hs, 0);
 
+	// This achieves the equivalent of a TV getting into sync with the
+	// colourburst.
 	ntsc_reset_phase();
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
+	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE);
+	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION);
 
 	vdg->scanline = SCANLINE(vdg->scanline + 1);
 
-	/* On PAL machines, the clock to the VDG is interrupted at two points
-	 * in every frame to fake up some extra scanlines, padding the signal
-	 * from 262 lines to 312 lines.  Dragons do not generate an HS-related
-	 * interrupt signal during this time, CoCos do.  The positioning and
-	 * duration of each interruption differs also. */
+	// On PAL machines, external circuitry suspends the clock to the VDG at
+	// two points each frame to insert extra scanlines (differently on
+	// Dragon and CoCo).  Ideally outside code would represent this, but
+	// it's handled here for speed.
 
 	if (vdg->public.is_pal) {
 		if (vdg->public.is_dragon64) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
 			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
-				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
-				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_PIXELS(VDG_PAL_PADDING_LINE);
+				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_TIME(VDG_PAL_PADDING_LINE);
+				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_TIME(VDG_PAL_PADDING_LINE);
 			}
 		} else if (vdg->public.is_dragon32) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
@@ -255,8 +259,8 @@ static void do_hs_fall_pal(void *data) {
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
+	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE);
+	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION);
 
 	vdg->pal_padding--;
 	if (vdg->pal_padding == 0)
@@ -266,8 +270,10 @@ static void do_hs_fall_pal(void *data) {
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
 }
 
+// Renders current scanline up to the current time.
+
 static void render_scanline(struct MC6847_private *vdg) {
-	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_PIXELS(1);
+	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_TIME(1);
 	if (vdg->is_32byte && beam_to >= (VDG_tHBNK + 16)) {
 		unsigned nbytes = (beam_to - VDG_tHBNK) >> 4;
 		if (nbytes > 42)
@@ -499,7 +505,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->scanline = 0;
 	vdg->public.row = 0;
 	vdg->scanline_start = event_current_tick;
-	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_PIXELS(VDG_LINE_DURATION);
+	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_TIME(VDG_LINE_DURATION);
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
