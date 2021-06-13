@@ -47,6 +47,8 @@ AC_CHECK_FUNCS([getaddrinfo popen strnlen strsep])
 AX_GCC_BUILTIN(__builtin_parity)
 AX_GCC_VAR_ATTRIBUTE(packed)
 
+AC_PATH_XTRA
+
 ### Options
 
 AC_ARG_ENABLE([snapshot],[])
@@ -133,6 +135,8 @@ AM_COND_IF([WASM], [
 		test -z "$enable_trace" && enable_trace=no
 		test -z "$enable_ao_null" && enable_ao_null=no
 		test -z "$enable_gdb_target" && enable_gdb_target=no
+		test -z "$with_x" && with_x=no
+		test -z "$no_x" && no_x=yes
 		test -z "$with_gtk2" && with_gtk2=no
 		test -z "$with_cocoa" && with_cocoa=no
 		test -z "$with_alsa" && with_alsa=no
@@ -145,8 +149,6 @@ AM_COND_IF([WASM], [
 		test -z "$with_pthreads" && with_pthreads=no
 		test -z "$with_zlib" && with_zlib=no
 		EXEEXT=".js"
-		OBJC="$CC"
-		OBJCFLAGS="$CFLAGS"
 		])
 AC_SUBST(WASM_CFLAGS)
 AC_SUBST(WASM_LIBS)
@@ -201,17 +203,15 @@ AM_COND_IF([ZLIB], [AC_DEFINE([HAVE_ZLIB], 1, [Have zlib])])
 
 ### X11
 
-AS_IF([test "x$with_x11" != "xno"], [
-		AC_CHECK_LIB([X11], [XKeysymToKeycode], [X11_LIBS="-lX11"])
-		])
-
 unset have_xlib
-AS_IF([test -n "$X11_LIBS"], [
+AS_IF([test "x$no_x" != "xyes"], [
+		X11_CFLAGS="$X_CFLAGS"
+		X11_LIBS="$X_PRE_LIBS $X_LIBS -lX11 $X_EXTRA_LIBS"
 		OLD_CFLAGS="$CFLAGS"
 		OLD_LIBS="$LIBS"
 		CFLAGS="$CFLAGS $X11_CFLAGS"
 		LIBS="$LIBS $X11_LIBS"
-		AC_MSG_CHECKING([if xlib is usable])
+		AC_MSG_CHECKING([if X is usable])
 		AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <stdlib.h>
 #include <X11/Xlib.h>
@@ -477,8 +477,18 @@ fi
 AC_SUBST(COCOA_CFLAGS)
 AC_SUBST(COCOA_LIBS)
 
+# Cocoa is the only thing that requires Objective C.  If it's not found, copy
+# standard C settings into OBJC & OBJCFLAGS, as user should not have to guess
+# that an ObjC compiler is going to be used anyway (I don't know how to
+# conditionally test for ObjC compiler).
+
 AM_CONDITIONAL([UI_COCOA], [test -n "$have_cocoa"])
-AM_COND_IF([UI_COCOA], [AC_DEFINE([HAVE_COCOA], 1, [Have Mac OS X Cocoa framework])])
+AM_COND_IF([UI_COCOA], [
+		AC_DEFINE([HAVE_COCOA], 1, [Have Mac OS X Cocoa framework])
+	], [
+		OBJC="$CC"
+		OBJCFLAGS="$CFLAGS"
+	])
 
 ### libsndfile
 
