@@ -35,7 +35,6 @@ See COPYING.GPL for redistribution conditions.
 
 #include "gtk2/common.h"
 #include "gtk2/drivecontrol.h"
-#include "gtk2/ui_gtk2.h"
 
 /* Module callbacks */
 static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);

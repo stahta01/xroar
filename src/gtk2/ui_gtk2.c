@@ -48,7 +48,6 @@ See COPYING.GPL for redistribution conditions.
 #include "gtk2/common.h"
 #include "gtk2/drivecontrol.h"
 #include "gtk2/tapecontrol.h"
-#include "gtk2/ui_gtk2.h"
 
 static void *ui_gtk2_new(void *cfg);
 static void ui_gtk2_free(void *sptr);

@@ -37,7 +37,6 @@ See COPYING.GPL for redistribution conditions.
 
 #include "gtk2/common.h"
 #include "gtk2/tapecontrol.h"
-#include "gtk2/ui_gtk2.h"
 
 /* UI events */
 static void update_tape_counters(void *);

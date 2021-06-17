@@ -35,8 +35,6 @@ See COPYING.GPL for redistribution conditions.
 #include "module.h"
 #include "xroar.h"
 
-#include "gtk2/ui_gtk2.h"
-
 struct filereq_interface_gtk2 {
 	struct filereq_interface public;
 

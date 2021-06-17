@@ -47,7 +47,6 @@ See COPYING.GPL for redistribution conditions.
 #include "xroar.h"
 
 #include "gtk2/common.h"
-#include "gtk2/ui_gtk2.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

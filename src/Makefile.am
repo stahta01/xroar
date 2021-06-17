@@ -167,7 +167,7 @@ xroar_SOURCES += \
 	gtk2/joystick_gtk2.c \
 	gtk2/keyboard_gtk2.c \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
-	gtk2/ui_gtk2.c gtk2/ui_gtk2.h
+	gtk2/ui_gtk2.c
 
 BUILT_SOURCES += \
 	gtk2/ui_gtk2.gresource.c

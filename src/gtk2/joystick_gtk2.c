@@ -46,12 +46,13 @@ See COPYING.GPL for redistribution conditions.
 #include "xroar.h"
 
 #include "gtk2/common.h"
-#include "gtk2/ui_gtk2.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
+
+extern struct joystick_submodule gtk2_js_submod_keyboard;
 
 static struct joystick_submodule gtk2_js_submod_mouse = {
 	.name = "mouse",
