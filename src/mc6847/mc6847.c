@@ -273,6 +273,9 @@ static void do_hs_fall_pal(void *data) {
 // Renders current scanline up to the current time.
 
 static void render_scanline(struct MC6847_private *vdg) {
+	// Calculate where we are in the scanline, and queue video data up to
+	// this point in time.
+
 	unsigned beam_to = (event_current_tick - vdg->scanline_start) / EVENT_VDG_TIME(1);
 	if (vdg->is_32byte && beam_to >= (VDG_tHBNK + 16)) {
 		unsigned nbytes = (beam_to - VDG_tHBNK) >> 4;
@@ -291,26 +294,42 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->vram_nbytes = nbytes;
 		}
 	}
+
 	if (beam_to < VDG_LEFT_BORDER_START)
 		return;
-
 	if (vdg->beam_pos >= beam_to)
 		return;
 	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos/SCALE_PIXELS;
 
+	// Render left border in full pixels (so two half pixels when
+	// WANT_SIMULATED_NTSC is defined).
+
 	while (vdg->lborder_remaining > 0) {
 		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-		vdg->beam_pos += SCALE_PIXELS;
+#ifdef WANT_SIMULATED_NTSC
+		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
+#endif
+
+		vdg->beam_pos += 2;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
-		vdg->lborder_remaining -= SCALE_PIXELS;
+		vdg->lborder_remaining -= 2;
 		if (vdg->beam_pos >= beam_to)
 			return;
 	}
 
+	// Active area.
+
 	while (vdg->vram_remaining > 0) {
+
 		if (vdg->vram_bit == 0) {
+			// Byte boundary.  This is where we fetch new data,
+			// including shifting in new values for CSS.  Per-byte
+			// flags are processed and data is formatted for bitmap
+			// graphics (vram_g_data) and semigraphics
+			// (vram_sg_data).
+
 			uint16_t vdata = vdg->vram[vdg->vram_index++];
 			vdg->vram_g_data = vdata & 0xff;
 			vdg->vram_bit = 8;
@@ -371,6 +390,15 @@ static void render_scanline(struct MC6847_private *vdg) {
 			}
 		}
 
+		// Output is rendered for two bits of input data at a time.
+		// This limits where mode changes can take effect, possibly a
+		// little too much (2 bits can be 4 pixels in 16-byte modes).
+
+		// Interpret data according to mode.  Note that a switch to
+		// semigraphics mode can only occur on byte boundaries (ie,
+		// processed above), which means a switch to text mode mid-byte
+		// always renders the rest of the byte as bitmap graphics.
+
 		uint8_t c0, c1;
 		switch (vdg->render_mode) {
 		case VDG_RENDER_SG: default:
@@ -385,31 +413,45 @@ static void render_scanline(struct MC6847_private *vdg) {
 			c1 = (vdg->vram_g_data&0x40) ? vdg->fg_colour : vdg->bg_colour;
 			break;
 		}
+
+#ifdef WANT_SIMULATED_NTSC
+		// The normal behaviour is to render half-pixels from an LUT
+		// tracking phase.  This provides enough data to perform a
+		// low-pass filter for simulated NTSC.
+
 		if (vdg->is_32byte) {
 			*(pixel++) = encode_pixel(vdg, c0);
-#ifdef WANT_SIMULATED_NTSC
 			*(pixel++) = encode_pixel(vdg, c0);
-#endif
 			*(pixel++) = encode_pixel(vdg, c1);
-#ifdef WANT_SIMULATED_NTSC
 			*(pixel++) = encode_pixel(vdg, c1);
-#endif
 			vdg->beam_pos += 4;
 		} else {
 			*(pixel++) = encode_pixel(vdg, c0);
 			*(pixel++) = encode_pixel(vdg, c0);
-#ifdef WANT_SIMULATED_NTSC
 			*(pixel++) = encode_pixel(vdg, c0);
 			*(pixel++) = encode_pixel(vdg, c0);
-#endif
 			*(pixel++) = encode_pixel(vdg, c1);
 			*(pixel++) = encode_pixel(vdg, c1);
-#ifdef WANT_SIMULATED_NTSC
 			*(pixel++) = encode_pixel(vdg, c1);
 			*(pixel++) = encode_pixel(vdg, c1);
-#endif
 			vdg->beam_pos += 8;
 		}
+#else
+		// A faster path stores colour values directly and only renders
+		// full pixels.
+
+		if (vdg->is_32byte) {
+			*(pixel++) = encode_pixel(vdg, c0);
+			*(pixel++) = encode_pixel(vdg, c1);
+			vdg->beam_pos += 4;
+		} else {
+			*(pixel++) = encode_pixel(vdg, c0);
+			*(pixel++) = encode_pixel(vdg, c0);
+			*(pixel++) = encode_pixel(vdg, c1);
+			*(pixel++) = encode_pixel(vdg, c1);
+			vdg->beam_pos += 8;
+		}
+#endif
 
 		vdg->vram_bit -= 2;
 		if (vdg->vram_bit == 0) {
@@ -421,6 +463,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 			return;
 	}
 
+	// Render right border in full pixels (as with left border).
+
 	while (vdg->rborder_remaining > 0) {
 		if (vdg->beam_pos == VDG_RIGHT_BORDER_START) {
 			vdg->CSSb = vdg->CSSa;
@@ -428,17 +472,21 @@ static void render_scanline(struct MC6847_private *vdg) {
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
 		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-		vdg->beam_pos += SCALE_PIXELS;
+#ifdef WANT_SIMULATED_NTSC
+		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
+#endif
+		vdg->beam_pos += 2;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
 		}
-		vdg->rborder_remaining -= SCALE_PIXELS;
+		vdg->rborder_remaining -= 2;
 		if (vdg->beam_pos >= beam_to)
 			return;
 	}
 
 	// If a program switches to 32 bytes per line mid-scanline, the whole
 	// scanline might not have been rendered:
+
 	while (vdg->beam_pos < VDG_RIGHT_BORDER_END) {
 		*(pixel++) = encode_pixel(vdg, VDG_BLACK);
 		vdg->beam_pos++;
@@ -448,47 +496,23 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void update_vdg(struct MC6847_private *vdg) {
-
-	vdg->GM0 = vdg->GM & 1;
-	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
-	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
-	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
-	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
-	vdg->cg_colours = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
-
-	if (!vdg->nA_G) {
-		vdg->render_mode = VDG_RENDER_RG;
-		if (vdg->nA_S) {
-			vdg->fg_colour = VDG_GREEN;
-			vdg->bg_colour = VDG_DARK_GREEN;
-		} else {
-			vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
-			vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_DARK_ORANGE;
-		}
-		vdg->border_colour = vdg->text_border ? vdg->text_border_colour : VDG_BLACK;
-	} else {
-		vdg->render_mode = vdg->GM0 ? VDG_RENDER_RG : VDG_RENDER_CG;
-		vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
-		vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_BLACK;
-		vdg->border_colour = vdg->cg_colours;
-	}
-
-}
-
 struct MC6847 *mc6847_new(_Bool t1) {
 	struct MC6847_private *vdg = part_new(sizeof(*vdg));
 	*vdg = (struct MC6847_private){0};
 	part_init((struct part *)vdg, t1 ? "MC6847T1" : "MC6847");
 	vdg->public.part.free = mc6847_free;
+
+	// 6847T1 doesn't appear to do bright orange:
 	vdg->is_t1 = t1;
+	vdg->bright_orange = t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
+
+	// Beam timing & events
 	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.fetch_data = DELEGATE_DEFAULT2(void, int, uint16p);
 	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
 	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
-	update_vdg(vdg);
 	return (struct MC6847 *)vdg;
 }
 
@@ -507,8 +531,6 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->scanline_start = event_current_tick;
 	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_TIME(VDG_LINE_DURATION);
 	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
-	// 6847T1 doesn't appear to do bright orange:
-	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
 	mc6847_set_mode(vdgp, 0);
 	vdg->vram_index = 0;
 	vdg->vram_bit = 0;
@@ -532,13 +554,15 @@ void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
 
 void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	/* Render scanline so far before changing modes */
+
+	// Render scanline so far before changing modes
 	if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 		render_scanline(vdg);
 	}
 
+	// New mode information
 	vdg->GM = (mode >> 4) & 7;
-	vdg->GM0 = mode & 0x10;
+	vdg->GM0 = vdg->GM & 1;
 	vdg->CSS = mode & 0x08;
 	_Bool new_nA_G = mode & 0x80;
 
@@ -546,31 +570,37 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
 	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 
-	/* If switching from graphics to alpha/semigraphics */
-	if (vdg->nA_G && !new_nA_G) {
-		vdg->public.row = 0;
-		vdg->render_mode = VDG_RENDER_RG;
-		if (vdg->nA_S) {
-			vdg->vram_g_data = 0x3f;
-			vdg->fg_colour = VDG_GREEN;
-			vdg->bg_colour = VDG_DARK_GREEN;
-		} else {
-			vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
-			vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_DARK_ORANGE;
+	// Transition between alpha/semigraphics and graphics has side-effects.
+	// Border colour may change, row preset may occur, rest of byte may be
+	// rendered differently.
+
+	if (!new_nA_G) {
+		// Alpha/semigraphics mode
+		if (vdg->nA_G) {
+			// Previously in graphics mode
+			vdg->public.row = 0;  // row preset
+			vdg->render_mode = VDG_RENDER_RG;
+			if (vdg->nA_S) {
+				vdg->vram_g_data = 0x3f;
+				vdg->fg_colour = VDG_GREEN;
+				vdg->bg_colour = VDG_DARK_GREEN;
+			} else {
+				vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
+				vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_DARK_ORANGE;
+			}
 		}
-	}
-	if (!vdg->nA_G && new_nA_G) {
-		vdg->border_colour = vdg->cg_colours;
-		vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
-		vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_BLACK;
+		vdg->border_colour = vdg->text_border ? vdg->text_border_colour : VDG_BLACK;
+	} else {
+		// Graphics mode
+		if (!vdg->nA_G) {
+			// Previously in alpha/semigraphics mode
+			vdg->border_colour = vdg->cg_colours;
+			vdg->fg_colour = !vdg->CSSb ? VDG_GREEN : VDG_WHITE;
+			vdg->bg_colour = !vdg->CSSb ? VDG_DARK_GREEN : VDG_BLACK;
+		}
+		vdg->render_mode = vdg->GM0 ? VDG_RENDER_RG : VDG_RENDER_CG;
 	}
 	vdg->nA_G = new_nA_G;
-
-	if (vdg->nA_G) {
-		vdg->render_mode = vdg->GM0 ? VDG_RENDER_RG : VDG_RENDER_CG;
-	} else {
-		vdg->border_colour = vdg->text_border ? vdg->text_border_colour : VDG_BLACK;
-	}
 
 	vdg->is_32byte = !vdg->nA_G || !(vdg->GM == 0 || (vdg->GM0 && vdg->GM != 7));
 }
