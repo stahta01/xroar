@@ -283,6 +283,14 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 			LOG_PRINT("SDL_GetRendererInfo()\n");
 			LOG_PRINT("\tname = %s\n", renderer_info.name);
 			LOG_PRINT("\tflags = 0x%x\n", renderer_info.flags);
+			if (renderer_info.flags & SDL_RENDERER_SOFTWARE)
+				LOG_PRINT("\t\tSDL_RENDERER_SOFTWARE\n");
+			if (renderer_info.flags & SDL_RENDERER_ACCELERATED)
+				LOG_PRINT("\t\tSDL_RENDERER_ACCELERATED\n");
+			if (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC)
+				LOG_PRINT("\t\tSDL_RENDERER_PRESENTVSYNC\n");
+			if (renderer_info.flags & SDL_RENDERER_TARGETTEXTURE)
+				LOG_PRINT("\t\tSDL_RENDERER_TARGETTEXTURE\n");
 			for (unsigned i = 0; i < renderer_info.num_texture_formats; i++) {
 				LOG_PRINT("\ttexture_formats[%u] = %s\n", i, SDL_GetPixelFormatName(renderer_info.texture_formats[i]));
 			}
