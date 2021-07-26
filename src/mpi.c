@@ -2,7 +2,7 @@
 
 Multi-Pak Interface (MPI) support
 
-Copyright 2014-2019 Ciaran Anscomb
+Copyright 2014-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -14,6 +14,20 @@ option) any later version.
 See COPYING.GPL for redistribution conditions.
 
 */
+
+/*
+ * Now includes support for the RACE Computer Expansion Cage - similar to the
+ * MPI, but with some slightly different behaviour:
+
+ *    No separate IO select.
+ *    Select register is at $FEFF.
+ *    Reading $FEFF does same as writing (reference suggests it sets slot to
+ *       '2', but my guess is that this just happened to be on the data bus at
+ *       the time it was tested (confirmed for PEEK).
+
+ * http://worldofdragon.org/index.php?title=RACE_Computer_Expansion_Cage
+
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -34,11 +48,18 @@ See COPYING.GPL for redistribution conditions.
 #include "xroar.h"
 
 static struct cart *mpi_new(struct cart_config *);
+static struct cart *race_new(struct cart_config *);
 
 struct cart_module cart_mpi_module = {
 	.name = "mpi",
 	.description = "Multi-Pak Interface",
 	.new = mpi_new,
+};
+
+struct cart_module cart_mpi_race_module = {
+	.name = "mpi-race",
+	.description = "RACE Computer Expansion Cage",
+	.new = race_new,
 };
 
 struct mpi;
@@ -52,6 +73,7 @@ struct mpi_slot {
 struct mpi {
 	struct cart cart;
 	_Bool switch_enable;
+	_Bool is_race;
 	int cts_route;
 	int p2_route;
 	unsigned firq_state;
@@ -140,6 +162,17 @@ static struct cart *mpi_new(struct cart_config *cc) {
 	}
 	select_slot(c, (initial_slot << 4) | initial_slot);
 
+	return c;
+}
+
+static struct cart *race_new(struct cart_config *cc) {
+	struct cart *c = mpi_new(cc);
+	if (!c)
+		return NULL;
+	struct mpi *m = (struct mpi *)c;
+	m->is_race = 1;
+	m->switch_enable = 0;
+	select_slot(c, 0);
 	return c;
 }
 
@@ -242,8 +275,17 @@ void mpi_switch_slot(struct cart *c, unsigned slot) {
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
 	m->cart.EXTMEM = 0;
-	if (A == 0xff7f) {
-		return (m->cts_route << 4) | m->p2_route;
+	if (!m->is_race) {
+		if (A == 0xff7f) {
+			return (m->cts_route << 4) | m->p2_route;
+		}
+	} else {
+		if (A == 0xfeff) {
+			// Same as writing!  Uses whatever happened to be on
+			// the data bus.
+			select_slot(c, ((D & 3) << 4) | (D & 3));
+			return D;
+		}
 	}
 	if (P2) {
 		struct cart *p2c = m->slot[m->p2_route].cart;
@@ -271,10 +313,18 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mpi *m = (struct mpi *)c;
 	m->cart.EXTMEM = 0;
-	if (A == 0xff7f) {
-		m->switch_enable = 0;
-		select_slot(c, D);
-		return D;
+	if (!m->is_race) {
+		if (A == 0xff7f) {
+			m->switch_enable = 0;
+			select_slot(c, D);
+			return D;
+		}
+	} else {
+		if (A == 0xfeff) {
+			m->switch_enable = 0;
+			select_slot(c, ((D & 3) << 4) | (D & 3));
+			return D;
+		}
 	}
 	if (P2) {
 		struct cart *p2c = m->slot[m->p2_route].cart;

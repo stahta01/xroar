@@ -2,7 +2,7 @@
 
 XRoar - a Dragon/Tandy Coco emulator
 
-Copyright 2003-2020 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -339,6 +339,10 @@ static char const * const default_config[] = {
 	"cart mpi",
 	"cart-desc 'Multi-Pak Interface'",
 	"cart-type mpi",
+	// Multi-Pak Interface
+	"cart mpi-race",
+	"cart-desc 'RACE Computer Expansion Cage'",
+	"cart-type mpi-race",
 	// IDE Cartridge
 	"cart ide",
 	"cart-desc 'IDE Interface'",

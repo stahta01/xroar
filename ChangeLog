@@ -7,6 +7,7 @@ Version 0.36.3, unreleased
  * New option -tape-rewrite-leader _bytes_ sets leader length during rewrite
  * Document previously added option -tape-pan
  * Detect pulse widths for CUE data when using -tape-rewrite
+ * RACE Computer Expansion Cage support (-cart mpi-race)
 
 Version 0.36.2, Wed Jul 22 2020
 

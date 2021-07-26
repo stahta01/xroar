@@ -552,6 +552,11 @@ Tormod Volden's MOOH RAM expansion cartridge.
 Multi-Pak Interface.  A CoCo add-on by Tandy that allows up to four
 cartridges to be connected, selectable by software or hardware switch.
 
+@item mpi-race
+
+RACE Computer Expansion Cage.  A Dragon add-on by RACE similar to the MPI.
+Addressing and behaviour differs.
+
 @end table
 
 You can create new cartridge configurations or reconfigure existing ones.
@@ -626,6 +631,9 @@ next) slot.  Configure the initially selected slot with @option{-mpi-slot
 It's not recommended to load more than one DOS cartridge into the MPI.
 As things stand, only the last one (in slot order) will have the emulated
 drives properly connected.
+
+These options also apply to the RACE Computer Expansion Cage, which provides
+similar features, albeit with slightly different behaviour.
 
 @subsection Becker port
 

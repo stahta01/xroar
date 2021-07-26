@@ -2,7 +2,7 @@
 
 Dragon/CoCo cartridge support.
 
-Copyright 2005-2020 Ciaran Anscomb
+Copyright 2005-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -66,6 +66,7 @@ extern struct cart_module cart_rsdos_module;
 extern struct cart_module cart_gmc_module;
 extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
+extern struct cart_module cart_mpi_race_module;
 extern struct cart_module cart_ide_module;
 extern struct cart_module cart_nx32_module;
 extern struct cart_module cart_mooh_module;
@@ -245,6 +246,7 @@ void cart_init(void) {
 	cart_modules = slist_prepend(cart_modules, &cart_mooh_module);
 	cart_modules = slist_prepend(cart_modules, &cart_nx32_module);
 	cart_modules = slist_prepend(cart_modules, &cart_ide_module);
+	cart_modules = slist_prepend(cart_modules, &cart_mpi_race_module);
 	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);
 	cart_modules = slist_prepend(cart_modules, &cart_orch90_module);
 	cart_modules = slist_prepend(cart_modules, &cart_gmc_module);

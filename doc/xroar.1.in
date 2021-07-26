@@ -118,6 +118,9 @@ initially select slot (0\-3)
 \fB\-mpi\-load\-cart\fR \fI[slot=]name\fR
 insert cartridge into next or numbered slot
 
+.PP
+These options also apply to the similar RACE Computer Expansion Cage.
+
 .SS Becker port:
 
 .TP
