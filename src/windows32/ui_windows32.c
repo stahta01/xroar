@@ -255,7 +255,6 @@ static void setup_tool_menu(void) {
 
 	tool_menu = CreatePopupMenu();
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "Keyboard Translation");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_fast_sound), "Fast Sound");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
 }
@@ -392,11 +391,6 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		break;
 
-	// Audio:
-	case ui_tag_fast_sound:
-		xroar_set_fast_sound(1, !xroar_cfg.fast_sound);
-		break;
-
 	// Keyboard:
 	case ui_tag_keymap:
 		xroar_set_keymap(1, tag_value);
@@ -438,7 +432,6 @@ void windows32_ui_set_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_fullscreen:
 	case ui_tag_vdg_inverse:
-	case ui_tag_fast_sound:
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 

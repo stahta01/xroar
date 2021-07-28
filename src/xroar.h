@@ -72,9 +72,8 @@ struct xroar_cfg {
 	int ao_fragment_nframes;
 	int ao_buffer_ms;
 	int ao_buffer_nframes;
-#ifndef FAST_SOUND
-	_Bool fast_sound;
-#endif
+	_Bool fast_sound;  // deprecated - ignored
+
 	// Keyboard
 	_Bool kbd_translate;
 	// Cartridges
@@ -175,7 +174,6 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_set_cross_colour_renderer(_Bool notify, int action);
 void xroar_set_cross_colour(_Bool notify, int action);
 void xroar_set_vdg_inverted_text(_Bool notify, int action);
-void xroar_set_fast_sound(_Bool notify, int action);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);

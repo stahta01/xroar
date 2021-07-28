@@ -207,7 +207,6 @@ struct machine {
 
 	_Bool (*set_pause)(struct machine *m, int action);
 	_Bool (*set_trace)(struct machine *m, int action);
-	_Bool (*set_fast_sound)(struct machine *m, int action);
 	_Bool (*set_inverted_text)(struct machine *m, int action);
 	void *(*get_component)(struct machine *m, const char *cname);
 	void *(*get_interface)(struct machine *m, const char *ifname);

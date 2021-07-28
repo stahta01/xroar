@@ -8,6 +8,7 @@ Version 0.36.3, unreleased
  * Document previously added option -tape-pan
  * Detect pulse widths for CUE data when using -tape-rewrite
  * RACE Computer Expansion Cage support (-cart mpi-race)
+ * Removed -fast-sound option (and related menu options)
 
 Version 0.36.2, Wed Jul 22 2020
 

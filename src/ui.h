@@ -75,7 +75,6 @@ enum ui_tag {
 	ui_tag_ccr,
 	ui_tag_cross_colour,
 	// Audio
-	ui_tag_fast_sound,
 	ui_tag_ratelimit,
 	// Keyboard
 	ui_tag_keymap,

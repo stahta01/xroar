@@ -297,12 +297,6 @@ static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_
 	xroar_set_kbd_translate(0, val);
 }
 
-static void toggle_fast_sound(GtkToggleAction *current, gpointer user_data) {
-	gboolean val = gtk_toggle_action_get_active(current);
-	(void)user_data;
-	xroar_set_fast_sound(0, val);
-}
-
 static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
 	gboolean val = gtk_toggle_action_get_active(current);
 	(void)user_data;
@@ -436,8 +430,6 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "TapeControlAction", .label = "_Tape Control",
 	  .accelerator = "<control>T",
 	  .callback = G_CALLBACK(gtk2_toggle_tc_window) },
-	{ .name = "FastSoundAction", .label = "_Fast Sound",
-	  .callback = G_CALLBACK(toggle_fast_sound) },
 	{ .name = "RateLimitAction", .label = "_Rate Limit",
 	  .callback = G_CALLBACK(toggle_ratelimit) },
 };
@@ -702,11 +694,6 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		break;
 
 	/* Audio */
-
-	case ui_tag_fast_sound:
-		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/FastSound");
-		uigtk2_notify_toggle_action_set(toggle, value ? TRUE : FALSE, toggle_fast_sound, uigtk2);
-		break;
 
 	case ui_tag_ratelimit:
 		toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/RateLimit");

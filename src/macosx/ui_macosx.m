@@ -79,8 +79,6 @@ See COPYING.GPL for redistribution conditions.
 #define TAG_COMPOSITE_RENDERER (18 << 24)
 #define TAG_COMPOSITE_PHASE (10 << 24)
 
-#define TAG_FAST_SOUND (11 << 24)
-
 #define TAG_KEYMAP (12 << 24)
 #define TAG_KBD_TRANSLATE (13 << 24)
 #define TAG_JOY_RIGHT (14 << 24)
@@ -139,7 +137,6 @@ static int current_keymap = 0;
 static int is_fullscreen = 0;
 static int vdg_inverted = 0;
 static int is_kbd_translate = 0;
-static _Bool is_fast_sound = 0;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
 static _Bool disk_write_back[4] = { 0, 0, 0, 0 };
 
@@ -324,12 +321,6 @@ int cocoa_super_all_keys = 0;
 		xroar_set_vdg_inverted_text(0, vdg_inverted);
 		break;
 
-	/* Audio: */
-	case TAG_FAST_SOUND:
-		is_fast_sound = !is_fast_sound;
-		xroar_set_fast_sound(0, is_fast_sound);
-		break;
-
 	/* Keyboard: */
 	case TAG_KEYMAP:
 		current_keymap = tag;
@@ -397,10 +388,6 @@ int cocoa_super_all_keys = 0;
 		break;
 	case TAG_COMPOSITE_PHASE:
 		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
-		break;
-
-	case TAG_FAST_SOUND:
-		[item setState:(is_fast_sound ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_KEYMAP:
@@ -840,11 +827,6 @@ static void setup_tool_menu(void) {
 	[tool_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Fast Sound" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:TAG_FAST_SOUND];
-	[tool_menu addItem:item];
-	[item release];
-
 	tool_menu_item = [[NSMenuItem alloc] initWithTitle:@"Tool" action:nil keyEquivalent:@""];
 	[tool_menu_item setSubmenu:tool_menu];
 	[[NSApp mainMenu] addItem:tool_menu_item];
@@ -1132,12 +1114,6 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_cross_colour:
 		current_cc = TAG_COMPOSITE_PHASE | value;
-		break;
-
-	/* Audio */
-
-	case ui_tag_fast_sound:
-		is_fast_sound = value ? 1 : 0;
 		break;
 
 	/* Keyboard */

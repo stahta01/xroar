@@ -264,9 +264,6 @@ audio gain in dB relative to 0 dBFS [\-3.0]
 .TP
 \fB\-volume\fR \fIvolume\fR
 older way to specify audio volume, linear (0\-100)
-.TP
-\fB\-fast\-sound\fR
-faster but less accurate sound
 
 .SS Keyboard:
 

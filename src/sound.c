@@ -457,8 +457,6 @@ void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled) {
 	if (snd->next.mux_enabled == enabled)
 		return;
 	snd->next.mux_enabled = enabled;
-	if (xroar_cfg.fast_sound)
-		return;
 	sound_update(sndp);
 }
 
@@ -468,8 +466,6 @@ void sound_set_mux_source(struct sound_interface *sndp, unsigned source) {
 		return;
 	snd->next.mux_source = source;
 	if (!snd->next.mux_enabled)
-		return;
-	if (xroar_cfg.fast_sound)
 		return;
 	sound_update(sndp);
 }

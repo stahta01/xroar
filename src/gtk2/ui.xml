@@ -75,7 +75,6 @@
       <menuitem name='TranslateKeyboard' action='TranslateKeyboardAction'/>
       <menuitem name='DriveControl' action='DriveControlAction'/>
       <menuitem name='TapeControl' action='TapeControlAction'/>
-      <menuitem name='FastSound' action='FastSoundAction'/>
       <menuitem name='RateLimit' action='RateLimitAction'/>
     </menu>
     <menu name='HelpMenu' action='HelpMenuAction'>

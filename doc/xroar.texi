@@ -1064,10 +1064,6 @@ sense here.  The default is @samp{-3.0}.
 
 Older way to specify volume.  Simple linear scaling, using values 0--100.
 
-@item -fast-sound
-
-Slightly faster audio support by ignoring certain uncommon state changes.
-
 @end table
 
 Audio latency is a concern for emulators, so XRoar allows the buffering

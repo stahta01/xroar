@@ -105,7 +105,6 @@ struct machine_dragon {
 	struct machine_memory ram1;  // introspection
 
 	_Bool inverted_text;
-	_Bool fast_sound;
 	struct cart *cart;
 	unsigned frameskip;
 
@@ -254,7 +253,6 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 static _Bool dragon_set_pause(struct machine *m, int state);
 static _Bool dragon_set_trace(struct machine *m, int state);
-static _Bool dragon_set_fast_sound(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
@@ -332,7 +330,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 
 	m->set_pause = dragon_set_pause;
 	m->set_trace = dragon_set_trace;
-	m->set_fast_sound = dragon_set_fast_sound;
 	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
@@ -722,8 +719,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 		}
 	}
 
-	md->fast_sound = xroar_cfg.fast_sound;
-
 	keyboard_set_keymap(md->keyboard_interface, xroar_machine_config->keymap);
 
 #ifdef WANT_GDB_TARGET
@@ -953,23 +948,6 @@ static _Bool dragon_set_trace(struct machine *m, int state) {
 	md->CPU0->set_trace(md->CPU0, md->trace);
 	return md->trace;
 #endif
-}
-
-static _Bool dragon_set_fast_sound(struct machine *m, int action) {
-	struct machine_dragon *md = (struct machine_dragon *)m;
-	switch (action) {
-	case 0: case 1:
-		md->fast_sound = action;
-		break;
-	case 2:
-		md->fast_sound = !md->fast_sound;
-		break;
-	default:
-		break;
-	}
-	// TODO: move dragon-specific sound code here
-	xroar_cfg.fast_sound = md->fast_sound;
-	return md->fast_sound;
 }
 
 static _Bool dragon_set_inverted_text(struct machine *m, int action) {

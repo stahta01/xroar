@@ -1297,13 +1297,6 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 	}
 }
 
-void xroar_set_fast_sound(_Bool notify, int action) {
-	_Bool state = xroar_machine->set_fast_sound(xroar_machine, action);
-	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fast_sound, state, NULL);
-	}
-}
-
 void xroar_set_ratelimit(int action) {
 	if (xroar_state.noratelimit_latch)
 		return;
@@ -2118,9 +2111,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("ao-buffer-frames", &xroar_cfg.ao_buffer_nframes) },
 	{ XC_CALL_DOUBLE("ao-gain", &set_gain) },
 	{ XC_SET_INT("volume", &private_cfg.volume) },
-	{ XC_SET_BOOL("fast-sound", &xroar_cfg.fast_sound) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT("ao-buffer-samples", &xroar_cfg.ao_buffer_nframes), .deprecated = 1 },
+	{ XC_SET_BOOL("fast-sound", &xroar_cfg.fast_sound), .deprecated = 1 },
 
 	/* Keyboard: */
 	{ XC_SET_STRING("keymap", &xroar_ui_cfg.keymap) },
@@ -2282,7 +2275,6 @@ static void helptext(void) {
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
 "  -ao-gain DB           audio gain in dB relative to 0 dBFS [-3.0]\n"
 "  -volume VOLUME        older way to specify audio volume, linear (0-100)\n"
-"  -fast-sound           faster but less accurate sound\n"
 
 "\n Keyboard:\n"
 "  -keymap CODE          host keyboard type (-keymap help for list)\n"
@@ -2443,7 +2435,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int_nz(f, all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
 	xroar_cfg_print_double(f, all, "ao-gain", private_cfg.gain, -3.0);
 	xroar_cfg_print_int(f, all, "volume", private_cfg.volume, -1);
-	xroar_cfg_print_bool(f, all, "fast-sound", xroar_cfg.fast_sound, 0);
 	fputs("\n", f);
 
 	fputs("# Keyboard\n", f);
