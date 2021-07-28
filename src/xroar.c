@@ -2005,6 +2005,7 @@ static union {
 
 static struct xconfig_option const xroar_options[] = {
 	/* Machines: */
+	{ XC_SET_STRING("m", &private_cfg.default_machine) },
 	{ XC_SET_STRING("default-machine", &private_cfg.default_machine) },
 	{ XC_CALL_STRING("machine", &set_machine) },
 	{ XC_SET_STRING("machine-desc", &private_cfg.machine_desc) },
