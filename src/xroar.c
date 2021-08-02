@@ -530,16 +530,18 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			// -no-builtin, disable builtin config
 			no_builtin = 1;
 			argn++;
-#ifdef WINDOWS32
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-C")) {
+#ifdef WINDOWS32
 			// Windows allocate console option
 			alloc_console = 1;
+#endif
 			argn++;
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-C")) {
+#ifdef WINDOWS32
 			// Windows allocate console option
 			alloc_console = 0;
-			argn++;
 #endif
+			argn++;
 		} else {
 			break;
 		}
@@ -2134,19 +2136,13 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("lp-pipe", &private_cfg.lp_pipe) },
 
 	/* Debugging: */
-#ifdef WANT_GDB_TARGET
 	{ XC_SET_BOOL("gdb", &xroar_cfg.gdb) },
 	{ XC_SET_STRING("gdb-ip", &xroar_cfg.gdb_ip) },
 	{ XC_SET_STRING("gdb-port", &xroar_cfg.gdb_port) },
-#endif
-#ifdef TRACE
 	{ XC_SET_INT1("trace", &xroar_cfg.trace_enabled) },
-#endif
 	{ XC_SET_INT("debug-fdc", &logging.debug_fdc) },
 	{ XC_SET_INT("debug-file", &logging.debug_file) },
-#ifdef WANT_GDB_TARGET
 	{ XC_SET_INT("debug-gdb", &logging.debug_gdb) },
-#endif
 	{ XC_SET_INT("debug-ui", &logging.debug_ui) },
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
 	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
@@ -2305,10 +2301,12 @@ static void helptext(void) {
 #ifdef TRACE
 "  -trace                start with trace mode on\n"
 #endif
-"  -debug-ui FLAGS       UI debugging (see manual, or -1 for all)\n"
-"  -debug-file FLAGS     file debugging (see manual, or -1 for all)\n"
 "  -debug-fdc FLAGS      FDC debugging (see manual, or -1 for all)\n"
+"  -debug-file FLAGS     file debugging (see manual, or -1 for all)\n"
+#ifdef WANT_GDB_TARGET
 "  -debug-gdb FLAGS      GDB target debugging (see manual, or -1 for all)\n"
+#endif
+"  -debug-ui FLAGS       UI debugging (see manual, or -1 for all)\n"
 "  -v, --verbose LEVEL   general debug verbosity (0-3) [1]\n"
 "  -q, --quiet           equivalent to --verbose 0\n"
 "  -timeout S            run for S seconds then quit\n"
@@ -2460,19 +2458,13 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Debugging\n", f);
-#ifdef WANT_GDB_TARGET
 	xroar_cfg_print_bool(f, all, "gdb", xroar_cfg.gdb, 0);
 	xroar_cfg_print_string(f, all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
 	xroar_cfg_print_string(f, all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
-#endif
-#ifdef TRACE
 	xroar_cfg_print_bool(f, all, "trace", xroar_cfg.trace_enabled, 0);
-#endif
 	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
 	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
-#ifdef WANT_GDB_TARGET
 	xroar_cfg_print_flags(f, all, "debug-gdb", logging.debug_gdb);
-#endif
 	xroar_cfg_print_flags(f, all, "debug-ui", logging.debug_ui);
 	xroar_cfg_print_string(f, all, "timeout", private_cfg.timeout, NULL);
 	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
