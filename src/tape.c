@@ -592,7 +592,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	int type = f->type;
 	_Bool done = 0;
 
-	if (xroar_cfg.debug_file & XROAR_DEBUG_FILE_TAPE_FNBLOCK) {
+	if (logging.debug_file & LOG_FILE_TAPE_FNBLOCK) {
 		sds name = sdsx_quote_str(f->name);
 		LOG_PRINT("\tname %s\n", name);
 		sdsfree(name);

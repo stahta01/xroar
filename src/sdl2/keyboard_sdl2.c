@@ -2,7 +2,7 @@
 
 SDL2 keyboard module
 
-Copyright 2015-2020 Ciaran Anscomb
+Copyright 2015-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -308,7 +308,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		uisdl2->mouse_hidden = 1;
 	}
 
-	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT) {
+	if (logging.debug_ui & LOG_UI_KBD_EVENT) {
 		int unicode = sdl_os_keysym_to_unicode(keysym);
 		if (unicode & 0x40000000)
 			unicode = 0;
@@ -411,7 +411,7 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	if (sym == SDL_SCANCODE_UNKNOWN)
 		return;
 
-	if (xroar_cfg.debug_ui & XROAR_DEBUG_UI_KBD_EVENT) {
+	if (logging.debug_ui & LOG_UI_KBD_EVENT) {
 		int unicode = 0;
 		if (scancode < SDL_NUM_SCANCODES)
 			unicode = uisdl2->keyboard.unicode_last_scancode[scancode];

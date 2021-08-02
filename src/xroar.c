@@ -2142,12 +2142,12 @@ static struct xconfig_option const xroar_options[] = {
 #ifdef TRACE
 	{ XC_SET_INT1("trace", &xroar_cfg.trace_enabled) },
 #endif
-	{ XC_SET_INT("debug-ui", &xroar_cfg.debug_ui) },
-	{ XC_SET_INT("debug-file", &xroar_cfg.debug_file) },
-	{ XC_SET_INT("debug-fdc", &xroar_cfg.debug_fdc) },
+	{ XC_SET_INT("debug-fdc", &logging.debug_fdc) },
+	{ XC_SET_INT("debug-file", &logging.debug_file) },
 #ifdef WANT_GDB_TARGET
-	{ XC_SET_INT("debug-gdb", &xroar_cfg.debug_gdb) },
+	{ XC_SET_INT("debug-gdb", &logging.debug_gdb) },
 #endif
+	{ XC_SET_INT("debug-ui", &logging.debug_ui) },
 	{ XC_SET_STRING("timeout", &private_cfg.timeout) },
 	{ XC_SET_STRING("timeout-motoroff", &xroar_cfg.timeout_motoroff) },
 	{ XC_SET_STRING("snap-motoroff", &xroar_cfg.snap_motoroff) },
@@ -2155,10 +2155,10 @@ static struct xconfig_option const xroar_options[] = {
 	/* Other options: */
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
 	{ XC_SET_BOOL("config-print-all", &private_cfg.config_print_all) },
-	{ XC_SET_INT0("quiet", &log_level) },
-	{ XC_SET_INT0("q", &log_level) },
-	{ XC_SET_INT("verbose", &log_level) },
-	{ XC_SET_INT("v", &log_level) },
+	{ XC_SET_INT0("quiet", &logging.level) },
+	{ XC_SET_INT0("q", &logging.level) },
+	{ XC_SET_INT("verbose", &logging.level) },
+	{ XC_SET_INT("v", &logging.level) },
 	{ XC_CALL_NULL("help", &helptext) },
 	{ XC_CALL_NULL("h", &helptext) },
 	{ XC_CALL_NULL("version", &versiontext) },
@@ -2468,12 +2468,12 @@ static void config_print_all(FILE *f, _Bool all) {
 #ifdef TRACE
 	xroar_cfg_print_bool(f, all, "trace", xroar_cfg.trace_enabled, 0);
 #endif
-	xroar_cfg_print_flags(f, all, "debug-ui", xroar_cfg.debug_ui);
-	xroar_cfg_print_flags(f, all, "debug-file", xroar_cfg.debug_file);
-	xroar_cfg_print_flags(f, all, "debug-fdc", xroar_cfg.debug_fdc);
+	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
+	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
 #ifdef WANT_GDB_TARGET
-	xroar_cfg_print_flags(f, all, "debug-gdb", xroar_cfg.debug_gdb);
+	xroar_cfg_print_flags(f, all, "debug-gdb", logging.debug_gdb);
 #endif
+	xroar_cfg_print_flags(f, all, "debug-ui", logging.debug_ui);
 	xroar_cfg_print_string(f, all, "timeout", private_cfg.timeout, NULL);
 	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
 	xroar_cfg_print_string(f, all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);

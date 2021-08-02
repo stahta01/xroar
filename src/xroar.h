@@ -2,7 +2,7 @@
 
 XRoar - a Dragon/Tandy Coco emulator
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -95,11 +95,7 @@ struct xroar_cfg {
 	_Bool gdb;
 	char *gdb_ip;
 	char *gdb_port;
-	unsigned debug_gdb;
 	_Bool trace_enabled;
-	unsigned debug_ui;
-	unsigned debug_file;
-	unsigned debug_fdc;
 	char *timeout_motoroff;
 	char *snap_motoroff;
 };
@@ -127,26 +123,6 @@ extern struct printer_interface *xroar_printer_interface;
 extern struct vdg_palette *xroar_vdg_palette;
 
 extern struct vdrive_interface *xroar_vdrive_interface;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Debug flags
-
-// UI: keyboard event debugging
-#define XROAR_DEBUG_UI_KBD_EVENT (1 << 0)
-
-// Files: binary files & hex record metadata
-#define XROAR_DEBUG_FILE_BIN (1 << 0)
-// Files: binary files & hex record data
-#define XROAR_DEBUG_FILE_BIN_DATA (1 << 1)
-// Files: tape autorun filename block metadata
-#define XROAR_DEBUG_FILE_TAPE_FNBLOCK (1 << 2)
-
-// FDC: state debug level mask (1 = commands, 2 = all)
-#define XROAR_DEBUG_FDC_STATE (3 << 0)
-// FDC: dump sector data flag
-#define XROAR_DEBUG_FDC_DATA (1 << 2)
-// FDC: dump becker data flag
-#define XROAR_DEBUG_FDC_BECKER (1 << 3)
 
 /**************************************************************************/
 

@@ -2,7 +2,7 @@
 
 WD279x Floppy Drive Controller
 
-Copyright 2003-2018 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -285,7 +285,7 @@ void wd279x_write(WD279X *fdc, uint16_t A, uint8_t D) {
 			fdc->command_register = D;
 			/* FORCE INTERRUPT */
 			if ((D & 0xf0) == 0xd0) {
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_STATE) {
+				if (logging.debug_fdc & LOG_FDC_STATE) {
 					debug_state(fdc);
 				}
 				fdc->intrq_nready_to_ready = D & 1;
@@ -337,7 +337,7 @@ static void state_machine(void *sptr) {
 	for (;;) {
 
 		// Log new states if requested:
-		if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_STATE) {
+		if (logging.debug_fdc & LOG_FDC_STATE) {
 			static enum WD279X_state last_state = WD279X_state_invalid;
 			if (fdc->state != last_state) {
 				debug_state(fdc);
@@ -612,11 +612,11 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_read_sector_1:
 			LOG_DEBUG(3, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, DELEGATE_CALL0(fdc->get_head_pos));
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_open_hexdump(&log_rsec_hex, "WD279X: read-sector");
 			fdc->status_register |= ((~fdc->dam & 1) << 5);
 			fdc->data_register = _vdrive_read(fdc);
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_hexdump_byte(log_rsec_hex, fdc->data_register);
 			fdc->bytes_left--;
 			SET_DRQ;
@@ -627,13 +627,13 @@ static void state_machine(void *sptr) {
 		case WD279X_state_read_sector_2:
 			if (fdc->status_register & STATUS_DRQ) {
 				fdc->status_register |= STATUS_LOST_DATA;
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_flag(log_rsec_hex);
 				/* RESET_DRQ;  XXX */
 			}
 			if (fdc->bytes_left > 0) {
 				fdc->data_register = _vdrive_read(fdc);
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_byte(log_rsec_hex, fdc->data_register);
 				fdc->bytes_left--;
 				SET_DRQ;
@@ -685,7 +685,7 @@ static void state_machine(void *sptr) {
 
 
 		case WD279X_state_write_sector_3:
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_open_hexdump(&log_wsec_hex, "WD279X: write-sector");
 			if (IS_DOUBLE_DENSITY) {
 				for (i = 0; i < 11; i++)
@@ -721,11 +721,11 @@ static void state_machine(void *sptr) {
 			if (fdc->status_register & STATUS_DRQ) {
 				data = 0;
 				fdc->status_register |= STATUS_LOST_DATA;
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_flag(log_wsec_hex);
 				RESET_DRQ;  /* XXX */
 			}
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_hexdump_byte(log_wsec_hex, data);
 			_vdrive_write(fdc, data);
 			fdc->bytes_left--;
@@ -857,7 +857,7 @@ static void state_machine(void *sptr) {
 			}
 			fdc->index_holes_count = 0;
 			LOG_DEBUG(3, "WD279X: Writing track from head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_open_hexdump(&log_wtrk_hex, "WD279X: write-track");
 			GOTO_STATE(WD279X_state_write_track_3);
 
@@ -865,7 +865,7 @@ static void state_machine(void *sptr) {
 		case WD279X_state_write_track_3:
 			data = fdc->data_register;
 			if (fdc->index_holes_count > 0) {
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_close(&log_wtrk_hex);
 				LOG_DEBUG(3, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 				RESET_DRQ;  /* XXX */
@@ -873,12 +873,12 @@ static void state_machine(void *sptr) {
 				SET_INTRQ;
 				return;
 			}
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_hexdump_byte(log_wtrk_hex, fdc->data_register);
 			if (fdc->status_register & STATUS_DRQ) {
 				data = 0;
 				fdc->status_register |= STATUS_LOST_DATA;
-				if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_DATA)
+				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_flag(log_wtrk_hex);
 			}
 			SET_DRQ;
@@ -998,7 +998,7 @@ static char const * const debug_command[] = {
 static void debug_state(WD279X *fdc) {
 	assert(fdc != NULL);
 	assert((unsigned)fdc->state < WD279X_state_invalid);
-	unsigned level = xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_STATE;
+	unsigned level = logging.debug_fdc & LOG_FDC_STATE;
 	if (level == 0)
 		return;
 	_Bool forced_interrupt = ((fdc->command_register & 0xf0) == 0xd0);

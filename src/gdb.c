@@ -2,7 +2,7 @@
 
 GDB protocol support
 
-Copyright 2013-2017 Ciaran Anscomb
+Copyright 2013-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -129,9 +129,6 @@ struct gdb_interface_private {
 	pthread_cond_t run_state_cv;
 	pthread_mutex_t run_state_mt;
 	int last_signal;
-
-	// Debugging
-	unsigned debug;
 };
 
 static void *handle_tcp_sock(void *sptr);
@@ -367,18 +364,14 @@ static void *handle_tcp_sock(void *sptr) {
 			int flag = 1;
 			setsockopt(gip->sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
 		}
-		if (gip->debug & GDB_DEBUG_CONNECT) {
-			LOG_PRINT("gdb: connection accepted\n");
-		}
+		LOG_DEBUG_GDB(LOG_GDB_CONNECT, "gdb: connection accepted\n");
 
 		gdb_machine_signal(gip, MACHINE_SIGINT);
 		_Bool attached = 1;
 		while (attached) {
 			int l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
-				if (gip->debug & GDB_DEBUG_PACKET) {
-					LOG_PRINT("gdb: BREAK\n");
-				}
+				LOG_DEBUG_GDB(LOG_GDB_PACKET, "gdb: BREAK\n");
 				gdb_machine_signal(gip, MACHINE_SIGINT);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
@@ -388,7 +381,7 @@ static void *handle_tcp_sock(void *sptr) {
 			} else if (l < 0) {
 				break;
 			}
-			if (gip->debug & GDB_DEBUG_PACKET) {
+			if (logging.debug_gdb & LOG_GDB_PACKET) {
 				if (gip->run_state == gdb_run_state_stopped) {
 					LOG_PRINT("gdb: packet received: ");
 				} else {
@@ -479,9 +472,7 @@ static void *handle_tcp_sock(void *sptr) {
 		}
 		close(gip->sockfd);
 		gdb_continue(gip);
-		if (gip->debug & GDB_DEBUG_CONNECT) {
-			LOG_PRINT("gdb: connection closed\n");
-		}
+		LOG_DEBUG_GDB(LOG_GDB_CONNECT, "gdb: connection closed\n");
 	}
 	return NULL;
 }
@@ -562,7 +553,7 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 			}
 			csum |= tmp;
 			if (csum != packet_sum) {
-				if (gip->debug & GDB_DEBUG_CHECKSUM) {
+				if (logging.debug_gdb & LOG_GDB_CHECKSUM) {
 					LOG_PRINT("gdb: bad checksum in '");
 					if (isprint(buffer[0]))
 						LOG_PRINT("%c", buffer[0]);
@@ -611,7 +602,7 @@ static int send_packet(struct gdb_interface_private *gip, const char *buffer, un
 		return -GDBE_WRITE_ERROR;
 	// the reply ("+" or "-") will be discarded by the next read_packet
 
-	if (gip->debug & GDB_DEBUG_PACKET) {
+	if (logging.debug_gdb & LOG_GDB_PACKET) {
 		LOG_PRINT("gdb: packet sent: ");
 		for (unsigned i = 0; i < (unsigned)count; i++) {
 			if (isprint(buffer[i])) {
@@ -727,9 +718,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 3, 0) < 0)
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
-	if (gip->debug & GDB_DEBUG_PACKET) {
-		LOG_PRINT("gdb: packet sent (binary): %u bytes\n", length);
-	}
+	LOG_DEBUG_GDB(LOG_GDB_PACKET, "gdb: packet sent (binary): %u bytes\n", length);
 	return;
 error:
 	send_packet(gip, NULL, 0);
@@ -839,30 +828,20 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
 		if (0 == strcmp(query, "sam")) {
-			if (gip->debug & GDB_DEBUG_QUERY) {
-				LOG_PRINT("gdb: query: xroar.sam\n");
-			}
+			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: xroar.sam\n");
 			sprintf(packet, "%04x", sam_get_register(gip->sam));
 			send_packet(gip, packet, 4);
 		} else {
-			if (gip->debug & GDB_DEBUG_QUERY) {
-				LOG_PRINT("gdb: query: unknown xroar vendor query\n");
-			}
+			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown xroar vendor query\n");
 		}
 	} else if (0 == strcmp(query, "Supported")) {
-		if (gip->debug & GDB_DEBUG_QUERY) {
-			LOG_PRINT("gdb: query: Supported\n");
-		}
+		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: Supported\n");
 		send_supported(gip, args);
 	} else if (0 == strcmp(query, "Attached")) {
-		if (gip->debug & GDB_DEBUG_QUERY) {
-			LOG_PRINT("gdb: query: Attached\n");
-		}
+		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: Attached\n");
 		send_packet_string(gip, "1");
 	} else {
-		if (gip->debug & GDB_DEBUG_QUERY) {
-			LOG_PRINT("gdb: query: unknown query\n");
-		}
+		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown query\n");
 		send_packet(gip, NULL, 0);
 	}
 }
@@ -969,13 +948,4 @@ static int hex16(char *s) {
 	if (b0 < 0 || b1 < 0)
 		return -1;
 	return (b1 << 8) | b0;
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/* Debugging */
-
-void gdb_set_debug(struct gdb_interface *gi, unsigned value) {
-	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
-	gip->debug = value;
 }

@@ -2,7 +2,7 @@
 
 Dragon and Tandy Colour Computer machines
 
-Copyright 2003-2020 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -725,9 +725,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	// GDB
 	if (xroar_cfg.gdb) {
 		md->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, md->bp_session);
-		if (md->gdb_interface) {
-			gdb_set_debug(md->gdb_interface, xroar_cfg.debug_gdb);
-		}
 	}
 #endif
 

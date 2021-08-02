@@ -2,7 +2,7 @@
 
 GDB protocol support
 
-Copyright 2013-2016 Ciaran Anscomb
+Copyright 2013-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -40,18 +40,5 @@ void gdb_run_unlock(struct gdb_interface *gi);
 void gdb_stop(struct gdb_interface *gi, int sig);
 void gdb_single_step(struct gdb_interface *gi);
 _Bool gdb_signal_lock(struct gdb_interface *gi, int sig);
-
-/* Debugging */
-
-// connections
-#define GDB_DEBUG_CONNECT (1 << 0)
-// packets
-#define GDB_DEBUG_PACKET (1 << 1)
-// report bad checksums
-#define GDB_DEBUG_CHECKSUM (1 << 2)
-// queries and sets
-#define GDB_DEBUG_QUERY (1 << 3)
-
-void gdb_set_debug(struct gdb_interface *gi, unsigned);
 
 #endif

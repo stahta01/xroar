@@ -2,7 +2,7 @@
 
 General logging framework
 
-Copyright 2013-2016 Ciaran Anscomb
+Copyright 2013-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -30,7 +30,9 @@ See COPYING.GPL for redistribution conditions.
 #include "logging.h"
 #include "xroar.h"
 
-int log_level = 1;
+struct logging logging = {
+	.level = 1,
+};
 
 enum log_type {
 	LOG_HEXDUMP,

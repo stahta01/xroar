@@ -2,7 +2,7 @@
 
 SDL2 video output module
 
-Copyright 2015-2018 Ciaran Anscomb
+Copyright 2015-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -277,7 +277,7 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 		return 0;
 	}
 
-	if (log_level >= 3) {
+	if (logging.level >= 3) {
 		SDL_RendererInfo renderer_info;
 		if (SDL_GetRendererInfo(vosdl->renderer, &renderer_info) == 0) {
 			LOG_PRINT("SDL_GetRendererInfo()\n");

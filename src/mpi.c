@@ -254,7 +254,7 @@ static void select_slot(struct cart *c, unsigned D) {
 	struct mpi *m = (struct mpi *)c;
 	m->cts_route = (D >> 4) & 3;
 	m->p2_route = D & 3;
-	if (log_level >= 2) {
+	if (logging.level >= 2) {
 		LOG_PRINT("MPI selected: %02x: ROM=", D & 0x33);
 		debug_cart_name(m->slot[m->cts_route].cart);
 		LOG_PRINT(", IO=");

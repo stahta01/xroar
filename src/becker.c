@@ -2,7 +2,7 @@
 
 Becker port support
 
-Copyright 2012-2019 Ciaran Anscomb
+Copyright 2012-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -155,7 +155,7 @@ static void becker_free(struct part *p) {
 }
 
 void becker_reset(struct becker *becker) {
-	if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
+	if (logging.debug_fdc & LOG_FDC_BECKER) {
 		log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
 		log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
 	}
@@ -166,7 +166,7 @@ static void fetch_input(struct becker *becker) {
 		ssize_t new = recv(becker->sockfd, becker->input_buf, INPUT_BUFFER_SIZE, 0);
 		if (new > 0) {
 			becker->input_buf_length = new;
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
+			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen output hexdump
 				log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
 				for (unsigned i = 0; i < (unsigned)new; i++)
@@ -180,7 +180,7 @@ static void write_output(struct becker *becker) {
 	if (becker->output_buf_length > 0) {
 		ssize_t sent = send(becker->sockfd, becker->output_buf + becker->output_buf_ptr, becker->output_buf_length - becker->output_buf_ptr, 0);
 		if (sent > 0) {
-			if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
+			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen input hexdump
 				log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
 				for (unsigned i = 0; i < (unsigned)sent; i++)
@@ -195,7 +195,7 @@ static void write_output(struct becker *becker) {
 }
 
 uint8_t becker_read_status(struct becker *becker) {
-	if (xroar_cfg.debug_fdc & XROAR_DEBUG_FDC_BECKER) {
+	if (logging.debug_fdc & LOG_FDC_BECKER) {
 		// flush both hexdump logs
 		log_hexdump_line(becker->log_data_in_hex);
 		log_hexdump_line(becker->log_data_out_hex);
