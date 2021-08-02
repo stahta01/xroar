@@ -2,7 +2,7 @@
 
 Motorola MC6809 CPU
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -37,6 +37,7 @@ See COPYING.GPL for redistribution conditions.
 #include "delegate.h"
 #include "xalloc.h"
 
+#include "logging.h"
 #include "mc6809.h"
 #include "part.h"
 
@@ -57,9 +58,6 @@ static void mc6809_free(struct part *p);
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
-#ifdef TRACE
-static void mc6809_set_trace(struct MC6809 *cpu, _Bool state);
-#endif
 
 /*
  * Common 6809 functions
@@ -173,11 +171,12 @@ struct MC6809 *mc6809_new(void) {
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
-#ifdef TRACE
-	cpu->set_trace = mc6809_set_trace;
-#endif
 	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+#ifdef TRACE
+	// Tracing
+	cpu->tracer = mc6809_trace_new(cpu);
+#endif
 	mc6809_reset(cpu);
 	return cpu;
 }
@@ -218,7 +217,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->irq_active = 0;
 			cpu->state = mc6809_state_reset_check_halt;
 #ifdef TRACE
-			if (cpu->trace) {
+			if (logging.trace_cpu) {
 				mc6809_trace_irq(cpu->tracer, MC6809_INT_VEC_RESET);
 			}
 #endif
@@ -1131,17 +1130,6 @@ static void mc6809_jump(struct MC6809 *cpu, uint16_t pc) {
 	REG_PC = pc;
 }
 
-#ifdef TRACE
-static void mc6809_set_trace(struct MC6809 *cpu, _Bool state) {
-	cpu->trace = state;
-	if (state) {
-		if (!cpu->tracer) {
-			cpu->tracer = mc6809_trace_new(cpu);
-		}
-	}
-}
-#endif
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
@@ -1159,7 +1147,7 @@ static void mc6809_set_trace(struct MC6809 *cpu, _Bool state) {
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		mc6809_trace_byte(cpu->tracer, v, a);
 	}
 #endif
@@ -1170,7 +1158,7 @@ static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
 #ifndef TRACE
 	return fetch_word_notrace(cpu, a);
 #else
-	if (!cpu->trace) {
+	if (!logging.trace_cpu) {
 		return fetch_word_notrace(cpu, a);
 	}
 	unsigned v0 = fetch_byte_notrace(cpu, a);
@@ -1282,7 +1270,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
 #ifdef TRACE
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		mc6809_trace_irq(cpu->tracer, vec);
 	}
 #endif
@@ -1292,7 +1280,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 
 static void instruction_posthook(struct MC6809 *cpu) {
 #ifdef TRACE
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		mc6809_trace_print(cpu->tracer);
 	}
 #endif

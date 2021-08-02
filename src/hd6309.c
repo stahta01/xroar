@@ -2,7 +2,7 @@
 
 Hitach HD6309 CPU
 
-Copyright 2012-2019 Ciaran Anscomb
+Copyright 2012-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -38,6 +38,7 @@ See COPYING.GPL for redistribution conditions.
 #include "xalloc.h"
 
 #include "hd6309.h"
+#include "logging.h"
 #include "mc6809.h"
 #include "part.h"
 
@@ -53,9 +54,6 @@ static void hd6309_free(struct part *p);
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
-#ifdef TRACE
-static void hd6309_set_trace(struct MC6809 *cpu, _Bool state);
-#endif
 
 /*
  * Common 6809 functions
@@ -201,11 +199,12 @@ struct MC6809 *hd6309_new(void) {
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
-#ifdef TRACE
-	cpu->set_trace = hd6309_set_trace;
-#endif
 	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+#ifdef TRACE
+	// Tracing
+	hcpu->tracer = hd6309_trace_new(hcpu);
+#endif
 	hd6309_reset(cpu);
 	return cpu;
 }
@@ -248,7 +247,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
 #ifdef TRACE
-			if (cpu->trace) {
+			if (logging.trace_cpu) {
 				hd6309_trace_irq(hcpu->tracer, MC6809_INT_VEC_RESET);
 			}
 #endif
@@ -1853,18 +1852,6 @@ static void hd6309_jump(struct MC6809 *cpu, uint16_t pc) {
 	REG_PC = pc;
 }
 
-#ifdef TRACE
-static void hd6309_set_trace(struct MC6809 *cpu, _Bool state) {
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	cpu->trace = state;
-	if (state) {
-		if (!hcpu->tracer) {
-			hcpu->tracer = hd6309_trace_new(hcpu);
-		}
-	}
-}
-#endif
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
@@ -1883,7 +1870,7 @@ static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		hd6309_trace_byte(hcpu->tracer, v, a);
 	}
 #endif
@@ -1895,7 +1882,7 @@ static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
 	return fetch_word_notrace(cpu, a);
 #else
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (!cpu->trace) {
+	if (!logging.trace_cpu) {
 		return fetch_word_notrace(cpu, a);
 	}
 	unsigned v0 = fetch_byte_notrace(cpu, a);
@@ -2035,7 +2022,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	NVMA_CYCLE;
 #ifdef TRACE
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		hd6309_trace_irq(hcpu->tracer, vec);
 	}
 #endif
@@ -2046,7 +2033,7 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 static void instruction_posthook(struct MC6809 *cpu) {
 #ifdef TRACE
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (cpu->trace) {
+	if (logging.trace_cpu) {
 		hd6309_trace_print(hcpu->tracer);
 	}
 #endif

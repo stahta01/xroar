@@ -2,7 +2,7 @@
 
 Machine configuration
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -206,7 +206,6 @@ struct machine {
 	void (*bp_remove_n)(struct machine *m, struct machine_bp *list, int n);
 
 	_Bool (*set_pause)(struct machine *m, int action);
-	_Bool (*set_trace)(struct machine *m, int action);
 	_Bool (*set_inverted_text)(struct machine *m, int action);
 	void *(*get_component)(struct machine *m, const char *cname);
 	void *(*get_interface)(struct machine *m, const char *ifname);

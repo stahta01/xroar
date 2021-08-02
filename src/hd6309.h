@@ -2,7 +2,7 @@
 
 Hitach HD6309 CPU
 
-Copyright 2012-2017 Ciaran Anscomb
+Copyright 2012-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -22,7 +22,9 @@ See COPYING.GPL for redistribution conditions.
 
 #include "mc6809.h"
 
+#ifdef TRACE
 struct hd6309_trace;
+#endif
 
 #define MC6809_VARIANT_HD6309 (0x00006309)
 

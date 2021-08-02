@@ -116,7 +116,6 @@ struct machine_dragon {
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
-	_Bool trace;
 
 	struct tape_interface *tape_interface;
 	struct keyboard_interface *keyboard_interface;
@@ -252,7 +251,6 @@ static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, v
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
 static _Bool dragon_set_pause(struct machine *m, int state);
-static _Bool dragon_set_trace(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
@@ -329,7 +327,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	m->bp_remove_n = dragon_bp_remove_n;
 
 	m->set_pause = dragon_set_pause;
-	m->set_trace = dragon_set_trace;
 	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
@@ -925,26 +922,6 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 		break;
 	}
 	return md->CPU0->halt;
-}
-
-static _Bool dragon_set_trace(struct machine *m, int state) {
-#ifndef TRACE
-	return 0;
-#else
-	struct machine_dragon *md = (struct machine_dragon *)m;
-	switch (state) {
-	case 0: case 1:
-		md->trace = state;
-		break;
-	case 2:
-		md->trace = !md->trace;
-		break;
-	default:
-		break;
-	}
-	md->CPU0->set_trace(md->CPU0, md->trace);
-	return md->trace;
-#endif
 }
 
 static _Bool dragon_set_inverted_text(struct machine *m, int action) {

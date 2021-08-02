@@ -2,7 +2,7 @@
 
 Motorola MC6809 CPU
 
-Copyright 2003-2019 Ciaran Anscomb
+Copyright 2003-2021 Ciaran Anscomb
 
 This file is part of XRoar.
 
@@ -25,7 +25,9 @@ See COPYING.GPL for redistribution conditions.
 
 #include "part.h"
 
+#ifdef TRACE
 struct mc6809_trace;
+#endif
 
 #define MC6809_VARIANT_MC6809 (0x00006809)
 
@@ -80,9 +82,6 @@ struct MC6809 {
 	void (*reset)(struct MC6809 *cpu);
 	void (*run)(struct MC6809 *cpu);
 	void (*jump)(struct MC6809 *cpu, uint16_t pc);
-#ifdef TRACE
-	void (*set_trace)(struct MC6809 *cpu, _Bool state);
-#endif
 
 	/* External handlers */
 
@@ -99,7 +98,6 @@ struct MC6809 {
 	_Bool running;
 	uint16_t page;  // 0, 0x200, or 0x300
 #ifdef TRACE
-	_Bool trace;
 	struct mc6809_trace *tracer;
 #endif
 

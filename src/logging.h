@@ -84,6 +84,8 @@ struct logging {
 	unsigned debug_file;
 	unsigned debug_gdb;
 	unsigned debug_ui;
+	// Specific tracing
+	_Bool trace_cpu;
 };
 
 extern struct logging logging;  // global log/debug flags

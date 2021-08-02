@@ -884,7 +884,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		}
 	}
 
-	xroar_set_trace(xroar_cfg.trace_enabled);
 	xroar_set_vdg_inverted_text(1, xroar_cfg.vdg_inverted_text);
 	xroar_set_ratelimit_latch(1, XROAR_ON);
 
@@ -1125,19 +1124,17 @@ void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 
 void xroar_set_trace(int mode) {
 #ifdef TRACE
-	int set_to;
 	switch (mode) {
 	case XROAR_OFF: default:
-		set_to = 0;
+		logging.trace_cpu = 0;
 		break;
 	case XROAR_ON:
-		set_to = 1;
+		logging.trace_cpu = 1;
 		break;
 	case XROAR_NEXT:
-		set_to = 2;
+		logging.trace_cpu = !logging.trace_cpu;
 		break;
 	}
-	xroar_cfg.trace_enabled = xroar_machine->set_trace(xroar_machine, set_to);
 #endif
 }
 
@@ -2139,7 +2136,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("gdb", &xroar_cfg.gdb) },
 	{ XC_SET_STRING("gdb-ip", &xroar_cfg.gdb_ip) },
 	{ XC_SET_STRING("gdb-port", &xroar_cfg.gdb_port) },
-	{ XC_SET_INT1("trace", &xroar_cfg.trace_enabled) },
+	{ XC_SET_INT1("trace", &logging.trace_cpu) },
 	{ XC_SET_INT("debug-fdc", &logging.debug_fdc) },
 	{ XC_SET_INT("debug-file", &logging.debug_file) },
 	{ XC_SET_INT("debug-gdb", &logging.debug_gdb) },
@@ -2461,7 +2458,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_bool(f, all, "gdb", xroar_cfg.gdb, 0);
 	xroar_cfg_print_string(f, all, "gdb-ip", xroar_cfg.gdb_ip, GDB_IP_DEFAULT);
 	xroar_cfg_print_string(f, all, "gdb-port", xroar_cfg.gdb_port, GDB_PORT_DEFAULT);
-	xroar_cfg_print_bool(f, all, "trace", xroar_cfg.trace_enabled, 0);
+	xroar_cfg_print_bool(f, all, "trace", logging.trace_cpu, 0);
 	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
 	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
 	xroar_cfg_print_flags(f, all, "debug-gdb", logging.debug_gdb);
