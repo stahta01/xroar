@@ -358,7 +358,7 @@ Dragon as a line ending, instead try @samp{\r}.
 @item @samp{\r} @tab Carriage Return (CR), ASCII 13, @kbd{ENTER}.
 @item @samp{\t} @tab Horizontal Tab (HT), ASCII 9, @kbd{RIGHT}.
 @item @samp{\v} @tab Vertical Tab (VT), ASCII 11, no equivalent on the Dragon keyboard.
-@item @samp{\x@emph{nnn}} @tab 8-bit byte with value specified as a three-digit octal
+@item @samp{\@emph{nnn}} @tab 8-bit byte with value specified as a three-digit octal
 number, @emph{nnn}.
 @item @samp{\x@emph{hh}} @tab 8-bit byte with value specified as a two-digit
 hexadecimal number, @emph{hh}.
