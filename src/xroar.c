@@ -455,7 +455,6 @@ static char const * const default_config[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 const char *xroar_conf_path = NULL;
-const char *xroar_rom_path = NULL;
 
 struct event *xroar_ui_events = NULL;
 struct event *xroar_machine_events = NULL;
@@ -565,6 +564,13 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Default configuration.
 	if (!no_builtin) {
+		// Set a default ROM search path if required.
+		char const *env = getenv("XROAR_ROM_PATH");
+		if (!env)
+			env = ROMPATH;
+		if (env)
+			xroar_cfg.rompath = xstrdup(env);
+		// Process builtin directives
 		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(default_config); i++) {
 			xconfig_parse_line(xroar_options, default_config[i]);
 		}
@@ -600,14 +606,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (ret != XCONFIG_OK) {
 		exit(EXIT_FAILURE);
 	}
-	// Set a default ROM search path if required.
-	if (!xroar_rom_path) {
-		char const *env = getenv("XROAR_ROM_PATH");
-		if (!env)
-			env = ROMPATH;
-		if (env)
-			xroar_rom_path = xstrdup(env);
-	}
+
 	// If no machine specified on command line, get default.
 	if (!xroar_machine_config && private_cfg.default_machine) {
 		xroar_machine_config = machine_config_by_name(private_cfg.default_machine);
@@ -2078,7 +2077,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("disk-jvc-hack", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Firmware ROM images: */
-	{ XC_SET_STRING_F("rompath", &xroar_rom_path) },
+	{ XC_SET_STRING_F("rompath", &xroar_cfg.rompath) },
 	{ XC_CALL_ASSIGN_F("romlist", &romlist_assign) },
 	{ XC_CALL_NULL("romlist-print", &romlist_print) },
 	{ XC_CALL_ASSIGN("crclist", &crclist_assign) },
@@ -2399,7 +2398,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Firmware ROM images\n", f);
-	xroar_cfg_print_string(f, all, "rompath", xroar_rom_path, NULL);
+	xroar_cfg_print_string(f, all, "rompath", xroar_cfg.rompath, NULL);
 	romlist_print_all(f);
 	crclist_print_all(f);
 	xroar_cfg_print_bool(f, all, "force-crc-match", xroar_cfg.force_crc_match, 0);

@@ -80,6 +80,8 @@ struct xroar_cfg {
 	_Bool becker;
 	char *becker_ip;
 	char *becker_port;
+	// Files
+	char *rompath;
 	// Cassettes
 	double tape_pan;
 	double tape_hysteresis;
@@ -103,8 +105,6 @@ extern struct xroar_cfg xroar_cfg;
 
 /**************************************************************************/
 /* Global flags */
-
-extern const char *xroar_rom_path;
 
 #define UI_EVENT_LIST xroar_ui_events
 #define MACHINE_EVENT_LIST xroar_machine_events

@@ -123,10 +123,11 @@ static sds find_rom(const char *romname) {
 	if (!romname) return NULL;
 	sds filename = sdsnew(romname);
 	size_t filename_len = sdslen(filename);
+	const char *rompath = xroar_cfg.rompath ? xroar_cfg.rompath : "";
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(rom_extensions); i++) {
 		sdssetlen(filename, filename_len);
 		filename = sdscat(filename, rom_extensions[i]);
-		path = find_in_path(xroar_rom_path, filename);
+		path = find_in_path(rompath, filename);
 		if (path) break;
 	}
 	sdsfree(filename);
