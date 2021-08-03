@@ -637,7 +637,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		exit(EXIT_SUCCESS);
 	}
 
-	assert(xroar_machine_config != NULL);
+	if (xroar_machine_config == NULL) {
+		LOG_ERROR("Failed to start any machine.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* New vdrive interface */
 	xroar_vdrive_interface = vdrive_interface_new();
