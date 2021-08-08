@@ -1082,7 +1082,6 @@ static void handle_timeout_event(void *sptr) {
 	if (timeout->seconds == 0) {
 		free(timeout);
 		xroar_quit();
-		return;
 	}
 	timeout->seconds--;
 	if (timeout->seconds) {
@@ -1091,7 +1090,6 @@ static void handle_timeout_event(void *sptr) {
 		if (timeout->cycles == 0) {
 			free(timeout);
 			xroar_quit();
-			return;
 		}
 		timeout->event.at_tick = event_current_tick + timeout->cycles;
 	}
@@ -1345,7 +1343,6 @@ void xroar_set_pause(_Bool notify, int action) {
 }
 
 void xroar_quit(void) {
-	xroar_shutdown();
 	exit(EXIT_SUCCESS);
 }
 

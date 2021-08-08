@@ -24,6 +24,14 @@ See COPYING.GPL for redistribution conditions.
 #include "ui.h"
 #include "xconfig.h"
 
+#if __STDC_VERSION__ >= 201112L
+#define _NORETURN _Noreturn
+#elif __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 5)
+#define _NORETURN __attribute__ ((noreturn))
+#else
+#define __NORETURN
+#endif
+
 struct ao_interface;
 struct cart;
 struct event;
@@ -152,7 +160,7 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);
-void xroar_quit(void);
+void _NORETURN xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);
 void xroar_load_file(const char * const *exts);
 void xroar_run_file(const char * const *exts);
