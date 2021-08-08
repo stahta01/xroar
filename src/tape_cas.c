@@ -13,7 +13,7 @@ option) any later version.
 
 See COPYING.GPL for redistribution conditions.
 
-Includes experimental CUE support.
+Includes CUE support.
 
 */
 
