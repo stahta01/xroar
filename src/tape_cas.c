@@ -55,23 +55,11 @@ Includes experimental CUE support.
 
 #define PULSE_BUFFER_SIZE (400)
 
-// Some terminology:
-//
-// Section: region within CAS file of raw CAS data
-// Block: a block-sized section and associated metadata
-// Binary block: block containing raw binary data
-// ASCII block: as binary block, but LF translated to CR
-// Synthesised block: block with generated in-RAM CAS data
-//      - e.g, header block
-
 // Input CUE chunk types:
 
 #define CUE_TIMING (0xf0)
 #define CUE_SILENCE (0x00)
 #define CUE_DATA (0x0d)
-#define CUE_BIN_BLOCK (0xbb)
-#define CUE_ASC_BLOCK (0xab)
-#define CUE_SYNTH_BLOCK (0x5b)
 
 // Internal CUE entry types:
 
