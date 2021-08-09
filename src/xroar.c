@@ -1140,16 +1140,16 @@ void xroar_set_trace(int mode) {
 
 void xroar_new_disk(int drive) {
 	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_disk_exts);
-
 	if (filename == NULL)
 		return;
 	int filetype = xroar_filetype_by_ext(filename);
 	xroar_eject_disk(drive);
-	// Default to 34T 1H.  Will be auto-expanded as necessary.
+
 	struct vdisk *new_disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
-	if (new_disk == NULL)
+	if (new_disk == NULL) {
+		LOG_WARN("Failed to create new disk\n");
 		return;
-	LOG_DEBUG(1, "Creating blank disk in drive %d\n", 1 + drive);
+	}
 	switch (filetype) {
 		case FILETYPE_VDK:
 		case FILETYPE_JVC:
@@ -1167,6 +1167,7 @@ void xroar_new_disk(int drive) {
 	if (xroar_ui_interface) {
 		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, new_disk);
 	}
+	LOG_DEBUG(1, "New unformatted disk in drive %d: %s\n", 1+drive, filename);
 }
 
 void xroar_insert_disk_file(int drive, const char *filename) {
