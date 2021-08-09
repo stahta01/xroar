@@ -96,7 +96,7 @@ struct xroar_cfg xroar_cfg = {
 // Private
 
 struct private_cfg {
-	/* Emulated machine */
+	// Machines
 	char *default_machine;
 	char *machine_desc;
 	int machine_arch;
@@ -116,45 +116,60 @@ struct private_cfg {
 	int ram;
 	int nodos;
 
-	/* Emulated cartridge */
+	// Cartridges
 	char *cart_desc;
 	char *cart_type;
 	char *cart_rom;
 	char *cart_rom2;
 	int cart_becker;
 	int cart_autorun;
-	/* Deprecated */
+	// Deprecated
 	char *dos_option;
 
-	/* Attach files */
+	// Files
 	struct slist *load_list;
 	char *run;
-	char *tape_write;
-	char *lp_file;
-	char *lp_pipe;
-	struct slist *type_list;
 
-	/* Emulator interface */
-	char *ui;
-	char *filereq;
-	char *ao;
-	int volume;
-	double gain;
-	char *joy_right;
-	char *joy_left;
-	char *joy_virtual;
-	char *joy_desc;
+	// Cassettes
+	char *tape_write;
 	int tape_fast;
 	int tape_pad_auto;
 	int tape_rewrite;
 	int tape_ao_rate;
 
+	// User interface
+	char *ui;
+	char *filereq;
+
+	// Video
+	int ccr;
+
+	// Audio
+	char *ao;
+	int volume;
+	double gain;
+
+	// Keyboard
+	struct slist *type_list;
+
+	// Joysticks
+	char *joy_desc;
 	char *joy_axis[JOYSTICK_NUM_AXES];
 	char *joy_button[JOYSTICK_NUM_BUTTONS];
+	char *joy_right;
+	char *joy_left;
+	char *joy_virtual;
 
+	// Printing
+	char *lp_file;
+	char *lp_pipe;
+
+	// Debugging
+	char *timeout;
+
+	// Other options
 	_Bool config_print;
 	_Bool config_print_all;
-	char *timeout;
 };
 
 static struct private_cfg private_cfg = {
@@ -169,11 +184,12 @@ static struct private_cfg private_cfg = {
 	.nodos = -1,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
-	// if volume set >=0, use that, else use gain value in dB
-	.volume = -1,
-	.gain = -3.0,
 	.tape_fast = 1,
 	.tape_pad_auto = 1,
+	.ccr = UI_CCR_5BIT,
+	// if volume set >=0, use that, else use gain value in dB
+	.gain = -3.0,
+	.volume = -1,
 };
 
 static struct ui_cfg xroar_ui_cfg = {
@@ -181,8 +197,6 @@ static struct ui_cfg xroar_ui_cfg = {
 		.gl_filter = UI_GL_FILTER_AUTO,
 	},
 };
-
-static int ccr = UI_CCR_5BIT;
 
 /* Helper functions used by configuration */
 static void set_machine(const char *name);
@@ -1238,15 +1252,15 @@ void xroar_set_cross_colour_renderer(_Bool notify, int action) {
 	case UI_CCR_SIMPLE:
 	case UI_CCR_5BIT:
 	case UI_CCR_SIMULATED:
-		ccr = action;
+		private_cfg.ccr = action;
 		break;
 	default:
-		ccr = UI_CCR_5BIT;
+		private_cfg.ccr = UI_CCR_5BIT;
 		break;
 	}
 	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ccr, ccr, NULL);
+		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
 	}
 }
 
@@ -1265,7 +1279,7 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 			xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 			DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
-			switch (ccr) {
+			switch (private_cfg.ccr) {
 			default:
 				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
@@ -1484,7 +1498,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 		break;
 	}
 	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? VO_PHASE_OFF : VO_PHASE_KBRW;
-	xroar_set_cross_colour_renderer(1, ccr);
+	xroar_set_cross_colour_renderer(1, private_cfg.ccr);
 }
 
 void xroar_set_machine(_Bool notify, int id) {
@@ -2091,7 +2105,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
 	{ XC_SET_INT("fskip", &xroar_cfg.frameskip) },
-	{ XC_SET_ENUM("ccr", &ccr, ui_ccr_list) },
+	{ XC_SET_ENUM("ccr", &private_cfg.ccr, ui_ccr_list) },
 	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, ui_gl_filter_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
@@ -2411,7 +2425,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "vo", xroar_ui_cfg.vo, NULL);
 	xroar_cfg_print_bool(f, all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
 	xroar_cfg_print_int_nz(f, all, "fskip", xroar_cfg.frameskip);
-	xroar_cfg_print_enum(f, all, "ccr", ccr, UI_CCR_5BIT, ui_ccr_list);
+	xroar_cfg_print_enum(f, all, "ccr", private_cfg.ccr, UI_CCR_5BIT, ui_ccr_list);
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_bool(f, all, "invert-text", xroar_cfg.vdg_inverted_text, 0);
