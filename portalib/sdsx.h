@@ -1,24 +1,27 @@
-/*
-
-SDS extras
-
-Copyright 2018-2020 Ciaran Anscomb
-
-Layers on top of SDSLib 2.0, available here at time of writing:
-
-- https://github.com/antirez/sds
-
-This is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the
-Free Software Foundation; either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.LGPL and COPYING.GPL for redistribution conditions.
-
-Be aware that this depends on SDSLib functionality, which is distributed
-under the 3-clause "Modified BSD License".
-
-*/
+/** \file
+ *
+ *  \brief SDS extras.
+ *
+ *  \copyright Copyright 2018-2020 Ciaran Anscomb
+ *
+ *  \licenseblock
+ *
+ *  This is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU Lesser General Public License as published by the Free
+ *  Software Foundation; either version 3 of the License, or (at your option)
+ *  any later version.
+ *
+ *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
+ *
+ *  Be aware that this depends on SDSLib functionality, which is distributed
+ *  under the 3-clause "Modified BSD License".
+ *
+ *  \endlicenseblock
+ *
+ *  Layers on top of SDSLib 2.0, available here at time of writing:
+ *
+ *  - https://github.com/antirez/sds
+ */
 
 #ifndef SDSX_H_
 #define SDSX_H_

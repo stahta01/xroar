@@ -1,25 +1,26 @@
-/*
-
-Singly linked lists
-
-Copyright 2014 Ciaran Anscomb
-
-This file is part of Portalib.
-
-Portalib is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the
-Free Software Foundation; either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.LGPL and COPYING.GPL for redistribution conditions.
-
-A simple singly-linked list implementation.  The interfaces are similar
-to other such implementations, but are implemented from scratch.  A list
-is simply a pointer to its first member. In general, functions returning
-a list are returning the new head of the list after an operation has
-been performed.  Exceptions to this include copying.
-
-*/
+/** \file
+ *
+ *  \brief Singly linked lists.
+ *
+ *  \copyright Copyright 2014 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of Portalib.
+ *
+ *  Portalib is free software; you can redistribute it and/or modify it under
+ *  the terms of the GNU Lesser General Public License as published by the Free
+ *  Software Foundation; either version 3 of the License, or (at your option)
+ *  any later version.
+ *
+ *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  A simple singly-linked list implementation.  The interfaces are similar to
+ *  other such implementations, but are implemented from scratch.  A list is
+ *  simply a pointer to its first member. In general, functions returning a
+ *  list are returning the new head of the list after an operation has been
+ *  performed.  Exceptions to this include copying.
+ */
 
 #ifndef PORTALIB_SLIST_H_
 #define PORTALIB_SLIST_H_

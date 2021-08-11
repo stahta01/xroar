@@ -1,21 +1,22 @@
-/*
-
-C locale character handling
-
-Copyright 2014 Ciaran Anscomb
-
-This file is part of Portalib.
-
-Portalib is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the
-Free Software Foundation; either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.LGPL and COPYING.GPL for redistribution conditions.
-
-*/
-
-// Assumes ASCII.
+/** \file
+ *
+ *  \brief C locale character handling.
+ *
+ *  \copyright Copyright 2014 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of Portalib.
+ *
+ *  Portalib is free software; you can redistribute it and/or modify it under
+ *  the terms of the GNU Lesser General Public License as published by the Free
+ *  Software Foundation; either version 3 of the License, or (at your option)
+ *  any later version.
+ *
+ *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  Assumes ASCII.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
