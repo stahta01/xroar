@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,14 +22,20 @@
 #include "config.h"
 #endif
 
-#include "cart.h"
+#include <inttypes.h>
+#include <stdio.h>
+
+#include "logging.h"
 
 /* Our own defined states, not per specification */
 enum sd_states { STBY, CMDFRAME, RESP, RESP_R7, SENDCSD,
 		 TOKEN, SBLKREAD, RTOKEN, SBLKWRITE, DATARESP };
 
-/* const char *state_dbg_desc[] = { "STBY", "CFRM", "RESP", "RESP7",
-	"SNCSD", "TOKEN", "SBLRD", "RTOKN", "SBLWR", "DATAR" }; */
+static const char *state_dbg_desc[] = {
+	"STBY", "CFRM", "RESP", "RESP7",
+	"SNCSD", "TOKEN", "SBLRD", "RTOKN",
+	"SBLWR", "DATAR"
+};
 
 /* SD card registers */
 static enum sd_states state_sd;
@@ -57,43 +63,39 @@ static const uint8_t csd[16] = { 0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, 0x00,
 
 #define SDIMAGE "sdcard.img"
 
-static void read_image(uint8_t *buffer, uint32_t lba)
-{
-		FILE *sd_image;
-
-		sd_image = fopen(SDIMAGE, "rb");
-		if (!sd_image)
-		{
-			fprintf(stderr, "Error opening SD card image %s\n", SDIMAGE);
-			return;
-		}
-		fseek(sd_image, lba * 512, SEEK_SET);
-		// fprintf(stderr, "\nReading SD card image %s at LBA %d\n", SDIMAGE, lba);
-		if (fread(buffer, 512, 1, sd_image) != 1)
-			fprintf(stderr, "Short read from SD card image %s\n", SDIMAGE);
-		fclose(sd_image);
+static void read_image(uint8_t *buffer, uint32_t lba) {
+	FILE *sd_image = fopen(SDIMAGE, "rb");
+	if (!sd_image) {
+		LOG_WARN("SPI/SDCARD/READ: Error opening SD card image %s\n", SDIMAGE);
+		return;
+	}
+	fseek(sd_image, lba * 512, SEEK_SET);
+	LOG_DEBUG(3, "Reading SD card image %s at LBA %d\n", SDIMAGE, lba);
+	if (fread(buffer, 512, 1, sd_image) != 1) {
+		LOG_WARN("SPI/SDCARD/READ: Short read from SD card image %s\n", SDIMAGE);
+	}
+	fclose(sd_image);
 }
 
-static void write_image(uint8_t *buffer, uint32_t lba)
-{
-		FILE *sd_image;
-
-		sd_image = fopen(SDIMAGE, "r+b");
-		if (!sd_image)
-			fprintf(stderr, "Error opening SD card image %s\n", SDIMAGE);
-		fseek(sd_image, lba * 512, SEEK_SET);
-		// fprintf(stderr, "\nWriting SD card image %s at LBA %d\n", SDIMAGE, lba);
-		if (fwrite(buffer, 512, 1, sd_image) != 1)
-			fprintf(stderr, "Short write to SD card image %s\n", SDIMAGE);
-		fclose(sd_image);
+static void write_image(uint8_t *buffer, uint32_t lba) {
+	FILE *sd_image = fopen(SDIMAGE, "r+b");
+	if (!sd_image) {
+		LOG_WARN("SPI/SDCARD/WRITE: Error opening SD card image %s\n", SDIMAGE);
+		return;
+	}
+	fseek(sd_image, lba * 512, SEEK_SET);
+	LOG_DEBUG(3, "Writing SD card image %s at LBA %d\n", SDIMAGE, lba);
+	if (fwrite(buffer, 512, 1, sd_image) != 1) {
+		LOG_WARN("SPI/SDCARD/WRITE: Short write to SD card image %s\n", SDIMAGE);
+	}
+	fclose(sd_image);
 }
 
-uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active)
-{
+uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active) {
 	enum sd_states next = state_sd;
 	uint8_t data_in = 0xFF;
 
-	// fprintf(stderr, "[%s]\t -> %02x ", state_dbg_desc[state_sd], data_out);
+	LOG_DEBUG(3, "[%s]\t -> %02x ", state_dbg_desc[state_sd], data_out);
 
 	if (!ss_active) {
 		next = STBY;
@@ -114,7 +116,7 @@ uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active)
 		cmdcount++;
 		if (cmdcount == 6) {
 			address = (cmdarg[0] << 24) | (cmdarg[1] << 16) |
-			      (cmdarg[2] << 8) | cmdarg[3];
+			          (cmdarg[2] << 8) | cmdarg[3];
 			next = RESP;
 		}
 	} else if (state_sd == RESP) {
@@ -141,7 +143,7 @@ uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active)
 			respcount = 0;
 		}
 		data_in = idle_state; /* signal Success + Idle State in R1 */
-		// fprintf(stderr, " (%0x %d) ", current_cmd, idle_state);
+		LOG_DEBUG(3, " (%0x %d) ", current_cmd, idle_state);
 	} else if (state_sd == RESP_R7) {
 		data_in = (address >> ((3 - respcount) * 8)) & 0xFF;
 		if (++respcount == 4)
@@ -190,12 +192,11 @@ uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active)
 		}
 		csdcount++;
 	}
-	// fprintf(stderr, " <- %02x\n", data_in);
+	LOG_DEBUG(3, " <- %02x\n", data_in);
 	state_sd = next;
 	return data_in;
 }
 
-void spi_sdcard_reset(void)
-{
+void spi_sdcard_reset(void) {
 	state_sd = STBY;
 }
