@@ -1,6 +1,9 @@
-/* CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
+/** \file
+ *
+ * CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
  * the WD279X FDC (polynomial 0x1021).  In the FDC, CRC is initialised to
- * 0xffff and NOT inverted before appending to the message. */
+ * 0xffff and NOT inverted before appending to the message.
+ */
 
 #ifndef XROAR_CRC16_H_
 #define XROAR_CRC16_H_

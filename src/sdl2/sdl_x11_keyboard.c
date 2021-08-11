@@ -1,39 +1,37 @@
-/*
-
-Extended keyboard handling for X11 using SDL
-
-Copyright 2015-2016 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/*
-
-SDL2 cleverly "fingerprint"s the X11 keyboard scancode order using a small
-subset of KeySyms that are unlikely to be remapped across locales. While this
-is limited to the scancode tables included, it does yield good positional data,
-which XRoar needs.
-
-However, it then also (as of 2.0.2):
-
-a) ignores modifier mappings (e.g., Caps Lock remapped to Control)
-b) hides the KeySym of *modified* keys
-
-XRoar needs a) for interface functions and b) for "translated" keyboard mode.
-SDL1.2 provided a "Unicode" mode for b), and got a) right.
-
-Therefore, we redo some of that work here to get a reverse mapping (SDL
-scancode to X11 keycode). A lot of work to fix a leaky abstraction.
-
-*/
+/** \file
+ *
+ *  \brief Extended keyboard handling for X11 using SDL.
+ *
+ *  \copyright Copyright 2015-2016 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  SDL2 cleverly "fingerprint"s the X11 keyboard scancode order using a small
+ *  subset of KeySyms that are unlikely to be remapped across locales. While
+ *  this is limited to the scancode tables included, it does yield good
+ *  positional data, which XRoar needs.
+ *
+ *  However, it then also (as of 2.0.2):
+ *
+ *  a) ignores modifier mappings (e.g., Caps Lock remapped to Control)
+ *
+ *  b) hides the KeySym of *modified* keys
+ *
+ *  XRoar needs a) for interface functions and b) for "translated" keyboard
+ *  mode.  SDL1.2 provided a "Unicode" mode for b), and got a) right.
+ *
+ *  Therefore, we redo some of that work here to get a reverse mapping (SDL
+ *  scancode to X11 keycode). A lot of work to fix a leaky abstraction.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

@@ -1,23 +1,24 @@
-/*
-
-Windows sound module
-
-Copyright 2011-2016 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-// XXX
-//
-// This was never operational, Windows just uses SDL audio.
+/** \file
+ *
+ *  \brief Windows sound module.
+ *
+ *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  XXX
+ *
+ *  This was never operational, Windows just uses SDL audio.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

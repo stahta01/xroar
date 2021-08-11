@@ -1,19 +1,20 @@
-/*
-
-GTK+2 tape control window
-
-Copyright 2011 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
+/** \file
+ *
+ *  \brief GTK+2 tape control window.
+ *
+ *  \copyright Copyright 2011 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ */
 
 #ifndef XROAR_GTK2_TAPECONTROL_H_
 #define XROAR_GTK2_TAPECONTROL_H_

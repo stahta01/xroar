@@ -1,25 +1,26 @@
-/*
-
-SDL2 sound module
-
-Copyright 2015-2019 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/* SDL processes audio in a separate thread, using a callback to request more
- * data.  When the configured number of audio fragments (nfragments) is 1,
- * write directly into the buffer provided by SDL.  When nfragments > 1,
- * maintain a queue of fragment buffers; the callback takes the next filled
- * buffer from the queue and copies its data into place. */
+/** \file
+ *
+ *  \brief SDL2 sound module.
+ *
+ *  \copyright Copyright 2015-2019 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  SDL processes audio in a separate thread, using a callback to request more
+ *  data.  When the configured number of audio fragments (nfragments) is 1,
+ *  write directly into the buffer provided by SDL.  When nfragments > 1,
+ *  maintain a queue of fragment buffers; the callback takes the next filled
+ *  buffer from the queue and copies its data into place.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

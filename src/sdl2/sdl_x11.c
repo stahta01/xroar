@@ -1,27 +1,24 @@
-/*
-
-System event handling for X11 using SDL2
-
-Copyright 2015 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/*
-
-MappingNotify events trigger an update of keyboard mapping tables.
-
-KeymapNotify events used to update internal modifier state.
-
-*/
+/** \file
+ *
+ *  \brief System event handling for X11 using SDL2.
+ *
+ *  \copyright Copyright 2015 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  MappingNotify events trigger an update of keyboard mapping tables.
+ *
+ *  KeymapNotify events used to update internal modifier state.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

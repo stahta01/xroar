@@ -1,26 +1,28 @@
-/*
-
-Parts & interfaces.
-
-Copyright 2018-2019 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-A _part_ is a required part of a device.  Typically, sub-parts are freed
-recursively.
-
-An _interface_ is a connection between parts.  One part hosts the interface and
-returns a pointer when its get_intf() method is called.  This pointer is then
-passed to the attach_intf() method of both parts to populate their fields.
-
-*/
+/** \file
+ *
+ *  \brief Parts & interfaces.
+ *
+ *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ * A _part_ is a required part of a device.  Typically, sub-parts are freed
+ * recursively.
+ *
+ * An _interface_ is a connection between parts.  One part hosts the interface
+ * and returns a pointer when its get_intf() method is called.  This pointer is
+ * then passed to the attach_intf() method of both parts to populate their
+ * fields.
+ */
 
 #ifndef XROAR_PART_H_
 #define XROAR_PART_H_

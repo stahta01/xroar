@@ -1,25 +1,26 @@
-/*
-
-Windows file requester module
-
-Copyright 2005-2019 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
+/** \file
+ *
+ *  \brief Windows file requester module.
+ *
+ *  \copyright Copyright 2005-2019 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  This Windows32 code is probably all wrong, but it does seem to work.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-/* This Windows32 code is probably all wrong, but it does seem to work */
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,11 +1,13 @@
-/* CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
+/** \file
+ *
+ * CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
  * the WD279X FDC (polynomial 0x1021).  In the FDC, CRC is initialised to
- * 0xffff and NOT inverted before appending to the message. */
-
-/* This implementation uses some clever observations about which bits of the
- * message and old CRC affect each other.  Credits:
- * Ashley Roll   - www.digitalnemesis.com
- * Scott Dattalo - www.dattalo.com
+ * 0xffff and NOT inverted before appending to the message.
+ *
+ * This implementation uses some clever observations about which bits of the
+ * message and old CRC affect each other.
+ * \author Ashley Roll, www.digitalnemesis.com
+ * \author Scott Dattalo, www.dattalo.com
  */
 
 #ifdef HAVE_CONFIG_H

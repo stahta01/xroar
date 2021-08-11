@@ -1,29 +1,34 @@
-/*
-
-Hitach HD6309 CPU
-
-Copyright 2012-2021 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/* References:
- *     MC6809E data sheet,
- *         Motorola
- *     HD6309E data sheet,
- *         Hitachi
- *     MC6809 Cycle-By-Cycle Performance,
- *         http://koti.mbnet.fi/~atjs/mc6809/Information/6809cyc.txt
- *     Motorola 6809 and Hitachi 6309 Programmers Reference,
- *         2009 Darren Atkinson
+/** \file
+ *
+ *  \brief Hitach HD6309 CPU.
+ *
+ *  \copyright Copyright 2012-2021 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  A drop-in replacement for the MC6809, this Hitachi CMOS version of the CPU
+ *  includes many instruction set enhancements.
+ *
+ *  \par Sources
+ *
+ *  - MC6809E data sheet, Motorola
+ *
+ *  - HD6309E data sheet, Hitachi
+ *
+ *  - MC6809 Cycle-By-Cycle Performance,
+ *    http://koti.mbnet.fi/~atjs/mc6809/Information/6809cyc.txt
+ *
+ *  - Motorola 6809 and Hitachi 6309 Programmers Reference,
+ *    2009 Darren Atkinson
  */
 
 #ifdef HAVE_CONFIG_H

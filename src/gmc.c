@@ -1,26 +1,28 @@
-/*
-
-Games Master Cartridge support
-
-Copyright 2018-2019 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-John Linville's Games Master Cartridge.  Provides bank-switched ROM and
-SN76489 sound chip.
-
-*/
-
-/* Sources:
- *     Games Master Cartridge:
- *         https://drive.google.com/drive/folders/1FWSpWshl_GJevk85hsm54b62SGGojyB1
+/** \file
+ *
+ *  \brief Games Master Cartridge support.
+ *
+ *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  John Linville's Games Master Cartridge.  Provides bank-switched ROM and
+ *  SN76489 sound chip.
+ *
+ *  \par Sources
+ *
+ *  Games Master Cartridge:
+ *
+ *  - https://drive.google.com/drive/folders/1FWSpWshl_GJevk85hsm54b62SGGojyB1
  */
 
 #ifdef HAVE_CONFIG_H

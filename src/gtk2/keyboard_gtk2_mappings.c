@@ -1,27 +1,30 @@
-/*
-
-GTK+2 keyboard mappings
-
-Copyright 2010-2014 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/* The Dragon keyboard layout:
+/** \file
  *
- *   1   2   3   4   5   6   7   8   9   0   :   -  brk
- * up   Q   W   E   R   T   Y   U   I   O   P   @  lft rgt
- *  dwn  A   S   D   F   G   H   J   K   L   ;   enter  clr
- *  shft  Z   X   C   V   B   N   M   , .   /   shft
- *                         space
+ *  \brief GTK+2 keyboard mappings.
+ *
+ *  \copyright Copyright 2010-2014 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  The Dragon keyboard layout:
+ *  \verbatim
+
+     1   2   3   4   5   6   7   8   9   0   :   -  brk
+   up   Q   W   E   R   T   Y   U   I   O   P   @  lft rgt
+    dwn  A   S   D   F   G   H   J   K   L   ;   enter  clr
+    shft  Z   X   C   V   B   N   M   , .   /   shft
+                           space
+
+\endverbatim
  */
 
 /* Keymaps map GDK keysym to dkey. */

@@ -1,19 +1,32 @@
-/*
-
-Motorola SN74LS783/MC6883 Synchronous Address Multiplexer
-
-Copyright 2003-2019 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
+/** \file
+ *
+ *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
+ *
+ *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
+ *
+ *  Research into how SAM VDG mode transitions affect addressing and the
+ *  various associated "glitches" by Stewart Orchard.
+ *
+ *  As the code currently stands, implementation of this undocumented behaviour
+ *  is partial and you shouldn't rely on it to accurately represent real
+ *  hardware.  However, if you're testing on the real thing too, this could
+ *  still allow you to achieve some nice effects.
+ *
+ *  Currently unoptimised as whole behaviour not implemented.  In normal
+ *  operation, this adds <1% to execution time.  Pathological case of
+ *  constantly varying SAM VDG mode adds a little over 5%.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -31,18 +44,6 @@ See COPYING.GPL for redistribution conditions.
 // Constants for address multiplexer
 // SAM Data Sheet,
 //   Figure 6 - Signal routing for address multiplexer
-
-// Research into how SAM VDG mode transitions affect addressing and the various
-// associated "glitches" by Stewart Orchard.
-//
-// As the code currently stands, implementation of this undocumented behaviour
-// is partial and you shouldn't rely on it to accurately represent real
-// hardware.  However, if you're testing on the real thing too, this could
-// still allow you to achieve some nice effects.
-//
-// Currently unoptimised as whole behaviour not implemented.  In normal
-// operation, this adds <1% to execution time.  Pathological case of constantly
-// varying SAM VDG mode adds a little over 5%.
 
 static uint16_t const ram_row_masks[4] = { 0x007f, 0x007f, 0x00ff, 0x00ff };
 static int const ram_col_shifts[4] = { 2, 1, 0, 0 };

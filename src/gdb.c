@@ -1,41 +1,40 @@
-/*
+/** \file
+ *
+ *  \brief GDB protocol support.
+ *
+ *  \copyright Copyright 2013-2021 Ciaran Anscomb
+ *
+ *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ *
+ *  XRoar is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation, either version 3 of the License, or (at your option) any later
+ *  version.
+ *
+ *  See COPYING.GPL for redistribution conditions.
+ *
+ *  \endlicenseblock
 
-GDB protocol support
-
-Copyright 2013-2021 Ciaran Anscomb
-
-This file is part of XRoar.
-
-XRoar is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-See COPYING.GPL for redistribution conditions.
-
-*/
-
-/*
  * Support a subset of the gdb protocol over a socket.  See
  * http://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
  *
  * The following registers are accessible:
 
- *      Index   Name    Bits
- *
- *      0       CC      8
- *      1       A       8
- *      2       B       8
- *      3       DP      8
- *      4       X       16
- *      5       Y       16
- *      6       U       16
- *      7       S       16
- *      8       PC      16
- *      9       MD      8       (HD6309)
- *      10      E       8       (HD6309)
- *      11      F       8       (HD6309)
- *      12      V       16      (HD6309)
+ *    | Index | Name  | Bits
+ *    | :---- | :---- | :----
+ *    | 0     | CC    | 8
+ *    | 1     | A     | 8
+ *    | 2     | B     | 8
+ *    | 3     | DP    | 8
+ *    | 4     | X     | 16
+ *    | 5     | Y     | 16
+ *    | 6     | U     | 16
+ *    | 7     | S     | 16
+ *    | 8     | PC    | 16
+ *    | 9     | MD    | 8       (HD6309)
+ *    | 10    | E     | 8       (HD6309)
+ *    | 11    | F     | 8       (HD6309)
+ *    | 12    | V     | 16      (HD6309)
 
  * 'g' packet responses will contain 14 hex pairs comprising the 6809 register,
  * and either a further 5 hex pairs for the 6309 registers, or 'xx'.  'G'
@@ -48,13 +47,13 @@ See COPYING.GPL for redistribution conditions.
  *
  * Some standard, and some vendor-specific general queries are supported:
 
- *      qxroar.sam      XXXX    get SAM register, reply is 4 hex digits
- *      qSupported      XX...   report PacketSize
- *      qAttached       1       always report attached
+ *      qxroar.sam    | XXXX  | get SAM register, reply is 4 hex digits
+ *      qSupported    | XX... | report PacketSize
+ *      qAttached     | 1     | always report attached
 
  * Only these vendor-specific general sets are supported:
 
- *      Qxroar.sam:XXXX         set SAM register (4 hex digits)
+ *      Qxroar.sam:XXXX       | set SAM register (4 hex digits)
 
  */
 
