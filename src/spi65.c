@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,7 +22,7 @@
 #include "config.h"
 #endif
 
-#include "cart.h"
+#include <inttypes.h>
 
 uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active);
 void spi_sdcard_reset();
@@ -44,8 +44,7 @@ static uint8_t status;
 static uint8_t clkdiv;
 static uint8_t ss_ie;
 
-uint8_t spi65_read(uint8_t reg)
-{
+uint8_t spi65_read(uint8_t reg) {
 	uint8_t value = 0;
 
 	switch (reg) {
@@ -78,8 +77,7 @@ uint8_t spi65_read(uint8_t reg)
 	return value;
 }
 
-void spi65_write(uint8_t reg, uint8_t value)
-{
+void spi65_write(uint8_t reg, uint8_t value) {
 	switch (reg) {
 	case SPIDATA:
 		// fprintf(stderr, "Writing SPI DATA");
@@ -106,8 +104,7 @@ void spi65_write(uint8_t reg, uint8_t value)
 	// fprintf(stderr, "\t -> %02x\n", value);
 }
 
-void spi65_reset(void)
-{
+void spi65_reset(void) {
 	reg_data_in = 0xFF; /* TODO verify */
 	reg_data_out = 0;
 	status = 0;
