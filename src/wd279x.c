@@ -74,7 +74,7 @@ See COPYING.GPL for redistribution conditions.
 		fdc->state_event.at_tick = event_current_tick + t; \
 		event_queue(&MACHINE_EVENT_LIST, &fdc->state_event); \
 	} while (0)
-#define GOTO_STATE(f) fdc->state = f; continue
+#define SET_STATE(f) fdc->state = (f)
 
 #define IS_DOUBLE_DENSITY (fdc->double_density)
 #define IS_SINGLE_DENSITY (!fdc->double_density)
@@ -103,10 +103,6 @@ static const char *wd279x_type_name[4] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Debugging
-
-struct log_handle *log_rsec_hex = NULL;
-struct log_handle *log_wsec_hex = NULL;
-struct log_handle *log_wtrk_hex = NULL;
 
 static void debug_state(WD279X *fdc);
 
@@ -152,6 +148,9 @@ WD279X *wd279x_new(enum WD279X_type type) {
 
 static void wd279x_free(struct part *p) {
 	WD279X *fdc = (WD279X *)p;
+	log_close(&fdc->log_rsec_hex);
+	log_close(&fdc->log_wsec_hex);
+	log_close(&fdc->log_wtrk_hex);
 	event_dequeue(&fdc->state_event);
 }
 
@@ -367,15 +366,18 @@ static void state_machine(void *sptr) {
 				}
 				if (fdc->is_step_cmd) {
 					if (fdc->command_register & 0x10) {
-						GOTO_STATE(WD279X_state_type1_2);
+						SET_STATE(WD279X_state_type1_2);
+						continue;
 					}
-					GOTO_STATE(WD279X_state_type1_3);
+					SET_STATE(WD279X_state_type1_3);
+					continue;
 				}
 				if ((fdc->command_register & 0xf0) == 0x00) {
 					fdc->track_register = 0xff;
 					fdc->data_register = 0x00;
 				}
-				GOTO_STATE(WD279X_state_type1_1);
+				SET_STATE(WD279X_state_type1_1);
+				continue;
 			}
 
 			/* 10xxxxxx = READ/WRITE SECTOR */
@@ -397,7 +399,8 @@ static void state_machine(void *sptr) {
 					NEXT_STATE(WD279X_state_type2_1, EVENT_MS(30));
 					return;
 				}
-				GOTO_STATE(WD279X_state_type2_1);
+				SET_STATE(WD279X_state_type2_1);
+				continue;
 			}
 
 			/* 11000xx0 = READ ADDRESS */
@@ -424,7 +427,8 @@ static void state_machine(void *sptr) {
 					NEXT_STATE(WD279X_state_type3_1, EVENT_MS(30));
 					return;
 				}
-				GOTO_STATE(WD279X_state_type3_1);
+				SET_STATE(WD279X_state_type3_1);
+				continue;
 			}
 			LOG_WARN("WD279X: CMD: Unknown command %02x\n", fdc->command_register);
 			return;
@@ -432,18 +436,21 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_type1_1:
 			if (fdc->data_register == fdc->track_register) {
-				GOTO_STATE(WD279X_state_verify_track_1);
+				SET_STATE(WD279X_state_verify_track_1);
+				continue;
 			}
 			if (fdc->data_register > fdc->track_register)
 				SET_DIRECTION;
 			else
 				RESET_DIRECTION;
-			GOTO_STATE(WD279X_state_type1_2);
+			SET_STATE(WD279X_state_type1_2);
+			continue;
 
 
 		case WD279X_state_type1_2:
 			fdc->track_register += fdc->direction;
-			GOTO_STATE(WD279X_state_type1_3);
+			SET_STATE(WD279X_state_type1_3);
+			continue;
 
 
 		case WD279X_state_type1_3:
@@ -613,11 +620,11 @@ static void state_machine(void *sptr) {
 		case WD279X_state_read_sector_1:
 			LOG_DEBUG(3, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, DELEGATE_CALL0(fdc->get_head_pos));
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_open_hexdump(&log_rsec_hex, "WD279X: read-sector");
+				log_open_hexdump(&fdc->log_rsec_hex, "WD279X: read-sector");
 			fdc->status_register |= ((~fdc->dam & 1) << 5);
 			fdc->data_register = _vdrive_read(fdc);
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_hexdump_byte(log_rsec_hex, fdc->data_register);
+				log_hexdump_byte(fdc->log_rsec_hex, fdc->data_register);
 			fdc->bytes_left--;
 			SET_DRQ;
 			NEXT_STATE(WD279X_state_read_sector_2, DELEGATE_CALL0(fdc->time_to_next_byte));
@@ -628,19 +635,19 @@ static void state_machine(void *sptr) {
 			if (fdc->status_register & STATUS_DRQ) {
 				fdc->status_register |= STATUS_LOST_DATA;
 				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_hexdump_flag(log_rsec_hex);
+					log_hexdump_flag(fdc->log_rsec_hex);
 				/* RESET_DRQ;  XXX */
 			}
 			if (fdc->bytes_left > 0) {
 				fdc->data_register = _vdrive_read(fdc);
 				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_hexdump_byte(log_rsec_hex, fdc->data_register);
+					log_hexdump_byte(fdc->log_rsec_hex, fdc->data_register);
 				fdc->bytes_left--;
 				SET_DRQ;
 				NEXT_STATE(WD279X_state_read_sector_2, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
-			log_close(&log_rsec_hex);
+			log_close(&fdc->log_rsec_hex);
 			/* Including CRC bytes should result in computed CRC = 0 */
 			(void)_vdrive_read(fdc);
 			(void)_vdrive_read(fdc);
@@ -656,7 +663,8 @@ static void state_machine(void *sptr) {
 			if (fdc->command_register & 0x10) {
 				/* XXX what happens on overflow here? */
 				fdc->sector_register++;
-				GOTO_STATE(WD279X_state_type2_1);
+				SET_STATE(WD279X_state_type2_1);
+				continue;
 			}
 			fdc->status_register &= ~(STATUS_BUSY);
 			SET_INTRQ;
@@ -686,7 +694,7 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_write_sector_3:
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_open_hexdump(&log_wsec_hex, "WD279X: write-sector");
+				log_open_hexdump(&fdc->log_wsec_hex, "WD279X: write-sector");
 			if (IS_DOUBLE_DENSITY) {
 				for (i = 0; i < 11; i++)
 					DELEGATE_CALL0(fdc->skip);
@@ -722,11 +730,11 @@ static void state_machine(void *sptr) {
 				data = 0;
 				fdc->status_register |= STATUS_LOST_DATA;
 				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_hexdump_flag(log_wsec_hex);
+					log_hexdump_flag(fdc->log_wsec_hex);
 				RESET_DRQ;  /* XXX */
 			}
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_hexdump_byte(log_wsec_hex, data);
+				log_hexdump_byte(fdc->log_wsec_hex, data);
 			_vdrive_write(fdc, data);
 			fdc->bytes_left--;
 			if (fdc->bytes_left > 0) {
@@ -734,7 +742,7 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_write_sector_5, DELEGATE_CALL0(fdc->time_to_next_byte));
 				return;
 			}
-			log_close(&log_wsec_hex);
+			log_close(&fdc->log_wsec_hex);
 			VDRIVE_WRITE_CRC16;
 			NEXT_STATE(WD279X_state_write_sector_6, DELEGATE_CALL0(fdc->time_to_next_byte) + EVENT_US(20));
 			return;
@@ -745,7 +753,8 @@ static void state_machine(void *sptr) {
 			if (fdc->command_register & 0x10) {
 				/* XXX what happens on overflow here? */
 				fdc->sector_register++;
-				GOTO_STATE(WD279X_state_type2_1);
+				SET_STATE(WD279X_state_type2_1);
+				continue;
 			}
 			fdc->status_register &= ~(STATUS_BUSY);
 			SET_INTRQ;
@@ -763,7 +772,8 @@ static void state_machine(void *sptr) {
 					SET_INTRQ;
 					break;
 				case 0xf0:
-					GOTO_STATE(WD279X_state_write_track_1);
+					SET_STATE(WD279X_state_write_track_1);
+					continue;
 				default:
 					break;
 			}
@@ -858,15 +868,16 @@ static void state_machine(void *sptr) {
 			fdc->index_holes_count = 0;
 			LOG_DEBUG(3, "WD279X: Writing track from head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_open_hexdump(&log_wtrk_hex, "WD279X: write-track");
-			GOTO_STATE(WD279X_state_write_track_3);
+				log_open_hexdump(&fdc->log_wtrk_hex, "WD279X: write-track");
+			SET_STATE(WD279X_state_write_track_3);
+			continue;
 
 
 		case WD279X_state_write_track_3:
 			data = fdc->data_register;
 			if (fdc->index_holes_count > 0) {
 				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_close(&log_wtrk_hex);
+					log_close(&fdc->log_wtrk_hex);
 				LOG_DEBUG(3, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL0(fdc->get_head_pos));
 				RESET_DRQ;  /* XXX */
 				fdc->status_register &= ~(STATUS_BUSY);
@@ -874,12 +885,12 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			if (logging.debug_fdc & LOG_FDC_DATA)
-				log_hexdump_byte(log_wtrk_hex, fdc->data_register);
+				log_hexdump_byte(fdc->log_wtrk_hex, fdc->data_register);
 			if (fdc->status_register & STATUS_DRQ) {
 				data = 0;
 				fdc->status_register |= STATUS_LOST_DATA;
 				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_hexdump_flag(log_wtrk_hex);
+					log_hexdump_flag(fdc->log_wtrk_hex);
 			}
 			SET_DRQ;
 			if (IS_SINGLE_DENSITY) {
