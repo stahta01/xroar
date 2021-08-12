@@ -60,8 +60,8 @@ xroar_SOURCES = \
 	sn76489.c sn76489.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
-	spi65.c \
-	spi_sdcard.c \
+	spi65.c spi65.h \
+	spi_sdcard.c spi_sdcard.h \
 	tape.c tape.h \
 	tape_cas.c \
 	ui.c ui.h \

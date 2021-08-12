@@ -18,14 +18,20 @@
  *  \endlicenseblock
  */
 
+// Sources:
+//     65SPI/B
+//         http://www.6502.org/users/andre/spi65b/
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include <inttypes.h>
 
-uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active);
-void spi_sdcard_reset();
+#include "delegate.h"
+
+#include "logging.h"
+#include "spi65.h"
 
 #define SPIDATA 0
 #define SPICTRL 1
@@ -36,81 +42,139 @@ void spi_sdcard_reset();
 #define SPICTRL_TC  0x80
 #define SPICTRL_FRX 0x10
 
-/* 65SPI internal registers */
-// struct me
-static uint8_t reg_data_in; /* read by host */
-static uint8_t reg_data_out; /* written by host */
-static uint8_t status;
-static uint8_t clkdiv;
-static uint8_t ss_ie;
+#define SPI_NDEVICES (4)
 
-uint8_t spi65_read(uint8_t reg) {
+struct spi65_private {
+	struct spi65 public;
+
+	// 65SPI internal registers
+	uint8_t reg_data_in;   // read by host
+	uint8_t reg_data_out;  // written by host
+	uint8_t status;
+	uint8_t clkdiv;
+	uint8_t ss_ie;
+
+	// Attached devices
+	struct spi65_device *device[SPI_NDEVICES];
+};
+
+struct spi65 *spi65_new(void) {
+	struct spi65_private *spi65p = part_new(sizeof(*spi65p));
+	*spi65p = (struct spi65_private){0};
+	part_init(&spi65p->public.part, "65SPI-B");
+	return &spi65p->public;
+}
+
+void spi65_add_device(struct spi65 *spi65, struct spi65_device *device, unsigned slot) {
+	struct spi65_private *spi65p = (struct spi65_private *)spi65;
+	char id[] = { 's', 'l', 'o', 't', '0', 0 };
+	if (slot >= SPI_NDEVICES)
+		return;
+	spi65_remove_device(spi65, slot);
+	spi65p->device[slot] = device;
+	id[4] = '0' + slot;
+	part_add_component(&spi65->part, &device->part, id);
+}
+
+void spi65_remove_device(struct spi65 *spi65, unsigned slot) {
+	struct spi65_private *spi65p = (struct spi65_private *)spi65;
+	if (slot >= SPI_NDEVICES)
+		return;
+	if (spi65p->device[slot]) {
+		part_remove_component(&spi65->part, &spi65p->device[slot]->part);
+	}
+}
+
+uint8_t spi65_read(struct spi65 *spi65, uint8_t reg) {
+	struct spi65_private *spi65p = (struct spi65_private *)spi65;
 	uint8_t value = 0;
 
 	switch (reg) {
 	case SPIDATA:
-		value = reg_data_in;
-		// fprintf(stderr, "Reading SPI DATA");
-		status &= ~SPICTRL_TC; /* clear TC on read */
+		value = spi65p->reg_data_in;
+		LOG_DEBUG(3, "Reading SPI DATA");
+		spi65p->status &= ~SPICTRL_TC; /* clear TC on read */
 		/* reading triggers SPI transfer in FRX mode */
-		if (status & SPICTRL_FRX) {
-			reg_data_in = spi_sdcard_transfer(reg_data_out, (ss_ie & 0x01) == 0);
+		if (spi65p->status & SPICTRL_FRX) {
+			for (int i = 0; i < 4; i++) {
+				if (spi65p->device[i]) {
+					if ((spi65p->ss_ie & (1 << i)) == 0) {
+						spi65p->reg_data_in = DELEGATE_CALL(spi65p->device[i]->transfer, spi65p->reg_data_out, 1);
+					} else {
+						(void)DELEGATE_CALL(spi65p->device[i]->transfer, spi65p->reg_data_out, 0);
+					}
+				}
+			}
 		}
 		break;
 	case SPISTATUS:
-		// fprintf(stderr, "Reading SPI STATUS");
-		value = status;
-		status |= SPICTRL_TC; // complete next time
+		LOG_DEBUG(3, "Reading SPI STATUS");
+		value = spi65p->status;
+		spi65p->status |= SPICTRL_TC; // complete next time
 		break;
 	case SPICLK:
-		// fprintf(stderr, "Reading SPI CLK");
-		value = clkdiv;
+		LOG_DEBUG(3, "Reading SPI CLK");
+		value = spi65p->clkdiv;
 		break;
 	case SPISIE:
-		// fprintf(stderr, "Reading SPI SIE");
-		value = ss_ie;
+		LOG_DEBUG(3, "Reading SPI SIE");
+		value = spi65p->ss_ie;
 		break;
 	default: /* only for compiler happiness */
 		break;
 	}
-	// fprintf(stderr, "\t\t <- %02x\n", value);
+	LOG_DEBUG(3, "\t\t <- %02x\n", value);
 	return value;
 }
 
-void spi65_write(uint8_t reg, uint8_t value) {
+void spi65_write(struct spi65 *spi65, uint8_t reg, uint8_t value) {
+	struct spi65_private *spi65p = (struct spi65_private *)spi65;
 	switch (reg) {
 	case SPIDATA:
-		// fprintf(stderr, "Writing SPI DATA");
-		reg_data_out = value;
+		LOG_DEBUG(3, "Writing SPI DATA");
+		spi65p->reg_data_out = value;
 		/* writing triggers SPI transfer */
-		reg_data_in = spi_sdcard_transfer(reg_data_out, (ss_ie & 0x01) == 0);
-		status &= ~SPICTRL_TC;
+		for (int i = 0; i < 4; i++) {
+			if (spi65p->device[i]) {
+				if ((spi65p->ss_ie & (1 << i)) == 0) {
+					spi65p->reg_data_in = DELEGATE_CALL(spi65p->device[i]->transfer, spi65p->reg_data_out, 1);
+				} else {
+					(void)DELEGATE_CALL(spi65p->device[i]->transfer, spi65p->reg_data_out, 0);
+				}
+			}
+		}
+		spi65p->status &= ~SPICTRL_TC;
 		break;
 	case SPICTRL:
-		// fprintf(stderr, "Writing SPI CONTROL");
-		status = (value & ~0xA0) | (status & 0xA0);
+		LOG_DEBUG(3, "Writing SPI CONTROL");
+		spi65p->status = (value & ~0xa0) | (spi65p->status & 0xa0);
 		break;
 	case SPICLK:
-		// fprintf(stderr, "Writing SPI CLK");
-		clkdiv = value;
+		LOG_DEBUG(3, "Writing SPI CLK");
+		spi65p->clkdiv = value;
 		break;
 	case SPISIE:
-		// fprintf(stderr, "Writing SPI SIE");
-		ss_ie = value;
+		LOG_DEBUG(3, "Writing SPI SIE");
+		spi65p->ss_ie = value;
 		break;
 	default: /* only for compiler happiness */
 		break;
 	}
-	// fprintf(stderr, "\t -> %02x\n", value);
+	LOG_DEBUG(3, "\t -> %02x\n", value);
 }
 
-void spi65_reset(void) {
-	reg_data_in = 0xFF; /* TODO verify */
-	reg_data_out = 0;
-	status = 0;
-	status = 0;
-	clkdiv = 0;
-	ss_ie = 0x0F; /* slave selects high = inactive */
+void spi65_reset(struct spi65 *spi65) {
+	struct spi65_private *spi65p = (struct spi65_private *)spi65;
+	spi65p->reg_data_in = 0xff; /* TODO verify */
+	spi65p->reg_data_out = 0;
+	spi65p->status = 0;
+	spi65p->status = 0;
+	spi65p->clkdiv = 0;
+	spi65p->ss_ie = 0x0f; /* slave selects high = inactive */
 
-	spi_sdcard_reset();
+	for (int i = 0; i < SPI_NDEVICES; i++) {
+		if (spi65p->device[i]) {
+			DELEGATE_SAFE_CALL(spi65p->device[i]->reset);
+		}
+	}
 }

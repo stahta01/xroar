@@ -25,7 +25,11 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "delegate.h"
+#include "xalloc.h"
+
 #include "logging.h"
+#include "spi65.h"
 
 /* Our own defined states, not per specification */
 enum sd_states { STBY, CMDFRAME, RESP, RESP_R7, SENDCSD,
@@ -37,20 +41,25 @@ static const char *state_dbg_desc[] = {
 	"SBLWR", "DATAR"
 };
 
-/* SD card registers */
-static enum sd_states state_sd;
+struct spi_sdcard {
+	struct spi65_device spi65_device;
 
-/* struct me */
-static enum sd_states current_cmd;
-static int cmdcount;
-static uint8_t cmdarg[6];
-static uint8_t blkbuf[512];
-static int32_t address;
-static int blkcount;
-static int respcount;
-static int csdcount;
-static int idle_state = 0;
-static int acmd = 0;
+	// Backing image filename
+	const char *imagefile;
+
+	// SD card registers
+	enum sd_states state_sd;
+	enum sd_states current_cmd;
+	int cmdcount;
+	uint8_t cmdarg[6];
+	uint8_t blkbuf[512];
+	int32_t address;
+	int blkcount;
+	int respcount;
+	int csdcount;
+	int idle_state;
+	int acmd;
+};
 
 #define MY_OCR 0x40300000 /* big endian */
 // static const uint8_t ocr[4] = { 0x40, 0x30, 0x00, 0x00 };
@@ -61,142 +70,155 @@ static const uint8_t csd[16] = { 0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, 0x00,
 #define CMD(x) (0x40 | x)
 #define ACMD(x) (APP_FLAG | CMD(x))
 
-#define SDIMAGE "sdcard.img"
+static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active);
+static void spi_sdcard_reset(void *sptr);
 
-static void read_image(uint8_t *buffer, uint32_t lba) {
-	FILE *sd_image = fopen(SDIMAGE, "rb");
+struct spi65_device *spi_sdcard_new(const char *image) {
+	struct spi_sdcard *sdcard = part_new(sizeof(*sdcard));
+	*sdcard = (struct spi_sdcard){0};
+	part_init(&sdcard->spi65_device.part, "SPI-SDCARD");
+	sdcard->imagefile = xstrdup(image);
+	sdcard->spi65_device.transfer = DELEGATE_AS2(uint8, uint8, bool, spi_sdcard_transfer, sdcard);
+	sdcard->spi65_device.reset = DELEGATE_AS0(void, spi_sdcard_reset, sdcard);
+	return (struct spi65_device *)sdcard;
+}
+
+static void read_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
+	FILE *sd_image = fopen(sdcard->imagefile, "rb");
 	if (!sd_image) {
-		LOG_WARN("SPI/SDCARD/READ: Error opening SD card image %s\n", SDIMAGE);
+		LOG_WARN("SPI/SDCARD/READ: Error opening SD card image %s\n", sdcard->imagefile);
 		return;
 	}
 	fseek(sd_image, lba * 512, SEEK_SET);
-	LOG_DEBUG(3, "Reading SD card image %s at LBA %d\n", SDIMAGE, lba);
+	LOG_DEBUG(3, "Reading SD card image %s at LBA %d\n", sdcard->imagefile, lba);
 	if (fread(buffer, 512, 1, sd_image) != 1) {
-		LOG_WARN("SPI/SDCARD/READ: Short read from SD card image %s\n", SDIMAGE);
+		LOG_WARN("SPI/SDCARD/READ: Short read from SD card image %s\n", sdcard->imagefile);
 	}
 	fclose(sd_image);
 }
 
-static void write_image(uint8_t *buffer, uint32_t lba) {
-	FILE *sd_image = fopen(SDIMAGE, "r+b");
+static void write_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
+	FILE *sd_image = fopen(sdcard->imagefile, "r+b");
 	if (!sd_image) {
-		LOG_WARN("SPI/SDCARD/WRITE: Error opening SD card image %s\n", SDIMAGE);
+		LOG_WARN("SPI/SDCARD/WRITE: Error opening SD card image %s\n", sdcard->imagefile);
 		return;
 	}
 	fseek(sd_image, lba * 512, SEEK_SET);
-	LOG_DEBUG(3, "Writing SD card image %s at LBA %d\n", SDIMAGE, lba);
+	LOG_DEBUG(3, "Writing SD card image %s at LBA %d\n", sdcard->imagefile, lba);
 	if (fwrite(buffer, 512, 1, sd_image) != 1) {
-		LOG_WARN("SPI/SDCARD/WRITE: Short write to SD card image %s\n", SDIMAGE);
+		LOG_WARN("SPI/SDCARD/WRITE: Short write to SD card image %s\n", sdcard->imagefile);
 	}
 	fclose(sd_image);
 }
 
-uint8_t spi_sdcard_transfer(uint8_t data_out, int ss_active) {
-	enum sd_states next = state_sd;
-	uint8_t data_in = 0xFF;
+static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active) {
+	struct spi_sdcard *sdcard = sptr;
+	enum sd_states next = sdcard->state_sd;
+	uint8_t data_in = 0xff;
 
-	LOG_DEBUG(3, "[%s]\t -> %02x ", state_dbg_desc[state_sd], data_out);
+	LOG_DEBUG(3, "[%s]\t -> %02x ", state_dbg_desc[sdcard->state_sd], data_out);
 
 	if (!ss_active) {
 		next = STBY;
 	}
 
-	if (state_sd < CMDFRAME && ss_active && (data_out & 0xC0) == 0x40) {
+	if (sdcard->state_sd < CMDFRAME && ss_active && (data_out & 0xc0) == 0x40) {
 		/* start of command frame */
-		if (acmd)
-			current_cmd = ACMD(data_out);
+		if (sdcard->acmd)
+			sdcard->current_cmd = ACMD(data_out);
 		else
-			current_cmd = data_out;
-		acmd = 0;
-		cmdcount = 0;
+			sdcard->current_cmd = data_out;
+		sdcard->acmd = 0;
+		sdcard->cmdcount = 0;
 		next = CMDFRAME;
-	} else if (state_sd == CMDFRAME && ss_active) {
+	} else if (sdcard->state_sd == CMDFRAME && ss_active) {
 		/* inside command frame */
-		cmdarg[cmdcount] = data_out;
-		cmdcount++;
-		if (cmdcount == 6) {
-			address = (cmdarg[0] << 24) | (cmdarg[1] << 16) |
-			          (cmdarg[2] << 8) | cmdarg[3];
+		sdcard->cmdarg[sdcard->cmdcount] = data_out;
+		sdcard->cmdcount++;
+		if (sdcard->cmdcount == 6) {
+			sdcard->address = (sdcard->cmdarg[0] << 24) | (sdcard->cmdarg[1] << 16) |
+			          (sdcard->cmdarg[2] << 8) | sdcard->cmdarg[3];
 			next = RESP;
 		}
-	} else if (state_sd == RESP) {
+	} else if (sdcard->state_sd == RESP) {
 		next = STBY; /* default R1 response */
-		if (current_cmd == CMD(0))         /* GO_IDLE_STATE */
-			idle_state = 1;
-		else if (current_cmd == ACMD(41))  /* APP_SEND_OP_COND */
-			idle_state = 0;
-		else if (current_cmd == CMD(55))   /* APP_CMD */
-			acmd = 1;
-		else if (current_cmd == CMD(17))   /* READ_SINGLE_BLOCK */
+		if (sdcard->current_cmd == CMD(0))         /* GO_IDLE_STATE */
+			sdcard->idle_state = 1;
+		else if (sdcard->current_cmd == ACMD(41))  /* APP_SEND_OP_COND */
+			sdcard->idle_state = 0;
+		else if (sdcard->current_cmd == CMD(55))   /* APP_CMD */
+			sdcard->acmd = 1;
+		else if (sdcard->current_cmd == CMD(17))   /* READ_SINGLE_BLOCK */
 			next = TOKEN;
-		else if (current_cmd == CMD(24))   /* WRITE_BLOCK */
+		else if (sdcard->current_cmd == CMD(24))   /* WRITE_BLOCK */
 			next = RTOKEN;
-		else if (current_cmd == CMD(9))    /* SEND_CSD */
+		else if (sdcard->current_cmd == CMD(9))    /* SEND_CSD */
 			next = TOKEN;
-		else if (current_cmd == CMD(8)) {  /* SEND_IF_COND */
+		else if (sdcard->current_cmd == CMD(8)) {  /* SEND_IF_COND */
 			next = RESP_R7;
-			address = 0x1AA; /* voltage (use cmdarg?) */
-			respcount = 0;
-		} else if (current_cmd == CMD(58)) { /* READ_OCR */
+			sdcard->address = 0x1aa; /* voltage (use sdcard->cmdarg?) */
+			sdcard->respcount = 0;
+		} else if (sdcard->current_cmd == CMD(58)) { /* READ_OCR */
 			next = RESP_R7;
-			address = MY_OCR; /* FIXME use ocr array */
-			respcount = 0;
+			sdcard->address = MY_OCR; /* FIXME use ocr array */
+			sdcard->respcount = 0;
 		}
-		data_in = idle_state; /* signal Success + Idle State in R1 */
-		LOG_DEBUG(3, " (%0x %d) ", current_cmd, idle_state);
-	} else if (state_sd == RESP_R7) {
-		data_in = (address >> ((3 - respcount) * 8)) & 0xFF;
-		if (++respcount == 4)
+		data_in = sdcard->idle_state; /* signal Success + Idle State in R1 */
+		LOG_DEBUG(3, " (%0x %d) ", sdcard->current_cmd, sdcard->idle_state);
+	} else if (sdcard->state_sd == RESP_R7) {
+		data_in = (sdcard->address >> ((3 - sdcard->respcount) * 8)) & 0xff;
+		if (++sdcard->respcount == 4)
 			next = STBY;
-	} else if (state_sd == TOKEN && current_cmd == CMD(9)) {
-		csdcount = 0;
-		data_in = 0xFE;
+	} else if (sdcard->state_sd == TOKEN && sdcard->current_cmd == CMD(9)) {
+		sdcard->csdcount = 0;
+		data_in = 0xfe;
 		next = SENDCSD;
-	} else if (state_sd == TOKEN && current_cmd == CMD(17)) {
-		read_image(blkbuf, address);
-		blkcount = 0;
-		data_in = 0xFE;
+	} else if (sdcard->state_sd == TOKEN && sdcard->current_cmd == CMD(17)) {
+		read_image(sdcard, sdcard->blkbuf, sdcard->address);
+		sdcard->blkcount = 0;
+		data_in = 0xfe;
 		next = SBLKREAD;
-	} else if (state_sd == RTOKEN && current_cmd == CMD(24)) {
-		if (data_out == 0xFE) {
-			blkcount = 0;
+	} else if (sdcard->state_sd == RTOKEN && sdcard->current_cmd == CMD(24)) {
+		if (data_out == 0xfe) {
+			sdcard->blkcount = 0;
 			next = SBLKWRITE;
 		}
-	} else if (state_sd == SBLKREAD) {
-		if (blkcount < 512)
-			data_in = blkbuf[blkcount];
-		else if (blkcount == 512)
-			data_in = 0xAA; /* fake CRC 1 */
-		else if (blkcount == 512 + 1) {
-			data_in = 0xAA; /* fake CRC 2 */
+	} else if (sdcard->state_sd == SBLKREAD) {
+		if (sdcard->blkcount < 512)
+			data_in = sdcard->blkbuf[sdcard->blkcount];
+		else if (sdcard->blkcount == 512)
+			data_in = 0xaa; /* fake CRC 1 */
+		else if (sdcard->blkcount == 512 + 1) {
+			data_in = 0xaa; /* fake CRC 2 */
 			next = STBY;
 		}
-		blkcount++;
-	} else if (state_sd == SBLKWRITE) {
-		if (blkcount < 512)
-			blkbuf[blkcount] = data_out;
-		else if (blkcount == 512 + 1) { /* CRC ignored */
-			write_image(blkbuf, address);
+		sdcard->blkcount++;
+	} else if (sdcard->state_sd == SBLKWRITE) {
+		if (sdcard->blkcount < 512)
+			sdcard->blkbuf[sdcard->blkcount] = data_out;
+		else if (sdcard->blkcount == 512 + 1) { /* CRC ignored */
+			write_image(sdcard, sdcard->blkbuf, sdcard->address);
 			next = DATARESP;
 		}
-		blkcount++;
-	} else if (state_sd == DATARESP) {
+		sdcard->blkcount++;
+	} else if (sdcard->state_sd == DATARESP) {
 		data_in = 0x05; /* Data Accepted */
 		next = STBY;
-	} else if (state_sd == SENDCSD) {
-		if (csdcount < 16)
-			data_in = csd[csdcount];
+	} else if (sdcard->state_sd == SENDCSD) {
+		if (sdcard->csdcount < 16)
+			data_in = csd[sdcard->csdcount];
 		else {
-			data_in = 0xAA; /* fake CRC */
+			data_in = 0xaa; /* fake CRC */
 			next = STBY;
 		}
-		csdcount++;
+		sdcard->csdcount++;
 	}
 	LOG_DEBUG(3, " <- %02x\n", data_in);
-	state_sd = next;
+	sdcard->state_sd = next;
 	return data_in;
 }
 
-void spi_sdcard_reset(void) {
-	state_sd = STBY;
+static void spi_sdcard_reset(void *sptr) {
+	struct spi_sdcard *sdcard = sptr;
+	sdcard->state_sd = STBY;
 }

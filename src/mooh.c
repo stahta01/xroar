@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2016-2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,17 +29,16 @@
 #include "becker.h"
 #include "cart.h"
 #include "part.h"
+#include "spi65.h"
+#include "spi_sdcard.h"
 
 /* Number of 8KB mappable RAM pages in cartridge */
 #define MEMPAGES 0x40
-#define TASK_MASK 0x3F	/* 6 bit task registers */
-
-uint8_t spi65_read(uint8_t reg);
-void spi65_write(uint8_t reg, uint8_t value);
-void spi65_reset(void);
+#define TASK_MASK 0x3F  /* 6 bit task registers */
 
 struct mooh {
 	struct cart cart;
+	struct spi65 *spi65;
 	uint8_t extmem[0x2000 * MEMPAGES];
 	_Bool mmu_enable;
 	_Bool crm_enable;
@@ -84,6 +83,14 @@ struct cart *mooh_new(struct cart_config *cc) {
 		part_add_component(&c->part, (struct part *)n->becker, "becker");
 	}
 
+	// 65SPI/B for interfacing to SD card
+	n->spi65 = spi65_new();
+	part_add_component(&c->part, (struct part *)n->spi65, "SPI65");
+
+	// Attach an SD card (SPI mode) to 65SPI/B
+	struct spi65_device *sdcard = spi_sdcard_new("sdcard.img");
+	spi65_add_device(n->spi65, sdcard, 0);
+
 	return c;
 }
 
@@ -104,7 +111,7 @@ static void mooh_reset(struct cart *c) {
 		becker_reset(n->becker);
 	n->crt9128_reg_addr = 0;
 
-	spi65_reset();
+	spi65_reset(n->spi65);
 }
 
 /* unused for now...
@@ -140,7 +147,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	}
 
 	if ((A & 0xFFFC) == 0xFF6C)
-		return spi65_read(A & 3);
+		return spi65_read(n->spi65, A & 3);
 
 	if ((A & 0xFFF0) == 0xFFA0) {
 		return n->taskreg[A & 7][(A & 8) >> 3];
@@ -205,7 +212,7 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 		n->rom_conf = D & 31;
 
 	if ((A & 0xFFFC) == 0xFF6C)
-		spi65_write(A & 3, D);
+		spi65_write(n->spi65, A & 3, D);
 
 	/* poor man's CRT9128 Wordpak emulation */
 	if (A == 0xFF7D)
