@@ -25,14 +25,11 @@
 #include "becker.h"
 #include "cart.h"
 #include "part.h"
+#include "spi65.h"
+#include "spi_sdcard.h"
 
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
 #define EXTBANKS 16
-
-/* 65SPI interface on Spinx-512 boards */
-uint8_t spi65_read(uint8_t reg);
-void spi65_write(uint8_t reg, uint8_t value);
-void spi65_reset(void);
 
 static struct cart *nx32_new(struct cart_config *);
 
@@ -44,6 +41,7 @@ struct cart_module cart_nx32_module = {
 
 struct nx32 {
 	struct cart cart;
+	struct spi65 *spi65;
 	uint8_t extmem[0x8000 * EXTBANKS];
 	_Bool extmem_map;
 	_Bool extmem_ty;
@@ -76,6 +74,14 @@ struct cart *nx32_new(struct cart_config *cc) {
 		part_add_component(&c->part, (struct part *)n->becker, "becker");
 	}
 
+	// 65SPI/B for interfacing to SD card
+	n->spi65 = spi65_new();
+	part_add_component(&c->part, (struct part *)n->spi65, "SPI65");
+
+	// Attach an SD card (SPI mode) to 65SPI/B
+	struct spi65_device *sdcard = spi_sdcard_new("sdcard.img");
+	spi65_add_device(n->spi65, sdcard, 0);
+
 	return c;
 }
 
@@ -87,7 +93,7 @@ static void nx32_reset(struct cart *c) {
 	n->extmem_bank = 0;
 	if (n->becker)
 		becker_reset(n->becker);
-	spi65_reset();
+	spi65_reset(n->spi65);
 }
 
 static void nx32_detach(struct cart *c) {
@@ -107,7 +113,7 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	c->EXTMEM = 0;
 
 	if ((A & 0xFFFC) == 0xFF6C)
-		return spi65_read(A & 3);
+		return spi65_read(n->spi65, A & 3);
 
 	if (A > 0x7fff && A < 0xff00 && !n->extmem_ty && n->extmem_map) {
 		c->EXTMEM = 1;
@@ -132,7 +138,7 @@ static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	c->EXTMEM = 0;
 
 	if ((A & 0xFFFC) == 0xFF6C)
-		spi65_write(A & 3, D);
+		spi65_write(n->spi65, A & 3, D);
 
 	if ((A & ~1) == 0xFFDE) {
 		n->extmem_ty = A & 1;
