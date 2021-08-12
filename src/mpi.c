@@ -39,15 +39,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
-
 #include "becker.h"
 #include "cart.h"
 #include "delegate.h"
 #include "logging.h"
 #include "mpi.h"
 #include "part.h"
-#include "xroar.h"
 
 static struct cart *mpi_new(struct cart_config *);
 static struct cart *race_new(struct cart_config *);

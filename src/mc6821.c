@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "events.h"
 #include "mc6821.h"

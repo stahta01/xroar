@@ -29,7 +29,6 @@
 
 #include "delegate.h"
 #include "sds.h"
-#include "xalloc.h"
 
 #include "cart.h"
 #include "crc32.h"

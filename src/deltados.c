@@ -2,7 +2,7 @@
  *
  *  \brief Premier Microsystems' Delta disk system.
  *
- *  \copyright Copyright 2007-2019 Ciaran Anscomb
+ *  \copyright Copyright 2007-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -34,14 +34,12 @@
 #include <string.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "cart.h"
 #include "logging.h"
 #include "part.h"
 #include "vdrive.h"
 #include "wd279x.h"
-#include "xroar.h"
 
 static struct cart *deltados_new(struct cart_config *cc);
 

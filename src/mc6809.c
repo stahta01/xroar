@@ -37,7 +37,6 @@
 #include <string.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "logging.h"
 #include "mc6809.h"

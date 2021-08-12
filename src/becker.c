@@ -47,8 +47,6 @@
 
 #endif
 
-#include "xalloc.h"
-
 #include "becker.h"
 #include "logging.h"
 #include "part.h"

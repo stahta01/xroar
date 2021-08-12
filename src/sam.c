@@ -36,7 +36,6 @@
 #include <stdlib.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "part.h"
 #include "sam.h"

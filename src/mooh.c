@@ -24,8 +24,6 @@
 
 #include <stdio.h>
 
-#include <xalloc.h>
-
 #include "becker.h"
 #include "cart.h"
 #include "part.h"

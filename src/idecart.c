@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2015-2019 Ciaran Anscomb
+ *  \copyright Copyright 2015-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,15 +28,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "xalloc.h"
-
+#include "becker.h"
 #include "cart.h"
+#include "ide.h"
 #include "logging.h"
 #include "part.h"
-#include "xroar.h"
-
-#include "becker.h"
-#include "ide.h"
 
 static struct cart *idecart_new(struct cart_config *cc);
 

@@ -31,7 +31,6 @@
 #include <string.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "becker.h"
 #include "cart.h"
@@ -39,7 +38,6 @@
 #include "part.h"
 #include "vdrive.h"
 #include "wd279x.h"
-#include "xroar.h"
 
 static struct cart *rsdos_new(struct cart_config *cc);
 

@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
-
 #include "crc16.h"
 #include "events.h"
 #include "logging.h"

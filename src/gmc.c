@@ -2,7 +2,7 @@
  *
  *  \brief Games Master Cartridge support.
  *
- *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -33,15 +33,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
-
 #include "cart.h"
 #include "events.h"
 #include "logging.h"
 #include "part.h"
 #include "sn76489.h"
 #include "sound.h"
-#include "xroar.h"
 
 static struct cart *gmc_new(struct cart_config *);
 

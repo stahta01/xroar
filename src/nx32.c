@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2016-2018 Tormod Volden
  *
- *  \copyright Copyright 2016-2019 Ciaran Anscomb
+ *  \copyright Copyright 2016-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,8 +21,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-#include <xalloc.h>
 
 #include "becker.h"
 #include "cart.h"

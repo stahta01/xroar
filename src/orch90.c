@@ -2,7 +2,7 @@
  *
  *  \brief Orchestra 90-CC sound cartridge.
  *
- *  \copyright Copyright 2013-2019 Ciaran Anscomb
+ *  \copyright Copyright 2013-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -24,13 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xalloc.h"
-
 #include "cart.h"
 #include "logging.h"
 #include "part.h"
 #include "sound.h"
-#include "xroar.h"
 
 static struct cart *orch90_new(struct cart_config *);
 

@@ -2,7 +2,7 @@
  *
  *  \brief TI SN76489 sound chip.
  *
- *  \copyright Copyright 2018 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,8 +28,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "xalloc.h"
 
 #include "part.h"
 #include "sn76489.h"

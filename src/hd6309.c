@@ -40,7 +40,6 @@
 #include <string.h>
 
 #include "delegate.h"
-#include "xalloc.h"
 
 #include "hd6309.h"
 #include "logging.h"
