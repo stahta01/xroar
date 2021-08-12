@@ -674,8 +674,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Override other module lists if UI has an entry.
 	if (ui_module->filereq_module_list != NULL)
 		filereq_module_list = ui_module->filereq_module_list;
-	if (ui_module->vo_module_list != NULL)
-		vo_module_list = ui_module->vo_module_list;
 	if (ui_module->ao_module_list != NULL)
 		ao_module_list = ui_module->ao_module_list;
 	// Select file requester, video & audio modules

@@ -73,8 +73,6 @@ struct vo_interface {
 	DELEGATE_T1(void, int) set_vo_cmp;
 };
 
-extern struct module * const *vo_module_list;
-
 extern struct xconfig_enum vo_ntsc_phase_list[];
 
 #endif
