@@ -2,7 +2,7 @@
  *
  *  \brief Delegates in C.
  *
- *  \copyright Copyright 2014-2018 Ciaran Anscomb
+ *  \copyright Copyright 2014-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -45,6 +45,7 @@ DELEGATE_DEF_FUNC0(_Bool, bool, 0)
 DELEGATE_DEF_FUNC0(unsigned, unsigned, 0)
 DELEGATE_DEF_FUNC1(unsigned, unsigned, void *, voidp, 0)
 DELEGATE_DEF_FUNC0(uint8_t, uint8, 0)
+DELEGATE_DEF_FUNC2(uint8_t, uint8, uint8_t, uint8, _Bool, bool, 0)
 DELEGATE_DEF_FUNC1(uint8_t, uint8, uint16_t, uint16, 0)
 DELEGATE_DEF_FUNC0(uint8_t *, uint8p, NULL)
 DELEGATE_DEF_FUNC2(void, void, uint8_t *, uint8p, unsigned, unsigned, )

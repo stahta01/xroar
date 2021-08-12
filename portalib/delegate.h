@@ -2,7 +2,7 @@
  *
  *  \brief Delegates in C.
  *
- *  \copyright Copyright 2014-2018 Ciaran Anscomb
+ *  \copyright Copyright 2014-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -60,6 +60,7 @@ typedef DELEGATE_S0(_Bool) DELEGATE_T0(bool);
 typedef DELEGATE_S0(unsigned) DELEGATE_T0(unsigned);
 typedef DELEGATE_S1(unsigned, void *) DELEGATE_T1(unsigned, voidp);
 typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
+typedef DELEGATE_S2(uint8_t, uint8_t, _Bool) DELEGATE_T2(uint8, uint8, bool);
 typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
 typedef DELEGATE_S0(uint8_t *) DELEGATE_T0(uint8p);
 typedef DELEGATE_S2(void, uint8_t *, unsigned) DELEGATE_T2(void, uint8p, unsigned);
@@ -113,6 +114,7 @@ DELEGATE_DEF_PROTO0(_Bool, bool);
 DELEGATE_DEF_PROTO0(unsigned, unsigned);
 DELEGATE_DEF_PROTO1(unsigned, unsigned, void *, voidp);
 DELEGATE_DEF_PROTO0(uint8_t, uint8);
+DELEGATE_DEF_PROTO2(uint8_t, uint8, uint8_t, uint8, _Bool, bool);
 DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
 DELEGATE_DEF_PROTO0(uint8_t *, uint8p);
 DELEGATE_DEF_PROTO2(void, void, uint8_t *, uint8p, unsigned, unsigned);
