@@ -135,9 +135,14 @@ extern struct vdrive_interface *xroar_vdrive_interface;
 /**************************************************************************/
 
 void xroar_getargs(int argc, char **argv);
+
+/// Configure XRoar, initialise modules and start machine.
 struct ui_interface *xroar_init(int argc, char **argv);
+
+/// Cleanly shut down before program exit.
 void xroar_shutdown(void);
 
+/// Process UI event queue and run emulated machine.
 void xroar_run(int ncycles);
 
 int xroar_filetype_by_ext(const char *filename);

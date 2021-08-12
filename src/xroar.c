@@ -518,6 +518,17 @@ static struct vdg_palette *get_machine_palette(void);
 # define CONFPATH "."
 #endif
 
+/** Processes options from a builtin list, a configuration file, and the
+ * command line.  Determines which modules to use (see ui.h, vo.h, ao.h) and
+ * initialises them.  Starts an emulated machine.
+ *
+ * Attaches any media images requested to the emulated machine and schedules
+ * any deferred commands (e.g. autorunning a program, or user-specified "-type"
+ * option).
+ *
+ * Returns the UI interface to the caller (probably main()).
+ */
+
 struct ui_interface *xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
@@ -925,6 +936,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	return xroar_ui_interface;
 }
 
+/** Generally set as an atexit() handler by main(), this function flushes any
+ * output, shuts down the emulated machine and frees any other allocated
+ * resources.
+ */
+
 void xroar_shutdown(void) {
 	static _Bool shutting_down = 0;
 	if (shutting_down)
@@ -983,8 +999,10 @@ static struct vdg_palette *get_machine_palette(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Called either by main() in a loop, or by a UI module's run().  Processes the
-// UI event queue, then runs the machine for specified number of cycles.
+/** \param ncycles number of cycles to run.
+ *
+ * Called either by main() in a loop, or by a UI module's run().
+ */
 
 void xroar_run(int ncycles) {
 	event_run_queue(&UI_EVENT_LIST);

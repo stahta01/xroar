@@ -32,6 +32,14 @@
 #include "xroar.h"
 #include "logging.h"
 
+/** \brief Entry point.
+ *
+ * Sets up the exit handler and calls xroar_init(), which will process all
+ * configuration and return a UI interface.  If the returned interface provides
+ * its own run() method, calls that, otherwise provides a default "main loop"
+ * that repeatedly calls xroar_run().
+ */
+
 int main(int argc, char **argv) {
 	atexit(xroar_shutdown);
 	struct ui_interface *ui = xroar_init(argc, argv);
