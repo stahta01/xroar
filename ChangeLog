@@ -1,4 +1,4 @@
-Version 0.36.3, unreleased
+Version 0.37, unreleased
 
  * Add Control+Shift+D to flush disk images
  * Support leading "~/" in filenames, not just path elements
