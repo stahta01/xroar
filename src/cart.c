@@ -430,7 +430,7 @@ void cart_rom_select_bank(struct cart *c, uint16_t bank) {
 static void do_firq(void *data) {
 	static _Bool level = 0;
 	struct cart *c = data;
-	DELEGATE_SAFE_CALL1(c->signal_firq, level);
+	DELEGATE_SAFE_CALL(c->signal_firq, level);
 	c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
 	event_queue(&MACHINE_EVENT_LIST, c->firq_event);
 	level = !level;

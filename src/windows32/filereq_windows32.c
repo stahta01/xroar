@@ -2,7 +2,7 @@
  *
  *  \brief Windows file requester module.
  *
- *  \copyright Copyright 2005-2019 Ciaran Anscomb
+ *  \copyright Copyright 2005-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -90,7 +90,7 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 	(void)extensions;  /* unused */
 	was_fullscreen = xroar_vo_interface->is_fullscreen;
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 0);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -113,7 +113,7 @@ static char *load_filename(void *sptr, char const * const *extensions) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 1);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }
 
@@ -126,7 +126,7 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 	(void)extensions;  /* unused */
 	was_fullscreen = xroar_vo_interface->is_fullscreen;
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 0);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 0);
 
 	memset(&ofn, 0, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
@@ -149,6 +149,6 @@ static char *save_filename(void *sptr, char const * const *extensions) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 	if (was_fullscreen)
-		DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, 1);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }

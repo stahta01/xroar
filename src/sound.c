@@ -2,7 +2,7 @@
  *
  *  \brief Dragon sound interface.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -286,7 +286,7 @@ static void send_buffer(struct sound_interface_private *snd) {
 			break;
 		}
 	}
-	snd->output_buffer = DELEGATE_CALL1(snd->public.write_buffer, snd->output_buffer);
+	snd->output_buffer = DELEGATE_CALL(snd->public.write_buffer, snd->output_buffer);
 	snd->buffer_frame = 0;
 }
 
@@ -319,9 +319,9 @@ void sound_update(struct sound_interface *sndp) {
 	// only use one of them.
 	if (DELEGATE_DEFINED(sndp->get_tape_audio)) {
 		if (mux_source == SOURCE_TAPE && sndp->ratelimit) {
-			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, snd->mux_input[SOURCE_TAPE]);
+			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL(sndp->get_tape_audio, event_current_tick, nframes, snd->mux_input[SOURCE_TAPE]);
 		} else {
-			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL3(sndp->get_tape_audio, event_current_tick, nframes, NULL);
+			snd->mux_input_raw[SOURCE_TAPE] = DELEGATE_CALL(sndp->get_tape_audio, event_current_tick, nframes, NULL);
 			if (mux_source == SOURCE_TAPE) {
 				mux_source = SOURCE_NONE;
 			}
@@ -337,9 +337,9 @@ void sound_update(struct sound_interface *sndp) {
 
 	if (DELEGATE_DEFINED(sndp->get_cart_audio)) {
 		if (mux_source == SOURCE_CART && sndp->ratelimit) {
-			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, snd->mux_input[SOURCE_CART]);
+			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL(sndp->get_cart_audio, event_current_tick, nframes, snd->mux_input[SOURCE_CART]);
 		} else {
-			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL3(sndp->get_cart_audio, event_current_tick, nframes, NULL);
+			snd->mux_input_raw[SOURCE_CART] = DELEGATE_CALL(sndp->get_cart_audio, event_current_tick, nframes, NULL);
 			if (mux_source == SOURCE_CART) {
 				mux_source = SOURCE_NONE;
 			}
@@ -417,7 +417,7 @@ void sound_update(struct sound_interface *sndp) {
 
 	// Feed back bus level to single bit pin.
 	float bus_level = (mux_output_raw * snd->mux_gain) + snd->bus_offset;
-	DELEGATE_SAFE_CALL1(snd->public.sbs_feedback, snd->current.sbs_enabled || bus_level >= 1.414);
+	DELEGATE_SAFE_CALL(snd->public.sbs_feedback, snd->current.sbs_enabled || bus_level >= 1.414);
 
 }
 

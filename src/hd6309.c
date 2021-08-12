@@ -304,7 +304,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->page = 0;
 			// Instruction fetch hook called here so that machine
 			// can be stopped beforehand.
-			DELEGATE_SAFE_CALL0(cpu->instruction_hook);
+			DELEGATE_SAFE_CALL(cpu->instruction_hook);
 			continue;
 
 		case hd6309_state_dispatch_irq:
@@ -2042,7 +2042,7 @@ static void instruction_posthook(struct MC6809 *cpu) {
 		hd6309_trace_print(hcpu->tracer);
 	}
 #endif
-	DELEGATE_SAFE_CALL0(cpu->instruction_posthook);
+	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -225,7 +225,7 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 	tip->keyboard_interface = m->get_interface(m, "keyboard");
 	tip->cpu = m->get_component(m, "CPU0");
 	ti->update_audio = DELEGATE_AS1(void, float, m->get_interface(m, "tape-update-audio"), m);
-	DELEGATE_CALL1(ti->update_audio, 0.5);
+	DELEGATE_CALL(ti->update_audio, 0.5);
 }
 
 void tape_interface_disconnect_machine(struct tape_interface *ti) {
@@ -722,17 +722,17 @@ static void waggle_bit(void *sptr) {
 	switch (tip->in_pulse) {
 	default:
 	case -1:
-		DELEGATE_CALL1(ti->update_audio, 0.5);
+		DELEGATE_CALL(ti->update_audio, 0.5);
 		event_dequeue(&tip->waggle_event);
 		if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
 			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
 		}
 		return;
 	case 0:
-		DELEGATE_CALL1(ti->update_audio, 0.0);
+		DELEGATE_CALL(ti->update_audio, 0.0);
 		break;
 	case 1:
-		DELEGATE_CALL1(ti->update_audio, 1.0);
+		DELEGATE_CALL(ti->update_audio, 1.0);
 		break;
 	}
 	tip->waggle_event.at_tick += tip->in_pulse_width;
@@ -778,7 +778,7 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 	tip->in_pulse_width -= skip;
 	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
 	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
-	DELEGATE_CALL1(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
+	DELEGATE_CALL(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
 }
 
 // Apply accumulated time skip to read state
@@ -1311,7 +1311,7 @@ void tape_set_state(struct tape_interface *ti, int flags) {
 void tape_select_state(struct tape_interface *ti, int flags) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_set_state(ti, flags);
-	DELEGATE_CALL3(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
+	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
 }
 
 // Get current tape flags.

@@ -2,7 +2,7 @@
  *
  *  \brief User-interface modules & interfaces.
  *
- *  \copyright Copyright 2003-2020 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -114,17 +114,41 @@ struct ui_module {
 	struct joystick_module * const *joystick_module_list;
 };
 
+/** \brief Interface to UI module.
+ */
+
 struct ui_interface {
 	DELEGATE_T0(void) free;
+
+	/** \brief UI-specific function providing emulator main loop.
+	 *
+	 * If not provided, main() should call xroar_run() in a loop.
+	 */
 	DELEGATE_T0(void) run;
-	// set_state updates the UI to reflect a change in state.  It should
-	// not itself cause state to change.
+
+	/** \brief Update UI to reflect a change in emulator state.
+	 *  \param ui_tag  from enum ui_tag.
+	 *  \param value   value to set.
+	 *  \param data    other tag-specific data.
+	 *
+	 * Calling this shall not in itself change any emulator state.
+	 */
 	DELEGATE_T3(void, int, int, cvoidp) set_state;  // ui_tag, value, data
 
-	// called at startup, or when these lists change
+	/** \brief Create or update machine menu.
+	 *
+	 * Called at startup, and whenever the machine config list changes.
+	 */
 	DELEGATE_T0(void) update_machine_menu;
+
+	/** \brief Create or update cartridge menu.
+	 *
+	 * Called at startup, and whenever the cartridge config list changes.
+	 */
 	DELEGATE_T0(void) update_cartridge_menu;
 
+	/** \brief Interface to the video module initialised by the UI.
+	 */
 	struct vo_interface *vo_interface;
 };
 

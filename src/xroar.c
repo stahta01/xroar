@@ -839,7 +839,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	/* Notify UI of starting options: */
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	xroar_tape_interface = tape_interface_new(xroar_ui_interface);
@@ -903,7 +903,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
 				tape_open_writing(xroar_tape_interface, private_cfg.tape_write);
-				DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
+				DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
 				break;
@@ -956,16 +956,16 @@ void xroar_shutdown(void) {
 	machine_shutdown();
 	xroar_machine_config = NULL;
 	if (xroar_ao_interface) {
-		DELEGATE_SAFE_CALL0(xroar_ao_interface->free);
+		DELEGATE_SAFE_CALL(xroar_ao_interface->free);
 	}
 	if (xroar_vo_interface) {
-		DELEGATE_SAFE_CALL0(xroar_vo_interface->free);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->free);
 	}
 	if (xroar_filereq_interface) {
-		DELEGATE_SAFE_CALL0(xroar_filereq_interface->free);
+		DELEGATE_SAFE_CALL(xroar_filereq_interface->free);
 	}
 	if (xroar_ui_interface) {
-		DELEGATE_SAFE_CALL0(xroar_ui_interface->free);
+		DELEGATE_SAFE_CALL(xroar_ui_interface->free);
 	}
 #ifdef WINDOWS32
 	windows32_shutdown();
@@ -1010,7 +1010,7 @@ void xroar_run(int ncycles) {
 		return;
 	switch (xroar_machine->run(xroar_machine, ncycles)) {
 	case machine_run_state_stopped:
-		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->refresh);
 		break;
 	case machine_run_state_ok:
 	default:
@@ -1087,7 +1087,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 				ret = tape_open_reading(xroar_tape_interface, filename);
 			}
 			if (ret != -1) {
-				DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
+				DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 			}
 			break;
 	}
@@ -1170,7 +1170,7 @@ void xroar_set_trace(int mode) {
 }
 
 void xroar_new_disk(int drive) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_disk_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_disk_exts);
 	if (filename == NULL)
 		return;
 	int filetype = xroar_filetype_by_ext(filename);
@@ -1196,7 +1196,7 @@ void xroar_new_disk(int drive) {
 	new_disk->write_back = 1;
 	vdrive_insert_disk(xroar_vdrive_interface, drive, new_disk);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, new_disk);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, new_disk);
 	}
 	LOG_DEBUG(1, "New unformatted disk in drive %d: %s\n", 1+drive, filename);
 }
@@ -1206,19 +1206,19 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar_vdrive_interface, drive, disk);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, disk);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, disk);
 	}
 }
 
 void xroar_insert_disk(int drive) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_disk_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, xroar_disk_exts);
 	xroar_insert_disk_file(drive, filename);
 }
 
 void xroar_eject_disk(int drive) {
 	vdrive_eject_disk(xroar_vdrive_interface, drive);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_data, drive, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, NULL);
 	}
 }
 
@@ -1238,7 +1238,7 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 	}
 	vd->write_protect = !new_we;
 	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
 	}
 	return new_we;
 }
@@ -1259,7 +1259,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	}
 	vd->write_back = new_wb;
 	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
 	}
 	return new_wb;
 }
@@ -1277,7 +1277,7 @@ void xroar_set_cross_colour_renderer(_Bool notify, int action) {
 	}
 	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
 	}
 }
 
@@ -1294,37 +1294,37 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 	if (xroar_machine->set_vo_cmp) {
 		if (xroar_machine_config->cross_colour_phase == VO_PHASE_OFF) {
 			xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
-			DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
+			DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
 			switch (private_cfg.ccr) {
 			default:
 				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
-				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
+				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 				break;
 			case UI_CCR_SIMPLE:
 				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
-				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
+				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
 				break;
 			case UI_CCR_5BIT:
 				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
-				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
+				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
 				break;
 			case UI_CCR_SIMULATED:
 				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_SIMULATED);
-				DELEGATE_SAFE_CALL1(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
+				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
 				break;
 			}
 		}
 	}
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
 	}
 }
 
 void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_vdg_inverse, state, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_vdg_inverse, state, NULL);
 	}
 }
 
@@ -1363,7 +1363,7 @@ void xroar_set_ratelimit_latch(_Bool notify, int action) {
 		xroar_machine->set_ratelimit(xroar_machine, 0);
 	}
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_ratelimit, state, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ratelimit, state, NULL);
 	}
 }
 
@@ -1373,6 +1373,9 @@ void xroar_set_pause(_Bool notify, int action) {
 	(void)notify;
 	(void)state;
 }
+
+/** Quit the emulator.
+ */
 
 void xroar_quit(void) {
 	exit(EXIT_SUCCESS);
@@ -1392,21 +1395,21 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 			set_to = !xroar_vo_interface->is_fullscreen;
 			break;
 	}
-	DELEGATE_SAFE_CALL1(xroar_vo_interface->set_fullscreen, set_to);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, set_to);
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_fullscreen, set_to, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_fullscreen, set_to, NULL);
 	}
 }
 
 void xroar_load_file(char const * const *exts) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
 	if (filename) {
 		xroar_load_file_by_type(filename, 0);
 	}
 }
 
 void xroar_run_file(char const * const *exts) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
 	if (filename) {
 		xroar_load_file_by_type(filename, 1);
 	}
@@ -1437,7 +1440,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 	if (new >= 0 && new < NUM_KEYMAPS) {
 		keyboard_set_keymap(xroar_keyboard_interface, new);
 		if (notify) {
-			DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_keymap, new, NULL);
+			DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, new, NULL);
 		}
 	}
 }
@@ -1452,7 +1455,7 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 			break;
 	}
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
 	}
 }
 
@@ -1461,7 +1464,7 @@ static void update_ui_joysticks(int port) {
 	if (joystick_port_config[port] && joystick_port_config[port]->name) {
 		name = joystick_port_config[port]->name;
 	}
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_joy_right + port, 0, name);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_joy_right + port, 0, name);
 }
 
 void xroar_set_joystick(_Bool notify, int port, const char *name) {
@@ -1502,7 +1505,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
 	if (xroar_ui_interface) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
 	}
 	switch (mc->architecture) {
 	case ARCH_COCO:
@@ -1552,10 +1555,10 @@ void xroar_set_machine(_Bool notify, int id) {
 		xroar_set_cart(1, NULL);
 	}
 	xroar_vdg_palette = get_machine_palette();
-	DELEGATE_SAFE_CALL0(xroar_vo_interface->update_palette);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->update_palette);
 	xroar_hard_reset();
 	if (notify) {
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);
 	}
 }
 
@@ -1620,7 +1623,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 
 	if (notify) {
 		int id = new_cart ? new_cart->config->id : -1;
-		DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_cartridge, id, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, id, NULL);
 	}
 }
 
@@ -1642,7 +1645,7 @@ void xroar_set_dos(int dos_type) {
 }
 
 void xroar_save_snapshot(void) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_snap_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_snap_exts);
 	if (filename) {
 		write_snapshot(filename);
 	}
@@ -1651,33 +1654,33 @@ void xroar_save_snapshot(void) {
 void xroar_insert_input_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_reading(xroar_tape_interface, filename);
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
 }
 
 void xroar_insert_input_tape(void) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->load_filename, xroar_tape_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, xroar_tape_exts);
 	xroar_insert_input_tape_file(filename);
 }
 
 void xroar_eject_input_tape(void) {
 	tape_close_reading(xroar_tape_interface);
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, NULL);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_insert_output_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_writing(xroar_tape_interface, filename);
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
 }
 
 void xroar_insert_output_tape(void) {
-	char *filename = DELEGATE_CALL1(xroar_filereq_interface->save_filename, xroar_tape_exts);
+	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_tape_exts);
 	xroar_insert_output_tape_file(filename);
 }
 
 void xroar_eject_output_tape(void) {
 	tape_close_writing(xroar_tape_interface);
-	DELEGATE_CALL3(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
+	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
 }
 
 void xroar_soft_reset(void) {

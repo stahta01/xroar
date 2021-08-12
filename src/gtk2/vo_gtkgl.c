@@ -135,7 +135,7 @@ static void vo_gtkgl_free(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vogl = vogtkgl->vogl;
 	set_fullscreen(vogtkgl, 0);
-	DELEGATE_CALL0(vogl->free);
+	DELEGATE_CALL(vogl->free);
 	free(vogtkgl);
 }
 
@@ -204,7 +204,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		g_assert_not_reached();
 	}
 
-	DELEGATE_CALL2(vogl->resize, da->allocation.width, da->allocation.height);
+	DELEGATE_CALL(vogl->resize, da->allocation.width, da->allocation.height);
 	vo_opengl_get_display_rect(vogl, &global_uigtk2->display_rect);
 	vo_gtkgl_set_vsync(1);
 
@@ -223,7 +223,7 @@ static void refresh(void *sptr) {
 		g_assert_not_reached();
 	}
 
-	DELEGATE_CALL0(vogl->refresh);
+	DELEGATE_CALL(vogl->refresh);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
@@ -239,7 +239,7 @@ static void vsync(void *sptr) {
 		g_assert_not_reached();
 	}
 
-	DELEGATE_CALL0(vogl->vsync);
+	DELEGATE_CALL(vogl->vsync);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
@@ -249,7 +249,7 @@ static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vo = &vogtkgl->public;
 	struct vo_interface *vogl = vogtkgl->vogl;
-	DELEGATE_CALL1(vogl->set_vo_cmp, mode);
+	DELEGATE_CALL(vogl->set_vo_cmp, mode);
 	vo->render_scanline = vogl->render_scanline;
 }
 

@@ -1420,7 +1420,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 		if (md->frame < 0)
 			md->frame = md->frameskip;
 		if (md->frame == 0) {
-			DELEGATE_CALL0(md->vo->vsync);
+			DELEGATE_CALL(md->vo->vsync);
 		}
 	}
 }
@@ -1430,7 +1430,7 @@ static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst) {
 	burst = (burst | md->ntsc_burst_mod) & 3;
 	struct ntsc_burst *nb = md->ntsc_burst[burst];
 	unsigned phase = 2*md->public.config->cross_colour_phase;
-	DELEGATE_CALL3(md->vo->render_scanline, data, nb, phase);
+	DELEGATE_CALL(md->vo->render_scanline, data, nb, phase);
 }
 
 /* Dragon parallel printer line delegate. */

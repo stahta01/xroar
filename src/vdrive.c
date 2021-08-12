@@ -2,7 +2,7 @@
  *
  *  \brief Virtual floppy drives.
  *
- *  \copyright Copyright 2003-2020 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -403,10 +403,10 @@ uint8_t *vdrive_next_idam(void *sptr) {
 static void vdrive_update_connection(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
 	struct vdrive_interface *vi = &vip->public;
-	DELEGATE_CALL1(vi->ready, vip->ready_state);
-	DELEGATE_CALL1(vi->tr00, vip->tr00_state);
-	DELEGATE_CALL1(vi->index_pulse, vip->index_state);
-	DELEGATE_CALL1(vi->write_protect, vip->write_protect_state);
+	DELEGATE_CALL(vi->ready, vip->ready_state);
+	DELEGATE_CALL(vi->tr00, vip->tr00_state);
+	DELEGATE_CALL(vi->index_pulse, vip->index_state);
+	DELEGATE_CALL(vi->write_protect, vip->write_protect_state);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -418,7 +418,7 @@ static void set_ready_state(struct vdrive_interface_private *vip, _Bool state) {
 	if (vip->ready_state == state)
 		return;
 	vip->ready_state = state;
-	DELEGATE_CALL1(vi->ready, state);
+	DELEGATE_CALL(vi->ready, state);
 }
 
 static void set_tr00_state(struct vdrive_interface_private *vip, _Bool state) {
@@ -426,7 +426,7 @@ static void set_tr00_state(struct vdrive_interface_private *vip, _Bool state) {
 	if (vip->tr00_state == state)
 		return;
 	vip->tr00_state = state;
-	DELEGATE_CALL1(vi->tr00, state);
+	DELEGATE_CALL(vi->tr00, state);
 }
 
 static void set_index_state(struct vdrive_interface_private *vip, _Bool state) {
@@ -434,7 +434,7 @@ static void set_index_state(struct vdrive_interface_private *vip, _Bool state) {
 	if (vip->index_state == state)
 		return;
 	vip->index_state = state;
-	DELEGATE_CALL1(vi->index_pulse, state);
+	DELEGATE_CALL(vi->index_pulse, state);
 }
 
 static void set_write_protect_state(struct vdrive_interface_private *vip, _Bool state) {
@@ -442,14 +442,14 @@ static void set_write_protect_state(struct vdrive_interface_private *vip, _Bool 
 	if (vip->write_protect_state == state)
 		return;
 	vip->write_protect_state = state;
-	DELEGATE_CALL1(vi->write_protect, state);
+	DELEGATE_CALL(vi->write_protect, state);
 }
 
 static void update_signals(struct vdrive_interface_private *vip) {
 	struct vdrive_interface *vi = &vip->public;
 	set_ready_state(vip, vip->current_drive->disk != NULL);
 	set_tr00_state(vip, vip->current_drive->current_cyl == 0);
-	DELEGATE_SAFE_CALL3(vi->update_drive_cyl_head, vip->cur_drive_number, vip->current_drive->current_cyl, vip->cur_head);
+	DELEGATE_SAFE_CALL(vi->update_drive_cyl_head, vip->cur_drive_number, vip->current_drive->current_cyl, vip->cur_head);
 	if (!vip->ready_state) {
 		set_write_protect_state(vip, 0);
 		vip->track_base = NULL;

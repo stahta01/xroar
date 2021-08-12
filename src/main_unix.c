@@ -2,7 +2,7 @@
  *
  *  \brief main() function.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 	// In Wasm, main() will now return!
 #else
 	if (DELEGATE_DEFINED(ui->run)) {
-		DELEGATE_CALL0(ui->run);
+		DELEGATE_CALL(ui->run);
 	} else {
 		for (;;) {
 			xroar_run(EVENT_MS(10));

@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809-compatible common functions.
  *
- *  \copyright Copyright 2003-2018 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -25,7 +25,7 @@ static uint8_t fetch_byte_notrace(struct MC6809 *cpu, uint16_t a) {
 	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
-	DELEGATE_CALL2(cpu->mem_cycle, 1, a);
+	DELEGATE_CALL(cpu->mem_cycle, 1, a);
 	return cpu->D;
 }
 
@@ -39,7 +39,7 @@ static void store_byte(struct MC6809 *cpu, uint16_t a, uint8_t d) {
 	cpu->firq_latch = cpu->firq;
 	cpu->irq_latch = cpu->irq;
 	cpu->D = d;
-	DELEGATE_CALL2(cpu->mem_cycle, 0, a);
+	DELEGATE_CALL(cpu->mem_cycle, 0, a);
 }
 
 /* Read & write various addressing modes */

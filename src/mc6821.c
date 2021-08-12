@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -104,30 +104,30 @@ void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 
 #define UPDATE_OUTPUT_A(p) do { \
 		(p).out_sink = ~(~(p).output_register & (p).direction_register); \
-		DELEGATE_SAFE_CALL0((p).data_postwrite); \
+		DELEGATE_SAFE_CALL((p).data_postwrite); \
 	} while (0)
 
 #define UPDATE_OUTPUT_B(p) do { \
 		(p).out_source = (p).output_register & (p).direction_register; \
 		(p).out_sink = (p).output_register | ~(p).direction_register; \
-		DELEGATE_SAFE_CALL0((p).data_postwrite); \
+		DELEGATE_SAFE_CALL((p).data_postwrite); \
 	} while (0)
 
 void mc6821_update_state(struct MC6821 *pia) {
 	UPDATE_OUTPUT_A(pia->a);
 	UPDATE_OUTPUT_B(pia->b);
-	DELEGATE_SAFE_CALL0(pia->a.control_postwrite);
-	DELEGATE_SAFE_CALL0(pia->b.control_postwrite);
+	DELEGATE_SAFE_CALL(pia->a.control_postwrite);
+	DELEGATE_SAFE_CALL(pia->b.control_postwrite);
 }
 
 #define READ_DR(p) do { \
-		DELEGATE_SAFE_CALL0((p).data_preread); \
+		DELEGATE_SAFE_CALL((p).data_preread); \
 		(p).interrupt_received = 0; \
 		(p).irq = 0; \
 	} while (0)
 
 #define READ_CR(p) do { \
-		DELEGATE_SAFE_CALL0((p).control_preread); \
+		DELEGATE_SAFE_CALL((p).control_preread); \
 	} while (0)
 
 uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
@@ -170,7 +170,7 @@ uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 		} else { \
 			(p).irq = 0; \
 		} \
-		DELEGATE_SAFE_CALL0((p).control_postwrite); \
+		DELEGATE_SAFE_CALL((p).control_postwrite); \
 	} while (0)
 
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {

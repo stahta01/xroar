@@ -2,7 +2,7 @@
  *
  *  \brief Printing to file or pipe
  *
- *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *  \copyright Copyright 2011-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -152,7 +152,7 @@ void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 		fputc(data, pip->stream);
 	}
 	/* ACK, and schedule !ACK */
-	DELEGATE_SAFE_CALL1(pi->signal_ack, 1);
+	DELEGATE_SAFE_CALL(pi->signal_ack, 1);
 	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
 	event_queue(&MACHINE_EVENT_LIST, &pip->ack_clear_event);
 }
@@ -190,7 +190,7 @@ static void open_stream(struct printer_interface_private *pip) {
 static void do_ack_clear(void *sptr) {
 	struct printer_interface_private *pip = sptr;
 	struct printer_interface *pi = &pip->public;
-	DELEGATE_SAFE_CALL1(pi->signal_ack, 0);
+	DELEGATE_SAFE_CALL(pi->signal_ack, 0);
 }
 
 _Bool printer_busy(struct printer_interface *pi) {

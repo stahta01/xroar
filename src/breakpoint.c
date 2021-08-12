@@ -2,7 +2,7 @@
  *
  *  \brief Breakpoint tracking for debugging.
  *
- *  \copyright Copyright 2011-2017 Ciaran Anscomb
+ *  \copyright Copyright 2011-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -210,7 +210,7 @@ static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsi
 			continue;
 		if (address > bp->address_end)
 			continue;
-		DELEGATE_CALL0(bp->handler);
+		DELEGATE_CALL(bp->handler);
 	}
 	iter_next = NULL;
 }

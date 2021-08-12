@@ -2,7 +2,7 @@
  *
  *  \brief GTK+2 user-interface module.
  *
- *  \copyright Copyright 2010-2020 Ciaran Anscomb
+ *  \copyright Copyright 2010-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -161,7 +161,7 @@ static void zoom_1_1(GtkEntry *entry, gpointer user_data) {
 	(void)uigtk2;
 	if (!xroar_vo_interface)
 		return;
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 320, 240);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 320, 240);
 }
 
 static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
@@ -170,7 +170,7 @@ static void zoom_2_1(GtkEntry *entry, gpointer user_data) {
 	(void)uigtk2;
 	if (!xroar_vo_interface)
 		return;
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 640, 480);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 640, 480);
 }
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
@@ -189,7 +189,7 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 		scale = xscale + 1;
 	if (scale < 1)
 		scale = 1;
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160 * scale, 120 * scale);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 160 * scale, 120 * scale);
 }
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
@@ -208,7 +208,7 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 		scale = xscale - 1;
 	if (scale < 1)
 		scale = 1;
-	DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, 160 * scale, 120 * scale);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->resize, 160 * scale, 120 * scale);
 }
 
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {

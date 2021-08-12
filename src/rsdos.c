@@ -2,7 +2,7 @@
  *
  *  \brief Tandy CoCo disk controller ("RS-DOS").
  *
- *  \copyright Copyright 2005-2019 Ciaran Anscomb
+ *  \copyright Copyright 2005-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -272,11 +272,11 @@ static void latch_write(struct rsdos *d, unsigned D) {
 	d->latch_density = D & 0x20;
 	wd279x_set_dden(d->fdc, !d->latch_density);
 	if (d->latch_density && d->intrq_flag) {
-		DELEGATE_CALL1(c->signal_nmi, 1);
+		DELEGATE_CALL(c->signal_nmi, 1);
 	}
 	d->halt_enable = D & 0x80;
 	if (d->intrq_flag) d->halt_enable = 0;
-	DELEGATE_CALL1(c->signal_halt, d->halt_enable && !d->drq_flag);
+	DELEGATE_CALL(c->signal_halt, d->halt_enable && !d->drq_flag);
 }
 
 static void set_drq(void *sptr, _Bool value) {
@@ -284,10 +284,10 @@ static void set_drq(void *sptr, _Bool value) {
 	struct cart *c = &d->cart;
 	d->drq_flag = value;
 	if (value) {
-		DELEGATE_CALL1(c->signal_halt, 0);
+		DELEGATE_CALL(c->signal_halt, 0);
 	} else {
 		if (d->halt_enable) {
-			DELEGATE_CALL1(c->signal_halt, 1);
+			DELEGATE_CALL(c->signal_halt, 1);
 		}
 	}
 }
@@ -298,11 +298,11 @@ static void set_intrq(void *sptr, _Bool value) {
 	d->intrq_flag = value;
 	if (value) {
 		d->halt_enable = 0;
-		DELEGATE_CALL1(c->signal_halt, 0);
+		DELEGATE_CALL(c->signal_halt, 0);
 		if (!d->latch_density && d->intrq_flag) {
-			DELEGATE_CALL1(c->signal_nmi, 1);
+			DELEGATE_CALL(c->signal_nmi, 1);
 		}
 	} else {
-		DELEGATE_CALL1(c->signal_nmi, 0);
+		DELEGATE_CALL(c->signal_nmi, 0);
 	}
 }

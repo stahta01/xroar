@@ -360,7 +360,7 @@ static void set_firq(void *sptr, _Bool value) {
 	} else {
 		m->firq_state &= ~firq_bit;
 	}
-	DELEGATE_CALL1(m->cart.signal_firq, m->firq_state);
+	DELEGATE_CALL(m->cart.signal_firq, m->firq_state);
 }
 
 static void set_nmi(void *sptr, _Bool value) {
@@ -372,7 +372,7 @@ static void set_nmi(void *sptr, _Bool value) {
 	} else {
 		m->nmi_state &= ~nmi_bit;
 	}
-	DELEGATE_CALL1(m->cart.signal_nmi, m->nmi_state);
+	DELEGATE_CALL(m->cart.signal_nmi, m->nmi_state);
 }
 
 static void set_halt(void *sptr, _Bool value) {
@@ -384,7 +384,7 @@ static void set_halt(void *sptr, _Bool value) {
 	} else {
 		m->halt_state &= ~halt_bit;
 	}
-	DELEGATE_CALL1(m->cart.signal_halt, m->halt_state);
+	DELEGATE_CALL(m->cart.signal_halt, m->halt_state);
 }
 
 /* Configure */

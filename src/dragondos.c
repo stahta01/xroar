@@ -2,7 +2,7 @@
  *
  *  \brief DragonDOS cartridge.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -260,7 +260,7 @@ static void latch_write(struct dragondos *d, unsigned D) {
 static void set_drq(void *sptr, _Bool value) {
 	struct dragondos *d = sptr;
 	struct cart *c = &d->cart;
-	DELEGATE_CALL1(c->signal_firq, value);
+	DELEGATE_CALL(c->signal_firq, value);
 }
 
 static void set_intrq(void *sptr, _Bool value) {
@@ -268,9 +268,9 @@ static void set_intrq(void *sptr, _Bool value) {
 	struct cart *c = &d->cart;
 	if (value) {
 		if (d->latch_nmi_enable) {
-			DELEGATE_CALL1(c->signal_nmi, 1);
+			DELEGATE_CALL(c->signal_nmi, 1);
 		}
 	} else {
-		DELEGATE_CALL1(c->signal_nmi, 0);
+		DELEGATE_CALL(c->signal_nmi, 0);
 	}
 }

@@ -158,13 +158,13 @@ static void do_hs_fall(void *data) {
 					*(v++) = encode_pixel(vdg, vdg->border_colour);
 				}
 			}
-			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
+			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 			render_scanline(vdg);
 			vdg->public.row++;
 			if (vdg->public.row > 11)
 				vdg->public.row = 0;
-			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
+			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
@@ -173,12 +173,12 @@ static void do_hs_fall(void *data) {
 					*(v++) = encode_pixel(vdg, vdg->border_colour);
 				}
 			}
-			DELEGATE_CALL2(vdg->public.render_line, vdg->pixel_data, vdg->burst);
+			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		}
 	}
 
 	// HS falling edge.
-	DELEGATE_CALL1(vdg->public.signal_hs, 0);
+	DELEGATE_CALL(vdg->public.signal_hs, 0);
 
 	// This achieves the equivalent of a TV getting into sync with the
 	// colourburst.
@@ -237,12 +237,12 @@ static void do_hs_fall(void *data) {
 
 	if (vdg->scanline == VDG_ACTIVE_AREA_END) {
 		// FS falling edge
-		DELEGATE_CALL1(vdg->public.signal_fs, 0);
+		DELEGATE_CALL(vdg->public.signal_fs, 0);
 	}
 
 	if (vdg->scanline == VDG_VBLANK_START) {
 		// FS rising edge
-		DELEGATE_CALL1(vdg->public.signal_fs, 1);
+		DELEGATE_CALL(vdg->public.signal_fs, 1);
 	}
 
 }
@@ -250,13 +250,13 @@ static void do_hs_fall(void *data) {
 static void do_hs_rise(void *data) {
 	struct MC6847_private *vdg = data;
 	// HS rising edge.
-	DELEGATE_CALL1(vdg->public.signal_hs, 1);
+	DELEGATE_CALL(vdg->public.signal_hs, 1);
 }
 
 static void do_hs_fall_pal(void *data) {
 	struct MC6847_private *vdg = data;
 	// HS falling edge
-	DELEGATE_CALL1(vdg->public.signal_hs, 0);
+	DELEGATE_CALL(vdg->public.signal_hs, 0);
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
@@ -283,7 +283,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
+			DELEGATE_CALL(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	} else if (!vdg->is_32byte && beam_to >= (VDG_tHBNK + 32)) {
@@ -291,7 +291,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL2(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
+			DELEGATE_CALL(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	}

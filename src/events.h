@@ -79,7 +79,7 @@ inline void event_dispatch_next(struct event **list) {
 	struct event *e = *list;
 	*list = e->next;
 	e->queued = 0;
-	DELEGATE_CALL0(e->delegate);
+	DELEGATE_CALL(e->delegate);
 	if (e->autofree)
 		free(e);
 }

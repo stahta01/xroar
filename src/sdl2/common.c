@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2019 Ciaran Anscomb
+ *  \copyright Copyright 2015-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -105,7 +105,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			switch(event.window.event) {
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 			case SDL_WINDOWEVENT_RESIZED:
-				DELEGATE_SAFE_CALL2(xroar_vo_interface->resize, event.window.data1, event.window.data2);
+				DELEGATE_SAFE_CALL(xroar_vo_interface->resize, event.window.data1, event.window.data2);
 				break;
 			}
 			break;

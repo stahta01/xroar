@@ -127,12 +127,13 @@ DELEGATE_DEF_PROTO3(float, float, uint32_t, uint32, int, int, float *, floatp);
 /* Calling interface. */
 
 #define DELEGATE_CALL0(d) ((d).func((d).sptr))
-#define DELEGATE_CALL1(d,v0) ((d).func((d).sptr,(v0)))
-#define DELEGATE_CALL2(d,v0,v1) ((d).func((d).sptr,(v0),(v1)))
-#define DELEGATE_CALL3(d,v0,v1,v2) ((d).func((d).sptr,(v0),(v1),(v2)))
+#define DELEGATE_CALLN(d,...) ((d).func((d).sptr,__VA_ARGS__))
 #define DELEGATE_SAFE_CALL0(d) do { if ((d).func) { DELEGATE_CALL0((d)); } } while (0)
-#define DELEGATE_SAFE_CALL1(d,v0) do { if ((d).func) { DELEGATE_CALL1((d),(v0)); } } while (0)
-#define DELEGATE_SAFE_CALL2(d,v0,v1) do { if ((d).func) { DELEGATE_CALL2((d),(v0),(v1)); } } while (0)
-#define DELEGATE_SAFE_CALL3(d,v0,v1,v2) do { if ((d).func) { DELEGATE_CALL3((d),(v0),(v1),(v2)); } } while (0)
+#define DELEGATE_SAFE_CALLN(d,...) do { if ((d).func) { ((d).func((d).sptr,__VA_ARGS__)); } } while (0)
+
+#define DELEGATE_GET_CALL(_1,_2,_3,_4,_5,_6,_7,NAME,...) NAME
+
+#define DELEGATE_CALL(...) DELEGATE_GET_CALL(__VA_ARGS__, DELEGATE_CALLN, DELEGATE_CALLN, DELEGATE_CALLN, DELEGATE_CALLN, DELEGATE_CALLN, DELEGATE_CALLN, DELEGATE_CALL0)(__VA_ARGS__)
+#define DELEGATE_SAFE_CALL(...) DELEGATE_GET_CALL(__VA_ARGS__, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALLN, DELEGATE_SAFE_CALL0)(__VA_ARGS__)
 
 #endif

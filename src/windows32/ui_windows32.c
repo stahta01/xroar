@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface module.
  *
- *  \copyright Copyright 2014-2020 Ciaran Anscomb
+ *  \copyright Copyright 2014-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -576,7 +576,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		break;
 
 	case WM_UNINITMENUPOPUP:
-		DELEGATE_SAFE_CALL0(xroar_vo_interface->refresh);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->refresh);
 		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	default:
