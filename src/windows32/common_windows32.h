@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface common functions.
  *
- *  \copyright Copyright 2006-2017 Ciaran Anscomb
+ *  \copyright Copyright 2006-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,6 +26,5 @@ extern HWND windows32_main_hwnd;
 int windows32_init(_Bool alloc_console);
 void windows32_shutdown(void);
 
-void windows32_handle_wm_command(WPARAM wParam, LPARAM lParam);
 
 #endif
