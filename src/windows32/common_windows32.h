@@ -23,8 +23,10 @@
 
 extern HWND windows32_main_hwnd;
 
+/// Various initialisation required for Windows32.
 int windows32_init(_Bool alloc_console);
-void windows32_shutdown(void);
 
+/// Cleanup before exit.
+void windows32_shutdown(void);
 
 #endif

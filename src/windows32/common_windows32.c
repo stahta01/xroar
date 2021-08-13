@@ -32,6 +32,14 @@
 
 HWND windows32_main_hwnd = NULL;
 
+/** A console window is created if requested, thus this should be called _after_
+ * processing options that may call for a console, but _before_ generating any
+ * output that should go to that console.
+ *
+ * Performs various incantations that seem to be required to make networking
+ * code work.
+ */
+
 int windows32_init(_Bool alloc_console) {
 	if (alloc_console) {
 		redirect_io_to_console(1024);
