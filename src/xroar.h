@@ -134,8 +134,6 @@ extern struct vdrive_interface *xroar_vdrive_interface;
 
 /**************************************************************************/
 
-void xroar_getargs(int argc, char **argv);
-
 /// Configure XRoar, initialise modules and start machine.
 struct ui_interface *xroar_init(int argc, char **argv);
 
