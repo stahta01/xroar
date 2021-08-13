@@ -61,7 +61,6 @@ enum WD279X_state {
 	WD279X_state_invalid
 };
 
-typedef struct WD279X WD279X;
 struct WD279X {
 	struct part part;
 
@@ -131,19 +130,19 @@ struct WD279X {
 	struct log_handle *log_wtrk_hex;
 };
 
-WD279X *wd279x_new(enum WD279X_type type);
-void wd279x_reset(WD279X *fdc);
-void wd279x_disconnect(WD279X *fdc);
+struct WD279X *wd279x_new(enum WD279X_type type);
+void wd279x_reset(struct WD279X *fdc);
+void wd279x_disconnect(struct WD279X *fdc);
 
 /* Signal all connected delegates */
-void wd279x_update_connection(WD279X *fdc);
+void wd279x_update_connection(struct WD279X *fdc);
 
 void wd279x_ready(void *sptr, _Bool state);
 void wd279x_tr00(void *sptr, _Bool state);
 void wd279x_index_pulse(void *sptr, _Bool state);
 void wd279x_write_protect(void *sptr, _Bool state);
-void wd279x_set_dden(WD279X *fdc, _Bool dden);  /* 1 = Double density, 0 = Single */
-uint8_t wd279x_read(WD279X *fdc, uint16_t A);
-void wd279x_write(WD279X *fdc, uint16_t A, uint8_t D);
+void wd279x_set_dden(struct WD279X *fdc, _Bool dden);  /* 1 = Double density, 0 = Single */
+uint8_t wd279x_read(struct WD279X *fdc, uint16_t A);
+void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D);
 
 #endif

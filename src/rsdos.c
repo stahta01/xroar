@@ -56,7 +56,7 @@ struct rsdos {
 	_Bool intrq_flag;
 	_Bool halt_enable;
 	struct becker *becker;
-	WD279X *fdc;
+	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
 

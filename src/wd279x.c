@@ -102,17 +102,17 @@ static const char *wd279x_type_name[4] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Debugging
 
-static void debug_state(WD279X *fdc);
+static void debug_state(struct WD279X *fdc);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static uint8_t _vdrive_read(WD279X *fdc) {
+static uint8_t _vdrive_read(struct WD279X *fdc) {
 	uint8_t b = DELEGATE_CALL(fdc->read);
 	fdc->crc = crc16_byte(fdc->crc, b);
 	return b;
 }
 
-static void _vdrive_write(WD279X *fdc, uint8_t b) {
+static void _vdrive_write(struct WD279X *fdc, uint8_t b) {
 	DELEGATE_CALL(fdc->write, b);
 	fdc->crc = crc16_byte(fdc->crc, b);
 }
@@ -125,10 +125,10 @@ static void wd279x_free(struct part *p);
 		_vdrive_write(fdc, tmp & 0xff); \
 	} while (0)
 
-WD279X *wd279x_new(enum WD279X_type type) {
+struct WD279X *wd279x_new(enum WD279X_type type) {
 	assert(type >= WD2791 && type <= WD2797);
-	WD279X *fdc = part_new(sizeof(*fdc));
-	*fdc = (WD279X){0};
+	struct WD279X *fdc = part_new(sizeof(*fdc));
+	*fdc = (struct WD279X){0};
 	part_init(&fdc->part, wd279x_type_name[type]);
 	fdc->part.free = wd279x_free;
 
@@ -145,14 +145,14 @@ WD279X *wd279x_new(enum WD279X_type type) {
 }
 
 static void wd279x_free(struct part *p) {
-	WD279X *fdc = (WD279X *)p;
+	struct WD279X *fdc = (struct WD279X *)p;
 	log_close(&fdc->log_rsec_hex);
 	log_close(&fdc->log_wsec_hex);
 	log_close(&fdc->log_wtrk_hex);
 	event_dequeue(&fdc->state_event);
 }
 
-void wd279x_disconnect(WD279X *fdc) {
+void wd279x_disconnect(struct WD279X *fdc) {
 	if (!fdc)
 		return;
 	fdc->set_dirc = DELEGATE_DEFAULT1(void, int);
@@ -172,7 +172,7 @@ void wd279x_disconnect(WD279X *fdc) {
 	fdc->update_connection = DELEGATE_DEFAULT0(void);
 }
 
-void wd279x_reset(WD279X *fdc) {
+void wd279x_reset(struct WD279X *fdc) {
 	assert(fdc != NULL);
 	event_dequeue(&fdc->state_event);
 	fdc->status_register = 0;
@@ -185,7 +185,7 @@ void wd279x_reset(WD279X *fdc) {
 }
 
 void wd279x_ready(void *sptr, _Bool state) {
-	WD279X *fdc = sptr;
+	struct WD279X *fdc = sptr;
 	if (fdc->ready_state == state)
 		return;
 	fdc->ready_state = state;
@@ -200,14 +200,14 @@ void wd279x_ready(void *sptr, _Bool state) {
 }
 
 void wd279x_tr00(void *sptr, _Bool state) {
-	WD279X *fdc = sptr;
+	struct WD279X *fdc = sptr;
 	if (fdc->tr00_state == state)
 		return;
 	fdc->tr00_state = state;
 }
 
 void wd279x_index_pulse(void *sptr, _Bool state) {
-	WD279X *fdc = sptr;
+	struct WD279X *fdc = sptr;
 	if (fdc->index_state == state)
 		return;
 	fdc->index_state = state;
@@ -221,18 +221,18 @@ void wd279x_index_pulse(void *sptr, _Bool state) {
 }
 
 void wd279x_write_protect(void *sptr, _Bool state) {
-	WD279X *fdc = sptr;
+	struct WD279X *fdc = sptr;
 	if (fdc->write_protect_state == state)
 		return;
 	fdc->write_protect_state = state;
 }
 
-void wd279x_set_dden(WD279X *fdc, _Bool dden) {
+void wd279x_set_dden(struct WD279X *fdc, _Bool dden) {
 	fdc->double_density = dden;
 	DELEGATE_CALL(fdc->set_dden, dden);
 }
 
-void wd279x_update_connection(WD279X *fdc) {
+void wd279x_update_connection(struct WD279X *fdc) {
 	DELEGATE_CALL(fdc->set_dden, fdc->double_density);
 	if (fdc->has_sso)
 		DELEGATE_CALL(fdc->set_sso, fdc->side);
@@ -240,7 +240,7 @@ void wd279x_update_connection(WD279X *fdc) {
 	DELEGATE_CALL(fdc->update_connection);
 }
 
-uint8_t wd279x_read(WD279X *fdc, uint16_t A) {
+uint8_t wd279x_read(struct WD279X *fdc, uint16_t A) {
 	uint8_t D;
 	switch (A & 3) {
 		default:
@@ -274,7 +274,7 @@ uint8_t wd279x_read(WD279X *fdc, uint16_t A) {
 	return D ^ fdc->invert_data;
 }
 
-void wd279x_write(WD279X *fdc, uint16_t A, uint8_t D) {
+void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D) {
 	D ^= fdc->invert_data;
 	switch (A & 3) {
 		default:
@@ -327,7 +327,7 @@ void wd279x_write(WD279X *fdc, uint16_t A, uint8_t D) {
  * write command function. */
 
 static void state_machine(void *sptr) {
-	WD279X *fdc = (WD279X *)sptr;
+	struct WD279X *fdc = (struct WD279X *)sptr;
 	uint8_t *idam;
 	uint8_t data;
 	int i;
@@ -1004,7 +1004,7 @@ static char const * const debug_command[] = {
 	"write-track",
 };
 
-static void debug_state(WD279X *fdc) {
+static void debug_state(struct WD279X *fdc) {
 	assert(fdc != NULL);
 	assert((unsigned)fdc->state < WD279X_state_invalid);
 	unsigned level = logging.debug_fdc & LOG_FDC_STATE;

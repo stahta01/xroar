@@ -55,7 +55,7 @@ struct deltados {
 	unsigned latch_drive_select;
 	_Bool latch_side_select;
 	_Bool latch_density;
-	WD279X *fdc;
+	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
 

@@ -56,7 +56,7 @@ struct dragondos {
 	_Bool latch_density;
 	_Bool latch_nmi_enable;
 	struct becker *becker;
-	WD279X *fdc;
+	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
 
