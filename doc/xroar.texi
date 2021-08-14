@@ -1423,4 +1423,7 @@ instructions on the 6809.
 
 Alan Cox contributed the IDE code.
 
+Tormod Voldon contributed support for his NX32 and MOOH devices (including
+general SPI and SD image support).
+
 @bye
