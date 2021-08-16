@@ -265,10 +265,14 @@ AC_C_BIGENDIAN([AC_DEFINE([HAVE_BIG_ENDIAN], 1, [Correct-endian architecture])])
 ### ALSA
 
 AS_IF([test "x$with_alsa" != "xno"], [
+		OLD_CFLAGS="$CFLAGS"
+		CFLAGS="$CFLAGS -D_POSIX_C_SOURCE=200112L"
 		AC_CHECK_HEADER([alsa/asoundlib.h], [
 			AC_CHECK_LIB([asound], [snd_pcm_open], [
 				ALSA_LIBS="-lasound"
-				], :) ]) ])
+				], :) ])
+		CFLAGS="$OLD_CFLAGS"
+	])
 AM_CONDITIONAL([AO_ALSA], [test -n "$ALSA_LIBS"])
 AM_COND_IF([AO_ALSA], [AC_DEFINE([HAVE_ALSA_AUDIO], 1, [Use ALSA audio])])
 AC_SUBST(ALSA_LIBS)

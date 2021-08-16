@@ -61,7 +61,7 @@
 #include "config.h"
 #endif
 
-// for addrinfo
+// for addrinfo, struct timeval
 #define _POSIX_C_SOURCE 200112L
 // For strsep
 #define _DEFAULT_SOURCE
