@@ -1,5 +1,7 @@
 Version 0.38, unreleased
 
+ * UNFINISHED, UNSUPPORTED CoCo 3 support.  Much known not to work.
+
 Version 0.37, Sat Aug 14 2020
 
  * Add Control+Shift+D to flush disk images
