@@ -497,7 +497,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct MC6847 *mc6847_new(_Bool t1) {
+struct MC6847 *mc6847_new(int type) {
+	_Bool t1 = (type == VDG_6847T1);
 	struct MC6847_private *vdg = part_new(sizeof(*vdg));
 	*vdg = (struct MC6847_private){0};
 	part_init((struct part *)vdg, t1 ? "MC6847T1" : "MC6847");

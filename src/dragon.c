@@ -179,6 +179,8 @@ static void dragon_config_complete(struct machine_config *mc) {
 		mc->tv_standard = TV_PAL;
 	if (mc->vdg_type == ANY_AUTO)
 		mc->vdg_type = VDG_6847;
+	if (mc->vdg_type != VDG_6847 && mc->vdg_type != VDG_6847T1)
+		mc->vdg_type = VDG_6847;
 	/* Various heuristics to find a working architecture */
 	if (mc->architecture == ANY_AUTO) {
 		/* TODO: checksum ROMs to help determine arch */
@@ -426,7 +428,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->snd->sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, md);
 
 	// VDG
-	md->VDG0 = mc6847_new(mc->vdg_type == VDG_6847T1);
+	md->VDG0 = mc6847_new(mc->vdg_type);
 	part_add_component(&m->part, (struct part *)md->VDG0, "VDG");
 	mc6847_set_palette(md->VDG0, md->dummy_palette);
 	// XXX kludges that should be handled by machine-specific code

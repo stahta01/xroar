@@ -118,7 +118,12 @@ struct MC6847 {
  *  7...0   DD7..DD0
  */
 
-struct MC6847 *mc6847_new(_Bool t1);
+/** \brief Create a new MC6847 part.
+ *
+ * \param type    one of VDG_6847 or VDG_6847T1.
+ */
+
+struct MC6847 *mc6847_new(int type);
 
 void mc6847_reset(struct MC6847 *);
 
