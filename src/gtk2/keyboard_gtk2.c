@@ -125,39 +125,39 @@ static guint32 last_unicode[MAX_KEYCODE];
 
 static struct sym_dkey_mapping keyval_dkey_default[] = {
 	// Common
-	{ GDK_Escape, DSCAN_BREAK, 1 },
-	{ GDK_Return, DSCAN_ENTER, 0 },
-	{ GDK_Home, DSCAN_CLEAR, 1 },
-	{ GDK_Shift_L, DSCAN_SHIFT, 1 },
-	{ GDK_Shift_R, DSCAN_SHIFT, 1 },
-	{ GDK_space, DSCAN_SPACE, 0 },
-	{ GDK_F1, DSCAN_F1, 1 },
-	{ GDK_F2, DSCAN_F2, 1 },
+	{ GDK_KEY_Escape, DSCAN_BREAK, 1 },
+	{ GDK_KEY_Return, DSCAN_ENTER, 0 },
+	{ GDK_KEY_Home, DSCAN_CLEAR, 1 },
+	{ GDK_KEY_Shift_L, DSCAN_SHIFT, 1 },
+	{ GDK_KEY_Shift_R, DSCAN_SHIFT, 1 },
+	{ GDK_KEY_space, DSCAN_SPACE, 0 },
+	{ GDK_KEY_F1, DSCAN_F1, 1 },
+	{ GDK_KEY_F2, DSCAN_F2, 1 },
 
         // Not so common
-        { GDK_Break, DSCAN_BREAK, 1 },
-        { GDK_Clear, DSCAN_CLEAR, 1 },
+        { GDK_KEY_Break, DSCAN_BREAK, 1 },
+        { GDK_KEY_Clear, DSCAN_CLEAR, 1 },
 
         // Cursor keys
-        { GDK_Up, DSCAN_UP, 1 },
-        { GDK_Down, DSCAN_DOWN, 1 },
-        { GDK_Left, DSCAN_LEFT, 1 },
-        { GDK_Right, DSCAN_RIGHT, 1 },
-        { GDK_BackSpace, DSCAN_LEFT, 1 },
-        { GDK_KP_Delete, DSCAN_LEFT, 1 },
-        { GDK_Tab, DSCAN_RIGHT, 1 },
+        { GDK_KEY_Up, DSCAN_UP, 1 },
+        { GDK_KEY_Down, DSCAN_DOWN, 1 },
+        { GDK_KEY_Left, DSCAN_LEFT, 1 },
+        { GDK_KEY_Right, DSCAN_RIGHT, 1 },
+        { GDK_KEY_BackSpace, DSCAN_LEFT, 1 },
+        { GDK_KEY_KP_Delete, DSCAN_LEFT, 1 },
+        { GDK_KEY_Tab, DSCAN_RIGHT, 1 },
 
         // Keypad
-	{ GDK_KP_Up, DSCAN_UP, 1 },
-	{ GDK_KP_Down, DSCAN_DOWN, 1 },
-	{ GDK_KP_Left, DSCAN_LEFT, 1 },
-	{ GDK_KP_Right, DSCAN_RIGHT, 1 },
-        { GDK_KP_Multiply, DSCAN_COLON, 1 },
-        { GDK_KP_Subtract, DSCAN_MINUS, 1 },
-        { GDK_KP_Add, DSCAN_SEMICOLON, 1 },
-        { GDK_KP_Decimal, DSCAN_FULL_STOP, 1 },
-        { GDK_KP_Divide, DSCAN_SLASH, 1 },
-        { GDK_KP_Enter, DSCAN_ENTER, 0 },
+	{ GDK_KEY_KP_Up, DSCAN_UP, 1 },
+	{ GDK_KEY_KP_Down, DSCAN_DOWN, 1 },
+	{ GDK_KEY_KP_Left, DSCAN_LEFT, 1 },
+	{ GDK_KEY_KP_Right, DSCAN_RIGHT, 1 },
+        { GDK_KEY_KP_Multiply, DSCAN_COLON, 1 },
+        { GDK_KEY_KP_Subtract, DSCAN_MINUS, 1 },
+        { GDK_KEY_KP_Add, DSCAN_SEMICOLON, 1 },
+        { GDK_KEY_KP_Decimal, DSCAN_FULL_STOP, 1 },
+        { GDK_KEY_KP_Divide, DSCAN_SLASH, 1 },
+        { GDK_KEY_KP_Enter, DSCAN_ENTER, 0 },
 };
 
 static int keyval_index(guint keyval) {
@@ -205,12 +205,12 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	}
 	// 0 - 9
 	for (int i = 0; i <= 9; i++) {
-		keyval_to_dkey[keyval_index(GDK_0 + i)] = DSCAN_0 + i;
-		keyval_to_dkey[keyval_index(GDK_KP_0 + i)] = DSCAN_0 + i;
+		keyval_to_dkey[keyval_index(GDK_KEY_0 + i)] = DSCAN_0 + i;
+		keyval_to_dkey[keyval_index(GDK_KEY_KP_0 + i)] = DSCAN_0 + i;
 	}
 	// A - Z
 	for (int i = 0; i <= 25; i++)
-		keyval_to_dkey[keyval_index(GDK_a + i)] = DSCAN_A + i;
+		keyval_to_dkey[keyval_index(GDK_KEY_a + i)] = DSCAN_A + i;
 
 	/* Apply keyboard map if selected: */
 	if (keymap == NULL)
@@ -253,64 +253,64 @@ void gtk2_keyboard_init(struct ui_cfg *ui_cfg) {
 
 static void emulator_command(guint keyval, int shift) {
 	switch (keyval) {
-	case GDK_1: case GDK_2: case GDK_3: case GDK_4:
+	case GDK_KEY_1: case GDK_KEY_2: case GDK_KEY_3: case GDK_KEY_4:
 		if (shift) {
-			xroar_new_disk(keyval - GDK_1);
+			xroar_new_disk(keyval - GDK_KEY_1);
 		}
 		break;
-	case GDK_5: case GDK_6: case GDK_7: case GDK_8:
+	case GDK_KEY_5: case GDK_KEY_6: case GDK_KEY_7: case GDK_KEY_8:
 		if (shift) {
-			xroar_set_write_back(1, keyval - GDK_5, XROAR_NEXT);
+			xroar_set_write_back(1, keyval - GDK_KEY_5, XROAR_NEXT);
 		} else {
-			xroar_set_write_enable(1, keyval - GDK_5, XROAR_NEXT);
+			xroar_set_write_enable(1, keyval - GDK_KEY_5, XROAR_NEXT);
 		}
 		break;
-	case GDK_a:
+	case GDK_KEY_a:
 		xroar_set_cross_colour(1, XROAR_NEXT);
 		break;
-	case GDK_d:
+	case GDK_KEY_d:
 		if (shift) {
 			vdrive_flush(xroar_vdrive_interface);
 		}
 		break;
-	case GDK_e:
+	case GDK_KEY_e:
 		xroar_toggle_cart();
 		break;
-	case GDK_f:
+	case GDK_KEY_f:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
-	case GDK_h:
+	case GDK_KEY_h:
 		if (shift)
 			xroar_set_pause(1, XROAR_NEXT);
 		break;
-	case GDK_i:
+	case GDK_KEY_i:
 		if (shift)
 			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		else
 			xroar_run_file(NULL);
 		break;
-	case GDK_j:
+	case GDK_KEY_j:
 		if (shift) {
 			xroar_swap_joysticks(1);
 		} else {
 			xroar_cycle_joysticks(1);
 		}
 		break;
-	case GDK_k:
+	case GDK_KEY_k:
 		xroar_set_keymap(1, XROAR_NEXT);
 		break;
-	case GDK_m:
+	case GDK_KEY_m:
 		xroar_set_machine(1, XROAR_NEXT);
 		break;
-	case GDK_p:
+	case GDK_KEY_p:
 		if (shift)
 			printer_flush(xroar_printer_interface);
 		break;
-	case GDK_w:
+	case GDK_KEY_w:
 		xroar_insert_output_tape();
 		break;
 #ifdef TRACE
-	case GDK_v:
+	case GDK_KEY_v:
 		xroar_set_trace(XROAR_NEXT);  /* toggle */
 		break;
 #endif
@@ -354,7 +354,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		}
 	}
 
-	if (keyval == GDK_Shift_L || keyval == GDK_Shift_R) {
+	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
 		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
 		return FALSE;
 	}
@@ -362,14 +362,14 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	if (!shift) {
 		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
-	if (keyval == GDK_F12) {
+	if (keyval == GDK_KEY_F12) {
 		if (shift) {
 			xroar_set_ratelimit_latch(1, XROAR_NEXT);
 		} else {
 			xroar_set_ratelimit(0);
 		}
 	}
-	if (keyval == GDK_Pause) {
+	if (keyval == GDK_KEY_Pause) {
 		xroar_set_pause(1, XROAR_NEXT);
 		return FALSE;
 	}
@@ -390,9 +390,9 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		guint32 unicode = gdk_keyval_to_unicode(event->keyval);
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));
 		if (unicode == 0) {
-			if (event->keyval == GDK_Return)
+			if (event->keyval == GDK_KEY_Return)
 				unicode = 0x0d;
-			else if (event->keyval == GDK_KP_Enter)
+			else if (event->keyval == GDK_KEY_KP_Enter)
 				unicode = 0x0d;
 		}
 		/* shift + backspace -> erase line */
@@ -446,7 +446,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		}
 	}
 
-	if (keyval == GDK_Shift_L || keyval == GDK_Shift_R) {
+	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
 		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 		return FALSE;
 	}
@@ -454,7 +454,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	if (!shift) {
 		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
-	if (keyval == GDK_F12) {
+	if (keyval == GDK_KEY_F12) {
 		xroar_set_ratelimit(1);
 	}
 
@@ -505,11 +505,11 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	unsigned key0, key1;
 	// sensible defaults
 	if (jaxis == 0) {
-		key0 = GDK_Left;
-		key1 = GDK_Right;
+		key0 = GDK_KEY_Left;
+		key1 = GDK_KEY_Right;
 	} else {
-		key0 = GDK_Up;
-		key1 = GDK_Down;
+		key0 = GDK_KEY_Up;
+		key1 = GDK_KEY_Down;
 	}
 	char *a0 = NULL;
 	char *a1 = NULL;
@@ -538,7 +538,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	unsigned key = (jbutton == 0) ? GDK_Alt_L : GDK_VoidSymbol;
+	unsigned key = (jbutton == 0) ? GDK_KEY_Alt_L : GDK_KEY_VoidSymbol;
 	if (spec && *spec)
 		key = get_key_by_name(spec);
 	struct button *button_data = g_malloc(sizeof(*button_data));
