@@ -498,6 +498,10 @@ machine pippin
   ram 16
 @end example
 
+XRoar now contains @emph{very} early support for the Tandy Colour Computer 3,
+but it is unfinished and unsupported.  Much is known not to work.  Don't use it
+unless you're testing.  Hopefully it will get better over time.
+
 
 @node Cartridges
 @section Cartridges
