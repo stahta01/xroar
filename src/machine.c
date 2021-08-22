@@ -162,6 +162,8 @@ struct xconfig_enum machine_tv_type_list[] = {
 struct xconfig_enum machine_vdg_type_list[] = {
 	{ XC_ENUM_INT("6847", VDG_6847, "Original 6847") },
 	{ XC_ENUM_INT("6847t1", VDG_6847T1, "6847T1 with lowercase") },
+	{ XC_ENUM_INT("gime1986", VDG_GIME_1986, "1986 GIME") },
+	{ XC_ENUM_INT("gime1987", VDG_GIME_1987, "1987 GIME") },
 	{ XC_ENUM_END() }
 };
 

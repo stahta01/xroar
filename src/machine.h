@@ -55,6 +55,8 @@ struct vo_interface;
 #define TV_PAL_M (2)
 #define VDG_6847 (0)
 #define VDG_6847T1 (1)
+#define VDG_GIME_1986 (2)
+#define VDG_GIME_1987 (3)
 
 /* These are now purely for backwards-compatibility with old snapshots.
  * Cartridge types are now more generic: see cart.h.  */
