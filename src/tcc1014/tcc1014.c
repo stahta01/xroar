@@ -17,6 +17,9 @@
  *
  *  Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED, and much is KNOWN NOT
  *  TO WORK.  Please do not use except for testing.
+ *
+ *  \par Sources
+ *  Sock's GIME register reference http://users.axess.com/twilight/sock/gime.html
  */
 
 #include "config.h"
@@ -245,9 +248,12 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 static void update_from_sam_register(struct TCC1014_private *gime);
 
 static const unsigned VMODE_LPR[8] = { 1, 1, 2, 8, 9, 10, 11, 255 };
-static const unsigned VRES_LPF_lAA[4] = { 192, 200, 255, 225 };
-// Unsure of these, something to get going with though
-static const unsigned VRES_LPF_lTB[4] = { 25, 21, 6, 9 };  // top border
+
+// Index LPF into top border and active area line counts.  In both cases, a
+// transition to LPF=2 implies an infinite count (so just set really large).
+static const unsigned VRES_LPF_lTB[4] = { 25, 21, 65535, 9 };  // top border - unsure...
+static const unsigned VRES_LPF_lAA[4] = { 192, 200, 65535, 225 };
+
 static const unsigned VRES_HRES_pLB[2] = { 120, 56 };  // left border
 static const unsigned VSC_nLPR[16] = { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 4, 3, 2, 1, 12 };
 static const unsigned SAM_V_nLPR[8] = { 12, 1, 3, 2, 2, 1, 1, 1 };
@@ -435,7 +441,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 static void schedule_timer(struct TCC1014_private *gime) {
 	event_dequeue(&gime->timer_event);
 	unsigned timer_register = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-	gime->timer_counter += timer_register;
+	gime->timer_counter += timer_register + 1;
 	gime->timer_tick_base = event_current_tick >> 2;
 	if (gime->registers[1] & 0x20) {
 		// TINS=1: 3.58MHz
@@ -609,25 +615,25 @@ static void do_hs_fall(void *sptr) {
 
 	// Always check against field duration - could hit this during active
 	// area or bottom border.
-	if (gime->scanline >= gime->field_duration) {
-		// FS falling edge, in case there's not been one
+	if (gime->scanline == gime->field_duration - 6) {
+		// FS falling edge
 		DELEGATE_CALL(gime->public.signal_fs, 0);
-
-		gime->B = gime->Y + gime->X;
+		// clear output line to...  well should be vsync signal, but use black
+		clear_line(gime, TCC1014_BLACK);
+	} else if (gime->scanline == gime->field_duration) {
+		// FS rising edge
+		DELEGATE_CALL(gime->public.signal_fs, 1);
+		gime->B = gime->Y;
 		if (gime->COCO) {
 			gime->B = (gime->B & 0x701ff) | (gime->SAM_F << 9);
 		}
 		gime->line_base = gime->B;
-		// clear output line to...  well should be vsync signal, but use black
-		clear_line(gime, TCC1014_BLACK);
 		gime->vstate = tcc1014_vstate_vblank;
 		gime->lcount = 0;
 		gime->scanline = 0;
 	} else switch (gime->vstate) {
 	case tcc1014_vstate_vblank:
 		if (gime->lcount >= TCC1014_TOP_BORDER_START) {
-			// FS rising edge
-			DELEGATE_CALL(gime->public.signal_fs, 1);
 			// clear output line to border colour
 			// XXX GIME may be more dynamic than this
 			clear_line(gime, gime->border_colour);
@@ -667,7 +673,8 @@ static void do_hs_rise(void *sptr) {
 }
 
 static uint8_t fetch_byte_vram(struct TCC1014_private *gime) {
-	return DELEGATE_CALL(gime->public.fetch_vram, gime->B++);
+	// X offset appears to be dynamically added to current video address
+	return DELEGATE_CALL(gime->public.fetch_vram, gime->X + gime->B++);
 }
 
 static void render_scanline(struct TCC1014_private *gime) {
