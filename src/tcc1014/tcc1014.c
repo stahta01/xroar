@@ -752,24 +752,29 @@ static void render_scanline(struct TCC1014_private *gime) {
 			// CoCo 2 modes
 			switch (gime->render_mode) {
 			case TCC1014_RENDER_SG: default:
-				c0 = c1 = gime->palette_reg[(gime->vram_sg_data&0x80) ? gime->s_fg_colour : gime->s_bg_colour];
-				c2 = c3 = gime->palette_reg[(gime->vram_sg_data&0x40) ? gime->s_fg_colour : gime->s_bg_colour];
+				c0 = gime->palette_reg[(gime->vram_sg_data&0x80) ? gime->s_fg_colour : gime->s_bg_colour];
+				c1 = gime->palette_reg[(gime->vram_sg_data&0x40) ? gime->s_fg_colour : gime->s_bg_colour];
+				c2 = gime->palette_reg[(gime->vram_sg_data&0x20) ? gime->s_fg_colour : gime->s_bg_colour];
+				c3 = gime->palette_reg[(gime->vram_sg_data&0x10) ? gime->s_fg_colour : gime->s_bg_colour];
 				break;
 			case TCC1014_RENDER_CG:
-				c0 = c1 = c2 = c3 = gime->palette_reg[gime->cg_colours + ((gime->vram_g_data & 0xc0) >> 6)];
+				c0 = c1 = gime->palette_reg[gime->cg_colours + ((gime->vram_g_data >> 6) & 3)];
+				c2 = c3 = gime->palette_reg[gime->cg_colours + ((gime->vram_g_data >> 4) & 3)];
 				break;
 			case TCC1014_RENDER_RG:
-				c0 = c1 = gime->palette_reg[(gime->vram_g_data&0x80) ? gime->fg_colour : gime->bg_colour];
-				c2 = c3 = gime->palette_reg[(gime->vram_g_data&0x40) ? gime->fg_colour : gime->bg_colour];
+				c0 = gime->palette_reg[(gime->vram_g_data&0x80) ? gime->fg_colour : gime->bg_colour];
+				c1 = gime->palette_reg[(gime->vram_g_data&0x40) ? gime->fg_colour : gime->bg_colour];
+				c2 = gime->palette_reg[(gime->vram_g_data&0x20) ? gime->fg_colour : gime->bg_colour];
+				c3 = gime->palette_reg[(gime->vram_g_data&0x10) ? gime->fg_colour : gime->bg_colour];
 				break;
 			}
-			gime->vram_bit -= 2;
-			gime->vram_g_data <<= 2;
-			gime->vram_sg_data <<= 2;
+			gime->vram_bit -= 4;
+			gime->vram_g_data <<= 4;
+			gime->vram_sg_data <<= 4;
 			if (gime->is_32byte) {
-				HRES = 4;
-			} else {
 				HRES = 2;
+			} else {
+				HRES = 0;
 			}
 
 		} else {
