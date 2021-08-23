@@ -1230,10 +1230,13 @@ static void rewrite_end_of_block(void *sptr) {
 static struct machine_bp bp_list_fast[] = {
 	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
 	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
+	BP_COCO3_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
+	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 };
 
 // Need to enable these two aspects of fast loading if tape padding turned on
@@ -1242,8 +1245,10 @@ static struct machine_bp bp_list_fast[] = {
 static struct machine_bp bp_list_pad[] = {
 	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
 	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
+	BP_COCO3_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 };
 
 // Intercepting CBIN for fast loading isn't compatible with tape-rewriting, so
@@ -1252,6 +1257,7 @@ static struct machine_bp bp_list_pad[] = {
 static struct machine_bp bp_list_fast_cbin[] = {
 	BP_DRAGON_ROM(.address = 0xbdad, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_COCO_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
+	BP_COCO3_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 };
 
 
@@ -1261,12 +1267,16 @@ static struct machine_bp bp_list_fast_cbin[] = {
 static struct machine_bp bp_list_rewrite[] = {
 	BP_DRAGON_ROM(.address = 0xb94d, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
 	BP_COCO_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
+	BP_COCO3_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbdac, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
 	BP_COCO_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
+	BP_COCO3_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbdeb, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
 	BP_COCO_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
+	BP_COCO3_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
 	BP_DRAGON_ROM(.address = 0xb97e, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
 	BP_COCO_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
+	BP_COCO3_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
 };
 
 static void set_breakpoints(struct tape_interface_private *tip) {

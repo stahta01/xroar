@@ -65,6 +65,7 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 };
 

@@ -120,6 +120,8 @@ struct machine_bp {
 	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas12" }
 #define BP_COCO_BAS13_ROM(...) \
 	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas13" }
+#define BP_COCO3_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_EXT, .cond_crc_extbas = "@coco3" }
 #define BP_MX1600_BAS_ROM(...) \
 	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
 #define BP_COCO_ROM(...) \
