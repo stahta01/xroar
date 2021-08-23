@@ -135,7 +135,8 @@ static void coco3_config_complete(struct machine_config *mc) {
 		mc->vdg_type = VDG_GIME_1986;
 	if (mc->vdg_type != VDG_GIME_1986 && mc->vdg_type != VDG_GIME_1987)
 		mc->vdg_type = VDG_GIME_1986;
-	/* RAM > 128K? */
+	if (mc->ram != 128 && mc->ram != 512)
+		mc->ram = 128;
 	mc->keymap = dkbd_layout_coco3;
 	/* Now find which ROMs we're actually going to use */
 	if (!mc->noextbas && !mc->extbas_rom) {
@@ -368,6 +369,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		mcc3->ram_mask = 0x7ffff;
 		break;
 	default:
+	case 128:
 		mcc3->ram_size = 128 * 1024;
 		mcc3->ram_mask = 0x1ffff;
 		break;
