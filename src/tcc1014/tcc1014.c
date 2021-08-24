@@ -698,8 +698,8 @@ static void render_scanline(struct TCC1014_private *gime) {
 	uint8_t *pixel = gime->pixel_data + gime->beam_pos;
 
 	while (gime->lborder_remaining > 0) {
-		*(pixel++) = encode_pixel(gime, gime->palette_reg[gime->border_colour]);
-		*(pixel++) = encode_pixel(gime, gime->palette_reg[gime->border_colour]);
+		*(pixel++) = encode_pixel(gime, gime->border_colour);
+		*(pixel++) = encode_pixel(gime, gime->border_colour);
 		gime->beam_pos += 2;
 		gime->lborder_remaining -= 2;
 		if (gime->beam_pos >= beam_to)
@@ -911,8 +911,8 @@ static void render_scanline(struct TCC1014_private *gime) {
 		if (gime->beam_pos == TCC1014_RIGHT_BORDER_START) {
 			gime->text_border_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
 		}
-		*(pixel++) = encode_pixel(gime, gime->palette_reg[gime->border_colour]);
-		*(pixel++) = encode_pixel(gime, gime->palette_reg[gime->border_colour]);
+		*(pixel++) = encode_pixel(gime, gime->border_colour);
+		*(pixel++) = encode_pixel(gime, gime->border_colour);
 		gime->beam_pos += 2;
 		gime->rborder_remaining -= 2;
 		if (gime->beam_pos >= beam_to)
@@ -930,7 +930,7 @@ static void render_scanline(struct TCC1014_private *gime) {
 
 static void clear_line(struct TCC1014_private *gime, uint8_t colour) {
 	for (int i = TCC1014_LEFT_BORDER_START; i < TCC1014_RIGHT_BORDER_END; i++) {
-		gime->pixel_data[i] = encode_pixel(gime, gime->palette_reg[colour]);
+		gime->pixel_data[i] = encode_pixel(gime, colour);
 	}
 }
 
@@ -1006,12 +1006,12 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 			gime->render_mode = !gime->SnA ? TCC1014_RENDER_RG : TCC1014_RENDER_SG;
 			gime->fg_colour = 13; //!gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
 			gime->bg_colour = 12; //!gime->CSS ? TCC1014_DARK_GREEN : TCC1014_DARK_ORANGE;
-			gime->border_colour = gime->text_border ? gime->text_border_colour : TCC1014_BLACK;
+			gime->border_colour = gime->palette_reg[12];
 		} else {
 			gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
 			gime->fg_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
 			gime->bg_colour = !gime->CSS ? TCC1014_DARK_GREEN : TCC1014_BLACK;
-			gime->border_colour = gime->cg_colours;
+			gime->border_colour = gime->palette_reg[gime->cg_colours];
 		}
 	} else {
 		gime->border_colour = gime->BRDR;
