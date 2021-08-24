@@ -957,8 +957,6 @@ static void pia1b_data_postwrite(void *sptr) {
 	_Bool sbs_enabled = !((mcc3->PIA1->b.out_source ^ mcc3->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = mcc3->PIA1->b.out_source & mcc3->PIA1->b.out_sink & (1<<1);
 	sound_set_sbs(mcc3->snd, sbs_enabled, sbs_level);
-	unsigned vmode = (mcc3->PIA1->b.out_source & mcc3->PIA1->b.out_sink) & 0xf8;
-	tcc1014_update_graphics_mode(mcc3->GIME0, vmode);
 }
 
 static void pia1b_control_postwrite(void *sptr) {

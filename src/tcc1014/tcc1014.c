@@ -265,6 +265,7 @@ static void do_hs_rise(void *);
 static void update_timer(void *);
 static void render_scanline(struct TCC1014_private *gime);
 static void clear_line(struct TCC1014_private *gime, uint8_t colour);
+static void tcc1014_update_graphics_mode(struct TCC1014_private *gime);
 
 #define SET_INTERRUPT(g,v) do { \
 		(g)->irq_state |= ((v) & (g)->registers[2]); \
@@ -315,7 +316,7 @@ static void update_from_sam_register(struct TCC1014_private *gime) {
 	gime->R1 = gime->SAM_register & 0x1000;
 	gime->SAM_F = (gime->SAM_register >> 3) & 0x7f;
 	gime->SAM_V = gime->SAM_register & 0x7;
-	tcc1014_update_graphics_mode(&gime->public, gime->vmode);
+	tcc1014_update_graphics_mode(gime);
 }
 
 void tcc1014_reset(struct TCC1014 *gimep) {
@@ -332,9 +333,10 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	gime->scanline = 0;
 	gime->row = 0;
 	gime->scanline_start = event_current_tick;
+	gime->vmode = 0;
 	gime->hs_fall_event.at_tick = event_current_tick + TCC1014_LINE_DURATION;
 	event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
-	tcc1014_update_graphics_mode(&gime->public, 0);
+	tcc1014_update_graphics_mode(gime);
 	gime->vram_bit = 0;
 	gime->lborder_remaining = gime->pLB;
 	gime->vram_remaining = gime->is_32byte ? 32 : 16;
@@ -378,6 +380,11 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	} else if (A < 0xff40) {
 		gimep->S = 2;
+		if (A == 0xff22 && !RnW) {
+			// Special: GIME records writes to $FF22
+			gime->vmode = *gimep->CPUD & 0xf8;
+			tcc1014_update_graphics_mode(gime);
+		}
 
 	} else if (A < 0xff60) {
 		if (gime->MC2 || A >= 0xff50) {
@@ -475,7 +482,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->MC2 = val & 0x04;
 		gime->MC1 = val & 0x02;
 		gime->MC0 = val & 0x01;
-		tcc1014_update_graphics_mode(&gime->public, gime->vmode);
+		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 1:
@@ -519,12 +526,12 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->lAA = VRES_LPF_lAA[gime->LPF];
 		gime->lTB = VRES_LPF_lTB[gime->LPF];
 		gime->pLB = VRES_HRES_pLB[gime->HRES & 1];
-		tcc1014_update_graphics_mode(&gime->public, gime->vmode);
+		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 0xa:
 		gime->BRDR = val;
-		tcc1014_update_graphics_mode(&gime->public, gime->vmode);
+		tcc1014_update_graphics_mode(gime);
 		break;
 
 	case 0xc:
@@ -546,7 +553,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->HVEN = val & 0x80;
 		gime->X = (val & 0x7f) << 1;
 		LOG_DEBUG(3, "GIME HOFF: HVEN=%d X=%02x\n", gime->HVEN, gime->X);
-		tcc1014_update_graphics_mode(&gime->public, gime->vmode);
+		tcc1014_update_graphics_mode(gime);
 		break;
 	}
 }
@@ -927,17 +934,15 @@ void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool invert) {
 	gime->inverted_text = invert;
 }
 
-void tcc1014_update_graphics_mode(struct TCC1014 *gimep, unsigned mode) {
-	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	/* Render scanline so far before changing modes */
 	if (gime->frame == 0 && gime->vstate == tcc1014_vstate_active_area) {
 		render_scanline(gime);
 	}
 
-	gime->vmode = mode;
-	gime->GnA = mode & 0x80;
-	gime->CSS = mode & 0x08;
-	gime->GM = (mode >> 4) & 7;
+	gime->GnA = gime->vmode & 0x80;
+	gime->CSS = gime->vmode & 0x08;
+	gime->GM = (gime->vmode >> 4) & 7;
 
 	if (gime->COCO) {
 		gime->nTB = 25;

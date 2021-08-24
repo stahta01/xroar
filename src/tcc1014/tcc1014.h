@@ -117,6 +117,4 @@ void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val);
 void tcc1014_set_palette(struct TCC1014 *gimep, const struct ntsc_palette *np);
 void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool);
 
-void tcc1014_update_graphics_mode(struct TCC1014 *gimep, unsigned mode);
-
 #endif
