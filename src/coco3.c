@@ -304,6 +304,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 
 	// Keyboard interface
 	mcc3->keyboard_interface = keyboard_interface_new(m);
+	mcc3->keyboard_interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
 
 	// Tape interface
 	mcc3->tape_interface = ti;
