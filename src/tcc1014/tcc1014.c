@@ -218,6 +218,7 @@ struct TCC1014_private {
 	int vram_bit;
 	enum vdg_render_mode render_mode;
 	unsigned pal_padding;
+	_Bool blink;
 
 	/* Unsafe warning: pixel_data[] *may* need to be 16 elements longer
 	 * than a full scanline.  16 is the maximum number of elements rendered
@@ -466,6 +467,7 @@ static void update_timer(void *sptr) {
 		gime->timer_tick_base = event_current_tick >> 2;
 	}
 	if (gime->timer_counter <= 0) {
+		gime->blink = !gime->blink;
 		schedule_timer(gime);
 		SET_INTERRUPT(gime, 0x20);
 	}
@@ -613,8 +615,10 @@ static void do_hs_fall(void *sptr) {
 	gime->lborder_remaining = gime->pLB;
 	if (gime->COCO) {
 		gime->vram_remaining = gime->is_32byte ? 32 : 16;
-	} else {
+	} else if (gime->BP) {
 		gime->vram_remaining = VRES_HRES_BPR[gime->HRES];
+	} else {
+		gime->vram_remaining = VRES_HRES_BPR_TEXT[gime->HRES];
 	}
 	gime->rborder_remaining = TCC1014_tRB;
 	gime->scanline++;
@@ -753,8 +757,19 @@ static void render_scanline(struct TCC1014_private *gime) {
 					uint8_t attr = fetch_byte_vram(gime);
 					gime->attr_blink = attr & 0x80;
 					gime->attr_undln = attr & 0x40;
-					gime->attr_fgnd = (attr >> 3) & 7;
+					gime->attr_fgnd = 8 | ((attr >> 3) & 7);
 					gime->attr_bgnd = attr & 7;
+					if ((attr & 0x80) && gime->blink)
+						gime->attr_fgnd = gime->attr_bgnd;
+					int c = gime->vram_g_data & 0x3f;
+					if (c < 0x20 && gime->GM0)
+						c |= 0x40;
+					gime->vram_g_data = font_gime[c*12+gime->row+1];
+					if (gime->attr_undln && (gime->row+1) == gime->LPR)
+						gime->vram_g_data = 0xff;
+					gime->render_mode = TCC1014_RENDER_RG;
+					gime->fg_colour = 13;
+					gime->bg_colour = 12;
 				}
 			}
 		}
@@ -815,17 +830,17 @@ static void render_scanline(struct TCC1014_private *gime) {
 				}
 
 			} else {
-				HRES = VRES_HRES_BPR_TEXT[gime->HRES];
+				HRES = (gime->HRES & 4) ? 4 : 2;
 				if (gime->CRES & 1) {
 					c0 = gime->palette_reg[(vdata&0x80)?gime->attr_fgnd:gime->attr_bgnd];
 					c1 = gime->palette_reg[(vdata&0x40)?gime->attr_fgnd:gime->attr_bgnd];
 					c2 = gime->palette_reg[(vdata&0x20)?gime->attr_fgnd:gime->attr_bgnd];
 					c3 = gime->palette_reg[(vdata&0x10)?gime->attr_fgnd:gime->attr_bgnd];
 				} else {
-					c0 = gime->palette_reg[(vdata>>7)&1];
-					c1 = gime->palette_reg[(vdata>>6)&1];
-					c2 = gime->palette_reg[(vdata>>5)&1];
-					c3 = gime->palette_reg[(vdata>>4)&1];
+					c0 = gime->palette_reg[(vdata&0x80)?gime->fg_colour:gime->bg_colour];
+					c1 = gime->palette_reg[(vdata&0x40)?gime->fg_colour:gime->bg_colour];
+					c2 = gime->palette_reg[(vdata&0x20)?gime->fg_colour:gime->bg_colour];
+					c3 = gime->palette_reg[(vdata&0x10)?gime->fg_colour:gime->bg_colour];
 				}
 			}
 			gime->vram_bit -= 4;
