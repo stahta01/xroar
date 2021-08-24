@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard.
  *
- *  \copyright Copyright 2003-2020 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -161,8 +161,9 @@ void keyboard_unicode_press(struct keyboard_interface *ki, unsigned unicode) {
 		KEYBOARD_RELEASE_SHIFT(ki);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
 		KEYBOARD_PRESS_CLEAR(ki);
-	keyboard_press(ki, ki->keymap.unicode_to_dkey[unicode].dk_key);
-	return;
+	int s = ki->keymap.unicode_to_dkey[unicode].dk_key;
+	keyboard_press_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	DELEGATE_SAFE_CALL(ki->update);
 }
 
 void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
@@ -174,8 +175,9 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 		KEYBOARD_PRESS_SHIFT(ki);
 	if (ki->keymap.unicode_to_dkey[unicode].dk_mod & DK_MOD_CLEAR)
 		KEYBOARD_RELEASE_CLEAR(ki);
-	keyboard_release(ki, ki->keymap.unicode_to_dkey[unicode].dk_key);
-	return;
+	int s = ki->keymap.unicode_to_dkey[unicode].dk_key;
+	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	DELEGATE_SAFE_CALL(ki->update);
 }
 
 static void type_command(void *sptr) {

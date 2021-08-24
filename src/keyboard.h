@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard.
  *
- *  \copyright Copyright 2003-2016 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -19,8 +19,10 @@
 #ifndef XROAR_KEYBOARD_H_
 #define XROAR_KEYBOARD_H_
 
-#include "dkbd.h"
+#include "delegate.h"
 #include "sds.h"
+
+#include "dkbd.h"
 
 struct machine;
 
@@ -49,6 +51,11 @@ struct keyboard_interface {
 
 	unsigned keyboard_column[9];
 	unsigned keyboard_row[9];
+
+	// As the keyboard state is likely updated directly by keyboard
+	// modules, machines may wish to be notified of changes.
+
+	DELEGATE_T0(void) update;
 };
 
 /* Press or release a key at the the matrix position (col,row). */
@@ -67,10 +74,12 @@ inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int 
 
 inline void keyboard_press(struct keyboard_interface *ki, int s) {
 	keyboard_press_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	DELEGATE_SAFE_CALL(ki->update);
 }
 
 inline void keyboard_release(struct keyboard_interface *ki, int s) {
 	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
+	DELEGATE_SAFE_CALL(ki->update);
 }
 
 /* Shift and clear keys are at the same matrix point in both Dragon & CoCo
