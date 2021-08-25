@@ -645,14 +645,12 @@ static void do_hs_fall(void *sptr) {
 	} else switch (gime->vstate) {
 	case tcc1014_vstate_vblank:
 		if (gime->lcount >= TCC1014_TOP_BORDER_START) {
-			// clear output line to border colour
-			// XXX GIME may be more dynamic than this
-			clear_line(gime, gime->border_colour);
 			gime->lcount = 0;
 			gime->vstate = tcc1014_vstate_top_border;
 		}
 		break;
 	case tcc1014_vstate_top_border:
+		clear_line(gime, gime->border_colour);
 		if (gime->lcount >= gime->nTB) {
 			gime->row = gime->COCO ? 0 : gime->VSC;
 			gime->lcount = 0;
@@ -661,15 +659,15 @@ static void do_hs_fall(void *sptr) {
 		break;
 	case tcc1014_vstate_active_area:
 		if (gime->lcount >= gime->nAA) {
-			// clear output line to border colour
-			// XXX GIME may be more dynamic than this
-			clear_line(gime, gime->border_colour);
 			gime->lcount = 0;
 			gime->vstate = tcc1014_vstate_bottom_border;
 			// FS falling edge
 			DELEGATE_CALL(gime->public.signal_fs, 0);
 			SET_INTERRUPT(gime, 0x08);
 		}
+		break;
+	case tcc1014_vstate_bottom_border:
+		clear_line(gime, gime->border_colour);
 		break;
 	default:
 		break;
