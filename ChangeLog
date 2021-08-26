@@ -1,6 +1,7 @@
 Version 0.38, unreleased
 
  * UNFINISHED, UNSUPPORTED CoCo 3 support.  Much known not to work.
+ * Fix MPI FIRQ handling [Paul Fiscarelli]
 
 Version 0.37, Sat Aug 14 2020
 

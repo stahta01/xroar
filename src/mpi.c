@@ -260,6 +260,7 @@ static void select_slot(struct cart *c, unsigned D) {
 		debug_cart_name(m->slot[m->p2_route].cart);
 		LOG_PRINT("\n");
 	}
+	DELEGATE_CALL(m->cart.signal_firq, m->firq_state & (1 << m->cts_route));
 }
 
 void mpi_switch_slot(struct cart *c, unsigned slot) {
@@ -348,6 +349,8 @@ static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
+// FIRQ line is treated differently.
+
 static void set_firq(void *sptr, _Bool value) {
 	struct mpi_slot *ms = sptr;
 	struct mpi *m = ms->mpi;
@@ -357,7 +360,7 @@ static void set_firq(void *sptr, _Bool value) {
 	} else {
 		m->firq_state &= ~firq_bit;
 	}
-	DELEGATE_CALL(m->cart.signal_firq, m->firq_state);
+	DELEGATE_CALL(m->cart.signal_firq, m->firq_state & (1 << m->cts_route));
 }
 
 static void set_nmi(void *sptr, _Bool value) {
