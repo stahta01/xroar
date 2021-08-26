@@ -78,6 +78,7 @@ struct TCC1014_private {
 	struct event timer_event;
 	event_ticks timer_tick_base;
 	int timer_counter;
+	int timer_offset;  // 2 for 1986 GIME, 1 for 1987 GIME
 
 	/* Data */
 	uint8_t vram_g_data;
@@ -289,6 +290,8 @@ struct TCC1014 *tcc1014_new(int type) {
 	gime->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	gime->public.fetch_vram = DELEGATE_DEFAULT1(uint8, uint32);
 
+	gime->timer_offset = (type == VDG_GIME_1986) ? 2 : 1;
+
 	gime->line_base = 0x60400;
 	gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	gime->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
@@ -449,7 +452,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 static void schedule_timer(struct TCC1014_private *gime) {
 	event_dequeue(&gime->timer_event);
 	unsigned timer_register = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-	gime->timer_counter += timer_register + 1;
+	gime->timer_counter += timer_register + gime->timer_offset;
 	gime->timer_tick_base = event_current_tick >> 2;
 	if (gime->registers[1] & 0x20) {
 		// TINS=1: 3.58MHz
