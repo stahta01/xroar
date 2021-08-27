@@ -50,6 +50,7 @@
         <menuitem action='keymap_dragon'/>
         <menuitem action='keymap_dragon200e'/>
         <menuitem action='keymap_coco'/>
+        <menuitem action='keymap_coco3'/>
       </menu>
       <separator/>
       <menu name='JoyRightMenu' action='JoyRightMenuAction'>
