@@ -31,6 +31,7 @@
 #define DELEGATE_S1(T,T0) struct { T (*func)(void *, T0); void *sptr; }
 #define DELEGATE_S2(T,T0,T1) struct { T (*func)(void *, T0, T1); void *sptr; }
 #define DELEGATE_S3(T,T0,T1,T2) struct { T (*func)(void *, T0, T1, T2); void *sptr; }
+#define DELEGATE_S4(T,T0,T1,T2,T3) struct { T (*func)(void *, T0, T1, T2, T3); void *sptr; }
 
 /* Type name for delegates. */
 
@@ -38,6 +39,7 @@
 #define DELEGATE_T1(N,N0) delegate_##N##_##N0
 #define DELEGATE_T2(N,N0,N1) delegate_##N##_##N0##_##N1
 #define DELEGATE_T3(N,N0,N1,N2) delegate_##N##_##N0##_##N1##_##N2
+#define DELEGATE_T4(N,N0,N1,N2,N3) delegate_##N##_##N0##_##N1##_##N2##_##N3
 
 /* Define a set of delegate types. */
 
@@ -76,6 +78,7 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_AS1(N,N0,f,s) (DELEGATE_T1(N,N0))DELEGATE_INIT(f,s)
 #define DELEGATE_AS2(N,N0,N1,f,s) (DELEGATE_T2(N,N0,N1))DELEGATE_INIT(f,s)
 #define DELEGATE_AS3(N,N0,N1,N2,f,s) (DELEGATE_T3(N,N0,N1,N2))DELEGATE_INIT(f,s)
+#define DELEGATE_AS4(N,N0,N1,N2,N3,f,s) (DELEGATE_T4(N,N0,N1,N2,N3))DELEGATE_INIT(f,s)
 
 /* Delegate default function names. */
 
@@ -83,6 +86,7 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_DEFAULT_F1(N,N0) delegate_##N##_default_##N0
 #define DELEGATE_DEFAULT_F2(N,N0,N1) delegate_##N##_default_##N0##_##N1
 #define DELEGATE_DEFAULT_F3(N,N0,N1,N2) delegate_##N##_default_##N0##_##N1##_##N2
+#define DELEGATE_DEFAULT_F4(N,N0,N1,N2,N3) delegate_##N##_default_##N0##_##N1##_##N2##_##N3
 
 /* Default no-op functions for defined delegate types. */
 
@@ -90,11 +94,13 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_DEF_PROTO1(T,N,T0,N0) T DELEGATE_DEFAULT_F1(N,N0)(void *, T0)
 #define DELEGATE_DEF_PROTO2(T,N,T0,N0,T1,N1) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *, T0, T1)
 #define DELEGATE_DEF_PROTO3(T,N,T0,N0,T1,N1,T2,N2) T DELEGATE_DEFAULT_F3(N,N0,N1,N2)(void *, T0, T1, T2)
+#define DELEGATE_DEF_PROTO4(T,N,T0,N0,T1,N1,T2,N2,T3,N3) T DELEGATE_DEFAULT_F4(N,N0,N1,N2,N3)(void *, T0, T1, T2, T3)
 
 #define DELEGATE_DEF_FUNC0(T,N,R) T DELEGATE_DEFAULT_F0(N)(void *sptr) { (void)sptr; return R; }
 #define DELEGATE_DEF_FUNC1(T,N,T0,N0,R) T DELEGATE_DEFAULT_F1(N,N0)(void *sptr, T0 v0) { (void)sptr; (void)v0; return R; }
 #define DELEGATE_DEF_FUNC2(T,N,T0,N0,T1,N1,R) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *sptr, T0 v0, T1 v1) { (void)sptr; (void)v0; (void)v1; return R; }
 #define DELEGATE_DEF_FUNC3(T,N,T0,N0,T1,N1,T2,N2,R) T DELEGATE_DEFAULT_F3(N,N0,N1,N2)(void *sptr, T0 v0, T1 v1, T2 v2) { (void)sptr; (void)v0; (void)v1; (void)v2; return R; }
+#define DELEGATE_DEF_FUNC4(T,N,T0,N0,T1,N1,T2,N2,T3,N3,R) T DELEGATE_DEFAULT_F4(N,N0,N1,N2,N3)(void *sptr, T0 v0, T1 v1, T2 v2, T3 v3) { (void)sptr; (void)v0; (void)v1; (void)v2; (void)v3; return R; }
 
 DELEGATE_DEF_PROTO0(void, void);
 DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
@@ -127,6 +133,7 @@ DELEGATE_DEF_PROTO3(float, float, uint32_t, uint32, int, int, float *, floatp);
 #define DELEGATE_DEFAULT1(N,N0) DELEGATE_AS1(N, N0, DELEGATE_DEFAULT_F1(N, N0), NULL)
 #define DELEGATE_DEFAULT2(N,N0,N1) DELEGATE_AS2(N, N0, N1, DELEGATE_DEFAULT_F2(N, N0, N1), NULL)
 #define DELEGATE_DEFAULT3(N,N0,N1,N2) DELEGATE_AS3(N, N0, N1, N2, DELEGATE_DEFAULT_F3(N, N0, N1, N2), NULL)
+#define DELEGATE_DEFAULT4(N,N0,N1,N2,N3) DELEGATE_AS4(N, N0, N1, N2, N3, DELEGATE_DEFAULT_F4(N, N0, N1, N2, N3), NULL)
 
 /* Calling interface. */
 
