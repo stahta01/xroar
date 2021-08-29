@@ -42,9 +42,7 @@ void int_split(const int *buffer, int nelems, int *lowmean, int *highmean);
 // Clamp integer value to 8-bit unsigned range
 
 inline int int_clamp_u8(int v) {
-	if (v < 0) return 0;
-	if (v > 255) return 255;
-	return v;
+	return (v < 0) ? 0 : ((v > 255) ? 255 : v);
 }
 
 #endif
