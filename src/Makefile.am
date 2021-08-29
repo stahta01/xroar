@@ -21,6 +21,7 @@ xroar_SOURCES = \
 	breakpoint.c breakpoint.h \
 	cart.c cart.h \
 	coco3.c \
+	colourspace.c colourspace.h \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
