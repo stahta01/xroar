@@ -826,7 +826,10 @@ static void make_ascii(uint16_t *p, const char *t, int len)
 {
   int i;
   char *d = (char *)p;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
   strncpy(d, t, len);
+#pragma GCC diagnostic pop
 
   for (i = 0; i < len; i += 2) {
     char c = *d;
