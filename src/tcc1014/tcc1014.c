@@ -731,7 +731,7 @@ static void render_scanline(struct TCC1014_private *gime) {
 					_Bool INV = vdata & 0x40;
 					INV ^= gime->inverse_text;
 					int c = gime->vram_g_data & 0x3f;
-					if (c < 0x20 && gime->GM0)
+					if (c < 0x20)
 						c |= 0x40;
 					gime->vram_g_data = font_gime[c*12+gime->row];
 					if (INV ^ gime->inverted_text)
@@ -770,9 +770,9 @@ static void render_scanline(struct TCC1014_private *gime) {
 					gime->attr_bgnd = attr & 7;
 					if ((attr & 0x80) && gime->blink)
 						gime->attr_fgnd = gime->attr_bgnd;
-					int c = gime->vram_g_data & 0x3f;
-					if (c < 0x20 && gime->GM0)
-						c |= 0x40;
+					int c = gime->vram_g_data & 0x7f;
+					//if (c < 0x20)
+						//c |= 0x40;
 					gime->vram_g_data = font_gime[c*12+gime->row+1];
 					if (gime->attr_undln && (gime->row+1) == gime->LPR)
 						gime->vram_g_data = 0xff;
