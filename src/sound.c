@@ -94,6 +94,9 @@ struct sound_interface_private {
 	float mux_gain;
 	float bus_offset;
 
+	// Last level seen on audio bus.
+	float bus_level;
+
 	// Overall gain to output buffer.  Computed by set_gain() or
 	// set_volume().  Defaults to -3 dBFS.
 	float gain;
@@ -412,12 +415,14 @@ void sound_update(struct sound_interface *sndp) {
 			unsigned sindex = snd->current.sbs_level ? 2 : 1;
 			snd->mux_gain = 0.0;
 			snd->bus_offset = source_offset_v[SOURCE_SINGLE_BIT][sindex];
+		} else {
+			snd->bus_offset = snd->bus_level;
 		}
 	}
 
 	// Feed back bus level to single bit pin.
-	float bus_level = (mux_output_raw * snd->mux_gain) + snd->bus_offset;
-	DELEGATE_SAFE_CALL(snd->public.sbs_feedback, snd->current.sbs_enabled || bus_level >= 1.414);
+	snd->bus_level = (mux_output_raw * snd->mux_gain) + snd->bus_offset;
+	DELEGATE_SAFE_CALL(snd->public.sbs_feedback, snd->current.sbs_enabled || snd->bus_level >= 1.414);
 
 }
 
