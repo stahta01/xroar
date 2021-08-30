@@ -57,13 +57,6 @@ enum tcc1014_vstate {
 	tcc1014_vstate_bottom_border,
 };
 
-#define REG_INIT0 (0x00)
-#define REG_INIT1 (0x01)
-#define REG_IRQENR (0x02)
-#define REG_FIRQENR (0x03)
-#define REG_TIMER_MSB (0x04)
-#define REG_TIMER_LSB (0x05)
-
 struct TCC1014_private {
 	struct TCC1014 public;
 
@@ -123,6 +116,7 @@ struct TCC1014_private {
 	_Bool MC0;  // ROM map control
 
 	// $FF91: Initialisation register 1 - INIT1
+	_Bool TINS;  // Timer source: 1=3.58MHz, 0=15.7kHz
 	unsigned TR;  // MMU task select 0=task 1, 8=task 2
 
 	// $FF98: Video mode register - VMODE
@@ -450,27 +444,27 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 }
 
 static void schedule_timer(struct TCC1014_private *gime) {
-	event_dequeue(&gime->timer_event);
-	unsigned timer_register = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-	gime->timer_counter += timer_register + gime->timer_offset;
-	gime->timer_tick_base = event_current_tick >> 2;
-	if (gime->registers[1] & 0x20) {
+	if (gime->TINS && gime->timer_counter > 0) {
 		// TINS=1: 3.58MHz
-		gime->timer_event.at_tick = (event_current_tick & ~3) + (gime->timer_counter << 2);
+		gime->timer_tick_base = event_current_tick;
+		gime->timer_event.at_tick = event_current_tick + (gime->timer_counter << 2);
 		event_queue(&MACHINE_EVENT_LIST, &gime->timer_event);
+	} else {
+		event_dequeue(&gime->timer_event);
 	}
 }
 
 static void update_timer(void *sptr) {
 	struct TCC1014_private *gime = sptr;
-	if (gime->registers[1] & 0x20) {
+	if (gime->TINS) {
 		// TINS=1: 3.58MHz
-		int elapsed = (event_current_tick >> 2) - gime->timer_tick_base;
+		int elapsed = (event_current_tick - gime->timer_tick_base) >> 2;
 		gime->timer_counter -= elapsed;
-		gime->timer_tick_base = event_current_tick >> 2;
 	}
 	if (gime->timer_counter <= 0) {
 		gime->blink = !gime->blink;
+		unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
+		gime->timer_counter = timer_reset + gime->timer_offset;
 		schedule_timer(gime);
 		SET_INTERRUPT(gime, 0x20);
 	}
@@ -492,8 +486,11 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		break;
 
 	case 1:
+		update_timer(gime);
+		gime->TINS = val & 0x20;
 		gime->TR = (val & 0x01) ? 8 : 0;
 		LOG_DEBUG(3, "GIME INIT1: MTYP=%d TINS=%d TR=%d\n", (val>>6)&1, (val>>5)&1, val&1);
+		schedule_timer(gime);
 		break;
 
 	case 2:
@@ -505,9 +502,12 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		break;
 
 	case 4:
-		// Timer MSB
-		gime->timer_counter = 0;
-		schedule_timer(gime);
+		{
+			// Timer MSB
+			unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
+			gime->timer_counter = timer_reset + gime->timer_offset;
+			schedule_timer(gime);
+		}
 		LOG_DEBUG(3, "GIME TMRH:  TIMER=%d\n", (val<<8)|gime->registers[5]);
 		break;
 
@@ -602,10 +602,12 @@ static void do_hs_fall(void *sptr) {
 	ntsc_reset_phase();
 
 	SET_INTERRUPT(gime, 0x10);
-	if (!(gime->registers[1] & 0x20)) {
+	if (!gime->TINS && gime->timer_counter > 0) {
 		// TINS=0: 15.7kHz
 		gime->timer_counter--;
-		update_timer(gime);
+		if (gime->timer_counter <= 0) {
+			update_timer(gime);
+		}
 	}
 
 	gime->scanline_start = gime->hs_fall_event.at_tick;
