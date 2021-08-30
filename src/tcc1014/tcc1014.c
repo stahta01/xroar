@@ -417,6 +417,8 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	} else if (A < 0xffc0) {
 		if (!RnW) {
 			gime->palette_reg[A & 15] = *gimep->CPUD & 0x3f;
+		} else {
+			*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->palette_reg[A & 15];
 		}
 
 	} else if (A < 0xffe0) {
