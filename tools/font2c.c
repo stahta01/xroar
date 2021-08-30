@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
 			pad_top = 1;
 		} else if (0 == strcmp(argv[i], "--gime")) {
 			output_mode = GIME;
-			nchars = 96;
+			nchars = 128;
 			pad_top = 1;
 		} else if (0 == strcmp(argv[i], "--array") && i+1 < argc) {
 			array_name = argv[++i];
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: %s: %s\n", argv0, argv[i], IMG_GetError());
 		exit(EXIT_FAILURE);
 	}
-	int fheight = in->h / 6;
+	int fheight = in->h / ((output_mode == GIME) ? 8 : 6);
 	if (in->w != 128 || fheight < 7) {
 		fprintf(stderr, "%s: %s: Wrong resolution for a font image file\n", argv0, argv[i]);
 		exit(EXIT_FAILURE);
@@ -131,13 +131,8 @@ int main(int argc, char **argv) {
 			}
 			break;
 		case GIME:
-			if (i < 64) {
-				c = i ^ 0x20;
-				invert = 0;
-			} else if (i < 96) {
-				c = i;
-				invert = 0xff;
-			}
+			c = i & 0x7f;
+			invert = 0;
 			break;
 		}
 		int xbase = (c & 15) * 8;
