@@ -84,7 +84,8 @@ struct TCC1014_private {
 	// XXX there may be a need for latch propagation as with the VDG, but
 	// for now assume that VDG-compatible modes are simulated in a basic
 	// fashion.
-	unsigned vmode;
+	_Bool vmode_direction;  // snooped direction register
+	unsigned vmode;  // snooped data register (mode bits only)
 	_Bool GnA;
 	unsigned GM;
 	_Bool GM0;
@@ -379,9 +380,14 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	} else if (A < 0xff40) {
 		gimep->S = 2;
 		if (A == 0xff22 && !RnW) {
-			// Special: GIME records writes to $FF22
-			gime->vmode = *gimep->CPUD & 0xf8;
-			tcc1014_update_graphics_mode(gime);
+			// GIME snoops writes to $FF22
+			if (gime->vmode_direction) {
+				gime->vmode = *gimep->CPUD & 0xf8;
+				tcc1014_update_graphics_mode(gime);
+			}
+		} else if (A == 0xff23 && !RnW) {
+			// GIME snoops the data direction register too
+			gime->vmode_direction = *gimep->CPUD & 0x04;
 		}
 
 	} else if (A < 0xff60) {
