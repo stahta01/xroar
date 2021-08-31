@@ -642,6 +642,7 @@ static void do_hs_fall(void *sptr) {
 	if (gime->scanline == gime->field_duration - 6) {
 		// FS falling edge
 		DELEGATE_CALL(gime->public.signal_fs, 0);
+		SET_INTERRUPT(gime, 0x08);
 		// clear output line to...  well should be vsync signal, but use black
 		clear_line(gime, TCC1014_BLACK);
 	} else if (gime->scanline == gime->field_duration) {
@@ -674,9 +675,6 @@ static void do_hs_fall(void *sptr) {
 		if (gime->lcount >= gime->nAA) {
 			gime->lcount = 0;
 			gime->vstate = tcc1014_vstate_bottom_border;
-			// FS falling edge
-			DELEGATE_CALL(gime->public.signal_fs, 0);
-			SET_INTERRUPT(gime, 0x08);
 		}
 		break;
 	case tcc1014_vstate_bottom_border:
