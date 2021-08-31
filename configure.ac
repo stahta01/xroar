@@ -466,6 +466,31 @@ int main(int argc, char **argv) { (void)argc; (void)argv; SDL_Init(0); return 0;
 AM_CONDITIONAL([UI_SDL2], [test -n "$have_sdl2"])
 AM_COND_IF([UI_SDL2], [AC_DEFINE([HAVE_SDL2], 1, [Have SDL2])])
 
+### SDL_image 2
+
+AS_IF([test -n "$SDL_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		SDL2_IMAGE_LIBS="-lSDL2_image"
+		CFLAGS="$CFLAGS $SDL_CFLAGS"
+		LIBS="$LIBS $SDL_LIBS $SDL2_IMAGE_LIBS"
+		AC_MSG_CHECKING([if SDL2_image is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <SDL.h>
+#include <SDL_image.h>
+int main(int argc, char **argv) { (void)argc; (void)argv; IMG_Load(""); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_sdl2_image=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([SDL2_IMAGE], [test -n "$have_sdl2_image"])
+AM_COND_IF([SDL2_IMAGE], [AC_DEFINE([HAVE_SDL2_IMAGE], 1, [Have SDL2_image])])
+AC_SUBST(SDL2_IMAGE_LIBS)
+
 ### Mac OS X Cocoa
 
 unset have_cocoa
