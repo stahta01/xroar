@@ -202,12 +202,12 @@ static void pia0a_data_preread(void *sptr);
 #define pia0a_control_postwrite update_sound_mux_source
 #define pia0b_data_postwrite NULL
 #define pia0b_control_postwrite update_sound_mux_source
-static void pia0b_data_preread_coco3(void *sptr);
+#define pia0b_data_preread keyboard_update
 
 #define pia1a_data_preread NULL
 static void pia1a_data_postwrite(void *sptr);
 static void pia1a_control_postwrite(void *sptr);
-static void pia1b_data_preread_coco3(void *sptr);
+#define pia1b_data_preread NULL
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
@@ -317,7 +317,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, mcc3);
 	mcc3->PIA0->a.data_postwrite = DELEGATE_AS0(void, pia0a_data_postwrite, mcc3);
 	mcc3->PIA0->a.control_postwrite = DELEGATE_AS0(void, pia0a_control_postwrite, mcc3);
-	mcc3->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco3, mcc3);
+	mcc3->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, mcc3);
 	mcc3->PIA0->b.data_postwrite = DELEGATE_AS0(void, pia0b_data_postwrite, mcc3);
 	mcc3->PIA0->b.control_postwrite = DELEGATE_AS0(void, pia0b_control_postwrite, mcc3);
 	mcc3->PIA1 = mc6821_new();
@@ -325,7 +325,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->PIA1->a.data_preread = DELEGATE_AS0(void, pia1a_data_preread, mcc3);
 	mcc3->PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite, mcc3);
 	mcc3->PIA1->a.control_postwrite = DELEGATE_AS0(void, pia1a_control_postwrite, mcc3);
-	mcc3->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco3, mcc3);
+	mcc3->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread, mcc3);
 	mcc3->PIA1->b.data_postwrite = DELEGATE_AS0(void, pia1b_data_postwrite, mcc3);
 	mcc3->PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, mcc3);
 
@@ -401,12 +401,6 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->PIA1->b.in_source = 0;
 	mcc3->PIA0->a.in_sink = mcc3->PIA0->b.in_sink = 0xff;
 	mcc3->PIA1->a.in_sink = mcc3->PIA1->b.in_sink = 0xff;
-	/* Machine-specific PIA connections */
-	/* 64K CoCo connects PB6 of mcc3->PIA0 to PB2 of mcc3->PIA1->
-	 * Deal with this through a postwrite. */
-	// XXX needed for coco3?
-	mcc3->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco3, mcc3);
-	mcc3->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco3, mcc3);
 
 	keyboard_set_chord_mode(mcc3->keyboard_interface, keyboard_chord_mode_coco_basic);
 
@@ -905,19 +899,6 @@ static void pia0a_data_preread(void *sptr) {
 	joystick_update(sptr);
 }
 
-static void pia0b_data_preread_coco3(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
-	keyboard_update(mcc3);
-	/* PB6 of mcc3->PIA0 is linked to PB2 of mcc3->PIA1 on 64K CoCos */
-	if ((mcc3->PIA1->b.out_source & mcc3->PIA1->b.out_sink) & (1<<2)) {
-		mcc3->PIA0->b.in_source |= (1<<6);
-		mcc3->PIA0->b.in_sink |= (1<<6);
-	} else {
-		mcc3->PIA0->b.in_source &= ~(1<<6);
-		mcc3->PIA0->b.in_sink &= ~(1<<6);
-	}
-}
-
 static void pia1a_data_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
 	sound_set_dac_level(mcc3->snd, (float)(PIA_VALUE_A(mcc3->PIA1) & 0xfc) / 252.);
@@ -927,18 +908,6 @@ static void pia1a_data_postwrite(void *sptr) {
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
 	tape_update_motor(mcc3->tape_interface, mcc3->PIA1->a.control_register & 0x08);
-}
-
-static void pia1b_data_preread_coco3(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
-	/* PB6 of mcc3->PIA0 is linked to PB2 of mcc3->PIA1 on 64K CoCos */
-	if ((mcc3->PIA0->b.out_source & mcc3->PIA0->b.out_sink) & (1<<6)) {
-		mcc3->PIA1->b.in_source |= (1<<2);
-		mcc3->PIA1->b.in_sink |= (1<<2);
-	} else {
-		mcc3->PIA1->b.in_source &= ~(1<<2);
-		mcc3->PIA1->b.in_sink &= ~(1<<2);
-	}
 }
 
 static void pia1b_data_postwrite(void *sptr) {
