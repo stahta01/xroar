@@ -191,7 +191,6 @@ static void gime_hs(void *sptr, _Bool level);
 // static void gime_hs_pal_coco(void *sptr, _Bool level);
 static void gime_fs(void *sptr, _Bool level);
 static void gime_render_line(void *sptr, uint8_t *data, unsigned burst);
-static void printer_ack(void *sptr, _Bool ack);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -340,9 +339,6 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->GIME0->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
 	mcc3->GIME0->render_line = DELEGATE_AS2(void, uint8p, unsigned, gime_render_line, mcc3);
 	tcc1014_set_inverted_text(mcc3->GIME0, mcc3->inverted_text);
-
-	// Printer
-	mcc3->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, mcc3);
 
 	/* Load appropriate ROMs */
 	memset(mcc3->rom0, 0, sizeof(mcc3->rom0));
@@ -926,12 +922,6 @@ static void pia1a_data_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
 	sound_set_dac_level(mcc3->snd, (float)(PIA_VALUE_A(mcc3->PIA1) & 0xfc) / 252.);
 	tape_update_output(mcc3->tape_interface, mcc3->PIA1->a.out_sink & 0xfc);
-	/*
-	if (mcc3->is_dragon) {
-		keyboard_update(mcc3);
-		printer_strobe(mcc3->printer_interface, PIA_VALUE_A(mcc3->PIA1) & 0x02, PIA_VALUE_B(mcc3->PIA0));
-	}
-	*/
 }
 
 static void pia1a_control_postwrite(void *sptr) {
@@ -973,8 +963,8 @@ static void gime_hs(void *sptr, _Bool level) {
 	mc6821_set_cx1(&mcc3->PIA0->a, level);
 }
 
-// PAL CoCos invert HS - which of these is true for coco3?
 /*
+// PAL CoCos 1&2 invert HS - is this true for coco3?  Probably not...
 static void gime_hs_pal_coco(void *sptr, _Bool level) {
 	struct machine_coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA0->a, !level);
@@ -984,7 +974,6 @@ static void gime_hs_pal_coco(void *sptr, _Bool level) {
 static void gime_fs(void *sptr, _Bool level) {
 	struct machine_coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA0->b, level);
-	// sam_vdg_fsync(md->SAM0, level);
 	if (level) {
 		sound_update(mcc3->snd);
 		mcc3->frame--;
@@ -1001,14 +990,6 @@ static void gime_render_line(void *sptr, uint8_t *data, unsigned burst) {
 	struct ntsc_burst *nb = mcc3->ntsc_burst[burst];
 	unsigned phase = 2*mcc3->public.config->cross_colour_phase;
 	DELEGATE_CALL(mcc3->vo->render_scanline, data, nb, phase);
-}
-
-/* Dragon parallel printer line delegate. */
-
-//ACK is active low
-static void printer_ack(void *sptr, _Bool ack) {
-	struct machine_coco3 *mcc3 = sptr;
-	mc6821_set_cx1(&mcc3->PIA1->a, !ack);
 }
 
 /* Sound output can feed back into the single bit sound pin when it's
