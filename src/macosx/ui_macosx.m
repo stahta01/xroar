@@ -2,7 +2,7 @@
  *
  *  \brief Mac OS X user-interface module.
  *
- *  \copyright Copyright 2011-2019 Ciaran Anscomb
+ *  \copyright Copyright 2011-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -668,12 +668,10 @@ static void setup_view_menu(void) {
 	[submenu addItem:item];
 	[item release];
 
-#ifdef WANT_SIMULATED_NTSC
 	item = [[NSMenuItem alloc] initWithTitle:@"Simulated" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_SIMULATED)];
 	[submenu addItem:item];
 	[item release];
-#endif
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];

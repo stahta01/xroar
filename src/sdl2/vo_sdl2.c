@@ -36,11 +36,7 @@
 
 #include "sdl2/common.h"
 
-#ifdef WANT_SIMULATED_NTSC
 #define TEXTURE_WIDTH (640)
-#else
-#define TEXTURE_WIDTH (320)
-#endif
 
 static void *new(void *cfg);
 
@@ -98,7 +94,8 @@ static void *new(void *sptr) {
 	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
 	struct vo_sdl_interface *vosdl = &generic->module;
 	struct vo_interface *vo = &vosdl->public;
-	*generic = (struct vo_generic_interface){0};
+
+	vo_generic_init(generic);
 
 	vosdl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
 	for (int i = 0; i < TEXTURE_WIDTH * 240; i++)
@@ -109,12 +106,13 @@ static void *new(void *sptr) {
 	vosdl->window_h = 480;
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
-	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
+	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
+	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
@@ -138,7 +136,6 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	alloc_colours(vo);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
 	vo->window_w = 640;
@@ -335,7 +332,9 @@ static void destroy_renderer(struct vo_sdl_interface *vosdl) {
 }
 
 static void vo_sdl_free(void *sptr) {
-	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_sdl_interface *vosdl = &generic->module;
+	vo_generic_free(generic);
 	if (vosdl->texture_pixels) {
 		free(vosdl->texture_pixels);
 		vosdl->texture_pixels = NULL;

@@ -107,10 +107,6 @@ struct machine_coco3 {
 	*/
 	_Bool trace;
 
-	// NTSC palettes for GIME
-	struct ntsc_palette *ntsc_palette;
-	struct ntsc_palette *dummy_palette;
-
 	// NTSC colour bursts
 	struct ntsc_burst *ntsc_burst[2];
 
@@ -170,7 +166,6 @@ static _Bool coco3_set_pause(struct machine *m, int state);
 static _Bool coco3_set_inverted_text(struct machine *m, int state);
 static void *coco3_get_component(struct machine *m, const char *cname);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
-static void coco3_set_vo_cmp(struct machine *m, int mode);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
 static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
 
@@ -242,7 +237,6 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	m->set_inverted_text = coco3_set_inverted_text;
 	m->get_component = coco3_get_component;
 	m->get_interface = coco3_get_interface;
-	m->set_vo_cmp = coco3_set_vo_cmp;
 	m->set_frameskip = coco3_set_frameskip;
 	m->set_ratelimit = coco3_set_ratelimit;
 
@@ -256,12 +250,9 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	// GIME
 	mcc3->GIME0 = tcc1014_new(mc->vdg_type);
 	part_add_component(&m->part, (struct part *)mcc3->GIME0, "GIME");
-	tcc1014_set_palette(mcc3->GIME0, mcc3->dummy_palette);
 	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
 	mcc3->GIME0->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
 
-	mcc3->ntsc_palette = ntsc_palette_new();
-	mcc3->dummy_palette = ntsc_palette_new();
 	for (int j = 0; j < 64; j++) {
 		int intensity = (j >> 4) & 3;
 		int phase = j & 15;
@@ -276,8 +267,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 			b_y = 0.5 * sin(hue);
 			r_y = 0.5 * cos(hue);
 		}
-		ntsc_palette_add_ybr(mcc3->ntsc_palette, j, y, b_y, r_y);
-		ntsc_palette_add_direct(mcc3->dummy_palette, j);
+		DELEGATE_CALL(vo->palette_set_ybr, j, y, b_y, r_y);
 	}
 
 	//mcc3->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
@@ -446,8 +436,6 @@ static void coco3_free(struct part *p) {
 	}
 	ntsc_burst_free(mcc3->ntsc_burst[1]);
 	ntsc_burst_free(mcc3->ntsc_burst[0]);
-	ntsc_palette_free(mcc3->dummy_palette);
-	ntsc_palette_free(mcc3->ntsc_palette);
 	free(mcc3->ram);
 }
 
@@ -665,19 +653,6 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 		return update_audio_from_tape;
 	}
 	return NULL;
-}
-
-static void coco3_set_vo_cmp(struct machine *m, int mode) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	switch (mode) {
-	case VO_CMP_PALETTE:
-	default:
-		tcc1014_set_palette(mcc3->GIME0, mcc3->dummy_palette);
-		break;
-	case VO_CMP_SIMULATED:
-		tcc1014_set_palette(mcc3->GIME0, mcc3->ntsc_palette);
-		break;
-	}
 }
 
 static void coco3_set_frameskip(struct machine *m, unsigned fskip) {

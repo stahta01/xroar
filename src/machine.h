@@ -215,7 +215,6 @@ struct machine {
 	_Bool (*set_inverted_text)(struct machine *m, int action);
 	void *(*get_component)(struct machine *m, const char *cname);
 	void *(*get_interface)(struct machine *m, const char *ifname);
-	void (*set_vo_cmp)(struct machine *m, int mode);
 	void (*set_frameskip)(struct machine *m, unsigned fskip);
 	void (*set_ratelimit)(struct machine *m, _Bool ratelimit);
 

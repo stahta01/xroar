@@ -121,10 +121,6 @@ struct machine_dragon {
 	struct keyboard_interface *keyboard_interface;
 	struct printer_interface *printer_interface;
 
-	// NTSC palettes for VDG
-	struct ntsc_palette *ntsc_palette;
-	struct ntsc_palette *dummy_palette;
-
 	// NTSC colour bursts
 	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artifacting)
 	unsigned ntsc_burst_mod;
@@ -256,7 +252,6 @@ static _Bool dragon_set_pause(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
-static void dragon_set_vo_cmp(struct machine *m, int mode);
 static void dragon_set_frameskip(struct machine *m, unsigned fskip);
 static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
 
@@ -332,7 +327,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_component = dragon_get_component;
 	m->get_interface = dragon_get_interface;
-	m->set_vo_cmp = dragon_set_vo_cmp;
 	m->set_frameskip = dragon_set_frameskip;
 	m->set_ratelimit = dragon_set_ratelimit;
 
@@ -352,24 +346,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 		break;
 	default:
 		break;
-	}
-
-	struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);
-	if (!palette) {
-		palette = vdg_palette_by_name("ideal");
-	}
-	md->ntsc_palette = ntsc_palette_new();
-	md->dummy_palette = ntsc_palette_new();
-	for (int j = 0; j < NUM_VDG_COLOURS; j++) {
-		// Y, B-Y, R-Y from VDG voltage tables
-		float y = palette->palette[j].y;
-		float b_y = palette->palette[j].b - VDG_CHB;
-		float r_y = palette->palette[j].a - VDG_CHB;
-		// Scale Y
-		y = (VDG_VBLANK - y) * 2.450;
-		// Add to palette
-		ntsc_palette_add_ybr(md->ntsc_palette, j, y, b_y, r_y);
-		ntsc_palette_add_direct(md->dummy_palette, j);
 	}
 
 	md->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
@@ -430,7 +406,6 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	// VDG
 	md->VDG0 = mc6847_new(mc->vdg_type);
 	part_add_component(&m->part, (struct part *)md->VDG0, "VDG");
-	mc6847_set_palette(md->VDG0, md->dummy_palette);
 	// XXX kludges that should be handled by machine-specific code
 	md->VDG0->is_dragon64 = md->is_dragon64;
 	md->VDG0->is_dragon32 = md->is_dragon32;
@@ -448,6 +423,25 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 	md->VDG0->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
 	md->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler, md);
 	mc6847_set_inverted_text(md->VDG0, md->inverted_text);
+
+	// Set up VDG palette in video module
+	{
+		struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);
+		if (!palette) {
+			palette = vdg_palette_by_name("ideal");
+		}
+		float blank_y = palette->blank_y;
+		//float white_y = palette->white_y;
+		//float scale_y = 1. / (blank_y - white_y);
+		for (int c = 0; c < NUM_VDG_COLOURS; c++) {
+			float y = palette->palette[c].y;
+			float chb = palette->palette[c].chb;
+			float b_y = palette->palette[c].b - chb;
+			float r_y = palette->palette[c].a - chb;
+			y = (blank_y - y) * 2.450;  //scale_y;
+			DELEGATE_CALL(vo->palette_set_ybr, c, y, b_y, r_y);
+		}
+	}
 
 	// Printer
 	md->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, md);
@@ -756,8 +750,6 @@ static void dragon_free(struct part *p) {
 	ntsc_burst_free(md->ntsc_burst[2]);
 	ntsc_burst_free(md->ntsc_burst[1]);
 	ntsc_burst_free(md->ntsc_burst[0]);
-	ntsc_palette_free(md->dummy_palette);
-	ntsc_palette_free(md->ntsc_palette);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -982,22 +974,6 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 		return update_audio_from_tape;
 	}
 	return NULL;
-}
-
-/* Sets the composite video rendering mode.  This needs to tell the VDG
- * which palette to use (NTSC encoded or dummy). */
-
-static void dragon_set_vo_cmp(struct machine *m, int mode) {
-	struct machine_dragon *md = (struct machine_dragon *)m;
-	switch (mode) {
-	case VO_CMP_PALETTE:
-	default:
-		mc6847_set_palette(md->VDG0, md->dummy_palette);
-		break;
-	case VO_CMP_SIMULATED:
-		mc6847_set_palette(md->VDG0, md->ntsc_palette);
-		break;
-	}
 }
 
 static void dragon_set_frameskip(struct machine *m, unsigned fskip) {

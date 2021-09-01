@@ -66,7 +66,8 @@
 enum tcc1014_colour {
 	TCC1014_GREEN, TCC1014_YELLOW, TCC1014_BLUE, TCC1014_RED,
 	TCC1014_WHITE, TCC1014_CYAN, TCC1014_MAGENTA, TCC1014_ORANGE,
-	TCC1014_BLACK, TCC1014_DARK_GREEN, TCC1014_DARK_ORANGE, TCC1014_BRIGHT_ORANGE
+	TCC1014_RGCSS0_0, TCC1014_RGCSS0_1, TCC1014_RGCSS1_0, TCC1014_RGCSS1_1,
+	TCC1014_DARK_GREEN, TCC1014_BRIGHT_GREEN, TCC1014_DARK_ORANGE, TCC1014_BRIGHT_ORANGE
 };
 
 struct TCC1014 {
@@ -114,7 +115,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val);
 
-void tcc1014_set_palette(struct TCC1014 *gimep, const struct ntsc_palette *np);
+void tcc1014_set_palette(struct TCC1014 *gimep);
 void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool);
 
 #endif

@@ -2,7 +2,7 @@
  *
  *  \brief GtkGLExt video output module.
  *
- *  \copyright Copyright 2010-2019 Ciaran Anscomb
+ *  \copyright Copyright 2010-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -95,11 +95,12 @@ static void *new(void *sptr) {
 	vogtkgl->vogl = vogl;
 
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
-	vo->update_palette = vogl->update_palette;
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->refresh = DELEGATE_AS0(void, refresh, vo);
 	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->palette_set_ybr = vogl->palette_set_ybr;
+	vo->palette_set_rgb = vogl->palette_set_rgb;
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_gtkgl_set_vo_cmp, vo);
 
 	/* Configure drawing_area widget */

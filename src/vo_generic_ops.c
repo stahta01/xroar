@@ -24,6 +24,7 @@
 
 #include "intfuncs.h"
 
+#include "colourspace.h"
 #include "machine.h"
 #include "module.h"
 #include "ntsc.h"
@@ -32,58 +33,67 @@
 
 // - - - - - - -
 
-#ifdef WANT_SIMULATED_NTSC
-
-#define SCALE_PIXELS (1)
-#define PIXEL_DENSITY (2)
-
-#else
-
-// Trades off speed for accuracy by halving the video data rate.
-#define SCALE_PIXELS (2)
-#define PIXEL_DENSITY (1)
-
-#endif
-
-// - - - - - - -
+// Palettes consist of a mask limiting number of entries, and an allocated list
+// of pixel values.
+struct vo_palette {
+	uint8_t mask;
+	Pixel *values;
+};
 
 struct vo_generic_interface {
 	VO_MODULE_INTERFACE module;
 
-	// Palettes
-	Pixel vdg_colour[12];
-	Pixel artifact_5bit[2][32];
-	Pixel artifact_simple[2][4];
+	struct {
+		// Composite output palette.
+		struct vo_palette palette;
+		// Cache testing if each colour is black or white.
+		unsigned *is_black_or_white;
+		// A 2-bit fast LUT for NTSC cross-colour.
+		Pixel cc_2bit[2][4];
+		// A 5-bit LUT for slightly better-looking NTSC cross-colour.
+		Pixel cc_5bit[2][32];
+		// And a full NTSC decode table.
+		struct ntsc_palette *ntsc_palette;
+	} cmp;
+
+	struct {
+		// RGB output palette.
+		struct vo_palette palette;
+	} rgb;
+
+	// Currently selected input.
+	struct vo_palette *input_palette;
 
 	// Current render pointer
 	Pixel *pixel;
 	int scanline;
 
-	// Gamma LUT
+	// Colourspace definition.
+	struct cs_profile *cs;
+
+	// Buffer for NTSC line encode.
+	// XXX if window_w can change, this must too!
+	uint8_t ntsc_buf[647];
+
+	// Gamma LUT.
 	uint8_t ntsc_ungamma[256];
 };
 
-/* Map VDG palette entry */
-static Pixel map_palette_entry(struct vo_generic_interface *generic, int i) {
-	(void)generic;
-	float R, G, B;
-	vdg_palette_RGB(xroar_vdg_palette, i, &R, &G, &B);
-	R *= 255.0;
-	G *= 255.0;
-	B *= 255.0;
-	return MAPCOLOUR(generic, (int)R, (int)G, (int)B);
-}
+// Must be called by encapsulating video module on startup.
 
-/* Allocate colours */
-
-static void alloc_colours(void *sptr) {
+static void vo_generic_init(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
+	*generic = (struct vo_generic_interface){0};
+	generic->cmp.palette.values = xmalloc(sizeof(Pixel));
+	generic->cmp.is_black_or_white = xmalloc(sizeof(unsigned));
+	generic->cmp.ntsc_palette = ntsc_palette_new();
+	generic->rgb.palette.values = xmalloc(sizeof(Pixel));
+	generic->input_palette = &generic->cmp.palette;
+	generic->cs = cs_profile_by_name("ntsc");
+
 #ifdef RESET_PALETTE
 	RESET_PALETTE();
 #endif
-	for (int j = 0; j < 12; j++) {
-		generic->vdg_colour[j] = map_palette_entry(generic, j);
-	}
 
 	// Populate NTSC inverse gamma LUT
 	for (int j = 0; j < 256; j++) {
@@ -96,88 +106,105 @@ static void alloc_colours(void *sptr) {
 		generic->ntsc_ungamma[j] = (int)(c * 255.0);
 	}
 
-	// 2-bit LUT NTSC cross-colour
-	generic->artifact_simple[0][0] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_simple[0][1] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_simple[0][2] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_simple[0][3] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_simple[1][0] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_simple[1][1] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_simple[1][2] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_simple[1][3] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-
-	// 5-bit LUT NTSC cross-colour
-	// TODO: generate this using available NTSC decoding
-	generic->artifact_5bit[0][0x00] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[0][0x01] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[0][0x02] = MAPCOLOUR(generic, 0x00, 0x32, 0x78);
-	generic->artifact_5bit[0][0x03] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
-	generic->artifact_5bit[0][0x04] = MAPCOLOUR(generic, 0xff, 0x8c, 0x64);
-	generic->artifact_5bit[0][0x05] = MAPCOLOUR(generic, 0xff, 0x8c, 0x64);
-	generic->artifact_5bit[0][0x06] = MAPCOLOUR(generic, 0xff, 0xd2, 0xff);
-	generic->artifact_5bit[0][0x07] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
-	generic->artifact_5bit[0][0x08] = MAPCOLOUR(generic, 0x00, 0x32, 0x78);
-	generic->artifact_5bit[0][0x09] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
-	generic->artifact_5bit[0][0x0a] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[0][0x0b] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[0][0x0c] = MAPCOLOUR(generic, 0xd2, 0xff, 0xd2);
-	generic->artifact_5bit[0][0x0d] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[0][0x0e] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
-	generic->artifact_5bit[0][0x0f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[0][0x10] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
-	generic->artifact_5bit[0][0x11] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
-	generic->artifact_5bit[0][0x12] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[0][0x13] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
-	generic->artifact_5bit[0][0x14] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[0][0x15] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[0][0x16] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[0][0x17] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
-	generic->artifact_5bit[0][0x18] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
-	generic->artifact_5bit[0][0x19] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
-	generic->artifact_5bit[0][0x1a] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[0][0x1b] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[0][0x1c] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
-	generic->artifact_5bit[0][0x1d] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
-	generic->artifact_5bit[0][0x1e] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[0][0x1f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-
-	generic->artifact_5bit[1][0x00] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[1][0x01] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[1][0x02] = MAPCOLOUR(generic, 0xb4, 0x3c, 0x1e);
-	generic->artifact_5bit[1][0x03] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
-	generic->artifact_5bit[1][0x04] = MAPCOLOUR(generic, 0x46, 0xc8, 0xff);
-	generic->artifact_5bit[1][0x05] = MAPCOLOUR(generic, 0x46, 0xc8, 0xff);
-	generic->artifact_5bit[1][0x06] = MAPCOLOUR(generic, 0xd2, 0xff, 0xd2);
-	generic->artifact_5bit[1][0x07] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
-	generic->artifact_5bit[1][0x08] = MAPCOLOUR(generic, 0xb4, 0x3c, 0x1e);
-	generic->artifact_5bit[1][0x09] = MAPCOLOUR(generic, 0x3c, 0x00, 0x00);
-	generic->artifact_5bit[1][0x0a] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[1][0x0b] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[1][0x0c] = MAPCOLOUR(generic, 0xff, 0xd2, 0xff);
-	generic->artifact_5bit[1][0x0d] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[1][0x0e] = MAPCOLOUR(generic, 0xff, 0xf0, 0xc8);
-	generic->artifact_5bit[1][0x0f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[1][0x10] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
-	generic->artifact_5bit[1][0x11] = MAPCOLOUR(generic, 0x00, 0x00, 0x3c);
-	generic->artifact_5bit[1][0x12] = MAPCOLOUR(generic, 0x00, 0x00, 0x00);
-	generic->artifact_5bit[1][0x13] = MAPCOLOUR(generic, 0x28, 0x00, 0x28);
-	generic->artifact_5bit[1][0x14] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[1][0x15] = MAPCOLOUR(generic, 0x00, 0x80, 0xff);
-	generic->artifact_5bit[1][0x16] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[1][0x17] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
-	generic->artifact_5bit[1][0x18] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
-	generic->artifact_5bit[1][0x19] = MAPCOLOUR(generic, 0x00, 0x28, 0x00);
-	generic->artifact_5bit[1][0x1a] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[1][0x1b] = MAPCOLOUR(generic, 0xff, 0x80, 0x00);
-	generic->artifact_5bit[1][0x1c] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
-	generic->artifact_5bit[1][0x1d] = MAPCOLOUR(generic, 0x64, 0xf0, 0xff);
-	generic->artifact_5bit[1][0x1e] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
-	generic->artifact_5bit[1][0x1f] = MAPCOLOUR(generic, 0xff, 0xff, 0xff);
+	for (int i = 0; i < 2; i++) {
+		// 2-bit LUT NTSC cross-colour
+		for (int j = 0; j < 4; j++) {
+			generic->cmp.cc_2bit[i][j] = MAPCOLOUR(generic, vo_cmp_lut_2bit[i][j][0], vo_cmp_lut_2bit[i][j][1], vo_cmp_lut_2bit[i][j][2]);
+		}
+		// 5-bit LUT NTSC cross-colour
+		// TODO: generate this using available NTSC decoding
+		for (int j = 0; j < 32; j++) {
+			generic->cmp.cc_5bit[i][j] = MAPCOLOUR(generic, vo_cmp_lut_5bit[i][j][0], vo_cmp_lut_5bit[i][j][1], vo_cmp_lut_5bit[i][j][2]);
+		}
+	}
 }
 
-/* Render colour line using palette */
+// Must be called by encapsulating video module on exit.
 
-static void render_scanline(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void vo_generic_free(void *sptr) {
+	struct vo_generic_interface *generic = sptr;
+	ntsc_palette_free(generic->cmp.ntsc_palette);
+	free(generic->rgb.palette.values);
+	free(generic->cmp.is_black_or_white);
+	free(generic->cmp.palette.values);
+}
+
+// Set a palette entry, adjusting mask and reallocating memory if needed.  This
+// way, palette is only as large as it needs to be while maintaining a simple
+// mask for bounds limiting.
+
+static void palette_set(uint8_t c, float R, float G, float B, struct vo_palette *palette) {
+	uint8_t oldmask = palette->mask;
+	while (c > palette->mask) {
+		palette->mask = (palette->mask << 1) | 1;
+	}
+	if (!palette->values || palette->mask != oldmask) {
+		palette->values = xrealloc(palette->values, (palette->mask+1) * sizeof(Pixel));
+	}
+	cs_clamp(&R, &G, &B);
+	R *= 255.0;
+	G *= 255.0;
+	B *= 255.0;
+	(palette->values)[c] = MAPCOLOUR(generic, (int)R, (int)G, (int)B);
+}
+
+// Add palette entry to RGB palette as R', G', B'
+
+static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
+	struct vo_generic_interface *generic = sptr;
+
+	float R, G, B;
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+
+	palette_set(c, R, G, B, &generic->rgb.palette);
+}
+
+// Add palette entry to composite palette as Y', B'-Y', R'-Y'
+
+static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y) {
+	struct vo_generic_interface *generic = sptr;
+
+	float u = 0.493 * b_y;
+	float v = 0.877 * r_y;
+	float r = 1.0 * y + 0.000 * u + 1.140 * v;
+	float g = 1.0 * y - 0.396 * u - 0.581 * v;
+	float b = 1.0 * y + 2.029 * u + 0.000 * v;
+
+	/* These values directly relate to voltages fed to a modulator which,
+	 * I'm assuming, does nothing further to correct for the non-linearity
+	 * of the display device.  Therefore, these can be considered "gamma
+	 * corrected" values, and to work with them in linear RGB, we need to
+	 * undo the assumed characteristics of the display.  NTSC was
+	 * originally defined differently, but most SD televisions that people
+	 * will have used any time recently are probably close to Rec. 601, so
+	 * use that transfer function:
+	 *
+	 * L = V/4.5                        for V <  0.081
+	 * L = ((V + 0.099) / 1.099) ^ 2.2  for V >= 0.081
+	 *
+	 * Note: the same transfer function is specified for Rec. 709.
+	 */
+
+	float R, G, B;
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+
+	palette_set(c, R, G, B, &generic->cmp.palette);
+
+	ntsc_palette_add_ybr(generic->cmp.ntsc_palette, c, y, b_y, r_y);
+
+	generic->cmp.is_black_or_white = xrealloc(generic->cmp.is_black_or_white, (generic->cmp.palette.mask+1) * sizeof(unsigned));
+	if (r > 0.85 && g > 0.85 && b > 0.85) {
+		generic->cmp.is_black_or_white[c] = 2;
+	} else if (r < 0.20 && g < 0.20 && b < 0.20) {
+		generic->cmp.is_black_or_white[c] = 1;
+	} else {
+		generic->cmp.is_black_or_white[c] = 0;
+	}
+}
+
+// Render colour line using palette.  Used for RGB and palette-based CMP.
+
+static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
@@ -185,17 +212,15 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 	(void)phase;
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x/SCALE_PIXELS;
+		scanline_data += vo->window_x;
+		uint8_t mask = generic->input_palette->mask;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window_w >> 1; i; i--) {
-			uint8_t c0 = *scanline_data;
-			scanline_data += PIXEL_DENSITY;
-#ifdef WANT_SIMULATED_NTSC
-			*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
-#else
-			*(generic->pixel) = generic->vdg_colour[c0];
-#endif
-			generic->pixel += PIXEL_DENSITY*XSTEP;
+		for (int i = vo->window_w; i; i--) {
+			uint8_t c0 = *scanline_data & mask;
+			scanline_data++;
+			Pixel p0 = generic->input_palette->values[c0];
+			*(generic->pixel) = p0;
+			generic->pixel += XSTEP;
 		}
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
@@ -203,9 +228,9 @@ static void render_scanline(void *sptr, uint8_t const *scanline_data, struct nts
 	generic->scanline++;
 }
 
-/* Render artifacted colours - simple 4-colour lookup */
+// Render artefact colours using simple 2-bit LUT.
 
-static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
@@ -213,30 +238,30 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 	unsigned p = (phase >> 2) & 1;
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x/SCALE_PIXELS;
+		scanline_data += vo->window_x;
+		uint8_t mask = generic->input_palette->mask;
 		LOCK_SURFACE(generic);
 		for (int i = vo->window_w / 4; i; i--) {
-			uint8_t c0 = *scanline_data;
-			uint8_t c1 = *(scanline_data+PIXEL_DENSITY);
-			scanline_data += 2*PIXEL_DENSITY;
-			if (c0 == VDG_BLACK || c0 == VDG_WHITE) {
-				int aindex = ((c0 != VDG_BLACK) ? 2 : 0)
-					     | ((c1 != VDG_BLACK) ? 1 : 0);
-#ifdef WANT_SIMULATED_NTSC
-				*(generic->pixel) = *(generic->pixel+1) = *(generic->pixel+2) = *(generic->pixel+3) = generic->artifact_simple[p][aindex];
-#else
-				*(generic->pixel) = *(generic->pixel+1) = generic->artifact_simple[p][aindex];
-#endif
+			uint8_t c0 = *scanline_data & mask;
+			uint8_t c1 = *(scanline_data + 2) & mask;
+			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c1]) {
+				scanline_data += 4;
+				unsigned aindex = (generic->cmp.is_black_or_white[c0] & 2) | (generic->cmp.is_black_or_white[c1] >> 1);
+				Pixel pout = generic->cmp.cc_2bit[p][aindex];
+				*(generic->pixel) = pout;
+				*(generic->pixel+1*XSTEP) = pout;
+				*(generic->pixel+2*XSTEP) = pout;
+				*(generic->pixel+3*XSTEP) = pout;
+				generic->pixel += 4*XSTEP;
 			} else {
-#ifdef WANT_SIMULATED_NTSC
-				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c0];
-				*(generic->pixel+2) = *(generic->pixel+3) = generic->vdg_colour[c1];
-#else
-				*(generic->pixel) = generic->vdg_colour[c0];
-				*(generic->pixel+1) = generic->vdg_colour[c1];
-#endif
+				for (int j = 4; j; j--) {
+					c0 = *scanline_data & mask;
+					scanline_data++;
+					Pixel p0 = generic->cmp.palette.values[c0];
+					*(generic->pixel) = p0;
+					generic->pixel += XSTEP;
+				}
 			}
-			generic->pixel += 2*PIXEL_DENSITY*XSTEP;
 		}
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
@@ -244,7 +269,7 @@ static void render_ccr_simple(void *sptr, uint8_t const *scanline_data, struct n
 	generic->scanline++;
 }
 
-/* Render artifacted colours - 5-bit lookup table */
+// Render artefact colours using 5-bit LUT.
 
 static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
@@ -255,30 +280,31 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 	if (generic->scanline >= vo->window_y &&
 	    generic->scanline < (vo->window_y + vo->window_h)) {
 		unsigned aindex = 0;
-		scanline_data += vo->window_x/SCALE_PIXELS;
-		aindex = (*(scanline_data - 3*PIXEL_DENSITY) != VDG_BLACK) ? 14 : 0;
-		aindex |= (*(scanline_data - 1*PIXEL_DENSITY) != VDG_BLACK) ? 1 : 0;
+		scanline_data += vo->window_x;
+		uint8_t mask = generic->input_palette->mask;
+		aindex = (generic->cmp.is_black_or_white[*(scanline_data-6)] != 1) ? 14 : 0;
+		aindex |= (generic->cmp.is_black_or_white[*(scanline_data-2)] != 1) ? 1 : 0;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window_w/2; i; i--) {
+		for (int i = vo->window_w / 2; i; i--) {
 			aindex = (aindex << 1) & 31;
-			if (*(scanline_data + 2*PIXEL_DENSITY) != VDG_BLACK)
+			if (generic->cmp.is_black_or_white[*(scanline_data+4)] != 1)
 				aindex |= 1;
-			uint8_t c = *scanline_data;
-			scanline_data += PIXEL_DENSITY;
-			if (c == VDG_BLACK || c == VDG_WHITE) {
-#ifdef WANT_SIMULATED_NTSC
-				*(generic->pixel) = *(generic->pixel+1) = generic->artifact_5bit[p][aindex];
-#else
-				*(generic->pixel) = generic->artifact_5bit[p][aindex];
-#endif
+			uint8_t c0 = *scanline_data & mask;
+			if (generic->cmp.is_black_or_white[c0]) {
+				scanline_data += 2;
+				Pixel pout = generic->cmp.cc_5bit[p][aindex];
+				*(generic->pixel) = pout;
+				*(generic->pixel+1*XSTEP) = pout;
+				generic->pixel += 2*XSTEP;
 			} else {
-#ifdef WANT_SIMULATED_NTSC
-				*(generic->pixel) = *(generic->pixel+1) = generic->vdg_colour[c];
-#else
-				*(generic->pixel) = generic->vdg_colour[c];
-#endif
+				for (int j = 2; j; j--) {
+					c0 = *scanline_data & mask;
+					scanline_data++;
+					Pixel p0 = generic->cmp.palette.values[c0];
+					*(generic->pixel) = p0;
+					generic->pixel += XSTEP;
+				}
 			}
-			generic->pixel += 1*PIXEL_DENSITY*XSTEP;
 			p ^= 1;
 		}
 		UNLOCK_SURFACE(generic);
@@ -287,7 +313,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 	generic->scanline++;
 }
 
-/* NTSC composite video simulation */
+// NTSC composite video simulation.
 
 static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
 	struct vo_generic_interface *generic = sptr;
@@ -299,11 +325,22 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 		return;
 	}
 	generic->scanline++;
-	const uint8_t *v = (scanline_data + vo->window_x) - 3;
+
+	// Encode NTSC
+	const uint8_t *src = scanline_data + vo->window_x - 3;
+	uint8_t *dst = generic->ntsc_buf;
+	ntsc_phase = (phase + vo->window_x) & 3;
+	for (int i = vo->window_w + 6; i; i--) {
+		unsigned c = *(src++);
+		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
+	}
+
+	// And now decode
+	src = generic->ntsc_buf;
 	ntsc_phase = ((phase + vo->window_x) + 3) & 3;
 	LOCK_SURFACE(generic);
 	for (int j = vo->window_w; j; j--) {
-		struct ntsc_xyz rgb = ntsc_decode(burst, v++);
+		struct ntsc_xyz rgb = ntsc_decode(burst, src++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
 		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];
@@ -322,10 +359,10 @@ static void set_vo_cmp(void *sptr, int mode) {
 	struct vo_interface *vo = &vom->public;
 	switch (mode) {
 	case VO_CMP_PALETTE:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
 		break;
 	case VO_CMP_2BIT:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_simple, vo);
+		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_2bit, vo);
 		break;
 	case VO_CMP_5BIT:
 		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_5bit, vo);

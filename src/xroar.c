@@ -1309,31 +1309,40 @@ void xroar_set_cross_colour(_Bool notify, int action) {
 		xroar_machine_config->cross_colour_phase = action;
 		break;
 	}
-	if (xroar_machine->set_vo_cmp) {
+
+	// XXX need to figure out new way to cycle through these.
+	// Notes:
+	// - move current cross_colour_phase to video module
+	// - but probably it needs to change its purpose and be renamed
+	// - want to cycle through:
+	//   - 0-phase cross-colour (blue-red)
+	//   - 180-phase cross-colour (red-blue)
+	//   - composite video palette
+	//   - rgb video palette
+
+	// And ALSO need to tell video module whether to use 2-bit, 5-bit or
+	// simulated - but these only apply when using one of the cross-colour
+	// modes.
+
 		if (xroar_machine_config->cross_colour_phase == VO_PHASE_OFF) {
-			xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 			DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 		} else {
 			switch (private_cfg.ccr) {
 			default:
-				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
 				break;
 			case UI_CCR_SIMPLE:
-				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
 				break;
 			case UI_CCR_5BIT:
-				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_PALETTE);
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
 				break;
 			case UI_CCR_SIMULATED:
-				xroar_machine->set_vo_cmp(xroar_machine, VO_CMP_SIMULATED);
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
 				break;
 			}
 		}
-	}
+
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
 	}
@@ -1574,7 +1583,6 @@ void xroar_set_machine(_Bool notify, int id) {
 		xroar_set_cart(1, NULL);
 	}
 	xroar_vdg_palette = get_machine_palette();
-	DELEGATE_SAFE_CALL(xroar_vo_interface->update_palette);
 	xroar_hard_reset();
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);

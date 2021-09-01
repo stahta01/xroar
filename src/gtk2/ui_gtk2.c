@@ -439,9 +439,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 static GtkRadioActionEntry const ccr_radio_entries[] = {
 	{ .name = "ccr-simple", .label = "Simple (2-bit LUT)", .value = UI_CCR_SIMPLE },
 	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = UI_CCR_5BIT },
-#ifdef WANT_SIMULATED_NTSC
 	{ .name = "ccr-simulated", .label = "Simulated", .value = UI_CCR_SIMULATED },
-#endif
 };
 
 static GtkRadioActionEntry const cross_colour_radio_entries[] = {

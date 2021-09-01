@@ -2,7 +2,7 @@
  *
  *  \brief Generic OpenGL support for video output modules.
  *
- *  \copyright Copyright 2012-2018 Ciaran Anscomb
+ *  \copyright Copyright 2012-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -47,13 +47,8 @@
 #include "vo_opengl.h"
 #include "xroar.h"
 
-#ifdef WANT_SIMULATED_NTSC
 #define TEXTURE_PITCH (1024)
 #define TEXTURE_WIDTH (640)
-#else
-#define TEXTURE_PITCH (512)
-#define TEXTURE_WIDTH (320)
-#endif
 
 /*** ***/
 
@@ -102,14 +97,16 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
 	struct vo_opengl_interface *vogl = &generic->module;
 	struct vo_interface *vo = &vogl->public;
-	*generic = (struct vo_generic_interface){0};
+
+	vo_generic_init(generic);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
-	vo->update_palette = DELEGATE_AS0(void, alloc_colours, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
 	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_scanline, vo);
+	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
+	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
+	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_opengl_set_vo_cmp, vo);
 
 	vogl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
@@ -117,7 +114,6 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vogl->window_height = 480;
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
 	vogl->filter = vo_cfg->gl_filter;
-	alloc_colours(vo);
 	generic_vsync(generic);
 	vo->window_x = VDG_ACTIVE_LINE_START - 64;
 	vo->window_y = VDG_TOP_BORDER_START + 1;
@@ -136,7 +132,9 @@ void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp) {
 }
 
 static void vo_opengl_free(void *sptr) {
-	struct vo_opengl_interface *vogl = sptr;
+	struct vo_generic_interface *generic = sptr;
+	struct vo_opengl_interface *vogl = &generic->module;
+	vo_generic_free(generic);
 	glDeleteTextures(1, &vogl->texnum);
 	free(vogl->texture_pixels);
 	free(vogl);

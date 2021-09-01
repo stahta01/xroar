@@ -29,11 +29,11 @@
 
 #include "events.h"
 #include "logging.h"
+#include "machine.h"
 #include "mc6809.h"
 #include "mc6847/font-6847.h"
 #include "mc6847/font-6847t1.h"
 #include "mc6847/mc6847.h"
-#include "ntsc.h"
 #include "part.h"
 #include "sam.h"
 #include "xroar.h"
@@ -96,7 +96,6 @@ struct MC6847_private {
 	 * elements rendered in render_scanline() between index checks. */
 	uint8_t pixel_data[VDG_LINE_DURATION+8];
 
-	const struct ntsc_palette *palette;
 	unsigned burst;
 
 	uint16_t vram[42];
@@ -128,34 +127,15 @@ static void render_scanline(struct MC6847_private *vdg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#ifdef WANT_SIMULATED_NTSC
-
-#define SCALE_PIXELS (1)
-
-static inline int encode_pixel(struct MC6847_private *vdg, int colour) {
-	return ntsc_encode_from_palette(vdg->palette, colour);
-}
-
-#else
-
-// Trades off speed for accuracy by halving the generated video data rate.
-
-#define SCALE_PIXELS (2)
-#define encode_pixel(vdg,colour) (colour)
-
-#endif
-
-// - - - - - - -
-
 static void do_hs_fall(void *data) {
 	struct MC6847_private *vdg = data;
 	// Finish rendering previous scanline
 	if (vdg->frame == 0) {
 		if (vdg->scanline < VDG_ACTIVE_AREA_START) {
 			if (vdg->scanline == 0) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START/SCALE_PIXELS;
-				for (unsigned j = VDG_tAVB/SCALE_PIXELS; j > 0; j--) {
-					*(v++) = encode_pixel(vdg, vdg->border_colour);
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
+				for (unsigned j = VDG_tAVB; j > 0; j--) {
+					*(v++) = vdg->border_colour;
 				}
 			}
 			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
@@ -168,9 +148,9 @@ static void do_hs_fall(void *data) {
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
-				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START/SCALE_PIXELS;
-				for (unsigned j = VDG_tAVB/SCALE_PIXELS; j > 0; j--) {
-					*(v++) = encode_pixel(vdg, vdg->border_colour);
+				uint8_t *v = vdg->pixel_data + VDG_LEFT_BORDER_START;
+				for (unsigned j = VDG_tAVB; j > 0; j--) {
+					*(v++) = vdg->border_colour;
 				}
 			}
 			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
@@ -179,10 +159,6 @@ static void do_hs_fall(void *data) {
 
 	// HS falling edge.
 	DELEGATE_CALL(vdg->public.signal_hs, 0);
-
-	// This achieves the equivalent of a TV getting into sync with the
-	// colourburst.
-	ntsc_reset_phase();
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
@@ -300,17 +276,13 @@ static void render_scanline(struct MC6847_private *vdg) {
 		return;
 	if (vdg->beam_pos >= beam_to)
 		return;
-	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos/SCALE_PIXELS;
+	uint8_t *pixel = vdg->pixel_data + vdg->beam_pos;
 
-	// Render left border in full pixels (so two half pixels when
-	// WANT_SIMULATED_NTSC is defined).
+	// Render left border in full pixels.
 
 	while (vdg->lborder_remaining > 0) {
-		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-#ifdef WANT_SIMULATED_NTSC
-		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-#endif
-
+		*(pixel++) = vdg->border_colour;
+		*(pixel++) = vdg->border_colour;
 		vdg->beam_pos += 2;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
@@ -415,44 +387,23 @@ static void render_scanline(struct MC6847_private *vdg) {
 			break;
 		}
 
-#ifdef WANT_SIMULATED_NTSC
-		// The normal behaviour is to render half-pixels from an LUT
-		// tracking phase.  This provides enough data to perform a
-		// low-pass filter for simulated NTSC.
-
 		if (vdg->is_32byte) {
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c1);
-			*(pixel++) = encode_pixel(vdg, c1);
+			*(pixel++) = c0;
+			*(pixel++) = c0;
+			*(pixel++) = c1;
+			*(pixel++) = c1;
 			vdg->beam_pos += 4;
 		} else {
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c1);
-			*(pixel++) = encode_pixel(vdg, c1);
-			*(pixel++) = encode_pixel(vdg, c1);
-			*(pixel++) = encode_pixel(vdg, c1);
+			*(pixel++) = c0;
+			*(pixel++) = c0;
+			*(pixel++) = c0;
+			*(pixel++) = c0;
+			*(pixel++) = c1;
+			*(pixel++) = c1;
+			*(pixel++) = c1;
+			*(pixel++) = c1;
 			vdg->beam_pos += 8;
 		}
-#else
-		// A faster path stores colour values directly and only renders
-		// full pixels.
-
-		if (vdg->is_32byte) {
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c1);
-			vdg->beam_pos += 4;
-		} else {
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c0);
-			*(pixel++) = encode_pixel(vdg, c1);
-			*(pixel++) = encode_pixel(vdg, c1);
-			vdg->beam_pos += 8;
-		}
-#endif
 
 		vdg->vram_bit -= 2;
 		if (vdg->vram_bit == 0) {
@@ -472,10 +423,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 		}
 		vdg->border_colour = vdg->nA_G ? vdg->cg_colours : (vdg->text_border ? vdg->text_border_colour : VDG_BLACK);
-		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-#ifdef WANT_SIMULATED_NTSC
-		*(pixel++) = encode_pixel(vdg, vdg->border_colour);
-#endif
+		*(pixel++) = vdg->border_colour;
+		*(pixel++) = vdg->border_colour;
 		vdg->beam_pos += 2;
 		if ((vdg->beam_pos & 15) == 0) {
 			vdg->CSSa = vdg->CSS;
@@ -489,7 +438,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 	// scanline might not have been rendered:
 
 	while (vdg->beam_pos < VDG_RIGHT_BORDER_END) {
-		*(pixel++) = encode_pixel(vdg, VDG_BLACK);
+		*(pixel++) = VDG_BLACK;
+		*(pixel++) = VDG_BLACK;
 		vdg->beam_pos++;
 	}
 
@@ -541,9 +491,8 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->rborder_remaining = VDG_tRB;
 }
 
-void mc6847_set_palette(struct MC6847 *vdgp, const struct ntsc_palette *np) {
+void mc6847_set_palette(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	vdg->palette = np;
 	// clear the pixel buffer, as the way its data so far is interpreted
 	// might change, and go out of bounds
 	memset(vdg->pixel_data, 0, sizeof(vdg->pixel_data));

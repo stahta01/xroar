@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2016 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -24,8 +24,6 @@
 #include "delegate.h"
 
 #include "part.h"
-
-struct ntsc_palette;
 
 // Output voltages
 
@@ -127,7 +125,7 @@ struct MC6847 *mc6847_new(int type);
 
 void mc6847_reset(struct MC6847 *);
 
-void mc6847_set_palette(struct MC6847 *, const struct ntsc_palette *np);
+void mc6847_set_palette(struct MC6847 *);
 void mc6847_set_inverted_text(struct MC6847 *, _Bool);
 
 /*

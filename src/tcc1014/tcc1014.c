@@ -34,8 +34,8 @@
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
+#include "machine.h"
 #include "mc6809.h"
-#include "ntsc.h"
 #include "part.h"
 #include "tcc1014/font-gime.h"
 #include "tcc1014/tcc1014.h"
@@ -221,7 +221,6 @@ struct TCC1014_private {
 	 * in render_scanline() between index checks. */
 	uint8_t pixel_data[TCC1014_LINE_DURATION+16];
 
-	const struct ntsc_palette *palette;
 	unsigned burst;
 
 	unsigned vram_nbytes;
@@ -261,7 +260,6 @@ static void do_hs_fall(void *);
 static void do_hs_rise(void *);
 static void update_timer(void *);
 static void render_scanline(struct TCC1014_private *gime);
-static void clear_line(struct TCC1014_private *gime, uint8_t colour);
 static void tcc1014_update_graphics_mode(struct TCC1014_private *gime);
 
 #define SET_INTERRUPT(g,v) do { \
@@ -326,7 +324,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	}
 	tcc1014_set_sam_register(gimep, 0);
 
-	clear_line(gime, TCC1014_BLACK);
+	memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
 	gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	gime->frame = 0;
 	gime->scanline = 0;
@@ -579,10 +577,6 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static inline int encode_pixel(struct TCC1014_private *gime, int colour) {
-	return ntsc_encode_from_palette(gime->palette, colour);
-}
-
 static void do_hs_fall(void *sptr) {
 	struct TCC1014_private *gime = sptr;
 	// Finish rendering previous scanline
@@ -606,8 +600,6 @@ static void do_hs_fall(void *sptr) {
 
 	// HS falling edge.
 	DELEGATE_CALL(gime->public.signal_hs, 0);
-
-	ntsc_reset_phase();
 
 	SET_INTERRUPT(gime, 0x10);
 	if (!gime->TINS && gime->timer_counter > 0) {
@@ -650,7 +642,7 @@ static void do_hs_fall(void *sptr) {
 		DELEGATE_CALL(gime->public.signal_fs, 0);
 		SET_INTERRUPT(gime, 0x08);
 		// clear output line to...  well should be vsync signal, but use black
-		clear_line(gime, TCC1014_BLACK);
+		memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
 	} else if (gime->scanline == gime->field_duration) {
 		// FS rising edge
 		DELEGATE_CALL(gime->public.signal_fs, 1);
@@ -670,7 +662,7 @@ static void do_hs_fall(void *sptr) {
 		}
 		break;
 	case tcc1014_vstate_top_border:
-		clear_line(gime, gime->border_colour);
+		memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		if (gime->lcount >= gime->nTB) {
 			gime->row = gime->COCO ? 0 : gime->VSC;
 			gime->lcount = 0;
@@ -684,7 +676,7 @@ static void do_hs_fall(void *sptr) {
 		}
 		break;
 	case tcc1014_vstate_bottom_border:
-		clear_line(gime, gime->border_colour);
+		memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		break;
 	default:
 		break;
@@ -713,8 +705,8 @@ static void render_scanline(struct TCC1014_private *gime) {
 	uint8_t *pixel = gime->pixel_data + gime->beam_pos;
 
 	while (gime->lborder_remaining > 0) {
-		*(pixel++) = encode_pixel(gime, gime->border_colour);
-		*(pixel++) = encode_pixel(gime, gime->border_colour);
+		*(pixel++) = gime->border_colour;
+		*(pixel++) = gime->border_colour;
 		gime->beam_pos += 2;
 		gime->lborder_remaining -= 2;
 		if (gime->beam_pos >= beam_to)
@@ -749,18 +741,18 @@ static void render_scanline(struct TCC1014_private *gime) {
 					if (gime->row < 6)
 						gime->vram_sg_data >>= 2;
 					gime->s_fg_colour = (gime->vram_g_data >> 4) & 7;
-					gime->s_bg_colour = !gime->GnA ? TCC1014_BLACK : TCC1014_GREEN;
+					gime->s_bg_colour = TCC1014_RGCSS0_0;
 					gime->vram_sg_data = ((gime->vram_sg_data & 2) ? 0xf0 : 0) | ((gime->vram_sg_data & 1) ? 0x0f : 0);
 				}
 
 				if (!gime->GnA) {
 					gime->render_mode = !gime->SnA ? TCC1014_RENDER_RG : TCC1014_RENDER_SG;
-					gime->fg_colour = 13; //!gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
-					gime->bg_colour = 12; //!gime->CSS ? TCC1014_DARK_GREEN : TCC1014_DARK_ORANGE;
+					gime->fg_colour = gime->CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
+					gime->bg_colour = gime->CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
 				} else {
 					gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
-					gime->fg_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
-					gime->bg_colour = !gime->CSS ? TCC1014_DARK_GREEN : TCC1014_BLACK;
+					gime->fg_colour = gime->CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
+					gime->bg_colour = gime->CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
 				}
 			} else {
 				// CoCo 3 mode
@@ -865,51 +857,51 @@ static void render_scanline(struct TCC1014_private *gime) {
 		// Render appropriate number of pixels
 		switch (HRES) {
 		case 0: case 1:
-			*(pixel) = encode_pixel(gime, c0);
-			*(pixel+1) = encode_pixel(gime, c0);
-			*(pixel+2) = encode_pixel(gime, c0);
-			*(pixel+3) = encode_pixel(gime, c0);
-			*(pixel+4) = encode_pixel(gime, c1);
-			*(pixel+5) = encode_pixel(gime, c1);
-			*(pixel+6) = encode_pixel(gime, c1);
-			*(pixel+7) = encode_pixel(gime, c1);
-			*(pixel+8) = encode_pixel(gime, c2);
-			*(pixel+9) = encode_pixel(gime, c2);
-			*(pixel+10) = encode_pixel(gime, c2);
-			*(pixel+11) = encode_pixel(gime, c2);
-			*(pixel+12) = encode_pixel(gime, c3);
-			*(pixel+13) = encode_pixel(gime, c3);
-			*(pixel+14) = encode_pixel(gime, c3);
-			*(pixel+15) = encode_pixel(gime, c3);
+			*(pixel) = c0;
+			*(pixel+1) = c0;
+			*(pixel+2) = c0;
+			*(pixel+3) = c0;
+			*(pixel+4) = c1;
+			*(pixel+5) = c1;
+			*(pixel+6) = c1;
+			*(pixel+7) = c1;
+			*(pixel+8) = c2;
+			*(pixel+9) = c2;
+			*(pixel+10) = c2;
+			*(pixel+11) = c2;
+			*(pixel+12) = c3;
+			*(pixel+13) = c3;
+			*(pixel+14) = c3;
+			*(pixel+15) = c3;
 			pixel += 16;
 			gime->beam_pos += 16;
 			break;
 
 		case 2: case 3:
-			*(pixel) = encode_pixel(gime, c0);
-			*(pixel+1) = encode_pixel(gime, c0);
-			*(pixel+2) = encode_pixel(gime, c1);
-			*(pixel+3) = encode_pixel(gime, c1);
-			*(pixel+4) = encode_pixel(gime, c2);
-			*(pixel+5) = encode_pixel(gime, c2);
-			*(pixel+6) = encode_pixel(gime, c3);
-			*(pixel+7) = encode_pixel(gime, c3);
+			*(pixel) = c0;
+			*(pixel+1) = c0;
+			*(pixel+2) = c1;
+			*(pixel+3) = c1;
+			*(pixel+4) = c2;
+			*(pixel+5) = c2;
+			*(pixel+6) = c3;
+			*(pixel+7) = c3;
 			pixel += 8;
 			gime->beam_pos += 8;
 			break;
 
 		case 4: case 5:
-			*(pixel) = encode_pixel(gime, c0);
-			*(pixel+1) = encode_pixel(gime, c1);
-			*(pixel+2) = encode_pixel(gime, c2);
-			*(pixel+3) = encode_pixel(gime, c3);
+			*(pixel) = c0;
+			*(pixel+1) = c1;
+			*(pixel+2) = c2;
+			*(pixel+3) = c3;
 			pixel += 4;
 			gime->beam_pos += 4;
 			break;
 
 		case 6: case 7:
-			*(pixel) = encode_pixel(gime, c0);
-			*(pixel+1) = encode_pixel(gime, c2);
+			*(pixel) = c0;
+			*(pixel+1) = c2;
 			pixel += 2;
 			gime->beam_pos += 2;
 			break;
@@ -926,8 +918,8 @@ static void render_scanline(struct TCC1014_private *gime) {
 		if (gime->beam_pos == TCC1014_RIGHT_BORDER_START) {
 			gime->text_border_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
 		}
-		*(pixel++) = encode_pixel(gime, gime->border_colour);
-		*(pixel++) = encode_pixel(gime, gime->border_colour);
+		*(pixel++) = gime->border_colour;
+		*(pixel++) = gime->border_colour;
 		gime->beam_pos += 2;
 		gime->rborder_remaining -= 2;
 		if (gime->beam_pos >= beam_to)
@@ -937,23 +929,16 @@ static void render_scanline(struct TCC1014_private *gime) {
 	// If a program switches to 32 bytes per line mid-scanline, the whole
 	// scanline might not have been rendered:
 	while (gime->beam_pos < TCC1014_RIGHT_BORDER_END) {
-		*(pixel++) = encode_pixel(gime, gime->palette_reg[TCC1014_BLACK]);
+		*(pixel++) = 0;
 		gime->beam_pos++;
 	}
 
 }
 
-static void clear_line(struct TCC1014_private *gime, uint8_t colour) {
-	for (int i = TCC1014_LEFT_BORDER_START; i < TCC1014_RIGHT_BORDER_END; i++) {
-		gime->pixel_data[i] = encode_pixel(gime, colour);
-	}
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void tcc1014_set_palette(struct TCC1014 *gimep, const struct ntsc_palette *np) {
+void tcc1014_set_palette(struct TCC1014 *gimep) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
-	gime->palette = np;
 	// clear the pixel buffer, as the way its data so far is interpreted
 	// might change, and go out of bounds
 	memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
@@ -997,38 +982,20 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	gime->text_border = !gime->inverse_text && (gime->GM & 4);
 	gime->text_border_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
 
-	// Removed from GIME: VDG artifacts when switching between graphics and text
-	if (!gime->GnA) {
-		//gime->row = 0;
-		gime->render_mode = TCC1014_RENDER_RG;
-		if (gime->SnA) {
-			gime->fg_colour = 13;
-			gime->bg_colour = 12;
-		} else {
-			//gime->fg_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
-			//gime->bg_colour = !gime->CSS ? TCC1014_DARK_GREEN : TCC1014_DARK_ORANGE;
-			gime->fg_colour = 13;
-			gime->bg_colour = 12;
-		}
-		gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
-	} else {
-		gime->fg_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
-		gime->bg_colour = !gime->CSS ? TCC1014_DARK_GREEN : TCC1014_BLACK;
-	}
-
 	if (gime->COCO) {
 		if (!gime->GnA) {
 			gime->render_mode = !gime->SnA ? TCC1014_RENDER_RG : TCC1014_RENDER_SG;
-			gime->fg_colour = 13; //!gime->CSS ? TCC1014_GREEN : TCC1014_ORANGE;
-			gime->bg_colour = 12; //!gime->CSS ? TCC1014_DARK_GREEN : TCC1014_DARK_ORANGE;
-			gime->border_colour = gime->palette_reg[12];
+			gime->fg_colour = gime->CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
+			gime->bg_colour = gime->CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
+			gime->border_colour = 0;
 		} else {
 			gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
-			gime->fg_colour = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
-			gime->bg_colour = !gime->CSS ? TCC1014_DARK_GREEN : TCC1014_BLACK;
+			gime->fg_colour = gime->CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
+			gime->bg_colour = gime->CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
 			gime->border_colour = gime->palette_reg[gime->cg_colours];
 		}
 	} else {
+		gime->render_mode = TCC1014_RENDER_RG;
 		gime->border_colour = gime->BRDR;
 	}
 

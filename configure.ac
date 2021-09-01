@@ -66,9 +66,6 @@ test "x$with_gtk2" = "xno" && with_gtkgl=no
 AC_ARG_ENABLE([kbd_translate],
 	AS_HELP_STRING([--disable-kbd-translate], [don't support keyboard translation]) )
 
-AC_ARG_ENABLE([simulated_ntsc],
-	AS_HELP_STRING([--disable-simulated-ntsc], [remove accurate NTSC support for speed]) )
-
 AC_ARG_WITH([sdl2],
 	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
 
@@ -589,9 +586,6 @@ AM_COND_IF([GDB], [AC_DEFINE([WANT_GDB_TARGET], 1, [GDB target])])
 
 AM_CONDITIONAL([KBD_TRANSLATE], [test "x$enable_kbd_translate" != "xno"])
 AM_COND_IF([KBD_TRANSLATE], [AC_DEFINE([HAVE_KBD_TRANSLATE], 1, [Support keyboard translation])])
-
-AM_CONDITIONAL([SIMULATED_NTSC], [test "x$enable_simulated_ntsc" != "xno"])
-AM_COND_IF([SIMULATED_NTSC], [AC_DEFINE([WANT_SIMULATED_NTSC], 1, [Enable simulated NTSC support])])
 
 AM_CONDITIONAL([AO_NULL], [test "x$enable_ao_null" != "xno"])
 AM_COND_IF([AO_NULL], [AC_DEFINE([HAVE_NULL_AUDIO], 1, [Include null audio driver])])
