@@ -245,7 +245,6 @@ struct tape_interface *xroar_tape_interface;
 struct keyboard_interface *xroar_keyboard_interface;
 struct printer_interface *xroar_printer_interface;
 static struct cart_config *selected_cart_config;
-struct vdg_palette *xroar_vdg_palette;
 
 struct vdrive_interface *xroar_vdrive_interface;
 
@@ -526,8 +525,6 @@ static struct {
 	{ "ASC", FILETYPE_ASC },
 	{ NULL, FILETYPE_UNKNOWN }
 };
-
-static struct vdg_palette *get_machine_palette(void);
 
 /**************************************************************************/
 
@@ -813,9 +810,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		xroar_machine_config->default_cart = xstrdup(selected_cart_config->name);
 	}
 
-	/* Initial palette */
-	xroar_vdg_palette = get_machine_palette();
-
 	/* Initialise everything */
 	event_current_tick = 0;
 	/* ... modules */
@@ -1003,18 +997,6 @@ void xroar_shutdown(void) {
 	vdrive_interface_free(xroar_vdrive_interface);
 	tape_interface_free(xroar_tape_interface);
 	xconfig_shutdown(xroar_options);
-}
-
-static struct vdg_palette *get_machine_palette(void) {
-	struct vdg_palette *vp;
-	vp = vdg_palette_by_name(xroar_machine_config->vdg_palette);
-	if (!vp) {
-		vp = vdg_palette_by_name("ideal");
-		if (!vp) {
-			vp = vdg_palette_index(0);
-		}
-	}
-	return vp;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1592,7 +1574,6 @@ void xroar_set_machine(_Bool notify, int id) {
 	} else {
 		xroar_set_cart(1, NULL);
 	}
-	xroar_vdg_palette = get_machine_palette();
 	xroar_hard_reset();
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);

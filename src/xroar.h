@@ -128,7 +128,6 @@ extern struct machine *xroar_machine;
 extern struct tape_interface *xroar_tape_interface;
 extern struct keyboard_interface *xroar_keyboard_interface;
 extern struct printer_interface *xroar_printer_interface;
-extern struct vdg_palette *xroar_vdg_palette;
 
 extern struct vdrive_interface *xroar_vdrive_interface;
 
