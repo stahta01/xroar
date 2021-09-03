@@ -15,17 +15,20 @@
       <menuitem name='Quit' action='QuitAction'/>
     </menu>
     <menu name='ViewMenu' action='ViewMenuAction'>
-      <menuitem name='InverseText' action='InverseTextAction'/>
       <menu name='CCRMenu' action='CCRMenuAction'>
-        <menuitem action='ccr-simple'/>
+        <menuitem action='ccr-none'/>
+        <menuitem action='ccr-2bit'/>
         <menuitem action='ccr-5bit'/>
         <menuitem action='ccr-simulated'/>
       </menu>
-      <menu name='CrossColourMenu' action='CrossColourMenuAction'>
-        <menuitem action='cc-none'/>
-        <menuitem action='cc-blue-red'/>
-        <menuitem action='cc-red-blue'/>
+      <menu name='TVInputMenu' action='TVInputMenuAction'>
+        <menuitem action='tv-input-cmp'/>
+        <menuitem action='tv-input-cmp-kbrw'/>
+        <menuitem action='tv-input-cmp-krbw'/>
+        <menuitem action='tv-input-rgb'/>
       </menu>
+      <separator/>
+      <menuitem name='InverseText' action='InverseTextAction'/>
       <separator/>
       <menu name='ZoomMenu' action='ZoomMenuAction'>
         <menuitem action='zoom_in'/>

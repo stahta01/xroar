@@ -231,15 +231,15 @@ static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer us
 	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	xroar_set_cross_colour_renderer(0, val);
+	xroar_set_ccr(0, val);
 }
 
-static void set_cc(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)uigtk2;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	xroar_set_cross_colour(0, val);
+	xroar_set_tv_input(0, val);
 }
 
 static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -375,7 +375,7 @@ static GtkActionEntry const ui_entries[] = {
 	  .callback = G_CALLBACK(do_quit) },
 	/* View */
 	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
-	{ .name = "CrossColourMenuAction", .label = "_Composite Phase" },
+	{ .name = "TVInputMenuAction", .label = "TV _Input" },
 	{ .name = "ZoomMenuAction", .label = "_Zoom" },
 	{ .name = "zoom_in", .label = "Zoom In",
 	  .accelerator = "<control>plus",
@@ -437,15 +437,17 @@ static GtkToggleActionEntry const ui_toggles[] = {
 };
 
 static GtkRadioActionEntry const ccr_radio_entries[] = {
-	{ .name = "ccr-simple", .label = "Simple (2-bit LUT)", .value = UI_CCR_SIMPLE },
-	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = UI_CCR_5BIT },
-	{ .name = "ccr-simulated", .label = "Simulated", .value = UI_CCR_SIMULATED },
+	{ .name = "ccr-none", .label = "None", .value = VO_CMP_CCR_NONE },
+	{ .name = "ccr-2bit", .label = "Simple (2-bit LUT)", .value = VO_CMP_CCR_2BIT },
+	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = VO_CMP_CCR_5BIT },
+	{ .name = "ccr-simulated", .label = "Simulated", .value = VO_CMP_CCR_SIMULATED },
 };
 
-static GtkRadioActionEntry const cross_colour_radio_entries[] = {
-	{ .name = "cc-none", .label = "None", .value = VO_PHASE_OFF },
-	{ .name = "cc-blue-red", .label = "Blue-red", .value = VO_PHASE_KBRW },
-	{ .name = "cc-red-blue", .label = "Red-blue", .value = VO_PHASE_KRBW },
+static GtkRadioActionEntry const tv_input_radio_entries[] = {
+	{ .name = "tv-input-cmp", .label = "Composite (no cross-colour)", .value = TV_INPUT_CMP_PALETTE },
+	{ .name = "tv-input-cmp-kbrw", .label = "Composite (blue-red cross-colour)", .value = TV_INPUT_CMP_KBRW },
+	{ .name = "tv-input-cmp-krbw", .label = "Composite (red-blue cross-colour)", .value = TV_INPUT_CMP_KRBW },
+	{ .name = "tv-input-rgb", .label = "RGB", .value = TV_INPUT_RGB },
 };
 
 static GtkRadioActionEntry const keymap_radio_entries[] = {
@@ -545,8 +547,8 @@ static void *ui_gtk2_new(void *cfg) {
 	gtk_action_group_add_radio_actions(main_action_group, keymap_radio_entries, G_N_ELEMENTS(keymap_radio_entries), 0, (GCallback)set_keymap, uigtk2);
 	gtk_action_group_add_radio_actions(main_action_group, joy_right_radio_entries, G_N_ELEMENTS(joy_right_radio_entries), 0, (GCallback)set_joy_right, uigtk2);
 	gtk_action_group_add_radio_actions(main_action_group, joy_left_radio_entries, G_N_ELEMENTS(joy_left_radio_entries), 0, (GCallback)set_joy_left, uigtk2);
+	gtk_action_group_add_radio_actions(main_action_group, tv_input_radio_entries, G_N_ELEMENTS(tv_input_radio_entries), 0, (GCallback)set_tv_input, uigtk2);
 	gtk_action_group_add_radio_actions(main_action_group, ccr_radio_entries, G_N_ELEMENTS(ccr_radio_entries), 0, (GCallback)set_ccr, uigtk2);
-	gtk_action_group_add_radio_actions(main_action_group, cross_colour_radio_entries, G_N_ELEMENTS(cross_colour_radio_entries), 0, (GCallback)set_cc, uigtk2);
 
 	/* Menu merge points */
 	uigtk2->merge_machines = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
@@ -685,13 +687,13 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		break;
 
 	case ui_tag_ccr:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-simple");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-none");
 		uigtk2_notify_radio_action_set(radio, value, set_ccr, uigtk2);
 		break;
 
-	case ui_tag_cross_colour:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CrossColourMenu/cc-none");
-		uigtk2_notify_radio_action_set(radio, value, set_cc, uigtk2);
+	case ui_tag_tv_input:
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/TVInputMenu/tv-input-cmp");
+		uigtk2_notify_radio_action_set(radio, value, set_tv_input, uigtk2);
 		break;
 
 	/* Audio */

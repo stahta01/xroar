@@ -37,8 +37,6 @@ unsigned ntsc_phase = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-extern inline void ntsc_reset_phase(void);
-
 struct ntsc_palette *ntsc_palette_new(void) {
 	struct ntsc_palette *np = xmalloc(sizeof(*np));
 	*np = (struct ntsc_palette){0};

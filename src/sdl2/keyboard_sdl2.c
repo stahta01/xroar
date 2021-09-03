@@ -190,7 +190,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			xroar_set_write_enable(1, cmdkey - '5', XROAR_NEXT);
 		}
 		return;
-	case 'a': xroar_set_cross_colour(1, XROAR_NEXT); return;
+	case 'a': xroar_set_tv_input(1, XROAR_NEXT); return;
 	case 'd':
 		     if (shift) {
 			     vdrive_flush(xroar_vdrive_interface);

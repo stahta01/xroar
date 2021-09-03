@@ -38,7 +38,7 @@ struct module vo_null_module = {
 static void null_free(void *sptr);
 static void no_op(void *sptr);
 static void no_op_render(void *sptr, uint8_t const *scanline_data,
-			 struct ntsc_burst *burst, unsigned phase);
+			 struct ntsc_burst *burst);
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -47,7 +47,7 @@ static void *new(void *cfg) {
 
 	vo->free = DELEGATE_AS0(void, null_free, vo);
 	vo->vsync = DELEGATE_AS0(void, no_op, vo);
-	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, no_op_render, vo);
+	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, no_op_render, vo);
 
 	return vo;
 }
@@ -62,9 +62,8 @@ static void no_op(void *sptr) {
 }
 
 static void no_op_render(void *sptr, uint8_t const *scanline_data,
-			 struct ntsc_burst *burst, unsigned phase) {
+			 struct ntsc_burst *burst) {
 	(void)sptr;
 	(void)scanline_data;
 	(void)burst;
-	(void)phase;
 }

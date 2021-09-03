@@ -54,6 +54,17 @@ struct vo_interface;
 #define TV_PAL  (0)
 #define TV_NTSC (1)
 #define TV_PAL_M (2)
+
+// TV input profiles. These are converted into combinations of input,
+// cross-colour renderer and cross-colour phase to configure the video module.
+
+#define TV_INPUT_CMP_PALETTE (0)
+#define TV_INPUT_CMP_KBRW (1)
+#define TV_INPUT_CMP_KRBW (2)
+#define TV_INPUT_RGB (3)
+#define NUM_TV_INPUTS_DRAGON (3)
+#define NUM_TV_INPUTS_COCO3 (4)
+
 #define VDG_6847 (0)
 #define VDG_6847T1 (1)
 #define VDG_GIME_1986 (2)
@@ -138,8 +149,8 @@ struct machine_config {
 	char *vdg_palette;
 	int keymap;
 	int tv_standard;
+	int tv_input;
 	int vdg_type;
-	int cross_colour_phase;
 	int ram;
 	_Bool nobas;
 	_Bool noextbas;
@@ -157,6 +168,7 @@ extern struct xconfig_enum machine_arch_list[];
 extern struct xconfig_enum machine_keyboard_list[];
 extern struct xconfig_enum machine_cpu_list[];
 extern struct xconfig_enum machine_tv_type_list[];
+extern struct xconfig_enum machine_tv_input_list[];
 extern struct xconfig_enum machine_vdg_type_list[];
 
 /* Add a new machine config: */

@@ -127,6 +127,18 @@ static void coco3_config_complete(struct machine_config *mc) {
 	}
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
+	if (mc->tv_input == ANY_AUTO) {
+		switch (mc->tv_standard) {
+		default:
+		case TV_PAL:
+			mc->tv_input = TV_INPUT_RGB;
+			break;
+		case TV_NTSC:
+		case TV_PAL_M:
+			mc->tv_input = TV_INPUT_CMP_KBRW;
+			break;
+		}
+	}
 	if (mc->vdg_type == ANY_AUTO)
 		mc->vdg_type = VDG_GIME_1986;
 	if (mc->vdg_type != VDG_GIME_1986 && mc->vdg_type != VDG_GIME_1987)
@@ -464,14 +476,6 @@ static void coco3_remove_cart(struct machine *m) {
 static void coco3_reset(struct machine *m, _Bool hard) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	xroar_set_keymap(1, xroar_machine_config->keymap);
-	switch (xroar_machine_config->tv_standard) {
-	case TV_PAL: default:
-		xroar_set_cross_colour(1, VO_PHASE_OFF);
-		break;
-	case TV_NTSC:
-		xroar_set_cross_colour(1, VO_PHASE_KBRW);
-		break;
-	}
 	if (hard) {
 		/* Intialise RAM contents */
 		unsigned loc = 0, val = 0xff;
@@ -932,8 +936,7 @@ static void gime_fs(void *sptr, _Bool level) {
 static void gime_render_line(void *sptr, uint8_t *data, unsigned burst) {
 	struct machine_coco3 *mcc3 = sptr;
 	struct ntsc_burst *nb = mcc3->ntsc_burst[burst];
-	unsigned phase = 2*mcc3->public.config->cross_colour_phase;
-	DELEGATE_CALL(mcc3->vo->render_scanline, data, nb, phase);
+	DELEGATE_CALL(mcc3->vo->render_scanline, data, nb);
 }
 
 /* Sound output can feed back into the single bit sound pin when it's

@@ -52,6 +52,7 @@ struct machine_config *machine_config_new(void) {
 	new->cpu = CPU_MC6809;
 	new->keymap = ANY_AUTO;
 	new->tv_standard = ANY_AUTO;
+	new->tv_input = ANY_AUTO;
 	new->vdg_type = ANY_AUTO;
 	new->ram = ANY_AUTO;
 	new->cart_enabled = 1;
@@ -161,6 +162,14 @@ struct xconfig_enum machine_tv_type_list[] = {
 	{ XC_ENUM_END() }
 };
 
+struct xconfig_enum machine_tv_input_list[] = {
+	{ XC_ENUM_INT("cmp", TV_INPUT_CMP_PALETTE, "Composite (no cross-colour)") },
+	{ XC_ENUM_INT("cmp-br", TV_INPUT_CMP_KBRW, "Composite (blue-red)") },
+	{ XC_ENUM_INT("cmp-rb", TV_INPUT_CMP_KRBW, "Composite (red-blue)") },
+	{ XC_ENUM_INT("rgb", TV_INPUT_RGB, "RGB") },
+	{ XC_ENUM_END() }
+};
+
 struct xconfig_enum machine_vdg_type_list[] = {
 	{ XC_ENUM_INT("6847", VDG_6847, "Original 6847") },
 	{ XC_ENUM_INT("6847t1", VDG_6847T1, "6847T1 with lowercase") },
@@ -196,6 +205,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_bool(f, all, "noaltbas", mc->noaltbas, 0);
 		xroar_cfg_print_string(f, all, "ext-charset", mc->ext_charset_rom, NULL);
 		xroar_cfg_print_enum(f, all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
+		xroar_cfg_print_enum(f, all, "tv-input", mc->tv_input, ANY_AUTO, machine_tv_input_list);
 		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
 		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
 		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL);

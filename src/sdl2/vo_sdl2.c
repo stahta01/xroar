@@ -108,12 +108,14 @@ static void *new(void *sptr) {
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
+	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
-	vo->set_vo_cmp = DELEGATE_AS1(void, int, set_vo_cmp, vo);
+	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
+	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
+	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {

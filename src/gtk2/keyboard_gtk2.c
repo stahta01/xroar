@@ -273,7 +273,7 @@ static void emulator_command(guint keyval, int shift) {
 		}
 		break;
 	case GDK_KEY_a:
-		xroar_set_cross_colour(1, XROAR_NEXT);
+		xroar_set_tv_input(1, XROAR_NEXT);
 		break;
 	case GDK_KEY_d:
 		if (shift) {

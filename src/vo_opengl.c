@@ -91,7 +91,6 @@ static void vo_opengl_free(void *sptr);
 static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h);
 static void vo_opengl_refresh(void *sptr);
 static void vo_opengl_vsync(void *sptr);
-static void vo_opengl_set_vo_cmp(void *sptr, int mode);
 
 struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
@@ -103,11 +102,13 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
 	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
+	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
-	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_opengl_set_vo_cmp, vo);
+	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
+	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
+	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
 
 	vogl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
 	vogl->window_width = 640;
@@ -229,11 +230,4 @@ static void vo_opengl_vsync(void *sptr) {
 	vo_opengl_refresh(vogl);
 	generic->pixel = vogl->texture_pixels;
 	generic_vsync(generic);
-}
-
-static void vo_opengl_set_vo_cmp(void *sptr, int mode) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_opengl_interface *vogl = &generic->module;
-	struct vo_interface *vo = &vogl->public;
-	set_vo_cmp(vo, mode);
 }

@@ -187,12 +187,11 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y
 
 // Render colour line using palette.  Used for RGB and palette-based CMP.
 
-static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
-	(void)phase;
 	if (generic->scanline >= vo->window.y &&
 	    generic->scanline < (vo->window.y + vo->window.h)) {
 		scanline_data += vo->window.x;
@@ -212,12 +211,12 @@ static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc
 
 // Render artefact colours using simple 2-bit LUT.
 
-static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
-	unsigned p = (phase >> 2) & 1;
+	unsigned p = generic->cmp_phase >> 1;
 	if (generic->scanline >= vo->window.y &&
 	    generic->scanline < (vo->window.y + vo->window.h)) {
 		scanline_data += vo->window.x;
@@ -254,12 +253,12 @@ static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct nts
 // runs of pixels are considered to contribute to artefect colours, otherwise
 // they are passed through from the palette.
 
-static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
-	unsigned p = (phase >> 2) & 1;
+	unsigned p = generic->cmp_phase >> 1;
 	if (generic->scanline >= vo->window.y &&
 	    generic->scanline < (vo->window.y + vo->window.h)) {
 		unsigned ibwcount = 0;
@@ -301,7 +300,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 
 // NTSC composite video simulation.
 
-static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst, unsigned phase) {
+static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
@@ -315,7 +314,7 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 	// Encode NTSC
 	const uint8_t *src = scanline_data + vo->window.x - 3;
 	uint8_t *dst = generic->ntsc_buf;
-	ntsc_phase = (phase + vo->window.x) & 3;
+	ntsc_phase = (generic->cmp_phase + vo->window.x) & 3;
 	for (int i = vo->window.w + 6; i; i--) {
 		unsigned c = *(src++);
 		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
@@ -323,7 +322,7 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 
 	// And now decode
 	src = generic->ntsc_buf;
-	ntsc_phase = ((phase + vo->window.x) + 3) & 3;
+	ntsc_phase = ((generic->cmp_phase + vo->window.x) + 3) & 3;
 	LOCK_SURFACE(generic);
 	for (int j = vo->window.w; j; j--) {
 		struct ntsc_xyz rgb = ntsc_decode(burst, src++);
@@ -355,23 +354,23 @@ static void update_render_parameters(struct vo_generic_interface *generic) {
 
 	// RGB is always palette-based
 	if (generic->input == VO_TV_RGB) {
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
+		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 		return;
 	}
 
 	// Composite video has more options
 	switch (generic->cmp_ccr) {
 	case VO_CMP_CCR_NONE:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_palette, vo);
+		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 		break;
 	case VO_CMP_CCR_2BIT:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_2bit, vo);
+		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ccr_2bit, vo);
 		break;
 	case VO_CMP_CCR_5BIT:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ccr_5bit, vo);
+		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ccr_5bit, vo);
 		break;
 	case VO_CMP_CCR_SIMULATED:
-		vo->render_scanline = DELEGATE_AS3(void, uint8cp, ntscburst, unsigned, render_ntsc, vo);
+		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ntsc, vo);
 		break;
 	}
 }
@@ -391,14 +390,6 @@ static void set_cmp_ccr(void *sptr, int ccr) {
 static void set_cmp_phase(void *sptr, int phase) {
 	struct vo_generic_interface *generic = sptr;
 	generic->cmp_phase = phase;
-	update_render_parameters(generic);
-}
-
-// XXX to be removed
-static void set_vo_cmp(void *sptr, int mode) {
-	struct vo_generic_interface *generic = sptr;
-	generic->input = VO_TV_CMP;
-	generic->cmp_ccr = mode;
 	update_render_parameters(generic);
 }
 

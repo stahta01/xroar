@@ -33,12 +33,6 @@ struct vdisk;
 #define UI_GL_FILTER_NEAREST (0)
 #define UI_GL_FILTER_LINEAR  (1)
 
-/* How to render NTSC cross-colour: simple (4-colour palette), 5bit (5-bit LUT)
- * or simulated (NTSC encoded, filtered, decoded). */
-#define UI_CCR_SIMPLE (0)
-#define UI_CCR_5BIT (1)
-#define UI_CCR_SIMULATED (2)
-
 struct ui_cfg {
 	// Video
 	char *vo;  // video output module
@@ -47,7 +41,6 @@ struct ui_cfg {
 	char *keymap;
 };
 
-extern struct xconfig_enum ui_ccr_list[];
 extern struct xconfig_enum ui_gl_filter_list[];
 
 /* To fit into the limits of the various UI toolkits in use, tag ids are 7
@@ -71,10 +64,10 @@ enum ui_tag {
 	ui_tag_disk_write_back,
 	ui_tag_disk_data,  // .data = struct vdisk
 	// Video
+	ui_tag_ccr,
+	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
-	ui_tag_ccr,
-	ui_tag_cross_colour,
 	// Audio
 	ui_tag_ratelimit,
 	// Keyboard

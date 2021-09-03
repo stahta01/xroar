@@ -33,11 +33,11 @@ static struct module * const default_vo_module_list[] = {
 
 struct module * const *vo_module_list = default_vo_module_list;
 
-struct xconfig_enum vo_ntsc_phase_list[] = {
-	{ XC_ENUM_INT("none", VO_PHASE_OFF, "None") },
-	{ XC_ENUM_INT("blue-red", VO_PHASE_KBRW, "Blue-red") },
-	{ XC_ENUM_INT("red-blue", VO_PHASE_KRBW, "Red-blue") },
-	{ XC_ENUM_END() }
+struct xconfig_enum vo_cmp_ccr_list[] = {
+	{ XC_ENUM_INT("none", VO_CMP_CCR_NONE, "no cross-colour") },
+	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
+	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit lookup table") },
+	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "simulated filtered analogue") },
 };
 
 const uint8_t vo_cmp_lut_2bit[2][4][3] = {

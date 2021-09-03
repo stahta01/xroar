@@ -66,7 +66,9 @@ static void refresh(void *sptr);
 static void vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
-static void vo_gtkgl_set_vo_cmp(void *sptr, int mode);
+static void vo_gtkgl_set_input(void *sptr, int input);
+static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr);
+static void vo_gtkgl_set_cmp_phase(void *sptr, int phase);
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
@@ -101,7 +103,9 @@ static void *new(void *sptr) {
 	vo->vsync = DELEGATE_AS0(void, vsync, vo);
 	vo->palette_set_ybr = vogl->palette_set_ybr;
 	vo->palette_set_rgb = vogl->palette_set_rgb;
-	vo->set_vo_cmp = DELEGATE_AS1(void, int, vo_gtkgl_set_vo_cmp, vo);
+	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);
+	vo->set_cmp_ccr = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_ccr, vo);
+	vo->set_cmp_phase = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_phase, vo);
 
 	/* Configure drawing_area widget */
 	gtk_widget_set_size_request(global_uigtk2->drawing_area, 640, 480);
@@ -247,11 +251,27 @@ static void vsync(void *sptr) {
 	gdk_gl_drawable_gl_end(gldrawable);
 }
 
-static void vo_gtkgl_set_vo_cmp(void *sptr, int mode) {
+static void vo_gtkgl_set_input(void *sptr, int input) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vo = &vogtkgl->public;
 	struct vo_interface *vogl = vogtkgl->vogl;
-	DELEGATE_CALL(vogl->set_vo_cmp, mode);
+	DELEGATE_CALL(vogl->set_input, input);
+	vo->render_scanline = vogl->render_scanline;
+}
+
+static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr) {
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_interface *vogl = vogtkgl->vogl;
+	DELEGATE_CALL(vogl->set_cmp_ccr, ccr);
+	vo->render_scanline = vogl->render_scanline;
+}
+
+static void vo_gtkgl_set_cmp_phase(void *sptr, int phase) {
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_interface *vogl = vogtkgl->vogl;
+	DELEGATE_CALL(vogl->set_cmp_phase, phase);
 	vo->render_scanline = vogl->render_scanline;
 }
 

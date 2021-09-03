@@ -112,6 +112,7 @@ struct private_cfg {
 	int noaltbas;
 	char *ext_charset;
 	int tv;
+	int tv_input;
 	int vdg_type;
 	char *machine_cart;
 	int ram;
@@ -181,13 +182,14 @@ static struct private_cfg private_cfg = {
 	.noextbas = -1,
 	.noaltbas = -1,
 	.tv = ANY_AUTO,
+	.tv_input = ANY_AUTO,
 	.vdg_type = -1,
 	.nodos = -1,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
 	.tape_fast = 1,
 	.tape_pad_auto = 1,
-	.ccr = UI_CCR_5BIT,
+	.ccr = VO_CMP_CCR_5BIT,
 	// if volume set >=0, use that, else use gain value in dB
 	.gain = -3.0,
 	.volume = -1,
@@ -1283,69 +1285,76 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	return new_wb;
 }
 
-void xroar_set_cross_colour_renderer(_Bool notify, int action) {
+void xroar_set_ccr(_Bool notify, int action) {
 	switch (action) {
-	case UI_CCR_SIMPLE:
-	case UI_CCR_5BIT:
-	case UI_CCR_SIMULATED:
+	case VO_CMP_CCR_NONE:
+	case VO_CMP_CCR_2BIT:
+	case VO_CMP_CCR_5BIT:
+	case VO_CMP_CCR_SIMULATED:
 		private_cfg.ccr = action;
 		break;
 	default:
-		private_cfg.ccr = UI_CCR_5BIT;
+		private_cfg.ccr = VO_CMP_CCR_NONE;
 		break;
 	}
-	xroar_set_cross_colour(0, xroar_machine_config->cross_colour_phase);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, private_cfg.ccr);
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
 	}
 }
 
-void xroar_set_cross_colour(_Bool notify, int action) {
+void xroar_set_tv_input(_Bool notify, int action) {
 	switch (action) {
-	case XROAR_NEXT:
-		xroar_machine_config->cross_colour_phase++;
-		xroar_machine_config->cross_colour_phase %= NUM_VO_PHASES;
+	case TV_INPUT_CMP_PALETTE:
+	case TV_INPUT_CMP_KBRW:
+	case TV_INPUT_CMP_KRBW:
+	case TV_INPUT_RGB:  // CoCo 3 only
+		xroar_machine_config->tv_input = action;
 		break;
+
+	case XROAR_NEXT:
+		xroar_machine_config->tv_input++;
+		if (xroar_machine_config->architecture == ARCH_COCO3) {
+			xroar_machine_config->tv_input %= NUM_TV_INPUTS_COCO3;
+		} else {
+			xroar_machine_config->tv_input %= NUM_TV_INPUTS_DRAGON;
+		}
+		break;
+
 	default:
-		xroar_machine_config->cross_colour_phase = action;
+		xroar_machine_config->tv_input = TV_INPUT_CMP_PALETTE;
 		break;
 	}
 
-	// XXX need to figure out new way to cycle through these.
-	// Notes:
-	// - move current cross_colour_phase to video module
-	// - but probably it needs to change its purpose and be renamed
-	// - want to cycle through:
-	//   - 0-phase cross-colour (blue-red)
-	//   - 180-phase cross-colour (red-blue)
-	//   - composite video palette
-	//   - rgb video palette
+	if (xroar_machine_config->architecture != ARCH_COCO3 && xroar_machine_config->tv_input == TV_INPUT_RGB) {
+		xroar_machine_config->tv_input = TV_INPUT_CMP_PALETTE;
+		notify = 1;
+	}
 
-	// And ALSO need to tell video module whether to use 2-bit, 5-bit or
-	// simulated - but these only apply when using one of the cross-colour
-	// modes.
-
-		if (xroar_machine_config->cross_colour_phase == VO_PHASE_OFF) {
-			DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
+	if (xroar_machine_config->tv_input == TV_INPUT_RGB) {
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_input, VO_TV_RGB);
+	} else {
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_input, VO_TV_CMP);
+		if (xroar_machine_config->tv_input == TV_INPUT_CMP_PALETTE) {
+			DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, VO_CMP_CCR_NONE);
 		} else {
-			switch (private_cfg.ccr) {
-			default:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_PALETTE);
-				break;
-			case UI_CCR_SIMPLE:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_2BIT);
-				break;
-			case UI_CCR_5BIT:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_5BIT);
-				break;
-			case UI_CCR_SIMULATED:
-				DELEGATE_SAFE_CALL(xroar_vo_interface->set_vo_cmp, VO_CMP_SIMULATED);
-				break;
-			}
+			DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, private_cfg.ccr);
 		}
+	}
+
+	switch (xroar_machine_config->tv_input) {
+	case TV_INPUT_CMP_KBRW:
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KBRW);
+		break;
+	case TV_INPUT_CMP_KRBW:
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KRBW);
+		break;
+	default:
+		break;
+	}
 
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cross_colour, xroar_machine_config->cross_colour_phase, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tv_input, xroar_machine_config->tv_input, NULL);
 	}
 }
 
@@ -1546,8 +1555,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 		break;
 	}
-	mc->cross_colour_phase = (mc->tv_standard == TV_PAL) ? VO_PHASE_OFF : VO_PHASE_KBRW;
-	xroar_set_cross_colour_renderer(1, private_cfg.ccr);
+	xroar_set_ccr(1, private_cfg.ccr);
+	xroar_set_tv_input(1, mc->tv_input);
 }
 
 void xroar_set_machine(_Bool notify, int id) {
@@ -2074,6 +2083,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("noaltbas", &private_cfg.noaltbas) },
 	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset) },
 	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
+	{ XC_SET_ENUM("tv-input", &private_cfg.tv_input, machine_tv_input_list) },
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_INT("ram", &private_cfg.ram) },
 	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart) },
@@ -2153,7 +2163,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
 	{ XC_SET_INT("fskip", &xroar_cfg.frameskip) },
-	{ XC_SET_ENUM("ccr", &private_cfg.ccr, ui_ccr_list) },
+	{ XC_SET_ENUM("ccr", &private_cfg.ccr, vo_cmp_ccr_list) },
 	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, ui_gl_filter_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
@@ -2473,7 +2483,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "vo", xroar_ui_cfg.vo, NULL);
 	xroar_cfg_print_bool(f, all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
 	xroar_cfg_print_int_nz(f, all, "fskip", xroar_cfg.frameskip);
-	xroar_cfg_print_enum(f, all, "ccr", private_cfg.ccr, UI_CCR_5BIT, ui_ccr_list);
+	xroar_cfg_print_enum(f, all, "ccr", private_cfg.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_bool(f, all, "invert-text", xroar_cfg.vdg_inverted_text, 0);

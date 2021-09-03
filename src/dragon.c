@@ -173,6 +173,18 @@ struct machine_config *machine_config_first_working(void) {
 static void dragon_config_complete(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
+	if (mc->tv_input == ANY_AUTO) {
+		switch (mc->tv_standard) {
+		default:
+		case TV_PAL:
+			mc->tv_input = TV_INPUT_CMP_PALETTE;
+			break;
+		case TV_NTSC:
+		case TV_PAL_M:
+			mc->tv_input = TV_INPUT_CMP_KBRW;
+			break;
+		}
+	}
 	if (mc->vdg_type == ANY_AUTO)
 		mc->vdg_type = VDG_6847;
 	if (mc->vdg_type != VDG_6847 && mc->vdg_type != VDG_6847T1)
@@ -778,15 +790,6 @@ static void dragon_remove_cart(struct machine *m) {
 static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	xroar_set_keymap(1, xroar_machine_config->keymap);
-	switch (xroar_machine_config->tv_standard) {
-	case TV_PAL: default:
-		xroar_set_cross_colour(1, VO_PHASE_OFF);
-		break;
-	case TV_NTSC:
-	case TV_PAL_M:
-		xroar_set_cross_colour(1, VO_PHASE_KBRW);
-		break;
-	}
 	if (hard) {
 		/* Intialise RAM contents */
 		int loc = 0, val = 0xff;
@@ -1406,8 +1409,7 @@ static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst) {
 	struct machine_dragon *md = sptr;
 	burst = (burst | md->ntsc_burst_mod) & 3;
 	struct ntsc_burst *nb = md->ntsc_burst[burst];
-	unsigned phase = 2*md->public.config->cross_colour_phase;
-	DELEGATE_CALL(md->vo->render_scanline, data, nb, phase);
+	DELEGATE_CALL(md->vo->render_scanline, data, nb);
 }
 
 /* Dragon parallel printer line delegate. */

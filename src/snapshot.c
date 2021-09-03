@@ -203,7 +203,7 @@ int write_snapshot(const char *filename) {
 	} else {
 		fs_write_uint8(fd, 0);
 	}
-	fs_write_uint8(fd, xroar_machine_config->cross_colour_phase);
+	fs_write_uint8(fd, xroar_machine_config->tv_input);
 	// RAM page 0
 	struct machine_memory *ram0 = xroar_machine->get_component(xroar_machine, "RAM0");
 	write_chunk_header(fd, ID_RAM_PAGE0, ram0->size);
@@ -534,7 +534,7 @@ int read_snapshot(const char *filename) {
 				}
 				size -= 7;
 				if (size > 0) {
-					mc->cross_colour_phase = fs_read_uint8(fd);
+					mc->tv_input = fs_read_uint8(fd);
 					size--;
 				}
 				xroar_configure_machine(mc);

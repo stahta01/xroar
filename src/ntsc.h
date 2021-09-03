@@ -52,14 +52,6 @@ struct ntsc_xyz {
 
 extern unsigned ntsc_phase;
 
-inline void ntsc_reset_phase(void) {
-	if (xroar_machine_config->cross_colour_phase == VO_PHASE_KRBW) {
-		ntsc_phase = 1;
-	} else {
-		ntsc_phase = 3;
-	}
-}
-
 struct ntsc_palette *ntsc_palette_new(void);
 void ntsc_palette_free(struct ntsc_palette *np);
 void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
