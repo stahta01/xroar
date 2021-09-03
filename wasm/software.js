@@ -16,6 +16,14 @@ const romstubs = [
 	// DragonDOS
 	'dplus49b.rom',
 	'sdose6.rom',
+	// CoCo
+	'bas13.rom',
+	'extbas11.rom',
+	// CoCo 3
+	'coco3.rom',
+	'coco3p.rom',
+	// RS-DOS
+	'disk11.rom',
 ];
 
 // List of software to present to the user in drop-down menus.

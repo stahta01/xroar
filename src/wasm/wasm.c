@@ -163,8 +163,8 @@ void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
 		EM_ASM_({ ui_update_ccr($0); }, value);
 		break;
 
-	case ui_tag_cross_colour:
-		EM_ASM_({ ui_update_cross_colour($0); }, value);
+	case ui_tag_tv_input:
+		EM_ASM_({ ui_update_tv_input($0); }, value);
 		break;
 
 	default:

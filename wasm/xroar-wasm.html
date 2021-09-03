@@ -60,15 +60,17 @@ be a better way to make this usable...
 <table class='column'>
 
 <tr title="Cross-colour renderer"><td style='text-align:right;'>Renderer:</td><td><select id='ccr' onchange='wasm_set_ccr(this.options[this.selectedIndex].value)'>
-	<option value='0'>Simple (2-bit LUT)</option>
-	<option value='1'>5-bit LUT</option>
-	<option value='2'>Simulated</option>
+	<option value='0'>None</option>
+	<option value='1'>Simple (2-bit LUT)</option>
+	<option value='2'>5-bit LUT</option>
+	<option value='3'>Simulated</option>
 	</select></td></tr>
 
-<tr title="Cross-colour phase"><td style='text-align:right;'>Phase:</td><td><select id='colour-phase' onchange='wasm_set_cross_colour(this.options[this.selectedIndex].value)'>
-	<option value='0'>None</option>
-	<option value='1'>Blue-red</option>
-	<option value='2'>Red-blue</option>
+<tr title="TV Input"><td style='text-align:right;'>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(this.options[this.selectedIndex].value)'>
+	<option value='0'>Composite palette</option>
+	<option value='1'>Composite (blue-red)</option>
+	<option value='2'>Composite (red-blue)</option>
+	<option value='3'>RGB</option>
 	</select></td></tr>
 
 </table>
@@ -116,6 +118,7 @@ be a better way to make this usable...
 		setWindowTitle: function(t){},
 		initial_resize: 0,
 		is_fullscreen: 0,
+		arguments: [ '-ao-fragments', '4' ],
 	};
 
 	// Initialisation that depends on the emscripten runtime being fully
@@ -338,14 +341,14 @@ be a better way to make this usable...
 	// Set cross-colour renderer
 	function wasm_set_ccr(value) {
 		resumeAudio(Module.canvas);
-		Module.ccall('xroar_set_cross_colour_renderer', null, [ 'boolean', 'number' ], [ false, value ]);
+		Module.ccall('xroar_set_ccr', null, [ 'boolean', 'number' ], [ false, value ]);
 		Module.canvas.focus();
 	}
 
-	// Set colourburst phase relationship
-	function wasm_set_cross_colour(value) {
+	// Set TV input
+	function wasm_set_tv_input(value) {
 		resumeAudio(Module.canvas);
-		Module.ccall('xroar_set_cross_colour', null, [ 'boolean', 'number' ], [ false, value ]);
+		Module.ccall('xroar_set_tv_input', null, [ 'boolean', 'number' ], [ false, value ]);
 		Module.canvas.focus();
 	}
 
@@ -426,8 +429,8 @@ be a better way to make this usable...
 	}
 
 	// Called when colourburst phase relationship changes
-	function ui_update_cross_colour(value) {
-		document.getElementById('colour-phase').value = value;
+	function ui_update_tv_input(value) {
+		document.getElementById('tv-input').value = value;
 	}
 
 	// Called when XRoar has finished initialising, before the main loop

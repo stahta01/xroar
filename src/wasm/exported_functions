@@ -9,8 +9,8 @@
 	'_xroar_eject_input_tape',
 	'_xroar_hard_reset',
 	'_xroar_set_cart_by_id',
-	'_xroar_set_cross_colour',
-	'_xroar_set_cross_colour_renderer',
+	'_xroar_set_ccr',
+	'_xroar_set_tv_input',
 	'_xroar_set_joystick',
 	'_xroar_set_machine',
 	'_xroar_soft_reset'
