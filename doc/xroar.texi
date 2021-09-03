@@ -50,12 +50,12 @@ Ciaran Anscomb.
 @node Top
 @top Introduction
 
-XRoar is a Dragon emulator that runs on a wide variety of platforms.  Due to
-hardware similarities, XRoar also emulates the Tandy Colour Computer (CoCo)
-models 1 & 2.  Some features are:
+XRoar is a Dragon and Tandy Colour Computer emulator that runs on a wide
+variety of platforms.  Some features are:
 
 @itemize @bullet
 @item Emulates Dragon 32, Dragon 64, Dragon 200-E, Tandy CoCo 1 & 2, and compatibles.
+@item Unfinished support for Tandy CoCo 3.
 @item Emulates DragonDOS, Delta and RSDOS disk systems.
 @item Emulates the Orchestra 90-CC stereo sound cartridge.
 @item Supports both raw and translated keyboard modes.
@@ -426,14 +426,18 @@ order: Dragon 64, Dragon 32, Tandy CoCo.  This can be overridden with the
 @option{-default-machine @var{name}} option.  XRoar has built-in configurations
 for the following machines:
 
-@multitable {dragon64xxx} {Tandy Color Computer (NTSC).xxx}
+@multitable {dragon64xxx} {Tandy Color Computer 1/2 (NTSC, T1).xxx}
 @headitem Name @tab Description
 @item @samp{dragon32} @tab Dragon 32 (PAL).
 @item @samp{dragon64} @tab Dragon 64 (PAL).
 @item @samp{dragon200e} @tab Dragon 200-E (PAL).
 @item @samp{tano} @tab Tano Dragon (NTSC).
-@item @samp{coco} @tab Tandy Colour Computer (PAL).
-@item @samp{cocous} @tab Tandy Color Computer (NTSC).
+@item @samp{coco} @tab Tandy Colour Computer 1/2 (PAL).
+@item @samp{cocous} @tab Tandy Color Computer 1/2 (NTSC).
+@item @samp{coco2b} @tab Tandy Colour Computer 1/2 (PAL, T1).
+@item @samp{coco2bus} @tab Tandy Color Computer 1/2 (NTSC, T1).
+@item @samp{coco3} @tab Tandy Colour Computer 3 (NTSC).
+@item @samp{coco3p} @tab Tandy Colour Computer 3 (PAL).
 @item @samp{mx1600} @tab Dynacom MX-1600 (PAL-M).
 @end multitable
 
@@ -469,15 +473,22 @@ Indicate the corresponding ROM is not fitted in this machine.
 @item -ext-charset @var{rom}
 ROM image to use for external character generator.
 
-@item -tv-type @var{type} One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.
-PAL-M is treated the same as NTSC, except with magenta-green artefacting
-instead of blue-red (simulated composite rendering only at the moment).
+@item -tv-type @var{type}
+One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.  PAL-M is treated the same as
+NTSC, except with magenta-green cross-colour instead of blue-red (simulated
+composite rendering only at the moment).
+
+@item -tv-input @var{input}
+One of @samp{cmp} (composite video, no cross-colour), @samp{cmp-br} (composite
+video, blue-red cross-colour), @samp{cmp-rb} (composite video, red-blue
+cross-colour) or @samp{rgb} (RGB video, CoCo 3 only).
 
 @item -vdg-type @var{type}
 Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 
 @item -ram @var{kbytes}
-Amount of RAM fitted.
+Amount of RAM fitted in kilobytes.  Valid sizes are 4-64K for Dragon and Tandy
+CoCo 1/2, 128K or 512K for the Tandy CoCo 3.
 
 @item -machine-cart @var{name}
 Default cartridge to attach.  @xref{Cartridges}.
@@ -833,6 +844,9 @@ state, current keyboard map, filenames of attached disk image files.
 
 What is @emph{not} (yet) included: Actual disk image data (only where to find
 it), attached cassettes or cartridge ROM contents.
+
+Please note that snapshots do @emph{not} work with Tandy CoCo 3 emulation yet
+(and when they do, the format is likely to change).
 
 
 @node Binary files
@@ -1406,8 +1420,8 @@ of cross-colour, but XRoar is emulating a PAL machine.  Try starting with
 @option{-default-machine tano} or @option{-default-machine cocous}.
 
 @float Figure,fig:artefacts
-@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artefact modes, png}
-@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different artefact modes}
+@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes, png}
+@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes}
 @end float
 
 
