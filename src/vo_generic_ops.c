@@ -224,25 +224,25 @@ static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct nts
 		LOCK_SURFACE(generic);
 		for (int i = vo->window.w / 4; i; i--) {
 			uint8_t c0 = *scanline_data;
-			uint8_t c1 = *(scanline_data + 2);
-			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c1]) {
-				scanline_data += 4;
-				unsigned aindex = (generic->cmp.is_black_or_white[c0] & 2) | (generic->cmp.is_black_or_white[c1] >> 1);
-				Pixel pout = generic->cmp.cc_2bit[p][aindex];
-				*(generic->pixel) = pout;
-				*(generic->pixel+1*XSTEP) = pout;
-				*(generic->pixel+2*XSTEP) = pout;
-				*(generic->pixel+3*XSTEP) = pout;
-				generic->pixel += 4*XSTEP;
+			uint8_t c2 = *(scanline_data + 2);
+			Pixel p0, p1, p2, p3;
+			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c2]) {
+				unsigned aindex = (generic->cmp.is_black_or_white[c0] & 2) | (generic->cmp.is_black_or_white[c2] >> 1);
+				p0 = p1 = p2 = p3 = generic->cmp.cc_2bit[p][aindex];
 			} else {
-				for (int j = 4; j; j--) {
-					c0 = *scanline_data;
-					scanline_data++;
-					Pixel p0 = generic->cmp.palette[c0];
-					*(generic->pixel) = p0;
-					generic->pixel += XSTEP;
-				}
+				uint8_t c1 = *(scanline_data+1);
+				uint8_t c3 = *(scanline_data+3);
+				p0 = generic->cmp.palette[c0];
+				p1 = generic->cmp.palette[c1];
+				p2 = generic->cmp.palette[c2];
+				p3 = generic->cmp.palette[c3];
 			}
+			scanline_data += 4;
+			*(generic->pixel) = p0;
+			*(generic->pixel+1*XSTEP) = p1;
+			*(generic->pixel+2*XSTEP) = p2;
+			*(generic->pixel+3*XSTEP) = p3;
+			generic->pixel += 4*XSTEP;
 		}
 		UNLOCK_SURFACE(generic);
 		generic->pixel += NEXTLINE;
