@@ -312,7 +312,7 @@ static char const * const default_config[] = {
 	"machine-arch coco3",
 	"tv-type ntsc",
 	"vdg-type gime1986",
-	"ram 128",
+	"ram 512",
 	// CoCo 3 PAL
 	"machine coco3p",
 	"machine-desc 'Tandy CoCo 3 (PAL)'",
@@ -320,7 +320,7 @@ static char const * const default_config[] = {
 	"tv-type pal",
 	"vdg-type gime1986",
 	"extbas @coco3p",
-	"ram 128",
+	"ram 512",
 	// Dynacom MX-1600
 	"machine mx1600",
 	"machine-desc 'Dynacom MX-1600'",
@@ -1067,6 +1067,7 @@ int xroar_load_file_by_type(const char *filename, int autorun) {
 				 * we're talking to */
 				switch (xroar_machine->config->architecture) {
 				case ARCH_COCO:
+				case ARCH_COCO3:
 					keyboard_queue_basic(xroar_keyboard_interface, "\\eDOS\\r");
 					break;
 				default:
