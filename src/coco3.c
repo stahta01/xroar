@@ -282,6 +282,13 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		DELEGATE_CALL(vo->palette_set_ybr, j, y, b_y, r_y);
 	}
 
+	for (int j = 0; j < 64; j++) {
+		float r = ((j & 0x20) ? 0.666 : 0.000) + ((j & 0x04) ? 0.333 : 0.000);
+		float g = ((j & 0x10) ? 0.666 : 0.000) + ((j & 0x02) ? 0.333 : 0.000);
+		float b = ((j & 0x08) ? 0.666 : 0.000) + ((j & 0x01) ? 0.333 : 0.000);
+		DELEGATE_CALL(vo->palette_set_rgb, j, r, g, b);
+	}
+
 	//mcc3->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
 	mcc3->ntsc_burst[0] = ntsc_burst_new(0);  // Normal burst (mode modes)
 	mcc3->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
