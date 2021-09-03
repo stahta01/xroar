@@ -81,8 +81,7 @@ struct vo_rect {
 };
 
 struct vo_interface {
-	int window_x, window_y;
-	int window_w, window_h;
+	struct vo_rect window;
 	_Bool is_fullscreen;
 
 	DELEGATE_T0(void) free;
@@ -94,6 +93,7 @@ struct vo_interface {
 	DELEGATE_T0(void) refresh;
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_ybr;  // Composite
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;  // RGB
+	DELEGATE_T1(void, int) set_vo_input;
 	DELEGATE_T1(void, int) set_vo_cmp;
 };
 

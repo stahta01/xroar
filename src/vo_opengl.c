@@ -115,10 +115,10 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
 	vogl->filter = vo_cfg->gl_filter;
 	generic_vsync(generic);
-	vo->window_x = VDG_ACTIVE_LINE_START - 64;
-	vo->window_y = VDG_TOP_BORDER_START + 1;
-	vo->window_w = 640;
-	vo->window_h = 240;
+	vo->window.x = VDG_ACTIVE_LINE_START - 64;
+	vo->window.y = VDG_TOP_BORDER_START + 1;
+	vo->window.w = 640;
+	vo->window.h = 240;
 	generic->pixel = vogl->texture_pixels;
 	return vo;
 }

@@ -210,12 +210,12 @@ static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	(void)phase;
-	if (generic->scanline >= vo->window_y &&
-	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x;
+	if (generic->scanline >= vo->window.y &&
+	    generic->scanline < (vo->window.y + vo->window.h)) {
+		scanline_data += vo->window.x;
 		uint8_t mask = generic->input_palette->mask;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window_w; i; i--) {
+		for (int i = vo->window.w; i; i--) {
 			uint8_t c0 = *scanline_data & mask;
 			scanline_data++;
 			Pixel p0 = generic->input_palette->values[c0];
@@ -236,12 +236,12 @@ static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct nts
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
-	if (generic->scanline >= vo->window_y &&
-	    generic->scanline < (vo->window_y + vo->window_h)) {
-		scanline_data += vo->window_x;
+	if (generic->scanline >= vo->window.y &&
+	    generic->scanline < (vo->window.y + vo->window.h)) {
+		scanline_data += vo->window.x;
 		uint8_t mask = generic->input_palette->mask;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window_w / 4; i; i--) {
+		for (int i = vo->window.w / 4; i; i--) {
 			uint8_t c0 = *scanline_data & mask;
 			uint8_t c1 = *(scanline_data + 2) & mask;
 			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c1]) {
@@ -277,15 +277,15 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = (phase >> 2) & 1;
-	if (generic->scanline >= vo->window_y &&
-	    generic->scanline < (vo->window_y + vo->window_h)) {
+	if (generic->scanline >= vo->window.y &&
+	    generic->scanline < (vo->window.y + vo->window.h)) {
 		unsigned aindex = 0;
-		scanline_data += vo->window_x;
+		scanline_data += vo->window.x;
 		uint8_t mask = generic->input_palette->mask;
 		aindex = (generic->cmp.is_black_or_white[*(scanline_data-6)] != 1) ? 14 : 0;
 		aindex |= (generic->cmp.is_black_or_white[*(scanline_data-2)] != 1) ? 1 : 0;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window_w / 2; i; i--) {
+		for (int i = vo->window.w / 2; i; i--) {
 			aindex = (aindex << 1) & 31;
 			if (generic->cmp.is_black_or_white[*(scanline_data+4)] != 1)
 				aindex |= 1;
@@ -319,27 +319,27 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 	struct vo_generic_interface *generic = sptr;
 	VO_MODULE_INTERFACE *vom = &generic->module;
 	struct vo_interface *vo = &vom->public;
-	if (generic->scanline < vo->window_y ||
-	    generic->scanline >= (vo->window_y + vo->window_h)) {
+	if (generic->scanline < vo->window.y ||
+	    generic->scanline >= (vo->window.y + vo->window.h)) {
 		generic->scanline++;
 		return;
 	}
 	generic->scanline++;
 
 	// Encode NTSC
-	const uint8_t *src = scanline_data + vo->window_x - 3;
+	const uint8_t *src = scanline_data + vo->window.x - 3;
 	uint8_t *dst = generic->ntsc_buf;
-	ntsc_phase = (phase + vo->window_x) & 3;
-	for (int i = vo->window_w + 6; i; i--) {
+	ntsc_phase = (phase + vo->window.x) & 3;
+	for (int i = vo->window.w + 6; i; i--) {
 		unsigned c = *(src++);
 		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
 	}
 
 	// And now decode
 	src = generic->ntsc_buf;
-	ntsc_phase = ((phase + vo->window_x) + 3) & 3;
+	ntsc_phase = ((phase + vo->window.x) + 3) & 3;
 	LOCK_SURFACE(generic);
-	for (int j = vo->window_w; j; j--) {
+	for (int j = vo->window.w; j; j--) {
 		struct ntsc_xyz rgb = ntsc_decode(burst, src++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable

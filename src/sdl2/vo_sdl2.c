@@ -136,10 +136,10 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	vo->window_x = VDG_ACTIVE_LINE_START - 64;
-	vo->window_y = VDG_TOP_BORDER_START + 1;
-	vo->window_w = 640;
-	vo->window_h = 240;
+	vo->window.x = VDG_ACTIVE_LINE_START - 64;
+	vo->window.y = VDG_TOP_BORDER_START + 1;
+	vo->window.w = 640;
+	vo->window.h = 240;
 
 	vo_sdl_vsync(vo);
 
