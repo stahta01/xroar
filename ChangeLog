@@ -1,7 +1,8 @@
 Version 0.38, unreleased
 
- * UNFINISHED, UNSUPPORTED CoCo 3 support.  Much known not to work.
+ * Initial CoCo 3 support.
  * Fix MPI FIRQ handling [Paul Fiscarelli]
+ * New option -tv-input configures type of video used by machine.
 
 Version 0.37, Sat Aug 14 2021
 
