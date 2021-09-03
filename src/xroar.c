@@ -1279,10 +1279,10 @@ void xroar_set_ccr(_Bool notify, int action) {
 		private_cfg.ccr = VO_CMP_CCR_NONE;
 		break;
 	}
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, private_cfg.ccr);
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
 	}
+	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }
 
 void xroar_set_tv_input(_Bool notify, int action) {

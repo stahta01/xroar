@@ -389,7 +389,7 @@ static void set_cmp_ccr(void *sptr, int ccr) {
 
 static void set_cmp_phase(void *sptr, int phase) {
 	struct vo_generic_interface *generic = sptr;
-	generic->cmp_phase = phase;
+	generic->cmp_phase = phase ^ 2;
 	update_render_parameters(generic);
 }
 
