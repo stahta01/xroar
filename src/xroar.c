@@ -1559,6 +1559,7 @@ void xroar_set_machine(_Bool notify, int id) {
 			break;
 	}
 	struct machine_config *mc = machine_config_by_id(new);
+	machine_config_complete(mc);
 #ifdef HAVE_WASM
 	if (!wasm_ui_prepare_machine(mc)) {
 		if (mc->default_cart) {
