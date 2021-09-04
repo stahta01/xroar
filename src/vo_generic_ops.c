@@ -57,7 +57,7 @@ struct vo_generic_interface {
 
 	// Current render pointer
 	Pixel *pixel;
-	int scanline;
+	unsigned scanline;
 
 	// Colourspace definition.
 	struct cs_profile *cs;

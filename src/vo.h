@@ -57,8 +57,8 @@ typedef DELEGATE_S2(void, uint8_t const *, struct ntsc_burst *) DELEGATE_T2(void
 typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8, float, float, float);
 
 struct vo_rect {
-	int x, y;
-	int w, h;
+	unsigned x, y;
+	unsigned w, h;
 };
 
 struct vo_interface {
