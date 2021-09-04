@@ -197,7 +197,7 @@ static void cart_halt(void *sptr, _Bool level);
 static void gime_hs(void *sptr, _Bool level);
 // static void gime_hs_pal_coco(void *sptr, _Bool level);
 static void gime_fs(void *sptr, _Bool level);
-static void gime_render_line(void *sptr, uint8_t *data, unsigned burst);
+static void gime_render_line(void *sptr, const uint8_t *data, _Bool phase_invert);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -289,9 +289,8 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		DELEGATE_CALL(vo->palette_set_rgb, j, r, g, b);
 	}
 
-	//mcc3->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
-	mcc3->ntsc_burst[0] = ntsc_burst_new(0);  // Normal burst (mode modes)
-	mcc3->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
+	mcc3->ntsc_burst[0] = ntsc_burst_new(0);    // Normal burst
+	mcc3->ntsc_burst[1] = ntsc_burst_new(180);  // Phase inverted burst
 
 	// CPU
 	switch (mc->cpu) {
@@ -346,7 +345,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 
 	mcc3->GIME0->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
 	mcc3->GIME0->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
-	mcc3->GIME0->render_line = DELEGATE_AS2(void, uint8p, unsigned, gime_render_line, mcc3);
+	mcc3->GIME0->render_line = (tcc1014_render_line_func){gime_render_line, mcc3};
 	tcc1014_set_inverted_text(mcc3->GIME0, mcc3->inverted_text);
 
 	/* Load appropriate ROMs */
@@ -940,9 +939,9 @@ static void gime_fs(void *sptr, _Bool level) {
 	}
 }
 
-static void gime_render_line(void *sptr, uint8_t *data, unsigned burst) {
+static void gime_render_line(void *sptr, const uint8_t *data, _Bool phase_invert) {
 	struct machine_coco3 *mcc3 = sptr;
-	struct ntsc_burst *nb = mcc3->ntsc_burst[burst];
+	struct ntsc_burst *nb = mcc3->ntsc_burst[phase_invert];
 	DELEGATE_CALL(mcc3->vo->render_scanline, data, nb);
 }
 

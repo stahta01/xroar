@@ -60,8 +60,7 @@
 #define TCC1014_VRETRACE_END       (TCC1014_BOTTOM_BORDER_END + 6)
 #define TCC1014_FRAME_DURATION     (262)
 
-/* Basic colours the VDG can generate */
-/* XXX GIME is more complex than this! */
+// GIME palette indices
 
 enum tcc1014_colour {
 	TCC1014_GREEN, TCC1014_YELLOW, TCC1014_BLUE, TCC1014_RED,
@@ -69,6 +68,8 @@ enum tcc1014_colour {
 	TCC1014_RGCSS0_0, TCC1014_RGCSS0_1, TCC1014_RGCSS1_0, TCC1014_RGCSS1_1,
 	TCC1014_DARK_GREEN, TCC1014_BRIGHT_GREEN, TCC1014_DARK_ORANGE, TCC1014_BRIGHT_ORANGE
 };
+
+typedef DELEGATE_S2(void, uint8_t const *, _Bool) tcc1014_render_line_func;
 
 struct TCC1014 {
 	struct part part;
@@ -92,7 +93,7 @@ struct TCC1014 {
 	DELEGATE_T1(uint8, uint32) fetch_vram;
 
 	// Render line
-	DELEGATE_T2(void, uint8p, unsigned) render_line;
+	tcc1014_render_line_func render_line;
 };
 
 /* Fetched data is a buffer of uint16_t, with bits:

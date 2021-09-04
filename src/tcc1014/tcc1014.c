@@ -221,8 +221,6 @@ struct TCC1014_private {
 	 * in render_scanline() between index checks. */
 	uint8_t pixel_data[TCC1014_LINE_DURATION+16];
 
-	unsigned burst;
-
 	unsigned vram_nbytes;
 
 	/* Counters */
@@ -595,7 +593,7 @@ static void do_hs_fall(void *sptr) {
 			gime->B = gime->line_base;
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
-		DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->burst);
+		DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->BPI);
 	}
 
 	// HS falling edge.
