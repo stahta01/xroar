@@ -135,7 +135,7 @@ static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
 	struct vo_generic_interface *generic = sptr;
 
 	float R, G, B;
-	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+	cs_mlaw(generic->cs, r+0.15625, g+0.15625, b+0.15625, &R, &G, &B);
 
 	palette_set(c, R, G, B, generic->rgb.palette);
 }
