@@ -22,6 +22,19 @@
  *  Sock's GIME register reference http://users.axess.com/twilight/sock/gime.html
  */
 
+// The "border" interrupts appear to be accurately named - the IRQ line fall is
+// coincident with the end of the active area, for both horizontal and vertical
+// border interrupts.
+
+// XXX PAL mode.
+//
+// At the moment I simply bodge 25 extra top/bottom border lines and set a
+// longer field duration.  There is then another bodge to skip sending the
+// first 25 scanlines to the video module.
+//
+// If interrupts are timed somewhere during these bodges, I'll have to rethink
+// earlier than I want to!
+
 #include "config.h"
 
 #include <limits.h>
@@ -63,6 +76,7 @@ struct TCC1014_private {
 	/* Timing */
 	struct event hs_fall_event;
 	struct event hs_rise_event;
+	struct event hs_border_event;
 	event_ticks scanline_start;
 	unsigned beam_pos;
 	unsigned scanline;
@@ -125,11 +139,10 @@ struct TCC1014_private {
 	_Bool BPI;  // 1=Composite phase invert
 	_Bool MOCH;  // 1=Monochrome on composite out
 	_Bool H50;  // 1=50Hz video; 0=60Hz video
-	unsigned LPR;  // Lines Per Row: 1, 2, 8, 9, 10, 11 or 255 (=infinite)
+	unsigned LPR;  // Lines Per Row: 1, 2, 8, 9, 10, 11 or 65535 (=infinite)
 
 	// $FF99: Video resolution register - VRES
-	unsigned LPF;  // Lines Per Field: 192, 200, 0, 225
-	_Bool infinite_LPF;  // Special case
+	unsigned LPF;  // Lines Per Field: 192, 200, 65535 (=infinite), 225
 	unsigned HRES;  // Bytes Per Row: 16, 20, 32, 40, 64, 80, 128, 160
 	unsigned CRES;  // Bits Per Pixel: 1, 2, 4, 0
 
@@ -241,7 +254,7 @@ static void tcc1014_free(struct part *p);
 static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val);
 static void update_from_sam_register(struct TCC1014_private *gime);
 
-static const unsigned VMODE_LPR[8] = { 1, 1, 2, 8, 9, 10, 11, 255 };
+static const unsigned VMODE_LPR[8] = { 1, 1, 2, 8, 9, 10, 11, 65535 };
 
 // Index LPF into top border and active area line counts.  In both cases, a
 // transition to LPF=2 implies an infinite count (so just set really large).
@@ -249,6 +262,7 @@ static const unsigned VRES_LPF_lTB[4] = { 25, 21, 65535, 9 };  // top border - u
 static const unsigned VRES_LPF_lAA[4] = { 192, 200, 65535, 225 };
 
 static const unsigned VRES_HRES_pLB[2] = { 120, 56 };  // left border
+static const unsigned VRES_HRES_pBRD[2] = { 760, 824 };  // pixels until border interrupt
 static const unsigned VSC_nLPR[16] = { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 4, 3, 2, 1, 12 };
 static const unsigned SAM_V_nLPR[8] = { 12, 1, 3, 2, 2, 1, 1, 1 };
 static const unsigned VRES_HRES_BPR[8] = { 16, 20, 32, 40, 64, 80, 128, 160 };
@@ -256,6 +270,7 @@ static const unsigned VRES_HRES_BPR_TEXT[8] = { 32, 40, 32, 40, 64, 80, 64, 80 }
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
+static void do_hs_border(void *);
 static void update_timer(void *);
 static void render_scanline(struct TCC1014_private *gime);
 static void tcc1014_update_graphics_mode(struct TCC1014_private *gime);
@@ -289,6 +304,7 @@ struct TCC1014 *tcc1014_new(int type) {
 	gime->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
 	event_init(&gime->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, gime));
 	event_init(&gime->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, gime));
+	event_init(&gime->hs_border_event, DELEGATE_AS0(void, do_hs_border, gime));
 	event_init(&gime->timer_event, DELEGATE_AS0(void, update_timer, gime));
 
 	return (struct TCC1014 *)gime;
@@ -296,6 +312,7 @@ struct TCC1014 *tcc1014_new(int type) {
 
 void tcc1014_free(struct part *p) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)p;
+	event_dequeue(&gime->hs_border_event);
 	event_dequeue(&gime->hs_fall_event);
 	event_dequeue(&gime->hs_rise_event);
 }
@@ -418,6 +435,9 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	} else if (A < 0xffc0) {
 		if (!RnW) {
+			if (gime->frame == 0 && gime->vstate == tcc1014_vstate_active_area) {
+				render_scanline(gime);
+			}
 			gime->palette_reg[A & 15] = *gimep->CPUD & 0x3f;
 		} else {
 			*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->palette_reg[A & 15];
@@ -475,6 +495,9 @@ static void update_timer(void *sptr) {
 }
 
 static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val) {
+	if (gime->frame == 0 && gime->vstate == tcc1014_vstate_active_area) {
+		render_scanline(gime);
+	}
 	reg &= 15;
 	gime->registers[reg] = val;
 	switch (reg) {
@@ -593,30 +616,26 @@ static void do_hs_fall(void *sptr) {
 			gime->B = gime->line_base;
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
-		DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->BPI);
+		// Total bodge to fix PAL display!  I think really we need the
+		// video module to know (either inferring or being told) that
+		// the signal is PAL.
+		if (!gime->H50 || gime->scanline > 25) {
+			DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->BPI);
+		}
 	}
 
 	// HS falling edge.
 	DELEGATE_CALL(gime->public.signal_hs, 0);
 
-	SET_INTERRUPT(gime, 0x10);
-	if (!gime->TINS && gime->timer_counter > 0) {
-		// TINS=0: 15.7kHz
-		gime->timer_counter--;
-		if (gime->timer_counter <= 0) {
-			update_timer(gime);
-		}
-	}
-
 	gime->scanline_start = gime->hs_fall_event.at_tick;
 	// Next HS rise and fall
 	gime->hs_rise_event.at_tick = gime->scanline_start + TCC1014_HS_RISING_EDGE;
 	gime->hs_fall_event.at_tick = gime->scanline_start + TCC1014_LINE_DURATION;
-
-	// XXX PAL mode?
+	gime->hs_border_event.at_tick = gime->scanline_start + VRES_HRES_pBRD[gime->HRES & 1];
 
 	event_queue(&MACHINE_EVENT_LIST, &gime->hs_rise_event);
 	event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
+	event_queue(&MACHINE_EVENT_LIST, &gime->hs_border_event);
 
 	// Next scanline
 	gime->vram_nbytes = 0;
@@ -635,10 +654,9 @@ static void do_hs_fall(void *sptr) {
 
 	// Always check against field duration - could hit this during active
 	// area or bottom border.
-	if (gime->scanline == gime->field_duration - 6) {
+	if (gime->scanline == gime->field_duration - 4) {
 		// FS falling edge
 		DELEGATE_CALL(gime->public.signal_fs, 0);
-		SET_INTERRUPT(gime, 0x08);
 		// clear output line to...  well should be vsync signal, but use black
 		memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
 	} else if (gime->scanline == gime->field_duration) {
@@ -686,6 +704,22 @@ static void do_hs_rise(void *sptr) {
 	struct TCC1014_private *gime = sptr;
 	// HS rising edge.
 	DELEGATE_CALL(gime->public.signal_hs, 1);
+}
+
+static void do_hs_border(void *sptr) {
+	struct TCC1014_private *gime = sptr;
+	// Horizontal border.
+	SET_INTERRUPT(gime, 0x10);
+	if (!gime->TINS && gime->timer_counter > 0) {
+		// TINS=0: 15.7kHz
+		gime->timer_counter--;
+		if (gime->timer_counter <= 0) {
+			update_timer(gime);
+		}
+	}
+	if (gime->vstate == tcc1014_vstate_active_area && gime->lcount == gime->nAA-1) {
+		SET_INTERRUPT(gime, 0x08);
+	}
 }
 
 static uint8_t fetch_byte_vram(struct TCC1014_private *gime) {
@@ -958,9 +992,9 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	gime->GM = (gime->vmode >> 4) & 7;
 
 	if (gime->COCO) {
-		gime->nTB = 25;
+		gime->nTB = 25 + (gime->H50 ? 25 : 0);
 		gime->nAA = 192;
-		gime->nLB = 120;
+		gime->nLB = 120 + (gime->H50 ? 25 : 0);
 		if (gime->GnA) {
 			gime->nLPR = SAM_V_nLPR[gime->SAM_V];
 		} else {
@@ -968,9 +1002,9 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 		}
 
 	} else {
-		gime->nTB = gime->lTB;
+		gime->nTB = gime->lTB + (gime->H50 ? 25 : 0);
 		gime->nAA = gime->lAA;
-		gime->nLB = gime->pLB;
+		gime->nLB = gime->pLB + (gime->H50 ? 25 : 0);
 		gime->nLPR = gime->LPR;
 	}
 
