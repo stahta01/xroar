@@ -545,7 +545,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	unsigned key = (jbutton == 0) ? GDK_KEY_Alt_L : GDK_KEY_VoidSymbol;
+	unsigned key = (jbutton == 0) ? GDK_KEY_Alt_L : GDK_KEY_Super_L;
 	if (spec && *spec)
 		key = get_key_by_name(spec);
 	struct button *button_data = g_malloc(sizeof(*button_data));

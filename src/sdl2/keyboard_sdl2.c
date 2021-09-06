@@ -555,7 +555,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	SDL_Keycode key = (jbutton == 0) ? SDLK_LALT : SDLK_UNKNOWN;
+	SDL_Keycode key = (jbutton == 0) ? SDLK_LALT : SDLK_LGUI;
 	if (spec && *spec)
 		key = get_key_by_name(spec);
 	struct button *button_data = xmalloc(sizeof(*button_data));

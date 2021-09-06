@@ -393,15 +393,35 @@ int joystick_read_axis(int port, int axis) {
 	return 32767;
 }
 
+// Reads up to four buttons (one from each joystick).  The returned value is
+// formatted to be easy to use with code for the Dragon/Coco1/2 (1 button per
+// stick) or Coco3 (2 buttons per stick).
+
 int joystick_read_buttons(void) {
 	int buttons = 0;
-	if (joystick_port[0] && joystick_port[0]->buttons[0]) {
-		if (joystick_port[0]->buttons[0]->read(joystick_port[0]->buttons[0]->data))
-			buttons |= 1;
+	if (joystick_port[0]) {
+	       if (joystick_port[0]->buttons[0]) {
+		       if (joystick_port[0]->buttons[0]->read(joystick_port[0]->buttons[0]->data)) {
+			       buttons |= 1;
+		       }
+	       }
+	       if (joystick_port[0]->buttons[1]) {
+		       if (joystick_port[0]->buttons[1]->read(joystick_port[0]->buttons[1]->data)) {
+			       buttons |= 4;
+		       }
+	       }
 	}
-	if (joystick_port[1] && joystick_port[1]->buttons[0]) {
-		if (joystick_port[1]->buttons[0]->read(joystick_port[1]->buttons[0]->data))
-			buttons |= 2;
+	if (joystick_port[1]) {
+		if (joystick_port[1]->buttons[0]) {
+			if (joystick_port[1]->buttons[0]->read(joystick_port[1]->buttons[0]->data)) {
+				buttons |= 2;
+			}
+		}
+		if (joystick_port[1]->buttons[1]) {
+			if (joystick_port[1]->buttons[1]->read(joystick_port[1]->buttons[1]->data)) {
+				buttons |= 8;
+			}
+		}
 	}
 	return buttons;
 }
