@@ -969,13 +969,6 @@ static void render_scanline(struct TCC1014_private *gime) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void tcc1014_set_palette(struct TCC1014 *gimep) {
-	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
-	// clear the pixel buffer, as the way its data so far is interpreted
-	// might change, and go out of bounds
-	memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
-}
-
 void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool invert) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	gime->inverted_text = invert;

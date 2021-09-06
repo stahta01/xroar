@@ -125,7 +125,6 @@ struct MC6847 *mc6847_new(int type);
 
 void mc6847_reset(struct MC6847 *);
 
-void mc6847_set_palette(struct MC6847 *);
 void mc6847_set_inverted_text(struct MC6847 *, _Bool);
 
 /*

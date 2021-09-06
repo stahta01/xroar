@@ -491,13 +491,6 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->rborder_remaining = VDG_tRB;
 }
 
-void mc6847_set_palette(struct MC6847 *vdgp) {
-	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
-	// clear the pixel buffer, as the way its data so far is interpreted
-	// might change, and go out of bounds
-	memset(vdg->pixel_data, 0, sizeof(vdg->pixel_data));
-}
-
 void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 	vdg->inverted_text = invert;
