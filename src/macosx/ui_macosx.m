@@ -74,8 +74,8 @@
 
 #define TAG_FULLSCREEN (9 << 24)
 #define TAG_VDG_INVERSE (16 << 24)
-#define TAG_COMPOSITE_RENDERER (18 << 24)
-#define TAG_COMPOSITE_PHASE (10 << 24)
+#define TAG_CCR (18 << 24)
+#define TAG_TV_INPUT (10 << 24)
 
 #define TAG_KEYMAP (12 << 24)
 #define TAG_KBD_TRANSLATE (13 << 24)
@@ -306,13 +306,13 @@ int cocoa_super_all_keys = 0;
 		is_fullscreen = !is_fullscreen;
 		xroar_set_fullscreen(0, is_fullscreen);
 		break;
-	case TAG_COMPOSITE_RENDERER:
+	case TAG_CCR:
 		current_ccr = tag;
-		xroar_set_cross_colour_renderer(0, tag_value);
+		xroar_set_ccr(0, tag_value);
 		break;
-	case TAG_COMPOSITE_PHASE:
+	case TAG_TV_INPUT:
 		current_cc = tag;
-		xroar_set_cross_colour(0, tag_value);
+		xroar_set_tv_input(0, tag_value);
 		break;
 	case TAG_VDG_INVERSE:
 		vdg_inverted = !vdg_inverted;
@@ -381,10 +381,10 @@ int cocoa_super_all_keys = 0;
 	case TAG_VDG_INVERSE:
 		[item setState:(vdg_inverted ? NSOnState : NSOffState)];
 		break;
-	case TAG_COMPOSITE_RENDERER:
+	case TAG_CCR:
 		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
 		break;
-	case TAG_COMPOSITE_PHASE:
+	case TAG_TV_INPUT:
 		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
 		break;
 
@@ -658,18 +658,23 @@ static void setup_view_menu(void) {
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
 
+	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_NONE)];
+	[submenu addItem:item];
+	[item release];
+
 	item = [[NSMenuItem alloc] initWithTitle:@"Simple (2-bit LUT)" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_SIMPLE)];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_2BIT)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"5-bit LUT" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_5BIT)];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_5BIT)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Simulated" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_COMPOSITE_RENDERER | UI_CCR_SIMULATED)];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_SIMULATED)];
 	[submenu addItem:item];
 	[item release];
 
@@ -678,19 +683,19 @@ static void setup_view_menu(void) {
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Composite Phase"];
+	submenu = [[NSMenu alloc] initWithTitle:@"TV Input"];
 
-	for (i = 0; vo_ntsc_phase_list[i].name; i++) {
-		NSString *s = [[NSString alloc] initWithUTF8String:vo_ntsc_phase_list[i].description];
+	for (i = 0; machine_tv_input_list[i].name; i++) {
+		NSString *s = [[NSString alloc] initWithUTF8String:machine_tv_input_list[i].description];
 		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_COMPOSITE_PHASE | vo_ntsc_phase_list[i].value)];
+		[item setTag:(TAG_TV_INPUT | machine_tv_input_list[i].value)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[submenu addItem:item];
 		[item release];
 		[s release];
 	}
 
-	item = [[NSMenuItem alloc] initWithTitle:@"Composite Phase" action:nil keyEquivalent:@""];
+	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
@@ -1105,11 +1110,11 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 		break;
 
 	case ui_tag_ccr:
-		current_ccr = TAG_COMPOSITE_RENDERER | value;
+		current_ccr = TAG_CCR | value;
 		break;
 
-	case ui_tag_cross_colour:
-		current_cc = TAG_COMPOSITE_PHASE | value;
+	case ui_tag_tv_input:
+		current_cc = TAG_TV_INPUT | value;
 		break;
 
 	/* Keyboard */
