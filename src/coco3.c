@@ -828,7 +828,7 @@ static uint8_t fetch_vram(void *sptr, uint32_t A) {
 
 static void keyboard_update(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	unsigned buttons = ~(joystick_read_buttons() & 3);
+	unsigned buttons = ~(joystick_read_buttons() & 15);
 	struct keyboard_state state = {
 		.row_source = mcc3->PIA0->a.out_sink,
 		.row_sink = mcc3->PIA0->a.out_sink & buttons,
