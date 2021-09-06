@@ -55,6 +55,9 @@
 
  *      Qxroar.sam:XXXX       | set SAM register (4 hex digits)
 
+ * TODO: machine-specific handling like SAM registers needs to be devolved to a
+ * machine interface, then we can add GIME register querying too.
+
  */
 
 #ifdef HAVE_CONFIG_H
@@ -826,7 +829,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 	char *query = strsep(&args, ":");
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
-		if (0 == strcmp(query, "sam")) {
+		if (0 == strcmp(query, "sam") && gip->sam) {
 			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: xroar.sam\n");
 			sprintf(packet, "%04x", sam_get_register(gip->sam));
 			send_packet(gip, packet, 4);
@@ -849,7 +852,7 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 	char *set = strsep(&args, ":");
 	if (0 == strncmp(set, "xroar.", 6)) {
 		set += 6;
-		if (0 == strcmp(set, "sam")) {
+		if (0 == strcmp(set, "sam") && gip->sam) {
 			sam_set_register(gip->sam, hex16(args));
 			send_packet_string(gip, "OK");
 			return;

@@ -38,6 +38,7 @@
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
+#include "gdb.h"
 #include "hd6309.h"
 #include "hd6309_trace.h"
 #include "joystick.h"
@@ -98,13 +99,11 @@ struct machine_coco3 {
 	int cycles;
 
 	struct bp_session *bp_session;
-	/*
 	_Bool single_step;
 	int stop_signal;
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
-	*/
 
 	// NTSC colour bursts.  The GIME can choose to invert the phase, so we
 	// maintain one normal, one 180° shifted.
@@ -169,8 +168,8 @@ static void coco3_insert_cart(struct machine *m, struct cart *c);
 static void coco3_remove_cart(struct machine *m);
 static void coco3_reset(struct machine *m, _Bool hard);
 static enum machine_run_state coco3_run(struct machine *m, int ncycles);
-//static void coco3_single_step(struct machine *m);
-//static void coco3_signal(struct machine *m, int sig);
+static void coco3_single_step(struct machine *m);
+static void coco3_signal(struct machine *m, int sig);
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
@@ -240,8 +239,8 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	m->remove_cart = coco3_remove_cart;
 	m->reset = coco3_reset;
 	m->run = coco3_run;
-	//m->single_step = coco3_single_step;
-	//m->signal = coco3_signal;
+	m->single_step = coco3_single_step;
+	m->signal = coco3_signal;
 	m->bp_add_n = coco3_bp_add_n;
 	m->bp_remove_n = coco3_bp_remove_n;
 
@@ -416,15 +415,12 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 
 	keyboard_set_keymap(mcc3->keyboard_interface, xroar_machine_config->keymap);
 
-	/*
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar_cfg.gdb) {
 		mcc3->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, mcc3->bp_session);
-		gdb_set_debug(mcc3->gdb_interface, xroar_cfg.debug_gdb);
 	}
 #endif
-*/
 
 	return m;
 }
@@ -437,11 +433,9 @@ static void coco3_free(struct part *p) {
 	}
 	//m->remove_cart(m);
 #ifdef WANT_GDB_TARGET
-	/*
 	if (mcc3->gdb_interface) {
 		gdb_interface_free(mcc3->gdb_interface);
 	}
-	*/
 #endif
 	if (mcc3->keyboard_interface) {
 		keyboard_interface_free(mcc3->keyboard_interface);
@@ -509,12 +503,11 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 
-	/*
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
 		switch (gdb_run_lock(mcc3->gdb_interface)) {
-		case gdb_run_state_timeout:
-			return machine_run_state_timeout;
+		case gdb_run_state_stopped:
+			return machine_run_state_stopped;
 		case gdb_run_state_running:
 			mcc3->stop_signal = 0;
 			mcc3->cycles += ncycles;
@@ -530,22 +523,18 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 			break;
 		}
 		gdb_run_unlock(mcc3->gdb_interface);
-		return mcc3->stop_signal ? machine_run_state_stopped : machine_run_state_ok;
+		return machine_run_state_ok;
 	} else {
 #endif
-*/
 		mcc3->cycles += ncycles;
 		mcc3->CPU0->running = 1;
 		mcc3->CPU0->run(mcc3->CPU0);
 		return machine_run_state_ok;
-		/*
 #ifdef WANT_GDB_TARGET
 	}
 #endif
-*/
 }
 
-/*
 static void coco3_single_step(struct machine *m) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->single_step = 1;
@@ -554,22 +543,18 @@ static void coco3_single_step(struct machine *m) {
 	do {
 		mcc3->CPU0->run(mcc3->CPU0);
 	} while (mcc3->single_step);
-	if (xroar_cfg.trace_enabled)
-		mcc3->CPU0->instruction_posthook.func = NULL;
+	mcc3->CPU0->instruction_posthook.func = NULL;
 }
-*/
 
 /*
  * Stop emulation and set stop_signal to reflect the reason.
  */
 
-/*
 static void coco3_signal(struct machine *m, int sig) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->stop_signal = sig;
 	mcc3->CPU0->running = 0;
 }
-*/
 
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
@@ -677,14 +662,11 @@ static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Used when single-stepping or tracing.
- */
+// Used when single-stepping.
 
 static void coco3_instruction_posthook(void *sptr) {
-	(void)sptr;
-	//struct machine_coco3 *mcc3 = sptr;
-	//mcc3->single_step = 0;  // XXX why is this commented out?
+	struct machine_coco3 *mcc3 = sptr;
+	mcc3->single_step = 0;
 }
 
 static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
