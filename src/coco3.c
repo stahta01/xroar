@@ -105,9 +105,9 @@ struct machine_coco3 {
 	struct gdb_interface *gdb_interface;
 #endif
 	*/
-	_Bool trace;
 
-	// NTSC colour bursts
+	// NTSC colour bursts.  The GIME can choose to invert the phase, so we
+	// maintain one normal, one 180° shifted.
 	struct ntsc_burst *ntsc_burst[2];
 
 	struct tape_interface *tape_interface;
@@ -696,15 +696,16 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 	}
 	switch (mcc3->GIME0->S) {
 	case 0:
-		// rom?
+		// ROM
 		mcc3->CPU0->D = mcc3->rom[A & 0x7fff];
 		break;
 	case 1:
+		// CTS (cartridge ROM)
 		if (mcc3->cart)
 			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A, 0, 1, mcc3->CPU0->D);
 		break;
 	case 2:
-		// seems to be general io area
+		// IO
 		if ((A & 32) == 0) {
 			mcc3->CPU0->D = mc6821_read(mcc3->PIA0, A);
 		} else {
@@ -712,12 +713,12 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		}
 		break;
 	case 6:
+		// SCS (cartridge IO)
 		if (mcc3->cart)
 			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A, 1, 0, mcc3->CPU0->D);
 		break;
-	case 7:
-		break;
 	default:
+		// All the rest are N/C
 		break;
 	}
 	if (mcc3->GIME0->RAS) {
@@ -735,16 +736,16 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	}
 	switch (mcc3->GIME0->S) {
 	case 0:
-		// rom?
+		// ROM
 		mcc3->CPU0->D = mcc3->rom[A & 0x7fff];
 		break;
 	case 1:
-		// seems to be CTS?
+		// CTS (cartridge ROM)
 		if (mcc3->cart)
 			mcc3->cart->write(mcc3->cart, A, 0, 1, mcc3->CPU0->D);
 		break;
 	case 2:
-		// seems to be general io area
+		// IO
 		if ((A & 32) == 0) {
 			mc6821_write(mcc3->PIA0, A, mcc3->CPU0->D);
 		} else {
@@ -752,12 +753,12 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 		}
 		break;
 	case 6:
+		// SCS (cartridge IO)
 		if (mcc3->cart)
 			mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU0->D);
 		break;
-	case 7:
-		break;
 	default:
+		// All the rest are N/C
 		break;
 	}
 	if (mcc3->GIME0->RAS) {
@@ -766,8 +767,7 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	}
 }
 
-/*
- * RAM access on the CoCo 3 is interesting.  For reading, 16 bits of data are
+/* RAM access on the CoCo 3 is interesting.  For reading, 16 bits of data are
  * strobed into two 8-bit buffers.  Each buffer is selected in turn using the
  * CAS signal, and presumably the GIME then latches one or the other to its
  * RAMD output based on the A0 line.  For writing, the CPU's data bus is
@@ -775,6 +775,9 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
  *
  * As the hi-res text modes use pairs of bytes (character and attribute), this
  * allows all the data to be fetched in one cycle.
+ *
+ * Of course, I do none of that here - the GIME code just asks for another byte
+ * if it needs it within the same cycle...  Good enough?
  */
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
