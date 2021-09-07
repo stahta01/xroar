@@ -21,10 +21,12 @@
 #endif
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "array.h"
+#include "c-strcase.h"
 
 #include "dkbd.h"
 
@@ -172,4 +174,79 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 		unsigned unicode = variant->chord_mappings[i].unicode;
 		map->unicode_to_dkey[unicode] = variant->chord_mappings[i].chord;
 	}
+}
+
+struct dk_name_to_key {
+	const char *name;
+	int8_t dk_key;
+} key_names[] = {
+	{ "colon", DSCAN_COLON },
+	{ "semicolon", DSCAN_SEMICOLON },
+	{ "comma", DSCAN_COMMA },
+	{ "minus", DSCAN_MINUS },
+	{ "fullstop", DSCAN_FULL_STOP },
+	{ "period", DSCAN_FULL_STOP },
+	{ "dot", DSCAN_FULL_STOP },
+	{ "slash", DSCAN_SLASH },
+	{ "at", DSCAN_AT },
+	{ "up", DSCAN_UP },
+	{ "down", DSCAN_DOWN },
+	{ "left", DSCAN_LEFT },
+	{ "right", DSCAN_RIGHT },
+	{ "space", DSCAN_SPACE },
+	{ "enter", DSCAN_ENTER },
+	{ "clear", DSCAN_CLEAR },
+	{ "break", DSCAN_BREAK },
+	{ "escape", DSCAN_BREAK },
+	{ "shift", DSCAN_SHIFT },
+	{ "alt", DSCAN_ALT },
+	{ "ctrl", DSCAN_CTRL },
+	{ "control", DSCAN_CTRL },
+	{ "f1", DSCAN_F1 },
+	{ "f2", DSCAN_F2 },
+};
+
+int8_t dk_key_by_name(const char *name) {
+	if (strlen(name) == 1) {
+		if (*name >= '0' && *name <= '9') {
+			return DSCAN_0 + (*name - '0');
+		}
+		// I mean, I'm pretty sure I assume ASCII elsehwere, but I
+		// can't stop myself writing it like this:
+		if (tolower(*name) >= 'a' && tolower(*name) <= 'i') {
+			return DSCAN_A + (tolower(*name) - 'a');
+		}
+		if (tolower(*name) >= 'j' && tolower(*name) <= 'r') {
+			return DSCAN_J + (tolower(*name) - 'j');
+		}
+		if (tolower(*name) >= 's' && tolower(*name) <= 'z') {
+			return DSCAN_S + (tolower(*name) - 's');
+		}
+		switch (*name) {
+		case ':': return DSCAN_COLON;
+		case ';': return DSCAN_SEMICOLON;
+		case ',': return DSCAN_COMMA;
+		case '-': return DSCAN_MINUS;
+		case '.': return DSCAN_FULL_STOP;
+		case '/': return DSCAN_SLASH;
+		case '@': return DSCAN_AT;
+		case 0x53: return DSCAN_UP;
+		case 0x0a: return DSCAN_DOWN;
+		case 0x08: return DSCAN_LEFT;
+		case 0x09: return DSCAN_RIGHT;
+		case ' ': return DSCAN_SPACE;
+		case 0x0d: return DSCAN_ENTER;
+		case 0x0c: return DSCAN_CLEAR;
+		case 0x1b: return DSCAN_BREAK;
+		default:
+			   break;
+		}
+	}
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(key_names); i++) {
+		if (c_strcasecmp(key_names[i].name, name) == 0) {
+			return key_names[i].dk_key;
+		}
+	}
+
+	return -1;
 }

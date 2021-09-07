@@ -132,6 +132,16 @@ struct dkbd_map {
 	struct dkey_chord unicode_to_dkey[DKBD_U_TABLE_SIZE];
 };
 
+struct dkbd_bind {
+	const char *hostkey;
+	int8_t dk_key;
+	_Bool priority;
+};
+
 void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout);
+
+// Return an emulated scancode by name.  Returns -1 if not found.
+
+int8_t dk_key_by_name(const char *name);
 
 #endif

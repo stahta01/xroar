@@ -208,6 +208,7 @@ static void set_ntsc(void);
 static void set_cart(const char *name);
 static void set_cart_type(const char *name);
 static void set_gain(double gain);
+static void set_kbd_bind(const char *spec);
 static void set_joystick(const char *name);
 static void set_joystick_axis(const char *spec);
 static void set_joystick_button(const char *spec);
@@ -1943,6 +1944,36 @@ static void cfg_mpi_load_cart(const char *arg) {
 	free(arg_copy);
 }
 
+static void set_kbd_bind(const char *spec) {
+	char *spec_copy = xstrdup(spec);
+	char *cspec = spec_copy;
+	char *hkey = strsep(&cspec, "=");
+	if (cspec) {
+		char *tmp = strsep(&cspec, ":");
+		char *flag = NULL;
+		char *dkey;
+		if (cspec) {
+			flag = tmp;
+			dkey = cspec;
+		} else {
+			dkey = tmp;
+		}
+		_Bool preempt = 0;
+		if (flag && c_strncasecmp(flag, "pre", 3) == 0) {
+			preempt = 1;
+		}
+		int8_t dk_key = dk_key_by_name(dkey);
+		if (dk_key >= 0) {
+			struct dkbd_bind *bind = xmalloc(sizeof(*bind));
+			bind->hostkey = xstrdup(hkey);
+			bind->dk_key = dk_key;
+			bind->priority = preempt;  // TODO: call this "preempt" elsewhere
+			xroar_cfg.kbd_bind_list = slist_append(xroar_cfg.kbd_bind_list, bind);
+		}
+	}
+	free(spec_copy);
+}
+
 /* Called when a "-joystick" option is encountered. */
 static void set_joystick(const char *name) {
 	// Apply any config to the current joystick config.
@@ -2171,6 +2202,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Keyboard: */
 	{ XC_SET_STRING("keymap", &xroar_ui_cfg.keymap) },
 	{ XC_SET_BOOL("kbd-translate", &xroar_cfg.kbd_translate) },
+	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 	{ XC_SET_STRING_LIST("type", &private_cfg.type_list) },
 
 	/* Joysticks: */
@@ -2324,9 +2356,10 @@ static void helptext(void) {
 "  -volume VOLUME        older way to specify audio volume, linear (0-100)\n"
 
 "\n Keyboard:\n"
-"  -keymap CODE          host keyboard type (-keymap help for list)\n"
-"  -kbd-translate        enable keyboard translation\n"
-"  -type STRING          intercept ROM calls to type STRING into BASIC\n"
+"  -keymap CODE            host keyboard type (-keymap help for list)\n"
+"  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
+"  -kbd-translate          enable keyboard translation\n"
+"  -type STRING            intercept ROM calls to type STRING into BASIC\n"
 
 "\n Joysticks:\n"
 "  -joy NAME             configure named joystick (-joy help for list)\n"

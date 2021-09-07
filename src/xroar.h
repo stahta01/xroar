@@ -85,6 +85,7 @@ struct xroar_cfg {
 
 	// Keyboard
 	_Bool kbd_translate;
+	struct slist *kbd_bind_list;
 	// Cartridges
 	_Bool becker;
 	char *becker_ip;
