@@ -1127,10 +1127,29 @@ Dragon 200-E).
 @table @option
 
 @item -keymap @var{code}
+
 Specify host keyboard layout.  @option{-keymap help} for a list.  Default is
-@samp{uk}.
+@samp{uk}.  This option adapts a variety of known host keyboard layout such
+that their untranslated keys are in roughly the same position as on a real
+Dragon computer.  Basically equivalent to a pre-rolled list of
+@option{-kbd-bind} options.
+
+@item -kbd-bind @var{hkey}=[pre:]@var{dkey}
+
+Bind host key @var{hkey} to emulated key @var{dkey}.  If prefixed with
+"preempt:" or "pre:", this binding preempts translation (useful for modifier
+keys).  Interpretation of @var{hkey} depends on which user-interface toolkit is
+in use, and it might be useful to run with @option{-debug-ui 1} to see what the
+toolkit calls your host keys.
+
+Special values for @var{dkey} are: @samp{colon}, @samp{semicolon},
+@samp{comma}, @samp{minus}, @samp{fullstop}, @samp{period}, @samp{dot},
+@samp{slash}, @samp{at}, @samp{up}, @samp{down}, @samp{left}, @samp{right},
+@samp{space}, @samp{enter}, @samp{clear}, @samp{break}, @samp{escape},
+@samp{shift}, @samp{alt}, @samp{ctrl}, @samp{control}, @samp{f1}, @samp{f2}.
 
 @item -kbd-translate
+
 Start up in ``translated'' keyboard mode.
 
 @item -type @var{string}
