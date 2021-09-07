@@ -34,6 +34,7 @@
 #include "array.h"
 #include "c-strcase.h"
 #include "pl-string.h"
+#include "slist.h"
 #include "xalloc.h"
 
 #include "dkbd.h"
@@ -164,6 +165,18 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 
 	for (unsigned i = 0; i < SDL_NUM_SCANCODES; i++)
 		uisdl2->keyboard.unicode_last_scancode[i] = 0;
+
+	// Apply user-supplied binds:
+	for (struct slist *iter = xroar_cfg.kbd_bind_list; iter; iter = iter->next) {
+		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
+		SDL_Scancode scancode = SDL_GetScancodeFromName(bind->hostkey);
+		if (scancode != SDL_SCANCODE_UNKNOWN && scancode < SDL_NUM_SCANCODES) {
+			uisdl2->keyboard.scancode_to_dkey[scancode] = bind->dk_key;
+			uisdl2->keyboard.scancode_priority[scancode] = bind->priority;
+		} else {
+			LOG_WARN("SDL2 key named '%s' not found\n", bind->hostkey);
+		}
+	}
 
 	// Clear the keystick mappings.
 
