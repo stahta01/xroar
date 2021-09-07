@@ -39,6 +39,7 @@
 #pragma GCC diagnostic pop
 
 #include "pl-string.h"
+#include "slist.h"
 
 #include "joystick.h"
 #include "keyboard.h"
@@ -228,6 +229,21 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 		keyval_to_dkey[keyval_index(mappings[i].sym)] = mappings[i].dkey;
 		keyval_priority[keyval_index(mappings[i].sym)] = mappings[i].priority;
 	}
+
+	// Apply user-supplied binds:
+	for (struct slist *iter = xroar_cfg.kbd_bind_list; iter; iter = iter->next) {
+		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
+		guint keyval = gdk_keyval_from_name(bind->hostkey);
+		// Docs say this returns GDK_KEY_VoidSymbol, but it seems to
+		// return 0 for me when key names not found.
+		if (keyval != 0 && keyval != GDK_KEY_VoidSymbol) {
+			keyval_to_dkey[keyval_index(keyval)] = bind->dk_key;
+			keyval_priority[keyval_index(keyval)] = bind->priority;
+		} else {
+			LOG_WARN("GTK+ key named '%s' not found\n", bind->hostkey);
+		}
+	}
+
 	return FALSE;
 }
 
