@@ -2,7 +2,7 @@
  *
  *  \brief File operations.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,6 +22,7 @@
 
 #define _POSIX_C_SOURCE 200112L
 
+#include <assert.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -61,6 +62,10 @@ int fs_truncate(FILE *fd, off_t length) {
 	return fseeko(fd, length, SEEK_SET);
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Writing basic integer types
+
 int fs_write_uint8(FILE *fd, int value) {
 	value &= 0xff;
 	return fputc(value, fd) == value;
@@ -89,6 +94,10 @@ int fs_write_uint31(FILE *fd, int value) {
 	return fwrite(out, 1, 4, fd);
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Reading basic integer types
+
 int fs_read_uint8(FILE *fd) {
 	return fgetc(fd);
 }
@@ -116,32 +125,128 @@ int fs_read_uint31(FILE *fd) {
 	return (in[0] << 24) | (in[1] << 16) | (in[2] << 8) | in[3];
 }
 
-/* Read a variable-length max 31-bit unsigned int. */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int fs_read_vuint31(FILE *fd) {
-	int val0 = fs_read_uint8(fd);
-	if (val0 < 0)
-		return -1;
-	int tmp = val0;
-	int shift = 0;
-	int mask = 0xff;
-	int val1 = 0;
-	while ((tmp & 0x80) == 0x80) {
-		tmp <<= 1;
-		shift += 8;
-		mask >>= 1;
-		int in = fs_read_uint8(fd);
-		if (in < 0)
-			return -1;
-		if (shift > 24) {
-			in &= 0x7f;
-			mask = 0;  // ignore val0
-			tmp = 0;  // no more
-		}
-		val1 = (val1 << 8) | in;
-	}
-	return ((val0 & mask) << shift) | val1;
+// Variable-length unsigned 32-bit integers
+
+int fs_sizeof_vuint32(uint32_t value) {
+	if (value <= 0x7f)
+		return 1;
+	if (value <= 0x3fff)
+		return 2;
+	if (value <= 0x1fffff)
+		return 3;
+	if (value <= 0xfffffff)
+		return 4;
+	return 5;
 }
+
+int fs_write_vuint32(FILE *fd, uint32_t value) {
+	switch (fs_sizeof_vuint32(value)) {
+	default:
+		break;
+	case 1:
+		return fs_write_uint8(fd, value);
+	case 2:
+		return fs_write_uint16(fd, value | 0x8000);
+	case 3:
+		if (fs_write_uint8(fd, 0xc0 | (value >> 16)) != 1) {
+			return -1;
+		}
+		if (fs_write_uint16(fd, value & 0xffff) != 2) {
+			return -1;
+		}
+		return 3;
+	case 4:
+		if (fs_write_uint16(fd, 0xe000 | (value >> 16)) != 2) {
+			return -1;
+		}
+		if (fs_write_uint16(fd, value & 0xffff) != 2) {
+			return -1;
+		}
+		return 4;
+	case 5:
+		if (fs_write_uint8(fd, 0xf0) != 1) {
+			return -1;
+		}
+		if (fs_write_uint16(fd, value >> 16) != 2) {
+			return -1;
+		}
+		if (fs_write_uint16(fd, value & 0xfff) != 2) {
+			return -1;
+		}
+		return 5;
+	}
+	return -1;
+}
+
+uint32_t fs_read_vuint32(FILE *fd, int *nread) {
+	int byte0 = fs_read_uint8(fd);
+	if (byte0 < 0) {
+		if (nread)
+			*nread = -1;
+		return 0;
+	}
+	int nbytes = 1;
+	uint32_t v = byte0;
+	uint32_t mask = 0x7f;
+	for (nbytes = 1; nbytes < 5; nbytes++) {
+		if ((byte0 & 0x80) == 0)
+			break;
+		byte0 <<= 1;
+		int byte = fs_read_uint8(fd);
+		if (byte < 0) {
+			if (nread)
+				*nread = -1;
+			return 0;
+		}
+		mask = (mask << 7) | 0x7f;
+		v = ((v << 8) | byte) & mask;
+	}
+	if (nread)
+		*nread = nbytes;
+	return v;
+}
+
+// Variable-length signed 32-bit integers
+
+int fs_sizeof_vint32(int32_t value) {
+	uint32_t v = value;
+	if (value < 0) {
+		v = ((~v) << 1) | 1;
+	} else {
+		v <<= 1;
+	}
+	return fs_sizeof_vuint32(v);
+}
+
+int fs_write_vint32(FILE *fd, int32_t value) {
+	uint32_t v = value;
+	if (value < 0) {
+		v = ((~v) << 1) | 1;
+	} else {
+		v <<= 1;
+	}
+	return fs_write_vuint32(fd, v);
+}
+
+int32_t fs_read_vint32(FILE *fd, int *nread) {
+	int nbytes = 0;
+	uint32_t uv = fs_read_vuint32(fd, &nbytes);
+	int32_t v = 0;
+	if (nbytes > 1) {
+		if ((uv & 1) == 1) {
+			v = -(int)(uv >> 1) - 1;
+		} else {
+			v = uv >> 1;
+		}
+	}
+	if (nread)
+		*nread = nbytes;
+	return v;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 char *fs_getcwd(void) {
 	size_t buflen = 4096;
