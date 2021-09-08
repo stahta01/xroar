@@ -211,16 +211,8 @@ int8_t dk_key_by_name(const char *name) {
 		if (*name >= '0' && *name <= '9') {
 			return DSCAN_0 + (*name - '0');
 		}
-		// I mean, I'm pretty sure I assume ASCII elsehwere, but I
-		// can't stop myself writing it like this:
-		if (tolower(*name) >= 'a' && tolower(*name) <= 'i') {
+		if (tolower(*name) >= 'a' && tolower(*name) <= 'z') {
 			return DSCAN_A + (tolower(*name) - 'a');
-		}
-		if (tolower(*name) >= 'j' && tolower(*name) <= 'r') {
-			return DSCAN_J + (tolower(*name) - 'j');
-		}
-		if (tolower(*name) >= 's' && tolower(*name) <= 'z') {
-			return DSCAN_S + (tolower(*name) - 's');
 		}
 		switch (*name) {
 		case ':': return DSCAN_COLON;
