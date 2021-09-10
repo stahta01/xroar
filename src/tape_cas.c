@@ -961,8 +961,9 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 	// should never hit EOF
 	while (!feof(fd) && ftello(fd) < cue_end) {
 		int type = fs_read_uint8(fd);
-		int elength = fs_read_vuint31(fd);
-		if (type < 0 || elength < 0)
+		int nread;
+		int32_t elength = fs_read_vuint32(fd, &nread);
+		if (type < 0 || elength < 0 || nread <= 0)
 			goto read_failed;
 
 		switch (type) {
