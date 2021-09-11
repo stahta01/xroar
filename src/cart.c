@@ -310,8 +310,6 @@ struct cart *cart_new_named(const char *cc_name) {
 /* ROM cart routines */
 
 void cart_rom_init(struct cart *c) {
-	struct cart_config *cc = c->config;
-	assert(cc != NULL);
 	c->read = cart_rom_read;
 	c->write = cart_rom_write;
 	c->reset = cart_rom_reset;
