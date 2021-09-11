@@ -30,12 +30,17 @@ struct SN76489 {
 	_Bool ready;
 };
 
-// Create a sound chip object.  refrate is the reference clock to the sound
-// chip itself (e.g., 4000000).  framerate is the desired output rate to be
-// written to supplied buffers.  tickrate is the "system" tick rate (e.g.,
-// 14318180).  tick indicates time of creation.
+// Create a sound chip object.
 
-struct SN76489 *sn76489_new(int refrate, int framerate, int tickrate, uint32_t tick);
+struct SN76489 *sn76489_new(void);
+
+// Configure sound chip.  refrate is the reference clock to the sound chip
+// itself (e.g., 4000000).  framerate is the desired output rate to be written
+// to supplied buffers.  tickrate is the "system" tick rate (e.g., 14318180).
+// tick indicates time of creation.
+
+void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tickrate,
+                       uint32_t tick);
 
 // Register write.  Current system time required to update 'ready' state.
 
