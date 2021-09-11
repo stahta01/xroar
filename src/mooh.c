@@ -22,11 +22,16 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include "array.h"
 
 #include "becker.h"
 #include "cart.h"
 #include "part.h"
+#include "serialise.h"
 #include "spi65.h"
 #include "spi_sdcard.h"
 
@@ -44,8 +49,24 @@ struct mooh {
 	uint8_t task;
 	uint8_t rom_conf;
 	struct becker *becker;
-	char crt9128_reg_addr;
+	uint8_t crt9128_reg_addr;
 };
+
+static const struct ser_struct ser_struct_mooh[] = {
+	SER_STRUCT_ELEM(struct mooh, cart, ser_type_unhandled), // 1
+	SER_STRUCT_ELEM(struct mooh, extmem, ser_type_unhandled), // 2
+	SER_STRUCT_ELEM(struct mooh, mmu_enable, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct mooh, crm_enable, ser_type_bool), // 4
+	SER_STRUCT_ELEM(struct mooh, taskreg, ser_type_unhandled), // 5
+	SER_STRUCT_ELEM(struct mooh, task, ser_type_uint8), // 6
+	SER_STRUCT_ELEM(struct mooh, rom_conf, ser_type_uint8), // 6
+};
+
+#define N_SER_STRUCT_MOOH ARRAY_N_ELEMENTS(ser_struct_mooh)
+
+#define MOOH_SER_CART    (1)
+#define MOOH_SER_EXTMEM  (2)
+#define MOOH_SER_TASKREG (5)
 
 static struct cart *mooh_new(struct cart_config *);
 
@@ -61,33 +82,69 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 // static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
 static void mooh_free(struct part *p);
+static void mooh_serialise(struct part *p, struct ser_handle *sh);
 
-struct cart *mooh_new(struct cart_config *cc) {
+static _Bool mooh_finish(struct part *p) {
+	struct mooh *n = (struct mooh *)p;
+
+	// Find attached parts
+	n->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
+	n->spi65 = (struct spi65 *)part_component_by_id_is_a(p, "SPI65", "65SPI-B");
+
+	// Check all required parts are attached
+	if (n->spi65 == NULL) {
+		return 0;
+	}
+
+	cart_finish(&n->cart);
+
+	return 1;
+}
+
+static struct mooh *mooh_create(void) {
 	struct mooh *n = part_new(sizeof(*n));
 	*n = (struct mooh){0};
 	struct cart *c = &n->cart;
 	part_init(&c->part, "mooh");
 	c->part.free = mooh_free;
+	c->part.serialise = mooh_serialise;
+	c->part.finish = mooh_finish;
+	c->part.is_a = cart_is_a;
 
-	c->config = cc;
 	cart_rom_init(c);
+
 	c->read = mooh_read;
 	c->write = mooh_write;
 	c->reset = mooh_reset;
 	c->detach = mooh_detach;
 
+	return n;
+}
+
+struct cart *mooh_new(struct cart_config *cc) {
+	assert(cc != NULL);
+
+	struct mooh *n = mooh_create();
+	struct cart *c = &n->cart;
+	struct part *p = &c->part;
+	c->config = cc;
+
 	if (cc->becker_port) {
-		n->becker = becker_new();
-		part_add_component(&c->part, (struct part *)n->becker, "becker");
+		part_add_component(&c->part, (struct part *)becker_new(), "becker");
 	}
 
 	// 65SPI/B for interfacing to SD card
-	n->spi65 = spi65_new();
-	part_add_component(&c->part, (struct part *)n->spi65, "SPI65");
+	struct spi65 *spi65 = spi65_new();
+	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 
 	// Attach an SD card (SPI mode) to 65SPI/B
 	struct spi65_device *sdcard = spi_sdcard_new("sdcard.img");
-	spi65_add_device(n->spi65, sdcard, 0);
+	spi65_add_device(spi65, sdcard, 0);
+
+	if (!mooh_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
 
 	return c;
 }
@@ -126,6 +183,53 @@ static void mooh_detach(struct cart *c) {
 
 static void mooh_free(struct part *p) {
 	cart_rom_free(p);
+}
+
+static void mooh_serialise(struct part *p, struct ser_handle *sh) {
+	struct mooh *n = (struct mooh *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, tag, n)) > 0; tag++) {
+		switch (tag) {
+		case MOOH_SER_CART:
+			cart_serialise(&n->cart, sh, tag);
+			break;
+		case MOOH_SER_EXTMEM:
+			ser_write(sh, tag, n->extmem, sizeof(n->extmem));
+			break;
+		case MOOH_SER_TASKREG:
+			ser_write(sh, tag, n->taskreg, sizeof(n->taskreg));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+struct part *mooh_deserialise(struct ser_handle *sh) {
+	struct mooh *n = mooh_create();
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, n))) {
+		switch (tag) {
+		case MOOH_SER_CART:
+			cart_deserialise(&n->cart, sh);
+			break;
+		case MOOH_SER_EXTMEM:
+			ser_read(sh, n->extmem, sizeof(n->extmem));
+			break;
+		case MOOH_SER_TASKREG:
+			ser_read(sh, n->taskreg, sizeof(n->taskreg));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	if (ser_error(sh)) {
+		part_free((struct part *)n);
+		return NULL;
+	}
+	return (struct part *)n;
 }
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
