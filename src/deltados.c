@@ -29,15 +29,18 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "delegate.h"
 
 #include "cart.h"
 #include "logging.h"
 #include "part.h"
+#include "serialise.h"
 #include "vdrive.h"
 #include "wd279x.h"
 
@@ -59,6 +62,16 @@ struct deltados {
 	struct vdrive_interface *vdrive_interface;
 };
 
+static const struct ser_struct ser_struct_deltados[] = {
+	SER_STRUCT_ELEM(struct deltados, cart, ser_type_unhandled), // 1
+	SER_STRUCT_ELEM(struct deltados, latch_drive_select, ser_type_unsigned), // 2
+	SER_STRUCT_ELEM(struct deltados, latch_side_select, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct deltados, latch_density, ser_type_bool), // 4
+};
+#define N_SER_STRUCT_DELTADOS ARRAY_N_ELEMENTS(ser_struct_deltados)
+
+#define DELTADOS_SER_CART (1)
+
 /* Cart interface */
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -66,6 +79,7 @@ static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 static void deltados_reset(struct cart *c);
 static void deltados_detach(struct cart *c);
 static void deltados_free(struct part *p);
+static void deltados_serialise(struct part *p, struct ser_handle *sh);
 static _Bool deltados_has_interface(struct cart *c, const char *ifname);
 static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -75,27 +89,58 @@ static void latch_write(struct deltados *d, unsigned D);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct cart *deltados_new(struct cart_config *cc) {
+static _Bool deltados_finish(struct part *p) {
+	struct deltados *d = (struct deltados *)p;
+
+	// Find attached parts
+	d->fdc = (struct WD279X *)part_component_by_id_is_a(p, "FDC", "WD2791");
+
+	// Check all required parts are attached
+	if (d->fdc == NULL) {
+		return 0;
+	}
+
+	cart_finish(&d->cart);
+
+	return 1;
+}
+
+static struct deltados *deltados_create(void) {
 	struct deltados *d = part_new(sizeof(*d));
 	struct cart *c = &d->cart;
 	*d = (struct deltados){0};
 	part_init(&c->part, "delta");
 	c->part.free = deltados_free;
+	c->part.serialise = deltados_serialise;
+	c->part.finish = deltados_finish;
+	c->part.is_a = cart_is_a;
 
-	c->config = cc;
 	cart_rom_init(c);
 
 	c->detach = deltados_detach;
-
 	c->read = deltados_read;
 	c->write = deltados_write;
 	c->reset = deltados_reset;
-
 	c->has_interface = deltados_has_interface;
 	c->attach_interface = deltados_attach_interface;
 
-	d->fdc = wd279x_new(WD2791);
-	part_add_component(&c->part, (struct part *)d->fdc, "FDC");
+	return d;
+}
+
+static struct cart *deltados_new(struct cart_config *cc) {
+	assert(cc != NULL);
+
+	struct deltados *d = deltados_create();
+	struct cart *c = &d->cart;
+	struct part *p = &c->part;
+	c->config = cc;
+
+	part_add_component(&c->part, (struct part *)wd279x_new(WD2791), "FDC");
+
+	if (!deltados_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
 
 	return c;
 }
@@ -117,6 +162,41 @@ static void deltados_detach(struct cart *c) {
 
 static void deltados_free(struct part *p) {
 	cart_rom_free(p);
+}
+
+static void deltados_serialise(struct part *p, struct ser_handle *sh) {
+	struct deltados *d = (struct deltados *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_deltados, N_SER_STRUCT_DELTADOS, tag, d)) > 0; tag++) {
+		switch (tag) {
+		case DELTADOS_SER_CART:
+			cart_serialise(&d->cart, sh, tag);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+struct part *deltados_deserialise(struct ser_handle *sh) {
+	struct deltados *d = deltados_create();
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_deltados, N_SER_STRUCT_DELTADOS, d))) {
+		switch (tag) {
+		case DELTADOS_SER_CART:
+			cart_deserialise(&d->cart, sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	if (ser_error(sh)) {
+		part_free((struct part *)d);
+		return NULL;
+	}
+	return (struct part *)d;
 }
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
