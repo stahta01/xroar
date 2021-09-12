@@ -4,6 +4,8 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
+ *  \copyright Copyright 2021 Ciaran Anscomb
+ *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
  *  XRoar is free software; you can redistribute it and/or modify it under the
@@ -21,6 +23,8 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+
+struct ser_handle;
 
 #define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
 #define ACME_COYOTE             2       /* 20MB early IDE drive */
@@ -67,7 +71,7 @@ struct ide_taskfile {
 struct ide_drive {
 	struct ide_controller *controller;
 	struct ide_taskfile taskfile;
-	unsigned int present:1, intrq:1, failed:1, lba:1, eightbit:1;
+	_Bool present, intrq, failed, lba, eightbit;
 	uint16_t cylinders;
 	uint8_t heads, sectors;
 	uint8_t data[512];
@@ -102,5 +106,8 @@ void ide_detach(struct ide_drive *d);
 void ide_free(struct ide_controller *c);
 
 int ide_make_drive(uint8_t type, int fd);
+
+void ide_serialise(struct ide_controller *ide, struct ser_handle *sh, unsigned otag);
+void ide_deserialise(struct ide_controller *ide, struct ser_handle *sh);
 
 #endif

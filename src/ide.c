@@ -4,6 +4,8 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
+ *  \copyright Copyright 2021 Ciaran Anscomb
+ *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
  *  XRoar is free software; you can redistribute it and/or modify it under the
@@ -29,9 +31,11 @@
 #include <errno.h>
 #include <time.h>
 
+#include "array.h"
 #include "xalloc.h"
 
 #include "ide.h"
+#include "serialise.h"
 
 #define IDE_IDLE        0
 #define IDE_CMD         1
@@ -944,4 +948,125 @@ int ide_make_drive(uint8_t type, int fd)
     if (write(fd, ident, 512) != 512)
       return -1;
   return 0;
+}
+
+// Most of this file is as contributed (as it's had at least one update, and
+// switching code styles would make merging that difficult!), but serialisation
+// code is a necessary inclusion here:
+
+static const struct ser_struct ser_struct_ide_drive[] = {
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.data, ser_type_uint16), // 1
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.error, ser_type_uint8), // 2
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.feature, ser_type_uint8), // 3
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.count, ser_type_uint8), // 4
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba1, ser_type_uint8), // 5
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba2, ser_type_uint8), // 6
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba3, ser_type_uint8), // 7
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba4, ser_type_uint8), // 8
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.status, ser_type_uint8), // 9
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.command, ser_type_uint8), // 10
+	SER_STRUCT_ELEM(struct ide_drive, taskfile.devctrl, ser_type_uint8), // 11
+	SER_STRUCT_ELEM(struct ide_drive, intrq, ser_type_bool), // 12
+	SER_STRUCT_ELEM(struct ide_drive, failed, ser_type_bool), // 13
+	SER_STRUCT_ELEM(struct ide_drive, eightbit, ser_type_bool), // 14
+	SER_STRUCT_ELEM(struct ide_drive, data, ser_type_unhandled), // 15
+	SER_STRUCT_ELEM(struct ide_drive, dptr, ser_type_unhandled), // 16
+	SER_STRUCT_ELEM(struct ide_drive, state, ser_type_int), // 17
+	SER_STRUCT_ELEM(struct ide_drive, offset, ser_type_unhandled), // 18
+	SER_STRUCT_ELEM(struct ide_drive, length, ser_type_int), // 19
+};
+
+#define N_SER_STRUCT_IDE_DRIVE ARRAY_N_ELEMENTS(ser_struct_ide_drive)
+
+#define IDE_DRIVE_SER_DATA   (15)
+#define IDE_DRIVE_SER_DPTR   (16)
+#define IDE_DRIVE_SER_OFFSET (18)
+
+static const struct ser_struct ser_struct_ide_controller[] = {
+	SER_STRUCT_ELEM(struct ide_controller, drive, ser_type_unhandled), // 1
+	SER_STRUCT_ELEM(struct ide_controller, selected, ser_type_int), // 2
+	SER_STRUCT_ELEM(struct ide_controller, data_latch, ser_type_uint16), // 3
+};
+
+#define N_SER_STRUCT_IDE_CONTROLLER ARRAY_N_ELEMENTS(ser_struct_ide_controller)
+
+#define IDE_CONTROLLER_SER_DRIVE (1)
+
+static void ide_drive_serialise(struct ide_drive *ided, struct ser_handle *sh) {
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_ide_drive, N_SER_STRUCT_IDE_DRIVE, tag, ided)) > 0; tag++) {
+		switch (tag) {
+		case IDE_DRIVE_SER_DATA:
+			ser_write(sh, tag, ided->data, sizeof(ided->data));
+			break;
+		case IDE_DRIVE_SER_DPTR:
+			ser_write_vuint32(sh, tag, ided->dptr - ided->data);
+			break;
+		case IDE_DRIVE_SER_OFFSET:
+			ser_write_vuint32(sh, tag, ided->offset);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+static void ide_drive_deserialise(struct ide_drive *ided, struct ser_handle *sh) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_ide_drive, N_SER_STRUCT_IDE_DRIVE, ided))) {
+		switch (tag) {
+		case IDE_DRIVE_SER_DATA:
+			ser_read(sh, ided->data, sizeof(ided->data));
+			break;
+		case IDE_DRIVE_SER_DPTR:
+			ided->dptr = ided->data + ser_read_vuint32(sh);
+			break;
+		case IDE_DRIVE_SER_OFFSET:
+			ided->offset = ser_read_vuint32(sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+}
+
+void ide_serialise(struct ide_controller *ide, struct ser_handle *sh, unsigned otag) {
+	ser_write_open_string(sh, otag, ide->name);
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_ide_controller, N_SER_STRUCT_IDE_CONTROLLER, tag, ide)) > 0; tag++) {
+		switch (tag) {
+		case IDE_CONTROLLER_SER_DRIVE:
+			for (unsigned i = 0; i < 2; i++) {
+				ser_write_open_vuint32(sh, tag, i);
+				ide_drive_serialise(&ide->drive[i], sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+void ide_deserialise(struct ide_controller *ide, struct ser_handle *sh) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_ide_controller, N_SER_STRUCT_IDE_CONTROLLER, ide))) {
+		switch (tag) {
+		case IDE_CONTROLLER_SER_DRIVE:
+			{
+				unsigned i = ser_read_vuint32(sh);
+				if (i >= 2) {
+					ser_set_error(sh, ser_error_format);
+					break;
+				}
+				ide_drive_deserialise(&ide->drive[i], sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
 }
