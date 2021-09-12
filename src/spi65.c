@@ -27,11 +27,15 @@
 #endif
 
 #include <stdint.h>
+#include <stdio.h>
 
+#include "array.h"
 #include "delegate.h"
 
 #include "logging.h"
+#include "serialise.h"
 #include "spi65.h"
+#include "part.h"
 
 #define SPIDATA 0
 #define SPICTRL 1
@@ -58,22 +62,95 @@ struct spi65_private {
 	struct spi65_device *device[SPI_NDEVICES];
 };
 
-struct spi65 *spi65_new(void) {
+static const struct ser_struct ser_struct_spi65[] = {
+	SER_STRUCT_ELEM(struct spi65_private, reg_data_in, ser_type_uint8), // 1
+	SER_STRUCT_ELEM(struct spi65_private, reg_data_out, ser_type_uint8), // 2
+	SER_STRUCT_ELEM(struct spi65_private, status, ser_type_uint8), // 3
+	SER_STRUCT_ELEM(struct spi65_private, clkdiv, ser_type_uint8), // 4
+	SER_STRUCT_ELEM(struct spi65_private, ss_ie, ser_type_uint8), // 5
+};
+
+#define N_SER_STRUCT_SPI65 ARRAY_N_ELEMENTS(ser_struct_spi65)
+
+static void spi65_serialise(struct part *p, struct ser_handle *sh);
+
+static _Bool spi65_finish(struct part *p) {
+	struct spi65_private *spi65p = (struct spi65_private *)p;
+
+	// Find attached devices
+	char id[6];
+	for (int i = 0; i < SPI_NDEVICES; i++) {
+		snprintf(id, sizeof(id), "slot%d", i);
+		struct spi65_device *device = (struct spi65_device *)part_component_by_id_is_a(p, id, "spi-device");
+		if (device) {
+			spi65p->device[i] = device;
+		} else {
+			spi65p->device[i] = NULL;
+		}
+	}
+
+	return 1;
+}
+
+static struct spi65_private *spi65_create(void) {
 	struct spi65_private *spi65p = part_new(sizeof(*spi65p));
 	*spi65p = (struct spi65_private){0};
 	part_init(&spi65p->public.part, "65SPI-B");
-	return &spi65p->public;
+	spi65p->public.part.serialise = spi65_serialise;
+	spi65p->public.part.finish = spi65_finish;
+	return spi65p;
+}
+
+struct spi65 *spi65_new(void) {
+	struct spi65_private *spi65p = spi65_create();
+	struct part *p = &spi65p->public.part;
+
+	if (!spi65_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
+
+	return (struct spi65 *)spi65p;
+}
+
+static void spi65_serialise(struct part *p, struct ser_handle *sh) {
+        struct spi65_private *spi65p = (struct spi65_private *)p;
+        for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, tag, spi65p)) > 0; tag++) {
+                switch (tag) {
+                default:
+                        ser_set_error(sh, ser_error_format);
+                        break;
+                }
+        }
+        ser_write_close_tag(sh);
+}
+
+struct part *spi65_deserialise(struct ser_handle *sh) {
+        struct spi65_private *spi65p = spi65_create();
+        int tag;
+        while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, spi65p))) {
+                switch (tag) {
+                default:
+                        ser_set_error(sh, ser_error_format);
+                        break;
+                }
+        }
+        if (ser_error(sh)) {
+                part_free((struct part *)spi65p);
+                return NULL;
+        }
+        return (struct part *)spi65p;
 }
 
 void spi65_add_device(struct spi65 *spi65, struct spi65_device *device, unsigned slot) {
 	struct spi65_private *spi65p = (struct spi65_private *)spi65;
-	char id[] = { 's', 'l', 'o', 't', '0', 0 };
+	char id[6];
 	if (slot >= SPI_NDEVICES)
 		return;
 	spi65_remove_device(spi65, slot);
-	spi65p->device[slot] = device;
-	id[4] = '0' + slot;
+	snprintf(id, sizeof(id), "slot%d", slot);
 	part_add_component(&spi65->part, &device->part, id);
+	spi65_finish(&spi65p->public.part);
 }
 
 void spi65_remove_device(struct spi65 *spi65, unsigned slot) {
@@ -83,6 +160,7 @@ void spi65_remove_device(struct spi65 *spi65, unsigned slot) {
 	if (spi65p->device[slot]) {
 		part_remove_component(&spi65->part, &spi65p->device[slot]->part);
 	}
+	spi65_finish(&spi65p->public.part);
 }
 
 uint8_t spi65_read(struct spi65 *spi65, uint8_t reg) {
