@@ -2,7 +2,7 @@
  *
  *  \brief Parts & interfaces.
  *
- *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -63,7 +63,9 @@ void part_free(struct part *p) {
 		p->free(p);
 	}
 
+#ifdef WANT_INTF
 	slist_free_full(p->interfaces, (slist_free_func)intf_free);
+#endif
 
 	// slist_free_full() does not permit freeing functions to modify the list,
 	// so as that may happen, free components manually:
@@ -120,6 +122,7 @@ struct part *part_component_by_id(struct part *p, const char *id) {
 	return NULL;
 }
 
+#ifdef WANT_INTF
 // Helper for parts that need to allocate space for an interface.
 struct intf *intf_new(size_t isize) {
 	if (isize < sizeof(struct intf))
@@ -198,3 +201,4 @@ void intf_detach(struct intf *i) {
 	p0->interfaces = slist_remove(p0->interfaces, i);
 	p1->interfaces = slist_remove(p1->interfaces, i);
 }
+#endif

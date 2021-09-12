@@ -2,7 +2,7 @@
  *
  *  \brief Parts & interfaces.
  *
- *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,8 +32,13 @@
 
 #include "xalloc.h"
 
+// For now, we're not using the interface features...
+#undef WANT_INTF
+
 struct slist;
+#ifdef WANT_INTF
 struct intf;
+#endif
 
 // (struct part) and (struct intf) are designed to be extended.
 
@@ -50,6 +55,7 @@ struct part {
 	// A list of sub-parts that form part of this one.
 	struct slist *components;
 
+#ifdef WANT_INTF
 	// A list of interfaces attached to this part.  When freeing a part,
 	// this is traversed, and detach_intf() is called for any where part ==
 	// intf->p0.
@@ -76,9 +82,11 @@ struct part {
 	// interface should be considered unusable until reacquired with
 	// get_intf() (as it may have been freed, and require reallocating).
 	void (*detach_intf)(struct part *part, struct intf *intf);
+#endif
 
 };
 
+#ifdef WANT_INTF
 struct intf {
 	char *name;
 
@@ -92,6 +100,7 @@ struct intf {
 	struct part *p1;
 	void *p1_idata;
 };
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -106,6 +115,7 @@ void part_add_component(struct part *p, struct part *c, const char *id);
 void part_remove_component(struct part *p, struct part *c);
 struct part *part_component_by_id(struct part *p, const char *id);
 
+#ifdef WANT_INTF
 // likewise, intf_new() and intf_init0().
 struct intf *intf_new(size_t isize);
 // intf_init0() is so named as it should only be called by p0.
@@ -116,5 +126,6 @@ _Bool intf_attach(struct part *p0, void *p0_idata,
 		  struct part *p1, void *p1_idata, const char *intf_name);
 
 void intf_detach(struct intf *i);
+#endif
 
 #endif
