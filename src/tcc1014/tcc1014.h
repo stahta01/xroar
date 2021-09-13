@@ -28,11 +28,10 @@
 
 // Horizontal timing, all measured in pixels
 
-#define TCC1014_tFP   (34)  // 28
-#define TCC1014_tWHS  (64)  // 70
-#define TCC1014_tBP   (70)
+#define TCC1014_tFP   (28)
+#define TCC1014_tWHS  (80)  // measured
+#define TCC1014_tBP   (60)  // measured
 #define TCC1014_tHBNK (TCC1014_tFP + TCC1014_tWHS + TCC1014_tBP)
-#define TCC1014_tLB   (120)  // 118
 #define TCC1014_tAV   (512)
 #define TCC1014_tRB   (112)
 #define TCC1014_tAVB  (TCC1014_tLB + TCC1014_tAV + TCC1014_tRB)
@@ -40,25 +39,17 @@
 // tHCD = time from start of back porch to beginning of colour burst
 #define TCC1014_tHCD  (14)
 // tCB = duration of colour burst
-#define TCC1014_tCB   (42)
+#define TCC1014_tCB   (40)
 
 /* All horizontal timings shall remain relative to the HS pulse falling edge */
 #define TCC1014_HS_FALLING_EDGE    (0)
 #define TCC1014_HS_RISING_EDGE     (TCC1014_HS_FALLING_EDGE + TCC1014_tWHS)
 #define TCC1014_LEFT_BORDER_START  (TCC1014_HS_FALLING_EDGE + TCC1014_tWHS + TCC1014_tBP)
-#define TCC1014_ACTIVE_LINE_START  (TCC1014_LEFT_BORDER_START + TCC1014_tLB)
-#define TCC1014_RIGHT_BORDER_START (TCC1014_ACTIVE_LINE_START + TCC1014_tAV)
-#define TCC1014_RIGHT_BORDER_END   (TCC1014_RIGHT_BORDER_START + TCC1014_tRB)
-#define TCC1014_LINE_DURATION      (TCC1014_tHBNK + TCC1014_tAVB)
-#define TCC1014_PAL_PADDING_LINE   TCC1014_LINE_DURATION
+#define TCC1014_LINE_DURATION      (912)
+#define TCC1014_RIGHT_BORDER_END   (TCC1014_LINE_DURATION - TCC1014_tFP)
 
 #define TCC1014_VBLANK_START       (0)
-#define TCC1014_TOP_BORDER_START   (TCC1014_VBLANK_START + 13)
-#define TCC1014_ACTIVE_AREA_START  (TCC1014_TOP_BORDER_START + 25)
-#define TCC1014_ACTIVE_AREA_END    (TCC1014_ACTIVE_AREA_START + 192)
-#define TCC1014_BOTTOM_BORDER_END  (TCC1014_ACTIVE_AREA_END + 26)
-#define TCC1014_VRETRACE_END       (TCC1014_BOTTOM_BORDER_END + 6)
-#define TCC1014_FRAME_DURATION     (262)
+#define TCC1014_TOP_BORDER_START   (TCC1014_VBLANK_START + 3)
 
 // GIME palette indices
 
