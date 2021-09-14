@@ -624,38 +624,6 @@ static void setup_view_menu(void) {
 
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Zoom In" action:@selector(do_set_state:) keyEquivalent:@"+"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_IN)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Zoom Out" action:@selector(do_set_state:) keyEquivalent:@"-"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_OUT)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Zoom" action:nil keyEquivalent:@""];
-	[item setSubmenu:submenu];
-	[view_menu addItem:item];
-	[item release];
-
-	[view_menu addItem:[NSMenuItem separatorItem]];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Full Screen" action:@selector(do_set_state:) keyEquivalent:@"f"];
-	[item setTag:TAG_FULLSCREEN];
-	[view_menu addItem:item];
-	[item release];
-
-	[view_menu addItem:[NSMenuItem separatorItem]];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Inverse Text" action:@selector(do_set_state:) keyEquivalent:@"i"];
-	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-	[item setTag:TAG_VDG_INVERSE];
-	[view_menu addItem:item];
-	[item release];
-
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
@@ -697,6 +665,40 @@ static void setup_view_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
+	[view_menu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Inverse Text" action:@selector(do_set_state:) keyEquivalent:@"i"];
+	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
+	[item setTag:TAG_VDG_INVERSE];
+	[view_menu addItem:item];
+	[item release];
+
+	[view_menu addItem:[NSMenuItem separatorItem]];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Zoom In" action:@selector(do_set_state:) keyEquivalent:@"+"];
+	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_IN)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Zoom Out" action:@selector(do_set_state:) keyEquivalent:@"-"];
+	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_OUT)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Zoom" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
+	[view_menu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Full Screen" action:@selector(do_set_state:) keyEquivalent:@"f"];
+	[item setTag:TAG_FULLSCREEN];
 	[view_menu addItem:item];
 	[item release];
 
