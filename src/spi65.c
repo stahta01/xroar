@@ -26,7 +26,7 @@
 #include "config.h"
 #endif
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "delegate.h"
 

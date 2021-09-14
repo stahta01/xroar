@@ -22,7 +22,7 @@
 #include "config.h"
 #endif
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "delegate.h"
