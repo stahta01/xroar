@@ -450,7 +450,7 @@ static struct machine *dragon_new(struct machine_config *mc, struct vo_interface
 			float chb = palette->palette[c].chb;
 			float b_y = palette->palette[c].b - chb;
 			float r_y = palette->palette[c].a - chb;
-			y = (blank_y - y) * 2.450;  //scale_y;
+			y = (blank_y - y) * 2.850;  //scale_y;
 			DELEGATE_CALL(vo->palette_set_ybr, c, y, b_y, r_y);
 		}
 	}

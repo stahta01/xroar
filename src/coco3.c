@@ -282,9 +282,9 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	}
 
 	for (int j = 0; j < 64; j++) {
-		float r = ((j & 0x20) ? 0.7238 : 0.1715) + ((j & 0x04) ? 0.2761 : 0.000);
-		float g = ((j & 0x10) ? 0.7238 : 0.1715) + ((j & 0x02) ? 0.2761 : 0.000);
-		float b = ((j & 0x08) ? 0.7238 : 0.1715) + ((j & 0x01) ? 0.2761 : 0.000);
+		float r = hue_intensity_map[((j>>4)&2)|((j>>2)&1)];
+		float g = hue_intensity_map[((j>>3)&2)|((j>>1)&1)];
+		float b = hue_intensity_map[((j>>2)&2)|((j>>0)&1)];
 		DELEGATE_CALL(vo->palette_set_rgb, j, r, g, b);
 	}
 

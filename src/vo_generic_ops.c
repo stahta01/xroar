@@ -153,7 +153,7 @@ static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
 	struct vo_generic_interface *generic = sptr;
 
 	float R, G, B;
-	cs_mlaw(generic->cs, r+0.15625, g+0.15625, b+0.15625, &R, &G, &B);
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
 
 	palette_set(c, R, G, B, generic->rgb.palette);
 }
@@ -184,9 +184,8 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y
 	 * Note: the same transfer function is specified for Rec. 709.
 	 */
 
-	// XXX fixed black level for palettised entries
 	float R, G, B;
-	cs_mlaw(generic->cs, r+0.15625, g+0.15625, b+0.15625, &R, &G, &B);
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
 
 	palette_set(c, R, G, B, generic->cmp.palette);
 
