@@ -2,7 +2,7 @@
  *
  *  \brief VDG measured voltage "palette"s
  *
- *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *  \copyright Copyright 2011-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -110,68 +110,4 @@ struct vdg_palette *vdg_palette_by_name(const char *name) {
 		}
 	}
 	return NULL;
-}
-
-/* ---------------------------------------------------------------------- */
-
-/* Map Y'U'V' from palette to pixel value */
-void vdg_palette_RGB(struct vdg_palette *vp, int colour,
-                     float *Rout, float *Gout, float *Bout) {
-	float blank_y = vp->blank_y;
-	float white_y = vp->white_y;
-	float black_level = vp->black_level;
-	float rgb_black_level = vp->rgb_black_level;
-	float y = vp->palette[colour].y;
-	float chb = vp->palette[colour].chb;
-	float b_y = vp->palette[colour].b - chb;
-	float r_y = vp->palette[colour].a - chb;
-
-	float scale_y = 1. / (blank_y - white_y);
-	y = black_level + (blank_y - y) * scale_y;
-
-	float u = 0.493 * b_y;
-	float v = 0.877 * r_y;
-	float r = 1.0 * y + 0.000 * u + 1.140 * v;
-	float g = 1.0 * y - 0.396 * u - 0.581 * v;
-	float b = 1.0 * y + 2.029 * u + 0.000 * v;
-	float mlaw = 2.2;
-
-	/* These values directly relate to voltages fed to a modulator which,
-	 * I'm assuming, does nothing further to correct for the non-linearity
-	 * of the display device.  Therefore, these can be considered "gamma
-	 * corrected" values, and to work with them in linear RGB, we need to
-	 * undo the assumed characteristics of the display.  NTSC was
-	 * originally defined differently, but most SD televisions that people
-	 * will have used any time recently are probably close to Rec. 601, so
-	 * use that transfer function:
-	 *
-	 * L = V/4.5                        for V <  0.081
-	 * L = ((V + 0.099) / 1.099) ^ 2.2  for V >= 0.081
-	 *
-	 * Note: the same transfer function is specified for Rec. 709.
-	 */
-
-	if (r < (0.018 * 4.5)) {
-		r = r / 4.5;
-	} else {
-		r = powf((r+0.099)/(1.+0.099), mlaw);
-	}
-	if (g < (0.018 * 4.5)) {
-		g = g / 4.5;
-	} else {
-		g = powf((g+0.099)/(1.+0.099), mlaw);
-	}
-	if (b < (0.018 * 4.5)) {
-		b = b / 4.5;
-	} else {
-		b = powf((b+0.099)/(1.+0.099), mlaw);
-	}
-
-	*Rout = r + rgb_black_level;
-	*Gout = g + rgb_black_level;
-	*Bout = b + rgb_black_level;
-
-	if (*Rout < 0.0) { *Rout = 0.0; } if (*Rout > 1.0) { *Rout = 1.0; }
-	if (*Gout < 0.0) { *Gout = 0.0; } if (*Gout > 1.0) { *Gout = 1.0; }
-	if (*Bout < 0.0) { *Bout = 0.0; } if (*Bout > 1.0) { *Bout = 1.0; }
 }

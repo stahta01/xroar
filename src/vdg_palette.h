@@ -2,7 +2,7 @@
  *
  *  \brief VDG measured voltage "palette"s
  *
- *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *  \copyright Copyright 2011-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -40,9 +40,5 @@ struct vdg_palette *vdg_palette_new(void);
 int vdg_palette_count(void);
 struct vdg_palette *vdg_palette_index(int i);
 struct vdg_palette *vdg_palette_by_name(const char *name);
-
-/* Map Y'U'V' from palette to pixel value */
-void vdg_palette_RGB(struct vdg_palette *vp, int colour,
-                     float *Rout, float *Gout, float *Bout);
 
 #endif
