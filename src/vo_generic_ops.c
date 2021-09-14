@@ -69,10 +69,14 @@ struct vo_generic_interface {
 	// Gamma LUT.
 	uint8_t ntsc_ungamma[256];
 
+	// Viewport
+	struct vo_rect viewport;
+
 	// Render configuration.
 	int input;      // VO_TV_CMP or VO_TV_RGB
 	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
 	int cmp_phase;  // 0 or 2 are useful
+	int cmp_phase_offset;  // likewise
 };
 
 // Must be called by encapsulating video module on startup.
@@ -110,6 +114,10 @@ static void vo_generic_init(void *sptr) {
 			generic->cmp.cc_5bit[i][j] = MAPCOLOUR(generic, vo_cmp_lut_5bit[i][j][0], vo_cmp_lut_5bit[i][j][1], vo_cmp_lut_5bit[i][j][2]);
 		}
 	}
+
+	// Sensible defaults, should be overridden by call to set_viewport*()
+	generic->viewport = (struct vo_rect){ .x = 190, .y = 14, .w = 640, .h = 240 };
+	generic->cmp_phase_offset = 2;
 }
 
 // Must be called by encapsulating video module on exit.
@@ -117,6 +125,16 @@ static void vo_generic_init(void *sptr) {
 static void vo_generic_free(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
 	ntsc_palette_free(generic->cmp.ntsc_palette);
+}
+
+// Set viewport geometry
+
+static void set_viewport_xy(void *sptr, unsigned x, unsigned y) {
+	struct vo_generic_interface *generic = sptr;
+	// XXX bounds checking?  Only really going to be needed if user ends up
+	// able to move the viewport...
+	generic->viewport.x = x;
+	generic->viewport.y = y;
 }
 
 // Set a palette entry.
@@ -189,14 +207,12 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y
 
 static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	VO_MODULE_INTERFACE *vom = &generic->module;
-	struct vo_interface *vo = &vom->public;
 	(void)burst;
-	if (generic->scanline >= vo->window.y &&
-	    generic->scanline < (vo->window.y + vo->window.h)) {
-		scanline_data += vo->window.x;
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
+		scanline_data += generic->viewport.x;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window.w; i; i--) {
+		for (int i = generic->viewport.w; i; i--) {
 			uint8_t c0 = *scanline_data;
 			scanline_data++;
 			Pixel p0 = generic->input_palette[c0];
@@ -213,15 +229,13 @@ static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc
 
 static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	VO_MODULE_INTERFACE *vom = &generic->module;
-	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = generic->cmp_phase >> 1;
-	if (generic->scanline >= vo->window.y &&
-	    generic->scanline < (vo->window.y + vo->window.h)) {
-		scanline_data += vo->window.x;
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
+		scanline_data += generic->viewport.x;
 		LOCK_SURFACE(generic);
-		for (int i = vo->window.w / 4; i; i--) {
+		for (int i = generic->viewport.w / 4; i; i--) {
 			uint8_t c0 = *scanline_data;
 			uint8_t c2 = *(scanline_data + 2);
 			Pixel p0, p1, p2, p3;
@@ -255,15 +269,13 @@ static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct nts
 
 static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	VO_MODULE_INTERFACE *vom = &generic->module;
-	struct vo_interface *vo = &vom->public;
 	(void)burst;
 	unsigned p = generic->cmp_phase >> 1;
-	if (generic->scanline >= vo->window.y &&
-	    generic->scanline < (vo->window.y + vo->window.h)) {
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
 		unsigned ibwcount = 0;
 		unsigned aindex = 0;
-		scanline_data += vo->window.x;
+		scanline_data += generic->viewport.x;
 		int ibw0 = generic->cmp.is_black_or_white[*(scanline_data-6)];
 		int ibw1 = generic->cmp.is_black_or_white[*(scanline_data-2)];
 		if (ibw0 && ibw1) {
@@ -272,7 +284,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 			aindex |= (ibw1 & 2) ? 1 : 0;
 		}
 		LOCK_SURFACE(generic);
-		for (int i = vo->window.w / 2; i; i--) {
+		for (int i = generic->viewport.w / 2; i; i--) {
 			ibw0 = generic->cmp.is_black_or_white[*(scanline_data+2)];
 			ibw1 = generic->cmp.is_black_or_white[*(scanline_data+4)];
 			ibwcount = ((ibwcount << 1) | (ibw0 != 0)) & 7;
@@ -302,29 +314,27 @@ static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct nts
 
 static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	VO_MODULE_INTERFACE *vom = &generic->module;
-	struct vo_interface *vo = &vom->public;
-	if (generic->scanline < vo->window.y ||
-	    generic->scanline >= (vo->window.y + vo->window.h)) {
+	if (generic->scanline < generic->viewport.y ||
+	    generic->scanline >= (generic->viewport.y + generic->viewport.h)) {
 		generic->scanline++;
 		return;
 	}
 	generic->scanline++;
 
 	// Encode NTSC
-	const uint8_t *src = scanline_data + vo->window.x - 3;
+	const uint8_t *src = scanline_data + generic->viewport.x - 3;
 	uint8_t *dst = generic->ntsc_buf;
-	ntsc_phase = (generic->cmp_phase + vo->window.x) & 3;
-	for (int i = vo->window.w + 6; i; i--) {
+	ntsc_phase = (generic->cmp_phase + generic->viewport.x) & 3;
+	for (int i = generic->viewport.w + 6; i; i--) {
 		unsigned c = *(src++);
 		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
 	}
 
 	// And now decode
 	src = generic->ntsc_buf;
-	ntsc_phase = ((generic->cmp_phase + vo->window.x) + 3) & 3;
+	ntsc_phase = ((generic->cmp_phase + generic->viewport.x) + 3) & 3;
 	LOCK_SURFACE(generic);
-	for (int j = vo->window.w; j; j--) {
+	for (int j = generic->viewport.w; j; j--) {
 		struct ntsc_xyz rgb = ntsc_decode(burst, src++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
@@ -389,8 +399,13 @@ static void set_cmp_ccr(void *sptr, int ccr) {
 
 static void set_cmp_phase(void *sptr, int phase) {
 	struct vo_generic_interface *generic = sptr;
-	generic->cmp_phase = phase ^ 2;
-	update_render_parameters(generic);
+	generic->cmp_phase = phase ^ generic->cmp_phase_offset;
+}
+
+static void set_cmp_phase_offset(void *sptr, int phase) {
+	struct vo_generic_interface *generic = sptr;
+	generic->cmp_phase_offset = phase ^ 2;
+	set_cmp_phase(generic, generic->cmp_phase);
 }
 
 static void generic_vsync(void *sptr) {

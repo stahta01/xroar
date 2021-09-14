@@ -111,11 +111,13 @@ static void *new(void *sptr) {
 	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
+	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
@@ -137,11 +139,6 @@ static void *new(void *sptr) {
 
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
-
-	vo->window.x = VDG_ACTIVE_LINE_START - 64;
-	vo->window.y = VDG_TOP_BORDER_START + 1;
-	vo->window.w = 640;
-	vo->window.h = 240;
 
 	vo_sdl_vsync(vo);
 

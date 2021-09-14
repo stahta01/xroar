@@ -1539,6 +1539,13 @@ void xroar_configure_machine(struct machine_config *mc) {
 		break;
 	}
 	xroar_set_ccr(1, private_cfg.ccr);
+	if (mc->architecture == ARCH_COCO3) {
+		DELEGATE_CALL(xroar_vo_interface->set_viewport_xy, 184, 16);
+		DELEGATE_CALL(xroar_vo_interface->set_cmp_phase_offset, 2);
+	} else {
+		DELEGATE_CALL(xroar_vo_interface->set_viewport_xy, 190, 14);
+		DELEGATE_CALL(xroar_vo_interface->set_cmp_phase_offset, 0);
+	}
 	xroar_set_tv_input(1, mc->tv_input);
 }
 

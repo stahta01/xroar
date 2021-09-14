@@ -104,11 +104,13 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
 	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
+	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
+	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
 
 	vogl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
 	vogl->window_width = 640;
@@ -116,10 +118,6 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
 	vogl->filter = vo_cfg->gl_filter;
 	generic_vsync(generic);
-	vo->window.x = VDG_ACTIVE_LINE_START - 64;
-	vo->window.y = VDG_TOP_BORDER_START + 1;
-	vo->window.w = 640;
-	vo->window.h = 240;
 	generic->pixel = vogl->texture_pixels;
 	return vo;
 }

@@ -48,6 +48,11 @@ struct vo_cfg {
 	_Bool fullscreen;
 };
 
+struct vo_rect {
+	unsigned x, y;
+	unsigned w, h;
+};
+
 // For render_scanline(), accepts pointer to scanline data (uint8_t), and an NTSC
 // colourburst.
 typedef DELEGATE_S2(void, uint8_t const *, struct ntsc_burst *) DELEGATE_T2(void, uint8cp, ntscburst);
@@ -56,13 +61,7 @@ typedef DELEGATE_S2(void, uint8_t const *, struct ntsc_burst *) DELEGATE_T2(void
 // (Y'PbPr or R'G'B').
 typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8, float, float, float);
 
-struct vo_rect {
-	unsigned x, y;
-	unsigned w, h;
-};
-
 struct vo_interface {
-	struct vo_rect window;
 	_Bool is_fullscreen;
 
 	DELEGATE_T0(void) free;
@@ -72,11 +71,13 @@ struct vo_interface {
 	DELEGATE_T2(void, uint8cp, ntscburst) render_scanline;
 	DELEGATE_T0(void) vsync;
 	DELEGATE_T0(void) refresh;
+	DELEGATE_T2(void, unsigned, unsigned) set_viewport_xy;
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_ybr;  // Composite
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;  // RGB
 	DELEGATE_T1(void, int) set_input;
 	DELEGATE_T1(void, int) set_cmp_ccr;
-	DELEGATE_T1(void, int) set_cmp_phase;
+	DELEGATE_T1(void, int) set_cmp_phase;  // set by user
+	DELEGATE_T1(void, int) set_cmp_phase_offset;  // set per-machine
 };
 
 extern struct xconfig_enum vo_cmp_ccr_list[];
