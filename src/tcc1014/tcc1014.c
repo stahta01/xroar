@@ -696,7 +696,7 @@ static void do_hs_fall(void *sptr) {
 	case tcc1014_vstate_top_border:
 		memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		if (gime->lcount >= gime->nTB) {
-			gime->row = gime->COCO ? 0 : gime->VSC;
+			gime->row = gime->COCO ? 0 : gime->VSC % 12;
 			gime->lcount = 0;
 			gime->vstate = tcc1014_vstate_active_area;
 		}
