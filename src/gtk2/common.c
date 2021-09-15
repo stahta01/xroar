@@ -36,8 +36,8 @@ struct ui_gtk2_interface *global_uigtk2 = NULL;
 
 gboolean gtk2_dummy_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
 	(void)widget;
-	struct ui_gtk2_interface *uigtk2 = user_data;
-	if (gtk_window_activate_key(GTK_WINDOW(uigtk2->top_window), event) == TRUE) {
+	(void)user_data;
+	if (gtk_window_activate_key(GTK_WINDOW(global_uigtk2->top_window), event) == TRUE) {
 		return TRUE;
 	}
 	return FALSE;

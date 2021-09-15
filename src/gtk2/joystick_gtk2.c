@@ -80,47 +80,47 @@ struct joystick_module *gtk2_js_modlist[] = {
 	NULL
 };
 
-void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2) {
+void gtk2_joystick_init(void) {
 	// Mouse tracking
-	uigtk2->mouse_xoffset = 34.0;
-	uigtk2->mouse_yoffset = 25.5;
-	uigtk2->mouse_xdiv = 252.;
-	uigtk2->mouse_ydiv = 189.;
-	uigtk2->last_mouse_update_time = event_current_tick;
+	global_uigtk2->mouse_xoffset = 34.0;
+	global_uigtk2->mouse_yoffset = 25.5;
+	global_uigtk2->mouse_xdiv = 252.;
+	global_uigtk2->mouse_ydiv = 189.;
+	global_uigtk2->last_mouse_update_time = event_current_tick;
 }
 
-static void update_mouse_state(struct ui_gtk2_interface *uigtk2) {
+static void update_mouse_state(void) {
 	int x, y;
 	GdkModifierType buttons;
-	GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
+	GdkWindow *window = gtk_widget_get_window(global_uigtk2->drawing_area);
 	gdk_window_get_pointer(window, &x, &y, &buttons);
-	x = (x - uigtk2->display_rect.x) * 320;
-	y = (y - uigtk2->display_rect.y) * 240;
-	float xx = (float)x / (float)uigtk2->display_rect.w;
-	float yy = (float)y / (float)uigtk2->display_rect.h;
-	xx = (xx - uigtk2->mouse_xoffset) / uigtk2->mouse_xdiv;
-	yy = (yy - uigtk2->mouse_yoffset) / uigtk2->mouse_ydiv;
+	x = (x - global_uigtk2->display_rect.x) * 320;
+	y = (y - global_uigtk2->display_rect.y) * 240;
+	float xx = (float)x / (float)global_uigtk2->display_rect.w;
+	float yy = (float)y / (float)global_uigtk2->display_rect.h;
+	xx = (xx - global_uigtk2->mouse_xoffset) / global_uigtk2->mouse_xdiv;
+	yy = (yy - global_uigtk2->mouse_yoffset) / global_uigtk2->mouse_ydiv;
 	if (xx < 0.0) xx = 0.0;
 	if (xx > 1.0) xx = 1.0;
 	if (yy < 0.0) yy = 0.0;
 	if (yy > 1.0) yy = 1.0;
-	uigtk2->mouse_axis[0] = xx * 65535.;
-	uigtk2->mouse_axis[1] = yy * 65535.;
-	uigtk2->mouse_button[0] = buttons & GDK_BUTTON1_MASK;
-	uigtk2->mouse_button[1] = buttons & GDK_BUTTON2_MASK;
-	uigtk2->mouse_button[2] = buttons & GDK_BUTTON3_MASK;
-	uigtk2->last_mouse_update_time = event_current_tick;
+	global_uigtk2->mouse_axis[0] = xx * 65535.;
+	global_uigtk2->mouse_axis[1] = yy * 65535.;
+	global_uigtk2->mouse_button[0] = buttons & GDK_BUTTON1_MASK;
+	global_uigtk2->mouse_button[1] = buttons & GDK_BUTTON2_MASK;
+	global_uigtk2->mouse_button[2] = buttons & GDK_BUTTON3_MASK;
+	global_uigtk2->last_mouse_update_time = event_current_tick;
 }
 
 static unsigned read_axis(unsigned *a) {
 	if ((event_current_tick - global_uigtk2->last_mouse_update_time) >= EVENT_MS(10))
-		update_mouse_state(global_uigtk2);
+		update_mouse_state();
 	return *a;
 }
 
 static _Bool read_button(_Bool *b) {
 	if ((event_current_tick - global_uigtk2->last_mouse_update_time) >= EVENT_MS(10))
-		update_mouse_state(global_uigtk2);
+		update_mouse_state();
 	return *b;
 }
 

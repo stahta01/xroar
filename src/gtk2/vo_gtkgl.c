@@ -74,8 +74,8 @@ static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 static void vo_gtkgl_set_vsync(int val);
 
 static void *new(void *sptr) {
-	struct ui_gtk2_interface *uigtk2 = sptr;
-	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
+	(void)sptr;
+	struct vo_cfg *vo_cfg = &global_uigtk2->cfg->vo_cfg;
 
 	gtk_gl_init(NULL, NULL);
 
