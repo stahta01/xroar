@@ -54,8 +54,7 @@ XRoar is a Dragon and Tandy Colour Computer emulator that runs on a wide
 variety of platforms.  Some features are:
 
 @itemize @bullet
-@item Emulates Dragon 32, Dragon 64, Dragon 200-E, Tandy CoCo 1 & 2, and compatibles.
-@item Unfinished support for Tandy CoCo 3.
+@item Emulates Dragon 32, Dragon 64, Dragon 200-E, Tandy CoCo 1, 2 & 3, and compatibles.
 @item Emulates DragonDOS, Delta and RSDOS disk systems.
 @item Emulates the Orchestra 90-CC stereo sound cartridge.
 @item Supports both raw and translated keyboard modes.
@@ -69,7 +68,7 @@ variety of platforms.  Some features are:
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
-for Mac OS X and Windows.
+for Mac OS X and Windows.  @xref{Installation}.
 
 XRoar can also be compiled to WebAssembly, and redistributing it in this form
 may provide a convenient way for users to run your Dragon software.  See
@@ -91,237 +90,207 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 @ifnottex
 @menu
 * Getting started::
+* Configuration::
 * Hardware emulation::
 * Files::
 * User interface::
-* Troubleshooting::
 * Acknowledgements::
+* Installation::
+* Keyboard shortcuts::
 @end menu
 @end ifnottex
 
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Getting started, Hardware emulation, Top, Top
 @chapter Getting started
 
 @menu
-* Installation::
-* Building from source::
+* Prerequisites::
+* User-interface introduction::
 * Running programs::
-* Configuration::
+* Troubleshooting::
 @end menu
 
+@node Prerequisites
+@section Prerequisites
 
-@node Installation
-@section Installation & running
+After installing XRoar (see @ref{Installation}), the first thing to do is make
+sure you have the firmware ROM images available for the system you wish to
+emulate.  Without these, you will see rubbish on the screen (probably a
+checkerboard pattern, reflecting the initial state of RAM, see
+@ref{Troubleshooting}).
 
-Pre-built binary packages are available from the
-@myuref{https://www.6809.org.uk/xroar/, XRoar home page}.  If one is not
-available for your architecture, you will need to build from source.  XRoar
-should build and run on any POSIX-like system for which SDL version 2 is
-available.
+These firmware images can be transferred from your original machine (with some
+effort, outside the scope of this document) or more likely found online on one
+of the archive websites.  XRoar searches certain directories for these images,
+depending on platform, including (where @samp{~} indicates your "home
+directory"):
 
-You will also need BASIC ROM images---binary dumps of the firmware from an
-original machine.  The originals were part-written by Microsoft, so they are
-not distributed in the XRoar packages.
+@multitable {Unix/Linux} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
+@headitem Platform @tab Normal ROM path
+@item Unix/Linux @tab @file{~/.xroar/roms}
+@item Windows @tab @file{~/Documents/XRoar/roms}
+@item Mac OS X @tab @file{~/Library/XRoar/roms}
+@end multitable
 
+Firmware ROM image files should have a @file{.rom} extension, and be headerless
+(so their file size will be an exact power of two bytes).  For most use cases,
+you'll need the BASIC ROM image(s) and a disk controller ROM image.  Here are
+the expected filenames for the most common images:
 
-@subsection Mac OS X binary package
+@multitable {Tandy Super ECB (PAL CoCo 3)} {d200e_26.romXX} {32K (32768 bytes)}
+@headitem Firmware ROM @tab Filename @tab File size
+@item Dragon 32 BASIC @tab @file{d32.rom} @tab 16K (16384 bytes)
+@item Dragon 64 32K BASIC @tab @file{d64_1.rom} @tab 16K
+@item Dragon 64 64K BASIC @tab @file{d64_2.rom} @tab 16K
+@item DragonDOS @tab @file{ddos10} @tab 8K (8192 bytes)
+@item Tandy Colour BASIC @tab @file{bas13.rom} @tab 8K
+@item Tandy Extended BASIC @tab @file{extbas11} @tab 8K
+@item Tandy Super ECB (CoCo 3) @tab @file{coco3} @tab 32K (32768 bytes)
+@item Tandy Super ECB (PAL CoCo 3) @tab @file{coco3p} @tab 32K
+@item Tandy RS-DOS @tab @file{disk11} @tab 8K
+@end multitable
 
-Download and unzip the appropriate @file{.zip} distribution for your system.
-Drag the application icon to @file{/Applications/}.
-
-For troubleshooting or testing options, it's often a good idea to run from the
-command line, but application packages don't make that trivial.  A symbolic
-link to somewhere in your @env{PATH} is all that's required.  e.g.:
-
-@example
-$ sudo ln -s /Applications/XRoar.app/Contents/MacOS/xroar \
-        /usr/local/bin/xroar
-@end example
-
-After this, you can start the emulator by simply typing @command{xroar}
-followed by any command line options.
-
-ROM images should be placed in a directory you create under your @env{HOME}
-named @file{~/Library/XRoar/roms/} (not the system directory,
-@file{/Library/}).  Name any configuration file you create
-@file{~/Library/XRoar/xroar.conf}.
-
-The Mac OS X build provides a menu for access to certain features, and often
-accepts the more familiar @kbd{Command}+@var{key} in place of the
-@kbd{Ctrl}+@var{key} shortcuts listed in this manual.
-
-
-@subsection Windows binary package
-
-Download and unzip the appropriate @file{.zip} distribution for your system.
-
-The easiest way forward is to simply put ROM images into the directory created
-when you unzip the distribution, and then run the @file{.exe} straight from
-there.  You can also put any configuration file (@file{xroar.conf}) here.
-
-However, if you want to avoid having to move files around each time you
-upgrade, you can create @file{Documents/XRoar} to contain your configuration
-file, and a subdirectory of that, @file{Documents/XRoar/roms} for ROM images.
-
-Note when troubleshooting that the logging from the Windows binary is probably
-only going to be visible if you run it with the @option{-C} option (must be the
-first option) to allocate a console.
-
-The Windows build provides menu-based access to certain features.
+Other machines (in particular the less common Dragon 200-E) will need a
+different set of ROM images, and other supported peripherals may also need
+their own firmware.  See @ref{Hardware emulation} for more information on the
+images that specific hardware emulation expects to find.
 
 
-@node Building from source
-@section Building from source
+@node User-interface introduction
+@section User-interface introduction
 
-@menu
-* Dependencies::
-* Compilation::
-@end menu
+With the prerequisites satisfied, on running XRoar you should now be presented
+with a window showing an emulated machine with a menu bar at the top showing
+(at least) @clicksequence{File}, @clicksequence{View}, @clicksequence{Hardware}
+and @clicksequence{Tool} menus.  Mac OS users will see the menu bar at the top
+of the whole screen instead.  There are often keyboard shortcuts for these,
+detailed throughout this manual and listed in @ref{Keyboard shortcuts}.
 
-@node Dependencies
-@subsection Dependencies
+You can put XRoar into fullscreen mode by selecting @clicksequence{View
+@click{} Full Screen}, but you will notice that the menu bar disappears.  To
+return to windowed mode, use the keyboard shortcut @kbd{@key{CTRL}+F}, or just
+@key{F11}.
 
-If there is no binary package for your system, you will have to build from
-source.  XRoar can use various backend toolkits, and you will need to ensure
-you have their development files installed.  If you're using Debian, this can
-(at the time of writing) be achieved with the following simple command:
+As you type, you may notice that certain keys don't produce the character you
+pressed.  This is because by default, XRoar tries to map keys such that they
+closely approximate their locations on the machine being emulated, so
+@kbd{minus} on a modern PC keyboard types @kbd{colon} in the emulated machine.
+This is good for playing games, where key placement is often important.  Be
+aware that some keys don't have useful equivalents on modern keyboards: for
+@kbd{CLEAR}, press @kbd{HOME}, or the backtick key; for @kbd{BREAK}, press
+@kbd{ESCAPE}.
 
-@example
-$ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
-        libgtkglext1-dev libasound2-dev
-@end example
+You can tell XRoar to translate PC keys to emulated keypresses by selecting
+@clicksequence{Tool @click{} Keyboard Translation}.  For more about the
+keyboard, including mapping keys, see @ref{Keyboard}.
 
-Under Mac OS X, first be sure to install Apple's
-@myuref{https://developer.apple.com/xcode/, Xcode} package.  The easiest way to
-then ensure you have XRoar's dependencies available is to use a system like
-@myuref{https://brew.sh/, Homebrew} or @myuref{http://www.macports.org/,
-MacPorts}.  For Homebrew, the following command will install the required
-dependencies:
+XRoar supports real joysticks, and simulating joysticks with the keyboard or
+mouse.  You can select which method is used for each of the emulated joysticks
+in the @clicksequence{Hardware @click{} Right Joystick} and
+@clicksequence{Hardware @click{} Left Joystick} menus.  The
+@clicksequence{Keyboard} option maps the cursor keys to joystick directions
+(meaning they become unavailable to type as actual emulated cursor keys) and
+@key{ALT} to the firebutton.  The @clicksequence{Mouse} option relates the
+pointer position within the window to a joystick's floating position, with the
+left mouse button bound being the firebutton.  Much of this can be configured,
+see @ref{Joysticks}.
 
-@example
-$ brew install libsndfile sdl2
-@end example
-
-Otherwise, you'll have to do a bit of platform-specific research to ensure you
-have all the dependencies for a full build:
-
-@myuref{http://www.gtk.org/, GTK+}, the GIMP toolkit, provides the most
-full-featured user interface.  It is only usable as such if you also have
-@myuref{http://projects.gnome.org/gtkglext/, GtkGlExt}, an OpenGL extension
-used to provide video output.  Otherwise, it can provide a file requester for
-use by other user interfaces.
-
-@myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
-slightly more basic user experience.  Menus are added using native code under
-Mac OS X and Windows; any other target using SDL will support only keyboard
-shortcuts.  Unless you are building for Linux, SDL is required to use
-joysticks.  Version 2 required.
-
-POSIX Regular Expressions are used in option parsing, so
-@myuref{https://laurikari.net/tre/about/, TRE} is required on non-POSIX
-platforms (e.g. Windows).
-
-Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some other
-options are still in the code base, but have not been tested in a while.
-
-@myuref{http://www.mega-nerd.com/libsndfile/, libsndfile} is recommended to
-enable support for using audio files as cassette images.
-
-@node Compilation
-@subsection Compilation
-
-Once you have the dependencies, building XRoar follows a familiar procedure:
-
-@example
-$ gzip -dc xroar-@value{VERSION}.tar.gz | tar xvf -
-$ cd xroar-@value{VERSION}
-$ ./configure
-$ make
-$ sudo make install
-@end example
-
-The @command{configure} script has a lot of options guiding what it tests for,
-specifying cross-compilation, changing the install path, etc.  List them all
-with the @option{--help} option.
-
-By default, @command{configure} will set up an install @emph{prefix} of
-@file{/usr/local}, but this can be changed by using the
-@option{--prefix=@var{path}} option.
-
-Once built, run @command{make install} as root (or use @command{sudo}, as in
-the example above) to install the binary and info documentation on your system.
-The executable is called @file{xroar}.  ROM images should be placed either in
-your home directory as @file{~/.xroar/roms/}, or under the installation
-@emph{prefix} as @file{@emph{prefix}/share/xroar/roms/}.  Any configuration
-file should be created as @file{~/.xroar/xroar.conf}.
-
-XRoar can be built on one platform to run on another.  The Windows binary
-package is built like this.  To specify a cross-compile, use the
-@option{--host=@var{host}} argument to @command{configure}.  For example, to
-build for Windows, you might use @samp{./configure --host=i686-w64-mingw32}.
-Getting everything ``just so'' for a cross-build can be a tricky procedure, and
-the details are beyond the scope of this manual.
-
-XRoar can be built to a WebAssembly target using
-@myuref{https://emscripten.org/, Emscripten}.  With the SDK installed, run
-@command{emconfigure ./configure --enable-wasm} to set up the build
-environment.  Build with @command{emmake make}.  HTML/JavaScript and CSS
-examples for interfacing to the output are included in the @file{wasm/}
-subdirectory.
+The @clicksequence{Hardware} menu also allows you to select which machine to
+emulate, and attach a cartridge to the running machine.  If ROM images were
+found for it, you'll probably see that a disk cartridge is already attached.
+Swapping cartridges 'live' is not something you'd generally do on a real
+machine, and if you change the selection, you may need to select
+@clicksequence{Hardware @click{} Hard Reset} to see the effect.
 
 
 @node Running programs
 @section Running programs
 
-Images of ROM cartridges, cassettes and disks can all be attached by pressing
-@kbd{Ctrl}+@kbd{L}.  Cassettes will be positioned at the beginning of the
-``tape'' and disks will be inserted into the first drive.
+XRoar tries to make this easy; after all, it's probably why you installed an
+emulator in the first place.  Select @clicksequence{File @click{} Run} to open
+a file requester, and select the program media image; in the majority of cases,
+and so long as the program was intended for the machine you have selected,
+XRoar will "do the right thing" to try and start it.
 
-To attach an image and try to automatically start it, press
-@kbd{Ctrl}+@kbd{Shift}+@kbd{L} instead.  XRoar will try and start the
-program using the normal method for the type of image:
+As with much automation, we can't forsee every eventuality, and sometimes
+you'll have to launch the program manually.  In this case, you can still simply
+attach the image (@emph{without} autorunning it) by selecting
+@clicksequence{File @click{} Load}, then follow the programs own instructions.
 
-@itemize @bullet
+Here's what XRoar tries to do with various types of media image.  XRoar uses
+filename extensions to decide how to handle an image, so be sure to check that
+this is correct.  For more a list of supported file formats, see @ref{Files}.
 
-@item If a BASIC program is found on a cassette, XRoar types ``CLOAD'', waits
-for the program to load, then types ``RUN''.
+ROM cartridge images typically have a @file{.rom} extension (just like the
+firmware ROM images).  XRoar will create and insert a ROM cartridge (it will
+appear in the list under @clicksequence{Hardware @click{} Cartridge}) and, if
+autorunning, set it up to generate the autostart signalling and hard reset the
+emulated machine.
 
-@item For machine code programs on cassette, XRoar types ``CLOADM'' if they
-appear to load in an autorun fashion, otherwise ``CLOADM:EXEC''.  Special
-built-in rules try and recognise some programs and issue a customised series of
-commands.
+For cassette images (usually a @file{.cas} or @file{.wav}), XRoar will try to
+determine the type of the first program in the image, and autorunning will
+issue the @samp{CLOAD} (for BASIC) or @samp{CLOADM} (for machine code) command
+to load it, followed by @samp{EXEC} or @samp{RUN} as appropriate.
+@xref{Cassettes}.
 
-@item If a ROM cartridge is inserted, the emulated machine is power cycled.
+The only standard way of autostarting the program on a disk image is through
+its boot sectors, so in this case XRoar will issue the @samp{BOOT} (Dragon) or
+@samp{DOS} (Tandy CoCo) command.  These are the most likely to fail as many
+disk images do not have boot sectors: read the instructions for yours!  Disk
+images can come in many formats, and the file extension is used to
+discriminate; the most common are VDK (@file{.vdk} extension) or JVC
+(@file{.dsk} extension).  @xref{Floppy Disks}.
 
-@item If a disk image is autorun, XRoar types ``BOOT'' (Dragon) or ``DOS'' (CoCo).
 
-@end itemize
+@node Troubleshooting
+@section Troubleshooting
 
-If you have trouble with a program, refer to its loading instructions: it may
-require a different series of commands to get going.  If you still have issues,
-see @ref{Cartridges}, @ref{Cassettes}, or @ref{Floppy Disks}.
+@subsection No BASIC ROM
 
-The keyboard layout of modern machines is not identical to that of the Dragon,
-so XRoar provides two ways of working.  The default, ``untranslated'', is to
-map key @emph{positions} as closely as possible (e.g. the key to the right of
-@kbd{P} maps to @kbd{@@}).  Pressing @kbd{Ctrl}+@kbd{Z} toggles
-``translated'' mode, which tries to map key @emph{symbols} closely instead
-(e.g. pressing @kbd{'} will press @kbd{Shift}+@kbd{7} in the emulated
-machine).
+The most common issue when first using XRoar.  You start the emulator and only
+see a checkerboard pattern of orange and inverse @samp{@@} signs (or on the
+CoCo 3, some other pattern that's not the usual copyright messages).  This
+probably indicates that XRoar could not locate any BASIC ROM images.  Acquire
+some and put them in the directory appropriate to your platform.
 
-In addition, a couple of keys aren't always available on modern keyboads, so
-@key{Escape} maps to the Dragon's @key{BREAK} key, and @key{Home} maps to
-@key{CLEAR}.  @xref{Keyboard}.
+@float Figure,fig:norom
+@image{xroar-screens, 4.15625in,, Emulator with and without BASIC ROM, png}
+@caption{Emulator with and without BASIC ROM}
+@end float
 
-XRoar will make use of attached joysticks, but can also emulate them with the
-cursor keys and @key{Left Alt}.  Press @kbd{Ctrl}+@kbd{J} to cycle through
-three emulation modes: No joystick emulation (default), Right joystick, Left
-joystick.  @xref{Joysticks}.
+@subsection Program lacks colour
 
+You remember a program being in colour, but all you see is black and white.
+
+American software was often written to exploit cross-colour artefacts, where
+alternating patterns of black and white would "trick" the TV into displaying
+colour.  XRoar supports this, and should enable it by default when you choose
+an NTSC machine.  If you're running an NTSC game on a PAL machine, you can
+still force XRoar to render the colours by selecting a cross-colour option from
+@clicksequence{View @click{} TV Input}.  There are also options that affect the
+fidelity of this rendering.  See @ref{Video output} for more details.
+
+@float Figure,fig:artefacts
+@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes, png}
+@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes}
+@end float
+
+@subsection Debug messages
+
+XRoar prints diagnostic messages to standard output and standard error, and
+these may help narrow down a problem.  You can increase their verbosity with
+various command-line options.  See @ref{Debugging} for more information.
+
+Windows generally does not show these messages by default. but you can
+"allocate a console" by running XRoar from the command line and including
+@option{-C} as the very first option.
+
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Configuration
-@section Configuration
+@chapter Configuration
 
 This manual details the options available for configuring XRoar.  Each option
 can be passed on the command line or placed in a configuration file called
@@ -407,6 +376,7 @@ to a config file), run with @option{-config-print}.  This will include all the
 built-in machine and cartridge definitions.  For a complete version including
 default values, use @option{-config-print-all}.
 
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Hardware emulation
 @chapter Hardware emulation
@@ -628,12 +598,12 @@ with @option{-machine-cart}, or automatic selection is disabled with the
 @option{-nodos} option.
 
 Selecting a ROM image file with the @option{-load} or @option{-run} command
-line options, or with @kbd{Ctrl}+@kbd{L} or
-@kbd{Ctrl}+@kbd{Shift}+@kbd{L}, will attach a ROM cartridge.
+line options, or with @key{CTRL}+@kbd{L} or
+@key{CTRL}+@key{SHIFT}+@kbd{L}, will attach a ROM cartridge.
 
 Within the emulator, cartridges can be enabled or disabled by pressing
-@kbd{Ctrl}+@kbd{E}.  You will almost certainly want to follow this with a
-hard reset (@kbd{Ctrl}+@kbd{Shift}+@kbd{R}).
+@key{CTRL}+@kbd{E}.  You will almost certainly want to follow this with a
+hard reset (@key{CTRL}+@key{SHIFT}+@kbd{R}).
 
 @subsection Multi-Pak Interface
 
@@ -666,14 +636,15 @@ The IP and port to connect to can be specified with the @option{-becker-ip} and
 @samp{65504} respectively, matching the defaults for DriveWire 4, the most
 popular server application used to provide such facilities.
 
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Files
 @chapter Files
 
 In general, files can be attached on the command line with @option{-load
-@var{filename}}, or by pressing @kbd{Ctrl}+@kbd{L}.  XRoar judges the type of
+@var{filename}}, or by pressing @key{CTRL}+@kbd{L}.  XRoar judges the type of
 file based on its filename extension.  To attempt to intelligently autorun a
-file, use @option{-run @var{filename}} or press @kbd{Ctrl}+@kbd{Shift}+@kbd{L}.
+file, use @option{-run @var{filename}} or press @key{CTRL}+@key{SHIFT}+@kbd{L}.
 See @ref{Running programs} for the methods XRoar will use to autorun a file.
 
 @menu
@@ -708,7 +679,7 @@ for loading in ASCII mode.  Read-only.
 
 To create a cassette image for writing (with the @command{CSAVE} or
 @command{CSAVEM} BASIC commands, for example), use the @option{-tape-write
-@var{filename}} option, or press @kbd{Ctrl}+@kbd{W}.  If a file already exists,
+@var{filename}} option, or press @key{CTRL}+@kbd{W}.  If a file already exists,
 new data will be appended to it.  Rewind the output take to overwrite it.  Note
 a slight behaviour difference: CAS files can only be overwritten or appended
 to, WAV files can overwrite existing data (leaving later data intact).
@@ -770,14 +741,14 @@ header information.
 @tab Another disk image file format, used by PC-Dragon.
 @end multitable
 
-To insert a disk into a particular drive, press @kbd{Ctrl}+@var{[1-4]}.
+To insert a disk into a particular drive, press @key{CTRL}+@var{[1-4]}.
 
 When you attach a disk, it is read into memory, and subsequent disk operations
 are performed on this in-memory copy.  Write enable defaults to on (so write
 operations on the copy will work), but write back defaults to off, so updates
 will not be written to the disk image file.  To toggle write enable, press
-@kbd{Ctrl}+@var{[5-8]}, where the number to press is the drive number plus
-4.  To toggle write back, press @kbd{Ctrl}+@kbd{Shift}+@var{[5-8]}.  Even
+@key{CTRL}+@var{[5-8]}, where the number to press is the drive number plus
+4.  To toggle write back, press @key{CTRL}+@key{SHIFT}+@var{[5-8]}.  Even
 with write back enabled, image files will not be updated until the disk in a
 virtual drive is changed, or you quit the emulator.
 
@@ -787,7 +758,7 @@ Write back can be set to default to on with the @option{-disk-write-back}
 command line option.
 
 To flush any changes made to in-memory disk images to their backing file (but
-only those with write back enabled), press @kbd{Ctrl}+@kbd{Shift}+@kbd{D}.
+only those with write back enabled), press @key{CTRL}+@key{SHIFT}+@kbd{D}.
 
 The JVC format specifies that the disk images without headers are single-sided,
 but some double-sided disk images have been made available without headers.
@@ -799,7 +770,7 @@ filename extension, but may be disabled for the other valid JVC filename
 extensions with @option{-no-disk-auto-os9}.
 
 You can create a new blank disk in a virtual drive by pressing
-@kbd{Ctrl}+@kbd{Shift}+@var{[1-4]}.  You will be a prompted for a filename,
+@key{CTRL}+@key{SHIFT}+@var{[1-4]}.  You will be a prompted for a filename,
 and the filename extension determines which type of file will be written.
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
@@ -835,8 +806,8 @@ just creates a cartridge instance of type @samp{rom}.  @xref{Cartridges}.
 @section Snapshots
 
 XRoar can save out a snapshot of the emulated machine state and read the
-snapshots back in later.  To save a snapshot, press @kbd{Ctrl}+@kbd{S}.
-When using @kbd{Ctrl}+@kbd{L} to load a file, anything ending in @file{.sna}
+snapshots back in later.  To save a snapshot, press @key{CTRL}+@kbd{S}.
+When using @key{CTRL}+@kbd{L} to load a file, anything ending in @file{.sna}
 will be recognised as a snapshot.
 
 What is included in snapshots: Selected machine architecture, complete hardware
@@ -936,6 +907,7 @@ Sometimes it may be useful to force CRC matching so that breakpoints apply
 the match list each time you modify it).  The @option{-force-crc-match} option
 forces the CRCs to be as if an original ROM image were loaded.
 
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node User interface
 @chapter User interface
@@ -948,7 +920,6 @@ forces the CRCs to be as if an original ROM image were loaded.
 * Joysticks::
 * Printing::
 * Debugging::
-* Keyboard shortcuts::
 @end menu
 
 @node User interface module
@@ -982,7 +953,7 @@ More limited than the GTK+ interface, providing keyboard shortcuts and, in
 the Mac OS X and Windows variants, some basic menus.
 
 Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
-as well as the usual shortcut of @kbd{Ctrl}+@var{key}.
+as well as the usual shortcut of @key{CTRL}+@var{key}.
 
 
 @node Video output
@@ -998,7 +969,7 @@ possible user-interface.
 
 @item -fs
 
-Start full-screen.  Toggle full-screen with @kbd{Ctrl}+@kbd{F} or @kbd{F11}.
+Start full-screen.  Toggle full-screen with @key{CTRL}+@kbd{F} or @kbd{F11}.
 
 @item -fskip @var{frames}
 
@@ -1023,10 +994,10 @@ Default is @samp{5bit}.
 
 Real NTSC machines start in one of two cross-colour states at random.  Games
 often prompt the user to ``Press Enter if the screen is red'', for example.
-You can press @kbd{Ctrl}+@kbd{A}, to cycle through three modes: Off,
+You can press @key{CTRL}+@kbd{A}, to cycle through three modes: Off,
 Blue-red and Red-blue.
 
-Inverted text mode may be toggled by pressing @kbd{Ctrl}+@kbd{Shift}+@kbd{I}.
+Inverted text mode may be toggled by pressing @key{CTRL}+@key{SHIFT}+@kbd{I}.
 
 
 @node Audio output
@@ -1118,12 +1089,12 @@ host's keyboard.  If it is not the default (UK), use the @option{-keymap
 XRoar can also be put into ``translated'' keyboard mode, where characters typed
 on a PC keyboard are translated into the equivalent keystrokes on the Dragon.
 Use the @option{-kbd-translate} option to default to this mode.  Press
-@kbd{Ctrl}+@kbd{Z} at any time to toggle between the two modes.
+@key{CTRL}+@kbd{Z} at any time to toggle between the two modes.
 
-In translated mode, @kbd{Shift}+@kbd{Return} is mapped to the Caps Lock
-combination (@kbd{Shift}+@kbd{0} usually, @kbd{Shift}+@kbd{ENTER} on the Dragon
-200-E).  Similarly, @kbd{Shift}+@kbd{Space} is mapped to the ``pause output''
-combination (@kbd{Shift}+@kbd{@@} usually, @kbd{Shift}+@kbd{Space} on the
+In translated mode, @key{SHIFT}+@kbd{Return} is mapped to the Caps Lock
+combination (@key{SHIFT}+@kbd{0} usually, @key{SHIFT}+@kbd{ENTER} on the Dragon
+200-E).  Similarly, @key{SHIFT}+@kbd{Space} is mapped to the ``pause output''
+combination (@key{SHIFT}+@kbd{@@} usually, @key{SHIFT}+@kbd{Space} on the
 Dragon 200-E).
 
 @table @option
@@ -1163,7 +1134,7 @@ Intercept ROM calls to type @var{string} into BASIC on startup.
 The keyboards of the Dragon, Dragon 200-E and Tandy CoCo operate in the same
 way, but the matrix and/or key layouts differ.  When you select a machine (see
 @ref{Machines}), the appropriate layout is selected for you, but you can cycle
-between the three by pressing @kbd{Ctrl}+@kbd{K}.
+between the three by pressing @key{CTRL}+@kbd{K}.
 
 XRoar will simulate the ``ghosting'' effects inherent in a simple matrix
 design, but the accuracy of this simulation will depend very much on your host
@@ -1190,10 +1161,10 @@ By default, @samp{joy0} (the first physical joystick) is mapped to the Dragon's
 right joystick port, and @samp{joy1} (the second physical joystick) to the left
 port.  Map different named joysticks with @option{-joy-right @var{name}} and
 @option{-joy-left @var{name}}.  Right and left joystick mapping can be easily
-swapped by pressing @kbd{Ctrl}+@kbd{Shift}+@kbd{J}.
+swapped by pressing @key{CTRL}+@key{SHIFT}+@kbd{J}.
 
 A configured ``virtual joystick'' can be used by pressing
-@kbd{Ctrl}+@kbd{J}.  The first press substitutes it for the right joystick,
+@key{CTRL}+@kbd{J}.  The first press substitutes it for the right joystick,
 the second press with the left joystick and a third press disables it again.
 The virtual joystick defaults to the keyboard-based @samp{kjoy0} described
 above, but can be reconfigured with @option{-joy-virtual @var{name}}.
@@ -1223,7 +1194,7 @@ which gives reasonable behaviour for some games and utilities.
 
 XRoar supports redirecting the Dragon parallel printer output to a file or pipe
 with the @option{-lp-file} or @option{-lp-pipe} option.  Printed data will be
-sent to the appropriate stream.  Pressing @kbd{Ctrl}+@kbd{Shift}+@kbd{P}
+sent to the appropriate stream.  Pressing @key{CTRL}+@key{SHIFT}+@kbd{P}
 will flush the current stream by closing it (so if the stream is a pipe, the
 filter will complete).  The stream will be re-opened when any new data is sent.
 
@@ -1231,7 +1202,7 @@ The pipe feature allows you to use useful print filters such as
 @command{enscript}, e.g. @option{-lp-pipe "enscript -B -N r -d
 @emph{printer-name}"}.  This will send a job to your printer, using carriage
 returns as line feeds (the Dragon default), each time you press
-@kbd{Ctrl}+@kbd{Shift}+@kbd{P} (or exit the emulator).
+@key{CTRL}+@key{SHIFT}+@kbd{P} (or exit the emulator).
 
 @table @option
 
@@ -1267,7 +1238,7 @@ the @option{-gdb-ip} and @option{-gdb-port} options.
 
 XRoar also supports a simpler ``trace mode'', where it will dump a disassembly
 of every instruction it executes to the console.  Toggle trace mode on or off
-with @kbd{Ctrl}+@kbd{V}.  Trace mode can be enabled from startup with the
+with @key{CTRL}+@kbd{V}.  Trace mode can be enabled from startup with the
 @option{-trace} option.
 
 User-interface debugging flag can be enabled with @option{-debug-ui
@@ -1355,96 +1326,7 @@ To see debug output from the pre-built Windows binary, run it with @option{-C}
 as the first option to allocate a console.
 
 
-@node Keyboard shortcuts
-@section Keyboard shortcuts
-
-A summary of commonly available shortcuts.
-
-@table @asis
-@item @kbd{Ctrl}+@kbd{A}
-Cycle through cross-colour video modes (hi-res only).
-@item @kbd{Ctrl}+@kbd{D}
-Open disk control dialogue (GTK+ only).
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{D}
-Flush disk images.
-@item @kbd{Ctrl}+@kbd{E}
-Toggle DOS emulation on/off - reset to take effect.
-@item @kbd{Ctrl}+@kbd{F}, @kbd{F11}
-Toggle full screen mode.
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{H}, @kbd{Pause}
-Toggles pause mode (HALTs the CPU).  As seen on the Dynacom MX-1600.
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{I}
-Toggle text mode inverse video.
-@item @kbd{Ctrl}+@kbd{J}
-Cycle through joystick emulation modes (None, Right, Left).
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{J}
-Swap left and right joysticks.
-@item @kbd{Ctrl}+@kbd{K}
-Cycle through Dragon, Dragon 200-E and CoCo keyboard layouts.
-@item @kbd{Ctrl}+@kbd{L}
-Load a file (see below).
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{L}
-Load a file and attempt to autorun it where appropriate.
-@item @kbd{Ctrl}+@kbd{M}
-Cycle through emulated machine types (resets machine).
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{P}
-Flush printer output.
-@item @kbd{Ctrl}+@kbd{Q}
-Quit emulator.
-@item @kbd{Ctrl}+@kbd{R}
-Soft reset emulated machine.
-@item @kbd{Ctrl}+@kbd{Shift}+@kbd{R}
-Hard reset emulated machine.
-@item @kbd{Ctrl}+@kbd{S}
-Save a snapshot.
-@item @kbd{Ctrl}+@kbd{T}
-Open the tape control dialogue (GTK+ only).
-@item @kbd{Ctrl}+@kbd{V}
-Toggle trace mode.
-@item @kbd{Ctrl}+@kbd{W}
-Attach a virtual cassette file for writing.
-@item @kbd{Ctrl}+@kbd{Z}
-Enable keyboard translation mode.
-@item @kbd{F12}
-While held, the emulator will run at the maximum possible speed.
-@item @kbd{Shift}+@kbd{F12}
-Toggle rate limiting.  Emulator will run at maximum speed until pressed again.
-@end table
-
-
-@node Troubleshooting
-@chapter Troubleshooting
-
-Some commonly encountered issues:
-
-@itemize @bullet
-@item I only see a checkerboard pattern of orange and inverse @samp{@@} signs.
-@end itemize
-
-This probably indicates that XRoar could not locate any BASIC ROM images.
-Acquire some and put them in the directory appropriate to your platform.  XRoar
-tries to find ROMs for machines in the following order if you do not specify a
-default machine: Dragon 64, Dragon 32, CoCo.
-
-@float Figure,fig:norom
-@image{xroar-screens, 4.15625in,, Emulator with and without BASIC ROM, png}
-@caption{Emulator with and without BASIC ROM}
-@end float
-
-@itemize @bullet
-@item This program is supposed to be in colour, but all I see is black & white.
-@end itemize
-
-Try pressing @kbd{Ctrl}+@kbd{A} one or more times.  What this really means
-is that you're used to running the program on an NTSC machine, and it makes use
-of cross-colour, but XRoar is emulating a PAL machine.  Try starting with
-@option{-default-machine tano} or @option{-default-machine cocous}.
-
-@float Figure,fig:artefacts
-@image{xroar-timebandit-af, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes, png}
-@caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes}
-@end float
-
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Acknowledgements
 @chapter Acknowledgements
@@ -1464,5 +1346,204 @@ Alan Cox contributed the IDE code.
 
 Tormod Voldon contributed support for his NX32 and MOOH devices (including
 general SPI and SD image support).
+
+
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+@node Installation
+@appendix Installation
+
+@section Binary packages
+
+Pre-built binary packages are available from the
+@myuref{https://www.6809.org.uk/xroar/, XRoar home page}.  If one is not
+available for your architecture, you will need to build from source.  XRoar
+should build and run on any POSIX-like system for which SDL version 2 is
+available.
+
+You will also need BASIC ROM images---binary dumps of the firmware from an
+original machine.  The originals were part-written by Microsoft, so they are
+not distributed in the XRoar packages.
+
+
+@subsection Mac OS X binary package
+
+Download and unzip the appropriate @file{.zip} distribution for your system.
+Drag the application icon to @file{/Applications/}.
+
+For troubleshooting or testing options, it's often a good idea to run from the
+command line, but application packages don't make that trivial.  A symbolic
+link to somewhere in your @env{PATH} is all that's required.  e.g.:
+
+@example
+$ sudo ln -s /Applications/XRoar.app/Contents/MacOS/xroar \
+        /usr/local/bin/xroar
+@end example
+
+After this, you can start the emulator by simply typing @command{xroar}
+followed by any command line options.
+
+ROM images should be placed in a directory you create under your @env{HOME}
+named @file{~/Library/XRoar/roms/} (not the system directory,
+@file{/Library/}).  Name any configuration file you create
+@file{~/Library/XRoar/xroar.conf}.
+
+The Mac OS X build provides a menu for access to certain features, and often
+accepts the more familiar @kbd{Command}+@var{key} in place of the
+@key{CTRL}+@var{key} shortcuts listed in this manual.
+
+
+@subsection Windows binary package
+
+Download and unzip the appropriate @file{.zip} distribution for your system.
+
+The easiest way forward is to simply put ROM images into the directory created
+when you unzip the distribution, and then run the @file{.exe} straight from
+there.  You can also put any configuration file (@file{xroar.conf}) here.
+
+However, if you want to avoid having to move files around each time you
+upgrade, you can create @file{Documents/XRoar} to contain your configuration
+file, and a subdirectory of that, @file{Documents/XRoar/roms} for ROM images.
+
+Note when troubleshooting that the logging from the Windows binary is probably
+only going to be visible if you run it with the @option{-C} option (must be the
+first option) to allocate a console.
+
+The Windows build provides menu-based access to certain features.
+
+
+@node Building from source
+@section Building from source
+
+@menu
+* Dependencies::
+* Compilation::
+@end menu
+
+@node Dependencies
+@subsection Dependencies
+
+If there is no binary package for your system, you will have to build from
+source.  XRoar can use various backend toolkits, and you will need to ensure
+you have their development files installed.  If you're using Debian, this can
+(at the time of writing) be achieved with the following simple command:
+
+@example
+$ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
+        libgtkglext1-dev libasound2-dev
+@end example
+
+Under Mac OS X, first be sure to install Apple's
+@myuref{https://developer.apple.com/xcode/, Xcode} package.  The easiest way to
+then ensure you have XRoar's dependencies available is to use a system like
+@myuref{https://brew.sh/, Homebrew} or @myuref{http://www.macports.org/,
+MacPorts}.  For Homebrew, the following command will install the required
+dependencies:
+
+@example
+$ brew install libsndfile sdl2
+@end example
+
+Otherwise, you'll have to do a bit of platform-specific research to ensure you
+have all the dependencies for a full build:
+
+@myuref{http://www.gtk.org/, GTK+}, the GIMP toolkit, provides the most
+full-featured user interface.  It is only usable as such if you also have
+@myuref{http://projects.gnome.org/gtkglext/, GtkGlExt}, an OpenGL extension
+used to provide video output.  Otherwise, it can provide a file requester for
+use by other user interfaces.
+
+@myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
+slightly more basic user experience.  Menus are added using native code under
+Mac OS X and Windows; any other target using SDL will support only keyboard
+shortcuts.  Unless you are building for Linux, SDL is required to use
+joysticks.  Version 2 required.
+
+POSIX Regular Expressions are used in option parsing, so
+@myuref{https://laurikari.net/tre/about/, TRE} is required on non-POSIX
+platforms (e.g. Windows).
+
+Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some other
+options are still in the code base, but have not been tested in a while.
+
+@myuref{http://www.mega-nerd.com/libsndfile/, libsndfile} is recommended to
+enable support for using audio files as cassette images.
+
+@node Compilation
+@subsection Compilation
+
+Once you have the dependencies, building XRoar follows a familiar procedure:
+
+@example
+$ gzip -dc xroar-@value{VERSION}.tar.gz | tar xvf -
+$ cd xroar-@value{VERSION}
+$ ./configure
+$ make
+$ sudo make install
+@end example
+
+The @command{configure} script has a lot of options guiding what it tests for,
+specifying cross-compilation, changing the install path, etc.  List them all
+with the @option{--help} option.
+
+By default, @command{configure} will set up an install @emph{prefix} of
+@file{/usr/local}, but this can be changed by using the
+@option{--prefix=@var{path}} option.
+
+Once built, run @command{make install} as root (or use @command{sudo}, as in
+the example above) to install the binary and info documentation on your system.
+The executable is called @file{xroar}.  ROM images should be placed either in
+your home directory as @file{~/.xroar/roms/}, or under the installation
+@emph{prefix} as @file{@emph{prefix}/share/xroar/roms/}.  Any configuration
+file should be created as @file{~/.xroar/xroar.conf}.
+
+XRoar can be built on one platform to run on another.  The Windows binary
+package is built like this.  To specify a cross-compile, use the
+@option{--host=@var{host}} argument to @command{configure}.  For example, to
+build for Windows, you might use @samp{./configure --host=i686-w64-mingw32}.
+Getting everything ``just so'' for a cross-build can be a tricky procedure, and
+the details are beyond the scope of this manual.
+
+XRoar can be built to a WebAssembly target using
+@myuref{https://emscripten.org/, Emscripten}.  With the SDK installed, run
+@command{emconfigure ./configure --enable-wasm} to set up the build
+environment.  Build with @command{emmake make}.  HTML/JavaScript and CSS
+examples for interfacing to the output are included in the @file{wasm/}
+subdirectory.
+
+@c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+@node Keyboard shortcuts
+@appendix Keyboard shortcuts
+
+A summary of commonly available keyboard shortcuts.
+
+@multitable {XXXXXXXXX} {XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}
+@item @kbd{@key{CTRL}+A} @tab Cycle through "TV inputs", including cross-colour modes.
+@item @kbd{@key{CTRL}+D} @tab Open disk control dialogue (GTK+ only).
+@item @kbd{@key{CTRL}+@key{SHIFT}+D} @tab Flush disk images.
+@item @kbd{@key{CTRL}+E} @tab Toggle DOS emulation on/off - reset to take effect.
+@item @kbd{@key{CTRL}+F}@*@ @ @ or @kbd{@key{F11}} @tab Toggle full screen mode.
+@item @kbd{@key{CTRL}+@key{SHIFT}+H}@*@ @ @ or @kbd{@key{PAUSE}} @tab HALTs the CPU.  Seen on the Dynacom MX-1600.
+@item @kbd{@key{CTRL}+@key{SHIFT}+I} @tab Toggle text mode inverse video.
+@item @kbd{@key{CTRL}+J} @tab Cycle through joystick emulation modes (None, Right, Left).
+@item @kbd{@key{CTRL}+@key{SHIFT}+J} @tab Swap left and right joysticks.
+@item @kbd{@key{CTRL}+K} @tab Cycle through Dragon, Dragon 200-E and CoCo keyboard layouts.
+@item @kbd{@key{CTRL}+L} @tab Load a file (see below).
+@item @kbd{@key{CTRL}+@key{SHIFT}+L} @tab Load a file and attempt to autorun it where appropriate.
+@item @kbd{@key{CTRL}+M} @tab Cycle through emulated machine types (resets machine).
+@item @kbd{@key{CTRL}+@key{SHIFT}+P} @tab Flush printer output.
+@item @kbd{@key{CTRL}+Q} @tab Quit emulator.
+@item @kbd{@key{CTRL}+R} @tab Soft reset emulated machine.
+@item @kbd{@key{CTRL}+@key{SHIFT}+R} @tab Hard reset emulated machine.
+@item @kbd{@key{CTRL}+S} @tab Save a snapshot.
+@item @kbd{@key{CTRL}+T} @tab Open the tape control dialogue (GTK+ only).
+@item @kbd{@key{CTRL}+V} @tab Toggle trace mode.
+@item @kbd{@key{CTRL}+W} @tab Attach a virtual cassette file for writing.
+@item @kbd{@key{CTRL}+Z} @tab Enable keyboard translation mode.
+@item @kbd{@key{F12}} @tab While held, the emulator will run at the maximum possible speed.
+@item @kbd{@key{SHIFT}+@key{F12}} @tab Toggle rate limiting.  Emulator runs at maximum speed until pressed again.
+@end multitable
+
 
 @bye
