@@ -338,7 +338,11 @@ static void vo_sdl_free(void *sptr) {
 		free(vosdl->texture_pixels);
 		vosdl->texture_pixels = NULL;
 	}
-	destroy_renderer(vosdl);
+	// XXX even though destroy_renderer() is called every time the window
+	// resizes with no issues, for some reason calling it here (before or
+	// after freeing the texture pixels) causes a SEGV deep down in the
+	// video driver.  So just don't.
+	//destroy_renderer(vosdl);
 	destroy_window();
 	free(vosdl);
 }
