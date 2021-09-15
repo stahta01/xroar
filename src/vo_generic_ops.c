@@ -135,6 +135,7 @@ static void set_viewport_xy(void *sptr, unsigned x, unsigned y) {
 	// able to move the viewport...
 	generic->viewport.x = x;
 	generic->viewport.y = y;
+	generic->scanline = y + generic->viewport.h;
 }
 
 // Set a palette entry.
