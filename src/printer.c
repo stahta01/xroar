@@ -79,6 +79,7 @@ struct printer_interface *printer_interface_new(struct machine *m) {
 void printer_interface_free(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	printer_close(pi);
+	event_dequeue(&pip->ack_clear_event);
 	free(pip);
 }
 
