@@ -20,6 +20,9 @@
 #include "config.h"
 #endif
 
+// Comment this out for debugging
+#define PART_DEBUG(...)
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -31,6 +34,10 @@
 #include "logging.h"
 #include "part.h"
 
+#ifndef PART_DEBUG
+#define PART_DEBUG(...) LOG_PRINT(__VA_ARGS__)
+#endif
+
 struct part_component {
 	char *id;
 	struct part *p;
@@ -40,16 +47,20 @@ void *part_new(size_t psize) {
 	void *m = xmalloc(psize < sizeof(struct part) ? sizeof(struct part) : psize);
 	struct part *p = m;
 	*p = (struct part){0};
+	PART_DEBUG("part_new() = %p\n", p);
 	return m;
 }
 
 void part_init(struct part *p, const char *name) {
 	p->name = xstrdup(name);
+	PART_DEBUG("part_init(%p) '%s'\n", p, name);
 }
 
 void part_free(struct part *p) {
 	if (!p)
 		return;
+
+	PART_DEBUG("part_free(%p) '%s'\n", p, p->name);
 
 	if (p->parent) {
 		part_remove_component(p->parent, p);
@@ -90,6 +101,7 @@ void part_add_component(struct part *p, struct part *c, const char *id) {
 	assert(p != NULL);
 	if (c == NULL)
 		return;
+	PART_DEBUG("part_add_component('%s', '%s', '%s')\n", p->name, c->name, id);
 	struct part_component *pc = xmalloc(sizeof(*pc));
 	pc->id = xstrdup(id);
 	pc->p = c;
@@ -99,6 +111,7 @@ void part_add_component(struct part *p, struct part *c, const char *id) {
 
 void part_remove_component(struct part *p, struct part *c) {
 	assert(p != NULL);
+	PART_DEBUG("part_remove_component('%s', '%s')\n", p->name, c->name);
 	for (struct slist *ent = p->components; ent; ent = ent->next) {
 		struct part_component *pc = ent->data;
 		if (pc->p == c) {
