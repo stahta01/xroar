@@ -329,6 +329,7 @@ struct TCC1014 *tcc1014_new(int type) {
 
 void tcc1014_free(struct part *p) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)p;
+	event_dequeue(&gime->timer_event);
 	event_dequeue(&gime->fs_rise_event);
 	event_dequeue(&gime->fs_fall_event);
 	event_dequeue(&gime->hs_border_event);
