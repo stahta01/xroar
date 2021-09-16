@@ -201,7 +201,8 @@ void tape_interface_free(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_close_reading(ti);
 	tape_close_writing(ti);
-	tape_reset(ti);
+	event_dequeue(&tip->flush_event);
+	event_dequeue(&tip->waggle_event);
 	free(tip);
 }
 
