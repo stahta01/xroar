@@ -150,6 +150,8 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 	if (!vi)
 		return;
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+	event_dequeue(&vip->index_pulse_event);
+	event_dequeue(&vip->reset_index_pulse_event);
 	for (unsigned i = 0; i < MAX_DRIVES; i++) {
 		if (vip->drives[i].disk) {
 			vdrive_eject_disk(vi, i);
