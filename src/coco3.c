@@ -683,8 +683,9 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		break;
 	case 1:
 		// CTS (cartridge ROM)
-		if (mcc3->cart)
-			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A, 0, 1, mcc3->CPU0->D);
+		if (mcc3->cart) {
+			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU0->D);
+		}
 		break;
 	case 2:
 		// IO
@@ -724,7 +725,7 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	case 1:
 		// CTS (cartridge ROM)
 		if (mcc3->cart)
-			mcc3->cart->write(mcc3->cart, A, 0, 1, mcc3->CPU0->D);
+			mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU0->D);
 		break;
 	case 2:
 		// IO

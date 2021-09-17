@@ -1034,7 +1034,7 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		break;
 	case 3:
 		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A, 0, 1, md->CPU0->D);
+			md->CPU0->D = md->cart->read(md->cart, A & 0x3fff, 0, 1, md->CPU0->D);
 		break;
 	case 4:
 		if (md->relaxed_pia_decode) {
@@ -1091,7 +1091,7 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 			break;
 		case 3:
 			if (md->cart)
-				md->CPU0->D = md->cart->write(md->cart, A, 0, 1, md->CPU0->D);
+				md->CPU0->D = md->cart->write(md->cart, A & 0x3fff, 0, 1, md->CPU0->D);
 			break;
 		case 4:
 			if (!md->is_dragon || md->unexpanded_dragon32) {

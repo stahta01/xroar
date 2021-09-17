@@ -316,6 +316,7 @@ void cart_rom_init(struct cart *c) {
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
 	c->rom_data = xzalloc(0x10000);
+	c->rom_mask = 0x3fff;
 	c->rom_bank = 0;
 
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
@@ -339,14 +340,14 @@ static struct cart *cart_rom_new(struct cart_config *cc) {
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
-		return c->rom_data[c->rom_bank | (A & 0x3fff)];
+		return c->rom_data[c->rom_bank | (A & c->rom_mask)];
 	return D;
 }
 
 static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
-		return c->rom_data[c->rom_bank | (A & 0x3fff)];
+		return c->rom_data[c->rom_bank | (A & c->rom_mask)];
 	return D;
 }
 
@@ -364,6 +365,13 @@ void cart_rom_reset(struct cart *c) {
 			}
 #endif
 			sdsfree(tmp);
+			if (size > 0x4000) {
+				c->rom_mask = 0x7fff;
+			} else if (size > 0x2000) {
+				c->rom_mask = 0x3fff;
+			} else {
+				c->rom_mask = 0x1fff;
+			}
 		}
 	}
 	if (cc->rom2) {
@@ -377,6 +385,7 @@ void cart_rom_reset(struct cart *c) {
 				LOG_DEBUG(1, "\tCRC = 0x%08x\n", crc);
 			}
 #endif
+			c->rom_mask = 0x3fff;
 			sdsfree(tmp);
 		}
 	}

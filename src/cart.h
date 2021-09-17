@@ -76,6 +76,7 @@ struct cart {
 	// to avoid having to create a "cart_rom" struct that adds little else.
 	uint8_t *rom_data;
 	uint16_t rom_bank;
+	uint16_t rom_mask;
 
 	// Used to schedule regular FIRQs when an "autorun" cartridge is
 	// configured.
