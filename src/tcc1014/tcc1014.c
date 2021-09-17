@@ -796,8 +796,6 @@ static void render_scanline(struct TCC1014_private *gime) {
 			if (gime->COCO) {
 				gime->SnA = vdata & 0x80;
 
-				gime->cg_colours = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
-
 				if (!gime->GnA && !gime->SnA) {
 					_Bool INV = vdata & 0x40;
 					INV ^= gime->inverse_text;
@@ -1019,6 +1017,8 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	gime->GnA = gime->vmode & 0x80;
 	gime->CSS = gime->vmode & 0x08;
 	gime->GM = (gime->vmode >> 4) & 7;
+
+	gime->cg_colours = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
 
 	if (gime->COCO) {
 		gime->nTB = gime->H50 ? 63 : 36;
