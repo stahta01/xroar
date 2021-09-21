@@ -28,6 +28,7 @@
 #include "slist.h"
 #include "xalloc.h"
 
+#include "events.h"
 #include "fs.h"
 #include "logging.h"
 #include "serialise.h"
@@ -161,6 +162,14 @@ int ser_error(struct ser_handle *sh) {
 	if (!sh)
 		return ser_error_bad_handle;
 	return sh->error;
+}
+
+void ser_set_error(struct ser_handle *sh, int error) {
+	assert(sh != NULL);
+	// Don't hide earlier errors:
+	if (sh->error)
+		return;
+	sh->error = error;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -321,6 +330,13 @@ void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size) {
 
 // Open tag write helpers.
 
+void ser_write_open_vuint32(struct ser_handle *sh, int tag, int v) {
+	size_t length = fs_sizeof_vuint32(v);
+	ser_write_tag(sh, tag, length);
+	s_write_vuint32(sh, v);
+	sh->length -= length;
+}
+
 void ser_write_open_string(struct ser_handle *sh, int tag, const char *s) {
 	size_t length = s ? strlen(s) : 0;
 	ser_write_tag(sh, tag, length);
@@ -344,6 +360,17 @@ void ser_write_uint8_untagged(struct ser_handle *sh, uint8_t v) {
 	}
 	s_write_uint8(sh, v);
 	sh->length--;
+}
+
+void ser_write_uint16_untagged(struct ser_handle *sh, uint16_t v) {
+	if (!sh)
+		return;
+	if (sh->length < 2) {
+		sh->error = ser_error_format;
+		return;
+	}
+	s_write_uint16(sh, v);
+	sh->length -= 2;
 }
 
 void ser_write_untagged(struct ser_handle *sh, const void *ptr, size_t size) {
@@ -475,4 +502,173 @@ void *ser_read_new(struct ser_handle *sh, size_t size) {
 	}
 	sh->length -= size;
 	return s_read_new(sh, size);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, int tag, void *s) {
+	for (; tag <= nss && !sh->error; tag++) {
+		enum ser_type type = ss[tag-1].type;
+		if (type == ser_type_unhandled)
+			return tag;
+		if (type == ser_type_skip)
+			continue;
+		void *ptr = s + ss[tag-1].offset;
+		switch (type) {
+		case ser_type_bool:
+			ser_write_vuint32(sh, tag, *(_Bool *)ptr);
+			break;
+		case ser_type_int:
+			ser_write_vint32(sh, tag, *(int *)ptr);
+			break;
+		case ser_type_unsigned:
+			ser_write_vuint32(sh, tag, *(unsigned *)ptr);
+			break;
+		case ser_type_int8:
+			ser_write_vint32(sh, tag, *(int8_t *)ptr);
+			break;
+		case ser_type_uint8:
+			ser_write_vuint32(sh, tag, *(uint8_t *)ptr);
+			break;
+		case ser_type_int16:
+			ser_write_vint32(sh, tag, *(int16_t *)ptr);
+			break;
+		case ser_type_uint16:
+			ser_write_vuint32(sh, tag, *(uint16_t *)ptr);
+			break;
+		case ser_type_int32:
+			ser_write_vint32(sh, tag, *(int32_t *)ptr);
+			break;
+		case ser_type_uint32:
+			ser_write_vuint32(sh, tag, *(uint32_t *)ptr);
+			break;
+		case ser_type_tick:
+			ser_write_vint32(sh, tag, *(event_ticks *)ptr - event_current_tick);
+			break;
+		case ser_type_event:
+			{
+				struct event *e = ptr;
+				if (e->queued) {
+					ser_write_vuint32(sh, tag, e->at_tick - event_current_tick);
+				}
+			}
+			break;
+		case ser_type_eventp:
+			{
+				struct event *e = *(struct event **)ptr;
+				if (e && e->queued) {
+					ser_write_vuint32(sh, tag, e->at_tick - event_current_tick);
+				}
+			}
+			break;
+		case ser_type_string:
+			{
+				char *str = *(char **)ptr;
+				if (str) {
+					ser_write_string(sh, tag, str);
+				}
+			}
+			break;
+		case ser_type_sds:
+			{
+				sds str = *(sds *)ptr;
+				if (str) {
+					ser_write_sds(sh, tag, str);
+				}
+			}
+			break;
+
+		default:
+			sh->error = ser_error_type;
+			break;
+		}
+	}
+	if (sh->error)
+		return -1;
+	return 0;
+}
+
+int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s) {
+	int tag;
+	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
+		if (tag > nss) {
+			sh->error = ser_error_bad_tag;
+			return -1;
+		}
+		enum ser_type type = ss[tag-1].type;
+		void *ptr = s + ss[tag-1].offset;
+		switch (type) {
+		case ser_type_bool:
+			*(_Bool *)ptr = ser_read_vuint32(sh);
+			break;
+		case ser_type_int:
+			*(int *)ptr = ser_read_vint32(sh);
+			break;
+		case ser_type_unsigned:
+			*(unsigned *)ptr = ser_read_vuint32(sh);
+			break;
+		case ser_type_int8:
+			*(int8_t *)ptr = ser_read_vint32(sh);
+			break;
+		case ser_type_uint8:
+			*(uint8_t *)ptr = ser_read_vuint32(sh);
+			break;
+		case ser_type_int16:
+			*(int16_t *)ptr = ser_read_vint32(sh);
+			break;
+		case ser_type_uint16:
+			*(uint16_t *)ptr = ser_read_vuint32(sh);
+			break;
+		case ser_type_int32:
+			*(int32_t *)ptr = ser_read_vint32(sh);
+			break;
+		case ser_type_uint32:
+			*(uint32_t *)ptr = ser_read_vuint32(sh);
+			break;
+		case ser_type_tick:
+			*(event_ticks *)ptr = event_current_tick + ser_read_vint32(sh);
+			break;
+		case ser_type_event:
+			{
+				struct event *e = ptr;
+				e->at_tick = event_current_tick + ser_read_vuint32(sh);
+				e->next = e;  // flag reader to queue
+			}
+			break;
+		case ser_type_eventp:
+			{
+				struct event *e = *(struct event **)ptr;
+				if (e) {
+					e->at_tick = event_current_tick + ser_read_vuint32(sh);
+					e->next = e;  // flag reader to queue
+				}
+			}
+			break;
+		case ser_type_string:
+			{
+				if (*(char **)ptr != NULL)
+					free(*(char **)ptr);
+				*(char **)ptr = ser_read_string(sh);
+			}
+			break;
+		case ser_type_sds:
+			{
+				if (*(sds *)ptr != NULL)
+					sdsfree(*(sds *)ptr);
+				*(sds *)ptr = ser_read_sds(sh);
+			}
+			break;
+
+		case ser_type_unhandled:
+			return tag;
+		case ser_type_skip:
+			continue;
+		default:
+			sh->error = ser_error_type;
+			break;
+		}
+	}
+	if (sh->error)
+		return -1;
+	return tag;
 }

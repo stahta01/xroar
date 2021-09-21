@@ -71,13 +71,42 @@
 
 #include "sds.h"
 
+/** \brief For marking up struct members in a struct ser_struct.
+ */
+enum ser_type {
+	ser_type_bool,
+	ser_type_int,
+	ser_type_unsigned,
+	ser_type_int8,
+	ser_type_uint8,
+	ser_type_int16,
+	ser_type_uint16,
+	ser_type_int32,
+	ser_type_uint32,
+	ser_type_tick,  // event_tick relative to current time
+	ser_type_event,  // tick delta only written if queued
+	ser_type_eventp,  // pointer to event (only read/write if non-null)
+	ser_type_string,  // only written if non-null
+	ser_type_sds,  // only written if non-null
+	ser_type_unhandled,  // returns control to caller
+	ser_type_skip,  // tag no longer handled: don't write, skip read
+};
+
+struct ser_struct {
+	enum ser_type type;
+	size_t offset;
+};
+
+#define SER_STRUCT_ELEM(s,e,t) { .type = t, .offset = offsetof(s,e) }
+
 enum ser_error {
 	ser_error_none = 0,
 	ser_error_file_io,  // error came from file i/o; might be EOF
-	ser_error_bad_tag,  // negative tags not allowed
+	ser_error_bad_tag,  // negative tag, or unknown in read struct
 	ser_error_format,  // badly formatted data
 	ser_error_bad_handle,  // NULL serialiser handle passed
 	ser_error_system,  // see errno or ser_eof()
+	ser_error_type,  // bad type found during struct read/write
 };
 
 enum ser_mode {
@@ -135,6 +164,14 @@ int ser_eof(struct ser_handle *sh);
  */
 int ser_error(struct ser_handle *sh);
 
+/** \brief Set error status.
+ * \param sh Serialiser handle.
+ * \param error Error code.
+ *
+ * Usually called by deserialisers to report a format error.
+ */
+void ser_set_error(struct ser_handle *sh, int error);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Write helpers.
@@ -151,12 +188,14 @@ void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size);
 
 // Open tag write helpers.
 
+void ser_write_open_vuint32(struct ser_handle *sh, int tag, int v);
 void ser_write_open_string(struct ser_handle *sh, int tag, const char *s);
 void ser_write_open_sds(struct ser_handle *sh, int tag, const sds s);
 
 // Untagged write helpers.
 
 void ser_write_uint8_untagged(struct ser_handle *sh, uint8_t v);
+void ser_write_uint16_untagged(struct ser_handle *sh, uint16_t v);
 void ser_write_untagged(struct ser_handle *sh, const void *ptr, size_t size);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -176,5 +215,23 @@ void ser_read(struct ser_handle *sh, void *ptr, size_t size);
 char *ser_read_string(struct ser_handle *sh);
 sds ser_read_sds(struct ser_handle *sh);
 void *ser_read_new(struct ser_handle *sh, size_t size);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// For each of these an array of struct ser_struct is passed (ss) and the
+// number of elements within it (nss).  Tag ID is always array index plus 1 (as
+// zero is reserved for closing tags).  Unhandled tags should still be included
+// in the array.
+
+// Struct writer.  Writes successive fields starting from 'tag' until either
+// all are written (returns zero) or an unhandled tag is met (returns tag).
+// Negative return value implies error.
+
+int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, int tag, void *s);
+
+// Struct reader.  Reads data into struct until closing tag (returns zero) or
+// unhandled tag is met (returns tag).  Negative return value implies error.
+
+int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s);
 
 #endif
