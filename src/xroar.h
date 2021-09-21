@@ -173,9 +173,11 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);
 void xroar_cycle_joysticks(_Bool notify);
+void xroar_connect_machine(void);
 void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
 void xroar_toggle_cart(void);
+void xroar_connect_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);
 void xroar_set_cart_by_id(_Bool notify, int id);
 void xroar_set_dos(int dos_type);  /* for old snapshots only */

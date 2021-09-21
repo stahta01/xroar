@@ -28,6 +28,7 @@
 #include "xconfig.h"
 
 struct cart;
+struct ser_handle;
 struct slist;
 struct sound_interface;
 struct tape_interface;
@@ -171,8 +172,18 @@ extern struct xconfig_enum machine_tv_type_list[];
 extern struct xconfig_enum machine_tv_input_list[];
 extern struct xconfig_enum machine_vdg_type_list[];
 
-/* Add a new machine config: */
+/** \brief Create a new machine config.
+ */
 struct machine_config *machine_config_new(void);
+
+/** \brief Serialise machine config.
+ */
+void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machine_config *mc);
+
+/** \brief Deserialise machine config.
+ */
+struct machine_config *machine_config_deserialise(struct ser_handle *sh);
+
 /* For finding known configs: */
 struct machine_config *machine_config_by_id(int id);
 struct machine_config *machine_config_by_name(const char *name);
@@ -240,8 +251,9 @@ struct machine {
 void machine_init(void);
 void machine_shutdown(void);
 
-struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
-			    struct sound_interface *snd, struct tape_interface *ti);
+struct machine *machine_new(struct machine_config *mc);
+void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag);
+void machine_deserialise(struct machine *m, struct ser_handle *sh);
 
 /* Helper function to populate breakpoints from a list. */
 #define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
@@ -251,7 +263,7 @@ struct machine_module {
 	const char *name;
 	const char *description;
 	void (*config_complete)(struct machine_config *mc);
-	struct machine *(* const new)(struct machine_config *mc, struct vo_interface *vo, struct sound_interface *snd, struct tape_interface *ti);
+	struct machine *(* const new)(struct machine_config *mc);
 };
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size);

@@ -31,10 +31,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "array.h"
 #include "delegate.h"
 #include "sds.h"
 #include "xalloc.h"
 
+#include "ao.h"
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
@@ -52,6 +54,7 @@
 #include "part.h"
 #include "printer.h"
 #include "romlist.h"
+#include "serialise.h"
 #include "sound.h"
 #include "tape.h"
 #include "tcc1014/tcc1014.h"
@@ -62,8 +65,10 @@
 # define M_PI 3.14159265358979323846
 #endif
 
-static struct machine *coco3_new(struct machine_config *mc, struct vo_interface *vo,
-				 struct sound_interface *snd, struct tape_interface *ti);
+#define COCO3_SER_MACHINE (1)
+#define COCO3_SER_RAM     (2)
+
+static struct machine *coco3_new(struct machine_config *mc);
 static void coco3_config_complete(struct machine_config *mc);
 
 struct machine_module machine_coco3_module = {
@@ -91,7 +96,6 @@ struct machine_coco3 {
 	uint8_t rom0[0x8000];
 
 	_Bool inverted_text;
-	_Bool fast_sound;
 	struct cart *cart;
 	unsigned frameskip;
 
@@ -116,6 +120,15 @@ struct machine_coco3 {
 	_Bool has_secb;
 	uint32_t crc_secb;
 };
+
+static const struct ser_struct ser_struct_coco3[] = {
+	SER_STRUCT_ELEM(struct machine_coco3, public.config, ser_type_unhandled), // 1
+	SER_STRUCT_ELEM(struct machine_coco3, ram, ser_type_unhandled), // 2
+	SER_STRUCT_ELEM(struct machine_coco3, ram_size, ser_type_unsigned), // 3
+	SER_STRUCT_ELEM(struct machine_coco3, ram_mask, ser_type_unsigned), // 4
+	SER_STRUCT_ELEM(struct machine_coco3, inverted_text, ser_type_bool), // 5
+};
+#define N_SER_STRUCT_COCO3 ARRAY_N_ELEMENTS(ser_struct_coco3)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -162,6 +175,7 @@ static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void coco3_free(struct part *p);
+static void coco3_serialise(struct part *p, struct ser_handle *sh);
 
 static void coco3_insert_cart(struct machine *m, struct cart *c);
 static void coco3_remove_cart(struct machine *m);
@@ -216,50 +230,37 @@ static void pia1a_control_postwrite(void *sptr);
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
-static struct machine *coco3_new(struct machine_config *mc, struct vo_interface *vo,
-				 struct sound_interface *snd, struct tape_interface *ti) {
-	if (!mc)
-		return NULL;
-
-	LOG_WARN("Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED.\n");
-	LOG_WARN("Please do not use except for testing.\n");
-
-	struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
-	*mcc3 = (struct machine_coco3){0};
+static _Bool coco3_finish(struct part *p) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
 	struct machine *m = &mcc3->public;
+	struct machine_config *mc = m->config;
 
-	part_init(&m->part, "coco3");
-	m->part.free = coco3_free;
+	// Interfaces
+	mcc3->vo = xroar_vo_interface;
+	mcc3->snd = xroar_ao_interface->sound_interface;
+	mcc3->tape_interface = xroar_tape_interface;
 
-	coco3_config_complete(mc);
+	// Find attached parts
+	mcc3->GIME0 = (struct TCC1014 *)part_component_by_id_is_a(p, "GIME", "TCC1014");
+	mcc3->CPU0 = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
+	mcc3->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
+	mcc3->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
+	mcc3->cart = (struct cart *)part_component_by_id_is_a(p, "CART", "cart");
 
-	m->config = mc;
-	m->insert_cart = coco3_insert_cart;
-	m->remove_cart = coco3_remove_cart;
-	m->reset = coco3_reset;
-	m->run = coco3_run;
-	m->single_step = coco3_single_step;
-	m->signal = coco3_signal;
-	m->bp_add_n = coco3_bp_add_n;
-	m->bp_remove_n = coco3_bp_remove_n;
+	// Check all required parts are attached
+	if (!mcc3->GIME0 || !mcc3->CPU0 || !mcc3->PIA0 || !mcc3->PIA1 ||
+	    !mcc3->vo || !mcc3->snd || !mcc3->tape_interface) {
+		return 0;
+	}
 
-	m->set_pause = coco3_set_pause;
-	m->set_inverted_text = coco3_set_inverted_text;
-	m->get_component = coco3_get_component;
-	m->get_interface = coco3_get_interface;
-	m->set_frameskip = coco3_set_frameskip;
-	m->set_ratelimit = coco3_set_ratelimit;
-
-	m->read_byte = coco3_read_byte;
-	m->write_byte = coco3_write_byte;
-	m->op_rts = coco3_op_rts;
-
-	mcc3->vo = vo;
-	mcc3->snd = snd;
+	if (mcc3->cart) {
+		mcc3->cart->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mcc3);
+		mcc3->cart->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mcc3);
+		mcc3->cart->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mcc3);
+	}
 
 	// GIME
-	mcc3->GIME0 = tcc1014_new(mc->vdg_type);
-	part_add_component(&m->part, (struct part *)mcc3->GIME0, "GIME");
+
 	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
 	mcc3->GIME0->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
 
@@ -277,57 +278,36 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 			b_y = 0.5 * sin(hue);
 			r_y = 0.5 * cos(hue);
 		}
-		DELEGATE_CALL(vo->palette_set_ybr, j, y, b_y, r_y);
+		DELEGATE_CALL(mcc3->vo->palette_set_ybr, j, y, b_y, r_y);
 	}
 
 	for (int j = 0; j < 64; j++) {
 		float r = hue_intensity_map[((j>>4)&2)|((j>>2)&1)];
 		float g = hue_intensity_map[((j>>3)&2)|((j>>1)&1)];
 		float b = hue_intensity_map[((j>>2)&2)|((j>>0)&1)];
-		DELEGATE_CALL(vo->palette_set_rgb, j, r, g, b);
+		DELEGATE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
 	}
 
 	mcc3->ntsc_burst[0] = ntsc_burst_new(0);    // Normal burst
 	mcc3->ntsc_burst[1] = ntsc_burst_new(180);  // Phase inverted burst
 
 	// CPU
-	switch (mc->cpu) {
-	case CPU_MC6809: default:
-		mcc3->CPU0 = mc6809_new();
-		break;
-	case CPU_HD6309:
-		mcc3->CPU0 = hd6309_new();
-		break;
-	}
-	part_add_component(&m->part, (struct part *)mcc3->CPU0, "CPU");
-	mcc3->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, tcc1014_mem_cycle, mcc3->GIME0);
 
+	mcc3->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, tcc1014_mem_cycle, mcc3->GIME0);
 	mcc3->GIME0->CPUD = &mcc3->CPU0->D;
 
 	// Breakpoint session
 	mcc3->bp_session = bp_session_new(m);
 
-	// Keyboard interface
-	mcc3->keyboard_interface = keyboard_interface_new(m);
-	mcc3->keyboard_interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
-
-	// Tape interface
-	mcc3->tape_interface = ti;
-
-	// Printer interface
-	mcc3->printer_interface = printer_interface_new(m);
-
 	// PIAs
-	mcc3->PIA0 = mc6821_new();
-	part_add_component(&m->part, (struct part *)mcc3->PIA0, "PIA0");
+
 	mcc3->PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, mcc3);
 	mcc3->PIA0->a.data_postwrite = DELEGATE_AS0(void, pia0a_data_postwrite, mcc3);
 	mcc3->PIA0->a.control_postwrite = DELEGATE_AS0(void, pia0a_control_postwrite, mcc3);
 	mcc3->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, mcc3);
 	mcc3->PIA0->b.data_postwrite = DELEGATE_AS0(void, pia0b_data_postwrite, mcc3);
 	mcc3->PIA0->b.control_postwrite = DELEGATE_AS0(void, pia0b_control_postwrite, mcc3);
-	mcc3->PIA1 = mc6821_new();
-	part_add_component(&m->part, (struct part *)mcc3->PIA1, "PIA1");
+
 	mcc3->PIA1->a.data_preread = DELEGATE_AS0(void, pia1a_data_preread, mcc3);
 	mcc3->PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite, mcc3);
 	mcc3->PIA1->a.control_postwrite = DELEGATE_AS0(void, pia1a_control_postwrite, mcc3);
@@ -336,7 +316,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, mcc3);
 
 	// Single-bit sound feedback
-	snd->sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, mcc3);
+	mcc3->snd->sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, mcc3);
 
 	// Tape
 	mcc3->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mcc3);
@@ -346,10 +326,10 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->GIME0->render_line = (tcc1014_render_line_func){gime_render_line, mcc3};
 	tcc1014_set_inverted_text(mcc3->GIME0, mcc3->inverted_text);
 
-	/* Load appropriate ROMs */
-	memset(mcc3->rom0, 0, sizeof(mcc3->rom0));
+	// Load appropriate ROMs.  The CoCo 3 ROM is a single 32K image: Super
+	// Extended Colour BASIC.  There are NTSC and PAL variants though.
 
-	// The CoCo 3 ROMs is a single 32K image: Super Extended Colour BASIC.
+	memset(mcc3->rom0, 0, sizeof(mcc3->rom0));
 
 	mcc3->has_secb = 0;
 	mcc3->crc_secb = 0;
@@ -381,7 +361,7 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		mcc3->ram = xmalloc(mcc3->ram_size);
 	}
 
-	/* CRCs */
+	// Check CRCs
 
 	if (mcc3->has_secb) {
 		_Bool forced = 0, valid_crc = 0;
@@ -408,11 +388,16 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	mcc3->PIA0->a.in_sink = mcc3->PIA0->b.in_sink = 0xff;
 	mcc3->PIA1->a.in_sink = mcc3->PIA1->b.in_sink = 0xff;
 
+	// Keyboard interface
+	mcc3->keyboard_interface = keyboard_interface_new(m);
+	mcc3->keyboard_interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
+
 	keyboard_set_chord_mode(mcc3->keyboard_interface, keyboard_chord_mode_coco_basic);
 
-	mcc3->fast_sound = xroar_cfg.fast_sound;
+	keyboard_set_keymap(mcc3->keyboard_interface, mc->keymap);
 
-	keyboard_set_keymap(mcc3->keyboard_interface, xroar_machine_config->keymap);
+	// Printer interface
+	mcc3->printer_interface = printer_interface_new(m);
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -421,7 +406,140 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 	}
 #endif
 
+	// XXX until we serialise sound information
+	update_sound_mux_source(mcc3);
+	sound_set_mux_enabled(mcc3->snd, mcc3->PIA1->b.control_register & 0x08);
+
+	return 1;
+}
+
+static struct machine_coco3 *coco3_create(void) {
+	LOG_WARN("Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED.\n");
+	LOG_WARN("Please do not use except for testing.\n");
+
+	struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
+	*mcc3 = (struct machine_coco3){0};
+	struct machine *m = &mcc3->public;
+	part_init(&m->part, "coco3");
+	m->part.free = coco3_free;
+	m->part.serialise = coco3_serialise;
+	m->part.finish = coco3_finish;
+
+	m->insert_cart = coco3_insert_cart;
+	m->remove_cart = coco3_remove_cart;
+	m->reset = coco3_reset;
+	m->run = coco3_run;
+	m->single_step = coco3_single_step;
+	m->signal = coco3_signal;
+	m->bp_add_n = coco3_bp_add_n;
+	m->bp_remove_n = coco3_bp_remove_n;
+
+	m->set_pause = coco3_set_pause;
+	m->set_inverted_text = coco3_set_inverted_text;
+	m->get_component = coco3_get_component;
+	m->get_interface = coco3_get_interface;
+	m->set_frameskip = coco3_set_frameskip;
+	m->set_ratelimit = coco3_set_ratelimit;
+
+	m->read_byte = coco3_read_byte;
+	m->write_byte = coco3_write_byte;
+	m->op_rts = coco3_op_rts;
+
+	return mcc3;
+}
+
+static struct machine *coco3_new(struct machine_config *mc) {
+	assert(mc != NULL);
+
+	struct machine_coco3 *mcc3 = coco3_create();
+	struct machine *m = &mcc3->public;
+	struct part *p = &m->part;
+
+	coco3_config_complete(mc);
+	m->config = mc;
+
+	// GIME
+	part_add_component(&m->part, (struct part *)tcc1014_new(mc->vdg_type), "GIME");
+
+	// CPU
+	switch (mc->cpu) {
+	case CPU_MC6809: default:
+		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
+		break;
+	case CPU_HD6309:
+		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
+		break;
+	}
+
+	// PIAs
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
+
+	if (!coco3_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
+
 	return m;
+}
+
+static void coco3_serialise(struct part *p, struct ser_handle *sh) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, tag, mcc3)) > 0; tag++) {
+		switch (tag) {
+		case COCO3_SER_MACHINE:
+			machine_serialise(&mcc3->public, sh, tag);
+			break;
+		case COCO3_SER_RAM:
+			ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+struct part *coco3_deserialise(struct ser_handle *sh) {
+	struct machine_coco3 *mcc3 = coco3_create();
+
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, mcc3))) {
+		size_t length = ser_data_length(sh);
+		switch (tag) {
+		case COCO3_SER_MACHINE:
+			machine_deserialise(&mcc3->public, sh);
+			break;
+
+		case COCO3_SER_RAM:
+			if (!mcc3->public.config) {
+				ser_set_error(sh, ser_error_format);
+				break;
+			}
+			if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
+				LOG_WARN("COCO3/DESERIALISE: RAM size mismatch\n");
+				ser_set_error(sh, ser_error_format);
+				break;
+			}
+			if (mcc3->ram) {
+				free(mcc3->ram);
+			}
+			mcc3->ram = ser_read_new(sh, length);
+			break;
+
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
+		part_free((struct part *)mcc3);
+		return NULL;
+	}
+
+	return (struct part *)mcc3;
 }
 
 static void coco3_free(struct part *p) {

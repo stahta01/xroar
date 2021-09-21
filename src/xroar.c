@@ -1515,19 +1515,29 @@ void xroar_cycle_joysticks(_Bool notify) {
 	}
 }
 
-void xroar_configure_machine(struct machine_config *mc) {
-	if (xroar_machine) {
-		part_free((struct part *)xroar_machine);
-	}
-	xroar_machine_config = mc;
-	xroar_machine = machine_new(mc, xroar_vo_interface, xroar_ao_interface->sound_interface, xroar_tape_interface);
+/** \brief Connect UI to machine.
+ */
+
+void xroar_connect_machine(void) {
+	assert(xroar_machine_config != NULL);
+	assert(xroar_machine != NULL);
 	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
-	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
+	struct cart *c = (struct cart *)part_component_by_id(&xroar_machine->part, "CART");
+	if (c && !part_is_a((struct part *)c, "cart")) {
+		part_free((struct part *)c);
+		c = NULL;
 	}
-	switch (mc->architecture) {
+
+	if (xroar_ui_interface) {
+		int mcid = xroar_machine_config->id;
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, mcid, NULL);
+		int ccid = (c && c->config) ? c->config->id : -1;
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, ccid, NULL);
+	}
+
+	switch (xroar_machine_config->architecture) {
 	case ARCH_COCO:
 	case ARCH_COCO3:
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 5);
@@ -1539,14 +1549,23 @@ void xroar_configure_machine(struct machine_config *mc) {
 		break;
 	}
 	xroar_set_ccr(1, private_cfg.ccr);
-	if (mc->architecture == ARCH_COCO3) {
+	if (xroar_machine_config->architecture == ARCH_COCO3) {
 		DELEGATE_CALL(xroar_vo_interface->set_viewport_xy, 184, 16);
 		DELEGATE_CALL(xroar_vo_interface->set_cmp_phase_offset, 2);
 	} else {
 		DELEGATE_CALL(xroar_vo_interface->set_viewport_xy, 190, 14);
 		DELEGATE_CALL(xroar_vo_interface->set_cmp_phase_offset, 0);
 	}
-	xroar_set_tv_input(1, mc->tv_input);
+	xroar_set_tv_input(1, xroar_machine_config->tv_input);
+}
+
+void xroar_configure_machine(struct machine_config *mc) {
+	if (xroar_machine) {
+		part_free((struct part *)xroar_machine);
+	}
+	xroar_machine_config = mc;
+	xroar_machine = machine_new(mc);
+	xroar_connect_machine();
 }
 
 void xroar_set_machine(_Bool notify, int id) {
@@ -1599,6 +1618,21 @@ void xroar_toggle_cart(void) {
 	}
 }
 
+void xroar_connect_cart(void) {
+	assert(xroar_machine != NULL);
+	struct cart *c = xroar_machine->get_interface(xroar_machine, "cart");
+	if (!c)
+		return;
+	if (c->has_interface) {
+		if (c->has_interface(c, "floppy")) {
+			c->attach_interface(c, "floppy", xroar_vdrive_interface);
+		}
+		if (c->has_interface(c, "sound")) {
+			c->attach_interface(c, "sound", xroar_ao_interface->sound_interface);
+		}
+	}
+}
+
 void xroar_set_cart_by_id(_Bool notify, int id) {
 	struct cart_config *cc = cart_config_by_id(id);
 	const char *name = cc ? cc->name : NULL;
@@ -1634,14 +1668,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 		new_cart = cart_new_named(cc_name);
 		if (new_cart) {
 			xroar_machine->insert_cart(xroar_machine, new_cart);
-			if (new_cart->has_interface) {
-				if (new_cart->has_interface(new_cart, "floppy")) {
-					new_cart->attach_interface(new_cart, "floppy", xroar_vdrive_interface);
-				}
-				if (new_cart->has_interface(new_cart, "sound")) {
-					new_cart->attach_interface(new_cart, "sound", xroar_ao_interface->sound_interface);
-				}
-			}
+			xroar_connect_cart();
 			// Reset the cart once all interfaces are attached
 			if (new_cart->reset)
 				new_cart->reset(new_cart);

@@ -2,7 +2,7 @@
  *
  *  \brief Machine configuration.
  *
- *  \copyright Copyright 2003-2019 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "array.h"
 #include "c-strcase.h"
 #include "slist.h"
 #include "xalloc.h"
@@ -35,7 +36,38 @@
 #include "dkbd.h"
 #include "machine.h"
 #include "logging.h"
+#include "serialise.h"
 #include "xroar.h"
+
+static const struct ser_struct ser_struct_machine_config[] = {
+	SER_STRUCT_ELEM(struct machine_config, description, ser_type_string), // 1
+	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_int), // 2
+	SER_STRUCT_ELEM(struct machine_config, cpu, ser_type_int), // 3
+	SER_STRUCT_ELEM(struct machine_config, vdg_palette, ser_type_string), // 4
+	SER_STRUCT_ELEM(struct machine_config, keymap, ser_type_int), // 5
+	SER_STRUCT_ELEM(struct machine_config, tv_standard, ser_type_int), // 6
+	SER_STRUCT_ELEM(struct machine_config, tv_input, ser_type_int), // 7
+	SER_STRUCT_ELEM(struct machine_config, vdg_type, ser_type_int), // 8
+	SER_STRUCT_ELEM(struct machine_config, ram, ser_type_int), // 9
+	SER_STRUCT_ELEM(struct machine_config, nobas, ser_type_bool), // 10
+	SER_STRUCT_ELEM(struct machine_config, noextbas, ser_type_bool), // 11
+	SER_STRUCT_ELEM(struct machine_config, noaltbas, ser_type_bool), // 12
+	SER_STRUCT_ELEM(struct machine_config, bas_rom, ser_type_string), // 13
+	SER_STRUCT_ELEM(struct machine_config, extbas_rom, ser_type_string), // 14
+	SER_STRUCT_ELEM(struct machine_config, altbas_rom, ser_type_string), // 15
+	SER_STRUCT_ELEM(struct machine_config, ext_charset_rom, ser_type_string), // 16
+	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 17
+	SER_STRUCT_ELEM(struct machine_config, nodos, ser_type_bool), // 18
+	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
+};
+#define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
+
+#define MACHINE_SER_MACHINE_CONFIG (1)
+
+static const struct ser_struct ser_struct_machine[] = {
+        SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
+};
+#define N_SER_STRUCT_MACHINE ARRAY_N_ELEMENTS(ser_struct_machine)
 
 static struct slist *config_list = NULL;
 static int next_id = 0;
@@ -59,6 +91,28 @@ struct machine_config *machine_config_new(void) {
 	config_list = slist_append(config_list, new);
 	next_id++;
 	return new;
+}
+
+void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machine_config *mc) {
+	if (!mc)
+		return;
+	ser_write_open_string(sh, otag, mc->name);
+	ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, 1, mc);
+	ser_write_close_tag(sh);
+}
+
+struct machine_config *machine_config_deserialise(struct ser_handle *sh) {
+	char *name = ser_read_string(sh);
+	if (!name)
+		return NULL;
+	struct machine_config *mc = machine_config_by_name(name);
+	if (!mc) {
+		mc = machine_config_new();
+		mc->name = xstrdup(name);
+	}
+	free(name);
+	ser_read_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, mc);
+	return mc;
 }
 
 struct machine_config *machine_config_by_id(int id) {
@@ -280,13 +334,40 @@ static struct machine_module *machine_module(struct machine_config *mc) {
 	return NULL;
 }
 
-struct machine *machine_new(struct machine_config *mc, struct vo_interface *vo,
-			    struct sound_interface *snd, struct tape_interface *ti) {
+struct machine *machine_new(struct machine_config *mc) {
 	assert(mc != NULL);
 	struct machine_module *mm = machine_module(mc);
 	assert(mm != NULL);
 	LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	LOG_DEBUG(2, "Machine module: %s\n", mm->name);
-	struct machine *m = mm->new(mc, vo, snd, ti);
-	return m;
+	return mm->new(mc);
+}
+
+void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag) {
+	ser_write_open_string(sh, otag, "MACHINE");
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_machine, N_SER_STRUCT_MACHINE, tag, m)) > 0; tag++) {
+		switch (tag) {
+		case MACHINE_SER_MACHINE_CONFIG:
+			machine_config_serialise(sh, tag, m->config);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+void machine_deserialise(struct machine *m, struct ser_handle *sh) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_machine, N_SER_STRUCT_MACHINE, m))) {
+		switch (tag) {
+		case MACHINE_SER_MACHINE_CONFIG:
+			m->config = machine_config_deserialise(sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
 }
