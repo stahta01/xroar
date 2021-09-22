@@ -88,7 +88,6 @@ struct machine_coco3 {
 	unsigned ram_size;
 	unsigned ram_mask;
 	uint8_t *ram;
-	uint8_t *rom;
 	uint8_t rom0[0x8000];
 
 	_Bool inverted_text;
@@ -379,8 +378,6 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		break;
 	}
 	mcc3->ram = xmalloc(mcc3->ram_size);
-	/* This will be under PIA control on a Dragon 64 */
-	mcc3->rom = mcc3->rom0;
 
 	/* CRCs */
 
@@ -679,7 +676,7 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 	switch (mcc3->GIME0->S) {
 	case 0:
 		// ROM
-		mcc3->CPU0->D = mcc3->rom[A & 0x7fff];
+		mcc3->CPU0->D = mcc3->rom0[A & 0x7fff];
 		break;
 	case 1:
 		// CTS (cartridge ROM)
@@ -720,7 +717,7 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	switch (mcc3->GIME0->S) {
 	case 0:
 		// ROM
-		mcc3->CPU0->D = mcc3->rom[A & 0x7fff];
+		mcc3->CPU0->D = mcc3->rom0[A & 0x7fff];
 		break;
 	case 1:
 		// CTS (cartridge ROM)
