@@ -95,7 +95,7 @@ struct MC6809 {
 
 	/* Internal state */
 
-	enum mc6809_state state;
+	unsigned state;
 	_Bool running;
 	uint16_t page;  // 0, 0x200, or 0x300
 #ifdef TRACE
@@ -140,5 +140,7 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 }
 
 struct MC6809 *mc6809_new(void);
+void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag);
+void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh);
 
 #endif

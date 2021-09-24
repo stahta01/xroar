@@ -36,15 +36,50 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "delegate.h"
 
 #include "logging.h"
 #include "mc6809.h"
 #include "part.h"
+#include "serialise.h"
 
 #ifdef TRACE
 #include "mc6809_trace.h"
 #endif
+
+static const struct ser_struct ser_struct_mc6809[] = {
+	SER_STRUCT_ELEM(struct MC6809, variant, ser_type_uint32), // 1
+
+	SER_STRUCT_ELEM(struct MC6809, halt, ser_type_bool), // 2
+	SER_STRUCT_ELEM(struct MC6809, nmi, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct MC6809, firq, ser_type_bool), // 4
+	SER_STRUCT_ELEM(struct MC6809, irq, ser_type_bool), // 5
+	SER_STRUCT_ELEM(struct MC6809, D, ser_type_uint8), // 6
+
+	SER_STRUCT_ELEM(struct MC6809, state, ser_type_unsigned), // 7
+	SER_STRUCT_ELEM(struct MC6809, running, ser_type_bool), // 8
+	SER_STRUCT_ELEM(struct MC6809, page, ser_type_uint16), // 9
+
+	SER_STRUCT_ELEM(struct MC6809, reg_cc, ser_type_uint8), // 10
+	SER_STRUCT_ELEM(struct MC6809, reg_d, ser_type_uint16), // 11
+	SER_STRUCT_ELEM(struct MC6809, reg_dp, ser_type_uint8), // 12
+	SER_STRUCT_ELEM(struct MC6809, reg_x, ser_type_uint16), // 13
+	SER_STRUCT_ELEM(struct MC6809, reg_y, ser_type_uint16), // 14
+	SER_STRUCT_ELEM(struct MC6809, reg_u, ser_type_uint16), // 15
+	SER_STRUCT_ELEM(struct MC6809, reg_s, ser_type_uint16), // 16
+	SER_STRUCT_ELEM(struct MC6809, reg_pc, ser_type_uint16), // 17
+
+	SER_STRUCT_ELEM(struct MC6809, nmi_armed, ser_type_bool), // 18
+	SER_STRUCT_ELEM(struct MC6809, nmi_latch, ser_type_bool), // 19
+	SER_STRUCT_ELEM(struct MC6809, firq_latch, ser_type_bool), // 20
+	SER_STRUCT_ELEM(struct MC6809, irq_latch, ser_type_bool), // 21
+	SER_STRUCT_ELEM(struct MC6809, nmi_active, ser_type_bool), // 22
+	SER_STRUCT_ELEM(struct MC6809, firq_active, ser_type_bool), // 23
+	SER_STRUCT_ELEM(struct MC6809, irq_active, ser_type_bool), // 24
+};
+
+#define N_SER_STRUCT_MC6809 ARRAY_N_ELEMENTS(ser_struct_mc6809)
 
 extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
@@ -161,11 +196,20 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
  * External interface
  */
 
-struct MC6809 *mc6809_new(void) {
+static void mc6809_serialise(struct part *p, struct ser_handle *sh);
+
+static _Bool mc6809_finish(struct part *p) {
+	(void)p;
+	return 1;
+}
+
+struct MC6809 *mc6809_create(void) {
 	struct MC6809 *cpu = part_new(sizeof(*cpu));
 	*cpu = (struct MC6809){0};
 	part_init((struct part *)cpu, "MC6809");
 	cpu->part.free = mc6809_free;
+	cpu->part.serialise = mc6809_serialise;
+	cpu->part.finish = mc6809_finish;
 	// XXX variant shouldn't be needed as part name identifies
 	cpu->variant = MC6809_VARIANT_MC6809;
 	//cpu->free = mc6809_free;
@@ -182,6 +226,16 @@ struct MC6809 *mc6809_new(void) {
 	return cpu;
 }
 
+struct MC6809 *mc6809_new(void) {
+	struct MC6809 *cpu = mc6809_create();
+	struct part *p = &cpu->part;
+        if (!mc6809_finish(p)) {
+                part_free(p);
+                return NULL;
+        }
+	return cpu;
+}
+
 static void mc6809_free(struct part *p) {
 #ifdef TRACE
 	struct MC6809 *cpu = (struct MC6809 *)p;
@@ -189,6 +243,27 @@ static void mc6809_free(struct part *p) {
 		mc6809_trace_free(cpu->tracer);
 	}
 #endif
+}
+
+static void mc6809_serialise(struct part *p, struct ser_handle *sh) {
+	struct MC6809 *cpu = (struct MC6809 *)p;
+	ser_write_struct(sh, ser_struct_mc6809, N_SER_STRUCT_MC6809, 1, cpu);
+        ser_write_close_tag(sh);
+}
+
+void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag) {
+	ser_write_open_string(sh, otag, "6809");
+	mc6809_serialise(&cpu->part, sh);
+}
+
+void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh) {
+	ser_read_struct(sh, ser_struct_mc6809, N_SER_STRUCT_MC6809, cpu);
+}
+
+struct part *mc6809_deserialise(struct ser_handle *sh) {
+	struct MC6809 *cpu = mc6809_create();
+	mc6809_deserialise_into(cpu, sh);
+	return (struct part *)cpu;
 }
 
 static void mc6809_reset(struct MC6809 *cpu) {
