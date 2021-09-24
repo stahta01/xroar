@@ -2,7 +2,7 @@
  *
  *  \brief Snapshotting of emulated system.
  *
- *  \copyright Copyright 2003-2006 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

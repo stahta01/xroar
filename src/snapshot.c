@@ -2,7 +2,7 @@
  *
  *  \brief Snapshotting of emulated system.
  *
- *  \copyright Copyright 2003-2016 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,15 +38,134 @@
 #include "mc6809.h"
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
+#include "part.h"
 #include "sam.h"
+#include "serialise.h"
 #include "snapshot.h"
 #include "tape.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
 
-/* Write files in 'chunks', each with an identifying byte and a 16-bit length.
- * This should mean no changes are required that break the format.  */
+// Top-level snapshot serialisation tags:
+
+// Special header tag - it's fine to reuse this as it only ever appears
+// at the beginning of the file as a header.
+#define SNAPSHOT_SER_HEADER         (0x23)
+
+#define SNAPSHOT_SER_MACHINE        (1)
+#define SNAPSHOT_SER_VDRIVE_INTF    (2)
+
+const char *snapv1_header = "XRoar snapshot.\012\000";
+const char *snapv2_header = "/usr/bin/env xroar\n# 6809.org.uk\n";
+
+static int read_v1_snapshot(const char *filename);
+static int read_v2_snapshot(const char *filename);
+
+int read_snapshot(const char *filename) {
+	if (read_v2_snapshot(filename) < 0 &&
+	    read_v1_snapshot(filename) < 0) {
+		LOG_WARN("Snapshot format not recognised.\n");
+		return -1;
+	}
+	return 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+int write_snapshot(const char *filename) {
+	struct ser_handle *sh = ser_open(filename, ser_mode_write);
+	if (!sh)
+		return -1;
+
+	ser_write_tag(sh, 0x23, strlen(snapv2_header));
+	ser_write_untagged(sh, snapv2_header, strlen(snapv2_header));
+
+	ser_write_open_string(sh, SNAPSHOT_SER_MACHINE, "machine");
+	part_serialise((struct part *)xroar_machine, sh);
+
+	vdrive_interface_serialise(xroar_vdrive_interface, sh, SNAPSHOT_SER_VDRIVE_INTF);
+
+	ser_write_close_tag(sh);
+	ser_close(sh);
+	return 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static int read_v2_snapshot(const char *filename) {
+	struct ser_handle *sh = ser_open(filename, ser_mode_read);
+	if (!sh)
+		return -1;
+
+	int tag = ser_read_tag(sh);
+	if (tag != 0x23) {
+		ser_close(sh);
+		return -1;
+	}
+	char *id = ser_read_string(sh);
+	if (strcmp(id, snapv2_header) != 0) {
+		ser_close(sh);
+		return -1;
+	}
+	free(id);
+
+	struct machine *m = NULL;
+
+	while ((tag = ser_read_tag(sh)) > 0) {
+		switch (tag) {
+
+		case SNAPSHOT_SER_MACHINE:
+			// Deserialises new machine.
+			m = (struct machine *)part_deserialise(sh);
+			break;
+
+		case SNAPSHOT_SER_VDRIVE_INTF:
+			// Deserialise into vdrive interface.  Important that
+			// new machine has been successfully read first, as
+			// this will eject anything associated with currently
+			// running machine.
+			if (!m) {
+				ser_set_error(sh, ser_error_format);
+				break;
+			}
+			vdrive_interface_deserialise(xroar_vdrive_interface, sh);
+			break;
+
+		default:
+			LOG_WARN("Unknown tag '%d' in snapshot\n", tag);
+			break;
+		}
+		if (ser_error(sh))
+			break;
+	}
+
+	ser_close(sh);
+
+	if (!m) {
+		return -1;
+	}
+
+	// TODO: probably a good idea to check the machine is really a machine
+	// and the cart is really a cart before we start accessing them.
+
+	// TODO: verify that any deserialised carts had their configs included
+	// earlier in the snapshot.
+
+	if (xroar_machine) {
+		part_free((struct part *)xroar_machine);
+	}
+	xroar_machine_config = m->config;
+	xroar_machine = m;
+	xroar_connect_machine();
+	xroar_connect_cart();
+
+	return 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Old snapshot READING code only follows.
 
 /* Note: Setting up the correct ROM select for Dragon 64 depends on SAM
  * register update following PIA configuration. */
@@ -67,13 +186,6 @@
 
 #define SNAPSHOT_VERSION_MAJOR 1
 #define SNAPSHOT_VERSION_MINOR 8
-
-// Versions < 1.8 used a number for these (add 1 to index)
-static const char *old_cart_type_names[] = {
-	"dragondos",
-	"rsdos",
-	"delta",
-};
 
 static const char *pia_component_names[2] = { "PIA0", "PIA1" };
 
@@ -97,199 +209,6 @@ static char *read_string(FILE *fd, unsigned *size) {
 		*size -= fread(str, 1, len-1, fd);
 	}
 	return str;
-}
-
-static void write_chunk_header(FILE *fd, unsigned id, int size) {
-	assert(size >= 0);
-	fs_write_uint8(fd, id);
-	fs_write_uint16(fd, size);
-}
-
-static void write_mc6809(FILE *fd, struct MC6809 *cpu) {
-	write_chunk_header(fd, ID_MC6809_STATE, 20);
-	fs_write_uint8(fd, cpu->reg_cc);
-	fs_write_uint8(fd, MC6809_REG_A(cpu));
-	fs_write_uint8(fd, MC6809_REG_B(cpu));
-	fs_write_uint8(fd, cpu->reg_dp);
-	fs_write_uint16(fd, cpu->reg_x);
-	fs_write_uint16(fd, cpu->reg_y);
-	fs_write_uint16(fd, cpu->reg_u);
-	fs_write_uint16(fd, cpu->reg_s);
-	fs_write_uint16(fd, cpu->reg_pc);
-	fs_write_uint8(fd, cpu->halt);
-	fs_write_uint8(fd, cpu->nmi);
-	fs_write_uint8(fd, cpu->firq);
-	fs_write_uint8(fd, cpu->irq);
-	fs_write_uint8(fd, cpu->state);
-	fs_write_uint8(fd, cpu->nmi_armed);
-}
-
-static uint8_t tfm_reg(struct HD6309 *hcpu, uint16_t *ptr) {
-	struct MC6809 *cpu = &hcpu->mc6809;
-	if (ptr == &cpu->reg_d)
-		return 0;
-	if (ptr == &cpu->reg_x)
-		return 1;
-	if (ptr == &cpu->reg_y)
-		return 2;
-	if (ptr == &cpu->reg_u)
-		return 3;
-	if (ptr == &cpu->reg_s)
-		return 4;
-	return 15;
-}
-
-static void write_hd6309(FILE *fd, struct HD6309 *hcpu) {
-	struct MC6809 *cpu = &hcpu->mc6809;
-	write_chunk_header(fd, ID_HD6309_STATE, 27);
-	fs_write_uint8(fd, cpu->reg_cc);
-	fs_write_uint8(fd, MC6809_REG_A(cpu));
-	fs_write_uint8(fd, MC6809_REG_B(cpu));
-	fs_write_uint8(fd, cpu->reg_dp);
-	fs_write_uint16(fd, cpu->reg_x);
-	fs_write_uint16(fd, cpu->reg_y);
-	fs_write_uint16(fd, cpu->reg_u);
-	fs_write_uint16(fd, cpu->reg_s);
-	fs_write_uint16(fd, cpu->reg_pc);
-	fs_write_uint8(fd, cpu->halt);
-	fs_write_uint8(fd, cpu->nmi);
-	fs_write_uint8(fd, cpu->firq);
-	fs_write_uint8(fd, cpu->irq);
-	// 6309-specific state
-	fs_write_uint8(fd, hcpu->state);
-	fs_write_uint8(fd, cpu->nmi_armed);
-	// 6309-specific extras:
-	fs_write_uint8(fd, HD6309_REG_E(hcpu));
-	fs_write_uint8(fd, HD6309_REG_F(hcpu));
-	fs_write_uint16(fd, hcpu->reg_v);
-	fs_write_uint8(fd, hcpu->reg_md);
-	uint8_t tfm_src_dest = tfm_reg(hcpu, hcpu->tfm_src) << 4;
-	tfm_src_dest |= tfm_reg(hcpu, hcpu->tfm_dest);
-	fs_write_uint8(fd, tfm_src_dest);
-	// lowest 4 bits of each of these is enough:
-	uint8_t tfm_mod = (hcpu->tfm_src_mod & 15) << 4;
-	tfm_mod |= (hcpu->tfm_dest_mod & 15);
-	fs_write_uint8(fd, tfm_mod);
-}
-
-int write_snapshot(const char *filename) {
-	FILE *fd;
-	if (!(fd = fopen(filename, "wb")))
-		return -1;
-	fwrite("XRoar snapshot.\012\000", 17, 1, fd);
-	// Snapshot version
-	write_chunk_header(fd, ID_SNAPVERSION, 3);
-	fs_write_uint8(fd, SNAPSHOT_VERSION_MAJOR);
-	fs_write_uint16(fd, SNAPSHOT_VERSION_MINOR);
-	// Machine running config
-	write_chunk_header(fd, ID_MACHINECONFIG, 8);
-	fs_write_uint8(fd, 0);  // xroar_machine_config->index;
-	fs_write_uint8(fd, xroar_machine_config->architecture);
-	fs_write_uint8(fd, xroar_machine_config->cpu);
-	fs_write_uint8(fd, xroar_machine_config->keymap);
-	fs_write_uint8(fd, xroar_machine_config->tv_standard);
-	fs_write_uint8(fd, xroar_machine_config->ram);
-	struct cart *cart = xroar_machine->get_interface(xroar_machine, "cart");
-	if (cart) {
-		// attempt to keep snapshots >= v1.8 loadable by older versions
-		unsigned old_cart_type = 0;
-		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(old_cart_type_names); i++) {
-			if (c_strcasecmp(cart->config->type, old_cart_type_names[i]) == 0) {
-				old_cart_type = i + 1;
-				break;
-			}
-		}
-		fs_write_uint8(fd, old_cart_type);
-	} else {
-		fs_write_uint8(fd, 0);
-	}
-	fs_write_uint8(fd, xroar_machine_config->tv_input);
-	// RAM page 0
-	struct machine_memory *ram0 = xroar_machine->get_component(xroar_machine, "RAM0");
-	write_chunk_header(fd, ID_RAM_PAGE0, ram0->size);
-	fwrite(ram0->data, 1, ram0->size, fd);
-	// RAM page 1
-	struct machine_memory *ram1 = xroar_machine->get_component(xroar_machine, "RAM1");
-	if (ram1->size > 0) {
-		write_chunk_header(fd, ID_RAM_PAGE1, ram1->size);
-		fwrite(ram1->data, 1, ram1->size, fd);
-	}
-	// PIA state written before CPU state because PIA may have
-	// unacknowledged interrupts pending already cleared in the CPU state
-	write_chunk_header(fd, ID_PIA_REGISTERS, 3 * 4);
-	for (int i = 0; i < 2; i++) {
-		struct MC6821 *pia = xroar_machine->get_component(xroar_machine, pia_component_names[i]);
-		fs_write_uint8(fd, pia->a.direction_register);
-		fs_write_uint8(fd, pia->a.output_register);
-		fs_write_uint8(fd, pia->a.control_register);
-		fs_write_uint8(fd, pia->b.direction_register);
-		fs_write_uint8(fd, pia->b.output_register);
-		fs_write_uint8(fd, pia->b.control_register);
-	}
-	// CPU state
-	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
-	struct MC6883 *sam = xroar_machine->get_component(xroar_machine, "SAM0");
-	switch (cpu->variant) {
-	case MC6809_VARIANT_MC6809: default:
-		write_mc6809(fd, cpu);
-		break;
-	case MC6809_VARIANT_HD6309:
-		write_hd6309(fd, (struct HD6309 *)cpu);
-		break;
-	}
-	// SAM
-	write_chunk_header(fd, ID_SAM_REGISTERS, 2);
-	fs_write_uint16(fd, sam_get_register(sam));
-
-	// Cartridge
-	if (cart) {
-		struct cart_config *cc = cart->config;
-		size_t name_len = cc->name ? strlen(cc->name) + 1 : 1;
-		if (name_len > 255) name_len = 255;
-		size_t desc_len = cc->description ? strlen(cc->description) + 1 : 1;
-		if (desc_len > 255) desc_len = 255;
-		size_t type_len = cc->type ? strlen(cc->type) + 1 : 1;
-		if (type_len > 255) type_len = 255;
-		size_t rom_len = cc->rom ? strlen(cc->rom) + 1: 1;
-		if (rom_len > 255) rom_len = 255;
-		size_t rom2_len = cc->rom2 ? strlen(cc->rom2) + 1: 1;
-		if (rom2_len > 255) rom2_len = 255;
-		int size = name_len + desc_len + type_len + rom_len + rom2_len + 2;
-		write_chunk_header(fd, ID_CART, size);
-		fs_write_uint8(fd, name_len);
-		if (cc->name)
-			fwrite(cc->name, 1, name_len-1, fd);
-		fs_write_uint8(fd, desc_len);
-		if (cc->description)
-			fwrite(cc->description, 1, desc_len-1, fd);
-		fs_write_uint8(fd, type_len);
-		if (cc->type)
-			fwrite(cc->type, 1, type_len-1, fd);
-		fs_write_uint8(fd, rom_len);
-		if (cc->rom)
-			fwrite(cc->rom, 1, rom_len-1, fd);
-		fs_write_uint8(fd, rom2_len);
-		if (cc->rom2)
-			fwrite(cc->rom2, 1, rom2_len-1, fd);
-		fs_write_uint8(fd, cc->becker_port);
-		fs_write_uint8(fd, cc->autorun);
-	}
-
-	// Attached virtual disk filenames
-	{
-		for (unsigned drive = 0; drive < VDRIVE_MAX_DRIVES; drive++) {
-			struct vdisk *disk = vdrive_disk_in_drive(xroar_vdrive_interface, drive);
-			if (disk != NULL && disk->filename != NULL) {
-				int length = strlen(disk->filename) + 1;
-				write_chunk_header(fd, ID_VDISK_FILE, 1 + length);
-				fs_write_uint8(fd, drive);
-				fwrite(disk->filename, 1, length, fd);
-			}
-		}
-	}
-	// Finish up
-	fclose(fd);
-	return 0;
 }
 
 static const int old_arch_mapping[4] = {
@@ -339,30 +258,28 @@ static uint16_t *tfm_reg_ptr(struct HD6309 *hcpu, unsigned reg) {
 
 #define sex4(v) (((uint16_t)(v) & 0x07) - ((uint16_t)(v) & 0x08))
 
-int read_snapshot(const char *filename) {
+static int read_v1_snapshot(const char *filename) {
 	FILE *fd;
 	uint8_t buffer[17];
 	int section, tmp;
 	int version_major = 1, version_minor = 0;
-	if (filename == NULL)
-		return -1;
+
 	if (!(fd = fopen(filename, "rb")))
 		return -1;
 	if (fread(buffer, 17, 1, fd) < 1) {
-		LOG_WARN("Snapshot format not recognised.\n");
 		fclose(fd);
 		return -1;
 	}
-	if (strncmp((char *)buffer, "XRoar snapshot.\012\000", 17)) {
+	if (strncmp((char *)buffer, snapv1_header, 17)) {
 		// Very old-style snapshot.  Register dump always came first.
 		// Also, it used to be written out as only taking 12 bytes.
 		if (buffer[0] != ID_REGISTER_DUMP || buffer[1] != 0
-				|| (buffer[2] != 12 && buffer[2] != 14)) {
-			LOG_WARN("Snapshot format not recognised.\n");
+		    || (buffer[2] != 12 && buffer[2] != 14)) {
 			fclose(fd);
 			return -1;
 		}
 	}
+
 	// Default to Dragon 64 for old snapshots
 	struct machine_config *mc = machine_config_by_arch(ARCH_DRAGON64);
 	xroar_configure_machine(mc);
