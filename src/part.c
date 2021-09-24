@@ -43,17 +43,82 @@
 #define PART_SER_PART (1)
 #define PART_SER_DATA (2)
 
-struct part_component {
-	char *id;
-	struct part *p;
-};
-
 struct partdb_entry {
 	const char *name;
 	struct part *(* const deserialise)(struct ser_handle *sh);
 };
 
+struct part *dragon_deserialise(struct ser_handle *sh);
+struct part *coco3_deserialise(struct ser_handle *sh);
+
+struct part *dragondos_deserialise(struct ser_handle *sh);
+struct part *deltados_deserialise(struct ser_handle *sh);
+struct part *rsdos_deserialise(struct ser_handle *sh);
+struct part *idecart_deserialise(struct ser_handle *sh);
+struct part *becker_deserialise(struct ser_handle *sh);
+struct part *gmc_deserialise(struct ser_handle *sh);
+struct part *mpi_deserialise(struct ser_handle *sh);
+struct part *race_deserialise(struct ser_handle *sh);
+struct part *nx32_deserialise(struct ser_handle *sh);
+struct part *mooh_deserialise(struct ser_handle *sh);
+struct part *orch90_deserialise(struct ser_handle *sh);
+
+struct part *mc6809_deserialise(struct ser_handle *sh);
+struct part *hd6309_deserialise(struct ser_handle *sh);
+struct part *mc6821_deserialise(struct ser_handle *sh);
+struct part *mc6847_deserialise(struct ser_handle *sh);
+struct part *mc6847t1_deserialise(struct ser_handle *sh);
+struct part *mc6883_deserialise(struct ser_handle *sh);
+struct part *sn76489_deserialise(struct ser_handle *sh);
+struct part *spi65_deserialise(struct ser_handle *sh);
+struct part *tcc1014_1986_deserialise(struct ser_handle *sh);
+struct part *tcc1014_1987_deserialise(struct ser_handle *sh);
+struct part *wd2791_deserialise(struct ser_handle *sh);
+struct part *wd2793_deserialise(struct ser_handle *sh);
+struct part *wd2795_deserialise(struct ser_handle *sh);
+struct part *wd2797_deserialise(struct ser_handle *sh);
+
+struct part *spi_sdcard_deserialise(struct ser_handle *sh);
+
 struct partdb_entry partdb[] = {
+	{ .name = "dragon", .deserialise = dragon_deserialise },
+	{ .name = "coco3", .deserialise = coco3_deserialise },
+
+	{ .name = "dragondos", .deserialise = dragondos_deserialise },
+	{ .name = "delta", .deserialise = deltados_deserialise },
+	{ .name = "rsdos", .deserialise = rsdos_deserialise },
+	{ .name = "ide", .deserialise = idecart_deserialise },
+	{ .name = "becker", .deserialise = becker_deserialise },
+	{ .name = "GMC", .deserialise = gmc_deserialise },
+	{ .name = "mpi", .deserialise = mpi_deserialise },
+	{ .name = "race-cage", .deserialise = race_deserialise },
+	{ .name = "nx32", .deserialise = nx32_deserialise },
+	{ .name = "mooh", .deserialise = mooh_deserialise },
+	{ .name = "orchestra-90", .deserialise = orch90_deserialise },
+
+	{ .name = "MC6809", .deserialise = mc6809_deserialise },
+	{ .name = "HD6309", .deserialise = hd6309_deserialise },
+	{ .name = "MC6821", .deserialise = mc6821_deserialise },
+	{ .name = "MC6847", .deserialise = mc6847_deserialise },
+	{ .name = "MC6847T1", .deserialise = mc6847t1_deserialise },
+	{ .name = "SN74LS783", .deserialise = mc6883_deserialise },
+	{ .name = "SN76489", .deserialise = sn76489_deserialise },
+	{ .name = "65SPI-B", .deserialise = spi65_deserialise },
+	{ .name = "TCC1014-1986", .deserialise = tcc1014_1986_deserialise },
+	{ .name = "TCC1014-1987", .deserialise = tcc1014_1987_deserialise },
+	{ .name = "WD2791", .deserialise = wd2791_deserialise },
+	{ .name = "WD2793", .deserialise = wd2793_deserialise },
+	{ .name = "WD2795", .deserialise = wd2795_deserialise },
+	{ .name = "WD2797", .deserialise = wd2797_deserialise },
+
+	{ .name = "SPI-SDCARD", .deserialise = spi_sdcard_deserialise },
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct part_component {
+	char *id;
+	struct part *p;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
