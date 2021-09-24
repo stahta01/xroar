@@ -26,6 +26,7 @@
 #include "events.h"
 
 struct log_handle;
+struct ser_handle;
 
 enum WD279X_type {
 	WD2791, WD2793, WD2795, WD2797
@@ -92,7 +93,7 @@ struct WD279X {
 	DELEGATE_T0(void) update_connection;
 
 	/* WD279X internal state */
-	enum WD279X_state state;
+	unsigned state;
 	struct event state_event;
 	int direction;
 	int side;
@@ -131,6 +132,10 @@ struct WD279X {
 };
 
 struct WD279X *wd279x_new(enum WD279X_type type);
+struct part *wd2791_deserialise(struct ser_handle *sh);
+struct part *wd2793_deserialise(struct ser_handle *sh);
+struct part *wd2795_deserialise(struct ser_handle *sh);
+struct part *wd2797_deserialise(struct ser_handle *sh);
 void wd279x_reset(struct WD279X *fdc);
 void wd279x_disconnect(struct WD279X *fdc);
 

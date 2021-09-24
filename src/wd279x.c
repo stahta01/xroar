@@ -29,10 +29,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
+
 #include "crc16.h"
 #include "events.h"
 #include "logging.h"
 #include "part.h"
+#include "serialise.h"
 #include "vdrive.h"
 #include "wd279x.h"
 #include "xroar.h"
@@ -49,6 +52,39 @@
 #define STATUS_INDEX_PULSE   (1<<1)
 #define STATUS_DRQ           (1<<1)
 #define STATUS_BUSY          (1<<0)
+
+static const struct ser_struct ser_struct_wd279x[] = {
+	SER_STRUCT_ELEM(struct WD279X, status_register, ser_type_uint8),
+	SER_STRUCT_ELEM(struct WD279X, track_register, ser_type_uint8),
+	SER_STRUCT_ELEM(struct WD279X, sector_register, ser_type_uint8),
+	SER_STRUCT_ELEM(struct WD279X, data_register, ser_type_uint8),
+	SER_STRUCT_ELEM(struct WD279X, command_register, ser_type_uint8),
+
+	SER_STRUCT_ELEM(struct WD279X, state, ser_type_unsigned),
+	SER_STRUCT_ELEM(struct WD279X, state_event, ser_type_event),
+	SER_STRUCT_ELEM(struct WD279X, direction, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, side, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, step_delay, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, double_density, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, ready_state, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, tr00_state, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, index_state, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, write_protect_state, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, status_type1, ser_type_bool),
+
+	SER_STRUCT_ELEM(struct WD279X, intrq_nready_to_ready, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, intrq_ready_to_nready, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, intrq_index_pulse, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, intrq_immediate, ser_type_bool),
+
+	SER_STRUCT_ELEM(struct WD279X, is_step_cmd, ser_type_bool),
+	SER_STRUCT_ELEM(struct WD279X, crc, ser_type_uint16),
+	SER_STRUCT_ELEM(struct WD279X, dam, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, bytes_left, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, index_holes_count, ser_type_int),
+	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8),
+};
+#define N_SER_STRUCT_WD279X ARRAY_N_ELEMENTS(ser_struct_wd279x)
 
 #define W_BYTE_TIME (EVENT_TICK_RATE / 31250)
 
@@ -87,6 +123,12 @@
 			DELEGATE_CALL(fdc->set_sso, fdc->side); \
 	} while (0)
 
+#define VDRIVE_WRITE_CRC16 do { \
+		uint16_t tmp = fdc->crc; \
+		_vdrive_write(fdc, tmp >> 8); \
+		_vdrive_write(fdc, tmp & 0xff); \
+	} while (0)
+
 static void state_machine(void *);
 
 static int const stepping_rate[4] = { 6, 12, 20, 30 };
@@ -118,29 +160,48 @@ static void _vdrive_write(struct WD279X *fdc, uint8_t b) {
 }
 
 static void wd279x_free(struct part *p);
+static void wd279x_serialise(struct part *p, struct ser_handle *sh);
 
-#define VDRIVE_WRITE_CRC16 do { \
-		uint16_t tmp = fdc->crc; \
-		_vdrive_write(fdc, tmp >> 8); \
-		_vdrive_write(fdc, tmp & 0xff); \
-	} while (0)
+static _Bool wd279x_finish(struct part *p) {
+	struct WD279X *fdc = (struct WD279X *)p;
 
-struct WD279X *wd279x_new(enum WD279X_type type) {
-	assert(type >= WD2791 && type <= WD2797);
+	if (fdc->state_event.next == &fdc->state_event) {
+		event_queue(&MACHINE_EVENT_LIST, &fdc->state_event);
+	}
+
+	return 1;
+}
+
+struct WD279X *wd279x_create(enum WD279X_type type) {
+	if (type < WD2791 || type > WD2797)
+		return NULL;
 	struct WD279X *fdc = part_new(sizeof(*fdc));
 	*fdc = (struct WD279X){0};
 	part_init(&fdc->part, wd279x_type_name[type]);
 	fdc->part.free = wd279x_free;
+	fdc->part.serialise = wd279x_serialise;
+	fdc->part.finish = wd279x_finish;
 
 	fdc->type = type;
+	fdc->state = WD279X_state_accept_command;
 	fdc->has_sso = (type == WD2795 || type == WD2797);
 	fdc->has_length_flag = (type == WD2795 || type == WD2797);
 	fdc->invert_data = (type == WD2791 || type == WD2795) ? 0xff : 0;
+
+	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
 	wd279x_disconnect(fdc);
 
-	fdc->state = WD279X_state_accept_command;
-	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
+	return fdc;
+}
 
+struct WD279X *wd279x_new(enum WD279X_type type) {
+	struct WD279X *fdc = wd279x_create(type);
+	assert(fdc != NULL);  // generally if type is invalid
+	struct part *p = &fdc->part;
+	if (!wd279x_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
 	return fdc;
 }
 
@@ -150,6 +211,34 @@ static void wd279x_free(struct part *p) {
 	log_close(&fdc->log_wsec_hex);
 	log_close(&fdc->log_wtrk_hex);
 	event_dequeue(&fdc->state_event);
+}
+
+static void wd279x_serialise(struct part *p, struct ser_handle *sh) {
+	struct WD279X *fdc = (struct WD279X *)p;
+	ser_write_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, 1, fdc);
+	ser_write_close_tag(sh);
+}
+
+static struct part *wd279x_deserialise(struct ser_handle *sh, enum WD279X_type type) {
+	struct WD279X *fdc = wd279x_create(type);
+	ser_read_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, fdc);
+	return (struct part *)fdc;
+}
+
+struct part *wd2791_deserialise(struct ser_handle *sh) {
+	return wd279x_deserialise(sh, WD2791);
+}
+
+struct part *wd2793_deserialise(struct ser_handle *sh) {
+	return wd279x_deserialise(sh, WD2793);
+}
+
+struct part *wd2795_deserialise(struct ser_handle *sh) {
+	return wd279x_deserialise(sh, WD2795);
+}
+
+struct part *wd2797_deserialise(struct ser_handle *sh) {
+	return wd279x_deserialise(sh, WD2797);
 }
 
 void wd279x_disconnect(struct WD279X *fdc) {
