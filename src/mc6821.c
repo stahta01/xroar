@@ -23,21 +23,55 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "delegate.h"
 
 #include "events.h"
 #include "mc6821.h"
+#include "logging.h"
 #include "part.h"
+#include "serialise.h"
 #include "xroar.h"
 
+#define MC6821_SER_SIDE (1)
+
+static const struct ser_struct ser_struct_mc6821_side[] = {
+	SER_STRUCT_ELEM(struct MC6821_side, control_register, ser_type_uint8),  // 1
+	SER_STRUCT_ELEM(struct MC6821_side, direction_register, ser_type_uint8),  // 2
+	SER_STRUCT_ELEM(struct MC6821_side, output_register, ser_type_uint8),  // 3
+	SER_STRUCT_ELEM(struct MC6821_side, cx1, ser_type_bool),  // 4
+	SER_STRUCT_ELEM(struct MC6821_side, interrupt_received, ser_type_bool),  // 5
+	SER_STRUCT_ELEM(struct MC6821_side, irq, ser_type_bool),  // 6
+	SER_STRUCT_ELEM(struct MC6821_side, irq_event, ser_type_event),  // 7
+	SER_STRUCT_ELEM(struct MC6821_side, out_source, ser_type_uint8),  // 8
+	SER_STRUCT_ELEM(struct MC6821_side, out_sink, ser_type_uint8),  // 9
+	SER_STRUCT_ELEM(struct MC6821_side, in_source, ser_type_uint8),  // 10
+	SER_STRUCT_ELEM(struct MC6821_side, in_sink, ser_type_uint8),  // 11
+};
+#define N_SER_STRUCT_MC6821_SIDE ARRAY_N_ELEMENTS(ser_struct_mc6821_side)
+
 static void mc6821_free(struct part *p);
+static void mc6821_serialise(struct part *p, struct ser_handle *sh);
 static void do_irq(void *sptr);
 
-struct MC6821 *mc6821_new(void) {
+static _Bool mc6821_finish(struct part *p) {
+	struct MC6821 *pia = (struct MC6821 *)p;
+	if (pia->a.irq_event.next == &pia->a.irq_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->a.irq_event);
+	}
+	if (pia->b.irq_event.next == &pia->b.irq_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->b.irq_event);
+	}
+	return 1;
+}
+
+struct MC6821 *mc6821_create(void) {
 	struct MC6821 *pia = part_new(sizeof(*pia));
 	*pia = (struct MC6821){0};
 	part_init((struct part *)pia, "MC6821");
 	pia->part.free = mc6821_free;
+	pia->part.serialise = mc6821_serialise;
+	pia->part.finish = mc6821_finish;
 
 	pia->a.in_sink = 0xff;
 	pia->b.in_sink = 0xff;
@@ -47,15 +81,62 @@ struct MC6821 *mc6821_new(void) {
 	return pia;
 }
 
-static void do_irq(void *sptr) {
-	struct MC6821_side *side = sptr;
-	side->irq = 1;
+struct MC6821 *mc6821_new(void) {
+	struct MC6821 *pia = mc6821_create();
+	struct part *p = &pia->part;
+	if (!mc6821_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
+	return pia;
 }
 
 static void mc6821_free(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
 	event_dequeue(&pia->a.irq_event);
 	event_dequeue(&pia->b.irq_event);
+}
+
+static void serialise_side(struct MC6821_side *side, struct ser_handle *sh) {
+	ser_write_struct(sh, ser_struct_mc6821_side, N_SER_STRUCT_MC6821_SIDE, 1, side);
+	ser_write_close_tag(sh);
+}
+
+static void mc6821_serialise(struct part *p, struct ser_handle *sh) {
+	struct MC6821 *pia = (struct MC6821 *)p;
+	ser_write_open_vuint32(sh, MC6821_SER_SIDE, 0);
+	serialise_side(&pia->a, sh);
+	ser_write_open_vuint32(sh, MC6821_SER_SIDE, 1);
+	serialise_side(&pia->b, sh);
+	ser_write_close_tag(sh);
+}
+
+static void deserialise_side(struct MC6821_side *side, struct ser_handle *sh) {
+	ser_read_struct(sh, ser_struct_mc6821_side, N_SER_STRUCT_MC6821_SIDE, side);
+}
+
+struct part *mc6821_deserialise(struct ser_handle *sh) {
+	struct MC6821 *pia = mc6821_create();
+	int tag;
+	while ((tag = ser_read_tag(sh)) > 0) {
+		switch (tag) {
+		case MC6821_SER_SIDE:
+			{
+				struct MC6821_side *side;
+				side = ser_read_vuint32(sh) ? &pia->b : &pia->a;
+				deserialise_side(side, sh);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	return (struct part *)pia;
+}
+
+static void do_irq(void *sptr) {
+	struct MC6821_side *side = sptr;
+	side->irq = 1;
 }
 
 #define INTERRUPT_ENABLED(p) ((p).control_register & 0x01)
