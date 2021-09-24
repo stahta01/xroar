@@ -37,11 +37,13 @@
 
 #include "config.h"
 
+#include <assert.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "xalloc.h"
 
 #include "delegate.h"
@@ -50,6 +52,7 @@
 #include "machine.h"
 #include "mc6809.h"
 #include "part.h"
+#include "serialise.h"
 #include "tcc1014/font-gime.h"
 #include "tcc1014/tcc1014.h"
 #include "vo.h"
@@ -208,8 +211,8 @@ struct TCC1014_private {
 	unsigned pRB;  // Right Border pixels, from VRES
 
 	// Video state
-	enum tcc1014_vstate vstate;
-	enum tcc1014_vstate post_vblank_vstate;
+	unsigned vstate;
+	unsigned post_vblank_vstate;
 	unsigned nTB;  // Top Border, from lTB or COCO
 	unsigned nAA;  // Active Area, from lAA or COCO
 	unsigned nLB;  // Left Border, from pLB or COCO
@@ -230,15 +233,12 @@ struct TCC1014_private {
 	uint8_t cg_colours;
 	int vram_bit;
 	enum vdg_render_mode render_mode;
-	unsigned pal_padding;
 	_Bool blink;
 
 	/* Unsafe warning: pixel_data[] *may* need to be 16 elements longer
 	 * than a full scanline.  16 is the maximum number of elements rendered
 	 * in render_scanline() between index checks. */
 	uint8_t pixel_data[TCC1014_LINE_DURATION+16];
-
-	unsigned vram_nbytes;
 
 	/* Counters */
 	unsigned lborder_remaining;
@@ -249,9 +249,86 @@ struct TCC1014_private {
 	_Bool inverse_text;
 };
 
+static struct ser_struct ser_struct_tcc1014[] = {
+	SER_STRUCT_ELEM(struct TCC1014, S, ser_type_unsigned),  // 1
+	SER_STRUCT_ELEM(struct TCC1014, Z, ser_type_uint32),  // 2
+	SER_STRUCT_ELEM(struct TCC1014, RAS, ser_type_bool),  // 3
+
+	SER_STRUCT_ELEM(struct TCC1014, FIRQ, ser_type_bool),  // 4
+	SER_STRUCT_ELEM(struct TCC1014, IRQ, ser_type_bool),  // 5
+
+	SER_STRUCT_ELEM(struct TCC1014, IL0, ser_type_bool),  // 6
+	SER_STRUCT_ELEM(struct TCC1014, IL1, ser_type_bool),  // 7
+	SER_STRUCT_ELEM(struct TCC1014, IL2, ser_type_bool),  // 8
+
+	SER_STRUCT_ELEM(struct TCC1014_private, hs_fall_event, ser_type_event),  // 9
+	SER_STRUCT_ELEM(struct TCC1014_private, hs_rise_event, ser_type_event),  // 10
+	SER_STRUCT_ELEM(struct TCC1014_private, hs_border_event, ser_type_event),  // 11
+	SER_STRUCT_ELEM(struct TCC1014_private, fs_fall_event, ser_type_event),  // 12
+	SER_STRUCT_ELEM(struct TCC1014_private, fs_rise_event, ser_type_event),  // 13
+	SER_STRUCT_ELEM(struct TCC1014_private, scanline_start, ser_type_tick),  // 14
+	SER_STRUCT_ELEM(struct TCC1014_private, beam_pos, ser_type_unsigned),  // 15
+	SER_STRUCT_ELEM(struct TCC1014_private, scanline, ser_type_unsigned),  // 16
+
+	SER_STRUCT_ELEM(struct TCC1014_private, timer_event, ser_type_event),  // 17
+	SER_STRUCT_ELEM(struct TCC1014_private, timer_tick_base, ser_type_tick),  // 18
+	SER_STRUCT_ELEM(struct TCC1014_private, timer_counter, ser_type_int),  // 19
+
+	SER_STRUCT_ELEM(struct TCC1014_private, vram_g_data, ser_type_uint8),  // 20
+	SER_STRUCT_ELEM(struct TCC1014_private, vram_sg_data, ser_type_uint8),  // 21
+
+	SER_STRUCT_ELEM(struct TCC1014_private, vmode_direction, ser_type_bool),  // 22
+	SER_STRUCT_ELEM(struct TCC1014_private, vmode, ser_type_unsigned),  // 23
+
+	SER_STRUCT_ELEM(struct TCC1014_private, registers, ser_type_unhandled),  // 24
+	SER_STRUCT_ELEM(struct TCC1014_private, mmu_bank, ser_type_unhandled),  // 25
+	SER_STRUCT_ELEM(struct TCC1014_private, palette_reg, ser_type_unhandled),  // 26
+	SER_STRUCT_ELEM(struct TCC1014_private, SAM_register, ser_type_uint16),  // 27
+
+	SER_STRUCT_ELEM(struct TCC1014_private, irq_state, ser_type_unsigned),  // 28
+	SER_STRUCT_ELEM(struct TCC1014_private, firq_state, ser_type_unsigned),  // 29
+
+	SER_STRUCT_ELEM(struct TCC1014_private, inverted_text, ser_type_bool),  // 30
+
+	SER_STRUCT_ELEM(struct TCC1014_private, B, ser_type_uint32),  // 31
+	SER_STRUCT_ELEM(struct TCC1014_private, row, ser_type_unsigned),  // 32
+	SER_STRUCT_ELEM(struct TCC1014_private, Xoff, ser_type_unsigned),  // 33
+
+	SER_STRUCT_ELEM(struct TCC1014_private, field_duration, ser_type_unsigned),  // 34
+	SER_STRUCT_ELEM(struct TCC1014_private, lTB, ser_type_unsigned),  // 35
+	SER_STRUCT_ELEM(struct TCC1014_private, lAA, ser_type_unsigned),  // 36
+	SER_STRUCT_ELEM(struct TCC1014_private, pVSYNC, ser_type_unsigned),  // 37
+	SER_STRUCT_ELEM(struct TCC1014_private, pLB, ser_type_unsigned),  // 38
+	SER_STRUCT_ELEM(struct TCC1014_private, pRB, ser_type_unsigned),  // 39
+
+	SER_STRUCT_ELEM(struct TCC1014_private, vstate, ser_type_unsigned),  // 40
+	SER_STRUCT_ELEM(struct TCC1014_private, post_vblank_vstate, ser_type_unsigned),  // 41
+	SER_STRUCT_ELEM(struct TCC1014_private, lcount, ser_type_unsigned),  // 42
+	SER_STRUCT_ELEM(struct TCC1014_private, attr_fgnd, ser_type_unsigned),  // 43
+	SER_STRUCT_ELEM(struct TCC1014_private, attr_bgnd, ser_type_unsigned),  // 44
+
+	SER_STRUCT_ELEM(struct TCC1014_private, attr_bgnd, ser_type_unsigned),  // 44
+
+	SER_STRUCT_ELEM(struct TCC1014_private, SnA, ser_type_bool),  // 45
+	SER_STRUCT_ELEM(struct TCC1014_private, s_fg_colour, ser_type_uint8),  // 46
+	SER_STRUCT_ELEM(struct TCC1014_private, s_bg_colour, ser_type_uint8),  // 47
+	SER_STRUCT_ELEM(struct TCC1014_private, vram_bit, ser_type_int),  // 48
+	SER_STRUCT_ELEM(struct TCC1014_private, blink, ser_type_bool),  // 49
+
+	SER_STRUCT_ELEM(struct TCC1014_private, lborder_remaining, ser_type_unsigned),  // 50
+	SER_STRUCT_ELEM(struct TCC1014_private, vram_remaining, ser_type_unsigned),  // 51
+	SER_STRUCT_ELEM(struct TCC1014_private, rborder_remaining, ser_type_unsigned),  // 52
+};
+#define N_SER_STRUCT_TCC1014 ARRAY_N_ELEMENTS(ser_struct_tcc1014)
+
+#define TCC1014_SER_REGISTERS   (24)
+#define TCC1014_SER_MMU_BANKS   (25)
+#define TCC1014_SER_PALETTE_REG (26)
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void tcc1014_free(struct part *p);
+static void tcc1014_serialise(struct part *p, struct ser_handle *sh);
 
 static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val);
 static void update_from_sam_register(struct TCC1014_private *gime);
@@ -301,12 +378,41 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct TCC1014 *tcc1014_new(int type) {
+static _Bool tcc1014_finish(struct part *p) {
+	struct TCC1014_private *gime = (struct TCC1014_private *)p;
+	if (gime->hs_fall_event.next == &gime->hs_fall_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
+	if (gime->hs_rise_event.next == &gime->hs_rise_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->hs_rise_event);
+	if (gime->hs_border_event.next == &gime->hs_border_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->hs_border_event);
+	if (gime->fs_fall_event.next == &gime->fs_fall_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->fs_fall_event);
+	if (gime->fs_rise_event.next == &gime->fs_rise_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->fs_rise_event);
+	if (gime->timer_event.next == &gime->timer_event)
+		event_queue(&MACHINE_EVENT_LIST, &gime->timer_event);
+	update_from_sam_register(gime);
+	for (int i = 0; i < 16; i++) {
+		tcc1014_set_register(gime, i, gime->registers[i]);
+	}
+	return 1;
+}
+
+static _Bool tcc1014_is_a(struct part *p, const char *name) {
+	(void)p;
+	return p && strcmp(name, "TCC1014") == 0;
+}
+
+static struct TCC1014_private *tcc1014_create(unsigned type) {
 	_Bool is_1986 = (type == VDG_GIME_1986);
 	struct TCC1014_private *gime = part_new(sizeof(*gime));
 	*gime = (struct TCC1014_private){0};
 	part_init((struct part *)gime, is_1986 ? "TCC1014-1986": "TCC1014-1987");
 	gime->public.part.free = tcc1014_free;
+	gime->public.part.serialise = tcc1014_serialise;
+	gime->public.part.finish = tcc1014_finish;
+	gime->public.part.is_a = tcc1014_is_a;
 
 	gime->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	gime->public.fetch_vram = DELEGATE_DEFAULT1(uint8, uint32);
@@ -324,7 +430,18 @@ struct TCC1014 *tcc1014_new(int type) {
 	event_init(&gime->fs_rise_event, DELEGATE_AS0(void, do_fs_rise, gime));
 	event_init(&gime->timer_event, DELEGATE_AS0(void, update_timer, gime));
 
-	return (struct TCC1014 *)gime;
+	return gime;
+}
+
+struct TCC1014 *tcc1014_new(unsigned type) {
+	struct TCC1014_private *gime = tcc1014_create(type);
+	assert(gime != NULL);  // generally if type is invalid
+	struct part *p = &gime->public.part;
+	if (!tcc1014_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
+	return &gime->public;
 }
 
 void tcc1014_free(struct part *p) {
@@ -335,6 +452,67 @@ void tcc1014_free(struct part *p) {
 	event_dequeue(&gime->hs_border_event);
 	event_dequeue(&gime->hs_rise_event);
 	event_dequeue(&gime->hs_fall_event);
+}
+
+static void tcc1014_serialise(struct part *p, struct ser_handle *sh) {
+        struct TCC1014_private *gime = (struct TCC1014_private *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_tcc1014, N_SER_STRUCT_TCC1014, tag, gime)) > 0; tag++) {
+		switch (tag) {
+		case TCC1014_SER_REGISTERS:
+			ser_write(sh, tag, gime->registers, sizeof(gime->registers));
+			break;
+		case TCC1014_SER_MMU_BANKS:
+			ser_write_tag(sh, tag, 16);
+			for (int i = 0; i < 16; i++) {
+				ser_write_uint8_untagged(sh, gime->mmu_bank[i] >> 13);
+			}
+			ser_write_close_tag(sh);
+			break;
+		case TCC1014_SER_PALETTE_REG:
+			ser_write(sh, tag, gime->palette_reg, sizeof(gime->palette_reg));
+			break;
+		default:
+			break;
+		}
+	}
+        ser_write_close_tag(sh);
+}
+
+static struct part *tcc1014_deserialise(struct ser_handle *sh, unsigned type) {
+	struct TCC1014_private *gime = tcc1014_create(type);
+	int tag;
+	while ((tag = ser_read_struct(sh, ser_struct_tcc1014, N_SER_STRUCT_TCC1014, gime)) > 0) {
+		switch (tag) {
+		case TCC1014_SER_REGISTERS:
+			ser_read(sh, gime->registers, sizeof(gime->registers));
+			break;
+		case TCC1014_SER_MMU_BANKS:
+			for (int i = 0; i < 16; i++) {
+				gime->mmu_bank[i] = ser_read_uint8(sh) << 13;
+			}
+			break;
+		case TCC1014_SER_PALETTE_REG:
+			ser_read(sh, gime->palette_reg, sizeof(gime->palette_reg));
+			break;
+		default:
+			break;
+		}
+		if (ser_error(sh))
+			break;
+	}
+	if (tag < 0) {
+		part_free((struct part *)gime);
+		return NULL;
+	}
+	return (struct part *)gime;
+}
+
+struct part *tcc1014_1986_deserialise(struct ser_handle *sh) {
+	return tcc1014_deserialise(sh, VDG_GIME_1986);
+}
+
+struct part *tcc1014_1987_deserialise(struct ser_handle *sh) {
+	return tcc1014_deserialise(sh, VDG_GIME_1987);
 }
 
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val) {
@@ -665,7 +843,6 @@ static void do_hs_fall(void *sptr) {
 	event_queue(&MACHINE_EVENT_LIST, &gime->hs_border_event);
 
 	// Next scanline
-	gime->vram_nbytes = 0;
 	gime->vram_bit = 0;
 	gime->lborder_remaining = gime->pLB;
 	if (gime->COCO) {
