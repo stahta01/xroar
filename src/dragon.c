@@ -959,6 +959,8 @@ static void *dragon_get_component(struct machine *m, const char *cname) {
 		return &md->ram0;
 	} else if (0 == strcmp(cname, "RAM1")) {
 		return &md->ram1;
+	} else if (0 == strcmp(cname, "cart")) {
+		return md->cart;
 	}
 	return NULL;
 }

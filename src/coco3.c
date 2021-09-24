@@ -629,6 +629,8 @@ static void *coco3_get_component(struct machine *m, const char *cname) {
 		return mcc3->PIA0;
 	} else if (0 == strcmp(cname, "PIA1")) {
 		return mcc3->PIA1;
+	} else if (0 == strcmp(cname, "cart")) {
+		return mcc3->cart;
 	}
 	return NULL;
 }
