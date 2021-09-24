@@ -32,6 +32,8 @@
 
 #include "xalloc.h"
 
+struct ser_handle;
+
 // For now, we're not using the interface features...
 #undef WANT_INTF
 
@@ -48,6 +50,17 @@ struct part {
 	// Called by part_free() after disconnecting all interfaces and
 	// components.
 	void (*free)(struct part *part);
+
+	// Called by part_serialise()
+	void (*serialise)(struct part *part, struct ser_handle *sh);
+
+	// Called by part_deserialise()
+	_Bool (*finish)(struct part *part);
+
+	// Check type of part matches a string.  Called by part_is_a() if
+	// defined and name does not match actual part name.  This is in lieu
+	// of everything needing to return an interface by name...
+	_Bool (*is_a)(struct part *p, const char *name);
 
 	// If this part is a component of another.
 	struct part *parent;
@@ -114,6 +127,13 @@ void part_free(struct part *p);
 void part_add_component(struct part *p, struct part *c, const char *id);
 void part_remove_component(struct part *p, struct part *c);
 struct part *part_component_by_id(struct part *p, const char *id);
+// same, but verify name with is_a()
+struct part *part_component_by_id_is_a(struct part *p, const char *id, const char *name);
+
+_Bool part_is_a(struct part *p, const char *name);
+
+void part_serialise(struct part *p, struct ser_handle *sh);
+struct part *part_deserialise(struct ser_handle *sh);
 
 #ifdef WANT_INTF
 // likewise, intf_new() and intf_init0().
