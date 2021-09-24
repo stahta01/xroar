@@ -377,7 +377,9 @@ static struct machine *coco3_new(struct machine_config *mc, struct vo_interface 
 		mcc3->ram_mask = 0x1ffff;
 		break;
 	}
-	mcc3->ram = xmalloc(mcc3->ram_size);
+	if (!mcc3->ram) {
+		mcc3->ram = xmalloc(mcc3->ram_size);
+	}
 
 	/* CRCs */
 
