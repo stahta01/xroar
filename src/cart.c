@@ -42,8 +42,29 @@
 #include "machine.h"
 #include "part.h"
 #include "romlist.h"
+#include "serialise.h"
 #include "xconfig.h"
 #include "xroar.h"
+
+static const struct ser_struct ser_struct_cart_config[] = {
+	SER_STRUCT_ELEM(struct cart_config, description, ser_type_string), // 1
+	SER_STRUCT_ELEM(struct cart_config, type, ser_type_string), // 2
+	SER_STRUCT_ELEM(struct cart_config, rom, ser_type_string), // 3
+	SER_STRUCT_ELEM(struct cart_config, rom2, ser_type_string), // 4
+	SER_STRUCT_ELEM(struct cart_config, becker_port, ser_type_bool), // 5
+	SER_STRUCT_ELEM(struct cart_config, autorun, ser_type_int), // 6
+};
+#define N_SER_STRUCT_CART_CONFIG ARRAY_N_ELEMENTS(ser_struct_cart_config)
+
+#define CART_SER_CART_CONFIG (1)
+
+static const struct ser_struct ser_struct_cart[] = {
+	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
+	SER_STRUCT_ELEM(struct cart, EXTMEM, ser_type_bool), // 2
+	SER_STRUCT_ELEM(struct cart, rom_bank, ser_type_uint16), // 3
+	SER_STRUCT_ELEM(struct cart, firq_event, ser_type_eventp), // 4
+};
+#define N_SER_STRUCT_CART ARRAY_N_ELEMENTS(ser_struct_cart)
 
 static struct slist *config_list = NULL;
 static int next_id = 0;
@@ -78,6 +99,7 @@ static struct slist *cart_modules = NULL;
 
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void cart_rom_load(struct cart *c);
 static void do_firq(void *);
 static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
@@ -91,6 +113,28 @@ struct cart_config *cart_config_new(void) {
 	config_list = slist_append(config_list, new);
 	next_id++;
 	return new;
+}
+
+void cart_config_serialise(struct cart_config *cc, struct ser_handle *sh, unsigned otag) {
+	if (!cc)
+		return;
+	ser_write_open_string(sh, otag, cc->name);
+	ser_write_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, 1, cc);
+	ser_write_close_tag(sh);
+}
+
+struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
+	char *name = ser_read_string(sh);
+	if (!name)
+		return NULL;
+	struct cart_config *cc = cart_config_by_name(name);
+	if (!cc) {
+		cc = cart_config_new();
+		cc->name = xstrdup(name);
+	}
+	free(name);
+	ser_read_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, cc);
+	return cc;
 }
 
 struct cart_config *cart_config_by_id(int id) {
@@ -307,6 +351,47 @@ struct cart *cart_new_named(const char *cc_name) {
 	return cart_new(cc);
 }
 
+void cart_finish(struct cart *c) {
+	if (c->firq_event && c->firq_event->next == c->firq_event) {
+		event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+	}
+}
+
+_Bool cart_is_a(struct part *p, const char *name) {
+	return p && strcmp(name, "cart") == 0;
+}
+
+void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag) {
+	ser_write_open_string(sh, otag, "");
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_cart, N_SER_STRUCT_CART, tag, c)) > 0; tag++) {
+		switch (tag) {
+		case CART_SER_CART_CONFIG:
+			cart_config_serialise(c->config, sh, tag);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+void cart_deserialise(struct cart *c, struct ser_handle *sh) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_cart, N_SER_STRUCT_CART, c))) {
+		switch (tag) {
+		case CART_SER_CART_CONFIG:
+			c->config = cart_config_deserialise(sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+		tag++;
+	}
+	cart_rom_load(c);
+}
+
 /* ROM cart routines */
 
 void cart_rom_init(struct cart *c) {
@@ -351,8 +436,9 @@ static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	return D;
 }
 
-void cart_rom_reset(struct cart *c) {
+static void cart_rom_load(struct cart *c) {
 	struct cart_config *cc = c->config;
+
 	if (cc->rom) {
 		sds tmp = romlist_find(cc->rom);
 		if (tmp) {
@@ -389,6 +475,10 @@ void cart_rom_reset(struct cart *c) {
 			sdsfree(tmp);
 		}
 	}
+}
+
+void cart_rom_reset(struct cart *c) {
+	cart_rom_load(c);
 	c->rom_bank = 0;
 }
 

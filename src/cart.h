@@ -94,7 +94,18 @@ struct cart_module {
 	struct cart *(* const new)(struct cart_config *);
 };
 
+/** \brief Create a new cart config.
+ */
 struct cart_config *cart_config_new(void);
+
+/** \brief Serialise cartridge.
+ */
+void cart_config_serialise(struct cart_config *cc, struct ser_handle *sh, unsigned otag);
+
+/** \brief Deserialise cartridge.
+ */
+struct cart_config *cart_config_deserialise(struct ser_handle *sh);
+
 struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
 _Bool cart_config_remove(const char *name);
@@ -110,6 +121,11 @@ void cart_type_help(void);
 struct cart *cart_new(struct cart_config *cc);
 struct cart *cart_new_named(const char *cc_name);
 void cart_free(struct cart *c);
+
+void cart_finish(struct cart *c);
+_Bool cart_is_a(struct part *p, const char *name);
+void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag);
+void cart_deserialise(struct cart *c, struct ser_handle *sh);
 
 void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c);
