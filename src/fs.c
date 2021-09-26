@@ -187,9 +187,9 @@ uint32_t fs_read_vuint32(FILE *fd, int *nread) {
 			*nread = -1;
 		return 0;
 	}
-	int nbytes = 1;
 	uint32_t v = byte0;
 	uint32_t mask = 0x7f;
+	int nbytes;
 	for (nbytes = 1; nbytes < 5; nbytes++) {
 		if ((byte0 & 0x80) == 0)
 			break;
@@ -201,11 +201,11 @@ uint32_t fs_read_vuint32(FILE *fd, int *nread) {
 			return 0;
 		}
 		mask = (mask << 7) | 0x7f;
-		v = ((v << 8) | byte) & mask;
+		v = (v << 8) | byte;
 	}
 	if (nread)
 		*nread = nbytes;
-	return v;
+	return v & mask;
 }
 
 // Variable-length signed 32-bit integers
@@ -234,7 +234,7 @@ int32_t fs_read_vint32(FILE *fd, int *nread) {
 	int nbytes = 0;
 	uint32_t uv = fs_read_vuint32(fd, &nbytes);
 	int32_t v = 0;
-	if (nbytes > 1) {
+	if (nbytes > 0) {
 		if ((uv & 1) == 1) {
 			v = -(int)(uv >> 1) - 1;
 		} else {
