@@ -20,10 +20,12 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "delegate.h"
 #include "xalloc.h"
 
@@ -36,6 +38,7 @@
 #include "mc6847/mc6847.h"
 #include "part.h"
 #include "sam.h"
+#include "serialise.h"
 #include "xroar.h"
 
 // Convert VDG timings (measured in quarter-VDG-cycles) to event ticks:
@@ -87,7 +90,7 @@ struct MC6847_private {
 	uint8_t border_colour;
 	uint8_t bright_orange;
 	int vram_bit;
-	enum vdg_render_mode render_mode;
+	unsigned render_mode;
 	unsigned pal_padding;
 
 	/* Unsafe warning: pixel_data[] needs to be 8 elements longer than a
@@ -114,7 +117,60 @@ struct MC6847_private {
 	uint8_t text_border_colour;
 };
 
-void mc6847_free(struct part *p);
+static struct ser_struct ser_struct_mc6847[] = {
+	SER_STRUCT_ELEM(struct MC6847, row, ser_type_unsigned), // 1
+	SER_STRUCT_ELEM(struct MC6847, is_dragon64, ser_type_bool), // 2
+	SER_STRUCT_ELEM(struct MC6847, is_dragon32, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct MC6847, is_coco, ser_type_bool), // 4
+	SER_STRUCT_ELEM(struct MC6847, is_pal, ser_type_bool), // 5
+
+	SER_STRUCT_ELEM(struct MC6847_private, GM, ser_type_unsigned), // 6
+	SER_STRUCT_ELEM(struct MC6847_private, nA_S, ser_type_bool), // 7
+	SER_STRUCT_ELEM(struct MC6847_private, nA_G, ser_type_bool), // 8
+	SER_STRUCT_ELEM(struct MC6847_private, EXT, ser_type_bool), // 9
+	SER_STRUCT_ELEM(struct MC6847_private, CSS, ser_type_bool), // 10
+	SER_STRUCT_ELEM(struct MC6847_private, CSSa, ser_type_bool), // 11
+	SER_STRUCT_ELEM(struct MC6847_private, CSSb, ser_type_bool), // 12
+	SER_STRUCT_ELEM(struct MC6847_private, inverted_text, ser_type_bool), // 13
+
+	SER_STRUCT_ELEM(struct MC6847_private, hs_fall_event, ser_type_event), // 14
+	SER_STRUCT_ELEM(struct MC6847_private, hs_rise_event, ser_type_event), // 15
+	SER_STRUCT_ELEM(struct MC6847_private, scanline_start, ser_type_tick), // 16
+	SER_STRUCT_ELEM(struct MC6847_private, beam_pos, ser_type_unsigned), // 17
+	SER_STRUCT_ELEM(struct MC6847_private, scanline, ser_type_unsigned), // 18
+
+	SER_STRUCT_ELEM(struct MC6847_private, vram_g_data, ser_type_uint8), // 19
+	SER_STRUCT_ELEM(struct MC6847_private, vram_sg_data, ser_type_uint8), // 20
+
+	SER_STRUCT_ELEM(struct MC6847_private, is_32byte, ser_type_bool), // 21
+	SER_STRUCT_ELEM(struct MC6847_private, GM0, ser_type_bool), // 22
+	SER_STRUCT_ELEM(struct MC6847_private, s_fg_colour, ser_type_uint8), // 23
+	SER_STRUCT_ELEM(struct MC6847_private, s_bg_colour, ser_type_uint8), // 24
+	SER_STRUCT_ELEM(struct MC6847_private, fg_colour, ser_type_uint8), // 25
+	SER_STRUCT_ELEM(struct MC6847_private, bg_colour, ser_type_uint8), // 26
+	SER_STRUCT_ELEM(struct MC6847_private, cg_colours, ser_type_uint8), // 27
+	SER_STRUCT_ELEM(struct MC6847_private, border_colour, ser_type_uint8), // 28
+	SER_STRUCT_ELEM(struct MC6847_private, bright_orange, ser_type_uint8), // 29
+	SER_STRUCT_ELEM(struct MC6847_private, vram_bit, ser_type_int), // 30
+	SER_STRUCT_ELEM(struct MC6847_private, render_mode, ser_type_unsigned), // 31
+	SER_STRUCT_ELEM(struct MC6847_private, pal_padding, ser_type_unsigned), // 32
+
+	SER_STRUCT_ELEM(struct MC6847_private, burst, ser_type_unsigned), // 33
+
+	SER_STRUCT_ELEM(struct MC6847_private, vram, ser_type_unhandled), // 34
+	SER_STRUCT_ELEM(struct MC6847_private, vram_index, ser_type_unsigned), // 35
+	SER_STRUCT_ELEM(struct MC6847_private, vram_nbytes, ser_type_unsigned), // 36
+
+	SER_STRUCT_ELEM(struct MC6847_private, lborder_remaining, ser_type_unsigned), // 37
+	SER_STRUCT_ELEM(struct MC6847_private, vram_remaining, ser_type_unsigned), // 38
+	SER_STRUCT_ELEM(struct MC6847_private, rborder_remaining, ser_type_unsigned), // 39
+};
+#define N_SER_STRUCT_MC6847 ARRAY_N_ELEMENTS(ser_struct_mc6847)
+
+#define TCC1014_SER_VRAM (34)
+
+static void mc6847_free(struct part *p);
+static void mc6847_serialise(struct part *p, struct ser_handle *sh);
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
@@ -447,12 +503,35 @@ static void render_scanline(struct MC6847_private *vdg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct MC6847 *mc6847_new(int type) {
+static _Bool mc6847_finish(struct part *p) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+
+	if (vdg->hs_fall_event.next == &vdg->hs_fall_event)
+		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+	if (vdg->hs_rise_event.next == &vdg->hs_rise_event)
+		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
+
+	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
+	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
+	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
+
+	return 1;
+}
+
+static _Bool mc6847_is_a(struct part *p, const char *name) {
+	(void)p;
+	return p && strcmp(name, "MC6847") == 0;
+}
+
+struct MC6847_private *mc6847_create(int type) {
 	_Bool t1 = (type == VDG_6847T1);
 	struct MC6847_private *vdg = part_new(sizeof(*vdg));
 	*vdg = (struct MC6847_private){0};
 	part_init((struct part *)vdg, t1 ? "MC6847T1" : "MC6847");
 	vdg->public.part.free = mc6847_free;
+	vdg->public.part.serialise = mc6847_serialise;
+	vdg->public.part.finish = mc6847_finish;
+	vdg->public.part.is_a = mc6847_is_a;
 
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->is_t1 = t1;
@@ -465,13 +544,76 @@ struct MC6847 *mc6847_new(int type) {
 	vdg->public.fetch_data = DELEGATE_DEFAULT2(void, int, uint16p);
 	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
 	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
+
+	return vdg;
+}
+
+struct MC6847 *mc6847_new(int type) {
+	struct MC6847_private *vdg = mc6847_create(type);
+	assert(vdg != NULL);  // generally if type is invalid
+	struct part *p = &vdg->public.part;
+	if (!mc6847_finish(p)) {
+		part_free(p);
+		return NULL;
+	}
 	return (struct MC6847 *)vdg;
 }
 
-void mc6847_free(struct part *p) {
+static void mc6847_free(struct part *p) {
 	struct MC6847_private *vdg = (struct MC6847_private *)p;
 	event_dequeue(&vdg->hs_fall_event);
 	event_dequeue(&vdg->hs_rise_event);
+}
+
+static void mc6847_serialise(struct part *p, struct ser_handle *sh) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, tag, vdg)) > 0; tag++) {
+		switch (tag) {
+		case TCC1014_SER_VRAM:
+			ser_write_tag(sh, tag, 42*2);
+			for (int i = 0; i < 42; i++) {
+				ser_write_uint16_untagged(sh, vdg->vram[i]);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+static struct part *mc6847_deserialise_typed(struct ser_handle *sh, int type) {
+	struct MC6847_private *vdg = mc6847_create(type);
+
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, vdg))) {
+		switch (tag) {
+		case TCC1014_SER_VRAM:
+			for (int i = 0; i < 42; i++) {
+				vdg->vram[i] = ser_read_uint16(sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
+		part_free((struct part *)vdg);
+		return NULL;
+	}
+
+	return (struct part *)vdg;
+}
+
+struct part *mc6847_deserialise(struct ser_handle *sh) {
+	return mc6847_deserialise_typed(sh, VDG_6847);
+}
+
+struct part *mc6847t1_deserialise(struct ser_handle *sh) {
+	return mc6847_deserialise_typed(sh, VDG_6847T1);
 }
 
 void mc6847_reset(struct MC6847 *vdgp) {
