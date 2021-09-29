@@ -4,6 +4,7 @@ Version 0.38, unreleased
  * Fix MPI FIRQ handling [Paul Fiscarelli]
  * New option -tv-input configures type of video used by machine.
  * New option -kbd-bind for user mapping of (untranslated) keys.
+ * Fix duplicate-IDAM issue when reformatting disks [Paul Fiscarelli]
 
 Version 0.37, Sat Aug 14 2021
 
