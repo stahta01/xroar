@@ -38,8 +38,6 @@
 #define MAX_SIDES (2)
 #define MAX_TRACKS (256)
 
-#define IDAM(vip,i) ((unsigned)((vip)->idamptr[i] & 0x3fff))
-
 struct drive_data {
 	struct vdisk *disk;
 	unsigned current_cyl;
@@ -314,16 +312,19 @@ void vdrive_write_idam(void *sptr) {
 		vip->track_base = (uint8_t *)vip->idamptr;
 	}
 	if (vip->track_base && (vip->head_pos+vip->head_incr) < vip->current_drive->disk->track_length) {
-		/* Write 0xfe and remove old IDAM ptr if it exists */
+		// Write 0xfe
+		for (unsigned i = 0; i < vip->head_incr; i++) {
+			vip->track_base[vip->head_pos + i] = 0xfe;
+		}
+		// Clear old IDAM ptr if it exists
 		for (unsigned i = 0; i < 64; i++) {
-			for (unsigned j = 0; j < vip->head_incr; j++) {
-				vip->track_base[vip->head_pos + j] = 0xfe;
-				if ((vip->head_pos + j) == IDAM(vip, j)) {
-					vip->idamptr[i] = 0;
-				}
+			if ((vip->idamptr[i] & 0x3fff) >= vip->head_pos &&
+			    (vip->idamptr[i] & 0x3fff) < (vip->head_pos + vip->head_incr)) {
+				vip->idamptr[i] = 0;
+				break;
 			}
 		}
-		/* Add to end of idam list and sort */
+		// Add to end of idam list and sort
 		vip->idamptr[63] = vip->head_pos | vip->cur_density;
 		qsort(vip->idamptr, 64, sizeof(uint16_t), compar_idams);
 	}
