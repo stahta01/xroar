@@ -25,6 +25,7 @@
 
 #include "delegate.h"
 
+struct ser_handle;
 struct vdisk;
 
 #define VDRIVE_MAX_DRIVES (4)
@@ -65,6 +66,9 @@ struct vdrive_interface {
 struct vdrive_interface *vdrive_interface_new(void);
 void vdrive_interface_free(struct vdrive_interface *vi);
 void vdrive_disconnect(struct vdrive_interface *vi);
+
+void vdrive_interface_serialise(struct vdrive_interface *vi, struct ser_handle *sh, unsigned otag);
+void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle *sh);
 
 void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk);
 void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive);

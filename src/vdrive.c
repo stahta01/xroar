@@ -25,10 +25,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "xalloc.h"
 
 #include "events.h"
 #include "logging.h"
+#include "serialise.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
@@ -67,6 +69,33 @@ struct vdrive_interface_private {
 	struct event index_pulse_event;
 	struct event reset_index_pulse_event;
 };
+
+static const struct ser_struct ser_struct_vdrive[] = {
+	SER_STRUCT_ELEM(struct vdrive_interface_private, ready_state, ser_type_bool), // 1
+	SER_STRUCT_ELEM(struct vdrive_interface_private, tr00_state, ser_type_bool), // 2
+	SER_STRUCT_ELEM(struct vdrive_interface_private, index_state, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct vdrive_interface_private, write_protect_state, ser_type_bool), // 4
+
+	SER_STRUCT_ELEM(struct vdrive_interface_private, drives, ser_type_unhandled), // 5
+	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_direction, ser_type_int), // 6
+	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_drive_number, ser_type_unsigned), // 7
+	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_head, ser_type_unsigned), // 8
+	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_density, ser_type_unsigned), // 9
+	SER_STRUCT_ELEM(struct vdrive_interface_private, head_incr, ser_type_unsigned), // 10
+	SER_STRUCT_ELEM(struct vdrive_interface_private, head_pos, ser_type_unsigned), // 11
+
+	SER_STRUCT_ELEM(struct vdrive_interface_private, last_update_cycle, ser_type_tick), // 12
+	SER_STRUCT_ELEM(struct vdrive_interface_private, track_start_cycle, ser_type_tick), // 13
+	SER_STRUCT_ELEM(struct vdrive_interface_private, index_pulse_event, ser_type_event), // 14
+	SER_STRUCT_ELEM(struct vdrive_interface_private, reset_index_pulse_event, ser_type_event), // 15
+
+};
+#define N_SER_STRUCT_VDRIVE ARRAY_N_ELEMENTS(ser_struct_vdrive)
+
+#define VDRIVE_SER_DRIVE (5)
+
+#define VDRIVE_SER_DRIVE_CYL (1)
+#define VDRIVE_SER_DRIVE_FILENAME (2)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -156,6 +185,99 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 		}
 	}
 	free(vip);
+}
+
+void vdrive_interface_serialise(struct vdrive_interface *vi, struct ser_handle *sh, unsigned otag) {
+	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+	ser_write_open_string(sh, otag, "vdrive");
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_vdrive, N_SER_STRUCT_VDRIVE, tag, vip)) > 0; tag++) {
+		switch (tag) {
+		case VDRIVE_SER_DRIVE:
+			for (unsigned i = 0; i < MAX_DRIVES; i++) {
+				ser_write_open_vuint32(sh, VDRIVE_SER_DRIVE, i);
+				ser_write_vuint32(sh, VDRIVE_SER_DRIVE_CYL, vip->drives[i].current_cyl);
+				if (vip->drives[i].disk) {
+					ser_write_string(sh, VDRIVE_SER_DRIVE_FILENAME, vip->drives[i].disk->filename);
+				}
+				ser_write_close_tag(sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+static void deserialise_drive_data(struct drive_data *drive, struct ser_handle *sh) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
+		switch (tag) {
+		case VDRIVE_SER_DRIVE_CYL:
+			drive->current_cyl = ser_read_vuint32(sh);
+			break;
+		case VDRIVE_SER_DRIVE_FILENAME:
+			{
+				char *filename = ser_read_string(sh);
+				if (filename) {
+					drive->disk = vdisk_load(filename);
+					free(filename);
+				}
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+}
+
+void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle *sh) {
+	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+
+	// Eject any current disks
+	for (unsigned i = 0; i < MAX_DRIVES; i++) {
+		vdrive_eject_disk(vi, i);
+	}
+
+	// Dequeue any current events
+	event_dequeue(&vip->index_pulse_event);
+	event_dequeue(&vip->reset_index_pulse_event);
+
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_vdrive, N_SER_STRUCT_VDRIVE, vip))) {
+		switch (tag) {
+		case VDRIVE_SER_DRIVE:
+			{
+				unsigned drive = ser_read_vuint32(sh);
+				if (drive >= VDRIVE_MAX_DRIVES) {
+					ser_set_error(sh, ser_error_format);
+					break;
+				}
+				deserialise_drive_data(&vip->drives[drive], sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	vip->current_drive = &vip->drives[vip->cur_drive_number];
+	if (vip->current_drive->disk) {
+		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
+		vip->track_base = (uint8_t *)vip->idamptr;
+	} else {
+		vip->idamptr = NULL;
+		vip->track_base = NULL;
+	}
+
+	// Queue active events
+	if (vip->index_pulse_event.next == &vip->index_pulse_event)
+		event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
+	if (vip->reset_index_pulse_event.next == &vip->reset_index_pulse_event)
+		event_queue(&MACHINE_EVENT_LIST, &vip->reset_index_pulse_event);
 }
 
 void vdrive_disconnect(struct vdrive_interface *vi) {
