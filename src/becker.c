@@ -50,6 +50,7 @@
 #include "becker.h"
 #include "logging.h"
 #include "part.h"
+#include "serialise.h"
 #include "xroar.h"
 
 /* In theory no reponse should be longer than this (though it doesn't actually
@@ -74,14 +75,22 @@ struct becker {
 };
 
 static void becker_free(struct part *p);
+static void becker_serialise(struct part *p, struct ser_handle *sh);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct becker *becker_new(void) {
+static _Bool becker_finish(struct part *p) {
+	(void)p;
+	return 1;
+}
+
+static struct becker *becker_create(void) {
 	struct becker *becker = part_new(sizeof(*becker));
 	*becker = (struct becker){0};
 	part_init(&becker->part, "becker");
 	becker->part.free = becker_free;
+	becker->part.serialise = becker_serialise;
+	becker->part.finish = becker_finish;
 
 	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
@@ -140,8 +149,13 @@ failed:
 	}
 	if (info)
 		freeaddrinfo(info);
-	part_free(&becker->part);
+	part_free((struct part *)becker);
 	return NULL;
+}
+
+struct becker *becker_new(void) {
+	struct becker *becker = becker_create();
+	return becker;
 }
 
 static void becker_free(struct part *p) {
@@ -151,6 +165,25 @@ static void becker_free(struct part *p) {
 		log_close(&becker->log_data_in_hex);
 	if (becker->log_data_out_hex)
 		log_close(&becker->log_data_out_hex);
+}
+
+static void becker_serialise(struct part *p, struct ser_handle *sh) {
+	(void)p;
+	// Just a single dummy field - all this serialised "part" does is
+	// indicate that a becker port must be created.  Maintaining state for
+	// a previous TCP connection seems nonsensical...
+	ser_write_vuint32(sh, 1, 0);
+	ser_write_close_tag(sh);
+}
+
+struct part *becker_deserialise(struct ser_handle *sh) {
+	struct becker *becker = becker_create();
+	while (ser_read_tag(sh) > 0);
+	if (ser_error(sh)) {
+		part_free((struct part *)becker);
+		return NULL;
+	}
+	return (struct part *)becker;
 }
 
 void becker_reset(struct becker *becker) {
