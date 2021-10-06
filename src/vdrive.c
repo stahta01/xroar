@@ -268,16 +268,15 @@ void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle
 	if (vip->current_drive->disk) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
 		vip->track_base = (uint8_t *)vip->idamptr;
+		// Queue index pulse events only if disk valid
+		if (vip->index_pulse_event.next == &vip->index_pulse_event)
+			event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
+		if (vip->reset_index_pulse_event.next == &vip->reset_index_pulse_event)
+			event_queue(&MACHINE_EVENT_LIST, &vip->reset_index_pulse_event);
 	} else {
 		vip->idamptr = NULL;
 		vip->track_base = NULL;
 	}
-
-	// Queue active events
-	if (vip->index_pulse_event.next == &vip->index_pulse_event)
-		event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
-	if (vip->reset_index_pulse_event.next == &vip->reset_index_pulse_event)
-		event_queue(&MACHINE_EVENT_LIST, &vip->reset_index_pulse_event);
 }
 
 void vdrive_disconnect(struct vdrive_interface *vi) {
