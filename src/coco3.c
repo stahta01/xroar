@@ -15,8 +15,8 @@
  *
  *  \endlicenseblock
  *
- *  Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED, and much is KNOWN NOT
- *  TO WORK.  Please do not use except for testing.
+ *  Tandy CoCo 3 support is decent enough, but still has some noticeable issues
+ *  with respect to the timer.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -414,9 +414,6 @@ static _Bool coco3_finish(struct part *p) {
 }
 
 static struct machine_coco3 *coco3_create(void) {
-	LOG_WARN("Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED.\n");
-	LOG_WARN("Please do not use except for testing.\n");
-
 	struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
 	*mcc3 = (struct machine_coco3){0};
 	struct machine *m = &mcc3->public;
