@@ -1811,6 +1811,10 @@ static void set_machine(const char *name) {
 			xroar_machine_config->tv_standard = private_cfg.tv;
 			private_cfg.tv = ANY_AUTO;
 		}
+		if (private_cfg.tv_input != ANY_AUTO) {
+			xroar_machine_config->tv_input = private_cfg.tv_input;
+			private_cfg.tv_input = ANY_AUTO;
+		}
 		if (private_cfg.vdg_type != -1) {
 			xroar_machine_config->vdg_type = private_cfg.vdg_type;
 			private_cfg.vdg_type = -1;
