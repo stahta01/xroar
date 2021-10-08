@@ -18,16 +18,16 @@
  * A set of simple tools to aid in the serialisation and deserialisation of
  * data.  The general structure is (TAG,LENGTH,DATA), where LENGTH is the
  * length in bytes of DATA.  TAG and LENGTH are both written as variable-length
- * unsigned integers (vuint31).
+ * unsigned integers (vuint32).
  *
  * Nesting happens by default until a special closing zero byte tag reduces the
  * nesting level.
  *
- * Read and write helpers do NOT return special values on error, instead they
- * store the error code in the handle.  Caller should check this by calling
- * ser_error() at a convenient point.  Subsequent calls to helpers will take no
- * action if an error has been flagged, with read functions returning zero or
- * NULL.
+ * Most read and write helpers do NOT return special values on error, instead
+ * they store the error code in the handle.  Caller should check this by
+ * calling ser_error() at a convenient point.  Subsequent calls to helpers will
+ * take no action if an error has been flagged, with read functions returning
+ * zero or NULL.
  *
  * ser_close() will return any flagged error.
  *
@@ -41,27 +41,21 @@
 // Helper functions are provided for common data types.  They emit the open
 // tag, calculate the appropriate length and write the data followed by the
 // close tag (zero byte).
-//
-// To nest, use ser_write_open_tag().  The DATA portion of the tag will be a
-// string identifying the nested data.  No closing tag will be emitted until
-// you call ser_write_close_tag().
 
 // Deserialising:
 //
 // ser_read_tag() will fetch the next tag, skipping any data remaining in the
 // current tag.  The first closing tag after a non-closing tag is skipped, but
 // after that successive closing tags are returned to the caller to signal
-// reduced nesting level.
+// reduced nesting level.  For this reason, nesting requires at least one
+// nested tag to be present.
 //
 // User can then decide how to read the tag's data, but helper functions for
 // common types are included.
-//
-// ser_read_close_tag() will skip entries until the nesting level is reduced.
 
 // ser_open*() will return NULL on error.  ser_close() will return zero or an
-// error code.  ser_read_open_tag() will return -1 on EOF or error.
-// ser_error() will return any current error code if needed before the call to
-// ser_close().
+// error code.  ser_error() will return any current error code if needed before
+// the call to ser_close().
 
 #ifndef XROAR_SERIALISE_H_
 #define XROAR_SERIALISE_H_

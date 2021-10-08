@@ -39,16 +39,13 @@ struct ser_handle {
 
 	// After reading a (TAG,LENGTH), this will contain LENGTH.  Attempts to
 	// read more than this many bytes as data will cause an error.  Any
-	// remaining data skipped when asked to read next tag.
+	// remaining data will be skipped when asked to read the next tag.
 	size_t length;
 
 	// Flag open tag.
 	int tag_open;
 
 	// Open tags increase, close tags (zero byte) decrease.
-	// ser_read_close_tag() will use this to skip the rest of a nested tag.
-	// It may be desirable to maintain a stack of open tags so that readers
-	// can check context, but will cross that bridge if we come to it.
 	int depth;
 };
 
@@ -257,9 +254,7 @@ static void *s_read_new(struct ser_handle *sh, size_t size) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Write helpers.
-
-// Writes out TAG,LENGTH,DATA followed by a closing tag.
+// Write helpers.  Writes out TAG,LENGTH,DATA followed by a closing tag.
 
 void ser_write_int8(struct ser_handle *sh, int tag, int8_t v) {
 	ser_write_uint8(sh, tag, (uint8_t)v);
@@ -328,7 +323,8 @@ void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size) {
 	ser_write_close_tag(sh);
 }
 
-// Open tag write helpers.
+// Open tag write helpers.  As above, but without the closing tag, indicating
+// nested data.
 
 void ser_write_open_vuint32(struct ser_handle *sh, int tag, int v) {
 	size_t length = fs_sizeof_vuint32(v);
@@ -349,7 +345,7 @@ void ser_write_open_sds(struct ser_handle *sh, int tag, const sds s) {
 	ser_write_untagged(sh, s, length);
 }
 
-// Untagged write helpers.
+// Untagged write helpers.  For manually writing tag DATA.
 
 void ser_write_uint8_untagged(struct ser_handle *sh, uint8_t v) {
 	if (!sh)
