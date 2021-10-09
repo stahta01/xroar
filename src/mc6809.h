@@ -30,8 +30,6 @@
 struct mc6809_trace;
 #endif
 
-#define MC6809_VARIANT_MC6809 (0x00006809)
-
 #define MC6809_INT_VEC_RESET (0xfffe)
 #define MC6809_INT_VEC_NMI (0xfffc)
 #define MC6809_INT_VEC_SWI (0xfffa)
@@ -70,16 +68,12 @@ struct MC6809 {
 	// Part metadata
 	struct part part;
 
-	// Variant - XXX, part metadata should allow us to ID this in future
-	uint32_t variant;
-
 	/* Interrupt lines */
 	_Bool halt, nmi, firq, irq;
 	uint8_t D;
 
 	/* Methods */
 
-	void (*free)(struct MC6809 *cpu);
 	void (*reset)(struct MC6809 *cpu);
 	void (*run)(struct MC6809 *cpu);
 	void (*jump)(struct MC6809 *cpu, uint16_t pc);

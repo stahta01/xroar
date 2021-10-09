@@ -116,6 +116,7 @@ struct gdb_interface_private {
 
 	struct MC6809 *cpu;
 	struct MC6883 *sam;
+	_Bool is_6309;
 
 	// Breakpoint session
 	struct bp_session *bp_session;
@@ -176,14 +177,24 @@ static int hex16(char *s);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m, struct bp_session *bp_session) {
+	if (!m)
+		return NULL;
+
+	struct MC6809 *cpu = m->get_component(m, "CPU0");
+	struct MC6883 *sam = m->get_component(m, "SAM0");
+	if (!cpu || !sam)
+		return NULL;
+
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
 
 	gip->machine = m;
-	gip->cpu = m->get_component(m, "CPU0");
-	gip->sam = m->get_component(m, "SAM0");
+	gip->cpu = cpu;
+	gip->sam = sam;
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
+
+	gip->is_6309 = (strcmp(((struct part *)cpu)->name, "HD6309") == 0);
 
 	struct addrinfo hints;
 	if (!hostname)
@@ -649,7 +660,7 @@ static void send_general_registers(struct gdb_interface_private *gip) {
 		 gip->cpu->reg_u,
 		 gip->cpu->reg_s,
 		 gip->cpu->reg_pc);
-	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
+	if (gip->is_6309) {
 		sprintf(packet + 28, "%02x%02x%02x%04x",
 			 ((struct HD6309 *)gip->cpu)->reg_md,
 			 HD6309_REG_E(((struct HD6309 *)gip->cpu)),
@@ -685,7 +696,7 @@ static void set_general_registers(struct gdb_interface_private *gip, char *args)
 		gip->cpu->reg_s = tmp;
 	if ((tmp = hex16(args+24)) >= 0)
 		gip->cpu->reg_pc = tmp;
-	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
+	if (gip->is_6309) {
 		if ((tmp = hex8(args+28)) >= 0)
 			((struct HD6309 *)gip->cpu)->reg_md = tmp;
 		if ((tmp = hex8(args+30)) >= 0)
@@ -772,7 +783,7 @@ static void send_register(struct gdb_interface_private *gip, char *args) {
 	case 12: size = -2; break;
 	default: break;
 	}
-	if (gip->cpu->variant == MC6809_VARIANT_HD6309) {
+	if (gip->is_6309) {
 		struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
 		switch (regnum) {
 		case 9: value = hcpu->reg_md; size = 1; break;
@@ -801,7 +812,7 @@ static void set_register(struct gdb_interface_private *gip, char *args) {
 	struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
 	if (regnum > 12)
 		goto error;
-	if (regnum > 8 && gip->cpu->variant != MC6809_VARIANT_HD6309)
+	if (regnum > 8 && !gip->is_6309)
 		goto error;
 	switch (regnum) {
 	case 0: gip->cpu->reg_cc = value; break;

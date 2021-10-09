@@ -49,34 +49,32 @@
 #endif
 
 static const struct ser_struct ser_struct_mc6809[] = {
-	SER_STRUCT_ELEM(struct MC6809, variant, ser_type_uint32), // 1
+	SER_STRUCT_ELEM(struct MC6809, halt, ser_type_bool), // 1
+	SER_STRUCT_ELEM(struct MC6809, nmi, ser_type_bool), // 2
+	SER_STRUCT_ELEM(struct MC6809, firq, ser_type_bool), // 3
+	SER_STRUCT_ELEM(struct MC6809, irq, ser_type_bool), // 4
+	SER_STRUCT_ELEM(struct MC6809, D, ser_type_uint8), // 5
 
-	SER_STRUCT_ELEM(struct MC6809, halt, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct MC6809, nmi, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct MC6809, firq, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct MC6809, irq, ser_type_bool), // 5
-	SER_STRUCT_ELEM(struct MC6809, D, ser_type_uint8), // 6
+	SER_STRUCT_ELEM(struct MC6809, state, ser_type_unsigned), // 6
+	SER_STRUCT_ELEM(struct MC6809, running, ser_type_bool), // 7
+	SER_STRUCT_ELEM(struct MC6809, page, ser_type_uint16), // 8
 
-	SER_STRUCT_ELEM(struct MC6809, state, ser_type_unsigned), // 7
-	SER_STRUCT_ELEM(struct MC6809, running, ser_type_bool), // 8
-	SER_STRUCT_ELEM(struct MC6809, page, ser_type_uint16), // 9
+	SER_STRUCT_ELEM(struct MC6809, reg_cc, ser_type_uint8), // 9
+	SER_STRUCT_ELEM(struct MC6809, reg_d, ser_type_uint16), // 10
+	SER_STRUCT_ELEM(struct MC6809, reg_dp, ser_type_uint8), // 11
+	SER_STRUCT_ELEM(struct MC6809, reg_x, ser_type_uint16), // 12
+	SER_STRUCT_ELEM(struct MC6809, reg_y, ser_type_uint16), // 13
+	SER_STRUCT_ELEM(struct MC6809, reg_u, ser_type_uint16), // 14
+	SER_STRUCT_ELEM(struct MC6809, reg_s, ser_type_uint16), // 15
+	SER_STRUCT_ELEM(struct MC6809, reg_pc, ser_type_uint16), // 16
 
-	SER_STRUCT_ELEM(struct MC6809, reg_cc, ser_type_uint8), // 10
-	SER_STRUCT_ELEM(struct MC6809, reg_d, ser_type_uint16), // 11
-	SER_STRUCT_ELEM(struct MC6809, reg_dp, ser_type_uint8), // 12
-	SER_STRUCT_ELEM(struct MC6809, reg_x, ser_type_uint16), // 13
-	SER_STRUCT_ELEM(struct MC6809, reg_y, ser_type_uint16), // 14
-	SER_STRUCT_ELEM(struct MC6809, reg_u, ser_type_uint16), // 15
-	SER_STRUCT_ELEM(struct MC6809, reg_s, ser_type_uint16), // 16
-	SER_STRUCT_ELEM(struct MC6809, reg_pc, ser_type_uint16), // 17
-
-	SER_STRUCT_ELEM(struct MC6809, nmi_armed, ser_type_bool), // 18
-	SER_STRUCT_ELEM(struct MC6809, nmi_latch, ser_type_bool), // 19
-	SER_STRUCT_ELEM(struct MC6809, firq_latch, ser_type_bool), // 20
-	SER_STRUCT_ELEM(struct MC6809, irq_latch, ser_type_bool), // 21
-	SER_STRUCT_ELEM(struct MC6809, nmi_active, ser_type_bool), // 22
-	SER_STRUCT_ELEM(struct MC6809, firq_active, ser_type_bool), // 23
-	SER_STRUCT_ELEM(struct MC6809, irq_active, ser_type_bool), // 24
+	SER_STRUCT_ELEM(struct MC6809, nmi_armed, ser_type_bool), // 17
+	SER_STRUCT_ELEM(struct MC6809, nmi_latch, ser_type_bool), // 18
+	SER_STRUCT_ELEM(struct MC6809, firq_latch, ser_type_bool), // 19
+	SER_STRUCT_ELEM(struct MC6809, irq_latch, ser_type_bool), // 20
+	SER_STRUCT_ELEM(struct MC6809, nmi_active, ser_type_bool), // 21
+	SER_STRUCT_ELEM(struct MC6809, firq_active, ser_type_bool), // 22
+	SER_STRUCT_ELEM(struct MC6809, irq_active, ser_type_bool), // 23
 };
 
 #define N_SER_STRUCT_MC6809 ARRAY_N_ELEMENTS(ser_struct_mc6809)
@@ -210,9 +208,6 @@ struct MC6809 *mc6809_create(void) {
 	cpu->part.free = mc6809_free;
 	cpu->part.serialise = mc6809_serialise;
 	cpu->part.finish = mc6809_finish;
-	// XXX variant shouldn't be needed as part name identifies
-	cpu->variant = MC6809_VARIANT_MC6809;
-	//cpu->free = mc6809_free;
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;

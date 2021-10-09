@@ -197,9 +197,6 @@ struct MC6809 *hd6309_new(void) {
 	part_init((struct part *)hcpu, "HD6309");
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
 	cpu->part.free = hd6309_free;
-	// XXX variant shouldn't be needed as part name identifies
-	cpu->variant = MC6809_VARIANT_HD6309;
-	//cpu->free = hd6309_free;
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;

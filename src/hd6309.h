@@ -27,8 +27,6 @@
 struct hd6309_trace;
 #endif
 
-#define MC6809_VARIANT_HD6309 (0x00006309)
-
 #define HD6309_INT_VEC_ILLEGAL (0xfff0)
 
 /* MPU state.  Represents current position in the high-level flow chart from
