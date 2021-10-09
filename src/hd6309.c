@@ -39,16 +39,39 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
 #include "delegate.h"
 
 #include "hd6309.h"
 #include "logging.h"
 #include "mc6809.h"
 #include "part.h"
+#include "serialise.h"
 
 #ifdef TRACE
 #include "hd6309_trace.h"
 #endif
+
+static const struct ser_struct ser_struct_hd6309[] = {
+	SER_STRUCT_ELEM(struct HD6309, mc6809, ser_type_unhandled), // 1
+
+	SER_STRUCT_ELEM(struct HD6309, state, ser_type_unsigned), // 2
+	SER_STRUCT_ELEM(struct HD6309, reg_w, ser_type_uint16), // 3
+	SER_STRUCT_ELEM(struct HD6309, reg_md, ser_type_uint8), // 4
+	SER_STRUCT_ELEM(struct HD6309, reg_v, ser_type_uint16), // 5
+
+	SER_STRUCT_ELEM(struct HD6309, tfm_src, ser_type_unhandled), // 6
+	SER_STRUCT_ELEM(struct HD6309, tfm_dest, ser_type_unhandled), // 7
+	SER_STRUCT_ELEM(struct HD6309, tfm_data, ser_type_uint8), // 8
+	SER_STRUCT_ELEM(struct HD6309, tfm_src_mod, ser_type_uint16), // 9
+	SER_STRUCT_ELEM(struct HD6309, tfm_dest_mod, ser_type_uint16), // 10
+};
+
+#define N_SER_STRUCT_HD6309 ARRAY_N_ELEMENTS(ser_struct_hd6309)
+
+#define HD6309_SER_MC6809   (1)
+#define HD6309_SER_TFM_SRC  (6)
+#define HD6309_SER_TFM_DEST (7)
 
 /*
  * External interface
@@ -187,16 +210,55 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 
 /* ------------------------------------------------------------------------- */
 
+static uint16_t *tfm_reg_to_ptr(struct HD6309 *hcpu, unsigned reg) {
+	struct MC6809 *cpu = &hcpu->mc6809;
+	switch (reg) {
+	case 0: return &REG_D;
+	case 1: return &REG_X;
+	case 2: return &REG_Y;
+	case 3: return &REG_U;
+	case 4: return &REG_S;
+	default: return NULL;
+	}
+}
+
+static unsigned tfm_ptr_to_reg(struct HD6309 *hcpu, uint16_t *ptr) {
+	struct MC6809 *cpu = &hcpu->mc6809;
+	if (ptr == &cpu->reg_d)
+		return 0;
+	if (ptr == &cpu->reg_x)
+		return 1;
+	if (ptr == &cpu->reg_y)
+		return 2;
+	if (ptr == &cpu->reg_u)
+		return 3;
+	if (ptr == &cpu->reg_s)
+		return 4;
+	return 15;
+}
+
+/* ------------------------------------------------------------------------- */
+
 /*
  * External interface
  */
 
-struct MC6809 *hd6309_new(void) {
+static void hd6309_serialise(struct part *p, struct ser_handle *sh);
+
+static _Bool hd6309_finish(struct part *p) {
+	(void)p;
+	return 1;
+}
+
+struct HD6309 *hd6309_create(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
+
 	*hcpu = (struct HD6309){.state=0};
 	part_init((struct part *)hcpu, "HD6309");
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
 	cpu->part.free = hd6309_free;
+	cpu->part.serialise = hd6309_serialise;
+	cpu->part.finish = hd6309_finish;
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
@@ -207,7 +269,12 @@ struct MC6809 *hd6309_new(void) {
 	hcpu->tracer = hd6309_trace_new(hcpu);
 #endif
 	hd6309_reset(cpu);
-	return cpu;
+	return hcpu;
+}
+
+struct MC6809 *hd6309_new(void) {
+	struct HD6309 *hcpu = hd6309_create();
+	return &hcpu->mc6809;
 }
 
 static void hd6309_free(struct part *p) {
@@ -217,6 +284,53 @@ static void hd6309_free(struct part *p) {
 		hd6309_trace_free(hcpu->tracer);
 	}
 #endif
+}
+
+static void hd6309_serialise(struct part *p, struct ser_handle *sh) {
+        struct HD6309 *hcpu = (struct HD6309 *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, tag, hcpu)) > 0; tag++) {
+		switch (tag) {
+		case HD6309_SER_MC6809:
+			mc6809_serialise_as(&hcpu->mc6809, sh, tag);
+			break;
+		case HD6309_SER_TFM_SRC:
+			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_src));
+			break;
+		case HD6309_SER_TFM_DEST:
+			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_dest));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+        ser_write_close_tag(sh);
+}
+
+struct part *hd6309_deserialise(struct ser_handle *sh) {
+	struct HD6309 *hcpu = hd6309_create();
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, hcpu))) {
+		switch (tag) {
+		case HD6309_SER_MC6809:
+			mc6809_deserialise_into(&hcpu->mc6809, sh);
+			break;
+		case HD6309_SER_TFM_SRC:
+			hcpu->tfm_src = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
+			break;
+		case HD6309_SER_TFM_DEST:
+			hcpu->tfm_dest = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	if (ser_error(sh)) {
+		part_free((struct part *)hcpu);
+		return NULL;
+	}
+	return (struct part *)hcpu;
 }
 
 static void hd6309_reset(struct MC6809 *cpu) {
@@ -1563,26 +1677,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
-				switch (postbyte >> 4) {
-				case 0: hcpu->tfm_src = &REG_D; break;
-				case 1: hcpu->tfm_src = &REG_X; break;
-				case 2: hcpu->tfm_src = &REG_Y; break;
-				case 3: hcpu->tfm_src = &REG_U; break;
-				case 4: hcpu->tfm_src = &REG_S; break;
-				default:
-					stack_irq_registers(cpu, 1);
-					instruction_posthook(cpu);
-					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
-					hcpu->state = hd6309_state_label_a;
-					continue;
-				}
-				switch (postbyte & 0xf) {
-				case 0: hcpu->tfm_dest = &REG_D; break;
-				case 1: hcpu->tfm_dest = &REG_X; break;
-				case 2: hcpu->tfm_dest = &REG_Y; break;
-				case 3: hcpu->tfm_dest = &REG_U; break;
-				case 4: hcpu->tfm_dest = &REG_S; break;
-				default:
+				hcpu->tfm_src = tfm_reg_to_ptr(hcpu, postbyte >> 4);
+				hcpu->tfm_dest = tfm_reg_to_ptr(hcpu, postbyte & 0xf);
+				if (!hcpu->tfm_src || !hcpu->tfm_dest) {
 					stack_irq_registers(cpu, 1);
 					instruction_posthook(cpu);
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);

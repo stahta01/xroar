@@ -52,7 +52,7 @@ enum hd6309_state {
 struct HD6309 {
 	struct MC6809 mc6809;
 	// Separate state variable for the sake of debugging
-	enum hd6309_state state;
+	unsigned state;
 #ifdef TRACE
 	struct hd6309_trace *tracer;
 #endif
