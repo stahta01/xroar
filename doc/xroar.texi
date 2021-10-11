@@ -54,7 +54,7 @@ XRoar is a Dragon and Tandy Colour Computer emulator that runs on a wide
 variety of platforms.  Some features are:
 
 @itemize @bullet
-@item Emulates Dragon 32, Dragon 64, Dragon 200-E, Tandy CoCo 1, 2 & 3, and compatibles.
+@item Emulates Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3.
 @item Emulates DragonDOS, Delta and RSDOS disk systems.
 @item Emulates the Orchestra 90-CC stereo sound cartridge.
 @item Supports both raw and translated keyboard modes.
@@ -91,7 +91,7 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 @menu
 * Getting started::
 * Configuration::
-* Hardware emulation::
+* Supported hardware::
 * Files::
 * User interface::
 * Acknowledgements::
@@ -102,7 +102,7 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-@node Getting started, Hardware emulation, Top, Top
+@node Getting started, Supported hardware, Top, Top
 @chapter Getting started
 
 @menu
@@ -154,7 +154,7 @@ the expected filenames for the most common images:
 
 Other machines (in particular the less common Dragon 200-E) will need a
 different set of ROM images, and other supported peripherals may also need
-their own firmware.  See @ref{Hardware emulation} for more information on the
+their own firmware.  See @ref{Supported hardware} for more information on the
 images that specific hardware emulation expects to find.
 
 
@@ -294,18 +294,17 @@ Windows generally does not show these messages by default. but you can
 
 This manual details the options available for configuring XRoar.  Each option
 can be passed on the command line or placed in a configuration file called
-@file{xroar.conf}.  @file{xroar.conf} is read first, and any command line
-options then take precedence.  Directives are listed in @file{xroar.conf} one
-per line.
+@file{xroar.conf}.  @file{xroar.conf} is read first, then command line options
+take precedence.  Directives are listed in @file{xroar.conf} one per line.
 
-Lines in the configuration file each contain an option followed by whitespace
-followed by a value.  Trailing whitespace is ignored.  Empty lines are skipped,
-and any line where the first non-whitespace character is a hash (@samp{#}) is
-treated as a comment.
+Lines in the configuration file contain an option, possibly followed by
+whitespace and a value.  Trailing whitespace is ignored.  Empty lines are
+skipped, and any line where the first non-whitespace character is a hash
+(@samp{#}) is treated as a comment.
 
-An option may be preceded by leading dashes as from the command line, but
-within the configuration file they are not necessary.  Most options may be
-preceded by @samp{no-} to invert their meaning or clear their value.
+When specified on the command line, options require a leading dash (@samp{-}),
+but in the configuration file, this is optional.  Many options may be preceded
+by @samp{no-} to invert their meaning or reset their value.
 
 If a value contains special characters, or if you want trailing whitespace to
 be included in the value, you must ``escape'' those characters.  Sections
@@ -340,17 +339,15 @@ included verbatim.  For example, this will be necessary in the configuration
 file under Windows when file paths include the backslash as a directory
 separator.
 
-However, on the command line, it is assumed that your shell will handle
-argument quoting, thus any quote characters will be included verbatim.  Escape
-sequences are still parsed, except in the instance that an option expects a
-filename, as shells often use their own escaping mechanisms when autocompleting
-filename arguments.
+On the command line, it is assumed that your shell will handle argument
+quoting, so any quote characters will be included verbatim.  Escape sequences
+are still parsed, except when an option expects a filename, as shells often use
+their own escaping mechanisms when autocompleting filename arguments.
 
-@ref{Installation} and @ref{Compilation} list good default locations for
-@file{xroar.conf}, but it is actually searched for in a list of directories.
-You can override this search path with the @env{XROAR_CONF_PATH} environment
-variable, which contains a colon-separated (@samp{:}) list of directories.
-Here are the defaults:
+@ref{Installation} lists good default locations for @file{xroar.conf}, but it
+is actually searched for in a list of directories.  You can override this
+search path with the @env{XROAR_CONF_PATH} environment variable, which contains
+a colon-separated (@samp{:}) list of directories.  Here are the defaults:
 
 @multitable {Mac OS X.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
@@ -359,7 +356,7 @@ Here are the defaults:
 @item Windows @tab @file{:~\Documents\XRoar:~\AppData\Local\XRoar:~\AppData\Roaming\XRoar}
 @end multitable
 
-Note the leading colon (@samp{:}) in the Windows default indicates an empty entry,
+Note the leading @samp{:} in the Windows default indicates an empty entry,
 meaning it will look in the current working directory first (i.e. you can put
 @file{xroar.conf} into the directory from which you run XRoar).
 
@@ -378,8 +375,8 @@ default values, use @option{-config-print-all}.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-@node Hardware emulation
-@chapter Hardware emulation
+@node Supported hardware
+@chapter Supported hardware
 
 @menu
 * Machines::
@@ -810,14 +807,17 @@ snapshots back in later.  To save a snapshot, press @key{CTRL}+@kbd{S}.
 When using @key{CTRL}+@kbd{L} to load a file, anything ending in @file{.sna}
 will be recognised as a snapshot.
 
-What is included in snapshots: Selected machine architecture, complete hardware
-state, current keyboard map, filenames of attached disk image files.
+Most internal state should be dumped to the snapshot.  External data like ROM
+images or disk image files will be referenced by name, so when you read the
+snapshot back in, they need to exist in the same place they were before.
 
-What is @emph{not} (yet) included: Actual disk image data (only where to find
-it), attached cassettes or cartridge ROM contents.
+State that is explicitly @emph{not} included in snapshots includes ``becker
+port'' DriveWire connections and GDB listen parameters.  These will use your
+local settings, which default to interacting with the local host only.
 
-Please note that snapshots do @emph{not} work with Tandy CoCo 3 emulation yet
-(and when they do, the format is likely to change).
+Note that the snapshot format has changed since version 0.37 to accomodate the
+CoCo 3 and other complex device state.  The old snapshot format is deprecated,
+but can still be read for now.
 
 
 @node Binary files
