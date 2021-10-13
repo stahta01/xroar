@@ -391,7 +391,7 @@ void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D) {
 			}
 			/* Ignore any other command if busy */
 			if (fdc->status_register & STATUS_BUSY) {
-				LOG_DEBUG(3, "WD279X: Command received while busy!\n");
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Command received while busy!\n");
 				return;
 			}
 			if (!fdc->intrq_immediate)
@@ -542,7 +542,7 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_type1_3:
 			if (fdc->tr00_state && fdc->direction == -1) {
-				LOG_DEBUG(3, "WD279X: TR00!\n");
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: TR00!\n");
 				fdc->track_register = 0;
 				// The WD279x flow chart implies this delay is
 				// not incurred in this situation, but real
@@ -573,14 +573,14 @@ static void state_machine(void *sptr) {
 		case WD279X_state_verify_track_2:
 			idam = DELEGATE_CALL(fdc->next_idam);
 			if (fdc->index_holes_count >= 5) {
-				LOG_DEBUG(3, "WD279X: index_holes_count >= 5: seek error\n");
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: index_holes_count >= 5: seek error\n");
 				fdc->status_register &= ~(STATUS_BUSY);
 				fdc->status_register |= STATUS_SEEK_ERROR;
 				SET_INTRQ;
 				return;
 			}
 			if (idam == NULL) {
-				LOG_DEBUG(3, "WD279X: null IDAM: -> WD279X_state_verify_track_2\n");
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: null IDAM: -> WD279X_state_verify_track_2\n");
 				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
@@ -592,7 +592,7 @@ static void state_machine(void *sptr) {
 			}
 			(void)_vdrive_read(fdc);  /* Include IDAM in CRC */
 			if (fdc->track_register != _vdrive_read(fdc)) {
-				LOG_DEBUG(3, "WD279X: track_register != idam[1]: -> WD279X_state_verify_track_2\n");
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: track_register != idam[1]: -> WD279X_state_verify_track_2\n");
 				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
@@ -600,7 +600,7 @@ static void state_machine(void *sptr) {
 			for (i = 0; i < 5; i++)
 				(void)_vdrive_read(fdc);
 			if (fdc->crc != 0) {
-				LOG_DEBUG(3, "WD279X: Verify track %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->crc);
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Verify track %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->crc);
 				fdc->status_register |= STATUS_CRC_ERROR;
 				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
@@ -666,7 +666,7 @@ static void state_machine(void *sptr) {
 			(void)_vdrive_read(fdc);
 			if (fdc->crc != 0) {
 				fdc->status_register |= STATUS_CRC_ERROR;
-				LOG_DEBUG(3, "WD279X: Type 2 tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Type 2 tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
 				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
@@ -705,7 +705,7 @@ static void state_machine(void *sptr) {
 
 
 		case WD279X_state_read_sector_1:
-			LOG_DEBUG(3, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, DELEGATE_CALL(fdc->get_head_pos));
+			LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Reading %d-byte sector (Tr %d, Se %d) from head_pos=%04x\n", fdc->bytes_left, fdc->track_register, fdc->sector_register, DELEGATE_CALL(fdc->get_head_pos));
 			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_open_hexdump(&fdc->log_rsec_hex, "WD279X: read-sector");
 			fdc->status_register |= ((~fdc->dam & 1) << 5);
@@ -744,7 +744,7 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_read_sector_3:
 			if (fdc->crc != 0) {
-				LOG_DEBUG(3, "WD279X: Read sector data tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Read sector data tr %d se %d CRC16 error: $%04x != 0\n", fdc->track_register, fdc->sector_register, fdc->crc);
 				fdc->status_register |= STATUS_CRC_ERROR;
 			}
 			if (fdc->command_register & 0x10) {
@@ -948,12 +948,12 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_write_track_2b:
 			if (fdc->index_holes_count == 0) {
-				LOG_DEBUG(3, "WD279X: Waiting for index pulse, head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Waiting for index pulse, head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
 				NEXT_STATE(WD279X_state_write_track_2b, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
 			fdc->index_holes_count = 0;
-			LOG_DEBUG(3, "WD279X: Writing track from head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
+			LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Writing track from head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
 			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_open_hexdump(&fdc->log_wtrk_hex, "WD279X: write-track");
 			SET_STATE(WD279X_state_write_track_3);
@@ -965,7 +965,7 @@ static void state_machine(void *sptr) {
 			if (fdc->index_holes_count > 0) {
 				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_close(&fdc->log_wtrk_hex);
-				LOG_DEBUG(3, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
 				RESET_DRQ;  /* XXX */
 				fdc->status_register &= ~(STATUS_BUSY);
 				SET_INTRQ;
@@ -983,7 +983,7 @@ static void state_machine(void *sptr) {
 			if (IS_SINGLE_DENSITY) {
 				/* Single density */
 				if (data == 0xf5 || data == 0xf6) {
-					LOG_DEBUG(3, "WD279X: Illegal value in single-density track write: %02x\n", data);
+					LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Illegal value in single-density track write: %02x\n", data);
 				}
 				if (data == 0xf7) {
 					VDRIVE_WRITE_CRC16;
@@ -997,7 +997,7 @@ static void state_machine(void *sptr) {
 					return;
 				}
 				if (data == 0xfe) {
-					LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
+					LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
 					fdc->crc = CRC16_RESET;
 					DELEGATE_CALL(fdc->write_idam);
 					fdc->crc = crc16_byte(fdc->crc, 0xfe);
@@ -1015,7 +1015,7 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			if (data == 0xfe) {
-				LOG_DEBUG(3, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
+				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: IDAM at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
 				DELEGATE_CALL(fdc->write_idam);
 				fdc->crc = crc16_byte(fdc->crc, 0xfe);
 				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));

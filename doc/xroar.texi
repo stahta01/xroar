@@ -1273,6 +1273,8 @@ Show all FDC states.
 Hex dump of read/write sector data.
 @item 0x0008
 Hex dump of becker port conversation data.
+@item 0x0010
+General FDC event debugging.
 @end table
 
 The GDB stub can also emit debug information about its own operation with

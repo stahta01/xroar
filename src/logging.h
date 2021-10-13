@@ -50,6 +50,8 @@
 #define LOG_FDC_DATA (1 << 2)
 // FDC: dump becker data flag
 #define LOG_FDC_BECKER (1 << 3)
+// FDC: general event debugging
+#define LOG_FDC_EVENTS (1 << 4)
 
 // Files: binary files & hex record metadata
 #define LOG_FILE_BIN (1 << 0)
