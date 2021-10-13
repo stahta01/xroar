@@ -65,7 +65,7 @@ static int read_v2_snapshot(const char *filename);
 int read_snapshot(const char *filename) {
 	if (read_v2_snapshot(filename) < 0 &&
 	    read_v1_snapshot(filename) < 0) {
-		LOG_WARN("Snapshot format not recognised.\n");
+		LOG_WARN("Snapshot: format not recognised.\n");
 		return -1;
 	}
 	return 0;
@@ -133,7 +133,7 @@ static int read_v2_snapshot(const char *filename) {
 			break;
 
 		default:
-			LOG_WARN("Unknown tag '%d' in snapshot\n", tag);
+			LOG_WARN("Snapshot v2 read: unknown tag '%d'\n", tag);
 			break;
 		}
 		if (ser_error(sh))
@@ -292,7 +292,7 @@ static int read_v1_snapshot(const char *filename) {
 	while ((section = fs_read_uint8(fd)) >= 0) {
 		unsigned size = fs_read_uint16(fd);
 		if (size == 0) size = 0x10000;
-		LOG_DEBUG(2, "Snapshot read: chunk type %d, size %u\n", section, size);
+		LOG_DEBUG(3, "Snapshot v1 read: chunk type %d, size %u\n", section, size);
 		switch (section) {
 			case ID_ARCHITECTURE:
 				// Deprecated: Machine architecture
@@ -323,7 +323,7 @@ static int read_v1_snapshot(const char *filename) {
 					// MC6809 state
 					if (size < 20) break;
 					if (mc->cpu != CPU_MC6809) {
-						LOG_WARN("CPU mismatch - skipping MC6809 chunk\n");
+						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping MC6809 chunk\n");
 						break;
 					}
 					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
@@ -383,7 +383,7 @@ static int read_v1_snapshot(const char *filename) {
 					// HD6309 state
 					if (size < 27) break;
 					if (mc->cpu != CPU_HD6309) {
-						LOG_WARN("CPU mismatch - skipping HD6309 chunk\n");
+						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping HD6309 chunk\n");
 						break;
 					}
 					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
@@ -511,7 +511,7 @@ static int read_v1_snapshot(const char *filename) {
 				size -= 3;
 				if (version_major != SNAPSHOT_VERSION_MAJOR
 				    || version_minor > SNAPSHOT_VERSION_MINOR) {
-					LOG_WARN("Snapshot version %d.%d not supported.\n", version_major, version_minor);
+					LOG_WARN("Snapshot v1 read: version %d.%d not supported.\n", version_major, version_minor);
 					fclose(fd);
 					return -1;
 				}
@@ -575,11 +575,11 @@ static int read_v1_snapshot(const char *filename) {
 
 			default:
 				// Unknown chunk
-				LOG_WARN("Unknown chunk in snaphot.\n");
+				LOG_WARN("Snapshot v1 read: unknown chunk type %d in snaphot.\n", section);
 				break;
 		}
 		if (size > 0) {
-			LOG_WARN("Skipping extra bytes in snapshot chunk id=%d.\n", (int)section);
+			LOG_WARN("Snapshot v1 read: skipping extra bytes in snapshot chunk type %d\n", (int)section);
 			for (; size; size--)
 				(void)fs_read_uint8(fd);
 		}
