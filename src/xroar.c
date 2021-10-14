@@ -203,8 +203,6 @@ static struct ui_cfg xroar_ui_cfg = {
 
 /* Helper functions used by configuration */
 static void set_machine(const char *name);
-static void set_pal(void);
-static void set_ntsc(void);
 static void set_cart(const char *name);
 static void set_cart_type(const char *name);
 static void set_gain(double gain);
@@ -1751,14 +1749,6 @@ void xroar_hard_reset(void) {
 
 /* Helper functions used by configuration */
 
-static void set_pal(void) {
-	private_cfg.tv = TV_PAL;
-}
-
-static void set_ntsc(void) {
-	private_cfg.tv = TV_NTSC;
-}
-
 /* Called when a "-machine" option is encountered.  If an existing machine
  * config was in progress, copies any machine-related options into it and
  * clears those options.  Starts a new config. */
@@ -2140,8 +2130,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart) },
 	{ XC_SET_INT1("nodos", &private_cfg.nodos) },
 	/* Shorthand: */
-	{ XC_CALL_NULL("pal", &set_pal) },
-	{ XC_CALL_NULL("ntsc", &set_ntsc) },
+	{ XC_ALIAS_ARG("pal", "tv-type", "pal") },
+	{ XC_ALIAS_ARG("ntsc", "tv-type", "ntsc") },
 	/* Deliberately undocumented: */
 	{ XC_SET_STRING("machine-palette", &private_cfg.machine_palette) },
 
