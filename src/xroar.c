@@ -2297,7 +2297,8 @@ static void helptext(void) {
 
 "\n Machines:\n"
 "  -default-machine NAME   default machine on startup\n"
-"  -machine NAME           configure named machine (-machine help for list)\n"
+"  -machine NAME           create or modify named machine profile\n"
+"                          (-machine help for list)\n"
 "    -machine-desc TEXT      machine description\n"
 "    -machine-arch ARCH      machine architecture (-machine-arch help for list)\n"
 "    -machine-keyboard LAYOUT\n"
@@ -2316,7 +2317,8 @@ static void helptext(void) {
 "    -machine-cart NAME      default cartridge for selected machine\n"
 
 "\n Cartridges:\n"
-"  -cart NAME            configure named cartridge (-cart help for list)\n"
+"  -cart NAME            create or modify named cartridge profile\n"
+"                        (-cart help for list)\n"
 "    -cart-desc TEXT       cartridge description\n"
 "    -cart-type TYPE       cartridge base type (-cart-type help for list)\n"
 "    -cart-rom NAME        ROM image to load ($C000-)\n"
