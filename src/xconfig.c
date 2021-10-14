@@ -65,6 +65,8 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 // point.
 
 static void set_option(struct xconfig_option const *option, sds arg) {
+	if (option->defined)
+		*(option->defined) = 1;
 	switch (option->type) {
 		case XCONFIG_BOOL:
 			if (option->flags & XCONFIG_FLAG_CALL)
@@ -140,6 +142,8 @@ static void set_option(struct xconfig_option const *option, sds arg) {
 
 /* returns 0 if it's a value option to unset */
 static int unset_option(struct xconfig_option const *option) {
+	if (option->defined)
+		*(option->defined) = 1;
 	switch (option->type) {
 	case XCONFIG_BOOL:
 		if (option->flags & XCONFIG_FLAG_CALL)

@@ -101,6 +101,7 @@ struct xconfig_option {
 		xconfig_func_assign func_assign;
 		xconfig_func_null func_null;
 	} dest;
+	_Bool *defined;
 	void *ref;
 	unsigned flags;
 	_Bool deprecated;
