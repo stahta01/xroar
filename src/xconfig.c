@@ -60,11 +60,13 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 	return undef_value;
 }
 
+static int unset_option(struct xconfig_option const *option);
+
 // Handle simple zero or one argument option setting (ie, not XCONFIG_ASSIGN).
 // 'arg' should be parsed to handle any quoting or escape sequences by this
 // point.
 
-static void set_option(struct xconfig_option const *option, sds arg) {
+static void set_option(struct xconfig_option const *options, struct xconfig_option const *option, sds arg) {
 	if (option->defined)
 		*(option->defined) = 1;
 	switch (option->type) {
@@ -133,6 +135,20 @@ static void set_option(struct xconfig_option const *option, sds arg) {
 				option->dest.func_int(val);
 			else
 				*(int *)option->dest.object = val;
+			}
+			break;
+		case XCONFIG_ALIAS:
+			// Be aware this will process any argument for escapes
+			xconfig_set_option(options, (char *)option->dest.object, (char *)option->ref);
+			break;
+		case XCONFIG_ALIAS1: {
+			// User-supplied argument already parsed, so don't use
+			// xconfig_set_option for this or it'll do it again.
+			// Note at the moment this precludes the use of "no-".
+			option = find_option(options, (char *)option->dest.object);
+			if (option) {
+				set_option(options, option, arg);
+			}
 			}
 			break;
 		default:
@@ -214,15 +230,16 @@ enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
 	    option->type == XCONFIG_INT1 ||
-	    option->type == XCONFIG_NULL) {
-		set_option(option, NULL);
+	    option->type == XCONFIG_NULL ||
+	    option->type == XCONFIG_ALIAS) {
+		set_option(options, option, NULL);
 		return XCONFIG_OK;
 	}
 	if (!arg) {
 		LOG_ERROR("Missing argument to `%s'\n", opt);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(option, sdsx_parse_str(arg));
+	set_option(options, option, sdsx_parse_str(arg));
 	return XCONFIG_OK;
 }
 
@@ -292,8 +309,9 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
 	    option->type == XCONFIG_INT1 ||
-	    option->type == XCONFIG_NULL) {
-		set_option(option, NULL);
+	    option->type == XCONFIG_NULL ||
+	    option->type == XCONFIG_ALIAS) {
+		set_option(options, option, NULL);
 		sdsfree(input);
 		return XCONFIG_OK;
 	}
@@ -339,7 +357,7 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 		sdsfree(value);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(option, value);
+	set_option(options, option, value);
 	sdsfree(value);
 	return XCONFIG_OK;
 }
@@ -377,8 +395,9 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		    option->type == XCONFIG_BOOL0 ||
 		    option->type == XCONFIG_INT0 ||
 		    option->type == XCONFIG_INT1 ||
-		    option->type == XCONFIG_NULL) {
-			set_option(option, NULL);
+		    option->type == XCONFIG_NULL ||
+		    option->type == XCONFIG_ALIAS) {
+			set_option(options, option, NULL);
 			_argn++;
 			continue;
 		}
@@ -420,7 +439,7 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 			} else {
 				arg = sdsx_parse_str(argv[_argn+1]);
 			}
-			set_option(option, arg);
+			set_option(options, option, arg);
 			sdsfree(arg);
 		}
 		_argn += 2;

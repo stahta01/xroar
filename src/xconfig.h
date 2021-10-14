@@ -34,6 +34,9 @@ struct sdsx_list;
 #define XC_SET_STRING_F(o,d) .type = XCONFIG_STRING, .name = (o), .dest.object = (d), .flags = XCONFIG_FLAG_CLI_NOESC
 #define XC_SET_STRING_LIST_F(o,d) .type = XCONFIG_STRING_LIST, .name = (o), .dest.object = (d), .flags = XCONFIG_FLAG_CLI_NOESC
 #define XC_SET_ENUM(o,d,e) .type = XCONFIG_ENUM, .name = (o), .ref = (e), .dest.object = (d)
+#define XC_ALIAS_NOARG(o,d) .type = XCONFIG_ALIAS, .name = (o), .dest.object = (d)
+#define XC_ALIAS_ARG(o,d,r) .type = XCONFIG_ALIAS, .name = (o), .dest.object = (d), .ref = (r)
+#define XC_ALIAS_UARG(o,d) .type = XCONFIG_ALIAS1, .name = (o), .dest.object = (d)
 
 #define XC_CALL_BOOL(o,d) .type = XCONFIG_BOOL, .name = (o), .dest.func_bool = (d), .flags = XCONFIG_FLAG_CALL
 #define XC_CALL_BOOL0(o,d) .type = XCONFIG_BOOL0, .name = (o), .dest.func_bool = (d), .flags = XCONFIG_FLAG_CALL
@@ -79,6 +82,8 @@ enum xconfig_option_type {
 	XCONFIG_ASSIGN,
 	XCONFIG_NULL,
 	XCONFIG_ENUM,
+	XCONFIG_ALIAS,  // alias with no user-supplied argument
+	XCONFIG_ALIAS1,  // alias with user-supplied argument
 	XCONFIG_END
 };
 
