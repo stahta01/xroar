@@ -115,9 +115,9 @@ struct private_cfg {
 	int tv;
 	int tv_input;
 	int vdg_type;
+	_Bool machine_cart_dfn;
 	char *machine_cart;
 	int ram;
-	int nodos;
 
 	// Cartridges
 	char *cart_desc;
@@ -182,7 +182,6 @@ static struct private_cfg private_cfg = {
 	.tv = ANY_AUTO,
 	.tv_input = ANY_AUTO,
 	.vdg_type = -1,
-	.nodos = -1,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
 	.tape_fast = 1,
@@ -743,7 +742,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		xroar_cfg.tape_rewrite_leader = 256;
 	}
 
-	_Bool no_auto_dos = xroar_machine_config->nodos;
+	_Bool no_auto_dos = xroar_machine_config->default_cart_dfn && !xroar_machine_config->default_cart;
 	_Bool definitely_dos = 0;
 	for (struct slist *tmp_list = private_cfg.load_list; tmp_list; tmp_list = tmp_list->next) {
 		char *load_file = tmp_list->data;
@@ -763,7 +762,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		case FILETYPE_OS9:
 		case FILETYPE_DMK:
 			// unless explicitly disabled
-			if (!xroar_machine_config->nodos)
+			if (!(xroar_machine_config->default_cart_dfn && !xroar_machine_config->default_cart))
 				definitely_dos = 1;
 			break;
 		// for cartridge ROMs, create a cart as machine default
@@ -1858,16 +1857,14 @@ static void set_machine(const char *name) {
 				private_cfg.ext_charset = NULL;
 			}
 		}
-		if (private_cfg.machine_cart) {
+		if (private_cfg.machine_cart_dfn) {
+			private_cfg.machine_cart_dfn = 0;
+			xroar_machine_config->default_cart_dfn = 1;
 			if (xroar_machine_config->default_cart) {
 				free(xroar_machine_config->default_cart);
 			}
 			xroar_machine_config->default_cart = private_cfg.machine_cart;
 			private_cfg.machine_cart = NULL;
-		}
-		if (private_cfg.nodos != -1) {
-			xroar_machine_config->nodos = private_cfg.nodos;
-			private_cfg.nodos = -1;
 		}
 		machine_config_complete(xroar_machine_config);
 	}
@@ -2126,21 +2123,22 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_F("bas", &private_cfg.bas), .defined = &private_cfg.bas_dfn },
 	{ XC_SET_STRING_F("extbas", &private_cfg.extbas), .defined = &private_cfg.extbas_dfn },
 	{ XC_SET_STRING_F("altbas", &private_cfg.altbas), .defined = &private_cfg.altbas_dfn },
-	{ XC_ALIAS_NOARG("nobas", "no-bas"), .deprecated = 1 },
-	{ XC_ALIAS_NOARG("noextbas", "no-extbas"), .deprecated = 1 },
-	{ XC_ALIAS_NOARG("noaltbas", "no-altbas"), .deprecated = 1 },
 	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset), .defined = &private_cfg.ext_charset_dfn },
 	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
 	{ XC_SET_ENUM("tv-input", &private_cfg.tv_input, machine_tv_input_list) },
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_INT("ram", &private_cfg.ram) },
-	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart) },
-	{ XC_SET_INT1("nodos", &private_cfg.nodos) },
-	/* Shorthand: */
+	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart), .defined = &private_cfg.machine_cart_dfn },
+	// Shorthand:
 	{ XC_ALIAS_ARG("pal", "tv-type", "pal") },
 	{ XC_ALIAS_ARG("ntsc", "tv-type", "ntsc") },
-	/* Deliberately undocumented: */
+	// Deliberately undocumented:
 	{ XC_SET_STRING("machine-palette", &private_cfg.machine_palette) },
+	// Backwards compatibility:
+	{ XC_ALIAS_NOARG("nobas", "no-bas"), .deprecated = 1 },
+	{ XC_ALIAS_NOARG("noextbas", "no-extbas"), .deprecated = 1 },
+	{ XC_ALIAS_NOARG("noaltbas", "no-altbas"), .deprecated = 1 },
+	{ XC_ALIAS_NOARG("nodos", "no-machine-cart"), .deprecated = 1 },
 
 	/* Cartridges: */
 	{ XC_CALL_STRING("cart", &set_cart) },
@@ -2316,7 +2314,6 @@ static void helptext(void) {
 "    -vdg-type TYPE          VDG type (6847 or 6847t1)\n"
 "    -ram KBYTES             amount of RAM in K\n"
 "    -machine-cart NAME      default cartridge for selected machine\n"
-"    -nodos                  don't automatically pick a DOS cartridge\n"
 
 "\n Cartridges:\n"
 "  -cart NAME            configure named cartridge (-cart help for list)\n"

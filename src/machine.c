@@ -56,8 +56,8 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, altbas_dfn, ser_type_bool), // 14
 	SER_STRUCT_ELEM(struct machine_config, altbas_rom, ser_type_string), // 15
 	SER_STRUCT_ELEM(struct machine_config, ext_charset_rom, ser_type_string), // 16
-	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 17
-	SER_STRUCT_ELEM(struct machine_config, nodos, ser_type_bool), // 18
+	SER_STRUCT_ELEM(struct machine_config, default_cart_dfn, ser_type_bool), // 17
+	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 18
 	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
 };
 #define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
@@ -260,8 +260,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_enum(f, all, "tv-input", mc->tv_input, ANY_AUTO, machine_tv_input_list);
 		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
 		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
-		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL);
-		xroar_cfg_print_bool(f, all, "nodos", mc->nodos, 0);
+		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL); // XXX definedness?
 		xroar_cfg_print_dec_indent();
 		fprintf(f, "\n");
 	}

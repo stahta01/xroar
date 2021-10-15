@@ -160,6 +160,7 @@ struct machine_config {
 	_Bool altbas_dfn;
 	char *altbas_rom;
 	char *ext_charset_rom;
+	_Bool default_cart_dfn;
 	char *default_cart;
 	_Bool nodos;
 	_Bool cart_enabled;

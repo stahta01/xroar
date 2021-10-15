@@ -256,7 +256,7 @@ static void dragon_config_complete(struct machine_config *mc) {
 		mc->altbas_rom = xstrdup(rom_list[mc->architecture].altbas);
 	}
 	// Determine a default DOS cartridge if necessary
-	if (!mc->default_cart) {
+	if (!mc->default_cart_dfn && !mc->default_cart) {
 		struct cart_config *cc = cart_find_working_dos(mc);
 		if (cc)
 			mc->default_cart = xstrdup(cc->name);
