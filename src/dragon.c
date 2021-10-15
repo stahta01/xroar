@@ -246,13 +246,13 @@ static void dragon_config_complete(struct machine_config *mc) {
 		}
 	}
 	/* Now find which ROMs we're actually going to use */
-	if (!mc->nobas && !mc->bas_rom && rom_list[mc->architecture].bas) {
+	if (!mc->bas_dfn && !mc->bas_rom && rom_list[mc->architecture].bas) {
 		mc->bas_rom = xstrdup(rom_list[mc->architecture].bas);
 	}
-	if (!mc->noextbas && !mc->extbas_rom && rom_list[mc->architecture].extbas) {
+	if (!mc->extbas_dfn && !mc->extbas_rom && rom_list[mc->architecture].extbas) {
 		mc->extbas_rom = xstrdup(rom_list[mc->architecture].extbas);
 	}
-	if (!mc->noaltbas && !mc->altbas_rom && rom_list[mc->architecture].altbas) {
+	if (!mc->altbas_dfn && !mc->altbas_rom && rom_list[mc->architecture].altbas) {
 		mc->altbas_rom = xstrdup(rom_list[mc->architecture].altbas);
 	}
 	// Determine a default DOS cartridge if necessary
@@ -466,7 +466,7 @@ static _Bool dragon_finish(struct part *p) {
 	md->crc_ext_charset = 0;
 
 	/* ... Extended BASIC */
-	if (!mc->noextbas && mc->extbas_rom) {
+	if (mc->extbas_rom) {
 		sds tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom0, sizeof(md->rom0));
@@ -485,7 +485,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	/* ... BASIC */
-	if (!mc->nobas && mc->bas_rom) {
+	if (mc->bas_rom) {
 		sds tmp = romlist_find(mc->bas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom0 + 0x2000, sizeof(md->rom0) - 0x2000);
@@ -496,7 +496,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	/* ... 64K mode Extended BASIC */
-	if (!mc->noaltbas && mc->altbas_rom) {
+	if (mc->altbas_rom) {
 		sds tmp = romlist_find(mc->altbas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, md->rom1, sizeof(md->rom1));

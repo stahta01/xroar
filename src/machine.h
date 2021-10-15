@@ -153,11 +153,11 @@ struct machine_config {
 	int tv_input;
 	int vdg_type;
 	int ram;
-	_Bool nobas;
-	_Bool noextbas;
-	_Bool noaltbas;
+	_Bool bas_dfn;
 	char *bas_rom;
+	_Bool extbas_dfn;
 	char *extbas_rom;
+	_Bool altbas_dfn;
 	char *altbas_rom;
 	char *ext_charset_rom;
 	char *default_cart;

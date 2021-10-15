@@ -49,11 +49,11 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, tv_input, ser_type_int), // 7
 	SER_STRUCT_ELEM(struct machine_config, vdg_type, ser_type_int), // 8
 	SER_STRUCT_ELEM(struct machine_config, ram, ser_type_int), // 9
-	SER_STRUCT_ELEM(struct machine_config, nobas, ser_type_bool), // 10
-	SER_STRUCT_ELEM(struct machine_config, noextbas, ser_type_bool), // 11
-	SER_STRUCT_ELEM(struct machine_config, noaltbas, ser_type_bool), // 12
-	SER_STRUCT_ELEM(struct machine_config, bas_rom, ser_type_string), // 13
-	SER_STRUCT_ELEM(struct machine_config, extbas_rom, ser_type_string), // 14
+	SER_STRUCT_ELEM(struct machine_config, bas_dfn, ser_type_bool), // 10
+	SER_STRUCT_ELEM(struct machine_config, bas_rom, ser_type_string), // 11
+	SER_STRUCT_ELEM(struct machine_config, extbas_dfn, ser_type_bool), // 12
+	SER_STRUCT_ELEM(struct machine_config, extbas_rom, ser_type_string), // 13
+	SER_STRUCT_ELEM(struct machine_config, altbas_dfn, ser_type_bool), // 14
 	SER_STRUCT_ELEM(struct machine_config, altbas_rom, ser_type_string), // 15
 	SER_STRUCT_ELEM(struct machine_config, ext_charset_rom, ser_type_string), // 16
 	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 17
@@ -251,12 +251,10 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_enum(f, all, "machine-keyboard", mc->keymap, ANY_AUTO, machine_keyboard_list);
 		xroar_cfg_print_enum(f, all, "machine-cpu", mc->cpu, CPU_MC6809, machine_cpu_list);
 		xroar_cfg_print_string(f, all, "machine-palette", mc->vdg_palette, "ideal");
+		// XXX need to indicate definedness here
 		xroar_cfg_print_string(f, all, "bas", mc->bas_rom, NULL);
 		xroar_cfg_print_string(f, all, "extbas", mc->extbas_rom, NULL);
 		xroar_cfg_print_string(f, all, "altbas", mc->altbas_rom, NULL);
-		xroar_cfg_print_bool(f, all, "nobas", mc->nobas, 0);
-		xroar_cfg_print_bool(f, all, "noextbas", mc->noextbas, 0);
-		xroar_cfg_print_bool(f, all, "noaltbas", mc->noaltbas, 0);
 		xroar_cfg_print_string(f, all, "ext-charset", mc->ext_charset_rom, NULL);
 		xroar_cfg_print_enum(f, all, "tv-type", mc->tv_standard, ANY_AUTO, machine_tv_type_list);
 		xroar_cfg_print_enum(f, all, "tv-input", mc->tv_input, ANY_AUTO, machine_tv_input_list);

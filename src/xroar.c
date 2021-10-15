@@ -104,12 +104,13 @@ struct private_cfg {
 	int machine_keymap;
 	int machine_cpu;
 	char *machine_palette;
+	_Bool bas_dfn;
 	char *bas;
+	_Bool extbas_dfn;
 	char *extbas;
+	_Bool altbas_dfn;
 	char *altbas;
-	int nobas;
-	int noextbas;
-	int noaltbas;
+	_Bool ext_charset_dfn;
 	char *ext_charset;
 	int tv;
 	int tv_input;
@@ -178,9 +179,6 @@ static struct private_cfg private_cfg = {
 	.machine_arch = ANY_AUTO,
 	.machine_keymap = ANY_AUTO,
 	.machine_cpu = CPU_MC6809,
-	.nobas = -1,
-	.noextbas = -1,
-	.noaltbas = -1,
 	.tv = ANY_AUTO,
 	.tv_input = ANY_AUTO,
 	.vdg_type = -1,
@@ -1813,43 +1811,52 @@ static void set_machine(const char *name) {
 			xroar_machine_config->ram = private_cfg.ram;
 			private_cfg.ram = 0;
 		}
-		if (private_cfg.nobas != -1)
-			xroar_machine_config->nobas = private_cfg.nobas;
-		if (private_cfg.noextbas != -1)
-			xroar_machine_config->noextbas = private_cfg.noextbas;
-		if (private_cfg.noaltbas != -1)
-			xroar_machine_config->noaltbas = private_cfg.noaltbas;
-		private_cfg.nobas = private_cfg.noextbas = private_cfg.noaltbas = -1;
-		if (private_cfg.bas) {
+		if (private_cfg.bas_dfn) {
+			private_cfg.bas_dfn = 0;
+			xroar_machine_config->bas_dfn = 1;
 			if (xroar_machine_config->bas_rom) {
 				free(xroar_machine_config->bas_rom);
+				xroar_machine_config->bas_rom = NULL;
 			}
-			xroar_machine_config->bas_rom = private_cfg.bas;
-			xroar_machine_config->nobas = 0;
-			private_cfg.bas = NULL;
+			if (private_cfg.bas) {
+				xroar_machine_config->bas_rom = private_cfg.bas;
+				private_cfg.bas = NULL;
+			}
 		}
-		if (private_cfg.extbas) {
+		if (private_cfg.extbas_dfn) {
+			private_cfg.extbas_dfn = 0;
+			xroar_machine_config->extbas_dfn = 1;
 			if (xroar_machine_config->extbas_rom) {
 				free(xroar_machine_config->extbas_rom);
+				xroar_machine_config->extbas_rom = NULL;
 			}
-			xroar_machine_config->extbas_rom = private_cfg.extbas;
-			xroar_machine_config->noextbas = 0;
-			private_cfg.extbas = NULL;
+			if (private_cfg.extbas) {
+				xroar_machine_config->extbas_rom = private_cfg.extbas;
+				private_cfg.extbas = NULL;
+			}
 		}
-		if (private_cfg.altbas) {
+		if (private_cfg.altbas_dfn) {
+			private_cfg.altbas_dfn = 0;
+			xroar_machine_config->altbas_dfn = 1;
 			if (xroar_machine_config->altbas_rom) {
 				free(xroar_machine_config->altbas_rom);
+				xroar_machine_config->altbas_rom = NULL;
 			}
-			xroar_machine_config->altbas_rom = private_cfg.altbas;
-			xroar_machine_config->noaltbas = 0;
-			private_cfg.altbas = NULL;
+			if (private_cfg.altbas) {
+				xroar_machine_config->altbas_rom = private_cfg.altbas;
+				private_cfg.altbas = NULL;
+			}
 		}
-		if (private_cfg.ext_charset) {
+		if (private_cfg.ext_charset_dfn) {
+			private_cfg.ext_charset_dfn = 0;
 			if (xroar_machine_config->ext_charset_rom) {
 				free(xroar_machine_config->ext_charset_rom);
+				xroar_machine_config->ext_charset_rom = NULL;
 			}
-			xroar_machine_config->ext_charset_rom = private_cfg.ext_charset;
-			private_cfg.ext_charset = NULL;
+			if (private_cfg.ext_charset) {
+				xroar_machine_config->ext_charset_rom = private_cfg.ext_charset;
+				private_cfg.ext_charset = NULL;
+			}
 		}
 		if (private_cfg.machine_cart) {
 			if (xroar_machine_config->default_cart) {
@@ -2116,13 +2123,13 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("machine-arch", &private_cfg.machine_arch, machine_arch_list) },
 	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, machine_keyboard_list) },
 	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, machine_cpu_list) },
-	{ XC_SET_STRING_F("bas", &private_cfg.bas) },
-	{ XC_SET_STRING_F("extbas", &private_cfg.extbas) },
-	{ XC_SET_STRING_F("altbas", &private_cfg.altbas) },
-	{ XC_SET_INT1("nobas", &private_cfg.nobas) },
-	{ XC_SET_INT1("noextbas", &private_cfg.noextbas) },
-	{ XC_SET_INT1("noaltbas", &private_cfg.noaltbas) },
-	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset) },
+	{ XC_SET_STRING_F("bas", &private_cfg.bas), .defined = &private_cfg.bas_dfn },
+	{ XC_SET_STRING_F("extbas", &private_cfg.extbas), .defined = &private_cfg.extbas_dfn },
+	{ XC_SET_STRING_F("altbas", &private_cfg.altbas), .defined = &private_cfg.altbas_dfn },
+	{ XC_ALIAS_NOARG("nobas", "no-bas"), .deprecated = 1 },
+	{ XC_ALIAS_NOARG("noextbas", "no-extbas"), .deprecated = 1 },
+	{ XC_ALIAS_NOARG("noaltbas", "no-altbas"), .deprecated = 1 },
+	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset), .defined = &private_cfg.ext_charset_dfn },
 	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
 	{ XC_SET_ENUM("tv-input", &private_cfg.tv_input, machine_tv_input_list) },
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
@@ -2301,9 +2308,9 @@ static void helptext(void) {
 "    -bas NAME               BASIC ROM to use (CoCo only)\n"
 "    -extbas NAME            Extended BASIC ROM to use\n"
 "    -altbas NAME            64K mode Extended BASIC ROM (Dragon 64)\n"
-"    -nobas                  disable BASIC\n"
-"    -noextbas               disable Extended BASIC\n"
-"    -noaltbas               disable 64K mode Extended BASIC\n"
+"    -no-bas                 disable BASIC\n"
+"    -no-extbas              disable Extended BASIC\n"
+"    -no-altbas              disable 64K mode Extended BASIC\n"
 "    -ext-charset NAME       external character generator ROM to use\n"
 "    -tv-type TYPE           TV type (-tv-type help for list)\n"
 "    -vdg-type TYPE          VDG type (6847 or 6847t1)\n"

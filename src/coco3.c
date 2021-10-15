@@ -158,7 +158,7 @@ static void coco3_config_complete(struct machine_config *mc) {
 		mc->ram = 128;
 	mc->keymap = dkbd_layout_coco3;
 	/* Now find which ROMs we're actually going to use */
-	if (!mc->noextbas && !mc->extbas_rom) {
+	if (!mc->extbas_dfn && !mc->extbas_rom) {
 		mc->extbas_rom = xstrdup("@coco3");
 	}
 	// Determine a default DOS cartridge if necessary
@@ -335,7 +335,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->crc_secb = 0;
 
 	/* ... Super Extended BASIC */
-	if (!mc->noextbas && mc->extbas_rom) {
+	if (mc->extbas_rom) {
 		sds tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
 			int size = machine_load_rom(tmp, mcc3->rom0, sizeof(mcc3->rom0));
