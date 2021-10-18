@@ -1452,7 +1452,7 @@ void xroar_set_keymap(_Bool notify, int map) {
 			new = map;
 			break;
 	}
-	if (new >= 0 && new < NUM_KEYMAPS) {
+	if (new >= 0 && new < dkbd_num_layouts) {
 		keyboard_set_keymap(xroar_keyboard_interface, new);
 		if (notify) {
 			DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, new, NULL);

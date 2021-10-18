@@ -224,9 +224,10 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Keyboard Map");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_DRAGON), "Dragon Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_DRAGON200E), "Dragon 200-E Layout");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, KEYMAP_COCO), "CoCo Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon), "Dragon Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon200e), "Dragon 200-E Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco), "CoCo Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco3), "CoCo 3 Layout");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
@@ -493,7 +494,7 @@ void windows32_ui_set_state(void *sptr, int tag, int value, const void *data) {
 	// Keyboard
 
 	case ui_tag_keymap:
-		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (NUM_KEYMAPS - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_kbd_translate:

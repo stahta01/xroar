@@ -120,10 +120,11 @@ struct dkey_chord {
 #define DKBD_U_TABLE_SIZE (0x0100)
 
 enum dkbd_layout {
-	dkbd_layout_dragon,
+	dkbd_layout_dragon = 0,
 	dkbd_layout_coco,
 	dkbd_layout_dragon200e,
 	dkbd_layout_coco3,
+	dkbd_num_layouts
 };
 
 struct dkbd_map {

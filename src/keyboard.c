@@ -91,7 +91,7 @@ void keyboard_interface_free(struct keyboard_interface *ki) {
 }
 
 void keyboard_set_keymap(struct keyboard_interface *ki, int map) {
-	map %= NUM_KEYMAPS;
+	map %= dkbd_num_layouts;
 	xroar_machine_config->keymap = map;
 	dkbd_map_init(&ki->keymap, map);
 }

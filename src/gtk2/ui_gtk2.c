@@ -437,10 +437,10 @@ static GtkRadioActionEntry const tv_input_radio_entries[] = {
 };
 
 static GtkRadioActionEntry const keymap_radio_entries[] = {
-	{ .name = "keymap_dragon", .label = "Dragon Layout", .value = KEYMAP_DRAGON },
-	{ .name = "keymap_dragon200e", .label = "Dragon 200-E Layout", .value = KEYMAP_DRAGON200E },
-	{ .name = "keymap_coco", .label = "CoCo Layout", .value = KEYMAP_COCO },
-	{ .name = "keymap_coco3", .label = "CoCo 3 Layout", .value = KEYMAP_COCO3 },
+	{ .name = "keymap_dragon", .label = "Dragon Layout", .value = dkbd_layout_dragon },
+	{ .name = "keymap_dragon200e", .label = "Dragon 200-E Layout", .value = dkbd_layout_dragon200e },
+	{ .name = "keymap_coco", .label = "CoCo Layout", .value = dkbd_layout_coco },
+	{ .name = "keymap_coco3", .label = "CoCo 3 Layout", .value = dkbd_layout_coco3 },
 };
 
 static GtkRadioActionEntry const joy_right_radio_entries[] = {

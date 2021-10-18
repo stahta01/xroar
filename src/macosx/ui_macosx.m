@@ -739,19 +739,25 @@ static void setup_hardware_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard Map"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Dragon Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | KEYMAP_DRAGON)];
+	[item setTag:(TAG_KEYMAP | dkbd_layout_dragon)];
 	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Dragon 200-E Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | KEYMAP_DRAGON200E)];
+	[item setTag:(TAG_KEYMAP | dkbd_layout_dragon200e)];
 	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"CoCo Layout" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_KEYMAP | KEYMAP_COCO)];
+	[item setTag:(TAG_KEYMAP | dkbd_layout_coco)];
+	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"CoCo 3 Layout" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_KEYMAP | dkbd_layout_coco3)];
 	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 	[submenu addItem:item];
 	[item release];
