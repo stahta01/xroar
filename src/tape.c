@@ -40,6 +40,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
+#include "part.h"
 #include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
@@ -224,7 +225,7 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 	}
 	tip->machine = m;
 	tip->keyboard_interface = m->get_interface(m, "keyboard");
-	tip->cpu = m->get_component(m, "CPU0");
+	tip->cpu = (struct MC6809 *)part_component_by_id_is_a((struct part *)m, "CPU", "MC6809");
 	ti->update_audio = DELEGATE_AS1(void, float, m->get_interface(m, "tape-update-audio"), m);
 	DELEGATE_CALL(ti->update_audio, 0.5);
 }
