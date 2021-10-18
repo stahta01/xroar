@@ -324,6 +324,13 @@ static char const * const default_config[] = {
 	"extbas @mx1600ext",
 	"tv-type pal-m",
 	"ram 64",
+	// MC-10
+	"machine mc10",
+	"machine-desc 'Tandy MC-10'",
+	"machine-arch mc10",
+	"tv-type ntsc",
+	"bas @mc10",
+	"ram 4",
 
 	// DragonDOS
 	"cart dragondos",
