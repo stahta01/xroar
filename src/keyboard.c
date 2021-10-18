@@ -36,6 +36,7 @@
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
+#include "part.h"
 #include "xroar.h"
 
 extern inline void keyboard_press_matrix(struct keyboard_interface *ki, int col, int row);
@@ -74,7 +75,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	*kip = (struct keyboard_interface_private){0};
 	struct keyboard_interface *ki = &kip->public;
 	kip->machine = m;
-	kip->cpu = m->get_component(m, "CPU0");
+	kip->cpu = (struct MC6809 *)part_component_by_id_is_a((struct part *)m, "CPU", "MC6809");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -183,6 +184,9 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 static void type_command(void *sptr) {
 	struct keyboard_interface_private *kip = sptr;
 	struct MC6809 *cpu = kip->cpu;
+
+	if (!cpu)
+		return;
 
 	if (!kip->basic_command && kip->basic_command_list) {
 		kip->basic_command = kip->basic_command_list->data;
