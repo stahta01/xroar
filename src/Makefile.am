@@ -41,6 +41,7 @@ xroar_SOURCES = \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
 	machine.c machine.h \
+	mc10.c \
 	mc6801.c mc6801.h \
 	mc6809.c mc6809.h \
 	mc6821.c mc6821.h \

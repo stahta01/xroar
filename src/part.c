@@ -50,6 +50,7 @@ struct partdb_entry {
 
 struct part *dragon_deserialise(struct ser_handle *sh);
 struct part *coco3_deserialise(struct ser_handle *sh);
+struct part *mc10_deserialise(struct ser_handle *sh);
 
 struct part *dragondos_deserialise(struct ser_handle *sh);
 struct part *deltados_deserialise(struct ser_handle *sh);
@@ -85,6 +86,7 @@ struct part *spi_sdcard_deserialise(struct ser_handle *sh);
 struct partdb_entry partdb[] = {
 	{ .name = "dragon", .deserialise = dragon_deserialise },
 	{ .name = "coco3", .deserialise = coco3_deserialise },
+	{ .name = "mc10", .deserialise = mc10_deserialise },
 
 	{ .name = "dragondos", .deserialise = dragondos_deserialise },
 	{ .name = "delta", .deserialise = deltados_deserialise },

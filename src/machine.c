@@ -192,6 +192,7 @@ struct xconfig_enum machine_arch_list[] = {
 	{ XC_ENUM_INT("dragon32", ARCH_DRAGON32, "Dragon 32") },
 	{ XC_ENUM_INT("coco", ARCH_COCO, "Tandy CoCo 1/2") },
 	{ XC_ENUM_INT("coco3", ARCH_COCO3, "Tandy CoCo 3") },
+	{ XC_ENUM_INT("mc10", ARCH_MC10, "Tandy MC-10") },
 	{ XC_ENUM_END() }
 };
 
@@ -236,6 +237,7 @@ struct xconfig_enum machine_vdg_type_list[] = {
 
 extern struct machine_module machine_dragon_module;
 extern struct machine_module machine_coco3_module;
+extern struct machine_module machine_mc10_module;
 
 static struct slist *machine_modules = NULL;
 
@@ -300,6 +302,7 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 
 void machine_init(void) {
 	// reverse order
+	machine_modules = slist_prepend(machine_modules, &machine_mc10_module);
 	machine_modules = slist_prepend(machine_modules, &machine_coco3_module);
 	machine_modules = slist_prepend(machine_modules, &machine_dragon_module);
 }
@@ -317,6 +320,9 @@ static struct machine_module *machine_module(struct machine_config *mc) {
 	switch (mc->architecture) {
 	case ARCH_COCO3:
 		req_type = "coco3";
+		break;
+	case ARCH_MC10:
+		req_type = "mc10";
 		break;
 	default:
 		req_type = "dragon";

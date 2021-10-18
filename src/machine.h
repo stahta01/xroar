@@ -47,6 +47,7 @@ struct vo_interface;
 #define ARCH_DRAGON64 (1)
 #define ARCH_COCO     (2)
 #define ARCH_COCO3    (3)
+#define ARCH_MC10     (4)
 #define CPU_MC6809 (0)
 #define CPU_HD6309 (1)
 #define ROMSET_DRAGON32 (0)
@@ -138,6 +139,9 @@ struct machine_bp {
 	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
 #define BP_COCO_ROM(...) \
 	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@coco" }
+
+#define BP_MC10_ROM(...) \
+	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mc10" }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
