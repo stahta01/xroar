@@ -1337,6 +1337,8 @@ void xroar_set_tv_input(_Bool notify, int action) {
 }
 
 void xroar_set_vdg_inverted_text(_Bool notify, int action) {
+	if (!xroar_machine->set_inverted_text)
+		return;
 	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_vdg_inverse, state, NULL);
@@ -1344,6 +1346,8 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 }
 
 void xroar_set_ratelimit(int action) {
+	if (!xroar_machine->set_frameskip || !xroar_machine->set_ratelimit)
+		return;
 	if (xroar_state.noratelimit_latch)
 		return;
 	if (action) {
@@ -1356,6 +1360,8 @@ void xroar_set_ratelimit(int action) {
 }
 
 void xroar_set_ratelimit_latch(_Bool notify, int action) {
+	if (!xroar_machine->set_frameskip || !xroar_machine->set_ratelimit)
+		return;
 	_Bool state = !xroar_state.noratelimit_latch;
 	switch (action) {
 	case XROAR_ON:
