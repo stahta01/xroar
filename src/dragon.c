@@ -308,8 +308,8 @@ static void printer_ack(void *sptr, _Bool ack);
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
-static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest);
-static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest);
+static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
+static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 
 static void pia0a_data_preread(void *sptr);
 #define pia0a_data_postwrite NULL
@@ -410,7 +410,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 	md->VDG0->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
 	md->VDG0->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
-	md->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler, md);
+	md->VDG0->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
 	mc6847_set_inverted_text(md->VDG0, md->inverted_text);
 
 	// Set up VDG palette in video module
@@ -632,7 +632,7 @@ static _Bool dragon_finish(struct part *p) {
 
 	/* VDG external charset */
 	if (md->has_ext_charset)
-		md->VDG0->fetch_data = DELEGATE_AS2(void, int, uint16p, vdg_fetch_handler_chargen, md);
+		md->VDG0->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler_chargen, md);
 
 	/* Default all PIA connections to unconnected (no source, no sink) */
 	md->PIA0->b.in_source = 0;
@@ -1279,7 +1279,8 @@ static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	}
 }
 
-static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest) {
+static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
+	(void)A;
 	struct machine_dragon *md = sptr;
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
@@ -1300,7 +1301,8 @@ static void vdg_fetch_handler(void *sptr, int nbytes, uint16_t *dest) {
 // chargen modules (e.g. as provided for the CoCo). As I don't have schematics
 // for any of the others, those will have to wait!
 
-static void vdg_fetch_handler_chargen(void *sptr, int nbytes, uint16_t *dest) {
+static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
+	(void)A;
 	struct machine_dragon *md = sptr;
 	unsigned pia_vdg_mode = PIA_VALUE_B(md->PIA1);
 	_Bool GnA = pia_vdg_mode & 0x80;
