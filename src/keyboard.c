@@ -85,7 +85,8 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 
 void keyboard_interface_free(struct keyboard_interface *ki) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+	if (kip->cpu)
+		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	slist_free_full(kip->basic_command_list, (slist_free_func)sdsfree);
 	free(kip);
 }
