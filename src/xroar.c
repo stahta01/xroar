@@ -1740,12 +1740,10 @@ void xroar_eject_output_tape(void) {
 
 void xroar_soft_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_SOFT);
-	tape_reset(xroar_tape_interface);
 }
 
 void xroar_hard_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_HARD);
-	tape_reset(xroar_tape_interface);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
