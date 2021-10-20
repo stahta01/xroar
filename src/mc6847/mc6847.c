@@ -44,6 +44,8 @@
 // Convert VDG timings (measured in quarter-VDG-cycles) to event ticks:
 #define EVENT_VDG_TIME(c) EVENT_SAM_CYCLES((c))
 
+static const unsigned GM_nLPR[8] = { 3, 3, 3, 2, 2, 1, 1, 1 };
+
 // How video data is interpreted by the VDG.  As soon as mode changes take
 // effect (which on a Dragon or CoCo typically happens partway through a byte),
 // this changes immediately, so the rest of the byte is rendered differently.
@@ -72,6 +74,9 @@ struct MC6847_private {
 	unsigned beam_pos;
 	unsigned scanline;
 
+	// Address
+	uint16_t A;
+
 	/* Data */
 	uint8_t vram_g_data;
 	uint8_t vram_sg_data;
@@ -82,6 +87,7 @@ struct MC6847_private {
 	/* Internal state */
 	_Bool is_32byte;
 	_Bool GM0;
+	unsigned nLPR;
 	uint8_t s_fg_colour;
 	uint8_t s_bg_colour;
 	uint8_t fg_colour;
@@ -164,6 +170,8 @@ static struct ser_struct ser_struct_mc6847[] = {
 	SER_STRUCT_ELEM(struct MC6847_private, lborder_remaining, ser_type_unsigned), // 37
 	SER_STRUCT_ELEM(struct MC6847_private, vram_remaining, ser_type_unsigned), // 38
 	SER_STRUCT_ELEM(struct MC6847_private, rborder_remaining, ser_type_unsigned), // 39
+
+	SER_STRUCT_ELEM(struct MC6847_private, nLPR, ser_type_unsigned), // 40
 };
 #define N_SER_STRUCT_MC6847 ARRAY_N_ELEMENTS(ser_struct_mc6847)
 
@@ -200,6 +208,8 @@ static void do_hs_fall(void *data) {
 			vdg->public.row++;
 			if (vdg->public.row > 11)
 				vdg->public.row = 0;
+			if ((vdg->public.row % vdg->nLPR) == 0)
+				vdg->A += vdg->is_32byte ? 32 : 16;
 			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
@@ -270,6 +280,7 @@ static void do_hs_fall(void *data) {
 	if (vdg->scanline == VDG_ACTIVE_AREA_END) {
 		// FS falling edge
 		DELEGATE_CALL(vdg->public.signal_fs, 0);
+		vdg->A = 0;
 	}
 
 	if (vdg->scanline == VDG_VBLANK_START) {
@@ -315,7 +326,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 42)
 			nbytes = 42;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
+			unsigned nfetch = nbytes - vdg->vram_nbytes;
+			DELEGATE_CALL(vdg->public.fetch_data, vdg->A + vdg->vram_nbytes, nfetch, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	} else if (!vdg->is_32byte && beam_to >= (VDG_tHBNK + 32)) {
@@ -323,7 +335,8 @@ static void render_scanline(struct MC6847_private *vdg) {
 		if (nbytes > 22)
 			nbytes = 22;
 		if (nbytes > vdg->vram_nbytes) {
-			DELEGATE_CALL(vdg->public.fetch_data, nbytes - vdg->vram_nbytes, vdg->vram + vdg->vram_nbytes);
+			unsigned nfetch = nbytes - vdg->vram_nbytes;
+			DELEGATE_CALL(vdg->public.fetch_data, vdg->A + vdg->vram_nbytes, nfetch, vdg->vram + vdg->vram_nbytes);
 			vdg->vram_nbytes = nbytes;
 		}
 	}
@@ -536,12 +549,13 @@ struct MC6847_private *mc6847_create(int type) {
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->is_t1 = t1;
 	vdg->bright_orange = t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
+	vdg->nLPR = 12;
 
 	// Beam timing & events
 	vdg->beam_pos = VDG_LEFT_BORDER_START;
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
-	vdg->public.fetch_data = DELEGATE_DEFAULT2(void, int, uint16p);
+	vdg->public.fetch_data = DELEGATE_DEFAULT3(void, uint16, int, uint16p);
 	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
 	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
 
@@ -651,6 +665,7 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	vdg->GM0 = vdg->GM & 1;
 	vdg->CSS = mode & 0x08;
 	_Bool new_nA_G = mode & 0x80;
+	vdg->nLPR = new_nA_G ? GM_nLPR[vdg->GM] : 12;
 
 	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
 	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);

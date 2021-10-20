@@ -95,7 +95,7 @@ struct MC6847 {
 	DELEGATE_T1(void, bool) signal_fs;
 	// External handler to fetch data for display. First arg is number of
 	// 16-bit words, second a pointer to a buffer to receive them.
-	DELEGATE_T2(void, int, uint16p) fetch_data;
+	DELEGATE_T3(void, uint16, int, uint16p) fetch_data;
 
 	// Render line
 	DELEGATE_T2(void, uint8p, unsigned) render_line;
