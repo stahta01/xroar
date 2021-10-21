@@ -230,6 +230,7 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon200e), "Dragon 200-E Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco), "CoCo Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco3), "CoCo 3 Layout");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_mc10), "MC-10 Layout");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();

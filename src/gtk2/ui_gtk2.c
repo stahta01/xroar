@@ -441,6 +441,7 @@ static GtkRadioActionEntry const keymap_radio_entries[] = {
 	{ .name = "keymap_dragon200e", .label = "Dragon 200-E Layout", .value = dkbd_layout_dragon200e },
 	{ .name = "keymap_coco", .label = "CoCo Layout", .value = dkbd_layout_coco },
 	{ .name = "keymap_coco3", .label = "CoCo 3 Layout", .value = dkbd_layout_coco3 },
+	{ .name = "keymap_mc10", .label = "MC-10 Layout", .value = dkbd_layout_mc10 },
 };
 
 static GtkRadioActionEntry const joy_right_radio_entries[] = {

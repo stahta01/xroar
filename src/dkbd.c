@@ -91,6 +91,9 @@ static struct dkey_chord_mapping coco3_chord_mappings[] = {
 	{ DKBD_U_F2, { DSCAN_F2, 0 } },
 };
 
+static struct dkey_chord_mapping mc10_chord_mappings[] = {
+};
+
 #define CMAPPING(m) .num_chord_mappings = ARRAY_N_ELEMENTS(m), .chord_mappings = (m)
 
 static struct dkbd_layout_variant dkbd_layout_variants[] = {
@@ -98,6 +101,7 @@ static struct dkbd_layout_variant dkbd_layout_variants[] = {
 	{ .base_layout = dkbd_layout_coco, CMAPPING(dragon_chord_mappings), },
 	{ .base_layout = dkbd_layout_dragon, CMAPPING(dragon200e_chord_mappings), },
 	{ .base_layout = dkbd_layout_coco, CMAPPING(coco3_chord_mappings), },
+	{ .base_layout = dkbd_layout_mc10, CMAPPING(mc10_chord_mappings), },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -116,7 +120,8 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	for (int i = 0; i < 56; i++) {
 		unsigned col = i & 7;
 		unsigned row = (i >> 3) & 7;
-		if (variant->base_layout == dkbd_layout_coco) {
+		if (variant->base_layout == dkbd_layout_coco ||
+		    variant->base_layout == dkbd_layout_mc10) {
 			if (row != 6)
 				row = (row + 4) % 6;
 		}
@@ -124,8 +129,20 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	}
 	if (layout != dkbd_layout_coco3) {
 		// Unmap CoCo 3 extended keys
-		for (int i = 0x33; i <= 0x36; i++)
+		for (int i = DSCAN_ALT; i <= DSCAN_F2; i++)
 			map->point[i] = (struct dkbd_matrix_point){8, 8};
+	}
+	if (layout == dkbd_layout_mc10) {
+		// Tweak MC-10 layout
+		for (int i = DSCAN_UP; i <= DSCAN_RIGHT; i++) {
+			map->point[i] = (struct dkbd_matrix_point){8, 8};
+		}
+		map->point[DSCAN_SPACE] = (struct dkbd_matrix_point){3, 7};
+		map->point[DSCAN_ENTER] = (struct dkbd_matrix_point){3, 6};
+		map->point[DSCAN_CLEAR] = (struct dkbd_matrix_point){6, 0};
+		map->point[DSCAN_BREAK] = (struct dkbd_matrix_point){6, 2};
+		map->point[DSCAN_CTRL] = (struct dkbd_matrix_point){6, 0};
+		map->point[DSCAN_SHIFT] = (struct dkbd_matrix_point){6, 7};
 	}
 	for (int i = 0x38; i < DKBD_POINT_TABLE_SIZE; i++)
 		map->point[i] = (struct dkbd_matrix_point){8, 8};

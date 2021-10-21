@@ -124,6 +124,7 @@ enum dkbd_layout {
 	dkbd_layout_coco,
 	dkbd_layout_dragon200e,
 	dkbd_layout_coco3,
+	dkbd_layout_mc10,
 	dkbd_num_layouts
 };
 

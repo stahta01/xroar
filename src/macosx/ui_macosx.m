@@ -778,6 +778,12 @@ static void setup_hardware_menu(void) {
 	[submenu addItem:item];
 	[item release];
 
+	item = [[NSMenuItem alloc] initWithTitle:@"MC-10 Layout" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_KEYMAP | dkbd_layout_mc10)];
+	[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+	[submenu addItem:item];
+	[item release];
+
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard Map" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[hardware_menu addItem:item];
