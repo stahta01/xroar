@@ -415,6 +415,8 @@ static char const * const default_config[] = {
 	// MX-1600 and zephyr-patched version
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
+	// MC-10
+	"romlist mc10=mc10",
 	// DragonDOS
 	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,'Dragon Data Ltd - DragonDOS 1.0'",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
@@ -452,6 +454,8 @@ static char const * const default_config[] = {
 	"crclist cocoext=@extbas11,@extbas10,@mx1600ext",
 	"crclist coco_combined=@mx1600",
 	"crclist coco3=0xb4c88d6c,0xff050d80",
+	// MC-10 BASIC
+	"crclist mc10=0x11fda97e",
 
 	// Joysticks
 	"joy joy0",
