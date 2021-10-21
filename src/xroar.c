@@ -493,7 +493,7 @@ static void do_load_file(void *);
 static int autorun_loaded_file = 0;
 
 static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
-static char const * const xroar_tape_exts[] = { "CAS", NULL };
+static char const * const xroar_tape_exts[] = { "CAS", "C10", NULL };
 static char const * const xroar_snap_exts[] = { "SNA", NULL };
 /* static char const * const xroar_cart_exts[] = { "ROM", NULL }; */
 
@@ -511,6 +511,7 @@ static struct {
 	{ "CCO", FILETYPE_BIN },
 	{ "HEX", FILETYPE_HEX },
 	{ "CAS", FILETYPE_CAS },
+	{ "C10", FILETYPE_CAS },
 	{ "WAV", FILETYPE_WAV },
 	{ "SN",  FILETYPE_SNA },
 	{ "ROM", FILETYPE_ROM },
