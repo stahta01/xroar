@@ -250,6 +250,10 @@ static _Bool hd6309_finish(struct part *p) {
 	return 1;
 }
 
+static _Bool hd6309_is_a(struct part *p, const char *name) {
+	return p && strcmp(name, "MC6809") == 0;
+}
+
 struct HD6309 *hd6309_create(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
 
@@ -259,6 +263,7 @@ struct HD6309 *hd6309_create(void) {
 	cpu->part.free = hd6309_free;
 	cpu->part.serialise = hd6309_serialise;
 	cpu->part.finish = hd6309_finish;
+	cpu->part.is_a = hd6309_is_a;
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
