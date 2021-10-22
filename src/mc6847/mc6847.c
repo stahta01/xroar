@@ -496,7 +496,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 	while (vdg->beam_pos < VDG_RIGHT_BORDER_END) {
 		*(pixel++) = VDG_BLACK;
 		*(pixel++) = VDG_BLACK;
-		vdg->beam_pos++;
+		vdg->beam_pos += 2;
 	}
 
 }
