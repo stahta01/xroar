@@ -253,6 +253,7 @@ void machine_init(void);
 void machine_shutdown(void);
 
 struct machine *machine_new(struct machine_config *mc);
+_Bool machine_is_a(struct part *p, const char *name);
 void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag);
 void machine_deserialise(struct machine *m, struct ser_handle *sh);
 

@@ -419,6 +419,7 @@ static struct machine_coco3 *coco3_create(void) {
 	m->part.free = coco3_free;
 	m->part.serialise = coco3_serialise;
 	m->part.finish = coco3_finish;
+	m->part.is_a = machine_is_a;
 
 	m->insert_cart = coco3_insert_cart;
 	m->remove_cart = coco3_remove_cart;

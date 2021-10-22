@@ -741,6 +741,7 @@ static struct machine_dragon *dragon_create(void) {
 	m->part.free = dragon_free;
 	m->part.serialise = dragon_serialise;
 	m->part.finish = dragon_finish;
+	m->part.is_a = machine_is_a;
 
 	m->insert_cart = dragon_insert_cart;
 	m->remove_cart = dragon_remove_cart;

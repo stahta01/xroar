@@ -337,7 +337,16 @@ struct machine *machine_new(struct machine_config *mc) {
 	assert(mm != NULL);
 	LOG_DEBUG(1, "Machine: %s\n", mc->description);
 	LOG_DEBUG(2, "Machine module: %s\n", mm->name);
-	return mm->new(mc);
+	struct machine *m = mm->new(mc);
+	if (m && !part_is_a((struct part *)m, "machine")) {
+		part_free((struct part *)m);
+		m = NULL;
+	}
+	return m;
+}
+
+_Bool machine_is_a(struct part *p, const char *name) {
+	return p && strcmp(name, "machine") == 0;
 }
 
 void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag) {

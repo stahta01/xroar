@@ -118,6 +118,12 @@ static int read_v2_snapshot(const char *filename) {
 		case SNAPSHOT_SER_MACHINE:
 			// Deserialises new machine.
 			m = (struct machine *)part_deserialise(sh);
+			if (m && !part_is_a((struct part *)m, "machine")) {
+				LOG_WARN("Snapshot v2 read: not a machine\n");
+				part_free((struct part *)m);
+				m = NULL;
+				ser_set_error(sh, ser_error_format);
+			}
 			break;
 
 		case SNAPSHOT_SER_VDRIVE_INTF:
