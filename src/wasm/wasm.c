@@ -304,13 +304,13 @@ static void wasm_wget_rom(const char *rom) {
 // all fetches have completed.
 
 _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
-	if (!mc->nobas && mc->bas_rom) {
+	if (mc->bas_rom) {
 		wasm_wget_rom(mc->bas_rom);
 	}
-	if (!mc->noextbas && mc->extbas_rom) {
+	if (mc->extbas_rom) {
 		wasm_wget_rom(mc->extbas_rom);
 	}
-	if (!mc->noaltbas && mc->altbas_rom) {
+	if (mc->altbas_rom) {
 		wasm_wget_rom(mc->altbas_rom);
 	}
 	if (mc->ext_charset_rom) {
