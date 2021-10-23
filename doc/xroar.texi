@@ -432,9 +432,9 @@ ROM image to use for Extended BASIC (or Super Extended BASIC on the CoCo 3).
 @item -altbas @var{rom}
 64K-mode Extended BASIC for Dragon 64 & Dragon 200-E.
 
-@item -nobas
-@itemx -noextbas
-@itemx -noaltbas
+@item -no-bas
+@itemx -no-extbas
+@itemx -no-altbas
 Indicate the corresponding ROM is not fitted in this machine.
 
 @item -ext-charset @var{rom}
@@ -460,7 +460,7 @@ CoCo 1/2, 128K or 512K for the Tandy CoCo 3.
 @item -machine-cart @var{name}
 Default cartridge to attach.  @xref{Cartridges}.
 
-@item -nodos
+@item -no-machine-cart
 Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
 to this machine (the default is to try).
 
@@ -592,7 +592,7 @@ its ROM replaced with @file{sdose6.rom}, and an additional ROM called
 XRoar will automatically attempt to find a disk interface relevant to the
 current machine unless a specific default has been configured for the machine
 with @option{-machine-cart}, or automatic selection is disabled with the
-@option{-nodos} option.
+@option{-no-machine-cart} option.
 
 Selecting a ROM image file with the @option{-load} or @option{-run} command
 line options, or with @key{CTRL}+@kbd{L} or
