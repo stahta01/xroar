@@ -351,7 +351,7 @@ static void latch_write(struct rsdos *d, unsigned D) {
 	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
 	d->latch_density = D & 0x20;
 	wd279x_set_dden(d->fdc, !d->latch_density);
-	if (d->latch_density && d->intrq_flag) {
+	if (!d->latch_density && d->intrq_flag) {
 		DELEGATE_CALL(c->signal_nmi, 1);
 	}
 	d->halt_enable = D & 0x80;
