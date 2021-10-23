@@ -90,7 +90,8 @@ xroar_SOURCES += \
 EXTRA_DIST += \
 	mc6847/font-6847.c mc6847/font-6847.h \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \
-	mc6809_common.c mc6809_common.h \
+	mc6809_common.c \
+	mc680x_ops.c \
 	tcc1014/font-gime.c tcc1014/font-gime.h \
 	vo_generic_ops.c
 

@@ -83,12 +83,6 @@ static void hd6309_run(struct MC6809 *cpu);
 static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
 
 /*
- * Common 6809 functions
- */
-
-#include "mc6809_common.h"
-
-/*
  * Data reading & writing
  */
 
@@ -112,32 +106,6 @@ static void push_firq_registers(struct MC6809 *cpu);
 static void stack_irq_registers(struct MC6809 *cpu, _Bool entire);
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec);
 static void instruction_posthook(struct MC6809 *cpu);
-
-/*
- * ALU operations
- */
-
-/* 16-bit inherent operations */
-
-static uint16_t op_neg16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_com16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_lsr16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_ror16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_asr16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_asl16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_rol16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_dec16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_inc16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_tst16(struct MC6809 *cpu, uint16_t in);
-static uint16_t op_clr16(struct MC6809 *cpu, uint16_t in);
-
-/* 16-bit arithmetic operations */
-
-static uint16_t op_sbc16(struct MC6809 *cpu, uint16_t a, uint16_t b);
-static uint16_t op_and16(struct MC6809 *cpu, uint16_t a, uint16_t b);
-static uint16_t op_eor16(struct MC6809 *cpu, uint16_t a, uint16_t b);
-static uint16_t op_adc16(struct MC6809 *cpu, uint16_t a, uint16_t b);
-static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -174,29 +142,12 @@ static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b);
 #define CC_V (0x02)
 #define CC_C (0x01)
 
-#define CLR_HNZVC ( REG_CC &= ~(CC_H|CC_N|CC_Z|CC_V|CC_C) )
-#define CLR_NZ    ( REG_CC &= ~(CC_N|CC_Z) )
-#define CLR_NZV   ( REG_CC &= ~(CC_N|CC_Z|CC_V) )
-#define CLR_NZVC  ( REG_CC &= ~(CC_N|CC_Z|CC_V|CC_C) )
-#define CLR_Z     ( REG_CC &= ~(CC_Z) )
-#define CLR_NZC   ( REG_CC &= ~(CC_N|CC_Z|CC_C) )
-#define CLR_NVC   ( REG_CC &= ~(CC_N|CC_V|CC_C) )
-#define CLR_ZC    ( REG_CC &= ~(CC_Z|CC_C) )
+// Common operations
 
-#define SET_Z8(r)         ( (!((r)&0xff)) ? (REG_CC |= CC_Z) : 0 )
-#define SET_Z16(r)        ( (!((r)&0xffff)) ? (REG_CC |= CC_Z) : 0 )
-#define SET_N8(r)         ( REG_CC |= (((r) >> 4) & CC_N) )
-#define SET_N16(r)        ( REG_CC |= (((r) >> 12) & CC_N) )
-#define SET_H(a,b,r)      ( REG_CC |= ((((a)^(b)^(r))<<1) & CC_H) )
-#define SET_C8(r)         ( REG_CC |= (((r)>>8) & CC_C) )
-#define SET_C16(r)        ( REG_CC |= (((r)>>16) & CC_C) )
-#define SET_V8(a,b,r)     ( REG_CC |= ((((a)^(b)^(r)^((r)>>1))>>6) & CC_V) )
-#define SET_V16(a,b,r)    ( REG_CC |= ((((a)^(b)^(r)^((r)>>1))>>14) & CC_V) )
-#define SET_NZ8(r)        ( SET_N8(r), SET_Z8((r)&0xff) )
-#define SET_NZ16(r)       ( SET_N16(r), SET_Z16((r)&0xffff) )
-#define SET_NZC8(r)       ( SET_N8(r), SET_Z8((r)&0xff), SET_C8(r) )
-#define SET_NZVC8(a,b,r)  ( SET_N8(r), SET_Z8((r)&0xff), SET_V8(a,b,r), SET_C8(r) )
-#define SET_NZVC16(a,b,r) ( SET_N16(r), SET_Z16((r)&0xffff), SET_V16(a,b,r), SET_C16(r) )
+#define STRUCT_CPU struct MC6809
+
+#include "mc6809_common.c"
+#include "mc680x_ops.c"
 
 /* Mode register macros */
 
@@ -1961,12 +1912,6 @@ static void hd6309_jump(struct MC6809 *cpu, uint16_t pc) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Common 6809 functions
- */
-
-#include "mc6809_common.c"
-
-/*
  * Data reading & writing
  */
 
@@ -2144,131 +2089,4 @@ static void instruction_posthook(struct MC6809 *cpu) {
 	}
 #endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/*
- * ALU operations
- */
-
-/* 16-bit inherent operations */
-
-static uint16_t op_neg16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = ~in + 1;
-	CLR_NZVC;
-	SET_NZVC16(0, in, out);
-	return out;
-}
-
-static uint16_t op_com16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = ~in;
-	CLR_NZV;
-	SET_NZ16(out);
-	REG_CC |= CC_C;
-	return out;
-}
-
-static uint16_t op_lsr16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = in >> 1;
-	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_Z16(out);
-	return out;
-}
-
-static uint16_t op_ror16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = (in >> 1) | ((REG_CC & 1) << 15);
-	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ16(out);
-	return out;
-}
-
-static uint16_t op_asr16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = (in >> 1) | (in & 0x8000);
-	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ16(out);
-	return out;
-}
-
-static uint16_t op_asl16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = in << 1;
-	CLR_NZVC;
-	SET_NZVC16(in, in, out);
-	return out;
-}
-
-static uint16_t op_rol16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = (in << 1) | (REG_CC & 1);
-	CLR_NZVC;
-	SET_NZVC16(in, in, out);
-	return out;
-}
-
-static uint16_t op_dec16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = in - 1;
-	CLR_NZV;
-	SET_NZ16(out);
-	if (out == 0x7fff) REG_CC |= CC_V;
-	return out;
-}
-
-static uint16_t op_inc16(struct MC6809 *cpu, uint16_t in) {
-	unsigned out = in + 1;
-	CLR_NZV;
-	SET_NZ16(out);
-	if (out == 0x8000) REG_CC |= CC_V;
-	return out;
-}
-
-static uint16_t op_tst16(struct MC6809 *cpu, uint16_t in) {
-	CLR_NZV;
-	SET_NZ16(in);
-	return in;
-}
-
-static uint16_t op_clr16(struct MC6809 *cpu, uint16_t in) {
-	(void)in;
-	CLR_NVC;
-	REG_CC |= CC_Z;
-	return 0;
-}
-
-/* 16-bit arithmetic operations */
-
-static uint16_t op_sbc16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
-	unsigned out = a - b - (REG_CC & CC_C);
-	CLR_NZVC;
-	SET_NZVC16(a, b, out);
-	return out;
-}
-
-static uint16_t op_and16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
-	unsigned out = a & b;
-	CLR_NZV;
-	SET_NZ16(out);
-	return out;
-}
-
-static uint16_t op_eor16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
-	unsigned out = a ^ b;
-	CLR_NZV;
-	SET_NZ16(out);
-	return out;
-}
-
-static uint16_t op_adc16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
-	unsigned out = a + b + (REG_CC & CC_C);
-	CLR_NZVC;
-	SET_NZVC16(a, b, out);
-	return out;
-}
-
-static uint16_t op_or16(struct MC6809 *cpu, uint16_t a, uint16_t b) {
-	unsigned out = a | b;
-	CLR_NZV;
-	SET_NZ16(out);
-	return out;
 }
