@@ -65,6 +65,7 @@ variety of platforms.  Some features are:
 @item Games Master Cartridge support, including SN76489 sound chip.
 @item MOOH RAM expansion + SPI support.
 @item Glenside IDE support.
+@item Initial limited support for the Tandy MC-10.
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
@@ -139,17 +140,18 @@ Firmware ROM image files should have a @file{.rom} extension, and be headerless
 you'll need the BASIC ROM image(s) and a disk controller ROM image.  Here are
 the expected filenames for the most common images:
 
-@multitable {Tandy Super ECB (PAL CoCo 3)} {d200e_26.romXX} {32K (32768 bytes)}
+@multitable {Tandy Microcolour BASIC (MC-10)} {d200e_26.romXX} {32K (32768 bytes)}
 @headitem Firmware ROM @tab Filename @tab File size
 @item Dragon 32 BASIC @tab @file{d32.rom} @tab 16K (16384 bytes)
 @item Dragon 64 32K BASIC @tab @file{d64_1.rom} @tab 16K
 @item Dragon 64 64K BASIC @tab @file{d64_2.rom} @tab 16K
-@item DragonDOS @tab @file{ddos10} @tab 8K (8192 bytes)
+@item DragonDOS @tab @file{ddos10.rom} @tab 8K (8192 bytes)
 @item Tandy Colour BASIC @tab @file{bas13.rom} @tab 8K
-@item Tandy Extended BASIC @tab @file{extbas11} @tab 8K
-@item Tandy Super ECB (CoCo 3) @tab @file{coco3} @tab 32K (32768 bytes)
-@item Tandy Super ECB (PAL CoCo 3) @tab @file{coco3p} @tab 32K
-@item Tandy RS-DOS @tab @file{disk11} @tab 8K
+@item Tandy Extended BASIC @tab @file{extbas11.rom} @tab 8K
+@item Tandy Super ECB (CoCo 3) @tab @file{coco3.rom} @tab 32K (32768 bytes)
+@item Tandy Super ECB (PAL CoCo 3) @tab @file{coco3p.rom} @tab 32K
+@item Tandy RS-DOS @tab @file{disk11.rom} @tab 8K
+@item Tandy Microcolour BASIC (MC-10) @tab @file{mc10.rom} @tab 8K
 @end multitable
 
 Other machines (in particular the less common Dragon 200-E) will need a
@@ -406,6 +408,7 @@ for the following machines:
 @item @samp{coco3} @tab Tandy Colour Computer 3 (NTSC).
 @item @samp{coco3p} @tab Tandy Colour Computer 3 (PAL).
 @item @samp{mx1600} @tab Dynacom MX-1600 (PAL-M).
+@item @samp{mc10} @tab Tandy MC-10.
 @end multitable
 
 You can create new machine configurations or reconfigure existing ones.  Select
@@ -418,13 +421,14 @@ following options to modify it:
 Description shown in @option{-machine help}.
 
 @item -machine-arch @var{arch}
-Base machine architecture.  One of @samp{dragon64}, @samp{dragon32} or @samp{coco}.
+Base machine architecture.  One of @samp{dragon64}, @samp{dragon32},
+@samp{coco}, @samp{coco3} or @samp{mc10}.
 
 @item -machine-cpu @var{cpu}
-Fitted CPU.  One of @samp{6809} or @samp{6309}.  Hitachi 6309 support is not as well tested.
+Fitted CPU.  One of @samp{6809} or @samp{6309}.  Not applicable to the MC-10.
 
 @item -bas @var{rom}
-ROM image to use for Colour BASIC (CoCo only).
+ROM image to use for Colour BASIC (CoCo and MC-10 only).
 
 @item -extbas @var{rom}
 ROM image to use for Extended BASIC (or Super Extended BASIC on the CoCo 3).
@@ -455,7 +459,7 @@ Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 
 @item -ram @var{kbytes}
 Amount of RAM fitted in kilobytes.  Valid sizes are 4-64K for Dragon and Tandy
-CoCo 1/2, 128K or 512K for the Tandy CoCo 3.
+CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 
 @item -machine-cart @var{name}
 Default cartridge to attach.  @xref{Cartridges}.
@@ -476,9 +480,11 @@ machine pippin
   ram 16
 @end example
 
-XRoar now contains @emph{very} early support for the Tandy Colour Computer 3,
-but it is unfinished and unsupported.  Much is known not to work.  Don't use it
-unless you're testing.  Hopefully it will get better over time.
+XRoar's CoCo 3 support is recent and known to contain some slight timing
+errors.  Most programs work with it though.
+
+XRoar now contains @emph{very} early support for the Tandy MC-10, but it is
+unfinished, and much is known not to work.
 
 
 @node Cartridges
@@ -816,8 +822,8 @@ port'' DriveWire connections and GDB listen parameters.  These will use your
 local settings, which default to interacting with the local host only.
 
 Note that the snapshot format has changed since version 0.37 to accomodate the
-CoCo 3 and other complex device state.  The old snapshot format is deprecated,
-but can still be read for now.
+new CoCo 3 and MC-10 support, along with other complex device state.  The old
+snapshot format is deprecated, but can still be read for now.
 
 
 @node Binary files
@@ -865,21 +871,22 @@ seen ``in the wild'', the primary examples being:
 
 @multitable {Tandy Super ECB (PAL CoCo 3)} {Xdragondos_compatxx} {dplus49b, sdose6, ddos10XXXXX}
 @headitem Firmware ROM @tab ROM list @tab Canonical image names
-@item Dragon 32 BASIC @tab @samp{@@dragon32} @tab @file{d32}
-@item Dragon 64 32K BASIC @tab @samp{@@dragon64} @tab @file{d64_1}
-@item Dragon 64 64K BASIC @tab @samp{@@dragon64_alt} @tab @file{d64_2}
-@item Dragon 200-E 32K BASIC @tab @samp{@@dragon200e} @tab @file{d200e_1}
-@item Dragon 200-E 64K BASIC @tab @samp{@@dragon200e_alt} @tab @file{d200e_2}
-@item Dragon 200-E Charset@tab @samp{@@dragon200e_charset} @tab @file{d200e_26}
-@item Tandy Colour BASIC @tab @samp{@@coco} @tab @file{bas13}, @file{bas12}, @file{bas11}, @file{bas10}
-@item Tandy Extended BASIC @tab @samp{@@coco_ext} @tab @file{extbas11}, @file{extbas10}
-@item Tandy Super ECB (CoCo 3) @tab @samp{@@coco3} @tab @file{coco3}
-@item Tandy Super ECB (PAL CoCo 3) @tab @samp{@@coco3p} @tab @file{coco3p}
-@item DragonDOS @tab @samp{@@dragondos_compat} @tab @file{dplus49b}, @file{sdose6}, @file{ddos10}
-@item Delta System @tab @samp{@@delta} @tab @file{delta}
-@item RS-DOS @tab @samp{@@rsdos} @tab @file{disk11}, @file{disk10}
-@item RS-DOS with becker port @tab @samp{@@rsdos_becker} @tab @file{hdbdw3bck}
-@item Orchestra 90-CC @tab @samp{orch90} @tab
+@item Dragon 32 BASIC @tab @samp{@@dragon32} @tab @file{d32.rom}
+@item Dragon 64 32K BASIC @tab @samp{@@dragon64} @tab @file{d64_1.rom}
+@item Dragon 64 64K BASIC @tab @samp{@@dragon64_alt} @tab @file{d64_2.rom}
+@item Dragon 200-E 32K BASIC @tab @samp{@@dragon200e} @tab @file{d200e_1.rom}
+@item Dragon 200-E 64K BASIC @tab @samp{@@dragon200e_alt} @tab @file{d200e_2.rom}
+@item Dragon 200-E Charset@tab @samp{@@dragon200e_charset} @tab @file{d200e_26.rom}
+@item Tandy Colour BASIC @tab @samp{@@coco} @tab @file{bas13.rom}, @file{bas12.rom}, @file{bas11.rom}, @file{bas10.rom}
+@item Tandy Extended BASIC @tab @samp{@@coco_ext} @tab @file{extbas11.rom}, @file{extbas10.rom}
+@item Tandy Super ECB (CoCo 3) @tab @samp{@@coco3} @tab @file{coco3.rom}
+@item Tandy Super ECB (PAL CoCo 3) @tab @samp{@@coco3p} @tab @file{coco3p.rom}
+@item Tandy Microcolour BASIC @tab @samp{@@mc10} @tab @file{mc10.rom}
+@item DragonDOS @tab @samp{@@dragondos_compat} @tab @file{dplus49b.rom}, @file{sdose6.rom}, @file{ddos10.rom}
+@item Delta System @tab @samp{@@delta} @tab @file{delta.rom}
+@item RS-DOS @tab @samp{@@rsdos} @tab @file{disk11.rom}, @file{disk10.rom}
+@item RS-DOS with becker port @tab @samp{@@rsdos_becker} @tab @file{hdbdw3bck.rom}
+@item Orchestra 90-CC @tab @samp{orch90.rom} @tab
 @end multitable
 
 The default search path for images specified only as a base filename varies by
@@ -1131,10 +1138,10 @@ Intercept ROM calls to type @var{string} into BASIC on startup.
 
 @end table
 
-The keyboards of the Dragon, Dragon 200-E and Tandy CoCo operate in the same
-way, but the matrix and/or key layouts differ.  When you select a machine (see
-@ref{Machines}), the appropriate layout is selected for you, but you can cycle
-between the three by pressing @key{CTRL}+@kbd{K}.
+The keyboards of the Dragon, Dragon 200-E and Tandy machines operate in the
+same way, but the matrix and/or key layouts differ.  When you select a machine
+(see @ref{Machines}), the appropriate layout is selected for you, but you can
+cycle between them by pressing @key{CTRL}+@kbd{K}.
 
 XRoar will simulate the ``ghosting'' effects inherent in a simple matrix
 design, but the accuracy of this simulation will depend very much on your host
@@ -1240,6 +1247,9 @@ XRoar also supports a simpler ``trace mode'', where it will dump a disassembly
 of every instruction it executes to the console.  Toggle trace mode on or off
 with @key{CTRL}+@kbd{V}.  Trace mode can be enabled from startup with the
 @option{-trace} option.
+
+Note that GDB support is not currently implemented for the 6803 used by the
+MC-10, but trace mode is.
 
 User-interface debugging flag can be enabled with @option{-debug-ui
 @var{value}}, where only one value is currently supported:
