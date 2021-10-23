@@ -63,6 +63,8 @@ struct part *nx32_deserialise(struct ser_handle *sh);
 struct part *mooh_deserialise(struct ser_handle *sh);
 struct part *orch90_deserialise(struct ser_handle *sh);
 
+struct part *mc6801_deserialise(struct ser_handle *sh);
+struct part *mc6803_deserialise(struct ser_handle *sh);
 struct part *mc6809_deserialise(struct ser_handle *sh);
 struct part *hd6309_deserialise(struct ser_handle *sh);
 struct part *mc6821_deserialise(struct ser_handle *sh);
@@ -96,6 +98,8 @@ struct partdb_entry partdb[] = {
 	{ .name = "mooh", .deserialise = mooh_deserialise },
 	{ .name = "orchestra-90", .deserialise = orch90_deserialise },
 
+	{ .name = "MC6801", .deserialise = mc6801_deserialise },
+	{ .name = "MC6803", .deserialise = mc6803_deserialise },
 	{ .name = "MC6809", .deserialise = mc6809_deserialise },
 	{ .name = "HD6309", .deserialise = hd6309_deserialise },
 	{ .name = "MC6821", .deserialise = mc6821_deserialise },

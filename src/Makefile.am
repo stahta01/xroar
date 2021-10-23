@@ -41,6 +41,7 @@ xroar_SOURCES = \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
 	machine.c machine.h \
+	mc6801.c mc6801.h \
 	mc6809.c mc6809.h \
 	mc6821.c mc6821.h \
 	mc6847/font-6847.c mc6847/font-6847.h \
@@ -364,6 +365,7 @@ EXTRA_DIST += \
 # Trace mode support
 if TRACE
 xroar_SOURCES += \
+	mc6801_trace.c mc6801_trace.h \
 	mc6809_trace.c mc6809_trace.h \
 	hd6309_trace.c hd6309_trace.h
 endif
