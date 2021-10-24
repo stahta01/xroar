@@ -39,6 +39,7 @@
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
+#include "mc6801.h"
 #include "mc6809.h"
 #include "part.h"
 #include "snapshot.h"
@@ -53,11 +54,25 @@
 struct tape_interface_private {
 	struct tape_interface public;
 
-	_Bool is_dragon;
 	struct machine *machine;
 	struct ui_interface *ui;
 	struct keyboard_interface *keyboard_interface;
-	struct MC6809 *cpu;
+
+	struct debug_cpu *debug_cpu;
+	_Bool is_6809;
+	_Bool is_6801;
+	struct {
+		uint16_t pwcount;
+		uint16_t bcount;
+		uint16_t bphase;
+		uint16_t minpw1200;
+		uint16_t maxpw1200;
+		uint16_t mincw1200;
+		uint16_t motor_delay;
+	} addr;
+
+	int short_leader_threshold;
+	int initial_motor_delay;
 
 	_Bool tape_fast;
 	_Bool tape_pad_auto;
@@ -218,18 +233,44 @@ void tape_interface_free(struct tape_interface *ti) {
 
 void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+
+	_Bool is_dragon = 0;
 	switch (m->config->architecture) {
 	case ARCH_DRAGON32:
 	case ARCH_DRAGON64:
-		tip->is_dragon = 1;
+		is_dragon = 1;
 		break;
 	default:
-		tip->is_dragon = 0;
 		 break;
 	}
+
 	tip->machine = m;
 	tip->keyboard_interface = m->get_interface(m, "keyboard");
-	tip->cpu = (struct MC6809 *)part_component_by_id_is_a((struct part *)m, "CPU", "MC6809");
+
+	tip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
+	tip->is_6809 = part_is_a(&tip->debug_cpu->part, "MC6809");
+	tip->is_6801 = part_is_a(&tip->debug_cpu->part, "MC6801");
+
+	tip->short_leader_threshold = is_dragon ? 114 : 130;
+
+	if (tip->is_6809) {
+		tip->addr.pwcount = is_dragon ? 0x0082 : 0x0083;
+		tip->addr.bcount = is_dragon ? 0x0083 : 0x0082;
+		tip->addr.bphase = 0x0084;
+		tip->addr.minpw1200 = is_dragon ? 0x0093 : 0x0091;
+		tip->addr.maxpw1200 = is_dragon ? 0x0094 : 0x0090;
+		tip->addr.mincw1200 = is_dragon ? 0x0092 : 0x008f;
+		tip->initial_motor_delay = is_dragon ? 5 : 0;
+		tip->addr.motor_delay = is_dragon ? 0x0095 : 0x008a;
+	} else if (tip->is_6801) {
+		tip->addr.pwcount = 0x427d;
+		tip->addr.bcount = 0x427c;
+		tip->addr.bphase = 0x427e;
+		tip->addr.minpw1200 = 0x422e;
+		tip->addr.maxpw1200 = 0x422d;
+		tip->addr.mincw1200 = 0x422c;
+	}
+
 	ti->update_audio = DELEGATE_AS1(void, float, m->get_interface(m, "tape-update-audio"), m);
 	DELEGATE_CALL(ti->update_audio, 0.5);
 }
@@ -238,7 +279,7 @@ void tape_interface_disconnect_machine(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tip->machine = NULL;
 	tip->keyboard_interface = NULL;
-	tip->cpu = NULL;
+	tip->debug_cpu = NULL;
 	ti->update_audio = DELEGATE_DEFAULT1(void, float);
 }
 
@@ -483,9 +524,7 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 			return -1;
 		}
 		if (tip->tape_pad_auto) {
-			if (tip->is_dragon && ti->tape_input->leader_count < 114)
-				tip->short_leader = 1;
-			if (!tip->is_dragon && ti->tape_input->leader_count < 130)
+			if (ti->tape_input->leader_count < tip->short_leader_threshold)
 				tip->short_leader = 1;
 			// leader padding needs breakpoints set
 			set_breakpoints(tip);
@@ -829,10 +868,17 @@ static void flush_output(void *sptr) {
 	}
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* Fast tape reading
  *
  * A set of breakpoint handlers that replace ROM routines, avoiding the need to
- * emulate the CPU. */
+ * emulate the CPU.
+ *
+ * The MC-10 ROM performs pretty much the same operations - at least, they're
+ * similar enough that just subbing in MC-10 addresses makes this work for that
+ * machine too.
+ */
 
 // When we accelerate tape read operations, the system clock won't have
 // changed, but we need to pretend it did.  This reads pulses from the tape to
@@ -875,36 +921,71 @@ static void update_read_time(struct tape_interface_private *tip) {
 	}
 }
 
-static uint8_t op_add(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
-	unsigned int v = v1 + v2;
-	cpu->reg_cc &= ~0x2f;  /* clear HNZVC */
-	if (v & 0x80) cpu->reg_cc |= 0x08;  /* set N */
-	if ((v & 0xff) == 0) cpu->reg_cc |= 0x04;  /* set Z */
-	if ((v1^v2^v^(v>>1)) & 0x80) cpu->reg_cc |= 0x02;  /* set V */
-	if (v & 0x100) cpu->reg_cc |= 0x01;  /* set C */
-	if ((v1^v2^v) & 0x10) cpu->reg_cc |= 0x20;  /* set H */
-	return v;
-}
+// CPU operation equivalents
 
-static uint8_t op_sub(struct MC6809 *cpu, uint8_t v1, uint8_t v2) {
-	unsigned int v = v1 - v2;
-	cpu->reg_cc &= ~0x0f;  /* clear NZVC */
-	if (v & 0x80) cpu->reg_cc |= 0x08;  /* set N */
-	if ((v & 0xff) == 0) cpu->reg_cc |= 0x04;  /* set Z */
-	if ((v1^v2^v^(v>>1)) & 0x80) cpu->reg_cc |= 0x02;  /* set V */
-	if (v & 0x100) cpu->reg_cc |= 0x01;  /* set C */
-	return v;
-}
-
-static uint8_t op_clr(struct MC6809 *cpu) {
-	cpu->reg_cc &= ~0x0b;  /* clear NVC */
-	cpu->reg_cc |= 0x04;  /* set Z */
+static inline uint8_t CC(struct tape_interface_private *tip) {
+	if (tip->is_6809) {
+		return ((struct MC6809 *)tip->debug_cpu)->reg_cc;
+	}
+	if (tip->is_6801) {
+		return ((struct MC6801 *)tip->debug_cpu)->reg_cc;
+	}
 	return 0;
 }
 
-// CPU operation equivalents
+static inline uint8_t SET_CC(struct tape_interface_private *tip, uint8_t v) {
+	if (tip->is_6809) {
+		((struct MC6809 *)tip->debug_cpu)->reg_cc = v;
+	}
+	if (tip->is_6801) {
+		((struct MC6801 *)tip->debug_cpu)->reg_cc = v | 0xc0;
+	}
+	return 0;
+}
 
-#define CC(tip) ((tip)->cpu->reg_cc)
+static inline uint8_t SET_A(struct tape_interface_private *tip, uint8_t v) {
+	if (tip->is_6809) {
+		MC6809_REG_A(((struct MC6809 *)tip->debug_cpu)) = v;
+	}
+	if (tip->is_6801) {
+		MC6801_REG_A(((struct MC6801 *)tip->debug_cpu)) = v;
+	}
+	return 0;
+}
+
+static uint8_t op_add(struct tape_interface_private *tip, uint8_t v1, uint8_t v2) {
+	uint8_t cc = CC(tip);
+	unsigned int v = v1 + v2;
+	cc &= ~0x2f;  /* clear HNZVC */
+	if (v & 0x80) cc |= 0x08;  /* set N */
+	if ((v & 0xff) == 0) cc |= 0x04;  /* set Z */
+	if ((v1^v2^v^(v>>1)) & 0x80) cc |= 0x02;  /* set V */
+	if (v & 0x100) cc |= 0x01;  /* set C */
+	if ((v1^v2^v) & 0x10) cc |= 0x20;  /* set H */
+	SET_CC(tip, cc);
+	return v;
+}
+
+static uint8_t op_sub(struct tape_interface_private *tip, uint8_t v1, uint8_t v2) {
+	uint8_t cc = CC(tip);
+	unsigned int v = v1 - v2;
+	cc &= ~0x0f;  /* clear NZVC */
+	if (v & 0x80) cc |= 0x08;  /* set N */
+	if ((v & 0xff) == 0) cc |= 0x04;  /* set Z */
+	if ((v1^v2^v^(v>>1)) & 0x80) cc |= 0x02;  /* set V */
+	if (v & 0x100) cc |= 0x01;  /* set C */
+	SET_CC(tip, cc);
+	return v;
+}
+
+static uint8_t op_clr(struct tape_interface_private *tip) {
+	uint8_t cc = CC(tip);
+	cc &= ~0x0b;  // clear NVC
+	cc |= 0x04;  // set Z
+	SET_CC(tip, cc);
+	return 0;
+}
+
 #define CPUSKIP(tip,n) (tip->cpuskip += (n))
 
 #define BHI(tip) (CPUSKIP(tip, 3), !(CC(tip) & 0x05))
@@ -916,18 +997,23 @@ static uint8_t op_clr(struct MC6809 *cpu) {
 #define BNE(tip) (CPUSKIP(tip, 3), !(CC(tip) & 0x04))
 #define BRA(tip) (CPUSKIP(tip, 3))
 
-#define BSR(tip,f) do { CPUSKIP(tip, 7); f(tip); } while (0)
+static void BSR(struct tape_interface_private *tip, void (*f)(struct tape_interface_private *)) {
+	CPUSKIP(tip, tip->is_6809 ? 7 : 6);
+	f(tip);
+}
+
+//#define BSR(tip,f) do { CPUSKIP(tip, 7); f(tip); } while (0)
+//#define BSR_01(tip,f) do { CPUSKIP(tip, 6); f(tip); } while (0)
 #define RTS(tip)  do { CPUSKIP(tip, 5); } while (0)
 #define CLR(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), 0); } while (0)
-#define DEC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a) - 1); } while (0)
-#define INC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a) + 1); } while (0)
+#define DEC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a, 0) - 1); } while (0)
+#define INC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a, 0) + 1); } while (0)
 
 static void motor_on_delay(struct tape_interface_private *tip) {
-	int delay = tip->is_dragon ? 0x95 : 0x8a;
+	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
 	CPUSKIP(tip, 5);  /* LDX <$95 */
-	int i = (tip->machine->read_byte(tip->machine, delay) << 8) | tip->machine->read_byte(tip->machine, delay+1);
-	if (tip->is_dragon)
-		CPUSKIP(tip, 5);  /* LBRA delay_X */
+	int i = (tip->machine->read_byte(tip->machine, tip->addr.motor_delay, 0) << 8) | tip->machine->read_byte(tip->machine, tip->addr.motor_delay+1, 0);
+	CPUSKIP(tip, tip->initial_motor_delay);  /* LBRA delay_X */
 	for (; i; i--) {
 		CPUSKIP(tip, 5);  /* LEAX -1,X */
 		CPUSKIP(tip, 3);  /* BNE delay_X */
@@ -935,8 +1021,8 @@ static void motor_on_delay(struct tape_interface_private *tip) {
 		if ((i & 63) == 0)
 			do_skip_read_time(tip);
 	}
-	tip->cpu->reg_x = 0;
-	tip->cpu->reg_cc |= 0x04;
+	cpu09->reg_x = 0;
+	cpu09->reg_cc |= 0x04;
 	RTS(tip);
 }
 
@@ -944,16 +1030,10 @@ static void motor_on_delay(struct tape_interface_private *tip) {
 // results in CC.C clear, or set if negative.
 
 static void sample_cas(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	INC(tip, pwcount);
+	INC(tip, tip->addr.pwcount);
 	CPUSKIP(tip, 5);  /* LDB >$FF20 */
 	do_skip_read_time(tip);
 	CPUSKIP(tip, 2);  /* RORB */
-	if (tip->in_pulse) {
-		tip->cpu->reg_cc &= ~1;
-	} else {
-		tip->cpu->reg_cc |= 1;
-	}
 	RTS(tip);
 }
 
@@ -962,7 +1042,7 @@ static void tape_wait_p0(struct tape_interface_private *tip) {
 		BSR(tip, sample_cas);
 		if (tip->in_pulse < 0) return;
 		CPUSKIP(tip, 3);  /* BCS tape_wait_p0 */
-	} while (tip->cpu->reg_cc & 0x01);
+	} while (!tip->in_pulse);
 	RTS(tip);
 }
 
@@ -971,7 +1051,7 @@ static void tape_wait_p1(struct tape_interface_private *tip) {
 		BSR(tip, sample_cas);
 		if (tip->in_pulse < 0) return;
 		CPUSKIP(tip, 3);  /* BCC tape_wait_p1 */
-	} while (!(tip->cpu->reg_cc & 0x01));
+	} while (tip->in_pulse);
 	RTS(tip);
 }
 
@@ -992,27 +1072,22 @@ static void tape_wait_p1_p0(struct tape_interface_private *tip) {
 // against minpw1200.
 
 static void L_BDC3(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	int bcount = tip->is_dragon ? 0x83 : 0x82;
-	int minpw1200 = tip->is_dragon ? 0x93 : 0x91;
-	int maxpw1200 = tip->is_dragon ? 0x94 : 0x90;
 	CPUSKIP(tip, 4);  /* LDB <$82 */
 	CPUSKIP(tip, 4);  /* CMPB <$94 */
-	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount), tip->machine->read_byte(tip->machine, maxpw1200));
+	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0), tip->machine->read_byte(tip->machine, tip->addr.maxpw1200, 0));
 	if (BHI(tip)) {  // BHI L_BDCC
-		CLR(tip, bcount);
-		op_clr(tip->cpu);
+		CLR(tip, tip->addr.bcount);
+		op_clr(tip);
 		RTS(tip);
 		return;
 	}
 	CPUSKIP(tip, 4);  /* CMPB <$93 */
-	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount), tip->machine->read_byte(tip->machine, minpw1200));
+	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0), tip->machine->read_byte(tip->machine, tip->addr.minpw1200, 0));
 	RTS(tip);
 }
 
 static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	CLR(tip, pwcount);
+	CLR(tip, tip->addr.pwcount);
 	BSR(tip, tape_wait_p0);
 	if (tip->in_pulse < 0) return;
 	BRA(tip);  /* BRA L_BDC3 */
@@ -1020,8 +1095,7 @@ static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
 }
 
 static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	CLR(tip, pwcount);
+	CLR(tip, tip->addr.pwcount);
 	BSR(tip, tape_wait_p1);
 	if (tip->in_pulse < 0) return;
 	// fall through to L_BDC3
@@ -1041,7 +1115,6 @@ enum {
 };
 
 static void sync_leader(struct tape_interface_private *tip) {
-	int bcount = tip->is_dragon ? 0x83 : 0x82;
 	int phase = 0;
 	int state = L_BDED;
 	_Bool done = 0;
@@ -1068,11 +1141,11 @@ static void sync_leader(struct tape_interface_private *tip) {
 				state = L_BE03;  // BLO L_BE03
 				break;
 			}
-			INC(tip, bcount);
+			INC(tip, tip->addr.bcount);
 			CPUSKIP(tip, 4);  // LDA <$83
 			CPUSKIP(tip, 2);  // CMPA #$60
-			phase = tip->machine->read_byte(tip->machine, bcount);
-			op_sub(tip->cpu, phase, 0x60);
+			phase = tip->machine->read_byte(tip->machine, tip->addr.bcount, 0);
+			op_sub(tip, phase, 0x60);
 			BRA(tip);
 			state = L_BE0D;  // BRA L_BE0D
 			break;
@@ -1092,10 +1165,10 @@ static void sync_leader(struct tape_interface_private *tip) {
 				state = L_BDF3;  // BCS L_BDF3
 				break;
 			}
-			DEC(tip, bcount);
+			DEC(tip, tip->addr.bcount);
 			CPUSKIP(tip, 4);  // LDA <$83
 			CPUSKIP(tip, 2);  // ADDA #$60
-			phase = op_add(tip->cpu, tip->machine->read_byte(tip->machine, bcount), 0x60);
+			phase = op_add(tip, tip->machine->read_byte(tip->machine, tip->addr.bcount, 0), 0x60);
 			state = L_BE0D;
 			break;
 
@@ -1105,7 +1178,7 @@ static void sync_leader(struct tape_interface_private *tip) {
 				break;
 			}
 			CPUSKIP(tip, 4);  // STA <$84
-			tip->machine->write_byte(tip->machine, 0x84, phase);
+			tip->machine->write_byte(tip->machine, tip->addr.bphase, phase);
 			RTS(tip);
 			done = 1;
 			break;
@@ -1114,11 +1187,10 @@ static void sync_leader(struct tape_interface_private *tip) {
 }
 
 static void tape_wait_2p(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	CLR(tip, pwcount);
+	CLR(tip, tip->addr.pwcount);
 	CPUSKIP(tip, 6);  /* TST <$84 */
 	CPUSKIP(tip, 3);  /* BNE tape_wait_p1_p0 */
-	if (tip->machine->read_byte(tip->machine, 0x84)) {
+	if (tip->machine->read_byte(tip->machine, tip->addr.bphase, 0)) {
 		tape_wait_p1_p0(tip);
 	} else {
 		tape_wait_p0_p1(tip);
@@ -1126,18 +1198,15 @@ static void tape_wait_2p(struct tape_interface_private *tip) {
 }
 
 static void bitin(struct tape_interface_private *tip) {
-	int pwcount = tip->is_dragon ? 0x82 : 0x83;
-	int mincw1200 = tip->is_dragon ? 0x92 : 0x8f;
 	BSR(tip, tape_wait_2p);
 	CPUSKIP(tip, 4);  /* LDB <$82 */
 	CPUSKIP(tip, 2);  /* DECB */
 	CPUSKIP(tip, 4);  /* CMPB <$92 */
-	op_sub(tip->cpu, tip->machine->read_byte(tip->machine, pwcount) - 1, tip->machine->read_byte(tip->machine, mincw1200));
+	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0) - 1, tip->machine->read_byte(tip->machine, tip->addr.mincw1200, 0));
 	RTS(tip);
 }
 
 static void cbin(struct tape_interface_private *tip) {
-	int bcount = tip->is_dragon ? 0x83 : 0x82;
 	int bin = 0;
 	CPUSKIP(tip, 2);  /* LDA #$08 */
 	CPUSKIP(tip, 4);  /* STA <$83 */
@@ -1150,8 +1219,8 @@ static void cbin(struct tape_interface_private *tip) {
 		CPUSKIP(tip, 3);  // BNE $BDB1
 	}
 	RTS(tip);
-	MC6809_REG_A(tip->cpu) = bin;
-	tip->machine->write_byte(tip->machine, bcount, 0);
+	SET_A(tip, bin);
+	tip->machine->write_byte(tip->machine, tip->addr.bcount, 0);
 }
 
 // fast_motor_on() skips the standard delay if a short leader was detected
@@ -1159,12 +1228,13 @@ static void cbin(struct tape_interface_private *tip) {
 
 static void fast_motor_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
+	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
 	update_read_time(tip);
 	if (!tip->short_leader) {
 		motor_on_delay(tip);
 	} else {
-		tip->cpu->reg_x = 0;
-		tip->cpu->reg_cc |= 0x04;
+		cpu09->reg_x = 0;
+		cpu09->reg_cc |= 0x04;
 	}
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
@@ -1270,7 +1340,7 @@ static void rewrite_bitin(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
 	if (tip->tape_rewrite && tip->rewrite.have_sync) {
-		tape_bit_out(ti->tape_output, tip->cpu->reg_cc & 0x01);
+		tape_bit_out(ti->tape_output, CC(tip) & 0x01);
 	}
 }
 
@@ -1311,9 +1381,11 @@ static struct machine_bp bp_list_fast[] = {
 	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
+	BP_MC10_ROM(.address = 0xff22, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 };
 
 // Need to enable these two aspects of fast loading if tape padding turned on
@@ -1326,6 +1398,7 @@ static struct machine_bp bp_list_pad[] = {
 	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 };
 
 // Intercepting CBIN for fast loading isn't compatible with tape-rewriting, so
@@ -1335,6 +1408,7 @@ static struct machine_bp bp_list_fast_cbin[] = {
 	BP_DRAGON_ROM(.address = 0xbdad, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_COCO_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_COCO3_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
+	BP_MC10_ROM(.address = 0xff14, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 };
 
 
@@ -1357,7 +1431,7 @@ static struct machine_bp bp_list_rewrite[] = {
 };
 
 static void set_breakpoints(struct tape_interface_private *tip) {
-	if (!tip->cpu)
+	if (!tip->debug_cpu)
 		return;
 	/* clear any old breakpoints */
 	machine_bp_remove_list(tip->machine, bp_list_fast);
