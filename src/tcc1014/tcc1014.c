@@ -626,6 +626,8 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			} else if (A == 0xff93) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->firq_state;
 				gime->firq_state = 0;
+			} else if (A == 0xff94 || A == 0xff95) {
+				*gimep->CPUD = 0;
 			} else {
 				*gimep->CPUD = gime->registers[A & 0xf];
 			}
