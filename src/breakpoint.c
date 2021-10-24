@@ -28,9 +28,11 @@
 #include "xalloc.h"
 
 #include "breakpoint.h"
+#include "debug_cpu.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6809.h"
+#include "part.h"
 
 struct bp_session_private {
 	struct bp_session bps;
@@ -39,26 +41,26 @@ struct bp_session_private {
 	struct slist *wp_write_list;
 	struct slist *iter_next;
 	struct machine *machine;
-	struct MC6809 *cpu;
+	struct debug_cpu *debug_cpu;
 };
-
-static struct slist *bp_instruction_list = NULL;
-
-static struct slist *wp_read_list = NULL;
-static struct slist *wp_write_list = NULL;
-
-static struct slist *iter_next = NULL;
 
 static void bp_instruction_hook(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct bp_session *bp_session_new(struct machine *m) {
+	if (!m)
+		return NULL;
+	struct part *cpu = part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
+	if (!cpu)
+		return NULL;
+
 	struct bp_session_private *bpsp = xmalloc(sizeof(*bpsp));
 	*bpsp = (struct bp_session_private){0};
 	struct bp_session *bps = &bpsp->bps;
 	bpsp->machine = m;
-	bpsp->cpu = m->get_component(m, "CPU0");
+	bpsp->debug_cpu = (struct debug_cpu *)cpu;
+
 	return bps;
 }
 
@@ -80,22 +82,22 @@ void bp_add(struct bp_session *bps, struct breakpoint *bp) {
 	if (!bps)
 		return;
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (is_in_list(bp_instruction_list, bp))
+	if (is_in_list(bpsp->instruction_list, bp))
 		return;
 	bp->address_end = bp->address;
-	bp_instruction_list = slist_prepend(bp_instruction_list, bp);
-	bpsp->cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
+	bpsp->instruction_list = slist_prepend(bpsp->instruction_list, bp);
+	bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
 }
 
 void bp_remove(struct bp_session *bps, struct breakpoint *bp) {
 	if (!bps)
 		return;
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (iter_next && iter_next->data == bp)
-		iter_next = iter_next->next;
-	bp_instruction_list = slist_remove(bp_instruction_list, bp);
-	if (!bp_instruction_list) {
-		bpsp->cpu->instruction_hook.func = NULL;
+	if (bpsp->iter_next && bpsp->iter_next->data == bp)
+		bpsp->iter_next = bpsp->iter_next->next;
+	bpsp->instruction_list = slist_remove(bpsp->instruction_list, bp);
+	if (!bpsp->instruction_list) {
+		bpsp->debug_cpu->instruction_hook.func = NULL;
 	}
 }
 
@@ -132,8 +134,8 @@ static void trap_remove(struct bp_session_private *bpsp,
 			unsigned cond_mask, unsigned cond) {
 	struct breakpoint *bp = trap_find(bpsp, *bp_list, addr, addr_end, cond_mask, cond);
 	if (bp) {
-		if (iter_next && iter_next->data == bp)
-			iter_next = iter_next->next;
+		if (bpsp->iter_next && bpsp->iter_next->data == bp)
+			bpsp->iter_next = bpsp->iter_next->next;
 		*bp_list = slist_remove(*bp_list, bp);
 		free(bp);
 	}
@@ -141,17 +143,17 @@ static void trap_remove(struct bp_session_private *bpsp,
 
 void bp_hbreak_add(struct bp_session *bps, unsigned addr, unsigned cond_mask, unsigned cond) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_add(bpsp, &bp_instruction_list, addr, addr, cond_mask, cond);
-	if (bp_instruction_list) {
-		bpsp->cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
+	trap_add(bpsp, &bpsp->instruction_list, addr, addr, cond_mask, cond);
+	if (bpsp->instruction_list) {
+		bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
 	}
 }
 
 void bp_hbreak_remove(struct bp_session *bps, unsigned addr, unsigned cond_mask, unsigned cond) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_remove(bpsp, &bp_instruction_list, addr, addr, cond_mask, cond);
-	if (!bp_instruction_list) {
-		bpsp->cpu->instruction_hook.func = NULL;
+	trap_remove(bpsp, &bpsp->instruction_list, addr, addr, cond_mask, cond);
+	if (!bpsp->instruction_list) {
+		bpsp->debug_cpu->instruction_hook.func = NULL;
 	}
 }
 
@@ -160,14 +162,14 @@ void bp_wp_add(struct bp_session *bps, unsigned type,
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_add(bpsp, &wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 3:
-		trap_add(bpsp, &wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 4:
-		trap_add(bpsp, &wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_add(bpsp, &wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	default:
 		break;
@@ -179,14 +181,14 @@ void bp_wp_remove(struct bp_session *bps, unsigned type,
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_remove(bpsp, &wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 3:
-		trap_remove(bpsp, &wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 4:
-		trap_remove(bpsp, &wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_remove(bpsp, &wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	default:
 		break;
@@ -201,8 +203,8 @@ void bp_wp_remove(struct bp_session *bps, unsigned type,
 
 static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsigned address) {
 	struct bp_session *bps = &bpsp->bps;
-	for (struct slist *iter = bp_list; iter; iter = iter_next) {
-		iter_next = iter->next;
+	for (struct slist *iter = bp_list; iter; iter = bpsp->iter_next) {
+		bpsp->iter_next = iter->next;
 		struct breakpoint *bp = iter->data;
 		if ((bps->cond & bp->cond_mask) != bp->cond)
 			continue;
@@ -212,26 +214,26 @@ static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsi
 			continue;
 		DELEGATE_CALL(bp->handler);
 	}
-	iter_next = NULL;
+	bpsp->iter_next = NULL;
 }
 
 static void bp_instruction_hook(void *sptr) {
 	struct bp_session_private *bpsp = sptr;
 	uint16_t old_pc;
 	do {
-		old_pc = bpsp->cpu->reg_pc;
-		bp_hook(bpsp, bp_instruction_list, old_pc);
-	} while (old_pc != bpsp->cpu->reg_pc);
+		old_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
+		bp_hook(bpsp, bpsp->instruction_list, old_pc);
+	} while (old_pc != DELEGATE_CALL(bpsp->debug_cpu->get_pc));
 }
 
 void bp_wp_read_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (wp_read_list)
-		bp_hook(bpsp, wp_read_list, address);
+	if (bpsp->wp_read_list)
+		bp_hook(bpsp, bpsp->wp_read_list, address);
 }
 
 void bp_wp_write_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (wp_write_list)
-		bp_hook(bpsp, wp_write_list, address);
+	if (bpsp->wp_write_list)
+		bp_hook(bpsp, bpsp->wp_write_list, address);
 }

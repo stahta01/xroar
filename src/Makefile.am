@@ -25,6 +25,7 @@ xroar_SOURCES = \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
+	debug_cpu.h \
 	deltados.c \
 	dkbd.c dkbd.h \
 	dragon.c \

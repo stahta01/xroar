@@ -201,13 +201,26 @@ static _Bool mc6809_finish(struct part *p) {
 	return 1;
 }
 
+_Bool mc6809_is_a(struct part *p, const char *name) {
+        return p && strcmp(name, "DEBUG-CPU") == 0;
+}
+
+unsigned mc6809_get_pc(void *sptr) {
+	struct MC6809 *cpu = sptr;
+	return cpu->reg_pc;
+}
+
 struct MC6809 *mc6809_create(void) {
 	struct MC6809 *cpu = part_new(sizeof(*cpu));
 	*cpu = (struct MC6809){0};
 	part_init((struct part *)cpu, "MC6809");
-	cpu->part.free = mc6809_free;
-	cpu->part.serialise = mc6809_serialise;
-	cpu->part.finish = mc6809_finish;
+	cpu->debug_cpu.part.free = mc6809_free;
+	cpu->debug_cpu.part.serialise = mc6809_serialise;
+	cpu->debug_cpu.part.finish = mc6809_finish;
+	cpu->debug_cpu.part.is_a = mc6809_is_a;
+
+	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
+
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
@@ -223,7 +236,7 @@ struct MC6809 *mc6809_create(void) {
 
 struct MC6809 *mc6809_new(void) {
 	struct MC6809 *cpu = mc6809_create();
-	struct part *p = &cpu->part;
+	struct part *p = &cpu->debug_cpu.part;
         if (!mc6809_finish(p)) {
                 part_free(p);
                 return NULL;
@@ -248,7 +261,7 @@ static void mc6809_serialise(struct part *p, struct ser_handle *sh) {
 
 void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag) {
 	ser_write_open_string(sh, otag, "6809");
-	mc6809_serialise(&cpu->part, sh);
+	mc6809_serialise(&cpu->debug_cpu.part, sh);
 }
 
 void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh) {
@@ -340,7 +353,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->page = 0;
 			// Instruction fetch hook called here so that machine
 			// can be stopped beforehand.
-			DELEGATE_SAFE_CALL(cpu->instruction_hook);
+			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			continue;
 
 		case mc6809_state_dispatch_irq:
@@ -1355,7 +1368,7 @@ static void instruction_posthook(struct MC6809 *cpu) {
 		mc6809_trace_print(cpu->tracer);
 	}
 #endif
-	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
+	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

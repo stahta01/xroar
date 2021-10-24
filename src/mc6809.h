@@ -24,6 +24,7 @@
 #include "delegate.h"
 #include "pl-endian.h"
 
+#include "debug_cpu.h"
 #include "part.h"
 
 #ifdef TRACE
@@ -65,8 +66,8 @@ enum mc6809_state {
 
 /* Interface shared with all 6809-compatible CPUs */
 struct MC6809 {
-	// Part metadata
-	struct part part;
+	// Is a debuggable CPU, which is a part
+	struct debug_cpu debug_cpu;
 
 	/* Interrupt lines */
 	_Bool halt, nmi, firq, irq;
@@ -82,10 +83,6 @@ struct MC6809 {
 
 	/* Memory access cycle */
 	DELEGATE_T2(void, bool, uint16) mem_cycle;
-	/* Called just before instruction fetch if non-NULL */
-	DELEGATE_T0(void) instruction_hook;
-	/* Called after instruction is executed */
-	DELEGATE_T0(void) instruction_posthook;
 
 	/* Internal state */
 
@@ -132,6 +129,9 @@ inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val) {
 inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->irq = val;
 }
+
+_Bool mc6809_is_a(struct part *p, const char *name);
+unsigned mc6809_get_pc(void *sptr);
 
 struct MC6809 *mc6809_new(void);
 void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag);

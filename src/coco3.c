@@ -37,6 +37,7 @@
 #include "xalloc.h"
 
 #include "ao.h"
+#include "breakpoint.h"
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
@@ -99,6 +100,7 @@ struct machine_coco3 {
 
 	int cycles;
 
+	// Debug
 	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
@@ -296,6 +298,7 @@ static _Bool coco3_finish(struct part *p) {
 
 	// Breakpoint session
 	mcc3->bp_session = bp_session_new(m);
+	assert(mcc3->bp_session != NULL);  // this shouldn't fail
 
 	// PIAs
 
@@ -652,11 +655,11 @@ static void coco3_single_step(struct machine *m) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->single_step = 1;
 	mcc3->CPU0->running = 0;
-	mcc3->CPU0->instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
+	mcc3->CPU0->debug_cpu.instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
 	do {
 		mcc3->CPU0->run(mcc3->CPU0);
 	} while (mcc3->single_step);
-	mcc3->CPU0->instruction_posthook.func = NULL;
+	mcc3->CPU0->debug_cpu.instruction_posthook.func = NULL;
 }
 
 /*

@@ -251,7 +251,7 @@ static _Bool hd6309_finish(struct part *p) {
 }
 
 static _Bool hd6309_is_a(struct part *p, const char *name) {
-	return p && strcmp(name, "MC6809") == 0;
+	return p && (strcmp(name, "MC6809") == 0 || mc6809_is_a(p, name));
 }
 
 struct HD6309 *hd6309_create(void) {
@@ -260,10 +260,13 @@ struct HD6309 *hd6309_create(void) {
 	*hcpu = (struct HD6309){.state=0};
 	part_init((struct part *)hcpu, "HD6309");
 	struct MC6809 *cpu = (struct MC6809 *)hcpu;
-	cpu->part.free = hd6309_free;
-	cpu->part.serialise = hd6309_serialise;
-	cpu->part.finish = hd6309_finish;
-	cpu->part.is_a = hd6309_is_a;
+	cpu->debug_cpu.part.free = hd6309_free;
+	cpu->debug_cpu.part.serialise = hd6309_serialise;
+	cpu->debug_cpu.part.finish = hd6309_finish;
+	cpu->debug_cpu.part.is_a = hd6309_is_a;
+
+	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
+
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
@@ -419,7 +422,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->page = 0;
 			// Instruction fetch hook called here so that machine
 			// can be stopped beforehand.
-			DELEGATE_SAFE_CALL(cpu->instruction_hook);
+			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			continue;
 
 		case hd6309_state_dispatch_irq:
@@ -2140,7 +2143,7 @@ static void instruction_posthook(struct MC6809 *cpu) {
 		hd6309_trace_print(hcpu->tracer);
 	}
 #endif
-	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
+	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

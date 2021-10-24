@@ -32,6 +32,7 @@
 #include "sds.h"
 
 #include "ao.h"
+#include "breakpoint.h"
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
@@ -114,6 +115,7 @@ struct machine_dragon {
 
 	int cycles;
 
+	// Debug
 	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
@@ -374,6 +376,7 @@ static _Bool dragon_finish(struct part *p) {
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
+	assert(md->bp_session != NULL);  // this shouldn't fail
 	md->bp_session->trap_handler = DELEGATE_AS0(void, dragon_trap, m);
 
 	// PIAs
@@ -980,11 +983,11 @@ static void dragon_single_step(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->single_step = 1;
 	md->CPU0->running = 0;
-	md->CPU0->instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
+	md->CPU0->debug_cpu.instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
 	do {
 		md->CPU0->run(md->CPU0);
 	} while (md->single_step);
-	md->CPU0->instruction_posthook.func = NULL;
+	md->CPU0->debug_cpu.instruction_posthook.func = NULL;
 	update_vdg_mode(md);
 }
 
