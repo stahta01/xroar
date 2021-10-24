@@ -287,8 +287,8 @@ static void *dragon_get_interface(struct machine *m, const char *ifname);
 static void dragon_set_frameskip(struct machine *m, unsigned fskip);
 static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
 
-static uint8_t dragon_read_byte(struct machine *m, unsigned A);
-static void dragon_write_byte(struct machine *m, unsigned A, unsigned D);
+static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D);
+static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_op_rts(struct machine *m);
 
 static void keyboard_update(void *sptr);
@@ -1337,7 +1337,8 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
-static uint8_t dragon_read_byte(struct machine *m, unsigned A) {
+static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
+	(void)D;
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
 	sam_mem_cycle(md->SAM0, 1, A);
@@ -1347,7 +1348,7 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A) {
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
-static void dragon_write_byte(struct machine *m, unsigned A, unsigned D) {
+static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->CPU0->D = D;
 	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
@@ -1358,8 +1359,8 @@ static void dragon_write_byte(struct machine *m, unsigned A, unsigned D) {
 /* simulate an RTS without otherwise affecting machine state */
 static void dragon_op_rts(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	unsigned int new_pc = m->read_byte(m, md->CPU0->reg_s) << 8;
-	new_pc |= m->read_byte(m, md->CPU0->reg_s + 1);
+	unsigned int new_pc = m->read_byte(m, md->CPU0->reg_s, 0) << 8;
+	new_pc |= m->read_byte(m, md->CPU0->reg_s + 1, 0);
 	md->CPU0->reg_s += 2;
 	md->CPU0->reg_pc = new_pc;
 }

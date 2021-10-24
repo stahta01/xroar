@@ -247,8 +247,8 @@ struct machine {
 	void (*set_ratelimit)(struct machine *m, _Bool ratelimit);
 
 	/* simplified read & write byte for convenience functions */
-	uint8_t (*read_byte)(struct machine *m, unsigned A);
-	void (*write_byte)(struct machine *m, unsigned A, unsigned D);
+	uint8_t (*read_byte)(struct machine *m, unsigned A, uint8_t D);
+	void (*write_byte)(struct machine *m, unsigned A, uint8_t D);
 	/* simulate an RTS without otherwise affecting machine state */
 	void (*op_rts)(struct machine *m);
 };

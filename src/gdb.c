@@ -720,7 +720,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 1, 0) < 0)
 		return;
 	for (unsigned i = 0; i < length; i++) {
-		uint8_t b = gip->machine->read_byte(gip->machine, A++);
+		uint8_t b = gip->machine->read_byte(gip->machine, A++, 0);
 		snprintf(packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];

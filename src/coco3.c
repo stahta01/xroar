@@ -193,8 +193,8 @@ static void *coco3_get_interface(struct machine *m, const char *ifname);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
 static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
 
-static uint8_t coco3_read_byte(struct machine *m, unsigned A);
-static void coco3_write_byte(struct machine *m, unsigned A, unsigned D);
+static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D);
+static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_op_rts(struct machine *m);
 
 static void keyboard_update(void *sptr);
@@ -911,7 +911,8 @@ static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 /* Read a byte without advancing clock.  Used for debugging & breakpoints. */
 
-static uint8_t coco3_read_byte(struct machine *m, unsigned A) {
+static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D) {
+	(void)D;
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
 	tcc1014_mem_cycle(mcc3->GIME0, 1, A);
@@ -921,7 +922,7 @@ static uint8_t coco3_read_byte(struct machine *m, unsigned A) {
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
-static void coco3_write_byte(struct machine *m, unsigned A, unsigned D) {
+static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->CPU0->D = D;
 	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
@@ -932,8 +933,8 @@ static void coco3_write_byte(struct machine *m, unsigned A, unsigned D) {
 /* simulate an RTS without otherwise affecting machine state */
 static void coco3_op_rts(struct machine *m) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	unsigned int new_pc = m->read_byte(m, mcc3->CPU0->reg_s) << 8;
-	new_pc |= m->read_byte(m, mcc3->CPU0->reg_s + 1);
+	unsigned int new_pc = m->read_byte(m, mcc3->CPU0->reg_s, 0) << 8;
+	new_pc |= m->read_byte(m, mcc3->CPU0->reg_s + 1, 0);
 	mcc3->CPU0->reg_s += 2;
 	mcc3->CPU0->reg_pc = new_pc;
 }
