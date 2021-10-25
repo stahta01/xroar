@@ -39,12 +39,23 @@
 #include "mc6801.h"
 #include "mc6809.h"
 #include "part.h"
+#include "tape.h"
 #include "xroar.h"
 
-extern inline void keyboard_press_matrix(struct keyboard_interface *ki, int col, int row);
-extern inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int row);
-extern inline void keyboard_press(struct keyboard_interface *ki, int s);
-extern inline void keyboard_release(struct keyboard_interface *ki, int s);
+// Might want to make a more general automation interface out of this at some
+// point, but for now here it is, in with the keyboard stuff:
+
+enum auto_type {
+	auto_type_basic_command,  // type a command into BASIC
+	auto_type_press_play,     // press play on tape
+};
+
+struct auto_event {
+	enum auto_type type;
+	union {
+		sds string;
+	} data;
+};
 
 /* Current chording mode - only affects how backslash is typed: */
 static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basic;
@@ -57,23 +68,44 @@ struct keyboard_interface_private {
 	_Bool is_6809;
 	_Bool is_6801;
 
-	struct slist *basic_command_list;
-	sds basic_command;
-	unsigned command_index;
+	struct slist *auto_event_list;
+	unsigned command_index;  // when typing a basic command
 };
 
-static void type_command(void *);
+extern inline void keyboard_press_matrix(struct keyboard_interface *ki, int col, int row);
+extern inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int row);
+extern inline void keyboard_press(struct keyboard_interface *ki, int s);
+extern inline void keyboard_release(struct keyboard_interface *ki, int s);
+
+static void do_auto_event(void *);
 
 static struct machine_bp basic_command_breakpoint[] = {
-	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_MC10_ROM(.address = 0xf883, .handler = DELEGATE_INIT(type_command, NULL) ),
-	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_MC10_ROM(.address = 0xf883, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
 };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void auto_event_free(struct auto_event *ae) {
+	if (!ae)
+		return;
+	switch (ae->type) {
+	case auto_type_basic_command:
+		sdsfree(ae->data.string);
+		break;
+	default:
+		break;
+	}
+	free(ae);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	struct keyboard_interface_private *kip = xmalloc(sizeof(*kip));
@@ -94,7 +126,7 @@ void keyboard_interface_free(struct keyboard_interface *ki) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
 	if (kip->debug_cpu)
 		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
-	slist_free_full(kip->basic_command_list, (slist_free_func)sdsfree);
+	slist_free_full(kip->auto_event_list, (slist_free_func)auto_event_free);
 	free(kip);
 }
 
@@ -189,41 +221,76 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 	DELEGATE_SAFE_CALL(ki->update);
 }
 
-static void type_command(void *sptr) {
+static void do_auto_event(void *sptr) {
 	struct keyboard_interface_private *kip = sptr;
 	struct MC6801 *cpu01 = (struct MC6801 *)kip->debug_cpu;
 	struct MC6809 *cpu09 = (struct MC6809 *)kip->debug_cpu;
 
-	if (!kip->debug_cpu)
+	if (!kip->auto_event_list)
 		return;
 
-	if (!kip->basic_command && kip->basic_command_list) {
-		kip->basic_command = kip->basic_command_list->data;
-		kip->command_index = 0;
-		kip->basic_command_list = slist_remove(kip->basic_command_list, kip->basic_command);
+	// Default to no key pressed
+	if (kip->is_6809 && cpu09) {
+		MC6809_REG_A(cpu09) = 0;
+		cpu09->reg_cc |= 4;
 	}
-	if (!kip->basic_command) {
-		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
-		return;
-	}
-
-	if (kip->is_6809) {
-		MC6809_REG_A(cpu09) = kip->basic_command[kip->command_index++];
-		// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
-		// as otherwise BASIC will skip it.
-		cpu09->reg_cc &= ~4;
-	}
-	if (kip->is_6801) {
-		MC6801_REG_A(cpu01) = kip->basic_command[kip->command_index++];
-		cpu01->reg_cc &= ~4;
-	}
-	if (kip->command_index >= sdslen(kip->basic_command)) {
-		sdsfree(kip->basic_command);
-		kip->basic_command = NULL;
+	if (kip->is_6801 && cpu01) {
+		MC6801_REG_A(cpu01) = 0;
+		cpu01->reg_cc |= 4;
 	}
 
-	/* Use CPU read routine to pull return address back off stack */
+	struct auto_event *ae = kip->auto_event_list->data;
+
+	if (ae->type == auto_type_basic_command) {
+		// type a command into BASIC
+		if (kip->command_index < sdslen(ae->data.string)) {
+			uint8_t byte = ae->data.string[kip->command_index++];
+			// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
+			// as otherwise BASIC will skip it.
+			if (kip->is_6809 && cpu09) {
+				MC6809_REG_A(cpu09) = byte;
+				cpu09->reg_cc &= ~4;
+			}
+			if (kip->is_6801 && cpu01) {
+				MC6801_REG_A(cpu01) = byte;
+				cpu01->reg_cc &= ~4;
+			}
+		}
+		if (kip->command_index >= sdslen(ae->data.string)) {
+			kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
+			kip->command_index = 0;
+			auto_event_free(ae);
+			ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
+		}
+	}
+
+	// Process all non-typing queued events that might follow - this allows
+	// us to press PLAY immediately after typing when the keyboard
+	// breakpoint won't be useful.
+
+	while (ae && ae->type != auto_type_basic_command) {
+		switch (ae->type) {
+
+		case auto_type_press_play:
+			// press play on tape
+			tape_set_playing(xroar_tape_interface, 1, 1);
+			break;
+
+		default:
+			break;
+		}
+
+		kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
+		auto_event_free(ae);
+		ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
+	}
+
+	// Use CPU read routine to pull return address back off stack
 	kip->machine->op_rts(kip->machine);
+
+	if (!kip->auto_event_list) {
+		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+	}
 }
 
 static sds parse_string(sds s, enum dkbd_layout layout) {
@@ -314,15 +381,21 @@ static sds parse_string(sds s, enum dkbd_layout layout) {
 	return new;
 }
 
+static void queue_auto_event(struct keyboard_interface_private *kip, struct auto_event *ae) {
+	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
+	kip->auto_event_list = slist_append(kip->auto_event_list, ae);
+	if (kip->auto_event_list) {
+		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
+	}
+}
+
 void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	if (s) {
-		s = parse_string(s, ki->keymap.layout);
-		kip->basic_command_list = slist_append(kip->basic_command_list, s);
-	}
-	if (kip->basic_command_list) {
-		machine_bp_add_list(kip->machine, basic_command_breakpoint, kip);
+		struct auto_event *ae = xmalloc(sizeof(*ae));
+		ae->type = auto_type_basic_command;
+		ae->data.string = parse_string(s, ki->keymap.layout);
+		queue_auto_event(kip, ae);
 	}
 }
 
@@ -331,4 +404,11 @@ void keyboard_queue_basic(struct keyboard_interface *ki, const char *str) {
 	keyboard_queue_basic_sds(ki, s);
 	if (s)
 		sdsfree(s);
+}
+
+void keyboard_queue_press_play(struct keyboard_interface *ki) {
+	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
+	struct auto_event *ae = xmalloc(sizeof(*ae));
+	ae->type = auto_type_press_play;
+	queue_auto_event(kip, ae);
 }

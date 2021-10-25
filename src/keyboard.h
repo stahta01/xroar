@@ -104,5 +104,7 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode);
 void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s);
 // Else, if supplied as a normal C string, it's parsed.
 void keyboard_queue_basic(struct keyboard_interface *ki, const char *s);
+// Schedule press play on tape
+void keyboard_queue_press_play(struct keyboard_interface *ki);
 
 #endif
