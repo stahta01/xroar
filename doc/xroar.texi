@@ -1354,10 +1354,6 @@ as the first option to allocate a console.
 I made reference to the MAME 6809 core for clues on how the overflow bit in the
 condition code register was handled.
 
-Thanks to all the people on the
-@myuref{http://archive.worldofdragon.org/phpBB3/, Dragon Archive Forums} for
-helpful feedback and insight.
-
 Darren Atkinson's @cite{Motorola 6809 and Hitachi 6309 Programmers Reference}
 has been very useful for 6309 support and fleshing out some of the illegal
 instructions on the 6809.
@@ -1366,6 +1362,13 @@ Alan Cox contributed the IDE code.
 
 Tormod Voldon contributed support for his NX32 and MOOH devices (including
 general SPI and SD image support).
+
+Various people have provided feedback or test cases that have helped nail down
+bugs; read the ChangeLog for details.
+
+And thanks to all the people on the
+@myuref{https://archive.worldofdragon.org/phpBB3/, Dragon Archive Forums},
+CoCoTALK! Discord and IRC that have provided helpful feedback and insight.
 
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
