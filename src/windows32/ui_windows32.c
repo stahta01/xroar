@@ -127,6 +127,8 @@ static void setup_file_menu(void) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output), "Output Tape...");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output_rewind), "Rewind Output Tape");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_play_pause), "Play");
+	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_FAST), "Fast Loading");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "CAS padding");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_REWRITE), "Rewrite");
@@ -327,9 +329,13 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		case ui_action_tape_output:
 			xroar_insert_output_tape();
 			break;
+
 		case ui_action_tape_output_rewind:
 			if (xroar_tape_interface && xroar_tape_interface->tape_output)
 				tape_rewind(xroar_tape_interface->tape_output);
+			break;
+		case ui_action_tape_play_pause:
+			tape_set_playing(xroar_tape_interface, !(GetMenuState(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
 			break;
 		case ui_action_zoom_in:
 			sdl_zoom_in(global_uisdl2);
@@ -456,6 +462,10 @@ void windows32_ui_set_state(void *sptr, int tag, int value, const void *data) {
 			int t = TAGV(tag, 1 << i);
 			CheckMenuItem(top_menu, t, MF_BYCOMMAND | (f ? MF_CHECKED : MF_UNCHECKED));
 		}
+		break;
+
+	case ui_tag_tape_playing:
+		CheckMenuItem(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Disk
