@@ -240,6 +240,8 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->snd = xroar_ao_interface->sound_interface;
 	mcc3->tape_interface = xroar_tape_interface;
 
+	mcc3->tape_interface->default_paused = 0;
+
 	// Find attached parts
 	mcc3->GIME0 = (struct TCC1014 *)part_component_by_id_is_a(p, "GIME", "TCC1014");
 	mcc3->CPU0 = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");

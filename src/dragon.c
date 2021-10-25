@@ -340,6 +340,8 @@ static _Bool dragon_finish(struct part *p) {
 	md->snd = xroar_ao_interface->sound_interface;
 	md->tape_interface = xroar_tape_interface;
 
+	md->tape_interface->default_paused = 0;
+
 	// Find attached parts
 	md->SAM0 = (struct MC6883 *)part_component_by_id_is_a(p, "SAM0", "SN74LS783");
 	md->CPU0 = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
