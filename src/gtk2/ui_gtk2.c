@@ -647,6 +647,10 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		gtk2_output_tape_filename_cb((const char *)data);
 		break;
 
+	case ui_tag_tape_playing:
+		gtk2_update_tape_playing(value);
+		break;
+
 	/* Disk */
 
 	case ui_tag_disk_write_enable:

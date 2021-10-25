@@ -56,11 +56,17 @@ static GtkTreeView *tc_input_list = NULL;
 static GtkListStore *tc_input_list_store = NULL;
 static GtkScrollbar *tc_input_progress = NULL;
 static GtkScrollbar *tc_output_progress = NULL;
+static GtkWidget *tc_input_play = NULL;
+static GtkWidget *tc_input_pause = NULL;
+static GtkWidget *tc_output_record = NULL;
+static GtkWidget *tc_output_pause = NULL;
 static GtkToggleButton *tc_fast = NULL;
 static GtkToggleButton *tc_pad_auto = NULL;
 static GtkToggleButton *tc_rewrite = NULL;
 
 static void hide_tc_window(GtkEntry *entry, gpointer user_data);
+static void tc_play(GtkButton *button, gpointer user_data);
+static void tc_pause(GtkButton *button, gpointer user_data);
 static void tc_input_rewind(GtkButton *button, gpointer user_data);
 static void tc_output_rewind(GtkButton *button, gpointer user_data);
 static void tc_input_insert(GtkButton *button, gpointer user_data);
@@ -126,6 +132,10 @@ void gtk2_create_tc_window(void) {
 	tc_input_list_store = GTK_LIST_STORE(gtk_builder_get_object(builder, "input_file_list_store"));
 	tc_input_progress = GTK_SCROLLBAR(gtk_builder_get_object(builder, "input_file_progress"));
 	tc_output_progress = GTK_SCROLLBAR(gtk_builder_get_object(builder, "output_file_progress"));
+	tc_input_play = GTK_WIDGET(gtk_builder_get_object(builder, "input_play"));
+	tc_input_pause = GTK_WIDGET(gtk_builder_get_object(builder, "input_pause"));
+	tc_output_record = GTK_WIDGET(gtk_builder_get_object(builder, "output_record"));
+	tc_output_pause = GTK_WIDGET(gtk_builder_get_object(builder, "output_pause"));
 	tc_fast = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast"));
 	tc_pad_auto = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "pad_auto"));
 	tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "rewrite"));
@@ -136,6 +146,10 @@ void gtk2_create_tc_window(void) {
 	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), NULL);
 	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
 	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);
+	g_signal_connect(tc_input_play, "clicked", G_CALLBACK(tc_play), NULL);
+	g_signal_connect(tc_input_pause, "clicked", G_CALLBACK(tc_pause), NULL);
+	g_signal_connect(tc_output_record, "clicked", G_CALLBACK(tc_play), NULL);
+	g_signal_connect(tc_output_pause, "clicked", G_CALLBACK(tc_pause), NULL);
 	g_signal_connect(tc_fast, "toggled", G_CALLBACK(tc_toggled_fast), NULL);
 	g_signal_connect(tc_pad_auto, "toggled", G_CALLBACK(tc_toggled_pad_auto), NULL);
 	g_signal_connect(tc_rewrite, "toggled", G_CALLBACK(tc_toggled_rewrite), NULL);
@@ -265,6 +279,12 @@ static void update_tape_counters(void *data) {
 
 /* Tape Control - UI callbacks */
 
+void gtk2_update_tape_state(int flags) {
+	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
+	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, NULL);
+	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
+}
+
 void gtk2_input_tape_filename_cb(const char *filename) {
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(global_uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_label_set_text(GTK_LABEL(tc_input_filename), filename);
@@ -308,10 +328,11 @@ static void tc_toggled_rewrite(GtkToggleButton *togglebutton, gpointer user_data
 	tape_set_state(xroar_tape_interface, flags);
 }
 
-void gtk2_update_tape_state(int flags) {
-	uigtk2_notify_toggle_button_set(tc_fast, (flags & TAPE_FAST) ? TRUE : FALSE, tc_toggled_fast, NULL);
-	uigtk2_notify_toggle_button_set(tc_pad_auto, (flags & TAPE_PAD_AUTO) ? TRUE : FALSE, tc_toggled_pad_auto, NULL);
-	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
+void gtk2_update_tape_playing(int playing) {
+	gtk_widget_set_sensitive(tc_input_play, !playing);
+	gtk_widget_set_sensitive(tc_input_pause, playing);
+	gtk_widget_set_sensitive(tc_output_record, !playing);
+	gtk_widget_set_sensitive(tc_output_pause, playing);
 }
 
 /* Tape Control - Signal Handlers */
@@ -341,6 +362,18 @@ static gboolean tc_input_progress_change(GtkRange *range, GtkScrollType scroll, 
 	(void)user_data;
 	tc_seek(xroar_tape_interface->tape_input, scroll, value);
 	return TRUE;
+}
+
+static void tc_play(GtkButton *button, gpointer user_data) {
+	(void)button;
+	(void)user_data;
+	tape_set_playing(xroar_tape_interface, 1, 1);
+}
+
+static void tc_pause(GtkButton *button, gpointer user_data) {
+	(void)button;
+	(void)user_data;
+	tape_set_playing(xroar_tape_interface, 0, 1);
 }
 
 static void tc_input_rewind(GtkButton *button, gpointer user_data) {
