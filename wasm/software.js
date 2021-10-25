@@ -22,6 +22,8 @@ const romstubs = [
 	// CoCo 3
 	'coco3.rom',
 	'coco3p.rom',
+	// MC-10
+	'mc10.rom',
 	// RS-DOS
 	'disk11.rom',
 ];

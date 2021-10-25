@@ -136,6 +136,10 @@ void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
 		}
 		break;
 
+	case ui_tag_tape_playing:
+		EM_ASM_({ ui_update_tape_playing($0); }, value);
+		break;
+
 	// Disk
 
 	case ui_tag_disk_data:

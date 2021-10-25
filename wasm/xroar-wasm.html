@@ -66,7 +66,7 @@ be a better way to make this usable...
 	<option value='3'>Simulated</option>
 	</select></td></tr>
 
-<tr title="TV Input"><td style='text-align:right;'>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(this.options[this.selectedIndex].value)'>
+<tr title="TV Input"><td style='text-align:right;'>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(false, this.options[this.selectedIndex].value)'>
 	<option value='0'>Composite palette</option>
 	<option value='1'>Composite (blue-red)</option>
 	<option value='2'>Composite (red-blue)</option>
@@ -92,7 +92,7 @@ be a better way to make this usable...
 
 <tr><td colspan="2"></td></tr>
 
-<tr><td style='text-align:right;'>Tape:</td><td><span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span> <label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'><span id='tape'>Insert...</span></label></td></tr>
+<tr><td style='text-align:right;'>Tape:</td><td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_tape_playing(true,true)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_tape_playing(true,false)' style='display:none'>&#x23f8;</span> <span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span> <label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'><span id='tape'>Insert...</span></label></td></tr>
 
 </table>
 </div>
@@ -237,6 +237,14 @@ be a better way to make this usable...
 		document.getElementById('left-joystick').value = ljoy;
 		document.getElementById('right-joystick').value = rjoy;
 
+		if ('ccr' in program) {
+			wasm_set_ccr(program.ccr);
+		}
+
+		if ('tv_input' in program) {
+			setTimeout(wasm_set_tv_input, 500, true, program.tv_input);
+		}
+
 		wasm_eject_tape();
 		for (let i = 0; i < 4; i++) {
 			wasm_eject_disk(i);
@@ -332,6 +340,11 @@ be a better way to make this usable...
 		Module.ccall('xroar_eject_disk', null, [ 'number' ], [ drive ]);
 	}
 
+	function wasm_set_tape_playing(notify,value) {
+		resumeAudio(Module.canvas);
+		Module.ccall('xroar_set_tape_playing', null, [ 'boolean', 'boolean' ], [ notify, value ]);
+	}
+
 	// Eject current tape
 	function wasm_eject_tape() {
 		resumeAudio(Module.canvas);
@@ -346,9 +359,9 @@ be a better way to make this usable...
 	}
 
 	// Set TV input
-	function wasm_set_tv_input(value) {
+	function wasm_set_tv_input(notify,value) {
 		resumeAudio(Module.canvas);
-		Module.ccall('xroar_set_tv_input', null, [ 'boolean', 'number' ], [ false, value ]);
+		Module.ccall('xroar_set_tv_input', null, [ 'boolean', 'number' ], [ notify, value ]);
 		Module.canvas.focus();
 	}
 
@@ -420,6 +433,17 @@ be a better way to make this usable...
 			el.innerHTML = 'Insert...';
 		} else {
 			el.innerHTML = filename;
+		}
+	}
+
+	// Called when tape playing status changes
+	function ui_update_tape_playing(value) {
+		if (value) {
+			document.getElementById('tape_play').style.display = 'none';
+			document.getElementById('tape_pause').style.display = '';
+		} else {
+			document.getElementById('tape_play').style.display = '';
+			document.getElementById('tape_pause').style.display = 'none';
 		}
 	}
 

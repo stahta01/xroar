@@ -7,6 +7,7 @@
 	'_wasm_set_machine_cart',
 	'_xroar_eject_disk',
 	'_xroar_eject_input_tape',
+	'_xroar_set_tape_playing',
 	'_xroar_hard_reset',
 	'_xroar_set_cart_by_id',
 	'_xroar_set_ccr',
