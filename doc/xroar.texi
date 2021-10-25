@@ -173,7 +173,7 @@ detailed throughout this manual and listed in @ref{Keyboard shortcuts}.
 You can put XRoar into fullscreen mode by selecting @clicksequence{View
 @click{} Full Screen}, but you will notice that the menu bar disappears.  To
 return to windowed mode, use the keyboard shortcut @kbd{@key{CTRL}+F}, or just
-@key{F11}.
+@kbd{@key{F11}}.
 
 As you type, you may notice that certain keys don't produce the character you
 pressed.  This is because by default, XRoar tries to map keys such that they
@@ -601,12 +601,12 @@ with @option{-machine-cart}, or automatic selection is disabled with the
 @option{-no-machine-cart} option.
 
 Selecting a ROM image file with the @option{-load} or @option{-run} command
-line options, or with @key{CTRL}+@kbd{L} or
-@key{CTRL}+@key{SHIFT}+@kbd{L}, will attach a ROM cartridge.
+line options, or with @kbd{@key{CTRL}+L} or
+@kbd{@key{CTRL}+@key{SHIFT}+L}, will attach a ROM cartridge.
 
 Within the emulator, cartridges can be enabled or disabled by pressing
-@key{CTRL}+@kbd{E}.  You will almost certainly want to follow this with a
-hard reset (@key{CTRL}+@key{SHIFT}+@kbd{R}).
+@kbd{@key{CTRL}+E}.  You will almost certainly want to follow this with a
+hard reset (@kbd{@key{CTRL}+@key{SHIFT}+R}).
 
 @subsection Multi-Pak Interface
 
@@ -645,9 +645,9 @@ popular server application used to provide such facilities.
 @chapter Files
 
 In general, files can be attached on the command line with @option{-load
-@var{filename}}, or by pressing @key{CTRL}+@kbd{L}.  XRoar judges the type of
+@var{filename}}, or by pressing @kbd{@key{CTRL}+L}.  XRoar judges the type of
 file based on its filename extension.  To attempt to intelligently autorun a
-file, use @option{-run @var{filename}} or press @key{CTRL}+@key{SHIFT}+@kbd{L}.
+file, use @option{-run @var{filename}} or press @kbd{@key{CTRL}+@key{SHIFT}+L}.
 See @ref{Running programs} for the methods XRoar will use to autorun a file.
 
 @menu
@@ -682,7 +682,7 @@ for loading in ASCII mode.  Read-only.
 
 To create a cassette image for writing (with the @command{CSAVE} or
 @command{CSAVEM} BASIC commands, for example), use the @option{-tape-write
-@var{filename}} option, or press @key{CTRL}+@kbd{W}.  If a file already exists,
+@var{filename}} option, or press @kbd{@key{CTRL}+W}.  If a file already exists,
 new data will be appended to it.  Rewind the output take to overwrite it.  Note
 a slight behaviour difference: CAS files can only be overwritten or appended
 to, WAV files can overwrite existing data (leaving later data intact).
@@ -751,14 +751,14 @@ header information.
 @tab Another disk image file format, used by PC-Dragon.
 @end multitable
 
-To insert a disk into a particular drive, press @key{CTRL}+@var{[1-4]}.
+To insert a disk into a particular drive, press @kbd{@key{CTRL}+@var{[1-4]}}.
 
 When you attach a disk, it is read into memory, and subsequent disk operations
 are performed on this in-memory copy.  Write enable defaults to on (so write
 operations on the copy will work), but write back defaults to off, so updates
 will not be written to the disk image file.  To toggle write enable, press
-@key{CTRL}+@var{[5-8]}, where the number to press is the drive number plus
-4.  To toggle write back, press @key{CTRL}+@key{SHIFT}+@var{[5-8]}.  Even
+@kbd{@key{CTRL}+@var{[5-8]}}, where the number to press is the drive number plus
+4.  To toggle write back, press @kbd{@key{CTRL}+@key{SHIFT}+@var{[5-8]}}.  Even
 with write back enabled, image files will not be updated until the disk in a
 virtual drive is changed, or you quit the emulator.
 
@@ -768,7 +768,7 @@ Write back can be set to default to on with the @option{-disk-write-back}
 command line option.
 
 To flush any changes made to in-memory disk images to their backing file (but
-only those with write back enabled), press @key{CTRL}+@key{SHIFT}+@kbd{D}.
+only those with write back enabled), press @kbd{@key{CTRL}+@key{SHIFT}+D}.
 
 The JVC format specifies that the disk images without headers are single-sided,
 but some double-sided disk images have been made available without headers.
@@ -780,8 +780,9 @@ filename extension, but may be disabled for the other valid JVC filename
 extensions with @option{-no-disk-auto-os9}.
 
 You can create a new blank disk in a virtual drive by pressing
-@key{CTRL}+@key{SHIFT}+@var{[1-4]}.  You will be a prompted for a filename,
-and the filename extension determines which type of file will be written.
+@kbd{@key{CTRL}+@key{SHIFT}+@var{[1-4]}}.  You will be a prompted for a
+filename, and the filename extension determines which type of file will be
+written.
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
 instead of one, so when you perform operations on Drive 1, from the CoCo's
@@ -816,8 +817,8 @@ just creates a cartridge instance of type @samp{rom}.  @xref{Cartridges}.
 @section Snapshots
 
 XRoar can save out a snapshot of the emulated machine state and read the
-snapshots back in later.  To save a snapshot, press @key{CTRL}+@kbd{S}.
-When using @key{CTRL}+@kbd{L} to load a file, anything ending in @file{.sna}
+snapshots back in later.  To save a snapshot, press @kbd{@key{CTRL}+S}.
+When using @kbd{@key{CTRL}+L} to load a file, anything ending in @file{.sna}
 will be recognised as a snapshot.
 
 Most internal state should be dumped to the snapshot.  External data like ROM
@@ -967,7 +968,7 @@ More limited than the GTK+ interface, providing keyboard shortcuts and, in
 the Mac OS X and Windows variants, some basic menus.
 
 Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
-as well as the usual shortcut of @key{CTRL}+@var{key}.
+as well as the usual shortcut of @kbd{@key{CTRL}+@var{key}}.
 
 
 @node Video output
@@ -983,7 +984,7 @@ possible user-interface.
 
 @item -fs
 
-Start full-screen.  Toggle full-screen with @key{CTRL}+@kbd{F} or @kbd{F11}.
+Start full-screen.  Toggle full-screen with @kbd{@key{CTRL}+F} or @kbd{@key{F11}}.
 
 @item -fskip @var{frames}
 
@@ -1008,10 +1009,10 @@ Default is @samp{5bit}.
 
 Real NTSC machines start in one of two cross-colour states at random.  Games
 often prompt the user to ``Press Enter if the screen is red'', for example.
-You can press @key{CTRL}+@kbd{A}, to cycle through three modes: Off,
+You can press @kbd{@key{CTRL}+A}, to cycle through three modes: Off,
 Blue-red and Red-blue.
 
-Inverted text mode may be toggled by pressing @key{CTRL}+@key{SHIFT}+@kbd{I}.
+Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
 
 
 @node Audio output
@@ -1103,7 +1104,7 @@ host's keyboard.  If it is not the default (UK), use the @option{-keymap
 XRoar can also be put into ``translated'' keyboard mode, where characters typed
 on a PC keyboard are translated into the equivalent keystrokes on the Dragon.
 Use the @option{-kbd-translate} option to default to this mode.  Press
-@key{CTRL}+@kbd{Z} at any time to toggle between the two modes.
+@kbd{@key{CTRL}+Z} at any time to toggle between the two modes.
 
 In translated mode, @key{SHIFT}+@kbd{Return} is mapped to the Caps Lock
 combination (@key{SHIFT}+@kbd{0} usually, @key{SHIFT}+@kbd{ENTER} on the Dragon
@@ -1148,7 +1149,7 @@ Intercept ROM calls to type @var{string} into BASIC on startup.
 The keyboards of the Dragon, Dragon 200-E and Tandy machines operate in the
 same way, but the matrix and/or key layouts differ.  When you select a machine
 (see @ref{Machines}), the appropriate layout is selected for you, but you can
-cycle between them by pressing @key{CTRL}+@kbd{K}.
+cycle between them by pressing @kbd{@key{CTRL}+K}.
 
 XRoar will simulate the ``ghosting'' effects inherent in a simple matrix
 design, but the accuracy of this simulation will depend very much on your host
@@ -1175,10 +1176,10 @@ By default, @samp{joy0} (the first physical joystick) is mapped to the Dragon's
 right joystick port, and @samp{joy1} (the second physical joystick) to the left
 port.  Map different named joysticks with @option{-joy-right @var{name}} and
 @option{-joy-left @var{name}}.  Right and left joystick mapping can be easily
-swapped by pressing @key{CTRL}+@key{SHIFT}+@kbd{J}.
+swapped by pressing @kbd{@key{CTRL}+@key{SHIFT}+J}.
 
 A configured ``virtual joystick'' can be used by pressing
-@key{CTRL}+@kbd{J}.  The first press substitutes it for the right joystick,
+@kbd{@key{CTRL}+J}.  The first press substitutes it for the right joystick,
 the second press with the left joystick and a third press disables it again.
 The virtual joystick defaults to the keyboard-based @samp{kjoy0} described
 above, but can be reconfigured with @option{-joy-virtual @var{name}}.
@@ -1208,7 +1209,7 @@ which gives reasonable behaviour for some games and utilities.
 
 XRoar supports redirecting the Dragon parallel printer output to a file or pipe
 with the @option{-lp-file} or @option{-lp-pipe} option.  Printed data will be
-sent to the appropriate stream.  Pressing @key{CTRL}+@key{SHIFT}+@kbd{P}
+sent to the appropriate stream.  Pressing @kbd{@key{CTRL}+@key{SHIFT}+P}
 will flush the current stream by closing it (so if the stream is a pipe, the
 filter will complete).  The stream will be re-opened when any new data is sent.
 
@@ -1216,7 +1217,7 @@ The pipe feature allows you to use useful print filters such as
 @command{enscript}, e.g. @option{-lp-pipe "enscript -B -N r -d
 @emph{printer-name}"}.  This will send a job to your printer, using carriage
 returns as line feeds (the Dragon default), each time you press
-@key{CTRL}+@key{SHIFT}+@kbd{P} (or exit the emulator).
+@kbd{@key{CTRL}+@key{SHIFT}+P} (or exit the emulator).
 
 @table @option
 
@@ -1252,7 +1253,7 @@ the @option{-gdb-ip} and @option{-gdb-port} options.
 
 XRoar also supports a simpler ``trace mode'', where it will dump a disassembly
 of every instruction it executes to the console.  Toggle trace mode on or off
-with @key{CTRL}+@kbd{V}.  Trace mode can be enabled from startup with the
+with @kbd{@key{CTRL}+V}.  Trace mode can be enabled from startup with the
 @option{-trace} option.
 
 Note that GDB support is not currently implemented for the 6803 used by the
@@ -1408,8 +1409,8 @@ named @file{~/Library/XRoar/roms/} (not the system directory,
 @file{~/Library/XRoar/xroar.conf}.
 
 The Mac OS X build provides a menu for access to certain features, and often
-accepts the more familiar @kbd{Command}+@var{key} in place of the
-@key{CTRL}+@var{key} shortcuts listed in this manual.
+accepts the more familiar @kbd{@key{Command}+@var{key}} in place of the
+@kbd{@key{CTRL}+@var{key}} shortcuts listed in this manual.
 
 
 @subsection Windows binary package
