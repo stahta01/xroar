@@ -188,6 +188,7 @@ void xroar_eject_input_tape(void);
 void xroar_insert_output_tape_file(const char *filename);
 void xroar_insert_output_tape(void);
 void xroar_eject_output_tape(void);
+void xroar_set_tape_playing(_Bool notify, _Bool play);
 void xroar_hard_reset(void);
 void xroar_soft_reset(void);
 

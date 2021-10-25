@@ -1757,6 +1757,10 @@ void xroar_eject_output_tape(void) {
 	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
 }
 
+void xroar_set_tape_playing(_Bool notify, _Bool play) {
+	tape_set_playing(xroar_tape_interface, play, notify);
+}
+
 void xroar_soft_reset(void) {
 	xroar_machine->reset(xroar_machine, RESET_SOFT);
 }
