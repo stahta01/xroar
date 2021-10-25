@@ -65,6 +65,7 @@
 #define TAG_CARTRIDGE (3 << 24)
 
 #define TAG_TAPE_FLAGS (4 << 24)
+#define TAG_TAPE_PLAY_PAUSE (19 << 24)
 
 #define TAG_INSERT_DISK (5 << 24)
 #define TAG_NEW_DISK (6 << 24)
@@ -133,6 +134,7 @@ static int current_machine = 0;
 static int current_cartridge = 0;
 static int current_keymap = 0;
 static int is_fullscreen = 0;
+static int tape_is_playing = 0;
 static int vdg_inverted = 0;
 static int is_kbd_translate = 0;
 static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
@@ -281,6 +283,10 @@ int cocoa_super_all_keys = 0;
 	case TAG_TAPE_FLAGS:
 		tape_set_state(xroar_tape_interface, tape_get_state(xroar_tape_interface) ^ tag_value);
 		break;
+	case TAG_TAPE_PLAY_PAUSE:
+		tape_is_playing = !tape_is_playing;
+		tape_set_playing(xroar_tape_interface, tape_is_playing, 0);
+		break;
 
 	/* Disks: */
 	case TAG_INSERT_DISK:
@@ -366,6 +372,9 @@ int cocoa_super_all_keys = 0;
 
 	case TAG_TAPE_FLAGS:
 		[item setState:((tape_get_state(xroar_tape_interface) & tag_value) ? NSOnState : NSOffState)];
+		break;
+	case TAG_TAPE_PLAY_PAUSE:
+		[item setState:(tape_is_playing ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_WRITE_ENABLE:
@@ -515,6 +524,13 @@ static void setup_file_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Rewind Input Tape" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_INPUT_REWIND)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Play" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:TAG_TAPE_PLAY_PAUSE];
 	[submenu addItem:item];
 	[item release];
 
@@ -1082,6 +1098,12 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_cartridge:
 		current_cartridge = TAG_CARTRIDGE | value;
+		break;
+
+	/* Cassettes */
+
+	case ui_tag_tape_playing:
+		tape_is_playing = value ? 1 : 0;
 		break;
 
 	/* Disk */
