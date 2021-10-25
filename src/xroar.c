@@ -330,7 +330,7 @@ static char const * const default_config[] = {
 	"machine-arch mc10",
 	"tv-type ntsc",
 	"bas @mc10",
-	"ram 4",
+	"ram 20",
 
 	// DragonDOS
 	"cart dragondos",
