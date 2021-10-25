@@ -690,7 +690,9 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 		switch (type) {
 			case 0:
-				keyboard_queue_basic(tip->keyboard_interface, "\\eCLOAD\\r\\0RUN\\r");
+				keyboard_queue_basic(tip->keyboard_interface, "\\eCLOAD\\r");
+				keyboard_queue_press_play(tip->keyboard_interface);
+				keyboard_queue_basic(tip->keyboard_interface, "\\0RUN\\r");
 				break;
 			case 2:
 				if (need_exec) {
@@ -698,6 +700,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 				} else {
 					keyboard_queue_basic(tip->keyboard_interface, "\\eCLOADM\\r");
 				}
+				keyboard_queue_press_play(tip->keyboard_interface);
 				break;
 			default:
 				break;
