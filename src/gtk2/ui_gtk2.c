@@ -237,7 +237,7 @@ static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointe
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	xroar_set_machine(0, val);
+	xroar_set_machine(1, val);
 }
 
 static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -245,7 +245,7 @@ static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer u
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
 	struct cart_config *cc = cart_config_by_id(val);
-	xroar_set_cart(0, cc ? cc->name : NULL);
+	xroar_set_cart(1, cc ? cc->name : NULL);
 }
 
 static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
