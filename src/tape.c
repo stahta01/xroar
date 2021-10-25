@@ -72,7 +72,8 @@ struct tape_interface_private {
 	int ao_rate;
 
 	uint8_t last_tape_output;
-	_Bool motor;
+	_Bool playing;  // manual motor control
+	_Bool motor;  // automatic motor control
 
 	struct {
 		// Whether a sync byte has been detected yet.  If false, we're still
@@ -103,8 +104,11 @@ struct tape_interface_private {
 	struct event flush_event;
 };
 
+static struct xroar_timeout *motoroff_timeout = NULL;
+
 static void waggle_bit(void *);
 static void flush_output(void *);
+static void update_motor(struct tape_interface_private *tip);
 
 static void tape_desync(struct tape_interface_private *tip, int leader);
 static void rewrite_sync(void *sptr);
@@ -242,7 +246,7 @@ int tape_seek(struct tape *t, long offset, int whence) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int r = t->module->seek(t, offset, whence);
-	tape_update_motor(ti, tip->motor);
+	update_motor(tip);
 	// If seeking to beginning of tape, ensure any fake leader etc.
 	// is set up properly.
 	if (r >= 0 && t->offset == 0) {
@@ -456,6 +460,7 @@ void tape_reset(struct tape_interface *ti) {
 	tape_close_writing(ti);
 	tip->motor = 0;
 	event_dequeue(&tip->waggle_event);
+	tape_set_playing(ti, !ti->default_paused, 1);
 }
 
 void tape_set_ao_rate(struct tape_interface *ti, int rate) {
@@ -510,8 +515,12 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar_cfg.tape_hysteresis);
 
 	tape_desync(tip, xroar_cfg.tape_rewrite_leader);
-	tape_update_motor(ti, tip->motor);
-	LOG_DEBUG(1, "Tape: Attached '%s' for reading\n", filename);
+	tape_set_playing(ti, !ti->default_paused, 1);
+	if (logging.level >= 1) {
+		LOG_PRINT("Tape: Attached '%s' for reading", filename);
+		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
+		LOG_PRINT("\n");
+	}
 	return 0;
 }
 
@@ -547,10 +556,14 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 		break;
 	}
 
-	tape_update_motor(ti, tip->motor);
+	tape_set_playing(ti, !ti->default_paused, 1);
 	tip->rewrite.bit_count = 0;
 	tip->rewrite.silence = 1;
-	LOG_DEBUG(1, "Tape: Attached '%s' for writing.\n", filename);
+	if (logging.level >= 1) {
+		LOG_PRINT("Tape: Attached '%s' for writing", filename);
+		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
+		LOG_PRINT("\n");
+	}
 	return 0;
 }
 
@@ -657,16 +670,101 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	return type;
 }
 
-static struct xroar_timeout *motoroff_timeout = NULL;
+// Automatic motor control.  Simulates cassette relay.
 
-// Called whenever the motor control line is written to.
-
-void tape_update_motor(struct tape_interface *ti, _Bool state) {
+void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	if (state) {
+	_Bool prev_state = tip->motor;
+	tip->motor = motor;
+	update_motor(tip);
+	if (motor != prev_state) {
+		if (motoroff_timeout) {
+			xroar_cancel_timeout(motoroff_timeout);
+			motoroff_timeout = NULL;
+		}
+		if (!motor && xroar_cfg.timeout_motoroff) {
+			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		}
+		if (!motor && xroar_cfg.snap_motoroff) {
+			write_snapshot(xroar_cfg.snap_motoroff);
+		}
+		LOG_DEBUG(2, "Tape: motor %s\n", motor ? "ON" : "OFF");
+	}
+	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_motor, tip->motor, NULL);
+}
+
+// Manual motor control.  UI-triggered play/pause.  Call with play=0 to pause.
+
+void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tip->playing = play;
+	update_motor(tip);
+	// Might be confusing if user presses play but EOF immediately stops it
+	// again, so make sure there is some debugging for that available:
+	if (logging.level >= 2) {
+		LOG_PRINT("Tape: [%s]", play ? "PLAYING" : "PAUSED");
+		if (play != tip->playing) {
+			LOG_PRINT(" -> [%s]", tip->playing ? "PLAYING" : "PAUSED");
+		}
+		LOG_PRINT("\n");
+	}
+	if (notify) {
+		DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_playing, tip->playing, NULL);
+	}
+}
+
+// Called when machine's tape output level changes.
+
+void tape_update_output(struct tape_interface *ti, uint8_t value) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	if (tip->motor && tip->playing && ti->tape_output && !tip->tape_rewrite) {
+		int length = event_current_tick - ti->tape_output->last_write_cycle;
+		ti->tape_output->module->sample_out(ti->tape_output, tip->last_tape_output, length);
+		ti->tape_output->last_write_cycle = event_current_tick;
+	}
+	tip->last_tape_output = value;
+}
+
+// Updates flags and sets appropriate breakpoints.
+
+void tape_set_state(struct tape_interface *ti, int flags) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tip->tape_fast = flags & TAPE_FAST;
+	tip->tape_pad_auto = flags & TAPE_PAD_AUTO;
+	tip->tape_rewrite = flags & TAPE_REWRITE;
+	set_breakpoints(tip);
+}
+
+// Sets tape flags and updates UI.
+
+void tape_select_state(struct tape_interface *ti, int flags) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	tape_set_state(ti, flags);
+	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
+}
+
+// Get current tape flags.
+
+int tape_get_state(struct tape_interface *ti) {
+	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	int flags = 0;
+	if (tip->tape_fast) flags |= TAPE_FAST;
+	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
+	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
+	return flags;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Update events & breakpoints based on current motor state.
+
+static void update_motor(struct tape_interface_private *tip) {
+	struct tape_interface *ti = &tip->public;
+	_Bool running = tip->motor && tip->playing;
+	if (running) {
 		if (ti->tape_input && !tip->waggle_event.queued) {
-			/* If motor turned on and tape file attached,
-			 * enable the tape input bit waggler */
+			// If motor running and tape file attached, enable the
+			// tape input bit waggler.
 			tip->waggle_event.at_tick = event_current_tick;
 			waggle_bit(tip);
 		}
@@ -686,33 +784,7 @@ void tape_update_motor(struct tape_interface *ti, _Bool state) {
 			tape_desync(tip, xroar_cfg.tape_rewrite_leader);
 		}
 	}
-	if (tip->motor != state) {
-		if (motoroff_timeout) {
-			xroar_cancel_timeout(motoroff_timeout);
-			motoroff_timeout = NULL;
-		}
-		if (!state && xroar_cfg.timeout_motoroff) {
-			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
-		}
-		if (!state && xroar_cfg.snap_motoroff) {
-			write_snapshot(xroar_cfg.snap_motoroff);
-		}
-		LOG_DEBUG(2, "Tape: motor %s\n", state ? "ON" : "OFF");
-	}
-	tip->motor = state;
 	set_breakpoints(tip);
-}
-
-// Called whenever the DAC is written to.
-
-void tape_update_output(struct tape_interface *ti, uint8_t value) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	if (tip->motor && ti->tape_output && !tip->tape_rewrite) {
-		int length = event_current_tick - ti->tape_output->last_write_cycle;
-		ti->tape_output->module->sample_out(ti->tape_output, tip->last_tape_output, length);
-		ti->tape_output->last_write_cycle = event_current_tick;
-	}
-	tip->last_tape_output = value;
 }
 
 // Read pulse & duration, schedule next read.
@@ -728,6 +800,9 @@ static void waggle_bit(void *sptr) {
 		event_dequeue(&tip->waggle_event);
 		if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
 			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		}
+		if (ti->default_paused) {
+			tape_set_playing(ti, 0, 1);
 		}
 		return;
 	case 0:
@@ -748,7 +823,7 @@ static void flush_output(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
 	tape_update_output(ti, tip->last_tape_output);
-	if (tip->motor) {
+	if (tip->motor && tip->playing) {
 		tip->flush_event.at_tick += EVENT_MS(500);
 		event_queue(&MACHINE_EVENT_LIST, &tip->flush_event);
 	}
@@ -1288,7 +1363,7 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	machine_bp_remove_list(tip->machine, bp_list_fast);
 	machine_bp_remove_list(tip->machine, bp_list_fast_cbin);
 	machine_bp_remove_list(tip->machine, bp_list_rewrite);
-	if (!tip->motor)
+	if (!tip->motor || !tip->playing)
 		return;
 	// Don't intercept calls if there's no input tape.  The optimisations
 	// are only for reading.  Also, this helps works around missing
@@ -1308,33 +1383,4 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	if (tip->tape_rewrite) {
 		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
 	}
-}
-
-// Updates flags and sets appropriate breakpoints.
-
-void tape_set_state(struct tape_interface *ti, int flags) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	tip->tape_fast = flags & TAPE_FAST;
-	tip->tape_pad_auto = flags & TAPE_PAD_AUTO;
-	tip->tape_rewrite = flags & TAPE_REWRITE;
-	set_breakpoints(tip);
-}
-
-// Sets tape flags and updates UI.
-
-void tape_select_state(struct tape_interface *ti, int flags) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	tape_set_state(ti, flags);
-	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
-}
-
-// Get current tape flags.
-
-int tape_get_state(struct tape_interface *ti) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	int flags = 0;
-	if (tip->tape_fast) flags |= TAPE_FAST;
-	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
-	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
-	return flags;
 }

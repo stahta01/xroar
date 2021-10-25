@@ -996,7 +996,7 @@ static void pia1a_data_postwrite(void *sptr) {
 
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	tape_update_motor(mcc3->tape_interface, mcc3->PIA1->a.control_register & 0x08);
+	tape_set_motor(mcc3->tape_interface, mcc3->PIA1->a.control_register & 0x08);
 }
 
 static void pia1b_data_postwrite(void *sptr) {

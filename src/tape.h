@@ -38,9 +38,14 @@ struct machine;
 struct tape_interface {
 	// Delegate for tape output updates
 	DELEGATE_T1(void, float) update_audio;
+
 	// Current tapes for input and output
 	struct tape *tape_input;
 	struct tape *tape_output;
+
+	// Set by machines without motor control.  When set, tape interface
+	// will pause on reset or when a new tape is inserted.
+	_Bool default_paused;
 };
 
 struct tape_module;
@@ -125,7 +130,14 @@ void tape_close_writing(struct tape_interface *ti);
 
 int tape_autorun(struct tape_interface *ti, const char *filename);
 
-void tape_update_motor(struct tape_interface *ti, _Bool state);
+
+// Automatic motor control.  Simulates cassette relay.
+void tape_set_motor(struct tape_interface *ti, _Bool motor);
+
+// Manual motor control.  UI-triggered play/pause.  Call with play=0 to pause.
+void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify);
+
+// Called by machine to reflect change in tape output level.
 void tape_update_output(struct tape_interface *ti, uint8_t value);
 
 #define TAPE_FAST (1 << 0)

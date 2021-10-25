@@ -56,6 +56,8 @@ enum ui_tag {
 	ui_tag_tape_flags,
 	ui_tag_tape_input_filename,  // .data = filename
 	ui_tag_tape_output_filename,  // .data = filename
+	ui_tag_tape_motor,  // automatic control
+	ui_tag_tape_playing,  // manual control (0 = paused)
 	// Disk
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
@@ -92,6 +94,7 @@ enum ui_action {
 	ui_action_file_save_snapshot,
 	ui_action_tape_input,
 	ui_action_tape_output,
+	ui_action_tape_play_pause,
 	ui_action_tape_input_rewind,
 	ui_action_tape_output_rewind,
 	ui_action_zoom_in,
