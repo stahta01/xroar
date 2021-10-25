@@ -30,11 +30,13 @@
 #include "xalloc.h"
 
 #include "breakpoint.h"
+#include "debug_cpu.h"
 #include "dkbd.h"
 #include "events.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
+#include "mc6801.h"
 #include "mc6809.h"
 #include "part.h"
 #include "xroar.h"
@@ -51,7 +53,9 @@ struct keyboard_interface_private {
 	struct keyboard_interface public;
 
 	struct machine *machine;
-	struct MC6809 *cpu;
+	struct debug_cpu *debug_cpu;
+	_Bool is_6809;
+	_Bool is_6801;
 
 	struct slist *basic_command_list;
 	sds basic_command;
@@ -67,6 +71,7 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
+	BP_MC10_ROM(.address = 0xf883, .handler = DELEGATE_INIT(type_command, NULL) ),
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(type_command, NULL) ),
 };
 
@@ -75,7 +80,9 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	*kip = (struct keyboard_interface_private){0};
 	struct keyboard_interface *ki = &kip->public;
 	kip->machine = m;
-	kip->cpu = (struct MC6809 *)part_component_by_id_is_a((struct part *)m, "CPU", "MC6809");
+	kip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
+	kip->is_6809 = part_is_a(&kip->debug_cpu->part, "MC6809");
+	kip->is_6801 = part_is_a(&kip->debug_cpu->part, "MC6801");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -85,7 +92,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 
 void keyboard_interface_free(struct keyboard_interface *ki) {
 	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
-	if (kip->cpu)
+	if (kip->debug_cpu)
 		machine_bp_remove_list(kip->machine, basic_command_breakpoint);
 	slist_free_full(kip->basic_command_list, (slist_free_func)sdsfree);
 	free(kip);
@@ -184,9 +191,10 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 
 static void type_command(void *sptr) {
 	struct keyboard_interface_private *kip = sptr;
-	struct MC6809 *cpu = kip->cpu;
+	struct MC6801 *cpu01 = (struct MC6801 *)kip->debug_cpu;
+	struct MC6809 *cpu09 = (struct MC6809 *)kip->debug_cpu;
 
-	if (!cpu)
+	if (!kip->debug_cpu)
 		return;
 
 	if (!kip->basic_command && kip->basic_command_list) {
@@ -199,10 +207,16 @@ static void type_command(void *sptr) {
 		return;
 	}
 
-	MC6809_REG_A(cpu) = kip->basic_command[kip->command_index++];
-	// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
-	// as otherwise BASIC will skip it.
-	cpu->reg_cc &= ~4;
+	if (kip->is_6809) {
+		MC6809_REG_A(cpu09) = kip->basic_command[kip->command_index++];
+		// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
+		// as otherwise BASIC will skip it.
+		cpu09->reg_cc &= ~4;
+	}
+	if (kip->is_6801) {
+		MC6801_REG_A(cpu01) = kip->basic_command[kip->command_index++];
+		cpu01->reg_cc &= ~4;
+	}
 	if (kip->command_index >= sdslen(kip->basic_command)) {
 		sdsfree(kip->basic_command);
 		kip->basic_command = NULL;
