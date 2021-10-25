@@ -1665,6 +1665,15 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 	// seem to account for the short-circuit "&&".
 	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
 		return;
+
+	// Some machines don't actually support carts yet
+	if (!xroar_machine->insert_cart) {
+		if (notify) {
+			DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
+		}
+		return;
+	}
+
 	xroar_machine->remove_cart(xroar_machine);
 
 	struct cart *new_cart = NULL;
