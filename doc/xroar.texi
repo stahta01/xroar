@@ -668,7 +668,7 @@ XRoar supports three types of cassette image:
 
 @multitable @columnfractions .15 .80
 @headitem Extension @tab Description
-@item @file{.cas}
+@item @file{.cas}, @file{.c10}
 @tab Cassette file.  Simple binary representation of data contained on a
 tape.  CUE support appends metadata describing cycle widths and representing
 silence.
@@ -705,6 +705,13 @@ Select the output frame rate when writing to audio files with
 
 Some debugging actions can be triggered each time the cassette motor switches
 off (e.g. when finished loading).  @xref{Debugging}.
+
+The MC-10 has no tape motor control, so when you insert a cassette, the player
+defaults to paused.  After typing @command{CLOAD} or @command{CLOADM}, you will
+have to start the player by selecting @clicksequence{File @click{} Cassette
+@click{} Play} (Windows, Mac OS X), or by clicking @key{Play} in the tape
+control dialog (GTK+, @clicksequence{Tool @click{} Tape Control} or
+@kbd{@key{CTRL}+T}).
 
 The @option{-tape-fast} option accelerates tape loading by intercepting ROM
 calls.  Disable with @option{-no-tape-fast}.  On by default.
