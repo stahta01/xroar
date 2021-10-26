@@ -120,6 +120,10 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	/* Populate the matrix crosspoint map */
 
 	// Clear table
+	for (int i = 0; i < DKBD_POINT_TABLE_SIZE; i++)
+		map->point[i] = (struct dkbd_matrix_point){8, 8, 0};
+
+	// Map the easy stuff
 	for (int i = 0; i < 56; i++) {
 		unsigned col = i & 7;
 		unsigned row = (i >> 3) & 7;
@@ -128,27 +132,34 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 			if (row != 6)
 				row = (row + 4) % 6;
 		}
-		map->point[i] = (struct dkbd_matrix_point){row, col};
+		map->point[i] = (struct dkbd_matrix_point){row, col, 0};
 	}
+
+	// CoCo 3 specials
 	if (layout != dkbd_layout_coco3) {
 		// Unmap CoCo 3 extended keys
 		for (int i = DSCAN_ALT; i <= DSCAN_F2; i++)
-			map->point[i] = (struct dkbd_matrix_point){8, 8};
+			map->point[i] = (struct dkbd_matrix_point){8, 8, 0};
 	}
+
+	// For most machines, this is true.  Overridden later for MC-10:
+	map->point[DSCAN_BACKSPACE] = map->point[DSCAN_LEFT];
+
+	// MC-10
 	if (layout == dkbd_layout_mc10) {
 		// Tweak MC-10 layout
-		for (int i = DSCAN_UP; i <= DSCAN_RIGHT; i++) {
-			map->point[i] = (struct dkbd_matrix_point){8, 8};
-		}
-		map->point[DSCAN_SPACE] = (struct dkbd_matrix_point){3, 7};
-		map->point[DSCAN_ENTER] = (struct dkbd_matrix_point){3, 6};
-		map->point[DSCAN_CLEAR] = (struct dkbd_matrix_point){6, 0};
-		map->point[DSCAN_BREAK] = (struct dkbd_matrix_point){6, 2};
-		map->point[DSCAN_CTRL] = (struct dkbd_matrix_point){6, 0};
-		map->point[DSCAN_SHIFT] = (struct dkbd_matrix_point){6, 7};
+		map->point[DSCAN_UP] = map->point[DSCAN_W];
+		map->point[DSCAN_DOWN] = map->point[DSCAN_Z];
+		map->point[DSCAN_LEFT] = map->point[DSCAN_A];
+		map->point[DSCAN_RIGHT] = map->point[DSCAN_S];
+		map->point[DSCAN_SPACE] = (struct dkbd_matrix_point){3, 7, 0};
+		map->point[DSCAN_ENTER] = (struct dkbd_matrix_point){3, 6, 0};
+		map->point[DSCAN_BREAK] = (struct dkbd_matrix_point){6, 2, 0};
+		map->point[DSCAN_CTRL] = (struct dkbd_matrix_point){6, 0, 0};
+		map->point[DSCAN_CLEAR] = map->point[DSCAN_CTRL];
+		map->point[DSCAN_SHIFT] = (struct dkbd_matrix_point){6, 7, 0};
+		map->point[DSCAN_BACKSPACE] = (struct dkbd_matrix_point){0, 1, DSCAN_CTRL};
 	}
-	for (int i = 0x38; i < DKBD_POINT_TABLE_SIZE; i++)
-		map->point[i] = (struct dkbd_matrix_point){8, 8};
 
 	/* Populate the unicode_to_dkey map */
 

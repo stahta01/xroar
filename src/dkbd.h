@@ -84,6 +84,9 @@ enum {
 	DSCAN_F1 = 0x35,
 	DSCAN_F2 = 0x36,
 
+	// Extras
+	DSCAN_BACKSPACE = 0x38,
+
 	DSCAN_INVALID = 0x3f,
 };
 
@@ -105,6 +108,7 @@ enum {
 struct dkbd_matrix_point {
 	uint8_t row;
 	uint8_t col;
+	uint8_t mod;
 };
 
 #define DK_MOD_SHIFT (1 << 0)

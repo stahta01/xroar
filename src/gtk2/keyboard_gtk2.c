@@ -142,8 +142,8 @@ static struct sym_dkey_mapping keyval_dkey_default[] = {
         { GDK_KEY_Down, DSCAN_DOWN, 1 },
         { GDK_KEY_Left, DSCAN_LEFT, 1 },
         { GDK_KEY_Right, DSCAN_RIGHT, 1 },
-        { GDK_KEY_BackSpace, DSCAN_LEFT, 1 },
-        { GDK_KEY_KP_Delete, DSCAN_LEFT, 1 },
+        { GDK_KEY_BackSpace, DSCAN_BACKSPACE, 1 },
+        { GDK_KEY_KP_Delete, DSCAN_BACKSPACE, 1 },
         { GDK_KEY_Tab, DSCAN_RIGHT, 1 },
 
 	// CoCo 3

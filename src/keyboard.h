@@ -64,11 +64,19 @@ inline void keyboard_release_matrix(struct keyboard_interface *ki, int col, int 
 /* Press or release a key from the current keymap. */
 
 inline void keyboard_press(struct keyboard_interface *ki, int s) {
+	int mod = ki->keymap.point[s].mod;
+	if (mod) {
+		keyboard_press_matrix(ki, ki->keymap.point[mod].col, ki->keymap.point[mod].row);
+	}
 	keyboard_press_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
 	DELEGATE_SAFE_CALL(ki->update);
 }
 
 inline void keyboard_release(struct keyboard_interface *ki, int s) {
+	int mod = ki->keymap.point[s].mod;
+	if (mod) {
+		keyboard_release_matrix(ki, ki->keymap.point[mod].col, ki->keymap.point[mod].row);
+	}
 	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
 	DELEGATE_SAFE_CALL(ki->update);
 }
