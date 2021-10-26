@@ -92,6 +92,9 @@ static struct dkey_chord_mapping coco3_chord_mappings[] = {
 };
 
 static struct dkey_chord_mapping mc10_chord_mappings[] = {
+	{ DKBD_U_CAPS_LOCK, { DSCAN_0, DK_MOD_SHIFT } },
+	{ DKBD_U_PAUSE_OUTPUT, { DSCAN_AT, DK_MOD_SHIFT } },
+	{ '@', { DSCAN_AT, DK_MOD_UNSHIFT } },
 };
 
 #define CMAPPING(m) .num_chord_mappings = ARRAY_N_ELEMENTS(m), .chord_mappings = (m)
