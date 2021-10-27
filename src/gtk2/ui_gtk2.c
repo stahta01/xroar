@@ -108,8 +108,8 @@ struct ui_module ui_gtk2_module = {
 };
 
 /* Dynamic menus */
-static void update_machine_menu(void);
-static void update_cartridge_menu(void);
+static void gtk2_update_machine_menu(void *sptr);
+static void gtk2_update_cartridge_menu(void *sptr);
 
 /* for hiding cursor: */
 static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data);
@@ -542,8 +542,10 @@ static void *ui_gtk2_new(void *cfg) {
 	uigtk2->merge_carts = gtk_ui_manager_new_merge_id(uigtk2->menu_manager);
 
 	/* Update all dynamic menus */
-	update_machine_menu();
-	update_cartridge_menu();
+	ui->update_machine_menu = DELEGATE_AS0(void, gtk2_update_machine_menu, uigtk2);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, gtk2_update_cartridge_menu, uigtk2);
+	gtk2_update_machine_menu(uigtk2);
+	gtk2_update_cartridge_menu(uigtk2);
 
 	/* Extract menubar widget and add to vbox */
 	uigtk2->menubar = gtk_ui_manager_get_widget(uigtk2->menu_manager, "/MainMenu");
@@ -751,7 +753,8 @@ static void free_action_group(GtkActionGroup *action_group) {
 }
 
 /* Dynamic machine menu */
-static void update_machine_menu(void) {
+static void gtk2_update_machine_menu(void *sptr) {
+	(void)sptr;
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	int num_machines = slist_length(mcl);
 	int selected = -1;
@@ -788,7 +791,8 @@ static void update_machine_menu(void) {
 }
 
 /* Dynamic cartridge menu */
-static void update_cartridge_menu(void) {
+static void gtk2_update_cartridge_menu(void *sptr) {
+	(void)sptr;
 	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
 	int num_carts = slist_length(ccl);
 	int selected = 0;
