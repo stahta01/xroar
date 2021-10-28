@@ -128,12 +128,14 @@ struct MC6801 {
 	uint8_t reg_cc;
 	uint16_t reg_d;
 	uint16_t reg_x, reg_sp, reg_pc;
-
 	uint8_t reg[32];
-	uint8_t ICF;
-	uint8_t OCF;
-	uint8_t TOF;
+
+	// Counter handling
+	uint8_t ICF, ICF_read;
+	uint8_t OCF, OCF_read;
+	uint8_t TOF, TOF_read;
 	uint16_t counter;
+	uint8_t counter_lsb_buf;
 	uint16_t output_compare;
 	_Bool output_compare_inhibit;
 

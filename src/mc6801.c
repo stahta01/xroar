@@ -92,6 +92,11 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, counter, ser_type_uint16), // 25
 	SER_STRUCT_ELEM(struct MC6801, output_compare, ser_type_uint16), // 26
 	SER_STRUCT_ELEM(struct MC6801, output_compare_inhibit, ser_type_bool), // 27
+
+	SER_STRUCT_ELEM(struct MC6801, ICF_read, ser_type_uint8), // 28
+	SER_STRUCT_ELEM(struct MC6801, OCF_read, ser_type_uint8), // 29
+	SER_STRUCT_ELEM(struct MC6801, TOF_read, ser_type_uint8), // 30
+	SER_STRUCT_ELEM(struct MC6801, counter_lsb_buf, ser_type_uint8), // 31
 };
 
 #define N_SER_STRUCT_MC6801 ARRAY_N_ELEMENTS(ser_struct_mc6801)
@@ -321,12 +326,7 @@ struct part *mc6803_deserialise(struct ser_handle *sh) {
 }
 
 static void mc6801_reset(struct MC6801 *cpu) {
-	cpu->nmi = 0;
-	cpu->nmi = cpu->nmi_latch = cpu->nmi_active = 0;
-	cpu->irq1 = cpu->irq1_latch = cpu->irq1_active = 0;
-	cpu->irq2_latch = cpu->irq2_active = 0;
 	cpu->state = mc6801_state_reset;
-	cpu->output_compare = 0xffff;
 }
 
 // Run CPU while cpu->running is true.
@@ -340,10 +340,15 @@ static void mc6801_run(struct MC6801 *cpu) {
 		case mc6801_state_reset:
 			cpu->itmp = CC_I;
 			REG_CC |= CC_I;
-			cpu->nmi = 0;
-			cpu->nmi_active = 0;
-			cpu->irq1_active = 0;
-			cpu->irq2_active = 0;
+			cpu->nmi = cpu->nmi_latch = cpu->nmi_active = 0;
+			cpu->irq1_latch = cpu->irq1_active = 0;
+			cpu->irq2_latch = cpu->irq2_active = 0;
+			cpu->ICF = cpu->ICF_read = 0;
+			cpu->OCF = cpu->OCF_read = 0;
+			cpu->TOF = cpu->TOF_read = 0;
+			cpu->counter = 0;
+			cpu->counter_lsb_buf = 0;
+			cpu->output_compare = 0xffff;
 #ifdef TRACE
 			if (logging.trace_cpu) {
 				mc6801_trace_irq(cpu->tracer, MC6801_INT_VEC_RESET);
@@ -1021,14 +1026,20 @@ static uint8_t fetch_byte_notrace(struct MC6801 *cpu, uint16_t a) {
 			cpu->D = MC6801_VALUE_PORT2(cpu) | (cpu->reg[MC6801_REG_P2DR] & 0xc0);
 			break;
 		case MC6801_REG_TCSR:
+			cpu->ICF_read = cpu->ICF;
+			cpu->OCF_read = cpu->OCF;
+			cpu->TOF_read = cpu->TOF;
 			cpu->D = cpu->ICF | cpu->OCF | cpu->TOF | (cpu->reg[MC6801_REG_TCSR] & 0x1f);
-			cpu->ICF = cpu->OCF = cpu->TOF = 0;
 			break;
 		case MC6801_REG_CRMSB:
 			cpu->D = cpu->counter >> 8;
+			cpu->counter_lsb_buf = cpu->counter & 0xff;
+			if (cpu->TOF_read) {
+				cpu->TOF = cpu->TOF_read = 0;
+			}
 			break;
 		case MC6801_REG_CRLSB:
-			cpu->D = cpu->counter & 0xff;
+			cpu->D = cpu->counter_lsb_buf;
 			break;
 		default:
 			cpu->D = cpu->reg[a];
@@ -1072,6 +1083,9 @@ static void store_byte(struct MC6801 *cpu, uint16_t a, uint8_t d) {
 			// fall through
 		case MC6801_REG_OCLSB:
 			cpu->output_compare = (cpu->reg[MC6801_REG_OCMSB] << 8) | cpu->reg[MC6801_REG_OCLSB];
+			if (cpu->OCF_read) {
+				cpu->OCF = cpu->OCF_read = 0;
+			}
 			break;
 		default:
 			break;
