@@ -1602,13 +1602,13 @@ void xroar_set_machine(_Bool notify, int id) {
 	struct machine_config *mc = machine_config_by_id(new);
 	machine_config_complete(mc);
 #ifdef HAVE_WASM
-	if (!wasm_ui_prepare_machine(mc)) {
-		if (mc->default_cart) {
-			struct cart_config *cc = cart_config_by_name(mc->default_cart);
-			wasm_ui_prepare_cartridge(cc);
-		}
-		return;
+	_Bool waiting = !wasm_ui_prepare_machine(mc);;
+	if (mc->default_cart) {
+		struct cart_config *cc = cart_config_by_name(mc->default_cart);
+		waiting |= !wasm_ui_prepare_cartridge(cc);
 	}
+	if (waiting)
+		return;
 #endif
 	xroar_configure_machine(mc);
 	if (mc->cart_enabled) {
