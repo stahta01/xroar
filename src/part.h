@@ -42,6 +42,54 @@ struct slist;
 struct intf;
 #endif
 
+/** \brief Part database entry functions
+ *
+ * Called by part_create() and part_deserialise().
+ *
+ * To allocate memory for the part, 'allocate' is called, if defined, otherwise
+ * a block of 'size' bytes is malloc()ed.  Either way, the (struct part) header
+ * of the allocated block will then be initialised, populating name, is_a,
+ * free, etc. from the partdb, so no need to do any of that in 'allocate'.
+ *
+ * Then, either part_create() calls 'initialise' to set up intial state, or
+ * part_deserialise() calls 'deserialise' to restore a previous state.  Either
+ * should end up creating and adding any required sub-parts.
+ *
+ * Finally, 'finish' is called, which is expected to find any sub-parts and set
+ * up the connections between them.  If it returns false, a dependency wasn't
+ * found, and the part is freed.
+ *
+ * Note: the 'options' argument passed to 'intialise' by part_create() is
+ * replaced with the part name if NULL, so don't pass intptr_t cast to void *
+ * for this.
+ */
+
+struct partdb_entry_funcs {
+	struct part *(* const allocate)(void);
+	void (* const initialise)(struct part *p, void *options);
+	_Bool (* const finish)(struct part *part);
+	void (* const free)(struct part *part);
+
+	struct part *(* const deserialise)(struct ser_handle *sh);
+	void (* const serialise)(struct part *part, struct ser_handle *sh);
+
+	_Bool (* const is_a)(struct part *p, const char *name);
+};
+
+/** \brief Part database mapping entry
+ *
+ * Maps a name to a set of part functions.  For multiple part variants.
+ */
+
+struct partdb_entry {
+	const char *name;
+	const char *description;
+	const struct partdb_entry_funcs *funcs;
+};
+
+typedef _Bool (*partdb_match_func)(const struct partdb_entry *pe, void *mdata);
+typedef void (*partdb_iter_func)(const struct partdb_entry *pe, void *idata);
+
 // (struct part) and (struct intf) are designed to be extended.
 
 struct part {
@@ -51,16 +99,16 @@ struct part {
 	// components.
 	void (*free)(struct part *part);
 
+	// Check type of part matches a string.  Called by part_is_a() if
+	// defined and name does not match actual part name.  This is in lieu
+	// of everything needing to return an interface by name...
+	_Bool (*is_a)(struct part *p, const char *name);
+
 	// Called by part_serialise()
 	void (*serialise)(struct part *part, struct ser_handle *sh);
 
 	// Called by part_deserialise()
 	_Bool (*finish)(struct part *part);
-
-	// Check type of part matches a string.  Called by part_is_a() if
-	// defined and name does not match actual part name.  This is in lieu
-	// of everything needing to return an interface by name...
-	_Bool (*is_a)(struct part *p, const char *name);
 
 	// If this part is a component of another.
 	struct part *parent;
@@ -117,7 +165,28 @@ struct intf {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// allocate a new part
+// find partdb entry by name
+const struct partdb_entry *partdb_find_entry(const char *name);
+
+// test type of a partdb entry
+_Bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a);
+
+// test type of a partdb entry by name
+_Bool partdb_is_a(const char *partname, const char *is_a);
+
+// iterate over partdb, calling 'iter' for every entry for which 'match'
+// returns true (or all entries if 'match' is NULL)
+void partdb_foreach(partdb_match_func match, void *mdata, partdb_iter_func iter, void *idata);
+
+// iterate over partdb, calling 'iter' for every entry for which 'is_a' is true
+void partdb_foreach_is_a(partdb_iter_func iter, void *idata, const char *is_a);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// allocate a new part by name, looked up in partdb
+struct part *part_create(const char *name, void *options);
+
+// allocate a new part the old way
 void *part_new(size_t psize);
 
 // part_init() sets up part metadata
@@ -130,7 +199,8 @@ struct part *part_component_by_id(struct part *p, const char *id);
 // same, but verify name with is_a()
 struct part *part_component_by_id_is_a(struct part *p, const char *id, const char *name);
 
-_Bool part_is_a(struct part *p, const char *name);
+// test type of an already-created part
+_Bool part_is_a(struct part *p, const char *is_a);
 
 void part_serialise(struct part *p, struct ser_handle *sh);
 struct part *part_deserialise(struct ser_handle *sh);

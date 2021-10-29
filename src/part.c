@@ -43,20 +43,18 @@
 #define PART_SER_PART (1)
 #define PART_SER_DATA (2)
 
-struct partdb_entry {
+const struct partdb_entry *partdb[] = {
+};
+
+struct partdb_entry_old {
 	const char *name;
 	struct part *(* const deserialise)(struct ser_handle *sh);
 };
-
-struct part *dragon_deserialise(struct ser_handle *sh);
-struct part *coco3_deserialise(struct ser_handle *sh);
-struct part *mc10_deserialise(struct ser_handle *sh);
 
 struct part *dragondos_deserialise(struct ser_handle *sh);
 struct part *deltados_deserialise(struct ser_handle *sh);
 struct part *rsdos_deserialise(struct ser_handle *sh);
 struct part *idecart_deserialise(struct ser_handle *sh);
-struct part *becker_deserialise(struct ser_handle *sh);
 struct part *gmc_deserialise(struct ser_handle *sh);
 struct part *mpi_deserialise(struct ser_handle *sh);
 struct part *race_deserialise(struct ser_handle *sh);
@@ -64,60 +62,17 @@ struct part *nx32_deserialise(struct ser_handle *sh);
 struct part *mooh_deserialise(struct ser_handle *sh);
 struct part *orch90_deserialise(struct ser_handle *sh);
 
-struct part *mc6801_deserialise(struct ser_handle *sh);
-struct part *mc6803_deserialise(struct ser_handle *sh);
-struct part *mc6809_deserialise(struct ser_handle *sh);
-struct part *hd6309_deserialise(struct ser_handle *sh);
-struct part *mc6821_deserialise(struct ser_handle *sh);
-struct part *mc6847_deserialise(struct ser_handle *sh);
-struct part *mc6847t1_deserialise(struct ser_handle *sh);
-struct part *mc6883_deserialise(struct ser_handle *sh);
-struct part *sn76489_deserialise(struct ser_handle *sh);
-struct part *spi65_deserialise(struct ser_handle *sh);
-struct part *tcc1014_1986_deserialise(struct ser_handle *sh);
-struct part *tcc1014_1987_deserialise(struct ser_handle *sh);
-struct part *wd2791_deserialise(struct ser_handle *sh);
-struct part *wd2793_deserialise(struct ser_handle *sh);
-struct part *wd2795_deserialise(struct ser_handle *sh);
-struct part *wd2797_deserialise(struct ser_handle *sh);
-
-struct part *spi_sdcard_deserialise(struct ser_handle *sh);
-
-struct partdb_entry partdb[] = {
-	{ .name = "dragon", .deserialise = dragon_deserialise },
-	{ .name = "coco3", .deserialise = coco3_deserialise },
-	{ .name = "mc10", .deserialise = mc10_deserialise },
-
+struct partdb_entry_old partdb_old[] = {
 	{ .name = "dragondos", .deserialise = dragondos_deserialise },
 	{ .name = "delta", .deserialise = deltados_deserialise },
 	{ .name = "rsdos", .deserialise = rsdos_deserialise },
 	{ .name = "ide", .deserialise = idecart_deserialise },
-	{ .name = "becker", .deserialise = becker_deserialise },
 	{ .name = "GMC", .deserialise = gmc_deserialise },
 	{ .name = "mpi", .deserialise = mpi_deserialise },
 	{ .name = "race-cage", .deserialise = race_deserialise },
 	{ .name = "nx32", .deserialise = nx32_deserialise },
 	{ .name = "mooh", .deserialise = mooh_deserialise },
 	{ .name = "orchestra-90", .deserialise = orch90_deserialise },
-
-	{ .name = "MC6801", .deserialise = mc6801_deserialise },
-	{ .name = "MC6803", .deserialise = mc6803_deserialise },
-	{ .name = "MC6809", .deserialise = mc6809_deserialise },
-	{ .name = "HD6309", .deserialise = hd6309_deserialise },
-	{ .name = "MC6821", .deserialise = mc6821_deserialise },
-	{ .name = "MC6847", .deserialise = mc6847_deserialise },
-	{ .name = "MC6847T1", .deserialise = mc6847t1_deserialise },
-	{ .name = "SN74LS783", .deserialise = mc6883_deserialise },
-	{ .name = "SN76489", .deserialise = sn76489_deserialise },
-	{ .name = "65SPI-B", .deserialise = spi65_deserialise },
-	{ .name = "TCC1014-1986", .deserialise = tcc1014_1986_deserialise },
-	{ .name = "TCC1014-1987", .deserialise = tcc1014_1987_deserialise },
-	{ .name = "WD2791", .deserialise = wd2791_deserialise },
-	{ .name = "WD2793", .deserialise = wd2793_deserialise },
-	{ .name = "WD2795", .deserialise = wd2795_deserialise },
-	{ .name = "WD2797", .deserialise = wd2797_deserialise },
-
-	{ .name = "SPI-SDCARD", .deserialise = spi_sdcard_deserialise },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -129,16 +84,92 @@ struct part_component {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct partdb_entry *partdb_find_entry(const char *name) {
+const struct partdb_entry *partdb_find_entry(const char *name) {
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(partdb); i++) {
-		if (strcmp(partdb[i].name, name) == 0) {
-			return &partdb[i];
+		if (strcmp(partdb[i]->name, name) == 0) {
+			return partdb[i];
 		}
 	}
 	return NULL;
 }
 
+static struct partdb_entry_old *partdb_find_entry_old(const char *name) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(partdb_old); i++) {
+		if (strcmp(partdb_old[i].name, name) == 0) {
+			return &partdb_old[i];
+		}
+	}
+	return NULL;
+}
+
+_Bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a) {
+	if (!pe)
+		return 0;
+	// always match the actual part entry...
+	if (strcmp(pe->name, is_a) == 0)
+		return 1;
+	// otherwise, call the entry's is_a (NULL fine as part name; it's not
+	// used for checking)
+	return pe->funcs->is_a && pe->funcs->is_a(NULL, is_a);
+}
+
+_Bool partdb_is_a(const char *name, const char *is_a) {
+	// find partname
+	const struct partdb_entry *pe = partdb_find_entry(name);
+	if (!pe)
+		return 0;
+	return partdb_ent_is_a(pe, is_a);
+}
+
+void partdb_foreach(partdb_match_func match, void *mdata, partdb_iter_func iter, void *idata) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(partdb); i++) {
+		const struct partdb_entry *pe = partdb[i];
+		if (match && !match(pe, mdata))
+			continue;
+		iter(pe, idata);
+	}
+}
+
+void partdb_foreach_is_a(partdb_iter_func iter, void *idata, const char *is_a) {
+	partdb_foreach((partdb_match_func)partdb_ent_is_a, (void *)is_a, iter, idata);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct part *part_create(const char *name, void *options) {
+	// Find partdb entry
+	const struct partdb_entry *pe = partdb_find_entry(name);
+	if (!pe)
+		return NULL;
+
+	struct part *p = NULL;
+
+	// Ensure we are able to allocate something sensible
+	assert(pe->funcs->allocate != NULL);
+	// ... and do so
+	p = pe->funcs->allocate();
+	if (!p)
+		return NULL;
+
+	// Initialise, populating useful stuff from partdb
+	*p = (struct part){0};
+	p->name = xstrdup(name);
+	p->free = pe->funcs->free;
+	p->is_a = pe->funcs->is_a;
+	p->serialise = pe->funcs->serialise;
+	if (!options)
+		options = p->name;
+	if (pe->funcs->initialise)
+		pe->funcs->initialise(p, options);
+
+	// Finish
+	if (pe->funcs->finish && !pe->funcs->finish(p)) {
+		part_free(p);
+		p = NULL;
+	}
+
+	return p;
+}
 
 void *part_new(size_t psize) {
 	void *m = xmalloc(psize < sizeof(struct part) ? sizeof(struct part) : psize);
@@ -241,12 +272,12 @@ struct part *part_component_by_id_is_a(struct part *p, const char *id, const cha
 	return NULL;
 }
 
-_Bool part_is_a(struct part *p, const char *name) {
+_Bool part_is_a(struct part *p, const char *is_a) {
 	if (!p)
 		return 0;
-	if (strcmp(p->name, name) == 0)
+	if (strcmp(p->name, is_a) == 0)
 		return 1;
-	return p->is_a ? p->is_a(p, name) : 0;
+	return p->is_a ? p->is_a(p, is_a) : 0;
 }
 
 void part_serialise(struct part *p, struct ser_handle *sh) {
@@ -254,13 +285,17 @@ void part_serialise(struct part *p, struct ser_handle *sh) {
 		return;
 	assert(p->name != NULL);
 
-	// Check that we would be able to deserialise this part.  This is
-	// mostly to catch missed entries in the partb during development.
-	struct partdb_entry *ent = partdb_find_entry(p->name);
-	if (!ent) {
-		LOG_WARN("PART: can't serialise '%s'\n", p->name);
-		ser_set_error(sh, ser_error_format);
-		return;
+	const struct partdb_entry *pe = partdb_find_entry(p->name);
+
+	if (!pe) {
+		// Check that we would be able to deserialise this part.  This is
+		// mostly to catch missed entries in the partb during development.
+		struct partdb_entry_old *ent = partdb_find_entry_old(p->name);
+		if (!ent) {
+			LOG_WARN("PART: can't serialise '%s'\n", p->name);
+			ser_set_error(sh, ser_error_format);
+			return;
+		}
 	}
 
 	ser_write_open_string(sh, PART_SER_DATA, p->name);
@@ -275,6 +310,7 @@ void part_serialise(struct part *p, struct ser_handle *sh) {
 
 struct part *part_deserialise(struct ser_handle *sh) {
 	struct part *p = NULL;
+	const struct partdb_entry *pe = NULL;
 	int tag;
 	while ((tag = ser_read_tag(sh)) > 0) {
 		switch (tag) {
@@ -282,14 +318,30 @@ struct part *part_deserialise(struct ser_handle *sh) {
 			{
 				char *name = ser_read_string(sh);
 				if (name) {
-					struct partdb_entry *ent = partdb_find_entry(name);
-					free(name);
-					if (!ent) {
-						LOG_WARN("PART: can't deserialise '%s'\n", name);
-						ser_set_error(sh, ser_error_format);
-						return NULL;
+					pe = partdb_find_entry(name);
+					if (pe) {
+						// XXX this should become the only path
+						if (!pe) {
+							LOG_WARN("PART: can't deserialise '%s'\n", name);
+							ser_set_error(sh, ser_error_format);
+							return NULL;
+						}
+						p = pe->funcs->deserialise(sh);
+						p->name = name;
+						name = NULL;
+						p->free = pe->funcs->free;
+						p->is_a = pe->funcs->is_a;
+						p->serialise = pe->funcs->serialise;
+					} else {
+						struct partdb_entry_old *ent_old = partdb_find_entry_old(name);
+						free(name);
+						if (!ent_old) {
+							LOG_WARN("PART: can't deserialise '%s'\n", name);
+							ser_set_error(sh, ser_error_format);
+							return NULL;
+						}
+						p = ent_old->deserialise(sh);
 					}
-					p = ent->deserialise(sh);
 				}
 			}
 			break;
@@ -327,11 +379,20 @@ struct part *part_deserialise(struct ser_handle *sh) {
 	if (!p)
 		return NULL;
 
-	assert(p->finish != NULL);
-	if (!p->finish(p)) {
-		LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", p->name);
-		part_free(p);
-		return 0;
+	if (pe) {
+		// XXX this should become the only path
+		if (pe->funcs->finish && !pe->funcs->finish(p)) {
+			LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", p->name);
+			part_free(p);
+			return 0;
+		}
+	} else {
+		assert(p->finish != NULL);
+		if (!p->finish(p)) {
+			LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", p->name);
+			part_free(p);
+			return 0;
+		}
 	}
 
 	return p;
