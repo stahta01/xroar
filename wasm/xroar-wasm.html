@@ -52,7 +52,7 @@ be a better way to make this usable...
 
 <table class='column'>
 <tr title="Machine to emulate"><td style='text-align:right;'>Machine:</td><td><select id='machine' onchange='wasm_set_machine(this.options[this.selectedIndex].value)'></select></td></tr>
-<tr title="Use cartridge in current machine (may need hard reset)"><td style='text-align:right;'>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'><option value="-1">None</option></select></td></tr>
+<tr title="Use cartridge in current machine (may need hard reset)"><td style='text-align:right;'>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'></select></td></tr>
 </table>
 
 <!-- Cross-colour configuration -->
@@ -115,7 +115,8 @@ be a better way to make this usable...
 
 	var Module = {
 		canvas: (function() { return document.getElementById('canvas'); })(),
-		setWindowTitle: function(t){},
+		// is this deprecated?
+		//setWindowTitle: function(t){},
 		initial_resize: 0,
 		is_fullscreen: 0,
 		arguments: [ '-ao-fragments', '4' ],
@@ -392,13 +393,28 @@ be a better way to make this usable...
 		machine_select.appendChild(el);
 	}
 
+	// Clear cartridge drop-down in anticipation of repopulating
+	function ui_clear_carts() {
+		console.log("Clearing cart menu...");
+		var cart_select = document.getElementById("cart");
+		while (cart_select.lastChild) {
+			cart_select.removeChild(cart_select.lastChild);
+		}
+		ui_add_cart_(-1, "None");
+	}
+
 	// Called to populate the cartridge select drop-down
-	function ui_add_cart(index, description) {
+	function ui_add_cart_(index, description) {
 		var cart_select = document.getElementById("cart");
 		var opt = document.createElement("OPTION");
 		opt.setAttribute("value", index);
-		opt.innerHTML = UTF8ToString(description, 80);
+		opt.innerHTML = description;
 		cart_select.appendChild(opt);
+	}
+
+	// Called to populate the cartridge select drop-down
+	function ui_add_cart(index, description) {
+		ui_add_cart_(index, UTF8ToString(description, 80));
 	}
 
 	// Called when machine changes
