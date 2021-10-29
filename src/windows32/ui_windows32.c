@@ -84,6 +84,8 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 static HWND about_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
 static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static HMENU machine_menu = NULL;
+static HMENU cartridge_menu = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -197,31 +199,12 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	hardware_menu = CreatePopupMenu();
 
-	submenu = CreatePopupMenu();
+	machine_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Machine");
-	max_machine_id = 0;
-	struct slist *mcl = machine_config_list();
-	while (mcl) {
-		struct machine_config *mc = mcl->data;
-		if (mc->id > max_machine_id)
-			max_machine_id = mc->id;
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
-		mcl = mcl->next;
-	}
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	submenu = CreatePopupMenu();
+	cartridge_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cartridge");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
-	max_cartridge_id = 0;
-	struct slist *ccl = cart_config_list();
-	while (ccl) {
-		struct cart_config *cc = ccl->data;
-		if ((cc->id + 1) > max_cartridge_id)
-			max_cartridge_id = cc->id + 1;
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
-		ccl = ccl->next;
-	}
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
@@ -272,6 +255,42 @@ static void setup_help_menu(void) {
 	AppendMenu(help_menu, MF_STRING, TAG(ui_tag_about), "About");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)help_menu, "&Help");
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void windows32_update_machine_menu(void *sptr) {
+	(void)sptr;
+	// This seems to do the job of clearing any existing menu:
+	while (DeleteMenu(machine_menu, 0, MF_BYPOSITION))
+		;
+	max_machine_id = 0;
+	struct slist *mcl = machine_config_list();
+	while (mcl) {
+		struct machine_config *mc = mcl->data;
+		if (mc->id > max_machine_id)
+			max_machine_id = mc->id;
+		AppendMenu(machine_menu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
+		mcl = mcl->next;
+	}
+}
+
+void windows32_update_cartridge_menu(void *sptr) {
+	(void)sptr;
+	// This seems to do the job of clearing any existing menu:
+	while (DeleteMenu(cartridge_menu, 0, MF_BYPOSITION))
+		;
+	int cart_arch = (xroar_machine && xroar_machine->config && xroar_machine->config->architecture == ARCH_MC10) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
+	AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
+	max_cartridge_id = 0;
+	struct slist *ccl = cart_config_list_by_arch(cart_arch);
+	while (ccl) {
+		struct cart_config *cc = ccl->data;
+		if ((cc->id + 1) > max_cartridge_id)
+			max_cartridge_id = cc->id + 1;
+		AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
+		ccl = ccl->next;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

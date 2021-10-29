@@ -127,7 +127,11 @@ static void *ui_sdl_new(void *cfg) {
 
 #ifdef WINDOWS32
 	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_set_state, uisdl2);
+	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
 	windows32_create_menus(uisdl2);
+	windows32_update_machine_menu(uisdl2);
+	windows32_update_cartridge_menu(uisdl2);
 #endif
 
 #ifdef HAVE_WASM

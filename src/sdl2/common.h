@@ -88,6 +88,8 @@ void cocoa_update_cartridge_menu(void *sptr);
 void windows32_create_menus(struct ui_sdl2_interface *uisdl2);
 void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2);
 void windows32_ui_set_state(void *sptr, int tag, int value, const void *data);
+void windows32_update_machine_menu(void *sptr);
+void windows32_update_cartridge_menu(void *sptr);
 
 #ifdef HAVE_X11
 
