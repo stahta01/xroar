@@ -50,16 +50,6 @@
 #include "vo.h"
 #include "xroar.h"
 
-static struct machine *mc10_new(struct machine_config *mc);
-static void mc10_config_complete(struct machine_config *mc);
-
-struct machine_module machine_mc10_module = {
-	.name = "mc10",
-	.description = "MC-10 machine",
-	.config_complete = mc10_config_complete,
-	.new = mc10_new,
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_mc10 {
@@ -99,9 +89,6 @@ struct machine_mc10 {
 	uint32_t crc_bas;
 };
 
-#define MC10_SER_MACHINE (1)
-#define MC10_SER_RAM     (2)
-
 static const struct ser_struct ser_struct_mc10[] = {
 	SER_STRUCT_ELEM(struct machine_mc10, machine.config, ser_type_unhandled), // 1
 	SER_STRUCT_ELEM(struct machine_mc10, ram, ser_type_unhandled), // 2
@@ -111,8 +98,41 @@ static const struct ser_struct ser_struct_mc10[] = {
 
 #define N_SER_STRUCT_MC10 ARRAY_N_ELEMENTS(ser_struct_mc10)
 
-static void mc10_free(struct part *p);
-static void mc10_serialise(struct part *p, struct ser_handle *sh);
+#define MC10_SER_MACHINE (1)
+#define MC10_SER_RAM     (2)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void mc10_config_complete(struct machine_config *mc) {
+	if (mc->tv_standard == ANY_AUTO)
+		mc->tv_standard = TV_PAL;
+	if (mc->tv_input == ANY_AUTO) {
+		switch (mc->tv_standard) {
+		default:
+		case TV_PAL:
+			mc->tv_input = TV_INPUT_CMP_PALETTE;
+			break;
+		case TV_NTSC:
+		case TV_PAL_M:
+			mc->tv_input = TV_INPUT_CMP_KBRW;
+			break;
+		}
+	}
+	mc->vdg_type = VDG_6847;
+	mc->architecture = ARCH_MC10;
+	if (mc->ram != 2 && mc->ram != 4 && mc->ram != 20) {
+		if (mc->ram >= 16)
+			mc->ram = 20;
+		else
+			mc->ram = 4;
+	}
+	mc->keymap = dkbd_layout_mc10;
+	if (!mc->bas_dfn && !mc->bas_rom) {
+		mc->bas_rom = xstrdup("@mc10");
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_reset(struct machine *m, _Bool hard);
 static enum machine_run_state mc10_run(struct machine *m, int ncycles);
@@ -143,36 +163,71 @@ static void mc10_update_tape_input(void *sptr, float value);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mc10_config_complete(struct machine_config *mc) {
-	if (mc->tv_standard == ANY_AUTO)
-		mc->tv_standard = TV_PAL;
-	if (mc->tv_input == ANY_AUTO) {
-		switch (mc->tv_standard) {
-		default:
-		case TV_PAL:
-			mc->tv_input = TV_INPUT_CMP_PALETTE;
-			break;
-		case TV_NTSC:
-		case TV_PAL_M:
-			mc->tv_input = TV_INPUT_CMP_KBRW;
-			break;
-		}
-	}
-	mc->vdg_type = VDG_6847;
-	mc->architecture = ARCH_MC10;
-	if (mc->ram != 2 && mc->ram != 4 && mc->ram != 20) {
-		if (mc->ram >= 16)
-			mc->ram = 20;
-		else
-			mc->ram = 4;
-	}
-	mc->keymap = dkbd_layout_mc10;
-	if (!mc->bas_dfn && !mc->bas_rom) {
-		mc->bas_rom = xstrdup("@mc10");
-	}
+// MC-10 part creation
+
+static struct part *mc10_allocate(void);
+static void mc10_initialise(struct part *p, void *options);
+static _Bool mc10_finish(struct part *p);
+static void mc10_free(struct part *p);
+
+static struct part *mc10_deserialise(struct ser_handle *sh);
+static void mc10_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs mc10_funcs = {
+	.allocate = mc10_allocate,
+	.initialise = mc10_initialise,
+	.finish = mc10_finish,
+	.free = mc10_free,
+
+	.deserialise = mc10_deserialise,
+	.serialise = mc10_serialise,
+
+	.is_a = machine_is_a,
+};
+
+const struct partdb_entry mc10_part = { .name = "mc10", .funcs = &mc10_funcs };
+
+static struct part *mc10_allocate(void) {
+        struct machine_mc10 *mp = part_new(sizeof(*mp));
+        struct machine *m = &mp->machine;
+        struct part *p = &m->part;
+
+        *mp = (struct machine_mc10){0};
+
+	m->reset = mc10_reset;
+	m->run = mc10_run;
+	m->single_step = mc10_single_step;
+	m->signal = mc10_signal;
+	m->bp_add_n = mc10_bp_add_n;
+	m->bp_remove_n = mc10_bp_remove_n;
+	m->read_byte = mc10_read_byte;
+	m->write_byte = mc10_write_byte;
+	m->op_rts = mc10_op_rts;
+
+	m->set_inverted_text = mc10_set_inverted_text;
+	m->get_interface = mc10_get_interface;
+	m->set_frameskip = mc10_set_frameskip;
+	m->set_ratelimit = mc10_set_ratelimit;
+
+	return p;
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+static void mc10_initialise(struct part *p, void *options) {
+        struct machine_config *mc = options;
+        assert(mc != NULL);
+
+        struct machine_mc10 *mp = (struct machine_mc10 *)p;
+        struct machine *m = &mp->machine;
+
+        mc10_config_complete(mc);
+        m->config = mc;
+
+	// CPU
+	part_add_component(&m->part, (struct part *)mc6803_new(), "CPU");
+
+	// VDG
+	part_add_component(&m->part, (struct part *)mc6847_new(mc->vdg_type), "VDG0");
+}
 
 static _Bool mc10_finish(struct part *p) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)p;
@@ -301,80 +356,34 @@ static _Bool mc10_finish(struct part *p) {
 	return 1;
 }
 
-static struct machine_mc10 *mc10_create(void) {
-	LOG_WARN("Tandy MC-10 support is UNFINISHED and UNSUPPORTED.\n");
-	LOG_WARN("Please do not use except for testing.\n");
-	struct machine_mc10 *mp = part_new(sizeof(*mp));
-	*mp = (struct machine_mc10){0};
-	struct machine *m = &mp->machine;
-	part_init(&m->part, "mc10");
-	m->part.free = mc10_free;
-	m->part.serialise = mc10_serialise;
-	m->part.finish = mc10_finish;
-	m->part.is_a = machine_is_a;
-
-	m->reset = mc10_reset;
-	m->run = mc10_run;
-	m->single_step = mc10_single_step;
-	m->signal = mc10_signal;
-	m->bp_add_n = mc10_bp_add_n;
-	m->bp_remove_n = mc10_bp_remove_n;
-	m->read_byte = mc10_read_byte;
-	m->write_byte = mc10_write_byte;
-	m->op_rts = mc10_op_rts;
-
-	m->set_inverted_text = mc10_set_inverted_text;
-	m->get_interface = mc10_get_interface;
-	m->set_frameskip = mc10_set_frameskip;
-	m->set_ratelimit = mc10_set_ratelimit;
-
-	return mp;
-}
-
-static struct machine *mc10_new(struct machine_config *mc) {
-	assert(mc != NULL);
-
-	struct machine_mc10 *mp = mc10_create();
-	struct machine *m = &mp->machine;
-	struct part *p = &m->part;
-
-	mc10_config_complete(mc);
-	m->config = mc;
-
-	// CPU
-	part_add_component(&m->part, (struct part *)mc6803_new(), "CPU");
-
-	// VDG
-	part_add_component(&m->part, (struct part *)mc6847_new(mc->vdg_type), "VDG0");
-
-	if (!mc10_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return m;
-}
-
-static void mc10_serialise(struct part *p, struct ser_handle *sh) {
+// Called from part_free(), which handles freeing the struct itself
+static void mc10_free(struct part *p) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc10, N_SER_STRUCT_MC10, tag, mp)) > 0; tag++) {
-		switch (tag) {
-		case MC10_SER_MACHINE:
-			machine_serialise(&mp->machine, sh, tag);
-			break;
-		case MC10_SER_RAM:
-			ser_write(sh, tag, mp->ram, mp->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+	struct machine *m = &mp->machine;
+	if (m->config && m->config->description) {
+		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
-	ser_write_close_tag(sh);
+#ifdef WANT_GDB_TARGET
+	/* if (mp->gdb_interface) {
+		gdb_interface_free(mp->gdb_interface);
+	} */
+#endif
+	if (mp->keyboard_interface) {
+		keyboard_interface_free(mp->keyboard_interface);
+	}
+	/* if (mp->printer_interface) {
+		printer_interface_free(mp->printer_interface);
+	} */
+	if (mp->bp_session) {
+		bp_session_free(mp->bp_session);
+	}
+	ntsc_burst_free(mp->ntsc_burst[1]);
+	ntsc_burst_free(mp->ntsc_burst[0]);
 }
 
-struct part *mc10_deserialise(struct ser_handle *sh) {
-	struct machine_mc10 *mp = mc10_create();
+static struct part *mc10_deserialise(struct ser_handle *sh) {
+	struct part *p = mc10_allocate();
+	struct machine_mc10 *mp = (struct machine_mc10 *)p;
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc10, N_SER_STRUCT_MC10, mp))) {
 		size_t length = ser_data_length(sh);
@@ -407,36 +416,29 @@ struct part *mc10_deserialise(struct ser_handle *sh) {
 	}
 
 	if (ser_error(sh)) {
-		part_free((struct part *)mp);
+		part_free(p);
 		return NULL;
 	}
 
-	return (struct part *)mp;
+	return p;
 }
 
-// Called from part_free(), which handles freeing the struct itself
-static void mc10_free(struct part *p) {
+static void mc10_serialise(struct part *p, struct ser_handle *sh) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)p;
-	struct machine *m = &mp->machine;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc10, N_SER_STRUCT_MC10, tag, mp)) > 0; tag++) {
+		switch (tag) {
+		case MC10_SER_MACHINE:
+			machine_serialise(&mp->machine, sh, tag);
+			break;
+		case MC10_SER_RAM:
+			ser_write(sh, tag, mp->ram, mp->ram_size);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
 	}
-#ifdef WANT_GDB_TARGET
-	/* if (mp->gdb_interface) {
-		gdb_interface_free(mp->gdb_interface);
-	} */
-#endif
-	if (mp->keyboard_interface) {
-		keyboard_interface_free(mp->keyboard_interface);
-	}
-	/* if (mp->printer_interface) {
-		printer_interface_free(mp->printer_interface);
-	} */
-	if (mp->bp_session) {
-		bp_session_free(mp->bp_session);
-	}
-	ntsc_burst_free(mp->ntsc_burst[1]);
-	ntsc_burst_free(mp->ntsc_burst[0]);
+	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -43,7 +43,18 @@
 #define PART_SER_PART (1)
 #define PART_SER_DATA (2)
 
+extern const struct partdb_entry dragon64_part;
+extern const struct partdb_entry dragon32_part;
+extern const struct partdb_entry coco_part;
+extern const struct partdb_entry coco3_part;
+extern const struct partdb_entry mc10_part;
+
 const struct partdb_entry *partdb[] = {
+	&dragon64_part,
+	&dragon32_part,
+	&coco_part,
+	&coco3_part,
+	&mc10_part,
 };
 
 struct partdb_entry_old {

@@ -72,8 +72,6 @@ static const struct ser_struct ser_struct_machine[] = {
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
-static struct machine_module *machine_module(struct machine_config *mc);
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config *machine_config_new(void) {
@@ -145,13 +143,25 @@ struct machine_config *machine_config_by_arch(int arch) {
 	return NULL;
 }
 
+void dragon_config_complete(struct machine_config *mc);
+void coco3_config_complete(struct machine_config *mc);
+void mc10_config_complete(struct machine_config *mc);
+
 void machine_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
-	struct machine_module *mm = machine_module(mc);
-	assert(mm != NULL);
-	mm->config_complete(mc);
+	switch (mc->architecture) {
+	case ARCH_COCO3:
+		coco3_config_complete(mc);
+		break;
+	case ARCH_MC10:
+		mc10_config_complete(mc);
+		break;
+	default:
+		dragon_config_complete(mc);
+		break;
+	}
 }
 
 static void machine_config_free(struct machine_config *mc) {
@@ -235,14 +245,6 @@ struct xconfig_enum machine_vdg_type_list[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-extern struct machine_module machine_dragon_module;
-extern struct machine_module machine_coco3_module;
-extern struct machine_module machine_mc10_module;
-
-static struct slist *machine_modules = NULL;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 void machine_config_print_all(FILE *f, _Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
@@ -301,49 +303,39 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void machine_init(void) {
-	// reverse order
-	machine_modules = slist_prepend(machine_modules, &machine_mc10_module);
-	machine_modules = slist_prepend(machine_modules, &machine_coco3_module);
-	machine_modules = slist_prepend(machine_modules, &machine_dragon_module);
 }
 
 void machine_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)machine_config_free);
 	config_list = NULL;
-	slist_free(machine_modules);
-	machine_modules = NULL;
 }
 
-// Determine machine module from config.  Only the one for now...
-static struct machine_module *machine_module(struct machine_config *mc) {
-	const char *req_type = NULL;
+// Machine arch to part name.  Obviously we could be storing machine arch as a
+// string here, but do this mapping for now.
+static const char *machine_part(struct machine_config *mc) {
 	switch (mc->architecture) {
-	case ARCH_COCO3:
-		req_type = "coco3";
-		break;
-	case ARCH_MC10:
-		req_type = "mc10";
-		break;
+	case ARCH_DRAGON32:
+		return "dragon32";
+	case ARCH_DRAGON64:
 	default:
-		req_type = "dragon";
-		break;
+		return "dragon64";
+	case ARCH_COCO3:
+		return "coco3";
+	case ARCH_MC10:
+		return "mc10";
 	}
-	for (struct slist *iter = machine_modules; iter; iter = iter->next) {
-		struct machine_module *mm = iter->data;
-		if (c_strcasecmp(req_type, mm->name) == 0) {
-			return mm;
-		}
-	}
-	return NULL;
 }
 
 struct machine *machine_new(struct machine_config *mc) {
 	assert(mc != NULL);
-	struct machine_module *mm = machine_module(mc);
-	assert(mm != NULL);
 	LOG_DEBUG(1, "Machine: %s\n", mc->description);
-	LOG_DEBUG(2, "Machine module: %s\n", mm->name);
-	struct machine *m = mm->new(mc);
+	const char *partname = machine_part(mc);
+	// sanity check that the part is a machine
+	if (!partdb_is_a(partname, "machine")) {
+		return NULL;
+	}
+	LOG_DEBUG(2, "Machine part: %s\n", partname);
+	struct machine *m = (struct machine *)part_create(partname, mc);
 	if (m && !part_is_a((struct part *)m, "machine")) {
 		part_free((struct part *)m);
 		m = NULL;

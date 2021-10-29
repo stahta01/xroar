@@ -57,19 +57,6 @@
 #include "vo.h"
 #include "xroar.h"
 
-#define DRAGON_SER_MACHINE (1)
-#define DRAGON_SER_RAM     (2)
-
-static struct machine *dragon_new(struct machine_config *mc);
-static void dragon_config_complete(struct machine_config *mc);
-
-struct machine_module machine_dragon_module = {
-	.name = "dragon",
-	.description = "Dragon & CoCo 1/2 machines",
-	.config_complete = dragon_config_complete,
-	.new = dragon_new,
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static const struct {
@@ -154,7 +141,11 @@ static const struct ser_struct ser_struct_dragon[] = {
         SER_STRUCT_ELEM(struct machine_dragon, ram_mask, ser_type_unsigned), // 4
         SER_STRUCT_ELEM(struct machine_dragon, inverted_text, ser_type_bool), // 5
 };
+
 #define N_SER_STRUCT_DRAGON ARRAY_N_ELEMENTS(ser_struct_dragon)
+
+#define DRAGON_SER_MACHINE (1)
+#define DRAGON_SER_RAM     (2)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -198,7 +189,7 @@ static void verify_ram_size(struct machine_config *mc) {
 	}
 }
 
-static void dragon_config_complete(struct machine_config *mc) {
+void dragon_config_complete(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->tv_input == ANY_AUTO) {
@@ -267,9 +258,6 @@ static void dragon_config_complete(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon_free(struct part *p);
-static void dragon_serialise(struct part *p, struct ser_handle *sh);
-
 static void dragon_insert_cart(struct machine *m, struct cart *c);
 static void dragon_remove_cart(struct machine *m);
 static void dragon_reset(struct machine *m, _Bool hard);
@@ -329,6 +317,95 @@ static void pia1b_data_preread_dragon(void *sptr);
 static void pia1b_data_preread_coco64k(void *sptr);
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Dragon part creation
+
+static struct part *dragon_allocate(void);
+static void dragon_initialise(struct part *p, void *options);
+static _Bool dragon_finish(struct part *p);
+static void dragon_free(struct part *p);
+
+static struct part *dragon_deserialise(struct ser_handle *sh);
+static void dragon_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs dragon_funcs = {
+	.allocate = dragon_allocate,
+	.initialise = dragon_initialise,
+	.finish = dragon_finish,
+	.free = dragon_free,
+
+	.deserialise = dragon_deserialise,
+	.serialise = dragon_serialise,
+
+	.is_a = machine_is_a,
+};
+
+const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs };
+const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs };
+const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs };
+
+static struct part *dragon_allocate(void) {
+	struct machine_dragon *md = part_new(sizeof(*md));
+	struct machine *m = &md->public;
+	struct part *p = &m->part;
+
+	*md = (struct machine_dragon){0};
+
+	m->insert_cart = dragon_insert_cart;
+	m->remove_cart = dragon_remove_cart;
+	m->reset = dragon_reset;
+	m->run = dragon_run;
+	m->single_step = dragon_single_step;
+	m->signal = dragon_signal;
+	m->bp_add_n = dragon_bp_add_n;
+	m->bp_remove_n = dragon_bp_remove_n;
+
+	m->set_pause = dragon_set_pause;
+	m->set_inverted_text = dragon_set_inverted_text;
+	m->get_component = dragon_get_component;
+	m->get_interface = dragon_get_interface;
+	m->set_frameskip = dragon_set_frameskip;
+	m->set_ratelimit = dragon_set_ratelimit;
+
+	m->read_byte = dragon_read_byte;
+	m->write_byte = dragon_write_byte;
+	m->op_rts = dragon_op_rts;
+
+	return p;
+}
+
+static void dragon_initialise(struct part *p, void *options) {
+	struct machine_config *mc = options;
+	assert(mc != NULL);
+
+	struct machine_dragon *md = (struct machine_dragon *)p;
+	struct machine *m = &md->public;
+
+	dragon_config_complete(mc);
+	m->config = mc;
+
+	// SAM
+	part_add_component(&m->part, (struct part *)sam_new(), "SAM0");
+
+	// CPU
+	switch (mc->cpu) {
+	case CPU_MC6809: default:
+		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
+		break;
+	case CPU_HD6309:
+		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
+		break;
+	}
+
+	// PIAs
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
+
+	// VDG
+	part_add_component(&m->part, (struct part *)mc6847_new(mc->vdg_type), "VDG0");
+}
 
 static _Bool dragon_finish(struct part *p) {
 	struct machine_dragon *md = (struct machine_dragon *)p;
@@ -738,97 +815,37 @@ static _Bool dragon_finish(struct part *p) {
 	return 1;
 }
 
-static struct machine_dragon *dragon_create(void) {
-	struct machine_dragon *md = part_new(sizeof(*md));
-	*md = (struct machine_dragon){0};
-	struct machine *m = &md->public;
-	part_init(&m->part, "dragon");
-	m->part.free = dragon_free;
-	m->part.serialise = dragon_serialise;
-	m->part.finish = dragon_finish;
-	m->part.is_a = machine_is_a;
-
-	m->insert_cart = dragon_insert_cart;
-	m->remove_cart = dragon_remove_cart;
-	m->reset = dragon_reset;
-	m->run = dragon_run;
-	m->single_step = dragon_single_step;
-	m->signal = dragon_signal;
-	m->bp_add_n = dragon_bp_add_n;
-	m->bp_remove_n = dragon_bp_remove_n;
-
-	m->set_pause = dragon_set_pause;
-	m->set_inverted_text = dragon_set_inverted_text;
-	m->get_component = dragon_get_component;
-	m->get_interface = dragon_get_interface;
-	m->set_frameskip = dragon_set_frameskip;
-	m->set_ratelimit = dragon_set_ratelimit;
-
-	m->read_byte = dragon_read_byte;
-	m->write_byte = dragon_write_byte;
-	m->op_rts = dragon_op_rts;
-
-	return md;
-}
-
-static struct machine *dragon_new(struct machine_config *mc) {
-	assert(mc != NULL);
-
-	struct machine_dragon *md = dragon_create();
-	struct machine *m = &md->public;
-	struct part *p = &m->part;
-
-	dragon_config_complete(mc);
-	m->config = mc;
-
-	// SAM
-	part_add_component(&m->part, (struct part *)sam_new(), "SAM0");
-
-	// CPU
-	switch (mc->cpu) {
-	case CPU_MC6809: default:
-		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
-		break;
-	case CPU_HD6309:
-		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
-		break;
-	}
-
-	// PIAs
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
-
-	// VDG
-	part_add_component(&m->part, (struct part *)mc6847_new(mc->vdg_type), "VDG0");
-
-	if (!dragon_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return m;
-}
-
-static void dragon_serialise(struct part *p, struct ser_handle *sh) {
+// Called from part_free(), which handles freeing the struct itself
+static void dragon_free(struct part *p) {
 	struct machine_dragon *md = (struct machine_dragon *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragon, N_SER_STRUCT_DRAGON, tag, md)) > 0; tag++) {
-		switch (tag) {
-		case DRAGON_SER_MACHINE:
-			machine_serialise(&md->public, sh, tag);
-			break;
-		case DRAGON_SER_RAM:
-			ser_write(sh, tag, md->ram, md->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+	struct machine *m = &md->public;
+	if (m->config && m->config->description) {
+		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
-	ser_write_close_tag(sh);
+	//m->remove_cart(m);
+#ifdef WANT_GDB_TARGET
+	if (md->gdb_interface) {
+		gdb_interface_free(md->gdb_interface);
+	}
+#endif
+	if (md->keyboard_interface) {
+		keyboard_interface_free(md->keyboard_interface);
+	}
+	if (md->printer_interface) {
+		printer_interface_free(md->printer_interface);
+	}
+	if (md->bp_session) {
+		bp_session_free(md->bp_session);
+	}
+	ntsc_burst_free(md->ntsc_burst[3]);
+	ntsc_burst_free(md->ntsc_burst[2]);
+	ntsc_burst_free(md->ntsc_burst[1]);
+	ntsc_burst_free(md->ntsc_burst[0]);
 }
 
-struct part *dragon_deserialise(struct ser_handle *sh) {
-	struct machine_dragon *md = dragon_create();
+static struct part *dragon_deserialise(struct ser_handle *sh) {
+	struct part *p = dragon_allocate();
+	struct machine_dragon *md = (struct machine_dragon *)p;
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_dragon, N_SER_STRUCT_DRAGON, md))) {
 		size_t length = ser_data_length(sh);
@@ -858,39 +875,29 @@ struct part *dragon_deserialise(struct ser_handle *sh) {
 	}
 
 	if (ser_error(sh)) {
-		part_free((struct part *)md);
+		part_free(p);
 		return NULL;
 	}
 
-	return (struct part *)md;
+	return p;
 }
 
-// Called from part_free(), which handles freeing the struct itself
-static void dragon_free(struct part *p) {
+static void dragon_serialise(struct part *p, struct ser_handle *sh) {
 	struct machine_dragon *md = (struct machine_dragon *)p;
-	struct machine *m = &md->public;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragon, N_SER_STRUCT_DRAGON, tag, md)) > 0; tag++) {
+		switch (tag) {
+		case DRAGON_SER_MACHINE:
+			machine_serialise(&md->public, sh, tag);
+			break;
+		case DRAGON_SER_RAM:
+			ser_write(sh, tag, md->ram, md->ram_size);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
 	}
-	//m->remove_cart(m);
-#ifdef WANT_GDB_TARGET
-	if (md->gdb_interface) {
-		gdb_interface_free(md->gdb_interface);
-	}
-#endif
-	if (md->keyboard_interface) {
-		keyboard_interface_free(md->keyboard_interface);
-	}
-	if (md->printer_interface) {
-		printer_interface_free(md->printer_interface);
-	}
-	if (md->bp_session) {
-		bp_session_free(md->bp_session);
-	}
-	ntsc_burst_free(md->ntsc_burst[3]);
-	ntsc_burst_free(md->ntsc_burst[2]);
-	ntsc_burst_free(md->ntsc_burst[1]);
-	ntsc_burst_free(md->ntsc_burst[0]);
+	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

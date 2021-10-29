@@ -64,18 +64,8 @@
 # define M_PI 3.14159265358979323846
 #endif
 
-#define COCO3_SER_MACHINE (1)
-#define COCO3_SER_RAM     (2)
-
-static struct machine *coco3_new(struct machine_config *mc);
-static void coco3_config_complete(struct machine_config *mc);
-
-struct machine_module machine_coco3_module = {
-	.name = "coco3",
-	.description = "CoCo 3 machine",
-	.config_complete = coco3_config_complete,
-	.new = coco3_new,
-};
+static float hue_intensity_map[4] = { 0.30, 0.50, 0.80, 1.0 };
+static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -128,11 +118,15 @@ static const struct ser_struct ser_struct_coco3[] = {
 	SER_STRUCT_ELEM(struct machine_coco3, ram_mask, ser_type_unsigned), // 4
 	SER_STRUCT_ELEM(struct machine_coco3, inverted_text, ser_type_bool), // 5
 };
+
 #define N_SER_STRUCT_COCO3 ARRAY_N_ELEMENTS(ser_struct_coco3)
+
+#define COCO3_SER_MACHINE (1)
+#define COCO3_SER_RAM     (2)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void coco3_config_complete(struct machine_config *mc) {
+void coco3_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
@@ -168,9 +162,6 @@ static void coco3_config_complete(struct machine_config *mc) {
 			mc->default_cart = xstrdup(cc->name);
 	}
 }
-
-static float hue_intensity_map[4] = { 0.30, 0.50, 0.80, 1.0 };
-static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -229,6 +220,90 @@ static void pia1a_control_postwrite(void *sptr);
 #define pia1b_data_preread NULL
 static void pia1b_data_postwrite(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// CoCo 3 part creation
+
+static struct part *coco3_allocate(void);
+static void coco3_initialise(struct part *p, void *options);
+static _Bool coco3_finish(struct part *p);
+static void coco3_free(struct part *p);
+
+static struct part *coco3_deserialise(struct ser_handle *sh);
+static void coco3_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs coco3_funcs = {
+	.allocate = coco3_allocate,
+	.initialise = coco3_initialise,
+	.finish = coco3_finish,
+	.free = coco3_free,
+
+	.deserialise = coco3_deserialise,
+	.serialise = coco3_serialise,
+
+	.is_a = machine_is_a,
+};
+
+const struct partdb_entry coco3_part = { .name = "coco3", .funcs = &coco3_funcs };
+
+static struct part *coco3_allocate(void) {
+        struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
+        struct machine *m = &mcc3->public;
+        struct part *p = &m->part;
+
+	*mcc3 = (struct machine_coco3){0};
+
+	m->insert_cart = coco3_insert_cart;
+	m->remove_cart = coco3_remove_cart;
+	m->reset = coco3_reset;
+	m->run = coco3_run;
+	m->single_step = coco3_single_step;
+	m->signal = coco3_signal;
+	m->bp_add_n = coco3_bp_add_n;
+	m->bp_remove_n = coco3_bp_remove_n;
+
+	m->set_pause = coco3_set_pause;
+	m->set_inverted_text = coco3_set_inverted_text;
+	m->get_component = coco3_get_component;
+	m->get_interface = coco3_get_interface;
+	m->set_frameskip = coco3_set_frameskip;
+	m->set_ratelimit = coco3_set_ratelimit;
+
+	m->read_byte = coco3_read_byte;
+	m->write_byte = coco3_write_byte;
+	m->op_rts = coco3_op_rts;
+
+	return p;
+}
+
+static void coco3_initialise(struct part *p, void *options) {
+        struct machine_config *mc = options;
+        assert(mc != NULL);
+
+        struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+        struct machine *m = &mcc3->public;
+
+        coco3_config_complete(mc);
+        m->config = mc;
+
+	// GIME
+	part_add_component(&m->part, (struct part *)tcc1014_new(mc->vdg_type), "GIME");
+
+	// CPU
+	switch (mc->cpu) {
+	case CPU_MC6809: default:
+		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
+		break;
+	case CPU_HD6309:
+		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
+		break;
+	}
+
+	// PIAs
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
+	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
+}
 
 static _Bool coco3_finish(struct part *p) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
@@ -416,95 +491,35 @@ static _Bool coco3_finish(struct part *p) {
 	return 1;
 }
 
-static struct machine_coco3 *coco3_create(void) {
-	struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
-	*mcc3 = (struct machine_coco3){0};
-	struct machine *m = &mcc3->public;
-	part_init(&m->part, "coco3");
-	m->part.free = coco3_free;
-	m->part.serialise = coco3_serialise;
-	m->part.finish = coco3_finish;
-	m->part.is_a = machine_is_a;
-
-	m->insert_cart = coco3_insert_cart;
-	m->remove_cart = coco3_remove_cart;
-	m->reset = coco3_reset;
-	m->run = coco3_run;
-	m->single_step = coco3_single_step;
-	m->signal = coco3_signal;
-	m->bp_add_n = coco3_bp_add_n;
-	m->bp_remove_n = coco3_bp_remove_n;
-
-	m->set_pause = coco3_set_pause;
-	m->set_inverted_text = coco3_set_inverted_text;
-	m->get_component = coco3_get_component;
-	m->get_interface = coco3_get_interface;
-	m->set_frameskip = coco3_set_frameskip;
-	m->set_ratelimit = coco3_set_ratelimit;
-
-	m->read_byte = coco3_read_byte;
-	m->write_byte = coco3_write_byte;
-	m->op_rts = coco3_op_rts;
-
-	return mcc3;
-}
-
-static struct machine *coco3_new(struct machine_config *mc) {
-	assert(mc != NULL);
-
-	struct machine_coco3 *mcc3 = coco3_create();
-	struct machine *m = &mcc3->public;
-	struct part *p = &m->part;
-
-	coco3_config_complete(mc);
-	m->config = mc;
-
-	// GIME
-	part_add_component(&m->part, (struct part *)tcc1014_new(mc->vdg_type), "GIME");
-
-	// CPU
-	switch (mc->cpu) {
-	case CPU_MC6809: default:
-		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
-		break;
-	case CPU_HD6309:
-		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
-		break;
-	}
-
-	// PIAs
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
-
-	if (!coco3_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return m;
-}
-
-static void coco3_serialise(struct part *p, struct ser_handle *sh) {
+static void coco3_free(struct part *p) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, tag, mcc3)) > 0; tag++) {
-		switch (tag) {
-		case COCO3_SER_MACHINE:
-			machine_serialise(&mcc3->public, sh, tag);
-			break;
-		case COCO3_SER_RAM:
-			ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+	struct machine *m = &mcc3->public;
+	if (m->config && m->config->description) {
+		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
 	}
-	ser_write_close_tag(sh);
+	//m->remove_cart(m);
+#ifdef WANT_GDB_TARGET
+	if (mcc3->gdb_interface) {
+		gdb_interface_free(mcc3->gdb_interface);
+	}
+#endif
+	if (mcc3->keyboard_interface) {
+		keyboard_interface_free(mcc3->keyboard_interface);
+	}
+	if (mcc3->printer_interface) {
+		printer_interface_free(mcc3->printer_interface);
+	}
+	if (mcc3->bp_session) {
+		bp_session_free(mcc3->bp_session);
+	}
+	ntsc_burst_free(mcc3->ntsc_burst[1]);
+	ntsc_burst_free(mcc3->ntsc_burst[0]);
+	free(mcc3->ram);
 }
 
-struct part *coco3_deserialise(struct ser_handle *sh) {
-	struct machine_coco3 *mcc3 = coco3_create();
-
+static struct part *coco3_deserialise(struct ser_handle *sh) {
+	struct part *p = coco3_allocate();
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, mcc3))) {
 		size_t length = ser_data_length(sh);
@@ -543,30 +558,22 @@ struct part *coco3_deserialise(struct ser_handle *sh) {
 	return (struct part *)mcc3;
 }
 
-static void coco3_free(struct part *p) {
+static void coco3_serialise(struct part *p, struct ser_handle *sh) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
-	struct machine *m = &mcc3->public;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, tag, mcc3)) > 0; tag++) {
+		switch (tag) {
+		case COCO3_SER_MACHINE:
+			machine_serialise(&mcc3->public, sh, tag);
+			break;
+		case COCO3_SER_RAM:
+			ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
 	}
-	//m->remove_cart(m);
-#ifdef WANT_GDB_TARGET
-	if (mcc3->gdb_interface) {
-		gdb_interface_free(mcc3->gdb_interface);
-	}
-#endif
-	if (mcc3->keyboard_interface) {
-		keyboard_interface_free(mcc3->keyboard_interface);
-	}
-	if (mcc3->printer_interface) {
-		printer_interface_free(mcc3->printer_interface);
-	}
-	if (mcc3->bp_session) {
-		bp_session_free(mcc3->bp_session);
-	}
-	ntsc_burst_free(mcc3->ntsc_burst[1]);
-	ntsc_burst_free(mcc3->ntsc_burst[0]);
-	free(mcc3->ram);
+	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
