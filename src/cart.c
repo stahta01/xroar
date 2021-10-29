@@ -58,6 +58,12 @@ static const struct ser_struct ser_struct_cart_config[] = {
 
 #define CART_SER_CART_CONFIG (1)
 
+struct xconfig_enum cart_arch_list[] = {
+	{ XC_ENUM_INT("dragon", CART_ARCH_DRAGON, "Dragon/CoCo cartridge") },
+	{ XC_ENUM_INT("mc10", CART_ARCH_MC10, "MC-10 cartridge") },
+	{ XC_ENUM_END() }
+};
+
 static const struct ser_struct ser_struct_cart[] = {
 	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
 	SER_STRUCT_ELEM(struct cart, EXTMEM, ser_type_bool), // 2
@@ -93,7 +99,7 @@ extern struct cart_module cart_ide_module;
 extern struct cart_module cart_nx32_module;
 extern struct cart_module cart_mooh_module;
 
-static struct slist *cart_modules = NULL;
+static struct slist *cart_modules[NUM_CART_ARCH];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -226,6 +232,9 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 }
 
 void cart_config_complete(struct cart_config *cc) {
+	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH) {
+		cc->architecture = 0;
+	}
 	if (!cc->type) {
 		cc->type = xstrdup("rom");
 	}
@@ -268,12 +277,25 @@ struct slist *cart_config_list(void) {
 	return config_list;
 }
 
+struct slist *cart_config_list_by_arch(int arch) {
+	if (arch < 0 || arch >= NUM_CART_ARCH)
+		arch = 0;  // XXX maybe return NULL instead?
+	struct slist *l = NULL;
+	for (struct slist *iter = config_list; iter; iter = iter->next) {
+		struct cart_config *cc = iter->data;
+		if (cc->architecture == arch)
+			l = slist_append(l, cc);
+	}
+	return l;
+}
+
 void cart_config_print_all(FILE *f, _Bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
 		fprintf(f, "cart %s\n", cc->name);
 		xroar_cfg_print_inc_indent();
 		xroar_cfg_print_string(f, all, "cart-desc", cc->description, NULL);
+		xroar_cfg_print_enum(f, all, "cart-arch", cc->architecture, ANY_AUTO, cart_arch_list);
 		xroar_cfg_print_string(f, all, "cart-type", cc->type, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom", cc->rom, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom2", cc->rom2, NULL);
@@ -288,24 +310,31 @@ void cart_config_print_all(FILE *f, _Bool all) {
 
 void cart_init(void) {
 	// reverse order
-	cart_modules = slist_prepend(cart_modules, &cart_mooh_module);
-	cart_modules = slist_prepend(cart_modules, &cart_nx32_module);
-	cart_modules = slist_prepend(cart_modules, &cart_ide_module);
-	cart_modules = slist_prepend(cart_modules, &cart_mpi_race_module);
-	cart_modules = slist_prepend(cart_modules, &cart_mpi_module);
-	cart_modules = slist_prepend(cart_modules, &cart_orch90_module);
-	cart_modules = slist_prepend(cart_modules, &cart_gmc_module);
-	cart_modules = slist_prepend(cart_modules, &cart_rsdos_module);
-	cart_modules = slist_prepend(cart_modules, &cart_deltados_module);
-	cart_modules = slist_prepend(cart_modules, &cart_dragondos_module);
-	cart_modules = slist_prepend(cart_modules, &cart_rom_module);
+	struct slist *l = NULL;
+	l = slist_prepend(l, &cart_mooh_module);
+	l = slist_prepend(l, &cart_nx32_module);
+	l = slist_prepend(l, &cart_ide_module);
+	l = slist_prepend(l, &cart_mpi_race_module);
+	l = slist_prepend(l, &cart_mpi_module);
+	l = slist_prepend(l, &cart_orch90_module);
+	l = slist_prepend(l, &cart_gmc_module);
+	l = slist_prepend(l, &cart_rsdos_module);
+	l = slist_prepend(l, &cart_deltados_module);
+	l = slist_prepend(l, &cart_dragondos_module);
+	l = slist_prepend(l, &cart_rom_module);
+	cart_modules[CART_ARCH_DRAGON] = l;
+
+	l = NULL;
+	cart_modules[CART_ARCH_MC10] = l;
 }
 
 void cart_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)cart_config_free);
 	config_list = NULL;
-	slist_free(cart_modules);
-	cart_modules = NULL;
+	for (int arch = 0; arch < NUM_CART_ARCH; arch++) {
+		slist_free(cart_modules[arch]);
+		cart_modules[arch] = NULL;
+	}
 }
 
 static void cart_type_help_func(struct cart_module *cm, void *udata) {
@@ -315,8 +344,10 @@ static void cart_type_help_func(struct cart_module *cm, void *udata) {
 	printf("\t%-10s %s\n", cm->name, cm->description);
 }
 
-void cart_type_help(void) {
-	slist_foreach(cart_modules, (slist_iter_func)cart_type_help_func, NULL);
+void cart_type_help(int arch) {
+	if (arch < 0 || arch >= NUM_CART_ARCH)
+		arch = 0;
+	slist_foreach(cart_modules[arch], (slist_iter_func)cart_type_help_func, NULL);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -325,8 +356,10 @@ struct cart *cart_new(struct cart_config *cc) {
 	if (!cc) return NULL;
 	cart_config_complete(cc);
 	struct cart *c = NULL;
+	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH)
+		cc->architecture = 0;
 	const char *req_type = cc->type;
-	for (struct slist *iter = cart_modules; iter; iter = iter->next) {
+	for (struct slist *iter = cart_modules[cc->architecture]; iter; iter = iter->next) {
 		struct cart_module *cm = iter->data;
 		if (c_strcasecmp(req_type, cm->name) == 0) {
 			if (cc->description) {

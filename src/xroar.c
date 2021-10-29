@@ -119,6 +119,7 @@ struct private_cfg {
 
 	// Cartridges
 	char *cart_desc;
+	int cart_arch;
 	char *cart_type;
 	char *cart_rom;
 	char *cart_rom2;
@@ -180,6 +181,7 @@ static struct private_cfg private_cfg = {
 	.tv = ANY_AUTO,
 	.tv_input = ANY_AUTO,
 	.vdg_type = -1,
+	.cart_arch = ANY_AUTO,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
 	.tape_fast = 1,
@@ -1576,6 +1578,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 	}
 	xroar_machine_config = mc;
 	xroar_machine = machine_new(mc);
+	DELEGATE_SAFE_CALL(xroar_ui_interface->update_cartridge_menu);
 	xroar_connect_machine();
 }
 
@@ -1928,6 +1931,10 @@ static void set_cart(const char *name) {
 		cc = cart_config_by_name(xroar_machine_config->default_cart);
 	}
 	if (cc) {
+		if (private_cfg.cart_arch != ANY_AUTO) {
+			cc->architecture = private_cfg.cart_arch;
+			private_cfg.cart_arch = ANY_AUTO;
+		}
 		if (private_cfg.cart_desc) {
 			cc->description = private_cfg.cart_desc;
 			private_cfg.cart_desc = NULL;
@@ -1971,7 +1978,7 @@ static void set_cart(const char *name) {
 
 static void set_cart_type(const char *name) {
 	if (name && 0 == strcmp(name, "help")) {
-		cart_type_help();
+		cart_type_help(private_cfg.cart_arch);
 		exit(EXIT_SUCCESS);
 	}
 	if (private_cfg.cart_type) {
@@ -2170,6 +2177,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Cartridges: */
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
+	{ XC_SET_ENUM("cart-arch", &private_cfg.cart_arch, cart_arch_list) },
 	{ XC_CALL_STRING("cart-type", &set_cart_type) },
 	{ XC_SET_STRING_F("cart-rom", &private_cfg.cart_rom) },
 	{ XC_SET_STRING_F("cart-rom2", &private_cfg.cart_rom2) },

@@ -31,9 +31,14 @@ struct slist;
 struct machine_config;
 struct event;
 
+#define CART_ARCH_DRAGON (0)
+#define CART_ARCH_MC10   (1)
+#define NUM_CART_ARCH    (2)
+
 struct cart_config {
 	char *name;
 	char *description;
+	int architecture;
 	char *type;
 	int id;
 	char *rom;
@@ -41,6 +46,8 @@ struct cart_config {
 	_Bool becker_port;
 	int autorun;
 };
+
+extern struct xconfig_enum cart_arch_list[];
 
 struct cart {
 	struct part part;
@@ -110,13 +117,14 @@ struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
 _Bool cart_config_remove(const char *name);
 struct slist *cart_config_list(void);
+struct slist *cart_config_list_by_arch(int arch);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
 void cart_config_print_all(FILE *f, _Bool all);
 
 void cart_init(void);
 void cart_shutdown(void);
-void cart_type_help(void);
+void cart_type_help(int arch);
 
 struct cart *cart_new(struct cart_config *cc);
 struct cart *cart_new_named(const char *cc_name);
