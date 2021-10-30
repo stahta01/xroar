@@ -54,6 +54,7 @@ extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
 extern const struct partdb_entry mc6803_part;
 extern const struct partdb_entry mc6809_part;
+extern const struct partdb_entry mc6821_part;
 extern const struct partdb_entry mc6847_part;
 extern const struct partdb_entry mc6847t1_part;
 extern const struct partdb_entry mc6883_part;
@@ -77,6 +78,7 @@ const struct partdb_entry *partdb[] = {
 	&mc6801_part,
 	&mc6803_part,
 	&mc6809_part,
+	&mc6821_part,
 	&mc6847_part,
 	&mc6847t1_part,
 	&mc6883_part,

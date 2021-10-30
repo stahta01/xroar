@@ -70,9 +70,6 @@ struct MC6821 {
 #define PIA_VALUE_A(p) ((p)->a.out_sink & (p)->a.in_sink)
 #define PIA_VALUE_B(p) (((p)->b.out_source | (p)->b.in_source) & (p)->b.out_sink & (p)->b.in_sink)
 
-struct MC6821 *mc6821_new(void);
-struct part *mc6821_deserialise(struct ser_handle *sh);
-
 void mc6821_reset(struct MC6821 *pia);
 void mc6821_set_cx1(struct MC6821_side *side, _Bool level);
 void mc6821_update_state(struct MC6821 *pia);

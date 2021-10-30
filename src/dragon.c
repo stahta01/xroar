@@ -393,8 +393,8 @@ static void dragon_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create((mc->cpu == CPU_HD6309) ? "HD6309" : "MC6809", NULL), "CPU");
 
 	// PIAs
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");
-	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA1");
+	part_add_component(&m->part, part_create("MC6821", NULL), "PIA0");
+	part_add_component(&m->part, part_create("MC6821", NULL), "PIA1");
 
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG0");
