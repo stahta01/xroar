@@ -37,8 +37,6 @@ struct spi65_device {
 	DELEGATE_T0(void) reset;
 };
 
-struct spi65 *spi65_new(void);
-
 void spi65_add_device(struct spi65 *spi65, struct spi65_device *device, unsigned slot);
 void spi65_remove_device(struct spi65 *spi65, unsigned slot);
 

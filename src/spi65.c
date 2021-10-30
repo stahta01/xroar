@@ -48,6 +48,8 @@
 
 #define SPI_NDEVICES (4)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct spi65_private {
 	struct spi65 public;
 
@@ -72,7 +74,34 @@ static const struct ser_struct ser_struct_spi65[] = {
 
 #define N_SER_STRUCT_SPI65 ARRAY_N_ELEMENTS(ser_struct_spi65)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// 65SPI-B part creation
+
+static struct part *spi65_allocate(void);
+static _Bool spi65_finish(struct part *p);
+
+static struct part *spi65_deserialise(struct ser_handle *sh);
 static void spi65_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs spi65_funcs = {
+	.allocate = spi65_allocate,
+	.finish = spi65_finish,
+
+	.deserialise = spi65_deserialise,
+	.serialise = spi65_serialise,
+};
+
+const struct partdb_entry spi65_part = { .name = "65SPI-B", .funcs = &spi65_funcs };
+
+static struct part *spi65_allocate(void) {
+	struct spi65_private *spi65p = part_new(sizeof(*spi65p));
+	struct part *p = &spi65p->public.part;
+
+	*spi65p = (struct spi65_private){0};
+
+	return p;
+}
 
 static _Bool spi65_finish(struct part *p) {
 	struct spi65_private *spi65p = (struct spi65_private *)p;
@@ -92,25 +121,24 @@ static _Bool spi65_finish(struct part *p) {
 	return 1;
 }
 
-static struct spi65_private *spi65_create(void) {
-	struct spi65_private *spi65p = part_new(sizeof(*spi65p));
-	*spi65p = (struct spi65_private){0};
-	part_init(&spi65p->public.part, "65SPI-B");
-	spi65p->public.part.serialise = spi65_serialise;
-	spi65p->public.part.finish = spi65_finish;
-	return spi65p;
-}
+static struct part *spi65_deserialise(struct ser_handle *sh) {
+	struct part *p = spi65_allocate();
+        struct spi65_private *spi65p = (struct spi65_private *)p;
+        int tag;
+        while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, spi65p))) {
+                switch (tag) {
+                default:
+                        ser_set_error(sh, ser_error_format);
+                        break;
+                }
+        }
 
-struct spi65 *spi65_new(void) {
-	struct spi65_private *spi65p = spi65_create();
-	struct part *p = &spi65p->public.part;
+        if (ser_error(sh)) {
+                part_free(p);
+                return NULL;
+        }
 
-	if (!spi65_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return (struct spi65 *)spi65p;
+        return p;
 }
 
 static void spi65_serialise(struct part *p, struct ser_handle *sh) {
@@ -125,22 +153,7 @@ static void spi65_serialise(struct part *p, struct ser_handle *sh) {
         ser_write_close_tag(sh);
 }
 
-struct part *spi65_deserialise(struct ser_handle *sh) {
-        struct spi65_private *spi65p = spi65_create();
-        int tag;
-        while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, spi65p))) {
-                switch (tag) {
-                default:
-                        ser_set_error(sh, ser_error_format);
-                        break;
-                }
-        }
-        if (ser_error(sh)) {
-                part_free((struct part *)spi65p);
-                return NULL;
-        }
-        return (struct part *)spi65p;
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void spi65_add_device(struct spi65 *spi65, struct spi65_device *device, unsigned slot) {
 	struct spi65_private *spi65p = (struct spi65_private *)spi65;

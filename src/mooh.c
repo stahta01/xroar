@@ -133,7 +133,7 @@ struct cart *mooh_new(struct cart_config *cc) {
 	}
 
 	// 65SPI/B for interfacing to SD card
-	struct spi65 *spi65 = spi65_new();
+	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 
 	// Attach an SD card (SPI mode) to 65SPI/B
