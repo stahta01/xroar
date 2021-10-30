@@ -89,7 +89,7 @@ void ser_write_tag(struct ser_handle *sh, int tag, size_t length) {
 	if (!sh)
 		return;
 	if (tag < 0) {
-		sh->error = ser_error_bad_tag;
+		ser_set_error(sh, ser_error_bad_tag);
 		return;
 	}
 	s_write_vuint32(sh, tag);
@@ -112,7 +112,7 @@ int ser_read_tag(struct ser_handle *sh) {
 	// Skip any data remaining from previous read
 	if (sh->length) {
 		if (fseek(sh->fd, sh->length, SEEK_CUR) < 0) {
-			sh->error = ser_error_file_io;
+			ser_set_error(sh, ser_error_file_io);
 			return -1;
 		}
 		sh->length = 0;
@@ -178,35 +178,35 @@ static void s_write_uint8(struct ser_handle *sh, int v) {
 	if (sh->error)
 		return;
 	if (fs_write_uint8(sh->fd, v) != 1)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static void s_write_uint16(struct ser_handle *sh, int v) {
 	if (sh->error)
 		return;
 	if (fs_write_uint16(sh->fd, v) != 2)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static void s_write_vuint32(struct ser_handle *sh, uint32_t v) {
 	if (sh->error)
 		return;
 	if (fs_write_vuint32(sh->fd, v) <= 0)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static void s_write_vint32(struct ser_handle *sh, int32_t v) {
 	if (sh->error)
 		return;
 	if (fs_write_vint32(sh->fd, v) <= 0)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static void s_write(struct ser_handle *sh, const void *ptr, size_t size) {
 	if (sh->error)
 		return;
 	if (fwrite(ptr, 1, size, sh->fd) != size)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static int s_read_uint8(struct ser_handle *sh) {
@@ -214,7 +214,7 @@ static int s_read_uint8(struct ser_handle *sh) {
 		return 0;
 	int r = fs_read_uint8(sh->fd);
 	if (r < 0)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 	return r;
 }
 
@@ -223,7 +223,7 @@ static int s_read_uint16(struct ser_handle *sh) {
 		return 0;
 	int r = fs_read_uint16(sh->fd);
 	if (r < 0)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 	return r;
 }
 
@@ -233,7 +233,7 @@ static uint32_t s_read_vuint32(struct ser_handle *sh) {
 	int nread = 0;
 	uint32_t r = fs_read_vuint32(sh->fd, &nread);
 	if (nread < 0)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 	return r;
 }
 
@@ -241,7 +241,7 @@ static void s_read(struct ser_handle *sh, void *ptr, size_t size) {
 	if (sh->error)
 		return;
 	if (fread(ptr, 1, size, sh->fd) != size)
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_file_io);
 }
 
 static void *s_read_new(struct ser_handle *sh, size_t size) {
@@ -351,7 +351,7 @@ void ser_write_uint8_untagged(struct ser_handle *sh, uint8_t v) {
 	if (!sh)
 		return;
 	if (sh->length < 1) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return;
 	}
 	s_write_uint8(sh, v);
@@ -362,7 +362,7 @@ void ser_write_uint16_untagged(struct ser_handle *sh, uint16_t v) {
 	if (!sh)
 		return;
 	if (sh->length < 2) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return;
 	}
 	s_write_uint16(sh, v);
@@ -373,7 +373,7 @@ void ser_write_untagged(struct ser_handle *sh, const void *ptr, size_t size) {
 	if (!sh)
 		return;
 	if (size > sh->length) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return;
 	}
 	s_write(sh, ptr, size);
@@ -392,7 +392,7 @@ uint8_t ser_read_uint8(struct ser_handle *sh) {
 	if (!sh || sh->error)
 		return 0;
 	if (sh->length < 1) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	sh->length--;
@@ -407,7 +407,7 @@ uint16_t ser_read_uint16(struct ser_handle *sh) {
 	if (!sh || sh->error)
 		return 0;
 	if (sh->length < 2) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	sh->length -= 2;
@@ -418,17 +418,17 @@ int32_t ser_read_vint32(struct ser_handle *sh) {
 	if (!sh || sh->error)
 		return 0;
 	if (sh->length < 1) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	int nread;
 	int32_t v = fs_read_vint32(sh->fd, &nread);
 	if (nread <= 0) {
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	if ((unsigned)nread > sh->length) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	sh->length -= nread;
@@ -439,17 +439,17 @@ uint32_t ser_read_vuint32(struct ser_handle *sh) {
 	if (!sh || sh->error)
 		return 0;
 	if (sh->length < 1) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	int nread;
 	uint32_t v = fs_read_vuint32(sh->fd, &nread);
 	if (nread <= 0) {
-		sh->error = ser_error_file_io;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	if ((unsigned)nread > sh->length) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return 0;
 	}
 	sh->length -= nread;
@@ -460,7 +460,7 @@ void ser_read(struct ser_handle *sh, void *ptr, size_t size) {
 	if (!sh || sh->error)
 		return;
 	if (sh->length < size) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return;
 	}
 	sh->length -= size;
@@ -493,7 +493,7 @@ void *ser_read_new(struct ser_handle *sh, size_t size) {
 	if (!sh || sh->error)
 		return NULL;
 	if (sh->length < size) {
-		sh->error = ser_error_format;
+		ser_set_error(sh, ser_error_format);
 		return NULL;
 	}
 	sh->length -= size;
@@ -575,7 +575,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 			break;
 
 		default:
-			sh->error = ser_error_type;
+			ser_set_error(sh, ser_error_type);
 			break;
 		}
 	}
@@ -588,7 +588,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 	int tag;
 	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
 		if (tag > nss) {
-			sh->error = ser_error_bad_tag;
+			ser_set_error(sh, ser_error_bad_tag);
 			return -1;
 		}
 		enum ser_type type = ss[tag-1].type;
@@ -660,7 +660,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 		case ser_type_skip:
 			continue;
 		default:
-			sh->error = ser_error_type;
+			ser_set_error(sh, ser_error_type);
 			break;
 		}
 	}
