@@ -50,7 +50,7 @@ static struct {
 		// 0x00 - 0x0F
 		{ "NEG", DIRECT },
 		{ "NEG*", DIRECT },
-		{ "NEGCOM*", DIRECT },
+		{ "NGC*", DIRECT },
 		{ "COM", DIRECT },
 		{ "LSR", DIRECT },
 		{ "LSR*", DIRECT },
@@ -118,7 +118,7 @@ static struct {
 		// 0x40 - 0x4F
 		{ "NEGA", INHERENT },
 		{ "NEGA*", INHERENT },
-		{ "NEGCOMA*", INHERENT },
+		{ "NGCA*", INHERENT },
 		{ "COMA", INHERENT },
 		{ "LSRA", INHERENT },
 		{ "LSRA*", INHERENT },
@@ -135,7 +135,7 @@ static struct {
 		// 0x50 - 0x5F
 		{ "NEGB", INHERENT },
 		{ "NEGB*", INHERENT },
-		{ "NEGCOMB*", INHERENT },
+		{ "NGCB*", INHERENT },
 		{ "COMB", INHERENT },
 		{ "LSRB", INHERENT },
 		{ "LSRB*", INHERENT },
@@ -152,7 +152,7 @@ static struct {
 		// 0x60 - 0x6F
 		{ "NEG", INDEXED },
 		{ "NEG*", INDEXED },
-		{ "NEGCOM*", INDEXED },
+		{ "NGC*", INDEXED },
 		{ "COM", INDEXED },
 		{ "LSR", INDEXED },
 		{ "LSR*", INDEXED },
@@ -169,7 +169,7 @@ static struct {
 		// 0x70 - 0x7F
 		{ "NEG", EXTENDED },
 		{ "NEG*", EXTENDED },
-		{ "NEGCOM*", EXTENDED },
+		{ "NGC*", EXTENDED },
 		{ "COM", EXTENDED },
 		{ "LSR", EXTENDED },
 		{ "LSR*", EXTENDED },
@@ -394,7 +394,7 @@ static struct {
 		// 0x1040 - 0x104F
 		{ "NEGA*", INHERENT },
 		{ "NEGA*", INHERENT },
-		{ "NEGCOMA*", INHERENT },
+		{ "NGCA*", INHERENT },
 		{ "COMA*", INHERENT },
 		{ "LSRA*", INHERENT },
 		{ "LSRA*", INHERENT },
@@ -411,7 +411,7 @@ static struct {
 		// 0x1050 - 0x105F
 		{ "NEGB*", INHERENT },
 		{ "NEGB*", INHERENT },
-		{ "NEGCOMB*", INHERENT },
+		{ "NGCB*", INHERENT },
 		{ "COMB*", INHERENT },
 		{ "LSRB*", INHERENT },
 		{ "LSRB*", INHERENT },
@@ -428,7 +428,7 @@ static struct {
 		// 0x1060 - 0x106F
 		{ "NEG*", INDEXED },
 		{ "NEG*", INDEXED },
-		{ "NEGCOM*", INDEXED },
+		{ "NGC*", INDEXED },
 		{ "COM*", INDEXED },
 		{ "LSR*", INDEXED },
 		{ "LSR*", INDEXED },
@@ -445,7 +445,7 @@ static struct {
 		// 0x1070 - 0x107F
 		{ "NEG*", EXTENDED },
 		{ "NEG*", EXTENDED },
-		{ "NEGCOM*", EXTENDED },
+		{ "NGC*", EXTENDED },
 		{ "COM*", EXTENDED },
 		{ "LSR*", EXTENDED },
 		{ "LSR*", EXTENDED },

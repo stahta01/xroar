@@ -122,10 +122,6 @@ static void instruction_posthook(struct MC6809 *cpu);
  * ALU operations
  */
 
-/* Illegal 6809 8-bit inherent operations */
-
-static uint8_t op_negcom(struct MC6809 *cpu, uint8_t in);
-
 /* Illegal 6809 8-bit arithmetic operations */
 
 static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
@@ -464,7 +460,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				switch (op & 0xf) {
 				case 0x1: // NEG illegal
 				case 0x0: tmp1 = op_neg(cpu, tmp1); break; // NEG, NEGA, NEGB
-				case 0x2: tmp1 = op_negcom(cpu, tmp1); break; // NEGCOM illegal
+				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC illegal
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
 				case 0x5: // LSR illegal
 				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
@@ -1351,15 +1347,6 @@ static void instruction_posthook(struct MC6809 *cpu) {
 /*
  * ALU operations
  */
-
-/* Illegal 6809 8-bit inherent operations */
-
-static uint8_t op_negcom(struct MC6809 *cpu, uint8_t in) {
-	unsigned out = ~in + (~REG_CC & 1);
-	CLR_NZVC;
-	SET_NZVC8(0, in, out);
-	return out;
-}
 
 /* Illegal 6809 8-bit arithmetic operations */
 
