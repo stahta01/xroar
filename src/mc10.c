@@ -226,7 +226,7 @@ static void mc10_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, (struct part *)mc6803_new(), "CPU");
 
 	// VDG
-	part_add_component(&m->part, (struct part *)mc6847_new(mc->vdg_type), "VDG0");
+	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG0");
 }
 
 static _Bool mc10_finish(struct part *p) {

@@ -56,6 +56,8 @@ enum vdg_render_mode {
 	VDG_RENDER_RG,
 };
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct MC6847_private {
 	struct MC6847 public;
 
@@ -172,13 +174,14 @@ static struct ser_struct ser_struct_mc6847[] = {
 	SER_STRUCT_ELEM(struct MC6847_private, rborder_remaining, ser_type_unsigned), // 39
 
 	SER_STRUCT_ELEM(struct MC6847_private, nLPR, ser_type_unsigned), // 40
+	SER_STRUCT_ELEM(struct MC6847_private, is_t1, ser_type_bool), // 41
 };
+
 #define N_SER_STRUCT_MC6847 ARRAY_N_ELEMENTS(ser_struct_mc6847)
 
 #define TCC1014_SER_VRAM (34)
 
-static void mc6847_free(struct part *p);
-static void mc6847_serialise(struct part *p, struct ser_handle *sh);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
@@ -188,6 +191,121 @@ static void render_scanline(struct MC6847_private *vdg);
 
 // Canonify scanline numbers:
 #define SCANLINE(s) ((s) % VDG_FRAME_DURATION)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// MC6847 part creation
+
+static struct part *mc6847_allocate(void);
+static void mc6847_initialise(struct part *p, void *options);
+static _Bool mc6847_finish(struct part *p);
+static void mc6847_free(struct part *p);
+
+static struct part *mc6847_deserialise(struct ser_handle *sh);
+static void mc6847_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs mc6847_funcs = {
+	.allocate = mc6847_allocate,
+	.initialise = mc6847_initialise,
+	.finish = mc6847_finish,
+	.free = mc6847_free,
+
+	.deserialise = mc6847_deserialise,
+	.serialise = mc6847_serialise,
+};
+
+const struct partdb_entry mc6847_part = { .name = "MC6847", .funcs = &mc6847_funcs };
+const struct partdb_entry mc6847t1_part = { .name = "MC6847T1", .funcs = &mc6847_funcs };
+
+static struct part *mc6847_allocate(void) {
+	struct MC6847_private *vdg = part_new(sizeof(*vdg));
+	struct part *p = &vdg->public.part;
+
+	*vdg = (struct MC6847_private){0};
+
+	vdg->nLPR = 12;
+	vdg->beam_pos = VDG_LEFT_BORDER_START;
+	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
+	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
+	vdg->public.fetch_data = DELEGATE_DEFAULT3(void, uint16, int, uint16p);
+	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
+	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
+
+	return p;
+}
+
+static void mc6847_initialise(struct part *p, void *options) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+	vdg->is_t1 = options && (strcmp((char *)options, "6847T1") == 0);
+}
+
+static _Bool mc6847_finish(struct part *p) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+
+	if (vdg->hs_fall_event.next == &vdg->hs_fall_event)
+		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+	if (vdg->hs_rise_event.next == &vdg->hs_rise_event)
+		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
+
+	// 6847T1 doesn't appear to do bright orange:
+	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
+
+	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
+	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
+	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
+
+	return 1;
+}
+
+static void mc6847_free(struct part *p) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+	event_dequeue(&vdg->hs_fall_event);
+	event_dequeue(&vdg->hs_rise_event);
+}
+
+static struct part *mc6847_deserialise(struct ser_handle *sh) {
+	struct part *p = mc6847_allocate();
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, vdg))) {
+		switch (tag) {
+		case TCC1014_SER_VRAM:
+			for (int i = 0; i < 42; i++) {
+				vdg->vram[i] = ser_read_uint16(sh);
+			}
+			break;
+
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
+		part_free(p);
+		return NULL;
+	}
+
+	return p;
+}
+
+static void mc6847_serialise(struct part *p, struct ser_handle *sh) {
+	struct MC6847_private *vdg = (struct MC6847_private *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, tag, vdg)) > 0; tag++) {
+		switch (tag) {
+		case TCC1014_SER_VRAM:
+			ser_write_tag(sh, tag, 42*2);
+			for (int i = 0; i < 42; i++) {
+				ser_write_uint16_untagged(sh, vdg->vram[i]);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -515,120 +633,6 @@ static void render_scanline(struct MC6847_private *vdg) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static _Bool mc6847_finish(struct part *p) {
-	struct MC6847_private *vdg = (struct MC6847_private *)p;
-
-	if (vdg->hs_fall_event.next == &vdg->hs_fall_event)
-		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
-	if (vdg->hs_rise_event.next == &vdg->hs_rise_event)
-		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
-
-	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);
-	vdg->text_border = vdg->is_t1 && !vdg->inverse_text && (vdg->GM & 4);
-	vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
-
-	return 1;
-}
-
-static _Bool mc6847_is_a(struct part *p, const char *name) {
-	(void)p;
-	return p && strcmp(name, "MC6847") == 0;
-}
-
-struct MC6847_private *mc6847_create(int type) {
-	_Bool t1 = (type == VDG_6847T1);
-	struct MC6847_private *vdg = part_new(sizeof(*vdg));
-	*vdg = (struct MC6847_private){0};
-	part_init((struct part *)vdg, t1 ? "MC6847T1" : "MC6847");
-	vdg->public.part.free = mc6847_free;
-	vdg->public.part.serialise = mc6847_serialise;
-	vdg->public.part.finish = mc6847_finish;
-	vdg->public.part.is_a = mc6847_is_a;
-
-	// 6847T1 doesn't appear to do bright orange:
-	vdg->is_t1 = t1;
-	vdg->bright_orange = t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
-	vdg->nLPR = 12;
-
-	// Beam timing & events
-	vdg->beam_pos = VDG_LEFT_BORDER_START;
-	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
-	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
-	vdg->public.fetch_data = DELEGATE_DEFAULT3(void, uint16, int, uint16p);
-	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
-	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
-
-	return vdg;
-}
-
-struct MC6847 *mc6847_new(int type) {
-	struct MC6847_private *vdg = mc6847_create(type);
-	assert(vdg != NULL);  // generally if type is invalid
-	struct part *p = &vdg->public.part;
-	if (!mc6847_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-	return (struct MC6847 *)vdg;
-}
-
-static void mc6847_free(struct part *p) {
-	struct MC6847_private *vdg = (struct MC6847_private *)p;
-	event_dequeue(&vdg->hs_fall_event);
-	event_dequeue(&vdg->hs_rise_event);
-}
-
-static void mc6847_serialise(struct part *p, struct ser_handle *sh) {
-	struct MC6847_private *vdg = (struct MC6847_private *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, tag, vdg)) > 0; tag++) {
-		switch (tag) {
-		case TCC1014_SER_VRAM:
-			ser_write_tag(sh, tag, 42*2);
-			for (int i = 0; i < 42; i++) {
-				ser_write_uint16_untagged(sh, vdg->vram[i]);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
-}
-
-static struct part *mc6847_deserialise_typed(struct ser_handle *sh, int type) {
-	struct MC6847_private *vdg = mc6847_create(type);
-
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, vdg))) {
-		switch (tag) {
-		case TCC1014_SER_VRAM:
-			for (int i = 0; i < 42; i++) {
-				vdg->vram[i] = ser_read_uint16(sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-
-	if (ser_error(sh)) {
-		part_free((struct part *)vdg);
-		return NULL;
-	}
-
-	return (struct part *)vdg;
-}
-
-struct part *mc6847_deserialise(struct ser_handle *sh) {
-	return mc6847_deserialise_typed(sh, VDG_6847);
-}
-
-struct part *mc6847t1_deserialise(struct ser_handle *sh) {
-	return mc6847_deserialise_typed(sh, VDG_6847T1);
-}
 
 void mc6847_reset(struct MC6847 *vdgp) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;

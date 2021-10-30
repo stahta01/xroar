@@ -116,13 +116,6 @@ struct MC6847 {
  *  7...0   DD7..DD0
  */
 
-/** \brief Create a new MC6847 part.
- *
- * \param type    one of VDG_6847 or VDG_6847T1.
- */
-
-struct MC6847 *mc6847_new(int type);
-
 void mc6847_reset(struct MC6847 *);
 
 void mc6847_set_inverted_text(struct MC6847 *, _Bool);

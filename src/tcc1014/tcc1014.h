@@ -95,13 +95,6 @@ struct TCC1014 {
  *  7...0   DD7..DD0
  */
 
-/** \brief Create a new TCC1014 (GIME) part.
- *
- * \param type    one of VDG_GIME_1986 or VDG_GIME_1987.
- */
-
-struct TCC1014 *tcc1014_new(unsigned type);
-
 void tcc1014_reset(struct TCC1014 *gimep);
 void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 

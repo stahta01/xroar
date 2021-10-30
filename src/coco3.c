@@ -288,7 +288,7 @@ static void coco3_initialise(struct part *p, void *options) {
         m->config = mc;
 
 	// GIME
-	part_add_component(&m->part, (struct part *)tcc1014_new(mc->vdg_type), "GIME");
+	part_add_component(&m->part, part_create((mc->vdg_type == VDG_GIME_1986) ? "TCC1014-1986" : "TCC1014-1987", NULL), "GIME");
 
 	// CPU
 	switch (mc->cpu) {
