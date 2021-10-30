@@ -390,14 +390,7 @@ static void dragon_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM0");
 
 	// CPU
-	switch (mc->cpu) {
-	case CPU_MC6809: default:
-		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
-		break;
-	case CPU_HD6309:
-		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
-		break;
-	}
+	part_add_component(&m->part, part_create((mc->cpu == CPU_HD6309) ? "HD6309" : "MC6809", NULL), "CPU");
 
 	// PIAs
 	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");

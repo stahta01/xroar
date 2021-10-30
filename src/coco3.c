@@ -291,14 +291,7 @@ static void coco3_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create((mc->vdg_type == VDG_GIME_1986) ? "TCC1014-1986" : "TCC1014-1987", NULL), "GIME");
 
 	// CPU
-	switch (mc->cpu) {
-	case CPU_MC6809: default:
-		part_add_component(&m->part, (struct part *)mc6809_new(), "CPU");
-		break;
-	case CPU_HD6309:
-		part_add_component(&m->part, (struct part *)hd6309_new(), "CPU");
-		break;
-	}
+	part_add_component(&m->part, part_create((mc->cpu == CPU_HD6309) ? "HD6309" : "MC6809", NULL), "CPU");
 
 	// PIAs
 	part_add_component(&m->part, (struct part *)mc6821_new(), "PIA0");

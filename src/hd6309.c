@@ -73,11 +73,12 @@ static const struct ser_struct ser_struct_hd6309[] = {
 #define HD6309_SER_TFM_SRC  (6)
 #define HD6309_SER_TFM_DEST (7)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /*
  * External interface
  */
 
-static void hd6309_free(struct part *p);
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
@@ -190,50 +191,56 @@ static unsigned tfm_ptr_to_reg(struct HD6309 *hcpu, uint16_t *ptr) {
 
 /* ------------------------------------------------------------------------- */
 
-/*
- * External interface
- */
+// HD6309 part creation
 
+static struct part *hd6309_allocate(void);
+static void hd6309_initialise(struct part *p, void *options);
+static void hd6309_free(struct part *p);
+
+static struct part *hd6309_deserialise(struct ser_handle *sh);
 static void hd6309_serialise(struct part *p, struct ser_handle *sh);
+static _Bool hd6309_is_a(struct part *p, const char *name);
 
-static _Bool hd6309_finish(struct part *p) {
-	(void)p;
-	return 1;
-}
+static const struct partdb_entry_funcs hd6309_funcs = {
+        .allocate = hd6309_allocate,
+        .initialise = hd6309_initialise,
+        .free = hd6309_free,
 
-static _Bool hd6309_is_a(struct part *p, const char *name) {
-	return p && (strcmp(name, "MC6809") == 0 || mc6809_is_a(p, name));
-}
+        .deserialise = hd6309_deserialise,
+        .serialise = hd6309_serialise,
 
-struct HD6309 *hd6309_create(void) {
+        .is_a = hd6309_is_a,
+};
+
+const struct partdb_entry hd6309_part = { .name = "HD6309", .funcs = &hd6309_funcs };
+
+static struct part *hd6309_allocate(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
+	struct MC6809 *cpu = &hcpu->mc6809;
+	struct part *p = &cpu->debug_cpu.part;
 
-	*hcpu = (struct HD6309){.state=0};
-	part_init((struct part *)hcpu, "HD6309");
-	struct MC6809 *cpu = (struct MC6809 *)hcpu;
-	cpu->debug_cpu.part.free = hd6309_free;
-	cpu->debug_cpu.part.serialise = hd6309_serialise;
-	cpu->debug_cpu.part.finish = hd6309_finish;
-	cpu->debug_cpu.part.is_a = hd6309_is_a;
+	*hcpu = (struct HD6309){0};
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
 
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
 	cpu->jump = hd6309_jump;
-	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+
 #ifdef TRACE
 	// Tracing
 	hcpu->tracer = hd6309_trace_new(hcpu);
 #endif
-	hd6309_reset(cpu);
-	return hcpu;
+
+	return p;
 }
 
-struct MC6809 *hd6309_new(void) {
-	struct HD6309 *hcpu = hd6309_create();
-	return &hcpu->mc6809;
+static void hd6309_initialise(struct part *p, void *options) {
+	(void)options;
+	struct HD6309 *hcpu = (struct HD6309 *)p;
+	struct MC6809 *cpu = &hcpu->mc6809;
+	hd6309_reset(cpu);
 }
 
 static void hd6309_free(struct part *p) {
@@ -245,29 +252,9 @@ static void hd6309_free(struct part *p) {
 #endif
 }
 
-static void hd6309_serialise(struct part *p, struct ser_handle *sh) {
-        struct HD6309 *hcpu = (struct HD6309 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, tag, hcpu)) > 0; tag++) {
-		switch (tag) {
-		case HD6309_SER_MC6809:
-			mc6809_serialise_as(&hcpu->mc6809, sh, tag);
-			break;
-		case HD6309_SER_TFM_SRC:
-			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_src));
-			break;
-		case HD6309_SER_TFM_DEST:
-			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_dest));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-        ser_write_close_tag(sh);
-}
-
-struct part *hd6309_deserialise(struct ser_handle *sh) {
-	struct HD6309 *hcpu = hd6309_create();
+static struct part *hd6309_deserialise(struct ser_handle *sh) {
+	struct part *p = hd6309_allocate();
+	struct HD6309 *hcpu = (struct HD6309 *)p;
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, hcpu))) {
 		switch (tag) {
@@ -291,6 +278,33 @@ struct part *hd6309_deserialise(struct ser_handle *sh) {
 	}
 	return (struct part *)hcpu;
 }
+
+static void hd6309_serialise(struct part *p, struct ser_handle *sh) {
+        struct HD6309 *hcpu = (struct HD6309 *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, tag, hcpu)) > 0; tag++) {
+		switch (tag) {
+		case HD6309_SER_MC6809:
+			mc6809_serialise_as(&hcpu->mc6809, sh, tag);
+			break;
+		case HD6309_SER_TFM_SRC:
+			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_src));
+			break;
+		case HD6309_SER_TFM_DEST:
+			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_dest));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+        ser_write_close_tag(sh);
+}
+
+static _Bool hd6309_is_a(struct part *p, const char *name) {
+	return strcmp(name, "MC6809") == 0 || mc6809_is_a(p, name);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void hd6309_reset(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;

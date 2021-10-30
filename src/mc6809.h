@@ -130,11 +130,10 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->irq = val;
 }
 
-_Bool mc6809_is_a(struct part *p, const char *name);
-unsigned mc6809_get_pc(void *sptr);
-
-struct MC6809 *mc6809_new(void);
+// Used by MC6809-compatibles:
 void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag);
 void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh);
+_Bool mc6809_is_a(struct part *p, const char *name);
+unsigned mc6809_get_pc(void *sptr);
 
 #endif

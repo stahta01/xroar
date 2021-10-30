@@ -97,6 +97,8 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, OCF_read, ser_type_uint8), // 29
 	SER_STRUCT_ELEM(struct MC6801, TOF_read, ser_type_uint8), // 30
 	SER_STRUCT_ELEM(struct MC6801, counter_lsb_buf, ser_type_uint8), // 31
+
+	SER_STRUCT_ELEM(struct MC6801, is_6801, ser_type_bool), // 32
 };
 
 #define N_SER_STRUCT_MC6801 ARRAY_N_ELEMENTS(ser_struct_mc6801)
@@ -104,15 +106,17 @@ static const struct ser_struct ser_struct_mc6801[] = {
 #define MC6801_SER_REG (13)
 #define MC6801_SER_RAM (14)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 extern inline void MC6801_NMI_SET(struct MC6801 *cpu, _Bool val);
 extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val);
 
 // External interface
 
-static void mc6801_free(struct part *p);
 static void mc6801_reset(struct MC6801 *cpu);
 static void mc6801_run(struct MC6801 *cpu);
 static void mc6801_jump(struct MC6801 *cpu, uint16_t pc);
+static unsigned mc6801_get_pc(void *sptr);
 
 // Wrap common fetches
 
@@ -183,79 +187,71 @@ static void instruction_posthook(struct MC6801 *cpu);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// External interface
+// MC6801/6803 part creation
 
-enum mc680x_type {
-	mc680x_type_6801,
-	mc680x_type_6803,
-};
+static struct part *mc6801_allocate(void);
+static void mc6801_initialise(struct part *p, void *options);
+static _Bool mc6801_finish(struct part *p);
+static void mc6801_free(struct part *p);
 
+static struct part *mc6801_deserialise(struct ser_handle *sh);
 static void mc6801_serialise(struct part *p, struct ser_handle *sh);
 
-static _Bool mc6801_finish(struct part *p) {
-	(void)p;
-	return 1;
-}
+static _Bool mc6801_is_a(struct part *p, const char *name);
 
-static _Bool mc6801_is_a(struct part *p, const char *name) {
-        return p && (strcmp(name, "MC6801") == 0 || strcmp(name, "DEBUG-CPU") == 0);
-}
+static const struct partdb_entry_funcs mc6801_funcs = {
+	.allocate = mc6801_allocate,
+	.initialise = mc6801_initialise,
+	.finish = mc6801_finish,
+	.free = mc6801_free,
 
-static unsigned mc6801_get_pc(void *sptr) {
-        struct MC6801 *cpu = sptr;
-        return cpu->reg_pc;
-}
+	.deserialise = mc6801_deserialise,
+	.serialise = mc6801_serialise,
 
-struct MC6801 *mc680x_create(unsigned type) {
+	.is_a = mc6801_is_a,
+};
+
+const struct partdb_entry mc6801_part = { .name = "MC6801", .funcs = &mc6801_funcs };
+const struct partdb_entry mc6803_part = { .name = "MC6803", .funcs = &mc6801_funcs };
+
+static struct part *mc6801_allocate(void) {
 	struct MC6801 *cpu = part_new(sizeof(*cpu));
+	struct part *p = &cpu->debug_cpu.part;
+
 	*cpu = (struct MC6801){0};
-	part_init((struct part *)cpu, (type == mc680x_type_6801) ? "MC6801" : "MC6803");
-	LOG_WARN("%s support is UNFINISHED and UNSUPPORTED.\n", cpu->debug_cpu.part.name);
-	LOG_WARN("Please do not use except for testing.\n");
-	cpu->debug_cpu.part.free = mc6801_free;
-	cpu->debug_cpu.part.serialise = mc6801_serialise;
-	cpu->debug_cpu.part.finish = mc6801_finish;
-	cpu->debug_cpu.part.is_a = mc6801_is_a;
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6801_get_pc, cpu);
-
-	if (type == mc680x_type_6801) {
-		cpu->rom = xzalloc(2048);
-		cpu->rom_size = 2048;
-	}
 
 	cpu->reset = mc6801_reset;
 	cpu->run = mc6801_run;
 	cpu->jump = mc6801_jump;
-
-	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+
 #ifdef TRACE
 	// Tracing
 	cpu->tracer = mc6801_trace_new(cpu);
 #endif
+
+	return p;
+}
+
+static void mc6801_initialise(struct part *p, void *options) {
+        struct MC6801 *cpu = (struct MC6801 *)p;
+	cpu->is_6801 = options && (strcmp((char *)options, "6801") == 0);
 	mc6801_reset(cpu);
-	return cpu;
 }
 
-struct MC6801 *mc6801_new(void) {
-	struct MC6801 *cpu = mc680x_create(mc680x_type_6801);
-	struct part *p = &cpu->debug_cpu.part;
-        if (!mc6801_finish(p)) {
-                part_free(p);
-                return NULL;
-        }
-	return cpu;
-}
+static _Bool mc6801_finish(struct part *p) {
+	struct MC6801 *cpu = (struct MC6801 *)p;
 
-struct MC6801 *mc6803_new(void) {
-	struct MC6801 *cpu = mc680x_create(mc680x_type_6803);
-	struct part *p = &cpu->debug_cpu.part;
-        if (!mc6801_finish(p)) {
-                part_free(p);
-                return NULL;
-        }
-	return cpu;
+	if (cpu->is_6801 && !cpu->rom) {
+		cpu->rom = xzalloc(2048);
+		cpu->rom_size = 2048;
+	}
+
+	LOG_WARN("%s support is UNFINISHED and UNSUPPORTED.\n", cpu->debug_cpu.part.name);
+	LOG_WARN("Please do not use except for testing.\n");
+	return 1;
 }
 
 static void mc6801_free(struct part *p) {
@@ -267,6 +263,32 @@ static void mc6801_free(struct part *p) {
 #endif
 	if (cpu->rom)
 		free(cpu->rom);
+}
+
+static struct part *mc6801_deserialise(struct ser_handle *sh) {
+	struct part *p = mc6801_allocate();
+	struct MC6801 *cpu = (struct MC6801 *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6801, N_SER_STRUCT_MC6801, cpu))) {
+		switch (tag) {
+		case MC6801_SER_REG:
+			ser_read(sh, cpu->reg, sizeof(cpu->reg));
+			break;
+		case MC6801_SER_RAM:
+			ser_read(sh, cpu->ram, sizeof(cpu->ram));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
+		part_free(p);
+		return NULL;
+	}
+
+	return p;
 }
 
 static void mc6801_serialise(struct part *p, struct ser_handle *sh) {
@@ -288,41 +310,22 @@ static void mc6801_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-static void mc6801_deserialise_into(struct MC6801 *cpu, struct ser_handle *sh) {
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6801, N_SER_STRUCT_MC6801, cpu))) {
-		switch (tag) {
-		case MC6801_SER_REG:
-			ser_read(sh, cpu->reg, sizeof(cpu->reg));
-			break;
-		case MC6801_SER_RAM:
-			ser_read(sh, cpu->ram, sizeof(cpu->ram));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
+static _Bool mc6801_is_a(struct part *p, const char *name) {
+	if (!p)
+		return 0;
+	if (strcmp(name, "DEBUG-CPU") == 0)
+		return 1;
+	struct MC6801 *cpu = (struct MC6801 *)p;
+	if (cpu->is_6801 && strcmp(name, "MC6801") == 0)
+		return 1;
+	return (!cpu->is_6801 && strcmp(name, "MC6803") == 0);
 }
 
-struct part *mc6801_deserialise(struct ser_handle *sh) {
-	struct MC6801 *cpu = mc680x_create(mc680x_type_6801);
-	mc6801_deserialise_into(cpu, sh);
-	if (ser_error(sh)) {
-		part_free((struct part *)cpu);
-		return NULL;
-	}
-	return (struct part *)cpu;
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct part *mc6803_deserialise(struct ser_handle *sh) {
-	struct MC6801 *cpu = mc680x_create(mc680x_type_6803);
-	mc6801_deserialise_into(cpu, sh);
-	if (ser_error(sh)) {
-		part_free((struct part *)cpu);
-		return NULL;
-	}
-	return (struct part *)cpu;
+static unsigned mc6801_get_pc(void *sptr) {
+        struct MC6801 *cpu = sptr;
+        return cpu->reg_pc;
 }
 
 static void mc6801_reset(struct MC6801 *cpu) {

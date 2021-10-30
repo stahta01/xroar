@@ -79,6 +79,8 @@ static const struct ser_struct ser_struct_mc6809[] = {
 
 #define N_SER_STRUCT_MC6809 ARRAY_N_ELEMENTS(ser_struct_mc6809)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val);
@@ -88,7 +90,6 @@ extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
  * External interface
  */
 
-static void mc6809_free(struct part *p);
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
@@ -167,58 +168,53 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * External interface
- */
+// MC6809 part creation
 
+static struct part *mc6809_allocate(void);
+static void mc6809_initialise(struct part *p, void *options);
+static void mc6809_free(struct part *p);
+
+static struct part *mc6809_deserialise(struct ser_handle *sh);
 static void mc6809_serialise(struct part *p, struct ser_handle *sh);
 
-static _Bool mc6809_finish(struct part *p) {
-	(void)p;
-	return 1;
-}
+static const struct partdb_entry_funcs mc6809_funcs = {
+	.allocate = mc6809_allocate,
+	.initialise = mc6809_initialise,
+	.free = mc6809_free,
 
-_Bool mc6809_is_a(struct part *p, const char *name) {
-        return p && strcmp(name, "DEBUG-CPU") == 0;
-}
+	.deserialise = mc6809_deserialise,
+	.serialise = mc6809_serialise,
 
-unsigned mc6809_get_pc(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	return cpu->reg_pc;
-}
+	.is_a = mc6809_is_a,
+};
 
-struct MC6809 *mc6809_create(void) {
+const struct partdb_entry mc6809_part = { .name = "MC6809", .funcs = &mc6809_funcs };
+
+static struct part *mc6809_allocate(void) {
 	struct MC6809 *cpu = part_new(sizeof(*cpu));
+	struct part *p = &cpu->debug_cpu.part;
+
 	*cpu = (struct MC6809){0};
-	part_init((struct part *)cpu, "MC6809");
-	cpu->debug_cpu.part.free = mc6809_free;
-	cpu->debug_cpu.part.serialise = mc6809_serialise;
-	cpu->debug_cpu.part.finish = mc6809_finish;
-	cpu->debug_cpu.part.is_a = mc6809_is_a;
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
 
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->jump = mc6809_jump;
-	// External handlers
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
+
 #ifdef TRACE
 	// Tracing
 	cpu->tracer = mc6809_trace_new(cpu);
 #endif
-	mc6809_reset(cpu);
-	return cpu;
+
+	return p;
 }
 
-struct MC6809 *mc6809_new(void) {
-	struct MC6809 *cpu = mc6809_create();
-	struct part *p = &cpu->debug_cpu.part;
-        if (!mc6809_finish(p)) {
-                part_free(p);
-                return NULL;
-        }
-	return cpu;
+static void mc6809_initialise(struct part *p, void *options) {
+	(void)options;
+	struct MC6809 *cpu = (struct MC6809 *)p;
+	mc6809_reset(cpu);
 }
 
 static void mc6809_free(struct part *p) {
@@ -230,6 +226,23 @@ static void mc6809_free(struct part *p) {
 #endif
 }
 
+void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh) {
+	ser_read_struct(sh, ser_struct_mc6809, N_SER_STRUCT_MC6809, cpu);
+}
+
+static struct part *mc6809_deserialise(struct ser_handle *sh) {
+	struct part *p = mc6809_allocate();
+	struct MC6809 *cpu = (struct MC6809 *)p;
+	mc6809_deserialise_into(cpu, sh);
+
+	if (ser_error(sh)) {
+		part_free(p);
+		return NULL;
+	}
+
+	return p;
+}
+
 static void mc6809_serialise(struct part *p, struct ser_handle *sh) {
 	struct MC6809 *cpu = (struct MC6809 *)p;
 	ser_write_struct(sh, ser_struct_mc6809, N_SER_STRUCT_MC6809, 1, cpu);
@@ -237,18 +250,20 @@ static void mc6809_serialise(struct part *p, struct ser_handle *sh) {
 }
 
 void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag) {
-	ser_write_open_string(sh, otag, "6809");
+	ser_write_open_string(sh, otag, "");
 	mc6809_serialise(&cpu->debug_cpu.part, sh);
 }
 
-void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh) {
-	ser_read_struct(sh, ser_struct_mc6809, N_SER_STRUCT_MC6809, cpu);
+_Bool mc6809_is_a(struct part *p, const char *name) {
+	(void)p;
+        return strcmp(name, "DEBUG-CPU") == 0;
 }
 
-struct part *mc6809_deserialise(struct ser_handle *sh) {
-	struct MC6809 *cpu = mc6809_create();
-	mc6809_deserialise_into(cpu, sh);
-	return (struct part *)cpu;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+unsigned mc6809_get_pc(void *sptr) {
+	struct MC6809 *cpu = sptr;
+	return cpu->reg_pc;
 }
 
 static void mc6809_reset(struct MC6809 *cpu) {

@@ -85,6 +85,9 @@ struct MC6801 {
 	// Is a debuggable CPU, which is a part
 	struct debug_cpu debug_cpu;
 
+	// 6801 or 6803?
+	_Bool is_6801;
+
 	// Interrupt lines
 	_Bool nmi, irq1;
 
@@ -167,8 +170,5 @@ inline void MC6801_NMI_SET(struct MC6801 *cpu, _Bool val) {
 inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val) {
 	cpu->irq1 = val;
 }
-
-struct MC6801 *mc6801_new(void);
-struct MC6801 *mc6803_new(void);
 
 #endif

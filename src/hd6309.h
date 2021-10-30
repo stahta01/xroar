@@ -75,7 +75,4 @@ struct HD6309 {
 #define HD6309_REG_E(hcpu) (*((uint8_t *)&hcpu->reg_w + MC6809_REG_HI))
 #define HD6309_REG_F(hcpu) (*((uint8_t *)&hcpu->reg_w + MC6809_REG_LO))
 
-/* new still returns a struct MC6809 */
-struct MC6809 *hd6309_new(void);
-
 #endif
