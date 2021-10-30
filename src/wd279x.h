@@ -65,7 +65,7 @@ enum WD279X_state {
 struct WD279X {
 	struct part part;
 
-	enum WD279X_type type;
+	unsigned type;
 
 	/* Registers */
 	uint8_t status_register;
@@ -131,11 +131,6 @@ struct WD279X {
 	struct log_handle *log_wtrk_hex;
 };
 
-struct WD279X *wd279x_new(enum WD279X_type type);
-struct part *wd2791_deserialise(struct ser_handle *sh);
-struct part *wd2793_deserialise(struct ser_handle *sh);
-struct part *wd2795_deserialise(struct ser_handle *sh);
-struct part *wd2797_deserialise(struct ser_handle *sh);
 void wd279x_reset(struct WD279X *fdc);
 void wd279x_disconnect(struct WD279X *fdc);
 

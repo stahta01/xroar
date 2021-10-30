@@ -111,7 +111,7 @@ static struct cart *gmc_new(struct cart_config *cc) {
 	struct part *p = &c->part;
 	c->config = cc;
 
-	part_add_component(&c->part, (struct part *)sn76489_new(), "CSG");
+	part_add_component(&c->part, part_create("SN76489", NULL), "CSG");
 
 	if (!gmc_finish(p)) {
 		part_free(p);

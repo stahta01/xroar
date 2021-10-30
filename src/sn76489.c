@@ -65,12 +65,7 @@
  * yields 125kHz as predicted.
  */
 
-// attenuation lookup table, 10 ^ (-i / 10)
-static const float attenuation[16] = {
-	1.000000/4.0, 0.794328/4.0, 0.630957/4.0, 0.501187/4.0,
-	0.398107/4.0, 0.316228/4.0, 0.251189/4.0, 0.199526/4.0,
-	0.158489/4.0, 0.125893/4.0, 0.100000/4.0, 0.079433/4.0,
-	0.063096/4.0, 0.050119/4.0, 0.039811/4.0, 0.000000/4.0 };
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct SN76489_private {
 	struct SN76489 public;
@@ -125,38 +120,50 @@ static struct ser_struct ser_struct_sn76489[] = {
 
 	SER_STRUCT_ELEM(struct SN76489_private, noise_lfsr, ser_type_unsigned), // 10
 };
+
 #define N_SER_STRUCT_SN76489 ARRAY_N_ELEMENTS(ser_struct_sn76489)
 
 #define SN76489_SER_REG_VAL (6)
 #define SN76489_SER_COUNTER (7)
 #define SN76489_SER_STATE (8)
 
-// C integer type-safe delta between two unsigned values that may overflow.
-// Depends on 2's-complement behaviour (guaranteed by C99 spec where types are
-// available).
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int tick_delta(uint32_t t0, uint32_t t1) {
-        uint32_t dt = t0 - t1;
-        return *(int32_t *)&dt;
-}
+// attenuation lookup table, 10 ^ (-i / 10)
+static const float attenuation[16] = {
+	1.000000/4.0, 0.794328/4.0, 0.630957/4.0, 0.501187/4.0,
+	0.398107/4.0, 0.316228/4.0, 0.251189/4.0, 0.199526/4.0,
+	0.158489/4.0, 0.125893/4.0, 0.100000/4.0, 0.079433/4.0,
+	0.063096/4.0, 0.050119/4.0, 0.039811/4.0, 0.000000/4.0 };
 
-static void sn76489_free(struct part *p);
-static void sn76489_serialise(struct part *p, struct ser_handle *sh);
 static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned reg_val);
 
-static _Bool sn76489_finish(struct part *p) {
-	(void)p;
-	return (p != NULL);
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct SN76489_private *sn76489_create(void) {
+// SN76489 part creation
+
+static struct part *sn76489_allocate(void);
+static void sn76489_initialise(struct part *p, void *options);
+
+static struct part *sn76489_deserialise(struct ser_handle *sh);
+static void sn76489_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs sn76489_funcs = {
+	.allocate = sn76489_allocate,
+	.initialise = sn76489_initialise,
+
+	.deserialise = sn76489_deserialise,
+	.serialise = sn76489_serialise,
+};
+
+const struct partdb_entry sn76489_part = { .name = "SN76489", .funcs = &sn76489_funcs };
+
+static struct part *sn76489_allocate(void) {
 	struct SN76489_private *csg_ = part_new(sizeof(*csg_));
 	struct SN76489 *csg = &csg_->public;
+	struct part *p = &csg->part;
+
 	*csg_ = (struct SN76489_private){0};
-	part_init(&csg->part, "SN76489");
-	csg->part.free = sn76489_free;
-	csg->part.serialise = sn76489_serialise;
-	csg->part.finish = sn76489_finish;
 
 	csg_->frequency[0] = csg_->counter[0] = 0x001;
 	csg_->frequency[1] = csg_->counter[1] = 0x400;
@@ -167,26 +174,54 @@ static struct SN76489_private *sn76489_create(void) {
 	}
 	csg_->noise_lfsr = 0x4000;
 
-	return csg_;
+	return p;
 }
 
-struct SN76489 *sn76489_new(void) {
-	struct SN76489_private *csg_ = sn76489_create();
+static void sn76489_initialise(struct part *p, void *options) {
+	(void)options;
+	struct SN76489_private *csg_ = (struct SN76489_private *)p;
 	struct SN76489 *csg = &csg_->public;
-	struct part *p = &csg->part;
 
 	sn76489_configure(csg, 4000000, 48000, 14318180, 0);
+}
 
-	if (!sn76489_finish(p)) {
+static struct part *sn76489_deserialise(struct ser_handle *sh) {
+	struct part *p = sn76489_allocate();
+	struct SN76489_private *csg_ = (struct SN76489_private *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_sn76489, N_SER_STRUCT_SN76489, csg_))) {
+		switch (tag) {
+		case SN76489_SER_REG_VAL:
+			for (int i = 0; i < 8; i++) {
+				unsigned v = ser_read_uint16(sh);
+				update_reg(csg_, i, v);
+			}
+			break;
+		case SN76489_SER_COUNTER:
+			for (int i = 0; i < 4; i++) {
+				csg_->counter[i] = ser_read_uint16(sh);
+			}
+			break;
+		case SN76489_SER_STATE:
+			for (int i = 0; i < 4; i++) {
+				csg_->state[i] = ser_read_uint8(sh);
+			}
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
 		part_free(p);
 		return NULL;
 	}
 
-	return csg;
-}
+	float readyticks = (32.0 * csg_->tickrate) / (csg_->refrate << 4);
+	csg_->readyticks = (int)readyticks;
 
-static void sn76489_free(struct part *p) {
-	(void)p;
+	return p;
 }
 
 static void sn76489_serialise(struct part *p, struct ser_handle *sh) {
@@ -223,44 +258,15 @@ static void sn76489_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-struct part *sn76489_deserialise(struct ser_handle *sh) {
-	struct SN76489_private *csg_ = sn76489_create();
-	struct part *p = &csg_->public.part;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_sn76489, N_SER_STRUCT_SN76489, csg_))) {
-		switch (tag) {
-		case SN76489_SER_REG_VAL:
-			for (int i = 0; i < 8; i++) {
-				unsigned v = ser_read_uint16(sh);
-				update_reg(csg_, i, v);
-			}
-			break;
-		case SN76489_SER_COUNTER:
-			for (int i = 0; i < 4; i++) {
-				csg_->counter[i] = ser_read_uint16(sh);
-			}
-			break;
-		case SN76489_SER_STATE:
-			for (int i = 0; i < 4; i++) {
-				csg_->state[i] = ser_read_uint8(sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
+// C integer type-safe delta between two unsigned values that may overflow.
+// Depends on 2's-complement behaviour (guaranteed by C99 spec where types are
+// available).
 
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
-	float readyticks = (32.0 * csg_->tickrate) / (csg_->refrate << 4);
-	csg_->readyticks = (int)readyticks;
-
-	return p;
+static int tick_delta(uint32_t t0, uint32_t t1) {
+        uint32_t dt = t0 - t1;
+        return *(int32_t *)&dt;
 }
 
 void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tickrate,

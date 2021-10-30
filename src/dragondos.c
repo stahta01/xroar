@@ -142,9 +142,9 @@ static struct cart *dragondos_new(struct cart_config *cc) {
 	c->config = cc;
 
 	if (cc->becker_port) {
-		part_add_component(&c->part, (struct part *)becker_new(), "becker");
+		part_add_component(p, part_create("becker", NULL), "becker");
 	}
-	part_add_component(&c->part, (struct part *)wd279x_new(WD2797), "FDC");
+	part_add_component(p, part_create("WD2797", NULL), "FDC");
 
 	if (!dragondos_finish(p)) {
 		part_free(p);

@@ -145,9 +145,9 @@ static struct cart *rsdos_new(struct cart_config *cc) {
 	c->config = cc;
 
 	if (cc->becker_port) {
-		part_add_component(&c->part, (struct part *)becker_new(), "becker");
+		part_add_component(p, part_create("becker", NULL), "becker");
 	}
-	part_add_component(&c->part, (struct part *)wd279x_new(WD2793), "FDC");
+	part_add_component(p, part_create("WD2793", NULL), "FDC");
 
 	if (!rsdos_finish(p)) {
 		part_free(p);

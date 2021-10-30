@@ -2,7 +2,7 @@
  *
  *  \brief Becker port support.
  *
- *  \copyright Copyright 2012-2019 Ciaran Anscomb
+ *  \copyright Copyright 2012-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,7 +29,6 @@
 
 struct becker;
 
-struct becker *becker_new(void);
 void becker_reset(struct becker *becker);
 uint8_t becker_read_status(struct becker *becker);
 uint8_t becker_read_data(struct becker *becker);

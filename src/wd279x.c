@@ -40,6 +40,44 @@
 #include "wd279x.h"
 #include "xroar.h"
 
+static const struct ser_struct ser_struct_wd279x[] = {
+	SER_STRUCT_ELEM(struct WD279X, type, ser_type_unsigned), // 1
+
+	SER_STRUCT_ELEM(struct WD279X, status_register, ser_type_uint8), // 2
+	SER_STRUCT_ELEM(struct WD279X, track_register, ser_type_uint8), // 3
+	SER_STRUCT_ELEM(struct WD279X, sector_register, ser_type_uint8), // 4
+	SER_STRUCT_ELEM(struct WD279X, data_register, ser_type_uint8), // 5
+	SER_STRUCT_ELEM(struct WD279X, command_register, ser_type_uint8), // 6
+
+	SER_STRUCT_ELEM(struct WD279X, state, ser_type_unsigned), // 7
+	SER_STRUCT_ELEM(struct WD279X, state_event, ser_type_event), // 8
+	SER_STRUCT_ELEM(struct WD279X, direction, ser_type_int), // 9
+	SER_STRUCT_ELEM(struct WD279X, side, ser_type_int), // 10
+	SER_STRUCT_ELEM(struct WD279X, step_delay, ser_type_int), // 11
+	SER_STRUCT_ELEM(struct WD279X, double_density, ser_type_bool), // 12
+	SER_STRUCT_ELEM(struct WD279X, ready_state, ser_type_bool), // 13
+	SER_STRUCT_ELEM(struct WD279X, tr00_state, ser_type_bool), // 14
+	SER_STRUCT_ELEM(struct WD279X, index_state, ser_type_bool), // 15
+	SER_STRUCT_ELEM(struct WD279X, write_protect_state, ser_type_bool), // 16
+	SER_STRUCT_ELEM(struct WD279X, status_type1, ser_type_bool), // 17
+
+	SER_STRUCT_ELEM(struct WD279X, intrq_nready_to_ready, ser_type_bool), // 18
+	SER_STRUCT_ELEM(struct WD279X, intrq_ready_to_nready, ser_type_bool), // 19
+	SER_STRUCT_ELEM(struct WD279X, intrq_index_pulse, ser_type_bool), // 20
+	SER_STRUCT_ELEM(struct WD279X, intrq_immediate, ser_type_bool), // 21
+
+	SER_STRUCT_ELEM(struct WD279X, is_step_cmd, ser_type_bool), // 22
+	SER_STRUCT_ELEM(struct WD279X, crc, ser_type_uint16), // 23
+	SER_STRUCT_ELEM(struct WD279X, dam, ser_type_int), // 24
+	SER_STRUCT_ELEM(struct WD279X, bytes_left, ser_type_int), // 25
+	SER_STRUCT_ELEM(struct WD279X, index_holes_count, ser_type_int), // 26
+	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8), // 27
+};
+
+#define N_SER_STRUCT_WD279X ARRAY_N_ELEMENTS(ser_struct_wd279x)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #define STATUS_NOT_READY     (1<<7)
 #define STATUS_WRITE_PROTECT (1<<6)
 #define STATUS_HEAD_LOADED   (1<<5)
@@ -52,39 +90,6 @@
 #define STATUS_INDEX_PULSE   (1<<1)
 #define STATUS_DRQ           (1<<1)
 #define STATUS_BUSY          (1<<0)
-
-static const struct ser_struct ser_struct_wd279x[] = {
-	SER_STRUCT_ELEM(struct WD279X, status_register, ser_type_uint8),
-	SER_STRUCT_ELEM(struct WD279X, track_register, ser_type_uint8),
-	SER_STRUCT_ELEM(struct WD279X, sector_register, ser_type_uint8),
-	SER_STRUCT_ELEM(struct WD279X, data_register, ser_type_uint8),
-	SER_STRUCT_ELEM(struct WD279X, command_register, ser_type_uint8),
-
-	SER_STRUCT_ELEM(struct WD279X, state, ser_type_unsigned),
-	SER_STRUCT_ELEM(struct WD279X, state_event, ser_type_event),
-	SER_STRUCT_ELEM(struct WD279X, direction, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, side, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, step_delay, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, double_density, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, ready_state, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, tr00_state, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, index_state, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, write_protect_state, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, status_type1, ser_type_bool),
-
-	SER_STRUCT_ELEM(struct WD279X, intrq_nready_to_ready, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, intrq_ready_to_nready, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, intrq_index_pulse, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, intrq_immediate, ser_type_bool),
-
-	SER_STRUCT_ELEM(struct WD279X, is_step_cmd, ser_type_bool),
-	SER_STRUCT_ELEM(struct WD279X, crc, ser_type_uint16),
-	SER_STRUCT_ELEM(struct WD279X, dam, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, bytes_left, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, index_holes_count, ser_type_int),
-	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8),
-};
-#define N_SER_STRUCT_WD279X ARRAY_N_ELEMENTS(ser_struct_wd279x)
 
 #define W_BYTE_TIME (EVENT_TICK_RATE / 31250)
 
@@ -141,10 +146,120 @@ static const char *wd279x_type_name[4] = {
 	"WD2791", "WD2793", "WD2795", "WD2797"
 };
 
+static uint8_t _vdrive_read(struct WD279X *fdc);
+static void _vdrive_write(struct WD279X *fdc, uint8_t b);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Debugging
 
 static void debug_state(struct WD279X *fdc);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// WD279X part creation
+
+static struct part *wd279x_allocate(void);
+static void wd279x_initialise(struct part *p, void *options);
+static _Bool wd279x_finish(struct part *p);
+static void wd279x_free(struct part *p);
+
+static struct part *wd279x_deserialise(struct ser_handle *sh);
+static void wd279x_serialise(struct part *p, struct ser_handle *sh);
+
+static _Bool wd279x_is_a(struct part *p, const char *name);
+
+static const struct partdb_entry_funcs wd279x_funcs = {
+	.allocate = wd279x_allocate,
+	.initialise = wd279x_initialise,
+	.finish = wd279x_finish,
+	.free = wd279x_free,
+
+	.deserialise = wd279x_deserialise,
+	.serialise = wd279x_serialise,
+
+	.is_a = wd279x_is_a,
+};
+
+const struct partdb_entry wd2791_part = { .name = "WD2791", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2793_part = { .name = "WD2793", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2795_part = { .name = "WD2795", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2797_part = { .name = "WD2797", .funcs = &wd279x_funcs };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static struct part *wd279x_allocate(void) {
+	struct WD279X *fdc = part_new(sizeof(*fdc));
+	struct part *p = &fdc->part;
+
+	*fdc = (struct WD279X){0};
+
+	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
+	wd279x_disconnect(fdc);
+
+	return p;
+}
+
+static void wd279x_initialise(struct part *p, void *options) {
+	struct WD279X *fdc = (struct WD279X *)p;
+
+	fdc->state = WD279X_state_accept_command;
+
+	unsigned type = WD2797;
+	if (options) {
+		const char *type_str = options;
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(wd279x_type_name); i++) {
+			if (strcmp(type_str, wd279x_type_name[i]) == 0) {
+				type = i;
+				break;
+			}
+		}
+	}
+	fdc->type = type;
+}
+
+static _Bool wd279x_finish(struct part *p) {
+	struct WD279X *fdc = (struct WD279X *)p;
+
+	fdc->has_sso = (fdc->type == WD2795 || fdc->type == WD2797);
+	fdc->has_length_flag = (fdc->type == WD2795 || fdc->type == WD2797);
+	fdc->invert_data = (fdc->type == WD2791 || fdc->type == WD2795) ? 0xff : 0;
+
+	if (fdc->state_event.next == &fdc->state_event) {
+		event_queue(&MACHINE_EVENT_LIST, &fdc->state_event);
+	}
+
+	return 1;
+}
+
+static void wd279x_free(struct part *p) {
+	struct WD279X *fdc = (struct WD279X *)p;
+	log_close(&fdc->log_rsec_hex);
+	log_close(&fdc->log_wsec_hex);
+	log_close(&fdc->log_wtrk_hex);
+	event_dequeue(&fdc->state_event);
+}
+
+static struct part *wd279x_deserialise(struct ser_handle *sh) {
+	struct part *p = wd279x_allocate();
+	struct WD279X *fdc = (struct WD279X *)p;
+	ser_read_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, fdc);
+	return p;
+}
+
+static void wd279x_serialise(struct part *p, struct ser_handle *sh) {
+	struct WD279X *fdc = (struct WD279X *)p;
+	ser_write_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, 1, fdc);
+	ser_write_close_tag(sh);
+}
+
+static _Bool wd279x_is_a(struct part *p, const char *name) {
+	if (!p)
+		return 0;
+	struct WD279X *fdc = (struct WD279X *)p;
+	if (fdc->type >= ARRAY_N_ELEMENTS(wd279x_type_name))
+		fdc->type = WD2797;
+	return (strcmp(name, wd279x_type_name[fdc->type]) == 0);
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -159,87 +274,7 @@ static void _vdrive_write(struct WD279X *fdc, uint8_t b) {
 	fdc->crc = crc16_byte(fdc->crc, b);
 }
 
-static void wd279x_free(struct part *p);
-static void wd279x_serialise(struct part *p, struct ser_handle *sh);
-
-static _Bool wd279x_finish(struct part *p) {
-	struct WD279X *fdc = (struct WD279X *)p;
-
-	if (fdc->state_event.next == &fdc->state_event) {
-		event_queue(&MACHINE_EVENT_LIST, &fdc->state_event);
-	}
-
-	return 1;
-}
-
-struct WD279X *wd279x_create(enum WD279X_type type) {
-	if (type < WD2791 || type > WD2797)
-		return NULL;
-	struct WD279X *fdc = part_new(sizeof(*fdc));
-	*fdc = (struct WD279X){0};
-	part_init(&fdc->part, wd279x_type_name[type]);
-	fdc->part.free = wd279x_free;
-	fdc->part.serialise = wd279x_serialise;
-	fdc->part.finish = wd279x_finish;
-
-	fdc->type = type;
-	fdc->state = WD279X_state_accept_command;
-	fdc->has_sso = (type == WD2795 || type == WD2797);
-	fdc->has_length_flag = (type == WD2795 || type == WD2797);
-	fdc->invert_data = (type == WD2791 || type == WD2795) ? 0xff : 0;
-
-	event_init(&fdc->state_event, DELEGATE_AS0(void, state_machine, fdc));
-	wd279x_disconnect(fdc);
-
-	return fdc;
-}
-
-struct WD279X *wd279x_new(enum WD279X_type type) {
-	struct WD279X *fdc = wd279x_create(type);
-	assert(fdc != NULL);  // generally if type is invalid
-	struct part *p = &fdc->part;
-	if (!wd279x_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-	return fdc;
-}
-
-static void wd279x_free(struct part *p) {
-	struct WD279X *fdc = (struct WD279X *)p;
-	log_close(&fdc->log_rsec_hex);
-	log_close(&fdc->log_wsec_hex);
-	log_close(&fdc->log_wtrk_hex);
-	event_dequeue(&fdc->state_event);
-}
-
-static void wd279x_serialise(struct part *p, struct ser_handle *sh) {
-	struct WD279X *fdc = (struct WD279X *)p;
-	ser_write_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, 1, fdc);
-	ser_write_close_tag(sh);
-}
-
-static struct part *wd279x_deserialise(struct ser_handle *sh, enum WD279X_type type) {
-	struct WD279X *fdc = wd279x_create(type);
-	ser_read_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, fdc);
-	return (struct part *)fdc;
-}
-
-struct part *wd2791_deserialise(struct ser_handle *sh) {
-	return wd279x_deserialise(sh, WD2791);
-}
-
-struct part *wd2793_deserialise(struct ser_handle *sh) {
-	return wd279x_deserialise(sh, WD2793);
-}
-
-struct part *wd2795_deserialise(struct ser_handle *sh) {
-	return wd279x_deserialise(sh, WD2795);
-}
-
-struct part *wd2797_deserialise(struct ser_handle *sh) {
-	return wd279x_deserialise(sh, WD2797);
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void wd279x_disconnect(struct WD279X *fdc) {
 	if (!fdc)
@@ -366,54 +401,58 @@ uint8_t wd279x_read(struct WD279X *fdc, uint16_t A) {
 void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D) {
 	D ^= fdc->invert_data;
 	switch (A & 3) {
-		default:
-		case 0:
-			fdc->command_register = D;
-			/* FORCE INTERRUPT */
-			if ((D & 0xf0) == 0xd0) {
-				if (logging.debug_fdc & LOG_FDC_STATE) {
-					debug_state(fdc);
-				}
-				fdc->intrq_nready_to_ready = D & 1;
-				fdc->intrq_ready_to_nready = D & 2;
-				fdc->intrq_index_pulse = D & 4;
-				/* XXX Data sheet wording implies that *only*
-				 * 0xd0 can clear this.  Needs testing... */
-				fdc->intrq_immediate = D & 8;
-				if (!(fdc->status_register & STATUS_BUSY)) {
-					fdc->status_type1 = 1;
-				}
-				event_dequeue(&fdc->state_event);
-				fdc->status_register &= ~(STATUS_BUSY);
-				if (fdc->intrq_immediate)
-					SET_INTRQ;
-				return;
+	default:
+	case 0:
+		fdc->command_register = D;
+		// FORCE INTERRUPT
+		if ((D & 0xf0) == 0xd0) {
+			if (logging.debug_fdc & LOG_FDC_STATE) {
+				debug_state(fdc);
 			}
-			/* Ignore any other command if busy */
-			if (fdc->status_register & STATUS_BUSY) {
-				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Command received while busy!\n");
-				return;
+			fdc->intrq_nready_to_ready = D & 1;
+			fdc->intrq_ready_to_nready = D & 2;
+			fdc->intrq_index_pulse = D & 4;
+			// TODO: Data sheet wording implies that *only* 0xd0 can
+			// clear this.  Needs testing...
+			fdc->intrq_immediate = D & 8;
+			if (!(fdc->status_register & STATUS_BUSY)) {
+				fdc->status_type1 = 1;
 			}
-			if (!fdc->intrq_immediate)
-				RESET_INTRQ;
-			fdc->state = WD279X_state_accept_command;
-			state_machine(fdc);
-			break;
-		case 1:
-			fdc->track_register = D;
-			break;
-		case 2:
-			fdc->sector_register = D;
-			break;
-		case 3:
-			RESET_DRQ;
-			fdc->data_register = D;
-			break;
+			event_dequeue(&fdc->state_event);
+			fdc->status_register &= ~(STATUS_BUSY);
+			if (fdc->intrq_immediate)
+				SET_INTRQ;
+			return;
+		}
+		// Ignore any other command if busy
+		if (fdc->status_register & STATUS_BUSY) {
+			LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Command received while busy!\n");
+			return;
+		}
+		if (!fdc->intrq_immediate)
+			RESET_INTRQ;
+		fdc->state = WD279X_state_accept_command;
+		state_machine(fdc);
+		break;
+	case 1:
+		fdc->track_register = D;
+		break;
+	case 2:
+		fdc->sector_register = D;
+		break;
+	case 3:
+		RESET_DRQ;
+		fdc->data_register = D;
+		break;
 	}
 }
 
-/* One big state machine.  This is called from an event dispatch and from the
- * write command function. */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/** \brief WD279X state machine
+ *
+ * This is called from an event dispatch and from the write command function.
+ */
 
 static void state_machine(void *sptr) {
 	struct WD279X *fdc = (struct WD279X *)sptr;
@@ -434,7 +473,7 @@ static void state_machine(void *sptr) {
 		switch (fdc->state) {
 
 		case WD279X_state_accept_command:
-			/* 0xxxxxxx = RESTORE / SEEK / STEP / STEP-IN / STEP-OUT */
+			// 0xxxxxxx = RESTORE / SEEK / STEP / STEP-IN / STEP-OUT
 			if ((fdc->command_register & 0x80) == 0x00) {
 				fdc->status_type1 = 1;
 				fdc->status_register |= STATUS_BUSY;
@@ -467,7 +506,7 @@ static void state_machine(void *sptr) {
 				continue;
 			}
 
-			/* 10xxxxxx = READ/WRITE SECTOR */
+			// 10xxxxxx = READ/WRITE SECTOR
 			if ((fdc->command_register & 0xc0) == 0x80) {
 				fdc->status_type1 = 0;
 				fdc->status_register |= STATUS_BUSY;
@@ -479,10 +518,10 @@ static void state_machine(void *sptr) {
 					return;
 				}
 				if (fdc->has_sso)
-					SET_SIDE(fdc->command_register & 0x02);  /* 'U' */
+					SET_SIDE(fdc->command_register & 0x02);  // 'U'
 				else
-					SET_SIDE(fdc->command_register & 0x08);  /* 'S' */
-				if (fdc->command_register & 0x04) {  /* 'E' set */
+					SET_SIDE(fdc->command_register & 0x08);  // 'S'
+				if (fdc->command_register & 0x04) {  // 'E' set
 					NEXT_STATE(WD279X_state_type2_1, EVENT_MS(30));
 					return;
 				}
@@ -490,12 +529,12 @@ static void state_machine(void *sptr) {
 				continue;
 			}
 
-			/* 11000xx0 = READ ADDRESS */
-			/* 11100xx0 = READ TRACK */
-			/* 11110xx0 = WRITE TRACK */
+			// 11000xx0 = READ ADDRESS
+			// 11100xx0 = READ TRACK
+			// 11110xx0 = WRITE TRACK
 			if (((fdc->command_register & 0xf9) == 0xc0)
-					|| ((fdc->command_register & 0xf9) == 0xe0)
-					|| ((fdc->command_register & 0xf9) == 0xf0)) {
+			    || ((fdc->command_register & 0xf9) == 0xe0)
+			    || ((fdc->command_register & 0xf9) == 0xf0)) {
 				fdc->status_type1 = 0;
 				fdc->status_register |= STATUS_BUSY;
 				fdc->status_register &= ~(STATUS_LOST_DATA|(1<<4)|(1<<5));
@@ -507,10 +546,10 @@ static void state_machine(void *sptr) {
 					return;
 				}
 				if (fdc->has_sso)
-					SET_SIDE(fdc->command_register & 0x02);  /* 'U' */
+					SET_SIDE(fdc->command_register & 0x02);  // 'U'
 				else
-					SET_SIDE(fdc->command_register & 0x08);  /* 'S' */
-				if (fdc->command_register & 0x04) {  /* 'E' set */
+					SET_SIDE(fdc->command_register & 0x08);  // 'S'
+				if (fdc->command_register & 0x04) {  // 'E' set
 					NEXT_STATE(WD279X_state_type3_1, EVENT_MS(30));
 					return;
 				}
@@ -590,13 +629,13 @@ static void state_machine(void *sptr) {
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 			}
-			(void)_vdrive_read(fdc);  /* Include IDAM in CRC */
+			(void)_vdrive_read(fdc);  // Include IDAM in CRC
 			if (fdc->track_register != _vdrive_read(fdc)) {
 				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: track_register != idam[1]: -> WD279X_state_verify_track_2\n");
 				NEXT_STATE(WD279X_state_verify_track_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
-			/* Include rest of ID field - should result in computed CRC = 0 */
+			// Include rest of ID field - should result in computed CRC = 0
 			for (i = 0; i < 5; i++)
 				(void)_vdrive_read(fdc);
 			if (fdc->crc != 0) {
@@ -640,13 +679,13 @@ static void state_machine(void *sptr) {
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 				fdc->crc = crc16_byte(fdc->crc, 0xa1);
 			}
-			(void)_vdrive_read(fdc);  /* Include IDAM in CRC */
+			(void)_vdrive_read(fdc);  // Include IDAM in CRC
 			if (fdc->track_register != _vdrive_read(fdc)) {
 				NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL(fdc->time_to_next_idam));
 				return;
 			}
 			if (fdc->side != (int)_vdrive_read(fdc)) {
-				/* No error if no SSO or 'C' not set */
+				// No error if no SSO or 'C' not set
 				if (fdc->has_sso || fdc->command_register & 0x02) {
 					NEXT_STATE(WD279X_state_type2_2, DELEGATE_CALL(fdc->time_to_next_idam));
 					return;
@@ -661,7 +700,7 @@ static void state_machine(void *sptr) {
 				fdc->bytes_left = sector_size[(fdc->command_register & 0x08)?1:0][i&3];
 			else
 				fdc->bytes_left = sector_size[1][i&3];
-			/* Including CRC bytes should result in computed CRC = 0 */
+			// Including CRC bytes should result in computed CRC = 0
 			(void)_vdrive_read(fdc);
 			(void)_vdrive_read(fdc);
 			if (fdc->crc != 0) {
@@ -723,7 +762,7 @@ static void state_machine(void *sptr) {
 				fdc->status_register |= STATUS_LOST_DATA;
 				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_flag(fdc->log_rsec_hex);
-				/* RESET_DRQ;  XXX */
+				//RESET_DRQ;  // XXX
 			}
 			if (fdc->bytes_left > 0) {
 				fdc->data_register = _vdrive_read(fdc);
@@ -735,7 +774,7 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			log_close(&fdc->log_rsec_hex);
-			/* Including CRC bytes should result in computed CRC = 0 */
+			// Including CRC bytes should result in computed CRC = 0
 			(void)_vdrive_read(fdc);
 			(void)_vdrive_read(fdc);
 			NEXT_STATE(WD279X_state_read_sector_3, DELEGATE_CALL(fdc->time_to_next_byte));
@@ -748,7 +787,7 @@ static void state_machine(void *sptr) {
 				fdc->status_register |= STATUS_CRC_ERROR;
 			}
 			if (fdc->command_register & 0x10) {
-				/* XXX what happens on overflow here? */
+				// XXX what happens on overflow here?
 				fdc->sector_register++;
 				SET_STATE(WD279X_state_type2_1);
 				continue;
@@ -769,7 +808,7 @@ static void state_machine(void *sptr) {
 		case WD279X_state_write_sector_2:
 			if (fdc->status_register & STATUS_DRQ) {
 				fdc->status_register &= ~(STATUS_BUSY);
-				RESET_DRQ;  /* XXX */
+				RESET_DRQ;  // XXX
 				fdc->status_register |= STATUS_LOST_DATA;
 				SET_INTRQ;
 				return;
@@ -818,7 +857,7 @@ static void state_machine(void *sptr) {
 				fdc->status_register |= STATUS_LOST_DATA;
 				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_flag(fdc->log_wsec_hex);
-				RESET_DRQ;  /* XXX */
+				RESET_DRQ;  // XXX
 			}
 			if (logging.debug_fdc & LOG_FDC_DATA)
 				log_hexdump_byte(fdc->log_wsec_hex, data);
@@ -838,7 +877,7 @@ static void state_machine(void *sptr) {
 		case WD279X_state_write_sector_6:
 			_vdrive_write(fdc, 0xfe);
 			if (fdc->command_register & 0x10) {
-				/* XXX what happens on overflow here? */
+				// XXX what happens on overflow here?
 				fdc->sector_register++;
 				SET_STATE(WD279X_state_type2_1);
 				continue;
@@ -850,19 +889,19 @@ static void state_machine(void *sptr) {
 
 		case WD279X_state_type3_1:
 			switch (fdc->command_register & 0xf0) {
-				case 0xc0:
-					fdc->index_holes_count = 0;
-					NEXT_STATE(WD279X_state_read_address_1, DELEGATE_CALL(fdc->time_to_next_idam));
-					return;
-				case 0xe0:
-					LOG_WARN("WD279X: CMD: Read track not implemented\n");
-					SET_INTRQ;
-					break;
-				case 0xf0:
-					SET_STATE(WD279X_state_write_track_1);
-					continue;
-				default:
-					break;
+			case 0xc0:
+				fdc->index_holes_count = 0;
+				NEXT_STATE(WD279X_state_read_address_1, DELEGATE_CALL(fdc->time_to_next_idam));
+				return;
+			case 0xe0:
+				LOG_WARN("WD279X: CMD: Read track not implemented\n");
+				SET_INTRQ;
+				break;
+			case 0xf0:
+				SET_STATE(WD279X_state_write_track_1);
+				continue;
+			default:
+				break;
 			}
 			return;
 
@@ -893,7 +932,7 @@ static void state_machine(void *sptr) {
 		case WD279X_state_read_address_2:
 			fdc->bytes_left = 5;
 			fdc->data_register = _vdrive_read(fdc);
-			/* At end of command, this is transferred to the sector register: */
+			// At end of command, this is transferred to the sector register:
 			fdc->track_register_tmp = fdc->data_register;
 			SET_DRQ;
 			NEXT_STATE(WD279X_state_read_address_3, DELEGATE_CALL(fdc->time_to_next_byte));
@@ -901,8 +940,8 @@ static void state_machine(void *sptr) {
 
 
 		case WD279X_state_read_address_3:
-			/* Lost data not mentioned in data sheet, so not checking
-			   for now */
+			// Lost data not mentioned in data sheet, so not
+			// checking for now
 			if (fdc->bytes_left > 0) {
 				fdc->data_register = _vdrive_read(fdc);
 				fdc->bytes_left--;
@@ -927,15 +966,15 @@ static void state_machine(void *sptr) {
 				return;
 			}
 			SET_DRQ;
-			/* Data sheet says 3 byte times, but CoCo NitrOS9 fails unless I set
-			 * this delay higher. */
+			// Data sheet says 3 byte times, but CoCo NitrOS9 fails
+			// unless I set this delay higher.
 			NEXT_STATE(WD279X_state_write_track_2, 6 * W_BYTE_TIME);
 			return;
 
 
 		case WD279X_state_write_track_2:
 			if (fdc->status_register & STATUS_DRQ) {
-				RESET_DRQ;  /* XXX */
+				RESET_DRQ;  // XXX
 				fdc->status_register |= STATUS_LOST_DATA;
 				fdc->status_register &= ~(STATUS_BUSY);
 				SET_INTRQ;
@@ -966,7 +1005,7 @@ static void state_machine(void *sptr) {
 				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_close(&fdc->log_wtrk_hex);
 				LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Finished writing track at head_pos=%04x\n", DELEGATE_CALL(fdc->get_head_pos));
-				RESET_DRQ;  /* XXX */
+				RESET_DRQ;  // XXX
 				fdc->status_register &= ~(STATUS_BUSY);
 				SET_INTRQ;
 				return;
@@ -981,7 +1020,7 @@ static void state_machine(void *sptr) {
 			}
 			SET_DRQ;
 			if (IS_SINGLE_DENSITY) {
-				/* Single density */
+				// Single density
 				if (data == 0xf5 || data == 0xf6) {
 					LOG_DEBUG_FDC(LOG_FDC_EVENTS, "WD279X: Illegal value in single-density track write: %02x\n", data);
 				}
@@ -1008,7 +1047,7 @@ static void state_machine(void *sptr) {
 				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
 				return;
 			}
-			/* Double density */
+			// Double density
 			if (data == 0xf7) {
 				VDRIVE_WRITE_CRC16;
 				NEXT_STATE(WD279X_state_write_track_3, DELEGATE_CALL(fdc->time_to_next_byte));
@@ -1103,9 +1142,15 @@ static void debug_state(struct WD279X *fdc) {
 	if (fdc->state <= WD279X_state_accept_command || forced_interrupt) {
 		// command (incl. forced interrupt)
 		unsigned type = ((fdc->command_register) >> 4) & 15;
-		LOG_PRINT("WD279X: CR=%02x ST=%02x TR=%02x SR=%02x DR=%02x state=%s [%s]\n", fdc->command_register, fdc->status_register, fdc->track_register, fdc->sector_register, fdc->data_register, debug_state_name[fdc->state], debug_command[type]);
+		LOG_PRINT("WD279X: CR=%02x ST=%02x TR=%02x SR=%02x DR=%02x state=%s [%s]\n",
+			  fdc->command_register, fdc->status_register,
+			  fdc->track_register, fdc->sector_register, fdc->data_register,
+			  debug_state_name[fdc->state], debug_command[type]);
 	} else if (level >= 2) {
 		// any other state
-		LOG_PRINT("WD279X: CR=%02x ST=%02x TR=%02x SR=%02x DR=%02x state=%s\n", fdc->command_register, fdc->status_register, fdc->track_register, fdc->sector_register, fdc->data_register, debug_state_name[fdc->state]);
+		LOG_PRINT("WD279X: CR=%02x ST=%02x TR=%02x SR=%02x DR=%02x state=%s\n",
+			  fdc->command_register, fdc->status_register,
+			  fdc->track_register, fdc->sector_register, fdc->data_register,
+			  debug_state_name[fdc->state]);
 	}
 }

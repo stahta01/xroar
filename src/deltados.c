@@ -135,7 +135,7 @@ static struct cart *deltados_new(struct cart_config *cc) {
 	struct part *p = &c->part;
 	c->config = cc;
 
-	part_add_component(&c->part, (struct part *)wd279x_new(WD2791), "FDC");
+	part_add_component(p, part_create("WD2791", NULL), "FDC");
 
 	if (!deltados_finish(p)) {
 		part_free(p);

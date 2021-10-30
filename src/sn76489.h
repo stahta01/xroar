@@ -2,7 +2,7 @@
  *
  *  \brief TI SN76489 sound chip.
  *
- *  \copyright Copyright 2018-2019 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,10 +29,6 @@ struct SN76489 {
 	struct part part;
 	_Bool ready;
 };
-
-// Create a sound chip object.
-
-struct SN76489 *sn76489_new(void);
 
 // Configure sound chip.  refrate is the reference clock to the sound chip
 // itself (e.g., 4000000).  framerate is the desired output rate to be written

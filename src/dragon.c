@@ -387,7 +387,7 @@ static void dragon_initialise(struct part *p, void *options) {
 	m->config = mc;
 
 	// SAM
-	part_add_component(&m->part, (struct part *)sam_new(), "SAM0");
+	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM0");
 
 	// CPU
 	switch (mc->cpu) {

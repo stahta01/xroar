@@ -121,7 +121,7 @@ struct cart *nx32_new(struct cart_config *cc) {
 	c->config = cc;
 
 	if (cc->becker_port) {
-		part_add_component(&c->part, (struct part *)becker_new(), "becker");
+		part_add_component(p, part_create("becker", NULL), "becker");
 	}
 
 	// 65SPI/B for interfacing to SD card

@@ -58,6 +58,8 @@
 #define INPUT_BUFFER_SIZE 262
 #define OUTPUT_BUFFER_SIZE 16
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct becker {
 	struct part part;
 
@@ -74,23 +76,39 @@ struct becker {
 	struct log_handle *log_data_out_hex;
 };
 
-static void becker_free(struct part *p);
-static void becker_serialise(struct part *p, struct ser_handle *sh);
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool becker_finish(struct part *p) {
-	(void)p;
-	return 1;
+// Becker port part creation
+
+static struct part *becker_allocate(void);
+static _Bool becker_finish(struct part *p);
+static void becker_free(struct part *p);
+
+static struct part *becker_deserialise(struct ser_handle *sh);
+static void becker_serialise(struct part *p, struct ser_handle *sh);
+
+const struct partdb_entry_funcs becker_funcs = {
+	.allocate = becker_allocate,
+	.finish = becker_finish,
+	.free = becker_free,
+
+	.deserialise = becker_deserialise,
+	.serialise = becker_serialise,
+};
+
+const struct partdb_entry becker_part = { .name = "becker", .funcs = &becker_funcs };
+
+static struct part *becker_allocate(void) {
+	struct becker *becker = part_new(sizeof(*becker));
+	struct part *p = &becker->part;
+
+	*becker = (struct becker){0};
+
+	return p;
 }
 
-static struct becker *becker_create(void) {
-	struct becker *becker = part_new(sizeof(*becker));
-	*becker = (struct becker){0};
-	part_init(&becker->part, "becker");
-	becker->part.free = becker_free;
-	becker->part.serialise = becker_serialise;
-	becker->part.finish = becker_finish;
+static _Bool becker_finish(struct part *p) {
+	struct becker *becker = (struct becker *)p;
 
 	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
@@ -139,23 +157,16 @@ static struct becker *becker_create(void) {
 #endif
 
 	becker->sockfd = sockfd;
-
 	becker_reset(becker);
-	return becker;
+
+	return 1;
 
 failed:
-	if (sockfd != -1) {
+	if (sockfd != -1)
 		close(sockfd);
-	}
 	if (info)
 		freeaddrinfo(info);
-	part_free((struct part *)becker);
-	return NULL;
-}
-
-struct becker *becker_new(void) {
-	struct becker *becker = becker_create();
-	return becker;
+	return 0;
 }
 
 static void becker_free(struct part *p) {
@@ -167,6 +178,16 @@ static void becker_free(struct part *p) {
 		log_close(&becker->log_data_out_hex);
 }
 
+static struct part *becker_deserialise(struct ser_handle *sh) {
+	struct part *p = becker_allocate();
+	while (ser_read_tag(sh) > 0);
+	if (ser_error(sh)) {
+		part_free(p);
+		return NULL;
+	}
+	return p;
+}
+
 static void becker_serialise(struct part *p, struct ser_handle *sh) {
 	(void)p;
 	// Just a single dummy field - all this serialised "part" does is
@@ -176,15 +197,7 @@ static void becker_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-struct part *becker_deserialise(struct ser_handle *sh) {
-	struct becker *becker = becker_create();
-	while (ser_read_tag(sh) > 0);
-	if (ser_error(sh)) {
-		part_free((struct part *)becker);
-		return NULL;
-	}
-	return (struct part *)becker;
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void becker_reset(struct becker *becker) {
 	if (logging.debug_fdc & LOG_FDC_BECKER) {

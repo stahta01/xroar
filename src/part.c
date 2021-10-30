@@ -49,12 +49,30 @@ extern const struct partdb_entry coco_part;
 extern const struct partdb_entry coco3_part;
 extern const struct partdb_entry mc10_part;
 
+extern const struct partdb_entry becker_part;
+extern const struct partdb_entry mc6883_part;
+extern const struct partdb_entry sn76489_part;
+extern const struct partdb_entry wd2791_part;
+extern const struct partdb_entry wd2793_part;
+extern const struct partdb_entry wd2795_part;
+extern const struct partdb_entry wd2797_part;
+
+extern const struct partdb_entry spi_sdcard_part;
+
 const struct partdb_entry *partdb[] = {
 	&dragon64_part,
 	&dragon32_part,
 	&coco_part,
 	&coco3_part,
 	&mc10_part,
+
+	&becker_part,
+	&mc6883_part,
+	&sn76489_part,
+	&wd2791_part,
+	&wd2793_part,
+	&wd2795_part,
+	&wd2797_part,
 };
 
 struct partdb_entry_old {
