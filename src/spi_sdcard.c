@@ -45,11 +45,13 @@ static const char *state_dbg_desc[] = {
 	"SBLWR", "DATAR"
 };
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct spi_sdcard {
 	struct spi65_device spi65_device;
 
 	// Backing image filename
-	const char *imagefile;
+	char *imagefile;
 
 	// SD card registers
 	unsigned state_sd;
@@ -85,6 +87,8 @@ static const struct ser_struct ser_struct_spi_sdcard[] = {
 #define SPI_SDCARD_SER_CMDARG (5)
 #define SPI_SDCARD_SER_BLKBUF (6)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #define MY_OCR 0x40300000 /* big endian */
 // static const uint8_t ocr[4] = { 0x40, 0x30, 0x00, 0x00 };
 static const uint8_t csd[16] = { 0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, 0x00,
@@ -94,47 +98,93 @@ static const uint8_t csd[16] = { 0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, 0x00,
 #define CMD(x) (0x40 | x)
 #define ACMD(x) (APP_FLAG | CMD(x))
 
-static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh);
 static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active);
 static void spi_sdcard_reset(void *sptr);
 
-static _Bool spi_sdcard_finish(struct part *p) {
-	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
-	// Nothing to do...
-	(void)sdcard;
-	return 1;
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
-	return p && strcmp(name, "spi-device") == 0;
-}
+// SPI-SD creation
 
-struct spi_sdcard *spi_sdcard_create(void) {
+static struct part *spi_sdcard_allocate(void);
+static void spi_sdcard_initialise(struct part *p, void *options);
+static _Bool spi_sdcard_finish(struct part *p);
+static void spi_sdcard_free(struct part *p);
+
+static struct part *spi_sdcard_deserialise(struct ser_handle *sh);
+static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh);
+
+static _Bool spi_sdcard_is_a(struct part *p, const char *name);
+
+static const struct partdb_entry_funcs spi_sdcard_funcs = {
+	.allocate = spi_sdcard_allocate,
+	.initialise = spi_sdcard_initialise,
+	.finish = spi_sdcard_finish,
+	.free = spi_sdcard_free,
+
+	.deserialise = spi_sdcard_deserialise,
+	.serialise = spi_sdcard_serialise,
+
+	.is_a = spi_sdcard_is_a,
+};
+
+const struct partdb_entry spi_sdcard_part = { .name = "SPI-SDCARD", .funcs = &spi_sdcard_funcs };
+
+static struct part *spi_sdcard_allocate(void) {
 	struct spi_sdcard *sdcard = part_new(sizeof(*sdcard));
-	*sdcard = (struct spi_sdcard){0};
 	struct part *p = &sdcard->spi65_device.part;
-	part_init(p, "SPI-SDCARD");
-	p->serialise = spi_sdcard_serialise;
-	p->finish = spi_sdcard_finish;
-	p->is_a = spi_sdcard_is_a;
+
+	*sdcard = (struct spi_sdcard){0};
 
 	sdcard->spi65_device.transfer = DELEGATE_AS2(uint8, uint8, bool, spi_sdcard_transfer, sdcard);
 	sdcard->spi65_device.reset = DELEGATE_AS0(void, spi_sdcard_reset, sdcard);
 
-	return sdcard;
+	return p;
 }
 
-struct spi65_device *spi_sdcard_new(const char *image) {
-	struct spi_sdcard *sdcard = spi_sdcard_create();
-	struct part *p = &sdcard->spi65_device.part;
-	sdcard->imagefile = xstrdup(image);
+static void spi_sdcard_initialise(struct part *p, void *options) {
+	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
+	if (options) {
+		sdcard->imagefile = xstrdup((const char *)options);
+	}
+}
 
-	if (!spi_sdcard_finish(p)) {
+static _Bool spi_sdcard_finish(struct part *p) {
+	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
+	if (!sdcard->imagefile)
+		return 0;
+	return 1;
+}
+
+static void spi_sdcard_free(struct part *p) {
+	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
+	if (sdcard->imagefile)
+		free(sdcard->imagefile);
+}
+
+static struct part *spi_sdcard_deserialise(struct ser_handle *sh) {
+	struct part *p = spi_sdcard_allocate();
+	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi_sdcard, N_SER_STRUCT_SPI_SDCARD, sdcard))) {
+		switch (tag) {
+		case SPI_SDCARD_SER_CMDARG:
+			ser_read(sh, sdcard->cmdarg, sizeof(sdcard->cmdarg));
+			break;
+		case SPI_SDCARD_SER_BLKBUF:
+			ser_read(sh, sdcard->blkbuf, sizeof(sdcard->blkbuf));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+
+	if (ser_error(sh)) {
 		part_free(p);
 		return NULL;
 	}
 
-	return (struct spi65_device *)sdcard;
+	return p;
 }
 
 static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh) {
@@ -155,28 +205,12 @@ static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-struct part *spi_sdcard_deserialise(struct ser_handle *sh) {
-	struct spi_sdcard *sdcard = spi_sdcard_create();
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi_sdcard, N_SER_STRUCT_SPI_SDCARD, sdcard))) {
-		switch (tag) {
-		case SPI_SDCARD_SER_CMDARG:
-			ser_read(sh, sdcard->cmdarg, sizeof(sdcard->cmdarg));
-			break;
-		case SPI_SDCARD_SER_BLKBUF:
-			ser_read(sh, sdcard->blkbuf, sizeof(sdcard->blkbuf));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)sdcard);
-		return NULL;
-	}
-	return (struct part *)sdcard;
+static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
+	(void)p;
+	return strcmp(name, "spi-device") == 0;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void read_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
 	FILE *sd_image = fopen(sdcard->imagefile, "rb");

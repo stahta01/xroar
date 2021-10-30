@@ -32,7 +32,6 @@
 #include "part.h"
 #include "serialise.h"
 #include "spi65.h"
-#include "spi_sdcard.h"
 
 /* number of 32KB banks in memory cartridge: 1, 4 or 16 */
 #define EXTBANKS 16
@@ -129,7 +128,7 @@ struct cart *nx32_new(struct cart_config *cc) {
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 
 	// Attach an SD card (SPI mode) to 65SPI/B
-	struct spi65_device *sdcard = spi_sdcard_new("sdcard.img");
+	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", "sdcard.img");
 	spi65_add_device(spi65, sdcard, 0);
 
 	if (!nx32_finish(p)) {

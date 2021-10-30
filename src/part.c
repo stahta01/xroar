@@ -66,6 +66,8 @@ extern const struct partdb_entry wd2793_part;
 extern const struct partdb_entry wd2795_part;
 extern const struct partdb_entry wd2797_part;
 
+extern const struct partdb_entry spi_sdcard_part;
+
 const struct partdb_entry *partdb[] = {
 	&dragon64_part,
 	&dragon32_part,
@@ -89,6 +91,8 @@ const struct partdb_entry *partdb[] = {
 	&wd2793_part,
 	&wd2795_part,
 	&wd2797_part,
+
+	&spi_sdcard_part,
 };
 
 struct partdb_entry_old {

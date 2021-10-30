@@ -67,7 +67,7 @@ xroar_SOURCES = \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
 	spi65.c spi65.h \
-	spi_sdcard.c spi_sdcard.h \
+	spi_sdcard.c \
 	tape.c tape.h \
 	tape_cas.c \
 	tcc1014/font-gime.c tcc1014/font-gime.h \
