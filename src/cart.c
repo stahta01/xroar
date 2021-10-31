@@ -391,7 +391,8 @@ void cart_finish(struct cart *c) {
 }
 
 _Bool cart_is_a(struct part *p, const char *name) {
-	return p && strcmp(name, "cart") == 0;
+	(void)p;
+	return strcmp(name, "cart") == 0;
 }
 
 void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag) {

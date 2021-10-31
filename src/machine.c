@@ -352,7 +352,8 @@ struct machine *machine_new(struct machine_config *mc) {
 }
 
 _Bool machine_is_a(struct part *p, const char *name) {
-	return p && strcmp(name, "machine") == 0;
+	(void)p;
+	return strcmp(name, "machine") == 0;
 }
 
 void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag) {
