@@ -15,7 +15,9 @@
  *
  *  \endlicenseblock
  *
- *  Includes CUE support.
+ *  Includes CUE support, as proposed by Roberto CFG, here:
+ *
+ *  https://archive.worldofdragon.org/phpBB3/viewtopic.php?f=8&t=5621
  */
 
 #ifdef HAVE_CONFIG_H
