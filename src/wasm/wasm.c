@@ -20,6 +20,9 @@
 #include "config.h"
 #endif
 
+// Comment this out for debugging
+#define WASM_DEBUG(...)
+
 #include <libgen.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -46,6 +49,10 @@
 // Currently tied to SDL2, as we need to poll SDL events.  Refactor soon...
 #include <SDL.h>
 #include "sdl2/common.h"
+
+#ifndef WASM_DEBUG
+#define WASM_DEBUG(...) LOG_PRINT(__VA_ARGS__)
+#endif
 
 // Functions prefixed wasm_ui_ are called from UI to interact with the browser
 // environment.  Other functions prefixed wasm_ are exported and called from
@@ -110,6 +117,7 @@ void wasm_ui_run(void *sptr) {
 
 void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
 	(void)sptr;
+	WASM_DEBUG("wasm_ui_set_state(tag=%d, value=%d)\n", tag, value);
 
 	switch (tag) {
 
@@ -183,6 +191,7 @@ void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
 // work :)
 
 static _Bool lock_fetch(const char *file) {
+	WASM_DEBUG("lock_fetch(%s)\n", file);
 	sds lockfile = sdsnew(file);
 	lockfile = sdscat(lockfile, ".lock");
 	int fd = open(lockfile, O_CREAT|O_EXCL|O_WRONLY, 0666);
@@ -192,14 +201,17 @@ static _Bool lock_fetch(const char *file) {
 	}
 	close(fd);
 	wasm_waiting_files++;
+	WASM_DEBUG("lock_fetch(): %d waiting files\n", wasm_waiting_files);
 	return 1;
 }
 
 static void unlock_fetch(const char *file) {
+	WASM_DEBUG("unlock_fetch(%s)\n", file);
 	sds lockfile = sdsnew(file);
 	lockfile = sdscat(lockfile, ".lock");
 	int fd = open(lockfile, O_RDONLY);
 	if (fd == -1) {
+		WASM_DEBUG("unlock_fetch() failed: invalid fd\n");
 		perror(NULL);
 		sdsfree(lockfile);
 		return;
@@ -208,9 +220,11 @@ static void unlock_fetch(const char *file) {
 	unlink(lockfile);
 	sdsfree(lockfile);
 	wasm_waiting_files--;
+	WASM_DEBUG("unlock_fetch(): %d waiting files remaining\n", wasm_waiting_files);
 }
 
 static void wasm_onload(const char *file) {
+	WASM_DEBUG("wasm_onload(%s)\n", file);
 	unlock_fetch(file);
 }
 
@@ -220,8 +234,12 @@ static void wasm_onerror(const char *file) {
 }
 
 static void wasm_wget(const char *file) {
-	if (!file || *file == 0)
+	if (!file || *file == 0) {
+		WASM_DEBUG("wasm_wget(NULL) - ignored\n");
 		return;
+	}
+
+	WASM_DEBUG("wasm_wget(%s)\n", file);
 
 	// Ensure the destination directory exists.  Fine for MEMFS in the
 	// sandbox, just don't use this anywhere important, I've barely given
@@ -264,6 +282,7 @@ static void wasm_wget(const char *file) {
 		if (fs_file_size(fd) > 0) {
 			// File already exists - no need to fetch, so unlock
 			// and return.
+			WASM_DEBUG("wasm_wget(): file exists; unlocking\n");
 			fclose(fd);
 			unlock_fetch(file);
 			return;
@@ -278,6 +297,7 @@ static void wasm_wget(const char *file) {
 	// full-featured Emscripten wget function would allow us to display
 	// progress bars, etc., but nothing we'll ever fetch is really large
 	// enough to justify that.
+	WASM_DEBUG("emscripten_async_wget(%s)\n", file);
 	emscripten_async_wget(file, file, wasm_onload, wasm_onerror);
 }
 
@@ -285,20 +305,25 @@ static void wasm_wget(const char *file) {
 
 static void do_wasm_set_machine(void *sptr) {
 	int id = (intptr_t)sptr;
+	WASM_DEBUG("do_wasm_set_machine(%d)\n", id);
 	xroar_set_machine(1, id);
 }
 
 static void do_wasm_set_cartridge(void *sptr) {
 	int id = (intptr_t)sptr;
+	WASM_DEBUG("do_wasm_set_cartridge(%d)\n", id);
 	xroar_set_cart_by_id(1, id);
 }
 
 // Lookup ROM in romlist before trying to fetch it.
 
 static void wasm_wget_rom(const char *rom) {
+	WASM_DEBUG("wasm_wget_rom(%s)\n", rom);
 	char *tmp;
 	if ((tmp = romlist_find(rom))) {
 		wasm_wget(tmp);
+	} else {
+		WASM_DEBUG("wasm_wget_rom(%s): not found\n", rom);
 	}
 }
 
@@ -308,6 +333,7 @@ static void wasm_wget_rom(const char *rom) {
 // all fetches have completed.
 
 _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
+	WASM_DEBUG("wasm_ui_prepare_machine(%s)\n", mc->name);
 	if (mc->bas_rom) {
 		wasm_wget_rom(mc->bas_rom);
 	}
@@ -323,13 +349,15 @@ _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
 	if (wasm_waiting_files == 0) {
 		return 1;
 	}
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 0);
+	WASM_DEBUG("queueing do_wasm_set_machine()\n");
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 1);
 	return 0;
 }
 
 // Similarly, xroar_set_cart() redirects here.
 
 _Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
+	WASM_DEBUG("wasm_ui_prepare_cartridge(%s)\n", cc->name);
 	if (cc->rom) {
 		wasm_wget_rom(cc->rom);
 	}
@@ -339,7 +367,8 @@ _Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
 	if (wasm_waiting_files == 0) {
 		return 1;
 	}
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_cartridge, (void *)(intptr_t)cc->id), 0);
+	WASM_DEBUG("queueing do_wasm_set_cartridge()\n");
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_cartridge, (void *)(intptr_t)cc->id), 1);
 	return 0;
 }
 
@@ -348,10 +377,13 @@ _Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
 
 void wasm_set_machine_cart(const char *machine, const char *cart,
 			   const char *cart_rom, const char *cart_rom2) {
+	WASM_DEBUG("wasm_set_machine_cart(%s, %s, %s, %s)\n", machine, cart ? cart : "[none]", cart_rom ? cart_rom : "[none]", cart_rom2 ? cart_rom2 : "[none]");
 	struct machine_config *mc = machine_config_by_name(machine);
 	struct cart_config *cc = cart_config_by_name(cart);
-	if (!mc)
+	if (!mc) {
+		WASM_DEBUG("wasm_set_machine_cart() - invalid machine config, ignoring\n");
 		return;
+	}
 	wasm_ui_prepare_machine(mc);
 	if (mc->default_cart) {
 		free(mc->default_cart);
@@ -378,7 +410,8 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 		}
 		wasm_ui_prepare_cartridge(cc);
 	}
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 0);
+	WASM_DEBUG("queueing do_wasm_set_machine()\n");
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 1);
 }
 
 // Load (and optionally autorun) file from web
@@ -398,6 +431,7 @@ struct wasm_event_load_file {
 
 static void do_wasm_load_file(void *sptr) {
 	struct wasm_event_load_file *ev = sptr;
+	WASM_DEBUG("do_wasm_load_file(type=%d, file=%s)\n", ev->type, ev->filename);
 	switch (ev->type) {
 	case wasm_load_file_type_load:
 	case wasm_load_file_type_run:
@@ -415,12 +449,13 @@ static void do_wasm_load_file(void *sptr) {
 }
 
 void wasm_load_file(const char *filename, int type, int drive) {
+	WASM_DEBUG("wasm_load_file(filename=%s, type=%d, drive=%d)\n", filename, type, drive);
 	struct wasm_event_load_file *ev = xmalloc(sizeof(*ev));
 	ev->filename = xstrdup(filename);
 	ev->type = type;
 	ev->drive = drive;
 	wasm_wget(filename);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_load_file, ev), 0);
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_load_file, ev), 1);
 }
 
 // Configure joystick ports
@@ -432,6 +467,7 @@ struct wasm_event_set_joystick {
 
 static void do_wasm_set_joystick(void *sptr) {
 	struct wasm_event_set_joystick *ev = sptr;
+	WASM_DEBUG("do_wasm_set_joystick(%d, %s)\n", ev->port, ev->value);
 	xroar_set_joystick(1, ev->port, ev->value);
 	free(ev->value);
 	free(ev);
@@ -441,26 +477,30 @@ void wasm_set_joystick(int port, const char *value) {
 	struct wasm_event_set_joystick *ev = xmalloc(sizeof(*ev));
 	ev->port = port;
 	ev->value = xstrdup(value);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_joystick, ev), 0);
+	WASM_DEBUG("wasm_set_joystick(%d, %s): queueing do_wasm_set_joystick()\n", port, value);
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_joystick, ev), 1);
 }
 
 // Submit BASIC commands
 
 static void do_wasm_queue_basic(void *sptr) {
 	char *text = sptr;
+	WASM_DEBUG("do_wasm_queue_basic(%s)\n", text);
 	keyboard_queue_basic(xroar_keyboard_interface, text);
 	free(text);
 }
 
 void wasm_queue_basic(const char *string) {
 	char *text = xstrdup(string);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_queue_basic, text), 0);
+	WASM_DEBUG("wasm_queue_basic(%s): queueing do_wasm_queue_basic()\n", string);
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_queue_basic, text), 1);
 }
 
 // Update window size.  Browser handles knowing what size things should be,
 // then informs us here.
 
 void wasm_resize(int w, int h) {
+	WASM_DEBUG("wasm_resize(%d, %d)\n", w, h);
 	if (global_uisdl2 && global_uisdl2->vo_window) {
 		SDL_SetWindowSize(global_uisdl2->vo_window, w, h);
 	}
