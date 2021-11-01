@@ -219,6 +219,7 @@ static void mc6809_initialise(struct part *p, void *options) {
 }
 
 static void mc6809_free(struct part *p) {
+	(void)p;
 #ifdef TRACE
 	struct MC6809 *cpu = (struct MC6809 *)p;
 	if (cpu->tracer) {

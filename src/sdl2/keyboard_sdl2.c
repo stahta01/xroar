@@ -188,7 +188,9 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 }
 
 static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool shift) {
+	(void)uisdl2;
 	switch (cmdkey) {
+#ifndef HAVE_WASM
 	case '1': case '2': case '3': case '4':
 		if (shift) {
 			xroar_new_disk(cmdkey - '1');
@@ -196,6 +198,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			xroar_insert_disk(cmdkey - '1');
 		}
 		return;
+#endif
 	case '5': case '6': case '7': case '8':
 		if (shift) {
 			xroar_set_write_back(1, cmdkey - '5', XROAR_NEXT);
@@ -219,8 +222,10 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 	case 'i':
 		     if (shift) {
 			     xroar_set_vdg_inverted_text(1, XROAR_NEXT);
+#ifndef HAVE_WASM
 		     } else {
 			     xroar_run_file(NULL);
+#endif
 		     }
 		     return;
 	case 'j':
@@ -231,6 +236,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		     }
 		     return;
 	case 'k': xroar_set_keymap(1, XROAR_NEXT); return;
+#ifndef HAVE_WASM
 	case 'l':
 		     if (shift) {
 			     xroar_run_file(NULL);
@@ -245,6 +251,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		     }
 		     return;
 	case 'q': xroar_quit(); return;
+#endif
 	case 'r':
 		     if (shift) {
 			     xroar_hard_reset();
@@ -252,24 +259,29 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			     xroar_soft_reset();
 		     }
 		     return;
+#ifndef HAVE_WASM
 	case 's': xroar_save_snapshot(); return;
 	case 'w': xroar_insert_output_tape(); return;
+#endif
 #ifdef TRACE
 	case 'v': xroar_set_trace(XROAR_NEXT); return;
 #endif
 	case 'z': xroar_set_kbd_translate(1, XROAR_NEXT); return;
+#ifndef HAVE_WASM
 	case '-':
 		     sdl_zoom_out(uisdl2);
 		     return;
 	case '+':
 		     sdl_zoom_in(uisdl2);
 		     return;
+#endif
 	default:
 		break;
 	}
 }
 
 static void control_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
+	(void)uisdl2;
 	SDL_Scancode scancode = keysym->scancode;
 	SDL_Keycode sym = keysym->sym;
 	Uint16 mod = keysym->mod;
@@ -306,9 +318,7 @@ static void control_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysy
 
 	if (cmdkey == 0)
 		return;
-#ifndef HAVE_WASM
 	emulator_command(uisdl2, cmdkey, shift);
-#endif
 }
 
 

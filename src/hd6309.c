@@ -245,6 +245,7 @@ static void hd6309_initialise(struct part *p, void *options) {
 }
 
 static void hd6309_free(struct part *p) {
+	(void)p;
 #ifdef TRACE
 	struct HD6309 *hcpu = (struct HD6309 *)p;
 	if (hcpu->tracer) {

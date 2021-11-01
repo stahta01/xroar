@@ -71,7 +71,9 @@ struct ao_sdl2_interface {
 	unsigned timeout_ms;
 };
 
+#ifndef HAVE_WASM
 static void callback_1(void *, Uint8 *, int);
+#endif
 
 static void ao_sdl2_free(void *sptr);
 static void *ao_sdl2_write_buffer(void *sptr, void *buffer);

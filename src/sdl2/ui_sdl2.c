@@ -186,7 +186,7 @@ static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data) {
 
 #ifdef HAVE_WASM
 static void sdl2_wasm_update_machine_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)sptr;
 	for (struct slist *iter = machine_config_list(); iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
@@ -197,7 +197,7 @@ static void sdl2_wasm_update_machine_menu(void *sptr) {
 }
 
 static void sdl2_wasm_update_cartridge_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)sptr;
 	int cart_arch = (xroar_machine && xroar_machine->config && xroar_machine->config->architecture == ARCH_MC10) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
 	struct slist *ccl = cart_config_list_by_arch(cart_arch);
 	EM_ASM_({ ui_clear_carts(); });

@@ -1165,6 +1165,7 @@ void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 /* Helper functions */
 
 void xroar_set_trace(int mode) {
+	(void)mode;
 #ifdef TRACE
 	switch (mode) {
 	case XROAR_OFF: default:

@@ -109,7 +109,7 @@ void wasm_ui_run(void *sptr) {
 // Wasm event handler relays information to web page handlers.
 
 void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_interface *ui = sptr;
+	(void)sptr;
 
 	switch (tag) {
 
