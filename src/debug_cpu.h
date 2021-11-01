@@ -37,6 +37,9 @@ struct debug_cpu {
 
 	// Get program counter value.  Used by breakpoint hooks.
 	DELEGATE_T0(unsigned) get_pc;
+
+	// Set program counter value (JMP).
+	DELEGATE_T1(void, unsigned) set_pc;
 };
 
 #endif

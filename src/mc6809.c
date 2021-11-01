@@ -90,9 +90,10 @@ extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
  * External interface
  */
 
+static void mc6809_set_pc(void *sptr, unsigned pc);
+
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
-static void mc6809_jump(struct MC6809 *cpu, uint16_t pc);
 
 /*
  * Data reading & writing
@@ -197,10 +198,10 @@ static struct part *mc6809_allocate(void) {
 	*cpu = (struct MC6809){0};
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
+	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, mc6809_set_pc, cpu);
 
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
-	cpu->jump = mc6809_jump;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 
 #ifdef TRACE
@@ -1202,8 +1203,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 }
 
-static void mc6809_jump(struct MC6809 *cpu, uint16_t pc) {
+static void mc6809_set_pc(void *sptr, unsigned pc) {
+	struct MC6809 *cpu = sptr;
 	REG_PC = pc;
+	cpu->state = mc6809_state_next_instruction;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

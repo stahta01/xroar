@@ -79,9 +79,10 @@ static const struct ser_struct ser_struct_hd6309[] = {
  * External interface
  */
 
+static void hd6309_set_pc(void *sptr, unsigned pc);
+
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
-static void hd6309_jump(struct MC6809 *cpu, uint16_t pc);
 
 /*
  * Data reading & writing
@@ -222,10 +223,10 @@ static struct part *hd6309_allocate(void) {
 	*hcpu = (struct HD6309){0};
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
+	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, hd6309_set_pc, cpu);
 
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
-	cpu->jump = hd6309_jump;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 
 #ifdef TRACE
@@ -1919,8 +1920,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 }
 
-static void hd6309_jump(struct MC6809 *cpu, uint16_t pc) {
+static void hd6309_set_pc(void *sptr, unsigned pc) {
+	struct HD6309 *hcpu = sptr;
+	struct MC6809 *cpu = &hcpu->mc6809;
 	REG_PC = pc;
+	hcpu->state = hd6309_state_next_instruction;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

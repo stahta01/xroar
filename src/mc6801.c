@@ -113,10 +113,11 @@ extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val);
 
 // External interface
 
+static unsigned mc6801_get_pc(void *sptr);
+static void mc6801_set_pc(void *sptr, unsigned pc);
+
 static void mc6801_reset(struct MC6801 *cpu);
 static void mc6801_run(struct MC6801 *cpu);
-static void mc6801_jump(struct MC6801 *cpu, uint16_t pc);
-static unsigned mc6801_get_pc(void *sptr);
 
 // Wrap common fetches
 
@@ -221,10 +222,10 @@ static struct part *mc6801_allocate(void) {
 	*cpu = (struct MC6801){0};
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6801_get_pc, cpu);
+	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, mc6801_set_pc, cpu);
 
 	cpu->reset = mc6801_reset;
 	cpu->run = mc6801_run;
-	cpu->jump = mc6801_jump;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
 
 #ifdef TRACE
@@ -988,8 +989,10 @@ static void mc6801_run(struct MC6801 *cpu) {
 
 }
 
-static void mc6801_jump(struct MC6801 *cpu, uint16_t pc) {
+static void mc6801_set_pc(void *sptr, unsigned pc) {
+	struct MC6801 *cpu = sptr;
 	REG_PC = pc;
+	cpu->state = mc6801_state_next_instruction;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

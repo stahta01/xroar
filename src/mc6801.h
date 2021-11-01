@@ -108,7 +108,6 @@ struct MC6801 {
 
 	void (*reset)(struct MC6801 *cpu);
 	void (*run)(struct MC6801 *cpu);
-	void (*jump)(struct MC6801 *cpu, uint16_t pc);
 
 	// External handlers
 

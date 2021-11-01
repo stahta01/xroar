@@ -32,6 +32,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "delegate.h"
+
 #include "fs.h"
 #include "hexs19.h"
 #include "logging.h"
@@ -125,10 +127,13 @@ int intel_hex_read(const char *filename, int autorun) {
 	if (logging.debug_file & LOG_FILE_BIN_DATA)
 		log_close(&log_hex);
 	if (exec != 0) {
+		struct debug_cpu *dcpu = NULL;
 		if (autorun) {
-			struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+		}
+		if (autorun && dcpu) {
 			LOG_DEBUG_FILE(LOG_FILE_BIN, "Intel HEX: EXEC $%04x - autorunning\n", exec);
-			cpu->jump(cpu, exec);
+			DELEGATE_CALL(dcpu->set_pc, exec);
 		} else {
 			LOG_DEBUG_FILE(LOG_FILE_BIN, "Intel HEX: EXEC $%04x - not autorunning\n", exec);
 		}
@@ -187,10 +192,13 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 		log_hexdump_byte(log_bin, data);
 	}
 	log_close(&log_bin);
+	struct debug_cpu *dcpu = NULL;
 	if (autorun) {
-		struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+		dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+	}
+	if (autorun && dcpu) {
 		LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: EXEC $%04x - autorunning\n", exec);
-		cpu->jump(cpu, exec);
+		DELEGATE_CALL(dcpu->set_pc, exec);
 	} else {
 		LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: EXEC $%04x - not autorunning\n", exec);
 	}
@@ -234,10 +242,13 @@ static int coco_bin_load(FILE *fd, int autorun) {
 				LOG_WARN("CoCo BIN: short read in exec chunk\n");
 				break;
 			}
+			struct debug_cpu *dcpu = NULL;
 			if (autorun) {
-				struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+				dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar_machine, "CPU", "DEBUG-CPU");
+			}
+			if (autorun && dcpu) {
 				LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: EXEC $%04x - autorunning\n", exec);
-				cpu->jump(cpu, exec);
+				DELEGATE_CALL(dcpu->set_pc, exec);
 			} else {
 				LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: EXEC $%04x - not autorunning\n", exec);
 			}
