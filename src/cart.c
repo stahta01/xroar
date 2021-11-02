@@ -68,7 +68,7 @@ static const struct ser_struct ser_struct_cart[] = {
 	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
 	SER_STRUCT_ELEM(struct cart, EXTMEM, ser_type_bool), // 2
 	SER_STRUCT_ELEM(struct cart, rom_bank, ser_type_uint16), // 3
-	SER_STRUCT_ELEM(struct cart, firq_event, ser_type_eventp), // 4
+	SER_STRUCT_ELEM(struct cart, firq_event, ser_type_event), // 4
 };
 #define N_SER_STRUCT_CART ARRAY_N_ELEMENTS(ser_struct_cart)
 
@@ -385,8 +385,8 @@ struct cart *cart_new_named(const char *cc_name) {
 }
 
 void cart_finish(struct cart *c) {
-	if (c->firq_event && c->firq_event->next == c->firq_event) {
-		event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+	if (c->firq_event.next == &c->firq_event) {
+		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
 	}
 }
 
@@ -438,6 +438,7 @@ void cart_rom_init(struct cart *c) {
 	c->rom_mask = 0x3fff;
 	c->rom_bank = 0;
 
+	event_init(&c->firq_event, DELEGATE_AS0(void, do_firq, c));
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
@@ -527,20 +528,15 @@ void cart_rom_reset(struct cart *c) {
 void cart_rom_attach(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->autorun) {
-		c->firq_event = event_new(DELEGATE_AS0(void, do_firq, c));
-		c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
-		event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+		c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
+		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
 	} else {
-		c->firq_event = NULL;
+		event_dequeue(&c->firq_event);
 	}
 }
 
 void cart_rom_detach(struct cart *c) {
-	if (c->firq_event) {
-		event_dequeue(c->firq_event);
-		event_free(c->firq_event);
-		c->firq_event = NULL;
-	}
+	event_dequeue(&c->firq_event);
 }
 
 void cart_rom_free(struct part *p) {
@@ -562,8 +558,8 @@ static void do_firq(void *data) {
 	static _Bool level = 0;
 	struct cart *c = data;
 	DELEGATE_SAFE_CALL(c->signal_firq, level);
-	c->firq_event->at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&MACHINE_EVENT_LIST, c->firq_event);
+	c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
+	event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
 	level = !level;
 }
 

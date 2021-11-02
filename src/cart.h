@@ -25,6 +25,7 @@
 #include "delegate.h"
 #include "xconfig.h"
 
+#include "events.h"
 #include "part.h"
 
 struct slist;
@@ -87,7 +88,7 @@ struct cart {
 
 	// Used to schedule regular FIRQs when an "autorun" cartridge is
 	// configured.
-	struct event *firq_event;
+	struct event firq_event;
 
 	// Query if cartridge supports a named interface.
 	_Bool (*has_interface)(struct cart *c, const char *ifname);
