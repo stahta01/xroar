@@ -1623,6 +1623,10 @@ void xroar_set_machine(_Bool notify, int id) {
 	}
 }
 
+void xroar_update_cartridge_menu(void) {
+	DELEGATE_SAFE_CALL(xroar_ui_interface->update_cartridge_menu);
+}
+
 void xroar_toggle_cart(void) {
 	assert(xroar_machine_config != NULL);
 	xroar_machine_config->cart_enabled = !xroar_machine_config->cart_enabled;

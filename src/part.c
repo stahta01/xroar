@@ -49,6 +49,11 @@ extern const struct partdb_entry coco_part;
 extern const struct partdb_entry coco3_part;
 extern const struct partdb_entry mc10_part;
 
+extern const struct partdb_entry cart_rom_part;
+extern const struct partdb_entry deltados_part;
+extern const struct partdb_entry dragondos_part;
+extern const struct partdb_entry rsdos_part;
+
 extern const struct partdb_entry becker_part;
 extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
@@ -76,6 +81,11 @@ const struct partdb_entry *partdb[] = {
 	&coco3_part,
 	&mc10_part,
 
+	&cart_rom_part,
+	&deltados_part,
+	&dragondos_part,
+	&rsdos_part,
+
 	&becker_part,
 	&hd6309_part,
 	&mc6801_part,
@@ -102,9 +112,6 @@ struct partdb_entry_old {
 	struct part *(* const deserialise)(struct ser_handle *sh);
 };
 
-struct part *dragondos_deserialise(struct ser_handle *sh);
-struct part *deltados_deserialise(struct ser_handle *sh);
-struct part *rsdos_deserialise(struct ser_handle *sh);
 struct part *idecart_deserialise(struct ser_handle *sh);
 struct part *gmc_deserialise(struct ser_handle *sh);
 struct part *mpi_deserialise(struct ser_handle *sh);
@@ -114,9 +121,6 @@ struct part *mooh_deserialise(struct ser_handle *sh);
 struct part *orch90_deserialise(struct ser_handle *sh);
 
 struct partdb_entry_old partdb_old[] = {
-	{ .name = "dragondos", .deserialise = dragondos_deserialise },
-	{ .name = "delta", .deserialise = deltados_deserialise },
-	{ .name = "rsdos", .deserialise = rsdos_deserialise },
 	{ .name = "ide", .deserialise = idecart_deserialise },
 	{ .name = "GMC", .deserialise = gmc_deserialise },
 	{ .name = "mpi", .deserialise = mpi_deserialise },

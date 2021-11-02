@@ -56,21 +56,24 @@ static const struct ser_struct ser_struct_cart_config[] = {
 };
 #define N_SER_STRUCT_CART_CONFIG ARRAY_N_ELEMENTS(ser_struct_cart_config)
 
-#define CART_SER_CART_CONFIG (1)
-
-struct xconfig_enum cart_arch_list[] = {
-	{ XC_ENUM_INT("dragon", CART_ARCH_DRAGON, "Dragon/CoCo cartridge") },
-	{ XC_ENUM_INT("mc10", CART_ARCH_MC10, "MC-10 cartridge") },
-	{ XC_ENUM_END() }
-};
-
 static const struct ser_struct ser_struct_cart[] = {
 	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
 	SER_STRUCT_ELEM(struct cart, EXTMEM, ser_type_bool), // 2
 	SER_STRUCT_ELEM(struct cart, rom_bank, ser_type_uint16), // 3
 	SER_STRUCT_ELEM(struct cart, firq_event, ser_type_event), // 4
 };
+
 #define N_SER_STRUCT_CART ARRAY_N_ELEMENTS(ser_struct_cart)
+
+#define CART_SER_CART_CONFIG (1)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct xconfig_enum cart_arch_list[] = {
+	{ XC_ENUM_INT("dragon", CART_ARCH_DRAGON, "Dragon/CoCo cartridge") },
+	{ XC_ENUM_INT("mc10", CART_ARCH_MC10, "MC-10 cartridge") },
+	{ XC_ENUM_END() }
+};
 
 static struct slist *config_list = NULL;
 static int next_id = 0;
@@ -80,17 +83,6 @@ static struct cart_config *rom_cart_config = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct cart *cart_rom_new(struct cart_config *cc);
-
-static struct cart_module cart_rom_module = {
-	.name = "rom",
-	.description = "ROM cartridge",
-	.new = cart_rom_new,
-};
-
-extern struct cart_module cart_dragondos_module;
-extern struct cart_module cart_deltados_module;
-extern struct cart_module cart_rsdos_module;
 extern struct cart_module cart_gmc_module;
 extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
@@ -140,6 +132,9 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
 	}
 	free(name);
 	ser_read_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, cc);
+	if (strcmp(name, "romcart") == 0)
+		rom_cart_config = cc;
+	xroar_update_cartridge_menu();
 	return cc;
 }
 
@@ -164,9 +159,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 	   ROM cart config for it. */
 	if (xroar_filetype_by_ext(name) == FILETYPE_ROM) {
 		if (!rom_cart_config) {
-			if (!(rom_cart_config = cart_config_new())) {
-				return NULL;
-			}
+			rom_cart_config = cart_config_new();
 			rom_cart_config->name = xstrdup("romcart");
 		}
 		if (rom_cart_config->description) {
@@ -318,10 +311,6 @@ void cart_init(void) {
 	l = slist_prepend(l, &cart_mpi_module);
 	l = slist_prepend(l, &cart_orch90_module);
 	l = slist_prepend(l, &cart_gmc_module);
-	l = slist_prepend(l, &cart_rsdos_module);
-	l = slist_prepend(l, &cart_deltados_module);
-	l = slist_prepend(l, &cart_dragondos_module);
-	l = slist_prepend(l, &cart_rom_module);
 	cart_modules[CART_ARCH_DRAGON] = l;
 
 	l = NULL;
@@ -331,23 +320,19 @@ void cart_init(void) {
 void cart_shutdown(void) {
 	slist_free_full(config_list, (slist_free_func)cart_config_free);
 	config_list = NULL;
-	for (int arch = 0; arch < NUM_CART_ARCH; arch++) {
-		slist_free(cart_modules[arch]);
-		cart_modules[arch] = NULL;
-	}
 }
 
-static void cart_type_help_func(struct cart_module *cm, void *udata) {
-	(void)udata;
-	if (!cm)
-		return;
-	printf("\t%-10s %s\n", cm->name, cm->description);
+static void cart_type_help_func(const struct partdb_entry *pe, void *idata) {
+	(void)idata;
+	printf("\t%-10s %s\n", pe->name, pe->description ? pe->description : pe->name);
 }
 
 void cart_type_help(int arch) {
-	if (arch < 0 || arch >= NUM_CART_ARCH)
-		arch = 0;
-	slist_foreach(cart_modules[arch], (slist_iter_func)cart_type_help_func, NULL);
+	if (arch == CART_ARCH_MC10) {
+		partdb_foreach_is_a((partdb_iter_func)cart_type_help_func, NULL, "mc10-cart");
+	} else {
+		partdb_foreach_is_a((partdb_iter_func)cart_type_help_func, NULL, "cart");
+	}
 }
 
 /* ---------------------------------------------------------------------- */
@@ -355,25 +340,17 @@ void cart_type_help(int arch) {
 struct cart *cart_new(struct cart_config *cc) {
 	if (!cc) return NULL;
 	cart_config_complete(cc);
-	struct cart *c = NULL;
 	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH)
 		cc->architecture = 0;
-	const char *req_type = cc->type;
-	for (struct slist *iter = cart_modules[cc->architecture]; iter; iter = iter->next) {
-		struct cart_module *cm = iter->data;
-		if (c_strcasecmp(req_type, cm->name) == 0) {
-			if (cc->description) {
-				LOG_DEBUG(2, "Cartridge module: %s\n", req_type);
-				LOG_DEBUG(1, "Cartridge: %s\n", cc->description);
-			}
-			c = cm->new(cc);
-			break;
-		}
-	}
-	if (!c) {
-		LOG_WARN("Cartridge module '%s' not found for cartridge '%s'\n", req_type, cc->name);
+	if (!partdb_is_a(cc->type, "cart")) {
 		return NULL;
 	}
+	struct cart *c = (struct cart *)part_create(cc->type, cc);
+	if (c && !part_is_a((struct part *)c, "cart")) {
+		part_free((struct part *)c);
+		c = NULL;
+	}
+	LOG_DEBUG(1, "Cartridge: [%s] %s\n", cc->type, cc->description);
 	if (c->attach)
 		c->attach(c);
 	return c;
@@ -426,6 +403,94 @@ void cart_deserialise(struct cart *c, struct ser_handle *sh) {
 	cart_rom_load(c);
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// ROM cart part creation
+
+static struct part *cart_rom_allocate(void);
+static void cart_rom_initialise(struct part *p, void *options);
+static _Bool cart_rom_finish(struct part *p);
+
+static struct part *cart_rom_deserialise(struct ser_handle *sh);
+static void cart_rom_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs cart_rom_funcs = {
+	.allocate = cart_rom_allocate,
+	.initialise = cart_rom_initialise,
+	.finish = cart_rom_finish,
+	.free = cart_rom_free,
+
+	.deserialise = cart_rom_deserialise,
+	.serialise = cart_rom_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry cart_rom_part = { .name = "rom", .description = "ROM cartridge", .funcs = &cart_rom_funcs };
+
+static struct part *cart_rom_allocate(void) {
+	struct cart *c = part_new(sizeof(*c));
+	struct part *p = &c->part;
+
+	*c = (struct cart){0};
+
+	cart_rom_init(c);
+
+	return p;
+}
+
+static void cart_rom_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct cart *c = (struct cart *)p;
+
+	c->config = cc;
+}
+
+static _Bool cart_rom_finish(struct part *p) {
+	struct cart *c = (struct cart *)p;
+	cart_finish(c);
+	return 1;
+}
+
+void cart_rom_free(struct part *p) {
+	struct cart *c = (struct cart *)p;
+	if (c->detach) {
+		c->detach(c);
+	}
+	if (c->rom_data) {
+		free(c->rom_data);
+	}
+}
+
+static struct part *cart_rom_deserialise(struct ser_handle *sh) {
+	struct part *p = cart_rom_allocate();
+	struct cart *c = (struct cart *)p;
+	int tag = ser_read_tag(sh);
+	if (tag == 1) {
+		cart_deserialise(c, sh);
+	} else {
+		ser_set_error(sh, ser_error_format);
+	}
+	if (ser_read_tag(sh) != 0) {
+		ser_set_error(sh, ser_error_format);
+	}
+	if (ser_error(sh)) {
+		part_free(p);
+		return NULL;
+	}
+	return p;
+}
+
+static void cart_rom_serialise(struct part *p, struct ser_handle *sh) {
+	struct cart *c = (struct cart *)p;
+	cart_serialise(c, sh, 1);
+	ser_write_close_tag(sh);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* ROM cart routines */
 
 void cart_rom_init(struct cart *c) {
@@ -444,17 +509,6 @@ void cart_rom_init(struct cart *c) {
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
 	c->EXTMEM = 0;
 	c->has_interface = cart_rom_has_interface;
-}
-
-static struct cart *cart_rom_new(struct cart_config *cc) {
-	if (!cc) return NULL;
-	struct cart *c = part_new(sizeof(*c));
-	*c = (struct cart){0};
-	c->config = cc;
-	cart_rom_init(c);
-	part_init((struct part *)c, "dragon-romcart");
-	c->part.free = cart_rom_free;
-	return c;
 }
 
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -537,16 +591,6 @@ void cart_rom_attach(struct cart *c) {
 
 void cart_rom_detach(struct cart *c) {
 	event_dequeue(&c->firq_event);
-}
-
-void cart_rom_free(struct part *p) {
-	struct cart *c = (struct cart *)p;
-	if (c->detach) {
-		c->detach(c);
-	}
-	if (c->rom_data) {
-		free(c->rom_data);
-	}
 }
 
 void cart_rom_select_bank(struct cart *c, uint16_t bank) {

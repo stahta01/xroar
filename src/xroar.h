@@ -176,6 +176,7 @@ void xroar_cycle_joysticks(_Bool notify);
 void xroar_connect_machine(void);
 void xroar_configure_machine(struct machine_config *mc);
 void xroar_set_machine(_Bool notify, int id);
+void xroar_update_cartridge_menu(void);
 void xroar_toggle_cart(void);
 void xroar_connect_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);

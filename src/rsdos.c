@@ -42,14 +42,6 @@
 #include "vdrive.h"
 #include "wd279x.h"
 
-static struct cart *rsdos_new(struct cart_config *cc);
-
-struct cart_module cart_rsdos_module = {
-	.name = "rsdos",
-	.description = "RS-DOS",
-	.new = rsdos_new,
-};
-
 struct rsdos {
 	struct cart cart;
 	unsigned latch_old;
@@ -71,9 +63,12 @@ static const struct ser_struct ser_struct_rsdos[] = {
 	SER_STRUCT_ELEM(struct rsdos, intrq_flag, ser_type_bool), // 5
 	SER_STRUCT_ELEM(struct rsdos, halt_enable, ser_type_bool), // 6
 };
+
 #define N_SER_STRUCT_RSDOS ARRAY_N_ELEMENTS(ser_struct_rsdos)
 
 #define RSDOS_SER_CART (1)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Cart interface */
 
@@ -81,8 +76,6 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void rsdos_reset(struct cart *c);
 static void rsdos_detach(struct cart *c);
-static void rsdos_free(struct part *p);
-static void rsdos_serialise(struct part *p, struct ser_handle *sh);
 static _Bool rsdos_has_interface(struct cart *c, const char *ifname);
 static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -96,6 +89,64 @@ static void set_intrq(void *sptr, _Bool value);
 static void latch_write(struct rsdos *d, unsigned D);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// RSDOS part creation
+
+static struct part *rsdos_allocate(void);
+static void rsdos_initialise(struct part *p, void *options);
+static _Bool rsdos_finish(struct part *p);
+static void rsdos_free(struct part *p);
+
+static struct part *rsdos_deserialise(struct ser_handle *sh);
+static void rsdos_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs rsdos_funcs = {
+	.allocate = rsdos_allocate,
+	.initialise = rsdos_initialise,
+	.finish = rsdos_finish,
+	.free = rsdos_free,
+
+	.deserialise = rsdos_deserialise,
+	.serialise = rsdos_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry rsdos_part = { .name = "rsdos", .description = "RS-DOS", .funcs = &rsdos_funcs };
+
+static struct part *rsdos_allocate(void) {
+	struct rsdos *d = part_new(sizeof(*d));
+	struct cart *c = &d->cart;
+	struct part *p = &c->part;
+
+	*d = (struct rsdos){0};
+
+	cart_rom_init(c);
+
+	c->detach = rsdos_detach;
+	c->read = rsdos_read;
+	c->write = rsdos_write;
+	c->reset = rsdos_reset;
+	c->has_interface = rsdos_has_interface;
+	c->attach_interface = rsdos_attach_interface;
+
+	return p;
+}
+
+static void rsdos_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct rsdos *d = (struct rsdos *)p;
+	struct cart *c = &d->cart;
+
+	c->config = cc;
+
+	if (cc->becker_port) {
+		part_add_component(p, part_create("becker", NULL), "becker");
+	}
+	part_add_component(p, part_create("WD2793", NULL), "FDC");
+}
 
 static _Bool rsdos_finish(struct part *p) {
 	struct rsdos *d = (struct rsdos *)p;
@@ -114,48 +165,47 @@ static _Bool rsdos_finish(struct part *p) {
 	return 1;
 }
 
-static struct rsdos *rsdos_create(void) {
-	struct rsdos *d = part_new(sizeof(*d));
-	*d = (struct rsdos){0};
-	struct cart *c = &d->cart;
-	part_init(&c->part, "rsdos");
-	c->part.free = rsdos_free;
-	c->part.serialise = rsdos_serialise;
-	c->part.finish = rsdos_finish;
-	c->part.is_a = cart_is_a;
-
-	cart_rom_init(c);
-
-	c->detach = rsdos_detach;
-	c->read = rsdos_read;
-	c->write = rsdos_write;
-	c->reset = rsdos_reset;
-	c->has_interface = rsdos_has_interface;
-	c->attach_interface = rsdos_attach_interface;
-
-	return d;
+static void rsdos_free(struct part *p) {
+	cart_rom_free(p);
 }
 
-static struct cart *rsdos_new(struct cart_config *cc) {
-	assert(cc != NULL);
-
-	struct rsdos *d = rsdos_create();
-	struct cart *c = &d->cart;
-	struct part *p = &c->part;
-	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
+static struct part *rsdos_deserialise(struct ser_handle *sh) {
+        struct part *p = rsdos_allocate();
+        struct rsdos *d = (struct rsdos *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, d))) {
+		switch (tag) {
+		case RSDOS_SER_CART:
+			cart_deserialise(&d->cart, sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
 	}
-	part_add_component(p, part_create("WD2793", NULL), "FDC");
-
-	if (!rsdos_finish(p)) {
+	if (ser_error(sh)) {
 		part_free(p);
 		return NULL;
 	}
-
-	return c;
+	return p;
 }
+
+static void rsdos_serialise(struct part *p, struct ser_handle *sh) {
+	struct rsdos *d = (struct rsdos *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, tag, d)) > 0; tag++) {
+		switch (tag) {
+		case RSDOS_SER_CART:
+			cart_serialise(&d->cart, sh, tag);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void rsdos_reset(struct cart *c) {
 	struct rsdos *d = (struct rsdos *)c;
@@ -176,45 +226,6 @@ static void rsdos_detach(struct cart *c) {
 	if (d->becker)
 		becker_reset(d->becker);
 	cart_rom_detach(c);
-}
-
-static void rsdos_free(struct part *p) {
-	cart_rom_free(p);
-}
-
-static void rsdos_serialise(struct part *p, struct ser_handle *sh) {
-	struct rsdos *d = (struct rsdos *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, tag, d)) > 0; tag++) {
-		switch (tag) {
-		case RSDOS_SER_CART:
-			cart_serialise(&d->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
-}
-
-struct part *rsdos_deserialise(struct ser_handle *sh) {
-	struct rsdos *d = rsdos_create();
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, d))) {
-		switch (tag) {
-		case RSDOS_SER_CART:
-			cart_deserialise(&d->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)d);
-		return NULL;
-	}
-	return (struct part *)d;
 }
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

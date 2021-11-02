@@ -42,14 +42,6 @@
 #include "vdrive.h"
 #include "wd279x.h"
 
-static struct cart *dragondos_new(struct cart_config *cc);
-
-struct cart_module cart_dragondos_module = {
-	.name = "dragondos",
-	.description = "DragonDOS",
-	.new = dragondos_new,
-};
-
 struct dragondos {
 	struct cart cart;
 	unsigned latch_old;
@@ -71,17 +63,18 @@ static const struct ser_struct ser_struct_dragondos[] = {
 	SER_STRUCT_ELEM(struct dragondos, latch_density, ser_type_bool), // 5
 	SER_STRUCT_ELEM(struct dragondos, latch_nmi_enable, ser_type_bool), // 6
 };
+
 #define N_SER_STRUCT_DRAGONDOS ARRAY_N_ELEMENTS(ser_struct_dragondos)
 
 #define DRAGONDOS_SER_CART (1)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Cart interface */
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void dragondos_reset(struct cart *c);
 static void dragondos_detach(struct cart *c);
-static void dragondos_free(struct part *p);
-static void dragondos_serialise(struct part *p, struct ser_handle *sh);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -93,6 +86,64 @@ static void set_intrq(void *sptr, _Bool value);
 static void latch_write(struct dragondos *d, unsigned D);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// DragonDOS part creation
+
+static struct part *dragondos_allocate(void);
+static void dragondos_initialise(struct part *p, void *options);
+static _Bool dragondos_finish(struct part *p);
+static void dragondos_free(struct part *p);
+
+static struct part *dragondos_deserialise(struct ser_handle *sh);
+static void dragondos_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs dragondos_funcs = {
+	.allocate = dragondos_allocate,
+	.initialise = dragondos_initialise,
+	.finish = dragondos_finish,
+	.free = dragondos_free,
+
+	.deserialise = dragondos_deserialise,
+	.serialise = dragondos_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry dragondos_part = { .name = "dragondos", .description = "DragonDOS", .funcs = &dragondos_funcs };
+
+static struct part *dragondos_allocate(void) {
+	struct dragondos *d = part_new(sizeof(*d));
+	struct cart *c = &d->cart;
+	struct part *p = &c->part;
+
+	*d = (struct dragondos){0};
+
+	cart_rom_init(c);
+
+	c->detach = dragondos_detach;
+	c->read = dragondos_read;
+	c->write = dragondos_write;
+	c->reset = dragondos_reset;
+	c->has_interface = dragondos_has_interface;
+	c->attach_interface = dragondos_attach_interface;
+
+	return p;
+}
+
+static void dragondos_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct dragondos *d = (struct dragondos *)p;
+	struct cart *c = &d->cart;
+
+	c->config = cc;
+
+	if (cc->becker_port) {
+		part_add_component(p, part_create("becker", NULL), "becker");
+	}
+	part_add_component(p, part_create("WD2797", NULL), "FDC");
+}
 
 static _Bool dragondos_finish(struct part *p) {
 	struct dragondos *d = (struct dragondos *)p;
@@ -111,48 +162,47 @@ static _Bool dragondos_finish(struct part *p) {
 	return 1;
 }
 
-static struct dragondos *dragondos_create(void) {
-	struct dragondos *d = part_new(sizeof(*d));
-	*d = (struct dragondos){0};
-	struct cart *c = &d->cart;
-	part_init(&c->part, "dragondos");
-	c->part.free = dragondos_free;
-	c->part.serialise = dragondos_serialise;
-	c->part.finish = dragondos_finish;
-	c->part.is_a = cart_is_a;
-
-	cart_rom_init(c);
-
-	c->detach = dragondos_detach;
-	c->read = dragondos_read;
-	c->write = dragondos_write;
-	c->reset = dragondos_reset;
-	c->has_interface = dragondos_has_interface;
-	c->attach_interface = dragondos_attach_interface;
-
-	return d;
+static void dragondos_free(struct part *p) {
+	cart_rom_free(p);
 }
 
-static struct cart *dragondos_new(struct cart_config *cc) {
-	assert(cc != NULL);
-
-	struct dragondos *d = dragondos_create();
-	struct cart *c = &d->cart;
-	struct part *p = &c->part;
-	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
+static struct part *dragondos_deserialise(struct ser_handle *sh) {
+	struct part *p = dragondos_allocate();
+	struct dragondos *d = (struct dragondos *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, d))) {
+		switch (tag) {
+		case DRAGONDOS_SER_CART:
+			cart_deserialise(&d->cart, sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
 	}
-	part_add_component(p, part_create("WD2797", NULL), "FDC");
-
-	if (!dragondos_finish(p)) {
+	if (ser_error(sh)) {
 		part_free(p);
 		return NULL;
 	}
-
-	return c;
+	return p;
 }
+
+static void dragondos_serialise(struct part *p, struct ser_handle *sh) {
+	struct dragondos *d = (struct dragondos *)p;
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, tag, d)) > 0; tag++) {
+		switch (tag) {
+		case DRAGONDOS_SER_CART:
+			cart_serialise(&d->cart, sh, tag);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragondos_reset(struct cart *c) {
 	struct dragondos *d = (struct dragondos *)c;
@@ -171,45 +221,6 @@ static void dragondos_detach(struct cart *c) {
 	if (d->becker)
 		becker_reset(d->becker);
 	cart_rom_detach(c);
-}
-
-static void dragondos_free(struct part *p) {
-	cart_rom_free(p);
-}
-
-static void dragondos_serialise(struct part *p, struct ser_handle *sh) {
-	struct dragondos *d = (struct dragondos *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, tag, d)) > 0; tag++) {
-		switch (tag) {
-		case DRAGONDOS_SER_CART:
-			cart_serialise(&d->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
-}
-
-struct part *dragondos_deserialise(struct ser_handle *sh) {
-	struct dragondos *d = dragondos_create();
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, d))) {
-		switch (tag) {
-		case DRAGONDOS_SER_CART:
-			cart_deserialise(&d->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)d);
-		return NULL;
-	}
-	return (struct part *)d;
 }
 
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
