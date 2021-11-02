@@ -86,7 +86,6 @@ static struct cart_config *rom_cart_config = NULL;
 extern struct cart_module cart_orch90_module;
 extern struct cart_module cart_mpi_module;
 extern struct cart_module cart_mpi_race_module;
-extern struct cart_module cart_ide_module;
 extern struct cart_module cart_nx32_module;
 extern struct cart_module cart_mooh_module;
 
@@ -305,7 +304,6 @@ void cart_init(void) {
 	struct slist *l = NULL;
 	l = slist_prepend(l, &cart_mooh_module);
 	l = slist_prepend(l, &cart_nx32_module);
-	l = slist_prepend(l, &cart_ide_module);
 	l = slist_prepend(l, &cart_mpi_race_module);
 	l = slist_prepend(l, &cart_mpi_module);
 	l = slist_prepend(l, &cart_orch90_module);
