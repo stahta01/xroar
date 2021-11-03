@@ -32,6 +32,7 @@
 #include "xalloc.h"
 
 #include "logging.h"
+#include "part.h"
 #include "xconfig.h"
 
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
@@ -58,6 +59,23 @@ static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_va
 		exit(EXIT_SUCCESS);
 	}
 	return undef_value;
+}
+
+static void print_part_name_description(const struct partdb_entry *pe, void *idata) {
+	(void)idata;
+	printf("\t%-10s %s\n", pe->name, pe->description ? pe->description : pe->name);
+}
+
+static const char *lookup_part(const char *name) {
+	if (strcmp(name, "help") == 0) {
+		partdb_foreach_is_a((partdb_iter_func)print_part_name_description, NULL, "cart");
+		exit(EXIT_SUCCESS);
+	}
+	const struct partdb_entry *pe = partdb_find_entry(name);
+	if (pe && partdb_ent_is_a(pe, name)) {
+		return pe->name;
+	}
+	return NULL;
 }
 
 static int unset_option(struct xconfig_option const *option);
@@ -135,6 +153,16 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 				option->dest.func_int(val);
 			else
 				*(int *)option->dest.object = val;
+			}
+			break;
+		case XCONFIG_PART: {
+			const char *pname = lookup_part(arg);
+			if (*(char **)option->dest.object)
+				free(*(char **)option->dest.object);
+			*(char **)option->dest.object = NULL;
+			if (pname) {
+				*(char **)option->dest.object = xstrdup(pname);
+			}
 			}
 			break;
 		case XCONFIG_ALIAS:
