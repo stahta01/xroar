@@ -33,16 +33,8 @@
 #include "serialise.h"
 #include "spi65.h"
 
-/* number of 32KB banks in memory cartridge: 1, 4 or 16 */
+// number of 32KB banks in memory cartridge: 1, 4 or 16
 #define EXTBANKS 16
-
-static struct cart *nx32_new(struct cart_config *);
-
-struct cart_module cart_nx32_module = {
-	.name = "nx32",
-	.description = "NX32 memory cartridge",
-	.new = nx32_new,
-};
 
 struct nx32 {
 	struct cart cart;
@@ -67,12 +59,77 @@ static const struct ser_struct ser_struct_nx32[] = {
 #define NX32_SER_CART    (1)
 #define NX32_SER_EXTMEM  (2)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void nx32_reset(struct cart *c);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// DragonDOS part creation
+
+static struct part *nx32_allocate(void);
+static void nx32_initialise(struct part *p, void *options);
+static _Bool nx32_finish(struct part *p);
 static void nx32_free(struct part *p);
+
+static struct part *nx32_deserialise(struct ser_handle *sh);
 static void nx32_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs nx32_funcs = {
+	.allocate = nx32_allocate,
+	.initialise = nx32_initialise,
+	.finish = nx32_finish,
+	.free = nx32_free,
+
+	.deserialise = nx32_deserialise,
+	.serialise = nx32_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry nx32_part = { .name = "nx32", .description = "NX32 memory cartridge", .funcs = &nx32_funcs };
+
+static struct part *nx32_allocate(void) {
+	struct nx32 *n = part_new(sizeof(*n));
+	struct cart *c = &n->cart;
+	struct part *p = &c->part;
+
+	*n = (struct nx32){0};
+
+	cart_rom_init(c);
+
+	c->read = nx32_read;
+	c->write = nx32_write;
+	c->reset = nx32_reset;
+	c->detach = nx32_detach;
+
+	return p;
+}
+
+static void nx32_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct nx32 *n = (struct nx32 *)p;
+	struct cart *c = &n->cart;
+
+	c->config = cc;
+
+	if (cc->becker_port) {
+		part_add_component(p, part_create("becker", NULL), "becker");
+	}
+
+	// 65SPI/B for interfacing to SD card
+	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
+	part_add_component(&c->part, (struct part *)spi65, "SPI65");
+
+	// Attach an SD card (SPI mode) to 65SPI/B
+	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", "sdcard.img");
+	spi65_add_device(spi65, sdcard, 0);
+}
 
 static _Bool nx32_finish(struct part *p) {
 	struct nx32 *n = (struct nx32 *)p;
@@ -91,74 +148,32 @@ static _Bool nx32_finish(struct part *p) {
 	return 1;
 }
 
-static struct nx32 *nx32_create(void) {
-	struct nx32 *n = part_new(sizeof(*n));
-	*n = (struct nx32){0};
-	struct cart *c = &n->cart;
-	part_init(&c->part, "nx32");
-	c->part.free = nx32_free;
-	c->part.serialise = nx32_serialise;
-	c->part.finish = nx32_finish;
-	c->part.is_a = cart_is_a;
-
-	cart_rom_init(c);
-
-	c->read = nx32_read;
-	c->write = nx32_write;
-	c->reset = nx32_reset;
-	c->detach = nx32_detach;
-
-	return n;
-}
-
-struct cart *nx32_new(struct cart_config *cc) {
-	assert(cc != NULL);
-
-	struct nx32 *n = nx32_create();
-	struct cart *c = &n->cart;
-	struct part *p = &c->part;
-	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
-
-	// 65SPI/B for interfacing to SD card
-	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
-	part_add_component(&c->part, (struct part *)spi65, "SPI65");
-
-	// Attach an SD card (SPI mode) to 65SPI/B
-	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", "sdcard.img");
-	spi65_add_device(spi65, sdcard, 0);
-
-	if (!nx32_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return c;
-}
-
-static void nx32_reset(struct cart *c) {
-	struct nx32 *n = (struct nx32 *)c;
-	cart_rom_reset(c);
-	n->extmem_map = 0;
-	n->extmem_ty = 0;
-	n->extmem_bank = 0;
-	if (n->becker)
-		becker_reset(n->becker);
-	spi65_reset(n->spi65);
-}
-
-static void nx32_detach(struct cart *c) {
-	struct nx32 *n = (struct nx32 *)c;
-	if (n->becker)
-		becker_reset(n->becker);
-	cart_rom_detach(c);
-}
-
 static void nx32_free(struct part *p) {
 	cart_rom_free(p);
+}
+
+static struct part *nx32_deserialise(struct ser_handle *sh) {
+	struct part *p = nx32_allocate();
+	struct nx32 *n = (struct nx32 *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_nx32, N_SER_STRUCT_NX32, n))) {
+		switch (tag) {
+		case NX32_SER_CART:
+			cart_deserialise(&n->cart, sh);
+			break;
+		case NX32_SER_EXTMEM:
+			ser_read(sh, n->extmem, sizeof(n->extmem));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	if (ser_error(sh)) {
+		part_free((struct part *)n);
+		return NULL;
+	}
+	return (struct part *)n;
 }
 
 static void nx32_serialise(struct part *p, struct ser_handle *sh) {
@@ -179,27 +194,24 @@ static void nx32_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-struct part *nx32_deserialise(struct ser_handle *sh) {
-	struct nx32 *n = nx32_create();
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_nx32, N_SER_STRUCT_NX32, n))) {
-		switch (tag) {
-		case NX32_SER_CART:
-			cart_deserialise(&n->cart, sh);
-			break;
-		case NX32_SER_EXTMEM:
-			ser_read(sh, n->extmem, sizeof(n->extmem));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)n);
-		return NULL;
-	}
-	return (struct part *)n;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void nx32_reset(struct cart *c) {
+	struct nx32 *n = (struct nx32 *)c;
+	cart_rom_reset(c);
+	n->extmem_map = 0;
+	n->extmem_ty = 0;
+	n->extmem_bank = 0;
+	if (n->becker)
+		becker_reset(n->becker);
+	spi65_reset(n->spi65);
+}
+
+static void nx32_detach(struct cart *c) {
+	struct nx32 *n = (struct nx32 *)c;
+	if (n->becker)
+		becker_reset(n->becker);
+	cart_rom_detach(c);
 }
 
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

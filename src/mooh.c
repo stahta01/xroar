@@ -58,7 +58,7 @@ static const struct ser_struct ser_struct_mooh[] = {
 	SER_STRUCT_ELEM(struct mooh, crm_enable, ser_type_bool), // 4
 	SER_STRUCT_ELEM(struct mooh, taskreg, ser_type_unhandled), // 5
 	SER_STRUCT_ELEM(struct mooh, task, ser_type_uint8), // 6
-	SER_STRUCT_ELEM(struct mooh, rom_conf, ser_type_uint8), // 6
+	SER_STRUCT_ELEM(struct mooh, rom_conf, ser_type_uint8), // 7
 };
 
 #define N_SER_STRUCT_MOOH ARRAY_N_ELEMENTS(ser_struct_mooh)
@@ -67,21 +67,77 @@ static const struct ser_struct ser_struct_mooh[] = {
 #define MOOH_SER_EXTMEM  (2)
 #define MOOH_SER_TASKREG (5)
 
-static struct cart *mooh_new(struct cart_config *);
-
-struct cart_module cart_mooh_module = {
-	.name = "mooh",
-	.description = "MOOH memory cartridge",
-	.new = mooh_new,
-};
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mooh_reset(struct cart *c);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-// static void mooh_attach(struct cart *c);
 static void mooh_detach(struct cart *c);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// DragonDOS part creation
+
+static struct part *mooh_allocate(void);
+static void mooh_initialise(struct part *p, void *options);
+static _Bool mooh_finish(struct part *p);
 static void mooh_free(struct part *p);
+
+static struct part *mooh_deserialise(struct ser_handle *sh);
 static void mooh_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs mooh_funcs = {
+	.allocate = mooh_allocate,
+	.initialise = mooh_initialise,
+	.finish = mooh_finish,
+	.free = mooh_free,
+
+	.deserialise = mooh_deserialise,
+	.serialise = mooh_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry mooh_part = { .name = "mooh", .description = "MOOH memory cartridge", .funcs = &mooh_funcs };
+
+static struct part *mooh_allocate(void) {
+	struct mooh *n = part_new(sizeof(*n));
+	struct cart *c = &n->cart;
+	struct part *p = &c->part;
+
+	*n = (struct mooh){0};
+
+	cart_rom_init(c);
+
+	c->read = mooh_read;
+	c->write = mooh_write;
+	c->reset = mooh_reset;
+	c->detach = mooh_detach;
+
+	return p;
+}
+
+static void mooh_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct mooh *n = (struct mooh *)p; 
+	struct cart *c = &n->cart;
+
+	c->config = cc;
+
+	if (cc->becker_port) {
+		part_add_component(p, part_create("becker", NULL), "becker");
+	}
+
+	// 65SPI/B for interfacing to SD card
+	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
+	part_add_component(&c->part, (struct part *)spi65, "SPI65");
+
+	// Attach an SD card (SPI mode) to 65SPI/B
+	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", "sdcard.img");
+	spi65_add_device(spi65, sdcard, 0);
+}
 
 static _Bool mooh_finish(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
@@ -100,88 +156,35 @@ static _Bool mooh_finish(struct part *p) {
 	return 1;
 }
 
-static struct mooh *mooh_create(void) {
-	struct mooh *n = part_new(sizeof(*n));
-	*n = (struct mooh){0};
-	struct cart *c = &n->cart;
-	part_init(&c->part, "mooh");
-	c->part.free = mooh_free;
-	c->part.serialise = mooh_serialise;
-	c->part.finish = mooh_finish;
-	c->part.is_a = cart_is_a;
-
-	cart_rom_init(c);
-
-	c->read = mooh_read;
-	c->write = mooh_write;
-	c->reset = mooh_reset;
-	c->detach = mooh_detach;
-
-	return n;
-}
-
-struct cart *mooh_new(struct cart_config *cc) {
-	assert(cc != NULL);
-
-	struct mooh *n = mooh_create();
-	struct cart *c = &n->cart;
-	struct part *p = &c->part;
-	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
-
-	// 65SPI/B for interfacing to SD card
-	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
-	part_add_component(&c->part, (struct part *)spi65, "SPI65");
-
-	// Attach an SD card (SPI mode) to 65SPI/B
-	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", "sdcard.img");
-	spi65_add_device(spi65, sdcard, 0);
-
-	if (!mooh_finish(p)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return c;
-}
-
-static void mooh_reset(struct cart *c) {
-	struct mooh *n = (struct mooh *)c;
-	int i;
-
-	cart_rom_reset(c);
-
-	n->mmu_enable = 0;
-	n->crm_enable = 0;
-	n->task = 0;
-	for (i = 0; i < 8; i++)
-		n->taskreg[i][0] = n->taskreg[i][1] = 0xFF & TASK_MASK;
-	cart_rom_reset(c);
-	n->rom_conf = 0;
-	if (n->becker)
-		becker_reset(n->becker);
-	n->crt9128_reg_addr = 0;
-
-	spi65_reset(n->spi65);
-}
-
-/* unused for now...
-static void mooh_attach(struct cart *c) {
-	mooh_reset(c);
-} */
-
-static void mooh_detach(struct cart *c) {
-	struct mooh *n = (struct mooh *)c;
-	if (n->becker)
-		becker_reset(n->becker);
-	cart_rom_detach(c);
-}
-
 static void mooh_free(struct part *p) {
 	cart_rom_free(p);
+}
+
+static struct part *mooh_deserialise(struct ser_handle *sh) {
+	struct part *p = mooh_allocate();
+	struct mooh *n = (struct mooh *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, n))) {
+		switch (tag) {
+		case MOOH_SER_CART:
+			cart_deserialise(&n->cart, sh);
+			break;
+		case MOOH_SER_EXTMEM:
+			ser_read(sh, n->extmem, sizeof(n->extmem));
+			break;
+		case MOOH_SER_TASKREG:
+			ser_read(sh, n->taskreg, sizeof(n->taskreg));
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
+	if (ser_error(sh)) {
+		part_free((struct part *)n);
+		return NULL;
+	}
+	return (struct part *)n;
 }
 
 static void mooh_serialise(struct part *p, struct ser_handle *sh) {
@@ -205,30 +208,33 @@ static void mooh_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-struct part *mooh_deserialise(struct ser_handle *sh) {
-	struct mooh *n = mooh_create();
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, n))) {
-		switch (tag) {
-		case MOOH_SER_CART:
-			cart_deserialise(&n->cart, sh);
-			break;
-		case MOOH_SER_EXTMEM:
-			ser_read(sh, n->extmem, sizeof(n->extmem));
-			break;
-		case MOOH_SER_TASKREG:
-			ser_read(sh, n->taskreg, sizeof(n->taskreg));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)n);
-		return NULL;
-	}
-	return (struct part *)n;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void mooh_reset(struct cart *c) {
+	struct mooh *n = (struct mooh *)c;
+	int i;
+
+	cart_rom_reset(c);
+
+	n->mmu_enable = 0;
+	n->crm_enable = 0;
+	n->task = 0;
+	for (i = 0; i < 8; i++)
+		n->taskreg[i][0] = n->taskreg[i][1] = 0xFF & TASK_MASK;
+	cart_rom_reset(c);
+	n->rom_conf = 0;
+	if (n->becker)
+		becker_reset(n->becker);
+	n->crt9128_reg_addr = 0;
+
+	spi65_reset(n->spi65);
+}
+
+static void mooh_detach(struct cart *c) {
+	struct mooh *n = (struct mooh *)c;
+	if (n->becker)
+		becker_reset(n->becker);
+	cart_rom_detach(c);
 }
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
