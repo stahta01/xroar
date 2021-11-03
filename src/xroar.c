@@ -201,7 +201,6 @@ static struct ui_cfg xroar_ui_cfg = {
 /* Helper functions used by configuration */
 static void set_machine(const char *name);
 static void set_cart(const char *name);
-static void set_cart_type(const char *name);
 static void set_gain(double gain);
 static void set_kbd_bind(const char *spec);
 static void set_joystick(const char *name);
@@ -1978,17 +1977,6 @@ static void set_cart(const char *name) {
 	}
 }
 
-static void set_cart_type(const char *name) {
-	if (name && 0 == strcmp(name, "help")) {
-		cart_type_help(private_cfg.cart_arch);
-		exit(EXIT_SUCCESS);
-	}
-	if (private_cfg.cart_type) {
-		free(private_cfg.cart_type);
-	}
-	private_cfg.cart_type = xstrdup(name);
-}
-
 static void set_gain(double gain) {
 	private_cfg.gain = gain;
 	private_cfg.volume = -1;
@@ -2180,7 +2168,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
 	{ XC_SET_ENUM("cart-arch", &private_cfg.cart_arch, cart_arch_list) },
-	{ XC_CALL_STRING("cart-type", &set_cart_type) },
+	{ XC_SET_PART("cart-type", &private_cfg.cart_type, "cart") },
 	{ XC_SET_STRING_F("cart-rom", &private_cfg.cart_rom) },
 	{ XC_SET_STRING_F("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },

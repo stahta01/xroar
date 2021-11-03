@@ -118,8 +118,6 @@ void cart_config_print_all(FILE *f, _Bool all);
 _Bool cart_config_remove(const char *name);
 void cart_config_remove_all(void);
 
-void cart_type_help(int arch);
-
 struct cart *cart_new(struct cart_config *cc);
 struct cart *cart_new_named(const char *cc_name);
 void cart_free(struct cart *c);

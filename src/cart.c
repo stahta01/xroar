@@ -293,21 +293,6 @@ void cart_config_remove_all(void) {
 	rom_cart_config = NULL;
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static void cart_type_help_func(const struct partdb_entry *pe, void *idata) {
-	(void)idata;
-	printf("\t%-10s %s\n", pe->name, pe->description ? pe->description : pe->name);
-}
-
-void cart_type_help(int arch) {
-	if (arch == CART_ARCH_MC10) {
-		partdb_foreach_is_a((partdb_iter_func)cart_type_help_func, NULL, "mc10-cart");
-	} else {
-		partdb_foreach_is_a((partdb_iter_func)cart_type_help_func, NULL, "cart");
-	}
-}
-
 /* ---------------------------------------------------------------------- */
 
 struct cart *cart_new(struct cart_config *cc) {

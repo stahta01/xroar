@@ -139,7 +139,7 @@ static const struct partdb_entry_funcs mpi_funcs = {
 };
 
 const struct partdb_entry mpi_part = { .name = "mpi", .description = "Multi-Pak Interface", .funcs = &mpi_funcs };
-const struct partdb_entry race_part = { .name = "race-cage", .description = "RACE Computer Expansion Cage", .funcs = &mpi_funcs };
+const struct partdb_entry race_part = { .name = "mpi-race", .description = "RACE Computer Expansion Cage", .funcs = &mpi_funcs };
 
 static struct part *mpi_allocate(void) {
 	struct mpi *mpi = part_new(sizeof(*mpi));
@@ -177,7 +177,7 @@ static void mpi_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	mpi->is_race = options && (strcmp((char *)options, "race-cage") == 0);
+	mpi->is_race = options && (strcmp((char *)options, "mpi-race") == 0);
 	mpi->switch_enable = mpi->is_race ? 0 : 1;
 
 	char id[6];
