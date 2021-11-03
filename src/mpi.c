@@ -53,21 +53,6 @@
 #define MPI_TYPE_TANDY (0)
 #define MPI_TYPE_RACE  (1)
 
-static struct cart *mpi_new(struct cart_config *);
-static struct cart *race_new(struct cart_config *);
-
-struct cart_module cart_mpi_module = {
-	.name = "mpi",
-	.description = "Multi-Pak Interface",
-	.new = mpi_new,
-};
-
-struct cart_module cart_mpi_race_module = {
-	.name = "race-cage",
-	.description = "RACE Computer Expansion Cage",
-	.new = race_new,
-};
-
 struct mpi;
 
 struct mpi_slot {
@@ -101,6 +86,8 @@ static const struct ser_struct ser_struct_mpi[] = {
 
 #define MPI_SER_CART (1)
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* Protect against chained MPI initialisation */
 
 static _Bool mpi_active = 0;
@@ -127,6 +114,87 @@ static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf)
 
 static void select_slot(struct cart *c, unsigned D);
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// MPI part creation
+
+static struct part *mpi_allocate(void);
+static void mpi_initialise(struct part *p, void *options);
+static _Bool mpi_finish(struct part *p);
+static void mpi_free(struct part *p);
+
+static struct part *mpi_deserialise(struct ser_handle *sh);
+static void mpi_serialise(struct part *p, struct ser_handle *sh);
+
+static const struct partdb_entry_funcs mpi_funcs = {
+	.allocate = mpi_allocate,
+	.initialise = mpi_initialise,
+	.finish = mpi_finish,
+	.free = mpi_free,
+
+	.deserialise = mpi_deserialise,
+	.serialise = mpi_serialise,
+
+	.is_a = cart_is_a,
+};
+
+const struct partdb_entry mpi_part = { .name = "mpi", .description = "Multi-Pak Interface", .funcs = &mpi_funcs };
+const struct partdb_entry race_part = { .name = "race-cage", .description = "RACE Computer Expansion Cage", .funcs = &mpi_funcs };
+
+static struct part *mpi_allocate(void) {
+	struct mpi *mpi = part_new(sizeof(*mpi));
+	struct cart *c = &mpi->cart;
+	struct part *p = &c->part;
+
+	*mpi = (struct mpi){0};
+
+	c->attach = mpi_attach;
+	c->detach = mpi_detach;
+	c->read = mpi_read;
+	c->write = mpi_write;
+	c->reset = mpi_reset;
+	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
+	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
+	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
+	c->has_interface = mpi_has_interface;
+	c->attach_interface = mpi_attach_interface;
+
+	for (int i = 0; i < 4; i++) {
+		mpi->slot[i].mpi = mpi;
+		mpi->slot[i].id = i;
+		mpi->slot[i].cart = NULL;
+	}
+
+	return p;
+}
+
+static void mpi_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	struct mpi *mpi = (struct mpi *)p;
+	struct cart *c = &mpi->cart;
+
+	c->config = cc;
+
+	mpi->is_race = options && (strcmp((char *)options, "race-cage") == 0);
+	mpi->switch_enable = mpi->is_race ? 0 : 1;
+
+	char id[6];
+	for (int i = 0; i < 4; i++) {
+		snprintf(id, sizeof(id), "slot%d", i);
+		if (slot_cart_name[i]) {
+			part_add_component(&c->part, (struct part *)cart_new_named(slot_cart_name[i]), id);
+		}
+	}
+
+	if (!mpi->is_race) {
+		select_slot(c, (initial_slot << 4) | initial_slot);
+	} else {
+		select_slot(c, 0);
+	}
+}
+
 static _Bool mpi_finish(struct part *p) {
 	struct mpi *mpi = (struct mpi *)p;
 
@@ -148,85 +216,30 @@ static _Bool mpi_finish(struct part *p) {
 	return 1;
 }
 
-static struct mpi *mpi_create(unsigned type) {
-	// XXX this isn't going to work well with deserialisation
-	if (mpi_active) {
-		LOG_WARN("Chaining Multi-Pak Interfaces not supported.\n");
-		return NULL;
-	}
-	mpi_active = 1;
-
-	_Bool is_race = (type == MPI_TYPE_RACE);
-
-	struct mpi *mpi = part_new(sizeof(*mpi));
-	*mpi = (struct mpi){0};
-	struct cart *c = &mpi->cart;
-	part_init(&c->part, is_race ? "race-cage" : "mpi");
-	c->part.free = mpi_free;
-	c->part.serialise = mpi_serialise;
-	c->part.finish = mpi_finish;
-
-	c->attach = mpi_attach;
-	c->detach = mpi_detach;
-	c->read = mpi_read;
-	c->write = mpi_write;
-	c->reset = mpi_reset;
-	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
-	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
-	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
-	c->has_interface = mpi_has_interface;
-	c->attach_interface = mpi_attach_interface;
-
-	mpi->is_race = is_race;
-	mpi->switch_enable = is_race ? 0 : 1;
-
-	for (int i = 0; i < 4; i++) {
-		mpi->slot[i].mpi = mpi;
-		mpi->slot[i].id = i;
-		mpi->slot[i].cart = NULL;
-	}
-
-	if (!mpi->is_race) {
-		select_slot(c, (initial_slot << 4) | initial_slot);
-	} else {
-		select_slot(c, 0);
-	}
-
-	return mpi;
+static void mpi_free(struct part *p) {
+	(void)p;
+	mpi_active = 0;
 }
 
-static struct mpi *mpi_new_typed(struct cart_config *cc, unsigned type) {
-	assert(cc != NULL);
-
-	struct mpi *mpi = mpi_create(type);
-	struct cart *c = &mpi->cart;
-	struct part *p = &c->part;
-	c->config = cc;
-
-	char id[6];
-	for (int i = 0; i < 4; i++) {
-		snprintf(id, sizeof(id), "slot%d", i);
-		if (slot_cart_name[i]) {
-			part_add_component(&c->part, (struct part *)cart_new_named(slot_cart_name[i]), id);
+static struct part *mpi_deserialise(struct ser_handle *sh) {
+	struct part *p = mpi_allocate();
+	struct mpi *mpi = (struct mpi *)p;
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mpi, N_SER_STRUCT_MPI, mpi))) {
+		switch (tag) {
+		case MPI_SER_CART:
+			cart_deserialise(&mpi->cart, sh);
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
 		}
 	}
-
-	if (!mpi_finish(p)) {
+	if (ser_error(sh)) {
 		part_free(p);
 		return NULL;
 	}
-
-	return mpi;
-}
-
-static struct cart *mpi_new(struct cart_config *cc) {
-	struct mpi *mpi = mpi_new_typed(cc, MPI_TYPE_TANDY);
-	return &mpi->cart;
-}
-
-static struct cart *race_new(struct cart_config *cc) {
-	struct mpi *mpi = mpi_new_typed(cc, MPI_TYPE_RACE);
-	return &mpi->cart;
+	return p;
 }
 
 static void mpi_serialise(struct part *p, struct ser_handle *sh) {
@@ -244,33 +257,7 @@ static void mpi_serialise(struct part *p, struct ser_handle *sh) {
 	ser_write_close_tag(sh);
 }
 
-static struct part *mpi_deserialise_typed(unsigned type, struct ser_handle *sh) {
-	struct mpi *mpi = mpi_create(type);
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mpi, N_SER_STRUCT_MPI, mpi))) {
-		switch (tag) {
-		case MPI_SER_CART:
-			cart_deserialise(&mpi->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free((struct part *)mpi);
-		return NULL;
-	}
-	return (struct part *)mpi;
-}
-
-struct part *mpi_deserialise(struct ser_handle *sh) {
-	return mpi_deserialise_typed(MPI_TYPE_TANDY, sh);
-}
-
-struct part *race_deserialise(struct ser_handle *sh) {
-	return mpi_deserialise_typed(MPI_TYPE_RACE, sh);
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mpi_reset(struct cart *c) {
 	struct mpi *mpi = (struct mpi *)c;
@@ -302,11 +289,6 @@ static void mpi_detach(struct cart *c) {
 			mpi->slot[i].cart->detach(mpi->slot[i].cart);
 		}
 	}
-}
-
-static void mpi_free(struct part *p) {
-	(void)p;
-	mpi_active = 0;
 }
 
 static _Bool mpi_has_interface(struct cart *c, const char *ifname) {
@@ -484,7 +466,9 @@ static void mpi_set_halt(void *sptr, _Bool value) {
 	DELEGATE_CALL(mpi->cart.signal_halt, mpi->halt_state);
 }
 
-/* Configure */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// MPI global configuration
 
 void mpi_set_initial(int slot) {
 	if (slot < 0 || slot > 3) {
