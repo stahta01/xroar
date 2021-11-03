@@ -55,6 +55,7 @@ extern const struct partdb_entry dragondos_part;
 extern const struct partdb_entry gmc_part;
 extern const struct partdb_entry idecart_part;
 extern const struct partdb_entry mpi_part;
+extern const struct partdb_entry orch90_part;
 extern const struct partdb_entry race_part;
 extern const struct partdb_entry rsdos_part;
 
@@ -91,6 +92,7 @@ const struct partdb_entry *partdb[] = {
 	&gmc_part,
 	&idecart_part,
 	&mpi_part,
+	&orch90_part,
 	&race_part,
 	&rsdos_part,
 
@@ -122,12 +124,10 @@ struct partdb_entry_old {
 
 struct part *nx32_deserialise(struct ser_handle *sh);
 struct part *mooh_deserialise(struct ser_handle *sh);
-struct part *orch90_deserialise(struct ser_handle *sh);
 
 struct partdb_entry_old partdb_old[] = {
 	{ .name = "nx32", .deserialise = nx32_deserialise },
 	{ .name = "mooh", .deserialise = mooh_deserialise },
-	{ .name = "orchestra-90", .deserialise = orch90_deserialise },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
