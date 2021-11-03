@@ -96,12 +96,6 @@ struct cart {
 	void (*attach_interface)(struct cart *c, const char *ifname, void *intf);
 };
 
-struct cart_module {
-	const char *name;
-	const char *description;
-	struct cart *(* const new)(struct cart_config *);
-};
-
 /** \brief Create a new cart config.
  */
 struct cart_config *cart_config_new(void);
@@ -116,15 +110,14 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh);
 
 struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
-_Bool cart_config_remove(const char *name);
 struct slist *cart_config_list(void);
 struct slist *cart_config_list_by_arch(int arch);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
 void cart_config_print_all(FILE *f, _Bool all);
+_Bool cart_config_remove(const char *name);
+void cart_config_remove_all(void);
 
-void cart_init(void);
-void cart_shutdown(void);
 void cart_type_help(int arch);
 
 struct cart *cart_new(struct cart_config *cc);

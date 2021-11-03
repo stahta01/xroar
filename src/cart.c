@@ -83,10 +83,6 @@ static struct cart_config *rom_cart_config = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct slist *cart_modules[NUM_CART_ARCH];
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void cart_rom_load(struct cart *c);
@@ -235,29 +231,6 @@ void cart_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void cart_config_free(struct cart_config *cc) {
-	if (cc->name)
-		free(cc->name);
-	if (cc->description)
-		free(cc->description);
-	if (cc->type)
-		free(cc->type);
-	if (cc->rom)
-		free(cc->rom);
-	if (cc->rom2)
-		free(cc->rom2);
-	free(cc);
-}
-
-_Bool cart_config_remove(const char *name) {
-	struct cart_config *cc = cart_config_by_name(name);
-	if (!cc)
-		return 0;
-	config_list = slist_remove(config_list, cc);
-	cart_config_free(cc);
-	return 1;
-}
-
 struct slist *cart_config_list(void) {
 	return config_list;
 }
@@ -291,21 +264,36 @@ void cart_config_print_all(FILE *f, _Bool all) {
 	}
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void cart_init(void) {
-	// reverse order
-	struct slist *l = NULL;
-	cart_modules[CART_ARCH_DRAGON] = l;
-
-	l = NULL;
-	cart_modules[CART_ARCH_MC10] = l;
+static void cart_config_free(struct cart_config *cc) {
+	if (cc->name)
+		free(cc->name);
+	if (cc->description)
+		free(cc->description);
+	if (cc->type)
+		free(cc->type);
+	if (cc->rom)
+		free(cc->rom);
+	if (cc->rom2)
+		free(cc->rom2);
+	free(cc);
 }
 
-void cart_shutdown(void) {
+_Bool cart_config_remove(const char *name) {
+	struct cart_config *cc = cart_config_by_name(name);
+	if (!cc)
+		return 0;
+	config_list = slist_remove(config_list, cc);
+	cart_config_free(cc);
+	return 1;
+}
+
+void cart_config_remove_all(void) {
 	slist_free_full(config_list, (slist_free_func)cart_config_free);
 	config_list = NULL;
+	rom_cart_config = NULL;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void cart_type_help_func(const struct partdb_entry *pe, void *idata) {
 	(void)idata;

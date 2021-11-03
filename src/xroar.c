@@ -602,7 +602,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 #endif
 
 	machine_init();
-	cart_init();
 
 	xroar_conf_path = getenv("XROAR_CONF_PATH");
 	if (!xroar_conf_path)
@@ -973,7 +972,7 @@ void xroar_shutdown(void) {
 		xroar_machine = NULL;
 	}
 	joystick_shutdown();
-	cart_shutdown();
+	cart_config_remove_all();
 	mpi_shutdown();
 	machine_shutdown();
 	xroar_machine_config = NULL;
