@@ -121,14 +121,6 @@ const struct partdb_entry *partdb[] = {
 	&spi_sdcard_part,
 };
 
-struct partdb_entry_old {
-	const char *name;
-	struct part *(* const deserialise)(struct ser_handle *sh);
-};
-
-struct partdb_entry_old partdb_old[] = {
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct part_component {
@@ -142,15 +134,6 @@ const struct partdb_entry *partdb_find_entry(const char *name) {
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(partdb); i++) {
 		if (strcmp(partdb[i]->name, name) == 0) {
 			return partdb[i];
-		}
-	}
-	return NULL;
-}
-
-static struct partdb_entry_old *partdb_find_entry_old(const char *name) {
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(partdb_old); i++) {
-		if (strcmp(partdb_old[i].name, name) == 0) {
-			return &partdb_old[i];
 		}
 	}
 	return NULL;
@@ -342,14 +325,9 @@ void part_serialise(struct part *p, struct ser_handle *sh) {
 	const struct partdb_entry *pe = partdb_find_entry(p->name);
 
 	if (!pe) {
-		// Check that we would be able to deserialise this part.  This is
-		// mostly to catch missed entries in the partb during development.
-		struct partdb_entry_old *ent = partdb_find_entry_old(p->name);
-		if (!ent) {
-			LOG_WARN("PART: can't serialise '%s'\n", p->name);
-			ser_set_error(sh, ser_error_format);
-			return;
-		}
+		LOG_WARN("PART: can't serialise '%s'\n", p->name);
+		ser_set_error(sh, ser_error_format);
+		return;
 	}
 
 	ser_write_open_string(sh, PART_SER_DATA, p->name);
@@ -373,29 +351,18 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				char *name = ser_read_string(sh);
 				if (name) {
 					pe = partdb_find_entry(name);
-					if (pe) {
-						// XXX this should become the only path
-						if (!pe) {
-							LOG_WARN("PART: can't deserialise '%s'\n", name);
-							ser_set_error(sh, ser_error_format);
-							return NULL;
-						}
-						p = pe->funcs->deserialise(sh);
-						p->name = name;
-						name = NULL;
-						p->free = pe->funcs->free;
-						p->is_a = pe->funcs->is_a;
-						p->serialise = pe->funcs->serialise;
-					} else {
-						struct partdb_entry_old *ent_old = partdb_find_entry_old(name);
-						free(name);
-						if (!ent_old) {
-							LOG_WARN("PART: can't deserialise '%s'\n", name);
-							ser_set_error(sh, ser_error_format);
-							return NULL;
-						}
-						p = ent_old->deserialise(sh);
+					// XXX this should become the only path
+					if (!pe) {
+						LOG_WARN("PART: can't deserialise '%s'\n", name);
+						ser_set_error(sh, ser_error_format);
+						return NULL;
 					}
+					p = pe->funcs->deserialise(sh);
+					p->name = name;
+					name = NULL;
+					p->free = pe->funcs->free;
+					p->is_a = pe->funcs->is_a;
+					p->serialise = pe->funcs->serialise;
 				}
 			}
 			break;
