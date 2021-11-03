@@ -60,6 +60,7 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 18
 	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
 };
+
 #define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
 
 #define MACHINE_SER_MACHINE_CONFIG (1)
@@ -67,7 +68,56 @@ static const struct ser_struct ser_struct_machine_config[] = {
 static const struct ser_struct ser_struct_machine[] = {
         SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
 };
+
 #define N_SER_STRUCT_MACHINE ARRAY_N_ELEMENTS(ser_struct_machine)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct xconfig_enum machine_arch_list[] = {
+	{ XC_ENUM_INT("dragon64", ARCH_DRAGON64, "Dragon 64") },
+	{ XC_ENUM_INT("dragon32", ARCH_DRAGON32, "Dragon 32") },
+	{ XC_ENUM_INT("coco", ARCH_COCO, "Tandy CoCo 1/2") },
+	{ XC_ENUM_INT("coco3", ARCH_COCO3, "Tandy CoCo 3") },
+	{ XC_ENUM_INT("mc10", ARCH_MC10, "Tandy MC-10") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum machine_keyboard_list[] = {
+	{ XC_ENUM_INT("dragon", dkbd_layout_dragon, "Dragon") },
+	{ XC_ENUM_INT("dragon200e", dkbd_layout_dragon200e, "Dragon 200-E") },
+	{ XC_ENUM_INT("coco", dkbd_layout_coco, "Tandy CoCo 1/2") },
+	{ XC_ENUM_INT("coco3", dkbd_layout_coco3, "Tandy CoCo 3") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum machine_cpu_list[] = {
+	{ XC_ENUM_INT("6809", CPU_MC6809, "Motorola 6809") },
+	{ XC_ENUM_INT("6309", CPU_HD6309, "Hitachi 6309 - UNVERIFIED") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum machine_tv_type_list[] = {
+	{ XC_ENUM_INT("pal", TV_PAL, "PAL (50Hz)") },
+	{ XC_ENUM_INT("ntsc", TV_NTSC, "NTSC (60Hz)") },
+	{ XC_ENUM_INT("pal-m", TV_PAL_M, "PAL-M (60Hz)") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum machine_tv_input_list[] = {
+	{ XC_ENUM_INT("cmp", TV_INPUT_CMP_PALETTE, "Composite (no cross-colour)") },
+	{ XC_ENUM_INT("cmp-br", TV_INPUT_CMP_KBRW, "Composite (blue-red)") },
+	{ XC_ENUM_INT("cmp-rb", TV_INPUT_CMP_KRBW, "Composite (red-blue)") },
+	{ XC_ENUM_INT("rgb", TV_INPUT_RGB, "RGB") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum machine_vdg_type_list[] = {
+	{ XC_ENUM_INT("6847", VDG_6847, "Original 6847") },
+	{ XC_ENUM_INT("6847t1", VDG_6847T1, "6847T1 with lowercase") },
+	{ XC_ENUM_INT("gime1986", VDG_GIME_1986, "1986 GIME") },
+	{ XC_ENUM_INT("gime1987", VDG_GIME_1987, "1987 GIME") },
+	{ XC_ENUM_END() }
+};
 
 static struct slist *config_list = NULL;
 static int next_id = 0;
@@ -193,55 +243,14 @@ _Bool machine_config_remove(const char *name) {
 	return 1;
 }
 
+void machine_config_remove_all(void) {
+	slist_free_full(config_list, (slist_free_func)machine_config_free);
+	config_list = NULL;
+}
+
 struct slist *machine_config_list(void) {
 	return config_list;
 }
-
-struct xconfig_enum machine_arch_list[] = {
-	{ XC_ENUM_INT("dragon64", ARCH_DRAGON64, "Dragon 64") },
-	{ XC_ENUM_INT("dragon32", ARCH_DRAGON32, "Dragon 32") },
-	{ XC_ENUM_INT("coco", ARCH_COCO, "Tandy CoCo 1/2") },
-	{ XC_ENUM_INT("coco3", ARCH_COCO3, "Tandy CoCo 3") },
-	{ XC_ENUM_INT("mc10", ARCH_MC10, "Tandy MC-10") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum machine_keyboard_list[] = {
-	{ XC_ENUM_INT("dragon", dkbd_layout_dragon, "Dragon") },
-	{ XC_ENUM_INT("dragon200e", dkbd_layout_dragon200e, "Dragon 200-E") },
-	{ XC_ENUM_INT("coco", dkbd_layout_coco, "Tandy CoCo 1/2") },
-	{ XC_ENUM_INT("coco3", dkbd_layout_coco3, "Tandy CoCo 3") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum machine_cpu_list[] = {
-	{ XC_ENUM_INT("6809", CPU_MC6809, "Motorola 6809") },
-	{ XC_ENUM_INT("6309", CPU_HD6309, "Hitachi 6309 - UNVERIFIED") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum machine_tv_type_list[] = {
-	{ XC_ENUM_INT("pal", TV_PAL, "PAL (50Hz)") },
-	{ XC_ENUM_INT("ntsc", TV_NTSC, "NTSC (60Hz)") },
-	{ XC_ENUM_INT("pal-m", TV_PAL_M, "PAL-M (60Hz)") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum machine_tv_input_list[] = {
-	{ XC_ENUM_INT("cmp", TV_INPUT_CMP_PALETTE, "Composite (no cross-colour)") },
-	{ XC_ENUM_INT("cmp-br", TV_INPUT_CMP_KBRW, "Composite (blue-red)") },
-	{ XC_ENUM_INT("cmp-rb", TV_INPUT_CMP_KRBW, "Composite (red-blue)") },
-	{ XC_ENUM_INT("rgb", TV_INPUT_RGB, "RGB") },
-	{ XC_ENUM_END() }
-};
-
-struct xconfig_enum machine_vdg_type_list[] = {
-	{ XC_ENUM_INT("6847", VDG_6847, "Original 6847") },
-	{ XC_ENUM_INT("6847t1", VDG_6847T1, "6847T1 with lowercase") },
-	{ XC_ENUM_INT("gime1986", VDG_GIME_1986, "1986 GIME") },
-	{ XC_ENUM_INT("gime1987", VDG_GIME_1987, "1987 GIME") },
-	{ XC_ENUM_END() }
-};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -301,14 +310,6 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void machine_init(void) {
-}
-
-void machine_shutdown(void) {
-	slist_free_full(config_list, (slist_free_func)machine_config_free);
-	config_list = NULL;
-}
 
 // Machine arch to part name.  Obviously we could be storing machine arch as a
 // string here, but do this mapping for now.

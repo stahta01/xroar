@@ -195,14 +195,13 @@ struct machine_config *machine_config_by_name(const char *name);
 struct machine_config *machine_config_by_arch(int arch);
 void machine_config_complete(struct machine_config *mc);
 _Bool machine_config_remove(const char *name);
+void machine_config_remove_all(void);
 struct slist *machine_config_list(void);
 /* Find a working machine by searching available ROMs: */
 struct machine_config *machine_config_first_working(void);
 /* Complete a config replacing ANY_AUTO entries: */
 void machine_config_complete(struct machine_config *mc);
 void machine_config_print_all(FILE *f, _Bool all);
-
-void machine_config_shutdown(void);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -252,9 +251,6 @@ struct machine {
 	/* simulate an RTS without otherwise affecting machine state */
 	void (*op_rts)(struct machine *m);
 };
-
-void machine_init(void);
-void machine_shutdown(void);
 
 struct machine *machine_new(struct machine_config *mc);
 _Bool machine_is_a(struct part *p, const char *name);

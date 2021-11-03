@@ -601,8 +601,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	windows32_init(alloc_console);
 #endif
 
-	machine_init();
-
 	xroar_conf_path = getenv("XROAR_CONF_PATH");
 	if (!xroar_conf_path)
 		xroar_conf_path = CONFPATH;
@@ -972,9 +970,9 @@ void xroar_shutdown(void) {
 		xroar_machine = NULL;
 	}
 	joystick_shutdown();
-	cart_config_remove_all();
 	mpi_shutdown();
-	machine_shutdown();
+	cart_config_remove_all();
+	machine_config_remove_all();
 	xroar_machine_config = NULL;
 	if (xroar_ao_interface) {
 		DELEGATE_SAFE_CALL(xroar_ao_interface->free);
