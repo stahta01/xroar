@@ -42,6 +42,7 @@
 #include "mc6847/mc6847.h"
 #include "ntsc.h"
 #include "part.h"
+#include "printer.h"
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
@@ -81,6 +82,7 @@ struct machine_mc10 {
 
 	struct tape_interface *tape_interface;
 	struct keyboard_interface *keyboard_interface;
+	struct printer_interface *printer_interface;
 
 	struct ntsc_burst *ntsc_burst[2];
 
@@ -346,6 +348,9 @@ static _Bool mc10_finish(struct part *p) {
 	mp->keyboard_interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
 	keyboard_set_keymap(mp->keyboard_interface, mc->keymap);
 
+	// Printer interface
+	mp->printer_interface = printer_interface_new(m);
+
 #ifdef WANT_GDB_TARGET
 	// GDB
 	/* if (xroar_cfg.gdb) {
@@ -371,9 +376,9 @@ static void mc10_free(struct part *p) {
 	if (mp->keyboard_interface) {
 		keyboard_interface_free(mp->keyboard_interface);
 	}
-	/* if (mp->printer_interface) {
+	if (mp->printer_interface) {
 		printer_interface_free(mp->printer_interface);
-	} */
+	}
 	if (mp->bp_session) {
 		bp_session_free(mp->bp_session);
 	}
@@ -456,7 +461,7 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 	mc6847_reset(mp->VDG0);
 	tape_reset(mp->tape_interface);
 	tape_set_motor(mp->tape_interface, 1);  // no motor control!
-	// printer_reset(mp->printer_interface);
+	printer_reset(mp->printer_interface);
 	mp->video_attr = 0;
 }
 
@@ -635,8 +640,8 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	if (0 == strcmp(ifname, "keyboard")) {
 		return mp->keyboard_interface;
-	//} else if (0 == strcmp(ifname, "printer")) {
-		//return mp->printer_interface;
+	} else if (0 == strcmp(ifname, "printer")) {
+		return mp->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return mc10_update_tape_input;
 	}
