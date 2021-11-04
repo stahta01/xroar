@@ -30,11 +30,14 @@
 #include "xalloc.h"
 
 #include "breakpoint.h"
+#include "debug_cpu.h"
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
+#include "mc6801.h"
 #include "mc6809.h"
 #include "machine.h"
+#include "part.h"
 #include "printer.h"
 #include "xroar.h"
 
@@ -42,7 +45,9 @@ struct printer_interface_private {
 	struct printer_interface public;
 
 	struct machine *machine;
-	struct MC6809 *cpu;
+	struct debug_cpu *debug_cpu;
+	_Bool is_6809;
+	_Bool is_6801;
 
 	FILE *stream;
 	char *stream_dest;
@@ -66,7 +71,9 @@ struct printer_interface *printer_interface_new(struct machine *m) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
 	pip->machine = m;
-	pip->cpu = m->get_component(m, "CPU0");
+	pip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
+	pip->is_6809 = part_is_a(&pip->debug_cpu->part, "MC6809");
+	pip->is_6801 = part_is_a(&pip->debug_cpu->part, "MC6801");
 	pip->stream = NULL;
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
@@ -166,7 +173,11 @@ static void coco_print_byte(void *sptr) {
 	if (!pip->stream_dest) return;
 	if (!pip->stream) open_stream(pip);
 	/* Print byte */
-	byte = MC6809_REG_A(pip->cpu);
+	if (pip->is_6809) {
+		byte = MC6809_REG_A(((struct MC6809 *)pip->debug_cpu));
+	} else {
+		byte = MC6801_REG_A(((struct MC6801 *)pip->debug_cpu));
+	}
 	if (pip->stream) {
 		fputc(byte, pip->stream);
 	}
