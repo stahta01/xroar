@@ -103,7 +103,7 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-@node Getting started, Supported hardware, Top, Top
+@node Getting started, Configuration, Top, Top
 @chapter Getting started
 
 @menu
@@ -286,7 +286,7 @@ these may help narrow down a problem.  You can increase their verbosity with
 various command-line options.  See @ref{Debugging} for more information.
 
 Windows generally does not show these messages by default. but you can
-"allocate a console" by running XRoar from the command line and including
+allocate a console by running XRoar from the command line and including
 @option{-C} as the very first option.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -395,7 +395,7 @@ order: Dragon 64, Dragon 32, Tandy CoCo.  This can be overridden with the
 @option{-default-machine @var{name}} option.  XRoar has built-in configurations
 for the following machines:
 
-@multitable {dragon64xxx} {Tandy Color Computer 1/2 (NTSC, T1).xxx}
+@multitable @columnfractions 0.15 0.85
 @headitem Name @tab Description
 @item @samp{dragon32} @tab Dragon 32 (PAL).
 @item @samp{dragon64} @tab Dragon 64 (PAL).
@@ -411,8 +411,8 @@ for the following machines:
 @item @samp{mc10} @tab Tandy MC-10.
 @end multitable
 
-You can create new machine configurations or reconfigure existing ones.  Select
-a machine configuration with @option{-machine @var{name}}, and use the
+You can create new machine profiles or reconfigure existing ones.  Select or
+create a machine profile with @option{-machine @var{name}}, and use the
 following options to modify it:
 
 @table @option
@@ -490,65 +490,8 @@ unfinished, and much is known not to work.
 @node Cartridges
 @section Cartridges
 
-The default cartridge for a machine is selected with the @option{-machine-cart}
-option.  XRoar has built-in definitions for four cartridges:
-
-@table @samp
-
-@item dragondos
-
-DragonDOS, official disk interface cartridge from Dragon Data Ltd.  Based on
-the WD2797 Floppy Disk Controller chip.
-
-@item delta
-
-Delta System, Premier Microsystems' disk interface cartridge for the Dragon.
-@w{Mk 2}, based on the WD2791 controller.
-
-@item rsdos
-
-RSDOS, Tandy's disk interface cartridge for use with the CoCo.  Based on the
-WD1793 controller.
-
-@item gmc
-
-John Linville's Games Master Cartridge provides the ability to bank switch up
-to 64K of cartridge ROM, along with an on-board SN76489 sound chip.  Be aware
-that as provided, the cartridge is designed to auto-start an on-board ROM, and
-XRoar reflects this use.  If you want to use it as a standalone cartridge,
-you'll need to use the @option{-no-cart-autorun} option.
-
-@item orch90
-
-The Orchestra 90-CC cartridge provides stereo 8-bit audio output.  The default
-ROM is CoCo-only, but the hardware is compatible with the Dragon.
-
-@item ide
-
-Glenside IDE interface for hard disks.  See @ref{Hard Disks}.
-
-@item nx32
-
-Tormod Volden's NX32 RAM expansion cartridge.
-
-@item mooh
-
-Tormod Volden's MOOH RAM expansion cartridge.
-
-@item mpi
-
-Multi-Pak Interface.  A CoCo add-on by Tandy that allows up to four
-cartridges to be connected, selectable by software or hardware switch.
-
-@item mpi-race
-
-RACE Computer Expansion Cage.  A Dragon add-on by RACE similar to the MPI.
-Addressing and behaviour differs.
-
-@end table
-
-You can create new cartridge configurations or reconfigure existing ones.
-Select a cartridge configuration with @option{-cart @var{name}}, and use the
+You can create new cartridge profiles or reconfigure existing ones.  Select or
+create a cartridge profile with @option{-cart @var{name}}, and use the
 following options to modify it:
 
 @table @option
@@ -557,10 +500,13 @@ following options to modify it:
 
 Cartridge description shown in @option{-cart help}.
 
+@item -cart-arch @var{arch}
+
+Cartridge architecture.  One of @samp{dragon-cart} or @samp{mc10-cart}.
+
 @item -cart-type @var{type}
 
-Set cartridge base type.  One of @samp{rom}, @samp{dragondos}, @samp{delta},
-@samp{rsdos} or @samp{orch90}.
+Cartridge type.  See below for list.
 
 @item -cart-rom @var{filename}
 
@@ -580,20 +526,45 @@ Auto-start cartridge using FIRQ.
 
 @end table
 
-Defining extra cartridges is most usefully done in the configuration file, for
-example:
+XRoar supports many types of cartridge (the argument to @option{-cart-type}).
+The following are valid for the @samp{dragon-cart} architecture:
+
+@multitable @columnfractions 0.15 0.85
+@headitem Name @tab Description
+@item @samp{rom} @tab ROM cartridge, e.g. most cartridge games.
+@item @samp{dragondos} @tab DragonDOS, the official Dragon disk system from Dragon Data.
+@item @samp{delta} @tab Premier Microsystems' alternative Dragon disk system, Delta.
+@item @samp{rsdos} @tab Tandy's RSDOS for the CoCo.
+@item @samp{gmc} @tab John Linville's Games Master Cartridge.
+@item @samp{orch90} @tab Orchestra 90-CC stereo 8-bit DAC cartridge.
+@item @samp{ide} @tab Glenside IDE interface (see @ref{Hard Disks}).
+@item @samp{nx32} @tab Tormod Volden's NX32 RAM expansion cartridge.
+@item @samp{mooh} @tab Tormod Volden's MOOH RAM expansion cartridge.
+@item @samp{mpi} @tab Multi-Pak Interface.
+@item @samp{mpi-race} @tab RACE Computer Expansion Cage.
+@end multitable
+
+There are no cartridges usable for the @samp{mc10-cart} architecture yet.
+
+Built-in cartridge profiles exists with sensible defaults for each of the
+cartridge types except @samp{rom} (for which a profile is simply created when
+you try to autorun a ROM image), each with the same name as the type.
+
+Defining new cartridge profiles is most usefully done in the configuration
+file, for example:
 
 @example
-cart sdose6
+cart mydos
   cart-desc "SuperDOS E6"
   cart-type dragondos
   cart-rom sdose6.rom
   cart-rom2 dosdream.rom
 @end example
 
-This will define a cartridge called @samp{sdose6} as a DragonDOS cartridge with
+This will define a cartridge called @samp{mydos} as a DragonDOS cartridge with
 its ROM replaced with @file{sdose6.rom}, and an additional ROM called
-@file{dosdream.rom}.
+@file{dosdream.rom} (this was my setup in the 80s - DOS Dream is a very useful
+ROM-based editor/assembler/deugger that coexists with DragonDOS - advert over).
 
 XRoar will automatically attempt to find a disk interface relevant to the
 current machine unless a specific default has been configured for the machine
@@ -608,27 +579,55 @@ Within the emulator, cartridges can be enabled or disabled by pressing
 @kbd{@key{CTRL}+E}.  You will almost certainly want to follow this with a
 hard reset (@kbd{@key{CTRL}+@key{SHIFT}+R}).
 
+
+@c @subsection Disk controllers
+
+
+@c @subsection MOOH and NX32 memory cartridges
+
+
+@subsection Games Master Cartridge
+
+The Games Master Cartridge (@samp{gmc}) provides the ability to bank switch up
+to 64K of cartridge ROM, along with an on-board SN76489 sound chip.  Be aware
+that as provided, the cartridge is designed to auto-start an on-board ROM, and
+XRoar reflects this use.  If you want to use it as a standalone cartridge,
+you'll need to use the @option{-no-cart-autorun} option.
+
+
+@c @subsection Glenside IDE controller
+
+@c Move the Hard Disks section here?
+
+
+@c @subsection Orchestra 90-CC sound cartridge
+
+
 @subsection Multi-Pak Interface
 
-If you attach a Multi-Pak Interface (MPI), you'll want to populate one or more
-of its slots (numbered 0-3).  Use @option{-mpi-load-cart
-[@emph{slot}=]@emph{name}} to attach a named cartridge to the specified (or
+The Multi-Pak Interface (@samp{mpi}) is a CoCo add-on by Tandy that allows up
+to four cartridges to be connected, selectable by software or hardware switch.
+
+The RACE Computer Expansion Cage is a Dragon add-on by RACE similar to the MPI.
+Addressing and behaviour differs.
+
+If you attach either Multi-Pak Interface (MPI), you'll want to populate one or
+more of its slots (numbered 0-3).  Use @option{-mpi-load-cart
+[@var{slot}=]@var{name}} to attach a named cartridge to the specified (or
 next) slot.  Configure the initially selected slot with @option{-mpi-slot
-@emph{slot}}.
+@var{slot}}.
 
 It's not recommended to load more than one DOS cartridge into the MPI.
 As things stand, only the last one (in slot order) will have the emulated
 drives properly connected.
 
-These options also apply to the RACE Computer Expansion Cage, which provides
-similar features, albeit with slightly different behaviour.
 
 @subsection Becker port
 
 XRoar supports an emulator-only feature that enables it to connect to a server
-using a TCP connection to access remote facilities such as disk images and MIDI
-devices---the ``becker port''.  This appears as a memory-mapped device, and
-XRoar supports it as an optional feature of the DOS cartridge.
+using a TCP connection and access remote facilities such as disk images and 
+MIDI devices---the @dfn{becker port}.  This appears as a memory-mapped device,
+and XRoar supports it as an optional feature of many cartridge types.
 
 Enable this port when configuring a cartridge with @option{-cart-becker}.  The
 @option{-becker} option tells XRoar to prefer a cartridge with it enabled when
@@ -638,6 +637,10 @@ The IP and port to connect to can be specified with the @option{-becker-ip} and
 @option{-becker-port} options.  These default to @samp{127.0.0.1} and
 @samp{65504} respectively, matching the defaults for DriveWire 4, the most
 popular server application used to provide such facilities.
+
+
+@c MC-10 16K RAM cartridge
+
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
