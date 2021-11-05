@@ -55,15 +55,16 @@ struct deltados {
 };
 
 static const struct ser_struct ser_struct_deltados[] = {
-	SER_STRUCT_ELEM(struct deltados, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct deltados, latch_drive_select, ser_type_unsigned), // 2
 	SER_STRUCT_ELEM(struct deltados, latch_side_select, ser_type_bool), // 3
 	SER_STRUCT_ELEM(struct deltados, latch_density, ser_type_bool), // 4
 };
 
-#define N_SER_STRUCT_DELTADOS ARRAY_N_ELEMENTS(ser_struct_deltados)
-
-#define DELTADOS_SER_CART (1)
+static const struct ser_struct_data deltados_ser_struct_data = {
+	.elems = ser_struct_deltados,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_deltados),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -89,17 +90,13 @@ static void deltados_initialise(struct part *p, void *options);
 static _Bool deltados_finish(struct part *p);
 static void deltados_free(struct part *p);
 
-static struct part *deltados_deserialise(struct ser_handle *sh);
-static void deltados_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs deltados_funcs = {
 	.allocate = deltados_allocate,
 	.initialise = deltados_initialise,
 	.finish = deltados_finish,
 	.free = deltados_free,
 
-	.deserialise = deltados_deserialise,
-	.serialise = deltados_serialise,
+	.ser_struct_data = &deltados_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -155,42 +152,6 @@ static _Bool deltados_finish(struct part *p) {
 
 static void deltados_free(struct part *p) {
 	cart_rom_free(p);
-}
-
-static struct part *deltados_deserialise(struct ser_handle *sh) {
-	struct part *p = deltados_allocate();
-	struct deltados *d = (struct deltados *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_deltados, N_SER_STRUCT_DELTADOS, d))) {
-		switch (tag) {
-		case DELTADOS_SER_CART:
-			cart_deserialise(&d->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void deltados_serialise(struct part *p, struct ser_handle *sh) {
-	struct deltados *d = (struct deltados *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_deltados, N_SER_STRUCT_DELTADOS, tag, d)) > 0; tag++) {
-		switch (tag) {
-		case DELTADOS_SER_CART:
-			cart_serialise(&d->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

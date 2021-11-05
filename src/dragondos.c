@@ -56,7 +56,7 @@ struct dragondos {
 };
 
 static const struct ser_struct ser_struct_dragondos[] = {
-	SER_STRUCT_ELEM(struct dragondos, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct dragondos, latch_drive_select, ser_type_unsigned), // 2
 	SER_STRUCT_ELEM(struct dragondos, latch_motor_enable, ser_type_bool), // 3
 	SER_STRUCT_ELEM(struct dragondos, latch_precomp_enable, ser_type_bool), // 4
@@ -64,9 +64,10 @@ static const struct ser_struct ser_struct_dragondos[] = {
 	SER_STRUCT_ELEM(struct dragondos, latch_nmi_enable, ser_type_bool), // 6
 };
 
-#define N_SER_STRUCT_DRAGONDOS ARRAY_N_ELEMENTS(ser_struct_dragondos)
-
-#define DRAGONDOS_SER_CART (1)
+static const struct ser_struct_data dragondos_ser_struct_data = {
+	.elems = ser_struct_dragondos,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_dragondos),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -94,17 +95,13 @@ static void dragondos_initialise(struct part *p, void *options);
 static _Bool dragondos_finish(struct part *p);
 static void dragondos_free(struct part *p);
 
-static struct part *dragondos_deserialise(struct ser_handle *sh);
-static void dragondos_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs dragondos_funcs = {
 	.allocate = dragondos_allocate,
 	.initialise = dragondos_initialise,
 	.finish = dragondos_finish,
 	.free = dragondos_free,
 
-	.deserialise = dragondos_deserialise,
-	.serialise = dragondos_serialise,
+	.ser_struct_data = &dragondos_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -164,42 +161,6 @@ static _Bool dragondos_finish(struct part *p) {
 
 static void dragondos_free(struct part *p) {
 	cart_rom_free(p);
-}
-
-static struct part *dragondos_deserialise(struct ser_handle *sh) {
-	struct part *p = dragondos_allocate();
-	struct dragondos *d = (struct dragondos *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, d))) {
-		switch (tag) {
-		case DRAGONDOS_SER_CART:
-			cart_deserialise(&d->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void dragondos_serialise(struct part *p, struct ser_handle *sh) {
-	struct dragondos *d = (struct dragondos *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragondos, N_SER_STRUCT_DRAGONDOS, tag, d)) > 0; tag++) {
-		switch (tag) {
-		case DRAGONDOS_SER_CART:
-			cart_serialise(&d->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -56,7 +56,7 @@ struct rsdos {
 };
 
 static const struct ser_struct ser_struct_rsdos[] = {
-	SER_STRUCT_ELEM(struct rsdos, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct rsdos, latch_drive_select, ser_type_unsigned), // 2
 	SER_STRUCT_ELEM(struct rsdos, latch_density, ser_type_bool), // 3
 	SER_STRUCT_ELEM(struct rsdos, drq_flag, ser_type_bool), // 4
@@ -64,9 +64,10 @@ static const struct ser_struct ser_struct_rsdos[] = {
 	SER_STRUCT_ELEM(struct rsdos, halt_enable, ser_type_bool), // 6
 };
 
-#define N_SER_STRUCT_RSDOS ARRAY_N_ELEMENTS(ser_struct_rsdos)
-
-#define RSDOS_SER_CART (1)
+static const struct ser_struct_data rsdos_ser_struct_data = {
+	.elems = ser_struct_rsdos,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_rsdos),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -97,17 +98,13 @@ static void rsdos_initialise(struct part *p, void *options);
 static _Bool rsdos_finish(struct part *p);
 static void rsdos_free(struct part *p);
 
-static struct part *rsdos_deserialise(struct ser_handle *sh);
-static void rsdos_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs rsdos_funcs = {
 	.allocate = rsdos_allocate,
 	.initialise = rsdos_initialise,
 	.finish = rsdos_finish,
 	.free = rsdos_free,
 
-	.deserialise = rsdos_deserialise,
-	.serialise = rsdos_serialise,
+	.ser_struct_data = &rsdos_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -167,42 +164,6 @@ static _Bool rsdos_finish(struct part *p) {
 
 static void rsdos_free(struct part *p) {
 	cart_rom_free(p);
-}
-
-static struct part *rsdos_deserialise(struct ser_handle *sh) {
-        struct part *p = rsdos_allocate();
-        struct rsdos *d = (struct rsdos *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, d))) {
-		switch (tag) {
-		case RSDOS_SER_CART:
-			cart_deserialise(&d->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void rsdos_serialise(struct part *p, struct ser_handle *sh) {
-	struct rsdos *d = (struct rsdos *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_rsdos, N_SER_STRUCT_RSDOS, tag, d)) > 0; tag++) {
-		switch (tag) {
-		case RSDOS_SER_CART:
-			cart_serialise(&d->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
