@@ -65,7 +65,7 @@ static int read_v2_snapshot(const char *filename);
 int read_snapshot(const char *filename) {
 	if (read_v2_snapshot(filename) < 0 &&
 	    read_v1_snapshot(filename) < 0) {
-		LOG_WARN("Snapshot: format not recognised.\n");
+		LOG_WARN("Snapshot: read failed\n");
 		return -1;
 	}
 	return 0;
@@ -144,6 +144,10 @@ static int read_v2_snapshot(const char *filename) {
 		}
 		if (ser_error(sh))
 			break;
+	}
+
+	if (ser_error(sh)) {
+		LOG_WARN("Snapshot v2 read: %s\n", ser_errstr(sh));
 	}
 
 	ser_close(sh);
