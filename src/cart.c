@@ -295,8 +295,11 @@ void cart_config_remove_all(void) {
 
 /* ---------------------------------------------------------------------- */
 
-struct cart *cart_new(struct cart_config *cc) {
-	if (!cc) return NULL;
+struct cart *cart_create(const char *cc_name) {
+	struct cart_config *cc = cart_config_by_name(cc_name);
+	if (!cc)
+		return NULL;
+
 	cart_config_complete(cc);
 	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH)
 		cc->architecture = 0;
@@ -312,11 +315,6 @@ struct cart *cart_new(struct cart_config *cc) {
 	if (c->attach)
 		c->attach(c);
 	return c;
-}
-
-struct cart *cart_new_named(const char *cc_name) {
-	struct cart_config *cc = cart_config_by_name(cc_name);
-	return cart_new(cc);
 }
 
 void cart_finish(struct cart *c) {

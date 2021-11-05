@@ -1689,7 +1689,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 			xroar_machine_config->default_cart = xstrdup(cc_name);
 		}
 		xroar_machine_config->cart_enabled = 1;
-		new_cart = cart_new_named(cc_name);
+		new_cart = cart_create(cc_name);
 		if (new_cart) {
 			xroar_machine->insert_cart(xroar_machine, new_cart);
 			xroar_connect_cart();

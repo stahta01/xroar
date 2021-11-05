@@ -2,7 +2,7 @@
  *
  *  \brief Dragon/CoCo cartridge support.
  *
- *  \copyright Copyright 2005-2019 Ciaran Anscomb
+ *  \copyright Copyright 2005-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -118,9 +118,7 @@ void cart_config_print_all(FILE *f, _Bool all);
 _Bool cart_config_remove(const char *name);
 void cart_config_remove_all(void);
 
-struct cart *cart_new(struct cart_config *cc);
-struct cart *cart_new_named(const char *cc_name);
-void cart_free(struct cart *c);
+struct cart *cart_create(const char *cc_name);
 
 void cart_finish(struct cart *c);
 _Bool cart_is_a(struct part *p, const char *name);

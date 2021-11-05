@@ -184,7 +184,7 @@ static void mpi_initialise(struct part *p, void *options) {
 	for (int i = 0; i < 4; i++) {
 		snprintf(id, sizeof(id), "slot%d", i);
 		if (slot_cart_name[i]) {
-			part_add_component(&c->part, (struct part *)cart_new_named(slot_cart_name[i]), id);
+			part_add_component(&c->part, (struct part *)cart_create(slot_cart_name[i]), id);
 		}
 	}
 
