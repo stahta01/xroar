@@ -65,6 +65,27 @@
 
 #include "sds.h"
 
+enum ser_error {
+	ser_error_none = 0,
+	ser_error_file_io,  // error came from file i/o; might be EOF
+	ser_error_bad_tag,  // negative tag, or unknown in read struct
+	ser_error_format,  // badly formatted data
+	ser_error_bad_handle,  // NULL serialiser handle passed
+	ser_error_system,  // see errno or ser_eof()
+	ser_error_type,  // bad type found during struct read/write
+};
+
+enum ser_mode {
+	ser_mode_read,
+	ser_mode_write
+};
+
+struct ser_handle;
+
+// Struct reading & writing
+
+struct ser_struct_data;
+
 /** \brief For marking up struct members in a struct ser_struct.
  */
 enum ser_type {
@@ -83,32 +104,27 @@ enum ser_type {
 	ser_type_string,  // only written if non-null
 	ser_type_sds,  // only written if non-null
 	ser_type_unhandled,  // returns control to caller
+	ser_type_nest,  // recurse using data.ser_struct_data
 	ser_type_skip,  // tag no longer handled: don't write, skip read
 };
 
 struct ser_struct {
 	enum ser_type type;
-	size_t offset;
+	union {
+		size_t offset;
+		const struct ser_struct_data *ser_struct_data;
+	} data;
 };
 
-#define SER_STRUCT_ELEM(s,e,t) { .type = t, .offset = offsetof(s,e) }
+#define SER_STRUCT_ELEM(s,e,t) { .type = t, .data.offset = offsetof(s,e) }
+#define SER_STRUCT_NEST(s) { .type = ser_type_nest, .data.ser_struct_data = s }
 
-enum ser_error {
-	ser_error_none = 0,
-	ser_error_file_io,  // error came from file i/o; might be EOF
-	ser_error_bad_tag,  // negative tag, or unknown in read struct
-	ser_error_format,  // badly formatted data
-	ser_error_bad_handle,  // NULL serialiser handle passed
-	ser_error_system,  // see errno or ser_eof()
-	ser_error_type,  // bad type found during struct read/write
+struct ser_struct_data {
+	const struct ser_struct *elems;
+	const int num_elems;
+	_Bool (* const read_elem)(void *sptr, struct ser_handle *sh, int tag);
+	_Bool (* const write_elem)(void *sptr, struct ser_handle *sh, int tag);
 };
-
-enum ser_mode {
-	ser_mode_read,
-	ser_mode_write
-};
-
-struct ser_handle;
 
 /** \brief Open a file.
  * \param filename File to open.
@@ -166,6 +182,11 @@ int ser_error(struct ser_handle *sh);
  */
 void ser_set_error(struct ser_handle *sh, int error);
 
+/** \brief Get error string.
+ */
+
+const char *ser_errstr(struct ser_handle *sh);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Write helpers.
@@ -217,15 +238,26 @@ void *ser_read_new(struct ser_handle *sh, size_t size);
 // zero is reserved for closing tags).  Unhandled tags should still be included
 // in the array.
 
-// Struct writer.  Writes successive fields starting from 'tag' until either
-// all are written (returns zero) or an unhandled tag is met (returns tag).
-// Negative return value implies error.
+// Old struct writer.  Writes successive fields starting from 'tag' until
+// either all are written (returns zero) or an unhandled tag is met (returns
+// tag).  Negative return value implies error.
 
 int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, int tag, void *s);
 
-// Struct reader.  Reads data into struct until closing tag (returns zero) or
-// unhandled tag is met (returns tag).  Negative return value implies error.
+// Old struct reader.  As below but also returns when an unhandler tag is met.
+// Caller deals.
 
 int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s);
+
+
+// Struct writer.  Writes fields in order, calling ss->write_elem when type is
+// unhandled.
+
+void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s);
+
+// Struct reader.  Reads data into struct until closing tag.  Unhandled tags
+// call ss->read_elem.
+
+void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s);
 
 #endif

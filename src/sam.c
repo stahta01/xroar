@@ -237,7 +237,7 @@ static struct part *mc6883_deserialise(struct ser_handle *sh) {
 		case MC6883_SER_XDIV3:
 		case MC6883_SER_XDIV2:
 			{
-				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
+				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
 				if (ser_read_struct(sh, ser_struct_vcounter, N_SER_STRUCT_VCOUNTER, ptr) != 0) {
 					ser_set_error(sh, ser_error_format);
 					break;
@@ -272,7 +272,7 @@ static void mc6883_serialise(struct part *p, struct ser_handle *sh) {
 		case MC6883_SER_XDIV3:
 		case MC6883_SER_XDIV2:
 			{
-				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
+				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
 				if (ser_write_struct(sh, ser_struct_vcounter, N_SER_STRUCT_VCOUNTER, tag, ptr) != 0) {
 					ser_set_error(sh, ser_error_format);
 					break;

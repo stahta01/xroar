@@ -169,6 +169,21 @@ void ser_set_error(struct ser_handle *sh, int error) {
 	sh->error = error;
 }
 
+const char *ser_errstr(struct ser_handle *sh) {
+	if (!sh)
+		return "bad handle";
+	switch (sh->error) {
+	case ser_error_file_io: return "i/o error";
+	case ser_error_bad_tag: return "bad tag";
+	case ser_error_format: return "format error";
+	case ser_error_bad_handle: return "bad handle";
+	case ser_error_system: return "internal error";
+	case ser_error_type: return "type error";
+	default: return "unknown error";
+	}
+}
+
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Helpers for the helpers.  Wrap filesystem functions while handling error
@@ -509,7 +524,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 			return tag;
 		if (type == ser_type_skip)
 			continue;
-		void *ptr = s + ss[tag-1].offset;
+		void *ptr = s + ss[tag-1].data.offset;
 		switch (type) {
 		case ser_type_bool:
 			ser_write_vuint32(sh, tag, *(_Bool *)ptr);
@@ -573,6 +588,13 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+		case ser_type_nest:
+			{
+				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
+				ser_write_open_string(sh, tag, "");
+				ser_write_struct_data(sh, nssd, s);
+			}
+			break;
 
 		default:
 			ser_set_error(sh, ser_error_type);
@@ -592,7 +614,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 			return -1;
 		}
 		enum ser_type type = ss[tag-1].type;
-		void *ptr = s + ss[tag-1].offset;
+		void *ptr = s + ss[tag-1].data.offset;
 		switch (type) {
 		case ser_type_bool:
 			*(_Bool *)ptr = ser_read_vuint32(sh);
@@ -654,6 +676,12 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				*(sds *)ptr = ser_read_sds(sh);
 			}
 			break;
+		case ser_type_nest:
+			{
+				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
+				ser_read_struct_data(sh, nssd, s);
+			}
+			break;
 
 		case ser_type_unhandled:
 			return tag;
@@ -667,4 +695,25 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 	if (sh->error)
 		return -1;
 	return tag;
+}
+
+void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s) {
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ss->elems, ss->num_elems, tag, s)) > 0; tag++) {
+		assert(ss->write_elem != NULL);
+		if (!ss->write_elem(s, sh, tag)) {
+			ser_set_error(sh, ser_error_bad_tag);
+			return;
+		}
+	}
+	ser_write_close_tag(sh);
+}
+
+void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s) {
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ss->elems, ss->num_elems, s)) > 0) {
+		if (!ss->read_elem || !ss->read_elem(s, sh, tag)) {
+			ser_set_error(sh, ser_error_bad_tag);
+			return;
+		}
+	}
 }
