@@ -32,11 +32,11 @@
 
 #include "xalloc.h"
 
-struct ser_handle;
-
 // For now, we're not using the interface features...
 #undef WANT_INTF
 
+struct ser_handle;
+struct ser_struct_data;
 struct slist;
 #ifdef WANT_INTF
 struct intf;
@@ -70,8 +70,12 @@ struct partdb_entry_funcs {
 	_Bool (* const finish)(struct part *part);
 	void (* const free)(struct part *part);
 
+	// XXX deprecated old serialisation approach
 	struct part *(* const deserialise)(struct ser_handle *sh);
 	void (* const serialise)(struct part *part, struct ser_handle *sh);
+
+	// new serialisation approach - used if non-NULL
+	const struct ser_struct_data *ser_struct_data;
 
 	_Bool (* const is_a)(struct part *p, const char *name);
 };

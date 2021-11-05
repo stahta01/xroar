@@ -317,29 +317,6 @@ _Bool part_is_a(struct part *p, const char *is_a) {
 	return p->is_a ? p->is_a(p, is_a) : 0;
 }
 
-void part_serialise(struct part *p, struct ser_handle *sh) {
-	if (!p)
-		return;
-	assert(p->name != NULL);
-
-	const struct partdb_entry *pe = partdb_find_entry(p->name);
-
-	if (!pe) {
-		LOG_WARN("PART: can't serialise '%s'\n", p->name);
-		ser_set_error(sh, ser_error_format);
-		return;
-	}
-
-	ser_write_open_string(sh, PART_SER_DATA, p->name);
-	p->serialise(p, sh);
-	for (struct slist *iter = p->components; iter; iter = iter->next) {
-		struct part_component *pc = iter->data;
-		ser_write_open_string(sh, PART_SER_PART, pc->id);
-		part_serialise(pc->p, sh);
-	}
-	ser_write_close_tag(sh);
-}
-
 struct part *part_deserialise(struct ser_handle *sh) {
 	struct part *p = NULL;
 	const struct partdb_entry *pe = NULL;
@@ -357,7 +334,13 @@ struct part *part_deserialise(struct ser_handle *sh) {
 						ser_set_error(sh, ser_error_format);
 						return NULL;
 					}
-					p = pe->funcs->deserialise(sh);
+					if (pe->funcs->ser_struct_data) {
+						p = pe->funcs->allocate();
+						assert(p != NULL);
+						ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
+					} else {
+						p = pe->funcs->deserialise(sh);
+					}
 					p->name = name;
 					name = NULL;
 					p->free = pe->funcs->free;
@@ -417,6 +400,33 @@ struct part *part_deserialise(struct ser_handle *sh) {
 	}
 
 	return p;
+}
+
+void part_serialise(struct part *p, struct ser_handle *sh) {
+	if (!p)
+		return;
+	assert(p->name != NULL);
+
+	const struct partdb_entry *pe = partdb_find_entry(p->name);
+
+	if (!pe) {
+		LOG_WARN("PART: can't serialise '%s'\n", p->name);
+		ser_set_error(sh, ser_error_format);
+		return;
+	}
+
+	ser_write_open_string(sh, PART_SER_DATA, p->name);
+	if (pe->funcs->ser_struct_data) {
+		ser_write_struct_data(sh, pe->funcs->ser_struct_data, p);
+	} else {
+		p->serialise(p, sh);
+	}
+	for (struct slist *iter = p->components; iter; iter = iter->next) {
+		struct part_component *pc = iter->data;
+		ser_write_open_string(sh, PART_SER_PART, pc->id);
+		part_serialise(pc->p, sh);
+	}
+	ser_write_close_tag(sh);
 }
 
 #ifdef WANT_INTF
