@@ -45,14 +45,23 @@ struct idecart {
 };
 
 static const struct ser_struct ser_struct_idecart[] = {
-	SER_STRUCT_ELEM(struct idecart, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct idecart, controller, ser_type_unhandled), // 2
 };
 
 #define N_SER_STRUCT_IDECART ARRAY_N_ELEMENTS(ser_struct_idecart)
 
-#define IDECART_SER_CART       (1)
 #define IDECART_SER_CONTROLLER (2)
+
+static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data idecart_ser_struct_data = {
+	.elems = ser_struct_idecart,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_idecart),
+	.read_elem = idecart_read_elem,
+	.write_elem = idecart_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -70,17 +79,13 @@ static void idecart_initialise(struct part *p, void *options);
 static _Bool idecart_finish(struct part *p);
 static void idecart_free(struct part *p);
 
-static struct part *idecart_deserialise(struct ser_handle *sh);
-static void idecart_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs idecart_funcs = {
 	.allocate = idecart_allocate,
 	.initialise = idecart_initialise,
 	.finish = idecart_finish,
 	.free = idecart_free,
 
-	.deserialise = idecart_deserialise,
-	.serialise = idecart_serialise,
+	.ser_struct_data = &idecart_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -159,46 +164,28 @@ static void idecart_free(struct part *p) {
 	ide_free(ide->controller);
 }
 
-static struct part *idecart_deserialise(struct ser_handle *sh) {
-	struct part *p = idecart_allocate();
-	struct idecart *ide = (struct idecart *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_idecart, N_SER_STRUCT_IDECART, ide))) {
-		switch (tag) {
-		case IDECART_SER_CART:
-			cart_deserialise(&ide->cart, sh);
-			break;
-		case IDECART_SER_CONTROLLER:
-			ide_deserialise(ide->controller, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct idecart *ide = sptr;
+	switch (tag) {
+	case IDECART_SER_CONTROLLER:
+		ide_deserialise(ide->controller, sh);
+		break;
+	default:
+		return 0;
 	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
+	return 1;
 }
 
-static void idecart_serialise(struct part *p, struct ser_handle *sh) {
-	struct idecart *ide = (struct idecart *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_idecart, N_SER_STRUCT_IDECART, tag, ide)) > 0; tag++) {
-		switch (tag) {
-		case IDECART_SER_CART:
-			cart_serialise(&ide->cart, sh, tag);
-			break;
-		case IDECART_SER_CONTROLLER:
-			ide_serialise(ide->controller, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct idecart *ide = sptr;
+	switch (tag) {
+	case IDECART_SER_CONTROLLER:
+		ide_serialise(ide->controller, sh, tag);
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
