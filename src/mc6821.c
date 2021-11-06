@@ -47,9 +47,28 @@ static const struct ser_struct ser_struct_mc6821_side[] = {
 	SER_STRUCT_ELEM(struct MC6821_side, in_sink, ser_type_uint8),  // 11
 };
 
-#define N_SER_STRUCT_MC6821_SIDE ARRAY_N_ELEMENTS(ser_struct_mc6821_side)
+static const struct ser_struct_data mc6821_side_ser_struct_data = {
+	.elems = ser_struct_mc6821_side,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6821_side),
+};
 
-#define MC6821_SER_SIDE (1)
+static const struct ser_struct ser_struct_mc6821[] = {
+	SER_STRUCT_ELEM(struct MC6821, a, ser_type_unhandled),  // 1
+	SER_STRUCT_ELEM(struct MC6821, b, ser_type_unhandled),  // 2
+};
+
+#define MC6821_SER_A (1)
+#define MC6821_SER_B (2)
+
+static _Bool mc6821_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mc6821_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mc6821_ser_struct_data = {
+	.elems = ser_struct_mc6821,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6821),
+	.read_elem = mc6821_read_elem,
+	.write_elem = mc6821_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -63,16 +82,12 @@ static struct part *mc6821_allocate(void);
 static _Bool mc6821_finish(struct part *p);
 static void mc6821_free(struct part *p);
 
-static struct part *mc6821_deserialise(struct ser_handle *sh);
-static void mc6821_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mc6821_funcs = {
 	.allocate = mc6821_allocate,
 	.finish = mc6821_finish,
 	.free = mc6821_free,
 
-	.deserialise = mc6821_deserialise,
-	.serialise = mc6821_serialise,
+	.ser_struct_data = &mc6821_ser_struct_data,
 };
 
 const struct partdb_entry mc6821_part = { .name = "MC6821", .funcs = &mc6821_funcs };
@@ -108,49 +123,36 @@ static void mc6821_free(struct part *p) {
 	event_dequeue(&pia->b.irq_event);
 }
 
-static void deserialise_side(struct MC6821_side *side, struct ser_handle *sh) {
-	ser_read_struct(sh, ser_struct_mc6821_side, N_SER_STRUCT_MC6821_SIDE, side);
-}
-
-static struct part *mc6821_deserialise(struct ser_handle *sh) {
-	struct part *p = mc6821_allocate();
-        struct MC6821 *pia = (struct MC6821 *)p;
-	int tag;
-	while ((tag = ser_read_tag(sh)) > 0) {
-		switch (tag) {
-		case MC6821_SER_SIDE:
-			{
-				struct MC6821_side *side;
-				side = ser_read_vuint32(sh) ? &pia->b : &pia->a;
-				deserialise_side(side, sh);
-			}
-			break;
-
-		default:
-			break;
-		}
+static _Bool mc6821_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+        struct MC6821 *pia = sptr;
+	switch (tag) {
+	case MC6821_SER_A:
+		ser_read_struct_data(sh, &mc6821_side_ser_struct_data, &pia->a);
+		break;
+	case MC6821_SER_B:
+		ser_read_struct_data(sh, &mc6821_side_ser_struct_data, &pia->b);
+		break;
+	default:
+		return 0;
 	}
+	return 1;
+}
 
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
+static _Bool mc6821_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6821 *pia = sptr;
+	switch (tag) {
+	case MC6821_SER_A:
+		ser_write_open_string(sh, tag, "A");
+		ser_write_struct_data(sh, &mc6821_side_ser_struct_data, &pia->a);
+		break;
+	case MC6821_SER_B:
+		ser_write_open_string(sh, tag, "B");
+		ser_write_struct_data(sh, &mc6821_side_ser_struct_data, &pia->b);
+		break;
+	default:
+		return 0;
 	}
-
-	return p;
-}
-
-static void serialise_side(struct MC6821_side *side, struct ser_handle *sh) {
-	ser_write_struct(sh, ser_struct_mc6821_side, N_SER_STRUCT_MC6821_SIDE, 1, side);
-	ser_write_close_tag(sh);
-}
-
-static void mc6821_serialise(struct part *p, struct ser_handle *sh) {
-	struct MC6821 *pia = (struct MC6821 *)p;
-	ser_write_open_vuint32(sh, MC6821_SER_SIDE, 0);
-	serialise_side(&pia->a, sh);
-	ser_write_open_vuint32(sh, MC6821_SER_SIDE, 1);
-	serialise_side(&pia->b, sh);
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
