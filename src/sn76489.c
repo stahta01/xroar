@@ -35,21 +35,6 @@
 #include "serialise.h"
 #include "sn76489.h"
 
-// Butterworth IIR, order 3, fs 250kHz, -3dB at 20kHz.  Generated here:
-// https://www-users.cs.york.ac.uk/~fisher/mkfilter/
-
-// This very much assumes refclk of 4MHz, which is fine for this purpose, but
-// beware if you're using this code elsewhere.
-
-#define IIR_GAIN (9.820696921e+01)
-#define IIR_Z0 (1.0)
-#define IIR_Z1 (3.0)
-#define IIR_Z2 (3.0)
-#define IIR_Z3 (1.0)
-#define IIR_P0 (0.3617959282)
-#define IIR_P1 (-1.4470540195)
-#define IIR_P2 (2.0037974774)
-
 /*
  * Initial state doesn't seem to be quite random.  First two channels seem to
  * be on, with first generating very high tone, and second at lowest frequency.
@@ -121,13 +106,36 @@ static struct ser_struct ser_struct_sn76489[] = {
 	SER_STRUCT_ELEM(struct SN76489_private, noise_lfsr, ser_type_unsigned), // 10
 };
 
-#define N_SER_STRUCT_SN76489 ARRAY_N_ELEMENTS(ser_struct_sn76489)
-
 #define SN76489_SER_REG_VAL (6)
 #define SN76489_SER_COUNTER (7)
 #define SN76489_SER_STATE (8)
 
+static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data sn76489_ser_struct_data = {
+	.elems = ser_struct_sn76489,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_sn76489),
+	.read_elem = sn76489_read_elem,
+	.write_elem = sn76489_write_elem,
+};
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Butterworth IIR, order 3, fs 250kHz, -3dB at 20kHz.  Generated here:
+// https://www-users.cs.york.ac.uk/~fisher/mkfilter/
+
+// This very much assumes refclk of 4MHz, which is fine for this purpose, but
+// beware if you're using this code elsewhere.
+
+#define IIR_GAIN (9.820696921e+01)
+#define IIR_Z0 (1.0)
+#define IIR_Z1 (3.0)
+#define IIR_Z2 (3.0)
+#define IIR_Z3 (1.0)
+#define IIR_P0 (0.3617959282)
+#define IIR_P1 (-1.4470540195)
+#define IIR_P2 (2.0037974774)
 
 // attenuation lookup table, 10 ^ (-i / 10)
 static const float attenuation[16] = {
@@ -144,16 +152,14 @@ static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned 
 
 static struct part *sn76489_allocate(void);
 static void sn76489_initialise(struct part *p, void *options);
-
-static struct part *sn76489_deserialise(struct ser_handle *sh);
-static void sn76489_serialise(struct part *p, struct ser_handle *sh);
+static _Bool sn76489_finish(struct part *p);
 
 static const struct partdb_entry_funcs sn76489_funcs = {
 	.allocate = sn76489_allocate,
 	.initialise = sn76489_initialise,
+	.finish = sn76489_finish,
 
-	.deserialise = sn76489_deserialise,
-	.serialise = sn76489_serialise,
+	.ser_struct_data = &sn76489_ser_struct_data,
 };
 
 const struct partdb_entry sn76489_part = { .name = "SN76489", .funcs = &sn76489_funcs };
@@ -185,77 +191,68 @@ static void sn76489_initialise(struct part *p, void *options) {
 	sn76489_configure(csg, 4000000, 48000, 14318180, 0);
 }
 
-static struct part *sn76489_deserialise(struct ser_handle *sh) {
-	struct part *p = sn76489_allocate();
+static _Bool sn76489_finish(struct part *p) {
 	struct SN76489_private *csg_ = (struct SN76489_private *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_sn76489, N_SER_STRUCT_SN76489, csg_))) {
-		switch (tag) {
-		case SN76489_SER_REG_VAL:
-			for (int i = 0; i < 8; i++) {
-				unsigned v = ser_read_uint16(sh);
-				update_reg(csg_, i, v);
-			}
-			break;
-		case SN76489_SER_COUNTER:
-			for (int i = 0; i < 4; i++) {
-				csg_->counter[i] = ser_read_uint16(sh);
-			}
-			break;
-		case SN76489_SER_STATE:
-			for (int i = 0; i < 4; i++) {
-				csg_->state[i] = ser_read_uint8(sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
 
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
+	// 76489 needs 32 cycles of its reference clock between writes.
+	// Compute this (approximately) wrt system "ticks".
 	float readyticks = (32.0 * csg_->tickrate) / (csg_->refrate << 4);
 	csg_->readyticks = (int)readyticks;
 
-	return p;
+	return 1;
 }
 
-static void sn76489_serialise(struct part *p, struct ser_handle *sh) {
-	struct SN76489_private *csg_ = (struct SN76489_private *)p;
-	ser_write_struct(sh, ser_struct_sn76489, N_SER_STRUCT_SN76489, 1, csg_);
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_sn76489, N_SER_STRUCT_SN76489, tag, csg_)) > 0; tag++) {
-		switch (tag) {
-		case SN76489_SER_REG_VAL:
-			ser_write_tag(sh, tag, 8*2);
-			for (int i = 0; i < 8; i++) {
-				ser_write_uint16_untagged(sh, csg_->reg_val[i]);
-			}
-			ser_write_close_tag(sh);
-			break;
-		case SN76489_SER_COUNTER:
-			ser_write_tag(sh, tag, 4*2);
-			for (int i = 0; i < 4; i++) {
-				ser_write_uint16_untagged(sh, csg_->counter[i]);
-			}
-			ser_write_close_tag(sh);
-			break;
-		case SN76489_SER_STATE:
-			ser_write_tag(sh, tag, 4);
-			for (int i = 0; i < 4; i++) {
-				ser_write_uint8_untagged(sh, csg_->state[i]);
-			}
-			ser_write_close_tag(sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct SN76489_private *csg_ = sptr;
+	switch (tag) {
+	case SN76489_SER_REG_VAL:
+		for (int i = 0; i < 8; i++) {
+			unsigned v = ser_read_uint16(sh);
+			update_reg(csg_, i, v);
 		}
+		return 1;
+	case SN76489_SER_COUNTER:
+		for (int i = 0; i < 4; i++) {
+			csg_->counter[i] = ser_read_uint16(sh);
+		}
+		return 1;
+	case SN76489_SER_STATE:
+		for (int i = 0; i < 4; i++) {
+			csg_->state[i] = ser_read_uint8(sh);
+		}
+		return 1;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+}
+
+static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct SN76489_private *csg_ = sptr;
+	switch (tag) {
+	case SN76489_SER_REG_VAL:
+		ser_write_tag(sh, tag, 8*2);
+		for (int i = 0; i < 8; i++) {
+			ser_write_uint16_untagged(sh, csg_->reg_val[i]);
+		}
+		ser_write_close_tag(sh);
+		return 1;
+	case SN76489_SER_COUNTER:
+		ser_write_tag(sh, tag, 4*2);
+		for (int i = 0; i < 4; i++) {
+			ser_write_uint16_untagged(sh, csg_->counter[i]);
+		}
+		ser_write_close_tag(sh);
+		return 1;
+	case SN76489_SER_STATE:
+		ser_write_tag(sh, tag, 4);
+		for (int i = 0; i < 4; i++) {
+			ser_write_uint8_untagged(sh, csg_->state[i]);
+		}
+		ser_write_close_tag(sh);
+		return 1;
+	default:
+		return 0;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -278,11 +275,6 @@ void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tick
 	csg_->framerate = framerate;
 	csg_->tickrate = tickrate;
 	csg_->last_fragment_tick = tick;
-
-	// 76489 needs 32 cycles of its reference clock between writes.
-	// Compute this (approximately) wrt system "ticks".
-	float readyticks = (32.0 * tickrate) / refrate;
-	csg_->readyticks = (int)readyticks;
 }
 
 static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
