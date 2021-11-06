@@ -78,6 +78,15 @@ const struct ser_struct_data cart_ser_struct_data = {
 	.write_elem = cart_write_elem,
 };
 
+static const struct ser_struct ser_struct_cart_rom[] = {
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
+};
+
+static const struct ser_struct_data cart_rom_ser_struct_data = {
+        .elems = ser_struct_cart_rom,
+        .num_elems = ARRAY_N_ELEMENTS(ser_struct_cart_rom),
+};
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct xconfig_enum cart_arch_list[] = {
@@ -392,17 +401,13 @@ static struct part *cart_rom_allocate(void);
 static void cart_rom_initialise(struct part *p, void *options);
 static _Bool cart_rom_finish(struct part *p);
 
-static struct part *cart_rom_deserialise(struct ser_handle *sh);
-static void cart_rom_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs cart_rom_funcs = {
 	.allocate = cart_rom_allocate,
 	.initialise = cart_rom_initialise,
 	.finish = cart_rom_finish,
 	.free = cart_rom_free,
 
-	.deserialise = cart_rom_deserialise,
-	.serialise = cart_rom_serialise,
+	.ser_struct_data = &cart_rom_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -443,31 +448,6 @@ void cart_rom_free(struct part *p) {
 	if (c->rom_data) {
 		free(c->rom_data);
 	}
-}
-
-static struct part *cart_rom_deserialise(struct ser_handle *sh) {
-	struct part *p = cart_rom_allocate();
-	struct cart *c = (struct cart *)p;
-	int tag = ser_read_tag(sh);
-	if (tag == 1) {
-		cart_deserialise(c, sh);
-	} else {
-		ser_set_error(sh, ser_error_format);
-	}
-	if (ser_read_tag(sh) != 0) {
-		ser_set_error(sh, ser_error_format);
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void cart_rom_serialise(struct part *p, struct ser_handle *sh) {
-	struct cart *c = (struct cart *)p;
-	cart_serialise(c, sh, 1);
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
