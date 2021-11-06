@@ -52,7 +52,7 @@ struct mooh {
 };
 
 static const struct ser_struct ser_struct_mooh[] = {
-	SER_STRUCT_ELEM(struct mooh, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct mooh, extmem, ser_type_unhandled), // 2
 	SER_STRUCT_ELEM(struct mooh, mmu_enable, ser_type_bool), // 3
 	SER_STRUCT_ELEM(struct mooh, crm_enable, ser_type_bool), // 4
@@ -61,11 +61,18 @@ static const struct ser_struct ser_struct_mooh[] = {
 	SER_STRUCT_ELEM(struct mooh, rom_conf, ser_type_uint8), // 7
 };
 
-#define N_SER_STRUCT_MOOH ARRAY_N_ELEMENTS(ser_struct_mooh)
-
-#define MOOH_SER_CART    (1)
 #define MOOH_SER_EXTMEM  (2)
 #define MOOH_SER_TASKREG (5)
+
+static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mooh_ser_struct_data = {
+	.elems = ser_struct_mooh,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mooh),
+	.read_elem = mooh_read_elem,
+	.write_elem = mooh_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -83,17 +90,13 @@ static void mooh_initialise(struct part *p, void *options);
 static _Bool mooh_finish(struct part *p);
 static void mooh_free(struct part *p);
 
-static struct part *mooh_deserialise(struct ser_handle *sh);
-static void mooh_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mooh_funcs = {
 	.allocate = mooh_allocate,
 	.initialise = mooh_initialise,
 	.finish = mooh_finish,
 	.free = mooh_free,
 
-	.deserialise = mooh_deserialise,
-	.serialise = mooh_serialise,
+	.ser_struct_data = &mooh_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -160,52 +163,34 @@ static void mooh_free(struct part *p) {
 	cart_rom_free(p);
 }
 
-static struct part *mooh_deserialise(struct ser_handle *sh) {
-	struct part *p = mooh_allocate();
-	struct mooh *n = (struct mooh *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, n))) {
-		switch (tag) {
-		case MOOH_SER_CART:
-			cart_deserialise(&n->cart, sh);
-			break;
-		case MOOH_SER_EXTMEM:
-			ser_read(sh, n->extmem, sizeof(n->extmem));
-			break;
-		case MOOH_SER_TASKREG:
-			ser_read(sh, n->taskreg, sizeof(n->taskreg));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct mooh *n = sptr;
+	switch (tag) {
+	case MOOH_SER_EXTMEM:
+		ser_read(sh, n->extmem, sizeof(n->extmem));
+		break;
+	case MOOH_SER_TASKREG:
+		ser_read(sh, n->taskreg, sizeof(n->taskreg));
+		break;
+	default:
+		return 0;
 	}
-	if (ser_error(sh)) {
-		part_free((struct part *)n);
-		return NULL;
-	}
-	return (struct part *)n;
+	return 1;
 }
 
-static void mooh_serialise(struct part *p, struct ser_handle *sh) {
-	struct mooh *n = (struct mooh *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mooh, N_SER_STRUCT_MOOH, tag, n)) > 0; tag++) {
-		switch (tag) {
-		case MOOH_SER_CART:
-			cart_serialise(&n->cart, sh, tag);
-			break;
-		case MOOH_SER_EXTMEM:
-			ser_write(sh, tag, n->extmem, sizeof(n->extmem));
-			break;
-		case MOOH_SER_TASKREG:
-			ser_write(sh, tag, n->taskreg, sizeof(n->taskreg));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct mooh *n = sptr;
+	switch (tag) {
+	case MOOH_SER_EXTMEM:
+		ser_write(sh, tag, n->extmem, sizeof(n->extmem));
+		break;
+	case MOOH_SER_TASKREG:
+		ser_write(sh, tag, n->taskreg, sizeof(n->taskreg));
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

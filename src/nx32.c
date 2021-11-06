@@ -47,17 +47,24 @@ struct nx32 {
 };
 
 static const struct ser_struct ser_struct_nx32[] = {
-        SER_STRUCT_ELEM(struct nx32, cart, ser_type_unhandled), // 1
+        SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct nx32, extmem, ser_type_unhandled), // 2
 	SER_STRUCT_ELEM(struct nx32, extmem_map, ser_type_bool), // 3
 	SER_STRUCT_ELEM(struct nx32, extmem_ty, ser_type_bool), // 4
 	SER_STRUCT_ELEM(struct nx32, extmem_bank, ser_type_uint8), // 5
 };
 
-#define N_SER_STRUCT_NX32 ARRAY_N_ELEMENTS(ser_struct_nx32)
-
-#define NX32_SER_CART    (1)
 #define NX32_SER_EXTMEM  (2)
+
+static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data nx32_ser_struct_data = {
+	.elems = ser_struct_nx32,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_nx32),
+	.read_elem = nx32_read_elem,
+	.write_elem = nx32_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -75,17 +82,13 @@ static void nx32_initialise(struct part *p, void *options);
 static _Bool nx32_finish(struct part *p);
 static void nx32_free(struct part *p);
 
-static struct part *nx32_deserialise(struct ser_handle *sh);
-static void nx32_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs nx32_funcs = {
 	.allocate = nx32_allocate,
 	.initialise = nx32_initialise,
 	.finish = nx32_finish,
 	.free = nx32_free,
 
-	.deserialise = nx32_deserialise,
-	.serialise = nx32_serialise,
+	.ser_struct_data = &nx32_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -152,46 +155,28 @@ static void nx32_free(struct part *p) {
 	cart_rom_free(p);
 }
 
-static struct part *nx32_deserialise(struct ser_handle *sh) {
-	struct part *p = nx32_allocate();
-	struct nx32 *n = (struct nx32 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_nx32, N_SER_STRUCT_NX32, n))) {
-		switch (tag) {
-		case NX32_SER_CART:
-			cart_deserialise(&n->cart, sh);
-			break;
-		case NX32_SER_EXTMEM:
-			ser_read(sh, n->extmem, sizeof(n->extmem));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct nx32 *n = sptr;
+	switch (tag) {
+	case NX32_SER_EXTMEM:
+		ser_read(sh, n->extmem, sizeof(n->extmem));
+		break;
+	default:
+		return 0;
 	}
-	if (ser_error(sh)) {
-		part_free((struct part *)n);
-		return NULL;
-	}
-	return (struct part *)n;
+	return 1;
 }
 
-static void nx32_serialise(struct part *p, struct ser_handle *sh) {
-	struct nx32 *n = (struct nx32 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_nx32, N_SER_STRUCT_NX32, tag, n)) > 0; tag++) {
-		switch (tag) {
-		case NX32_SER_CART:
-			cart_serialise(&n->cart, sh, tag);
-			break;
-		case NX32_SER_EXTMEM:
-			ser_write(sh, tag, n->extmem, sizeof(n->extmem));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct nx32 *n = sptr;
+	switch (tag) {
+	case NX32_SER_EXTMEM:
+		ser_write(sh, tag, n->extmem, sizeof(n->extmem));
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
