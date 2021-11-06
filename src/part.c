@@ -191,7 +191,6 @@ struct part *part_create(const char *name, void *options) {
 	p->name = xstrdup(name);
 	p->free = pe->funcs->free;
 	p->is_a = pe->funcs->is_a;
-	p->serialise = pe->funcs->serialise;
 	if (!options)
 		options = p->name;
 	if (pe->funcs->initialise)
@@ -332,18 +331,14 @@ struct part *part_deserialise(struct ser_handle *sh) {
 						ser_set_error(sh, ser_error_format);
 						return NULL;
 					}
-					if (pe->funcs->ser_struct_data) {
-						p = pe->funcs->allocate();
-						assert(p != NULL);
-						ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
-					} else {
-						p = pe->funcs->deserialise(sh);
-					}
+					assert(pe->funcs->ser_struct_data != NULL);
+					p = pe->funcs->allocate();
+					assert(p != NULL);
+					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
 					p->name = name;
 					name = NULL;
 					p->free = pe->funcs->free;
 					p->is_a = pe->funcs->is_a;
-					p->serialise = pe->funcs->serialise;
 				}
 			}
 			break;
@@ -414,11 +409,8 @@ void part_serialise(struct part *p, struct ser_handle *sh) {
 	}
 
 	ser_write_open_string(sh, PART_SER_DATA, p->name);
-	if (pe->funcs->ser_struct_data) {
-		ser_write_struct_data(sh, pe->funcs->ser_struct_data, p);
-	} else {
-		p->serialise(p, sh);
-	}
+	assert(pe->funcs->ser_struct_data != NULL);
+	ser_write_struct_data(sh, pe->funcs->ser_struct_data, p);
 	for (struct slist *iter = p->components; iter; iter = iter->next) {
 		struct part_component *pc = iter->data;
 		ser_write_open_string(sh, PART_SER_PART, pc->id);
