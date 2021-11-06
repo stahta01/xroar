@@ -72,7 +72,10 @@ static const struct ser_struct ser_struct_spi65[] = {
 	SER_STRUCT_ELEM(struct spi65_private, ss_ie, ser_type_uint8), // 5
 };
 
-#define N_SER_STRUCT_SPI65 ARRAY_N_ELEMENTS(ser_struct_spi65)
+static const struct ser_struct_data spi65_ser_struct_data = {
+	.elems = ser_struct_spi65,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_spi65),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -81,15 +84,11 @@ static const struct ser_struct ser_struct_spi65[] = {
 static struct part *spi65_allocate(void);
 static _Bool spi65_finish(struct part *p);
 
-static struct part *spi65_deserialise(struct ser_handle *sh);
-static void spi65_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs spi65_funcs = {
 	.allocate = spi65_allocate,
 	.finish = spi65_finish,
 
-	.deserialise = spi65_deserialise,
-	.serialise = spi65_serialise,
+	.ser_struct_data = &spi65_ser_struct_data,
 };
 
 const struct partdb_entry spi65_part = { .name = "65SPI-B", .funcs = &spi65_funcs };
@@ -119,38 +118,6 @@ static _Bool spi65_finish(struct part *p) {
 	}
 
 	return 1;
-}
-
-static struct part *spi65_deserialise(struct ser_handle *sh) {
-	struct part *p = spi65_allocate();
-        struct spi65_private *spi65p = (struct spi65_private *)p;
-        int tag;
-        while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, spi65p))) {
-                switch (tag) {
-                default:
-                        ser_set_error(sh, ser_error_format);
-                        break;
-                }
-        }
-
-        if (ser_error(sh)) {
-                part_free(p);
-                return NULL;
-        }
-
-        return p;
-}
-
-static void spi65_serialise(struct part *p, struct ser_handle *sh) {
-        struct spi65_private *spi65p = (struct spi65_private *)p;
-        for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_spi65, N_SER_STRUCT_SPI65, tag, spi65p)) > 0; tag++) {
-                switch (tag) {
-                default:
-                        ser_set_error(sh, ser_error_format);
-                        break;
-                }
-        }
-        ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
