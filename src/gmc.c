@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "array.h"
+
 #include "cart.h"
 #include "events.h"
 #include "logging.h"
@@ -48,7 +50,14 @@ struct gmc {
 	struct sound_interface *snd;
 };
 
-#define GMC_SER_CART (1)
+static const struct ser_struct ser_struct_gmc[] = {
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
+};
+
+static const struct ser_struct_data gmc_ser_struct_data = {
+	.elems = ser_struct_gmc,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_gmc),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -68,17 +77,13 @@ static void gmc_initialise(struct part *p, void *options);
 static _Bool gmc_finish(struct part *p);
 static void gmc_free(struct part *p);
 
-static struct part *gmc_deserialise(struct ser_handle *sh);
-static void gmc_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs gmc_funcs = {
 	.allocate = gmc_allocate,
 	.initialise = gmc_initialise,
 	.finish = gmc_finish,
 	.free = gmc_free,
 
-	.deserialise = gmc_deserialise,
-	.serialise = gmc_serialise,
+	.ser_struct_data = &gmc_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -127,39 +132,13 @@ static _Bool gmc_finish(struct part *p) {
 		return 0;
 	}
 
+	cart_finish(&gmc->cart);
+
 	return 1;
 }
 
 static void gmc_free(struct part *p) {
 	cart_rom_free(p);
-}
-
-static struct part *gmc_deserialise(struct ser_handle *sh) {
-	struct part *p = gmc_allocate();
-	struct gmc *gmc = (struct gmc *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
-		switch (tag) {
-		case GMC_SER_CART:
-			cart_deserialise(&gmc->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void gmc_serialise(struct part *p, struct ser_handle *sh) {
-	struct gmc *gmc = (struct gmc *)p;
-	(void)gmc;
-	cart_serialise(&gmc->cart, sh, GMC_SER_CART);
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
