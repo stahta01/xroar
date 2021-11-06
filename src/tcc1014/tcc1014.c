@@ -334,11 +334,19 @@ static struct ser_struct ser_struct_tcc1014[] = {
 	SER_STRUCT_ELEM(struct TCC1014_private, is_1986, ser_type_bool),  // 53
 };
 
-#define N_SER_STRUCT_TCC1014 ARRAY_N_ELEMENTS(ser_struct_tcc1014)
-
 #define TCC1014_SER_REGISTERS   (24)
 #define TCC1014_SER_MMU_BANKS   (25)
 #define TCC1014_SER_PALETTE_REG (26)
+
+static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data tcc1014_ser_struct_data = {
+	.elems = ser_struct_tcc1014,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_tcc1014),
+	.read_elem = tcc1014_read_elem,
+	.write_elem = tcc1014_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -397,9 +405,6 @@ static void tcc1014_initialise(struct part *p, void *options);
 static _Bool tcc1014_finish(struct part *p);
 static void tcc1014_free(struct part *p);
 
-static struct part *tcc1014_deserialise(struct ser_handle *sh);
-static void tcc1014_serialise(struct part *p, struct ser_handle *sh);
-
 static _Bool tcc1014_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs tcc1014_funcs = {
@@ -408,8 +413,7 @@ static const struct partdb_entry_funcs tcc1014_funcs = {
         .finish = tcc1014_finish,
         .free = tcc1014_free,
 
-        .deserialise = tcc1014_deserialise,
-        .serialise = tcc1014_serialise,
+        .ser_struct_data = &tcc1014_ser_struct_data,
 
 	.is_a = tcc1014_is_a,
 };
@@ -481,60 +485,46 @@ void tcc1014_free(struct part *p) {
 	event_dequeue(&gime->hs_fall_event);
 }
 
-static struct part *tcc1014_deserialise(struct ser_handle *sh) {
-	struct part *p = tcc1014_allocate();
-	struct TCC1014_private *gime = (struct TCC1014_private *)p;
-	int tag;
-	while ((tag = ser_read_struct(sh, ser_struct_tcc1014, N_SER_STRUCT_TCC1014, gime)) > 0) {
-		switch (tag) {
-		case TCC1014_SER_REGISTERS:
-			ser_read(sh, gime->registers, sizeof(gime->registers));
-			break;
-		case TCC1014_SER_MMU_BANKS:
-			for (int i = 0; i < 16; i++) {
-				gime->mmu_bank[i] = ser_read_uint8(sh) << 13;
-			}
-			break;
-		case TCC1014_SER_PALETTE_REG:
-			ser_read(sh, gime->palette_reg, sizeof(gime->palette_reg));
-			break;
-		default:
-			break;
+static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct TCC1014_private *gime = sptr;
+	switch (tag) {
+	case TCC1014_SER_REGISTERS:
+		ser_read(sh, gime->registers, sizeof(gime->registers));
+		break;
+	case TCC1014_SER_MMU_BANKS:
+		for (int i = 0; i < 16; i++) {
+			gime->mmu_bank[i] = ser_read_uint8(sh) << 13;
 		}
-		if (ser_error(sh))
-			break;
+		break;
+	case TCC1014_SER_PALETTE_REG:
+		ser_read(sh, gime->palette_reg, sizeof(gime->palette_reg));
+		break;
+	default:
+		return 0;
 	}
-
-	if (tag < 0) {
-		part_free(p);
-		return NULL;
-	}
-
-	return p;
+	return 1;
 }
 
-static void tcc1014_serialise(struct part *p, struct ser_handle *sh) {
-        struct TCC1014_private *gime = (struct TCC1014_private *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_tcc1014, N_SER_STRUCT_TCC1014, tag, gime)) > 0; tag++) {
-		switch (tag) {
-		case TCC1014_SER_REGISTERS:
-			ser_write(sh, tag, gime->registers, sizeof(gime->registers));
-			break;
-		case TCC1014_SER_MMU_BANKS:
-			ser_write_tag(sh, tag, 16);
-			for (int i = 0; i < 16; i++) {
-				ser_write_uint8_untagged(sh, gime->mmu_bank[i] >> 13);
-			}
-			ser_write_close_tag(sh);
-			break;
-		case TCC1014_SER_PALETTE_REG:
-			ser_write(sh, tag, gime->palette_reg, sizeof(gime->palette_reg));
-			break;
-		default:
-			break;
+static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+        struct TCC1014_private *gime = sptr;
+	switch (tag) {
+	case TCC1014_SER_REGISTERS:
+		ser_write(sh, tag, gime->registers, sizeof(gime->registers));
+		break;
+	case TCC1014_SER_MMU_BANKS:
+		ser_write_tag(sh, tag, 16);
+		for (int i = 0; i < 16; i++) {
+			ser_write_uint8_untagged(sh, gime->mmu_bank[i] >> 13);
 		}
+		ser_write_close_tag(sh);
+		break;
+	case TCC1014_SER_PALETTE_REG:
+		ser_write(sh, tag, gime->palette_reg, sizeof(gime->palette_reg));
+		break;
+	default:
+		return 0;
 	}
-        ser_write_close_tag(sh);
+        return 1;
 }
 
 static _Bool tcc1014_is_a(struct part *p, const char *name) {

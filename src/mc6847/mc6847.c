@@ -177,9 +177,17 @@ static struct ser_struct ser_struct_mc6847[] = {
 	SER_STRUCT_ELEM(struct MC6847_private, is_t1, ser_type_bool), // 41
 };
 
-#define N_SER_STRUCT_MC6847 ARRAY_N_ELEMENTS(ser_struct_mc6847)
+#define MC6847_SER_VRAM (34)
 
-#define TCC1014_SER_VRAM (34)
+static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mc6847_ser_struct_data = {
+	.elems = ser_struct_mc6847,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6847),
+	.read_elem = mc6847_read_elem,
+	.write_elem = mc6847_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -201,17 +209,13 @@ static void mc6847_initialise(struct part *p, void *options);
 static _Bool mc6847_finish(struct part *p);
 static void mc6847_free(struct part *p);
 
-static struct part *mc6847_deserialise(struct ser_handle *sh);
-static void mc6847_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mc6847_funcs = {
 	.allocate = mc6847_allocate,
 	.initialise = mc6847_initialise,
 	.finish = mc6847_finish,
 	.free = mc6847_free,
 
-	.deserialise = mc6847_deserialise,
-	.serialise = mc6847_serialise,
+	.ser_struct_data = &mc6847_ser_struct_data,
 };
 
 const struct partdb_entry mc6847_part = { .name = "MC6847", .funcs = &mc6847_funcs };
@@ -263,48 +267,34 @@ static void mc6847_free(struct part *p) {
 	event_dequeue(&vdg->hs_rise_event);
 }
 
-static struct part *mc6847_deserialise(struct ser_handle *sh) {
-	struct part *p = mc6847_allocate();
-	struct MC6847_private *vdg = (struct MC6847_private *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, vdg))) {
-		switch (tag) {
-		case TCC1014_SER_VRAM:
-			for (int i = 0; i < 42; i++) {
-				vdg->vram[i] = ser_read_uint16(sh);
-			}
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6847_private *vdg = sptr;
+	switch (tag) {
+	case MC6847_SER_VRAM:
+		for (int i = 0; i < 42; i++) {
+			vdg->vram[i] = ser_read_uint16(sh);
 		}
-	}
+		break;
 
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
+	default:
+		return 0;
 	}
-
-	return p;
+	return 1;
 }
 
-static void mc6847_serialise(struct part *p, struct ser_handle *sh) {
-	struct MC6847_private *vdg = (struct MC6847_private *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6847, N_SER_STRUCT_MC6847, tag, vdg)) > 0; tag++) {
-		switch (tag) {
-		case TCC1014_SER_VRAM:
-			ser_write_tag(sh, tag, 42*2);
-			for (int i = 0; i < 42; i++) {
-				ser_write_uint16_untagged(sh, vdg->vram[i]);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6847_private *vdg = sptr;
+	switch (tag) {
+	case MC6847_SER_VRAM:
+		ser_write_tag(sh, tag, 42*2);
+		for (int i = 0; i < 42; i++) {
+			ser_write_uint16_untagged(sh, vdg->vram[i]);
 		}
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
