@@ -27,6 +27,8 @@
 #include "debug_cpu.h"
 #include "part.h"
 
+struct ser_struct_data;
+
 #ifdef TRACE
 struct mc6809_trace;
 #endif
@@ -113,6 +115,8 @@ struct MC6809 {
 #define MC6809_REG_A(cpu) (*((uint8_t *)&cpu->reg_d + MC6809_REG_HI))
 #define MC6809_REG_B(cpu) (*((uint8_t *)&cpu->reg_d + MC6809_REG_LO))
 
+extern const struct ser_struct_data mc6809_ser_struct_data;
+
 inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val) {
 	cpu->halt = val;
 }
@@ -130,8 +134,6 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 }
 
 // Used by MC6809-compatibles:
-void mc6809_serialise_as(struct MC6809 *cpu, struct ser_handle *sh, unsigned otag);
-void mc6809_deserialise_into(struct MC6809 *cpu, struct ser_handle *sh);
 _Bool mc6809_is_a(struct part *p, const char *name);
 unsigned mc6809_get_pc(void *sptr);
 

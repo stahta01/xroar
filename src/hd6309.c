@@ -53,7 +53,7 @@
 #endif
 
 static const struct ser_struct ser_struct_hd6309[] = {
-	SER_STRUCT_ELEM(struct HD6309, mc6809, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&mc6809_ser_struct_data), // 1
 
 	SER_STRUCT_ELEM(struct HD6309, state, ser_type_unsigned), // 2
 	SER_STRUCT_ELEM(struct HD6309, reg_w, ser_type_uint16), // 3
@@ -67,11 +67,18 @@ static const struct ser_struct ser_struct_hd6309[] = {
 	SER_STRUCT_ELEM(struct HD6309, tfm_dest_mod, ser_type_uint16), // 10
 };
 
-#define N_SER_STRUCT_HD6309 ARRAY_N_ELEMENTS(ser_struct_hd6309)
-
-#define HD6309_SER_MC6809   (1)
 #define HD6309_SER_TFM_SRC  (6)
 #define HD6309_SER_TFM_DEST (7)
+
+static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data hd6309_ser_struct_data = {
+	.elems = ser_struct_hd6309,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_hd6309),
+	.read_elem = hd6309_read_elem,
+	.write_elem = hd6309_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -198,8 +205,6 @@ static struct part *hd6309_allocate(void);
 static void hd6309_initialise(struct part *p, void *options);
 static void hd6309_free(struct part *p);
 
-static struct part *hd6309_deserialise(struct ser_handle *sh);
-static void hd6309_serialise(struct part *p, struct ser_handle *sh);
 static _Bool hd6309_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs hd6309_funcs = {
@@ -207,8 +212,7 @@ static const struct partdb_entry_funcs hd6309_funcs = {
         .initialise = hd6309_initialise,
         .free = hd6309_free,
 
-        .deserialise = hd6309_deserialise,
-        .serialise = hd6309_serialise,
+        .ser_struct_data = &hd6309_ser_struct_data,
 
         .is_a = hd6309_is_a,
 };
@@ -254,52 +258,34 @@ static void hd6309_free(struct part *p) {
 #endif
 }
 
-static struct part *hd6309_deserialise(struct ser_handle *sh) {
-	struct part *p = hd6309_allocate();
-	struct HD6309 *hcpu = (struct HD6309 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, hcpu))) {
-		switch (tag) {
-		case HD6309_SER_MC6809:
-			mc6809_deserialise_into(&hcpu->mc6809, sh);
-			break;
-		case HD6309_SER_TFM_SRC:
-			hcpu->tfm_src = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
-			break;
-		case HD6309_SER_TFM_DEST:
-			hcpu->tfm_dest = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct HD6309 *hcpu = sptr;
+	switch (tag) {
+	case HD6309_SER_TFM_SRC:
+		hcpu->tfm_src = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
+		break;
+	case HD6309_SER_TFM_DEST:
+		hcpu->tfm_dest = tfm_reg_to_ptr(hcpu, ser_read_vuint32(sh));
+		break;
+	default:
+		return 0;
 	}
-	if (ser_error(sh)) {
-		part_free((struct part *)hcpu);
-		return NULL;
-	}
-	return (struct part *)hcpu;
+	return 1;
 }
 
-static void hd6309_serialise(struct part *p, struct ser_handle *sh) {
-        struct HD6309 *hcpu = (struct HD6309 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_hd6309, N_SER_STRUCT_HD6309, tag, hcpu)) > 0; tag++) {
-		switch (tag) {
-		case HD6309_SER_MC6809:
-			mc6809_serialise_as(&hcpu->mc6809, sh, tag);
-			break;
-		case HD6309_SER_TFM_SRC:
-			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_src));
-			break;
-		case HD6309_SER_TFM_DEST:
-			ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_dest));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+        struct HD6309 *hcpu = sptr;
+	switch (tag) {
+	case HD6309_SER_TFM_SRC:
+		ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_src));
+		break;
+	case HD6309_SER_TFM_DEST:
+		ser_write_vuint32(sh, tag, tfm_ptr_to_reg(hcpu, hcpu->tfm_dest));
+		break;
+	default:
+		return 0;
 	}
-        ser_write_close_tag(sh);
+        return 1;
 }
 
 static _Bool hd6309_is_a(struct part *p, const char *name) {
