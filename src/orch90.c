@@ -41,14 +41,15 @@ struct orch90 {
 };
 
 static const struct ser_struct ser_struct_orch90[] = {
-	SER_STRUCT_ELEM(struct orch90, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct orch90, left, ser_type_uint8), // 2
 	SER_STRUCT_ELEM(struct orch90, right, ser_type_uint8), // 3
 };
 
-#define N_SER_STRUCT_ORCH90 ARRAY_N_ELEMENTS(ser_struct_orch90)
-
-#define ORCH90_SER_CART  (1)
+static const struct ser_struct_data orch90_ser_struct_data = {
+	.elems = ser_struct_orch90,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_orch90),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -67,16 +68,12 @@ static struct part *orch90_allocate(void);
 static void orch90_initialise(struct part *p, void *options);
 static _Bool orch90_finish(struct part *p);
 
-static struct part *orch90_deserialise(struct ser_handle *sh);
-static void orch90_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs orch90_funcs = {
 	.allocate = orch90_allocate,
 	.initialise = orch90_initialise,
 	.finish = orch90_finish,
 
-	.deserialise = orch90_deserialise,
-	.serialise = orch90_serialise,
+	.ser_struct_data = &orch90_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -113,46 +110,8 @@ static void orch90_initialise(struct part *p, void *options) {
 }
 
 static _Bool orch90_finish(struct part *p) {
-	struct orch90 *o = (struct orch90 *)p;
-	// Nothing to do...
-	(void)o;
+	cart_finish((struct cart *)p);
 	return 1;
-}
-
-static struct part *orch90_deserialise(struct ser_handle *sh) {
-	struct part *p = orch90_allocate();
-	struct orch90 *o = (struct orch90 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_orch90, N_SER_STRUCT_ORCH90, o))) {
-		switch (tag) {
-		case ORCH90_SER_CART:
-			cart_deserialise(&o->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void orch90_serialise(struct part *p, struct ser_handle *sh) {
-	struct orch90 *o = (struct orch90 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_orch90, N_SER_STRUCT_ORCH90, tag, o)) > 0; tag++) {
-		switch (tag) {
-		case ORCH90_SER_CART:
-			cart_serialise(&o->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
