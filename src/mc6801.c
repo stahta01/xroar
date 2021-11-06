@@ -101,10 +101,18 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, is_6801, ser_type_bool), // 32
 };
 
-#define N_SER_STRUCT_MC6801 ARRAY_N_ELEMENTS(ser_struct_mc6801)
-
 #define MC6801_SER_REG (13)
 #define MC6801_SER_RAM (14)
+
+static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mc6801_ser_struct_data = {
+	.elems = ser_struct_mc6801,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6801),
+	.read_elem = mc6801_read_elem,
+	.write_elem = mc6801_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -195,9 +203,6 @@ static void mc6801_initialise(struct part *p, void *options);
 static _Bool mc6801_finish(struct part *p);
 static void mc6801_free(struct part *p);
 
-static struct part *mc6801_deserialise(struct ser_handle *sh);
-static void mc6801_serialise(struct part *p, struct ser_handle *sh);
-
 static _Bool mc6801_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs mc6801_funcs = {
@@ -206,8 +211,7 @@ static const struct partdb_entry_funcs mc6801_funcs = {
 	.finish = mc6801_finish,
 	.free = mc6801_free,
 
-	.deserialise = mc6801_deserialise,
-	.serialise = mc6801_serialise,
+	.ser_struct_data = &mc6801_ser_struct_data,
 
 	.is_a = mc6801_is_a,
 };
@@ -266,49 +270,34 @@ static void mc6801_free(struct part *p) {
 		free(cpu->rom);
 }
 
-static struct part *mc6801_deserialise(struct ser_handle *sh) {
-	struct part *p = mc6801_allocate();
-	struct MC6801 *cpu = (struct MC6801 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6801, N_SER_STRUCT_MC6801, cpu))) {
-		switch (tag) {
-		case MC6801_SER_REG:
-			ser_read(sh, cpu->reg, sizeof(cpu->reg));
-			break;
-		case MC6801_SER_RAM:
-			ser_read(sh, cpu->ram, sizeof(cpu->ram));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6801 *cpu = sptr;
+	switch (tag) {
+	case MC6801_SER_REG:
+		ser_read(sh, cpu->reg, sizeof(cpu->reg));
+		break;
+	case MC6801_SER_RAM:
+		ser_read(sh, cpu->ram, sizeof(cpu->ram));
+		break;
+	default:
+		return 0;
 	}
-
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return p;
+	return 1;
 }
 
-static void mc6801_serialise(struct part *p, struct ser_handle *sh) {
-	struct MC6801 *cpu = (struct MC6801 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6801, N_SER_STRUCT_MC6801, tag, cpu)) > 0; tag++) {
-		switch (tag) {
-		case MC6801_SER_REG:
-			ser_write(sh, tag, cpu->reg, sizeof(cpu->reg));
-			break;
-		case MC6801_SER_RAM:
-			ser_write(sh, tag, cpu->ram, sizeof(cpu->ram));
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6801 *cpu = sptr;
+	switch (tag) {
+	case MC6801_SER_REG:
+		ser_write(sh, tag, cpu->reg, sizeof(cpu->reg));
+		break;
+	case MC6801_SER_RAM:
+		ser_write(sh, tag, cpu->ram, sizeof(cpu->ram));
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 static _Bool mc6801_is_a(struct part *p, const char *name) {
