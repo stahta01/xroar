@@ -75,7 +75,10 @@ static struct ser_struct ser_struct_vcounter[] = {
 	SER_STRUCT_ELEM(struct vcounter, output, ser_type_bool), // 3
 };
 
-#define N_SER_STRUCT_VCOUNTER ARRAY_N_ELEMENTS(ser_struct_vcounter)
+static const struct ser_struct_data vcounter_ser_struct_data = {
+	.elems = ser_struct_vcounter,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_vcounter),
+};
 
 static const struct vcounter ground = { .output = 0 };
 
@@ -159,8 +162,6 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_STRUCT_ELEM(struct MC6883_private, vdg.xdiv2, ser_type_unhandled), // 27
 };
 
-#define N_SER_STRUCT_MC6883 ARRAY_N_ELEMENTS(ser_struct_mc6883)
-
 #define MC6883_SER_B15_5 (20)
 #define MC6883_SER_B4    (21)
 #define MC6883_SER_B3_0  (22)
@@ -169,6 +170,16 @@ static struct ser_struct ser_struct_mc6883[] = {
 #define MC6883_SER_YDIV2 (25)
 #define MC6883_SER_XDIV3 (26)
 #define MC6883_SER_XDIV2 (27)
+
+static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mc6883_ser_struct_data = {
+	.elems = ser_struct_mc6883,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6883),
+	.read_elem = mc6883_read_elem,
+	.write_elem = mc6883_write_elem,
+};
 
 static void update_vcounter_inputs(struct MC6883_private *sam);
 static void update_from_register(struct MC6883_private *);
@@ -180,15 +191,11 @@ static void update_from_register(struct MC6883_private *);
 static struct part *mc6883_allocate(void);
 static _Bool mc6883_finish(struct part *p);
 
-static struct part *mc6883_deserialise(struct ser_handle *sh);
-static void mc6883_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mc6883_funcs = {
 	.allocate = mc6883_allocate,
 	.finish = mc6883_finish,
 
-	.deserialise = mc6883_deserialise,
-	.serialise = mc6883_serialise,
+	.ser_struct_data = &mc6883_ser_struct_data,
 };
 
 const struct partdb_entry mc6883_part = { .name = "SN74LS783", .funcs = &mc6883_funcs };
@@ -222,70 +229,51 @@ static _Bool mc6883_finish(struct part *p) {
 	return 1;
 }
 
-static struct part *mc6883_deserialise(struct ser_handle *sh) {
-	struct part *p = mc6883_allocate();
-	struct MC6883_private *sam = (struct MC6883_private *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc6883, N_SER_STRUCT_MC6883, sam))) {
-		switch (tag) {
-		case MC6883_SER_B15_5:
-		case MC6883_SER_B4:
-		case MC6883_SER_B3_0:
-		case MC6883_SER_YDIV4:
-		case MC6883_SER_YDIV3:
-		case MC6883_SER_YDIV2:
-		case MC6883_SER_XDIV3:
-		case MC6883_SER_XDIV2:
-			{
-				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
-				if (ser_read_struct(sh, ser_struct_vcounter, N_SER_STRUCT_VCOUNTER, ptr) != 0) {
-					ser_set_error(sh, ser_error_format);
-					break;
-				}
-			}
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6883_private *sam = sptr;
+	switch (tag) {
+	case MC6883_SER_B15_5:
+	case MC6883_SER_B4:
+	case MC6883_SER_B3_0:
+	case MC6883_SER_YDIV4:
+	case MC6883_SER_YDIV3:
+	case MC6883_SER_YDIV2:
+	case MC6883_SER_XDIV3:
+	case MC6883_SER_XDIV2:
+		{
+			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
+			ser_read_struct_data(sh, &vcounter_ser_struct_data, ptr);
 		}
-	}
+		break;
 
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
+	default:
+		return 0;
 	}
-
-	return p;
+	return 1;
 }
 
-static void mc6883_serialise(struct part *p, struct ser_handle *sh) {
-	struct MC6883_private *sam = (struct MC6883_private *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc6883, N_SER_STRUCT_MC6883, tag, sam)) > 0; tag++) {
-		switch (tag) {
-		case MC6883_SER_B15_5:
-		case MC6883_SER_B4:
-		case MC6883_SER_B3_0:
-		case MC6883_SER_YDIV4:
-		case MC6883_SER_YDIV3:
-		case MC6883_SER_YDIV2:
-		case MC6883_SER_XDIV3:
-		case MC6883_SER_XDIV2:
-			{
-				void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
-				if (ser_write_struct(sh, ser_struct_vcounter, N_SER_STRUCT_VCOUNTER, tag, ptr) != 0) {
-					ser_set_error(sh, ser_error_format);
-					break;
-				}
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-
+static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct MC6883_private *sam = sptr;
+	switch (tag) {
+	case MC6883_SER_B15_5:
+	case MC6883_SER_B4:
+	case MC6883_SER_B3_0:
+	case MC6883_SER_YDIV4:
+	case MC6883_SER_YDIV3:
+	case MC6883_SER_YDIV2:
+	case MC6883_SER_XDIV3:
+	case MC6883_SER_XDIV2:
+		{
+			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
+			ser_write_open_string(sh, tag, "");
+			ser_write_struct_data(sh, &vcounter_ser_struct_data, ptr);
 		}
+		break;
+	default:
+		return 0;
+
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
