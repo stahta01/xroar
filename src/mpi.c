@@ -74,7 +74,7 @@ struct mpi {
 };
 
 static const struct ser_struct ser_struct_mpi[] = {
-	SER_STRUCT_ELEM(struct mpi, cart, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct mpi, switch_enable, ser_type_bool), // 2
 	SER_STRUCT_ELEM(struct mpi, cts_route, ser_type_unsigned), // 3
 	SER_STRUCT_ELEM(struct mpi, p2_route, ser_type_unsigned), // 4
@@ -82,9 +82,13 @@ static const struct ser_struct ser_struct_mpi[] = {
 	SER_STRUCT_ELEM(struct mpi, nmi_state, ser_type_unsigned), // 6
 	SER_STRUCT_ELEM(struct mpi, halt_state, ser_type_unsigned), // 7
 };
-#define N_SER_STRUCT_MPI ARRAY_N_ELEMENTS(ser_struct_mpi)
 
 #define MPI_SER_CART (1)
+
+static const struct ser_struct_data mpi_ser_struct_data = {
+	.elems = ser_struct_mpi,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mpi),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -105,7 +109,6 @@ static void mpi_set_halt(void *, _Bool);
 static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
 static void mpi_free(struct part *p);
-static void mpi_serialise(struct part *p, struct ser_handle *sh);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_reset(struct cart *c);
@@ -123,17 +126,13 @@ static void mpi_initialise(struct part *p, void *options);
 static _Bool mpi_finish(struct part *p);
 static void mpi_free(struct part *p);
 
-static struct part *mpi_deserialise(struct ser_handle *sh);
-static void mpi_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mpi_funcs = {
 	.allocate = mpi_allocate,
 	.initialise = mpi_initialise,
 	.finish = mpi_finish,
 	.free = mpi_free,
 
-	.deserialise = mpi_deserialise,
-	.serialise = mpi_serialise,
+	.ser_struct_data = &mpi_ser_struct_data,
 
 	.is_a = cart_is_a,
 };
@@ -219,42 +218,6 @@ static _Bool mpi_finish(struct part *p) {
 static void mpi_free(struct part *p) {
 	(void)p;
 	mpi_active = 0;
-}
-
-static struct part *mpi_deserialise(struct ser_handle *sh) {
-	struct part *p = mpi_allocate();
-	struct mpi *mpi = (struct mpi *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mpi, N_SER_STRUCT_MPI, mpi))) {
-		switch (tag) {
-		case MPI_SER_CART:
-			cart_deserialise(&mpi->cart, sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void mpi_serialise(struct part *p, struct ser_handle *sh) {
-	struct mpi *mpi = (struct mpi *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mpi, N_SER_STRUCT_MPI, tag, mpi)) > 0; tag++) {
-		switch (tag) {
-		case MPI_SER_CART:
-			cart_serialise(&mpi->cart, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
