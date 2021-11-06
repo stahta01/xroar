@@ -34,10 +34,15 @@
 #include "xalloc.h"
 
 #include "dkbd.h"
+#include "fs.h"
 #include "machine.h"
 #include "logging.h"
 #include "serialise.h"
 #include "xroar.h"
+
+#ifdef HAVE_WASM
+#include "wasm/wasm.h"
+#endif
 
 static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, description, ser_type_string), // 1
@@ -288,23 +293,27 @@ void machine_config_print_all(FILE *f, _Bool all) {
 }
 
 int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
-	FILE *fd;
-
 	if (path == NULL)
 		return -1;
 
-	struct stat statbuf;
-	if (stat(path, &statbuf) != 0)
+#ifdef HAVE_WASM
+	FILE *fd = wasm_fopen(path, "rb");
+#else
+	FILE *fd = fopen(path, "rb");
+#endif
+
+	if (!fd) {
 		return -1;
-	off_t file_size = statbuf.st_size;
+	}
+
+	off_t file_size = fs_file_size(fd);
+	if (file_size < 0)
+		return -1;
 	int header_size = file_size % 256;
 	file_size -= header_size;
 	if (file_size > max_size)
 		file_size = max_size;
 
-	if (!(fd = fopen(path, "rb"))) {
-		return -1;
-	}
 	LOG_DEBUG(1, "Loading ROM image: %s\n", path);
 
 	if (header_size > 0) {

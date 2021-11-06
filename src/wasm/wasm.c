@@ -54,12 +54,14 @@
 #define WASM_DEBUG(...) LOG_PRINT(__VA_ARGS__)
 #endif
 
+_Bool wasm_retry_open = 0;
+
 // Functions prefixed wasm_ui_ are called from UI to interact with the browser
 // environment.  Other functions prefixed wasm_ are exported and called from
 // the JavaScript support code.
 
 // Flag pending downloads.  Emulator will not run while waiting for files.
-static int wasm_waiting_files = 0;
+int wasm_waiting_files = 0;
 
 static _Bool done_first_frame = 0;
 static double last_t;
@@ -299,6 +301,20 @@ static void wasm_wget(const char *file) {
 	// enough to justify that.
 	WASM_DEBUG("emscripten_async_wget(%s)\n", file);
 	emscripten_async_wget(file, file, wasm_onload, wasm_onerror);
+}
+
+// Front-end to fopen().  On failure, submits a wasm_wget() request if global
+// flag 'wasm_retry_open' is set.  Caller can then retry once all files are
+// fetched.
+
+FILE *wasm_fopen(const char *pathname, const char *mode) {
+	FILE *fd = fopen(pathname, mode);
+	if (wasm_retry_open) {
+		if (!fd || fs_file_size(fd) == 0) {
+			wasm_wget(pathname);
+		}
+	}
+	return fd;
 }
 
 // Set machine & its default cart

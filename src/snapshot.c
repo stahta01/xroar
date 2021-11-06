@@ -47,6 +47,10 @@
 #include "vdrive.h"
 #include "xroar.h"
 
+#ifdef HAVE_WASM
+#include "wasm/wasm.h"
+#endif
+
 // Top-level snapshot serialisation tags:
 
 // Special header tag - it's fine to reuse this as it only ever appears
@@ -62,12 +66,40 @@ const char *snapv2_header = "/usr/bin/env xroar\n# 6809.org.uk\n";
 static int read_v1_snapshot(const char *filename);
 static int read_v2_snapshot(const char *filename);
 
+// For WebAssembly, read the snapshot in, but if that resulted in any pending
+// files, queue up another go (but just the one).  This only really applies to
+// ROM files.
+
+#ifdef HAVE_WASM
+static void do_retry_read_snapshot(void *sptr) {
+	char *filename = sptr;
+	if (filename) {
+		read_v2_snapshot(filename);
+		free(filename);
+	}
+}
+#endif
+
 int read_snapshot(const char *filename) {
+#ifdef HAVE_WASM
+	wasm_retry_open = 1;
+#endif
 	if (read_v2_snapshot(filename) < 0 &&
 	    read_v1_snapshot(filename) < 0) {
+#ifdef HAVE_WASM
+		wasm_retry_open = 0;
+#endif
 		LOG_WARN("Snapshot: read failed\n");
 		return -1;
 	}
+#ifdef HAVE_WASM
+	wasm_retry_open = 0;
+	if (wasm_waiting_files) {
+		char *fncopy = xstrdup(filename);
+		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_retry_read_snapshot, fncopy), 1);
+		return -1;
+	}
+#endif
 	return 0;
 }
 

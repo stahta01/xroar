@@ -19,8 +19,15 @@
 #ifndef XROAR_WASM_H_
 #define XROAR_WASM_H_
 
+#include <stdio.h>
+
 struct machine_config;
 struct cart_config;
+
+extern _Bool wasm_retry_open;
+extern int wasm_waiting_files;
+
+FILE *wasm_fopen(const char *pathname, const char *mode);
 
 // Called once per frame.
 void wasm_ui_run(void *sptr);
