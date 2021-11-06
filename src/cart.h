@@ -28,6 +28,7 @@
 #include "events.h"
 #include "part.h"
 
+struct ser_struct_data;
 struct slist;
 struct machine_config;
 struct event;
@@ -118,12 +119,17 @@ void cart_config_print_all(FILE *f, _Bool all);
 _Bool cart_config_remove(const char *name);
 void cart_config_remove_all(void);
 
-struct cart *cart_create(const char *cc_name);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+extern const struct ser_struct_data cart_ser_struct_data;
+
+struct cart *cart_create(const char *cc_name);
 void cart_finish(struct cart *c);
-_Bool cart_is_a(struct part *p, const char *name);
-void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag);
 void cart_deserialise(struct cart *c, struct ser_handle *sh);
+void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag);
+_Bool cart_is_a(struct part *p, const char *name);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c);

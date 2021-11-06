@@ -54,6 +54,7 @@ static const struct ser_struct ser_struct_cart_config[] = {
 	SER_STRUCT_ELEM(struct cart_config, becker_port, ser_type_bool), // 5
 	SER_STRUCT_ELEM(struct cart_config, autorun, ser_type_int), // 6
 };
+
 #define N_SER_STRUCT_CART_CONFIG ARRAY_N_ELEMENTS(ser_struct_cart_config)
 
 static const struct ser_struct ser_struct_cart[] = {
@@ -66,6 +67,16 @@ static const struct ser_struct ser_struct_cart[] = {
 #define N_SER_STRUCT_CART ARRAY_N_ELEMENTS(ser_struct_cart)
 
 #define CART_SER_CART_CONFIG (1)
+
+static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data cart_ser_struct_data = {
+	.elems = ser_struct_cart,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart),
+	.read_elem = cart_read_elem,
+	.write_elem = cart_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -318,6 +329,7 @@ struct cart *cart_create(const char *cc_name) {
 }
 
 void cart_finish(struct cart *c) {
+	cart_rom_load(c);
 	if (c->firq_event.next == &c->firq_event) {
 		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
 	}
@@ -328,35 +340,48 @@ _Bool cart_is_a(struct part *p, const char *name) {
 	return strcmp(name, "cart") == 0;
 }
 
-void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag) {
-	ser_write_open_string(sh, otag, "");
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_cart, N_SER_STRUCT_CART, tag, c)) > 0; tag++) {
-		switch (tag) {
-		case CART_SER_CART_CONFIG:
-			cart_config_serialise(c->config, sh, tag);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct cart *c = sptr;
+	switch (tag) {
+	case CART_SER_CART_CONFIG:
+		c->config = cart_config_deserialise(sh);
+		return c->config != NULL;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
 }
 
 void cart_deserialise(struct cart *c, struct ser_handle *sh) {
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_cart, N_SER_STRUCT_CART, c))) {
-		switch (tag) {
-		case CART_SER_CART_CONFIG:
-			c->config = cart_config_deserialise(sh);
-			break;
-		default:
+		if (!cart_read_elem(c, sh, tag)) {
 			ser_set_error(sh, ser_error_format);
-			break;
+			return;
 		}
 		tag++;
 	}
-	cart_rom_load(c);
+}
+
+static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct cart *c = sptr;
+	switch (tag) {
+	case CART_SER_CART_CONFIG:
+		cart_config_serialise(c->config, sh, tag);
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+void cart_serialise(struct cart *c, struct ser_handle *sh, unsigned otag) {
+	ser_write_open_string(sh, otag, "");
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_cart, N_SER_STRUCT_CART, tag, c)) > 0; tag++) {
+		if (!cart_write_elem(c, sh, tag)) {
+			ser_set_error(sh, ser_error_format);
+			return;
+		}
+	}
+	ser_write_close_tag(sh);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
