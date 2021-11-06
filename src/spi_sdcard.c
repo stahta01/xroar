@@ -82,10 +82,18 @@ static const struct ser_struct ser_struct_spi_sdcard[] = {
 	SER_STRUCT_ELEM(struct spi_sdcard, acmd, ser_type_bool), // 12
 };
 
-#define N_SER_STRUCT_SPI_SDCARD ARRAY_N_ELEMENTS(ser_struct_spi_sdcard)
-
 #define SPI_SDCARD_SER_CMDARG (5)
 #define SPI_SDCARD_SER_BLKBUF (6)
+
+static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data spi_sdcard_ser_struct_data = {
+	.elems = ser_struct_spi_sdcard,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_spi_sdcard),
+	.read_elem = spi_sdcard_read_elem,
+	.write_elem = spi_sdcard_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -110,9 +118,6 @@ static void spi_sdcard_initialise(struct part *p, void *options);
 static _Bool spi_sdcard_finish(struct part *p);
 static void spi_sdcard_free(struct part *p);
 
-static struct part *spi_sdcard_deserialise(struct ser_handle *sh);
-static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh);
-
 static _Bool spi_sdcard_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs spi_sdcard_funcs = {
@@ -121,8 +126,7 @@ static const struct partdb_entry_funcs spi_sdcard_funcs = {
 	.finish = spi_sdcard_finish,
 	.free = spi_sdcard_free,
 
-	.deserialise = spi_sdcard_deserialise,
-	.serialise = spi_sdcard_serialise,
+	.ser_struct_data = &spi_sdcard_ser_struct_data,
 
 	.is_a = spi_sdcard_is_a,
 };
@@ -161,48 +165,35 @@ static void spi_sdcard_free(struct part *p) {
 		free(sdcard->imagefile);
 }
 
-static struct part *spi_sdcard_deserialise(struct ser_handle *sh) {
-	struct part *p = spi_sdcard_allocate();
-	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_spi_sdcard, N_SER_STRUCT_SPI_SDCARD, sdcard))) {
-		switch (tag) {
-		case SPI_SDCARD_SER_CMDARG:
-			ser_read(sh, sdcard->cmdarg, sizeof(sdcard->cmdarg));
-			break;
-		case SPI_SDCARD_SER_BLKBUF:
-			ser_read(sh, sdcard->blkbuf, sizeof(sdcard->blkbuf));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct spi_sdcard *sdcard = sptr;
+	switch (tag) {
+	case SPI_SDCARD_SER_CMDARG:
+		ser_read(sh, sdcard->cmdarg, sizeof(sdcard->cmdarg));
+		break;
+	case SPI_SDCARD_SER_BLKBUF:
+		ser_read(sh, sdcard->blkbuf, sizeof(sdcard->blkbuf));
+		break;
+	default:
+		return 0;
+		break;
 	}
-
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return p;
+	return 1;
 }
 
-static void spi_sdcard_serialise(struct part *p, struct ser_handle *sh) {
-	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_spi_sdcard, N_SER_STRUCT_SPI_SDCARD, tag, sdcard)) > 0; tag++) {
-		switch (tag) {
-		case SPI_SDCARD_SER_CMDARG:
-			ser_write(sh, tag, sdcard->cmdarg, sizeof(sdcard->cmdarg));
-			break;
-		case SPI_SDCARD_SER_BLKBUF:
-			ser_write(sh, tag, sdcard->blkbuf, sizeof(sdcard->blkbuf));
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct spi_sdcard *sdcard = sptr;
+	switch (tag) {
+	case SPI_SDCARD_SER_CMDARG:
+		ser_write(sh, tag, sdcard->cmdarg, sizeof(sdcard->cmdarg));
+		break;
+	case SPI_SDCARD_SER_BLKBUF:
+		ser_write(sh, tag, sdcard->blkbuf, sizeof(sdcard->blkbuf));
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
