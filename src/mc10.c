@@ -92,16 +92,23 @@ struct machine_mc10 {
 };
 
 static const struct ser_struct ser_struct_mc10[] = {
-	SER_STRUCT_ELEM(struct machine_mc10, machine.config, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct machine_mc10, ram, ser_type_unhandled), // 2
 	SER_STRUCT_ELEM(struct machine_mc10, ram_size, ser_type_unsigned), // 3
 	SER_STRUCT_ELEM(struct machine_mc10, inverted_text, ser_type_bool), // 4
 };
 
-#define N_SER_STRUCT_MC10 ARRAY_N_ELEMENTS(ser_struct_mc10)
-
-#define MC10_SER_MACHINE (1)
 #define MC10_SER_RAM     (2)
+
+static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data mc10_ser_struct_data = {
+	.elems = ser_struct_mc10,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc10),
+	.read_elem = mc10_read_elem,
+	.write_elem = mc10_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -172,17 +179,13 @@ static void mc10_initialise(struct part *p, void *options);
 static _Bool mc10_finish(struct part *p);
 static void mc10_free(struct part *p);
 
-static struct part *mc10_deserialise(struct ser_handle *sh);
-static void mc10_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs mc10_funcs = {
 	.allocate = mc10_allocate,
 	.initialise = mc10_initialise,
 	.finish = mc10_finish,
 	.free = mc10_free,
 
-	.deserialise = mc10_deserialise,
-	.serialise = mc10_serialise,
+	.ser_struct_data = &mc10_ser_struct_data,
 
 	.is_a = machine_is_a,
 };
@@ -386,64 +389,39 @@ static void mc10_free(struct part *p) {
 	ntsc_burst_free(mp->ntsc_burst[0]);
 }
 
-static struct part *mc10_deserialise(struct ser_handle *sh) {
-	struct part *p = mc10_allocate();
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_mc10, N_SER_STRUCT_MC10, mp))) {
-		size_t length = ser_data_length(sh);
-		switch (tag) {
-		case MC10_SER_MACHINE:
-			machine_deserialise(&mp->machine, sh);
-			break;
-
-		case MC10_SER_RAM:
-			if (!mp->machine.config) {
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			if (length != ((unsigned)mp->machine.config->ram * 1024)) {
-				LOG_WARN("MC10/DESERIALISE: RAM size mismatch\n");
-				LOG_PRINT("Expected %04x got %04x\n", mp->machine.config->ram * 1024, (int)length);
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			if (mp->ram) {
-				free(mp->ram);
-			}
-			mp->ram = ser_read_new(sh, length);
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_mc10 *mp = sptr;
+	size_t length = ser_data_length(sh);
+	switch (tag) {
+	case MC10_SER_RAM:
+		if (!mp->machine.config) {
+			return 0;
 		}
+		if (length != ((unsigned)mp->machine.config->ram * 1024)) {
+			LOG_WARN("MC10/DESERIALISE: RAM size mismatch\n");
+			return 0;
+		}
+		if (mp->ram) {
+			free(mp->ram);
+		}
+		mp->ram = ser_read_new(sh, length);
+		break;
+	default:
+		return 0;
 	}
-
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return p;
+	return 1;
 }
 
-static void mc10_serialise(struct part *p, struct ser_handle *sh) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_mc10, N_SER_STRUCT_MC10, tag, mp)) > 0; tag++) {
-		switch (tag) {
-		case MC10_SER_MACHINE:
-			machine_serialise(&mp->machine, sh, tag);
-			break;
-		case MC10_SER_RAM:
-			ser_write(sh, tag, mp->ram, mp->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_mc10 *mp = sptr;
+	switch (tag) {
+	case MC10_SER_RAM:
+		ser_write(sh, tag, mp->ram, mp->ram_size);
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

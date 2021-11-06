@@ -135,17 +135,24 @@ struct machine_dragon {
 };
 
 static const struct ser_struct ser_struct_dragon[] = {
-        SER_STRUCT_ELEM(struct machine_dragon, public.config, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
         SER_STRUCT_ELEM(struct machine_dragon, ram, ser_type_unhandled), // 2
         SER_STRUCT_ELEM(struct machine_dragon, ram_size, ser_type_unsigned), // 3
         SER_STRUCT_ELEM(struct machine_dragon, ram_mask, ser_type_unsigned), // 4
         SER_STRUCT_ELEM(struct machine_dragon, inverted_text, ser_type_bool), // 5
 };
 
-#define N_SER_STRUCT_DRAGON ARRAY_N_ELEMENTS(ser_struct_dragon)
-
-#define DRAGON_SER_MACHINE (1)
 #define DRAGON_SER_RAM     (2)
+
+static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data dragon_ser_struct_data = {
+	.elems = ser_struct_dragon,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_dragon),
+	.read_elem = dragon_read_elem,
+	.write_elem = dragon_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -327,17 +334,13 @@ static void dragon_initialise(struct part *p, void *options);
 static _Bool dragon_finish(struct part *p);
 static void dragon_free(struct part *p);
 
-static struct part *dragon_deserialise(struct ser_handle *sh);
-static void dragon_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs dragon_funcs = {
 	.allocate = dragon_allocate,
 	.initialise = dragon_initialise,
 	.finish = dragon_finish,
 	.free = dragon_free,
 
-	.deserialise = dragon_deserialise,
-	.serialise = dragon_serialise,
+	.ser_struct_data = &dragon_ser_struct_data,
 
 	.is_a = machine_is_a,
 };
@@ -836,61 +839,36 @@ static void dragon_free(struct part *p) {
 	ntsc_burst_free(md->ntsc_burst[0]);
 }
 
-static struct part *dragon_deserialise(struct ser_handle *sh) {
-	struct part *p = dragon_allocate();
-	struct machine_dragon *md = (struct machine_dragon *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_dragon, N_SER_STRUCT_DRAGON, md))) {
-		size_t length = ser_data_length(sh);
-		switch (tag) {
-		case DRAGON_SER_MACHINE:
-			machine_deserialise(&md->public, sh);
-			break;
-
-		case DRAGON_SER_RAM:
-			if (!md->public.config) {
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			if (length != ((unsigned)md->public.config->ram * 1024)) {
-				LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
-				LOG_PRINT("Expected %04x got %04x\n", md->public.config->ram * 1024, (int)length);
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			ser_read(sh, md->ram, length);
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_dragon *md = sptr;
+	size_t length = ser_data_length(sh);
+	switch (tag) {
+	case DRAGON_SER_RAM:
+		if (!md->public.config) {
+			return 0;
 		}
+		if (length != ((unsigned)md->public.config->ram * 1024)) {
+			LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
+			return 0;
+		}
+		ser_read(sh, md->ram, length);
+		break;
+	default:
+		return 0;
 	}
-
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-
-	return p;
+	return 1;
 }
 
-static void dragon_serialise(struct part *p, struct ser_handle *sh) {
-	struct machine_dragon *md = (struct machine_dragon *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_dragon, N_SER_STRUCT_DRAGON, tag, md)) > 0; tag++) {
-		switch (tag) {
-		case DRAGON_SER_MACHINE:
-			machine_serialise(&md->public, sh, tag);
-			break;
-		case DRAGON_SER_RAM:
-			ser_write(sh, tag, md->ram, md->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_dragon *md = sptr;
+	switch (tag) {
+	case DRAGON_SER_RAM:
+		ser_write(sh, tag, md->ram, md->ram_size);
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

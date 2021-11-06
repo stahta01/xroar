@@ -112,17 +112,24 @@ struct machine_coco3 {
 };
 
 static const struct ser_struct ser_struct_coco3[] = {
-	SER_STRUCT_ELEM(struct machine_coco3, public.config, ser_type_unhandled), // 1
+	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct machine_coco3, ram, ser_type_unhandled), // 2
 	SER_STRUCT_ELEM(struct machine_coco3, ram_size, ser_type_unsigned), // 3
 	SER_STRUCT_ELEM(struct machine_coco3, ram_mask, ser_type_unsigned), // 4
 	SER_STRUCT_ELEM(struct machine_coco3, inverted_text, ser_type_bool), // 5
 };
 
-#define N_SER_STRUCT_COCO3 ARRAY_N_ELEMENTS(ser_struct_coco3)
-
-#define COCO3_SER_MACHINE (1)
 #define COCO3_SER_RAM     (2)
+
+static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data coco3_ser_struct_data = {
+	.elems = ser_struct_coco3,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_coco3),
+	.read_elem = coco3_read_elem,
+	.write_elem = coco3_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -164,9 +171,6 @@ void coco3_config_complete(struct machine_config *mc) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static void coco3_free(struct part *p);
-static void coco3_serialise(struct part *p, struct ser_handle *sh);
 
 static void coco3_insert_cart(struct machine *m, struct cart *c);
 static void coco3_remove_cart(struct machine *m);
@@ -230,17 +234,13 @@ static void coco3_initialise(struct part *p, void *options);
 static _Bool coco3_finish(struct part *p);
 static void coco3_free(struct part *p);
 
-static struct part *coco3_deserialise(struct ser_handle *sh);
-static void coco3_serialise(struct part *p, struct ser_handle *sh);
-
 static const struct partdb_entry_funcs coco3_funcs = {
 	.allocate = coco3_allocate,
 	.initialise = coco3_initialise,
 	.finish = coco3_finish,
 	.free = coco3_free,
 
-	.deserialise = coco3_deserialise,
-	.serialise = coco3_serialise,
+	.ser_struct_data = &coco3_ser_struct_data,
 
 	.is_a = machine_is_a,
 };
@@ -510,63 +510,40 @@ static void coco3_free(struct part *p) {
 	free(mcc3->ram);
 }
 
-static struct part *coco3_deserialise(struct ser_handle *sh) {
-	struct part *p = coco3_allocate();
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, mcc3))) {
-		size_t length = ser_data_length(sh);
-		switch (tag) {
-		case COCO3_SER_MACHINE:
-			machine_deserialise(&mcc3->public, sh);
-			break;
-
-		case COCO3_SER_RAM:
-			if (!mcc3->public.config) {
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
-				LOG_WARN("COCO3/DESERIALISE: RAM size mismatch\n");
-				ser_set_error(sh, ser_error_format);
-				break;
-			}
-			if (mcc3->ram) {
-				free(mcc3->ram);
-			}
-			mcc3->ram = ser_read_new(sh, length);
-			break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
+static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_coco3 *mcc3 = sptr;
+	size_t length = ser_data_length(sh);
+	switch (tag) {
+	case COCO3_SER_RAM:
+		if (!mcc3->public.config) {
+			return 0;
 		}
-	}
+		if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
+			LOG_WARN("COCO3/DESERIALISE: RAM size mismatch\n");
+			return 0;
+		}
+		if (mcc3->ram) {
+			free(mcc3->ram);
+		}
+		mcc3->ram = ser_read_new(sh, length);
+		break;
 
-	if (ser_error(sh)) {
-		part_free((struct part *)mcc3);
-		return NULL;
+	default:
+		return 0;
 	}
-
-	return (struct part *)mcc3;
+	return 1;
 }
 
-static void coco3_serialise(struct part *p, struct ser_handle *sh) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_coco3, N_SER_STRUCT_COCO3, tag, mcc3)) > 0; tag++) {
-		switch (tag) {
-		case COCO3_SER_MACHINE:
-			machine_serialise(&mcc3->public, sh, tag);
-			break;
-		case COCO3_SER_RAM:
-			ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_coco3 *mcc3 = sptr;
+	switch (tag) {
+	case COCO3_SER_RAM:
+		ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

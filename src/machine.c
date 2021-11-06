@@ -69,7 +69,15 @@ static const struct ser_struct ser_struct_machine[] = {
         SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
 };
 
-#define N_SER_STRUCT_MACHINE ARRAY_N_ELEMENTS(ser_struct_machine)
+static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+const struct ser_struct_data machine_ser_struct_data = {
+	.elems = ser_struct_machine,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_machine),
+	.read_elem = machine_read_elem,
+	.write_elem = machine_write_elem,
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -141,14 +149,6 @@ struct machine_config *machine_config_new(void) {
 	return new;
 }
 
-void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machine_config *mc) {
-	if (!mc)
-		return;
-	ser_write_open_string(sh, otag, mc->name);
-	ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, 1, mc);
-	ser_write_close_tag(sh);
-}
-
 struct machine_config *machine_config_deserialise(struct ser_handle *sh) {
 	char *name = ser_read_string(sh);
 	if (!name)
@@ -161,6 +161,14 @@ struct machine_config *machine_config_deserialise(struct ser_handle *sh) {
 	free(name);
 	ser_read_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, mc);
 	return mc;
+}
+
+void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machine_config *mc) {
+	if (!mc)
+		return;
+	ser_write_open_string(sh, otag, mc->name);
+	ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, 1, mc);
+	ser_write_close_tag(sh);
 }
 
 struct machine_config *machine_config_by_id(int id) {
@@ -349,31 +357,26 @@ _Bool machine_is_a(struct part *p, const char *name) {
 	return strcmp(name, "machine") == 0;
 }
 
-void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag) {
-	ser_write_open_string(sh, otag, "MACHINE");
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_machine, N_SER_STRUCT_MACHINE, tag, m)) > 0; tag++) {
-		switch (tag) {
-		case MACHINE_SER_MACHINE_CONFIG:
-			machine_config_serialise(sh, tag, m->config);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine *m = sptr;
+	switch (tag) {
+	case MACHINE_SER_MACHINE_CONFIG:
+		m->config = machine_config_deserialise(sh);
+		break;
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
-void machine_deserialise(struct machine *m, struct ser_handle *sh) {
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_machine, N_SER_STRUCT_MACHINE, m))) {
-		switch (tag) {
-		case MACHINE_SER_MACHINE_CONFIG:
-			m->config = machine_config_deserialise(sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine *m = sptr;
+	switch (tag) {
+	case MACHINE_SER_MACHINE_CONFIG:
+		machine_config_serialise(sh, tag, m->config);
+		break;
+	default:
+		return 0;
 	}
+	return 1;
 }

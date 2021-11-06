@@ -29,6 +29,7 @@
 
 struct cart;
 struct ser_handle;
+struct ser_struct_data;
 struct slist;
 struct sound_interface;
 struct tape_interface;
@@ -252,10 +253,10 @@ struct machine {
 	void (*op_rts)(struct machine *m);
 };
 
+extern const struct ser_struct_data machine_ser_struct_data;
+
 struct machine *machine_new(struct machine_config *mc);
 _Bool machine_is_a(struct part *p, const char *name);
-void machine_serialise(struct machine *m, struct ser_handle *sh, unsigned otag);
-void machine_deserialise(struct machine *m, struct ser_handle *sh);
 
 /* Helper function to populate breakpoints from a list. */
 #define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
