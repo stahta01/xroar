@@ -139,17 +139,14 @@ static void rsdos_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
 	part_add_component(p, part_create("WD2793", NULL), "FDC");
 }
 
 static _Bool rsdos_finish(struct part *p) {
 	struct rsdos *d = (struct rsdos *)p;
+	struct cart *c = &d->cart;
 
 	// Find attached parts
-	d->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
 	d->fdc = (struct WD279X *)part_component_by_id_is_a(p, "FDC", "WD2793");
 
 	// Check all required parts are attached
@@ -157,12 +154,17 @@ static _Bool rsdos_finish(struct part *p) {
 		return 0;
 	}
 
-	cart_finish(&d->cart);
+	cart_finish(c);
+	if (c->config->becker_port) {
+		d->becker = becker_open();
+	}
 
 	return 1;
 }
 
 static void rsdos_free(struct part *p) {
+	struct rsdos *d = (struct rsdos *)p;
+	becker_close(d->becker);
 	cart_rom_free(p);
 }
 

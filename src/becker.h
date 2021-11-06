@@ -29,9 +29,11 @@
 
 struct becker;
 
-void becker_reset(struct becker *becker);
-uint8_t becker_read_status(struct becker *becker);
-uint8_t becker_read_data(struct becker *becker);
-void becker_write_data(struct becker *becker, uint8_t D);
+struct becker *becker_open(void);
+void becker_close(struct becker *b);
+void becker_reset(struct becker *b);
+uint8_t becker_read_status(struct becker *b);
+uint8_t becker_read_data(struct becker *b);
+void becker_write_data(struct becker *b, uint8_t D);
 
 #endif

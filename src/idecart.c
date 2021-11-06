@@ -126,17 +126,11 @@ static void idecart_initialise(struct part *p, void *options) {
 	struct cart *c = &ide->cart;
 
 	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
 }
 
 static _Bool idecart_finish(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
-
-	// Find attached parts
-	ide->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
+	struct cart *c = &ide->cart;
 
 	// Controller code depends on a valid filehandle being attached.
 	int fd = open("hd0.img", O_RDWR);
@@ -155,11 +149,17 @@ static _Bool idecart_finish(struct part *p) {
 	ide_attach(ide->controller, 0, fd);
 	ide_reset_begin(ide->controller);
 
+	cart_finish(c);
+	if (c->config->becker_port) {
+		ide->becker = becker_open();
+	}
+
 	return 1;
 }
 
 static void idecart_free(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
+	becker_close(ide->becker);
 	cart_rom_free(p);
 	ide_free(ide->controller);
 }

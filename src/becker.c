@@ -47,10 +47,10 @@
 
 #endif
 
+#include "xalloc.h"
+
 #include "becker.h"
 #include "logging.h"
-#include "part.h"
-#include "serialise.h"
 #include "xroar.h"
 
 /* In theory no reponse should be longer than this (though it doesn't actually
@@ -61,8 +61,6 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct becker {
-	struct part part;
-
 	int sockfd;
 	char input_buf[INPUT_BUFFER_SIZE];
 	int input_buf_ptr;
@@ -78,38 +76,7 @@ struct becker {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Becker port part creation
-
-static struct part *becker_allocate(void);
-static _Bool becker_finish(struct part *p);
-static void becker_free(struct part *p);
-
-static struct part *becker_deserialise(struct ser_handle *sh);
-static void becker_serialise(struct part *p, struct ser_handle *sh);
-
-const struct partdb_entry_funcs becker_funcs = {
-	.allocate = becker_allocate,
-	.finish = becker_finish,
-	.free = becker_free,
-
-	.deserialise = becker_deserialise,
-	.serialise = becker_serialise,
-};
-
-const struct partdb_entry becker_part = { .name = "becker", .funcs = &becker_funcs };
-
-static struct part *becker_allocate(void) {
-	struct becker *becker = part_new(sizeof(*becker));
-	struct part *p = &becker->part;
-
-	*becker = (struct becker){0};
-
-	return p;
-}
-
-static _Bool becker_finish(struct part *p) {
-	struct becker *becker = (struct becker *)p;
-
+struct becker *becker_open(void) {
 	struct addrinfo hints, *info = NULL;
 	const char *hostname = xroar_cfg.becker_ip ? xroar_cfg.becker_ip : BECKER_IP_DEFAULT;
 	const char *portname = xroar_cfg.becker_port ? xroar_cfg.becker_port : BECKER_PORT_DEFAULT;
@@ -156,115 +123,99 @@ static _Bool becker_finish(struct part *p) {
 	}
 #endif
 
-	becker->sockfd = sockfd;
-	becker_reset(becker);
+	struct becker *b = xmalloc(sizeof(*b));
+	*b = (struct becker){0};
 
-	return 1;
+	b->sockfd = sockfd;
+	becker_reset(b);
+
+	return b;
 
 failed:
 	if (sockfd != -1)
 		close(sockfd);
 	if (info)
 		freeaddrinfo(info);
-	return 0;
+	return NULL;
 }
 
-static void becker_free(struct part *p) {
-	struct becker *becker = (struct becker *)p;
-	close(becker->sockfd);
-	if (becker->log_data_in_hex)
-		log_close(&becker->log_data_in_hex);
-	if (becker->log_data_out_hex)
-		log_close(&becker->log_data_out_hex);
+void becker_close(struct becker *b) {
+	if (!b)
+		return;
+	close(b->sockfd);
+	if (b->log_data_in_hex)
+		log_close(&b->log_data_in_hex);
+	if (b->log_data_out_hex)
+		log_close(&b->log_data_out_hex);
+	free(b);
 }
 
-static struct part *becker_deserialise(struct ser_handle *sh) {
-	struct part *p = becker_allocate();
-	while (ser_read_tag(sh) > 0);
-	if (ser_error(sh)) {
-		part_free(p);
-		return NULL;
-	}
-	return p;
-}
-
-static void becker_serialise(struct part *p, struct ser_handle *sh) {
-	(void)p;
-	// Just a single dummy field - all this serialised "part" does is
-	// indicate that a becker port must be created.  Maintaining state for
-	// a previous TCP connection seems nonsensical...
-	ser_write_vuint32(sh, 1, 0);
-	ser_write_close_tag(sh);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void becker_reset(struct becker *becker) {
+void becker_reset(struct becker *b) {
 	if (logging.debug_fdc & LOG_FDC_BECKER) {
-		log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
-		log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
+		log_open_hexdump(&b->log_data_in_hex, "BECKER IN ");
+		log_open_hexdump(&b->log_data_out_hex, "BECKER OUT");
 	}
 }
 
-static void fetch_input(struct becker *becker) {
-	if (becker->input_buf_ptr == 0) {
-		ssize_t new = recv(becker->sockfd, becker->input_buf, INPUT_BUFFER_SIZE, 0);
+static void fetch_input(struct becker *b) {
+	if (b->input_buf_ptr == 0) {
+		ssize_t new = recv(b->sockfd, b->input_buf, INPUT_BUFFER_SIZE, 0);
 		if (new > 0) {
-			becker->input_buf_length = new;
+			b->input_buf_length = new;
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen output hexdump
-				log_open_hexdump(&becker->log_data_out_hex, "BECKER OUT");
+				log_open_hexdump(&b->log_data_out_hex, "BECKER OUT");
 				for (unsigned i = 0; i < (unsigned)new; i++)
-					log_hexdump_byte(becker->log_data_in_hex, becker->input_buf[i]);
+					log_hexdump_byte(b->log_data_in_hex, b->input_buf[i]);
 			}
 		}
 	}
 }
 
-static void write_output(struct becker *becker) {
-	if (becker->output_buf_length > 0) {
-		ssize_t sent = send(becker->sockfd, becker->output_buf + becker->output_buf_ptr, becker->output_buf_length - becker->output_buf_ptr, 0);
+static void write_output(struct becker *b) {
+	if (b->output_buf_length > 0) {
+		ssize_t sent = send(b->sockfd, b->output_buf + b->output_buf_ptr, b->output_buf_length - b->output_buf_ptr, 0);
 		if (sent > 0) {
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen input hexdump
-				log_open_hexdump(&becker->log_data_in_hex, "BECKER IN ");
+				log_open_hexdump(&b->log_data_in_hex, "BECKER IN ");
 				for (unsigned i = 0; i < (unsigned)sent; i++)
-					log_hexdump_byte(becker->log_data_out_hex, becker->output_buf[becker->output_buf_ptr + i]);
+					log_hexdump_byte(b->log_data_out_hex, b->output_buf[b->output_buf_ptr + i]);
 			}
-			becker->output_buf_ptr += sent;
-			if (becker->output_buf_ptr >= becker->output_buf_length) {
-				becker->output_buf_ptr = becker->output_buf_length = 0;
+			b->output_buf_ptr += sent;
+			if (b->output_buf_ptr >= b->output_buf_length) {
+				b->output_buf_ptr = b->output_buf_length = 0;
 			}
 		}
 	}
 }
 
-uint8_t becker_read_status(struct becker *becker) {
+uint8_t becker_read_status(struct becker *b) {
 	if (logging.debug_fdc & LOG_FDC_BECKER) {
 		// flush both hexdump logs
-		log_hexdump_line(becker->log_data_in_hex);
-		log_hexdump_line(becker->log_data_out_hex);
+		log_hexdump_line(b->log_data_in_hex);
+		log_hexdump_line(b->log_data_out_hex);
 	}
-	fetch_input(becker);
-	if (becker->input_buf_length > 0)
+	fetch_input(b);
+	if (b->input_buf_length > 0)
 		return 0x02;
 	return 0x00;
 }
 
-uint8_t becker_read_data(struct becker *becker) {
-	fetch_input(becker);
-	if (becker->input_buf_length == 0)
+uint8_t becker_read_data(struct becker *b) {
+	fetch_input(b);
+	if (b->input_buf_length == 0)
 		return 0x00;
-	uint8_t r = becker->input_buf[becker->input_buf_ptr++];
-	if (becker->input_buf_ptr == becker->input_buf_length) {
-		becker->input_buf_ptr = becker->input_buf_length = 0;
+	uint8_t r = b->input_buf[b->input_buf_ptr++];
+	if (b->input_buf_ptr == b->input_buf_length) {
+		b->input_buf_ptr = b->input_buf_length = 0;
 	}
 	return r;
 }
 
-void becker_write_data(struct becker *becker, uint8_t D) {
-	if (becker->output_buf_length < OUTPUT_BUFFER_SIZE) {
-		becker->output_buf[becker->output_buf_length++] = D;
+void becker_write_data(struct becker *b, uint8_t D) {
+	if (b->output_buf_length < OUTPUT_BUFFER_SIZE) {
+		b->output_buf[b->output_buf_length++] = D;
 	}
-	write_output(becker);
+	write_output(b);
 }

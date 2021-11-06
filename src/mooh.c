@@ -124,14 +124,10 @@ static void mooh_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
 
-	struct mooh *n = (struct mooh *)p; 
+	struct mooh *n = (struct mooh *)p;
 	struct cart *c = &n->cart;
 
 	c->config = cc;
-
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
 
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
@@ -144,9 +140,9 @@ static void mooh_initialise(struct part *p, void *options) {
 
 static _Bool mooh_finish(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
+	struct cart *c = &n->cart;
 
 	// Find attached parts
-	n->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
 	n->spi65 = (struct spi65 *)part_component_by_id_is_a(p, "SPI65", "65SPI-B");
 
 	// Check all required parts are attached
@@ -155,11 +151,16 @@ static _Bool mooh_finish(struct part *p) {
 	}
 
 	cart_finish(&n->cart);
+	if (c->config->becker_port) {
+		n->becker = becker_open();
+	}
 
 	return 1;
 }
 
 static void mooh_free(struct part *p) {
+	struct mooh *n = (struct mooh *)p;
+	becker_close(n->becker);
 	cart_rom_free(p);
 }
 

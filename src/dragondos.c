@@ -136,17 +136,14 @@ static void dragondos_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
 	part_add_component(p, part_create("WD2797", NULL), "FDC");
 }
 
 static _Bool dragondos_finish(struct part *p) {
 	struct dragondos *d = (struct dragondos *)p;
+	struct cart *c = &d->cart;
 
 	// Find attached parts
-	d->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
 	d->fdc = (struct WD279X *)part_component_by_id_is_a(p, "FDC", "WD2797");
 
 	// Check all required parts are attached
@@ -154,12 +151,18 @@ static _Bool dragondos_finish(struct part *p) {
 		return 0;
 	}
 
-	cart_finish(&d->cart);
+	if (c->config->becker_port) {
+		d->becker = becker_open();
+	}
+
+	cart_finish(c);
 
 	return 1;
 }
 
 static void dragondos_free(struct part *p) {
+	struct dragondos *d = (struct dragondos *)p;
+	becker_close(d->becker);
 	cart_rom_free(p);
 }
 

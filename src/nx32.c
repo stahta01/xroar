@@ -121,10 +121,6 @@ static void nx32_initialise(struct part *p, void *options) {
 
 	c->config = cc;
 
-	if (cc->becker_port) {
-		part_add_component(p, part_create("becker", NULL), "becker");
-	}
-
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
@@ -136,9 +132,9 @@ static void nx32_initialise(struct part *p, void *options) {
 
 static _Bool nx32_finish(struct part *p) {
 	struct nx32 *n = (struct nx32 *)p;
+	struct cart *c = &n->cart;
 
 	// Find attached parts
-	n->becker = (struct becker *)part_component_by_id_is_a(p, "becker", "becker");
 	n->spi65 = (struct spi65 *)part_component_by_id_is_a(p, "SPI65", "65SPI-B");
 
 	// Check all required parts are attached
@@ -147,11 +143,16 @@ static _Bool nx32_finish(struct part *p) {
 	}
 
 	cart_finish(&n->cart);
+	if (c->config->becker_port) {
+		n->becker = becker_open();
+	}
 
 	return 1;
 }
 
 static void nx32_free(struct part *p) {
+	struct nx32 *n = (struct nx32 *)p;
+	becker_close(n->becker);
 	cart_rom_free(p);
 }
 

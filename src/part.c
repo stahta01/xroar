@@ -61,7 +61,6 @@ extern const struct partdb_entry orch90_part;
 extern const struct partdb_entry race_part;
 extern const struct partdb_entry rsdos_part;
 
-extern const struct partdb_entry becker_part;
 extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
 extern const struct partdb_entry mc6803_part;
@@ -100,7 +99,6 @@ const struct partdb_entry *partdb[] = {
 	&race_part,
 	&rsdos_part,
 
-	&becker_part,
 	&hd6309_part,
 	&mc6801_part,
 	&mc6803_part,
