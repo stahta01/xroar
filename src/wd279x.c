@@ -74,7 +74,10 @@ static const struct ser_struct ser_struct_wd279x[] = {
 	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8), // 27
 };
 
-#define N_SER_STRUCT_WD279X ARRAY_N_ELEMENTS(ser_struct_wd279x)
+const struct ser_struct_data wd279x_ser_struct_data = {
+	.elems = ser_struct_wd279x,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_wd279x),
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -163,9 +166,6 @@ static void wd279x_initialise(struct part *p, void *options);
 static _Bool wd279x_finish(struct part *p);
 static void wd279x_free(struct part *p);
 
-static struct part *wd279x_deserialise(struct ser_handle *sh);
-static void wd279x_serialise(struct part *p, struct ser_handle *sh);
-
 static _Bool wd279x_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs wd279x_funcs = {
@@ -174,8 +174,7 @@ static const struct partdb_entry_funcs wd279x_funcs = {
 	.finish = wd279x_finish,
 	.free = wd279x_free,
 
-	.deserialise = wd279x_deserialise,
-	.serialise = wd279x_serialise,
+	.ser_struct_data = &wd279x_ser_struct_data,
 
 	.is_a = wd279x_is_a,
 };
@@ -237,19 +236,6 @@ static void wd279x_free(struct part *p) {
 	log_close(&fdc->log_wsec_hex);
 	log_close(&fdc->log_wtrk_hex);
 	event_dequeue(&fdc->state_event);
-}
-
-static struct part *wd279x_deserialise(struct ser_handle *sh) {
-	struct part *p = wd279x_allocate();
-	struct WD279X *fdc = (struct WD279X *)p;
-	ser_read_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, fdc);
-	return p;
-}
-
-static void wd279x_serialise(struct part *p, struct ser_handle *sh) {
-	struct WD279X *fdc = (struct WD279X *)p;
-	ser_write_struct(sh, ser_struct_wd279x, N_SER_STRUCT_WD279X, 1, fdc);
-	ser_write_close_tag(sh);
 }
 
 static _Bool wd279x_is_a(struct part *p, const char *name) {
