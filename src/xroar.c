@@ -376,7 +376,6 @@ static char const * const default_config[] = {
 	"cart gmc",
 	"cart-desc 'Games Master Cartridge'",
 	"cart-type gmc",
-	"cart-autorun",
 	// Orchestra 90
 	"cart orch90",
 	"cart-desc 'Orchestra-90 CC'",
