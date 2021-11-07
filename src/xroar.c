@@ -2345,6 +2345,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_F("load-hd0", &xroar_cfg.load_hd[0]) },
 	{ XC_SET_STRING_F("load-hd1", &xroar_cfg.load_hd[1]) },
 	{ XC_SET_STRING_F("load-sd", &xroar_cfg.load_sd) },
+	{ XC_SET_STRING_F("load-tape", &private_cfg.load_tape) },
 
 	/* Cassettes: */
 	{ XC_SET_STRING_F("tape-write", &private_cfg.tape_write) },
@@ -2516,9 +2517,10 @@ static void helptext(void) {
 "  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
 "  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g for ide)\n"
 "  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+"  -load-tape FILE       attach FILE as tape image for reading\n"
+"  -tape-write FILE      open FILE for tape writing\n"
 
 "\n Cassettes:\n"
-"  -tape-write FILE          open FILE for tape writing\n"
 "  -tape-pan PANNING         pan stereo input (0.0 = left, 1.0 = right) [0.5]\n"
 "  -tape-hysteresis H        read hysteresis as % of full scale [1]\n"
 "  -no-tape-fast             disable fast tape loading\n"
@@ -2682,10 +2684,11 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "load-hd0", xroar_cfg.load_hd[0], NULL);
 	xroar_cfg_print_string(f, all, "load-hd1", xroar_cfg.load_hd[1], NULL);
 	xroar_cfg_print_string(f, all, "load-sd", xroar_cfg.load_sd, NULL);
+	xroar_cfg_print_string(f, all, "load-tape", private_cfg.load_tape, NULL);
+	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
 	fputs("\n", f);
 
 	fputs("# Cassettes\n", f);
-	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
 	xroar_cfg_print_double(f, all, "tape-pan", xroar_cfg.tape_pan, 0.5);
 	xroar_cfg_print_double(f, all, "tape-hysteresis", xroar_cfg.tape_hysteresis, 1.0);
 
