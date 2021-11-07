@@ -518,7 +518,7 @@ The ROM image specified will be mapped from $E000.
 
 @item -cart-becker
 
-Enable becker port where supported.
+Enable Becker port where supported.
 
 @item -cart-autorun
 
@@ -537,7 +537,7 @@ The following are valid for the @samp{dragon-cart} architecture:
 @item @samp{rsdos} @tab Tandy's RSDOS for the CoCo.
 @item @samp{gmc} @tab John Linville's Games Master Cartridge.
 @item @samp{orch90} @tab Orchestra 90-CC stereo 8-bit DAC cartridge.
-@item @samp{ide} @tab Glenside IDE interface (see @ref{Hard Disks}).
+@item @samp{ide} @tab Glenside IDE interface.
 @item @samp{nx32} @tab Tormod Volden's NX32 RAM expansion cartridge.
 @item @samp{mooh} @tab Tormod Volden's MOOH RAM expansion cartridge.
 @item @samp{mpi} @tab Multi-Pak Interface.
@@ -580,29 +580,60 @@ Within the emulator, cartridges can be enabled or disabled by pressing
 hard reset (@kbd{@key{CTRL}+@key{SHIFT}+R}).
 
 
-@c @subsection Disk controllers
+@subsection Becker port
+
+XRoar supports an emulator-only feature that enables it to connect to a server
+using a TCP connection and access remote facilities such as disk images and 
+MIDI devices---the @dfn{Becker port}.  This appears as a memory-mapped device,
+and XRoar supports it as an optional feature of many cartridge types.
+
+Enable this port when configuring a cartridge with @option{-cart-becker}.  The
+@option{-becker} option tells XRoar to prefer a cartridge with it enabled when
+automatically selecting one.
+
+The IP and port to connect to can be specified with the @option{-becker-ip} and
+@option{-becker-port} options.  These default to @samp{127.0.0.1} and
+@samp{65504} respectively, matching the defaults for DriveWire 4, the most
+popular server application used to provide such facilities.
 
 
-@c @subsection MOOH and NX32 memory cartridges
+@node DragonDOS
+@subsection DragonDOS
+
+The official Dragon Data disk system for the Dragon.  Supports 80 track, double
+sided, double-density floppy disks.
+
+Emulation supports the Becker port mapped to $FF49/$FF4A.
 
 
+@node Games Master Cartridge
 @subsection Games Master Cartridge
 
-The Games Master Cartridge (@samp{gmc}) provides the ability to bank switch up
-to 64K of cartridge ROM, along with an on-board SN76489 sound chip.  Be aware
-that as provided, the cartridge is designed to auto-start an on-board ROM, and
-XRoar reflects this use.  If you want to use it as a standalone cartridge,
-you'll need to use the @option{-no-cart-autorun} option.
+The Games Master Cartridge (@samp{gmc}), created by John Linville, provides the
+ability to bank switch up to 64K of cartridge ROM, along with an on-board
+SN76489 sound chip.
+
+This cartridge type is selected automatically (and configured to autostart) if
+you autorun a ROM image larger than 16K.
 
 
-@c @subsection Glenside IDE controller
+@node Glenside IDE controller
+@subsection Glenside IDE controller
 
-@c Move the Hard Disks section here?
+The @samp{ide} cartridge type emulates a Glenside IDE controller mapped to
+addresses $FF50--$FF58.  The Becker port is supported.
+
+The controller supports up to two drives, and you can specify the image to use
+in each with @option{-load-hd0 @var{filename}} or @option{-load-hd1
+@var{filename}}.  If @var{filename} does not exist, a 256MB empty image is
+created when the controller first tries to access it.
+
+Sectors are 512 bytes, and while some software may use all 512, others only
+access 256 bytes per sector, padding the other 256 bytes (or simply doubling
+them up).
 
 
-@c @subsection Orchestra 90-CC sound cartridge
-
-
+@node Multi-Pak Interface
 @subsection Multi-Pak Interface
 
 The Multi-Pak Interface (@samp{mpi}) is a CoCo add-on by Tandy that allows up
@@ -622,21 +653,34 @@ As things stand, only the last one (in slot order) will have the emulated
 drives properly connected.
 
 
-@subsection Becker port
+@node NX32 and MOOH cartridges
+@subsection NX32 and MOOH cartridges
 
-XRoar supports an emulator-only feature that enables it to connect to a server
-using a TCP connection and access remote facilities such as disk images and 
-MIDI devices---the @dfn{becker port}.  This appears as a memory-mapped device,
-and XRoar supports it as an optional feature of many cartridge types.
+Two memory expansion cartridges created by Tormod Volden for the Dragon.  Both
+accept an SD card, and you can specify the backing image for this with the
+@option{-load-sd @var{filename}} option.  SD card images have no header
+information and contain 256-byte sectors.
 
-Enable this port when configuring a cartridge with @option{-cart-becker}.  The
-@option{-becker} option tells XRoar to prefer a cartridge with it enabled when
-automatically selecting one.
+The earlier NX32 provides simple bank switching, where the MOOH provides
+extensive MMU functionality very like that in the Tandy CoCo 3.
 
-The IP and port to connect to can be specified with the @option{-becker-ip} and
-@option{-becker-port} options.  These default to @samp{127.0.0.1} and
-@samp{65504} respectively, matching the defaults for DriveWire 4, the most
-popular server application used to provide such facilities.
+
+@node Orchestra 90-CC sound cartridge
+@subsection Orchestra 90-CC sound cartridge
+
+A simple expansion that provides two 8-bit DACs for stereo sound (but still
+driven by the CPU).  An on-board ROM for the CoCo provides an interface to
+composition, but if autorun is disabled, the hardware itself works fine on the
+Dragon.
+
+
+@node RS-DOS
+@subsection RS-DOS
+
+Tandy's disk interface for the CoCo.  Typically supports only 35-track
+single-sided double-density disks, though more is accessible using OS-9.
+
+Emulation supports the Becker port.
 
 
 @c MC-10 16K RAM cartridge
@@ -647,6 +691,37 @@ popular server application used to provide such facilities.
 @node Files
 @chapter Files
 
+@table @option
+
+@item -load @var{filename}
+
+Load or attach @var{filename}.  XRoar will try to do the right thing based on
+the file type (usually determined by file extension).
+
+@item -run @var{filename}
+
+As @option{-load}, but try to autorun the file after attaching.
+
+@item -load-fd@var{X} @var{filename}
+
+Load disk image file @var{filename} into drive @var{X} (0--3).  @option{-load}
+can also do this, populating each drive in turn, but this option allows you to
+be more specific.
+
+@item -load-hd@var{X} @var{filename}
+
+Use @var{filename} as the hard disk image for drive @var{X} (0 or 1).  The file
+will be created as a 256MB image if it does not exist.  512 byte sectors with
+2*512 bytes of header information.  Used by the Glenside IDE controller (see
+@ref{Glenside IDE controller}).
+
+@item -load-sd @var{filename}
+
+Use @var{filename} as the SD card image.  Used by the NX32 and MOOH memory
+expansion boards (see @ref{NX32 and MOOH cartridges}).
+
+@end table
+
 In general, files can be attached on the command line with @option{-load
 @var{filename}}, or by pressing @kbd{@key{CTRL}+L}.  XRoar judges the type of
 file based on its filename extension.  To attempt to intelligently autorun a
@@ -656,7 +731,6 @@ See @ref{Running programs} for the methods XRoar will use to autorun a file.
 @menu
 * Cassettes::
 * Floppy Disks::
-* Hard Disks::
 * ROM cartridges::
 * Snapshots::
 * Binary files::
@@ -792,22 +866,6 @@ instead of one, so when you perform operations on Drive 1, from the CoCo's
 point of view, that will be Drive 0.
 
 
-@node Hard Disks
-@section Hard Disks
-
-Some support is now in place for IDE hard disk images.  The @samp{ide}
-cartridge type emulates a Glenside IDE controller mapped to addresses
-$FF50--$FF58.
-
-A fixed image file named @file{hd0.img} in the current working directory is
-assumed.  If the image does not exist when you try to use the IDE cartridge, a
-new 256MB image is created.  Images consists of a 512 byte identifier block
-(ASCII string ``1DED15C0'' then all zeroes) followed by a 512 byte IDENTIFY
-header, then the sector data.  In examples, the 256 byte sector data of
-standard CoCo disks is doubled up to fill the 512 byte sectors of the hard disk
-image.
-
-
 @node ROM cartridges
 @section ROM cartridges
 
@@ -828,7 +886,7 @@ Most internal state should be dumped to the snapshot.  External data like ROM
 images or disk image files will be referenced by name, so when you read the
 snapshot back in, they need to exist in the same place they were before.
 
-State that is explicitly @emph{not} included in snapshots includes ``becker
+State that is explicitly @emph{not} included in snapshots includes ``Becker
 port'' DriveWire connections and GDB listen parameters.  These will use your
 local settings, which default to interacting with the local host only.
 
@@ -896,7 +954,7 @@ seen ``in the wild'', the primary examples being:
 @item DragonDOS @tab @samp{@@dragondos_compat} @tab @file{dplus49b.rom}, @file{sdose6.rom}, @file{ddos10.rom}
 @item Delta System @tab @samp{@@delta} @tab @file{delta.rom}
 @item RS-DOS @tab @samp{@@rsdos} @tab @file{disk11.rom}, @file{disk10.rom}
-@item RS-DOS with becker port @tab @samp{@@rsdos_becker} @tab @file{hdbdw3bck.rom}
+@item RS-DOS with Becker port @tab @samp{@@rsdos_becker} @tab @file{hdbdw3bck.rom}
 @item Orchestra 90-CC @tab @samp{orch90.rom} @tab
 @end multitable
 
@@ -1293,7 +1351,7 @@ Show all FDC states.
 @item 0x0004
 Hex dump of read/write sector data.
 @item 0x0008
-Hex dump of becker port conversation data.
+Hex dump of Becker port conversation data.
 @item 0x0010
 General FDC event debugging.
 @end table
