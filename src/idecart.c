@@ -37,6 +37,7 @@
 #include "logging.h"
 #include "part.h"
 #include "serialise.h"
+#include "xroar.h"
 
 struct idecart {
 	struct cart cart;
@@ -133,20 +134,24 @@ static _Bool idecart_finish(struct part *p) {
 	struct cart *c = &ide->cart;
 
 	// Controller code depends on a valid filehandle being attached.
-	int fd = open("hd0.img", O_RDWR);
-	if (fd == -1) {
-		fd = open("hd0.img", O_RDWR|O_CREAT|O_TRUNC|O_EXCL, 0600);
-		if (fd == -1) {
-			perror("hd0.img");
-			return 0;
-		}
-		if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
-			fprintf(stderr, "Unable to create hd0.img.\n");
-			close(fd);
-			return 0;
+	for (int i = 0; i < 2; i++) {
+		if (xroar_cfg.load_hd[i]) {
+			int fd = open(xroar_cfg.load_hd[i], O_RDWR);
+			if (fd == -1) {
+				fd = open(xroar_cfg.load_hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL, 0600);
+				if (fd == -1) {
+					perror(xroar_cfg.load_hd[i]);
+					continue;
+				}
+				if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
+					fprintf(stderr, "IDE: unable to create %s.\n", xroar_cfg.load_hd[i]);
+					close(fd);
+					continue;
+				}
+			}
+			ide_attach(ide->controller, i, fd);
 		}
 	}
-	ide_attach(ide->controller, 0, fd);
 	ide_reset_begin(ide->controller);
 
 	cart_finish(c);
