@@ -93,19 +93,7 @@ typedef void (*partdb_iter_func)(const struct partdb_entry *pe, void *idata);
 // (struct part) and (struct intf) are designed to be extended.
 
 struct part {
-	char *name;
-
-	// Called by part_free() after disconnecting all interfaces and
-	// components.
-	void (*free)(struct part *part);
-
-	// Check type of part matches a string.  Called by part_is_a() if
-	// defined and name does not match actual part name.  This is in lieu
-	// of everything needing to return an interface by name...
-	_Bool (*is_a)(struct part *p, const char *name);
-
-	// Called by part_deserialise()
-	_Bool (*finish)(struct part *part);
+	const struct partdb_entry *partdb;
 
 	// If this part is a component of another.
 	struct part *parent;

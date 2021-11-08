@@ -188,13 +188,18 @@ struct part *part_create(const char *name, void *options) {
 
 	// Initialise, populating useful stuff from partdb
 	*p = (struct part){0};
-	p->name = xstrdup(name);
-	p->free = pe->funcs->free;
-	p->is_a = pe->funcs->is_a;
-	if (!options)
-		options = p->name;
-	if (pe->funcs->initialise)
+	p->partdb = pe;
+	_Bool free_options = 0;
+	if (!options) {
+		options = xstrdup(pe->name);
+		free_options = 1;
+	}
+	if (pe->funcs->initialise) {
 		pe->funcs->initialise(p, options);
+	}
+	if (free_options) {
+		free(options);
+	}
 
 	// Finish
 	if (pe->funcs->finish && !pe->funcs->finish(p)) {
@@ -213,16 +218,13 @@ void *part_new(size_t psize) {
 	return m;
 }
 
-void part_init(struct part *p, const char *name) {
-	p->name = xstrdup(name);
-	PART_DEBUG("part_init(%p) '%s'\n", p, name);
-}
-
 void part_free(struct part *p) {
 	if (!p)
 		return;
 
-	PART_DEBUG("part_free(%p) '%s'\n", p, p->name);
+	const struct partdb_entry *pe = p->partdb;
+
+	PART_DEBUG("part_free(%p) '%s'\n", p, pe->name);
 
 	if (p->parent) {
 		part_remove_component(p->parent, p);
@@ -232,8 +234,8 @@ void part_free(struct part *p) {
 	// part-specific free() called first as it may have to do stuff
 	// before interfaces & components are destroyed.  mustn't actually free
 	// the structure itself.
-	if (p->free) {
-		p->free(p);
+	if (pe->funcs->free) {
+		pe->funcs->free(p);
 	}
 
 #ifdef WANT_INTF
@@ -251,10 +253,6 @@ void part_free(struct part *p) {
 		part_free(c);
 	}
 
-	if (p->name) {
-		free(p->name);
-		p->name = NULL;
-	}
 	free(p);
 }
 
@@ -309,9 +307,10 @@ struct part *part_component_by_id_is_a(struct part *p, const char *id, const cha
 _Bool part_is_a(struct part *p, const char *is_a) {
 	if (!p)
 		return 0;
-	if (strcmp(p->name, is_a) == 0)
+	const struct partdb_entry *pe = p->partdb;
+	if (strcmp(pe->name, is_a) == 0)
 		return 1;
-	return p->is_a ? p->is_a(p, is_a) : 0;
+	return pe->funcs->is_a ? pe->funcs->is_a(p, is_a) : 0;
 }
 
 struct part *part_deserialise(struct ser_handle *sh) {
@@ -334,11 +333,9 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					assert(pe->funcs->ser_struct_data != NULL);
 					p = pe->funcs->allocate();
 					assert(p != NULL);
+					p->partdb = pe;
 					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
-					p->name = name;
 					name = NULL;
-					p->free = pe->funcs->free;
-					p->is_a = pe->funcs->is_a;
 				}
 			}
 			break;
@@ -350,16 +347,17 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					part_free(p);
 					return NULL;
 				}
+				assert(pe != NULL);
 				char *id = ser_read_string(sh);
 				if (!id) {
-					LOG_DEBUG(3, "part_deserialise(): bad subpart for '%s'\n", p->name);
+					LOG_DEBUG(3, "part_deserialise(): bad subpart for '%s'\n", pe->name);
 					ser_set_error(sh, ser_error_format);
 					part_free(p);
 					return NULL;
 				}
 				struct part *c = part_deserialise(sh);
 				if (!c) {
-					LOG_DEBUG(3, "part_deserialise(): failed to deserialise '%s' for '%s'\n", id, p->name);
+					LOG_DEBUG(3, "part_deserialise(): failed to deserialise '%s' for '%s'\n", id, pe->name);
 					free(id);
 					part_free(p);
 					return NULL;
@@ -376,20 +374,12 @@ struct part *part_deserialise(struct ser_handle *sh) {
 	if (!p)
 		return NULL;
 
-	if (pe) {
-		// XXX this should become the only path
-		if (pe->funcs->finish && !pe->funcs->finish(p)) {
-			LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", p->name);
-			part_free(p);
-			return 0;
-		}
-	} else {
-		assert(p->finish != NULL);
-		if (!p->finish(p)) {
-			LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", p->name);
-			part_free(p);
-			return 0;
-		}
+	assert(pe != NULL);
+	// XXX this should become the only path
+	if (pe->funcs->finish && !pe->funcs->finish(p)) {
+		LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", pe->name);
+		part_free(p);
+		return 0;
 	}
 
 	return p;
@@ -398,17 +388,11 @@ struct part *part_deserialise(struct ser_handle *sh) {
 void part_serialise(struct part *p, struct ser_handle *sh) {
 	if (!p)
 		return;
-	assert(p->name != NULL);
+	assert(p->partdb != NULL);
 
-	const struct partdb_entry *pe = partdb_find_entry(p->name);
+	const struct partdb_entry *pe = p->partdb;
 
-	if (!pe) {
-		LOG_WARN("PART: can't serialise '%s'\n", p->name);
-		ser_set_error(sh, ser_error_format);
-		return;
-	}
-
-	ser_write_open_string(sh, PART_SER_DATA, p->name);
+	ser_write_open_string(sh, PART_SER_DATA, pe->name);
 	assert(pe->funcs->ser_struct_data != NULL);
 	ser_write_struct_data(sh, pe->funcs->ser_struct_data, p);
 	for (struct slist *iter = p->components; iter; iter = iter->next) {

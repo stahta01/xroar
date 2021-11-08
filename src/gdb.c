@@ -194,7 +194,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 
-	gip->is_6309 = (strcmp(((struct part *)cpu)->name, "HD6309") == 0);
+	gip->is_6309 = (strcmp(((struct part *)cpu)->partdb->name, "HD6309") == 0);
 
 	struct addrinfo hints;
 	if (!hostname)

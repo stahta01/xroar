@@ -254,7 +254,7 @@ static _Bool mc6801_finish(struct part *p) {
 		cpu->rom_size = 2048;
 	}
 
-	LOG_WARN("%s support is UNFINISHED and UNSUPPORTED.\n", cpu->debug_cpu.part.name);
+	LOG_WARN("%s support is UNFINISHED and UNSUPPORTED.\n", p->partdb->name);
 	LOG_WARN("Please do not use except for testing.\n");
 	return 1;
 }
