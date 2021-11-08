@@ -60,7 +60,7 @@ struct tape_interface_private {
 
 	struct debug_cpu *debug_cpu;
 	_Bool is_6809;
-	_Bool is_6801;
+	_Bool is_6803;
 	struct {
 		uint16_t pwcount;
 		uint16_t bcount;
@@ -249,7 +249,7 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 
 	tip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
 	tip->is_6809 = part_is_a(&tip->debug_cpu->part, "MC6809");
-	tip->is_6801 = part_is_a(&tip->debug_cpu->part, "MC6801");
+	tip->is_6803 = part_is_a(&tip->debug_cpu->part, "MC6803");
 
 	tip->short_leader_threshold = is_dragon ? 114 : 130;
 
@@ -262,7 +262,7 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 		tip->addr.mincw1200 = is_dragon ? 0x0092 : 0x008f;
 		tip->initial_motor_delay = is_dragon ? 5 : 0;
 		tip->addr.motor_delay = is_dragon ? 0x0095 : 0x008a;
-	} else if (tip->is_6801) {
+	} else if (tip->is_6803) {
 		tip->addr.pwcount = 0x427d;
 		tip->addr.bcount = 0x427c;
 		tip->addr.bphase = 0x427e;
@@ -930,7 +930,7 @@ static inline uint8_t CC(struct tape_interface_private *tip) {
 	if (tip->is_6809) {
 		return ((struct MC6809 *)tip->debug_cpu)->reg_cc;
 	}
-	if (tip->is_6801) {
+	if (tip->is_6803) {
 		return ((struct MC6801 *)tip->debug_cpu)->reg_cc;
 	}
 	return 0;
@@ -940,7 +940,7 @@ static inline uint8_t SET_CC(struct tape_interface_private *tip, uint8_t v) {
 	if (tip->is_6809) {
 		((struct MC6809 *)tip->debug_cpu)->reg_cc = v;
 	}
-	if (tip->is_6801) {
+	if (tip->is_6803) {
 		((struct MC6801 *)tip->debug_cpu)->reg_cc = v | 0xc0;
 	}
 	return 0;
@@ -950,7 +950,7 @@ static inline uint8_t SET_A(struct tape_interface_private *tip, uint8_t v) {
 	if (tip->is_6809) {
 		MC6809_REG_A(((struct MC6809 *)tip->debug_cpu)) = v;
 	}
-	if (tip->is_6801) {
+	if (tip->is_6803) {
 		MC6801_REG_A(((struct MC6801 *)tip->debug_cpu)) = v;
 	}
 	return 0;

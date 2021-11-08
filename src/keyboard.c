@@ -66,7 +66,7 @@ struct keyboard_interface_private {
 	struct machine *machine;
 	struct debug_cpu *debug_cpu;
 	_Bool is_6809;
-	_Bool is_6801;
+	_Bool is_6803;
 
 	struct slist *auto_event_list;
 	unsigned command_index;  // when typing a basic command
@@ -114,7 +114,7 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	kip->machine = m;
 	kip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
 	kip->is_6809 = part_is_a(&kip->debug_cpu->part, "MC6809");
-	kip->is_6801 = part_is_a(&kip->debug_cpu->part, "MC6801");
+	kip->is_6803 = part_is_a(&kip->debug_cpu->part, "MC6803");
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -234,7 +234,7 @@ static void do_auto_event(void *sptr) {
 		MC6809_REG_A(cpu09) = 0;
 		cpu09->reg_cc |= 4;
 	}
-	if (kip->is_6801 && cpu01) {
+	if (kip->is_6803 && cpu01) {
 		MC6801_REG_A(cpu01) = 0;
 		cpu01->reg_cc |= 4;
 	}
@@ -251,7 +251,7 @@ static void do_auto_event(void *sptr) {
 				MC6809_REG_A(cpu09) = byte;
 				cpu09->reg_cc &= ~4;
 			}
-			if (kip->is_6801 && cpu01) {
+			if (kip->is_6803 && cpu01) {
 				MC6801_REG_A(cpu01) = byte;
 				cpu01->reg_cc &= ~4;
 			}

@@ -228,7 +228,7 @@ static void mc10_initialise(struct part *p, void *options) {
         m->config = mc;
 
 	// CPU
-	part_add_component(&m->part, part_create("MC6801", "6803"), "CPU");
+	part_add_component(&m->part, part_create("MC6803", "6803"), "CPU");
 
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG0");

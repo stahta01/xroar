@@ -47,7 +47,7 @@ struct printer_interface_private {
 	struct machine *machine;
 	struct debug_cpu *debug_cpu;
 	_Bool is_6809;
-	_Bool is_6801;
+	_Bool is_6803;
 
 	FILE *stream;
 	char *stream_dest;
@@ -74,7 +74,7 @@ struct printer_interface *printer_interface_new(struct machine *m) {
 	pip->machine = m;
 	pip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
 	pip->is_6809 = part_is_a(&pip->debug_cpu->part, "MC6809");
-	pip->is_6801 = part_is_a(&pip->debug_cpu->part, "MC6801");
+	pip->is_6803 = part_is_a(&pip->debug_cpu->part, "MC6803");
 	pip->stream = NULL;
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
