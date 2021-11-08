@@ -395,7 +395,7 @@ static char const * const default_config[] = {
 	"cart ide",
 	"cart-desc 'IDE Interface'",
 	"cart-type ide",
-	"cart-rom @hdblba",
+	"cart-rom hdblba",
 	"cart-becker",
 	// nx32 memory cartridge
 	"cart nx32",
