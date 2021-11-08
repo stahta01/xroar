@@ -7,6 +7,11 @@ Version 0.38, unreleased
  * Fix duplicate-IDAM issue when reformatting disks [Paul Fiscarelli]
  * Initial MC-10 support (including MC6803 emulation).
  * Fix occasional spurious NMI in RSDOS [Simon Jonassen]
+ * New snapshot format to support CoCo 3, MC-10.
+ * New specific load options: -load-fdX, -load-hdX, -load-sd, -load-tape
+ * IDE, NX32, MOOH now all require user to specify an image.
+ * Games Master Cartridge no longer marked autostart by default.
+ * Tape play/pause function (mainly for MC-10 which has no motor remote).
 
 Version 0.37, Sat Aug 14 2021
 
