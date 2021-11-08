@@ -136,11 +136,11 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
 		cc = cart_config_new();
 		cc->name = xstrdup(name);
 	}
-	free(name);
 	ser_read_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, cc);
 	if (strcmp(name, "romcart") == 0)
 		rom_cart_config = cc;
 	xroar_update_cartridge_menu();
+	free(name);
 	return cc;
 }
 
