@@ -46,39 +46,48 @@ struct intf;
  *
  * Called by part_create() and part_deserialise().
  *
- * To allocate memory for the part, 'allocate' is called, if defined, otherwise
- * a block of 'size' bytes is malloc()ed.  Either way, the (struct part) header
- * of the allocated block will then be initialised, populating name, is_a,
- * free, etc. from the partdb, so no need to do any of that in 'allocate'.
+ * To allocate memory for the part, 'allocate' is called.
  *
  * Then, either part_create() calls 'initialise' to set up intial state, or
  * part_deserialise() calls 'deserialise' to restore a previous state.  Either
- * should end up creating and adding any required sub-parts.
+ * should end up creating and adding any required sub-parts.  Both initialise
+ * 'partdb' within the part to point to its partdb entry.
  *
  * Finally, 'finish' is called, which is expected to find any sub-parts and set
  * up the connections between them.  If it returns false, a dependency wasn't
  * found, and the part is freed.
  *
  * Note: the 'options' argument passed to 'intialise' by part_create() is
- * replaced with the part name if NULL, so don't pass intptr_t cast to void *
- * for this.
+ * replaced with the part name if NULL.
  */
 
 struct partdb_entry_funcs {
-	struct part *(* const allocate)(void);
-	void (* const initialise)(struct part *p, void *options);
-	_Bool (* const finish)(struct part *part);
-	void (* const free)(struct part *part);
-
-	// new serialisation approach - used if non-NULL
+	// Metadata about how to serialise/deserialise the part
 	const struct ser_struct_data *ser_struct_data;
 
+	// Allocate memory for the part, often also essential initialisation
+	struct part *(* const allocate)(void);
+
+	// Create any necessary sub-parts (not called by deserialise, as the
+	// process of deserialisation creates these)
+	void (* const initialise)(struct part *p, void *options);
+
+	// Finish any internal setup once all sub-parts are available (either
+	// by the call to initialise(), or through deserialisation)
+	_Bool (* const finish)(struct part *part);
+
+	// Any extra work needed before free()ing the allocated memory
+	void (* const free)(struct part *part);
+
+	// In addition to the part name (in the partdb entry), this returns
+	// true for any other simple strings that this part identifies as
 	_Bool (* const is_a)(struct part *p, const char *name);
 };
 
 /** \brief Part database mapping entry
  *
- * Maps a name to a set of part functions.  For multiple part variants.
+ * Maps a name to a set of part functions.  Multiple variants of a part can
+ * then use the same general approach to creation.
  */
 
 struct partdb_entry {

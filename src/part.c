@@ -317,19 +317,20 @@ struct part *part_deserialise(struct ser_handle *sh) {
 	struct part *p = NULL;
 	const struct partdb_entry *pe = NULL;
 	int tag;
-	while ((tag = ser_read_tag(sh)) > 0) {
+	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
 		switch (tag) {
 		case PART_SER_DATA:
+			// Data for the part itself
 			{
 				char *name = ser_read_string(sh);
 				if (name) {
 					pe = partdb_find_entry(name);
-					// XXX this should become the only path
 					if (!pe) {
 						LOG_WARN("PART: can't deserialise '%s'\n", name);
 						ser_set_error(sh, ser_error_format);
 						return NULL;
 					}
+					assert(pe->funcs != NULL);
 					assert(pe->funcs->ser_struct_data != NULL);
 					p = pe->funcs->allocate();
 					assert(p != NULL);
@@ -339,7 +340,9 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				}
 			}
 			break;
+
 		case PART_SER_PART:
+			// Once for each sub-part
 			{
 				if (!p) {
 					LOG_DEBUG(3, "part_deserialise(): DATA must come before sub-PARTs\n");
@@ -366,16 +369,18 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				free(id);
 			}
 			break;
+
 		default:
 			break;
 		}
 	}
 
-	if (!p)
+	if (!p) {
+		LOG_DEBUG(3, "part_deserialise(): failed to deserialise part\n");
 		return NULL;
-
+	}
 	assert(pe != NULL);
-	// XXX this should become the only path
+
 	if (pe->funcs->finish && !pe->funcs->finish(p)) {
 		LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", pe->name);
 		part_free(p);
