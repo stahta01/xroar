@@ -112,7 +112,7 @@ const struct ser_struct_data mc10_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void mc10_config_complete(struct machine_config *mc) {
+static void mc10_config_complete(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->tv_input == ANY_AUTO) {
@@ -139,6 +139,21 @@ void mc10_config_complete(struct machine_config *mc) {
 	if (!mc->bas_dfn && !mc->bas_rom) {
 		mc->bas_rom = xstrdup("@mc10");
 	}
+}
+
+static _Bool mc10_is_working_config(struct machine_config *mc) {
+	if (!mc)
+		return 0;
+	sds tmp;
+	if (mc->bas_rom) {
+		tmp = romlist_find(mc->bas_rom);
+		if (!tmp)
+			return 0;
+		sdsfree(tmp);
+	} else {
+		return 0;
+	}
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -190,7 +205,12 @@ static const struct partdb_entry_funcs mc10_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct partdb_entry mc10_part = { .name = "mc10", .funcs = &mc10_funcs };
+const struct machine_partdb_extra mc10_machine_extra = {
+	.config_complete = mc10_config_complete,
+	.is_working_config = mc10_is_working_config,
+};
+
+const struct partdb_entry mc10_part = { .name = "mc10", .funcs = &mc10_funcs, .extra = { &mc10_machine_extra } };
 
 static struct part *mc10_allocate(void) {
         struct machine_mc10 *mp = part_new(sizeof(*mp));

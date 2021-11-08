@@ -133,7 +133,7 @@ const struct ser_struct_data coco3_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void coco3_config_complete(struct machine_config *mc) {
+static void coco3_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
@@ -168,6 +168,21 @@ void coco3_config_complete(struct machine_config *mc) {
 		if (cc)
 			mc->default_cart = xstrdup(cc->name);
 	}
+}
+
+static _Bool coco3_is_working_config(struct machine_config *mc) {
+	if (!mc)
+		return 0;
+	sds tmp;
+	if (mc->extbas_rom) {
+		tmp = romlist_find(mc->extbas_rom);
+		if (!tmp)
+			return 0;
+		sdsfree(tmp);
+	} else {
+		return 0;
+	}
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -245,7 +260,12 @@ static const struct partdb_entry_funcs coco3_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct partdb_entry coco3_part = { .name = "coco3", .funcs = &coco3_funcs };
+const struct machine_partdb_extra coco3_machine_extra = {
+	.config_complete = coco3_config_complete,
+	.is_working_config = coco3_is_working_config,
+};
+
+const struct partdb_entry coco3_part = { .name = "coco3", .funcs = &coco3_funcs, .extra = { &coco3_machine_extra } };
 
 static struct part *coco3_allocate(void) {
         struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));

@@ -94,6 +94,7 @@ struct partdb_entry {
 	const char *name;
 	const char *description;
 	const struct partdb_entry_funcs *funcs;
+	const void *extra[];
 };
 
 typedef _Bool (*partdb_match_func)(const struct partdb_entry *pe, void *mdata);

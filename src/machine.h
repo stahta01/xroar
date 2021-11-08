@@ -206,6 +206,18 @@ void machine_config_print_all(FILE *f, _Bool all);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Extend struct partdb_entry to contain machine-specific helpers
+
+struct machine_partdb_extra {
+	// resolve any undefined config
+	void (*config_complete)(struct machine_config *mc);
+
+	// check everything ok for this machine to run (e.g. ROM files exist)
+	_Bool (*is_working_config)(struct machine_config *mc);
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #define MACHINE_SIGINT (2)
 #define MACHINE_SIGILL (4)
 #define MACHINE_SIGTRAP (5)

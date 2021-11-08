@@ -156,32 +156,6 @@ const struct ser_struct_data dragon_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int find_working_arch(void) {
-	int arch;
-	sds tmp = NULL;
-	if ((tmp = romlist_find("@dragon64"))) {
-		arch = ARCH_DRAGON64;
-	} else if ((tmp = romlist_find("@dragon32"))) {
-		arch = ARCH_DRAGON32;
-	} else if ((tmp = romlist_find("@coco"))) {
-		arch = ARCH_COCO;
-	} else {
-		// Fall back to Dragon 64, which won't start up properly:
-		LOG_WARN("Can't find ROMs for any machine.\n");
-		arch = ARCH_DRAGON64;
-	}
-	if (tmp)
-		sdsfree(tmp);
-	return arch;
-}
-
-struct machine_config *machine_config_first_working(void) {
-	struct machine_config *mc = machine_config_by_arch(find_working_arch());
-	if (!mc)
-		mc = machine_config_by_id(0);
-	return mc;
-}
-
 static void verify_ram_size(struct machine_config *mc) {
 	if (mc->ram < 4 || mc->ram > 64) {
 		mc->ram = (mc->architecture == ARCH_DRAGON32) ? 32 : 64;
@@ -196,7 +170,7 @@ static void verify_ram_size(struct machine_config *mc) {
 	}
 }
 
-void dragon_config_complete(struct machine_config *mc) {
+static void dragon_config_complete(struct machine_config *mc) {
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->tv_input == ANY_AUTO) {
@@ -231,7 +205,7 @@ void dragon_config_complete(struct machine_config *mc) {
 				}
 			}
 		} else {
-			mc->architecture = find_working_arch();
+			mc->architecture = ARCH_DRAGON64;
 		}
 	}
 	verify_ram_size(mc);
@@ -261,6 +235,29 @@ void dragon_config_complete(struct machine_config *mc) {
 		if (cc)
 			mc->default_cart = xstrdup(cc->name);
 	}
+}
+
+static _Bool dragon_is_working_config(struct machine_config *mc) {
+	if (!mc)
+		return 0;
+	sds tmp;
+	if (mc->bas_rom) {
+		tmp = romlist_find(mc->bas_rom);
+		if (!tmp)
+			return 0;
+		sdsfree(tmp);
+	}
+	if (mc->extbas_rom) {
+		tmp = romlist_find(mc->extbas_rom);
+		if (!tmp)
+			return 0;
+		sdsfree(tmp);
+	}
+	// but one of them should exist...
+	if (!mc->bas_rom && !mc->extbas_rom)
+		return 0;
+	// No need to check altbas - it's an alternate, not a requirement.
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -345,9 +342,14 @@ static const struct partdb_entry_funcs dragon_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs };
-const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs };
-const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs };
+const struct machine_partdb_extra dragon_machine_extra = {
+	.config_complete = dragon_config_complete,
+	.is_working_config = dragon_is_working_config,
+};
+
+const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct partdb_entry dragon32_part = { .name = "dragon32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct partdb_entry coco_part = { .name = "coco", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
 
 static struct part *dragon_allocate(void) {
 	struct machine_dragon *md = part_new(sizeof(*md));

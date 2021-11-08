@@ -135,6 +135,8 @@ struct xconfig_enum machine_vdg_type_list[] = {
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
+static const char *machine_arch_to_name(struct machine_config *mc);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config *machine_config_new(void) {
@@ -206,25 +208,51 @@ struct machine_config *machine_config_by_arch(int arch) {
 	return NULL;
 }
 
-void dragon_config_complete(struct machine_config *mc);
-void coco3_config_complete(struct machine_config *mc);
-void mc10_config_complete(struct machine_config *mc);
+static _Bool machine_is_working_config(struct machine_config *mc) {
+	if (!mc) {
+		return 0;
+	}
+	const struct partdb_entry *pe = partdb_find_entry(machine_arch_to_name(mc));
+	if (!partdb_ent_is_a(pe, "machine"))
+		return 0;
+	const struct machine_partdb_extra *mpe = pe->extra[0];
+	assert(mpe != NULL);
+	if (mpe->is_working_config && mpe->is_working_config(mc)) {
+		return 1;
+	}
+	return 0;
+}
+
+struct machine_config *machine_config_first_working(void) {
+	// dragon64 might not be first in the list, but it's been the first one
+	// tested for the whole time, so avoid unexpected behaviour by checking
+	// it first.
+	struct machine_config *d64_mc = machine_config_by_name("dragon64");
+	if (machine_is_working_config(d64_mc))
+		return d64_mc;
+	// otherwise, work through the list
+	for (struct slist *iter = config_list; iter; iter = iter->next) {
+		struct machine_config *mc = iter->data;
+		if (machine_is_working_config(mc))
+			return mc;
+	}
+	// and if none found, just return the non-working dragon64 one
+	if (d64_mc)
+		return d64_mc;
+	assert(config_list != NULL);
+	return config_list->data;
+}
 
 void machine_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
-	switch (mc->architecture) {
-	case ARCH_COCO3:
-		coco3_config_complete(mc);
-		break;
-	case ARCH_MC10:
-		mc10_config_complete(mc);
-		break;
-	default:
-		dragon_config_complete(mc);
-		break;
-	}
+	const struct partdb_entry *pe = partdb_find_entry(machine_arch_to_name(mc));
+	if (!partdb_ent_is_a(pe, "machine"))
+		return;
+	const struct machine_partdb_extra *mpe = pe->extra[0];
+	assert(mpe != NULL);
+	mpe->config_complete(mc);
 }
 
 static void machine_config_free(struct machine_config *mc) {
@@ -330,7 +358,7 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 
 // Machine arch to part name.  Obviously we could be storing machine arch as a
 // string here, but do this mapping for now.
-static const char *machine_part(struct machine_config *mc) {
+static const char *machine_arch_to_name(struct machine_config *mc) {
 	switch (mc->architecture) {
 	case ARCH_DRAGON32:
 		return "dragon32";
@@ -347,7 +375,7 @@ static const char *machine_part(struct machine_config *mc) {
 struct machine *machine_new(struct machine_config *mc) {
 	assert(mc != NULL);
 	LOG_DEBUG(1, "Machine: %s\n", mc->description);
-	const char *partname = machine_part(mc);
+	const char *partname = machine_arch_to_name(mc);
 	// sanity check that the part is a machine
 	if (!partdb_is_a(partname, "machine")) {
 		return NULL;
