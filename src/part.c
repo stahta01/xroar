@@ -325,6 +325,7 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				char *name = ser_read_string(sh);
 				if (name) {
 					pe = partdb_find_entry(name);
+					free(name);
 					if (!pe) {
 						LOG_WARN("PART: can't deserialise '%s'\n", name);
 						ser_set_error(sh, ser_error_format);
@@ -336,7 +337,6 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					assert(p != NULL);
 					p->partdb = pe;
 					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
-					name = NULL;
 				}
 			}
 			break;
