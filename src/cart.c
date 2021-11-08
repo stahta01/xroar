@@ -194,6 +194,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 		if (rom_cart_config->rom) free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
 		rom_cart_config->autorun = 1;
+		xroar_update_cartridge_menu();
 		FILE *fd = fopen(name, "rb");
 		if (fd) {
 			off_t fsize = fs_file_size(fd);
