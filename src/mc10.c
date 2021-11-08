@@ -376,6 +376,10 @@ static void mc10_free(struct part *p) {
 		gdb_interface_free(mp->gdb_interface);
 	} */
 #endif
+	if (mp->ram) {
+		free(mp->ram);
+		mp->ram = NULL;
+	}
 	if (mp->keyboard_interface) {
 		keyboard_interface_free(mp->keyboard_interface);
 	}
