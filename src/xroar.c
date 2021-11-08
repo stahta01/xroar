@@ -1445,10 +1445,12 @@ void xroar_set_ratelimit_latch(_Bool notify, int action) {
 }
 
 void xroar_set_pause(_Bool notify, int action) {
-	_Bool state = xroar_machine->set_pause(xroar_machine, action);
-	// TODO: UI indication of paused state
-	(void)notify;
-	(void)state;
+	if (xroar_machine->set_pause) {
+		_Bool state = xroar_machine->set_pause(xroar_machine, action);
+		// TODO: UI indication of paused state
+		(void)state;
+		(void)notify;
+	}
 }
 
 /** Quit the emulator.

@@ -697,7 +697,7 @@ static _Bool coco3_set_pause(struct machine *m, int state) {
 	case 0: case 1:
 		mcc3->CPU0->halt = state;
 		break;
-	case 2:
+	case XROAR_NEXT:
 		mcc3->CPU0->halt = !mcc3->CPU0->halt;
 		break;
 	default:
