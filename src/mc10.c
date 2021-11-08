@@ -367,10 +367,6 @@ static _Bool mc10_finish(struct part *p) {
 // Called from part_free(), which handles freeing the struct itself
 static void mc10_free(struct part *p) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)p;
-	struct machine *m = &mp->machine;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
-	}
 #ifdef WANT_GDB_TARGET
 	/* if (mp->gdb_interface) {
 		gdb_interface_free(mp->gdb_interface);

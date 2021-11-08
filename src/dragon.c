@@ -814,11 +814,6 @@ static _Bool dragon_finish(struct part *p) {
 // Called from part_free(), which handles freeing the struct itself
 static void dragon_free(struct part *p) {
 	struct machine_dragon *md = (struct machine_dragon *)p;
-	struct machine *m = &md->public;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
-	}
-	//m->remove_cart(m);
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);

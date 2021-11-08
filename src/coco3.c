@@ -486,11 +486,6 @@ static _Bool coco3_finish(struct part *p) {
 
 static void coco3_free(struct part *p) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
-	struct machine *m = &mcc3->public;
-	if (m->config && m->config->description) {
-		LOG_DEBUG(1, "Machine shutdown: %s\n", m->config->description);
-	}
-	//m->remove_cart(m);
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
 		gdb_interface_free(mcc3->gdb_interface);
