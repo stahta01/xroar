@@ -141,12 +141,21 @@ load or attach \fIfile\fR
 .TP
 \fB\-run\fR \fIfile\fR
 load or attach \fIfile\fR and attempt autorun
-
-.SS Cassettes:
-
+.TP
+\fB\-load-fd\fIX\fR\fR \fIfile\fR
+insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3)
+.TP
+\fB\-load-hd\fIX\fR\fR \fIfile\fR
+use hard disk image \fIfile\fR as drive \fIX\fR (0-1, e.g. for ide)
+.TP
+\fB\-load-sd\fR \fIfile\fR
+use SD card image \fIfile\fR (e.g. for mooh, nx32)
 .TP
 \fB\-tape\-write\fR \fIfile\fR
 open \fIfile\fR for tape writing
+
+.SS Cassettes:
+
 .TP
 \fB\-tape\-pan\fR \fIpanning\fR
 pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
@@ -271,6 +280,9 @@ older way to specify audio volume, linear (0\-100)
 \fB\-keymap\fR \fIcode\fR
 host keyboard type (\fB\-keymap help\fR for list)
 .TP
+\fB\-kbd\-bind\fR \fIhostkey\fR=[pre:]\fIemukey\fR
+map host key to emulated key (pre = no translate)
+.TP
 \fB\-kbd\-translate\fR
 enable keyboard translation
 .TP
@@ -329,17 +341,17 @@ port for GDB target to listen on [65520]
 \fB\-trace\fR
 start with trace mode on
 .TP
-\fB\-debug\-ui\fR \fIflags\fR
-UI debugging (see manual, or \fB\-1\fR for all)
+\fB\-debug\-fdc\fR \fIflags\fR
+FDC debugging (see manual, or \fB\-1\fR for all)
 .TP
 \fB\-debug\-file\fR \fIflags\fR
 file debugging (see manual, or \fB\-1\fR for all)
 .TP
-\fB\-debug\-fdc\fR \fIflags\fR
-FDC debugging (see manual, or \fB\-1\fR for all)
-.TP
 \fB\-debug\-gdb\fR \fIflags\fR
 GDB target debugging (see manual, or \fB\-1\fR for all)
+.TP
+\fB\-debug\-ui\fR \fIflags\fR
+UI debugging (see manual, or \fB\-1\fR for all)
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
 general debug verbosity (\fB0\fR to \fB3\fR) [1]
