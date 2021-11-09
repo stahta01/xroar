@@ -1624,7 +1624,7 @@ void xroar_configure_machine(struct machine_config *mc) {
 	}
 	xroar_machine_config = mc;
 	xroar_machine = machine_new(mc);
-	DELEGATE_SAFE_CALL(xroar_ui_interface->update_cartridge_menu);
+	xroar_update_cartridge_menu();  // XXX why here?
 	xroar_connect_machine();
 }
 
@@ -1669,7 +1669,9 @@ void xroar_set_machine(_Bool notify, int id) {
 }
 
 void xroar_update_cartridge_menu(void) {
-	DELEGATE_SAFE_CALL(xroar_ui_interface->update_cartridge_menu);
+	if (xroar_ui_interface) {
+		DELEGATE_SAFE_CALL(xroar_ui_interface->update_cartridge_menu);
+	}
 }
 
 void xroar_toggle_cart(void) {
