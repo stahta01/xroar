@@ -69,6 +69,7 @@ struct machine_mc10 {
 
 	_Bool inverted_text;
 	unsigned frameskip;
+	unsigned video_mode;
 	uint16_t video_attr;
 
 	int cycles;
@@ -100,6 +101,8 @@ static const struct ser_struct ser_struct_mc10[] = {
 	SER_STRUCT_ELEM(struct machine_mc10, ram, ser_type_unhandled), // 2
 	SER_STRUCT_ELEM(struct machine_mc10, ram_size, ser_type_unsigned), // 3
 	SER_STRUCT_ELEM(struct machine_mc10, inverted_text, ser_type_bool), // 4
+	SER_STRUCT_ELEM(struct machine_mc10, video_mode, ser_type_unsigned), // 5
+	SER_STRUCT_ELEM(struct machine_mc10, video_attr, ser_type_unsigned), // 6
 };
 
 #define MC10_SER_RAM     (2)
@@ -602,7 +605,15 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
 		if (mp->ram_size > 0x4000 && A < (0x4000 + mp->ram_size)) {
 			mp->ram[A - 0x4000] = D;
 		} else {
-			sound_set_sbs(mp->snd, 1, D & 0x80);
+			unsigned vmode = 0;
+			vmode |= (mp->CPU->D & 0x20) ? 0x80 : 0;  // D5 -> GnA
+			vmode |= (mp->CPU->D & 0x04) ? 0x40 : 0;  // D2 -> GM2
+			vmode |= (mp->CPU->D & 0x08) ? 0x20 : 0;  // D3 -> GM1
+			vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;  // D4 -> GM0
+			vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;  // D6 -> CSS
+			mp->video_mode = vmode;
+			mp->video_attr = (mp->CPU->D & 0x10) << 6;  // GM0 -> ¬INT/EXT
+			sound_set_sbs(mp->snd, 1, D & 0x80);  // D7 -> sound bit
 			mc10_vdg_update_mode(mp);
 		}
 		break;
@@ -696,14 +707,7 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 
 static void mc10_vdg_update_mode(void *sptr) {
 	struct machine_mc10 *mp = sptr;
-	unsigned vmode = 0;
-	vmode |= (mp->CPU->D & 0x20) ? 0x80 : 0;
-	vmode |= (mp->CPU->D & 0x04) ? 0x40 : 0;
-	vmode |= (mp->CPU->D & 0x08) ? 0x20 : 0;
-	vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;
-	vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;
-	mc6847_set_mode(mp->VDG, vmode);
-	mp->video_attr = (mp->CPU->D & 0x10) << 6;  // GM0 -> ¬INT/EXT
+	mc6847_set_mode(mp->VDG, mp->video_mode);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
