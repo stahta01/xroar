@@ -266,8 +266,10 @@ static _Bool dragon_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void dragon_connect_cart(struct part *p);
 static void dragon_insert_cart(struct machine *m, struct cart *c);
 static void dragon_remove_cart(struct machine *m);
+
 static void dragon_reset(struct machine *m, _Bool hard);
 static enum machine_run_state dragon_run(struct machine *m, int ncycles);
 static void dragon_single_step(struct machine *m);
@@ -429,7 +431,6 @@ static _Bool dragon_finish(struct part *p) {
 	md->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	md->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
 	md->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
-	md->cart = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 
 	// Check all required parts are attached
 	if (!md->SAM || !md->CPU || !md->PIA0 || !md->PIA1 || !md->VDG ||
@@ -437,11 +438,8 @@ static _Bool dragon_finish(struct part *p) {
 		return 0;
 	}
 
-	if (md->cart) {
-		md->cart->signal_firq = DELEGATE_AS1(void, bool, cart_firq, md);
-		md->cart->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, md);
-		md->cart->signal_halt = DELEGATE_AS1(void, bool, cart_halt, md);
-	}
+	// Connect any cartridge part
+	dragon_connect_cart(p);
 
 	switch (mc->architecture) {
 	case ARCH_DRAGON32:
@@ -875,23 +873,27 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void dragon_connect_cart(struct part *p) {
+	struct machine_dragon *md = (struct machine_dragon *)p;
+	struct cart *c = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
+	md->cart = c;
+	if (!c)
+		return;
+	assert(c->read != NULL);
+	assert(c->write != NULL);
+	c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, md);
+	c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, md);
+	c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, md);
+}
+
 static void dragon_insert_cart(struct machine *m, struct cart *c) {
-	struct machine_dragon *md = (struct machine_dragon *)m;
-	m->remove_cart(m);
-	if (c) {
-		assert(c->read != NULL);
-		assert(c->write != NULL);
-		md->cart = c;
-		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, md);
-		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, md);
-		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, md);
-		part_add_component(&m->part, (struct part *)c, "cart");
-	}
+	dragon_remove_cart(m);
+	part_add_component(&m->part, &c->part, "cart");
+	dragon_connect_cart(&m->part);
 }
 
 static void dragon_remove_cart(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	(void)md;
 	part_free((struct part *)md->cart);
 	md->cart = NULL;
 }
@@ -1009,7 +1011,6 @@ static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, v
 
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	(void)md;
 	for (int i = 0; i < n; i++) {
 		bp_remove(md->bp_session, &list[i].bp);
 	}
@@ -1418,7 +1419,6 @@ static void update_vdg_mode(struct machine_dragon *md) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void pia0a_data_preread(void *sptr) {
-	(void)sptr;
 	keyboard_update(sptr);
 	joystick_update(sptr);
 }
@@ -1588,7 +1588,6 @@ static void update_audio_from_tape(void *sptr, float value) {
 
 static void cart_firq(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
-	(void)md;
 	mc6821_set_cx1(&md->PIA1->b, level);
 }
 

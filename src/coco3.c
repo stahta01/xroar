@@ -192,8 +192,10 @@ static _Bool coco3_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void coco3_connect_cart(struct part *p);
 static void coco3_insert_cart(struct machine *m, struct cart *c);
 static void coco3_remove_cart(struct machine *m);
+
 static void coco3_reset(struct machine *m, _Bool hard);
 static enum machine_run_state coco3_run(struct machine *m, int ncycles);
 static void coco3_single_step(struct machine *m);
@@ -340,7 +342,6 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->CPU = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
 	mcc3->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	mcc3->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
-	mcc3->cart = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 
 	// Check all required parts are attached
 	if (!mcc3->GIME || !mcc3->CPU || !mcc3->PIA0 || !mcc3->PIA1 ||
@@ -348,11 +349,8 @@ static _Bool coco3_finish(struct part *p) {
 		return 0;
 	}
 
-	if (mcc3->cart) {
-		mcc3->cart->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mcc3);
-		mcc3->cart->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mcc3);
-		mcc3->cart->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mcc3);
-	}
+	// Connect any cartridge part
+	coco3_connect_cart(p);
 
 	// GIME
 
@@ -567,18 +565,23 @@ static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void coco3_connect_cart(struct part *p) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	struct cart *c = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
+	mcc3->cart = c;
+	if (!c)
+		return;
+	assert(c->read != NULL);
+	assert(c->write != NULL);
+	c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mcc3);
+	c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mcc3);
+	c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mcc3);
+}
+
 static void coco3_insert_cart(struct machine *m, struct cart *c) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	m->remove_cart(m);
-	if (c) {
-		assert(c->read != NULL);
-		assert(c->write != NULL);
-		mcc3->cart = c;
-		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mcc3);
-		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mcc3);
-		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mcc3);
-		part_add_component(&m->part, (struct part *)c, "cart");
-	}
+	coco3_remove_cart(m);
+	part_add_component(&m->part, (struct part *)c, "cart");
+	coco3_connect_cart(&m->part);
 }
 
 static void coco3_remove_cart(struct machine *m) {
@@ -996,7 +999,6 @@ static void update_sound_mux_source(void *sptr) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void pia0a_data_preread(void *sptr) {
-	(void)sptr;
 	keyboard_update(sptr);
 	joystick_update(sptr);
 }
