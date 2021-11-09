@@ -66,9 +66,9 @@ static void print_part_name_description(const struct partdb_entry *pe, void *ida
 	printf("\t%-10s %s\n", pe->name, pe->description ? pe->description : pe->name);
 }
 
-static const char *lookup_part(const char *name) {
+static const char *lookup_part(const char *name, const char *is_a) {
 	if (strcmp(name, "help") == 0) {
-		partdb_foreach_is_a((partdb_iter_func)print_part_name_description, NULL, "cart");
+		partdb_foreach_is_a((partdb_iter_func)print_part_name_description, NULL, is_a);
 		exit(EXIT_SUCCESS);
 	}
 	const struct partdb_entry *pe = partdb_find_entry(name);
@@ -156,7 +156,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			}
 			break;
 		case XCONFIG_PART: {
-			const char *pname = lookup_part(arg);
+			const char *pname = lookup_part(arg, (char *)option->ref);
 			if (*(char **)option->dest.object)
 				free(*(char **)option->dest.object);
 			*(char **)option->dest.object = NULL;
