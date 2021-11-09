@@ -30,8 +30,8 @@
 @c @end ifnottex
 
 @copying
-This manual is for XRoar (version @value{VERSION}), a Dragon and
-Tandy Colour Computer emulator.
+This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
+computer emulator.
 
 Copyright @copyright{} 2021
 Ciaran Anscomb.
@@ -48,32 +48,10 @@ Ciaran Anscomb.
 @contents
 
 @node Top
-@top Introduction
+@top About this manual
 
-XRoar is a Dragon and Tandy Colour Computer emulator that runs on a wide
-variety of platforms.  Some features are:
-
-@itemize @bullet
-@item Emulates Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3.
-@item Emulates DragonDOS, Delta and RSDOS disk systems.
-@item Emulates the Orchestra 90-CC stereo sound cartridge.
-@item Supports both raw and translated keyboard modes.
-@item Reads and writes virtual cassettes (compact @file{.cas} files and audio files).
-@item Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
-@item Saves and loads machine snapshots.
-@item Provides a GDB target for remote debugging.
-@item Games Master Cartridge support, including SN76489 sound chip.
-@item MOOH RAM expansion + SPI support.
-@item Glenside IDE support.
-@item Initial limited support for the Tandy MC-10.
-@end itemize
-
-XRoar is easily built from source under Linux, and binary packages are provided
-for Mac OS X and Windows.  @xref{Installation}.
-
-XRoar can also be compiled to WebAssembly, and redistributing it in this form
-may provide a convenient way for users to run your Dragon software.  See
-@myuref{https://www.6809.org.uk/xroar/online/, XRoar Online} for an example.
+This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
+computer emulator.
 
 XRoar is free software; you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
@@ -107,11 +85,77 @@ this program.  If not, see <https://www.gnu.org/licenses/>.
 @chapter Getting started
 
 @menu
+* Introduction::
 * Prerequisites::
 * User-interface introduction::
 * Running programs::
 * Troubleshooting::
 @end menu
+
+
+@node Introduction
+@section Introduction
+
+XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the Tandy
+MC-10; and some other similar machines or clones.  It runs on a wide variety of
+platforms.  Emulated hardware includes:
+
+@itemize @bullet
+@item Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10.
+@item DragonDOS, Delta and RSDOS disk controller cartridges.
+@item Orchestra 90-CC stereo sound cartridge.
+@item Games Master Cartridge, including the SN76489 sound chip.
+@item Glenside IDE cartridge, with IDE hard disk image support.
+@item NX32 and MOOH RAM expansions, with SPI and SD card image support.
+@end itemize
+
+Other features include:
+
+@itemize @bullet
+@item Raw and translated keyboard modes.
+@item Read and write tape images (compact @file{.cas} files or audio, e.g. @file{.wav}).
+@item Read and write VDK, JVC and DMK format floppy disk images.
+@item Becker port for communication with remove servers.
+@item Save and load machine snapshots.
+@item GDB target for remote debugging.
+@end itemize
+
+XRoar is easily built from source under Linux, and binary packages are provided
+for Mac OS X and Windows.
+
+XRoar can also be compiled to WebAssembly, and redistributing it in this form
+may provide a convenient way for users to run your Dragon software.  See
+@myuref{https://www.6809.org.uk/xroar/online/, XRoar Online} for an example.
+
+
+@node Notes for version 1.x
+@subheading Notes for version 1.x
+
+Version 1.x comes with support for two new emulated machines: the Tandy Colour
+Computer 3 and the Tandy MC-10.  Some major changes have taken place under the
+hood, and although most things should remain familiar, for some special uses,
+here are the things you need to know.
+
+Snapshots now store much more state, and of course support the new emulated
+machines, but this means the format had to change.  Snapshots from the last 0.x
+release are still recognised, and can be loaded, but this support is likely to
+be removed in time.
+
+The tape emulation now supports manual pause control.  On the MC-10, this
+defaults to paused, as it has no ability to remotely control the tape motor.
+You will need to un-pause after typing @code{CLOAD} or @code{CLOADM} on the
+MC-10 (@clicksequence{File @click{} Cassette @click{} Play}, or from the tape
+control tool; autorunning will do this automatically).
+
+Previously, the Glenside IDE controller would use a fixed HD image file in the
+current working directory called @file{hd0.img}.  You must now specify an image
+with the @option{-load-hd0} option.  There is also the new ability to attach a
+@emph{second} hard disk image with @option{-load-hd1}, if you have software
+that can access it.
+
+Similarly, the NX32 and MOOH cartridges would use a fixed SD image file, and
+you must now specify it with the @option{-load-sd} option.
+
 
 @node Prerequisites
 @section Prerequisites
@@ -192,12 +236,14 @@ XRoar supports real joysticks, and simulating joysticks with the keyboard or
 mouse.  You can select which method is used for each of the emulated joysticks
 in the @clicksequence{Hardware @click{} Right Joystick} and
 @clicksequence{Hardware @click{} Left Joystick} menus.  The
-@clicksequence{Keyboard} option maps the cursor keys to joystick directions
-(meaning they become unavailable to type as actual emulated cursor keys) and
-@key{ALT} to the firebutton.  The @clicksequence{Mouse} option relates the
-pointer position within the window to a joystick's floating position, with the
-left mouse button bound being the firebutton.  Much of this can be configured,
-see @ref{Joysticks}.
+@clicksequence{Keyboard} option maps the cursor keys to joystick
+directions@footnote{While mapped as a joystick, the cursor keys won't work as
+actual emulated keys.}, with @key{ALT} and @key{SUPER} mapped to the first and
+second firebuttons respectively@footnote{The second firebutton is only useful
+on the CoCo 3.}.  The @clicksequence{Mouse} option relates the pointer position
+within the window to a joystick's floating position, with the left mouse button
+bound being the firebutton.  Much of this can be configured, see
+@ref{Joysticks}.
 
 The @clicksequence{Hardware} menu also allows you to select which machine to
 emulate, and attach a cartridge to the running machine.  If ROM images were
@@ -210,11 +256,11 @@ machine, and if you change the selection, you may need to select
 @node Running programs
 @section Running programs
 
-XRoar tries to make this easy; after all, it's probably why you installed an
-emulator in the first place.  Select @clicksequence{File @click{} Run} to open
-a file requester, and select the program media image; in the majority of cases,
-and so long as the program was intended for the machine you have selected,
-XRoar will "do the right thing" to try and start it.
+XRoar tries to make running programs easy; after all, it's probably why you
+installed an emulator in the first place.  Select @clicksequence{File @click{}
+Run} to open a file requester, and select the program media image; in the
+majority of cases, and so long as the program was intended for the machine you
+have selected, XRoar will "do the right thing" to try and start it.
 
 As with much automation, we can't forsee every eventuality, and sometimes
 you'll have to launch the program manually.  In this case, you can still simply
@@ -233,9 +279,8 @@ emulated machine.
 
 For cassette images (usually a @file{.cas} or @file{.wav}), XRoar will try to
 determine the type of the first program in the image, and autorunning will
-issue the @samp{CLOAD} (for BASIC) or @samp{CLOADM} (for machine code) command
-to load it, followed by @samp{EXEC} or @samp{RUN} as appropriate.
-@xref{Cassettes}.
+issue the @samp{CLOAD} or @samp{CLOADM} command accordingly, followed by
+@samp{EXEC} or @samp{RUN} as appropriate.  @xref{Cassettes}.
 
 The only standard way of autostarting the program on a disk image is through
 its boot sectors, so in this case XRoar will issue the @samp{BOOT} (Dragon) or
@@ -249,6 +294,7 @@ discriminate; the most common are VDK (@file{.vdk} extension) or JVC
 @node Troubleshooting
 @section Troubleshooting
 
+
 @subsection No BASIC ROM
 
 The most common issue when first using XRoar.  You start the emulator and only
@@ -261,6 +307,7 @@ some and put them in the directory appropriate to your platform.
 @image{xroar-screens, 4.15625in,, Emulator with and without BASIC ROM, png}
 @caption{Emulator with and without BASIC ROM}
 @end float
+
 
 @subsection Program lacks colour
 
@@ -279,6 +326,14 @@ fidelity of this rendering.  See @ref{Video output} for more details.
 @caption{@cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes}
 @end float
 
+
+@subsection Can't access HD/SD image
+
+If you've been using previous versions of XRoar with the IDE, MOOH, or NX32
+cartridges, you now need to specify the image filename with @option{-load-hd0}
+(HD image for IDE) or @option{-load-sd} (SD image for NX32, MOOH).
+
+
 @subsection Debug messages
 
 XRoar prints diagnostic messages to standard output and standard error, and
@@ -288,6 +343,7 @@ various command-line options.  See @ref{Debugging} for more information.
 Windows generally does not show these messages by default. but you can
 allocate a console by running XRoar from the command line and including
 @option{-C} as the very first option.
+
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -389,11 +445,11 @@ default values, use @option{-config-print-all}.
 @node Machines
 @section Machines
 
-With no other options, XRoar searches the ROM path and determines which
-supported machine has firmware ROM images are available.  It tries in this
-order: Dragon 64, Dragon 32, Tandy CoCo.  This can be overridden with the
-@option{-default-machine @var{name}} option.  XRoar has built-in configurations
-for the following machines:
+With no other options, XRoar tests each configured machine in order (starting
+with the Dragon 64) to see whether its required ROM images are available.  This
+can be overridden with the @option{-default-machine @var{name}} option
+(@option{-m @var{name}} for short).  XRoar has built-in configurations for the
+following machines:
 
 @multitable @columnfractions 0.15 0.85
 @headitem Name @tab Description
@@ -428,13 +484,13 @@ Base machine architecture.  One of @samp{dragon64}, @samp{dragon32},
 Fitted CPU.  One of @samp{6809} or @samp{6309}.  Not applicable to the MC-10.
 
 @item -bas @var{rom}
-ROM image to use for Colour BASIC (CoCo and MC-10 only).
+Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
 
 @item -extbas @var{rom}
-ROM image to use for Extended BASIC (or Super Extended BASIC on the CoCo 3).
+Extended BASIC (or Super Extended BASIC on the CoCo@w{ }3).
 
 @item -altbas @var{rom}
-64K-mode Extended BASIC for Dragon 64 & Dragon 200-E.
+64K-mode Extended BASIC (Dragon 64, Dragon 200-E).
 
 @item -no-bas
 @itemx -no-extbas
@@ -462,7 +518,7 @@ Amount of RAM fitted in kilobytes.  Valid sizes are 4-64K for Dragon and Tandy
 CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 
 @item -machine-cart @var{name}
-Default cartridge to attach.  @xref{Cartridges}.
+Default cartridge to attach.
 
 @item -no-machine-cart
 Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
@@ -480,7 +536,7 @@ machine pippin
   ram 16
 @end example
 
-XRoar's CoCo 3 support is recent and known to contain some slight timing
+XRoar's CoCo 3 and MC-10 support is recent and known to contain some slight timing
 errors.  Most programs work with it though.
 
 XRoar now contains @emph{very} early support for the Tandy MC-10, but it is
@@ -787,7 +843,7 @@ The MC-10 has no tape motor control, so when you insert a cassette, the player
 defaults to paused.  After typing @command{CLOAD} or @command{CLOADM}, you will
 have to start the player by selecting @clicksequence{File @click{} Cassette
 @click{} Play} (Windows, Mac OS X), or by clicking @key{Play} in the tape
-control dialog (GTK+, @clicksequence{Tool @click{} Tape Control} or
+control tool (GTK+, @clicksequence{Tool @click{} Tape Control} or
 @kbd{@key{CTRL}+T}).
 
 The @option{-tape-fast} option accelerates tape loading by intercepting ROM
@@ -1016,8 +1072,8 @@ Select user-interface module.  @option{-ui help} to list compiled-in modules.
 Select with @option{-ui gtk2}.
 
 This is the most full-featured user interface.  It provides extensive dynamic
-menus, and control dialogues for cassette and disk files.  This is the
-preferred interface under Linux.
+menus, and control tools for cassette and disk files.  This is the preferred
+interface under Linux.
 
 Only one video module is usable with this user interface: @samp{gtkgl}.
 
@@ -1070,8 +1126,9 @@ Default is @samp{5bit}.
 
 Real NTSC machines start in one of two cross-colour states at random.  Games
 often prompt the user to ``Press Enter if the screen is red'', for example.
-You can press @kbd{@key{CTRL}+A}, to cycle through three modes: Off,
-Blue-red and Red-blue.
+You can press @kbd{@key{CTRL}+A}, to cycle through three modes: Off, Blue-red
+and Red-blue.  On the CoCo 3, a fourth mode is included that switches to the
+RGB output.
 
 Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
 
@@ -1245,12 +1302,19 @@ the second press with the left joystick and a third press disables it again.
 The virtual joystick defaults to the keyboard-based @samp{kjoy0} described
 above, but can be reconfigured with @option{-joy-virtual @var{name}}.
 
-A joystick configuration can be created or configured by selecting it by name
-with @option{-joy @var{name}}, and then configuring its axes with
-@option{-joy-axis @var{index}=@var{spec}} and buttons with @option{-joy-button
-@var{index}=@var{spec}}.  In each case, @var{spec} has the syntax
-@var{module}:@var{args}, with @var{args} being a comma-separated list, the
-format of which is specific to @var{module}:
+Joystick configuration profiles can be created or modified.  First select a
+profile by name with @option{-joy @var{name}} (the built-in names are listed in
+the table above), then configure its axes and buttons:
+
+Configure axes with @option{-joy-axis @var{axis}=[@var{module}:]@var{args}}.
+The @var{axis} is either @samp{X} or @samp{Y} (or numbered 0--1).
+
+Configure buttons with
+@option{-joy-button @var{button}=[@var{module}:]@var{args}}.  The @var{button}
+is either 0 (first button), or 1 (second button---only useful on the CoCo 3).
+
+In both cases, the @var{module} selects a source for the input from the list
+below, and the @var{args} specify which one to use.
 
 @multitable {physicalxxx} {screen-offset0,screen-offset1xxx} {joystick-index,button-indexxxx}
 @headitem Module @tab Axis args @tab Button args
@@ -1315,7 +1379,8 @@ the @option{-gdb-ip} and @option{-gdb-port} options.
 XRoar also supports a simpler ``trace mode'', where it will dump a disassembly
 of every instruction it executes to the console.  Toggle trace mode on or off
 with @kbd{@key{CTRL}+V}.  Trace mode can be enabled from startup with the
-@option{-trace} option.
+@option{-trace} option.  Very useful when piped through @command{less}, as you
+can use simple text searches.
 
 Note that GDB support is not currently implemented for the 6803 used by the
 MC-10, but trace mode is.
@@ -1412,8 +1477,8 @@ as the first option to allocate a console.
 @node Acknowledgements
 @chapter Acknowledgements
 
-I made reference to the MAME 6809 core for clues on how the overflow bit in the
-condition code register was handled.
+Early on, I made reference to the MAME 6809 core for clues on how the overflow
+bit in the condition code register was handled.
 
 Darren Atkinson's @cite{Motorola 6809 and Hitachi 6309 Programmers Reference}
 has been very useful for 6309 support and fleshing out some of the illegal
@@ -1421,7 +1486,7 @@ instructions on the 6809.
 
 Alan Cox contributed the IDE code.
 
-Tormod Voldon contributed support for his NX32 and MOOH devices (including
+Tormod Volden contributed support for his NX32 and MOOH devices (including
 general SPI and SD image support).
 
 Various people have provided feedback or test cases that have helped nail down
@@ -1504,6 +1569,7 @@ The Windows build provides menu-based access to certain features.
 * Compilation::
 @end menu
 
+
 @node Dependencies
 @subsection Dependencies
 
@@ -1535,7 +1601,7 @@ have all the dependencies for a full build:
 full-featured user interface.  It is only usable as such if you also have
 @myuref{http://projects.gnome.org/gtkglext/, GtkGlExt}, an OpenGL extension
 used to provide video output.  Otherwise, it can provide a file requester for
-use by other user interfaces.
+use by other user interfaces.  Version 2 only.
 
 @myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code under
@@ -1552,6 +1618,7 @@ options are still in the code base, but have not been tested in a while.
 
 @myuref{http://www.mega-nerd.com/libsndfile/, libsndfile} is recommended to
 enable support for using audio files as cassette images.
+
 
 @node Compilation
 @subsection Compilation
@@ -1602,31 +1669,35 @@ subdirectory.
 
 A summary of commonly available keyboard shortcuts.
 
-@multitable {XXXXXXXXX} {XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}
-@item @kbd{@key{CTRL}+A} @tab Cycle through "TV inputs", including cross-colour modes.
-@item @kbd{@key{CTRL}+D} @tab Open disk control dialogue (GTK+ only).
+@multitable {XXXXXXXXXXX} {XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}
+@item @kbd{@key{CTRL}+[1-4]} @tab Insert disk into drive 1--4.
+@item @kbd{@key{CTRL}+@key{SHIFT}+[1-4]} @tab Create new disk in drive 1--4.
+@item @kbd{@key{CTRL}+[5-8]} @tab Toggle write enable on disk in drive 1--4.
+@item @kbd{@key{CTRL}+@key{SHIFT}+[5-8]} @tab Toggle write back on disk in drive 1--4.
+@item @kbd{@key{CTRL}+A} @tab Cycle through cross-colour modes (and RGB on CoCo 3).
+@item @kbd{@key{CTRL}+D} @tab Open disk control tool (GTK+ only).
 @item @kbd{@key{CTRL}+@key{SHIFT}+D} @tab Flush disk images.
-@item @kbd{@key{CTRL}+E} @tab Toggle DOS emulation on/off - reset to take effect.
+@item @kbd{@key{CTRL}+E} @tab Toggle cartridge on/off - reset to take effect.
 @item @kbd{@key{CTRL}+F}@*@ @ @ or @kbd{@key{F11}} @tab Toggle full screen mode.
-@item @kbd{@key{CTRL}+@key{SHIFT}+H}@*@ @ @ or @kbd{@key{PAUSE}} @tab HALTs the CPU.  Seen on the Dynacom MX-1600.
+@item @kbd{@key{CTRL}+@key{SHIFT}+H}@*@ @ @ or @kbd{@key{PAUSE}} @tab Halt the CPU (not on the MC-10).
 @item @kbd{@key{CTRL}+@key{SHIFT}+I} @tab Toggle text mode inverse video.
 @item @kbd{@key{CTRL}+J} @tab Cycle through joystick emulation modes (None, Right, Left).
 @item @kbd{@key{CTRL}+@key{SHIFT}+J} @tab Swap left and right joysticks.
-@item @kbd{@key{CTRL}+K} @tab Cycle through Dragon, Dragon 200-E and CoCo keyboard layouts.
-@item @kbd{@key{CTRL}+L} @tab Load a file (see below).
-@item @kbd{@key{CTRL}+@key{SHIFT}+L} @tab Load a file and attempt to autorun it where appropriate.
-@item @kbd{@key{CTRL}+M} @tab Cycle through emulated machine types (resets machine).
+@item @kbd{@key{CTRL}+K} @tab Toggle Dragon/CoCo keyboard layout (not on the MC-10).
+@item @kbd{@key{CTRL}+L} @tab Load a file.
+@item @kbd{@key{CTRL}+@key{SHIFT}+L} @tab Load and attempt to autorun a file.
+@item @kbd{@key{CTRL}+M} @tab Cycle through emulated machine types.  Deprecated.
 @item @kbd{@key{CTRL}+@key{SHIFT}+P} @tab Flush printer output.
 @item @kbd{@key{CTRL}+Q} @tab Quit emulator.
 @item @kbd{@key{CTRL}+R} @tab Soft reset emulated machine.
 @item @kbd{@key{CTRL}+@key{SHIFT}+R} @tab Hard reset emulated machine.
 @item @kbd{@key{CTRL}+S} @tab Save a snapshot.
-@item @kbd{@key{CTRL}+T} @tab Open the tape control dialogue (GTK+ only).
+@item @kbd{@key{CTRL}+T} @tab Open the tape control tool (GTK+ only).
 @item @kbd{@key{CTRL}+V} @tab Toggle trace mode.
 @item @kbd{@key{CTRL}+W} @tab Attach a virtual cassette file for writing.
 @item @kbd{@key{CTRL}+Z} @tab Enable keyboard translation mode.
-@item @kbd{@key{F12}} @tab While held, the emulator will run at the maximum possible speed.
-@item @kbd{@key{SHIFT}+@key{F12}} @tab Toggle rate limiting.  Emulator runs at maximum speed until pressed again.
+@item @kbd{@key{F12}} @tab Run at maximum speed while held.
+@item @kbd{@key{SHIFT}+@key{F12}} @tab Maximum speed toggle.
 @end multitable
 
 
