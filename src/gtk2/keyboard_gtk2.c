@@ -320,7 +320,7 @@ static void emulator_command(guint keyval, int shift) {
 		}
 		break;
 	case GDK_KEY_k:
-		xroar_set_keymap(1, XROAR_NEXT);
+		xroar_set_keyboard_type(1, XROAR_NEXT);
 		break;
 	case GDK_KEY_m:
 		xroar_set_machine(1, XROAR_NEXT);

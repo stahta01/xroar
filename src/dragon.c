@@ -111,8 +111,12 @@ struct machine_dragon {
 #endif
 
 	struct tape_interface *tape_interface;
-	struct keyboard_interface *keyboard_interface;
 	struct printer_interface *printer_interface;
+
+	struct {
+		struct keyboard_interface *interface;
+		int type;  // currently selected keyboard type
+	} keyboard;
 
 	// NTSC colour bursts
 	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artifacting)
@@ -272,6 +276,7 @@ static void dragon_trap(void *sptr);
 static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
+static int dragon_set_keyboard_type(struct machine *m, int action);
 static _Bool dragon_set_pause(struct machine *m, int state);
 static _Bool dragon_set_inverted_text(struct machine *m, int state);
 static void *dragon_get_component(struct machine *m, const char *cname);
@@ -367,6 +372,7 @@ static struct part *dragon_allocate(void) {
 	m->bp_add_n = dragon_bp_add_n;
 	m->bp_remove_n = dragon_bp_remove_n;
 
+	m->set_keyboard_type = dragon_set_keyboard_type;
 	m->set_pause = dragon_set_pause;
 	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_component = dragon_get_component;
@@ -785,15 +791,14 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	// Keyboard interface
-	md->keyboard_interface = keyboard_interface_new(m);
-
+	md->keyboard.interface = keyboard_interface_new(m);
 	if (md->is_dragon) {
-		keyboard_set_chord_mode(md->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
+		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
-		keyboard_set_chord_mode(md->keyboard_interface, keyboard_chord_mode_coco_basic);
+		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_coco_basic);
 	}
-
-	keyboard_set_keymap(md->keyboard_interface, mc->keymap);
+	md->keyboard.type = mc->keymap;
+	keyboard_set_keymap(md->keyboard.interface, md->keyboard.type);
 
 	// Printer interface
 	md->printer_interface = printer_interface_new(m);
@@ -821,8 +826,8 @@ static void dragon_free(struct part *p) {
 		gdb_interface_free(md->gdb_interface);
 	}
 #endif
-	if (md->keyboard_interface) {
-		keyboard_interface_free(md->keyboard_interface);
+	if (md->keyboard.interface) {
+		keyboard_interface_free(md->keyboard.interface);
 	}
 	if (md->printer_interface) {
 		printer_interface_free(md->printer_interface);
@@ -893,7 +898,7 @@ static void dragon_remove_cart(struct machine *m) {
 
 static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	xroar_set_keymap(1, xroar_machine_config->keymap);
+	xroar_set_keyboard_type(1, md->keyboard.type);
 	if (hard) {
 		// Initial RAM pattern is approximately what I see on my Dragon
 		// 64, though it can probably vary based on manufacturer.  It
@@ -1012,6 +1017,39 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static int dragon_set_keyboard_type(struct machine *m, int action) {
+	struct machine_dragon *md = (struct machine_dragon *)m;
+	int type = md->keyboard.type;
+	switch (action) {
+	case XROAR_QUERY:
+		break;
+	case XROAR_NEXT:
+		if (type == m->config->keymap) {
+			switch (m->config->keymap) {
+			case dkbd_layout_dragon:
+			case dkbd_layout_dragon200e:
+				type = dkbd_layout_coco;
+				break;
+			default:
+				type = dkbd_layout_dragon;
+				break;
+			}
+		} else {
+			type = m->config->keymap;
+		}
+		break;
+	case XROAR_AUTO:
+		type = m->config->keymap;
+		break;
+	default:
+		type = action;
+		break;
+	}
+	md->keyboard.type = type;
+	keyboard_set_keymap(md->keyboard.interface, type);
+	return type;
+}
+
 static _Bool dragon_set_pause(struct machine *m, int state) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	switch (state) {
@@ -1078,7 +1116,7 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 	if (0 == strcmp(ifname, "cart")) {
 		return md->cart;
 	} else if (0 == strcmp(ifname, "keyboard")) {
-		return md->keyboard_interface;
+		return md->keyboard.interface;
 	} else if (0 == strcmp(ifname, "printer")) {
 		return md->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
@@ -1355,7 +1393,7 @@ static void keyboard_update(void *sptr) {
 		.col_source = md->PIA0->b.out_source,
 		.col_sink = md->PIA0->b.out_sink,
 	};
-	keyboard_read_matrix(md->keyboard_interface, &state);
+	keyboard_read_matrix(md->keyboard.interface, &state);
 	md->PIA0->a.in_sink = state.row_sink;
 	md->PIA0->b.in_source = state.col_source;
 	md->PIA0->b.in_sink = state.col_sink;
@@ -1450,10 +1488,10 @@ static void pia1b_data_postwrite(void *sptr) {
 		_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
 		if (is_32k) {
 			md->rom = md->rom0;
-			keyboard_set_chord_mode(md->keyboard_interface, keyboard_chord_mode_dragon_32k_basic);
+			keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
 		} else {
 			md->rom = md->rom1;
-			keyboard_set_chord_mode(md->keyboard_interface, keyboard_chord_mode_dragon_64k_basic);
+			keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_64k_basic);
 		}
 	}
 	// Single-bit sound

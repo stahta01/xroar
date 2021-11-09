@@ -235,7 +235,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			     xroar_cycle_joysticks(1);
 		     }
 		     return;
-	case 'k': xroar_set_keymap(1, XROAR_NEXT); return;
+	case 'k': xroar_set_keyboard_type(1, XROAR_NEXT); return;
 #ifndef HAVE_WASM
 	case 'l':
 		     if (shift) {

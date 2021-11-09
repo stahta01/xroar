@@ -78,11 +78,15 @@ struct machine_mc10 {
 	_Bool single_step;
 	int stop_signal;
 
-	unsigned keyboard_rows;
-
 	struct tape_interface *tape_interface;
-	struct keyboard_interface *keyboard_interface;
 	struct printer_interface *printer_interface;
+
+	struct {
+		struct keyboard_interface *interface;
+		// Keyboard row read value is updated on port read, and also by
+		// CPU on appropriate port write.
+		unsigned rows;
+	} keyboard;
 
 	struct ntsc_burst *ntsc_burst[2];
 
@@ -367,9 +371,9 @@ static _Bool mc10_finish(struct part *p) {
 	}
 
 	// Keyboard interface
-	mp->keyboard_interface = keyboard_interface_new(m);
-	mp->keyboard_interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
-	keyboard_set_keymap(mp->keyboard_interface, mc->keymap);
+	mp->keyboard.interface = keyboard_interface_new(m);
+	mp->keyboard.interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
+	keyboard_set_keymap(mp->keyboard.interface, mc->keymap);
 
 	// Printer interface
 	mp->printer_interface = printer_interface_new(m);
@@ -396,8 +400,8 @@ static void mc10_free(struct part *p) {
 		free(mp->ram);
 		mp->ram = NULL;
 	}
-	if (mp->keyboard_interface) {
-		keyboard_interface_free(mp->keyboard_interface);
+	if (mp->keyboard.interface) {
+		keyboard_interface_free(mp->keyboard.interface);
 	}
 	if (mp->printer_interface) {
 		printer_interface_free(mp->printer_interface);
@@ -448,7 +452,7 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 static void mc10_reset(struct machine *m, _Bool hard) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	xroar_set_keymap(1, xroar_machine_config->keymap);
+	xroar_set_keyboard_type(1, xroar_machine_config->keymap);
 	if (hard) {
 		memset(mp->ram, 0, mp->ram_size);
 	}
@@ -569,7 +573,7 @@ static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
 		} else {
 			// 16K of address space to read the keyboard rows...
 			mc10_keyboard_update(mp);
-			D = mp->keyboard_rows;
+			D = mp->keyboard.rows;
 		}
 		break;
 
@@ -637,7 +641,7 @@ static _Bool mc10_set_inverted_text(struct machine *m, int action) {
 static void *mc10_get_interface(struct machine *m, const char *ifname) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	if (0 == strcmp(ifname, "keyboard")) {
-		return mp->keyboard_interface;
+		return mp->keyboard.interface;
 	} else if (0 == strcmp(ifname, "printer")) {
 		return mp->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
@@ -746,12 +750,12 @@ static void mc10_keyboard_update(void *sptr) {
 		.col_source = MC6801_VALUE_PORT1(mp->CPU0),
 		.col_sink = MC6801_VALUE_PORT1(mp->CPU0),
 	};
-	keyboard_read_matrix(mp->keyboard_interface, &state);
+	keyboard_read_matrix(mp->keyboard.interface, &state);
 	if (state.row_sink & 0x40)
 		mp->CPU0->port2_in |= 0x02;
 	else
 		mp->CPU0->port2_in &= ~0x02;
-	mp->keyboard_rows = state.row_sink | 0xc0;
+	mp->keyboard.rows = state.row_sink | 0xc0;
 }
 
 static void mc10_update_tape_input(void *sptr, float value) {

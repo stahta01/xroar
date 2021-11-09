@@ -103,8 +103,12 @@ struct machine_coco3 {
 	struct ntsc_burst *ntsc_burst[2];
 
 	struct tape_interface *tape_interface;
-	struct keyboard_interface *keyboard_interface;
 	struct printer_interface *printer_interface;
+
+	struct {
+		struct keyboard_interface *interface;
+		int type;
+	} keyboard;
 
 	// Useful configuration side-effect tracking
 	_Bool has_secb;
@@ -196,6 +200,7 @@ static void coco3_signal(struct machine *m, int sig);
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
+static int coco3_set_keyboard_type(struct machine *m, int action);
 static _Bool coco3_set_pause(struct machine *m, int state);
 static _Bool coco3_set_inverted_text(struct machine *m, int state);
 static void *coco3_get_component(struct machine *m, const char *cname);
@@ -283,6 +288,7 @@ static struct part *coco3_allocate(void) {
 	m->bp_add_n = coco3_bp_add_n;
 	m->bp_remove_n = coco3_bp_remove_n;
 
+	m->set_keyboard_type = coco3_set_keyboard_type;
 	m->set_pause = coco3_set_pause;
 	m->set_inverted_text = coco3_set_inverted_text;
 	m->get_component = coco3_get_component;
@@ -480,12 +486,11 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->PIA1->a.in_sink = mcc3->PIA1->b.in_sink = 0xff;
 
 	// Keyboard interface
-	mcc3->keyboard_interface = keyboard_interface_new(m);
-	mcc3->keyboard_interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
-
-	keyboard_set_chord_mode(mcc3->keyboard_interface, keyboard_chord_mode_coco_basic);
-
-	keyboard_set_keymap(mcc3->keyboard_interface, mc->keymap);
+	mcc3->keyboard.interface = keyboard_interface_new(m);
+	mcc3->keyboard.interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
+	keyboard_set_chord_mode(mcc3->keyboard.interface, keyboard_chord_mode_coco_basic);
+	mcc3->keyboard.type = mc->keymap;
+	keyboard_set_keymap(mcc3->keyboard.interface, mcc3->keyboard.type);
 
 	// Printer interface
 	mcc3->printer_interface = printer_interface_new(m);
@@ -511,8 +516,8 @@ static void coco3_free(struct part *p) {
 		gdb_interface_free(mcc3->gdb_interface);
 	}
 #endif
-	if (mcc3->keyboard_interface) {
-		keyboard_interface_free(mcc3->keyboard_interface);
+	if (mcc3->keyboard.interface) {
+		keyboard_interface_free(mcc3->keyboard.interface);
 	}
 	if (mcc3->printer_interface) {
 		printer_interface_free(mcc3->printer_interface);
@@ -585,7 +590,7 @@ static void coco3_remove_cart(struct machine *m) {
 
 static void coco3_reset(struct machine *m, _Bool hard) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	xroar_set_keymap(1, xroar_machine_config->keymap);
+	xroar_set_keyboard_type(1, mcc3->keyboard.type);
 	if (hard) {
 		// This initial RAM state is carried over from Dragon/CoCo1/2
 		// code, but might as well keep it.  As noted there, some
@@ -692,6 +697,39 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static int coco3_set_keyboard_type(struct machine *m, int action) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	int type = mcc3->keyboard.type;
+	switch (action) {
+	case XROAR_QUERY:
+		break;
+	case XROAR_NEXT:
+		if (type == m->config->keymap) {
+			switch (m->config->keymap) {
+			case dkbd_layout_coco3:
+			case dkbd_layout_coco:
+				type = dkbd_layout_dragon;
+				break;
+			default:
+				type = dkbd_layout_coco3;
+				break;
+			}
+		} else {
+			type = m->config->keymap;
+		}
+		break;
+	case XROAR_AUTO:
+		type = m->config->keymap;
+		break;
+	default:
+		type = action;
+		break;
+	}
+	mcc3->keyboard.type = type;
+	keyboard_set_keymap(mcc3->keyboard.interface, type);
+	return type;
+}
+
 static _Bool coco3_set_pause(struct machine *m, int state) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	switch (state) {
@@ -754,7 +792,7 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 	if (0 == strcmp(ifname, "cart")) {
 		return mcc3->cart;
 	} else if (0 == strcmp(ifname, "keyboard")) {
-		return mcc3->keyboard_interface;
+		return mcc3->keyboard.interface;
 	} else if (0 == strcmp(ifname, "printer")) {
 		return mcc3->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
@@ -950,7 +988,7 @@ static void keyboard_update(void *sptr) {
 		.col_source = mcc3->PIA0->b.out_source,
 		.col_sink = mcc3->PIA0->b.out_sink,
 	};
-	keyboard_read_matrix(mcc3->keyboard_interface, &state);
+	keyboard_read_matrix(mcc3->keyboard.interface, &state);
 	mcc3->PIA0->a.in_sink = state.row_sink;
 	mcc3->PIA0->b.in_source = state.col_source;
 	mcc3->PIA0->b.in_sink = state.col_sink;

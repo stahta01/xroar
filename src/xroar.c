@@ -1494,33 +1494,13 @@ void xroar_run_file(char const * const *exts) {
 	}
 }
 
-void xroar_set_keymap(_Bool notify, int map) {
-	int new;
-	switch (map) {
-		case XROAR_NEXT:
-			// fudge the cycle order...
-			switch (xroar_machine_config->keymap) {
-			case dkbd_layout_dragon:
-				new = dkbd_layout_dragon200e;
-				break;
-			case dkbd_layout_dragon200e:
-				new = dkbd_layout_coco;
-				break;
-			case dkbd_layout_coco:
-			default:
-				new = dkbd_layout_dragon;
-				break;
-			}
-			break;
-		default:
-			new = map;
-			break;
+void xroar_set_keyboard_type(_Bool notify, int action) {
+	int type = xroar_machine_config->keymap;
+	if (xroar_machine->set_keyboard_type) {
+		type = xroar_machine->set_keyboard_type(xroar_machine, action);
 	}
-	if (new >= 0 && new < dkbd_num_layouts) {
-		keyboard_set_keymap(xroar_keyboard_interface, new);
-		if (notify) {
-			DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, new, NULL);
-		}
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, type, NULL);
 	}
 }
 

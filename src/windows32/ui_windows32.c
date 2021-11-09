@@ -422,7 +422,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 	// Keyboard:
 	case ui_tag_keymap:
-		xroar_set_keymap(1, tag_value);
+		xroar_set_keyboard_type(1, tag_value);
 		break;
 	case ui_tag_kbd_translate:
 		xroar_set_kbd_translate(1, XROAR_NEXT);

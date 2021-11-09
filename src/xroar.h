@@ -42,11 +42,12 @@ struct vdg_palette;
 struct vo_interface;
 struct xroar_timeout;
 
-/* Convenient values for arguments to helper functions */
-#define XROAR_NEXT (-2)
-#define XROAR_AUTO (-1)
-#define XROAR_OFF  (0)
-#define XROAR_ON   (1)
+// Convenient values for arguments to helper functions
+#define XROAR_QUERY (-3)  // query current setting
+#define XROAR_NEXT  (-2)  // cycle or toggle setting
+#define XROAR_AUTO  (-1)  // default, possible based on other settings
+#define XROAR_OFF    (0)
+#define XROAR_ON     (1)
 
 enum xroar_filetype {
 	FILETYPE_UNKNOWN,
@@ -173,7 +174,7 @@ _NORETURN void xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);
 void xroar_load_file(const char * const *exts);
 void xroar_run_file(const char * const *exts);
-void xroar_set_keymap(_Bool notify, int map);
+void xroar_set_keyboard_type(_Bool notify, int action);
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);
