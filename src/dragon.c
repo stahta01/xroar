@@ -895,9 +895,11 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	xroar_set_keymap(1, xroar_machine_config->keymap);
 	if (hard) {
-		/* Intialise RAM contents */
+		// Initial RAM pattern is approximately what I see on my Dragon
+		// 64, though it can probably vary based on manufacturer.  It
+		// actually does matter that we set it to something
+		// non-uniform, else Wildcatting won't work on the CoCo.
 		unsigned loc = 0, val = 0xff;
-		/* Don't know why, but RAM seems to start in this state: */
 		while (loc <= 0xfffc) {
 			md->ram[loc++] = val;
 			md->ram[loc++] = val;

@@ -587,9 +587,10 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	xroar_set_keymap(1, xroar_machine_config->keymap);
 	if (hard) {
-		/* Intialise RAM contents */
+		// This initial RAM state is carried over from Dragon/CoCo1/2
+		// code, but might as well keep it.  As noted there, some
+		// non-uniform state is required for Wildcatting to work.
 		unsigned loc = 0, val = 0xff;
-		/* Don't know why, but RAM seems to start in this state: */
 		while (loc < (mcc3->ram_size-3)) {
 			mcc3->ram[loc++] = val;
 			mcc3->ram[loc++] = val;
