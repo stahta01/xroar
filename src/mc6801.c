@@ -452,6 +452,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// 0x08 INX inherent
 			case 0x08:
 				REG_X++;
+				CLR_Z;
 				SET_Z16(REG_X);
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
@@ -460,6 +461,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// 0x09 DEX inherent
 			case 0x09:
 				REG_X--;
+				CLR_Z;
 				SET_Z16(REG_X);
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
