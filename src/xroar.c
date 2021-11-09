@@ -399,11 +399,11 @@ static char const * const default_config[] = {
 	"cart-type ide",
 	"cart-rom hdblba",
 	"cart-becker",
-	// nx32 memory cartridge
+	// NX32 memory cartridge
 	"cart nx32",
 	"cart-desc 'NX32 memory cartridge'",
 	"cart-type nx32",
-	// mooh memory cartridge
+	// MOOH memory cartridge
 	"cart mooh",
 	"cart-desc 'MOOH memory cartridge'",
 	"cart-type mooh",
@@ -1130,6 +1130,10 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 	}
 }
 
+// Simple binary files (or hex representations) are the only media where it
+// makes sense to load more than one of them, so we process these as a list
+// after machine has had time to start up.
+
 static void do_load_binaries(void *sptr) {
 	(void)sptr;
 	for (struct slist *iter = private_cfg.load_binaries; iter; iter = iter->next) {
@@ -1488,16 +1492,12 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 
 void xroar_load_file(char const * const *exts) {
 	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
-	if (filename) {
-		xroar_load_file_by_type(filename, 0);
-	}
+	xroar_load_file_by_type(filename, 0);
 }
 
 void xroar_run_file(char const * const *exts) {
 	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
-	if (filename) {
-		xroar_load_file_by_type(filename, 1);
-	}
+	xroar_load_file_by_type(filename, 1);
 }
 
 void xroar_set_keyboard_type(_Bool notify, int action) {
