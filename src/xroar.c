@@ -1666,7 +1666,7 @@ void xroar_toggle_cart(void) {
 
 void xroar_connect_cart(void) {
 	assert(xroar_machine != NULL);
-	struct cart *c = xroar_machine->get_interface(xroar_machine, "cart");
+	struct cart *c = (struct cart *)part_component_by_id_is_a(&xroar_machine->part, "CART", "cart");
 	if (!c)
 		return;
 	if (c->has_interface) {

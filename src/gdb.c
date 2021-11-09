@@ -180,10 +180,17 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	if (!m)
 		return NULL;
 
-	struct MC6809 *cpu = m->get_component(m, "CPU0");
-	struct MC6883 *sam = m->get_component(m, "SAM0");
-	if (!cpu || !sam)
+	struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&m->part, "CPU", "MC6809");
+	if (!cpu) {
+		LOG_WARN("GDB: MC6809 CPU not found - not enabling GDB support\n");
 		return NULL;
+	}
+
+	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
+	if (!sam) {
+		LOG_WARN("GDB: MC6883 SAM not found - not enabling GDB support\n");
+		return NULL;
+	}
 
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};

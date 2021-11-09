@@ -229,8 +229,6 @@ static int read_v2_snapshot(const char *filename) {
 #define SNAPSHOT_VERSION_MAJOR 1
 #define SNAPSHOT_VERSION_MINOR 8
 
-static const char *pia_component_names[2] = { "PIA0", "PIA1" };
-
 static char *read_string(FILE *fd, unsigned *size) {
 	char *str = NULL;
 	if (*size == 0) {
@@ -260,8 +258,10 @@ static const int old_arch_mapping[4] = {
 	MACHINE_COCOUS
 };
 
-static void old_set_registers(uint8_t *regs) {
-	struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+static void old_set_registers(struct machine *m, uint8_t *regs) {
+	struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&m->part, "CPU", "MC6809");
+	if (!cpu)
+		return;
 	cpu->reg_cc = regs[0];
 	MC6809_REG_A(cpu) = regs[1];
 	MC6809_REG_B(cpu) = regs[2];
@@ -328,7 +328,7 @@ static int read_v1_snapshot(const char *filename) {
 	xroar_machine->reset(xroar_machine, RESET_HARD);
 	// If old snapshot, buffer contains register dump
 	if (buffer[0] != 'X') {
-		old_set_registers(buffer + 3);
+		old_set_registers(xroar_machine, buffer + 3);
 	}
 	struct cart_config *cart_config = NULL;
 	while ((section = fs_read_uint8(fd)) >= 0) {
@@ -357,7 +357,7 @@ static int read_v1_snapshot(const char *filename) {
 				// Deprecated
 				if (size < 14) break;
 				size -= fread(buffer, 1, 14, fd);
-				old_set_registers(buffer);
+				old_set_registers(xroar_machine, buffer);
 				break;
 
 			case ID_MC6809_STATE:
@@ -368,7 +368,11 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping MC6809 chunk\n");
 						break;
 					}
-					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
+					struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&xroar_machine->part, "CPU", "MC6809");
+					if (!cpu) {
+						LOG_WARN("Snapshot v1 read: CPU not found - skipping MC6809 chunk\n");
+						break;
+					}
 					cpu->reg_cc = fs_read_uint8(fd);
 					MC6809_REG_A(cpu) = fs_read_uint8(fd);
 					MC6809_REG_B(cpu) = fs_read_uint8(fd);
@@ -428,8 +432,12 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping HD6309 chunk\n");
 						break;
 					}
-					struct MC6809 *cpu = xroar_machine->get_component(xroar_machine, "CPU0");
-					struct HD6309 *hcpu = (struct HD6309 *)cpu;
+					struct HD6309 *hcpu = (struct HD6309 *)part_component_by_id_is_a(&xroar_machine->part, "CPU", "HD6309");
+					if (!hcpu) {
+						LOG_WARN("Snapshot v1 read: CPU not found - skipping HD6309 chunk\n");
+						break;
+					}
+					struct MC6809 *cpu = &hcpu->mc6809;
 					cpu->reg_cc = fs_read_uint8(fd);
 					MC6809_REG_A(cpu) = fs_read_uint8(fd);
 					MC6809_REG_B(cpu) = fs_read_uint8(fd);
@@ -502,7 +510,13 @@ static int read_v1_snapshot(const char *filename) {
 
 			case ID_PIA_REGISTERS:
 				for (int i = 0; i < 2; i++) {
-					struct MC6821 *pia = xroar_machine->get_component(xroar_machine, pia_component_names[i]);
+					char id[5];
+					snprintf(id, sizeof(id), "PIA%d", i);
+					struct MC6821 *pia = (struct MC6821 *)part_component_by_id_is_a(&xroar_machine->part, id, "MC6821");
+					if (!pia) {
+						LOG_WARN("Snapshot v1 read: %s not found - skipping PIA\n", id);
+						break;
+					}
 					if (size < 3) break;
 					pia->a.direction_register = fs_read_uint8(fd);
 					pia->a.output_register = fs_read_uint8(fd);
@@ -539,7 +553,11 @@ static int read_v1_snapshot(const char *filename) {
 				tmp = fs_read_uint16(fd);
 				size -= 2;
 				{
-					struct MC6883 *sam = xroar_machine->get_component(xroar_machine, "SAM0");
+					struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&xroar_machine->part, "SAM", "SN74LS783");
+					if (!sam) {
+						LOG_WARN("Snapshot v1 read: SAM not found - skipping SAM registers chunk\n");
+						break;
+					}
 					sam_set_register(sam, tmp);
 				}
 				break;

@@ -71,8 +71,9 @@ static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
 
 struct machine_coco3 {
 	struct machine public;
-	struct MC6809 *CPU0;
-	struct TCC1014 *GIME0;
+
+	struct MC6809 *CPU;
+	struct TCC1014 *GIME;
 	struct MC6821 *PIA0, *PIA1;
 
 	struct vo_interface *vo;
@@ -203,7 +204,6 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 static int coco3_set_keyboard_type(struct machine *m, int action);
 static _Bool coco3_set_pause(struct machine *m, int state);
 static _Bool coco3_set_inverted_text(struct machine *m, int state);
-static void *coco3_get_component(struct machine *m, const char *cname);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
 static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
@@ -291,7 +291,6 @@ static struct part *coco3_allocate(void) {
 	m->set_keyboard_type = coco3_set_keyboard_type;
 	m->set_pause = coco3_set_pause;
 	m->set_inverted_text = coco3_set_inverted_text;
-	m->get_component = coco3_get_component;
 	m->get_interface = coco3_get_interface;
 	m->set_frameskip = coco3_set_frameskip;
 	m->set_ratelimit = coco3_set_ratelimit;
@@ -337,14 +336,14 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->tape_interface->default_paused = 0;
 
 	// Find attached parts
-	mcc3->GIME0 = (struct TCC1014 *)part_component_by_id_is_a(p, "GIME", "TCC1014");
-	mcc3->CPU0 = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
+	mcc3->GIME = (struct TCC1014 *)part_component_by_id_is_a(p, "GIME", "TCC1014");
+	mcc3->CPU = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
 	mcc3->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	mcc3->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
 	mcc3->cart = (struct cart *)part_component_by_id_is_a(p, "CART", "cart");
 
 	// Check all required parts are attached
-	if (!mcc3->GIME0 || !mcc3->CPU0 || !mcc3->PIA0 || !mcc3->PIA1 ||
+	if (!mcc3->GIME || !mcc3->CPU || !mcc3->PIA0 || !mcc3->PIA1 ||
 	    !mcc3->vo || !mcc3->snd || !mcc3->tape_interface) {
 		return 0;
 	}
@@ -357,8 +356,8 @@ static _Bool coco3_finish(struct part *p) {
 
 	// GIME
 
-	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
-	mcc3->GIME0->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
+	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
+	mcc3->GIME->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
 
 	for (int j = 0; j < 64; j++) {
 		int intensity = (j >> 4) & 3;
@@ -389,8 +388,8 @@ static _Bool coco3_finish(struct part *p) {
 
 	// CPU
 
-	mcc3->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, tcc1014_mem_cycle, mcc3->GIME0);
-	mcc3->GIME0->CPUD = &mcc3->CPU0->D;
+	mcc3->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, tcc1014_mem_cycle, mcc3->GIME);
+	mcc3->GIME->CPUD = &mcc3->CPU->D;
 
 	// Breakpoint session
 	mcc3->bp_session = bp_session_new(m);
@@ -418,10 +417,10 @@ static _Bool coco3_finish(struct part *p) {
 	// Tape
 	mcc3->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mcc3);
 
-	mcc3->GIME0->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
-	mcc3->GIME0->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
-	mcc3->GIME0->render_line = (tcc1014_render_line_func){gime_render_line, mcc3};
-	tcc1014_set_inverted_text(mcc3->GIME0, mcc3->inverted_text);
+	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
+	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
+	mcc3->GIME->render_line = (tcc1014_render_line_func){gime_render_line, mcc3};
+	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
 
 	// Load appropriate ROMs.  The CoCo 3 ROM is a single 32K image: Super
 	// Extended Colour BASIC.  There are NTSC and PAL variants though.
@@ -610,8 +609,8 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 	if (mcc3->cart && mcc3->cart->reset) {
 		mcc3->cart->reset(mcc3->cart);
 	}
-	tcc1014_reset(mcc3->GIME0);
-	mcc3->CPU0->reset(mcc3->CPU0);
+	tcc1014_reset(mcc3->GIME);
+	mcc3->CPU->reset(mcc3->CPU);
 	tape_reset(mcc3->tape_interface);
 	printer_reset(mcc3->printer_interface);
 }
@@ -627,8 +626,8 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 		case gdb_run_state_running:
 			mcc3->stop_signal = 0;
 			mcc3->cycles += ncycles;
-			mcc3->CPU0->running = 1;
-			mcc3->CPU0->run(mcc3->CPU0);
+			mcc3->CPU->running = 1;
+			mcc3->CPU->run(mcc3->CPU);
 			if (mcc3->stop_signal != 0) {
 				gdb_stop(mcc3->gdb_interface, mcc3->stop_signal);
 			}
@@ -643,8 +642,8 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 	} else {
 #endif
 		mcc3->cycles += ncycles;
-		mcc3->CPU0->running = 1;
-		mcc3->CPU0->run(mcc3->CPU0);
+		mcc3->CPU->running = 1;
+		mcc3->CPU->run(mcc3->CPU);
 		return machine_run_state_ok;
 #ifdef WANT_GDB_TARGET
 	}
@@ -654,12 +653,12 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 static void coco3_single_step(struct machine *m) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->single_step = 1;
-	mcc3->CPU0->running = 0;
-	mcc3->CPU0->debug_cpu.instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
+	mcc3->CPU->running = 0;
+	mcc3->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
 	do {
-		mcc3->CPU0->run(mcc3->CPU0);
+		mcc3->CPU->run(mcc3->CPU);
 	} while (mcc3->single_step);
-	mcc3->CPU0->debug_cpu.instruction_posthook.func = NULL;
+	mcc3->CPU->debug_cpu.instruction_posthook.func = NULL;
 }
 
 /*
@@ -669,7 +668,7 @@ static void coco3_single_step(struct machine *m) {
 static void coco3_signal(struct machine *m, int sig) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->stop_signal = sig;
-	mcc3->CPU0->running = 0;
+	mcc3->CPU->running = 0;
 }
 
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
@@ -734,15 +733,15 @@ static _Bool coco3_set_pause(struct machine *m, int state) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	switch (state) {
 	case 0: case 1:
-		mcc3->CPU0->halt = state;
+		mcc3->CPU->halt = state;
 		break;
 	case XROAR_NEXT:
-		mcc3->CPU0->halt = !mcc3->CPU0->halt;
+		mcc3->CPU->halt = !mcc3->CPU->halt;
 		break;
 	default:
 		break;
 	}
-	return mcc3->CPU0->halt;
+	return mcc3->CPU->halt;
 }
 
 static _Bool coco3_set_inverted_text(struct machine *m, int action) {
@@ -757,33 +756,13 @@ static _Bool coco3_set_inverted_text(struct machine *m, int action) {
 	default:
 		break;
 	}
-	tcc1014_set_inverted_text(mcc3->GIME0, mcc3->inverted_text);
+	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
 	return mcc3->inverted_text;
 }
 
 /*
  * Device inspection.
  */
-
-/* Note, this is SLOW.  Could be sped up by maintaining a hash by component
- * name, but will only ever be used outside critical path, so don't bother for
- * now. */
-
-static void *coco3_get_component(struct machine *m, const char *cname) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	if (0 == strcmp(cname, "CPU0")) {
-		return mcc3->CPU0;
-	} else if (0 == strcmp(cname, "GIME0")) {
-		return mcc3->GIME0;
-	} else if (0 == strcmp(cname, "PIA0")) {
-		return mcc3->PIA0;
-	} else if (0 == strcmp(cname, "PIA1")) {
-		return mcc3->PIA1;
-	} else if (0 == strcmp(cname, "cart")) {
-		return mcc3->cart;
-	}
-	return NULL;
-}
 
 /* Similarly SLOW.  Used to populate UI. */
 
@@ -822,82 +801,82 @@ static void coco3_instruction_posthook(void *sptr) {
 
 static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 	if (mcc3->cart) {
-		mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A, 0, 0, mcc3->CPU0->D);
+		mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A, 0, 0, mcc3->CPU->D);
 		if (mcc3->cart->EXTMEM) {
 			return;
 		}
 	}
-	switch (mcc3->GIME0->S) {
+	switch (mcc3->GIME->S) {
 	case 0:
 		// ROM
-		mcc3->CPU0->D = mcc3->rom0[A & 0x7fff];
+		mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
 		break;
 	case 1:
 		// CTS (cartridge ROM)
 		if (mcc3->cart) {
-			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU0->D);
+			mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
 		}
 		break;
 	case 2:
 		// IO
 		if ((A & 32) == 0) {
-			mcc3->CPU0->D = mc6821_read(mcc3->PIA0, A);
+			mcc3->CPU->D = mc6821_read(mcc3->PIA0, A);
 		} else {
-			mcc3->CPU0->D = mc6821_read(mcc3->PIA1, A);
+			mcc3->CPU->D = mc6821_read(mcc3->PIA1, A);
 		}
 		break;
 	case 6:
 		// SCS (cartridge IO)
 		if (mcc3->cart)
-			mcc3->CPU0->D = mcc3->cart->read(mcc3->cart, A, 1, 0, mcc3->CPU0->D);
+			mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 		break;
 	default:
 		// All the rest are N/C
 		break;
 	}
-	if (mcc3->GIME0->RAS) {
-		uint32_t Z = mcc3->GIME0->Z;
-		mcc3->CPU0->D = mcc3->ram[Z & mcc3->ram_mask];
+	if (mcc3->GIME->RAS) {
+		uint32_t Z = mcc3->GIME->Z;
+		mcc3->CPU->D = mcc3->ram[Z & mcc3->ram_mask];
 	}
 }
 
 static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	if (mcc3->cart) {
-		mcc3->cart->write(mcc3->cart, A, 0, 0, mcc3->CPU0->D);
+		mcc3->cart->write(mcc3->cart, A, 0, 0, mcc3->CPU->D);
 		if (mcc3->cart->EXTMEM) {
 			return;
 		}
 	}
-	switch (mcc3->GIME0->S) {
+	switch (mcc3->GIME->S) {
 	case 0:
 		// ROM
-		mcc3->CPU0->D = mcc3->rom0[A & 0x7fff];
+		mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
 		break;
 	case 1:
 		// CTS (cartridge ROM)
 		if (mcc3->cart)
-			mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU0->D);
+			mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
 		break;
 	case 2:
 		// IO
 		if ((A & 32) == 0) {
-			mc6821_write(mcc3->PIA0, A, mcc3->CPU0->D);
+			mc6821_write(mcc3->PIA0, A, mcc3->CPU->D);
 		} else {
-			mc6821_write(mcc3->PIA1, A, mcc3->CPU0->D);
+			mc6821_write(mcc3->PIA1, A, mcc3->CPU->D);
 		}
 		break;
 	case 6:
 		// SCS (cartridge IO)
 		if (mcc3->cart)
-			mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU0->D);
+			mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 		break;
 	default:
 		// All the rest are N/C
 		break;
 	}
-	if (mcc3->GIME0->RAS) {
-		uint32_t Z = mcc3->GIME0->Z;
-		mcc3->ram[Z & mcc3->ram_mask] = mcc3->CPU0->D;
+	if (mcc3->GIME->RAS) {
+		uint32_t Z = mcc3->GIME->Z;
+		mcc3->ram[Z & mcc3->ram_mask] = mcc3->CPU->D;
 	}
 }
 
@@ -917,11 +896,11 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct machine_coco3 *mcc3 = sptr;
 	mcc3->cycles -= ncycles;
-	if (mcc3->cycles <= 0) mcc3->CPU0->running = 0;
+	if (mcc3->cycles <= 0) mcc3->CPU->running = 0;
 	event_current_tick += ncycles;
 	event_run_queue(&MACHINE_EVENT_LIST);
-	MC6809_IRQ_SET(mcc3->CPU0, mcc3->PIA0->a.irq | mcc3->PIA0->b.irq | mcc3->GIME0->IRQ);
-	MC6809_FIRQ_SET(mcc3->CPU0, mcc3->PIA1->a.irq | mcc3->PIA1->b.irq | mcc3->GIME0->FIRQ);
+	MC6809_IRQ_SET(mcc3->CPU, mcc3->PIA0->a.irq | mcc3->PIA0->b.irq | mcc3->GIME->IRQ);
+	MC6809_FIRQ_SET(mcc3->CPU, mcc3->PIA1->a.irq | mcc3->PIA1->b.irq | mcc3->GIME->FIRQ);
 
 	if (RnW) {
 		read_byte(mcc3, A);
@@ -947,29 +926,29 @@ static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
-	tcc1014_mem_cycle(mcc3->GIME0, 1, A);
-	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
-	return mcc3->CPU0->D;
+	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
+	tcc1014_mem_cycle(mcc3->GIME, 1, A);
+	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
+	return mcc3->CPU->D;
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	mcc3->CPU0->D = D;
-	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
-	tcc1014_mem_cycle(mcc3->GIME0, 0, A);
-	mcc3->GIME0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
+	mcc3->CPU->D = D;
+	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
+	tcc1014_mem_cycle(mcc3->GIME, 0, A);
+	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
 }
 
 /* simulate an RTS without otherwise affecting machine state */
 static void coco3_op_rts(struct machine *m) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	unsigned int new_pc = m->read_byte(m, mcc3->CPU0->reg_s, 0) << 8;
-	new_pc |= m->read_byte(m, mcc3->CPU0->reg_s + 1, 0);
-	mcc3->CPU0->reg_s += 2;
-	mcc3->CPU0->reg_pc = new_pc;
+	unsigned int new_pc = m->read_byte(m, mcc3->CPU->reg_s, 0) << 8;
+	new_pc |= m->read_byte(m, mcc3->CPU->reg_s + 1, 0);
+	mcc3->CPU->reg_s += 2;
+	mcc3->CPU->reg_pc = new_pc;
 }
 
 static uint8_t fetch_vram(void *sptr, uint32_t A) {
@@ -992,7 +971,7 @@ static void keyboard_update(void *sptr) {
 	mcc3->PIA0->a.in_sink = state.row_sink;
 	mcc3->PIA0->b.in_source = state.col_source;
 	mcc3->PIA0->b.in_sink = state.col_sink;
-	mcc3->GIME0->IL1 = (PIA_VALUE_A(mcc3->PIA0) | 0x80) != 0xff;
+	mcc3->GIME->IL1 = (PIA_VALUE_A(mcc3->PIA0) | 0x80) != 0xff;
 }
 
 static void joystick_update(void *sptr) {
@@ -1113,15 +1092,15 @@ static void update_audio_from_tape(void *sptr, float value) {
 static void cart_firq(void *sptr, _Bool level) {
 	struct machine_coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA1->b, level);
-	mcc3->GIME0->IL0 = level;
+	mcc3->GIME->IL0 = level;
 }
 
 static void cart_nmi(void *sptr, _Bool level) {
 	struct machine_coco3 *mcc3 = sptr;
-	MC6809_NMI_SET(mcc3->CPU0, level);
+	MC6809_NMI_SET(mcc3->CPU, level);
 }
 
 static void cart_halt(void *sptr, _Bool level) {
 	struct machine_coco3 *mcc3 = sptr;
-	MC6809_HALT_SET(mcc3->CPU0, level);
+	MC6809_HALT_SET(mcc3->CPU, level);
 }

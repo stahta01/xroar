@@ -78,10 +78,10 @@ enum machine_ram_organisation {
 struct machine_dragon {
 	struct machine public;  // first element in turn is part
 
-	struct MC6809 *CPU0;
-	struct MC6883 *SAM0;
+	struct MC6809 *CPU;
+	struct MC6883 *SAM;
 	struct MC6821 *PIA0, *PIA1;
-	struct MC6847 *VDG0;
+	struct MC6847 *VDG;
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
@@ -398,7 +398,7 @@ static void dragon_initialise(struct part *p, void *options) {
 	m->config = mc;
 
 	// SAM
-	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM0");
+	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
 
 	// CPU
 	part_add_component(&m->part, part_create((mc->cpu == CPU_HD6309) ? "HD6309" : "MC6809", NULL), "CPU");
@@ -408,7 +408,7 @@ static void dragon_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create("MC6821", NULL), "PIA1");
 
 	// VDG
-	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG0");
+	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG");
 }
 
 static _Bool dragon_finish(struct part *p) {
@@ -424,15 +424,15 @@ static _Bool dragon_finish(struct part *p) {
 	md->tape_interface->default_paused = 0;
 
 	// Find attached parts
-	md->SAM0 = (struct MC6883 *)part_component_by_id_is_a(p, "SAM0", "SN74LS783");
-	md->CPU0 = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
+	md->SAM = (struct MC6883 *)part_component_by_id_is_a(p, "SAM", "SN74LS783");
+	md->CPU = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
 	md->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	md->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
-	md->VDG0 = (struct MC6847 *)part_component_by_id_is_a(p, "VDG0", "MC6847");
+	md->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
 	md->cart = (struct cart *)part_component_by_id_is_a(p, "CART", "cart");
 
 	// Check all required parts are attached
-	if (!md->SAM0 || !md->CPU0 || !md->PIA0 || !md->PIA1 || !md->VDG0 ||
+	if (!md->SAM || !md->CPU || !md->PIA0 || !md->PIA1 || !md->VDG ||
 	    !md->vo || !md->snd || !md->tape_interface) {
 		return 0;
 	}
@@ -454,8 +454,8 @@ static _Bool dragon_finish(struct part *p) {
 		break;
 	}
 
-	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
-	md->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM0);
+	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM);
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
@@ -482,22 +482,22 @@ static _Bool dragon_finish(struct part *p) {
 
 	// VDG
 	// XXX kludges that should be handled by machine-specific code
-	md->VDG0->is_dragon64 = md->is_dragon64;
-	md->VDG0->is_dragon32 = md->is_dragon32;
-	md->VDG0->is_coco = !md->is_dragon;
+	md->VDG->is_dragon64 = md->is_dragon64;
+	md->VDG->is_dragon32 = md->is_dragon32;
+	md->VDG->is_coco = !md->is_dragon;
 	_Bool is_pal = (mc->tv_standard == TV_PAL);
-	md->VDG0->is_pal = is_pal;
+	md->VDG->is_pal = is_pal;
 	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL_M);
 
 	if (!md->is_dragon && is_pal) {
-		md->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, md);
+		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, md);
 	} else {
-		md->VDG0->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, md);
+		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, md);
 	}
-	md->VDG0->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
-	md->VDG0->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
-	md->VDG0->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
-	mc6847_set_inverted_text(md->VDG0, md->inverted_text);
+	md->VDG->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
+	md->VDG->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
+	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
+	mc6847_set_inverted_text(md->VDG, md->inverted_text);
 
 	// Set up VDG palette in video module
 	{
@@ -718,7 +718,7 @@ static _Bool dragon_finish(struct part *p) {
 
 	/* VDG external charset */
 	if (md->has_ext_charset)
-		md->VDG0->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler_chargen, md);
+		md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler_chargen, md);
 
 	/* Default all PIA connections to unconnected (no source, no sink) */
 	md->PIA0->b.in_source = 0;
@@ -919,9 +919,9 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	if (md->cart && md->cart->reset) {
 		md->cart->reset(md->cart);
 	}
-	sam_reset(md->SAM0);
-	md->CPU0->reset(md->CPU0);
-	mc6847_reset(md->VDG0);
+	sam_reset(md->SAM);
+	md->CPU->reset(md->CPU);
+	mc6847_reset(md->VDG);
 	tape_reset(md->tape_interface);
 	printer_reset(md->printer_interface);
 }
@@ -937,8 +937,8 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 		case gdb_run_state_running:
 			md->stop_signal = 0;
 			md->cycles += ncycles;
-			md->CPU0->running = 1;
-			md->CPU0->run(md->CPU0);
+			md->CPU->running = 1;
+			md->CPU->run(md->CPU);
 			if (md->stop_signal != 0) {
 				gdb_stop(md->gdb_interface, md->stop_signal);
 			}
@@ -955,8 +955,8 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 	} else {
 #endif
 		md->cycles += ncycles;
-		md->CPU0->running = 1;
-		md->CPU0->run(md->CPU0);
+		md->CPU->running = 1;
+		md->CPU->run(md->CPU);
 		return machine_run_state_ok;
 #ifdef WANT_GDB_TARGET
 	}
@@ -966,12 +966,12 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 static void dragon_single_step(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->single_step = 1;
-	md->CPU0->running = 0;
-	md->CPU0->debug_cpu.instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
+	md->CPU->running = 0;
+	md->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
 	do {
-		md->CPU0->run(md->CPU0);
+		md->CPU->run(md->CPU);
 	} while (md->single_step);
-	md->CPU0->debug_cpu.instruction_posthook.func = NULL;
+	md->CPU->debug_cpu.instruction_posthook.func = NULL;
 	update_vdg_mode(md);
 }
 
@@ -983,7 +983,7 @@ static void dragon_signal(struct machine *m, int sig) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	update_vdg_mode(md);
 	md->stop_signal = sig;
-	md->CPU0->running = 0;
+	md->CPU->running = 0;
 }
 
 static void dragon_trap(void *sptr) {
@@ -1054,15 +1054,15 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	switch (state) {
 	case 0: case 1:
-		md->CPU0->halt = state;
+		md->CPU->halt = state;
 		break;
 	case XROAR_NEXT:
-		md->CPU0->halt = !md->CPU0->halt;
+		md->CPU->halt = !md->CPU->halt;
 		break;
 	default:
 		break;
 	}
-	return md->CPU0->halt;
+	return md->CPU->halt;
 }
 
 static _Bool dragon_set_inverted_text(struct machine *m, int action) {
@@ -1077,7 +1077,7 @@ static _Bool dragon_set_inverted_text(struct machine *m, int action) {
 	default:
 		break;
 	}
-	mc6847_set_inverted_text(md->VDG0, md->inverted_text);
+	mc6847_set_inverted_text(md->VDG, md->inverted_text);
 	return md->inverted_text;
 }
 
@@ -1091,20 +1091,10 @@ static _Bool dragon_set_inverted_text(struct machine *m, int action) {
 
 static void *dragon_get_component(struct machine *m, const char *cname) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	if (0 == strcmp(cname, "CPU0")) {
-		return md->CPU0;
-	} else if (0 == strcmp(cname, "SAM0")) {
-		return md->SAM0;
-	} else if (0 == strcmp(cname, "PIA0")) {
-		return md->PIA0;
-	} else if (0 == strcmp(cname, "PIA1")) {
-		return md->PIA1;
-	} else if (0 == strcmp(cname, "RAM0")) {
+	if (0 == strcmp(cname, "RAM0")) {
 		return &md->ram0;
 	} else if (0 == strcmp(cname, "RAM1")) {
 		return &md->ram1;
-	} else if (0 == strcmp(cname, "cart")) {
-		return md->cart;
 	}
 	return NULL;
 }
@@ -1158,36 +1148,36 @@ static uint16_t decode_Z(struct machine_dragon *md, unsigned Z) {
 static void read_byte(struct machine_dragon *md, unsigned A) {
 	// Thanks to CrAlt on #coco_chat for verifying that RAM accesses
 	// produce a different "null" result on his 16K CoCo
-	if (md->SAM0->RAS)
-		md->CPU0->D = 0xff;
+	if (md->SAM->RAS)
+		md->CPU->D = 0xff;
 	if (md->cart) {
-		md->CPU0->D = md->cart->read(md->cart, A, 0, 0, md->CPU0->D);
+		md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
 		if (md->cart->EXTMEM) {
 			return;
 		}
 	}
-	switch (md->SAM0->S) {
+	switch (md->SAM->S) {
 	case 0:
-		if (md->SAM0->RAS) {
-			unsigned Z = decode_Z(md, md->SAM0->Z);
+		if (md->SAM->RAS) {
+			unsigned Z = decode_Z(md, md->SAM->Z);
 			if (Z < md->ram_size)
-				md->CPU0->D = md->ram[Z];
+				md->CPU->D = md->ram[Z];
 		}
 		break;
 	case 1:
 	case 2:
-		md->CPU0->D = md->rom[A & 0x3fff];
+		md->CPU->D = md->rom[A & 0x3fff];
 		break;
 	case 3:
 		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A & 0x3fff, 0, 1, md->CPU0->D);
+			md->CPU->D = md->cart->read(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
 		break;
 	case 4:
 		if (md->relaxed_pia_decode) {
-			md->CPU0->D = mc6821_read(md->PIA0, A);
+			md->CPU->D = mc6821_read(md->PIA0, A);
 		} else {
 			if ((A & 4) == 0) {
-				md->CPU0->D = mc6821_read(md->PIA0, A);
+				md->CPU->D = mc6821_read(md->PIA0, A);
 			} else {
 				if (md->have_acia) {
 					/* XXX Dummy ACIA reads */
@@ -1195,13 +1185,13 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 					default:
 					case 0:  /* Receive Data */
 					case 3:  /* Control */
-						md->CPU0->D = 0x00;
+						md->CPU->D = 0x00;
 						break;
 					case 2:  /* Command */
-						md->CPU0->D = 0x02;
+						md->CPU->D = 0x02;
 						break;
 					case 1:  /* Status */
-						md->CPU0->D = 0x10;
+						md->CPU->D = 0x10;
 						break;
 					}
 				}
@@ -1210,12 +1200,12 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 		break;
 	case 5:
 		if (md->relaxed_pia_decode || (A & 4) == 0) {
-			md->CPU0->D = mc6821_read(md->PIA1, A);
+			md->CPU->D = mc6821_read(md->PIA1, A);
 		}
 		break;
 	case 6:
 		if (md->cart)
-			md->CPU0->D = md->cart->read(md->cart, A, 1, 0, md->CPU0->D);
+			md->CPU->D = md->cart->read(md->cart, A, 1, 0, md->CPU->D);
 		break;
 	default:
 		break;
@@ -1224,46 +1214,46 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 
 static void write_byte(struct machine_dragon *md, unsigned A) {
 	if (md->cart) {
-		md->CPU0->D = md->cart->write(md->cart, A, 0, 0, md->CPU0->D);
-		if (md->cart->EXTMEM && 0 < md->SAM0->S && md->SAM0->S < 7) {
+		md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
+		if (md->cart->EXTMEM && 0 < md->SAM->S && md->SAM->S < 7) {
 			return;
 		}
 	}
-	if ((md->SAM0->S & 4) || md->unexpanded_dragon32) {
-		switch (md->SAM0->S) {
+	if ((md->SAM->S & 4) || md->unexpanded_dragon32) {
+		switch (md->SAM->S) {
 		case 1:
 		case 2:
-			md->CPU0->D = md->rom[A & 0x3fff];
+			md->CPU->D = md->rom[A & 0x3fff];
 			break;
 		case 3:
 			if (md->cart)
-				md->CPU0->D = md->cart->write(md->cart, A & 0x3fff, 0, 1, md->CPU0->D);
+				md->CPU->D = md->cart->write(md->cart, A & 0x3fff, 0, 1, md->CPU->D);
 			break;
 		case 4:
 			if (!md->is_dragon || md->unexpanded_dragon32) {
-				mc6821_write(md->PIA0, A, md->CPU0->D);
+				mc6821_write(md->PIA0, A, md->CPU->D);
 			} else {
 				if ((A & 4) == 0) {
-					mc6821_write(md->PIA0, A, md->CPU0->D);
+					mc6821_write(md->PIA0, A, md->CPU->D);
 				}
 			}
 			break;
 		case 5:
 			if (md->relaxed_pia_decode || (A & 4) == 0) {
-				mc6821_write(md->PIA1, A, md->CPU0->D);
+				mc6821_write(md->PIA1, A, md->CPU->D);
 			}
 			break;
 		case 6:
 			if (md->cart)
-				md->CPU0->D = md->cart->write(md->cart, A, 1, 0, md->CPU0->D);
+				md->CPU->D = md->cart->write(md->cart, A, 1, 0, md->CPU->D);
 			break;
 		default:
 			break;
 		}
 	}
-	if (md->SAM0->RAS) {
-		unsigned Z = decode_Z(md, md->SAM0->Z);
-		md->ram[Z] = md->CPU0->D;
+	if (md->SAM->RAS) {
+		unsigned Z = decode_Z(md, md->SAM->Z);
+		md->ram[Z] = md->CPU->D;
 	}
 }
 
@@ -1275,11 +1265,11 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 		update_vdg_mode(md);
 	}
 	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU0->running = 0;
+	if (md->cycles <= 0) md->CPU->running = 0;
 	event_current_tick += ncycles;
 	event_run_queue(&MACHINE_EVENT_LIST);
-	MC6809_IRQ_SET(md->CPU0, md->PIA0->a.irq || md->PIA0->b.irq);
-	MC6809_FIRQ_SET(md->CPU0, md->PIA1->a.irq || md->PIA1->b.irq);
+	MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
+	MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
 
 	if (RnW) {
 		read_byte(md, A);
@@ -1305,9 +1295,9 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	struct machine_dragon *md = sptr;
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
-		int n = sam_vdg_bytes(md->SAM0, nbytes);
+		int n = sam_vdg_bytes(md->SAM, nbytes);
 		if (dest) {
-			uint16_t V = decode_Z(md, md->SAM0->V);
+			uint16_t V = decode_Z(md, md->SAM->V);
 			for (int i = n; i; i--) {
 				uint16_t D = md->ram[V++] | attr;
 				D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
@@ -1330,15 +1320,15 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	_Bool EnI = pia_vdg_mode & 0x10;
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
-		int n = sam_vdg_bytes(md->SAM0, nbytes);
+		int n = sam_vdg_bytes(md->SAM, nbytes);
 		if (dest) {
-			uint16_t V = decode_Z(md, md->SAM0->V);
+			uint16_t V = decode_Z(md, md->SAM->V);
 			for (int i = n; i; i--) {
 				uint16_t Dram = md->ram[V++];
 				_Bool SnA = Dram & 0x80;
 				uint16_t D;
 				if (!GnA && !SnA) {
-					unsigned Aext = (md->VDG0->row << 8) | Aram7 | Dram;
+					unsigned Aext = (md->VDG->row << 8) | Aram7 | Dram;
 					D = md->ext_charset[Aext&0xfff] | 0x100;  // set INV
 					D |= (~Dram & 0x80) << 3;
 				} else {
@@ -1357,29 +1347,29 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
-	sam_mem_cycle(md->SAM0, 1, A);
-	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
-	return md->CPU0->D;
+	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
+	sam_mem_cycle(md->SAM, 1, A);
+	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	return md->CPU->D;
 }
 
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	md->CPU0->D = D;
-	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
-	sam_mem_cycle(md->SAM0, 0, A);
-	md->SAM0->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	md->CPU->D = D;
+	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
+	sam_mem_cycle(md->SAM, 0, A);
+	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 }
 
 /* simulate an RTS without otherwise affecting machine state */
 static void dragon_op_rts(struct machine *m) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	unsigned int new_pc = m->read_byte(m, md->CPU0->reg_s, 0) << 8;
-	new_pc |= m->read_byte(m, md->CPU0->reg_s + 1, 0);
-	md->CPU0->reg_s += 2;
-	md->CPU0->reg_pc = new_pc;
+	unsigned int new_pc = m->read_byte(m, md->CPU->reg_s, 0) << 8;
+	new_pc |= m->read_byte(m, md->CPU->reg_s + 1, 0);
+	md->CPU->reg_s += 2;
+	md->CPU->reg_pc = new_pc;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1422,7 +1412,7 @@ static void update_vdg_mode(struct machine_dragon *md) {
 	unsigned vmode = (md->PIA1->b.out_source & md->PIA1->b.out_sink) & 0xf8;
 	// ¬INT/EXT = GM0
 	vmode |= (vmode & 0x10) << 4;
-	mc6847_set_mode(md->VDG0, vmode);
+	mc6847_set_mode(md->VDG, vmode);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1514,7 +1504,7 @@ static void pia1b_control_postwrite(void *sptr) {
 static void vdg_hs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level);
-	sam_vdg_hsync(md->SAM0, level);
+	sam_vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
 		_Bool GM0 = p1bval & 0x10;
@@ -1527,7 +1517,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, !level);
-	sam_vdg_hsync(md->SAM0, level);
+	sam_vdg_hsync(md->SAM, level);
 	// PAL uses palletised output so this wouldn't technically matter, but
 	// user is able to cycle to a faux-NTSC colourscheme, so update phase
 	// here as in NTSC code:
@@ -1542,7 +1532,7 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 static void vdg_fs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
-	sam_vdg_fsync(md->SAM0, level);
+	sam_vdg_fsync(md->SAM, level);
 	if (level) {
 		sound_update(md->snd);
 		md->frame--;
@@ -1604,10 +1594,10 @@ static void cart_firq(void *sptr, _Bool level) {
 
 static void cart_nmi(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
-	MC6809_NMI_SET(md->CPU0, level);
+	MC6809_NMI_SET(md->CPU, level);
 }
 
 static void cart_halt(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
-	MC6809_HALT_SET(md->CPU0, level);
+	MC6809_HALT_SET(md->CPU, level);
 }

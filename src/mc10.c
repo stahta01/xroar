@@ -56,8 +56,8 @@
 struct machine_mc10 {
 	struct machine machine;
 
-	struct MC6801 *CPU0;
-	struct MC6847 *VDG0;
+	struct MC6801 *CPU;
+	struct MC6847 *VDG;
 
 	struct vo_interface *vo;
 	int frame;  // track frameskip
@@ -255,7 +255,7 @@ static void mc10_initialise(struct part *p, void *options) {
 	part_add_component(&m->part, part_create("MC6803", "6803"), "CPU");
 
 	// VDG
-	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG0");
+	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG");
 }
 
 static _Bool mc10_finish(struct part *p) {
@@ -271,17 +271,17 @@ static _Bool mc10_finish(struct part *p) {
 	mp->tape_interface->default_paused = 1;
 
 	// Find attached parts
-	mp->CPU0 = (struct MC6801 *)part_component_by_id_is_a(p, "CPU", "MC6803");
-	mp->VDG0 = (struct MC6847 *)part_component_by_id_is_a(p, "VDG0", "MC6847");
+	mp->CPU = (struct MC6801 *)part_component_by_id_is_a(p, "CPU", "MC6803");
+	mp->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
 
 	// Check all required parts are attached
-	if (!mp->CPU0 || !mp->VDG0 ||
+	if (!mp->CPU || !mp->VDG ||
 	    !mp->vo || !mp->snd || !mp->tape_interface) {
 		return 0;
 	}
 
-	mp->CPU0->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
-	mp->CPU0->port2_preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
+	mp->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
+	mp->CPU->port2_preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
 
 	// Breakpoint session
 	mp->bp_session = bp_session_new(m);
@@ -297,15 +297,15 @@ static _Bool mc10_finish(struct part *p) {
 
 	// This only affects how PAL signal padding works, and for now I'm
 	// going to assume it's like the CoCo.
-	mp->VDG0->is_coco = 1;
+	mp->VDG->is_coco = 1;
 	_Bool is_pal = (mc->tv_standard == TV_PAL);
-	mp->VDG0->is_pal = is_pal;
+	mp->VDG->is_pal = is_pal;
 
-	mp->VDG0->signal_hs = DELEGATE_AS1(void, bool, mc10_vdg_hs, mp);
-        mp->VDG0->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
-        mp->VDG0->render_line = DELEGATE_AS2(void, uint8p, unsigned, mc10_vdg_render_line, mp);
-        mp->VDG0->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
-        mc6847_set_inverted_text(mp->VDG0, mp->inverted_text);
+	mp->VDG->signal_hs = DELEGATE_AS1(void, bool, mc10_vdg_hs, mp);
+        mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
+        mp->VDG->render_line = DELEGATE_AS2(void, uint8p, unsigned, mc10_vdg_render_line, mp);
+        mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
+        mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
 
 	// Set up VDG palette in video module
 	{
@@ -459,8 +459,8 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 	/* if (mp->cart && mp->cart->reset) {
 		mp->cart->reset(mp->cart);
 	} */
-	mp->CPU0->reset(mp->CPU0);
-	mc6847_reset(mp->VDG0);
+	mp->CPU->reset(mp->CPU);
+	mc6847_reset(mp->VDG);
 	tape_reset(mp->tape_interface);
 	tape_set_motor(mp->tape_interface, 1);  // no motor control!
 	printer_reset(mp->printer_interface);
@@ -480,8 +480,8 @@ static enum machine_run_state mc10_run(struct machine *m, int ncycles) {
 		case gdb_run_state_running:
 			mp->stop_signal = 0;
 			mp->cycles += ncycles;
-			mp->CPU0->running = 1;
-			mp->CPU0->run(mp->CPU0);
+			mp->CPU->running = 1;
+			mp->CPU->run(mp->CPU);
 			if (mp->stop_signal != 0) {
 				gdb_stop(mp->gdb_interface, mp->stop_signal);
 			}
@@ -498,8 +498,8 @@ static enum machine_run_state mc10_run(struct machine *m, int ncycles) {
 	} else {
 #endif
 		mp->cycles += ncycles;
-		mp->CPU0->running = 1;
-		mp->CPU0->run(mp->CPU0);
+		mp->CPU->running = 1;
+		mp->CPU->run(mp->CPU);
 		return machine_run_state_ok;
 #ifdef WANT_GDB_TARGET
 	}
@@ -514,12 +514,12 @@ static void mc10_instruction_posthook(void *sptr) {
 static void mc10_single_step(struct machine *m) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	mp->single_step = 1;
-	mp->CPU0->running = 0;
-	mp->CPU0->debug_cpu.instruction_posthook = DELEGATE_AS0(void, mc10_instruction_posthook, mp);
+	mp->CPU->running = 0;
+	mp->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, mc10_instruction_posthook, mp);
 	do {
-		mp->CPU0->run(mp->CPU0);
+		mp->CPU->run(mp->CPU);
 	} while (mp->single_step);
-	mp->CPU0->debug_cpu.instruction_posthook.func = NULL;
+	mp->CPU->debug_cpu.instruction_posthook.func = NULL;
 	mc10_vdg_update_mode(mp);
 }
 
@@ -527,7 +527,7 @@ static void mc10_signal(struct machine *m, int sig) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	mc10_vdg_update_mode(mp);
 	mp->stop_signal = sig;
-	mp->CPU0->running = 0;
+	mp->CPU->running = 0;
 }
 
 static void mc10_trap(void *sptr) {
@@ -614,10 +614,10 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
 
 static void mc10_op_rts(struct machine *m) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	unsigned int new_pc = m->read_byte(m, mp->CPU0->reg_sp + 1, 0) << 8;
-	new_pc |= m->read_byte(m, mp->CPU0->reg_sp + 2, 0);
-	mp->CPU0->reg_sp += 2;
-	mp->CPU0->reg_pc = new_pc;
+	unsigned int new_pc = m->read_byte(m, mp->CPU->reg_sp + 1, 0) << 8;
+	new_pc |= m->read_byte(m, mp->CPU->reg_sp + 2, 0);
+	mp->CPU->reg_sp += 2;
+	mp->CPU->reg_pc = new_pc;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -634,7 +634,7 @@ static _Bool mc10_set_inverted_text(struct machine *m, int action) {
 	default:
 		break;
 	}
-	mc6847_set_inverted_text(mp->VDG0, mp->inverted_text);
+	mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
 	return mp->inverted_text;
 }
 
@@ -697,13 +697,13 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 static void mc10_vdg_update_mode(void *sptr) {
 	struct machine_mc10 *mp = sptr;
 	unsigned vmode = 0;
-	vmode |= (mp->CPU0->D & 0x20) ? 0x80 : 0;
-	vmode |= (mp->CPU0->D & 0x04) ? 0x40 : 0;
-	vmode |= (mp->CPU0->D & 0x08) ? 0x20 : 0;
-	vmode |= (mp->CPU0->D & 0x10) ? 0x10 : 0;
-	vmode |= (mp->CPU0->D & 0x40) ? 0x08 : 0;
-	mc6847_set_mode(mp->VDG0, vmode);
-	mp->video_attr = (mp->CPU0->D & 0x10) << 6;  // GM0 -> ¬INT/EXT
+	vmode |= (mp->CPU->D & 0x20) ? 0x80 : 0;
+	vmode |= (mp->CPU->D & 0x04) ? 0x40 : 0;
+	vmode |= (mp->CPU->D & 0x08) ? 0x20 : 0;
+	vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;
+	vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;
+	mc6847_set_mode(mp->VDG, vmode);
+	mp->video_attr = (mp->CPU->D & 0x10) << 6;  // GM0 -> ¬INT/EXT
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -713,17 +713,17 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct machine *m = &mp->machine;
 
 	if (RnW) {
-		mp->CPU0->D = mc10_read_byte(m, A, mp->CPU0->D);
+		mp->CPU->D = mc10_read_byte(m, A, mp->CPU->D);
 		bp_wp_read_hook(mp->bp_session, A);
 	} else {
-		mc10_write_byte(m, A, mp->CPU0->D);
+		mc10_write_byte(m, A, mp->CPU->D);
 		bp_wp_write_hook(mp->bp_session, A);
 	}
 
 	int ncycles = 16;
 	mp->cycles -= ncycles;
 	if (mp->cycles <= 0)
-		mp->CPU0->running = 0;
+		mp->CPU->running = 0;
 	event_current_tick += ncycles;
         event_run_queue(&MACHINE_EVENT_LIST);
 }
@@ -747,14 +747,14 @@ static void mc10_keyboard_update(void *sptr) {
 	struct keyboard_state state = {
 		.row_source = 0xff,
 		.row_sink = 0xff,
-		.col_source = MC6801_VALUE_PORT1(mp->CPU0),
-		.col_sink = MC6801_VALUE_PORT1(mp->CPU0),
+		.col_source = MC6801_VALUE_PORT1(mp->CPU),
+		.col_sink = MC6801_VALUE_PORT1(mp->CPU),
 	};
 	keyboard_read_matrix(mp->keyboard.interface, &state);
 	if (state.row_sink & 0x40)
-		mp->CPU0->port2_in |= 0x02;
+		mp->CPU->port2_in |= 0x02;
 	else
-		mp->CPU0->port2_in &= ~0x02;
+		mp->CPU->port2_in &= ~0x02;
 	mp->keyboard.rows = state.row_sink | 0xc0;
 }
 
@@ -762,7 +762,7 @@ static void mc10_update_tape_input(void *sptr, float value) {
 	struct machine_mc10 *mp = sptr;
 	sound_set_tape_level(mp->snd, value);
 	if (value >= 0.5)
-		mp->CPU0->port2_in &= ~(1<<4);
+		mp->CPU->port2_in &= ~(1<<4);
 	else
-		mp->CPU0->port2_in |= (1<<4);
+		mp->CPU->port2_in |= (1<<4);
 }
