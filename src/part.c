@@ -91,12 +91,16 @@ const struct partdb_entry *partdb[] = {
 	&deltados_part,
 	&dragondos_part,
 	&gmc_part,
+#ifndef HAVE_WASM
 	&idecart_part,
 	&mooh_part,
 	&mpi_part,
 	&nx32_part,
+#endif
 	&orch90_part,
+#ifndef HAVE_WASM
 	&race_part,
+#endif
 	&rsdos_part,
 
 	&hd6309_part,
@@ -108,7 +112,9 @@ const struct partdb_entry *partdb[] = {
 	&mc6847t1_part,
 	&mc6883_part,
 	&sn76489_part,
+#ifndef HAVE_WASM
 	&spi65_part,
+#endif
 	&tcc1014_1986_part,
 	&tcc1014_1987_part,
 	&wd2791_part,
@@ -116,7 +122,9 @@ const struct partdb_entry *partdb[] = {
 	&wd2795_part,
 	&wd2797_part,
 
+#ifndef HAVE_WASM
 	&spi_sdcard_part,
+#endif
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

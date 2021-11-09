@@ -169,9 +169,11 @@ struct private_cfg {
 	// Debugging
 	char *timeout;
 
+#ifndef HAVE_WASM
 	// Other options
 	_Bool config_print;
 	_Bool config_print_all;
+#endif
 };
 
 static struct private_cfg private_cfg = {
@@ -450,8 +452,10 @@ static char const * const default_config[] = {
 	"romlist rsdos=disk11,disk10",
 	// Delta
 	"romlist delta=delta,deltados,'Premier Micros - DeltaDOS'",
+#ifndef HAVE_WASM
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
+#endif
 
 	// CRC lists
 
@@ -729,6 +733,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		ui_print_vo_help();
 		exit(EXIT_SUCCESS);
 	}
+#ifndef HAVE_WASM
 	if (private_cfg.config_print) {
 		config_print_all(stdout, 0);
 		exit(EXIT_SUCCESS);
@@ -737,6 +742,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		config_print_all(stdout, 1);
 		exit(EXIT_SUCCESS);
 	}
+#endif
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -2425,8 +2431,10 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("snap-motoroff", &xroar_cfg.snap_motoroff) },
 
 	/* Other options: */
+#ifndef HAVE_WASM
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
 	{ XC_SET_BOOL("config-print-all", &private_cfg.config_print_all) },
+#endif
 	{ XC_SET_INT0("quiet", &logging.level) },
 	{ XC_SET_INT0("q", &logging.level) },
 	{ XC_SET_INT("verbose", &logging.level) },
@@ -2446,9 +2454,12 @@ static void helptext(void) {
 #ifdef LOGGING
 	puts(
 "Usage: xroar [STARTUP-OPTION]... [OPTION]...\n"
-"XRoar is a Dragon emulator.  Due to hardware similarities, XRoar also\n"
-"emulates the Tandy Colour Computer (CoCo) models 1 & 2.\n"
+"XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3;\n"
+"the Tandy MC-10; and some other similar machines or clones."
+	);
 
+#ifndef HAVE_WASM
+	puts(
 "\n Startup options:\n"
 #ifdef WINDOWS32
 "  -C              allocate a console window\n"
@@ -2614,8 +2625,8 @@ static void helptext(void) {
 "\nFor physical joysticks a '-' before the axis index inverts the axis.  AXIS 0 is\n"
 "the X-axis, and AXIS 1 the Y-axis.  BTN 0 is the only one used so far, but in\n"
 "the future BTN 1 will be the second button on certain CoCo joysticks."
-
 	);
+#endif
 #endif
 	exit(EXIT_SUCCESS);
 }
