@@ -134,7 +134,7 @@ static const struct partdb_entry_funcs mpi_funcs = {
 
 	.ser_struct_data = &mpi_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry mpi_part = { .name = "mpi", .description = "Multi-Pak Interface", .funcs = &mpi_funcs };
@@ -201,7 +201,7 @@ static _Bool mpi_finish(struct part *p) {
 	char id[6];
 	for (int i = 0; i < 4; i++) {
 		snprintf(id, sizeof(id), "slot%d", i);
-		struct cart *c2 = (struct cart *)part_component_by_id_is_a(p, id, "cart");
+		struct cart *c2 = (struct cart *)part_component_by_id_is_a(p, id, "dragon-cart");
 		if (c2) {
 			c2->signal_firq = DELEGATE_AS1(void, bool, mpi_set_firq, &mpi->slot[i]);
 			c2->signal_nmi = DELEGATE_AS1(void, bool, mpi_set_nmi, &mpi->slot[i]);

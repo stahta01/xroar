@@ -106,7 +106,7 @@ static const struct partdb_entry_funcs rsdos_funcs = {
 
 	.ser_struct_data = &rsdos_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry rsdos_part = { .name = "rsdos", .description = "RS-DOS", .funcs = &rsdos_funcs };

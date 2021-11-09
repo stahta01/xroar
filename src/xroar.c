@@ -1563,7 +1563,7 @@ void xroar_connect_machine(void) {
 	tape_interface_connect_machine(xroar_tape_interface, xroar_machine);
 	xroar_keyboard_interface = xroar_machine->get_interface(xroar_machine, "keyboard");
 	xroar_printer_interface = xroar_machine->get_interface(xroar_machine, "printer");
-	struct cart *c = (struct cart *)part_component_by_id(&xroar_machine->part, "CART");
+	struct cart *c = (struct cart *)part_component_by_id(&xroar_machine->part, "cart");
 	if (c && !part_is_a((struct part *)c, "cart")) {
 		part_free((struct part *)c);
 		c = NULL;
@@ -1666,7 +1666,7 @@ void xroar_toggle_cart(void) {
 
 void xroar_connect_cart(void) {
 	assert(xroar_machine != NULL);
-	struct cart *c = (struct cart *)part_component_by_id_is_a(&xroar_machine->part, "CART", "cart");
+	struct cart *c = (struct cart *)part_component_by_id_is_a(&xroar_machine->part, "cart", "cart");
 	if (!c)
 		return;
 	if (c->has_interface) {

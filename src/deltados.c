@@ -98,7 +98,7 @@ static const struct partdb_entry_funcs deltados_funcs = {
 
 	.ser_struct_data = &deltados_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry deltados_part = { .name = "delta", .description = "Delta System", .funcs = &deltados_funcs };

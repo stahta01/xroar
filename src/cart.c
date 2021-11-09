@@ -343,9 +343,19 @@ void cart_finish(struct cart *c) {
 	}
 }
 
-_Bool cart_is_a(struct part *p, const char *name) {
+static _Bool cart_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "cart") == 0;
+}
+
+_Bool dragon_cart_is_a(struct part *p, const char *name) {
+	(void)p;
+	return strcmp(name, "dragon-cart") == 0 || cart_is_a(p, name);
+}
+
+_Bool mc10_cart_is_a(struct part *p, const char *name) {
+	(void)p;
+	return strcmp(name, "mc10-cart") == 0 || cart_is_a(p, name);
 }
 
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -388,7 +398,7 @@ static const struct partdb_entry_funcs cart_rom_funcs = {
 
 	.ser_struct_data = &cart_rom_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry cart_rom_part = { .name = "rom", .description = "ROM cartridge", .funcs = &cart_rom_funcs };

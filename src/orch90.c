@@ -75,7 +75,7 @@ static const struct partdb_entry_funcs orch90_funcs = {
 
 	.ser_struct_data = &orch90_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry orch90_part = { .name = "orch90", .description = "Orchestra 90-CC", .funcs = &orch90_funcs };

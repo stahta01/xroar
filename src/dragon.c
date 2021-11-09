@@ -429,7 +429,7 @@ static _Bool dragon_finish(struct part *p) {
 	md->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	md->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
 	md->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
-	md->cart = (struct cart *)part_component_by_id_is_a(p, "CART", "cart");
+	md->cart = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 
 	// Check all required parts are attached
 	if (!md->SAM || !md->CPU || !md->PIA0 || !md->PIA1 || !md->VDG ||
@@ -885,7 +885,7 @@ static void dragon_insert_cart(struct machine *m, struct cart *c) {
 		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, md);
 		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, md);
 		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, md);
-		part_add_component(&m->part, (struct part *)c, "CART");
+		part_add_component(&m->part, (struct part *)c, "cart");
 	}
 }
 

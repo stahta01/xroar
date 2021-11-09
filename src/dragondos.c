@@ -103,7 +103,7 @@ static const struct partdb_entry_funcs dragondos_funcs = {
 
 	.ser_struct_data = &dragondos_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry dragondos_part = { .name = "dragondos", .description = "DragonDOS", .funcs = &dragondos_funcs };

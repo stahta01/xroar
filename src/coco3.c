@@ -340,7 +340,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->CPU = (struct MC6809 *)part_component_by_id_is_a(p, "CPU", "MC6809");
 	mcc3->PIA0 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA0", "MC6821");
 	mcc3->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
-	mcc3->cart = (struct cart *)part_component_by_id_is_a(p, "CART", "cart");
+	mcc3->cart = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 
 	// Check all required parts are attached
 	if (!mcc3->GIME || !mcc3->CPU || !mcc3->PIA0 || !mcc3->PIA1 ||
@@ -577,7 +577,7 @@ static void coco3_insert_cart(struct machine *m, struct cart *c) {
 		c->signal_firq = DELEGATE_AS1(void, bool, cart_firq, mcc3);
 		c->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mcc3);
 		c->signal_halt = DELEGATE_AS1(void, bool, cart_halt, mcc3);
-		part_add_component(&m->part, (struct part *)c, "CART");
+		part_add_component(&m->part, (struct part *)c, "cart");
 	}
 }
 

@@ -88,7 +88,7 @@ static const struct partdb_entry_funcs idecart_funcs = {
 
 	.ser_struct_data = &idecart_ser_struct_data,
 
-	.is_a = cart_is_a,
+	.is_a = dragon_cart_is_a,
 };
 
 const struct partdb_entry idecart_part = { .name = "ide", .description = "Glenside IDE", .funcs = &idecart_funcs };
