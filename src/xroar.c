@@ -2321,9 +2321,6 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("becker", &xroar_cfg.becker) },
 	{ XC_SET_STRING("becker-ip", &xroar_cfg.becker_ip) },
 	{ XC_SET_STRING("becker-port", &xroar_cfg.becker_port) },
-	/* Backwards-compatibility: */
-	{ XC_SET_STRING("dw4-ip", &xroar_cfg.becker_ip), .deprecated = 1 },
-	{ XC_SET_STRING("dw4-port", &xroar_cfg.becker_port), .deprecated = 1 },
 
 	/* Files: */
 	{ XC_CALL_STRING_F("load", &add_load) },
@@ -2348,15 +2345,12 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("tape-rewrite-leader", &xroar_cfg.tape_rewrite_leader) },
 	{ XC_SET_INT("tape-ao-rate", &private_cfg.tape_ao_rate) },
 	/* Backwards-compatibility: */
-	{ XC_SET_INT1("tapehack", &private_cfg.tape_rewrite), .deprecated = 1 },
 	{ XC_SET_INT1("tape-pad", &dummy_value.v_int), .deprecated = 1 },
 
 	/* Disks: */
 	{ XC_SET_BOOL("disk-write-back", &xroar_cfg.disk_write_back) },
 	{ XC_SET_BOOL("disk-auto-os9", &xroar_cfg.disk_auto_os9) },
 	{ XC_SET_BOOL("disk-auto-sd", &xroar_cfg.disk_auto_sd) },
-	/* Backwards-compatibility: */
-	{ XC_SET_BOOL("disk-jvc-hack", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Firmware ROM images: */
 	{ XC_SET_STRING_F("rompath", &xroar_cfg.rompath) },
@@ -2396,7 +2390,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("volume", &private_cfg.volume) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT("ao-buffer-samples", &xroar_cfg.ao_buffer_nframes), .deprecated = 1 },
-	{ XC_SET_BOOL("fast-sound", &xroar_cfg.fast_sound), .deprecated = 1 },
+	{ XC_SET_BOOL("fast-sound", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Keyboard: */
 	{ XC_SET_STRING("keymap", &xroar_ui_cfg.keymap) },

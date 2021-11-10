@@ -84,7 +84,6 @@ struct xroar_cfg {
 	int ao_fragment_nframes;
 	int ao_buffer_ms;
 	int ao_buffer_nframes;
-	_Bool fast_sound;  // deprecated - ignored
 
 	// Keyboard
 	_Bool kbd_translate;

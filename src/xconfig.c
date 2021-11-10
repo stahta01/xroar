@@ -234,6 +234,16 @@ static int unset_option(struct xconfig_option const *option) {
 	return -1;
 }
 
+static void xconfig_warn_deprecated(const struct xconfig_option *opt) {
+	if (!opt->deprecated)
+		return;
+	LOG_WARN("Deprecated option `%s'", opt->name);
+	if (opt->type == XCONFIG_ALIAS) {
+		LOG_PRINT(".  Try `%s' instead.", (char *)opt->dest.object);
+	}
+	LOG_PRINT("\n");
+}
+
 // Convenience function to manually set an option.  Only handles simple zero-
 // or one-argument options.  'arg' will be parsed to process escape sequences,
 // but should not contain quoted sections.
@@ -251,9 +261,7 @@ enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
 		LOG_ERROR("Unrecognised option `%s'\n", opt);
 		return XCONFIG_BAD_OPTION;
 	}
-	if (option->deprecated) {
-		LOG_WARN("Deprecated option `%s'\n", opt);
-	}
+	xconfig_warn_deprecated(option);
 	if (option->type == XCONFIG_BOOL ||
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
@@ -330,9 +338,7 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	}
 	sdsfree(opt);
 
-	if (option->deprecated) {
-		LOG_WARN("Deprecated option `%s'\n", option->name);
-	}
+	xconfig_warn_deprecated(option);
 	if (option->type == XCONFIG_BOOL ||
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
@@ -416,9 +422,7 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 			LOG_ERROR("Unrecognised option `%s'\n", opt);
 			return XCONFIG_BAD_OPTION;
 		}
-		if (option->deprecated) {
-			LOG_WARN("Deprecated option `%s'\n", opt);
-		}
+		xconfig_warn_deprecated(option);
 		if (option->type == XCONFIG_BOOL ||
 		    option->type == XCONFIG_BOOL0 ||
 		    option->type == XCONFIG_INT0 ||
