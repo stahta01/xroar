@@ -2,7 +2,7 @@
  *
  *  \brief Dragon joysticks.
  *
- *  \copyright Copyright 2003-2017 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -98,6 +98,7 @@ struct joystick_submodule {
 	struct joystick_button *(* const configure_button)(char *spec, unsigned jbutton);
 	void (* const unmap_axis)(struct joystick_axis *);
 	void (* const unmap_button)(struct joystick_button *);
+	void (* const print_list)(void);
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -111,6 +112,8 @@ struct slist *joystick_config_list(void);
 
 void joystick_init(void);
 void joystick_shutdown(void);
+
+void joystick_list_physical(void);
 
 void joystick_map(struct joystick_config const *, unsigned port);
 void joystick_unmap(unsigned port);

@@ -171,6 +171,7 @@ struct private_cfg {
 
 #ifndef HAVE_WASM
 	// Other options
+	_Bool joystick_print_list;
 	_Bool config_print;
 	_Bool config_print_all;
 #endif
@@ -774,6 +775,15 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	struct module *filereq_module = (struct module *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
 	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
 	ui_joystick_module_list = ui_module->joystick_module_list;
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	// Help text that depends on selected UI module.
+
+	if (private_cfg.joystick_print_list) {
+		joystick_list_physical();
+		exit(EXIT_SUCCESS);
+	}
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -2214,6 +2224,10 @@ static void set_joystick(const char *name) {
 }
 
 static void set_joystick_axis(const char *spec) {
+	if (strcmp(spec, "help") == 0) {
+		private_cfg.joystick_print_list = 1;
+		return;
+	}
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned axis = 0;
@@ -2237,6 +2251,10 @@ static void set_joystick_axis(const char *spec) {
 }
 
 static void set_joystick_button(const char *spec) {
+	if (strcmp(spec, "help") == 0) {
+		private_cfg.joystick_print_list = 1;
+		return;
+	}
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned button = 0;
@@ -2566,10 +2584,11 @@ static void helptext(void) {
 "  -type STRING            intercept ROM calls to type STRING into BASIC\n"
 
 "\n Joysticks:\n"
-"  -joy NAME             configure named joystick (-joy help for list)\n"
+"  -joy NAME             configure named joystick profile (-joy help for list)\n"
 "    -joy-desc TEXT        joystick description\n"
 "    -joy-axis AXIS=SPEC   configure joystick axis\n"
-"    -joy-button BTN=SPEC  configure joystick button\n"
+"    -joy-button BTN=SPEC  configure joystick button (-joy-button help or\n"
+"                          -joy-axis help to list physical joysticks)\n"
 "  -joy-right NAME       map right joystick\n"
 "  -joy-left NAME        map left joystick\n"
 "  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"

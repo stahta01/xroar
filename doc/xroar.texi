@@ -1328,6 +1328,10 @@ names for the keyboard module depend on the underlying toolkit.  The default
 screen offsets for the mouse module are @samp{X=2,254} and @samp{Y=1.5,190.5}
 which gives reasonable behaviour for some games and utilities.
 
+To list the physical joysticks seen by XRoar, along with their index for use in
+the options above, specify either @option{-joy-axis help} or
+@option{-joy-button help}.
+
 
 @node Printing
 @section Printing

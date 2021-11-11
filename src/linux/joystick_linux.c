@@ -2,7 +2,7 @@
  *
  *  \brief Linux joystick module.
  *
- *  \copyright Copyright 2010-2016 Ciaran Anscomb
+ *  \copyright Copyright 2010-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,6 +26,7 @@
 #define _DARWIN_C_SOURCE
 
 #include <fcntl.h>
+#include <glob.h>
 #include <linux/joystick.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +51,7 @@ static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
+static void linux_js_print_physical(void);
 
 static struct joystick_submodule linux_js_submod_physical = {
 	.name = "physical",
@@ -57,6 +59,7 @@ static struct joystick_submodule linux_js_submod_physical = {
 	.configure_button = configure_button,
 	.unmap_axis = unmap_axis,
 	.unmap_button = unmap_button,
+	.print_list = linux_js_print_physical,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -90,6 +93,64 @@ struct control {
 	unsigned control;
 	_Bool inverted;
 };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// For sorting joystick device filenames
+
+static unsigned linux_js_prefix_len = 0;
+
+static int linux_js_compar(const void *ap, const void *bp) {
+	long a = strtol(*(const char **)ap + linux_js_prefix_len, NULL, 10);
+	long b = strtol(*(const char **)bp + linux_js_prefix_len, NULL, 10);
+	if (a < b)
+		return -1;
+	if (a == b)
+		return 0;
+	return 1;
+}
+
+// For now all this does is print out a list of joysticks.  I think I'll need
+// to switch to the event interface before a consistent gamepad experience is
+// possible.
+
+static void linux_js_print_physical(void) {
+	glob_t globbuf;
+	globbuf.gl_offs = 0;
+	linux_js_prefix_len = 13;
+	glob("/dev/input/js*", GLOB_ERR|GLOB_NOSORT, NULL, &globbuf);
+	if (!globbuf.gl_pathc) {
+		linux_js_prefix_len = 7;
+		glob("/dev/js*", GLOB_ERR|GLOB_NOSORT, NULL, &globbuf);
+	}
+	// Sort the list so we can spot removed devices
+	qsort(globbuf.gl_pathv, globbuf.gl_pathc, sizeof(char *), linux_js_compar);
+	// Now iterate
+	LOG_PRINT("%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+	for (unsigned i = 0; i < globbuf.gl_pathc; i++) {
+		if (strlen(globbuf.gl_pathv[i]) < linux_js_prefix_len)
+			continue;
+		const char *index = globbuf.gl_pathv[i] + linux_js_prefix_len;
+		int fd  = open(globbuf.gl_pathv[i], O_RDONLY|O_NONBLOCK);
+		if (fd < 0) {
+			continue;
+		}
+		LOG_PRINT("%-3s ", index);
+		char buf[32];
+		if (ioctl(fd, JSIOCGNAME(sizeof(buf)), buf) >= 0) {
+			buf[31] = 0;
+			LOG_PRINT("%-31s ", buf);
+		}
+		if (ioctl(fd, JSIOCGAXES, buf) < 0)
+			buf[0] = 0;
+		LOG_PRINT("%-7d ", (int)buf[0]);
+		if (ioctl(fd, JSIOCGBUTTONS, buf) < 0)
+			buf[0] = 0;
+		LOG_PRINT("%-7d\n", (int)buf[0]);
+		close(fd);
+	}
+	globfree(&globbuf);
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

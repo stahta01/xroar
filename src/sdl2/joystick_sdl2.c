@@ -45,6 +45,7 @@ static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 static void unmap_axis(struct joystick_axis *axis);
 static void unmap_button(struct joystick_button *button);
+static void sdl2_js_print_physical(void);
 
 struct joystick_submodule sdl_js_submod_physical = {
 	.name = "physical",
@@ -52,6 +53,7 @@ struct joystick_submodule sdl_js_submod_physical = {
 	.configure_button = configure_button,
 	.unmap_axis = unmap_axis,
 	.unmap_button = unmap_button,
+	.print_list = sdl2_js_print_physical,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -88,6 +90,27 @@ struct control {
 	unsigned control;
 	_Bool inverted;
 };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void sdl2_js_print_physical(void) {
+	SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+	unsigned njstk = SDL_NumJoysticks();
+	LOG_PRINT("%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
+	for (unsigned index = 0; index < njstk; index++) {
+		SDL_Joystick *sdlj = SDL_JoystickOpen(index);
+		if (!sdlj)
+			continue;
+		LOG_PRINT("%-3u ", index);
+		const char *description = SDL_JoystickName(sdlj);
+		if (!description)
+			description = "";
+		LOG_PRINT("%-31s ", description);
+		LOG_PRINT("%-7d ", SDL_JoystickNumAxes(sdlj));
+		LOG_PRINT("%-7d\n", SDL_JoystickNumButtons(sdlj));
+		SDL_JoystickClose(sdlj);
+	}
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

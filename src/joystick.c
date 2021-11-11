@@ -212,13 +212,20 @@ static struct joystick_submodule *find_if(const char *if_name) {
 
 static void select_interface(char **spec) {
 	char *if_name = NULL;
-	if (*spec && strchr(*spec, ':')) {
+	if (spec && *spec && strchr(*spec, ':')) {
 		if_name = strsep(spec, ":");
 	}
 	if (if_name) {
 		selected_interface = find_if(if_name);
 	} else if (!selected_interface) {
 		selected_interface = find_if("physical");
+	}
+}
+
+void joystick_list_physical(void) {
+	select_interface(NULL);  // default physical
+	if (selected_interface->print_list) {
+		selected_interface->print_list();
 	}
 }
 
