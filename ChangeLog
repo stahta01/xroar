@@ -12,6 +12,7 @@ Version 0.38, unreleased
  * IDE, NX32, MOOH now all require user to specify an image.
  * Games Master Cartridge no longer marked autostart by default.
  * Tape play/pause function (mainly for MC-10 which has no motor remote).
+ * Snapshot saves only RAM contents into .ram files [Phill Harvey-Smith]
 
 Version 0.37, Sat Aug 14 2021
 
