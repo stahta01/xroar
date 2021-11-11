@@ -39,6 +39,7 @@ static void null_free(void *sptr);
 static void no_op(void *sptr);
 static void no_op_render(void *sptr, uint8_t const *scanline_data,
 			 struct ntsc_burst *burst);
+static void no_op_palette_set(void *sptr, uint8_t c, float y, float b_y, float r_y);
 
 static void *new(void *cfg) {
 	(void)cfg;
@@ -48,6 +49,8 @@ static void *new(void *cfg) {
 	vo->free = DELEGATE_AS0(void, null_free, vo);
 	vo->vsync = DELEGATE_AS0(void, no_op, vo);
 	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, no_op_render, vo);
+	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
+	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
 
 	return vo;
 }
@@ -59,6 +62,14 @@ static void null_free(void *sptr) {
 
 static void no_op(void *sptr) {
 	(void)sptr;
+}
+
+static void no_op_palette_set(void *sptr, uint8_t c, float y, float b_y, float r_y) {
+	(void)sptr;
+	(void)c;
+	(void)y;
+	(void)b_y;
+	(void)r_y;
 }
 
 static void no_op_render(void *sptr, uint8_t const *scanline_data,
