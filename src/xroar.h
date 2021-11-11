@@ -64,6 +64,7 @@ enum xroar_filetype {
 	FILETYPE_HD,
 	FILETYPE_SD,
 	FILETYPE_SNA,
+	FILETYPE_RAM,
 };
 
 /**************************************************************************/

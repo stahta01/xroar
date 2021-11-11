@@ -264,6 +264,8 @@ struct machine {
 	void (*write_byte)(struct machine *m, unsigned A, uint8_t D);
 	/* simulate an RTS without otherwise affecting machine state */
 	void (*op_rts)(struct machine *m);
+	// Simple RAM dump to file
+	void (*dump_ram)(struct machine *m, FILE *fd);
 };
 
 extern const struct ser_struct_data machine_ser_struct_data;

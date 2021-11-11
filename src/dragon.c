@@ -289,6 +289,7 @@ static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
 static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_op_rts(struct machine *m);
+static void dragon_dump_ram(struct machine *m, FILE *fd);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -385,6 +386,7 @@ static struct part *dragon_allocate(void) {
 	m->read_byte = dragon_read_byte;
 	m->write_byte = dragon_write_byte;
 	m->op_rts = dragon_op_rts;
+	m->dump_ram = dragon_dump_ram;
 
 	return p;
 }
@@ -1371,6 +1373,11 @@ static void dragon_op_rts(struct machine *m) {
 	new_pc |= m->read_byte(m, md->CPU->reg_s + 1, 0);
 	md->CPU->reg_s += 2;
 	md->CPU->reg_pc = new_pc;
+}
+
+static void dragon_dump_ram(struct machine *m, FILE *fd) {
+	struct machine_dragon *md = (struct machine_dragon *)m;
+	fwrite(md->ram, md->ram_size, 1, fd);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

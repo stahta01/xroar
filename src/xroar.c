@@ -540,6 +540,7 @@ static struct {
 	{ "C10", FILETYPE_CAS },
 	{ "WAV", FILETYPE_WAV },
 	{ "SN",  FILETYPE_SNA },
+	{ "RAM", FILETYPE_RAM },
 	{ "ROM", FILETYPE_ROM },
 	{ "CCC", FILETYPE_ROM },
 	{ "BAS", FILETYPE_ASC },

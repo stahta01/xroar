@@ -213,6 +213,7 @@ static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
 static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_op_rts(struct machine *m);
+static void coco3_dump_ram(struct machine *m, FILE *fd);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -300,6 +301,7 @@ static struct part *coco3_allocate(void) {
 	m->read_byte = coco3_read_byte;
 	m->write_byte = coco3_write_byte;
 	m->op_rts = coco3_op_rts;
+	m->dump_ram = coco3_dump_ram;
 
 	return p;
 }
@@ -952,6 +954,11 @@ static void coco3_op_rts(struct machine *m) {
 	new_pc |= m->read_byte(m, mcc3->CPU->reg_s + 1, 0);
 	mcc3->CPU->reg_s += 2;
 	mcc3->CPU->reg_pc = new_pc;
+}
+
+static void coco3_dump_ram(struct machine *m, FILE *fd) {
+	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	fwrite(mcc3->ram, mcc3->ram_size, 1, fd);
 }
 
 static uint8_t fetch_vram(void *sptr, uint32_t A) {

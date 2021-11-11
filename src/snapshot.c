@@ -106,6 +106,20 @@ int read_snapshot(const char *filename) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 int write_snapshot(const char *filename) {
+	if (xroar_filetype_by_ext(filename) == FILETYPE_RAM) {
+		// simple ram dump
+		if (!xroar_machine->dump_ram) {
+			LOG_WARN("Running machine does not support RAM dump.\n");
+			return -1;
+		}
+		FILE *fd = fopen(filename, "wb");
+		if (!fd)
+			return -1;
+		xroar_machine->dump_ram(xroar_machine, fd);
+		fclose(fd);
+		return 0;
+	}
+
 	struct ser_handle *sh = ser_open(filename, ser_mode_write);
 	if (!sh)
 		return -1;

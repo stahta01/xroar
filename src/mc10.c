@@ -175,6 +175,7 @@ static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_op_rts(struct machine *m);
+static void mc10_dump_ram(struct machine *m, FILE *fd);
 
 static void mc10_vdg_hs(void *sptr, _Bool level);
 static void mc10_vdg_fs(void *sptr, _Bool level);
@@ -235,6 +236,7 @@ static struct part *mc10_allocate(void) {
 	m->read_byte = mc10_read_byte;
 	m->write_byte = mc10_write_byte;
 	m->op_rts = mc10_op_rts;
+	m->dump_ram = mc10_dump_ram;
 
 	m->set_inverted_text = mc10_set_inverted_text;
 	m->get_interface = mc10_get_interface;
@@ -629,6 +631,11 @@ static void mc10_op_rts(struct machine *m) {
 	new_pc |= m->read_byte(m, mp->CPU->reg_sp + 2, 0);
 	mp->CPU->reg_sp += 2;
 	mp->CPU->reg_pc = new_pc;
+}
+
+static void mc10_dump_ram(struct machine *m, FILE *fd) {
+	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	fwrite(mp->ram, mp->ram_size, 1, fd);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
