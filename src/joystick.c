@@ -2,7 +2,7 @@
  *
  *  \brief Dragon joysticks.
  *
- *  \copyright Copyright 2003-2017 Ciaran Anscomb
+ *  \copyright Copyright 2003-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -189,23 +189,16 @@ struct slist *joystick_config_list(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_submodule *find_if_in_mod(struct joystick_module *module, const char *if_name) {
-	if (!module || !if_name)
-		return NULL;
-	for (unsigned i = 0; module->submodule_list[i]; i++) {
-		if (0 == strcmp(module->submodule_list[i]->name, if_name))
-			return module->submodule_list[i];
-	}
-	return NULL;
-}
-
 static struct joystick_submodule *find_if_in_modlist(struct joystick_module * const *list, const char *if_name) {
 	if (!list || !if_name)
 		return NULL;
-	for (unsigned i = 0; list[i]; i++) {
-		struct joystick_submodule *submod = find_if_in_mod(list[i], if_name);
-		if (submod)
-			return submod;
+	for (unsigned j = 0; list[j]; j++) {
+		struct joystick_module *module = list[j];
+		for (unsigned i = 0; module->submodule_list[i]; i++) {
+			if (strcmp(module->submodule_list[i]->name, if_name) == 0) {
+				return module->submodule_list[i];
+			}
+		}
 	}
 	return NULL;
 }
@@ -218,22 +211,11 @@ static struct joystick_submodule *find_if(const char *if_name) {
 }
 
 static void select_interface(char **spec) {
-	char *mod_name = NULL;
 	char *if_name = NULL;
 	if (*spec && strchr(*spec, ':')) {
 		if_name = strsep(spec, ":");
 	}
-	if (*spec && strchr(*spec, ':')) {
-		mod_name = if_name;
-		if_name = strsep(spec, ":");
-	}
-	if (mod_name) {
-		struct joystick_module *m = (struct joystick_module *)module_select_by_arg((struct module * const *)ui_joystick_module_list, mod_name);
-		if (!m) {
-			m = (struct joystick_module *)module_select_by_arg((struct module * const *)joystick_module_list, mod_name);
-		}
-		selected_interface = find_if_in_mod(m, if_name);
-	} else if (if_name) {
+	if (if_name) {
 		selected_interface = find_if(if_name);
 	} else if (!selected_interface) {
 		selected_interface = find_if("physical");
