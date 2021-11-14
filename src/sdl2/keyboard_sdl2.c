@@ -206,74 +206,94 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 			xroar_set_write_enable(1, cmdkey - '5', XROAR_NEXT);
 		}
 		return;
-	case 'a': xroar_set_tv_input(1, XROAR_NEXT); return;
+	case 'a':
+		xroar_set_tv_input(1, XROAR_NEXT);
+		return;
 	case 'd':
-		     if (shift) {
-			     vdrive_flush(xroar_vdrive_interface);
-		     }
-		     return;
-	case 'e': xroar_toggle_cart(); return;
-	case 'f': xroar_set_fullscreen(1, XROAR_NEXT); return;
+		if (shift) {
+			vdrive_flush(xroar_vdrive_interface);
+		}
+		return;
+	case 'e':
+		xroar_toggle_cart();
+		return;
+	case 'f':
+		xroar_set_fullscreen(1, XROAR_NEXT);
+		return;
 	case 'h':
-		     if (shift) {
-			     xroar_set_pause(1, XROAR_NEXT);
-		     }
-		     return;
+		if (shift) {
+			xroar_set_pause(1, XROAR_NEXT);
+		}
+		return;
 	case 'i':
-		     if (shift) {
-			     xroar_set_vdg_inverted_text(1, XROAR_NEXT);
+		if (shift) {
+			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 #ifndef HAVE_WASM
-		     } else {
-			     xroar_run_file(NULL);
+		} else {
+			xroar_run_file(NULL);
 #endif
-		     }
-		     return;
+		}
+		return;
 	case 'j':
-		     if (shift) {
-			     xroar_swap_joysticks(1);
-		     } else {
-			     xroar_cycle_joysticks(1);
-		     }
-		     return;
-	case 'k': xroar_set_keyboard_type(1, XROAR_NEXT); return;
+		if (shift) {
+			xroar_swap_joysticks(1);
+		} else {
+			xroar_cycle_joysticks(1);
+		}
+		return;
+	case 'k':
+		xroar_set_keyboard_type(1, XROAR_NEXT);
+		return;
 #ifndef HAVE_WASM
 	case 'l':
-		     if (shift) {
-			     xroar_run_file(NULL);
-		     } else {
-			     xroar_load_file(NULL);
-		     }
-		     return;
-	case 'm': xroar_set_machine(1, XROAR_NEXT); return;
+		if (shift) {
+			xroar_run_file(NULL);
+		} else {
+			xroar_load_file(NULL);
+		}
+		return;
+	case 'm':
+		xroar_set_machine(1, XROAR_NEXT);
+		return;
 	case 'p':
-		     if (shift) {
-			     printer_flush(xroar_printer_interface);
-		     }
-		     return;
-	case 'q': xroar_quit(); return;
+		if (shift) {
+			printer_flush(xroar_printer_interface);
+		}
+		return;
+	case 'q':
+		xroar_quit();
+		return;
 #endif
 	case 'r':
-		     if (shift) {
-			     xroar_hard_reset();
-		     } else {
-			     xroar_soft_reset();
-		     }
-		     return;
+		if (shift) {
+			xroar_hard_reset();
+		} else {
+			xroar_soft_reset();
+		}
+		return;
 #ifndef HAVE_WASM
-	case 's': xroar_save_snapshot(); return;
-	case 'w': xroar_insert_output_tape(); return;
+	case 's':
+		xroar_save_snapshot();
+		return;
+	case 'w':
+		xroar_insert_output_tape();
+		return;
 #endif
 #ifdef TRACE
-	case 'v': xroar_set_trace(XROAR_NEXT); return;
+	case 'v':
+		xroar_set_trace(XROAR_NEXT);
+		return;
 #endif
-	case 'z': xroar_set_kbd_translate(1, XROAR_NEXT); return;
+	case 'z':
+		xroar_set_kbd_translate(1, XROAR_NEXT);
+		return;
 #ifndef HAVE_WASM
 	case '-':
-		     sdl_zoom_out(uisdl2);
-		     return;
+		sdl_zoom_out(uisdl2);
+		return;
 	case '+':
-		     sdl_zoom_in(uisdl2);
-		     return;
+		sdl_zoom_in(uisdl2);
+		return;
 #endif
 	default:
 		break;
