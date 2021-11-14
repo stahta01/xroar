@@ -115,7 +115,6 @@ struct machine_dragon {
 
 	struct {
 		struct keyboard_interface *interface;
-		int type;  // currently selected keyboard type
 	} keyboard;
 
 	// NTSC colour bursts
@@ -388,6 +387,8 @@ static struct part *dragon_allocate(void) {
 	m->op_rts = dragon_op_rts;
 	m->dump_ram = dragon_dump_ram;
 
+	m->keyboard.type = dkbd_layout_dragon;
+
 	return p;
 }
 
@@ -413,6 +414,9 @@ static void dragon_initialise(struct part *p, void *options) {
 
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG");
+
+	// Keyboard
+	m->keyboard.type = mc->keymap;
 }
 
 static _Bool dragon_finish(struct part *p) {
@@ -797,8 +801,7 @@ static _Bool dragon_finish(struct part *p) {
 	} else {
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_coco_basic);
 	}
-	md->keyboard.type = mc->keymap;
-	keyboard_set_keymap(md->keyboard.interface, md->keyboard.type);
+	keyboard_set_keymap(md->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
 	md->printer_interface = printer_interface_new(m);
@@ -902,7 +905,7 @@ static void dragon_remove_cart(struct machine *m) {
 
 static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	xroar_set_keyboard_type(1, md->keyboard.type);
+	xroar_set_keyboard_type(1, m->keyboard.type);
 	if (hard) {
 		// Initial RAM pattern is approximately what I see on my Dragon
 		// 64, though it can probably vary based on manufacturer.  It
@@ -1022,7 +1025,7 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 static int dragon_set_keyboard_type(struct machine *m, int action) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
-	int type = md->keyboard.type;
+	int type = m->keyboard.type;
 	switch (action) {
 	case XROAR_QUERY:
 		break;
@@ -1048,7 +1051,7 @@ static int dragon_set_keyboard_type(struct machine *m, int action) {
 		type = action;
 		break;
 	}
-	md->keyboard.type = type;
+	m->keyboard.type = type;
 	keyboard_set_keymap(md->keyboard.interface, type);
 	return type;
 }

@@ -72,6 +72,7 @@ static const struct ser_struct ser_struct_machine_config[] = {
 
 static const struct ser_struct ser_struct_machine[] = {
         SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
+        SER_STRUCT_ELEM(struct machine, keyboard.type, ser_type_int), // 2
 };
 
 static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);

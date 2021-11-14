@@ -1591,6 +1591,7 @@ void xroar_connect_machine(void) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, mcid, NULL);
 		int ccid = (c && c->config) ? c->config->id : -1;
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, ccid, NULL);
+		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, xroar_machine->keyboard.type, NULL);
 	}
 
 	switch (xroar_machine_config->architecture) {

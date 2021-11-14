@@ -108,7 +108,6 @@ struct machine_coco3 {
 
 	struct {
 		struct keyboard_interface *interface;
-		int type;
 	} keyboard;
 
 	// Useful configuration side-effect tracking
@@ -303,6 +302,8 @@ static struct part *coco3_allocate(void) {
 	m->op_rts = coco3_op_rts;
 	m->dump_ram = coco3_dump_ram;
 
+	m->keyboard.type = dkbd_layout_coco3;
+
 	return p;
 }
 
@@ -325,6 +326,9 @@ static void coco3_initialise(struct part *p, void *options) {
 	// PIAs
 	part_add_component(&m->part, part_create("MC6821", NULL), "PIA0");
 	part_add_component(&m->part, part_create("MC6821", NULL), "PIA1");
+
+	// Keyboard
+	m->keyboard.type = mc->keymap;
 }
 
 static _Bool coco3_finish(struct part *p) {
@@ -488,8 +492,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->keyboard.interface = keyboard_interface_new(m);
 	mcc3->keyboard.interface->update = DELEGATE_AS0(void, keyboard_update, mcc3);
 	keyboard_set_chord_mode(mcc3->keyboard.interface, keyboard_chord_mode_coco_basic);
-	mcc3->keyboard.type = mc->keymap;
-	keyboard_set_keymap(mcc3->keyboard.interface, mcc3->keyboard.type);
+	keyboard_set_keymap(mcc3->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
 	mcc3->printer_interface = printer_interface_new(m);
@@ -594,7 +597,7 @@ static void coco3_remove_cart(struct machine *m) {
 
 static void coco3_reset(struct machine *m, _Bool hard) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	xroar_set_keyboard_type(1, mcc3->keyboard.type);
+	xroar_set_keyboard_type(1, m->keyboard.type);
 	if (hard) {
 		// This initial RAM state is carried over from Dragon/CoCo1/2
 		// code, but might as well keep it.  As noted there, some
@@ -703,7 +706,7 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 
 static int coco3_set_keyboard_type(struct machine *m, int action) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	int type = mcc3->keyboard.type;
+	int type = m->keyboard.type;
 	switch (action) {
 	case XROAR_QUERY:
 		break;
@@ -729,7 +732,7 @@ static int coco3_set_keyboard_type(struct machine *m, int action) {
 		type = action;
 		break;
 	}
-	mcc3->keyboard.type = type;
+	m->keyboard.type = type;
 	keyboard_set_keymap(mcc3->keyboard.interface, type);
 	return type;
 }

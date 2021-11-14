@@ -266,6 +266,10 @@ struct machine {
 	void (*op_rts)(struct machine *m);
 	// Simple RAM dump to file
 	void (*dump_ram)(struct machine *m, FILE *fd);
+
+	struct {
+		int type;
+	} keyboard;
 };
 
 extern const struct ser_struct_data machine_ser_struct_data;

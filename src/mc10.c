@@ -243,6 +243,8 @@ static struct part *mc10_allocate(void) {
 	m->set_frameskip = mc10_set_frameskip;
 	m->set_ratelimit = mc10_set_ratelimit;
 
+	m->keyboard.type = dkbd_layout_mc10;
+
 	return p;
 }
 
@@ -261,6 +263,9 @@ static void mc10_initialise(struct part *p, void *options) {
 
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", "6847"), "VDG");
+
+	// Keyboard
+	m->keyboard.type = mc->keymap;
 }
 
 static _Bool mc10_finish(struct part *p) {
@@ -378,7 +383,7 @@ static _Bool mc10_finish(struct part *p) {
 	// Keyboard interface
 	mp->keyboard.interface = keyboard_interface_new(m);
 	mp->keyboard.interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
-	keyboard_set_keymap(mp->keyboard.interface, mc->keymap);
+	keyboard_set_keymap(mp->keyboard.interface, m->keyboard.type);
 
 	// Printer interface
 	mp->printer_interface = printer_interface_new(m);
