@@ -1501,6 +1501,23 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 	}
 }
 
+void xroar_set_menubar(int action) {
+	_Bool set_to;
+	switch (action) {
+		case XROAR_OFF:
+			set_to = 0;
+			break;
+		case XROAR_ON:
+			set_to = 1;
+			break;
+		case XROAR_NEXT:
+		default:
+			set_to = !xroar_vo_interface->show_menubar;
+			break;
+	}
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_menubar, set_to);
+}
+
 void xroar_load_file(char const * const *exts) {
 	char *filename = DELEGATE_CALL(xroar_filereq_interface->load_filename, exts);
 	xroar_load_file_by_type(filename, 0);

@@ -82,6 +82,7 @@ static void vo_sdl_refresh(void *sptr);
 static void vo_sdl_vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
+static void set_menubar(void *sptr, _Bool show_menubar);
 
 static _Bool create_renderer(struct vo_sdl_interface *vosdl);
 static void destroy_window(void);
@@ -111,6 +112,7 @@ static void *new(void *sptr) {
 	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
@@ -126,6 +128,7 @@ static void *new(void *sptr) {
 	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, wflags);
 	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
 	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
+	vo->show_menubar = 1;
 	if (!create_renderer(vosdl)) {
 		vo_sdl_free(vo);
 		return NULL;
@@ -179,6 +182,23 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	return 0;
 }
 
+static void set_menubar(void *sptr, _Bool show_menubar) {
+	struct vo_sdl_interface *vosdl = sptr;
+	struct vo_interface *vo = &vosdl->public;
+
+	vo->show_menubar = show_menubar;
+#ifdef WINDOWS32
+	if (show_menubar && !vosdl->showing_menu) {
+		sdl_windows32_add_menu(global_uisdl2->vo_window);
+	} else if (!show_menubar && vosdl->showing_menu) {
+		sdl_windows32_remove_menu(global_uisdl2->vo_window);
+	}
+	if (!vo->is_fullscreen) {
+		SDL_SetWindowSize(global_uisdl2->vo_window, vosdl->window_w, vosdl->window_h);
+	}
+#endif
+}
+
 static void destroy_window(void) {
 	if (global_uisdl2->vo_window) {
 		sdl_os_keyboard_free(global_uisdl2->vo_window);
@@ -223,20 +243,25 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	int w, h;
 	SDL_GetWindowSize(global_uisdl2->vo_window, &w, &h);
 
-	vo->is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+	_Bool is_fullscreen = SDL_GetWindowFlags(global_uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+	if (is_fullscreen != vo->is_fullscreen) {
+		vo->is_fullscreen = is_fullscreen;
+		vo->show_menubar = !is_fullscreen;
+	}
 
 	_Bool resize_again = 0;
 
 #ifdef WINDOWS32
 	// Also take the opportunity to add (windowed) or remove (fullscreen) a
 	// menubar under windows.
-	if (!vosdl->showing_menu && !vo->is_fullscreen) {
+	if (!vosdl->showing_menu && vo->show_menubar) {
 		sdl_windows32_add_menu(global_uisdl2->vo_window);
 		vosdl->showing_menu = 1;
 		// Adding menubar steals space from client area, so reset size
 		// to get that back.
 		resize_again = 1;
-	} else if (vosdl->showing_menu && vo->is_fullscreen) {
+	} else if (vosdl->showing_menu && !vo->show_menubar) {
 		sdl_windows32_remove_menu(global_uisdl2->vo_window);
 		vosdl->showing_menu = 0;
 	}

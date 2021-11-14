@@ -323,7 +323,7 @@ static void emulator_command(guint keyval, int shift) {
 		xroar_set_keyboard_type(1, XROAR_NEXT);
 		break;
 	case GDK_KEY_m:
-		xroar_set_machine(1, XROAR_NEXT);
+		xroar_set_menubar(XROAR_NEXT);
 		break;
 	case GDK_KEY_p:
 		if (shift)

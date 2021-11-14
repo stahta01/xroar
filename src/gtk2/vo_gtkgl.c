@@ -51,21 +51,24 @@ struct module vo_gtkgl_module = {
 	.new = new,
 };
 
-// - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct vo_gtkgl_interface {
 	struct vo_interface public;
 
 	struct vo_interface *vogl;  // OpenGL generic interface
+
+	int woff, hoff;  // geometry offsets introduced by menubar
 };
 
-// - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void vo_gtkgl_free(void *sptr);
 static void refresh(void *sptr);
 static void vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
+static void set_menubar(void *sptr, _Bool show_menubar);
 static void vo_gtkgl_set_input(void *sptr, int input);
 static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr);
 
@@ -98,6 +101,7 @@ static void *new(void *sptr) {
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
+	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->refresh = DELEGATE_AS0(void, refresh, vo);
 	vo->vsync = DELEGATE_AS0(void, vsync, vo);
 	vo->set_viewport_xy = vogl->set_viewport_xy;
@@ -129,6 +133,7 @@ static void *new(void *sptr) {
 
 	/* Show top window first so that drawing area is realised to the
 	 * right size even if we then fullscreen.  */
+	vo->show_menubar = 1;
 	gtk_widget_show(global_uigtk2->top_window);
 	/* Set fullscreen. */
 	set_fullscreen(vo, vo_cfg->fullscreen);
@@ -166,22 +171,40 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	gint oldh = global_uigtk2->top_window->allocation.height;
 	gint woff = oldw - global_uigtk2->drawing_area->allocation.width;
 	gint hoff = oldh - global_uigtk2->drawing_area->allocation.height;
-	w += woff;
-	h += hoff;
-	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w, h);
+	vogtkgl->woff = woff;
+	vogtkgl->hoff = hoff;
+	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w + woff, h + hoff);
 }
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vo = &vogtkgl->public;
-	(void)fullscreen;
+	vo->is_fullscreen = fullscreen;
+	vo->show_menubar = !fullscreen;
 	if (fullscreen) {
 		gtk_window_fullscreen(GTK_WINDOW(global_uigtk2->top_window));
 	} else {
 		gtk_window_unfullscreen(GTK_WINDOW(global_uigtk2->top_window));
 	}
-	vo->is_fullscreen = fullscreen;
 	return 0;
+}
+
+static void set_menubar(void *sptr, _Bool show_menubar) {
+	struct vo_gtkgl_interface *vogtkgl = sptr;
+	struct vo_interface *vo = &vogtkgl->public;
+	int w = global_uigtk2->drawing_area->allocation.width;
+	int h = global_uigtk2->drawing_area->allocation.height;
+	if (show_menubar) {
+		w += vogtkgl->woff;
+		h += vogtkgl->hoff;
+	}
+	vo->show_menubar = show_menubar;
+	if (show_menubar) {
+		gtk_widget_show(global_uigtk2->menubar);
+	} else {
+		gtk_widget_hide(global_uigtk2->menubar);
+	}
+	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w, h);
 }
 
 static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer data) {
@@ -191,16 +214,19 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo->is_fullscreen) {
 		gtk_widget_hide(global_uigtk2->menubar);
 		vo->is_fullscreen = 1;
+		vo->show_menubar = 0;
 	}
 	if (!(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && vo->is_fullscreen) {
 		gtk_widget_show(global_uigtk2->menubar);
 		vo->is_fullscreen = 0;
+		vo->show_menubar = 1;
 	}
 	return 0;
 }
 
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
 	struct vo_gtkgl_interface *vogtkgl = data;
+	struct vo_interface *vo = &vogtkgl->public;
 	struct vo_interface *vogl = vogtkgl->vogl;
 	(void)event;
 
@@ -209,6 +235,14 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 
 	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext)) {
 		g_assert_not_reached();
+	}
+
+	// Preserve geometry offsets introduced by menubar
+	if (vo->show_menubar) {
+		gint oldw = global_uigtk2->top_window->allocation.width;
+		gint oldh = global_uigtk2->top_window->allocation.height;
+		vogtkgl->woff = oldw - global_uigtk2->drawing_area->allocation.width;
+		vogtkgl->hoff = oldh - global_uigtk2->drawing_area->allocation.height;
 	}
 
 	DELEGATE_CALL(vogl->resize, da->allocation.width, da->allocation.height);

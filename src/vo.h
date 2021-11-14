@@ -63,11 +63,13 @@ typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8,
 
 struct vo_interface {
 	_Bool is_fullscreen;
+	_Bool show_menubar;
 
 	DELEGATE_T0(void) free;
 
 	DELEGATE_T2(void, unsigned, unsigned) resize;
 	DELEGATE_T1(int, bool) set_fullscreen;
+	DELEGATE_T1(void, bool) set_menubar;
 	DELEGATE_T2(void, uint8cp, ntscburst) render_scanline;
 	DELEGATE_T0(void) vsync;
 	DELEGATE_T0(void) refresh;

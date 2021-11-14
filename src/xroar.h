@@ -172,6 +172,7 @@ void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);
 _NORETURN void xroar_quit(void);
 void xroar_set_fullscreen(_Bool notify, int action);
+void xroar_set_menubar(int action);
 void xroar_load_file(const char * const *exts);
 void xroar_run_file(const char * const *exts);
 void xroar_set_keyboard_type(_Bool notify, int action);

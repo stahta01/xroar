@@ -253,7 +253,7 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		}
 		return;
 	case 'm':
-		xroar_set_machine(1, XROAR_NEXT);
+		xroar_set_menubar(XROAR_NEXT);
 		return;
 	case 'p':
 		if (shift) {

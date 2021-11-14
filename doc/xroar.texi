@@ -217,7 +217,8 @@ detailed throughout this manual and listed in @ref{Keyboard shortcuts}.
 You can put XRoar into fullscreen mode by selecting @clicksequence{View
 @click{} Full Screen}, but you will notice that the menu bar disappears.  To
 return to windowed mode, use the keyboard shortcut @kbd{@key{CTRL}+F}, or just
-@kbd{@key{F11}}.
+@kbd{@key{F11}}.  You can also toggle the menubar manually by pressing
+@kbd{@key{CTRL}+M}.
 
 As you type, you may notice that certain keys don't produce the character you
 pressed.  This is because by default, XRoar tries to map keys such that they
@@ -1690,7 +1691,7 @@ A summary of commonly available keyboard shortcuts.
 @item @kbd{@key{CTRL}+K} @tab Toggle Dragon/CoCo keyboard layout (not on the MC-10).
 @item @kbd{@key{CTRL}+L} @tab Load a file.
 @item @kbd{@key{CTRL}+@key{SHIFT}+L} @tab Load and attempt to autorun a file.
-@item @kbd{@key{CTRL}+M} @tab Cycle through emulated machine types.  Deprecated.
+@item @kbd{@key{CTRL}+M} @tab Toggle menubar.
 @item @kbd{@key{CTRL}+@key{SHIFT}+P} @tab Flush printer output.
 @item @kbd{@key{CTRL}+Q} @tab Quit emulator.
 @item @kbd{@key{CTRL}+R} @tab Soft reset emulated machine.
