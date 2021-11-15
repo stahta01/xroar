@@ -2404,7 +2404,6 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("filereq", &private_cfg.filereq) },
 
 	/* Video: */
-	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
 	{ XC_SET_INT("fskip", &xroar_cfg.frameskip) },
 	{ XC_SET_ENUM("ccr", &private_cfg.ccr, vo_cmp_ccr_list) },
@@ -2412,6 +2411,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_BOOL("invert-text", &xroar_cfg.vdg_inverted_text) },
+	/* Deliberately undocumented: */
+	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 
 	/* Audio: */
 	{ XC_SET_STRING("ao", &private_cfg.ao) },
@@ -2574,7 +2575,6 @@ static void helptext(void) {
 "  -ui MODULE            user-interface module (-ui help for list)\n"
 
 "\n Video:\n"
-"  -vo MODULE            video module (-vo help for list)\n"
 "  -fs                   start emulator full-screen if possible\n"
 "  -fskip FRAMES         frameskip (default: 0)\n"
 "  -ccr RENDERER         cross-colour renderer (-ccr help for list)\n"
