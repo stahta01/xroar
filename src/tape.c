@@ -843,6 +843,9 @@ static void waggle_bit(void *sptr) {
 		if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
 			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
 		}
+		if (xroar_cfg.snap_motoroff) {
+			write_snapshot(xroar_cfg.snap_motoroff);
+		}
 		if (ti->default_paused) {
 			tape_set_playing(ti, 0, 1);
 		}
