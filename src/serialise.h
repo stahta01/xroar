@@ -196,14 +196,14 @@ void ser_write_uint8(struct ser_handle *sh, int tag, uint8_t v);
 void ser_write_int16(struct ser_handle *sh, int tag, int16_t v);
 void ser_write_uint16(struct ser_handle *sh, int tag, uint16_t v);
 void ser_write_vint32(struct ser_handle *sh, int tag, int v);
-void ser_write_vuint32(struct ser_handle *sh, int tag, int v);
+void ser_write_vuint32(struct ser_handle *sh, int tag, uint32_t v);
 void ser_write_string(struct ser_handle *sh, int tag, const char *s);
 void ser_write_sds(struct ser_handle *sh, int tag, const sds s);
 void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size);
 
 // Open tag write helpers.
 
-void ser_write_open_vuint32(struct ser_handle *sh, int tag, int v);
+void ser_write_open_vuint32(struct ser_handle *sh, int tag, uint32_t v);
 void ser_write_open_string(struct ser_handle *sh, int tag, const char *s);
 void ser_write_open_sds(struct ser_handle *sh, int tag, const sds s);
 

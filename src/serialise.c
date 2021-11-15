@@ -321,7 +321,7 @@ void ser_write_vint32(struct ser_handle *sh, int tag, int v) {
 	ser_write_close_tag(sh);
 }
 
-void ser_write_vuint32(struct ser_handle *sh, int tag, int v) {
+void ser_write_vuint32(struct ser_handle *sh, int tag, uint32_t v) {
 	if (!sh)
 		return;
 
@@ -354,7 +354,7 @@ void ser_write(struct ser_handle *sh, int tag, const void *ptr, size_t size) {
 // Open tag write helpers.  As above, but without the closing tag, indicating
 // nested data.
 
-void ser_write_open_vuint32(struct ser_handle *sh, int tag, int v) {
+void ser_write_open_vuint32(struct ser_handle *sh, int tag, uint32_t v) {
 	size_t length = fs_sizeof_vuint32(v);
 	ser_write_tag(sh, tag, length);
 	s_write_vuint32(sh, v);
