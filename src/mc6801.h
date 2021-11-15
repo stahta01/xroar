@@ -62,8 +62,7 @@ struct mc6801_trace;
 #define MC6801_REG_SCITX (19)
 #define MC6801_REG_RAMC  (20)
 
-#define MC6801_VALUE_PORT1(c) (((c)->reg[MC6801_REG_P1DR] & (c)->reg[MC6801_REG_P1DDR]) | ((c)->port1_in & ~(c)->reg[MC6801_REG_P1DDR]))
-#define MC6801_VALUE_PORT2(c) ((((c)->reg[MC6801_REG_P2DR] & (c)->reg[MC6801_REG_P2DDR]) | ((c)->port2_in & ~(c)->reg[MC6801_REG_P2DDR])) & 0x3f)
+#define MC6801_PORT_VALUE(p) (((p)->out_source | (p)->in_source) & (p)->out_sink & (p)->in_sink)
 
 // MPU state.  Represents current position in the high-level flow chart from
 // the data sheet.
@@ -81,6 +80,18 @@ enum mc6801_state {
 	mc6801_state_hcf
 };
 
+struct MC6801_port {
+	// Calculated pin state
+	uint8_t out_source;
+	uint8_t out_sink;
+	// External state
+	uint8_t in_source;
+	uint8_t in_sink;
+	// Notifications
+	DELEGATE_T0(void) preread;
+	DELEGATE_T0(void) postwrite;
+};
+
 struct MC6801 {
 	// Is a debuggable CPU, which is a part
 	struct debug_cpu debug_cpu;
@@ -94,11 +105,11 @@ struct MC6801 {
 	// Data bus (in real hardware, shared with port 3)
 	uint8_t D;
 
-	// Ports.  These should probably be full in/out source/sink sets as per
-	// PIA code, but bodging for now.
-	uint8_t port1_in;
-	uint8_t port2_in;
-	DELEGATE_T0(void) port2_preread;
+	// Ports
+	struct MC6801_port port1;
+	struct MC6801_port port2;
+	// Note: depending on mode, ports 3 & 4 may also be usable, but these
+	// are not implemented yet.
 
 	// 2048 bytes allocated for MC6801 ONLY.  Populate externally.
 	size_t rom_size;

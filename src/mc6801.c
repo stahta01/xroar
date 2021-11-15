@@ -58,13 +58,25 @@
 #include "mc6801_trace.h"
 #endif
 
+static const struct ser_struct ser_struct_mc6801_port[] = {
+	SER_STRUCT_ELEM(struct MC6801_port, out_source, ser_type_uint8),  // 1
+	SER_STRUCT_ELEM(struct MC6801_port, out_sink, ser_type_uint8),  // 2
+	SER_STRUCT_ELEM(struct MC6801_port, in_source, ser_type_uint8),  // 3
+	SER_STRUCT_ELEM(struct MC6801_port, in_sink, ser_type_uint8),  // 4
+};
+
+const struct ser_struct_data mc6801_port_ser_struct_data = {
+	.elems = ser_struct_mc6801_port,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6801_port),
+};
+
 static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, nmi, ser_type_bool), // 1
 	SER_STRUCT_ELEM(struct MC6801, irq1, ser_type_bool), // 2
 	SER_STRUCT_ELEM(struct MC6801, D, ser_type_uint8), // 3
 
-	SER_STRUCT_ELEM(struct MC6801, port1_in, ser_type_uint8), // 4
-	SER_STRUCT_ELEM(struct MC6801, port2_in, ser_type_uint8), // 5
+	SER_STRUCT_ELEM(struct MC6801, port1, ser_type_unhandled), // 4
+	SER_STRUCT_ELEM(struct MC6801, port2, ser_type_unhandled), // 5
 
 	SER_STRUCT_ELEM(struct MC6801, state, ser_type_unsigned), // 6
 	SER_STRUCT_ELEM(struct MC6801, running, ser_type_bool), // 7
@@ -101,8 +113,10 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, is_6801, ser_type_bool), // 32
 };
 
-#define MC6801_SER_REG (13)
-#define MC6801_SER_RAM (14)
+#define MC6801_SER_PORT1 (4)
+#define MC6801_SER_PORT2 (5)
+#define MC6801_SER_REG   (13)
+#define MC6801_SER_RAM   (14)
 
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -237,6 +251,9 @@ static struct part *mc6801_allocate(void) {
 	cpu->tracer = mc6801_trace_new(cpu);
 #endif
 
+	cpu->port1.in_sink = 0xff;
+	cpu->port2.in_sink = 0xff;
+
 	return p;
 }
 
@@ -269,6 +286,12 @@ static void mc6801_free(struct part *p) {
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
+	case MC6801_SER_PORT1:
+		ser_read_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port1);
+		break;
+	case MC6801_SER_PORT2:
+		ser_read_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port2);
+		break;
 	case MC6801_SER_REG:
 		ser_read(sh, cpu->reg, sizeof(cpu->reg));
 		break;
@@ -284,6 +307,14 @@ static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
+	case MC6801_SER_PORT1:
+		ser_write_open_vuint32(sh, tag, 1);
+		ser_write_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port1);
+		break;
+	case MC6801_SER_PORT2:
+		ser_write_open_vuint32(sh, tag, 2);
+		ser_write_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port2);
+		break;
 	case MC6801_SER_REG:
 		ser_write(sh, tag, cpu->reg, sizeof(cpu->reg));
 		break;
@@ -1012,11 +1043,11 @@ static uint8_t fetch_byte_notrace(struct MC6801 *cpu, uint16_t a) {
 			cpu->D = 0xff;
 			break;
 		case MC6801_REG_P1DR:
-			cpu->D = MC6801_VALUE_PORT1(cpu);
+			cpu->D = (cpu->reg[MC6801_REG_P1DR] & cpu->reg[MC6801_REG_P1DDR]) | ((cpu->port1.out_source | cpu->port1.in_source) & cpu->port1.out_sink & cpu->port1.in_sink & ~cpu->reg[MC6801_REG_P1DDR]);
 			break;
 		case MC6801_REG_P2DR:
-			DELEGATE_SAFE_CALL(cpu->port2_preread);
-			cpu->D = MC6801_VALUE_PORT2(cpu) | (cpu->reg[MC6801_REG_P2DR] & 0xc0);
+			DELEGATE_SAFE_CALL(cpu->port2.preread);
+			cpu->D = ((cpu->reg[MC6801_REG_P2DR] & cpu->reg[MC6801_REG_P2DDR]) | ((cpu->port2.out_source | cpu->port2.in_source) & cpu->port2.out_sink & cpu->port2.in_sink & ~cpu->reg[MC6801_REG_P2DDR])) & 0x1f;
 			break;
 		case MC6801_REG_TCSR:
 			cpu->ICF_read = cpu->ICF;
@@ -1066,8 +1097,20 @@ static void store_byte(struct MC6801 *cpu, uint16_t a, uint8_t d) {
 	cpu->output_compare_inhibit = 0;
 
 	if (a < 0x0020) {
-		cpu->reg[a & 0x1f] = d;
+		cpu->reg[a] = d;
 		switch (a) {
+		case MC6801_REG_P1DDR:
+		case MC6801_REG_P1DR:
+			cpu->port1.out_source = cpu->reg[MC6801_REG_P1DR] & cpu->reg[MC6801_REG_P1DDR];
+			cpu->port1.out_sink = cpu->reg[MC6801_REG_P1DR] | ~cpu->reg[MC6801_REG_P1DDR];
+			DELEGATE_SAFE_CALL(cpu->port1.postwrite);
+			break;
+		case MC6801_REG_P2DDR:
+		case MC6801_REG_P2DR:
+			cpu->port2.out_source = cpu->reg[MC6801_REG_P2DR] & cpu->reg[MC6801_REG_P2DDR] & 0x1f;
+			cpu->port2.out_sink = cpu->reg[MC6801_REG_P2DR] | ~cpu->reg[MC6801_REG_P2DDR] | 0xe0;
+			DELEGATE_SAFE_CALL(cpu->port2.postwrite);
+			break;
 		case MC6801_REG_CRMSB:
 			cpu->counter = 0xfff8;
 			break;
