@@ -1,12 +1,13 @@
 .TH XROAR 1 "@MANPAGE_DATE@" "XRoar @PACKAGE_VERSION@"
 .SH NAME
-xroar \- Dragon and Tandy CoCo 1/2 emulator
+xroar \- Dragon and Tandy 8-bit computer emulator
 .SH SYNOPSIS
 \fBxroar\fR [\fB\-c\fR \fIconffile\fR] [\fIOPTION\fR]... [\fIFILENAME\fR]...
 .SH DESCRIPTION
-\fBxroar\fR is a Dragon emulator that runs on a wide variety of platforms.  Due
-to hardware similarities, XRoar also emulates the Tandy Colour Computer (CoCo)
-models 1 & 2.
+\fBXRoar\fR emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the
+Tandy MC-10; and some other similar machines or clones. It runs on a wide
+variety of platforms.
+
 .PP
 .SH OPTIONS
 Options are first read from a configuration file
@@ -15,108 +16,111 @@ any found in the configuration file.
 .PP
 .TP
 \fB\-C\fR
-allocate a console window (Windows only)
+Allocate a console window (Windows only)
 .TP
 \fB\-c\fR \fIconffile\fR
-specify a configuration file
+Specify a configuration file.
 
 .SS Machines:
 
 .TP
-\fB\-default\-machine\fR \fIname\fR
-default machine on startup
+\fB\-m\fR \fIname\fR, \fB\-default\-machine\fR \fIname\fR
+Default machine profile to select on startup.
 .TP
 \fB\-machine\fR \fIname\fR
-configure named machine (\fB\-machine help\fR for list)
+Create or modify named machine profile.  \fB\-machine help\fR lists currently
+defined profiles.
 
 .PP
 The remaining options configure the currently selected machine:
 
 .TP
 \fB\-machine\-desc\fR \fItext\fR
-machine description
+Machine description shown in \fB\-machine help\fR and menu options.
 .TP
 \fB\-machine\-arch\fR \fIarch\fR
-machine architecture (\fBdragon64\fR, \fBdragon32\fR or \fBcoco\fR)
+Machine architecture (\fBdragon64, dragon32, coco, coco3\fR or \fBmc10\fR)
 .TP
 \fB\-machine\-keyboard\fR \fIlayout\fR
-keyboard layout (\fBdragon\fR, \fBdragon200e\fR or \fBcoco\fR)
+Keyboard layout (\fBdragon, dragon200e, coco\fR or \fBcoco3\fR)
 .TP
 \fB\-machine\-cpu\fR \fIcpu\fR
-machine CPU (\fB6809\fR or \fB6309\fR)
+Machine CPU (\fB6809\fR or \fB6309\fR).  Not applicable to the MC-10.
 .TP
-\fB\-bas\fR \fIname\fR
-BASIC ROM to use (CoCo only)
+\fB\-bas\fR \fIrom\fR
+ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
 .TP
-\fB\-extbas\fR \fIname\fR
-Extended BASIC ROM to use
+\fB\-extbas\fR \fIrom\fR
+ROM image for Extended BASIC (Super Extended BASIC on the CoCo 3).
 .TP
-\fB\-altbas\fR \fIname\fR
-64K mode Extended BASIC ROM (Dragon 64)
+\fB\-altbas\fR \fIrom\fR
+ROM image for 64K-mode Extended BASIC (Dragon 64, Dragon 200-E).
 .TP
-\fB\-nobas\fR
-disable BASIC
+\fB\-nobas, \-noextbas, \-noaltbas\fR
+Indicate the corresponding ROM is not fitted in this machine.
 .TP
-\fB\-noextbas\fR
-disable Extended BASIC
-.TP
-\fB\-noaltbas\fR
-disable 64K mode Extended BASIC
-.TP
-\fB\-ext\-charset\fR \fIname\fR
-external character generator ROM to use
+\fB\-ext\-charset\fR \fIrom\fR
+External character generator ROM to use.
 .TP
 \fB\-tv\-type\fR \fItype\fR
-TV type (\fBpal\fR, \fBntsc\fR or \fBpal\-m\fR)
+TV type (\fBpal, ntsc\fR or \fBpal\-m\fR).
+.TP
+\fB\-tv\-input\fR \fIinput\fR
+One of ‘cmp’ (composite video, no cross-colour), ‘cmp-br’ (composite video,
+blue-red cross-colour), ‘cmp-rb’ (composite video, red-blue cross-colour) or
+‘rgb’ (RGB video, CoCo 3 only).
 .TP
 \fB\-vdg\-type\fR \fItype\fR
-VDG type (\fB6847\fR or \fB6847t1\fR)
+Indicate the VDG variant fitted. One of \fB6847\fR or \fB6847t1\fR.
 .TP
 \fB\-ram\fR \fIkbytes\fR
-amount of RAM in K
+Amount of RAM fitted in kilobytes. Valid sizes are 4-64K for Dragon and Tandy
+CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 .TP
 \fB\-machine\-cart\fR \fIname\fR
-default cartridge for selected machine
+Default cartridge to attach.
 .TP
 \fB\-nodos\fR
-don't automatically pick a DOS cartridge
+Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
+to this machine (the default is to try).
 
 .SS Cartridges:
 
 .TP
 \fB\-cart\fR \fIname\fR
-configure named cartridge (\fB\-cart help\fR for list)
+Create or modify named cartridge profile.  \fB\-cart help\fR lists currently
+defined profiles.
 
 .PP
 The remaining options configure the currently selected cartridge:
 
 .TP
 \fB\-cart\-desc\fR \fItext\fR
-cartridge description
+Cartridge description shown in \fB\-cart help\fR and menu options.
 .TP
 \fB\-cart\-type\fR \fItype\fR
-cartridge base type (\fB\-cart\-type help\fR for list)
+Cartridge base type (\fB\-cart\-type help\fR for list).
 .TP
-\fB\-cart\-rom\fR \fIname\fR
-ROM image to load ($C000\-)
+\fB\-cart\-rom\fR \fIrom\fR
+ROM image to load ($C000\-).
 .TP
-\fB\-cart\-rom2\fR \fIname\fR
-second ROM image to load ($E000\-)
+\fB\-cart\-rom2\fR \fIrom\fR
+Second ROM image to load ($E000\-).
 .TP
 \fB\-cart\-autorun\fR
-autorun cartridge
+Autorun cartridge.
 .TP
 \fB\-cart\-becker\fR
-enable becker port where supported
+Enable becker port where supported.
 
 .SS Multi\-Pak Interface:
 
 .TP
 \fB\-mpi\-slot\fR \fIslot\fR
-initially select slot (0\-3)
+Initially select slot (0\-3).
 .TP
 \fB\-mpi\-load\-cart\fR \fI[slot=]name\fR
-insert cartridge into next or numbered slot
+Insert cartridge into next or numbered slot.
 
 .PP
 These options also apply to the similar RACE Computer Expansion Cage.
@@ -125,64 +129,146 @@ These options also apply to the similar RACE Computer Expansion Cage.
 
 .TP
 \fB\-becker\fR
-prefer becker\-enabled DOS (when picked automatically)
+Prefer becker\-enabled DOS cartridge when picked automatically.
 .TP
 \fB\-becker\-ip\fR \fIaddress\fR
-address or hostname of DriveWire server [127.0.0.1]
+Address or hostname of DriveWire server [127.0.0.1]
 .TP
 \fB\-becker\-port\fR \fIport\fR
-port of DriveWire server [65504]
+Port of DriveWire server [65504]
+
+.SS Cassettes:
+
+.TP
+\fB\-load\-tape\fR \fIfile\fR
+Attach \fIfile\fR as tape image for reading.
+.TP
+\fB\-tape\-write\fR \fIfile\fR
+Open \fIfile\fR for tape writing.
+.TP
+\fB\-tape\-pan\fR \fIpanning\fR
+Pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
+.TP
+\fB\-tape\-hysteresis\fR \fIpercent\fR
+Read hysteresis as percentage of full scale [1]
+.TP
+\fB\-no\-tape\-fast\fR
+Disable fast tape loading.
+.TP
+\fB\-no\-tape\-pad\-auto\fR
+Disable automatic leader padding.
+.TP
+\fB\-tape\-ao\-rate\fR \fIhz\fR
+Set tape writing frame rate [9600]
+.TP
+\fB\-tape\-rewrite\fR
+Enable tape rewriting.
+.TP
+\fB\-tape\-rewrite\-gap\-ms\fR \fIms\fR
+Gap length in milliseconds to write in rewrite mode (1-5000ms, default 500ms).
+.TP
+\fB\-tape\-rewrite\-leader\fR \fIbytes\fR
+Length of leaders in bytes to write in rewrite mode (1-2048 bytes, default 256).
+
+.SS Floppy disks:
+
+.TP
+\fB\-load\-fd\fIX\fR\fR \fIfile\fR
+Insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3).
+.TP
+\fB\-disk\-write\-back\fR
+Default to enabling write\-back for disk images.
+.TP
+\fB\-no\-disk\-auto\-os9\fR
+Don't try to detect headerless OS\-9 JVC disk images.
+.TP
+\fB\-no\-disk\-auto\-sd\fR
+Don't assume single density for 10 sec/track disks.
+
+.SS Hard disks:
+
+.TP
+\fB\-load-hd\fIX\fR\fR \fIfile\fR
+Use \fIfile\fR as the hard disk image for drive \fIX\fR (0-1).
+.TP
+\fB\-load-sd\fR \fIfile\fR
+Use \fIfile\fR as the SD card image.
+
+.SS Keyboard:
+
+.TP
+\fB\-keymap\fR \fIcode\fR
+Host keyboard type (\fB\-keymap help\fR for list).
+.TP
+\fB\-kbd\-bind\fR \fIhostkey\fR=[pre:]\fIemukey\fR
+Map host key to emulated key (pre = no translate).
+.TP
+\fB\-kbd\-translate\fR
+Enable keyboard translation.
+.TP
+\fB\-type\fR \fIstring\fR
+Intercept ROM calls to type \fIstring\fR into BASIC.
+
+.SS Joysticks:
+
+.TP
+\fB\-joy\-right\fR \fIname\fR
+Map right joystick.
+.TP
+\fB\-joy\-left\fR \fIname\fR
+Map left joystick.
+.TP
+\fB\-joy\-virtual\fR \fIname\fR
+Specify the 'virtual' joystick to cycle [kjoy0]
+.TP
+\fB\-joy\fR \fIname\fR
+Configure named joystick (\fB\-joy help\fR for list).
+
+.PP
+The remaining options configure the currently selected joystick:
+
+.TP
+\fB\-joy\-desc\fR \fItext\fR
+Joystick description.
+.TP
+\fB\-joy\-axis\fR \fIaxis\fR=\fIspec\fR
+Configure joystick axis.
+.TP
+\fB\-joy\-button\fR \fIbtn\fR=\fIspec\fR
+Configure joystick button.
+
+.SS Printers:
+
+.TP
+\fB\-lp\-file\fR \fIfile\fR
+Append printer output to \fIfile\fR.
+.TP
+\fB\-lp\-pipe\fR \fIcommand\fR
+Pipe printer output to \fIcommand\fR.
 
 .SS Files:
 
 .TP
 \fB\-load\fR \fIfile\fR
-load or attach \fIfile\fR
+Load or attach \fIfile\fR
 .TP
 \fB\-run\fR \fIfile\fR
-load or attach \fIfile\fR and attempt autorun
+Load or attach \fIfile\fR and attempt autorun
 .TP
-\fB\-load-fd\fIX\fR\fR \fIfile\fR
-insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3)
+\fB\-load\-fd\fIX\fR\fR \fIfile\fR
+Insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3).
 .TP
-\fB\-load-hd\fIX\fR\fR \fIfile\fR
-use hard disk image \fIfile\fR as drive \fIX\fR (0-1, e.g. for ide)
+\fB\-load\-hd\fIX\fR\fR \fIfile\fR
+Use \fIfile\fR as the hard disk image for drive \fIX\fR (0-1).
 .TP
-\fB\-load-sd\fR \fIfile\fR
-use SD card image \fIfile\fR (e.g. for mooh, nx32)
+\fB\-load\-sd\fR \fIfile\fR
+Use \fIfile\fR as the SD card image.
+.TP
+\fB\-load\-tape\fR \fIfile\fR
+Attach \fIfile\fR as tape image for reading.
 .TP
 \fB\-tape\-write\fR \fIfile\fR
-open \fIfile\fR for tape writing
-
-.SS Cassettes:
-
-.TP
-\fB\-tape\-pan\fR \fIpanning\fR
-pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
-.TP
-\fB\-no\-tape\-fast\fR
-disable fast tape loading
-.TP
-\fB\-no\-tape\-pad\-auto\fR
-disable automatic leader padding
-.TP
-\fB\-tape\-rewrite\fR
-enable tape rewriting
-.TP
-\fB\-tape\-ao\-rate\fR \fIhz\fR
-set tape writing frame rate
-
-.SS Disks:
-
-.TP
-\fB\-disk\-write\-back\fR
-default to enabling write\-back for disk images
-.TP
-\fB\-no\-disk\-auto\-os9\fR
-don't try to detect headerless OS\-9 JVC disk images
-.TP
-\fB\-no\-disk\-auto\-sd\fR
-don't assume single density for 10 sec/track disks
+Open \fIfile\fR for tape writing.
 
 .SS Firmware ROM images:
 
@@ -274,58 +360,6 @@ audio gain in dB relative to 0 dBFS [\-3.0]
 \fB\-volume\fR \fIvolume\fR
 older way to specify audio volume, linear (0\-100)
 
-.SS Keyboard:
-
-.TP
-\fB\-keymap\fR \fIcode\fR
-host keyboard type (\fB\-keymap help\fR for list)
-.TP
-\fB\-kbd\-bind\fR \fIhostkey\fR=[pre:]\fIemukey\fR
-map host key to emulated key (pre = no translate)
-.TP
-\fB\-kbd\-translate\fR
-enable keyboard translation
-.TP
-\fB\-type\fR \fIstring\fR
-intercept ROM calls to type \fIstring\fR into BASIC
-
-.SS Joysticks:
-
-.TP
-\fB\-joy\-right\fR \fIname\fR
-map right joystick
-.TP
-\fB\-joy\-left\fR \fIname\fR
-map left joystick
-.TP
-\fB\-joy\-virtual\fR \fIname\fR
-specify the 'virtual' joystick to cycle [kjoy0]
-.TP
-\fB\-joy\fR \fIname\fR
-configure named joystick (\fB\-joy help\fR for list)
-
-.PP
-The remaining options configure the currently selected joystick:
-
-.TP
-\fB\-joy\-desc\fR \fItext\fR
-joystick description
-.TP
-\fB\-joy\-axis\fR \fIaxis\fR=\fIspec\fR
-configure joystick axis
-.TP
-\fB\-joy\-button\fR \fIbtn\fR=\fIspec\fR
-configure joystick button
-
-.SS Printing:
-
-.TP
-\fB\-lp\-file\fR \fIfile\fR
-append printer output to \fIfile\fR
-.TP
-\fB\-lp\-pipe\fR \fIcommand\fR
-pipe printer output to \fIcommand\fR
-
 .SS Debugging:
 
 .TP
@@ -368,7 +402,7 @@ quit \fIs\fR seconds after tape motor switches off
 \fB\-snap\-motoroff\fR \fIfile\fR
 write a snapshot each time tape motor switches off
 
-.SS Other options:
+.SS Help options:
 
 .TP
 \fB\-config\-print\fR
