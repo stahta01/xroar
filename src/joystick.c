@@ -242,6 +242,8 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 	*j = (struct joystick){.axes={0}};
 	_Bool valid_joystick = 0;
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
+		if (!jc->axis_specs[i])
+			continue;
 		char *spec_copy = xstrdup(jc->axis_specs[i]);
 		char *spec = spec_copy;
 		select_interface(&spec);
@@ -259,6 +261,8 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 		free(spec_copy);
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
+		if (!jc->button_specs[i])
+			continue;
 		char *spec_copy = xstrdup(jc->button_specs[i]);
 		char *spec = spec_copy;
 		select_interface(&spec);
