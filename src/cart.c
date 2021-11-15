@@ -272,7 +272,7 @@ void cart_config_print_all(FILE *f, _Bool all) {
 		fprintf(f, "cart %s\n", cc->name);
 		xroar_cfg_print_inc_indent();
 		xroar_cfg_print_string(f, all, "cart-desc", cc->description, NULL);
-		xroar_cfg_print_enum(f, all, "cart-arch", cc->architecture, ANY_AUTO, cart_arch_list);
+		xroar_cfg_print_enum(f, all, "cart-intf", cc->architecture, ANY_AUTO, cart_arch_list);
 		xroar_cfg_print_string(f, all, "cart-type", cc->type, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom", cc->rom, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom2", cc->rom2, NULL);

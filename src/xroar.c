@@ -2343,12 +2343,13 @@ static struct xconfig_option const xroar_options[] = {
 	/* Cartridges: */
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
-	{ XC_SET_ENUM("cart-arch", &private_cfg.cart_arch, cart_arch_list) },
 	{ XC_SET_PART("cart-type", &private_cfg.cart_type, "cart") },
 	{ XC_SET_STRING_F("cart-rom", &private_cfg.cart_rom) },
 	{ XC_SET_STRING_F("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
+	// Deliberately undocumented:
+	{ XC_SET_ENUM("cart-intf", &private_cfg.cart_arch, cart_arch_list) },
 
 	/* Multi-Pak Interface: */
 	{ XC_CALL_INT("mpi-slot", &cfg_mpi_slot) },
