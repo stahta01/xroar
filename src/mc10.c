@@ -192,6 +192,7 @@ static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit);
 
 static void mc10_keyboard_update(void *sptr);
 static void mc10_update_tape_input(void *sptr, float value);
+static void mc10_mc6803_port2_postwrite(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -291,7 +292,8 @@ static _Bool mc10_finish(struct part *p) {
 	}
 
 	mp->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
-	mp->CPU->port2_preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
+	mp->CPU->port2.preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
+	mp->CPU->port2.postwrite = DELEGATE_AS0(void, mc10_mc6803_port2_postwrite, mp);
 
 	// Breakpoint session
 	mp->bp_session = bp_session_new(m);
@@ -760,25 +762,42 @@ static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit) {
 
 static void mc10_keyboard_update(void *sptr) {
 	struct machine_mc10 *mp = sptr;
+	uint8_t shift_sink = (mp->CPU->port2.out_sink & (1<<1)) ? (1<<6) : 0;
 	struct keyboard_state state = {
-		.row_source = 0xff,
-		.row_sink = 0xff,
-		.col_source = MC6801_VALUE_PORT1(mp->CPU),
-		.col_sink = MC6801_VALUE_PORT1(mp->CPU),
+		.row_source = ~(1<<6) | shift_sink,
+		.row_sink = ~(1<<6) | shift_sink,
+		.col_source = mp->CPU->port1.out_source,
+		.col_sink = mp->CPU->port1.out_sink,
 	};
 	keyboard_read_matrix(mp->keyboard.interface, &state);
-	if (state.row_sink & 0x40)
-		mp->CPU->port2_in |= 0x02;
-	else
-		mp->CPU->port2_in &= ~0x02;
+	if (state.row_source & (1<<6)) {
+		mp->CPU->port2.in_source |= (1<<1);
+	} else {
+		mp->CPU->port2.in_source &= ~(1<<1);
+	}
+	if (state.row_sink & (1<<6)) {
+		mp->CPU->port2.in_sink |= (1<<1);
+	} else {
+		mp->CPU->port2.in_sink &= ~(1<<1);
+	}
 	mp->keyboard.rows = state.row_sink | 0xc0;
 }
 
 static void mc10_update_tape_input(void *sptr, float value) {
 	struct machine_mc10 *mp = sptr;
 	sound_set_tape_level(mp->snd, value);
-	if (value >= 0.5)
-		mp->CPU->port2_in &= ~(1<<4);
-	else
-		mp->CPU->port2_in |= (1<<4);
+	if (value >= 0.5) {
+		mp->CPU->port2.in_source &= ~(1<<4);
+		mp->CPU->port2.in_sink &= ~(1<<4);
+	} else {
+		mp->CPU->port2.in_source |= (1<<4);
+		mp->CPU->port2.in_sink |= (1<<4);
+	}
+}
+
+static void mc10_mc6803_port2_postwrite(void *sptr) {
+	struct machine_mc10 *mp = sptr;
+	uint8_t port2 = MC6801_PORT_VALUE(&mp->CPU->port2);
+	tape_update_output(mp->tape_interface, (port2 & 1) ? 0xfc : 0);
+	LOG_PRINT("%d", port2 & 1);
 }
