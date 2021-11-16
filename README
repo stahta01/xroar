@@ -1,23 +1,30 @@
-XRoar - a Dragon/Tandy Coco emulator
+XRoar - a Dragon and Tandy 8-bit computer emulator
 Copyright 2003-2021 Ciaran Anscomb <xroar@6809.org.uk>
 
-XRoar is a Dragon emulator that runs on a wide variety of platforms.
-Due to hardware similarities, XRoar also emulates the Tandy Colour
-Computer (CoCo) models 1 & 2.  Some features are:
 
-   * Emulates Dragon 32, Dragon 64, Dragon 200-E, Tandy CoCo 1 & 2, and
-     compatibles.
-   * Emulates DragonDOS, Delta and RSDOS disk systems.
-   * Emulates the Orchestra 90-CC stereo sound cartridge.
-   * Supports both raw and translated keyboard modes.
-   * Reads and writes virtual cassettes (compact '.cas' files and audio
-     files).
-   * Reads and writes VDK, JVC and DMK format virtual floppy diskettes.
-   * Saves and loads machine snapshots.
-   * Provides a GDB target for remote debugging.
-   * Games Master Cartridge support, including SN76489 sound chip.
-   * MOOH RAM expansion + SPI support.
-   * Glenside IDE support.
+Introduction
+============
+
+XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the
+Tandy MC-10; and some other similar machines or clones.  It runs on a
+wide variety of platforms.  Emulated hardware includes:
+
+   * Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10.
+   * DragonDOS, Delta and RS-DOS disk controller cartridges.
+   * Orchestra 90-CC stereo sound cartridge.
+   * Games Master Cartridge, including the SN76489 sound chip.
+   * Glenside IDE cartridge, with IDE hard disk image support.
+   * NX32 and MOOH RAM expansions, with SPI and SD card image support.
+
+   Other features include:
+
+   * Raw and translated keyboard modes.
+   * Read and write tape images (compact '.cas' files or audio, e.g.
+     '.wav').
+   * Read and write VDK, JVC and DMK format floppy disk images.
+   * Becker port for communication with remote servers.
+   * Save and load machine snapshots.
+   * GDB target for remote debugging.
 
    XRoar is easily built from source under Linux, and binary packages
 are provided for Mac OS X and Windows.
@@ -44,12 +51,40 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 contain the full manual as a PDF, which is also available from the XRoar
 home page (https://www.6809.org.uk/xroar/).
 
+Notes for version 1.x
+=====================
 
-Getting started
-***************
+Version 1.x comes with support for two new emulated machines: the Tandy
+Colour Computer 3 and the Tandy MC-10.  Some major changes have taken
+place under the hood, and although most things should remain familiar,
+for some special uses, here are the things you need to know.
 
-Installation & running
-======================
+   Snapshots now store much more state, and of course support the new
+emulated machines, but this means the format had to change.  Snapshots
+from the last 0.x release are still recognised, and can be loaded, but
+this support is likely to be removed in time.
+
+   The tape emulation now supports manual pause control.  On the MC-10,
+this defaults to paused, as it has no ability to remotely control the
+tape motor.  You will need to un-pause after typing 'CLOAD' or 'CLOADM'
+on the MC-10 (File -> Cassette -> Play, or from the tape control tool;
+autorunning will do this automatically).
+
+   Previously, the Glenside IDE controller would use a fixed HD image
+file in the current working directory called 'hd0.img'.  You must now
+specify an image with the '-load-hd0' option.  There is also the new
+ability to attach a _second_ hard disk image with '-load-hd1', if you
+have software that can access it.
+
+   Similarly, the NX32 and MOOH cartridges would use a fixed SD image
+file, and you must now specify it with the '-load-sd' option.
+
+
+Installation
+************
+
+Binary packages
+===============
 
 Pre-built binary packages are available from the XRoar home page
 (https://www.6809.org.uk/xroar/).  If one is not available for your
@@ -83,8 +118,8 @@ followed by any command line options.
 '~/Library/XRoar/xroar.conf'.
 
    The Mac OS X build provides a menu for access to certain features,
-and often accepts the more familiar 'Command'+KEY in place of the
-'Ctrl'+KEY shortcuts listed in this manual.
+and often accepts the more familiar '<Command>+KEY' in place of the
+'<CTRL>+KEY' shortcuts listed in this manual.
 
 Windows binary package
 ----------------------
@@ -106,7 +141,6 @@ probably only going to be visible if you run it with the '-C' option
 (must be the first option) to allocate a console.
 
    The Windows build provides menu-based access to certain features.
-
 
 Building from source
 ====================
@@ -138,7 +172,7 @@ ensure you have all the dependencies for a full build:
 full-featured user interface.  It is only usable as such if you also
 have GtkGlExt (http://projects.gnome.org/gtkglext/), an OpenGL extension
 used to provide video output.  Otherwise, it can provide a file
-requester for use by other user interfaces.
+requester for use by other user interfaces.  Version 2 only.
 
    SDL (http://www.libsdl.org/), Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code
@@ -188,7 +222,7 @@ configuration file should be created as '~/.xroar/xroar.conf'.
 binary package is built like this.  To specify a cross-compile, use the
 '--host=HOST' argument to 'configure'.  For example, to build for
 Windows, you might use './configure --host=i686-w64-mingw32'.  Getting
-everything "just so" for a cross-build can be a tricky procedure, and
+everything _just so_ for a cross-build can be a tricky procedure, and
 the details are beyond the scope of this manual.
 
    XRoar can be built to a WebAssembly target using Emscripten
