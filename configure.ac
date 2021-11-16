@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([xroar], [0.37])
+AC_INIT([xroar], [1.0])
 AM_INIT_AUTOMAKE([foreign])
 
-MANPAGE_DATE="June 2020"
+MANPAGE_DATE="November 2021"
 AC_SUBST(MANPAGE_DATE)
 
 AC_CONFIG_SRCDIR([src/xroar.c])

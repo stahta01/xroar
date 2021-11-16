@@ -1,4 +1,4 @@
-Version 0.38, unreleased
+Version 1.0, Tue 16 Nov 2021
 
  * Initial CoCo 3 support.
  * Fix MPI FIRQ handling [Paul Fiscarelli]
