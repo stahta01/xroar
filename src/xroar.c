@@ -780,10 +780,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Help text that depends on selected UI module.
 
+#ifndef HAVE_WASM
 	if (private_cfg.joystick_print_list) {
 		joystick_list_physical();
 		exit(EXIT_SUCCESS);
 	}
+#endif
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -2242,10 +2244,12 @@ static void set_joystick(const char *name) {
 }
 
 static void set_joystick_axis(const char *spec) {
+#ifndef HAVE_WASM
 	if (strcmp(spec, "help") == 0) {
 		private_cfg.joystick_print_list = 1;
 		return;
 	}
+#endif
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned axis = 0;
@@ -2269,10 +2273,12 @@ static void set_joystick_axis(const char *spec) {
 }
 
 static void set_joystick_button(const char *spec) {
+#ifndef HAVE_WASM
 	if (strcmp(spec, "help") == 0) {
 		private_cfg.joystick_print_list = 1;
 		return;
 	}
+#endif
 	char *spec_copy = xstrdup(spec);
 	char *cspec = spec_copy;
 	unsigned button = 0;
