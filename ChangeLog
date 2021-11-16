@@ -16,7 +16,7 @@ Version 0.38, unreleased
  * List physical joysticks on -joy-axis help or -joy-button help.
  * Control+M toggles menubar where appropriate.
 
-Version 0.37, Sat Aug 14 2021
+Version 0.37, Sat 14 Aug 2021
 
  * Add Control+Shift+D to flush disk images
  * Support leading "~/" in filenames, not just path elements
@@ -28,12 +28,12 @@ Version 0.37, Sat Aug 14 2021
  * RACE Computer Expansion Cage support (-cart mpi-race)
  * Removed -fast-sound option (and related menu options)
 
-Version 0.36.2, Wed Jul 22 2020
+Version 0.36.2, Wed 22 Jul 2020
 
   * Fix -lp-file option [Pere Serrat]
   * Change default CoCo disk interleave to 5 [Simon Jonassen]
 
-Version 0.36.1, Thu Jun 18 2020
+Version 0.36.1, Thu 18 Jun 2020
 
   * Support CAS padding without fast loading enabled
   * Don't escape option arguments if they expect a filename [".mad."]
@@ -41,7 +41,7 @@ Version 0.36.1, Thu Jun 18 2020
   * Fix GDB listen on machine reconfigure (eg snapshot load) [Pere Serrat]
   * Fix joystick axis & button option parsing [David Ladd]
 
-Version 0.36, Mon Jun  8 2020
+Version 0.36, Mon  8 Jun 2020
 
   * Fix SAM S output in map type 1 [Pere Serrat]
   * Work around Windows audio failure when 5.1 is available [Gerald Stefan]
@@ -62,7 +62,7 @@ Version 0.36, Mon Jun  8 2020
   * In Windows, search Documents/XRoar/ (for config file) and
     Documents/XRoar/roms/ (for ROM images).
 
-Version 0.35, Fri Jul 27 2018
+Version 0.35, Fri 27 Jul 2018
 
   * New EXTMEM/SLENB support allows cartridges to inhibit normal device select
   * New NX32 RAM cartridge [by Tormod Volden]
@@ -82,7 +82,7 @@ Version 0.35, Fri Jul 27 2018
   * Optional --disable-simulated-ntsc configure option for speed
   * HD6309: Fix interrupt handling during TFM instruction [David Ladd]
 
-Version 0.34, Sun Aug  7 2016
+Version 0.34, Sun  7 Aug 2016
 
   * Zoom controls fixed or added where missing
   * Dragon 200-E "CLS 9" alternate text mode fixed
@@ -97,7 +97,7 @@ Version 0.34, Sun Aug  7 2016
   * Fix treatment of empty drives in DOS carts
   * Initial IDE code [by Alan Cox]
 
-Version 0.33, Fri May 22 2015
+Version 0.33, Fri 22 May 2015
 
   * Capped mouse polling frequency (could cause high CPU load).
   * Slight SAM timing tweak.
@@ -127,7 +127,7 @@ Version 0.33, Fri May 22 2015
   * Fix Dragon PAL padding.  Passes Stewart Orchard's PAL tests v1.3.
   * Work around breakpoint re-add bug.
 
-Version 0.32, Tue Apr 22 2014
+Version 0.32, Tue 22 Apr 2014
 
   * Fix keyboard handling - CoCo Tetris now playable again.
   * SDL, CoreAudio: allow -ao-fragments more than 1.
@@ -145,7 +145,7 @@ Version 0.32, Tue Apr 22 2014
   * Recognise ".os9" as extension for JVC images, ignores -no-disk-auto-os9.
   * Deprecated option -disk-jvc-hack (now ignored in favour of above).
 
-Version 0.31, Thu Nov 28 2013
+Version 0.31, Thu 28 Nov 2013
 
   * New option -timeout quits emulator after number of seconds.
   * Differentiate between combined and concatenated ROMs.
@@ -164,7 +164,7 @@ Version 0.31, Thu Nov 28 2013
   * New options -ao-fragments, -ao-fragment-ms, -ao-fragment-frames.
   * Rename option -ao-buffer-samples to -ao-buffer-frames.
 
-Version 0.30, Wed Sep 18 2013
+Version 0.30, Wed 18 Sep 2013
 
   * Minimal CoCo BASIC printing support using ROM intercept.
   * Fix SAM clock stretching on slow/fast transition.
@@ -191,7 +191,7 @@ Version 0.30, Wed Sep 18 2013
   * New -ao-channels option.
   * New -config-print option.
 
-Version 0.29, Sat Dec 29 2012
+Version 0.29, Sat 29 Dec 2012
 
   * New PIA & keyboard code supports matrix ghosting.
   * Fixed emulation of Dragon 32 with 64K.
@@ -207,7 +207,7 @@ Version 0.29, Sat Dec 29 2012
   * Hitachi 6309 support (unverified) with "-machine-cpu 6309".
   * Added -c option (must be first one) to specify configuration file.
 
-Version 0.28, Sat May 12 2012
+Version 0.28, Sat 12 May 2012
 
   * New keyboard map: Canadian French [Pierre Sarrazin]
   * CPU core optimisations.
@@ -227,18 +227,18 @@ Version 0.28, Sat May 12 2012
   * Data bus state updated during NVMA (fixes Manic Miner protection).
   * -tape-pad-auto leader thresholds updated.
 
-Version 0.27, Tue Sep 27 2011
+Version 0.27, Tue 27 Sep 2011
 
   * CPU fixes: verified flags set/cleared in SEX and DAA instructions.
   * Tape fixes: various usability fixes.
   * VDK files: fill in header bytes more completely when writing.
 
-Version 0.26, Mon Aug  1 2011
+Version 0.26, Mon  1 Aug 2011
 
   * SAM-VDG interaction fix - 48 byte-per-line mode now works.
   * More resilient fast tape loading.
 
-Version 0.25, Sat Jun 18 2011
+Version 0.25, Sat 18 Jun 2011
 
   * New GTK+2 user-interface.
   * New GtkGLExt video module.
@@ -257,7 +257,7 @@ Version 0.25, Sat Jun 18 2011
   * Ability to define new machines or cartridges.
   * Fixed crash bug accessing non-existent disk side 2.
 
-Version 0.24, Wed Sep  8 2010
+Version 0.24, Wed  8 Sep 2010
 
   * Improved ALSA sound module.
   * SDL video module fixes.
@@ -271,7 +271,7 @@ Version 0.24, Wed Sep  8 2010
   * Support direct loading of DragonDOS binaries.
   * Implement remaining known illegal instructions.
 
-Version 0.23, Mon Nov 30 2009
+Version 0.23, Mon 30 Nov 2009
 
   * Full CoCo RAM select emulation.
   * Implemented SAM FAST mode.
@@ -292,7 +292,7 @@ Version 0.23, Mon Nov 30 2009
   * Write-back support for VDK and JVC disk images.
   * Request filename when creating a blank disk.
 
-Version 0.22, Tue Dec 23 2008
+Version 0.22, Tue 23 Dec 2008
 
   * Feed audio output back to single bit sound input.
   * Update GP32 build to use EABI libs and devkitARM crt0.
@@ -310,7 +310,7 @@ Version 0.22, Tue Dec 23 2008
   * Replace README with a manual.
   * Fake trailing leader byte for CAS files.
 
-Version 0.21, Thu Apr 24 2008
+Version 0.21, Thu 24 Apr 2008
 
   * Fix border colour in RG6, CSS=0.
   * Input abstraction layer.
@@ -324,7 +324,7 @@ Version 0.21, Thu Apr 24 2008
   * More accurate single-bit sound.
   * Variable MPU rate support configurable.
 
-Version 0.20, Wed Feb 27 2008
+Version 0.20, Wed 27 Feb 2008
 
   * Don't show artifacted colours for CSS=0.
   * Better emulation of undocumented 6809 behaviour.
@@ -336,7 +336,7 @@ Version 0.20, Wed Feb 27 2008
   * New 5-bit NTSC cross-colour renderer.
   * NTSC cross-colour phase saved with snapshots.
 
-Version 0.19, Tue Jun 26 2007
+Version 0.19, Tue 26 Jun 2007
 
   * WD279x Read Address command implemented.
   * VDG fixes.
@@ -349,7 +349,7 @@ Version 0.19, Tue Jun 26 2007
   * Write protect toggles in SDL user interface.
   * Attached virtual disk filenames written to snapshots.
 
-Version 0.18, Fri Mar  9 2007
+Version 0.18, Fri  9 Mar 2007
 
   * New 'configure' script.
   * New 'null' sound driver replaces 'rtc'.
@@ -364,7 +364,7 @@ Version 0.18, Fri Mar  9 2007
   * Premier Delta System DOS cartridge support.
   * Added -dostype option.
 
-Version 0.17, Tue Aug 15 2006
+Version 0.17, Tue 15 Aug 2006
 
   * Map '~' to Shift+'@' in translation mode.
   * Hopefully fix windows32 build.
@@ -374,7 +374,7 @@ Version 0.17, Tue Aug 15 2006
   * Added frameskip option (-fskip).
   * Added rate limiter inhibit by holding F12.
 
-Version 0.16, Tue Aug  8 2006
+Version 0.16, Tue  8 Aug 2006
 
   * Added -ram option.
   * CRC16 fixes.
@@ -388,7 +388,7 @@ Version 0.16, Tue Aug  8 2006
   * Support using audio files for cassette input.
   * GP32 speed hacks (still not perfect).
 
-Version 0.15, Sun Jun 25 2006
+Version 0.15, Sun 25 Jun 2006
 
   * All registers now local to 6809 core main loop.
   * New indexed addressing code should be faster.
@@ -402,7 +402,7 @@ Version 0.15, Sun Jun 25 2006
   * Timing issue with short branches fixed.
   * WD2797 emulation now implements CRC16.
 
-Version 0.14, Sat Oct 22 2005
+Version 0.14, Sat 22 Oct 2005
 
   * Implemented PAL timing for Dragon 32, Dragon 64.
   * Added new machine, 'tano'.
@@ -414,7 +414,7 @@ Version 0.14, Sat Oct 22 2005
   * Fix to Windows32 UI module (retains CWD).
   * 6809 core optimisations.
 
-Version 0.13, Fri Aug 26 2005
+Version 0.13, Fri 26 Aug 2005
 
   * Fixed OpenGL resize problem.
   * Fixed OpenGL border alignment problem.
@@ -425,7 +425,7 @@ Version 0.13, Fri Aug 26 2005
   * 6809-PIA interrupt interaction more accurate (fixes some games).
   * Various command-line options added.
 
-Version 0.12, Thu Jul 28 2005
+Version 0.12, Thu 28 Jul 2005
 
   * New OpenGL video driver.  Allows architectures without Xv extension
     but with fast 3D graphics card to do hardware scaling.
@@ -433,7 +433,7 @@ Version 0.12, Thu Jul 28 2005
   * Address-dependent CPU rate implemented (GP32 clock rate upped to
     80MHz to cope).
 
-Version 0.11, Thu Jan 13 2005
+Version 0.11, Thu 13 Jan 2005
 
   * Modularised almost everything.  Binary can contain multiple drivers
     for video, sound and ui.  User can pick one on startup and, hopefully,
@@ -450,7 +450,7 @@ Version 0.11, Thu Jan 13 2005
   * Added French & German keyboard mappings for 'raw' mode to SDL driver.
   * Ctrl+D (insert disk) replaced with Ctrl+[1-4] in SDL interface.
 
-Version 0.10, Sun Jun 27 2004
+Version 0.10, Sun 27 Jun 2004
 
   * Fixed Sun audio code broken by v0.9.
   * Fix SEX bug.  Pretty much everything runs correctly now (including
@@ -462,7 +462,7 @@ Version 0.10, Sun Jun 27 2004
   * Use C99 types instead of SDL ones except in SDL-based drivers.
   * Wrote faster GP32-specific VDG routines.
 
-Version 0.9, Sat May 15 2004
+Version 0.9, Sat 15 May 2004
 
   * More timing fixes.
   * Video rendering optimisations.
@@ -471,12 +471,12 @@ Version 0.9, Sat May 15 2004
   * Ability to switch between Dragon and CoCo ROMs and keymaps.
   * Can insert disks (but still only into drive 1).
 
-Version 0.8, Mon May  3 2004
+Version 0.8, Mon  3 May 2004
 
   * Added GTK interface option (default) to Unix build.
   * Timing fixes - most things play at a better speed now.
 
-Version 0.7, Wed Apr  7 2004
+Version 0.7, Wed  7 Apr 2004
 
   * Added basic Unix joystick support (using SDL).
   * PIA0 addressing more specific (D64-style), OS-9 boots!
@@ -485,6 +485,6 @@ Version 0.7, Wed Apr  7 2004
   * Keyboard handling changed; GP32 version will be easier to switch to
     CoCo mode when the time comes.
 
-Version 0.6, Thu Apr 17 2003
+Version 0.6, Thu 17 Apr 2003
 
   * Joystick support available in the GP32 version.
