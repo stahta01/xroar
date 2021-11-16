@@ -2385,7 +2385,7 @@ static struct xconfig_option const xroar_options[] = {
 	/* Backwards-compatibility: */
 	{ XC_SET_INT1("tape-pad", &dummy_value.v_int), .deprecated = 1 },
 
-	/* Disks: */
+	/* Floppy disks: */
 	{ XC_SET_BOOL("disk-write-back", &xroar_cfg.disk_write_back) },
 	{ XC_SET_BOOL("disk-auto-os9", &xroar_cfg.disk_auto_os9) },
 	{ XC_SET_BOOL("disk-auto-sd", &xroar_cfg.disk_auto_sd) },
@@ -2539,16 +2539,9 @@ static void helptext(void) {
 "  -becker-ip ADDRESS    address or hostname of DriveWire server [" BECKER_IP_DEFAULT "]\n"
 "  -becker-port PORT     port of DriveWire server [" BECKER_PORT_DEFAULT "]\n"
 
-"\n Files:\n"
-"  -load FILE            load or attach FILE\n"
-"  -run FILE             load or attach FILE and attempt autorun\n"
-"  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
-"  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
-"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
-"  -load-tape FILE       attach FILE as tape image for reading\n"
-"  -tape-write FILE      open FILE for tape writing\n"
-
 "\n Cassettes:\n"
+"  -load-tape FILE           attach FILE as tape image for reading\n"
+"  -tape-write FILE          open FILE for tape writing\n"
 "  -tape-pan PANNING         pan stereo input (0.0 = left, 1.0 = right) [0.5]\n"
 "  -tape-hysteresis H        read hysteresis as % of full scale [1]\n"
 "  -no-tape-fast             disable fast tape loading\n"
@@ -2558,10 +2551,46 @@ static void helptext(void) {
 "  -tape-rewrite-leader B    rewrite leader length in bytes (1-2048) [256]\n"
 "  -tape-ao-rate HZ          set tape writing frame rate\n"
 
-"\n Disks:\n"
+"\n Floppy disks:\n"
+"  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
 "  -disk-write-back      default to enabling write-back for disk images\n"
 "  -no-disk-auto-os9     don't try to detect headerless OS-9 JVC disk images\n"
 "  -no-disk-auto-sd      don't assume single density for 10 sec/track disks\n"
+
+"\n Hard disks:\n"
+"  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
+"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+
+"\n Keyboard:\n"
+"  -keymap CODE            host keyboard type (-keymap help for list)\n"
+"  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
+"  -kbd-translate          enable keyboard translation\n"
+"  -type STRING            intercept ROM calls to type STRING into BASIC\n"
+
+"\n Joysticks:\n"
+"  -joy NAME             configure named joystick profile (-joy help for list)\n"
+"    -joy-desc TEXT        joystick description\n"
+"    -joy-axis AXIS=SPEC   configure joystick axis\n"
+"    -joy-button BTN=SPEC  configure joystick button (-joy-button help or\n"
+"                          -joy-axis help to list physical joysticks)\n"
+"  -joy-right NAME       map right joystick\n"
+"  -joy-left NAME        map left joystick\n"
+"  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"
+
+"\n Printers:\n"
+"  -lp-file FILE         append Dragon printer output to FILE\n"
+#ifdef HAVE_POPEN
+"  -lp-pipe COMMAND      pipe Dragon printer output to COMMAND\n"
+#endif
+
+"\n Files:\n"
+"  -load FILE            load or attach FILE\n"
+"  -run FILE             load or attach FILE and attempt autorun\n"
+"  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
+"  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
+"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+"  -load-tape FILE       attach FILE as tape image for reading\n"
+"  -tape-write FILE      open FILE for tape writing\n"
 
 "\n Firmware ROM images:\n"
 "  -rompath PATH         ROM search path (colon-separated list)\n"
@@ -2595,28 +2624,6 @@ static void helptext(void) {
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
 "  -ao-gain DB           audio gain in dB relative to 0 dBFS [-3.0]\n"
 "  -volume VOLUME        older way to specify audio volume, linear (0-100)\n"
-
-"\n Keyboard:\n"
-"  -keymap CODE            host keyboard type (-keymap help for list)\n"
-"  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
-"  -kbd-translate          enable keyboard translation\n"
-"  -type STRING            intercept ROM calls to type STRING into BASIC\n"
-
-"\n Joysticks:\n"
-"  -joy NAME             configure named joystick profile (-joy help for list)\n"
-"    -joy-desc TEXT        joystick description\n"
-"    -joy-axis AXIS=SPEC   configure joystick axis\n"
-"    -joy-button BTN=SPEC  configure joystick button (-joy-button help or\n"
-"                          -joy-axis help to list physical joysticks)\n"
-"  -joy-right NAME       map right joystick\n"
-"  -joy-left NAME        map left joystick\n"
-"  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"
-
-"\n Printing:\n"
-"  -lp-file FILE         append Dragon printer output to FILE\n"
-#ifdef HAVE_POPEN
-"  -lp-pipe COMMAND      pipe Dragon printer output to COMMAND\n"
-#endif
 
 "\n Debugging:\n"
 #ifdef WANT_GDB_TARGET
