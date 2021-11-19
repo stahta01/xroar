@@ -1802,7 +1802,11 @@ enable support for using audio files as cassette images.
 @node Compilation
 @subsection Compilation
 
-Once you have the dependencies, building XRoar follows a familiar procedure:
+Once you have the dependencies, building XRoar follows a familiar
+procedure:@footnote{If you have cloned the git repository, you will need GNU
+Build System packages installed: @samp{autoconf}, etc.  Running
+@command{./autogen.sh} should then generate the configure script, which you can
+run as normal.}
 
 @example
 $ gzip -dc xroar-@value{VERSION}.tar.gz | tar xvf -
