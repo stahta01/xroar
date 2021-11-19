@@ -1,4 +1,4 @@
-Version 1.0.1
+Version 1.0.1, Sat 20 Nov 2021
 
  * Fix cart disable logic when loading other media [".mad.", Stewart Orchard]
  * MC6801/6803: TST resets CC.C, unlike MC6809.
