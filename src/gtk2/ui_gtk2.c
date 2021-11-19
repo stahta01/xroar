@@ -320,7 +320,7 @@ static void about(GtkMenuItem *item, gpointer user_data) {
 "You should have received a copy of the GNU General Public License along\n"
 "with XRoar.  If not, see <https://www.gnu.org/licenses/>."
 	);
-	gtk_about_dialog_set_website(dialog, "http://www.6809.org.uk/xroar/");
+	gtk_about_dialog_set_website(dialog, "https://www.6809.org.uk/xroar/");
 	g_signal_connect(dialog, "response", G_CALLBACK(close_about), NULL);
 	gtk_widget_show(GTK_WIDGET(dialog));
 }
