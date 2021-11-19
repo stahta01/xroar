@@ -525,7 +525,12 @@ static _Bool dragon_finish(struct part *p) {
 	md->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
 	md->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
 	md->ntsc_burst[2] = ntsc_burst_new(33);  // Modified burst (coco hi-res css=1)
-	md->ntsc_burst[3] = ntsc_burst_new(66);  // Forced burst (XXX calculate this)
+	// This was going to represent the extra colourburst mode achievable by
+	// switching to/from colour modes at the right time that Sock Master
+	// demoed.  Until I look into that properly, it's actually used for CSS
+	// + GM0 in non-resolution-graphics mode, so just set it to same as
+	// normal burst.
+	md->ntsc_burst[3] = ntsc_burst_new(0);
 
 	verify_ram_size(mc);
 	md->ram_size = mc->ram * 1024;

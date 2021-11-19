@@ -2,6 +2,7 @@ Version 1.0.1
 
  * Fix cart disable logic when loading other media [".mad.", Stewart Orchard]
  * MC6801/6803: TST resets CC.C, unlike MC6809.
+ * Revert colourburst for NTSC colour modes with CSS+GM0 [Allen Huffman]
 
 Version 1.0, Tue 16 Nov 2021
 
