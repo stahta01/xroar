@@ -199,7 +199,11 @@ static uint8_t op_inc(STRUCT_CPU *cpu, uint8_t in) {
 }
 
 static uint8_t op_tst(STRUCT_CPU *cpu, uint8_t in) {
+#ifdef TST_CLR_C
+	CLR_NZVC;
+#else
 	CLR_NZV;
+#endif
 	SET_NZ8(in);
 	return in;
 }

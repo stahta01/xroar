@@ -192,6 +192,7 @@ static void instruction_posthook(struct MC6801 *cpu);
 // Common operations
 
 #define STRUCT_CPU struct MC6801
+#define TST_CLR_C
 
 #include "mc680x_ops.c"
 
