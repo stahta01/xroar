@@ -1,3 +1,7 @@
+Version 1.0.1
+
+ * Fix cart disable logic when loading other media [".mad.", Stewart Orchard]
+
 Version 1.0, Tue 16 Nov 2021
 
  * Initial CoCo 3 support.

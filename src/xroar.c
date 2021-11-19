@@ -809,9 +809,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Default to enabling default_cart (typically a DOS cart)
 	_Bool auto_dos = 1;
 
-	// Attaching a tape generally means we don't want a DOS, and I'll
-	// assume the same for a binary for now.
-	if (private_cfg.load_tape || private_cfg.load_binaries) {
+	// Attaching a tape generally means we don't want a DOS.
+	if (!selected_cart_config && private_cfg.load_tape) {
 		auto_dos = 0;
 	}
 
@@ -835,7 +834,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// should assume they mean it.
 	if (xroar_machine_config->default_cart_dfn && !xroar_machine_config->default_cart) {
 		auto_dos = 0;
-		selected_cart_config = NULL;
 	}
 
 	// Disable cart in machine if none selected and we're not going to try
