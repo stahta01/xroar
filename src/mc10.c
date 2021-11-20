@@ -585,7 +585,7 @@ static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
 		} else {
 			// 16K of address space to read the keyboard rows...
 			mc10_keyboard_update(mp);
-			D = mp->keyboard.rows;
+			D = (D & 0xc0) | mp->keyboard.rows;
 		}
 		break;
 
@@ -780,7 +780,7 @@ static void mc10_keyboard_update(void *sptr) {
 	} else {
 		mp->CPU->port2.in_sink &= ~(1<<1);
 	}
-	mp->keyboard.rows = state.row_sink | 0xc0;
+	mp->keyboard.rows = state.row_sink & 0x3f;
 }
 
 static void mc10_update_tape_input(void *sptr, float value) {

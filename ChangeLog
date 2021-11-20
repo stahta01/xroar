@@ -5,6 +5,7 @@ Version 1.0.2, unreleased
  * Fix MC10 INT/EXT wiring [Jim Gerrie]
  * 6801/6803: implement more illegal instructions [with Greg Dionne]
  * 6803: Lower bits of address to data bus for floating reads [Greg Dionne]
+ * MC10: Only set lower 6 bits on keyboard read [Greg Dionne]
 
 Version 1.0.1, Sat 20 Nov 2021
 
