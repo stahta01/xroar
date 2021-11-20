@@ -1124,6 +1124,11 @@ static uint8_t fetch_byte_notrace(struct MC6801 *cpu, uint16_t a) {
 	}
 	cpu->output_compare_inhibit = 0;
 
+	// XXX This should be mode-dependent.  The lower address bits are
+	// shared with the data bus, and so it is these address values that may
+	// remain on the data bus if left floating during a read.
+	cpu->D = a & 0xff;
+
 	if (a < 0x0020) {
 		DELEGATE_CALL(cpu->mem_cycle, 1, 0xffff);
 		switch (a) {
