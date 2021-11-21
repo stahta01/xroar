@@ -1,3 +1,7 @@
+Version 1.0.2, unreleased
+
+ * Fix single-bit sound feedback into PIA.
+
 Version 1.0.1, Sat 20 Nov 2021
 
  * Fix cart disable logic when loading other media [".mad.", Stewart Orchard]

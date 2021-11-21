@@ -422,7 +422,7 @@ void sound_update(struct sound_interface *sndp) {
 
 	// Feed back bus level to single bit pin.
 	snd->bus_level = (mux_output_raw * snd->mux_gain) + snd->bus_offset;
-	DELEGATE_SAFE_CALL(snd->public.sbs_feedback, snd->current.sbs_enabled || snd->bus_level >= 1.414);
+	DELEGATE_SAFE_CALL(snd->public.sbs_feedback, snd->current.sbs_enabled || snd->bus_level >= 0.3);
 
 }
 
