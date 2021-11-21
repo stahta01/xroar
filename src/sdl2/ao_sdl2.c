@@ -145,7 +145,11 @@ static void *new(void *cfg) {
 
 	ao->free = DELEGATE_AS0(void, ao_sdl2_free, ao);
 
+#ifdef HAVE_WASM
+	unsigned rate = 22050;
+#else
 	unsigned rate = 48000;
+#endif
 	unsigned nchannels = 2;
 	unsigned fragment_nframes;
 	unsigned buffer_nframes;
