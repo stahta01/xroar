@@ -1,6 +1,7 @@
 Version 1.0.2, unreleased
 
  * Fix single-bit sound feedback into PIA.
+ * Revert SDL audio to callbacks, helps with Windows ["sloopy malibu"]
 
 Version 1.0.1, Sat 20 Nov 2021
 

@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 sound module.
  *
- *  \copyright Copyright 2015-2019 Ciaran Anscomb
+ *  \copyright Copyright 2015-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -16,8 +16,8 @@
  *  \endlicenseblock
  *
  *  SDL processes audio in a separate thread, using a callback to request more
- *  data.  When the configured number of audio fragments (nfragments) is 1,
- *  write directly into the buffer provided by SDL.  When nfragments > 1,
+ *  data.  When the configured number of audio fragments (nfragments) is 0,
+ *  write directly into the buffer provided by SDL.  When nfragments >= 1,
  *  maintain a queue of fragment buffers; the callback takes the next filled
  *  buffer from the queue and copies its data into place.
  */
@@ -58,21 +58,35 @@ struct ao_sdl2_interface {
 	void *callback_buffer;
 	_Bool shutting_down;
 
+	unsigned frame_nbytes;
+
 	unsigned nfragments;
 	unsigned fragment_nbytes;
 
+#ifndef HAVE_WASM
+	void *last_frame;
+
 	SDL_mutex *fragment_mutex;
 	SDL_cond *fragment_cv;
-	void *fragment_buffer;
-	_Bool fragment_available;
+	unsigned timeout_ms;
 
+	void **fragment_buffer;
+	_Bool fragment_available;
+	unsigned write_fragment;
+	unsigned play_fragment;
+	unsigned fragment_queue_length;
+#endif
+
+#ifdef HAVE_WASM
+	void *fragment_buffer;
 	Uint32 qbytes_threshold;
 	unsigned qdelay_divisor;
-	unsigned timeout_ms;
+#endif
 };
 
 #ifndef HAVE_WASM
-static void callback_1(void *, Uint8 *, int);
+static void callback(void *, Uint8 *, int);
+static void callback_0(void *, Uint8 *, int);
 #endif
 
 static void ao_sdl2_free(void *sptr);
@@ -145,14 +159,15 @@ static void *new(void *cfg) {
 		nchannels = xroar_cfg.ao_channels;
 
 	aosdl->nfragments = 3;
-	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
+	if (xroar_cfg.ao_fragments >= 0 && xroar_cfg.ao_fragments <= 64)
 		aosdl->nfragments = xroar_cfg.ao_fragments;
 #ifdef HAVE_WASM
-	// The special case where nfragments == 1 requires threads which we're
+	// The special case where nfragments == 0 requires threads which we're
 	// not using in Wasm, so never pick that.
-	if (aosdl->nfragments == 1)
+	if (aosdl->nfragments == 0)
 		aosdl->nfragments++;
 #endif
+	unsigned buf_nfragments = aosdl->nfragments ? aosdl->nfragments : 1;
 
 	if (xroar_cfg.ao_fragment_ms > 0) {
 		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
@@ -164,18 +179,18 @@ static void *new(void *cfg) {
 		} else if (xroar_cfg.ao_buffer_nframes > 0) {
 			buffer_nframes = xroar_cfg.ao_buffer_nframes;
 		} else {
-			buffer_nframes = 1024 * aosdl->nfragments;
+			buffer_nframes = 1024 * buf_nfragments;
 		}
-		fragment_nframes = buffer_nframes / aosdl->nfragments;
+		fragment_nframes = buffer_nframes / buf_nfragments;
 	}
 
 	desired.freq = rate;
 	desired.channels = nchannels;
 	desired.samples = fragment_nframes;
-#ifndef HAVE_WASM
-	desired.callback = (aosdl->nfragments == 1) ? callback_1 : NULL;
-#else
+#ifdef HAVE_WASM
 	desired.callback = NULL;
+#else
+	desired.callback = (aosdl->nfragments == 0) ? callback_0 : callback;
 #endif
 	desired.userdata = aosdl;
 
@@ -257,39 +272,54 @@ static void *new(void *cfg) {
 			goto failed;
 	}
 
-	buffer_nframes = fragment_nframes * aosdl->nfragments;
-	unsigned frame_nbytes = nchannels * sample_nbytes;
-	aosdl->fragment_nbytes = fragment_nframes * frame_nbytes;
+	buffer_nframes = fragment_nframes * buf_nfragments;
+	aosdl->frame_nbytes = nchannels * sample_nbytes;
+	aosdl->fragment_nbytes = fragment_nframes * aosdl->frame_nbytes;
 
-	if (aosdl->nfragments == 1) {
-		aosdl->fragment_mutex = SDL_CreateMutex();
-		aosdl->fragment_cv = SDL_CreateCond();
-		aosdl->timeout_ms = (fragment_nframes * 2000) / rate;
-	} else {
-		// If any more than (n-1) fragments (measured in bytes) are in
-		// the queue, we will wait.
-		aosdl->qbytes_threshold = aosdl->fragment_nbytes * (aosdl->nfragments - 1);
-		aosdl->qdelay_divisor = frame_nbytes * rate;
-	}
+#ifndef HAVE_WASM
+	aosdl->fragment_mutex = SDL_CreateMutex();
+	aosdl->fragment_cv = SDL_CreateCond();
+	aosdl->timeout_ms = (fragment_nframes * 2000) / rate;
+	aosdl->fragment_available = 0;
+	aosdl->write_fragment = aosdl->play_fragment = 0;
+	aosdl->fragment_queue_length = 0;
+#endif
+
+#ifdef HAVE_WASM
+	// If any more than (n-1) fragments (measured in bytes) are in
+	// the queue, we will wait.
+	aosdl->qbytes_threshold = aosdl->fragment_nbytes * (aosdl->nfragments - 1);
+	aosdl->qdelay_divisor = aosdl->frame_nbytes * rate;
+#endif
 
 	aosdl->shutting_down = 0;
-	aosdl->fragment_available = 0;
 	aosdl->callback_buffer = NULL;
 
+#ifdef HAVE_WASM
+	aosdl->fragment_buffer = xmalloc(aosdl->fragment_nbytes);
+#endif
+
+#ifndef HAVE_WASM
 	// allocate fragment buffers
-	if (aosdl->nfragments == 1) {
+	if (aosdl->nfragments == 0) {
 		aosdl->fragment_buffer = NULL;
 	} else {
-		aosdl->fragment_buffer = xmalloc(aosdl->fragment_nbytes);
+		aosdl->fragment_buffer = xmalloc(aosdl->nfragments * sizeof(void *));
+		for (unsigned i = 0; i < aosdl->nfragments; i++) {
+			aosdl->fragment_buffer[i] = xmalloc(aosdl->fragment_nbytes);
+		}
+		aosdl->last_frame = xmalloc(aosdl->frame_nbytes);
+		memset(aosdl->last_frame, 0, aosdl->frame_nbytes);
 	}
+#endif
 
-	ao->sound_interface = sound_interface_new(aosdl->fragment_buffer, sample_fmt, rate, nchannels, fragment_nframes);
+	ao->sound_interface = sound_interface_new(NULL, sample_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
 		LOG_ERROR("Failed to initialise SDL audio: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl2_write_buffer, ao);
-	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aosdl->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
+	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", buf_nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
 	SDL_PauseAudioDevice(aosdl->device, 0);
 	return aosdl;
@@ -298,9 +328,13 @@ failed:
 	if (aosdl) {
 		SDL_CloseAudioDevice(aosdl->device);
 		if (aosdl->fragment_buffer) {
-			if (aosdl->nfragments > 1) {
-				free(aosdl->fragment_buffer);
+#ifndef HAVE_WASM
+			if (aosdl->nfragments > 0) {
+				for (unsigned i = 0; i < aosdl->nfragments; i++) {
+					free(aosdl->fragment_buffer[i]);
+				}
 			}
+#endif
 			free(aosdl->fragment_buffer);
 		}
 		free(aosdl);
@@ -316,25 +350,33 @@ static void ao_sdl2_free(void *sptr) {
 	// no more audio
 	SDL_PauseAudioDevice(aosdl->device, 1);
 
+#ifndef HAVE_WASM
 	// unblock audio thread
-	if (aosdl->nfragments == 1) {
-		SDL_LockMutex(aosdl->fragment_mutex);
-		aosdl->fragment_available = 1;
-		SDL_CondSignal(aosdl->fragment_cv);
-		SDL_UnlockMutex(aosdl->fragment_mutex);
-	}
+	SDL_LockMutex(aosdl->fragment_mutex);
+	aosdl->fragment_available = 1;
+	aosdl->fragment_queue_length = 0;
+	SDL_CondSignal(aosdl->fragment_cv);
+	SDL_UnlockMutex(aosdl->fragment_mutex);
+#endif
 
 	SDL_CloseAudioDevice(aosdl->device);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 
-	if (aosdl->nfragments == 1) {
+#ifndef HAVE_WASM
+	if (aosdl->nfragments == 0) {
 		SDL_DestroyCond(aosdl->fragment_cv);
 		SDL_DestroyMutex(aosdl->fragment_mutex);
 	}
+#endif
 
 	sound_interface_free(aosdl->public.sound_interface);
 
-	if (aosdl->nfragments > 1) {
+	if (aosdl->nfragments > 0) {
+#ifndef HAVE_WASM
+		for (unsigned i; i < aosdl->nfragments; i++) {
+			free(aosdl->fragment_buffer[i]);
+		}
+#endif
 		free(aosdl->fragment_buffer);
 	}
 
@@ -346,10 +388,18 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 
 	(void)buffer;
 
-	if (aosdl->nfragments == 1) {
+#ifndef HAVE_WASM
+	// The normal approach is to use mutexes so the callback can write
+	// silence if there's no data available, and we can wait if all the
+	// buffers are full.
+	//
+	// The queued audio approach worked fine under Linux, but appears to
+	// have caused major popping under Windows.
+
+	if (aosdl->nfragments == 0) {
 		SDL_LockMutex(aosdl->fragment_mutex);
 
-		/* For nfragments == 1, a non-NULL buffer means we've finished
+		/* For nfragments == 0, a non-NULL buffer means we've finished
 		 * writing to the buffer provided by the callback.  Signal the
 		 * callback in case it is waiting for data to be available. */
 
@@ -374,34 +424,90 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 		aosdl->callback_buffer = NULL;
 
 		SDL_UnlockMutex(aosdl->fragment_mutex);
+		return aosdl->fragment_buffer;
 	} else {
 		if (!aosdl->public.sound_interface->ratelimit) {
+			aosdl->play_fragment = 0;
+			aosdl->write_fragment = 0;
+			aosdl->fragment_queue_length = 0;
 			return NULL;
 		}
-		Uint32 qbytes;
-		if ((qbytes = SDL_GetQueuedAudioSize(aosdl->device)) > aosdl->qbytes_threshold) {
-#ifndef HAVE_WASM
-			int ms = ((qbytes - aosdl->qbytes_threshold) * 1000) / aosdl->qdelay_divisor;
-			if (ms >= 10) {
-				SDL_Delay(ms);
+		SDL_LockMutex(aosdl->fragment_mutex);
+		aosdl->write_fragment = (aosdl->write_fragment + 1) % aosdl->nfragments;
+		aosdl->fragment_queue_length++;
+		while (aosdl->fragment_queue_length == aosdl->nfragments) {
+			if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
+				SDL_UnlockMutex(aosdl->fragment_mutex);
+				return NULL;
 			}
-#else
-			// In Wasm, rather then wait on too much audio, discard
-			// it - if the timer is accurate this should never
-			// happen, but opening/closing console windows seems to
-			// cause glitches...
-			SDL_ClearQueuedAudio(aosdl->device);
-#endif
 		}
-		SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
+		SDL_UnlockMutex(aosdl->fragment_mutex);
+		return aosdl->fragment_buffer[aosdl->write_fragment];
 	}
+#endif
 
+#ifdef HAVE_WASM
+	// For WebAssembly, use the queued audio interface instead.  There's no
+	// waiting around on mutexes, which doesn't really work with Wasm.  If
+	// there's too much audio already in the queue, just purge it - doesn't
+	// happen much, again, due to the way Wasm runs.
+	if (!aosdl->public.sound_interface->ratelimit) {
+		return NULL;
+	}
+	Uint32 qbytes;
+	if ((qbytes = SDL_GetQueuedAudioSize(aosdl->device)) > aosdl->qbytes_threshold) {
+		SDL_ClearQueuedAudio(aosdl->device);
+	}
+	SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
 	return aosdl->fragment_buffer;
+#endif
+
 }
 
 #ifndef HAVE_WASM
-// Callback for nfragments == 1.  Never used for Wasm builds.
-static void callback_1(void *userdata, Uint8 *stream, int len) {
+
+// Callback for nfragments > 0.
+
+static void callback(void *userdata, Uint8 *stream, int len) {
+	struct ao_sdl2_interface *aosdl = userdata;
+	// Lock mutex
+	SDL_LockMutex(aosdl->fragment_mutex);
+
+	// If there's nothing in the queue, fill SDL's data area with copies of
+	// the last frame
+	if (aosdl->fragment_queue_length == 0 || (unsigned)len != aosdl->fragment_nbytes) {
+		SDL_UnlockMutex(aosdl->fragment_mutex);
+		while (len > 0) {
+			memcpy(stream, aosdl->last_frame, aosdl->frame_nbytes);
+			stream += aosdl->frame_nbytes;
+			len -= aosdl->frame_nbytes;
+		}
+		return;
+	}
+
+	// Copy fragment where SDL wants it
+	unsigned play_fragment = aosdl->play_fragment;
+	void *fragment = aosdl->fragment_buffer[play_fragment];
+	memcpy(stream, fragment, len);
+
+	// Preserve last frame
+	memcpy(aosdl->last_frame, fragment + len - aosdl->frame_nbytes, aosdl->frame_nbytes);
+
+	// Bump play_fragment, decrement queue length
+	aosdl->play_fragment = (play_fragment + 1) % aosdl->nfragments;
+	aosdl->fragment_queue_length--;
+	// Signal main thread to continue (if it was waiting)
+	SDL_CondSignal(aosdl->fragment_cv);
+	// Unlock mutex, done
+	SDL_UnlockMutex(aosdl->fragment_mutex);
+}
+
+// Callback for nfragments == 0.  In this case we pass back SDL's data pointer
+// to the main thread for it to fill and cond_wait until it's ready.  This is
+// going to require quite a nippy CPU, but if you can fill the buffer in time,
+// the latency's going to be nice and low.
+
+static void callback_0(void *userdata, Uint8 *stream, int len) {
 	struct ao_sdl2_interface *aosdl = userdata;
 	(void)len;  /* unused */
 	if (aosdl->shutting_down)
@@ -426,4 +532,5 @@ static void callback_1(void *userdata, Uint8 *stream, int len) {
 
 	SDL_UnlockMutex(aosdl->fragment_mutex);
 }
+
 #endif
