@@ -799,5 +799,4 @@ static void mc10_mc6803_port2_postwrite(void *sptr) {
 	struct machine_mc10 *mp = sptr;
 	uint8_t port2 = MC6801_PORT_VALUE(&mp->CPU->port2);
 	tape_update_output(mp->tape_interface, (port2 & 1) ? 0xfc : 0);
-	LOG_PRINT("%d", port2 & 1);
 }
