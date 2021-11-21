@@ -215,7 +215,13 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 	sndp->framerate = rate;
 	snd->output_buffer = buf;
-	snd->mix_buffer = xmalloc(nframes * nchannels * sizeof(float));
+	if (fmt == SOUND_FMT_FLOAT) {
+		// No need to convert floats, point mix buffer at output buffer.
+		snd->mix_buffer = buf;
+	} else {
+		// Otherwise we need a staging area to mix float data.
+		snd->mix_buffer = xmalloc(nframes * nchannels * sizeof(float));
+	}
 	snd->buffer_nframes = nframes;
 	snd->output_fmt = fmt;
 	snd->output_nchannels = nchannels;
@@ -242,7 +248,9 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 void sound_interface_free(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	event_dequeue(&snd->flush_event);
-	free(snd->mix_buffer);
+	if (snd->output_fmt != SOUND_FMT_FLOAT) {
+		free(snd->mix_buffer);
+	}
 	for (unsigned i = 0; i < 4; i++) {
 		free(snd->mux_input[i]);
 	}
@@ -281,15 +289,18 @@ static void send_buffer(struct sound_interface_private *snd) {
 			}
 		} break;
 		case SOUND_FMT_FLOAT: {
-			float *output = snd->output_buffer;
-			for (int i = nsamples; i; i--)
-				*(output++) = *(input++);
+			// For float, mix buffer is pointed directly to output
+			// buffer, as no conversion is necessary.
 		} break;
 		default:
 			break;
 		}
 	}
 	snd->output_buffer = DELEGATE_CALL(snd->public.write_buffer, snd->output_buffer);
+	if (snd->output_fmt == SOUND_FMT_FLOAT) {
+		// No need to convert floats, point mix buffer at output buffer.
+		snd->mix_buffer = snd->output_buffer;
+	}
 	snd->buffer_frame = 0;
 }
 
@@ -370,7 +381,7 @@ void sound_update(struct sound_interface *sndp) {
 		else
 			count = nframes;
 		nframes -= count;
-		if (snd->output_buffer) {
+		if (snd->output_buffer && snd->mix_buffer) {
 			float *ptr = (float *)snd->mix_buffer + snd->buffer_frame * snd->output_nchannels;
 			for (int i = 0; i < count; i++) {
 				float mix_sample = (*(mux_output++) * snd->mux_gain) + snd->bus_offset;
