@@ -100,8 +100,8 @@ void wasm_ui_run(void *sptr) {
 	}
 
 	// Calculate number of ticks to run based on time delta.
-	tickerr += (14318180. * (dt / 1000.));
-	int nticks = (int)tickerr;
+	tickerr += ((double)EVENT_TICK_RATE / 1000.) * dt;
+	int nticks = (int)(tickerr + 0.5);
 	event_ticks last_tick = event_current_tick;
 
 	// Poll SDL events (need to refactor this).
