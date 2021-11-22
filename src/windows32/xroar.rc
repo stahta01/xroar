@@ -54,9 +54,6 @@ FONT 9, "Arial"
 BEGIN
    CTEXT to_str(PACKAGE_TEXT), IDC_STATIC, 16, 10, 192, 12
    CTEXT "Copyright \xa9 " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>", IDC_STATIC, 8, 28, 208, 12
-   // Apparently this "requires v6 of comctl32".  Don't know how to do that in
-   // MinGW yet.
-   //CONTROL "<a href=""http://www.6809.org.uk/xroar/"">http://www.6809.org.uk/xroar/</a>", 103, "SysLink", WS_CHILD | WS_VISIBLE | WS_GROUP | 0x1, 64, 46, 96, 12
-   CTEXT "http://www.6809.org.uk/xroar/", IDC_STATIC, 64, 46, 96, 12
+   CONTROL "<a href=""https://www.6809.org.uk/xroar/"">https://www.6809.org.uk/xroar/</a>", 103, "SysLink", WS_CHILD | WS_VISIBLE | WS_GROUP | 0x1, 64, 46, 96, 12
    CONTROL "&Close", IDOK, "BUTTON", BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE | WS_TABSTOP, 164, 64, 44, 14
 END
