@@ -621,7 +621,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 }
 
 int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s) {
-	int tag;
+	int tag = -1;
 	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
 		if (tag > nss) {
 			SER_DEBUG("ser_read_struct(): tag=%d invalid\n", tag);
