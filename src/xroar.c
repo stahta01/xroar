@@ -227,9 +227,11 @@ static void set_joystick_axis(const char *spec);
 static void set_joystick_button(const char *spec);
 
 /* Help texts */
+#ifndef HAVE_WASM
 static void helptext(void);
 static void versiontext(void);
 static void config_print_all(FILE *f, _Bool all);
+#endif
 
 static int load_disk_to_drive = 0;
 
@@ -2476,10 +2478,12 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT0("q", &logging.level) },
 	{ XC_SET_INT("verbose", &logging.level) },
 	{ XC_SET_INT("v", &logging.level) },
+#ifndef HAVE_WASM
 	{ XC_CALL_NULL("help", &helptext) },
 	{ XC_CALL_NULL("h", &helptext) },
 	{ XC_CALL_NULL("version", &versiontext) },
 	{ XC_CALL_NULL("V", &versiontext) },
+#endif
 	{ XC_OPT_END() }
 };
 
@@ -2487,16 +2491,15 @@ static struct xconfig_option const xroar_options[] = {
 
 /* Help texts */
 
+#ifndef HAVE_WASM
+
 static void helptext(void) {
 #ifdef LOGGING
 	puts(
 "Usage: xroar [STARTUP-OPTION]... [OPTION]...\n"
 "XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3;\n"
-"the Tandy MC-10; and some other similar machines or clones."
-	);
+"the Tandy MC-10; and some other similar machines or clones.\n"
 
-#ifndef HAVE_WASM
-	puts(
 "\n Startup options:\n"
 #ifdef WINDOWS32
 "  -C              allocate a console window\n"
@@ -2671,7 +2674,6 @@ static void helptext(void) {
 "the future BTN 1 will be the second button on certain CoCo joysticks."
 	);
 #endif
-#endif
 	exit(EXIT_SUCCESS);
 }
 
@@ -2688,6 +2690,8 @@ static void versiontext(void) {
 	exit(EXIT_SUCCESS);
 }
 
+#endif
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Dump all known config to stdout */
@@ -2701,6 +2705,7 @@ static void versiontext(void) {
  * a default changes or new options are added.  Be careful!
  */
 
+#ifndef HAVE_WASM
 static void config_print_all(FILE *f, _Bool all) {
 	fputs("# Machines\n\n", f);
 	xroar_cfg_print_string(f, all, "default-machine", private_cfg.default_machine, NULL);
@@ -2816,6 +2821,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);
 	fputs("\n", f);
 }
+#endif
 
 /* Helper functions for config printing */
 
