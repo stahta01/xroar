@@ -373,7 +373,7 @@ static void ao_sdl2_free(void *sptr) {
 
 	if (aosdl->nfragments > 0) {
 #ifndef HAVE_WASM
-		for (unsigned i; i < aosdl->nfragments; i++) {
+		for (unsigned i = 0; i < aosdl->nfragments; i++) {
 			free(aosdl->fragment_buffer[i]);
 		}
 #endif
