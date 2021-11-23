@@ -52,6 +52,8 @@
 #define SET_NZ8(r)        ( SET_N8(r), SET_Z8((r)&0xff) )
 #define SET_NZ16(r)       ( SET_N16(r), SET_Z16((r)&0xffff) )
 #define SET_NZC8(r)       ( SET_N8(r), SET_Z8((r)&0xff), SET_C8(r) )
+#define SET_NZC16(r)      ( SET_N16(r), SET_Z16((r)&0xffff), SET_C16(r) )
+#define SET_NZV8(a,b,r)   ( SET_N8(r), SET_Z8((r)&0xff), SET_V8(a,b,r) )
 #define SET_NZVC8(a,b,r)  ( SET_N8(r), SET_Z8((r)&0xff), SET_V8(a,b,r), SET_C8(r) )
 #define SET_NZVC16(a,b,r) ( SET_N16(r), SET_Z16((r)&0xffff), SET_V16(a,b,r), SET_C16(r) )
 
@@ -145,26 +147,40 @@ static uint8_t op_com(STRUCT_CPU *cpu, uint8_t in) {
 }
 
 static uint8_t op_lsr(STRUCT_CPU *cpu, uint8_t in) {
-	unsigned out = in >> 1;
+	unsigned out = (in >> 1) | ((in & 1) << 8);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC8(in, in, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_Z8(out);
+	SET_NZC8(out);
+#endif
 	return out;
 }
 
 static uint8_t op_ror(STRUCT_CPU *cpu, uint8_t in) {
-	unsigned out = (in >> 1) | ((REG_CC & 1) << 7);
+	unsigned inx = in | ((REG_CC & 1) << 8);
+	unsigned out = (inx >> 1) | ((inx & 1) << 8);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC8(inx, inx, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ8(out);
+	SET_NZC8(out);
+#endif
 	return out;
 }
 
 static uint8_t op_asr(STRUCT_CPU *cpu, uint8_t in) {
-	unsigned out = (in >> 1) | (in & 0x80);
+	unsigned inx = in | ((in & 0x80) << 1);
+	unsigned out = (inx >> 1) | ((inx & 1) << 8);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC8(inx, inx, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ8(out);
+	SET_NZC8(out);
+#endif
 	return out;
 }
 
@@ -224,6 +240,19 @@ static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 	// CC.C NOT cleared, only set if appropriate
 	CLR_NZV;
 	SET_NZC8(out);
+	return out;
+}
+
+// Same as op_daa(), but test and set V, used in 6801/3
+static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned add = 0;
+	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;
+	if (in >= 0x90 && (in & 0x0f) >= 0x0a) add |= 0x60;
+	if (in >= 0xa0 || REG_CC & CC_C) add |= 0x60;
+	unsigned out = in + add;
+	// CC.C NOT cleared, only set if appropriate
+	CLR_NZV;
+	SET_NZVC8(in, add, out);
 	return out;
 }
 
@@ -287,6 +316,14 @@ static uint8_t op_add(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
 	return out;
 }
 
+// Same as op_add(), but don't affect H or C.  Illegal op in the 6801/3.
+static uint8_t op_add_nzv(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
+	unsigned out = a + b;
+	CLR_NZV;
+	SET_NZV8(a, b, out);
+	return out;
+}
+
 // 16-bit inherent operations
 
 static uint16_t op_neg16(STRUCT_CPU *cpu, uint16_t in) {
@@ -305,26 +342,40 @@ static uint16_t op_com16(STRUCT_CPU *cpu, uint16_t in) {
 }
 
 static uint16_t op_lsr16(STRUCT_CPU *cpu, uint16_t in) {
-	unsigned out = in >> 1;
+	unsigned out = (in >> 1) | ((in & 1) << 16);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC16(in, in, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_Z16(out);
+	SET_NZC16(out);
+#endif
 	return out;
 }
 
 static uint16_t op_ror16(STRUCT_CPU *cpu, uint16_t in) {
-	unsigned out = (in >> 1) | ((REG_CC & 1) << 15);
+	unsigned inx = in | ((REG_CC & 1) << 16);
+	unsigned out = (inx >> 1) | ((inx & 1) << 16);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC16(inx, inx, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ16(out);
+	SET_NZC16(out);
+#endif
 	return out;
 }
 
 static uint16_t op_asr16(STRUCT_CPU *cpu, uint16_t in) {
-	unsigned out = (in >> 1) | (in & 0x8000);
+	unsigned inx = in | ((in & 0x8000) << 1);
+	unsigned out = (inx >> 1) | ((inx & 1) << 16);
+#ifdef SHR_TEST_V
+	CLR_NZVC;
+	SET_NZVC16(inx, inx, out);
+#else
 	CLR_NZC;
-	REG_CC |= (in & 1);
-	SET_NZ16(out);
+	SET_NZC16(out);
+#endif
 	return out;
 }
 

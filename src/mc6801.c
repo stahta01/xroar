@@ -195,6 +195,7 @@ static void instruction_posthook(struct MC6801 *cpu);
 // Common operations
 
 #define STRUCT_CPU struct MC6801
+#define SHR_TEST_V
 #define TST_CLR_C
 
 #include "mc680x_ops.c"
@@ -498,7 +499,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 
 			// 0x07 TPA inherent
 			case 0x07:
-				REG_A = REG_CC | 0xc0;
+				REG_A = 0xc0 | REG_CC;
 				peek_byte(cpu, REG_PC);
 				break;
 
@@ -570,13 +571,13 @@ static void mc6801_run(struct MC6801 *cpu) {
 				peek_byte(cpu, REG_PC);
 				break;
 
-			// 0x12 A = A - B - C, inherent, illegal
+			// 0x12 SCBA inherent, illegal; A = A - B - C
 			case 0x12:
 				REG_A = op_sbc(cpu, REG_A, REG_B);
 				peek_byte(cpu, REG_PC);
 				break;
 
-			// 0x13 A = A - B - 1, inherent, illegal
+			// 0x13 S1BA inherent, illegal; A = A - B - 1
 			case 0x13:
 				{
 					unsigned out = REG_A - REG_B - 1;
@@ -587,24 +588,36 @@ static void mc6801_run(struct MC6801 *cpu) {
 				}
 				break;
 
-			// 0x14 B = A - !C, inherent, illegal
+			// 0x14 TCAB inherent, illegal; B = A - 1
+			// 0x1c TCAB inherent, illegal; B = A - 1
 			case 0x14:
-				REG_A = REG_B - (~REG_CC & CC_C);
-				CLR_NZV;
-				SET_NZ8(REG_A);
-				peek_byte(cpu, REG_PC);
+			case 0x1c:
+				{
+					unsigned out = REG_A - 1;
+					CLR_NZV;
+					SET_NZ8(out);
+					SET_V8(REG_A, 1, out);
+					REG_B = out;
+					peek_byte(cpu, REG_PC);
+				}
 				break;
 
-			// 0x15 A = B - 1, inherent, illegal
+			// 0x15 TCBA, inherent, illegal; A = B - 1
 			case 0x15:
-				REG_A = REG_B - 1;
-				CLR_NZV;
-				SET_NZ8(REG_A);
-				peek_byte(cpu, REG_PC);
+				{
+					unsigned out = REG_B - 1;
+					CLR_NZV;
+					SET_NZ8(out);
+					SET_V8(REG_B, 1, out);
+					REG_A = out;
+					peek_byte(cpu, REG_PC);
+				}
 				break;
 
 			// 0x16 TAB inherent
+			// 0x1e TAB inherent, illegal
 			case 0x16:
+			case 0x1e:
 				REG_B = REG_A;
 				CLR_NZV;
 				SET_NZ8(REG_B);
@@ -621,16 +634,15 @@ static void mc6801_run(struct MC6801 *cpu) {
 
 			// 0x18 ABA inherent, illegal
 			// 0x1a ABA inherent, illegal
-			// XXX apparently the flags differ?
 			case 0x18:
 			case 0x1a:
-				REG_A = op_add(cpu, REG_A, REG_B);
+				REG_A = op_add_nzv(cpu, REG_A, REG_B);
 				peek_byte(cpu, REG_PC);
 				break;
 
 			// 0x19 DAA inherent
 			case 0x19:
-				REG_A = op_daa(cpu, REG_A);
+				REG_A = op_daa_v(cpu, REG_A);
 				peek_byte(cpu, REG_PC);
 				break;
 
@@ -640,23 +652,21 @@ static void mc6801_run(struct MC6801 *cpu) {
 				peek_byte(cpu, REG_PC);
 				break;
 
-			// 0x1c B = A - 1, inherent, illegal
-			case 0x1c:
-				REG_B = REG_A - 1;
-				CLR_NZV;
-				SET_NZ8(REG_B);
-				peek_byte(cpu, REG_PC);
+			// 0x1d TCBA, inherent, illegal; A = B - 1
+			case 0x1d:
+				{
+					unsigned out = REG_B - 1;
+					CLR_NZVC;
+					SET_NZ8(out);
+					SET_V8(REG_B, 1, out);
+					// CC.C inverted!
+					REG_CC |= (~out >> 8) & CC_C;
+					REG_A = out;
+					peek_byte(cpu, REG_PC);
+				}
 				break;
 
-			// 0x1e TAB inherent, illegal
-			case 0x1e:
-				REG_B = REG_A;
-				CLR_NZV;
-				SET_NZ8(REG_B);
-				peek_byte(cpu, REG_PC);
-				break;
-
-			// 0x1f A = B, set C, inherent, illegal
+			// 0x1f TBAC inherent, illegal; A = B, set C
 			case 0x1f:
 				REG_A = REG_B;
 				CLR_NZV;
@@ -774,10 +784,10 @@ static void mc6801_run(struct MC6801 *cpu) {
 			case 0x3d: {
 				unsigned tmp = REG_A * REG_B;
 				REG_D = tmp;
-				CLR_ZC;
-				SET_Z16(tmp);
 				if (tmp & 0x80)
 					REG_CC |= CC_C;
+				else
+					REG_CC &= ~CC_C;
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -839,18 +849,18 @@ static void mc6801_run(struct MC6801 *cpu) {
 				}
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_neg(cpu, tmp1); break; // NEG, NEGA, NEGB
-				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC illegal
+				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC*,NGCA*,NGCB*
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
-				case 0x5: // LSR illegal
+				case 0x5: // LSR illegal  XXX wrong flags
 				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
 				case 0x6: tmp1 = op_ror(cpu, tmp1); break; // ROR, RORA, RORB
 				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
 				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
-				case 0xb: // DEC illegal
+				case 0xb: // DEC illegal  XXX wrong flags
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
-				case 0x1: // TST illegal
+				case 0x1: // TST illegal  XXX wrong flags
 				case 0xd: tmp1 = op_tst(cpu, tmp1); break; // TST, TSTA, TSTB
 				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
 				default: break;
