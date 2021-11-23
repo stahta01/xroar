@@ -621,7 +621,7 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
 			vmode |= (mp->CPU->D & 0x10) ? 0x10 : 0;  // D4 -> GM0
 			vmode |= (mp->CPU->D & 0x40) ? 0x08 : 0;  // D6 -> CSS
 			mp->video_mode = vmode;
-			mp->video_attr = (mp->CPU->D & 0x10) << 6;  // GM0 -> ¬INT/EXT
+			mp->video_attr = (mp->CPU->D & 0x04) << 8;  // GM2 -> ¬INT/EXT
 			sound_set_sbs(mp->snd, 1, D & 0x80);  // D7 -> sound bit
 			mc10_vdg_update_mode(mp);
 		}
