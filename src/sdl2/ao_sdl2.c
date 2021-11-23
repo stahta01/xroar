@@ -458,11 +458,11 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 	if (!aosdl->public.sound_interface->ratelimit) {
 		return NULL;
 	}
+	SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
 	Uint32 qbytes;
 	if ((qbytes = SDL_GetQueuedAudioSize(aosdl->device)) > aosdl->qbytes_threshold) {
-		SDL_ClearQueuedAudio(aosdl->device);
+		return NULL;
 	}
-	SDL_QueueAudio(aosdl->device, aosdl->fragment_buffer, aosdl->fragment_nbytes);
 	return aosdl->fragment_buffer;
 #endif
 
