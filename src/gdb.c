@@ -854,7 +854,8 @@ error:
 static int qRcmd(struct gdb_interface_private *gip, char *args) {
 	if (!*args) {
 		/* no words received, print usage */
-		send_packet_hexstring(gip, "monitor cycles [STRING]\n");
+		send_packet_hexstring(gip, "monitor cycles [STRING]\n"
+					   "monitor trace VALUE\n");
 		return 0;
 	}
 
@@ -880,6 +881,8 @@ static int qRcmd(struct gdb_interface_private *gip, char *args) {
 	*reply = '\0';
 	if (0 == strcmp(cmd, "cycles")) {
 		sprintf(reply, "%u cycles %s\n", (uint32_t) event_current_tick / 16, args);
+	} else if (0 == strcmp(cmd, "trace")) {
+		logging.trace_cpu = atoi(args);
 	} else {
 		sprintf(reply, "unknown monitor command\n");
 	}
