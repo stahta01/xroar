@@ -1663,8 +1663,11 @@ Alan Cox contributed the IDE code.
 Tormod Volden contributed support for his NX32 and MOOH devices (including
 general SPI and SD image support).
 
-Various people have provided feedback or test cases that have helped nail down
-bugs; read the ChangeLog for details.
+Greg Dionne and Ron Klein have been very helpful with information and testing
+of MC-10 related behaviour.
+
+Various other people have also provided feedback or test cases that have helped
+nail down bugs; read the ChangeLog for details.
 
 And thanks to all the people on the
 @myuref{https://archive.worldofdragon.org/phpBB3/, Dragon Archive Forums},

@@ -29,6 +29,9 @@
  *  -  Greg Dionne, for lots of details about illegal instructions, from an
  *     original list by James Tamer.
  *
+ *  -  Ron Klein, for running tests on real hardware and sending me pictures of
+ *     the results.
+ *
  *  Lots of warnings:
  *
  *  This implementation is very much INCOMPLETE.
@@ -37,7 +40,7 @@
  *
  *  Interface does _not_ reflect the multiple-use nature of 680[13] ports.
  *
- *  May eat your dog.
+ *  May eat your dog.  Well, maybe just your stick insects.
  */
 
 #ifdef HAVE_CONFIG_H
