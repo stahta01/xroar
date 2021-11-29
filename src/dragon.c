@@ -1226,11 +1226,8 @@ static void read_byte(struct machine_dragon *md, unsigned A) {
 static void write_byte(struct machine_dragon *md, unsigned A) {
 	if (md->cart) {
 		md->CPU->D = md->cart->write(md->cart, A, 0, 0, md->CPU->D);
-		if (md->cart->EXTMEM && 0 < md->SAM->S && md->SAM->S < 7) {
-			return;
-		}
 	}
-	if ((md->SAM->S & 4) || md->unexpanded_dragon32) {
+	if ((!md->cart || !md->cart->EXTMEM) && ((md->SAM->S & 4) || md->unexpanded_dragon32)) {
 		switch (md->SAM->S) {
 		case 1:
 		case 2:
