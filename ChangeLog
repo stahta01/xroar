@@ -1,3 +1,10 @@
+
+ * 6801/6803: many more illegal instructions [Greg Dionne, Ron Klein]
+ * Fix EXTMEM signalling for writes to RAM [Stewart Orchard]
+ * MC10: Constrain video to internal 4K RAM [Simon Jonassen]
+ * Default -ao-fragments changed for new SDL audio [Steve Bamford]
+ * MPI: return to selected slot on reset ["dragonnostalgia", Tim Lindner]
+
 Version 1.0.2, Tue 23 Nov 2021
 
  * Fix single-bit sound feedback into PIA.
