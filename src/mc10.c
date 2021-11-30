@@ -708,11 +708,7 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 		return;
 	uint16_t attr = mp->video_attr;
 	for (int i = nbytes; i; i--) {
-		uint16_t D;
-		if (A < mp->ram_size)
-			D = mp->ram[A] | attr;
-		else
-			D = 0xff | attr;
+		uint16_t D = mp->ram[A & 0x0fff] | attr;
 		A++;
 		D |= (D & 0xc0) << 2;  // D7,D6 -> ¬A/S,INV
 		*(dest++) = D;
