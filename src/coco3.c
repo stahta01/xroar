@@ -851,36 +851,35 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	if (mcc3->cart) {
 		mcc3->cart->write(mcc3->cart, A, 0, 0, mcc3->CPU->D);
-		if (mcc3->cart->EXTMEM) {
-			return;
-		}
 	}
-	switch (mcc3->GIME->S) {
-	case 0:
-		// ROM
-		mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
-		break;
-	case 1:
-		// CTS (cartridge ROM)
-		if (mcc3->cart)
-			mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
-		break;
-	case 2:
-		// IO
-		if ((A & 32) == 0) {
-			mc6821_write(mcc3->PIA0, A, mcc3->CPU->D);
-		} else {
-			mc6821_write(mcc3->PIA1, A, mcc3->CPU->D);
+	if (!mcc3->cart || !mcc3->cart->EXTMEM) {
+		switch (mcc3->GIME->S) {
+		case 0:
+			// ROM
+			mcc3->CPU->D = mcc3->rom0[A & 0x7fff];
+			break;
+		case 1:
+			// CTS (cartridge ROM)
+			if (mcc3->cart)
+				mcc3->cart->write(mcc3->cart, A ^ 0x4000, 0, 1, mcc3->CPU->D);
+			break;
+		case 2:
+			// IO
+			if ((A & 32) == 0) {
+				mc6821_write(mcc3->PIA0, A, mcc3->CPU->D);
+			} else {
+				mc6821_write(mcc3->PIA1, A, mcc3->CPU->D);
+			}
+			break;
+		case 6:
+			// SCS (cartridge IO)
+			if (mcc3->cart)
+				mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU->D);
+			break;
+		default:
+			// All the rest are N/C
+			break;
 		}
-		break;
-	case 6:
-		// SCS (cartridge IO)
-		if (mcc3->cart)
-			mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU->D);
-		break;
-	default:
-		// All the rest are N/C
-		break;
 	}
 	if (mcc3->GIME->RAS) {
 		uint32_t Z = mcc3->GIME->Z;
