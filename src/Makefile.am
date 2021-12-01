@@ -372,12 +372,15 @@ xroar_SOURCES += \
 endif
 
 if PTHREADS
+
 xroar_CFLAGS += $(PTHREADS_CFLAGS)
 xroar_LDADD += $(PTHREADS_LIBS)
 
 if GDB
 xroar_SOURCES += \
 	gdb.c gdb.h
+endif
+
 endif
 
 if TRE
@@ -387,6 +390,4 @@ endif
 if FILEREQ_CLI
 xroar_SOURCES += \
 	filereq_cli.c
-endif
-
 endif
