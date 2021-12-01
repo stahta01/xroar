@@ -270,6 +270,7 @@ struct vdrive_interface *xroar_vdrive_interface;
 /* Default configuration */
 
 static char const * const default_config[] = {
+#ifdef WANT_MACHINE_ARCH_DRAGON
 	// Dragon 32
 	"machine dragon32",
 	"machine-desc 'Dragon 32'",
@@ -324,6 +325,9 @@ static char const * const default_config[] = {
 	"tv-type ntsc",
 	"vdg-type 6847t1",
 	"ram 64",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_COCO3
 	// CoCo 3
 	"machine coco3",
 	"machine-desc 'Tandy CoCo 3'",
@@ -339,6 +343,9 @@ static char const * const default_config[] = {
 	"vdg-type gime1986",
 	"extbas @coco3p",
 	"ram 512",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_DRAGON
 	// Dynacom MX-1600
 	"machine mx1600",
 	"machine-desc 'Dynacom MX-1600'",
@@ -347,6 +354,9 @@ static char const * const default_config[] = {
 	"extbas @mx1600ext",
 	"tv-type pal-m",
 	"ram 64",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_MC10
 	// MC-10
 	"machine mc10",
 	"machine-desc 'Tandy MC-10'",
@@ -354,7 +364,9 @@ static char const * const default_config[] = {
 	"tv-type ntsc",
 	"bas @mc10",
 	"ram 20",
+#endif
 
+#ifdef WANT_CART_ARCH_DRAGON
 	// DragonDOS
 	"cart dragondos",
 	"cart-desc DragonDOS",
@@ -412,9 +424,11 @@ static char const * const default_config[] = {
 	"cart-desc 'MOOH memory cartridge'",
 	"cart-type mooh",
 #endif
+#endif
 
 	// ROM lists
 
+#ifdef WANT_MACHINE_ARCH_DRAGON
 	// Fallback Dragon BASIC
 	"romlist dragon=dragon",
 	"romlist d64_1=d64_1,d64rom1,'Dragon Data Ltd - Dragon 64 - IC17','Dragon Data Ltd - TANO IC18','Eurohard S.A. - Dragon 200 IC18',dragrom",
@@ -439,13 +453,23 @@ static char const * const default_config[] = {
 	"romlist coco2=bas12,@coco",
 	"romlist coco2_ext=extbas11,@coco_ext",
 	"romlist coco2b=bas13,@coco",
-	"romlist coco3=coco3",
-	"romlist coco3p=coco3p",
 	// MX-1600 and zephyr-patched version
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_COCO3
+	// CoCo 3 Super Extended Colour BASIC
+	"romlist coco3=coco3",
+	"romlist coco3p=coco3p",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_MC10
 	// MC-10
 	"romlist mc10=mc10",
+#endif
+
+#ifdef WANT_CART_ARCH_DRAGON
 	// DragonDOS
 	"romlist dragondos=ddos12a,ddos12,ddos40,ddos15,ddos10,'Dragon Data Ltd - DragonDOS 1.0'",
 	"romlist dosplus=dplus49b,dplus48,dosplus-4.8,DOSPLUS",
@@ -460,9 +484,11 @@ static char const * const default_config[] = {
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
 #endif
+#endif
 
 	// CRC lists
 
+#ifdef WANT_MACHINE_ARCH_DRAGON
 	// Dragon BASIC
 	"crclist d64_1=0x84f68bf9,0x60a4634c,@woolham_d64_1",
 	"crclist d64_2=0x17893a42,@woolham_d64_2",
@@ -484,9 +510,17 @@ static char const * const default_config[] = {
 	"crclist mx1600ext=0x322a3d58",
 	"crclist cocoext=@extbas11,@extbas10,@mx1600ext",
 	"crclist coco_combined=@mx1600",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_COCO3
+	// CoCo 3 Super Extended Colour BASIC
 	"crclist coco3=0xb4c88d6c,0xff050d80",
+#endif
+
+#ifdef WANT_MACHINE_ARCH_MC10
 	// MC-10 BASIC
 	"crclist mc10=0x11fda97e",
+#endif
 
 	// Joysticks
 	"joy joy0",
@@ -1016,7 +1050,9 @@ void xroar_shutdown(void) {
 		xroar_machine = NULL;
 	}
 	joystick_shutdown();
+#ifdef WANT_CART_ARCH_DRAGON
 	mpi_shutdown();
+#endif
 	cart_config_remove_all();
 	machine_config_remove_all();
 	xroar_machine_config = NULL;
@@ -2152,10 +2188,15 @@ static void set_gain(double gain) {
 }
 
 static void cfg_mpi_slot(int slot) {
+	(void)slot;
+#ifdef WANT_CART_ARCH_DRAGON
 	mpi_set_initial(slot);
+#endif
 }
 
 static void cfg_mpi_load_cart(const char *arg) {
+	(void)arg;
+#ifdef WANT_CART_ARCH_DRAGON
 	char *arg_copy = xstrdup(arg);
 	char *carg = arg_copy;
 	char *tmp = strsep(&carg, "=");
@@ -2167,6 +2208,7 @@ static void cfg_mpi_load_cart(const char *arg) {
 	mpi_set_cart(slot, tmp);
 	slot++;
 	free(arg_copy);
+#endif
 }
 
 static void set_kbd_bind(const char *spec) {

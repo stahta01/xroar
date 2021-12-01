@@ -81,50 +81,73 @@ extern const struct partdb_entry wd2797_part;
 extern const struct partdb_entry spi_sdcard_part;
 
 const struct partdb_entry *partdb[] = {
+#ifdef WANT_MACHINE_ARCH_DRAGON
 	&dragon64_part,
 	&dragon32_part,
 	&coco_part,
-	&coco3_part,
-	&mc10_part,
+#endif
 
+#ifdef WANT_MACHINE_ARCH_COCO3
+	&coco3_part,
+#endif
+
+#ifdef WANT_MACHINE_ARCH_MC10
+	&mc10_part,
+#endif
+
+#ifdef WANT_CART_ARCH_DRAGON
 	&cart_rom_part,
 	&deltados_part,
 	&dragondos_part,
 	&gmc_part,
+	&orch90_part,
+	&rsdos_part,
 #ifndef HAVE_WASM
 	&idecart_part,
 	&mooh_part,
 	&mpi_part,
 	&nx32_part,
-#endif
-	&orch90_part,
-#ifndef HAVE_WASM
 	&race_part,
 #endif
-	&rsdos_part,
+#endif
 
+#ifdef WANT_PART_MC6809
 	&hd6309_part,
-	&mc6801_part,
-	&mc6803_part,
 	&mc6809_part,
 	&mc6821_part,
+#endif
+
+#ifdef WANT_PART_MC6801
+	&mc6801_part,
+	&mc6803_part,
+#endif
+
+#ifdef WANT_PART_MC6883
+	&mc6883_part,
+#endif
+
+#ifdef WANT_PART_MC6847
 	&mc6847_part,
 	&mc6847t1_part,
-	&mc6883_part,
-	&sn76489_part,
-#ifndef HAVE_WASM
-	&spi65_part,
 #endif
+
+#ifdef WANT_PART_TCC1014
 	&tcc1014_1986_part,
 	&tcc1014_1987_part,
+#endif
+
+#ifdef WANT_CART_ARCH_DRAGON
+	&sn76489_part,
 	&wd2791_part,
 	&wd2793_part,
 	&wd2795_part,
 	&wd2797_part,
-
 #ifndef HAVE_WASM
+	&spi65_part,
 	&spi_sdcard_part,
 #endif
+#endif
+
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

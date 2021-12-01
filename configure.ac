@@ -51,7 +51,21 @@ AC_PATH_XTRA
 
 ### Options
 
+_machine_arch_default="yes"
+
 AC_ARG_ENABLE([snapshot],[])
+
+AC_ARG_ENABLE([dragon],
+	AS_HELP_STRING([--enable-dragon], [support Dragon and Tandy CoCo 1/2]) )
+test "x$enable_dragon" = "xyes" && _machine_arch_default="no"
+
+AC_ARG_ENABLE([coco3],
+	AS_HELP_STRING([--enable-coco3], [support Tandy CoCo 3]) )
+test "x$enable_coco3" = "xyes" && _machine_arch_default="no"
+
+AC_ARG_ENABLE([mc10],
+	AS_HELP_STRING([--enable-mc10], [support Tandy MC-10]) )
+test "x$enable_mc10" = "xyes" && _machine_arch_default="no"
 
 AC_ARG_ENABLE([wasm],
 	AS_HELP_STRING([--enable-wasm], [build for WebAssembly using emscripten]) )
@@ -119,6 +133,75 @@ AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
 
 #'
+
+### Optional emulated hardware
+
+test -z "$enable_dragon" && enable_dragon="$_machine_arch_default"
+AM_CONDITIONAL([MACHINE_ARCH_DRAGON], [test "x$enable_dragon" = "xyes"])
+AM_COND_IF([MACHINE_ARCH_DRAGON], [AC_DEFINE([WANT_MACHINE_ARCH_DRAGON], 1, [Want Dragon, Tandy Coco 1/2])])
+
+test -z "$enable_coco3" && enable_coco3="$_machine_arch_default"
+AM_CONDITIONAL([MACHINE_ARCH_COCO3], [test "x$enable_coco3" = "xyes"])
+AM_COND_IF([MACHINE_ARCH_COCO3], [AC_DEFINE([WANT_MACHINE_ARCH_COCO3], 1, [Want Tandy Coco 3])])
+
+test -z "$enable_mc10" && enable_mc10="$_machine_arch_default"
+AM_CONDITIONAL([MACHINE_ARCH_MC10], [test "x$enable_mc10" = "xyes"])
+AM_COND_IF([MACHINE_ARCH_MC10], [AC_DEFINE([WANT_MACHINE_ARCH_MC10], 1, [Want Tandy MC-10])])
+
+enable_part_mc6801=no
+enable_part_mc6809=no
+enable_part_mc6821=no
+enable_part_mc6847=no
+enable_part_mc6883=no
+enable_part_tcc1014=no
+
+enable_dragon_cart=no
+enable_mc10_cart=no
+
+if test "x$enable_dragon" = "xyes"; then
+	enable_part_mc6809=yes
+	enable_part_mc6821=yes
+	enable_part_mc6847=yes
+	enable_part_mc6883=yes
+	enable_dragon_cart=yes
+fi
+
+if test "x$enable_coco3" = "xyes"; then
+	enable_part_mc6809=yes
+	enable_part_mc6821=yes
+	enable_part_tcc1014=yes
+	enable_dragon_cart=yes
+fi
+
+if test "x$enable_mc10" = "xyes"; then
+	enable_part_mc6801=yes
+	enable_part_mc6847=yes
+	enable_mc10_cart=yes
+fi
+
+AM_CONDITIONAL([CART_ARCH_DRAGON], [test "x$enable_dragon_cart" = "xyes"])
+AM_COND_IF([CART_ARCH_DRAGON], [AC_DEFINE([WANT_CART_ARCH_DRAGON], 1, [Want Dragon/Tandy CoCo cartridges])])
+
+AM_CONDITIONAL([CART_ARCH_MC10], [test "x$enable_mc10_cart" = "xyes"])
+AM_COND_IF([CART_ARCH_MC10], [AC_DEFINE([WANT_CART_ARCH_MC10], 1, [Want Tandy MC-10 cartridges])])
+
+AM_CONDITIONAL([PART_MC6801], [test "x$enable_part_mc6801" = "xyes"])
+AM_COND_IF([PART_MC6801], [AC_DEFINE([WANT_PART_MC6801], 1, [Want MC6801/MC6803 CPU support])])
+
+AM_CONDITIONAL([PART_MC6809], [test "x$enable_part_mc6809" = "xyes"])
+AM_COND_IF([PART_MC6809], [AC_DEFINE([WANT_PART_MC6809], 1, [Want MC6809/HD6309 CPU support])])
+
+AM_CONDITIONAL([PART_MC6821], [test "x$enable_part_mc6821" = "xyes"])
+AM_COND_IF([PART_MC6821], [AC_DEFINE([WANT_PART_MC6821], 1, [Want MC6821 PIA support])])
+
+AM_CONDITIONAL([PART_MC6847], [test "x$enable_part_mc6847" = "xyes"])
+AM_COND_IF([PART_MC6847], [AC_DEFINE([WANT_PART_MC6847], 1, [Want MC6847 VDG support])])
+
+AM_CONDITIONAL([PART_MC6883], [test "x$enable_part_mc6883" = "xyes"])
+AM_COND_IF([PART_MC6883], [AC_DEFINE([WANT_PART_MC6883], 1, [Want MC6883 SAM support])])
+
+AM_CONDITIONAL([PART_TCC1014], [test "x$enable_part_tcc1014" = "xyes"])
+AM_COND_IF([PART_TCC1014], [AC_DEFINE([WANT_PART_TCC1014], 1, [Want TCC1014 GIME support])])
 
 ### WebAssembly
 

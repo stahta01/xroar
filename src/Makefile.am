@@ -20,66 +20,106 @@ xroar_SOURCES = \
 	becker.c becker.h \
 	breakpoint.c breakpoint.h \
 	cart.c cart.h \
-	coco3.c \
 	colourspace.c colourspace.h \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
 	debug_cpu.h \
-	deltados.c \
 	dkbd.c dkbd.h \
-	dragon.c \
-	dragondos.c \
 	events.c events.h \
 	fs.c fs.h \
-	gmc.c \
-	hd6309.c hd6309.h \
 	hexs19.c hexs19.h \
-	ide.c ide.h \
-	idecart.c idecart.h \
 	joystick.c joystick.h \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
 	machine.c machine.h \
-	mc10.c \
-	mc6801.c mc6801.h \
-	mc6809.c mc6809.h \
-	mc6821.c mc6821.h \
-	mc6847/font-6847.c mc6847/font-6847.h \
-	mc6847/font-6847t1.c mc6847/font-6847t1.h \
-	mc6847/mc6847.c mc6847/mc6847.h \
 	module.c module.h \
-	mooh.c \
-	mpi.c mpi.h \
 	ntsc.c ntsc.h \
 	null/ui_null.c \
 	null/vo_null.c \
-	nx32.c \
-	orch90.c \
 	part.c part.h \
 	path.c path.h \
 	printer.c printer.h \
 	romlist.c romlist.h \
-	rsdos.c \
-	sam.c sam.h \
 	serialise.c serialise.h \
-	sn76489.c sn76489.h \
 	snapshot.c snapshot.h \
 	sound.c sound.h \
-	spi65.c spi65.h \
-	spi_sdcard.c \
 	tape.c tape.h \
 	tape_cas.c \
-	tcc1014/font-gime.c tcc1014/font-gime.h \
-	tcc1014/tcc1014.c tcc1014/tcc1014.h \
 	ui.c ui.h \
 	vdg_palette.c vdg_palette.h \
 	vdisk.c vdisk.h \
 	vdrive.c vdrive.h \
 	vo.c vo.h \
-	wd279x.c wd279x.h \
 	xconfig.c xconfig.h \
 	xroar.c xroar.h
+
+if MACHINE_ARCH_DRAGON
+xroar_SOURCES += \
+	dragon.c
+endif
+
+if MACHINE_ARCH_COCO3
+xroar_SOURCES += \
+	coco3.c
+endif
+
+if MACHINE_ARCH_MC10
+xroar_SOURCES += \
+	mc10.c
+endif
+
+if PART_MC6801
+xroar_SOURCES += \
+	mc6801.c mc6801.h
+endif
+
+if PART_MC6809
+xroar_SOURCES += \
+	hd6309.c hd6309.h \
+	mc6809.c mc6809.h
+endif
+
+if PART_MC6821
+xroar_SOURCES += \
+	mc6821.c mc6821.h
+endif
+
+if PART_MC6847
+xroar_SOURCES += \
+	mc6847/font-6847.c mc6847/font-6847.h \
+	mc6847/font-6847t1.c mc6847/font-6847t1.h \
+	mc6847/mc6847.c mc6847/mc6847.h
+endif
+
+if PART_MC6883
+xroar_SOURCES += \
+	sam.c sam.h
+endif
+
+if PART_TCC1014
+xroar_SOURCES += \
+	tcc1014/font-gime.c tcc1014/font-gime.h \
+	tcc1014/tcc1014.c tcc1014/tcc1014.h
+endif
+
+if CART_ARCH_DRAGON
+xroar_SOURCES += \
+	deltados.c \
+	dragondos.c \
+	gmc.c \
+	ide.c ide.h \
+	idecart.c idecart.h \
+	mooh.c \
+	mpi.c mpi.h \
+	nx32.c \
+	orch90.c \
+	rsdos.c \
+	sn76489.c sn76489.h \
+	spi65.c spi65.h \
+	spi_sdcard.c \
+	wd279x.c wd279x.h
+endif
 
 BUILT_SOURCES += \
 	mc6847/font-6847.c mc6847/font-6847.h \

@@ -243,6 +243,8 @@ static int read_v2_snapshot(const char *filename) {
 #define SNAPSHOT_VERSION_MAJOR 1
 #define SNAPSHOT_VERSION_MINOR 8
 
+#ifdef WANT_MACHINE_ARCH_DRAGON
+
 static char *read_string(FILE *fd, unsigned *size) {
 	char *str = NULL;
 	if (*size == 0) {
@@ -312,9 +314,17 @@ static uint16_t *tfm_reg_ptr(struct HD6309 *hcpu, unsigned reg) {
 	return NULL;
 }
 
+#endif
+
 #define sex4(v) (((uint16_t)(v) & 0x07) - ((uint16_t)(v) & 0x08))
 
 static int read_v1_snapshot(const char *filename) {
+#ifndef WANT_MACHINE_ARCH_DRAGON
+	(void)filename;
+	return -1;
+
+#else
+
 	FILE *fd;
 	uint8_t buffer[17];
 	int section, tmp;
@@ -666,4 +676,5 @@ static int read_v1_snapshot(const char *filename) {
 		xroar_set_cart(1, cart_config->name);
 	}
 	return 0;
+#endif
 }

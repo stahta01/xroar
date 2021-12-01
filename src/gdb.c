@@ -905,13 +905,15 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 	char *query = strsep(&args, ":");
 	if (0 == strncmp(query, "xroar.", 6)) {
 		query += 6;
+#ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(query, "sam") && gip->sam) {
 			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: xroar.sam\n");
 			sprintf(packet, "%04x", sam_get_register(gip->sam));
 			send_packet(gip, packet, 4);
-		} else {
-			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown xroar vendor query\n");
 		}
+		return;
+#endif
+		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown xroar vendor query\n");
 	} else if (0 == strcmp(query, "Supported")) {
 		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: Supported\n");
 		send_supported(gip, args);
@@ -928,11 +930,13 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 	char *set = strsep(&args, ":");
 	if (0 == strncmp(set, "xroar.", 6)) {
 		set += 6;
+#ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(set, "sam") && gip->sam) {
 			sam_set_register(gip->sam, hex16(args));
 			send_packet_string(gip, "OK");
 			return;
 		}
+#endif
 	}
 	send_packet(gip, NULL, 0);
 	return;
