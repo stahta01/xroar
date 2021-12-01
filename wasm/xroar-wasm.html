@@ -115,8 +115,6 @@ be a better way to make this usable...
 
 	var Module = {
 		canvas: (function() { return document.getElementById('canvas'); })(),
-		// is this deprecated?
-		//setWindowTitle: function(t){},
 		initial_resize: 0,
 		is_fullscreen: 0,
 		arguments: [ '-ao-fragments', '4' ],
@@ -395,7 +393,6 @@ be a better way to make this usable...
 
 	// Clear cartridge drop-down in anticipation of repopulating
 	function ui_clear_carts() {
-		console.log("Clearing cart menu...");
 		var cart_select = document.getElementById("cart");
 		while (cart_select.lastChild) {
 			cart_select.removeChild(cart_select.lastChild);
