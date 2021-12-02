@@ -43,11 +43,15 @@ struct idecart {
 	struct cart cart;
 	struct ide_controller *controller;
 	struct becker *becker;
+	uint16_t io_region;
+	uint8_t data_latch;  // upper 8-bits of 16-bit IDE data
 };
 
 static const struct ser_struct ser_struct_idecart[] = {
 	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
 	SER_STRUCT_ELEM(struct idecart, controller, ser_type_unhandled), // 2
+	SER_STRUCT_ELEM(struct idecart, io_region, ser_type_uint16), // 3
+	SER_STRUCT_ELEM(struct idecart, data_latch, ser_type_uint8), // 4
 };
 
 #define N_SER_STRUCT_IDECART ARRAY_N_ELEMENTS(ser_struct_idecart)
@@ -115,6 +119,7 @@ static struct part *idecart_allocate(void) {
 		part_free(&c->part);
 		return NULL;
 	}
+	ide->io_region = 0xff50;
 
 	return p;
 }
@@ -201,52 +206,65 @@ static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 	if (R2) {
 		return c->rom_data[A & 0x3FFF];
 	}
-	if (!P2) {
+
+	if ((A & 0xfff0) != ide->io_region) {
+		if (P2 && ide->becker) {
+			if (A == 0xff41)
+				D = becker_read_status(ide->becker);
+			else if (A == 0xff42)
+				D = becker_read_data(ide->becker);
+		}
 		return D;
 	}
-	if (A == 0xff58) {
-		D = ide_read_latched(ide->controller, ide_data_latch);
-	} else if (A == 0xff50) {
-		D = ide_read_latched(ide->controller, ide_data);
-	} else if (A > 0xff50 && A < 0xff58) {
-		D = ide_read_latched(ide->controller, A - 0xff50);
-	} else if (ide->becker) {
-		// Becker port
-		if (A == 0xff41)
-			D = becker_read_status(ide->becker);
-		else if (A == 0xff42)
-			D = becker_read_data(ide->becker);
+
+	if (P2) {
+		// if mapped to $FF5x, we'd get called twice
+		return D;
 	}
+
+	if (A & 8) {
+		// Read from latch
+		D = ide->data_latch;
+	} else {
+		// Read from IDE controller
+		uint16_t v = ide_read16(ide->controller, A & 7);
+		ide->data_latch = v >> 8;
+		D = v & 0xff;
+	}
+
 	return D;
 }
 
 static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct idecart *ide = (struct idecart *)c;
-	(void)R2;
 
 	if (R2) {
 		return c->rom_data[A & 0x3FFF];
 	}
-	if (!P2) {
+
+	if ((A & 0xfff0) != ide->io_region) {
+		if (P2 && ide->becker) {
+			if (A == 0xff42) {
+				becker_write_data(ide->becker, D);
+			}
+		}
 		return D;
 	}
 
-	if (A == 0xff58) {
-		ide_write_latched(ide->controller, ide_data_latch, D);
+	if (P2) {
+		// if mapped to $FF5x, we'd get called twice
 		return D;
 	}
-	if (A == 0xff50) {
-		ide_write_latched(ide->controller, ide_data, D);
-		return D;
+
+	if (A & 8) {
+		// Write to latch
+		ide->data_latch = D;
+	} else {
+		// Write to IDE controller
+		uint16_t v = (ide->data_latch << 8) | D;
+		ide_write16(ide->controller, A & 7, v);
 	}
-	if (A > 0xff50 && A < 0xff58) {
-		ide_write_latched(ide->controller, (A - 0xff50), D);
-		return D;
-	}
-	if (ide->becker) {
-		if (A == 0xff42)
-			becker_write_data(ide->becker, D);
-	}
+
 	return D;
 }
 
