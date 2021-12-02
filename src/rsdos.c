@@ -328,8 +328,7 @@ static void latch_write(struct rsdos *d, unsigned D) {
 	if (!d->latch_density && d->intrq_flag) {
 		DELEGATE_CALL(c->signal_nmi, 1);
 	}
-	d->halt_enable = D & 0x80;
-	if (d->intrq_flag) d->halt_enable = 0;
+	d->halt_enable = (D & 0x80) && !d->intrq_flag;
 	DELEGATE_CALL(c->signal_halt, d->halt_enable && !d->drq_flag);
 }
 
@@ -337,13 +336,7 @@ static void set_drq(void *sptr, _Bool value) {
 	struct rsdos *d = sptr;
 	struct cart *c = &d->cart;
 	d->drq_flag = value;
-	if (value) {
-		DELEGATE_CALL(c->signal_halt, 0);
-	} else {
-		if (d->halt_enable) {
-			DELEGATE_CALL(c->signal_halt, 1);
-		}
-	}
+	DELEGATE_CALL(c->signal_halt, d->halt_enable && !d->drq_flag);
 }
 
 static void set_intrq(void *sptr, _Bool value) {
