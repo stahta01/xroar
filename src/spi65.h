@@ -21,7 +21,7 @@
 #ifndef XROAR_SPI65_H_
 #define XROAR_SPI65_H_
 
-#include <inttypes.h>
+#include <stdint.h>
 
 #include "delegate.h"
 
