@@ -131,6 +131,14 @@ static uint8_t op_neg(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
+// Illegal op in 6801/3.  Basically like NEG, but doesn't affect value.
+static uint8_t op_ngt(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned out = ~in + 1;
+	CLR_NZVC;
+	SET_NZVC8(0, in, out);
+	return in;
+}
+
 static uint8_t op_ngc(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = ~in + (~REG_CC & 1);
 	CLR_NZVC;

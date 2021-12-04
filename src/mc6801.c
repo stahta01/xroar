@@ -850,6 +850,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				}
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_neg(cpu, tmp1); break; // NEG, NEGA, NEGB
+				case 0x1: tmp1 = op_ngt(cpu, tmp1); break; // NGT*,NGTA*,NGTB*
 				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC*,NGCA*,NGCB*
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
 				case 0x5: // LSR illegal  XXX wrong flags
@@ -861,7 +862,6 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0xb: // DEC illegal  XXX wrong flags
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
-				case 0x1: // TST illegal  XXX wrong flags
 				case 0xd: tmp1 = op_tst_c(cpu, tmp1); break; // TST, TSTA, TSTB
 				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
 				default: break;
