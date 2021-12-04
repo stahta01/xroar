@@ -146,41 +146,55 @@ static uint8_t op_com(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
+// This vesion of LSR used in 6809
 static uint8_t op_lsr(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 8);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC8(in, in, out);
-#else
 	CLR_NZC;
 	SET_NZC8(out);
-#endif
 	return out;
 }
 
+// This vesion of LSR used in 6801/3
+static uint8_t op_lsr_v(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned out = (in >> 1) | ((in & 1) << 8);
+	CLR_NZVC;
+	SET_NZVC8(in, in, out);
+	return out;
+}
+
+// This vesion of ROR used in 6809
 static uint8_t op_ror(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((REG_CC & 1) << 8);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC8(inx, inx, out);
-#else
 	CLR_NZC;
 	SET_NZC8(out);
-#endif
 	return out;
 }
 
+// This vesion of ROR used in 6801/3
+static uint8_t op_ror_v(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned inx = in | ((REG_CC & 1) << 8);
+	unsigned out = (inx >> 1) | ((inx & 1) << 8);
+	CLR_NZVC;
+	SET_NZVC8(inx, inx, out);
+	return out;
+}
+
+// This vesion of ASR used in 6809
 static uint8_t op_asr(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((in & 0x80) << 1);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC8(inx, inx, out);
-#else
 	CLR_NZC;
 	SET_NZC8(out);
-#endif
+	return out;
+}
+
+// This vesion of ASR used in 6801/3
+static uint8_t op_asr_v(STRUCT_CPU *cpu, uint8_t in) {
+	unsigned inx = in | ((in & 0x80) << 1);
+	unsigned out = (inx >> 1) | ((inx & 1) << 8);
+	CLR_NZVC;
+	SET_NZVC8(inx, inx, out);
 	return out;
 }
 
@@ -214,12 +228,16 @@ static uint8_t op_inc(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
+// This version of TST used in 6809
 static uint8_t op_tst(STRUCT_CPU *cpu, uint8_t in) {
-#ifdef TST_CLR_C
-	CLR_NZVC;
-#else
 	CLR_NZV;
-#endif
+	SET_NZ8(in);
+	return in;
+}
+
+// This version of TST used in 6801/3
+static uint8_t op_tst_c(STRUCT_CPU *cpu, uint8_t in) {
+	CLR_NZVC;
 	SET_NZ8(in);
 	return in;
 }
@@ -231,6 +249,7 @@ static uint8_t op_clr(STRUCT_CPU *cpu, uint8_t in) {
 	return 0;
 }
 
+// This version of DAA used in 6809
 static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) out |= 0x06;
@@ -243,7 +262,7 @@ static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// Same as op_daa(), but test and set V, used in 6801/3
+// This version of DAA used in 6801/3
 static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned add = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;
@@ -341,41 +360,35 @@ static uint16_t op_com16(STRUCT_CPU *cpu, uint16_t in) {
 	return out;
 }
 
+// This vesion of LSR16 used in 6309
 static uint16_t op_lsr16(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 16);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC16(in, in, out);
-#else
 	CLR_NZC;
 	SET_NZC16(out);
-#endif
+	return out;
+}
+
+// This vesion of LSR16 used in 6801/3
+static uint16_t op_lsr16_v(STRUCT_CPU *cpu, uint16_t in) {
+	unsigned out = (in >> 1) | ((in & 1) << 16);
+	CLR_NZVC;
+	SET_NZVC16(in, in, out);
 	return out;
 }
 
 static uint16_t op_ror16(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned inx = in | ((REG_CC & 1) << 16);
 	unsigned out = (inx >> 1) | ((inx & 1) << 16);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC16(inx, inx, out);
-#else
 	CLR_NZC;
 	SET_NZC16(out);
-#endif
 	return out;
 }
 
 static uint16_t op_asr16(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned inx = in | ((in & 0x8000) << 1);
 	unsigned out = (inx >> 1) | ((inx & 1) << 16);
-#ifdef SHR_TEST_V
-	CLR_NZVC;
-	SET_NZVC16(inx, inx, out);
-#else
 	CLR_NZC;
 	SET_NZC16(out);
-#endif
 	return out;
 }
 

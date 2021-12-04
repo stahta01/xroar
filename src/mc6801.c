@@ -198,8 +198,6 @@ static void instruction_posthook(struct MC6801 *cpu);
 // Common operations
 
 #define STRUCT_CPU struct MC6801
-#define SHR_TEST_V
-#define TST_CLR_C
 
 #include "mc680x_ops.c"
 
@@ -478,7 +476,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 
 			// 0x04 LSRD inherent
 			case 0x04:
-				REG_D = op_lsr16(cpu, REG_D);
+				REG_D = op_lsr16_v(cpu, REG_D);
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
 				break;
@@ -855,16 +853,16 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC*,NGCA*,NGCB*
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
 				case 0x5: // LSR illegal  XXX wrong flags
-				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
-				case 0x6: tmp1 = op_ror(cpu, tmp1); break; // ROR, RORA, RORB
-				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
+				case 0x4: tmp1 = op_lsr_v(cpu, tmp1); break; // LSR, LSRA, LSRB
+				case 0x6: tmp1 = op_ror_v(cpu, tmp1); break; // ROR, RORA, RORB
+				case 0x7: tmp1 = op_asr_v(cpu, tmp1); break; // ASR, ASRA, ASRB
 				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
 				case 0xb: // DEC illegal  XXX wrong flags
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
 				case 0x1: // TST illegal  XXX wrong flags
-				case 0xd: tmp1 = op_tst(cpu, tmp1); break; // TST, TSTA, TSTB
+				case 0xd: tmp1 = op_tst_c(cpu, tmp1); break; // TST, TSTA, TSTB
 				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
 				default: break;
 				}
