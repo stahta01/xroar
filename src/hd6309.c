@@ -605,16 +605,17 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x10 Page 2
-			case 0x10:
 			// 0x1010, 0x1011 Page 2
+			case 0x10:
 			case 0x0210:
 			case 0x0211:
 				hcpu->state = hd6309_state_next_instruction;
 				cpu->page = 0x200;
 				continue;
+
 			// 0x11 Page 3
-			case 0x11:
 			// 0x1110, 0x1111 Page 3
+			case 0x11:
 			case 0x0310:
 			case 0x0311:
 				hcpu->state = hd6309_state_next_instruction;
@@ -623,6 +624,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x12 NOP inherent
 			case 0x12: peek_byte(cpu, REG_PC); break;
+
 			// 0x13 SYNC inherent
 			case 0x13:
 				if (!NATIVE_MODE)
@@ -633,6 +635,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_sync;
 				continue;
+
 			// 0x14 SEXW inherent
 			case 0x14:
 				REG_D = (REG_W & 0x8000) ? 0xffff : 0;
@@ -644,6 +647,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				break;
+
 			// 0x16 LBRA relative
 			case 0x16: {
 				uint16_t ea;
@@ -653,6 +657,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				if (!NATIVE_MODE)
 					NVMA_CYCLE;
 			} break;
+
 			// 0x17 LBSR relative
 			case 0x17: {
 				uint16_t ea;
@@ -667,11 +672,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 				push_s_word(cpu, REG_PC);
 				REG_PC = ea;
 			} break;
+
 			// 0x19 DAA inherent
 			case 0x19:
 				REG_A = op_daa(cpu, REG_A);
 				peek_byte(cpu, REG_PC);
 				break;
+
 			// 0x1a ORCC immediate
 			case 0x1a: {
 				unsigned data;
@@ -679,6 +686,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				REG_CC |= data;
 				peek_byte(cpu, REG_PC);
 			} break;
+
 			// 0x1c ANDCC immediate
 			case 0x1c: {
 				unsigned data;
@@ -686,6 +694,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				REG_CC &= data;
 				peek_byte(cpu, REG_PC);
 			} break;
+
 			// 0x1d SEX inherent
 			case 0x1d:
 				REG_A = (REG_B & 0x80) ? 0xff : 0;
@@ -694,6 +703,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				if (!NATIVE_MODE)
 					peek_byte(cpu, REG_PC);
 				break;
+
 			// 0x1e EXG immediate
 			case 0x1e: {
 				unsigned postbyte;
@@ -759,6 +769,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					NVMA_CYCLE;
 				}
 			} break;
+
 			// 0x1f TFR immediate
 			case 0x1f: {
 				unsigned postbyte;
@@ -1081,13 +1092,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x8c, 0x9c, 0xac, 0xbc CMPX
-			case 0x8c: case 0x9c: case 0xac: case 0xbc:
 			// 0x1083, 0x1093, 0x10a3, 0x10b3 CMPD
 			// 0x108c, 0x109c, 0x10ac, 0x10bc CMPY
-			case 0x0283: case 0x0293: case 0x02a3: case 0x02b3:
-			case 0x028c: case 0x029c: case 0x02ac: case 0x02bc:
 			// 0x1183, 0x1193, 0x11a3, 0x11b3 CMPU
 			// 0x118c, 0x119c, 0x11ac, 0x11bc CMPS
+			case 0x8c: case 0x9c: case 0xac: case 0xbc:
+			case 0x0283: case 0x0293: case 0x02a3: case 0x02b3:
+			case 0x028c: case 0x029c: case 0x02ac: case 0x02bc:
 			case 0x0383: case 0x0393: case 0x03a3: case 0x03b3:
 			case 0x038c: case 0x039c: case 0x03ac: case 0x03bc: {
 				unsigned tmp1, tmp2;
@@ -1129,12 +1140,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// 0x8e, 0x9e, 0xae, 0xbe LDX
 			// 0xcc, 0xdc, 0xec, 0xfc LDD
 			// 0xce, 0xde, 0xee, 0xfe LDU
-			case 0x8e: case 0x9e: case 0xae: case 0xbe:
-			case 0xcc: case 0xdc: case 0xec: case 0xfc:
-			case 0xce: case 0xde: case 0xee: case 0xfe:
 			// 0x1086, 0x1096, 0x10a6, 0x10b6 LDW
 			// 0x108e, 0x109e, 0x10ae, 0x10be LDY
 			// 0x10ce, 0x10de, 0x10ee, 0x10fe LDS
+			case 0x8e: case 0x9e: case 0xae: case 0xbe:
+			case 0xcc: case 0xdc: case 0xec: case 0xfc:
+			case 0xce: case 0xde: case 0xee: case 0xfe:
 			case 0x0286: case 0x0296: case 0x02a6: case 0x02b6:
 			case 0x028e: case 0x029e: case 0x02ae: case 0x02be:
 			case 0x02ce: case 0x02de: case 0x02ee: case 0x02fe: {
@@ -1160,10 +1171,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x97, 0xa7, 0xb7 STA
 			// 0xd7, 0xe7, 0xf7 STB
-			case 0x97: case 0xa7: case 0xb7:
-			case 0xd7: case 0xe7: case 0xf7:
 			// 0x1197, 0x11a7, 0x11b7 STE
 			// 0x11d7, 0x11e7, 0x11f7 STF
+			case 0x97: case 0xa7: case 0xb7:
+			case 0xd7: case 0xe7: case 0xf7:
 			case 0x0397: case 0x03a7: case 0x03b7:
 			case 0x03d7: case 0x03e7: case 0x03f7: {
 				uint16_t ea;
@@ -1189,12 +1200,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// 0x9f, 0xaf, 0xbf STX
 			// 0xdd, 0xed, 0xfd STD
 			// 0xdf, 0xef, 0xff STU
-			case 0x9f: case 0xaf: case 0xbf:
-			case 0xdd: case 0xed: case 0xfd:
-			case 0xdf: case 0xef: case 0xff:
 			// 0x1097, 0x10a7, 0x10b7 STW
 			// 0x109f, 0x10af, 0x10bf STY
 			// 0x10df, 0x10ef, 0x10ff STS
+			case 0x9f: case 0xaf: case 0xbf:
+			case 0xdd: case 0xed: case 0xfd:
+			case 0xdf: case 0xef: case 0xff:
 			case 0x0297: case 0x02a7: case 0x02b7:
 			case 0x029f: case 0x02af: case 0x02bf:
 			case 0x02df: case 0x02ef: case 0x02ff: {
@@ -1244,11 +1255,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
-			/* XXX: The order in which bits in CC are set when it
-			 * is the destination register is NOT correct.  Fixing
-			 * this probably means rewriting all of op_*().  Also,
-			 * the effect on PC as a destination register needs
-			 * investigating. */
+			// XXX: The order in which bits in CC are set when it
+			// is the destination register is NOT correct.  Fixing
+			// this might mean rewriting all of op_*().  Also, the
+			// effect on PC as a destination register needs
+			// investigating.
 
 			// 0x1030 ADDR
 			// 0x1031 ADCR
@@ -1512,7 +1523,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				REG_D = tmp1;
 			} break;
 
-			// 0x10dc, 0x10ec, 0x10fc LDQ direct, indexed, extended
+			// 0x10dc, 0x10ec, 0x10fc LDQ
 			case 0x02dc: case 0x02ec: case 0x02fc: {
 				unsigned ea;
 				switch ((op >> 4) & 3) {

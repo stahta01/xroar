@@ -603,7 +603,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				}
 				break;
 
-			// 0x15 TCBA, inherent, illegal; A = B - 1
+			// 0x15 TCBA inherent, illegal; A = B - 1
 			case 0x15:
 				{
 					unsigned out = REG_B - 1;
@@ -653,7 +653,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				peek_byte(cpu, REG_PC);
 				break;
 
-			// 0x1d TCBA, inherent, illegal; A = B - 1
+			// 0x1d TCBA inherent, illegal; A = B - 1
 			case 0x1d:
 				{
 					unsigned out = REG_B - 1;
@@ -800,7 +800,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
-			// 0x3e WAI
+			// 0x3e WAI inherent
 			case 0x3e:
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
 				stack_irq_registers(cpu);
@@ -821,8 +821,8 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// 0x50 - 0x5f inherent B register ops
 			// 0x60 - 0x6f indexed mode ops
 			// 0x70 - 0x7f extended mode ops
-			// NOTE: I'm still implementing the illegal ops here as
-			// I do for 6809.  Possibly true, but needs testing.
+			// NOTE: illegal indexed and extended instructions
+			// appear to behave differently.  Needs investigating.
 			case 0x40: case 0x41: case 0x42: case 0x43:
 			case 0x44: case 0x45: case 0x46: case 0x47:
 			case 0x48: case 0x49: case 0x4a: case 0x4b:
@@ -853,7 +853,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x1: tmp1 = op_ngt(cpu, tmp1); break; // NGT*,NGTA*,NGTB*
 				case 0x2: tmp1 = op_ngc(cpu, tmp1); break; // NGC*,NGCA*,NGCB*
 				case 0x3: tmp1 = op_com(cpu, tmp1); break; // COM, COMA, COMB
-				case 0x5: // LSR illegal  XXX wrong flags
+				case 0x5: // LSR illegal
 				case 0x4: tmp1 = op_lsr_v(cpu, tmp1); break; // LSR, LSRA, LSRB
 				case 0x6: tmp1 = op_ror_v(cpu, tmp1); break; // ROR, RORA, RORB
 				case 0x7: tmp1 = op_asr_v(cpu, tmp1); break; // ASR, ASRA, ASRB

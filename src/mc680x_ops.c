@@ -71,7 +71,8 @@ static uint16_t sex8(uint8_t v) {
 	return (int16_t)(*((int8_t *)&v));
 }
 
-// Read & write various addressing modes
+// Read & write various addressing modes.  Note: ea_*() functions should be
+// defined by the core (as they vary wildly).
 
 static uint8_t byte_immediate(STRUCT_CPU *cpu) {
 	return fetch_byte(cpu, REG_PC++);
@@ -121,17 +122,13 @@ static uint16_t short_relative(STRUCT_CPU *cpu) {
 // 8-bit inherent operations
 
 static uint8_t op_neg(STRUCT_CPU *cpu, uint8_t in) {
-	// This appears to be correct: CC.C is the inverse of what you might
-	// expect from an increment being involved.  'in' is promoted to
-	// unsigned before inverting here, which inverts the carry result of
-	// the increment.
 	unsigned out = ~in + 1;
 	CLR_NZVC;
 	SET_NZVC8(0, in, out);
 	return out;
 }
 
-// Illegal op in 6801/3.  Basically like NEG, but doesn't affect value.
+// Illegal op in 6801/6803.  Tests like NEG, but doesn't store result.
 static uint8_t op_ngt(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = ~in + 1;
 	CLR_NZVC;
@@ -139,6 +136,7 @@ static uint8_t op_ngt(STRUCT_CPU *cpu, uint8_t in) {
 	return in;
 }
 
+// Illegal op.  Invert and add !C, i.e. NEG if carry clear, else COM.
 static uint8_t op_ngc(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = ~in + (~REG_CC & 1);
 	CLR_NZVC;
@@ -162,7 +160,7 @@ static uint8_t op_lsr(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of LSR used in 6801/3
+// This vesion of LSR used in 6801/6803
 static uint8_t op_lsr_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 8);
 	CLR_NZVC;
@@ -179,7 +177,7 @@ static uint8_t op_ror(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ROR used in 6801/3
+// This vesion of ROR used in 6801/6803
 static uint8_t op_ror_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((REG_CC & 1) << 8);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -197,7 +195,7 @@ static uint8_t op_asr(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This vesion of ASR used in 6801/3
+// This vesion of ASR used in 6801/6803
 static uint8_t op_asr_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned inx = in | ((in & 0x80) << 1);
 	unsigned out = (inx >> 1) | ((inx & 1) << 8);
@@ -243,7 +241,7 @@ static uint8_t op_tst(STRUCT_CPU *cpu, uint8_t in) {
 	return in;
 }
 
-// This version of TST used in 6801/3
+// This version of TST used in 6801/6803
 static uint8_t op_tst_c(STRUCT_CPU *cpu, uint8_t in) {
 	CLR_NZVC;
 	SET_NZ8(in);
@@ -270,7 +268,7 @@ static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-// This version of DAA used in 6801/3
+// This version of DAA used in 6801/6803
 static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned add = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;
@@ -343,7 +341,7 @@ static uint8_t op_add(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
 	return out;
 }
 
-// Same as op_add(), but don't affect H or C.  Illegal op in the 6801/3.
+// Illegal op in 6801/6803.  Same as op_add(), but don't affect H or C.
 static uint8_t op_add_nzv(STRUCT_CPU *cpu, uint8_t a, uint8_t b) {
 	unsigned out = a + b;
 	CLR_NZV;
@@ -376,7 +374,7 @@ static uint16_t op_lsr16(STRUCT_CPU *cpu, uint16_t in) {
 	return out;
 }
 
-// This vesion of LSR16 used in 6801/3
+// This vesion of LSR16 used in 6801/6803
 static uint16_t op_lsr16_v(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned out = (in >> 1) | ((in & 1) << 16);
 	CLR_NZVC;
