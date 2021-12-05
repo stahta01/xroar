@@ -84,6 +84,7 @@
 // Public
 
 struct xroar_cfg xroar_cfg = {
+	.ao_fragments = -1,
 	.disk_auto_os9 = 1,
 	.disk_auto_sd = 1,
 	.tape_pan = 0.5,
