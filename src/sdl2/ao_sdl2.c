@@ -16,10 +16,15 @@
  *  \endlicenseblock
  *
  *  SDL processes audio in a separate thread, using a callback to request more
- *  data.  When the configured number of audio fragments (nfragments) is 0,
- *  write directly into the buffer provided by SDL.  When nfragments >= 1,
- *  maintain a queue of fragment buffers; the callback takes the next filled
- *  buffer from the queue and copies its data into place.
+ *  data.  When nfragments >= 1, maintain a queue of fragment buffers; the
+ *  callback takes the next filled buffer from the queue and copies its data
+ *  into place.
+ *
+ *  For the special case where nfragments is 0, XRoar will write directly into
+ *  the buffer provided by SDL for the minimum latency.  This will require a
+ *  fast CPU to fill the buffer in time, but may also conflict with vsync being
+ *  enabled in video modules (which would cause other pauses at non-useful
+ *  times).
  */
 
 #ifdef HAVE_CONFIG_H
@@ -64,20 +69,38 @@ struct ao_sdl2_interface {
 	unsigned fragment_nbytes;
 
 #ifndef HAVE_WASM
+	// For most platforms (not WebAssembly), maintain a queue of buffers.
+
+	// A small amount of allocated memory to which the last frame is copied
+	// (all channels, whatever sample size is appropriate).
 	void *last_frame;
 
+	// Locking between main thread and audio callback.
 	SDL_mutex *fragment_mutex;
 	SDL_cond *fragment_cv;
+
+	// Maximum time to wait for a lock to be released before continuing
+	// without a buffer.
 	unsigned timeout_ms;
 
+	// Allocated space for buffers.
 	void **fragment_buffer;
-	_Bool fragment_available;
+
+	// Current fragment being written, for nfragments > 0 only.
 	unsigned write_fragment;
+
+	// Next fragment to be played, for nfragments > 0 only.
 	unsigned play_fragment;
+
+	// Number of buffers filled.  For nfragments == 0, used to indicate
+	// that the SDL-provided buffer has been filled to the audio callback.
 	unsigned fragment_queue_length;
 #endif
 
 #ifdef HAVE_WASM
+	// Under WebAssembly, we use SDL's queued audio interface, which seem
+	// to work better in that environment (while not working well at all
+	// under Windows).
 	void *fragment_buffer;
 	Uint32 qbytes_threshold;
 	unsigned qdelay_divisor;
@@ -284,7 +307,6 @@ static void *new(void *cfg) {
 	aosdl->fragment_mutex = SDL_CreateMutex();
 	aosdl->fragment_cv = SDL_CreateCond();
 	aosdl->timeout_ms = (fragment_nframes * 2000) / rate;
-	aosdl->fragment_available = 0;
 	aosdl->write_fragment = aosdl->play_fragment = 0;
 	aosdl->fragment_queue_length = 0;
 #endif
@@ -357,8 +379,7 @@ static void ao_sdl2_free(void *sptr) {
 #ifndef HAVE_WASM
 	// unblock audio thread
 	SDL_LockMutex(aosdl->fragment_mutex);
-	aosdl->fragment_available = 1;
-	aosdl->fragment_queue_length = 0;
+	aosdl->fragment_queue_length = 1;
 	SDL_CondSignal(aosdl->fragment_cv);
 	SDL_UnlockMutex(aosdl->fragment_mutex);
 #endif
@@ -408,7 +429,7 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 		 * callback in case it is waiting for data to be available. */
 
 		if (buffer) {
-			aosdl->fragment_available = 1;
+			aosdl->fragment_queue_length = 1;
 			SDL_CondSignal(aosdl->fragment_cv);
 		}
 
@@ -523,7 +544,7 @@ static void callback_0(void *userdata, Uint8 *stream, int len) {
 	SDL_CondSignal(aosdl->fragment_cv);
 
 	// wait until main thread signals filled buffer
-	while (!aosdl->fragment_available) {
+	while (aosdl->fragment_queue_length == 0) {
 		if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
 			memset(stream, 0, aosdl->fragment_nbytes);
 			SDL_UnlockMutex(aosdl->fragment_mutex);
@@ -532,7 +553,7 @@ static void callback_0(void *userdata, Uint8 *stream, int len) {
 	}
 
 	// set to 0 so next callback will wait
-	aosdl->fragment_available = 0;
+	aosdl->fragment_queue_length = 0;
 
 	SDL_UnlockMutex(aosdl->fragment_mutex);
 }
