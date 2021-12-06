@@ -69,7 +69,7 @@ const struct ser_struct_data nx32_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void nx32_reset(struct cart *c);
+static void nx32_reset(struct cart *c, _Bool hard);
 static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
@@ -183,9 +183,9 @@ static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void nx32_reset(struct cart *c) {
+static void nx32_reset(struct cart *c, _Bool hard) {
 	struct nx32 *n = (struct nx32 *)c;
-	cart_rom_reset(c);
+	cart_rom_reset(c, hard);
 	n->extmem_map = 0;
 	n->extmem_ty = 0;
 	n->extmem_bank = 0;

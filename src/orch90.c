@@ -54,7 +54,7 @@ static const struct ser_struct_data orch90_ser_struct_data = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void orch90_reset(struct cart *c);
+static void orch90_reset(struct cart *c, _Bool hard);
 static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
 static _Bool orch90_has_interface(struct cart *c, const char *ifname);
@@ -116,8 +116,8 @@ static _Bool orch90_finish(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void orch90_reset(struct cart *c) {
-	cart_rom_reset(c);
+static void orch90_reset(struct cart *c, _Bool hard) {
+	cart_rom_reset(c, hard);
 }
 
 static void orch90_attach(struct cart *c) {

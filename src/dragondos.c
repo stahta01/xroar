@@ -74,7 +74,7 @@ static const struct ser_struct_data dragondos_ser_struct_data = {
 /* Cart interface */
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void dragondos_reset(struct cart *c);
+static void dragondos_reset(struct cart *c, _Bool hard);
 static void dragondos_detach(struct cart *c);
 static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
@@ -168,9 +168,9 @@ static void dragondos_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragondos_reset(struct cart *c) {
+static void dragondos_reset(struct cart *c, _Bool hard) {
 	struct dragondos *d = (struct dragondos *)c;
-	cart_rom_reset(c);
+	cart_rom_reset(c, hard);
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	latch_write(d, 0);

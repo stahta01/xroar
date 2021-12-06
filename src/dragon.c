@@ -929,7 +929,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	mc6821_reset(md->PIA0);
 	mc6821_reset(md->PIA1);
 	if (md->cart && md->cart->reset) {
-		md->cart->reset(md->cart);
+		md->cart->reset(md->cart, hard);
 	}
 	sam_reset(md->SAM);
 	md->CPU->reset(md->CPU);

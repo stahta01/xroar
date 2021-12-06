@@ -111,7 +111,7 @@ static void mpi_detach(struct cart *c);
 static void mpi_free(struct part *p);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void mpi_reset(struct cart *c);
+static void mpi_reset(struct cart *c, _Bool hard);
 static _Bool mpi_has_interface(struct cart *c, const char *ifname);
 static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -222,7 +222,7 @@ static void mpi_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mpi_reset(struct cart *c) {
+static void mpi_reset(struct cart *c, _Bool hard) {
 	struct mpi *mpi = (struct mpi *)c;
 	mpi->firq_state = 0;
 	mpi->nmi_state = 0;
@@ -230,7 +230,7 @@ static void mpi_reset(struct cart *c) {
 	for (int i = 0; i < 4; i++) {
 		struct cart *c2 = mpi->slot[i].cart;
 		if (c2 && c2->reset) {
-			c2->reset(c2);
+			c2->reset(c2, hard);
 		}
 	}
 	mpi->cart.EXTMEM = 0;

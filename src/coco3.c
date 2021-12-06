@@ -615,7 +615,7 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 	mc6821_reset(mcc3->PIA0);
 	mc6821_reset(mcc3->PIA1);
 	if (mcc3->cart && mcc3->cart->reset) {
-		mcc3->cart->reset(mcc3->cart);
+		mcc3->cart->reset(mcc3->cart, hard);
 	}
 	tcc1014_reset(mcc3->GIME);
 	mcc3->CPU->reset(mcc3->CPU);

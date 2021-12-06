@@ -64,7 +64,7 @@ static const struct ser_struct_data gmc_ser_struct_data = {
 static void gmc_attach(struct cart *c);
 static void gmc_detach(struct cart *c);
 static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void gmc_reset(struct cart *c);
+static void gmc_reset(struct cart *c, _Bool hard);
 static _Bool gmc_has_interface(struct cart *c, const char *ifname);
 static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf);
 
@@ -143,8 +143,8 @@ static void gmc_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void gmc_reset(struct cart *c) {
-	cart_rom_reset(c);
+static void gmc_reset(struct cart *c, _Bool hard) {
+	cart_rom_reset(c, hard);
 }
 
 static void gmc_attach(struct cart *c) {

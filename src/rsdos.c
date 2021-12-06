@@ -75,7 +75,7 @@ static const struct ser_struct_data rsdos_ser_struct_data = {
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void rsdos_reset(struct cart *c);
+static void rsdos_reset(struct cart *c, _Bool hard);
 static void rsdos_detach(struct cart *c);
 static _Bool rsdos_has_interface(struct cart *c, const char *ifname);
 static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf);
@@ -170,9 +170,9 @@ static void rsdos_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void rsdos_reset(struct cart *c) {
+static void rsdos_reset(struct cart *c, _Bool hard) {
 	struct rsdos *d = (struct rsdos *)c;
-	cart_rom_reset(c);
+	cart_rom_reset(c, hard);
 	wd279x_reset(d->fdc);
 	d->latch_old = -1;
 	d->latch_drive_select = -1;

@@ -72,7 +72,7 @@ struct cart {
 	uint8_t (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 
 	// Reset line.
-	void (*reset)(struct cart *c);
+	void (*reset)(struct cart *c, _Bool hard);
 
 	// Cartridge asserts this to inhibit usual address decode by host.
 	_Bool EXTMEM;
@@ -132,7 +132,7 @@ _Bool mc10_cart_is_a(struct part *p, const char *name);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void cart_rom_init(struct cart *c);
-void cart_rom_reset(struct cart *c);
+void cart_rom_reset(struct cart *c, _Bool hard);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
 void cart_rom_free(struct part *p);

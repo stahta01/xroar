@@ -516,8 +516,9 @@ static void cart_rom_load(struct cart *c) {
 	}
 }
 
-void cart_rom_reset(struct cart *c) {
-	cart_rom_load(c);
+void cart_rom_reset(struct cart *c, _Bool hard) {
+	if (hard)
+		cart_rom_load(c);
 	c->rom_bank = 0;
 }
 

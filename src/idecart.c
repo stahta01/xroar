@@ -72,7 +72,7 @@ const struct ser_struct_data idecart_ser_struct_data = {
 
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void idecart_reset(struct cart *c);
+static void idecart_reset(struct cart *c, _Bool hard);
 static void idecart_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -268,9 +268,9 @@ static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 	return D;
 }
 
-static void idecart_reset(struct cart *c) {
+static void idecart_reset(struct cart *c, _Bool hard) {
 	struct idecart *ide = (struct idecart *)c;
-	cart_rom_reset(c);
+	cart_rom_reset(c, hard);
 	if (ide->becker)
 		becker_reset(ide->becker);
 	ide_reset_begin(ide->controller);

@@ -469,7 +469,7 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 		memset(mp->ram, 0, mp->ram_size);
 	}
 	/* if (mp->cart && mp->cart->reset) {
-		mp->cart->reset(mp->cart);
+		mp->cart->reset(mp->cart, hard);
 	} */
 	mp->CPU->reset(mp->CPU);
 	mc6847_reset(mp->VDG);

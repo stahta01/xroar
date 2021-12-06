@@ -1764,7 +1764,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 			xroar_connect_cart();
 			// Reset the cart once all interfaces are attached
 			if (new_cart->reset)
-				new_cart->reset(new_cart);
+				new_cart->reset(new_cart, 1);
 		}
 	}
 

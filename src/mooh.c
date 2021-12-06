@@ -77,7 +77,7 @@ const struct ser_struct_data mooh_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mooh_reset(struct cart *c);
+static void mooh_reset(struct cart *c, _Bool hard);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mooh_detach(struct cart *c);
@@ -197,18 +197,18 @@ static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mooh_reset(struct cart *c) {
+static void mooh_reset(struct cart *c, _Bool hard) {
 	struct mooh *n = (struct mooh *)c;
 	int i;
 
-	cart_rom_reset(c);
+	cart_rom_reset(c, hard);
 
 	n->mmu_enable = 0;
 	n->crm_enable = 0;
 	n->task = 0;
 	for (i = 0; i < 8; i++)
 		n->taskreg[i][0] = n->taskreg[i][1] = 0xFF & TASK_MASK;
-	cart_rom_reset(c);
+
 	n->rom_conf = 0;
 	if (n->becker)
 		becker_reset(n->becker);
