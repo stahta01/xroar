@@ -1,3 +1,4 @@
+Version 1.0.3, Mon  6 Dec 2021
 
  * 6801/6803: many more illegal instructions [Greg Dionne, Ron Klein]
  * Fix EXTMEM signalling for writes to RAM [Stewart Orchard]
