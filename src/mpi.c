@@ -234,6 +234,12 @@ static void mpi_reset(struct cart *c, _Bool hard) {
 		}
 	}
 	mpi->cart.EXTMEM = 0;
+
+	if (!mpi->is_race) {
+		select_slot(c, (initial_slot << 4) | initial_slot);
+	} else {
+		select_slot(c, 0);
+	}
 }
 
 static void mpi_attach(struct cart *c) {
