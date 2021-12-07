@@ -482,11 +482,14 @@ static _Bool coco3_finish(struct part *p) {
 		}
 	}
 
-	/* Default all PIA connections to unconnected (no source, no sink) */
+	// Default all PIA connections to unconnected (no source, no sink)
 	mcc3->PIA0->b.in_source = 0;
 	mcc3->PIA1->b.in_source = 0;
 	mcc3->PIA0->a.in_sink = mcc3->PIA0->b.in_sink = 0xff;
 	mcc3->PIA1->a.in_sink = mcc3->PIA1->b.in_sink = 0xff;
+
+	// Until I implement serial, this appear to pull low by default
+	mcc3->PIA1->b.in_sink &= ~(1<<0);
 
 	// Keyboard interface
 	mcc3->keyboard.interface = keyboard_interface_new(m);
@@ -983,6 +986,8 @@ static void keyboard_update(void *sptr) {
 	mcc3->PIA0->a.in_sink = state.row_sink;
 	mcc3->PIA0->b.in_source = state.col_source;
 	mcc3->PIA0->b.in_sink = state.col_sink;
+	mcc3->PIA1->b.in_source = (mcc3->PIA1->b.in_sink & ~(1<<2)) | ((state.col_source & (1<<6)) ? (1<<2) : 0);
+	mcc3->PIA1->b.in_sink = (mcc3->PIA1->b.in_sink & ~(1<<2)) | ((state.col_sink & (1<<6)) ? (1<<2) : 0);
 	mcc3->GIME->IL1 = (PIA_VALUE_A(mcc3->PIA0) | 0x80) != 0xff;
 }
 
