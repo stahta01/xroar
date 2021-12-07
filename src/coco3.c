@@ -199,6 +199,7 @@ static void coco3_reset(struct machine *m, _Bool hard);
 static enum machine_run_state coco3_run(struct machine *m, int ncycles);
 static void coco3_single_step(struct machine *m);
 static void coco3_signal(struct machine *m, int sig);
+static void coco3_trap(void *sptr);
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
@@ -398,6 +399,7 @@ static _Bool coco3_finish(struct part *p) {
 	// Breakpoint session
 	mcc3->bp_session = bp_session_new(m);
 	assert(mcc3->bp_session != NULL);  // this shouldn't fail
+	mcc3->bp_session->trap_handler = DELEGATE_AS0(void, coco3_trap, m);
 
 	// PIAs
 
@@ -680,6 +682,11 @@ static void coco3_signal(struct machine *m, int sig) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
 	mcc3->stop_signal = sig;
 	mcc3->CPU->running = 0;
+}
+
+static void coco3_trap(void *sptr) {
+	struct machine *m = sptr;
+	coco3_signal(m, MACHINE_SIGTRAP);
 }
 
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
