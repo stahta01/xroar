@@ -187,10 +187,6 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	}
 
 	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
-	if (!sam) {
-		LOG_WARN("GDB: MC6883 SAM not found - not enabling GDB support\n");
-		return NULL;
-	}
 
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
