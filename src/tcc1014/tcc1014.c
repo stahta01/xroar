@@ -608,16 +608,18 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		}
 
 	} else if (A < 0xff40) {
-		gimep->S = 2;
-		if (A == 0xff22 && !RnW) {
-			// GIME snoops writes to $FF22
-			if (gime->vmode_direction) {
-				gime->vmode = *gimep->CPUD & 0xf8;
-				tcc1014_update_graphics_mode(gime);
+		if ((A & 0x10) == 0) {
+			gimep->S = 2;
+			if (A == 0xff22 && !RnW) {
+				// GIME snoops writes to $FF22
+				if (gime->vmode_direction) {
+					gime->vmode = *gimep->CPUD & 0xf8;
+					tcc1014_update_graphics_mode(gime);
+				}
+			} else if (A == 0xff23 && !RnW) {
+				// GIME snoops the data direction register too
+				gime->vmode_direction = *gimep->CPUD & 0x04;
 			}
-		} else if (A == 0xff23 && !RnW) {
-			// GIME snoops the data direction register too
-			gime->vmode_direction = *gimep->CPUD & 0x04;
 		}
 
 	} else if (A < 0xff60) {
