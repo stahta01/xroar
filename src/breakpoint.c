@@ -118,6 +118,10 @@ static struct breakpoint *trap_find(struct bp_session_private *bpsp,
 static void trap_add(struct bp_session_private *bpsp,
 		     struct slist **bp_list, unsigned addr, unsigned addr_end,
 		     unsigned cond_mask, unsigned cond) {
+	if (!bpsp->bps.trap_handler.func) {
+		LOG_WARN("Machine has not set trap handler: not setting breakpoint\n");
+		return;
+	}
 	if (trap_find(bpsp, *bp_list, addr, addr_end, cond_mask, cond))
 		return;
 	struct breakpoint *new = xmalloc(sizeof(*new));
