@@ -550,8 +550,6 @@ static void mc10_trap(void *sptr) {
 static void mc10_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	for (int i = 0; i < n; i++) {
-		if ((list[i].add_cond & BP_MACHINE_ARCH) && xroar_machine_config->architecture != list[i].cond_machine_arch)
-			continue;
 		if ((list[i].add_cond & BP_CRC_BAS) && (!mp->has_bas || !crclist_match(list[i].cond_crc_bas, mp->crc_bas)))
 			continue;
 		list[i].bp.handler.sptr = sptr;

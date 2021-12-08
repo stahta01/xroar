@@ -95,11 +95,10 @@ struct vo_interface;
 /* Local flags determining whether breakpoints are added with
  * machine_add_bp_list(). */
 
-#define BP_MACHINE_ARCH (1 << 0)
-#define BP_CRC_BAS (1 << 1)
-#define BP_CRC_EXT (1 << 2)
-#define BP_CRC_ALT (1 << 3)
-#define BP_CRC_COMBINED (1 << 4)
+#define BP_CRC_BAS (1 << 0)
+#define BP_CRC_EXT (1 << 1)
+#define BP_CRC_ALT (1 << 2)
+#define BP_CRC_COMBINED (1 << 3)
 
 struct machine_bp {
 	struct breakpoint bp;
