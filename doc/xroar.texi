@@ -565,8 +565,7 @@ but still using the MC6847 VDG and containing a version of Microsoft BASIC.
 Comes with 4K of RAM, but much of the small amount of software available for it
 assumes an additional 16K RAM pack.
 
-Architecture @samp{mc10}.  Built-in machine profile @samp{mc10}.  XRoar's MC-10
-support is very new, and may contain more obvious errors.
+Architecture @samp{mc10}.  Built-in machine profile @samp{mc10}.
 
 @c
 
@@ -587,8 +586,7 @@ Composite Video, while the PAL version always used the RGB output from the
 GIME.
 
 Architecture @samp{coco3}.  Built-in machine profiles: @samp{coco3} (NTSC),
-@samp{coco3p} (PAL).  XRoar's CoCo 3 support is very new, and may contain more
-obvious errors.
+@samp{coco3p} (PAL).
 
 @c = === === === === === === === === === === === === === === === === === ===
 
