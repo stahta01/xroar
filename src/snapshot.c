@@ -267,11 +267,11 @@ static char *read_string(FILE *fd, unsigned *size) {
 	return str;
 }
 
-static const int old_arch_mapping[4] = {
-	MACHINE_DRAGON32,
-	MACHINE_DRAGON64,
-	MACHINE_TANO,
-	MACHINE_COCOUS
+static const char *old_arch_mapping[4] = {
+	"dragon32",
+	"dragon64",
+	"dragon64",
+	"coco"
 };
 
 static void old_set_registers(struct machine *m, uint8_t *regs) {
@@ -347,7 +347,7 @@ static int read_v1_snapshot(const char *filename) {
 	}
 
 	// Default to Dragon 64 for old snapshots
-	struct machine_config *mc = machine_config_by_arch(ARCH_DRAGON64);
+	struct machine_config *mc = machine_config_by_arch(1);  // 1 == old ARCH_DRAGON64
 	xroar_configure_machine(mc);
 	xroar_machine->reset(xroar_machine, RESET_HARD);
 	// If old snapshot, buffer contains register dump
@@ -365,7 +365,9 @@ static int read_v1_snapshot(const char *filename) {
 				if (size < 1) break;
 				tmp = fs_read_uint8(fd);
 				tmp %= 4;
-				mc->architecture = old_arch_mapping[tmp];
+				if (mc->architecture)
+					free(mc->architecture);
+				mc->architecture = xstrdup(old_arch_mapping[tmp]);
 				xroar_configure_machine(mc);
 				xroar_machine->reset(xroar_machine, RESET_HARD);
 				size--;

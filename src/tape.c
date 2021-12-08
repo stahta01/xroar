@@ -235,13 +235,9 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 
 	_Bool is_dragon = 0;
-	switch (m->config->architecture) {
-	case ARCH_DRAGON32:
-	case ARCH_DRAGON64:
+	if (strcmp(m->config->architecture, "dragon32") == 0
+	    || strcmp(m->config->architecture, "dragon64") == 0) {
 		is_dragon = 1;
-		break;
-	default:
-		 break;
 	}
 
 	tip->machine = m;

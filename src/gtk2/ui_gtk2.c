@@ -793,7 +793,7 @@ static void gtk2_update_machine_menu(void *sptr) {
 /* Dynamic cartridge menu */
 static void gtk2_update_cartridge_menu(void *sptr) {
 	(void)sptr;
-	int cart_arch = (xroar_machine && xroar_machine->config && xroar_machine->config->architecture == ARCH_MC10) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
+	int cart_arch = (xroar_machine && xroar_machine->config && strcmp(xroar_machine->config->architecture, "mc10") == 0) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
 	struct slist *ccl = slist_reverse(cart_config_list_by_arch(cart_arch));
 	int num_carts = slist_length(ccl);
 	int selected = 0;

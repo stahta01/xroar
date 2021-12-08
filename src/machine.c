@@ -46,7 +46,7 @@
 
 static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, description, ser_type_string), // 1
-	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_int), // 2
+	SER_STRUCT_UNHANDLED(), // 2 - old 'architecture' as int
 	SER_STRUCT_ELEM(struct machine_config, cpu, ser_type_int), // 3
 	SER_STRUCT_ELEM(struct machine_config, vdg_palette, ser_type_string), // 4
 	SER_STRUCT_ELEM(struct machine_config, keymap, ser_type_int), // 5
@@ -64,16 +64,18 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, default_cart_dfn, ser_type_bool), // 17
 	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 18
 	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
+	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_string), // 20
 };
-
 #define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
 
-#define MACHINE_SER_MACHINE_CONFIG (1)
+#define MACHINE_CONFIG_SER_ARCHITECTURE_OLD (2)
 
 static const struct ser_struct ser_struct_machine[] = {
         SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
         SER_STRUCT_ELEM(struct machine, keyboard.type, ser_type_int), // 2
 };
+
+#define MACHINE_SER_MACHINE_CONFIG (1)
 
 static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -85,16 +87,12 @@ const struct ser_struct_data machine_ser_struct_data = {
 	.write_elem = machine_write_elem,
 };
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-struct xconfig_enum machine_arch_list[] = {
-	{ XC_ENUM_INT("dragon64", ARCH_DRAGON64, "Dragon 64") },
-	{ XC_ENUM_INT("dragon32", ARCH_DRAGON32, "Dragon 32") },
-	{ XC_ENUM_INT("coco", ARCH_COCO, "Tandy CoCo 1/2") },
-	{ XC_ENUM_INT("coco3", ARCH_COCO3, "Tandy CoCo 3") },
-	{ XC_ENUM_INT("mc10", ARCH_MC10, "Tandy MC-10") },
-	{ XC_ENUM_END() }
+// Translate old integer machine architecture to string
+static const char *int_arch_to_string[5] = {
+	"dragon32", "dragon64", "coco", "coco3", "mc10"
 };
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct xconfig_enum machine_keyboard_list[] = {
 	{ XC_ENUM_INT("dragon", dkbd_layout_dragon, "Dragon") },
@@ -136,15 +134,12 @@ struct xconfig_enum machine_vdg_type_list[] = {
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
-static const char *machine_arch_to_name(struct machine_config *mc);
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config *machine_config_new(void) {
 	struct machine_config *new = xmalloc(sizeof(*new));
 	*new = (struct machine_config){0};
 	new->id = next_id;
-	new->architecture = ANY_AUTO;
 	new->cpu = CPU_MC6809;
 	new->keymap = ANY_AUTO;
 	new->tv_standard = ANY_AUTO;
@@ -167,7 +162,23 @@ struct machine_config *machine_config_deserialise(struct ser_handle *sh) {
 		mc->name = xstrdup(name);
 	}
 	free(name);
-	ser_read_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, mc);
+	int tag;
+	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, mc)) > 0) {
+		switch (tag) {
+		case MACHINE_CONFIG_SER_ARCHITECTURE_OLD: {
+			int old_arch = ser_read_vint32(sh);
+			if (mc->architecture)
+				free(mc->architecture);
+			if (old_arch < 0 || old_arch >= (int)ARRAY_N_ELEMENTS(int_arch_to_string))
+				old_arch = 0;
+			mc->architecture = xstrdup(int_arch_to_string[old_arch]);
+		} break;
+
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
 	return mc;
 }
 
@@ -175,7 +186,16 @@ void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machi
 	if (!mc)
 		return;
 	ser_write_open_string(sh, otag, mc->name);
-	ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, 1, mc);
+	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, tag, mc)) > 0; tag++) {
+		switch (tag) {
+		case MACHINE_CONFIG_SER_ARCHITECTURE_OLD:
+			// old field, just ignore here for now
+			break;
+		default:
+			ser_set_error(sh, ser_error_format);
+			break;
+		}
+	}
 	ser_write_close_tag(sh);
 }
 
@@ -200,9 +220,11 @@ struct machine_config *machine_config_by_name(const char *name) {
 }
 
 struct machine_config *machine_config_by_arch(int arch) {
+	if (arch < 0  || arch >= (int)ARRAY_N_ELEMENTS(int_arch_to_string))
+		return NULL;
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
-		if (mc->architecture == arch) {
+		if (strcmp(mc->architecture, int_arch_to_string[arch]) == 0) {
 			return mc;
 		}
 	}
@@ -213,7 +235,7 @@ static _Bool machine_is_working_config(struct machine_config *mc) {
 	if (!mc) {
 		return 0;
 	}
-	const struct partdb_entry *pe = partdb_find_entry(machine_arch_to_name(mc));
+	const struct partdb_entry *pe = partdb_find_entry(mc->architecture);
 	if (!partdb_ent_is_a(pe, "machine"))
 		return 0;
 	const struct machine_partdb_extra *mpe = pe->extra[0];
@@ -248,7 +270,10 @@ void machine_config_complete(struct machine_config *mc) {
 	if (!mc->description) {
 		mc->description = xstrdup(mc->name);
 	}
-	const struct partdb_entry *pe = partdb_find_entry(machine_arch_to_name(mc));
+	if (!mc->architecture) {
+		mc->architecture = xstrdup("dragon64");
+	}
+	const struct partdb_entry *pe = partdb_find_entry(mc->architecture);
 	if (!partdb_ent_is_a(pe, "machine"))
 		return;
 	const struct machine_partdb_extra *mpe = pe->extra[0];
@@ -302,7 +327,7 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		fprintf(f, "machine %s\n", mc->name);
 		xroar_cfg_print_inc_indent();
 		xroar_cfg_print_string(f, all, "machine-desc", mc->description, NULL);
-		xroar_cfg_print_enum(f, all, "machine-arch", mc->architecture, ANY_AUTO, machine_arch_list);
+		xroar_cfg_print_string(f, all, "machine-arch", mc->architecture, NULL);
 		xroar_cfg_print_enum(f, all, "machine-keyboard", mc->keymap, ANY_AUTO, machine_keyboard_list);
 		xroar_cfg_print_enum(f, all, "machine-cpu", mc->cpu, CPU_MC6809, machine_cpu_list);
 		xroar_cfg_print_string(f, all, "machine-palette", mc->vdg_palette, "ideal");
@@ -357,32 +382,14 @@ int machine_load_rom(const char *path, uint8_t *dest, off_t max_size) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Machine arch to part name.  Obviously we could be storing machine arch as a
-// string here, but do this mapping for now.
-static const char *machine_arch_to_name(struct machine_config *mc) {
-	switch (mc->architecture) {
-	case ARCH_DRAGON32:
-		return "dragon32";
-	case ARCH_DRAGON64:
-	default:
-		return "dragon64";
-	case ARCH_COCO3:
-		return "coco3";
-	case ARCH_MC10:
-		return "mc10";
-	}
-}
-
 struct machine *machine_new(struct machine_config *mc) {
 	assert(mc != NULL);
-	LOG_DEBUG(1, "Machine: %s\n", mc->description);
-	const char *partname = machine_arch_to_name(mc);
+	LOG_DEBUG(1, "Machine: [%s] %s\n", mc->architecture, mc->description);
 	// sanity check that the part is a machine
-	if (!partdb_is_a(partname, "machine")) {
+	if (!partdb_is_a(mc->architecture, "machine")) {
 		return NULL;
 	}
-	LOG_DEBUG(2, "Machine part: %s\n", partname);
-	struct machine *m = (struct machine *)part_create(partname, mc);
+	struct machine *m = (struct machine *)part_create(mc->architecture, mc);
 	if (m && !part_is_a((struct part *)m, "machine")) {
 		part_free((struct part *)m);
 		m = NULL;

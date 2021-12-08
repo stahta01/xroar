@@ -117,6 +117,7 @@ struct ser_struct {
 };
 
 #define SER_STRUCT_ELEM(s,e,t) { .type = t, .data.offset = offsetof(s,e) }
+#define SER_STRUCT_UNHANDLED() { .type = ser_type_unhandled }
 #define SER_STRUCT_NEST(s) { .type = ser_type_nest, .data.ser_struct_data = s }
 
 struct ser_struct_data {

@@ -280,7 +280,8 @@ void windows32_update_cartridge_menu(void *sptr) {
 	// This seems to do the job of clearing any existing menu:
 	while (DeleteMenu(cartridge_menu, 0, MF_BYPOSITION))
 		;
-	int cart_arch = (xroar_machine && xroar_machine->config && xroar_machine->config->architecture == ARCH_MC10) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
+	_Bool is_mc10 = xroar_machine && xroar_machine->config && strcmp(xroar_machine->config->architecture, "mc10") == 0;
+	int cart_arch = is_mc10 ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
 	AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
 	max_cartridge_id = 0;
 	struct slist *ccl = cart_config_list_by_arch(cart_arch);

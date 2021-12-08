@@ -135,7 +135,9 @@ static void mc10_config_complete(struct machine_config *mc) {
 		}
 	}
 	mc->vdg_type = VDG_6847;
-	mc->architecture = ARCH_MC10;
+	if (mc->architecture)
+		free(mc->architecture);
+	mc->architecture = xstrdup("mc10");
 	if (mc->ram != 2 && mc->ram != 4 && mc->ram != 20) {
 		if (mc->ram >= 16)
 			mc->ram = 20;

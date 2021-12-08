@@ -44,11 +44,6 @@ struct vo_interface;
 #define MACHINE_TANO     (2)
 #define MACHINE_COCO     (3)
 #define MACHINE_COCOUS   (4)
-#define ARCH_DRAGON32 (0)
-#define ARCH_DRAGON64 (1)
-#define ARCH_COCO     (2)
-#define ARCH_COCO3    (3)
-#define ARCH_MC10     (4)
 #define CPU_MC6809 (0)
 #define CPU_HD6309 (1)
 #define ROMSET_DRAGON32 (0)
@@ -149,7 +144,7 @@ struct machine_config {
 	char *name;
 	char *description;
 	int id;
-	int architecture;
+	char *architecture;
 	int cpu;
 	char *vdg_palette;
 	int keymap;
@@ -170,7 +165,6 @@ struct machine_config {
 	_Bool cart_enabled;
 };
 
-extern struct xconfig_enum machine_arch_list[];
 extern struct xconfig_enum machine_keyboard_list[];
 extern struct xconfig_enum machine_cpu_list[];
 extern struct xconfig_enum machine_tv_type_list[];

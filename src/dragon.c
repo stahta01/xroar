@@ -161,7 +161,7 @@ const struct ser_struct_data dragon_ser_struct_data = {
 
 static void verify_ram_size(struct machine_config *mc) {
 	if (mc->ram < 4 || mc->ram > 64) {
-		mc->ram = (mc->architecture == ARCH_DRAGON32) ? 32 : 64;
+		mc->ram = (strcmp(mc->architecture, "dragon32") == 0) ? 32 : 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
 	} else if (mc->ram < 16) {
@@ -193,44 +193,55 @@ static void dragon_config_complete(struct machine_config *mc) {
 	if (mc->vdg_type != VDG_6847 && mc->vdg_type != VDG_6847T1)
 		mc->vdg_type = VDG_6847;
 	/* Various heuristics to find a working architecture */
-	if (mc->architecture == ANY_AUTO) {
+	if (!mc->architecture) {
 		/* TODO: checksum ROMs to help determine arch */
 		if (mc->bas_rom) {
-			mc->architecture = ARCH_COCO;
+			mc->architecture = xstrdup("coco");
 		} else if (mc->altbas_rom) {
-			mc->architecture = ARCH_DRAGON64;
+			mc->architecture = xstrdup("dragon64");
 		} else if (mc->extbas_rom) {
 			struct stat statbuf;
-			mc->architecture = ARCH_DRAGON64;
+			mc->architecture = xstrdup("dragon64");
 			if (stat(mc->extbas_rom, &statbuf) == 0) {
 				if (statbuf.st_size <= 0x2000) {
-					mc->architecture = ARCH_COCO;
+					mc->architecture = xstrdup("coco");
 				}
 			}
 		} else {
-			mc->architecture = ARCH_DRAGON64;
+			mc->architecture = xstrdup("dragon64");
 		}
 	}
+	int old_arch;
+	if (strcmp(mc->architecture, "dragon32") == 0) {
+		old_arch = 0;
+	} else if (strcmp(mc->architecture, "coco") == 0) {
+		old_arch = 2;
+	} else if (strcmp(mc->architecture, "coco3") == 0) {
+		old_arch = 3;
+	} else if (strcmp(mc->architecture, "mc10") == 0) {
+		old_arch = 4;
+	} else {
+		old_arch = 1;
+	}
+
+	_Bool is_dragon = old_arch == 0 || old_arch == 1;
 	verify_ram_size(mc);
 	if (mc->keymap == ANY_AUTO) {
-		switch (mc->architecture) {
-		case ARCH_DRAGON64: case ARCH_DRAGON32: default:
+		if (is_dragon) {
 			mc->keymap = dkbd_layout_dragon;
-			break;
-		case ARCH_COCO:
+		} else {
 			mc->keymap = dkbd_layout_coco;
-			break;
 		}
 	}
 	/* Now find which ROMs we're actually going to use */
-	if (!mc->bas_dfn && !mc->bas_rom && rom_list[mc->architecture].bas) {
-		mc->bas_rom = xstrdup(rom_list[mc->architecture].bas);
+	if (!mc->bas_dfn && !mc->bas_rom && rom_list[old_arch].bas) {
+		mc->bas_rom = xstrdup(rom_list[old_arch].bas);
 	}
-	if (!mc->extbas_dfn && !mc->extbas_rom && rom_list[mc->architecture].extbas) {
-		mc->extbas_rom = xstrdup(rom_list[mc->architecture].extbas);
+	if (!mc->extbas_dfn && !mc->extbas_rom && rom_list[old_arch].extbas) {
+		mc->extbas_rom = xstrdup(rom_list[old_arch].extbas);
 	}
-	if (!mc->altbas_dfn && !mc->altbas_rom && rom_list[mc->architecture].altbas) {
-		mc->altbas_rom = xstrdup(rom_list[mc->architecture].altbas);
+	if (!mc->altbas_dfn && !mc->altbas_rom && rom_list[old_arch].altbas) {
+		mc->altbas_rom = xstrdup(rom_list[old_arch].altbas);
 	}
 	// Determine a default DOS cartridge if necessary
 	if (!mc->default_cart_dfn && !mc->default_cart) {
@@ -447,16 +458,9 @@ static _Bool dragon_finish(struct part *p) {
 	// Connect any cartridge part
 	dragon_connect_cart(p);
 
-	switch (mc->architecture) {
-	case ARCH_DRAGON32:
-		md->is_dragon32 = md->is_dragon = 1;
-		break;
-	case ARCH_DRAGON64:
-		md->is_dragon64 = md->is_dragon = 1;
-		break;
-	default:
-		break;
-	}
+	md->is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
+	md->is_dragon64 = (strcmp(mc->architecture, "dragon64") == 0);
+	md->is_dragon = md->is_dragon32 || md->is_dragon64;
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM);

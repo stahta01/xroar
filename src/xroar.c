@@ -99,7 +99,7 @@ struct private_cfg {
 	// Machines
 	char *default_machine;
 	char *machine_desc;
-	int machine_arch;
+	char *machine_arch;
 	int machine_keymap;
 	int machine_cpu;
 	char *machine_palette;
@@ -179,7 +179,6 @@ struct private_cfg {
 };
 
 static struct private_cfg private_cfg = {
-	.machine_arch = ANY_AUTO,
 	.machine_keymap = ANY_AUTO,
 	.machine_cpu = CPU_MC6809,
 	.tv = ANY_AUTO,
@@ -1202,14 +1201,11 @@ void xroar_load_disk(const char *filename, int drive, _Bool autorun) {
 	if (autorun && vdrive_disk_in_drive(xroar_vdrive_interface, 0)) {
 		/* TODO: more intelligent recognition of the type of DOS
 		 * we're talking to */
-		switch (xroar_machine->config->architecture) {
-		case ARCH_COCO:
-		case ARCH_COCO3:
+		if (strcmp(xroar_machine->config->architecture, "coco") == 0
+		    || strcmp(xroar_machine->config->architecture, "coco3") == 0) {
 			keyboard_queue_basic(xroar_keyboard_interface, "\\eDOS\\r");
-			break;
-		default:
+		} else {
 			keyboard_queue_basic(xroar_keyboard_interface, "\\eBOOT\\r");
-			break;
 		}
 	}
 }
@@ -1398,6 +1394,7 @@ void xroar_set_ccr(_Bool notify, int action) {
 }
 
 void xroar_set_tv_input(_Bool notify, int action) {
+	_Bool is_coco3 = (strcmp(xroar_machine_config->architecture, "coco3") == 0);
 	switch (action) {
 	case TV_INPUT_CMP_PALETTE:
 	case TV_INPUT_CMP_KBRW:
@@ -1408,7 +1405,7 @@ void xroar_set_tv_input(_Bool notify, int action) {
 
 	case XROAR_NEXT:
 		xroar_machine_config->tv_input++;
-		if (xroar_machine_config->architecture == ARCH_COCO3) {
+		if (is_coco3) {
 			xroar_machine_config->tv_input %= NUM_TV_INPUTS_COCO3;
 		} else {
 			xroar_machine_config->tv_input %= NUM_TV_INPUTS_DRAGON;
@@ -1420,7 +1417,7 @@ void xroar_set_tv_input(_Bool notify, int action) {
 		break;
 	}
 
-	if (xroar_machine_config->architecture != ARCH_COCO3 && xroar_machine_config->tv_input == TV_INPUT_RGB) {
+	if (!is_coco3 && xroar_machine_config->tv_input == TV_INPUT_RGB) {
 		xroar_machine_config->tv_input = TV_INPUT_CMP_PALETTE;
 		notify = 1;
 	}
@@ -1650,19 +1647,18 @@ void xroar_connect_machine(void) {
 		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, xroar_machine->keyboard.type, NULL);
 	}
 
-	switch (xroar_machine_config->architecture) {
-	case ARCH_COCO:
-	case ARCH_COCO3:
+	_Bool is_coco3 = strcmp(xroar_machine_config->architecture, "coco3") == 0;
+	_Bool is_coco = is_coco3 || strcmp(xroar_machine_config->architecture, "coco") == 0;
+
+	if (is_coco) {
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 5);
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 5);
-		break;
-	default:
+	} else {
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 2);
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
-		break;
 	}
 	xroar_set_ccr(1, private_cfg.ccr);
-	if (xroar_machine_config->architecture == ARCH_COCO3) {
+	if (is_coco3) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_viewport_xy, 184, 16);
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, 2);
 	} else {
@@ -1899,9 +1895,11 @@ static void set_machine(const char *name) {
 #endif
 
 	if (xroar_machine_config) {
-		if (private_cfg.machine_arch != ANY_AUTO) {
+		if (private_cfg.machine_arch) {
+			if (xroar_machine_config->architecture)
+				free(xroar_machine_config->architecture);
 			xroar_machine_config->architecture = private_cfg.machine_arch;
-			private_cfg.machine_arch = ANY_AUTO;
+			private_cfg.machine_arch = NULL;
 		}
 		if (private_cfg.machine_keymap != ANY_AUTO) {
 			xroar_machine_config->keymap = private_cfg.machine_keymap;
@@ -2366,7 +2364,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("default-machine", &private_cfg.default_machine) },
 	{ XC_CALL_STRING("machine", &set_machine) },
 	{ XC_SET_STRING("machine-desc", &private_cfg.machine_desc) },
-	{ XC_SET_ENUM("machine-arch", &private_cfg.machine_arch, machine_arch_list) },
+	{ XC_SET_PART("machine-arch", &private_cfg.machine_arch, "machine") },
 	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, machine_keyboard_list) },
 	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, machine_cpu_list) },
 	{ XC_SET_STRING_F("bas", &private_cfg.bas), .defined = &private_cfg.bas_dfn },
