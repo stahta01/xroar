@@ -433,6 +433,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_tfm:
 			// order is read, NVMA, write
+			if (REG_W == 0) {
+				REG_PC += 3;
+				hcpu->state = hd6309_state_label_a;
+				break;
+			}
 			hcpu->tfm_data = fetch_byte_notrace(cpu, *hcpu->tfm_src);
 			NVMA_CYCLE;
 			hcpu->state = hd6309_state_tfm_write;
@@ -455,11 +460,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			*hcpu->tfm_src += hcpu->tfm_src_mod;
 			*hcpu->tfm_dest += hcpu->tfm_dest_mod;
 			REG_W--;
-			if (REG_W == 0) {
-				REG_PC += 3;
-				hcpu->state = hd6309_state_label_a;
-				break;
-			}
 			cpu->nmi_active = cpu->nmi_latch;
 			cpu->firq_active = cpu->firq_latch;
 			cpu->irq_active = cpu->irq_latch;
