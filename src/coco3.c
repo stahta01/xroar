@@ -110,6 +110,18 @@ struct machine_coco3 {
 		struct keyboard_interface *interface;
 	} keyboard;
 
+	// Optional DAT board provides extra translation for up to 2M of RAM.
+	struct {
+		_Bool enabled;
+		_Bool readable;
+		_Bool MMUEN;
+		_Bool MC3;
+		unsigned task;
+		uint32_t mask;
+		uint32_t mmu_bank[16];
+		uint32_t vram_bank;
+	} dat;
+
 	// Useful configuration side-effect tracking
 	_Bool has_secb;
 	uint32_t crc_secb;
@@ -121,9 +133,17 @@ static const struct ser_struct ser_struct_coco3[] = {
 	SER_STRUCT_ELEM(struct machine_coco3, ram_size, ser_type_unsigned), // 3
 	SER_STRUCT_ELEM(struct machine_coco3, ram_mask, ser_type_unsigned), // 4
 	SER_STRUCT_ELEM(struct machine_coco3, inverted_text, ser_type_bool), // 5
+	SER_STRUCT_ELEM(struct machine_coco3, dat.enabled, ser_type_bool), // 6
+	SER_STRUCT_ELEM(struct machine_coco3, dat.readable, ser_type_bool), // 7
+	SER_STRUCT_ELEM(struct machine_coco3, dat.MMUEN, ser_type_bool), // 8
+	SER_STRUCT_ELEM(struct machine_coco3, dat.MC3, ser_type_bool), // 9
+	SER_STRUCT_ELEM(struct machine_coco3, dat.task, ser_type_unsigned), // 10
+	SER_STRUCT_ELEM(struct machine_coco3, dat.mmu_bank, ser_type_unhandled), // 11
+	SER_STRUCT_ELEM(struct machine_coco3, dat.vram_bank, ser_type_uint32), // 12
 };
 
-#define COCO3_SER_RAM     (2)
+#define COCO3_SER_RAM          (2)
+#define COCO3_SER_DAT_MMU_BANK (11)
 
 static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -159,7 +179,7 @@ static void coco3_config_complete(struct machine_config *mc) {
 		mc->vdg_type = VDG_GIME_1986;
 	if (mc->vdg_type != VDG_GIME_1986 && mc->vdg_type != VDG_GIME_1987)
 		mc->vdg_type = VDG_GIME_1986;
-	if (mc->ram != 128 && mc->ram != 512)
+	if (mc->ram != 128 && mc->ram != 512 && mc->ram != 1024 && mc->ram != 2048)
 		mc->ram = 128;
 	mc->keymap = dkbd_layout_coco3;
 	/* Now find which ROMs we're actually going to use */
@@ -449,6 +469,20 @@ static _Bool coco3_finish(struct part *p) {
 	}
 
 	switch (mc->ram) {
+	case 2048:
+		mcc3->ram_size = 2048 * 1024;
+		mcc3->ram_mask = 0x7ffff;
+		mcc3->dat.enabled = 1;
+		mcc3->dat.mask = 0xc0 << 13;
+		//mcc3->dat.readable = 1;  // XXX make configurable
+		break;
+	case 1024:
+		mcc3->ram_size = 1024 * 1024;
+		mcc3->ram_mask = 0x7ffff;
+		mcc3->dat.enabled = 1;
+		mcc3->dat.mask = 0x40 << 13;
+		//mcc3->dat.readable = 1;  // XXX make configurable
+		break;
 	case 512:
 		mcc3->ram_size = 512 * 1024;
 		mcc3->ram_mask = 0x7ffff;
@@ -546,13 +580,19 @@ static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 			return 0;
 		}
 		if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
-			LOG_WARN("COCO3/DESERIALISE: RAM size mismatch\n");
+			LOG_WARN("COCO3/DESERIALISE: RAM size mismatch %zd != %d\n", length, mcc3->public.config->ram * 1024);
 			return 0;
 		}
 		if (mcc3->ram) {
 			free(mcc3->ram);
 		}
 		mcc3->ram = ser_read_new(sh, length);
+		break;
+
+	case COCO3_SER_DAT_MMU_BANK:
+		for (int i = 0; i < 16; i++) {
+			mcc3->dat.mmu_bank[i] = ser_read_uint8(sh) << 13;
+		}
 		break;
 
 	default:
@@ -567,6 +607,15 @@ static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case COCO3_SER_RAM:
 		ser_write(sh, tag, mcc3->ram, mcc3->ram_size);
 		break;
+
+	case COCO3_SER_DAT_MMU_BANK:
+		ser_write_tag(sh, tag, 16);
+		for (int i = 0; i < 16; i++) {
+			ser_write_uint8_untagged(sh, mcc3->dat.mmu_bank[i] >> 13);
+		}
+		ser_write_close_tag(sh);
+		break;
+
 	default:
 		return 0;
 	}
@@ -846,13 +895,30 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 		if (mcc3->cart)
 			mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 		break;
+	case 7:
+		if (!mcc3->dat.enabled || !mcc3->dat.readable) {
+			break;
+		}
+		// Optional DAT board can optionally be read from
+		if (A == 0xff9b) {
+			mcc3->CPU->D = (mcc3->CPU->D & ~0x03) | (mcc3->dat.vram_bank >> 19);
+		} else if (A >= 0xffa0 && A < 0xffb0) {
+			mcc3->CPU->D = (mcc3->CPU->D & ~0xc0) | (mcc3->dat.mmu_bank[A & 15] >> 13);
+		}
 	default:
 		// All the rest are N/C
 		break;
 	}
 	if (mcc3->GIME->RAS) {
 		uint32_t Z = mcc3->GIME->Z;
-		mcc3->CPU->D = mcc3->ram[Z & mcc3->ram_mask];
+		if (!mcc3->dat.MMUEN || (mcc3->dat.MC3 && A >= 0xfe00 && A < 0xff00)) {
+			// MMU not enabled, or CRM enabled and CRM region
+			mcc3->CPU->D = mcc3->ram[Z & mcc3->ram_mask];
+		} else {
+			// Otherwise, translate
+			uint32_t bank = (A >> 13) | mcc3->dat.task;
+			mcc3->CPU->D = mcc3->ram[mcc3->dat.mmu_bank[bank] | (Z & mcc3->ram_mask)];
+		}
 	}
 }
 
@@ -884,6 +950,24 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 			if (mcc3->cart)
 				mcc3->cart->write(mcc3->cart, A, 1, 0, mcc3->CPU->D);
 			break;
+		case 7:
+			if (!mcc3->dat.enabled) {
+				break;
+			}
+			// Optional DAT board intercepts writes to MMU registers
+			if (A == 0xff90) {
+				mcc3->dat.MMUEN = mcc3->CPU->D & 0x40;
+				mcc3->dat.MC3 = mcc3->CPU->D & 0x08;
+			} else if (A == 0xff91) {
+				// Task register - store as index into MMU banks
+				mcc3->dat.task = (mcc3->CPU->D & 0x01) ? 8 : 0;
+			} else if (A == 0xff9b) {
+				// Video RAM limited to one of four 512K banks
+				mcc3->dat.vram_bank = ((mcc3->CPU->D & 0x03) << 19) & mcc3->dat.mask;
+			} else if (A >= 0xffa0 && A < 0xffb0) {
+				// MMU banking extended by 2 bits
+				mcc3->dat.mmu_bank[A & 15] = ((mcc3->CPU->D & 0xc0) << 13) & mcc3->dat.mask;
+			}
 		default:
 			// All the rest are N/C
 			break;
@@ -891,7 +975,14 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
 	}
 	if (mcc3->GIME->RAS) {
 		uint32_t Z = mcc3->GIME->Z;
-		mcc3->ram[Z & mcc3->ram_mask] = mcc3->CPU->D;
+		if (!mcc3->dat.MMUEN || (mcc3->dat.MC3 && A >= 0xfe00 && A < 0xff00)) {
+			// MMU not enabled, or CRM enabled and CRM region
+			mcc3->ram[Z & mcc3->ram_mask] = mcc3->CPU->D;
+		} else {
+			// Otherwise, translate
+			uint32_t bank = (A >> 13) | mcc3->dat.task;
+			mcc3->ram[mcc3->dat.mmu_bank[bank] | (Z & mcc3->ram_mask)] = mcc3->CPU->D;
+		}
 	}
 }
 
@@ -973,7 +1064,7 @@ static void coco3_dump_ram(struct machine *m, FILE *fd) {
 
 static uint8_t fetch_vram(void *sptr, uint32_t A) {
 	struct machine_coco3 *mcc3 = sptr;
-	return mcc3->ram[A & mcc3->ram_mask];
+	return mcc3->ram[mcc3->dat.vram_bank | (A & mcc3->ram_mask)];
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

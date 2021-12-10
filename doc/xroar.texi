@@ -481,7 +481,7 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-vdg-type @var{type}}
 @tab Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 @item @ @ @ @option{-ram @var{kbytes}}
-@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4-64K for Dragon and Tandy CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
+@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 @item @ @ @ @option{-machine-cart @var{name}}
 @tab Default cartridge to attach.
 @item @ @ @ @option{-no-machine-cart}
@@ -584,6 +584,10 @@ The CoCo 3 generates different colours depending on whether you use the
 Composite Video or RGB outputs.  The NTSC version defaults to assuming
 Composite Video, while the PAL version always used the RGB output from the
 GIME.
+
+If you specify 1024K or 2048K RAM, this enables an optional DAT board function
+that extends the range of the MMU registers by two bits.  For compatibility
+with early 2M board, these two bits are write-only.
 
 Architecture @samp{coco3}.  Built-in machine profiles: @samp{coco3} (NTSC),
 @samp{coco3p} (PAL).
@@ -2005,7 +2009,7 @@ configuration file.
 @item @ @ @ @option{-vdg-type @var{type}}
 @tab Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 @item @ @ @ @option{-ram @var{kbytes}}
-@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4-64K for Dragon and Tandy CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
+@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 @item @ @ @ @option{-machine-cart @var{name}}
 @tab Default cartridge to attach.
 @item @ @ @ @option{-no-machine-cart}
