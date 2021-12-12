@@ -580,8 +580,8 @@ to run at twice the clock speed.  A major development, it maintained a high
 degree of compatibility with its predecessors, losing some lesser-used (in the
 USA) graphics modes.
 
-Note that the CoCo 3 generates different colours depending on whether you use
-the Composite Video or RGB outputs.  The NTSC version defaults to assuming
+The CoCo 3 generates different colours depending on whether you use the
+Composite Video or RGB outputs.  The NTSC version defaults to assuming
 Composite Video, while the PAL version always used the RGB output from the
 GIME.
 
