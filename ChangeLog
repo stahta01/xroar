@@ -1,3 +1,8 @@
+
+ * GIME IO range fixes [Roger Taylor]
+ * Enable GDB for CoCo 3 [Michael Furman]
+ * Fix HD6309 TFM when W=0 [Michael Furman, L. Curtis Boyle]
+
 Version 1.0.3, Mon  6 Dec 2021
 
  * 6801/6803: many more illegal instructions [Greg Dionne, Ron Klein]
