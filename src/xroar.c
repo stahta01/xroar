@@ -2367,10 +2367,10 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_PART("machine-arch", &private_cfg.machine_arch, "machine") },
 	{ XC_SET_ENUM("machine-keyboard", &private_cfg.machine_keymap, machine_keyboard_list) },
 	{ XC_SET_ENUM("machine-cpu", &private_cfg.machine_cpu, machine_cpu_list) },
-	{ XC_SET_STRING_F("bas", &private_cfg.bas), .defined = &private_cfg.bas_dfn },
-	{ XC_SET_STRING_F("extbas", &private_cfg.extbas), .defined = &private_cfg.extbas_dfn },
-	{ XC_SET_STRING_F("altbas", &private_cfg.altbas), .defined = &private_cfg.altbas_dfn },
-	{ XC_SET_STRING_F("ext-charset", &private_cfg.ext_charset), .defined = &private_cfg.ext_charset_dfn },
+	{ XC_SET_STRING_NE("bas", &private_cfg.bas), .defined = &private_cfg.bas_dfn },
+	{ XC_SET_STRING_NE("extbas", &private_cfg.extbas), .defined = &private_cfg.extbas_dfn },
+	{ XC_SET_STRING_NE("altbas", &private_cfg.altbas), .defined = &private_cfg.altbas_dfn },
+	{ XC_SET_STRING_NE("ext-charset", &private_cfg.ext_charset), .defined = &private_cfg.ext_charset_dfn },
 	{ XC_SET_ENUM("tv-type", &private_cfg.tv, machine_tv_type_list) },
 	{ XC_SET_ENUM("tv-input", &private_cfg.tv_input, machine_tv_input_list) },
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
@@ -2391,8 +2391,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart_desc) },
 	{ XC_SET_PART("cart-type", &private_cfg.cart_type, "cart") },
-	{ XC_SET_STRING_F("cart-rom", &private_cfg.cart_rom) },
-	{ XC_SET_STRING_F("cart-rom2", &private_cfg.cart_rom2) },
+	{ XC_SET_STRING_NE("cart-rom", &private_cfg.cart_rom) },
+	{ XC_SET_STRING_NE("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
 	// Deliberately undocumented:
@@ -2408,19 +2408,19 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("becker-port", &xroar_cfg.becker_port) },
 
 	/* Files: */
-	{ XC_CALL_STRING_F("load", &add_load) },
-	{ XC_CALL_STRING_F("run", &add_run) },
-	{ XC_SET_STRING_F("load-fd0", &private_cfg.load_fd[0]) },
-	{ XC_SET_STRING_F("load-fd1", &private_cfg.load_fd[1]) },
-	{ XC_SET_STRING_F("load-fd2", &private_cfg.load_fd[2]) },
-	{ XC_SET_STRING_F("load-fd3", &private_cfg.load_fd[3]) },
-	{ XC_SET_STRING_F("load-hd0", &xroar_cfg.load_hd[0]) },
-	{ XC_SET_STRING_F("load-hd1", &xroar_cfg.load_hd[1]) },
-	{ XC_SET_STRING_F("load-sd", &xroar_cfg.load_sd) },
-	{ XC_SET_STRING_F("load-tape", &private_cfg.load_tape) },
+	{ XC_CALL_STRING_NE("load", &add_load) },
+	{ XC_CALL_STRING_NE("run", &add_run) },
+	{ XC_SET_STRING_NE("load-fd0", &private_cfg.load_fd[0]) },
+	{ XC_SET_STRING_NE("load-fd1", &private_cfg.load_fd[1]) },
+	{ XC_SET_STRING_NE("load-fd2", &private_cfg.load_fd[2]) },
+	{ XC_SET_STRING_NE("load-fd3", &private_cfg.load_fd[3]) },
+	{ XC_SET_STRING_NE("load-hd0", &xroar_cfg.load_hd[0]) },
+	{ XC_SET_STRING_NE("load-hd1", &xroar_cfg.load_hd[1]) },
+	{ XC_SET_STRING_NE("load-sd", &xroar_cfg.load_sd) },
+	{ XC_SET_STRING_NE("load-tape", &private_cfg.load_tape) },
 
 	/* Cassettes: */
-	{ XC_SET_STRING_F("tape-write", &private_cfg.tape_write) },
+	{ XC_SET_STRING_NE("tape-write", &private_cfg.tape_write) },
 	{ XC_SET_DOUBLE("tape-pan", &xroar_cfg.tape_pan) },
 	{ XC_SET_DOUBLE("tape-hysteresis", &xroar_cfg.tape_hysteresis) },
 	{ XC_SET_INT1("tape-fast", &private_cfg.tape_fast) },
@@ -2438,11 +2438,11 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("disk-auto-sd", &xroar_cfg.disk_auto_sd) },
 
 	/* Firmware ROM images: */
-	{ XC_SET_STRING_F("rompath", &xroar_cfg.rompath) },
-	{ XC_CALL_ASSIGN_F("romlist", &romlist_assign) },
-	{ XC_CALL_NULL("romlist-print", &romlist_print) },
+	{ XC_SET_STRING_NE("rompath", &xroar_cfg.rompath) },
+	{ XC_CALL_ASSIGN_NE("romlist", &romlist_assign) },
+	{ XC_CALL_NONE("romlist-print", &romlist_print) },
 	{ XC_CALL_ASSIGN("crclist", &crclist_assign) },
-	{ XC_CALL_NULL("crclist-print", &crclist_print) },
+	{ XC_CALL_NONE("crclist-print", &crclist_print) },
 	{ XC_SET_BOOL("force-crc-match", &xroar_cfg.force_crc_match) },
 
 	/* User interface: */
@@ -2494,7 +2494,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("joy-virtual", &private_cfg.joy_virtual) },
 
 	/* Printing: */
-	{ XC_SET_STRING_F("lp-file", &private_cfg.lp_file) },
+	{ XC_SET_STRING_NE("lp-file", &private_cfg.lp_file) },
 	{ XC_SET_STRING("lp-pipe", &private_cfg.lp_pipe) },
 
 	/* Debugging: */
@@ -2520,10 +2520,10 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("verbose", &logging.level) },
 	{ XC_SET_INT("v", &logging.level) },
 #ifndef HAVE_WASM
-	{ XC_CALL_NULL("help", &helptext) },
-	{ XC_CALL_NULL("h", &helptext) },
-	{ XC_CALL_NULL("version", &versiontext) },
-	{ XC_CALL_NULL("V", &versiontext) },
+	{ XC_CALL_NONE("help", &helptext) },
+	{ XC_CALL_NONE("h", &helptext) },
+	{ XC_CALL_NONE("version", &versiontext) },
+	{ XC_CALL_NONE("V", &versiontext) },
 #endif
 	{ XC_OPT_END() }
 };

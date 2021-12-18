@@ -2,7 +2,7 @@
  *
  *  \brief Command-line and file-based configuration options.
  *
- *  \copyright Copyright 2009-2020 Ciaran Anscomb
+ *  \copyright Copyright 2009-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -78,13 +78,21 @@ static const char *lookup_part(const char *name, const char *is_a) {
 	return NULL;
 }
 
-static int unset_option(struct xconfig_option const *option);
-
 // Handle simple zero or one argument option setting (ie, not XCONFIG_ASSIGN).
 // 'arg' should be parsed to handle any quoting or escape sequences by this
 // point.
 
-static void set_option(struct xconfig_option const *options, struct xconfig_option const *option, sds arg) {
+static void set_option(struct xconfig_option const *options, struct xconfig_option const *option, sds arg, void *sptr) {
+	void *object;
+	if (option->flags & XCONFIG_FLAG_OFFSET) {
+		// A non-NULL struct pointer must have been passed if we are to
+		// use offset-based options.
+		assert(sptr != NULL);
+		object = sptr + option->dest.object_offset;
+	} else {
+		object = option->dest.object;
+	}
+
 	if (option->defined)
 		*(option->defined) = 1;
 	switch (option->type) {
@@ -92,13 +100,13 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_bool(1);
 			else
-				*(_Bool *)option->dest.object = 1;
+				*(_Bool *)object = 1;
 			break;
 		case XCONFIG_BOOL0:
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_bool(0);
 			else
-				*(_Bool *)option->dest.object = 0;
+				*(_Bool *)object = 0;
 			break;
 		case XCONFIG_INT:
 			{
@@ -106,20 +114,20 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 				if (option->flags & XCONFIG_FLAG_CALL)
 					option->dest.func_int(val);
 				else
-					*(int *)option->dest.object = val;
+					*(int *)object = val;
 			}
 			break;
 		case XCONFIG_INT0:
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_int(0);
 			else
-				*(int *)option->dest.object = 0;
+				*(int *)object = 0;
 			break;
 		case XCONFIG_INT1:
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_int(1);
 			else
-				*(int *)option->dest.object = 1;
+				*(int *)object = 1;
 			break;
 		case XCONFIG_DOUBLE:
 			{
@@ -127,23 +135,23 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 				if (option->flags & XCONFIG_FLAG_CALL)
 					option->dest.func_double(val);
 				else
-					*(double *)option->dest.object = val;
+					*(double *)object = val;
 			}
 			break;
 		case XCONFIG_STRING:
 			if (option->flags & XCONFIG_FLAG_CALL) {
 				option->dest.func_string(arg);
 			} else {
-				if (*(char **)option->dest.object)
-					free(*(char **)option->dest.object);
-				*(char **)option->dest.object = xstrdup(arg);
+				if (*(char **)object)
+					free(*(char **)object);
+				*(char **)object = xstrdup(arg);
 			}
 			break;
 		case XCONFIG_STRING_LIST:
 			assert(!(option->flags & XCONFIG_FLAG_CALL));
-			*(struct slist **)option->dest.object = slist_append(*(struct slist **)option->dest.object, sdsdup(arg));
+			*(struct slist **)object = slist_append(*(struct slist **)object, sdsdup(arg));
 			break;
-		case XCONFIG_NULL:
+		case XCONFIG_NONE:
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_null();
 			break;
@@ -152,30 +160,30 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_int(val);
 			else
-				*(int *)option->dest.object = val;
+				*(int *)object = val;
 			}
 			break;
 		case XCONFIG_PART: {
 			const char *pname = lookup_part(arg, (char *)option->ref);
-			if (*(char **)option->dest.object)
-				free(*(char **)option->dest.object);
-			*(char **)option->dest.object = NULL;
+			if (*(char **)object)
+				free(*(char **)object);
+			*(char **)object = NULL;
 			if (pname) {
-				*(char **)option->dest.object = xstrdup(pname);
+				*(char **)object = xstrdup(pname);
 			}
 			}
 			break;
 		case XCONFIG_ALIAS:
 			// Be aware this will process any argument for escapes
-			xconfig_set_option(options, (char *)option->dest.object, (char *)option->ref);
+			xconfig_set_option_struct(options, (char *)object, (char *)option->ref, sptr);
 			break;
 		case XCONFIG_ALIAS1: {
 			// User-supplied argument already parsed, so don't use
 			// xconfig_set_option for this or it'll do it again.
 			// Note at the moment this precludes the use of "no-".
-			option = find_option(options, (char *)option->dest.object);
+			option = find_option(options, (char *)object);
 			if (option) {
-				set_option(options, option, arg);
+				set_option(options, option, arg, sptr);
 			}
 			}
 			break;
@@ -184,54 +192,65 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 	}
 }
 
-/* returns 0 if it's a value option to unset */
-static int unset_option(struct xconfig_option const *option) {
+// Returns false on error.
+static _Bool unset_option(struct xconfig_option const *option, void *sptr) {
+	void *object;
+	if (option->flags & XCONFIG_FLAG_OFFSET) {
+		// A non-NULL struct pointer must have been passed if we are to
+		// use offset-based options.
+		assert(sptr != NULL);
+		object = sptr + option->dest.object_offset;
+	} else {
+		object = option->dest.object;
+	}
+
 	if (option->defined)
 		*(option->defined) = 1;
+
 	switch (option->type) {
 	case XCONFIG_BOOL:
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_bool(0);
 		else
-			*(_Bool *)option->dest.object = 0;
-		return 0;
+			*(_Bool *)object = 0;
+		return 1;
 	case XCONFIG_BOOL0:
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_bool(1);
 		else
-			*(_Bool *)option->dest.object = 1;
-		return 0;
+			*(_Bool *)object = 1;
+		return 1;
 	case XCONFIG_INT0:
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_int(1);
 		else
-			*(int *)option->dest.object = 1;
-		return 0;
+			*(int *)object = 1;
+		return 1;
 	case XCONFIG_INT1:
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_int(0);
 		else
-			*(int *)option->dest.object = 0;
-		return 0;
+			*(int *)object = 0;
+		return 1;
 	case XCONFIG_STRING:
 		if (option->flags & XCONFIG_FLAG_CALL) {
 			option->dest.func_string(NULL);
-		} else if (*(char **)option->dest.object) {
-			free(*(char **)option->dest.object);
-			*(char **)option->dest.object = NULL;
+		} else if (*(char **)object) {
+			free(*(char **)object);
+			*(char **)object = NULL;
 		}
-		return 0;
+		return 1;
 	case XCONFIG_STRING_LIST:
 		assert(!(option->flags & XCONFIG_FLAG_CALL));
 		/* providing an argument to remove here might more sense, but
 		 * for now just remove the entire list: */
-		slist_free_full(*(struct slist **)option->dest.object, (slist_free_func)sdsfree);
-		*(struct slist **)option->dest.object = NULL;
-		return 0;
+		slist_free_full(*(struct slist **)object, (slist_free_func)sdsfree);
+		*(struct slist **)object = NULL;
+		return 1;
 	default:
 		break;
 	}
-	return -1;
+	return 0;
 }
 
 static void xconfig_warn_deprecated(const struct xconfig_option *opt) {
@@ -250,11 +269,16 @@ static void xconfig_warn_deprecated(const struct xconfig_option *opt) {
 
 enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
 				       const char *opt, const char *arg) {
+	return xconfig_set_option_struct(options, opt, arg, NULL);
+}
+
+enum xconfig_result xconfig_set_option_struct(struct xconfig_option const *options,
+				       const char *opt, const char *arg, void *sptr) {
 	struct xconfig_option const *option = find_option(options, opt);
 	if (option == NULL) {
 		if (0 == strncmp(opt, "no-", 3)) {
 			option = find_option(options, opt + 3);
-			if (option && unset_option(option) == 0) {
+			if (option && unset_option(option, sptr)) {
 				return XCONFIG_OK;
 			}
 		}
@@ -266,16 +290,16 @@ enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
 	    option->type == XCONFIG_INT1 ||
-	    option->type == XCONFIG_NULL ||
+	    option->type == XCONFIG_NONE ||
 	    option->type == XCONFIG_ALIAS) {
-		set_option(options, option, NULL);
+		set_option(options, option, NULL, sptr);
 		return XCONFIG_OK;
 	}
 	if (!arg) {
 		LOG_ERROR("Missing argument to `%s'\n", opt);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(options, option, sdsx_parse_str(arg));
+	set_option(options, option, sdsx_parse_str(arg), sptr);
 	return XCONFIG_OK;
 }
 
@@ -302,6 +326,10 @@ enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
 // Lines are of the form: KEY [=] [VALUE [,VALUE]...]
 
 enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, const char *line) {
+	return xconfig_parse_line_struct(options, line, NULL);
+}
+
+enum xconfig_result xconfig_parse_line_struct(struct xconfig_option const *options, const char *line, void *sptr) {
 	// Trim leading and trailing whitespace, accounting for quotes & escapes
 	sds input = sdsx_trim_qe(sdsnew(line), NULL);
 
@@ -325,7 +353,7 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	if (!option) {
 		if (0 == strncmp(opt, "no-", 3)) {
 			option = find_option(options, opt + 3);
-			if (option && unset_option(option) == 0) {
+			if (option && unset_option(option, sptr)) {
 				sdsfree(opt);
 				sdsfree(input);
 				return XCONFIG_OK;
@@ -343,9 +371,9 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 	    option->type == XCONFIG_BOOL0 ||
 	    option->type == XCONFIG_INT0 ||
 	    option->type == XCONFIG_INT1 ||
-	    option->type == XCONFIG_NULL ||
+	    option->type == XCONFIG_NONE ||
 	    option->type == XCONFIG_ALIAS) {
-		set_option(options, option, NULL);
+		set_option(options, option, NULL, sptr);
 		sdsfree(input);
 		return XCONFIG_OK;
 	}
@@ -391,13 +419,18 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options, con
 		sdsfree(value);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(options, option, value);
+	set_option(options, option, value, sptr);
 	sdsfree(value);
 	return XCONFIG_OK;
 }
 
 enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		int argc, char **argv, int *argn) {
+	return xconfig_parse_cli_struct(options, argc, argv, argn, NULL);
+}
+
+enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *options,
+		int argc, char **argv, int *argn, void *sptr) {
 	int _argn = argn ? *argn : 0;
 	while (_argn < argc) {
 		if (argv[_argn][0] != '-') {
@@ -413,7 +446,7 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		if (option == NULL) {
 			if (0 == strncmp(opt, "no-", 3)) {
 				option = find_option(options, opt + 3);
-				if (option && unset_option(option) == 0) {
+				if (option && unset_option(option, sptr)) {
 					_argn++;
 					continue;
 				}
@@ -427,9 +460,9 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		    option->type == XCONFIG_BOOL0 ||
 		    option->type == XCONFIG_INT0 ||
 		    option->type == XCONFIG_INT1 ||
-		    option->type == XCONFIG_NULL ||
+		    option->type == XCONFIG_NONE ||
 		    option->type == XCONFIG_ALIAS) {
-			set_option(options, option, NULL);
+			set_option(options, option, NULL, sptr);
 			_argn++;
 			continue;
 		}
@@ -471,7 +504,7 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 			} else {
 				arg = sdsx_parse_str(argv[_argn+1]);
 			}
-			set_option(options, option, arg);
+			set_option(options, option, arg, sptr);
 			sdsfree(arg);
 		}
 		_argn += 2;
