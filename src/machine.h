@@ -163,6 +163,7 @@ struct machine_config {
 	char *default_cart;
 	_Bool nodos;
 	_Bool cart_enabled;
+	struct slist *opts;
 };
 
 extern struct xconfig_enum machine_keyboard_list[];

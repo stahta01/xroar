@@ -48,6 +48,7 @@ struct cart_config {
 	char *rom2;
 	_Bool becker_port;
 	int autorun;
+	struct slist *opts;
 };
 
 extern struct xconfig_enum cart_arch_list[];

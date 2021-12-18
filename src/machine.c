@@ -65,6 +65,7 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 18
 	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
 	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_string), // 20
+	SER_STRUCT_ELEM(struct machine_config, opts, ser_type_sds_list), // 21
 };
 #define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
 
@@ -298,6 +299,7 @@ static void machine_config_free(struct machine_config *mc) {
 		free(mc->ext_charset_rom);
 	if (mc->default_cart)
 		free(mc->default_cart);
+	slist_free_full(mc->opts, (slist_free_func)sdsfree);
 	free(mc);
 }
 

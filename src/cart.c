@@ -53,6 +53,7 @@ static const struct ser_struct ser_struct_cart_config[] = {
 	SER_STRUCT_ELEM(struct cart_config, rom2, ser_type_string), // 4
 	SER_STRUCT_ELEM(struct cart_config, becker_port, ser_type_bool), // 5
 	SER_STRUCT_ELEM(struct cart_config, autorun, ser_type_int), // 6
+	SER_STRUCT_ELEM(struct cart_config, opts, ser_type_sds_list), // 7
 };
 
 #define N_SER_STRUCT_CART_CONFIG ARRAY_N_ELEMENTS(ser_struct_cart_config)
@@ -294,6 +295,7 @@ static void cart_config_free(struct cart_config *cc) {
 		free(cc->rom);
 	if (cc->rom2)
 		free(cc->rom2);
+	slist_free_full(cc->opts, (slist_free_func)sdsfree);
 	free(cc);
 }
 

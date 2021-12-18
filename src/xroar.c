@@ -117,6 +117,7 @@ struct private_cfg {
 	_Bool machine_cart_dfn;
 	char *machine_cart;
 	int ram;
+	struct slist *machine_opts;
 
 	// Cartridges
 	char *cart_desc;
@@ -126,6 +127,7 @@ struct private_cfg {
 	char *cart_rom2;
 	int cart_becker;
 	int cart_autorun;
+	struct slist *cart_opts;
 
 	// Files
 	char *load_fd[4];
@@ -2000,6 +2002,10 @@ static void set_machine(const char *name) {
 			xroar_machine_config->default_cart = private_cfg.machine_cart;
 			private_cfg.machine_cart = NULL;
 		}
+		if (private_cfg.machine_opts) {
+			xroar_machine_config->opts = slist_concat(xroar_machine_config->opts, private_cfg.machine_opts);
+			private_cfg.machine_opts = NULL;
+		}
 		machine_config_complete(xroar_machine_config);
 	}
 	if (name) {
@@ -2068,6 +2074,10 @@ static void set_cart(const char *name) {
 		if (private_cfg.cart_autorun != ANY_AUTO) {
 			cc->autorun = private_cfg.cart_autorun;
 			private_cfg.cart_autorun = ANY_AUTO;
+		}
+		if (private_cfg.cart_opts) {
+			cc->opts = slist_concat(cc->opts, private_cfg.cart_opts);
+			private_cfg.cart_opts = NULL;
 		}
 		cart_config_complete(cc);
 	}
@@ -2376,6 +2386,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("vdg-type", &private_cfg.vdg_type, machine_vdg_type_list) },
 	{ XC_SET_INT("ram", &private_cfg.ram) },
 	{ XC_SET_STRING("machine-cart", &private_cfg.machine_cart), .defined = &private_cfg.machine_cart_dfn },
+	{ XC_SET_STRING_LIST_NE("machine-opt", &private_cfg.machine_opts) },
 	// Shorthand:
 	{ XC_ALIAS_ARG("pal", "tv-type", "pal") },
 	{ XC_ALIAS_ARG("ntsc", "tv-type", "ntsc") },
@@ -2395,6 +2406,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_NE("cart-rom2", &private_cfg.cart_rom2) },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
+	{ XC_SET_STRING_LIST_NE("cart-opt", &private_cfg.cart_opts) },
 	// Deliberately undocumented:
 	{ XC_SET_ENUM("cart-intf", &private_cfg.cart_arch, cart_arch_list) },
 
