@@ -24,6 +24,7 @@
 #include "sds.h"
 
 struct sdsx_list;
+struct slist;
 
 // Basic common option fields
 #define XC_TN(t,n) .type = XCONFIG_##t, .name = (n)
@@ -213,6 +214,9 @@ enum xconfig_result xconfig_parse_line(struct xconfig_option const *options,
 
 enum xconfig_result xconfig_parse_line_struct(struct xconfig_option const *options,
 		const char *line, void *sptr);
+
+enum xconfig_result xconfig_parse_list_struct(struct xconfig_option const *options,
+					      struct slist *list, void *sptr);
 
 enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		int argc, char **argv, int *argn);

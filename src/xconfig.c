@@ -431,6 +431,21 @@ enum xconfig_result xconfig_parse_line_struct(struct xconfig_option const *optio
 	return XCONFIG_OK;
 }
 
+// Parse a list of lines
+
+enum xconfig_result xconfig_parse_list_struct(struct xconfig_option const *options, struct slist *list, void *sptr) {
+	int ret = XCONFIG_OK;
+	for ( ; list; list = list->next) {
+		sds line = list->data;
+		enum xconfig_result r = xconfig_parse_line_struct(options, line, sptr);
+		if (r != XCONFIG_OK)
+			ret = r;
+	}
+	return ret;
+}
+
+// Parse CLI options
+
 enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 		int argc, char **argv, int *argn) {
 	return xconfig_parse_cli_struct(options, argc, argv, argn, NULL);
