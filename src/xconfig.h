@@ -88,6 +88,8 @@ struct sdsx_list;
 #define XC_ALIAS_ARG(n,d,r) XC_OPT_REF(ALIAS,n,d,r)
 #define XC_ALIAS_UARG(n,d) XC_OPT(ALIAS1,n,d)
 
+#define XC_LINK(d) XC_OPT(LINK,"",d)
+
 #define XCO_SET_BOOL(n,s,m) XCO_OPT(BOOL,n,s,m)
 #define XCO_SET_BOOL0(n,s,m) XCO_OPT(BOOL0,n,s,m)
 #define XCO_SET_INT(n,s,m) XCO_OPT(INT,n,s,m)
@@ -154,6 +156,7 @@ enum xconfig_option_type {
 	XCONFIG_PART,
 	XCONFIG_ALIAS,  // alias with no user-supplied argument
 	XCONFIG_ALIAS1,  // alias with user-supplied argument
+	XCONFIG_LINK,  // continue option processing with new list
 	XCONFIG_END
 };
 

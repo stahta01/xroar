@@ -38,6 +38,13 @@
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
 		const char *opt) {
 	for (int i = 0; options[i].type != XCONFIG_END; i++) {
+		if (options[i].type == XCONFIG_LINK) {
+			// recurse
+			struct xconfig_option const *r = find_option(options[i].dest.object, opt);
+			if (r)
+				return r;
+			continue;
+		}
 		if (0 == strcmp(options[i].name, opt)) {
 			return &options[i];
 		}
