@@ -602,6 +602,15 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+		case ser_type_sds_list:
+			{
+				struct slist *l = *(struct slist **)ptr;
+				for(; l; l = l->next) {
+					sds str = l->data;
+					ser_write_sds(sh, tag, str);
+				}
+			}
+			break;
 		case ser_type_nest:
 			{
 				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
@@ -690,6 +699,14 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				if (*(sds *)ptr != NULL)
 					sdsfree(*(sds *)ptr);
 				*(sds *)ptr = ser_read_sds(sh);
+			}
+			break;
+		case ser_type_sds_list:
+			{
+				struct slist *l = *(struct slist **)ptr;
+				sds str = ser_read_sds(sh);
+				l = slist_append(l, str);
+				*(struct slist **)ptr = l;
 			}
 			break;
 		case ser_type_nest:
