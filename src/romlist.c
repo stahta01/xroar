@@ -187,8 +187,10 @@ static void print_romlist_entry(struct romlist *list, void *user_data) {
 		char *str = jter->data;
 		if (user_data) {
 			sds out = sdsx_quote_str(str);
-			fprintf(f, "%s", out);
-			sdsfree(out);
+			if (out) {
+				fprintf(f, "%s", out);
+				sdsfree(out);
+			}
 		} else {
 			fprintf(f, "%s", str);
 		}
