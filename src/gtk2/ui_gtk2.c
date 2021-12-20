@@ -495,6 +495,8 @@ static void *ui_gtk2_new(void *cfg) {
 
 	/* Fetch top level window */
 	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
+	gtk_signal_connect(GTK_OBJECT(uigtk2->top_window), "destroy",
+			   GTK_SIGNAL_FUNC(gtk_exit), NULL);
 
 	/* Fetch vbox */
 	GtkWidget *vbox = GTK_WIDGET(gtk_builder_get_object(builder, "vbox1"));
