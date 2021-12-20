@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "intfuncs.h"
+#include "xalloc.h"
 
 extern inline int int_clamp_u8(int v);
 
@@ -77,7 +78,7 @@ void int_split_inplace(int *buffer, int nelems, int *lowmean, int *highmean) {
 // Same, but work on an allocated copy of the data
 
 void int_split(const int *buffer, int nelems, int *lowmean, int *highmean) {
-	int *bufcopy = malloc(nelems * sizeof(int));
+	int *bufcopy = xmalloc(nelems * sizeof(int));
 	memcpy(bufcopy, buffer, nelems * sizeof(int));
 	int_split_inplace(bufcopy, nelems, lowmean, highmean);
 	free(bufcopy);
