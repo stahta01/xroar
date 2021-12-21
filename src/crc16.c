@@ -24,7 +24,7 @@ uint16_t crc16_byte(uint16_t crc, uint8_t value) {
 	return (crc << 8) ^ (x << 12) ^ (x << 5) ^ x;
 }
 
-uint16_t crc16_block(uint16_t crc, uint8_t *block, unsigned int length) {
+uint16_t crc16_block(uint16_t crc, const uint8_t *block, unsigned length) {
 	for (; length; length--)
 		crc = crc16_byte(crc, *(block++));
 	return crc;

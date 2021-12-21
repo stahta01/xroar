@@ -18,7 +18,7 @@
 
 #ifdef HAVE_ZLIB
 
-uint32_t crc32_block(uint32_t crc, uint8_t *block, unsigned int length) {
+uint32_t crc32_block(uint32_t crc, const uint8_t *block, unsigned length) {
 	return crc32(crc, block, length);
 }
 
@@ -91,7 +91,7 @@ static const uint32_t crc32_table[256] = {
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-uint32_t crc32_block(uint32_t crc, uint8_t *block, unsigned int length) {
+uint32_t crc32_block(uint32_t crc, const uint8_t *block, unsigned length) {
 	crc = ~crc;
 	for (; length; length--)
 		crc = (crc >> 8) ^ crc32_table[(crc ^ *(block++)) & 0xff];

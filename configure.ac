@@ -45,6 +45,13 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_CHECK_FUNCS([getaddrinfo popen strnlen strsep])
 AX_GCC_BUILTIN(__builtin_parity)
+AX_GCC_FUNC_ATTRIBUTE(const)
+AX_GCC_FUNC_ATTRIBUTE(format)
+AX_GCC_FUNC_ATTRIBUTE(malloc)
+AX_GCC_FUNC_ATTRIBUTE(nonnull)
+AX_GCC_FUNC_ATTRIBUTE(noreturn)
+AX_GCC_FUNC_ATTRIBUTE(pure)
+AX_GCC_FUNC_ATTRIBUTE(returns_nonnull)
 AX_GCC_VAR_ATTRIBUTE(packed)
 
 AC_PATH_XTRA

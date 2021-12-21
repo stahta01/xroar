@@ -19,17 +19,19 @@
 #ifndef PORTALIB_INTFUNCS_H_
 #define PORTALIB_INTFUNCS_H_
 
+#include "top-config.h"
+
 // Integer division with rounding
 
 #define IDIV_ROUND(n,d) (((n)+((d)/2)) / (d))
 
 // Integer compare suitable for passing to qsort()
 
-int int_cmp(const void *a, const void *b);
+int int_cmp(const void *a, const void *b) FUNC_ATTR_PURE;
 
 // Calculate the mean of a set of integers
 
-int int_mean(int *values, int nvalues);
+int int_mean(int *values, int nvalues) FUNC_ATTR_PURE;
 
 // Split a set of integers into two and calculate the mean of each
 

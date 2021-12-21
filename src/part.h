@@ -27,6 +27,8 @@
 #ifndef XROAR_PART_H_
 #define XROAR_PART_H_
 
+#include "top-config.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -182,7 +184,7 @@ void partdb_foreach_is_a(partdb_iter_func iter, void *idata, const char *is_a);
 struct part *part_create(const char *name, void *options);
 
 // allocate a new part the old way
-void *part_new(size_t psize);
+FUNC_ATTR_RETURNS_NONNULL void *part_new(size_t psize);
 
 // part_init() sets up part metadata
 void part_init(struct part *p, const char *name);

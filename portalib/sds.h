@@ -44,6 +44,8 @@
 #ifndef __SDS_H
 #define __SDS_H
 
+#include "top-config.h"
+
 #define SDS_MAX_PREALLOC (1024*1024)
 extern const char *SDS_NOINIT;
 
@@ -55,29 +57,29 @@ typedef char *sds;
 
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
-struct __attribute__ ((__packed__)) sdshdr5 {
+struct VAR_ATTR_PACKED sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
 };
-struct __attribute__ ((__packed__)) sdshdr8 {
+struct VAR_ATTR_PACKED sdshdr8 {
     uint8_t len; /* used */
     uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct __attribute__ ((__packed__)) sdshdr16 {
+struct VAR_ATTR_PACKED sdshdr16 {
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct __attribute__ ((__packed__)) sdshdr32 {
+struct VAR_ATTR_PACKED sdshdr32 {
     uint32_t len; /* used */
     uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
 };
-struct __attribute__ ((__packed__)) sdshdr64 {
+struct VAR_ATTR_PACKED sdshdr64 {
     uint64_t len; /* used */
     uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
@@ -239,12 +241,7 @@ sds sdscpylen(sds s, const char *t, size_t len);
 sds sdscpy(sds s, const char *t);
 
 sds sdscatvprintf(sds s, const char *fmt, va_list ap);
-#ifdef __GNUC__
-sds sdscatprintf(sds s, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
-#else
-sds sdscatprintf(sds s, const char *fmt, ...);
-#endif
+sds sdscatprintf(sds s, const char *fmt, ...) FUNC_ATTR_FORMAT_V(printf, 2, 3);
 
 sds sdscatfmt(sds s, char const *fmt, ...);
 sds sdstrim(sds s, const char *cset);

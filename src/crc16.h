@@ -8,11 +8,13 @@
 #ifndef XROAR_CRC16_H_
 #define XROAR_CRC16_H_
 
+#include "top-config.h"
+
 #include <stdint.h>
 
 #define CRC16_RESET (0xffff)
 
 uint16_t crc16_byte(uint16_t crc, uint8_t value);
-uint16_t crc16_block(uint16_t crc, uint8_t *block, unsigned int length);
+uint16_t crc16_block(uint16_t crc, const uint8_t *block, unsigned length);
 
 #endif

@@ -2,7 +2,7 @@
  *
  *  \brief SDS extras.
  *
- *  \copyright Copyright 2018-2020 Ciaran Anscomb
+ *  \copyright Copyright 2018-2021 Ciaran Anscomb
  *
  *  \licenseblock
  *
@@ -25,6 +25,8 @@
 
 #ifndef SDSX_H_
 #define SDSX_H_
+
+#include "top-config.h"
 
 #include <stdio.h>
 
@@ -90,9 +92,15 @@ sds sdsx_replace_substr(sds s, ssize_t index, ssize_t sublen);
 // Quote a string to be suitable for the tokenising process.  An alternative to
 // sdscatrepr().  Appends results to 's'.
 
-sds sdsx_cat_quote_str_len(sds s, const char *str, size_t len);
+sds sdsx_cat_quote_str_len(sds s, const char *str, size_t len) FUNC_ATTR_RETURNS_NONNULL FUNC_ATTR_NONNULL_V(1,2);
 
 // Helpers wrapped around sdsx_cat_quote_str_len():
+
+static inline sds sdsx_cat_quote(sds s, const sds t) FUNC_ATTR_RETURNS_NONNULL FUNC_ATTR_NONNULL_V(1,2);
+static inline sds sdsx_cat_quote_str(sds s, const char *str) FUNC_ATTR_RETURNS_NONNULL FUNC_ATTR_NONNULL_V(1,2);
+static inline sds sdsx_quote(sds t) FUNC_ATTR_RETURNS_NONNULL FUNC_ATTR_NONNULL_V(1);
+static inline sds sdsx_quote_str(const char *str) FUNC_ATTR_RETURNS_NONNULL FUNC_ATTR_NONNULL_V(1);
+
 static inline sds sdsx_cat_quote(sds s, const sds t) {
 	return sdsx_cat_quote_str_len(s, t, sdslen(t));
 }

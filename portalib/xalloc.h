@@ -22,14 +22,25 @@
 #ifndef PORTALIB_XALLOC_H_
 #define PORTALIB_XALLOC_H_
 
+#include "top-config.h"
+
 #include <stddef.h>
 
-void *xmalloc(size_t s);
-void *xzalloc(size_t s);
+void *xmalloc(size_t s) FUNC_ATTR_MALLOC FUNC_ATTR_RETURNS_NONNULL;
+void *xzalloc(size_t s) FUNC_ATTR_MALLOC FUNC_ATTR_RETURNS_NONNULL;
+
+// xrealloc() may legitimately return NULL if s == 0.
+
 void *xrealloc(void *p, size_t s);
 
-void *xmemdup(const void *p, size_t s);
-char *xstrdup(const char *str);
-char *xstrndup(const char *str, size_t s);
+// xmemdup() is not flagged as a malloc-like function, as the result may
+// contain pointers to valid objects.
+
+void *xmemdup(const void *p, size_t s) FUNC_ATTR_RETURNS_NONNULL;
+
+// Whereas string functions are expected only to be operating on strings.
+
+char *xstrdup(const char *str) FUNC_ATTR_MALLOC FUNC_ATTR_RETURNS_NONNULL;
+char *xstrndup(const char *str, size_t s) FUNC_ATTR_MALLOC FUNC_ATTR_RETURNS_NONNULL;
 
 #endif

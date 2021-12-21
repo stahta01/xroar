@@ -7,10 +7,12 @@
 #ifndef XROAR_CRC32_H_
 #define XROAR_CRC32_H_
 
+#include "top-config.h"
+
 #include <stdint.h>
 
 #define CRC32_RESET (0)
 
-uint32_t crc32_block(uint32_t crc, uint8_t *block, unsigned int length);
+uint32_t crc32_block(uint32_t crc, const uint8_t *block, unsigned length);
 
 #endif
