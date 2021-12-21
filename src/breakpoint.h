@@ -40,6 +40,9 @@ struct machine;
 struct bp_session {
 	unsigned cond;  // matched against breakpoint's cond ANDed with cond_mask
 	DELEGATE_T0(void) trap_handler;
+
+	struct slist *wp_read_list;
+	struct slist *wp_write_list;
 };
 
 struct bp_session *bp_session_new(struct machine *m);

@@ -35,8 +35,6 @@
 struct bp_session_private {
 	struct bp_session bps;
 	struct slist *instruction_list;
-	struct slist *wp_read_list;
-	struct slist *wp_write_list;
 	struct slist *iter_next;
 	struct machine *machine;
 	struct debug_cpu *debug_cpu;
@@ -164,14 +162,14 @@ void bp_wp_add(struct bp_session *bps, unsigned type,
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_add(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 3:
-		trap_add(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 4:
-		trap_add(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_add(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	default:
 		break;
@@ -183,14 +181,14 @@ void bp_wp_remove(struct bp_session *bps, unsigned type,
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_remove(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 3:
-		trap_remove(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	case 4:
-		trap_remove(bpsp, &bpsp->wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_remove(bpsp, &bpsp->wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
 		break;
 	default:
 		break;
@@ -230,12 +228,10 @@ static void bp_instruction_hook(void *sptr) {
 
 void bp_wp_read_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (bpsp->wp_read_list)
-		bp_hook(bpsp, bpsp->wp_read_list, address);
+	bp_hook(bpsp, bpsp->bps.wp_read_list, address);
 }
 
 void bp_wp_write_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (bpsp->wp_write_list)
-		bp_hook(bpsp, bpsp->wp_write_list, address);
+	bp_hook(bpsp, bpsp->bps.wp_write_list, address);
 }

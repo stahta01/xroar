@@ -1008,10 +1008,12 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		read_byte(mcc3, A);
-		bp_wp_read_hook(mcc3->bp_session, A);
+		if (mcc3->bp_session->wp_read_list)
+			bp_wp_read_hook(mcc3->bp_session, A);
 	} else {
 		write_byte(mcc3, A);
-		bp_wp_write_hook(mcc3->bp_session, A);
+		if (mcc3->bp_session->wp_write_list)
+			bp_wp_write_hook(mcc3->bp_session, A);
 	}
 }
 

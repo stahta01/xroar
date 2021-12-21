@@ -1281,10 +1281,12 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		read_byte(md, A);
-		bp_wp_read_hook(md->bp_session, A);
+		if (md->bp_session->wp_read_list)
+			bp_wp_read_hook(md->bp_session, A);
 	} else {
 		write_byte(md, A);
-		bp_wp_write_hook(md->bp_session, A);
+		if (md->bp_session->wp_write_list)
+			bp_wp_write_hook(md->bp_session, A);
 	}
 }
 
