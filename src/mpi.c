@@ -31,9 +31,7 @@
  *    time it was tested (confirmed for PEEK).
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <assert.h>
 #include <stdint.h>

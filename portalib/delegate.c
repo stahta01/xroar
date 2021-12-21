@@ -18,9 +18,7 @@
  *  Implements the default no-op functions for defined delegate types.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdlib.h>
 

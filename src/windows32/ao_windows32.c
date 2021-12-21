@@ -20,9 +20,7 @@
  *  This was never operational, Windows just uses SDL audio.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <windows.h>
 

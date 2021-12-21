@@ -18,9 +18,7 @@
  *  This Windows32 code is probably all wrong, but it does seem to work.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdlib.h>
 #include <string.h>

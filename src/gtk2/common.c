@@ -16,9 +16,7 @@
  *  \endlicenseblock
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"

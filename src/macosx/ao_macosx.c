@@ -22,9 +22,7 @@
  *  takes the next filled buffer from the queue and copies its data into place.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <pthread.h>
 #include <signal.h>

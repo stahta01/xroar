@@ -20,9 +20,7 @@
  *  https://archive.worldofdragon.org/phpBB3/viewtopic.php?f=8&t=5621
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 // for off_t based functions
 #define _POSIX_C_SOURCE 200112L

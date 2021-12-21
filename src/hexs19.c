@@ -24,9 +24,7 @@
  *  - CoCo RS-DOS ("DECB") binary
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdint.h>
 #include <stdio.h>

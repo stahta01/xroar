@@ -43,9 +43,7 @@
  *  May eat your dog.  Well, maybe just your stick insects.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdint.h>
 #include <stdlib.h>

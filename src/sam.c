@@ -28,9 +28,7 @@
  *  constantly varying SAM VDG mode adds a little over 5%.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -25,9 +25,7 @@
  *  - https://drive.google.com/drive/folders/1FWSpWshl_GJevk85hsm54b62SGGojyB1
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <assert.h>
 #include <stdint.h>

@@ -25,9 +25,7 @@
  *    www.dragon-archive.co.uk.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <assert.h>
 #include <stdint.h>

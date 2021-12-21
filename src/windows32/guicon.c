@@ -18,9 +18,7 @@
  *  Console redirection adapted from example by "luke" on stackoverflow.com.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <windows.h>
 #include <stdio.h>

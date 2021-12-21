@@ -16,9 +16,7 @@
  *  \endlicenseblock
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 // For strsep()
 #define _DEFAULT_SOURCE

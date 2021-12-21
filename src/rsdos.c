@@ -22,9 +22,7 @@
  *  - http://www.coco3.com/unravalled/disk-basic-unravelled.pdf
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <assert.h>
 #include <stdint.h>

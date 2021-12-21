@@ -24,9 +24,7 @@
  *  Feel free to customize this file to suit your needs.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <SDL.h>
 #include <sys/param.h> /* for MAXPATHLEN */

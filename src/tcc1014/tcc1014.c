@@ -35,9 +35,7 @@
 // If interrupts are timed somewhere during these bodges, I'll have to rethink
 // earlier than I want to!
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 // Comment this out for debugging
 #define GIME_DEBUG(...)

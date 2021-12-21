@@ -4,9 +4,7 @@
  * function, otherwise a table-based implementation is built.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdint.h>
 

@@ -18,9 +18,7 @@
  *  \endlicenseblock
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -22,9 +22,7 @@
  *  - SMS Power!  SN76489 - Development, http://www.smspower.org/Development/SN76489
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <stdint.h>
 #include <stdlib.h>

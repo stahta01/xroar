@@ -33,9 +33,7 @@
  *  scancode to X11 keycode). A lot of work to fix a leaky abstraction.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #include <X11/Xlib.h>
 #include <X11/keysym.h>

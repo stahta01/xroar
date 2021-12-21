@@ -16,9 +16,7 @@
  *  \endlicenseblock
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 /* Windows has a habit of making include order important: */
 #include <winsock2.h>

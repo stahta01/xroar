@@ -16,9 +16,7 @@
  *  \endlicenseblock
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 #ifdef WINDOWS32
 #include <windows.h>

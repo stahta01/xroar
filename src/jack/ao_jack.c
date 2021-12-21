@@ -20,9 +20,7 @@
  *  stereo, so nchannels == 1 too.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "top-config.h"
 
 // for struct timespec, gettimeofday
 #define _POSIX_C_SOURCE 200112L
