@@ -85,12 +85,6 @@ static const struct ser_struct_data cart_rom_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct xconfig_enum cart_arch_list[] = {
-	{ XC_ENUM_INT("dragon", CART_ARCH_DRAGON, "Dragon/CoCo cartridge") },
-	{ XC_ENUM_INT("mc10", CART_ARCH_MC10, "MC-10 cartridge") },
-	{ XC_ENUM_END() }
-};
-
 static struct slist *config_list = NULL;
 static int next_id = 0;
 
@@ -230,9 +224,6 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 }
 
 void cart_config_complete(struct cart_config *cc) {
-	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH) {
-		cc->architecture = 0;
-	}
 	if (!cc->type) {
 		cc->type = xstrdup("rom");
 	}
@@ -269,7 +260,6 @@ void cart_config_print_all(FILE *f, _Bool all) {
 		fprintf(f, "cart %s\n", cc->name);
 		xroar_cfg_print_inc_indent();
 		xroar_cfg_print_string(f, all, "cart-desc", cc->description, NULL);
-		xroar_cfg_print_enum(f, all, "cart-intf", cc->architecture, ANY_AUTO, cart_arch_list);
 		xroar_cfg_print_string(f, all, "cart-type", cc->type, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom", cc->rom, NULL);
 		xroar_cfg_print_string(f, all, "cart-rom2", cc->rom2, NULL);
@@ -318,8 +308,6 @@ struct cart *cart_create(const char *cc_name) {
 		return NULL;
 
 	cart_config_complete(cc);
-	if (cc->architecture < 0 || cc->architecture >= NUM_CART_ARCH)
-		cc->architecture = 0;
 	if (!partdb_is_a(cc->type, "cart")) {
 		return NULL;
 	}

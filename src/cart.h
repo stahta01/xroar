@@ -34,14 +34,9 @@ struct slist;
 struct machine_config;
 struct event;
 
-#define CART_ARCH_DRAGON (0)
-#define CART_ARCH_MC10   (1)
-#define NUM_CART_ARCH    (2)
-
 struct cart_config {
 	char *name;
 	char *description;
-	int architecture;
 	char *type;
 	int id;
 	char *rom;
@@ -50,8 +45,6 @@ struct cart_config {
 	int autorun;
 	struct slist *opts;
 };
-
-extern struct xconfig_enum cart_arch_list[];
 
 struct cart {
 	struct part part;

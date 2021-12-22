@@ -119,7 +119,6 @@ struct private_cfg {
 
 	// Cartridges
 	char *cart_desc;
-	int cart_arch;
 	char *cart_type;
 	char *cart_rom;
 	char *cart_rom2;
@@ -184,7 +183,6 @@ static struct private_cfg private_cfg = {
 	.tv = ANY_AUTO,
 	.tv_input = ANY_AUTO,
 	.vdg_type = -1,
-	.cart_arch = ANY_AUTO,
 	.cart_becker = ANY_AUTO,
 	.cart_autorun = ANY_AUTO,
 	.tape_fast = 1,
@@ -2039,10 +2037,6 @@ static void set_cart(const char *name) {
 		cc = cart_config_by_name(xroar_machine_config->default_cart);
 	}
 	if (cc) {
-		if (private_cfg.cart_arch != ANY_AUTO) {
-			cc->architecture = private_cfg.cart_arch;
-			private_cfg.cart_arch = ANY_AUTO;
-		}
 		if (private_cfg.cart_desc) {
 			cc->description = private_cfg.cart_desc;
 			private_cfg.cart_desc = NULL;
@@ -2405,8 +2399,6 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart_autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart_becker) },
 	{ XC_SET_STRING_LIST_NE("cart-opt", &private_cfg.cart_opts) },
-	// Deliberately undocumented:
-	{ XC_SET_ENUM("cart-intf", &private_cfg.cart_arch, cart_arch_list) },
 
 	/* Multi-Pak Interface: */
 	{ XC_CALL_INT("mpi-slot", &cfg_mpi_slot) },
