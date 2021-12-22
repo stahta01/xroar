@@ -361,6 +361,7 @@ static const struct partdb_entry_funcs dragon_funcs = {
 const struct machine_partdb_extra dragon_machine_extra = {
 	.config_complete = dragon_config_complete,
 	.is_working_config = dragon_is_working_config,
+	.cart_arch = "dragon-cart",
 };
 
 const struct partdb_entry dragon64_part = { .name = "dragon64", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };

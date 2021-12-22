@@ -208,6 +208,9 @@ struct machine_partdb_extra {
 
 	// check everything ok for this machine to run (e.g. ROM files exist)
 	_Bool (*is_working_config)(struct machine_config *mc);
+
+	// cartridge architecture valid for this machine
+	const char *cart_arch;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

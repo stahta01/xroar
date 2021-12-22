@@ -252,14 +252,13 @@ struct slist *cart_config_list(void) {
 	return config_list;
 }
 
-struct slist *cart_config_list_by_arch(int arch) {
-	if (arch < 0 || arch >= NUM_CART_ARCH)
-		arch = 0;  // XXX maybe return NULL instead?
+struct slist *cart_config_list_is_a(const char *is_a) {
 	struct slist *l = NULL;
 	for (struct slist *iter = config_list; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		if (cc->architecture == arch)
+		if (partdb_is_a(cc->type, is_a)) {
 			l = slist_append(l, cc);
+		}
 	}
 	return l;
 }

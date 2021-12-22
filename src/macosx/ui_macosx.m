@@ -1038,13 +1038,18 @@ int main(int argc, char **argv) {
 /* XRoar UI definition */
 
 void cocoa_update_machine_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
-	NSMenuItem *item;
+	(void)sptr;
+	// Get list of machine configs
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
-	struct slist *iter;
+
+	// Remove old entries
 	while ([machine_menu numberOfItems] > 0)
 		[machine_menu removeItem:[machine_menu itemAtIndex:0]];
+
+	// Add new entries in reverse order, as each will be inserted before
+	// the previous.
+	NSMenuItem *item;
+	struct slist *iter;
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar_machine_config)
@@ -1061,14 +1066,25 @@ void cocoa_update_machine_menu(void *sptr) {
 }
 
 void cocoa_update_cartridge_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
-	NSMenuItem *item;
-	struct slist *ccl = slist_reverse(slist_copy(cart_config_list()));
-	struct slist *iter;
-	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
+	(void)sptr;
+	// Get list of cart configs
+	struct slist *ccl = NULL;
+	struct cart *cart = NULL;
+	if (xroar_machine) {
+		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+		const char *cart_arch = mpe->cart_arch;
+		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
+		cart = (struct cart *)part_component_by_id(&xroar_machine->part, "cart");
+	}
+
+	// Remove old entries
 	while ([cartridge_menu numberOfItems] > 0)
 		[cartridge_menu removeItem:[cartridge_menu itemAtIndex:0]];
+
+	// Add new entries in reverse order, as each will be inserted before
+	// the previous.
+	NSMenuItem *item;
+	struct slist *iter;
 	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (cart && cc == cart->config)

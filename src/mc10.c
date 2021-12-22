@@ -217,6 +217,7 @@ static const struct partdb_entry_funcs mc10_funcs = {
 const struct machine_partdb_extra mc10_machine_extra = {
 	.config_complete = mc10_config_complete,
 	.is_working_config = mc10_is_working_config,
+	.cart_arch = "mc10-cart",
 };
 
 const struct partdb_entry mc10_part = { .name = "mc10", .funcs = &mc10_funcs, .extra = { &mc10_machine_extra } };

@@ -752,20 +752,26 @@ static void free_action_group(GtkActionGroup *action_group) {
 	g_list_free(list);
 }
 
-/* Dynamic machine menu */
+// Dynamic machine menu
+
 static void gtk2_update_machine_menu(void *sptr) {
 	(void)sptr;
+	// Get list of machine configs
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
 	int num_machines = slist_length(mcl);
-	int selected = -1;
+
+	// Remove old entries
 	free_action_group(global_uigtk2->machine_action_group);
 	gtk_ui_manager_remove_ui(global_uigtk2->menu_manager, global_uigtk2->merge_machines);
 	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
-	// jump through alloc hoops just to avoid const-ness warnings
+
+	// Jump through alloc hoops just to avoid const-ness warnings
 	gchar **names = g_malloc0(num_machines * sizeof(gchar *));
 	gchar **labels = g_malloc0(num_machines * sizeof(gchar *));
-	/* add these to the ui in reverse order, as each will be
-	 * inserted before the previous */
+
+	// Add new entries in reverse order, as each will be inserted before
+	// the previous.
+	int selected = -1;
 	int i = 0;
 	for (struct slist *iter = mcl; iter; iter = iter->next, i++) {
 		struct machine_config *mc = iter->data;
@@ -779,7 +785,8 @@ static void gtk2_update_machine_menu(void *sptr) {
 		gtk_ui_manager_add_ui(global_uigtk2->menu_manager, global_uigtk2->merge_machines, "/MainMenu/HardwareMenu/MachineMenu", radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	}
 	gtk_action_group_add_radio_actions(global_uigtk2->machine_action_group, radio_entries, num_machines, selected, (GCallback)set_machine, NULL);
-	// back through the hoops
+
+	// Back through the hoops
 	for (i = 0; i < num_machines; i++) {
 		g_free(names[i]);
 		g_free(labels[i]);
@@ -790,24 +797,36 @@ static void gtk2_update_machine_menu(void *sptr) {
 	slist_free(mcl);
 }
 
-/* Dynamic cartridge menu */
+// Dynamic cartridge menu
+
 static void gtk2_update_cartridge_menu(void *sptr) {
 	(void)sptr;
-	int cart_arch = (xroar_machine && xroar_machine->config && strcmp(xroar_machine->config->architecture, "mc10") == 0) ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
-	struct slist *ccl = slist_reverse(cart_config_list_by_arch(cart_arch));
-	int num_carts = slist_length(ccl);
-	int selected = 0;
+	// Get list of cart configs
+	struct slist *ccl = NULL;
+	int num_carts = 0;
+	struct cart *cart = NULL;
+	if (xroar_machine) {
+		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+		const char *cart_arch = mpe->cart_arch;
+		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
+		num_carts = slist_length(ccl);
+		cart = (struct cart *)part_component_by_id(&xroar_machine->part, "cart");
+	}
+
+	// Remove old entries
 	free_action_group(global_uigtk2->cart_action_group);
 	gtk_ui_manager_remove_ui(global_uigtk2->menu_manager, global_uigtk2->merge_carts);
+
+	// Jump through alloc hoops just to avoid const-ness warnings.
+	// Note: final entry's name & label is const, no need to allow space
+	// for it in names[] & labels[].
 	GtkRadioActionEntry *radio_entries = g_malloc0((num_carts+1) * sizeof(*radio_entries));
-	// jump through alloc hoops just to avoid const-ness warnings
-	// note: final entry's name & label is const, no need to allow space
-	// for it in names[] & labels[]
 	gchar **names = g_malloc0(num_carts * sizeof(gchar *));
 	gchar **labels = g_malloc0(num_carts * sizeof(gchar *));
-	/* add these to the ui in reverse order, as each will be
-	   inserted before the previous */
-	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
+
+	// Add new entries in reverse order, as each will be inserted before
+	// the previous.
+	int selected = 0;
 	int i = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
 		struct cart_config *cc = iter->data;
@@ -825,7 +844,8 @@ static void gtk2_update_cartridge_menu(void *sptr) {
 	radio_entries[num_carts].value = -1;
 	gtk_ui_manager_add_ui(global_uigtk2->menu_manager, global_uigtk2->merge_carts, "/MainMenu/HardwareMenu/CartridgeMenu", radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
 	gtk_action_group_add_radio_actions(global_uigtk2->cart_action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, NULL);
-	// back through the hoops
+
+	// Back through the hoops
 	for (i = 0; i < num_carts; i++) {
 		g_free(names[i]);
 		g_free(labels[i]);

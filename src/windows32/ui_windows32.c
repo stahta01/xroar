@@ -259,11 +259,16 @@ static void setup_help_menu(void) {
 
 void windows32_update_machine_menu(void *sptr) {
 	(void)sptr;
-	// This seems to do the job of clearing any existing menu:
+	// Get list of machine configs
+	struct slist *mcl = machine_config_list();
+	// Note: this list is not a copy, so does not need freeing
+
+	// Remove old entries
 	while (DeleteMenu(machine_menu, 0, MF_BYPOSITION))
 		;
+
+	// Add new entries
 	max_machine_id = 0;
-	struct slist *mcl = machine_config_list();
 	while (mcl) {
 		struct machine_config *mc = mcl->data;
 		if (mc->id > max_machine_id)
@@ -275,21 +280,28 @@ void windows32_update_machine_menu(void *sptr) {
 
 void windows32_update_cartridge_menu(void *sptr) {
 	(void)sptr;
-	// This seems to do the job of clearing any existing menu:
+	// Get list of cart configs
+	struct slist *ccl = NULL;
+	if (xroar_machine) {
+		const struct machine_partdb_extra *mpe = xroar_machine->part.partdb->extra[0];
+		const char *cart_arch = mpe->cart_arch;
+		ccl = cart_config_list_is_a(cart_arch);
+	}
+
+	// Remove old entries
 	while (DeleteMenu(cartridge_menu, 0, MF_BYPOSITION))
 		;
-	_Bool is_mc10 = xroar_machine && xroar_machine->config && strcmp(xroar_machine->config->architecture, "mc10") == 0;
-	int cart_arch = is_mc10 ? CART_ARCH_MC10 : CART_ARCH_DRAGON;
+
+	// Add new entries
 	AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
 	max_cartridge_id = 0;
-	struct slist *ccl = cart_config_list_by_arch(cart_arch);
-	while (ccl) {
-		struct cart_config *cc = ccl->data;
+	for (struct slist *iter = ccl; iter; iter = iter->next) {
+		struct cart_config *cc = iter->data;
 		if ((cc->id + 1) > max_cartridge_id)
 			max_cartridge_id = cc->id + 1;
 		AppendMenu(cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
-		ccl = ccl->next;
 	}
+	slist_free(ccl);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

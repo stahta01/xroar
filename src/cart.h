@@ -114,7 +114,7 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh);
 struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
 struct slist *cart_config_list(void);
-struct slist *cart_config_list_by_arch(int arch);
+struct slist *cart_config_list_is_a(const char *is_a);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
 void cart_config_print_all(FILE *f, _Bool all);
