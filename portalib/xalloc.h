@@ -2,7 +2,7 @@
  *
  *  \brief Memory allocation with checking.
  *
- *  \copyright Copyright 2014-2018 Ciaran Anscomb
+ *  \copyright Copyright 2014-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
