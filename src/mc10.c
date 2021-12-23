@@ -727,12 +727,16 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		mp->CPU->D = mc10_read_byte(m, A, mp->CPU->D);
+#ifdef WANT_GDB_TARGET
 		if (mp->bp_session->wp_read_list)
 			bp_wp_read_hook(mp->bp_session, A);
+#endif
 	} else {
 		mc10_write_byte(m, A, mp->CPU->D);
+#ifdef WANT_GDB_TARGET
 		if (mp->bp_session->wp_write_list)
 			bp_wp_write_hook(mp->bp_session, A);
+#endif
 	}
 
 	int ncycles = 16;

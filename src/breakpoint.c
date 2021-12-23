@@ -157,6 +157,8 @@ void bp_hbreak_remove(struct bp_session *bps, unsigned addr, unsigned cond_mask,
 	}
 }
 
+#ifdef WANT_GDB_TARGET
+
 void bp_wp_add(struct bp_session *bps, unsigned type,
 	       unsigned addr, unsigned nbytes, unsigned cond_mask, unsigned cond) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
@@ -195,6 +197,8 @@ void bp_wp_remove(struct bp_session *bps, unsigned type,
 	}
 }
 
+#endif
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Check the supplied list for any matching hooks.  These are temporarily
@@ -226,6 +230,8 @@ static void bp_instruction_hook(void *sptr) {
 	} while (old_pc != DELEGATE_CALL(bpsp->debug_cpu->get_pc));
 }
 
+#ifdef WANT_GDB_TARGET
+
 void bp_wp_read_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	bp_hook(bpsp, bpsp->bps.wp_read_list, address);
@@ -235,3 +241,5 @@ void bp_wp_write_hook(struct bp_session *bps, unsigned address) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	bp_hook(bpsp, bpsp->bps.wp_write_list, address);
 }
+
+#endif
