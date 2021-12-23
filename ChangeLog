@@ -3,6 +3,10 @@
  * New configure options to only build specific machine archs
  * Support 1M or 2M in CoCo 3 [with Christopher Hawks]
 
+Version 1.0.5, Thu 23 Dec 2021
+
+ * Open IDE images in binary mode under Windows [by Tormod Volden]
+
 Version 1.0.4, Sun 12 Dec 2021
 
  * GIME IO range fixes [Roger Taylor]
