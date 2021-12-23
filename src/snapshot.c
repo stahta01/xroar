@@ -525,7 +525,18 @@ static int read_v1_snapshot(const char *filename) {
 				tmp = fs_read_uint8(fd);  // dos_type
 				if (version_minor < 8) {
 					// v1.8 adds a separate cart chunk
-					xroar_set_dos(tmp);
+					switch (tmp) {
+					case 1: // DragonDOS
+						xroar_set_cart(1, "dragondos");
+						break;
+					case 2: // RSDOS
+						xroar_set_cart(1, "rsdos");
+						break;
+					case 3: // Delta
+						xroar_set_cart(1, "delta");
+						break;
+					default: break;
+					}
 				}
 				size -= 7;
 				if (size > 0) {

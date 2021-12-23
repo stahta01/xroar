@@ -68,13 +68,6 @@ struct vo_interface;
 #define VDG_GIME_1986 (2)
 #define VDG_GIME_1987 (3)
 
-/* These are now purely for backwards-compatibility with old snapshots.
- * Cartridge types are now more generic: see cart.h.  */
-#define DOS_NONE      (0)
-#define DOS_DRAGONDOS (1)
-#define DOS_RSDOS     (2)
-#define DOS_DELTADOS  (3)
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Breakpoint flags for Dragon & compatibles. */

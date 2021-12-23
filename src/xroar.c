@@ -1804,23 +1804,6 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 	}
 }
 
-/* For old snapshots */
-void xroar_set_dos(int dos_type) {
-	switch (dos_type) {
-	case DOS_DRAGONDOS:
-		xroar_set_cart(1, "dragondos");
-		break;
-	case DOS_RSDOS:
-		xroar_set_cart(1, "rsdos");
-		break;
-	case DOS_DELTADOS:
-		xroar_set_cart(1, "delta");
-		break;
-	default:
-		break;
-	}
-}
-
 void xroar_save_snapshot(void) {
 	char *filename = DELEGATE_CALL(xroar_filereq_interface->save_filename, xroar_snap_exts);
 	if (filename) {

@@ -182,7 +182,6 @@ void xroar_toggle_cart(void);
 void xroar_connect_cart(void);
 void xroar_set_cart(_Bool notify, const char *cc_name);
 void xroar_set_cart_by_id(_Bool notify, int id);
-void xroar_set_dos(int dos_type);  /* for old snapshots only */
 void xroar_save_snapshot(void);
 void xroar_insert_input_tape_file(const char *filename);
 void xroar_insert_input_tape(void);
