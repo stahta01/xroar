@@ -37,6 +37,10 @@
 #include "serialise.h"
 #include "xroar.h"
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 struct idecart {
 	struct cart cart;
 	struct ide_controller *controller;
@@ -139,9 +143,9 @@ static _Bool idecart_finish(struct part *p) {
 	// Controller code depends on a valid filehandle being attached.
 	for (int i = 0; i < 2; i++) {
 		if (xroar_cfg.load_hd[i]) {
-			int fd = open(xroar_cfg.load_hd[i], O_RDWR);
+			int fd = open(xroar_cfg.load_hd[i], O_RDWR|O_BINARY);
 			if (fd == -1) {
-				fd = open(xroar_cfg.load_hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL, 0600);
+				fd = open(xroar_cfg.load_hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0600);
 				if (fd == -1) {
 					perror(xroar_cfg.load_hd[i]);
 					continue;
