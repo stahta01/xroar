@@ -58,11 +58,22 @@
 #define SNAPSHOT_SER_MACHINE        (1)
 #define SNAPSHOT_SER_VDRIVE_INTF    (2)
 
-const char *snapv1_header = "XRoar snapshot.\012\000";
-const char *snapv2_header = "/usr/bin/env xroar\n# 6809.org.uk\n";
+// Only include V1 snapshot support for non-emscripten builds including Dragon
+// arch support.
+#undef WANT_V1_SNAPSHOTS
+#ifdef WANT_MACHINE_ARCH_DRAGON
+#ifndef HAVE_WASM
+#define WANT_V1_SNAPSHOTS
+#endif
+#endif
 
-static int read_v1_snapshot(const char *filename);
+const char *snapv2_header = "/usr/bin/env xroar\n# 6809.org.uk\n";
 static int read_v2_snapshot(const char *filename);
+
+#ifdef WANT_V1_SNAPSHOTS
+const char *snapv1_header = "XRoar snapshot.\012\000";
+static int read_v1_snapshot(const char *filename);
+#endif
 
 // For WebAssembly, read the snapshot in, but if that resulted in any pending
 // files, queue up another go (but just the one).  This only really applies to
@@ -79,18 +90,19 @@ static void do_retry_read_snapshot(void *sptr) {
 #endif
 
 int read_snapshot(const char *filename) {
-#ifdef HAVE_WASM
-	wasm_retry_open = 1;
-#endif
+#ifndef HAVE_WASM
 	if (read_v2_snapshot(filename) < 0 &&
 	    read_v1_snapshot(filename) < 0) {
-#ifdef HAVE_WASM
-		wasm_retry_open = 0;
-#endif
 		LOG_WARN("Snapshot: read failed\n");
 		return -1;
 	}
-#ifdef HAVE_WASM
+#else
+	wasm_retry_open = 1;
+	if (read_v2_snapshot(filename) < 0) {
+		wasm_retry_open = 0;
+		LOG_WARN("Snapshot: read failed\n");
+		return -1;
+	}
 	wasm_retry_open = 0;
 	if (wasm_waiting_files) {
 		char *fncopy = xstrdup(filename);
@@ -219,6 +231,8 @@ static int read_v2_snapshot(const char *filename) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+#ifdef WANT_V1_SNAPSHOTS
+
 // Old snapshot READING code only follows.
 
 /* Note: Setting up the correct ROM select for Dragon 64 depends on SAM
@@ -240,8 +254,6 @@ static int read_v2_snapshot(const char *filename) {
 
 #define SNAPSHOT_VERSION_MAJOR 1
 #define SNAPSHOT_VERSION_MINOR 8
-
-#ifdef WANT_MACHINE_ARCH_DRAGON
 
 static char *read_string(FILE *fd, unsigned *size) {
 	char *str = NULL;
@@ -312,17 +324,9 @@ static uint16_t *tfm_reg_ptr(struct HD6309 *hcpu, unsigned reg) {
 	return NULL;
 }
 
-#endif
-
 #define sex4(v) (((uint16_t)(v) & 0x07) - ((uint16_t)(v) & 0x08))
 
 static int read_v1_snapshot(const char *filename) {
-#ifndef WANT_MACHINE_ARCH_DRAGON
-	(void)filename;
-	return -1;
-
-#else
-
 	FILE *fd;
 	uint8_t buffer[17];
 	int section, tmp;
@@ -676,5 +680,6 @@ static int read_v1_snapshot(const char *filename) {
 		xroar_set_cart(1, cart_config->name);
 	}
 	return 0;
-#endif
 }
+
+#endif
