@@ -136,6 +136,9 @@ AC_ARG_WITH([pthreads],
 AC_ARG_WITH([zlib],
 	AS_HELP_STRING([--without-zlib], [don't use zlib]) )
 
+AC_ARG_ENABLE([becker],
+	AS_HELP_STRING([--disable-becker], [don't include Becker port support]) )
+
 AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
 
@@ -221,6 +224,7 @@ AM_COND_IF([WASM], [
 		test -z "$SDL_LIBS" && SDL_LIBS="-s USE_SDL=2"
 		test -z "$enable_trace" && enable_trace=no
 		test -z "$enable_ao_null" && enable_ao_null=no
+		test -z "$enable_becker" && enable_becker=no
 		test -z "$enable_gdb_target" && enable_gdb_target=no
 		test -z "$with_x" && with_x=no
 		test -z "$no_x" && no_x=yes
@@ -660,6 +664,11 @@ int main(int argc, char **argv) { (void)argc; (void)argv; regcomp(0,0,REG_EXTEND
 
 AM_CONDITIONAL([TRE], [test -n "$have_tre"])
 AM_COND_IF([TRE], [AC_DEFINE([HAVE_TRE], 1, [TRE])])
+
+### Becker port
+
+AM_CONDITIONAL([BECKER], [test "x$enable_becker" != "xno"])
+AM_COND_IF([BECKER], [AC_DEFINE([WANT_BECKER], 1, [Becker port])])
 
 ### GDB target
 

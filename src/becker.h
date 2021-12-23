@@ -29,11 +29,24 @@
 
 struct becker;
 
+#ifdef WANT_BECKER
+
 struct becker *becker_open(void);
 void becker_close(struct becker *b);
 void becker_reset(struct becker *b);
 uint8_t becker_read_status(struct becker *b);
 uint8_t becker_read_data(struct becker *b);
 void becker_write_data(struct becker *b, uint8_t D);
+
+#else
+
+inline struct becker *becker_open(void) { return NULL; }
+inline void becker_close(struct becker *b) { (void)b; }
+inline void becker_reset(struct becker *b) { (void)b; }
+inline uint8_t becker_read_status(struct becker *b) { (void)b; return 0; }
+inline uint8_t becker_read_data(struct becker *b) { (void)b; return 0; }
+inline void becker_write_data(struct becker *b, uint8_t D) { (void)b; (void)D; }
+
+#endif
 
 #endif

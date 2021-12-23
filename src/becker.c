@@ -20,6 +20,8 @@
 
 #include "top-config.h"
 
+#ifdef WANT_BECKER
+
 // for addrinfo
 #define _POSIX_C_SOURCE 200112L
 
@@ -217,3 +219,5 @@ void becker_write_data(struct becker *b, uint8_t D) {
 	}
 	write_output(b);
 }
+
+#endif
