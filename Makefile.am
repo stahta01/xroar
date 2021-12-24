@@ -5,7 +5,8 @@ EXTRA_DIST = \
 	README \
 	README.SDS \
 	COPYING.GPL \
-	COPYING.LGPL
+	COPYING.LGPL \
+	top-config.h
 
 SUBDIRS = portalib src doc
 DIST_SUBDIRS = tools portalib src doc
