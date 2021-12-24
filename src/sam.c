@@ -60,11 +60,24 @@ static const int vdg_hclrs[8] = {  CLR4, CLR3, CLR4, CLR3, CLR4, CLR3, CLR4, CLR
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+#define VC_B15_5  (0)
+#define VC_YDIV4  (1)
+#define VC_YDIV3  (2)
+#define VC_YDIV2  (3)
+#define VC_B4     (4)
+#define VC_XDIV3  (5)
+#define VC_XDIV2  (6)
+#define VC_B3_0   (7)
+#define VC_GROUND (8)
+#define NUM_VCOUNTERS (9)
+
 struct vcounter {
-	_Bool input;
 	uint16_t value;
+	_Bool input;
 	_Bool output;
-	struct vcounter *input_from;
+	uint16_t val_mod;
+	uint16_t out_mask;
+	int input_from;
 };
 
 static struct ser_struct ser_struct_vcounter[] = {
@@ -78,7 +91,21 @@ static const struct ser_struct_data vcounter_ser_struct_data = {
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_vcounter),
 };
 
-static const struct vcounter ground = { .output = 0 };
+static const struct {
+	int input_from;
+	uint16_t val_mod;
+	uint16_t out_mask;
+} vcounter_init[NUM_VCOUNTERS] = {
+	{ VC_B4,    2048, 0 },
+	{ VC_YDIV3,    4, 2 },
+	{ VC_B4,       3, 2 },
+	{ VC_B4,       2, 1 },
+	{ VC_B3_0,     2, 1 },
+	{ VC_B3_0,     3, 2 },
+	{ VC_B3_0,     2, 1 },
+	{ -1,         16, 8 },
+	{ -1,          0, 0 }
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -112,14 +139,7 @@ struct MC6883_private {
 		// end of line clear mode
 		int clr_mode;  // CLR4, CLR3 or CLRN
 
-		struct vcounter b15_5;
-		struct vcounter b4;
-		struct vcounter b3_0;
-		struct vcounter ydiv4;
-		struct vcounter ydiv3;
-		struct vcounter ydiv2;
-		struct vcounter xdiv3;
-		struct vcounter xdiv2;
+		struct vcounter vcounter[NUM_VCOUNTERS];
 	} vdg;
 
 };
@@ -147,19 +167,20 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_STRUCT_ELEM(struct MC6883_private, extend_slow_cycle, ser_type_bool), // 16
 
 	SER_STRUCT_ELEM(struct MC6883_private, vdg.v, ser_type_unsigned), // 17
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.f, ser_type_uint16), // 18
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.f, ser_type_unhandled), // 18
 	SER_STRUCT_ELEM(struct MC6883_private, vdg.clr_mode, ser_type_int), // 19
 
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.b15_5, ser_type_unhandled), // 20
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.b4, ser_type_unhandled), // 21
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.b3_0, ser_type_unhandled), // 22
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.ydiv4, ser_type_unhandled), // 23
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.ydiv3, ser_type_unhandled), // 24
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.ydiv2, ser_type_unhandled), // 25
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.xdiv3, ser_type_unhandled), // 26
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.xdiv2, ser_type_unhandled), // 27
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B15_5], ser_type_unhandled), // 20
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B4], ser_type_unhandled), // 21
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B3_0], ser_type_unhandled), // 22
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV4], ser_type_unhandled), // 23
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV3], ser_type_unhandled), // 24
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV2], ser_type_unhandled), // 25
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_XDIV3], ser_type_unhandled), // 26
+	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_XDIV2], ser_type_unhandled), // 27
 };
 
+#define MC6883_SER_VDG_F (18)
 #define MC6883_SER_B15_5 (20)
 #define MC6883_SER_B4    (21)
 #define MC6883_SER_B3_0  (22)
@@ -210,13 +231,12 @@ static struct part *mc6883_allocate(void) {
 	// Set up VDG address divider sources.  Set initial V=7 so that first
 	// call to reset() changes them.
 	sam->vdg.v = 7;
-	sam->vdg.b15_5.input_from = &sam->vdg.b4;
-	sam->vdg.ydiv4.input_from = &sam->vdg.ydiv3;
-	sam->vdg.ydiv3.input_from = &sam->vdg.b4;
-	sam->vdg.ydiv2.input_from = &sam->vdg.b4;
-	sam->vdg.b4.input_from = &sam->vdg.b3_0;
-	sam->vdg.xdiv3.input_from = &sam->vdg.b3_0;
-	sam->vdg.xdiv2.input_from = &sam->vdg.b3_0;
+
+	for (int i = 0; i < NUM_VCOUNTERS; i++) {
+		sam->vdg.vcounter[i].input_from = vcounter_init[i].input_from;
+		sam->vdg.vcounter[i].val_mod = vcounter_init[i].val_mod;
+		sam->vdg.vcounter[i].out_mask = vcounter_init[i].out_mask;
+	}
 
 	return p;
 }
@@ -230,6 +250,13 @@ static _Bool mc6883_finish(struct part *p) {
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
 	switch (tag) {
+	case MC6883_SER_VDG_F:
+		// maintain compatibility
+		{
+			uint16_t f = ser_read_vuint32(sh);
+			sam->vdg.f = f >> 5;
+		}
+		break;
 	case MC6883_SER_B15_5:
 	case MC6883_SER_B4:
 	case MC6883_SER_B3_0:
@@ -253,6 +280,10 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
 	switch (tag) {
+	case MC6883_SER_VDG_F:
+		// maintain compatibility
+		ser_write_vuint32(sh, tag, sam->vdg.f << 5);
+		break;
 	case MC6883_SER_B15_5:
 	case MC6883_SER_B4:
 	case MC6883_SER_B3_0:
@@ -371,110 +402,26 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 }
 
-static void vdg_set_b3_0(struct MC6883_private *sam, uint16_t b3_0);
+static void vcounter_set(struct MC6883_private *sam, int i, int val);
 
-static void update_b15_5_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.b15_5.input;
-	_Bool new_input = sam->vdg.b15_5.input_from->output;
+static void vcounter_update(struct MC6883_private *sam, int i) {
+	_Bool old_input = sam->vdg.vcounter[i].input;
+	_Bool new_input = sam->vdg.vcounter[sam->vdg.vcounter[i].input_from].output;
 	if (new_input != old_input) {
-		sam->vdg.b15_5.input = new_input;
+		sam->vdg.vcounter[i].input = new_input;
 		if (!new_input) {
-			sam->vdg.b15_5.value += 0x20;
-			// output from this counter irrelevant
+			vcounter_set(sam, i, (sam->vdg.vcounter[i].value + 1) % sam->vdg.vcounter[i].val_mod);
 		}
 	}
 }
 
-static void update_ydiv4_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.ydiv4.input;
-	_Bool new_input = sam->vdg.ydiv4.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.ydiv4.input = new_input;
-		if (!new_input) {
-			sam->vdg.ydiv4.value = (sam->vdg.ydiv4.value + 1) % 4;
-			sam->vdg.ydiv4.output = (sam->vdg.ydiv4.value & 2);
-			update_b15_5_input(sam);
-		}
-	}
-}
-
-static void update_ydiv3_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.ydiv3.input;
-	_Bool new_input = sam->vdg.ydiv3.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.ydiv3.input = new_input;
-		if (!new_input) {
-			sam->vdg.ydiv3.value = (sam->vdg.ydiv3.value + 1) % 3;
-			sam->vdg.ydiv3.output = (sam->vdg.ydiv3.value & 2);
-			update_ydiv4_input(sam);
-			update_b15_5_input(sam);
-		}
-	}
-}
-
-static void update_ydiv2_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.ydiv2.input;
-	_Bool new_input = sam->vdg.ydiv2.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.ydiv2.input = new_input;
-		if (!new_input) {
-			sam->vdg.ydiv2.value = !sam->vdg.ydiv2.value;
-			sam->vdg.ydiv2.output = sam->vdg.ydiv2.value;
-			update_b15_5_input(sam);
-		}
-	}
-}
-
-static void update_b4_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.b4.input;
-	_Bool new_input = sam->vdg.b4.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.b4.input = new_input;
-		if (!new_input) {
-			sam->vdg.b4.value ^= 0x10;
-			sam->vdg.b4.output = sam->vdg.b4.value;
-			update_ydiv2_input(sam);
-			update_ydiv3_input(sam);
-			update_ydiv4_input(sam);
-			update_b15_5_input(sam);
-		}
-	}
-}
-
-static void update_xdiv3_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.xdiv3.input;
-	_Bool new_input = sam->vdg.xdiv3.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.xdiv3.input = new_input;
-		if (!new_input) {
-			sam->vdg.xdiv3.value = (sam->vdg.xdiv3.value + 1) % 3;
-			sam->vdg.xdiv3.output = (sam->vdg.xdiv3.value & 2);
-			update_b4_input(sam);
-		}
-	}
-}
-
-static void update_xdiv2_input(struct MC6883_private *sam) {
-	_Bool old_input = sam->vdg.xdiv2.input;
-	_Bool new_input = sam->vdg.xdiv2.input_from->output;
-	if (new_input != old_input) {
-		sam->vdg.xdiv2.input = new_input;
-		if (!new_input) {
-			sam->vdg.xdiv2.value = !sam->vdg.xdiv2.value;
-			sam->vdg.xdiv2.output = sam->vdg.xdiv2.value;
-			update_b4_input(sam);
-		}
-	}
-}
-
-static void vdg_set_b3_0(struct MC6883_private *sam, uint16_t b3_0) {
-	sam->vdg.b3_0.value = b3_0 & 15;
-	_Bool new_output = b3_0 & 8;
-	if (new_output != sam->vdg.b3_0.output) {
-		sam->vdg.b3_0.output = new_output;
-		update_xdiv2_input(sam);
-		update_xdiv3_input(sam);
-		update_b4_input(sam);
+static void vcounter_set(struct MC6883_private *sam, int i, int val) {
+	sam->vdg.vcounter[i].value = val;
+	sam->vdg.vcounter[i].output = val & sam->vdg.vcounter[i].out_mask;
+	// Never need to check VC_GROUND or VC_B3_0
+	for (int j = 0; j < NUM_VCOUNTERS - 2; j++) {
+		if (sam->vdg.vcounter[j].input_from == i)
+			vcounter_update(sam, j);
 	}
 }
 
@@ -487,26 +434,26 @@ void sam_vdg_hsync(struct MC6883 *samp, _Bool level) {
 
 	case CLR4:
 		// clear bits 4..1
-		sam->vdg.b3_0.value = 0;
-		sam->vdg.b3_0.output = 0;
-		sam->vdg.xdiv3.input = 0;
-		sam->vdg.xdiv2.input = 0;
-		sam->vdg.b4.input = 0;
-		sam->vdg.b4.value = 0;
-		sam->vdg.b4.output = 0;
-		update_ydiv2_input(sam);
-		update_ydiv3_input(sam);
-		update_ydiv4_input(sam);
-		update_b15_5_input(sam);
+		sam->vdg.vcounter[VC_B3_0].value = 0;
+		sam->vdg.vcounter[VC_B3_0].output = 0;
+		sam->vdg.vcounter[VC_XDIV3].input = 0;
+		sam->vdg.vcounter[VC_XDIV2].input = 0;
+		sam->vdg.vcounter[VC_B4].input = 0;
+		sam->vdg.vcounter[VC_B4].value = 0;
+		sam->vdg.vcounter[VC_B4].output = 0;
+		vcounter_update(sam, VC_YDIV2);
+		vcounter_update(sam, VC_YDIV3);
+		vcounter_update(sam, VC_YDIV4);
+		vcounter_update(sam, VC_B15_5);
 		break;
 
 	case CLR3:
 		// clear bits 3..1
-		sam->vdg.b3_0.value = 0;
-		sam->vdg.b3_0.output = 0;
-		update_xdiv2_input(sam);
-		update_xdiv3_input(sam);
-		update_b4_input(sam);
+		sam->vdg.vcounter[VC_B3_0].value = 0;
+		sam->vdg.vcounter[VC_B3_0].output = 0;
+		vcounter_update(sam, VC_XDIV2);
+		vcounter_update(sam, VC_XDIV3);
+		vcounter_update(sam, VC_B4);
 		break;
 
 	default:
@@ -515,10 +462,10 @@ void sam_vdg_hsync(struct MC6883 *samp, _Bool level) {
 
 }
 
-static inline void vcounter_reset(struct vcounter *vc) {
-	vc->input = 0;
-	vc->value = 0;
-	vc->output = 0;
+static inline void vcounter_reset(struct MC6883_private *sam, int i) {
+	sam->vdg.vcounter[i].input = 0;
+	sam->vdg.vcounter[i].value = 0;
+	sam->vdg.vcounter[i].output = 0;
 }
 
 void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
@@ -526,15 +473,15 @@ void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	if (!level) {
 		return;
 	}
-	vcounter_reset(&sam->vdg.b3_0);
-	vcounter_reset(&sam->vdg.xdiv2);
-	vcounter_reset(&sam->vdg.xdiv3);
-	vcounter_reset(&sam->vdg.b4);
-	vcounter_reset(&sam->vdg.ydiv2);
-	vcounter_reset(&sam->vdg.ydiv3);
-	vcounter_reset(&sam->vdg.ydiv4);
-	vcounter_reset(&sam->vdg.b15_5);
-	sam->vdg.b15_5.value = sam->vdg.f;
+	vcounter_reset(sam, VC_B3_0);
+	vcounter_reset(sam, VC_XDIV2);
+	vcounter_reset(sam, VC_XDIV3);
+	vcounter_reset(sam, VC_B4);
+	vcounter_reset(sam, VC_YDIV2);
+	vcounter_reset(sam, VC_YDIV3);
+	vcounter_reset(sam, VC_YDIV4);
+	vcounter_reset(sam, VC_B15_5);
+	sam->vdg.vcounter[VC_B15_5].value = sam->vdg.f;
 }
 
 // Called with the number of bytes of video data required.  Any one call will
@@ -554,7 +501,8 @@ int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	// whatever was being access by the CPU.  This won't be terribly
 	// accurate, as this function is called a lot less frequently than the
 	// CPU address changes.
-	uint16_t V = sam->vdg.b15_5.value | sam->vdg.b4.value | sam->vdg.b3_0.value;
+	uint16_t b3_0 = sam->vdg.vcounter[VC_B3_0].value;
+	uint16_t V = (sam->vdg.vcounter[VC_B15_5].value << 5) | (sam->vdg.vcounter[VC_B4].value << 4) | b3_0;
 	samp->V = sam->mpu_rate_fast ? samp->Z : VRAM_TRANSLATE(V);
 
 	// Either way, need to advance the VDG address pointer.
@@ -563,17 +511,17 @@ int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	// boundary.  Need to record any rising edge of bit 3 (as input to X
 	// divisor), but it will never fall here, so don't need to check for
 	// that.
-	if ((sam->vdg.b3_0.value + nbytes) < 16) {
-		vdg_set_b3_0(sam, sam->vdg.b3_0.value + nbytes);
+	if ((b3_0 + nbytes) < 16) {
+		vcounter_set(sam, VC_B3_0, b3_0 + nbytes);
 		return nbytes;
 	}
 
 	// Otherwise we have reached the boundary.  Bit 3 will always provide a
 	// falling edge to the X divider, so work through how that affects
 	// subsequent address bits.
-	nbytes = 16 - sam->vdg.b3_0.value;
-	vdg_set_b3_0(sam, 15);  // in case rising edge of b3 was skipped
-	vdg_set_b3_0(sam, 0);   // falling edge of b3
+	nbytes = 16 - b3_0;
+	vcounter_set(sam, VC_B3_0, 15);  // in case rising edge of b3 was skipped
+	vcounter_set(sam, VC_B3_0, 0);  // falling edge of b3
 	return nbytes;
 }
 
@@ -592,27 +540,27 @@ static void update_vcounter_inputs(struct MC6883_private *sam) {
 	int v = sam->reg & 7;
 	switch (vdg_ydivs[v]) {
 	case DIV12:
-		sam->vdg.b15_5.input_from = &sam->vdg.ydiv4;
+		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV4;
 		break;
 	case DIV3:
-		sam->vdg.b15_5.input_from = &sam->vdg.ydiv3;
+		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV3;
 		break;
 	case DIV2:
-		sam->vdg.b15_5.input_from = &sam->vdg.ydiv2;
+		sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV2;
 		break;
 	case DIV1: default:
-		sam->vdg.b15_5.input_from = &sam->vdg.b4;
+		sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
 		break;
 	}
 	switch (vdg_xdivs[v]) {
 	case DIV3:
-		sam->vdg.b4.input_from = &sam->vdg.xdiv3;
+		sam->vdg.vcounter[VC_B4].input_from = VC_XDIV3;
 		break;
 	case DIV2:
-		sam->vdg.b4.input_from = &sam->vdg.xdiv2;
+		sam->vdg.vcounter[VC_B4].input_from = VC_XDIV2;
 		break;
 	case DIV1: default:
-		sam->vdg.b4.input_from = &sam->vdg.b3_0;
+		sam->vdg.vcounter[VC_B4].input_from = VC_B3_0;
 		break;
 	}
 }
@@ -630,7 +578,7 @@ static void update_from_register(struct MC6883_private *sam) {
 	int new_hclr = vdg_hclrs[new_v];
 
 	sam->vdg.v = sam->reg & 7;
-	sam->vdg.f = (sam->reg & 0x03f8) << 6;
+	sam->vdg.f = (sam->reg & 0x03f8) << 1;
 	sam->vdg.clr_mode = new_hclr;
 
 	if (new_ydiv != old_ydiv) {
@@ -638,39 +586,39 @@ static void update_from_register(struct MC6883_private *sam) {
 		case DIV12:
 			if (old_ydiv == DIV3) {
 				// 'glitch'
-				sam->vdg.b15_5.input_from = (struct vcounter *)&ground;
-				update_b15_5_input(sam);
+				sam->vdg.vcounter[VC_B15_5].input_from = VC_GROUND;
+				vcounter_update(sam, VC_B15_5);
 			} else if (old_ydiv == DIV2) {
 				// 'glitch'
-				sam->vdg.b15_5.input_from = &sam->vdg.b4;
-				update_b15_5_input(sam);
+				sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.b15_5.input_from = &sam->vdg.ydiv4;
+			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV4;
 			break;
 		case DIV3:
 			if (old_ydiv == DIV12) {
 				// 'glitch'
-				sam->vdg.b15_5.input_from = (struct vcounter *)&ground;
-				update_b15_5_input(sam);
+				sam->vdg.vcounter[VC_B15_5].input_from = VC_GROUND;
+				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.b15_5.input_from = &sam->vdg.ydiv3;
+			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV3;
 			break;
 		case DIV2:
 			if (old_ydiv == DIV12) {
 				// 'glitch'
-				sam->vdg.b15_5.input_from = &sam->vdg.b4;
-				update_b15_5_input(sam);
+				sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
+				vcounter_update(sam, VC_B15_5);
 			}
-			sam->vdg.b15_5.input_from = &sam->vdg.ydiv2;
+			sam->vdg.vcounter[VC_B15_5].input_from = VC_YDIV2;
 			break;
 		case DIV1: default:
-			sam->vdg.b15_5.input_from = &sam->vdg.b4;
+			sam->vdg.vcounter[VC_B15_5].input_from = VC_B4;
 			break;
 		}
-		update_ydiv2_input(sam);
-		update_ydiv3_input(sam);
-		update_ydiv4_input(sam);
-		update_b15_5_input(sam);
+		vcounter_update(sam, VC_YDIV2);
+		vcounter_update(sam, VC_YDIV3);
+		vcounter_update(sam, VC_YDIV4);
+		vcounter_update(sam, VC_B15_5);
 	}
 
 	if (new_xdiv != old_xdiv) {
@@ -678,26 +626,26 @@ static void update_from_register(struct MC6883_private *sam) {
 		case DIV3:
 			if (old_xdiv == DIV2) {
 				// 'glitch'
-				sam->vdg.b4.input_from = (struct vcounter *)&ground;
-				update_b4_input(sam);
+				sam->vdg.vcounter[VC_B4].input_from = VC_GROUND;
+				vcounter_update(sam, VC_B4);
 			}
-			sam->vdg.b4.input_from = &sam->vdg.xdiv3;
+			sam->vdg.vcounter[VC_B4].input_from = VC_XDIV3;
 			break;
 		case DIV2:
 			if (old_xdiv == DIV3) {
 				// 'glitch'
-				sam->vdg.b4.input_from = (struct vcounter *)&ground;
-				update_b4_input(sam);
+				sam->vdg.vcounter[VC_B4].input_from = VC_GROUND;
+				vcounter_update(sam, VC_B4);
 			}
-			sam->vdg.b4.input_from = &sam->vdg.xdiv2;
+			sam->vdg.vcounter[VC_B4].input_from = VC_XDIV2;
 			break;
 		case DIV1: default:
-			sam->vdg.b4.input_from = &sam->vdg.b3_0;
+			sam->vdg.vcounter[VC_B4].input_from = VC_B3_0;
 			break;
 		}
-		update_xdiv2_input(sam);
-		update_xdiv3_input(sam);
-		update_b4_input(sam);
+		vcounter_update(sam, VC_XDIV2);
+		vcounter_update(sam, VC_XDIV3);
+		vcounter_update(sam, VC_B4);
 	}
 
 	int memory_size = (sam->reg >> 13) & 3;
