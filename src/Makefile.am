@@ -11,7 +11,7 @@ BUILT_SOURCES =
 # Common sources
 
 xroar_CFLAGS =
-xroar_CPPFLAGS = -I$(top_srcdir)/portalib
+xroar_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/portalib
 xroar_OBJCFLAGS =
 xroar_LDADD = $(top_builddir)/portalib/libporta.a -lm
 

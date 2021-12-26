@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
+AM_CPPFLAGS = -I$(top_srcdir)
+
 noinst_LIBRARIES = libporta.a
 
 libporta_a_SOURCES = \
