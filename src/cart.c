@@ -163,6 +163,10 @@ struct cart_config *cart_config_by_name(const char *name) {
 		if (rom_cart_config->description) {
 			free(rom_cart_config->description);
 		}
+		if (rom_cart_config->type) {
+			free(rom_cart_config->type);
+			rom_cart_config->type = NULL;
+		}
 		/* Make up a description from filename */
 		sds tmp_name = sdsnew(name);
 		char *bname = basename(tmp_name);
@@ -194,6 +198,9 @@ struct cart_config *cart_config_by_name(const char *name) {
 				rom_cart_config->type = xstrdup("gmc");
 			}
 			fclose(fd);
+		}
+		if (!rom_cart_config->type) {
+			rom_cart_config->type = xstrdup("rom");
 		}
 		return rom_cart_config;
 	}
