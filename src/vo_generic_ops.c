@@ -426,8 +426,9 @@ static void set_cmp_phase(void *sptr, int phase) {
 
 static void set_cmp_phase_offset(void *sptr, int phase) {
 	struct vo_generic_interface *generic = sptr;
+	int p = generic->cmp_phase ^ generic->cmp_phase_offset;
 	generic->cmp_phase_offset = phase ^ 2;
-	set_cmp_phase(generic, generic->cmp_phase);
+	set_cmp_phase(generic, p);
 }
 
 static void generic_vsync(void *sptr) {
