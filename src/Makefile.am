@@ -399,7 +399,8 @@ endif
 EXTRA_DIST += \
 	windows32/xroar-16x16.ico \
 	windows32/xroar-32x32.ico \
-	windows32/xroar-48x48.ico
+	windows32/xroar-48x48.ico \
+	windows32/xroar-256x256.ico
 
 # Trace mode support
 if TRACE
