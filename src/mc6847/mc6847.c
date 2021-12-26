@@ -644,6 +644,14 @@ void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
 	vdg->inverted_text = invert;
 }
 
+// Render scanline up to current time
+void mc6847_update(void *sptr) {
+	struct MC6847_private *vdg = sptr;
+	if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
+		render_scanline(vdg);
+	}
+}
+
 void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 

@@ -227,6 +227,7 @@ static struct part *mc6883_allocate(void) {
 	*sam = (struct MC6883_private){0};
 
 	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
+	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
 
 	// Set up VDG address divider sources.  Set initial V=7 so that first
 	// call to reset() changes them.
@@ -345,6 +346,10 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		samp->RAS = 0;
 		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
 		if (samp->S == 7 && !RnW && A >= 0xffc0) {
+			if (A < 0xffc6) {
+				// this is a change of video mode, so update VDG
+				DELEGATE_CALL(samp->vdg_update);
+			}
 			unsigned b = 1 << ((A >> 1) & 0x0f);
 			if (A & 1) {
 				sam->reg |= b;

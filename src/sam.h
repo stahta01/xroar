@@ -35,6 +35,7 @@ struct MC6883 {
 	unsigned V;
 	_Bool RAS;
 	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
+	DELEGATE_T0(void) vdg_update;
 };
 
 void sam_reset(struct MC6883 *);

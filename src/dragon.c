@@ -462,6 +462,7 @@ static _Bool dragon_finish(struct part *p) {
 	md->is_dragon = md->is_dragon32 || md->is_dragon64;
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
 	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM);
 
 	// Breakpoint session
@@ -1268,11 +1269,6 @@ static void write_byte(struct machine_dragon *md, unsigned A) {
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct machine_dragon *md = sptr;
-	// Changing the SAM VDG mode can affect its idea of the current VRAM
-	// address, so get the VDG output up to date:
-	if (!RnW && A >= 0xffc0 && A < 0xffc6) {
-		update_vdg_mode(md);
-	}
 	md->cycles -= ncycles;
 	if (md->cycles <= 0) md->CPU->running = 0;
 	event_current_tick += ncycles;

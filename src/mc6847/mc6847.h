@@ -120,6 +120,9 @@ void mc6847_reset(struct MC6847 *);
 
 void mc6847_set_inverted_text(struct MC6847 *, _Bool);
 
+// Render scanline up to current time
+void mc6847_update(void *sptr);
+
 /*
  * Mode bits:
  * 7    ¬A/G
