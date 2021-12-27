@@ -456,14 +456,14 @@ static void *ao_sdl2_write_buffer(void *sptr, void *buffer) {
 			return NULL;
 		}
 		SDL_LockMutex(aosdl->fragment_mutex);
-		aosdl->write_fragment = (aosdl->write_fragment + 1) % aosdl->nfragments;
-		aosdl->fragment_queue_length++;
 		while (aosdl->fragment_queue_length == aosdl->nfragments) {
 			if (SDL_CondWaitTimeout(aosdl->fragment_cv, aosdl->fragment_mutex, aosdl->timeout_ms) == SDL_MUTEX_TIMEDOUT) {
 				SDL_UnlockMutex(aosdl->fragment_mutex);
 				return NULL;
 			}
 		}
+		aosdl->write_fragment = (aosdl->write_fragment + 1) % aosdl->nfragments;
+		aosdl->fragment_queue_length++;
 		SDL_UnlockMutex(aosdl->fragment_mutex);
 		return aosdl->fragment_buffer[aosdl->write_fragment];
 	}
