@@ -24,6 +24,7 @@
 
 #include <SDL.h>
 
+#include "array.h"
 #include "xalloc.h"
 
 #include "logging.h"
@@ -74,6 +75,13 @@ struct vo_sdl_interface {
 #include "vo_generic_ops.c"
 
 /*** ***/
+
+static const Uint32 renderer_flags[] = {
+	SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC,
+	SDL_RENDERER_ACCELERATED,
+	SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC,
+	SDL_RENDERER_SOFTWARE
+};
 
 static void vo_sdl_free(void *sptr);
 static void vo_sdl_refresh(void *sptr);
@@ -289,13 +297,22 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 
 #ifdef HAVE_WASM
 	// XXX see above
-	if (!vosdl->renderer)
+	if (!vosdl->renderer) {
 #endif
-	vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, SDL_RENDERER_PRESENTVSYNC);
+
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
+		vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, renderer_flags[i]);
+		if (vosdl->renderer)
+			break;
+	}
 	if (!vosdl->renderer) {
 		LOG_ERROR("Failed to create renderer\n");
 		return 0;
 	}
+
+#ifdef HAVE_WASM
+	}
+#endif
 
 	if (logging.level >= 3) {
 		SDL_RendererInfo renderer_info;
