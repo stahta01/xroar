@@ -27,6 +27,7 @@ xroar_SOURCES = \
 	debug_cpu.h \
 	dkbd.c dkbd.h \
 	events.c events.h \
+	filter.c filter.h \
 	fs.c fs.h \
 	hexs19.c hexs19.h \
 	joystick.c joystick.h \
