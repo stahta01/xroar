@@ -29,6 +29,7 @@
 
 #include "array.h"
 
+#include "filter.h"
 #include "part.h"
 #include "serialise.h"
 #include "sn76489.h"
@@ -82,9 +83,7 @@ struct SN76489_private {
 	unsigned noise_lfsr;
 
 	// low-pass filter state
-	float output;
-	float xv1, xv2, xv3;
-	float yv1, yv2;
+	struct filter *filter;
 };
 
 static struct ser_struct ser_struct_sn76489[] = {
@@ -273,6 +272,11 @@ void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tick
 	csg_->framerate = framerate;
 	csg_->tickrate = tickrate;
 	csg_->last_fragment_tick = tick;
+
+	if (csg_->filter) {
+		filter_free(csg_->filter);
+	}
+	csg_->filter = filter_new(FILTER_BU|FILTER_LP, 3, 250000, 3000, 0);
 }
 
 static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
@@ -385,15 +389,8 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 	int nticks = csg_->nticks + tick_delta(tick, csg_->last_fragment_tick);
 	csg_->last_fragment_tick = tick;
 
-	// last output value
-	float output = csg_->output;
+	float output = csg_->filter->output;
 	float new_output = output;
-	// butterworth filter state
-	float xv1 = csg_->xv1;
-	float xv2 = csg_->xv2;
-	float xv3 = csg_->xv3;
-	float yv1 = csg_->yv1;
-	float yv2 = csg_->yv2;
 
 	// if previous call overran
 	if (csg_->overrun && nframes > 0) {
@@ -472,17 +469,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 		new_output = csg_->level[0] + csg_->level[1] +
 		             csg_->level[2] + csg_->level[3];
 
-		// apply butterworth low-pass filter
-		float xv0 = xv1;
-		xv1 = xv2;
-		xv2 = xv3;
-		xv3 = new_output / IIR_GAIN;
-		float yv0 = yv1;
-		yv1 = yv2;
-		yv2 = output;
-		output = IIR_Z0*xv0 + IIR_Z1*xv1 + IIR_Z2*xv2 + IIR_Z3*xv3
-		         + IIR_P0*yv0 + IIR_P1*yv1 + IIR_P2*yv2;
-
+		output = filter_apply(csg_->filter, new_output);
 	}
 
 	csg_->nticks = nticks;
@@ -494,13 +481,6 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 			nframes--;
 		}
 	}
-
-	csg_->output = output;
-	csg_->xv1 = xv1;
-	csg_->xv2 = xv2;
-	csg_->xv3 = xv3;
-	csg_->yv1 = yv1;
-	csg_->yv2 = yv2;
 
 	// return final unfiltered output value
 	return new_output;
