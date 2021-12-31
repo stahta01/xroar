@@ -2,7 +2,12 @@
  * New GDB monitor commands [by Tormod Volden]
  * New configure options to only build specific machine archs
  * Support 1M or 2M in CoCo 3 [with Christopher Hawks]
+
+Version 1.0.6, Fri 31 Dec 2021
+
  * Fix SDL audio thread interactions
+ * Try multiple SDL video renderers in order
+ * Fix composite phase setting
 
 Version 1.0.5, Thu 23 Dec 2021
 
