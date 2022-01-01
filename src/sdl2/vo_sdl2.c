@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 video output module.
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -294,6 +294,11 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	} else {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
+
+#ifdef WINDOWS32
+	// from https://github.com/libsdl-org/SDL/issues/5099
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
 
 #ifdef HAVE_WASM
 	// XXX see above
