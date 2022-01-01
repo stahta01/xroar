@@ -33,7 +33,7 @@
 This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
 computer emulator.
 
-Copyright @copyright{} 2021
+Copyright @copyright{} 2022
 Ciaran Anscomb.
 @end copying
 
