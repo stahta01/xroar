@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 1992 A.J. Fisher, University of York
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -46,15 +46,15 @@
 #define TWOPI       (2.0 * PI)
 #define EPS         1e-10
 
-static inline double chypot(complex c) { return hypot(creal(c), cimag(c)); }
-static inline double catan2(complex c) { return atan2(creal(c), cimag(c)); }
-static inline complex csqr(complex z) { return z*z; }
-static inline complex blt(complex c) { return (2.0 + c) / (2.0 - c); }
+static inline double chypot(double complex c) { return hypot(creal(c), cimag(c)); }
+static inline double catan2(double complex c) { return atan2(creal(c), cimag(c)); }
+static inline double complex csqr(double complex z) { return z*z; }
+static inline double complex blt(double complex c) { return (2.0 + c) / (2.0 - c); }
 
-static void expand(const complex *, int, complex *);
-static void multin(complex, int, complex *);
-static complex evaluate(const complex *, int nz, const complex *, int, complex);
-static complex eval(const complex *, int, complex);
+static void expand(const double complex *, int, double complex *);
+static void multin(double complex, int, double complex *);
+static double complex evaluate(const double complex *, int nz, const double complex *, int, double complex);
+static double complex eval(const double complex *, int, double complex);
 
 struct filter *filter_new(unsigned flags, int order, double fs, double f0, double f1) {
 	(void)flags;  // unused for now as always butterworth low-pass
@@ -69,16 +69,16 @@ struct filter *filter_new(unsigned flags, int order, double fs, double f0, doubl
 	filter->zv = xmalloc((order+1) * sizeof(*filter->zv));
 	filter->pv = xmalloc((order+1) * sizeof(*filter->pv));
 
-	complex *s_poles = xmalloc((order+1) * sizeof(*s_poles));
-	complex *z_poles = xmalloc((order+1) * sizeof(*z_poles));
-	complex *z_zeros = xmalloc((order+1) * sizeof(*z_zeros));
+	double complex *s_poles = xmalloc((order+1) * sizeof(*s_poles));
+	double complex *z_poles = xmalloc((order+1) * sizeof(*z_poles));
+	double complex *z_zeros = xmalloc((order+1) * sizeof(*z_zeros));
 
 	// compute S-plane poles for prototype LP filter
 	int s_numpoles = 0;
 	// Butterworth filter
 	for (int i = 0; i < 2*order; i++) {
 		double theta = (order & 1) ? (i*PI) / order : ((i+0.5)*PI) / order;
-		complex z = cos(theta)+sin(theta)*I;
+		double complex z = cos(theta)+sin(theta)*I;
 		if (creal(z) < 0.0) {
 			s_poles[s_numpoles++] = z;
 		}
@@ -108,11 +108,11 @@ struct filter *filter_new(unsigned flags, int order, double fs, double f0, doubl
 
 	// given Z-plane poles & zeros, compute top & bot polynomials in Z, and
 	// then recurrence relation
-	complex *topcoeffs = xmalloc((z_numzeros+1) * sizeof(*topcoeffs));
-	complex *botcoeffs = xmalloc((z_numzeros+1) * sizeof(*botcoeffs));
+	double complex *topcoeffs = xmalloc((z_numzeros+1) * sizeof(*topcoeffs));
+	double complex *botcoeffs = xmalloc((z_numzeros+1) * sizeof(*botcoeffs));
 	expand(z_zeros, z_numzeros, topcoeffs);
 	expand(z_poles, z_numpoles, botcoeffs);
-	complex dc_gain = evaluate(topcoeffs, z_numzeros, botcoeffs, z_numpoles, 1.0);
+	double complex dc_gain = evaluate(topcoeffs, z_numzeros, botcoeffs, z_numpoles, 1.0);
 	for (int i = 0; i <= z_numzeros; i++) {
 		filter->z[i] = +(creal(topcoeffs[i]) / creal(botcoeffs[z_numpoles]));
 		filter->zv[i] = 0.0;
@@ -141,7 +141,7 @@ void filter_free(struct filter *filter) {
 	free(filter);
 }
 
-static void expand(const complex *pz, int npz, complex *coeffs) {
+static void expand(const double complex *pz, int npz, double complex *coeffs) {
 	// compute product of poles or zeros as a polynomial of z
 	coeffs[0] = 1.0;
 	for (int i = 0; i < npz; i++) {
@@ -159,21 +159,21 @@ static void expand(const complex *pz, int npz, complex *coeffs) {
 	}
 }
 
-static void multin(complex w, int npz, complex *coeffs) {
+static void multin(double complex w, int npz, double complex *coeffs) {
 	// multiply factor (z-w) into coeffs
-	complex nw = -w;
+	double complex nw = -w;
 	for (int i = npz; i >= 1; i--) coeffs[i] = (nw * coeffs[i]) + coeffs[i-1];
 	coeffs[0] = nw * coeffs[0];
 }
 
-static complex evaluate(const complex *topco, int nz, const complex *botco, int np, complex z) {
+static double complex evaluate(const double complex *topco, int nz, const double complex *botco, int np, double complex z) {
 	// evaluate response, substituting for z
 	return eval(topco, nz, z) / eval(botco, np, z);
 }
 
-static complex eval(const complex *coeffs, int npz, complex z) {
+static double complex eval(const double complex *coeffs, int npz, double complex z) {
 	// evaluate polynomial in z, substituting for z
-	complex sum = 0.0;
+	double complex sum = 0.0;
 	for (int i = npz; i >= 0; i--) {
 		sum = (sum * z) + coeffs[i];
 	}
