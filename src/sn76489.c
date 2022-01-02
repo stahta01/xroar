@@ -276,7 +276,7 @@ void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tick
 	if (csg_->filter) {
 		filter_free(csg_->filter);
 	}
-	csg_->filter = filter_new(FILTER_BU|FILTER_LP, 3, 250000, 3000, 0);
+	csg_->filter = filter_new(FILTER_BU|FILTER_LP, 3, 250000, framerate/2, 0);
 }
 
 static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
