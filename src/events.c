@@ -76,16 +76,15 @@ void event_queue_auto(struct event **list, DELEGATE_T0(void) delegate, int dt) {
 }
 
 void event_dequeue(struct event *event) {
-	struct event **list = event->list;
-	struct event **entry;
-	event->queued = 0;
-	if (list == NULL)
+	if (!event->queued)
 		return;
+	event->queued = 0;
+	struct event **list = event->list;
 	if (*list == event) {
 		*list = event->next;
 		return;
 	}
-	for (entry = list; *entry; entry = &((*entry)->next)) {
+	for (struct event **entry = list; *entry; entry = &((*entry)->next)) {
 		if ((*entry)->next == event) {
 			(*entry)->next = event->next;
 			return;
