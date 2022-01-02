@@ -182,20 +182,4 @@ static double complex eval(const double complex *coeffs, int npz, double complex
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-float filter_apply(struct filter *filter, float value) {
-	for (int i = 0; i < filter->nz-1; i++)
-		filter->zv[i] = filter->zv[i+1];
-	filter->zv[filter->nz-1] = value / filter->dc_gain;
-	for (int i = 0; i < filter->np-1; i++)
-		filter->pv[i] = filter->pv[i+1];
-	filter->pv[filter->np-1] = filter->output;
-
-	float output = 0.0;
-	for (int i = 0; i < filter->nz; i++)
-		output += filter->z[i] * filter->zv[i];
-	for (int i = 0; i < filter->np; i++)
-		output += filter->p[i] * filter->pv[i];
-	filter->output = output;
-
-	return output;
-}
+extern inline float filter_apply(struct filter *filter, float value);
