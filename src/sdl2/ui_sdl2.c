@@ -54,7 +54,7 @@
 
 static void *ui_sdl_new(void *cfg);
 static void ui_sdl_free(void *sptr);
-static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data);
+static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data);
 
 extern struct module vo_sdl_module;
 extern struct module vo_null_module;
@@ -109,14 +109,14 @@ static void *ui_sdl_new(void *cfg) {
 	// defaults - may be overridden by platform-specific versions below
 	ui->free = DELEGATE_AS0(void, ui_sdl_free, uisdl2);
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
-	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_set_state, uisdl2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_update_state, uisdl2);
 
 #ifdef HAVE_X11
 	SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
 #endif
 
 #ifdef HAVE_COCOA
-	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_set_state, uisdl2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uisdl2);
 	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
 	cocoa_update_machine_menu(uisdl2);
@@ -124,7 +124,7 @@ static void *ui_sdl_new(void *cfg) {
 #endif
 
 #ifdef WINDOWS32
-	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_set_state, uisdl2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uisdl2);
 	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uisdl2);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uisdl2);
 	windows32_create_menus(uisdl2);
@@ -133,7 +133,7 @@ static void *ui_sdl_new(void *cfg) {
 #endif
 
 #ifdef HAVE_WASM
-	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_set_state, uisdl2);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_update_state, uisdl2);
 	ui->run = DELEGATE_AS0(void, wasm_ui_run, uisdl2);
 #endif
 
@@ -168,7 +168,7 @@ static void ui_sdl_free(void *sptr) {
 	free(uisdl2);
 }
 
-static void ui_sdl_set_state(void *sptr, int tag, int value, const void *data) {
+static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	(void)data;
 	switch (tag) {

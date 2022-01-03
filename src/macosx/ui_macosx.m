@@ -1104,7 +1104,7 @@ void cocoa_update_cartridge_menu(void *sptr) {
 	slist_free(ccl);
 }
 
-void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
+void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	(void)uisdl2;
 
@@ -1136,8 +1136,8 @@ void cocoa_ui_set_state(void *sptr, int tag, int value, const void *data) {
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			cocoa_ui_set_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			cocoa_ui_set_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			cocoa_ui_update_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			cocoa_ui_update_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 

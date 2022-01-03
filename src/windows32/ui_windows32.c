@@ -232,9 +232,9 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
 
-	windows32_ui_set_state(uisdl2, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
+	windows32_ui_update_state(uisdl2, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
 	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
-	windows32_ui_set_state(uisdl2, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
+	windows32_ui_update_state(uisdl2, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(void) {
@@ -464,7 +464,7 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void windows32_ui_set_state(void *sptr, int tag, int value, const void *data) {
+void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	switch (tag) {
 
@@ -509,8 +509,8 @@ void windows32_ui_set_state(void *sptr, int tag, int value, const void *data) {
 				we = !disk->write_protect;
 				wb = disk->write_back;
 			}
-			windows32_ui_set_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			windows32_ui_set_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
+			windows32_ui_update_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
+			windows32_ui_update_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
 		break;
 

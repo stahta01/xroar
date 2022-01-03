@@ -129,7 +129,7 @@ struct ui_interface {
 	 *
 	 * Calling this shall not in itself change any emulator state.
 	 */
-	DELEGATE_T3(void, int, int, cvoidp) set_state;  // ui_tag, value, data
+	DELEGATE_T3(void, int, int, cvoidp) update_state;  // ui_tag, value, data
 
 	/** \brief Create or update machine menu.
 	 *

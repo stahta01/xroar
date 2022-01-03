@@ -44,7 +44,7 @@ static struct module * const null_vo_module_list[] = {
 	NULL
 };
 
-static void set_state(void *sptr, int tag, int value, const void *data);
+static void update_state(void *sptr, int tag, int value, const void *data);
 
 static void *new(void *cfg);
 
@@ -70,7 +70,7 @@ static void *new(void *cfg) {
 	*uinull = (struct ui_interface){0};
 
 	uinull->free = DELEGATE_AS0(void, null_free, uinull);
-	uinull->set_state = DELEGATE_AS3(void, int, int, cvoidp, set_state, uinull);
+	uinull->update_state = DELEGATE_AS3(void, int, int, cvoidp, update_state, uinull);
 	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)null_vo_module_list, NULL);
 	if (!(uinull->vo_interface = module_init(vo_mod, uinull))) {
 		return NULL;
@@ -84,7 +84,7 @@ static void null_free(void *sptr) {
 	free(uinull);
 }
 
-static void set_state(void *sptr, int tag, int value, const void *data) {
+static void update_state(void *sptr, int tag, int value, const void *data) {
 	(void)sptr;
 	(void)tag;
 	(void)value;

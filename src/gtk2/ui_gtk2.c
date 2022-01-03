@@ -489,7 +489,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 	ui->free = DELEGATE_AS0(void, ui_gtk2_free, NULL);
 	ui->run = DELEGATE_AS0(void, ui_gtk2_run, NULL);
-	ui->set_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, NULL);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk2_set_state, NULL);
 
 	/* Fetch top level window */
 	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));

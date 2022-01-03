@@ -33,7 +33,7 @@ FILE *wasm_fopen(const char *pathname, const char *mode);
 void wasm_ui_run(void *sptr);
 
 // UI state update handler.
-void wasm_ui_set_state(void *sptr, int tag, int value, const void *data);
+void wasm_ui_update_state(void *sptr, int tag, int value, const void *data);
 
 // Hooks into xroar_set_machine() and xroar_set_cart() to asyncify.
 _Bool wasm_ui_prepare_machine(struct machine_config *mc);

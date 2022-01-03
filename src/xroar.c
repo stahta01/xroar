@@ -932,7 +932,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	// Notify UI of starting options:
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
 	xroar_set_kbd_translate(1, xroar_cfg.kbd_translate);
 
 	xroar_tape_interface = tape_interface_new(xroar_ui_interface);
@@ -980,7 +980,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 				r = tape_open_reading(xroar_tape_interface, private_cfg.load_tape);
 			}
 			if (r != -1) {
-				DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, private_cfg.load_tape);
+				DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_input_filename, 0, private_cfg.load_tape);
 			}
 		}
 
@@ -991,7 +991,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			case FILETYPE_CAS:
 			case FILETYPE_WAV:
 				tape_open_writing(xroar_tape_interface, private_cfg.tape_write);
-				DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
+				DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
 				break;
 			default:
 				break;
@@ -1170,7 +1170,7 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 				r = tape_open_reading(xroar_tape_interface, filename);
 			}
 			if (r != -1) {
-				DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
+				DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_input_filename, 0, filename);
 			}
 		}
 		break;
@@ -1305,7 +1305,7 @@ void xroar_new_disk(int drive) {
 	new_disk->write_back = 1;
 	vdrive_insert_disk(xroar_vdrive_interface, drive, new_disk);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, new_disk);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_disk_data, drive, new_disk);
 	}
 	LOG_DEBUG(1, "New unformatted disk in drive %d: %s\n", 1+drive, filename);
 }
@@ -1315,7 +1315,7 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar_vdrive_interface, drive, disk);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, disk);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_disk_data, drive, disk);
 	}
 }
 
@@ -1327,7 +1327,7 @@ void xroar_insert_disk(int drive) {
 void xroar_eject_disk(int drive) {
 	vdrive_eject_disk(xroar_vdrive_interface, drive);
 	if (xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_data, drive, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_disk_data, drive, NULL);
 	}
 }
 
@@ -1347,7 +1347,7 @@ _Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
 	}
 	vd->write_protect = !new_we;
 	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
 	}
 	return new_we;
 }
@@ -1368,7 +1368,7 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 	}
 	vd->write_back = new_wb;
 	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
 	}
 	return new_wb;
 }
@@ -1386,7 +1386,7 @@ void xroar_set_ccr(_Bool notify, int action) {
 		break;
 	}
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ccr, private_cfg.ccr, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_ccr, private_cfg.ccr, NULL);
 	}
 	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }
@@ -1443,7 +1443,7 @@ void xroar_set_tv_input(_Bool notify, int action) {
 	}
 
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tv_input, xroar_machine_config->tv_input, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tv_input, xroar_machine_config->tv_input, NULL);
 	}
 }
 
@@ -1452,7 +1452,7 @@ void xroar_set_vdg_inverted_text(_Bool notify, int action) {
 		return;
 	_Bool state = xroar_machine->set_inverted_text(xroar_machine, action);
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_vdg_inverse, state, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_vdg_inverse, state, NULL);
 	}
 }
 
@@ -1495,7 +1495,7 @@ void xroar_set_ratelimit_latch(_Bool notify, int action) {
 		xroar_machine->set_ratelimit(xroar_machine, 0);
 	}
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_ratelimit, state, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_ratelimit, state, NULL);
 	}
 }
 
@@ -1531,7 +1531,7 @@ void xroar_set_fullscreen(_Bool notify, int action) {
 	}
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_fullscreen, set_to);
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_fullscreen, set_to, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_fullscreen, set_to, NULL);
 	}
 }
 
@@ -1568,7 +1568,7 @@ void xroar_set_keyboard_type(_Bool notify, int action) {
 		type = xroar_machine->set_keyboard_type(xroar_machine, action);
 	}
 	if (notify && xroar_ui_interface) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, type, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_keymap, type, NULL);
 	}
 }
 
@@ -1582,7 +1582,7 @@ void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
 			break;
 	}
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_kbd_translate, xroar_cfg.kbd_translate, NULL);
 	}
 }
 
@@ -1591,7 +1591,7 @@ static void update_ui_joysticks(int port) {
 	if (joystick_port_config[port] && joystick_port_config[port]->name) {
 		name = joystick_port_config[port]->name;
 	}
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_joy_right + port, 0, name);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_joy_right + port, 0, name);
 }
 
 void xroar_set_joystick(_Bool notify, int port, const char *name) {
@@ -1639,10 +1639,10 @@ void xroar_connect_machine(void) {
 
 	if (xroar_ui_interface) {
 		int mcid = xroar_machine_config->id;
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, mcid, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_machine, mcid, NULL);
 		int ccid = (c && c->config) ? c->config->id : -1;
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, ccid, NULL);
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_keymap, xroar_machine->keyboard.type, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cartridge, ccid, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_keymap, xroar_machine->keyboard.type, NULL);
 	}
 
 	_Bool is_coco3 = strcmp(xroar_machine_config->architecture, "coco3") == 0;
@@ -1712,7 +1712,7 @@ void xroar_set_machine(_Bool notify, int id) {
 	}
 	xroar_hard_reset();
 	if (notify) {
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_machine, new, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_machine, new, NULL);
 	}
 }
 
@@ -1772,7 +1772,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 	// Some machines don't actually support carts yet
 	if (!xroar_machine->insert_cart) {
 		if (notify) {
-			DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, -1, NULL);
+			DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cartridge, -1, NULL);
 		}
 		return;
 	}
@@ -1800,7 +1800,7 @@ void xroar_set_cart(_Bool notify, const char *cc_name) {
 
 	if (notify) {
 		int id = new_cart ? new_cart->config->id : -1;
-		DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_cartridge, id, NULL);
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cartridge, id, NULL);
 	}
 }
 
@@ -1814,7 +1814,7 @@ void xroar_save_snapshot(void) {
 void xroar_insert_input_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_reading(xroar_tape_interface, filename);
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, filename);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_input_filename, 0, filename);
 }
 
 void xroar_insert_input_tape(void) {
@@ -1824,13 +1824,13 @@ void xroar_insert_input_tape(void) {
 
 void xroar_eject_input_tape(void) {
 	tape_close_reading(xroar_tape_interface);
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_input_filename, 0, NULL);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_insert_output_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_writing(xroar_tape_interface, filename);
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, filename);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_output_filename, 0, filename);
 }
 
 void xroar_insert_output_tape(void) {
@@ -1840,7 +1840,7 @@ void xroar_insert_output_tape(void) {
 
 void xroar_eject_output_tape(void) {
 	tape_close_writing(xroar_tape_interface);
-	DELEGATE_CALL(xroar_ui_interface->set_state, ui_tag_tape_output_filename, 0, NULL);
+	DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_output_filename, 0, NULL);
 }
 
 void xroar_set_tape_playing(_Bool notify, _Bool play) {

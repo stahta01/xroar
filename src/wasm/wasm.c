@@ -115,9 +115,9 @@ void wasm_ui_run(void *sptr) {
 
 // Wasm event handler relays information to web page handlers.
 
-void wasm_ui_set_state(void *sptr, int tag, int value, const void *data) {
+void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	(void)sptr;
-	WASM_DEBUG("wasm_ui_set_state(tag=%d, value=%d)\n", tag, value);
+	WASM_DEBUG("wasm_ui_update_state(tag=%d, value=%d)\n", tag, value);
 
 	switch (tag) {
 

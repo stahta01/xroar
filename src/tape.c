@@ -726,7 +726,7 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 		}
 		LOG_DEBUG(2, "Tape: motor %s\n", motor ? "ON" : "OFF");
 	}
-	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_motor, tip->motor, NULL);
+	DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_motor, tip->motor, NULL);
 }
 
 // Manual motor control.  UI-triggered play/pause.  Call with play=0 to pause.
@@ -745,7 +745,7 @@ void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify) {
 		LOG_PRINT("\n");
 	}
 	if (notify) {
-		DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_playing, tip->playing, NULL);
+		DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_playing, tip->playing, NULL);
 	}
 }
 
@@ -776,7 +776,7 @@ void tape_set_state(struct tape_interface *ti, int flags) {
 void tape_select_state(struct tape_interface *ti, int flags) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_set_state(ti, flags);
-	DELEGATE_CALL(tip->ui->set_state, ui_tag_tape_flags, flags, NULL);
+	DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_flags, flags, NULL);
 }
 
 // Get current tape flags.
