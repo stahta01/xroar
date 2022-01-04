@@ -2,7 +2,7 @@
  *
  *  \brief GTK+2 user-interface module.
  *
- *  \copyright Copyright 2010-2021 Ciaran Anscomb
+ *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -417,6 +417,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .accelerator = "<control>T",
 	  .callback = G_CALLBACK(gtk2_toggle_tc_window) },
 	{ .name = "RateLimitAction", .label = "_Rate Limit",
+	  .accelerator = "<shift>F12",
 	  .callback = G_CALLBACK(toggle_ratelimit) },
 };
 
