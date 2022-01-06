@@ -141,7 +141,7 @@ Version 0.34, Sun  7 Aug 2016
   * Pixel rate doubled anticipating more machine types (could be slower)
   * NTSC filtering renderer: -ccr simulated (note: slower than 5bit)
   * Add cross-colour rendering menu to GUI
-  * PAL-M magenta-green artifacting supported with -ccr simulated
+  * PAL-M magenta-green artefacting supported with -ccr simulated
   * Fix treatment of empty drives in DOS carts
   * Initial IDE code [by Alan Cox]
 
@@ -374,7 +374,7 @@ Version 0.21, Thu 24 Apr 2008
 
 Version 0.20, Wed 27 Feb 2008
 
-  * Don't show artifacted colours for CSS=0.
+  * Don't show artefacted colours for CSS=0.
   * Better emulation of undocumented 6809 behaviour.
   * New joystick axis and button mapping options.
   * Add GTK+-2 file requester.
@@ -491,7 +491,7 @@ Version 0.11, Thu 13 Jan 2005
   * Added NULL sound module (Linux-only: uses /dev/rtc to sync).
   * Eliminated busy-wait from SDL sound module.
   * Unified Unix and GP32 Makefiles.
-  * Added ability to simulate NTSC video artifacts for hi-res graphics.
+  * Added ability to simulate NTSC video artefacts for hi-res graphics.
   * Sound fixes for unsigned audio interferes less with other audio.
   * GP32 chatboard support (thanks to Mirko's SDK).
   * Added 'translation' mode to SDL keyboard driver.

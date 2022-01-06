@@ -2,7 +2,7 @@
  *
  *  \brief Dragon and Tandy Colour Computer machines.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -116,7 +116,7 @@ struct machine_dragon {
 	} keyboard;
 
 	// NTSC colour bursts
-	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artifacting)
+	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
 	unsigned ntsc_burst_mod;
 	struct ntsc_burst *ntsc_burst[4];
 
