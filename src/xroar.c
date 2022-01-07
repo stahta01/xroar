@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1062,12 +1062,6 @@ void xroar_shutdown(void) {
 	if (xroar_filereq_interface) {
 		DELEGATE_SAFE_CALL(xroar_filereq_interface->free);
 	}
-	if (xroar_ui_interface) {
-		DELEGATE_SAFE_CALL(xroar_ui_interface->free);
-	}
-#ifdef WINDOWS32
-	windows32_shutdown();
-#endif
 	romlist_shutdown();
 	crclist_shutdown();
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
@@ -1081,6 +1075,12 @@ void xroar_shutdown(void) {
 	vdrive_interface_free(xroar_vdrive_interface);
 	tape_interface_free(xroar_tape_interface);
 	xconfig_shutdown(xroar_options);
+	if (xroar_ui_interface) {
+		DELEGATE_SAFE_CALL(xroar_ui_interface->free);
+	}
+#ifdef WINDOWS32
+	windows32_shutdown();
+#endif
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
