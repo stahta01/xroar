@@ -8,6 +8,7 @@
  * Matra & Hachette Alice support (keyboard layout, built-in profile)
  * New meta-options -machine-opt and -cart-opt
  * New ide-addr=address cart-opt
+ * New abstract block device handling
 
 Version 1.0.9, Tue 18 Jan 2022
 
