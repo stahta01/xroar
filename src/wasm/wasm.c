@@ -2,7 +2,7 @@
  *
  *  \brief WebAssembly (emscripten) support.
  *
- *  \copyright Copyright 2019 Ciaran Anscomb
+ *  \copyright Copyright 2019-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

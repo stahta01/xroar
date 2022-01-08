@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2019 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

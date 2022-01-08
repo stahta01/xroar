@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface module.
  *
- *  \copyright Copyright 2014-2021 Ciaran Anscomb
+ *  \copyright Copyright 2014-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 1992 A.J. Fisher, University of York
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
