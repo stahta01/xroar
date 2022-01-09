@@ -104,6 +104,7 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f);
 
 /* Module-specific open() calls */
 struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode);
+struct tape *tape_k7_open(struct tape_interface *ti, const char *filename, const char *mode);
 struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode);
 struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate);
 

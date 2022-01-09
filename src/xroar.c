@@ -554,7 +554,7 @@ struct event *xroar_machine_events = NULL;
 static void do_load_binaries(void *);
 
 static char const * const xroar_disk_exts[] = { "DMK", "JVC", "OS9", "VDK", "DSK", NULL };
-static char const * const xroar_tape_exts[] = { "CAS", "C10", NULL };
+static char const * const xroar_tape_exts[] = { "CAS", "C10", "K7", NULL };
 static char const * const xroar_snap_exts[] = { "SNA", NULL };
 /* static char const * const xroar_cart_exts[] = { "ROM", NULL }; */
 
@@ -573,6 +573,7 @@ static struct {
 	{ "HEX", FILETYPE_HEX },
 	{ "CAS", FILETYPE_CAS },
 	{ "C10", FILETYPE_CAS },
+	{ "K7",  FILETYPE_K7  },
 	{ "WAV", FILETYPE_WAV },
 	{ "SN",  FILETYPE_SNA },
 	{ "RAM", FILETYPE_RAM },
@@ -989,6 +990,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			int write_file_type = xroar_filetype_by_ext(private_cfg.tape_write);
 			switch (write_file_type) {
 			case FILETYPE_CAS:
+			case FILETYPE_K7:
 			case FILETYPE_WAV:
 				tape_open_writing(xroar_tape_interface, private_cfg.tape_write);
 				DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_tape_output_filename, 0, private_cfg.tape_write);
@@ -1159,6 +1161,7 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 		break;
 
 	case FILETYPE_CAS:
+	case FILETYPE_K7:
 	case FILETYPE_ASC:
 	case FILETYPE_WAV:
 	default:
@@ -2100,6 +2103,7 @@ static enum media_slot add_load_file(const char *filename) {
 		break;
 
 	case FILETYPE_CAS:
+	case FILETYPE_K7:
 	case FILETYPE_WAV:
 	case FILETYPE_ASC:
 	case FILETYPE_UNKNOWN:

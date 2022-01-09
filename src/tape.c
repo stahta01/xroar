@@ -524,6 +524,14 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 			set_breakpoints(tip);
 		}
 		break;
+
+	case FILETYPE_K7:
+		if ((ti->tape_input = tape_k7_open(ti, filename, "rb")) == NULL) {
+			LOG_WARN("Failed to open '%s'\n", filename);
+			return -1;
+		}
+		break;
+
 	case FILETYPE_ASC:
 		if ((ti->tape_input = tape_asc_open(ti, filename, "rb")) == NULL) {
 			LOG_WARN("Failed to open '%s'\n", filename);

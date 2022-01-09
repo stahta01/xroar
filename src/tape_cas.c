@@ -208,8 +208,11 @@ static void init_filename_block(uint8_t *block, const char *filename, int type, 
 	block[14] = load & 0xff;
 }
 
+static void cue_read_ascii(struct tape_cas *cas, const char *filename);
+static void cue_read_k7(struct tape_cas *cas);
+
 static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *filename,
-				     const char *mode, _Bool is_ascii) {
+				     const char *mode, _Bool is_ascii, _Bool is_k7) {
 	struct tape *t;
 	struct tape_cas *cas;
 	FILE *fd;
@@ -240,9 +243,11 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 		return NULL;
 	}
 
-	// don't support ascii writing yet
-	if (writing)
+	// don't support ASCII or K7 writing yet
+	if (writing) {
 		is_ascii = 0;
+		is_k7 = 0;
+	}
 
 	t = tape_new(ti);
 	t->module = &tape_cas_module;
@@ -275,28 +280,11 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 	}
 
 	// note: read_cue_data() will update recorded size to omit any CUE data
-	if (!new_file && (is_ascii || !read_cue_data(cas))) {
+	if (!new_file && (is_ascii || is_k7 || !read_cue_data(cas))) {
 		if (is_ascii) {
-			// ASCII BASIC file: create a gapped loader with ASCII
-			// translation flagged in data blocks
-			uint8_t *filename_block = xmalloc(15);
-			init_filename_block(filename_block, filename, 0, 1, 1, 0, 0);
-			cue_add_silence(cas, 500);
-			cue_add_leader(cas, 192);
-			cue_add_block(cas, 0, 15, 0, 0, filename_block);
-			int offset = 0;
-			int remain = filesize;
-			while (remain > 0) {
-				int bsize = (remain > 255) ? 255 : remain;
-				cue_add_silence(cas, 500);
-				cue_add_leader(cas, 192);
-				cue_add_block(cas, 1, bsize, 1, offset, NULL);
-				remain -= bsize;
-				offset += bsize;
-			}
-			cue_add_silence(cas, 500);
-			cue_add_leader(cas, 192);
-			cue_add_block(cas, 0xff, 0, 0, offset, NULL);
+			cue_read_ascii(cas, filename);
+		} else if (is_k7) {
+			cue_read_k7(cas);
 		} else {
 			// Normal CAS file: create a raw section encompassing
 			// all file data
@@ -332,12 +320,150 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 	return t;
 }
 
+// K7 files: like CAS, but much stricter about block format, with optional preamble
+static void cue_read_k7(struct tape_cas *cas) {
+	uint8_t buf[7];
+	off_t nbytes = cas->size;
+	int leader_length = 0;
+	off_t block_length = 0;
+	_Bool have_preamble = 0;
+	off_t block_start = ftello(cas->fd);
+	int block_num = 0;
+	while (nbytes > 0) {
+		int b = fgetc(cas->fd);
+		if (b < 0)
+			goto short_read;
+		nbytes--;
+
+		switch (b) {
+		case 0xdc:
+			if (leader_length > 0) {
+				block_length += leader_length;
+				leader_length = 0;
+			}
+			if (block_length > 0) {
+				cue_add_raw_section(cas, block_length, block_start, NULL);
+				block_length = 0;
+			}
+			if (nbytes < 7)
+				goto malformed;
+			if (fread(buf, 1, 7, cas->fd) < 7)
+				goto short_read;
+			nbytes -= 7;
+			unsigned leader = ((buf[2] & 0x7f) << 8) | buf[1];
+			unsigned silence = ((buf[6] & 0x7f) << 24) | (buf[5] << 16) | (buf[4] << 8) | buf[3];
+			silence = (unsigned)((float)silence / 44.1);
+			cue_add_silence(cas, silence);
+			cue_add_leader(cas, leader);
+			block_start = ftello(cas->fd);
+			have_preamble = 1;
+			break;
+
+		case 0x55:
+			leader_length++;
+			break;
+
+		case 0x3c:
+			// a previous block without preamble gets all but one
+			// of any leader we've seen
+			if (block_length > 0) {
+				if (leader_length > 1) {
+					block_length += leader_length - 1;
+					leader_length = 1;
+				}
+				cue_add_raw_section(cas, block_length, block_start, NULL);
+				block_start += block_length;
+				block_length = 0;
+			}
+			block_length = leader_length + 1;
+			// now read type, length
+			if (nbytes < 2)
+				goto malformed;
+			if (fread(buf, 1, 2, cas->fd) < 2)
+				goto short_read;
+			nbytes -= 2;
+			block_length += 2;
+			block_num++;
+			if (buf[0] == 0) {
+				// filename block
+				block_num = 0;
+			}
+			// no preamble?  here are the defaults
+			if (!have_preamble) {
+				if (block_num == 0) {
+					// technically the spec says make this
+					// 20s, but that seems excessive!
+					cue_add_silence(cas, 4000);
+					cue_add_leader(cas, 128);
+				} else if (block_num == 1) {
+					cue_add_silence(cas, 500);
+					cue_add_leader(cas, 128);
+				} else if (leader_length < 1) {
+					cue_add_leader(cas, 1);
+				}
+			}
+			int bbytes = buf[1] + 1;  // include checksum
+			block_length += bbytes;
+			if (nbytes < bbytes)
+				goto malformed;
+			fseeko(cas->fd, bbytes, SEEK_CUR);
+			nbytes -= bbytes;
+			have_preamble = 0;
+			leader_length = 0;
+			break;
+
+		default:
+			goto malformed;
+		}
+
+	}
+	if (block_length > 0) {
+		block_length += leader_length;
+		cue_add_raw_section(cas, block_length, block_start, NULL);
+	}
+	return;
+
+malformed:
+	LOG_WARN("TAPE/CAS: malformed K7 file\n");
+	return;
+
+short_read:
+	LOG_WARN("TAPE/CAS: short read processing K7 file\n");
+	return;
+}
+
+// ASCII BASIC file: create a gapped loader with ASCII translation flagged
+static void cue_read_ascii(struct tape_cas *cas, const char *filename) {
+	uint8_t *filename_block = xmalloc(15);
+	init_filename_block(filename_block, filename, 0, 1, 1, 0, 0);
+	cue_add_silence(cas, 500);
+	cue_add_leader(cas, 192);
+	cue_add_block(cas, 0, 15, 0, 0, filename_block);
+	int offset = 0;
+	int remain = cas->size;
+	while (remain > 0) {
+		int bsize = (remain > 255) ? 255 : remain;
+		cue_add_silence(cas, 500);
+		cue_add_leader(cas, 192);
+		cue_add_block(cas, 1, bsize, 1, offset, NULL);
+		remain -= bsize;
+		offset += bsize;
+	}
+	cue_add_silence(cas, 500);
+	cue_add_leader(cas, 192);
+	cue_add_block(cas, 0xff, 0, 0, offset, NULL);
+}
+
 struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode) {
-	return do_tape_cas_open(ti, filename, mode, 0);
+	return do_tape_cas_open(ti, filename, mode, 0, 0);
+}
+
+struct tape *tape_k7_open(struct tape_interface *ti, const char *filename, const char *mode) {
+	return do_tape_cas_open(ti, filename, mode, 0, 1);
 }
 
 struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode) {
-	return do_tape_cas_open(ti, filename, mode, 1);
+	return do_tape_cas_open(ti, filename, mode, 1, 0);
 }
 
 static void cas_close(struct tape *t) {
