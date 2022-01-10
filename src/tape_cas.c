@@ -302,6 +302,12 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 			// all file data
 			cue_add_raw_section(cas, filesize, 0, NULL);
 		}
+		// if nothing there produced any CUE data, and we're reading,
+		// we won't know what to do with this tape, so bail
+		if (!writing && !cas->cue.list) {
+			cas_close(t);
+			return NULL;
+		}
 	}
 
 	t->size = cue_data_size(cas);
