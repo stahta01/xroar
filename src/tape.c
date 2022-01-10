@@ -572,14 +572,14 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	case FILETYPE_CAS:
 	case FILETYPE_ASC:
 		if ((ti->tape_output = tape_cas_open(ti, filename, "wb")) == NULL) {
-			LOG_WARN("Failed to open '%s' for writing.", filename);
+			LOG_WARN("Failed to open '%s' for writing\n", filename);
 			return -1;
 		}
 		break;
 	default:
 #ifdef HAVE_SNDFILE
 		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
-			LOG_WARN("Failed to open '%s' for writing.", filename);
+			LOG_WARN("Failed to open '%s' for writing\n", filename);
 			return -1;
 		}
 #else
