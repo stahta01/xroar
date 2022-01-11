@@ -417,18 +417,21 @@ static void cue_read_k7(struct tape_cas *cas) {
 		}
 
 	}
+	goto last_block;
+
+malformed:
+	LOG_WARN("TAPE/CAS: malformed K7 file\n");
+	goto last_block;
+
+short_read:
+	LOG_WARN("TAPE/CAS: short read processing K7 file\n");
+	goto last_block;
+
+last_block:
 	if (block_length > 0) {
 		block_length += leader_length;
 		cue_add_raw_section(cas, block_length, block_start, NULL);
 	}
-	return;
-
-malformed:
-	LOG_WARN("TAPE/CAS: malformed K7 file\n");
-	return;
-
-short_read:
-	LOG_WARN("TAPE/CAS: short read processing K7 file\n");
 	return;
 }
 
