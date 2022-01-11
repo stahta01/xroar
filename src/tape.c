@@ -1010,8 +1010,6 @@ static void BSR(struct tape_interface_private *tip, void (*f)(struct tape_interf
 	f(tip);
 }
 
-//#define BSR(tip,f) do { CPUSKIP(tip, 7); f(tip); } while (0)
-//#define BSR_01(tip,f) do { CPUSKIP(tip, 6); f(tip); } while (0)
 #define RTS(tip)  do { CPUSKIP(tip, 5); } while (0)
 #define CLR(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), 0); } while (0)
 #define DEC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a, 0) - 1); } while (0)
@@ -1260,6 +1258,17 @@ static void fast_sync_leader(void *sptr) {
 	do_skip_read_time(tip);
 }
 
+// If tape was paused, breakpoints would not have been in place, meaning this
+// code can be reached during initial silence.
+
+static void fast_tape_p0_wait_p1(void *sptr) {
+	struct tape_interface_private *tip = sptr;
+	update_read_time(tip);
+	tape_wait_p1(tip);
+	tip->machine->op_rts(tip->machine);
+	do_skip_read_time(tip);
+}
+
 static void fast_bitin(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	update_read_time(tip);
@@ -1390,6 +1399,10 @@ static struct machine_bp bp_list_fast[] = {
 	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbd99, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_COCO_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_COCO3_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_MC10_ROM(.address = 0xff38, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
@@ -1445,13 +1458,15 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	machine_bp_remove_list(tip->machine, bp_list_fast);
 	machine_bp_remove_list(tip->machine, bp_list_fast_cbin);
 	machine_bp_remove_list(tip->machine, bp_list_rewrite);
-	if (!tip->motor || !tip->playing)
+	if (!tip->motor || !tip->playing) {
 		return;
+	}
 	// Don't intercept calls if there's no input tape.  The optimisations
-	// are only for reading.  Also, this helps works around missing
+	// are only for reading.  Also, this helps work around missing
 	// silences...
-	if (!tip->public.tape_input)
+	if (!tip->public.tape_input) {
 		return;
+	}
 	// Add required breakpoints
 	if (tip->tape_fast) {
 		machine_bp_add_list(tip->machine, bp_list_fast, tip);
