@@ -3,6 +3,11 @@
  * New configure options to only build specific machine archs
  * Support 1M or 2M in CoCo 3 [with Christopher Hawks]
  * Support K7 cassette image files (read-only)
+
+Version 1.0.8, Thu 13 Jan 2022
+
+ * Fix WASM audio for non-Firefox [Greg Dionne]
+ * Fix crash reading zero-length CAS file
  * Fix joystick reads for Pacdude Monster Maze
 
 Version 1.0.7, Sat  1 Jan 2022
