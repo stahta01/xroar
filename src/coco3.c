@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Colour Computer 3 machine.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1096,7 +1096,7 @@ static void joystick_update(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
 	int port = (mcc3->PIA0->b.control_register & 0x08) >> 3;
 	int axis = (mcc3->PIA0->a.control_register & 0x08) >> 3;
-	int dac_value = (mcc3->PIA1->a.out_sink & 0xfc) << 8;
+	int dac_value = ((mcc3->PIA1->a.out_sink & 0xfc) | 2) << 8;
 	int js_value = joystick_read_axis(port, axis);
 	if (js_value >= dac_value)
 		mcc3->PIA0->a.in_sink |= 0x80;

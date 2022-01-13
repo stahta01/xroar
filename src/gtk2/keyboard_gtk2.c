@@ -2,7 +2,7 @@
  *
  *  \brief GTK+2 keyboard support.
  *
- *  \copyright Copyright 2010-2021 Ciaran Anscomb
+ *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -448,12 +448,12 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		if (enabled_axis[i]) {
 			if (keyval == enabled_axis[i]->key0) {
 				if (enabled_axis[i]->value < 32768)
-					enabled_axis[i]->value = 32767;
+					enabled_axis[i]->value = 32256;
 				return FALSE;
 			}
 			if (keyval == enabled_axis[i]->key1) {
 				if (enabled_axis[i]->value >= 32768)
-					enabled_axis[i]->value = 32768;
+					enabled_axis[i]->value = 33280;
 				return FALSE;
 			}
 		}
@@ -545,7 +545,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct axis *axis_data = g_malloc(sizeof(*axis_data));
 	axis_data->key0 = key0;
 	axis_data->key1 = key1;
-	axis_data->value = 32767;
+	axis_data->value = 32256;
 	struct joystick_axis *axis = g_malloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = axis_data;

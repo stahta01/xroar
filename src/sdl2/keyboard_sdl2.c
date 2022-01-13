@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 keyboard module.
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -473,12 +473,12 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		if (enabled_axis[i]) {
 			if (sym == enabled_axis[i]->key0) {
 				if (enabled_axis[i]->value < 32768)
-					enabled_axis[i]->value = 32767;
+					enabled_axis[i]->value = 32256;
 				return;
 			}
 			if (sym == enabled_axis[i]->key1) {
 				if (enabled_axis[i]->value >= 32768)
-					enabled_axis[i]->value = 32768;
+					enabled_axis[i]->value = 33280;
 				return;
 			}
 		}
@@ -582,7 +582,7 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct axis *axis_data = xmalloc(sizeof(*axis_data));
 	axis_data->key0 = key0;
 	axis_data->key1 = key1;
-	axis_data->value = 32767;
+	axis_data->value = 32256;
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = axis_data;

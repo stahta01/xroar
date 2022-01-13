@@ -2,7 +2,7 @@
  *
  *  \brief GTK+2 joystick interfaces.
  *
- *  \copyright Copyright 2010-2019 Ciaran Anscomb
+ *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -135,6 +135,8 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 		off0 = strtof(tmp, NULL);
 	if (spec && *spec)
 		off1 = strtof(spec, NULL);
+	off0 -= 1.0;
+	off1 -= 0.75;
 	if (jaxis == 0) {
 		if (off0 < -32.0) off0 = -32.0;
 		if (off1 > 288.0) off0 = 288.0;
