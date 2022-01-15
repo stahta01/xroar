@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -66,6 +66,11 @@ struct keyboard_interface_private {
 	_Bool is_6809;
 	_Bool is_6803;
 
+	_Bool ansi_bold;    // track whether ANSI 'bold' is on or off
+	_Bool sg6_mode;     // how to interpret block characters on MC-10
+	uint8_t sg4_colour;  // colour of SG4 graphics on MC-10
+	uint8_t sg6_colour;  // colour of SG6 graphics on MC-10
+
 	struct slist *auto_event_list;
 	unsigned command_index;  // when typing a basic command
 };
@@ -113,6 +118,9 @@ struct keyboard_interface *keyboard_interface_new(struct machine *m) {
 	kip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
 	kip->is_6809 = part_is_a(&kip->debug_cpu->part, "MC6809");
 	kip->is_6803 = part_is_a(&kip->debug_cpu->part, "MC6803");
+	kip->sg6_mode = 0;
+	kip->sg4_colour = 0x80;
+	kip->sg6_colour = 0x80;
 	for (int i = 0; i < 8; i++) {
 		ki->keyboard_column[i] = ~0;
 		ki->keyboard_row[i] = ~0;
@@ -290,21 +298,244 @@ static void do_auto_event(void *sptr) {
 	}
 }
 
-static sds parse_string(sds s, enum dkbd_layout layout) {
+// Process escape sequences, called after encountering an ESC character.
+
+static uint8_t ansi_to_vdg_colour[2][8] = {
+	{ 0, 3, 0, 7, 2, 6, 5, 4 },  // not bold: yellow -> orange
+	{ 0, 3, 0, 1, 2, 6, 5, 4 }   //     bold: yellow -> yellow
+};
+
+static _Bool parse_escape(struct keyboard_interface_private *kip, const uint8_t **pp, size_t *lenp) {
+	const uint8_t *p = *pp;
+	size_t len = *lenp;
+	if (len < 2 || *p != '[') {
+		// doesn't look like an escape sequence
+		return 0;
+	}
+	size_t elength;
+	for (elength = 1; elength < len; elength++) {
+		if (*(p + elength) == 'm')
+			break;
+	}
+	if (elength >= len || *(p + elength) != 'm') {
+		// supported escape sequence not found
+		return 0;
+	}
+	// Split string and process each element
+	struct sdsx_list *args = sdsx_split_str_len((char *)p + 1, elength, ";", 0);
+	if (!args) {
+		return 0;
+	}
+	// Looks like something we can at least try to parse - updated the
+	// string and length pointers.
+	*pp += (elength + 1);
+	*lenp -= (elength + 1);
+	for (unsigned i = 0; i < args->len; i++) {
+		long a = strtol(args->elem[i], NULL, 10);
+		switch (a) {
+		case 0:
+			// Reset
+			kip->ansi_bold = 0;
+			kip->sg6_mode = 0;
+			kip->sg4_colour = 0x80;
+			kip->sg6_colour = 0x80;
+			break;
+		case 1:
+			// Set bold mode (colour 33 is yellow)
+			kip->ansi_bold = 1;
+			break;
+		case 4:
+			// Select SG4
+			kip->sg6_mode = 0;
+			break;
+		case 6:
+			// Select SG6
+			kip->sg6_mode = 1;
+			break;
+		case 7:
+			// Set invert mode
+			kip->sg4_colour |= 0x0f;
+			kip->sg6_colour |= 0x3f;
+			break;
+		case 21:
+			// Unset bold mode (colour 33 is orange)
+			kip->ansi_bold = 0;
+			break;
+		case 27:
+			// Unset invert mode
+			kip->sg4_colour &= 0xf0;
+			kip->sg6_colour &= 0xc0;
+			break;
+		case 30: case 31: case 32: case 33:
+		case 34: case 35: case 36: case 37:
+			// Set colour
+			{
+				int c = ansi_to_vdg_colour[kip->ansi_bold][a-30];
+				kip->sg4_colour = 0x80 | (c << 4) | (kip->sg4_colour & 0x0f);
+				kip->sg6_colour = 0x80 | ((c & 1) << 6) | (kip->sg6_colour & 0x3f);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	sdsx_list_free(args);
+	return 1;
+}
+
+static sds parse_string(struct keyboard_interface_private *kip, sds s) {
 	if (!s)
 		return NULL;
-	// treat everything as unsigned char
-	const unsigned char *p = (unsigned char *)s;
+	enum dkbd_layout layout = kip->public.keymap.layout;
+	// treat everything as uint8_t
+	const uint8_t *p = (uint8_t *)s;
 	size_t len = sdslen(s);
 	sds new = sdsempty();
 	while (len > 0) {
-		unsigned char chr = *(p++);
+		uint8_t chr = *(p++);
 		len--;
 
-		// Most translations here are for the Dragon 200-E keyboard,
-		// but we map '\e' specially to BREAK:
+		// Most translations here are for the Dragon 200-E and MC-10
+		// keyboards, but '\e' is either followed by '[' to introduce
+		// an ANSI escape sequence, or it is mapped specially to BREAK.
 		if (chr == 0x1b) {
+			if (parse_escape(kip, &p, &len)) {
+				continue;
+			}
 			chr = 0x03;
+		}
+
+		if (layout == dkbd_layout_mc10) {
+			switch (chr) {
+			case 0xe2:
+				// U+258x and U+259x, "Block Elements"
+				if (len < 2 || *p != 0x96)
+					break;
+				p++;
+				len -= 2;
+				switch (*(p++)) {
+				case 0x80: chr = kip->sg4_colour ^ 0b1100; break;
+				case 0x84: chr = kip->sg4_colour ^ 0b0011; break;
+				case 0x88:
+					// FULL BLOCK
+					if (kip->sg6_mode) {
+						chr = kip->sg6_colour ^ 0b111111;
+					} else {
+						chr = kip->sg4_colour ^ 0b1111;
+					}
+					break;
+				case 0x8c:
+					// LEFT HALF BLOCK
+					if (kip->sg6_mode) {
+						chr = kip->sg6_colour ^ 0b101010;
+					} else {
+						chr = kip->sg4_colour ^ 0b1010;
+					}
+					break;
+				case 0x90:
+					// RIGHT HALF BLOCK
+					if (kip->sg6_mode) {
+						chr = kip->sg6_colour ^ 0b010101;
+					} else {
+						chr = kip->sg4_colour ^ 0b0101;
+					}
+					break;
+				case 0x91:  // LIGHT SHADE
+				case 0x92:  // MEDIUM SHADE
+				case 0x93:  // DARK SHADE
+					chr = kip->sg6_mode ? kip->sg6_colour : kip->sg4_colour;
+					break;
+				case 0x96: chr = kip->sg4_colour ^ 0b0010; break;
+				case 0x97: chr = kip->sg4_colour ^ 0b0001; break;
+				case 0x98: chr = kip->sg4_colour ^ 0b1000; break;
+				case 0x99: chr = kip->sg4_colour ^ 0b1011; break;
+				case 0x9a: chr = kip->sg4_colour ^ 0b1001; break;
+				case 0x9b: chr = kip->sg4_colour ^ 0b1110; break;
+				case 0x9c: chr = kip->sg4_colour ^ 0b1101; break;
+				case 0x9d: chr = kip->sg4_colour ^ 0b0100; break;
+				case 0x9e: chr = kip->sg4_colour ^ 0b0110; break;
+				case 0x9f: chr = kip->sg4_colour ^ 0b0111; break;
+				default: p--; len++; break;
+				}
+				break;
+
+			case 0xf0:
+				// U+1FB0x to U+1FB3x, "Symbols for Legacy Computing"
+				if (len < 3 || *p != 0x9f || *(p+1) != 0xac)
+					break;
+				p += 2;
+				len -= 3;
+				switch (*(p++)) {
+				case 0x80: chr = kip->sg6_colour ^ 0b100000; break;
+				case 0x81: chr = kip->sg6_colour ^ 0b010000; break;
+				case 0x82: chr = kip->sg6_colour ^ 0b110000; break;
+				case 0x83: chr = kip->sg6_colour ^ 0b001000; break;
+				case 0x84: chr = kip->sg6_colour ^ 0b101000; break;
+				case 0x85: chr = kip->sg6_colour ^ 0b011000; break;
+				case 0x86: chr = kip->sg6_colour ^ 0b111000; break;
+				case 0x87: chr = kip->sg6_colour ^ 0b000100; break;
+				case 0x88: chr = kip->sg6_colour ^ 0b100100; break;
+				case 0x89: chr = kip->sg6_colour ^ 0b010100; break;
+				case 0x8a: chr = kip->sg6_colour ^ 0b110100; break;
+				case 0x8b: chr = kip->sg6_colour ^ 0b001100; break;
+				case 0x8c: chr = kip->sg6_colour ^ 0b101100; break;
+				case 0x8d: chr = kip->sg6_colour ^ 0b011100; break;
+				case 0x8e: chr = kip->sg6_colour ^ 0b111100; break;
+
+				case 0x8f: chr = kip->sg6_colour ^ 0b000010; break;
+				case 0x90: chr = kip->sg6_colour ^ 0b100010; break;
+				case 0x91: chr = kip->sg6_colour ^ 0b010010; break;
+				case 0x92: chr = kip->sg6_colour ^ 0b110010; break;
+				case 0x93: chr = kip->sg6_colour ^ 0b001010; break;
+				case 0x94: chr = kip->sg6_colour ^ 0b011010; break;
+				case 0x95: chr = kip->sg6_colour ^ 0b111010; break;
+				case 0x96: chr = kip->sg6_colour ^ 0b000110; break;
+				case 0x97: chr = kip->sg6_colour ^ 0b100110; break;
+				case 0x98: chr = kip->sg6_colour ^ 0b010110; break;
+				case 0x99: chr = kip->sg6_colour ^ 0b110110; break;
+				case 0x9a: chr = kip->sg6_colour ^ 0b001110; break;
+				case 0x9b: chr = kip->sg6_colour ^ 0b101110; break;
+				case 0x9c: chr = kip->sg6_colour ^ 0b011110; break;
+				case 0x9d: chr = kip->sg6_colour ^ 0b111110; break;
+
+				case 0x9e: chr = kip->sg6_colour ^ 0b000001; break;
+				case 0x9f: chr = kip->sg6_colour ^ 0b100001; break;
+				case 0xa0: chr = kip->sg6_colour ^ 0b010001; break;
+				case 0xa1: chr = kip->sg6_colour ^ 0b110001; break;
+				case 0xa2: chr = kip->sg6_colour ^ 0b001001; break;
+				case 0xa3: chr = kip->sg6_colour ^ 0b101001; break;
+				case 0xa4: chr = kip->sg6_colour ^ 0b011001; break;
+				case 0xa5: chr = kip->sg6_colour ^ 0b111001; break;
+				case 0xa6: chr = kip->sg6_colour ^ 0b000101; break;
+				case 0xa7: chr = kip->sg6_colour ^ 0b100101; break;
+				case 0xa8: chr = kip->sg6_colour ^ 0b110101; break;
+				case 0xa9: chr = kip->sg6_colour ^ 0b001101; break;
+				case 0xaa: chr = kip->sg6_colour ^ 0b101101; break;
+				case 0xab: chr = kip->sg6_colour ^ 0b011101; break;
+				case 0xac: chr = kip->sg6_colour ^ 0b111101; break;
+
+				case 0xad: chr = kip->sg6_colour ^ 0b000011; break;
+				case 0xae: chr = kip->sg6_colour ^ 0b100011; break;
+				case 0xaf: chr = kip->sg6_colour ^ 0b010011; break;
+				case 0xb0: chr = kip->sg6_colour ^ 0b110011; break;
+				case 0xb1: chr = kip->sg6_colour ^ 0b001011; break;
+				case 0xb2: chr = kip->sg6_colour ^ 0b101011; break;
+				case 0xb3: chr = kip->sg6_colour ^ 0b011011; break;
+				case 0xb4: chr = kip->sg6_colour ^ 0b111011; break;
+				case 0xb5: chr = kip->sg6_colour ^ 0b000111; break;
+				case 0xb6: chr = kip->sg6_colour ^ 0b100111; break;
+				case 0xb7: chr = kip->sg6_colour ^ 0b010111; break;
+				case 0xb8: chr = kip->sg6_colour ^ 0b110111; break;
+				case 0xb9: chr = kip->sg6_colour ^ 0b001111; break;
+				case 0xba: chr = kip->sg6_colour ^ 0b101111; break;
+				case 0xbb: chr = kip->sg6_colour ^ 0b011111; break;
+
+				default: p -= 2; len += 2; break;
+				}
+				break;
+
+			default: break;
+			}
 		}
 
 		if (layout == dkbd_layout_dragon200e) {
@@ -391,7 +622,7 @@ void keyboard_queue_basic_sds(struct keyboard_interface *ki, sds s) {
 	if (s) {
 		struct auto_event *ae = xmalloc(sizeof(*ae));
 		ae->type = auto_type_basic_command;
-		ae->data.string = parse_string(s, ki->keymap.layout);
+		ae->data.string = parse_string(kip, s);
 		queue_auto_event(kip, ae);
 	}
 }
