@@ -400,8 +400,9 @@ backslash (@samp{\}) which introduces an escape sequence:
 byte, so it may be preferable to use @samp{\x00} instead.
 @item @samp{\a} @tab Bell (BEL), ASCII 7, no equivalent on the Dragon keyboard.
 @item @samp{\b} @tab Backspace (BS), ASCII 8, @kbd{LEFT}.
-@item @samp{\e} @tab Escape (ESC), ASCII 27, no equivalent on the Dragon keyboard, but
-mapped to @kbd{BREAK} by the @option{-type} option.
+@item @samp{\e} @tab Escape (ESC), ASCII 27, no equivalent on the Dragon
+keyboard, but either mapped to @kbd{BREAK} or used to introduce limited ANSI
+escape sequences in the @option{-type} command, effective for the MC-10.
 @item @samp{\f} @tab Form Feed (FF), ASCII 12, @kbd{CLEAR}.
 @item @samp{\n} @tab Newline (NL), ASCII 10, @kbd{DOWN}.  Not usually used by the
 Dragon as a line ending, instead try @samp{\r}.
