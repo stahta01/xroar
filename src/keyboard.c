@@ -101,6 +101,7 @@ extern inline void keyboard_press(struct keyboard_interface *ki, int s);
 extern inline void keyboard_release(struct keyboard_interface *ki, int s);
 
 static void do_auto_event(void *);
+static void do_rts(void *);
 static int parse_char(struct keyboard_interface_private *kip, uint8_t c);
 
 static struct machine_bp basic_command_breakpoint[] = {
@@ -112,6 +113,9 @@ static struct machine_bp basic_command_breakpoint[] = {
 	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
 	BP_MC10_ROM(.address = 0xf883, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
 	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbbc5, .handler = DELEGATE_INIT(do_rts, NULL) ),
+	BP_COCO_ROM(.address = 0xa7d3, .handler = DELEGATE_INIT(do_rts, NULL) ),
+	BP_MC10_ROM(.address = 0xf83f, .handler = DELEGATE_INIT(do_rts, NULL) ),
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -248,6 +252,11 @@ void keyboard_unicode_release(struct keyboard_interface *ki, unsigned unicode) {
 	int s = ki->keymap.unicode_to_dkey[unicode].dk_key;
 	keyboard_release_matrix(ki, ki->keymap.point[s].col, ki->keymap.point[s].row);
 	DELEGATE_SAFE_CALL(ki->update);
+}
+
+static void do_rts(void *sptr) {
+	struct keyboard_interface_private *kip = sptr;
+	kip->machine->op_rts(kip->machine);
 }
 
 static void do_auto_event(void *sptr) {
