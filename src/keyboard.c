@@ -45,6 +45,8 @@
 
 enum auto_type {
 	auto_type_basic_command,  // type a command into BASIC
+	auto_type_basic_file,     // type BASIC from a file
+	// keep these in order
 	auto_type_press_play,     // press play on tape
 };
 
@@ -52,6 +54,10 @@ struct auto_event {
 	enum auto_type type;
 	union {
 		sds string;
+		struct {
+			FILE *fd;
+			_Bool utf8;
+		} basic_file;
 	} data;
 };
 
@@ -60,8 +66,8 @@ static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basi
 
 enum type_state {
 	type_state_normal,
-	type_state_esc,
-	type_state_csi,
+	type_state_esc,    // ESC seen
+	type_state_csi,    // ESC '[' seen
 };
 
 struct keyboard_interface_private {
@@ -95,6 +101,7 @@ extern inline void keyboard_press(struct keyboard_interface *ki, int s);
 extern inline void keyboard_release(struct keyboard_interface *ki, int s);
 
 static void do_auto_event(void *);
+static int parse_char(struct keyboard_interface_private *kip, uint8_t c);
 
 static struct machine_bp basic_command_breakpoint[] = {
 	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
@@ -115,6 +122,9 @@ static void auto_event_free(struct auto_event *ae) {
 	switch (ae->type) {
 	case auto_type_basic_command:
 		sdsfree(ae->data.string);
+		break;
+	case auto_type_basic_file:
+		fclose(ae->data.basic_file.fd);
 		break;
 	default:
 		break;
@@ -259,6 +269,7 @@ static void do_auto_event(void *sptr) {
 	}
 
 	struct auto_event *ae = kip->auto_event_list->data;
+	_Bool next_event = 0;
 
 	if (ae->type == auto_type_basic_command) {
 		// type a command into BASIC
@@ -276,18 +287,47 @@ static void do_auto_event(void *sptr) {
 			}
 		}
 		if (kip->command_index >= sdslen(ae->data.string)) {
-			kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
-			kip->command_index = 0;
-			auto_event_free(ae);
-			ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
+			next_event = 1;
 		}
+	} else if (ae->type == auto_type_basic_file) {
+		for (;;) {
+			int byte = fgetc(ae->data.basic_file.fd);
+			if (byte < 0) {
+				next_event = 1;
+				break;
+			}
+			if (byte == 10)
+				byte = 13;
+			if (byte == 0x1b)
+				ae->data.basic_file.utf8 = 1;
+			if (ae->data.basic_file.utf8)
+				byte = parse_char(kip, byte);
+			if (byte >= 0) {
+				if (kip->is_6809 && cpu09) {
+					MC6809_REG_A(cpu09) = byte;
+					cpu09->reg_cc &= ~4;
+				}
+				if (kip->is_6803 && cpu01) {
+					MC6801_REG_A(cpu01) = byte;
+					cpu01->reg_cc &= ~4;
+				}
+				break;
+			}
+		}
+	}
+
+	if (next_event) {
+		kip->auto_event_list = slist_remove(kip->auto_event_list, ae);
+		kip->command_index = 0;
+		auto_event_free(ae);
+		ae = kip->auto_event_list ? kip->auto_event_list->data : NULL;
 	}
 
 	// Process all non-typing queued events that might follow - this allows
 	// us to press PLAY immediately after typing when the keyboard
 	// breakpoint won't be useful.
 
-	while (ae && ae->type != auto_type_basic_command) {
+	while (ae && ae->type >= auto_type_press_play) {
 		switch (ae->type) {
 
 		case auto_type_press_play:
@@ -666,6 +706,20 @@ void keyboard_queue_basic(struct keyboard_interface *ki, const char *str) {
 	keyboard_queue_basic_sds(ki, s);
 	if (s)
 		sdsfree(s);
+}
+
+void keyboard_queue_basic_file(struct keyboard_interface *ki, const char *filename) {
+	struct keyboard_interface_private *kip = (struct keyboard_interface_private *)ki;
+	FILE *fd = fopen(filename, "rb");
+	if (!fd) {
+		LOG_WARN("Failed to open '%s'\n", filename);
+		return;
+	}
+	struct auto_event *ae = xmalloc(sizeof(*ae));
+	ae->type = auto_type_basic_file;
+	ae->data.basic_file.fd = fd;
+	ae->data.basic_file.utf8 = 0;
+	queue_auto_event(kip, ae);
 }
 
 void keyboard_queue_press_play(struct keyboard_interface *ki) {

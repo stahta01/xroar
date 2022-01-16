@@ -130,6 +130,7 @@ struct private_cfg {
 	char *load_fd[4];
 	struct slist *load_binaries;
 	char *load_tape;
+	char *load_text;
 	char *load_snapshot;
 
 	// Cassettes
@@ -207,6 +208,7 @@ enum media_slot {
 	media_slot_fd3,
 	media_slot_binary,
 	media_slot_tape,
+	media_slot_text,
 	media_slot_cartridge,
 	media_slot_snapshot,
 };
@@ -214,6 +216,7 @@ enum media_slot {
 static int autorun_media_slot = media_slot_none;
 
 /* Helper functions used by configuration */
+static void set_default_machine(const char *name);
 static void set_machine(const char *name);
 static void set_cart(const char *name);
 static void add_load(const char *arg);
@@ -985,6 +988,15 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			}
 		}
 
+		// Text (type ASCII BASIC)
+		if (private_cfg.load_text) {
+			keyboard_queue_basic_file(xroar_keyboard_interface, private_cfg.load_text);
+			keyboard_queue_basic(xroar_keyboard_interface, "\r");
+			if (autorun_media_slot == media_slot_text) {
+				keyboard_queue_basic(xroar_keyboard_interface, "RUN\r");
+			}
+		}
+
 		if (private_cfg.tape_write) {
 			// Only write to CAS or WAV
 			int write_file_type = xroar_filetype_by_ext(private_cfg.tape_write);
@@ -1165,7 +1177,13 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 	case FILETYPE_ASC:
 	case FILETYPE_WAV:
 	default:
-		{
+		if (filetype == FILETYPE_ASC && part_is_a(&xroar_machine->part, "mc10")) {
+			keyboard_queue_basic_file(xroar_keyboard_interface, filename);
+			keyboard_queue_basic(xroar_keyboard_interface, "\r");
+			if (autorun) {
+				keyboard_queue_basic(xroar_keyboard_interface, "RUN\r");
+			}
+		} else {
 			int r;
 			if (autorun) {
 				r = tape_autorun(xroar_tape_interface, filename);
@@ -1862,6 +1880,14 @@ void xroar_hard_reset(void) {
 
 /* Helper functions used by configuration */
 
+static void set_default_machine(const char *name) {
+	private_cfg.default_machine = xstrdup(name);
+	// If no machine specified on command line, get default.
+	if (!xroar_machine_config && private_cfg.default_machine) {
+		xroar_machine_config = machine_config_by_name(private_cfg.default_machine);
+	}
+}
+
 /* Called when a "-machine" option is encountered.  If an existing machine
  * config was in progress, copies any machine-related options into it and
  * clears those options.  Starts a new config. */
@@ -2102,10 +2128,19 @@ static enum media_slot add_load_file(const char *filename) {
 		slot = media_slot_binary;
 		break;
 
+	case FILETYPE_ASC:
+		if (xroar_machine_config && strcmp(xroar_machine_config->architecture, "mc10") == 0) {
+			private_cfg.load_text = xstrdup(filename);
+			slot = media_slot_text;
+			break;
+		}
+		private_cfg.load_tape = xstrdup(filename);
+		slot = media_slot_tape;
+		break;
+
 	case FILETYPE_CAS:
 	case FILETYPE_K7:
 	case FILETYPE_WAV:
-	case FILETYPE_ASC:
 	case FILETYPE_UNKNOWN:
 		private_cfg.load_tape = xstrdup(filename);
 		slot = media_slot_tape;
@@ -2349,8 +2384,8 @@ static union {
 
 static struct xconfig_option const xroar_options[] = {
 	/* Machines: */
-	{ XC_SET_STRING("m", &private_cfg.default_machine) },
-	{ XC_SET_STRING("default-machine", &private_cfg.default_machine) },
+	{ XC_CALL_STRING("default-machine", &set_default_machine) },
+	{ XC_CALL_STRING("m", &set_machine) },
 	{ XC_CALL_STRING("machine", &set_machine) },
 	{ XC_SET_STRING("machine-desc", &private_cfg.machine_desc) },
 	{ XC_SET_PART("machine-arch", &private_cfg.machine_arch, "machine") },
@@ -2407,6 +2442,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_NE("load-hd1", &xroar_cfg.load_hd[1]) },
 	{ XC_SET_STRING_NE("load-sd", &xroar_cfg.load_sd) },
 	{ XC_SET_STRING_NE("load-tape", &private_cfg.load_tape) },
+	{ XC_SET_STRING_NE("load-text", &private_cfg.load_text) },
 
 	/* Cassettes: */
 	{ XC_SET_STRING_NE("tape-write", &private_cfg.tape_write) },
@@ -2603,6 +2639,7 @@ static void helptext(void) {
 "  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
 "  -kbd-translate          enable keyboard translation\n"
 "  -type STRING            intercept ROM calls to type STRING into BASIC\n"
+"  -load-text FILE         type FILE into BASIC\n"
 
 "\n Joysticks:\n"
 "  -joy NAME             configure named joystick profile (-joy help for list)\n"
@@ -2628,6 +2665,7 @@ static void helptext(void) {
 "  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
 "  -load-tape FILE       attach FILE as tape image for reading\n"
 "  -tape-write FILE      open FILE for tape writing\n"
+"  -load-text FILE       type FILE into BASIC\n"
 
 "\n Firmware ROM images:\n"
 "  -rompath PATH         ROM search path (colon-separated list)\n"
@@ -2760,6 +2798,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "load-sd", xroar_cfg.load_sd, NULL);
 	xroar_cfg_print_string(f, all, "load-tape", private_cfg.load_tape, NULL);
 	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
+	xroar_cfg_print_string(f, all, "load-text", private_cfg.load_text, NULL);
 	fputs("\n", f);
 
 	fputs("# Cassettes\n", f);

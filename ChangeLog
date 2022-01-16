@@ -4,6 +4,7 @@
  * Support 1M or 2M in CoCo 3 [with Christopher Hawks]
  * Support K7 cassette image files (read-only)
  * Support UTF-8 block characters in -type for MC-10
+ * Type ASCII BASIC from file on MC-10
 
 Version 1.0.8, Thu 13 Jan 2022
 
