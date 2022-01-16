@@ -435,6 +435,7 @@ enum wasm_load_file_type {
 	wasm_load_file_type_run = 1,
 	wasm_load_file_type_tape = 2,
 	wasm_load_file_type_disk = 3,
+	wasm_load_file_type_text = 4,
 };
 
 struct wasm_event_load_file {
@@ -456,6 +457,10 @@ static void do_wasm_load_file(void *sptr) {
 		break;
 	case wasm_load_file_type_disk:
 		xroar_insert_disk_file(ev->drive, ev->filename);
+		break;
+	case wasm_load_file_type_text:
+		keyboard_queue_basic_file(xroar_keyboard_interface, ev->filename);
+		keyboard_queue_basic(xroar_keyboard_interface, "\r");
 		break;
 	}
 	free(ev->filename);

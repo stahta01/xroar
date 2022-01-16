@@ -94,7 +94,12 @@ be a better way to make this usable...
 
 <tr><td style='text-align:right;'>Tape:</td><td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_tape_playing(true,true)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_tape_playing(true,false)' style='display:none'>&#x23f8;</span> <span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span> <label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'><span id='tape'>Insert...</span></label></td></tr>
 
+<tr><td colspan="2"></td></tr>
+
+<tr><td style='text-align:right;'>Type:</td><td><label title="Type BASIC from file" class='button'><input type='file' onchange='file_input_onload(this,load_type.text,0)'><span id='text'>BASIC file...</span></label></td></tr>
+
 </table>
+
 </div>
 
 <div class='column' style='width:49%;'>
@@ -190,6 +195,7 @@ be a better way to make this usable...
 		run:  1,  // attach and autorun (autodetect type)
 		tape: 2,  // attach tape
 		disk: 3,  // attach disk
+		text: 4,  // type BASIC from file
 	};
 
 	// Generic file upload handler.  Creates a file within the MEMFS with
@@ -259,6 +265,10 @@ be a better way to make this usable...
 
 		if ('tape' in program) {
 			wasm_load_file(program.tape, 2, 0);
+		}
+
+		if ('text' in program) {
+			wasm_load_file(program.text, 4, 0);
 		}
 
 		for (let i = 0; i < 4; i++) {
