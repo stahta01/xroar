@@ -58,6 +58,12 @@ struct auto_event {
 /* Current chording mode - only affects how backslash is typed: */
 static enum keyboard_chord_mode chord_mode = keyboard_chord_mode_dragon_32k_basic;
 
+enum type_state {
+	type_state_normal,
+	type_state_esc,
+	type_state_csi,
+};
+
 struct keyboard_interface_private {
 	struct keyboard_interface public;
 
@@ -70,6 +76,14 @@ struct keyboard_interface_private {
 	_Bool sg6_mode;     // how to interpret block characters on MC-10
 	uint8_t sg4_colour;  // colour of SG4 graphics on MC-10
 	uint8_t sg6_colour;  // colour of SG6 graphics on MC-10
+
+	struct {
+		enum type_state state;
+		int32_t unicode;
+		unsigned expect_utf8;
+		int32_t arg[8];
+		unsigned argnum;
+	} type;
 
 	struct slist *auto_event_list;
 	unsigned command_index;  // when typing a basic command
@@ -305,34 +319,173 @@ static uint8_t ansi_to_vdg_colour[2][8] = {
 	{ 0, 3, 0, 1, 2, 6, 5, 4 }   //     bold: yellow -> yellow
 };
 
-static _Bool parse_escape(struct keyboard_interface_private *kip, const uint8_t **pp, size_t *lenp) {
-	const uint8_t *p = *pp;
-	size_t len = *lenp;
-	if (len < 2 || *p != '[') {
-		// doesn't look like an escape sequence
-		return 0;
+// Dragon 200-E character translation: 200-E can handle various Spanish and
+// other special characters.
+
+int translate_dragon200e(struct keyboard_interface_private *kip, int32_t uchr) {
+	(void)kip;
+	switch (uchr) {
+	case '[': return 0x00;
+	case ']': return 0x01;
+	case '\\': return 0x0b;
+
+	case 0xa1: return 0x5b; // ¡
+	case 0xa7: return 0x13; // §
+	case 0xba: return 0x14; // º
+	case 0xbf: return 0x5d; // ¿
+
+	case 0xc0: case 0xe0: return 0x1b; // à
+	case 0xc1: case 0xe1: return 0x16; // á
+	case 0xc2: case 0xe2: return 0x0e; // â
+	case 0xc3: case 0xe3: return 0x0a; // ã
+	case 0xc4: case 0xe4: return 0x05; // ä
+	case 0xc7: case 0xe7: return 0x7d; // ç
+	case 0xc8: case 0xe8: return 0x1c; // è
+	case 0xc9: case 0xe9: return 0x17; // é
+	case 0xca: case 0xea: return 0x0f; // ê
+	case 0xcb: case 0xeb: return 0x06; // ë
+	case 0xcc: case 0xec: return 0x1d; // ì
+	case 0xcd: case 0xed: return 0x18; // í
+	case 0xce: case 0xee: return 0x10; // î
+	case 0xcf: case 0xef: return 0x09; // ï
+	case 0xd1:            return 0x5c; // Ñ
+	case 0xd2: case 0xf2: return 0x1e; // ò
+	case 0xd3: case 0xf3: return 0x19; // ó
+	case 0xd4: case 0xf4: return 0x11; // ô
+	case 0xd6: case 0xf6: return 0x07; // ö
+	case 0xd9: case 0xf9: return 0x1f; // ù
+	case 0xda: case 0xfa: return 0x1a; // ú
+	case 0xdb: case 0xfb: return 0x12; // û
+	case 0xdc:            return 0x7f; // Ü
+	case 0xdf:            return 0x02; // ß
+	case 0xf1:            return 0x7c; // ñ
+	case 0xfc:            return 0x7b; // ü
+
+	case 0x0391: case 0x03b1: return 0x04; // α
+	case 0x0392: case 0x03b2: return 0x02; // β
+
+	default: break;
 	}
-	size_t elength;
-	for (elength = 1; elength < len; elength++) {
-		if (*(p + elength) == 'm')
-			break;
+	return uchr;
+}
+
+// MC-10 character translation: MC-10 can type semigraphics characters
+// directly, so here we translate various Unicode block elements.  Although not
+// intended for inputting SG6 characters, we allow the user to switch to SG6
+// mode and translate accordingly.
+
+int translate_mc10(struct keyboard_interface_private *kip, int32_t uchr) {
+	switch (uchr) {
+
+		// U+258x and U+259x, "Block Elements"
+	case 0x2580: return kip->sg4_colour ^ 0b1100;
+	case 0x2584: return kip->sg4_colour ^ 0b0011;
+	case 0x2588: // FULL BLOCK
+		     if (kip->sg6_mode) {
+			     return kip->sg6_colour ^ 0b111111;
+		     }
+		     return kip->sg4_colour ^ 0b1111;
+	case 0x258c: // LEFT HALF BLOCK
+		     if (kip->sg6_mode) {
+			     return kip->sg6_colour ^ 0b101010;
+		     }
+		     return kip->sg4_colour ^ 0b1010;
+	case 0x2590: // RIGHT HALF BLOCK
+		     if (kip->sg6_mode) {
+			     return kip->sg6_colour ^ 0b010101;
+		     }
+		     return kip->sg4_colour ^ 0b0101;
+	case 0x2591: // LIGHT SHADE
+	case 0x2592: // MEDIUM SHADE
+	case 0x2593: // DARK SHADE
+		     return kip->sg6_mode ? kip->sg6_colour : kip->sg4_colour;
+	case 0x2596: return kip->sg4_colour ^ 0b0010;
+	case 0x2597: return kip->sg4_colour ^ 0b0001;
+	case 0x2598: return kip->sg4_colour ^ 0b1000;
+	case 0x2599: return kip->sg4_colour ^ 0b1011;
+	case 0x259a: return kip->sg4_colour ^ 0b1001;
+	case 0x259b: return kip->sg4_colour ^ 0b1110;
+	case 0x259c: return kip->sg4_colour ^ 0b1101;
+	case 0x259d: return kip->sg4_colour ^ 0b0100;
+	case 0x259e: return kip->sg4_colour ^ 0b0110;
+	case 0x259f: return kip->sg4_colour ^ 0b0111;
+
+		     // U+1FB0x to U+1FB3x, "Symbols for Legacy Computing"
+	case 0x1fb00: return kip->sg6_colour ^ 0b100000;
+	case 0x1fb01: return kip->sg6_colour ^ 0b010000;
+	case 0x1fb02: return kip->sg6_colour ^ 0b110000;
+	case 0x1fb03: return kip->sg6_colour ^ 0b001000;
+	case 0x1fb04: return kip->sg6_colour ^ 0b101000;
+	case 0x1fb05: return kip->sg6_colour ^ 0b011000;
+	case 0x1fb06: return kip->sg6_colour ^ 0b111000;
+	case 0x1fb07: return kip->sg6_colour ^ 0b000100;
+	case 0x1fb08: return kip->sg6_colour ^ 0b100100;
+	case 0x1fb09: return kip->sg6_colour ^ 0b010100;
+	case 0x1fb0a: return kip->sg6_colour ^ 0b110100;
+	case 0x1fb0b: return kip->sg6_colour ^ 0b001100;
+	case 0x1fb0c: return kip->sg6_colour ^ 0b101100;
+	case 0x1fb0d: return kip->sg6_colour ^ 0b011100;
+	case 0x1fb0e: return kip->sg6_colour ^ 0b111100;
+
+	case 0x1fb0f: return kip->sg6_colour ^ 0b000010;
+	case 0x1fb10: return kip->sg6_colour ^ 0b100010;
+	case 0x1fb11: return kip->sg6_colour ^ 0b010010;
+	case 0x1fb12: return kip->sg6_colour ^ 0b110010;
+	case 0x1fb13: return kip->sg6_colour ^ 0b001010;
+	case 0x1fb14: return kip->sg6_colour ^ 0b011010;
+	case 0x1fb15: return kip->sg6_colour ^ 0b111010;
+	case 0x1fb16: return kip->sg6_colour ^ 0b000110;
+	case 0x1fb17: return kip->sg6_colour ^ 0b100110;
+	case 0x1fb18: return kip->sg6_colour ^ 0b010110;
+	case 0x1fb19: return kip->sg6_colour ^ 0b110110;
+	case 0x1fb1a: return kip->sg6_colour ^ 0b001110;
+	case 0x1fb1b: return kip->sg6_colour ^ 0b101110;
+	case 0x1fb1c: return kip->sg6_colour ^ 0b011110;
+	case 0x1fb1d: return kip->sg6_colour ^ 0b111110;
+
+	case 0x1fb1e: return kip->sg6_colour ^ 0b000001;
+	case 0x1fb1f: return kip->sg6_colour ^ 0b100001;
+	case 0x1fb20: return kip->sg6_colour ^ 0b010001;
+	case 0x1fb21: return kip->sg6_colour ^ 0b110001;
+	case 0x1fb22: return kip->sg6_colour ^ 0b001001;
+	case 0x1fb23: return kip->sg6_colour ^ 0b101001;
+	case 0x1fb24: return kip->sg6_colour ^ 0b011001;
+	case 0x1fb25: return kip->sg6_colour ^ 0b111001;
+	case 0x1fb26: return kip->sg6_colour ^ 0b000101;
+	case 0x1fb27: return kip->sg6_colour ^ 0b100101;
+	case 0x1fb28: return kip->sg6_colour ^ 0b110101;
+	case 0x1fb29: return kip->sg6_colour ^ 0b001101;
+	case 0x1fb2a: return kip->sg6_colour ^ 0b101101;
+	case 0x1fb2b: return kip->sg6_colour ^ 0b011101;
+	case 0x1fb2c: return kip->sg6_colour ^ 0b111101;
+
+	case 0x1fb2d: return kip->sg6_colour ^ 0b000011;
+	case 0x1fb2e: return kip->sg6_colour ^ 0b100011;
+	case 0x1fb2f: return kip->sg6_colour ^ 0b010011;
+	case 0x1fb30: return kip->sg6_colour ^ 0b110011;
+	case 0x1fb31: return kip->sg6_colour ^ 0b001011;
+	case 0x1fb32: return kip->sg6_colour ^ 0b101011;
+	case 0x1fb33: return kip->sg6_colour ^ 0b011011;
+	case 0x1fb34: return kip->sg6_colour ^ 0b111011;
+	case 0x1fb35: return kip->sg6_colour ^ 0b000111;
+	case 0x1fb36: return kip->sg6_colour ^ 0b100111;
+	case 0x1fb37: return kip->sg6_colour ^ 0b010111;
+	case 0x1fb38: return kip->sg6_colour ^ 0b110111;
+	case 0x1fb39: return kip->sg6_colour ^ 0b001111;
+	case 0x1fb3a: return kip->sg6_colour ^ 0b101111;
+	case 0x1fb3b: return kip->sg6_colour ^ 0b011111;
+
+	default: break;
 	}
-	if (elength >= len || *(p + elength) != 'm') {
-		// supported escape sequence not found
-		return 0;
-	}
-	// Split string and process each element
-	struct sdsx_list *args = sdsx_split_str_len((char *)p + 1, elength, ";", 0);
-	if (!args) {
-		return 0;
-	}
-	// Looks like something we can at least try to parse - updated the
-	// string and length pointers.
-	*pp += (elength + 1);
-	*lenp -= (elength + 1);
-	for (unsigned i = 0; i < args->len; i++) {
-		long a = strtol(args->elem[i], NULL, 10);
-		switch (a) {
+	return uchr;
+}
+
+// Process ANSI 'Select Graphic Rendition' escape sequence
+
+static void process_sgr(struct keyboard_interface_private *kip) {
+	for (unsigned i = 0; i <= kip->type.argnum; i++) {
+		int arg = kip->type.arg[i];
+		switch (arg) {
 		case 0:
 			// Reset
 			kip->ansi_bold = 0;
@@ -370,7 +523,7 @@ static _Bool parse_escape(struct keyboard_interface_private *kip, const uint8_t 
 		case 34: case 35: case 36: case 37:
 			// Set colour
 			{
-				int c = ansi_to_vdg_colour[kip->ansi_bold][a-30];
+				int c = ansi_to_vdg_colour[kip->ansi_bold][arg-30];
 				kip->sg4_colour = 0x80 | (c << 4) | (kip->sg4_colour & 0x0f);
 				kip->sg6_colour = 0x80 | ((c & 1) << 6) | (kip->sg6_colour & 0x3f);
 			}
@@ -379,232 +532,113 @@ static _Bool parse_escape(struct keyboard_interface_private *kip, const uint8_t 
 			break;
 		}
 	}
-	sdsx_list_free(args);
-	return 1;
+}
+
+// Parse a character.  Returns -1 if this does not translate to a valid
+// character for the selected machine, or a positive 8-bit integer if it does.
+// Processes limited UTF-8 and ANSI escape sequences.
+
+static int parse_char(struct keyboard_interface_private *kip, uint8_t c) {
+	// Simple UTF-8 parsing
+	int32_t uchr = kip->type.unicode;
+	if (kip->type.expect_utf8 > 0 && (c & 0xc0) == 0x80) {
+		uchr = (uchr << 6) | (c & 0x3f);
+		kip->type.expect_utf8--;
+	} else if ((c & 0xf8) == 0xf0) {
+		kip->type.expect_utf8 = 3;
+		uchr = c & 0x07;
+	} else if ((c & 0xf0) == 0xe0) {
+		kip->type.expect_utf8 = 2;
+		uchr = c & 0x0f;
+	} else if ((c & 0xe0) == 0xc0) {
+		kip->type.expect_utf8 = 1;
+		uchr = c & 0x1f;
+	} else {
+		kip->type.expect_utf8 = 0;
+		if ((c & 0x80) == 0x80) {
+			// Invalid UTF-8 sequence
+			return -1;
+		}
+		uchr = c;
+	}
+	if (kip->type.expect_utf8 > 0) {
+		kip->type.unicode = uchr;
+		return -1;
+	}
+
+	// State machine handles the presence of ANSI escape sequences
+	switch (kip->type.state) {
+	case type_state_normal:
+		if (uchr == 0x1b) {
+			kip->type.state = type_state_esc;
+			break;
+		}
+		// Apply keyboard-specific character translation.  XXX this
+		// should really be based on the machine/ROM combination.
+		if (kip->public.keymap.layout == dkbd_layout_mc10) {
+			return translate_mc10(kip, uchr);
+		}
+		if (kip->public.keymap.layout == dkbd_layout_dragon200e) {
+			return translate_dragon200e(kip, uchr);
+		}
+		return uchr;
+
+	case type_state_esc:
+		if (uchr == '[') {
+			kip->type.state = type_state_csi;
+			kip->type.arg[0] = 0;
+			kip->type.argnum = 0;
+			break;
+		}
+		kip->type.state = type_state_normal;
+		if (uchr == 0x1b) {
+			return 3;  // ESC ESC -> BREAK
+		}
+		return parse_char(kip, uchr);
+
+	case type_state_csi:
+		switch (uchr) {
+		case '0': case '1': case '2': case '3': case '4':
+		case '5': case '6': case '7': case '8': case '9':
+			kip->type.arg[kip->type.argnum] = kip->type.arg[kip->type.argnum] * 10 + (uchr - '0');
+			break;
+
+		case ';':
+			kip->type.argnum++;
+			if (kip->type.argnum >= 8)
+				kip->type.argnum = 7;
+			kip->type.arg[kip->type.argnum] = 0;
+			break;
+		case 'm':
+			process_sgr(kip);
+			kip->type.state = type_state_normal;
+			break;
+		default:
+			kip->type.state = type_state_normal;
+			break;
+		}
+		break;
+
+	default:
+		break;
+	}
+	return -1;
 }
 
 static sds parse_string(struct keyboard_interface_private *kip, sds s) {
 	if (!s)
 		return NULL;
-	enum dkbd_layout layout = kip->public.keymap.layout;
 	// treat everything as uint8_t
-	const uint8_t *p = (uint8_t *)s;
+	const uint8_t *p = (const uint8_t *)s;
 	size_t len = sdslen(s);
 	sds new = sdsempty();
 	while (len > 0) {
-		uint8_t chr = *(p++);
 		len--;
-
-		// Most translations here are for the Dragon 200-E and MC-10
-		// keyboards, but '\e' is either followed by '[' to introduce
-		// an ANSI escape sequence, or it is mapped specially to BREAK.
-		if (chr == 0x1b) {
-			if (parse_escape(kip, &p, &len)) {
-				continue;
-			}
-			chr = 0x03;
-		}
-
-		if (layout == dkbd_layout_mc10) {
-			switch (chr) {
-			case 0xe2:
-				// U+258x and U+259x, "Block Elements"
-				if (len < 2 || *p != 0x96)
-					break;
-				p++;
-				len -= 2;
-				switch (*(p++)) {
-				case 0x80: chr = kip->sg4_colour ^ 0b1100; break;
-				case 0x84: chr = kip->sg4_colour ^ 0b0011; break;
-				case 0x88:
-					// FULL BLOCK
-					if (kip->sg6_mode) {
-						chr = kip->sg6_colour ^ 0b111111;
-					} else {
-						chr = kip->sg4_colour ^ 0b1111;
-					}
-					break;
-				case 0x8c:
-					// LEFT HALF BLOCK
-					if (kip->sg6_mode) {
-						chr = kip->sg6_colour ^ 0b101010;
-					} else {
-						chr = kip->sg4_colour ^ 0b1010;
-					}
-					break;
-				case 0x90:
-					// RIGHT HALF BLOCK
-					if (kip->sg6_mode) {
-						chr = kip->sg6_colour ^ 0b010101;
-					} else {
-						chr = kip->sg4_colour ^ 0b0101;
-					}
-					break;
-				case 0x91:  // LIGHT SHADE
-				case 0x92:  // MEDIUM SHADE
-				case 0x93:  // DARK SHADE
-					chr = kip->sg6_mode ? kip->sg6_colour : kip->sg4_colour;
-					break;
-				case 0x96: chr = kip->sg4_colour ^ 0b0010; break;
-				case 0x97: chr = kip->sg4_colour ^ 0b0001; break;
-				case 0x98: chr = kip->sg4_colour ^ 0b1000; break;
-				case 0x99: chr = kip->sg4_colour ^ 0b1011; break;
-				case 0x9a: chr = kip->sg4_colour ^ 0b1001; break;
-				case 0x9b: chr = kip->sg4_colour ^ 0b1110; break;
-				case 0x9c: chr = kip->sg4_colour ^ 0b1101; break;
-				case 0x9d: chr = kip->sg4_colour ^ 0b0100; break;
-				case 0x9e: chr = kip->sg4_colour ^ 0b0110; break;
-				case 0x9f: chr = kip->sg4_colour ^ 0b0111; break;
-				default: p--; len++; break;
-				}
-				break;
-
-			case 0xf0:
-				// U+1FB0x to U+1FB3x, "Symbols for Legacy Computing"
-				if (len < 3 || *p != 0x9f || *(p+1) != 0xac)
-					break;
-				p += 2;
-				len -= 3;
-				switch (*(p++)) {
-				case 0x80: chr = kip->sg6_colour ^ 0b100000; break;
-				case 0x81: chr = kip->sg6_colour ^ 0b010000; break;
-				case 0x82: chr = kip->sg6_colour ^ 0b110000; break;
-				case 0x83: chr = kip->sg6_colour ^ 0b001000; break;
-				case 0x84: chr = kip->sg6_colour ^ 0b101000; break;
-				case 0x85: chr = kip->sg6_colour ^ 0b011000; break;
-				case 0x86: chr = kip->sg6_colour ^ 0b111000; break;
-				case 0x87: chr = kip->sg6_colour ^ 0b000100; break;
-				case 0x88: chr = kip->sg6_colour ^ 0b100100; break;
-				case 0x89: chr = kip->sg6_colour ^ 0b010100; break;
-				case 0x8a: chr = kip->sg6_colour ^ 0b110100; break;
-				case 0x8b: chr = kip->sg6_colour ^ 0b001100; break;
-				case 0x8c: chr = kip->sg6_colour ^ 0b101100; break;
-				case 0x8d: chr = kip->sg6_colour ^ 0b011100; break;
-				case 0x8e: chr = kip->sg6_colour ^ 0b111100; break;
-
-				case 0x8f: chr = kip->sg6_colour ^ 0b000010; break;
-				case 0x90: chr = kip->sg6_colour ^ 0b100010; break;
-				case 0x91: chr = kip->sg6_colour ^ 0b010010; break;
-				case 0x92: chr = kip->sg6_colour ^ 0b110010; break;
-				case 0x93: chr = kip->sg6_colour ^ 0b001010; break;
-				case 0x94: chr = kip->sg6_colour ^ 0b011010; break;
-				case 0x95: chr = kip->sg6_colour ^ 0b111010; break;
-				case 0x96: chr = kip->sg6_colour ^ 0b000110; break;
-				case 0x97: chr = kip->sg6_colour ^ 0b100110; break;
-				case 0x98: chr = kip->sg6_colour ^ 0b010110; break;
-				case 0x99: chr = kip->sg6_colour ^ 0b110110; break;
-				case 0x9a: chr = kip->sg6_colour ^ 0b001110; break;
-				case 0x9b: chr = kip->sg6_colour ^ 0b101110; break;
-				case 0x9c: chr = kip->sg6_colour ^ 0b011110; break;
-				case 0x9d: chr = kip->sg6_colour ^ 0b111110; break;
-
-				case 0x9e: chr = kip->sg6_colour ^ 0b000001; break;
-				case 0x9f: chr = kip->sg6_colour ^ 0b100001; break;
-				case 0xa0: chr = kip->sg6_colour ^ 0b010001; break;
-				case 0xa1: chr = kip->sg6_colour ^ 0b110001; break;
-				case 0xa2: chr = kip->sg6_colour ^ 0b001001; break;
-				case 0xa3: chr = kip->sg6_colour ^ 0b101001; break;
-				case 0xa4: chr = kip->sg6_colour ^ 0b011001; break;
-				case 0xa5: chr = kip->sg6_colour ^ 0b111001; break;
-				case 0xa6: chr = kip->sg6_colour ^ 0b000101; break;
-				case 0xa7: chr = kip->sg6_colour ^ 0b100101; break;
-				case 0xa8: chr = kip->sg6_colour ^ 0b110101; break;
-				case 0xa9: chr = kip->sg6_colour ^ 0b001101; break;
-				case 0xaa: chr = kip->sg6_colour ^ 0b101101; break;
-				case 0xab: chr = kip->sg6_colour ^ 0b011101; break;
-				case 0xac: chr = kip->sg6_colour ^ 0b111101; break;
-
-				case 0xad: chr = kip->sg6_colour ^ 0b000011; break;
-				case 0xae: chr = kip->sg6_colour ^ 0b100011; break;
-				case 0xaf: chr = kip->sg6_colour ^ 0b010011; break;
-				case 0xb0: chr = kip->sg6_colour ^ 0b110011; break;
-				case 0xb1: chr = kip->sg6_colour ^ 0b001011; break;
-				case 0xb2: chr = kip->sg6_colour ^ 0b101011; break;
-				case 0xb3: chr = kip->sg6_colour ^ 0b011011; break;
-				case 0xb4: chr = kip->sg6_colour ^ 0b111011; break;
-				case 0xb5: chr = kip->sg6_colour ^ 0b000111; break;
-				case 0xb6: chr = kip->sg6_colour ^ 0b100111; break;
-				case 0xb7: chr = kip->sg6_colour ^ 0b010111; break;
-				case 0xb8: chr = kip->sg6_colour ^ 0b110111; break;
-				case 0xb9: chr = kip->sg6_colour ^ 0b001111; break;
-				case 0xba: chr = kip->sg6_colour ^ 0b101111; break;
-				case 0xbb: chr = kip->sg6_colour ^ 0b011111; break;
-
-				default: p -= 2; len += 2; break;
-				}
-				break;
-
-			default: break;
-			}
-		}
-
-		if (layout == dkbd_layout_dragon200e) {
-			switch (chr) {
-			case '[': chr = 0x00; break;
-			case ']': chr = 0x01; break;
-			case '\\': chr = 0x0b; break;
-			// some very partial utf-8 decoding:
-			case 0xc2:
-				if (len > 0) {
-					len--;
-					switch (*(p++)) {
-					case 0xa1: chr = 0x5b; break; // ¡
-					case 0xa7: chr = 0x13; break; // §
-					case 0xba: chr = 0x14; break; // º
-					case 0xbf: chr = 0x5d; break; // ¿
-					default: p--; len++; break;
-					}
-				}
-				break;
-			case 0xc3:
-				if (len > 0) {
-					len--;
-					switch (*(p++)) {
-					case 0x80: case 0xa0: chr = 0x1b; break; // à
-					case 0x81: case 0xa1: chr = 0x16; break; // á
-					case 0x82: case 0xa2: chr = 0x0e; break; // â
-					case 0x83: case 0xa3: chr = 0x0a; break; // ã
-					case 0x84: case 0xa4: chr = 0x05; break; // ä
-					case 0x87: case 0xa7: chr = 0x7d; break; // ç
-					case 0x88: case 0xa8: chr = 0x1c; break; // è
-					case 0x89: case 0xa9: chr = 0x17; break; // é
-					case 0x8a: case 0xaa: chr = 0x0f; break; // ê
-					case 0x8b: case 0xab: chr = 0x06; break; // ë
-					case 0x8c: case 0xac: chr = 0x1d; break; // ì
-					case 0x8d: case 0xad: chr = 0x18; break; // í
-					case 0x8e: case 0xae: chr = 0x10; break; // î
-					case 0x8f: case 0xaf: chr = 0x09; break; // ï
-					case 0x91: chr = 0x5c; break; // Ñ
-					case 0x92: case 0xb2: chr = 0x1e; break; // ò
-					case 0x93: case 0xb3: chr = 0x19; break; // ó
-					case 0x94: case 0xb4: chr = 0x11; break; // ô
-					case 0x96: case 0xb6: chr = 0x07; break; // ö
-					case 0x99: case 0xb9: chr = 0x1f; break; // ù
-					case 0x9a: case 0xba: chr = 0x1a; break; // ú
-					case 0x9b: case 0xbb: chr = 0x12; break; // û
-					case 0x9c: chr = 0x7f; break; // Ü
-					case 0x9f: chr = 0x02; break; // ß (also β)
-					case 0xb1: chr = 0x7c; break; // ñ
-					case 0xbc: chr = 0x7b; break; // ü
-					default: p--; len++; break;
-					}
-				}
-				break;
-			case 0xce:
-				if (len > 0) {
-					len--;
-					switch (*(p++)) {
-					case 0xb1: case 0x91: chr = 0x04; break; // α
-					case 0xb2: case 0x92: chr = 0x02; break; // β (also ß)
-					default: p--; len++; break;
-					}
-				}
-				break;
-			default: break;
-			}
-		}
-
-		new = sdscatlen(new, (char *)&chr, 1);
+		int chr = parse_char(kip, *(p++));
+		if (chr < 0)
+			continue;
+		char c = chr;
+		new = sdscatlen(new, &c, 1);
 	}
 	return new;
 }
