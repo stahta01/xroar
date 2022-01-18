@@ -444,18 +444,17 @@ their own escaping mechanisms when autocompleting filename arguments.
 
 XRoar creates a list of machine profiles from built-in and user-supplied
 configuration.  One of these profiles is selected at startup, using either the
-@option{-m @var{name}} option (short for @option{-default-machine @var{name}})
-on the command line, or by XRoar testing each profile in turn to see if its
-configured ROM image files are available.
+@option{-default-machine @var{name}} option, or by XRoar testing each profile
+in turn to see if its configured ROM image files are available.
 
 Each machine profile has a base architecture (specified with the
 @option{-machine-arch} option).  See @ref{Machines} for details of the
 supported architectures, and which machine profiles are built-in.
 
 @multitable @columnfractions .30 .66
-@item @option{-m @var{name}},@*@option{-default-machine @var{name}}
+@item @option{-default-machine @var{name}}
 @tab Default machine profile to select on startup.
-@item @option{-machine @var{name}}
+@item @option{-m @var{name}},@*@option{-machine @var{name}}
 @tab Create or modify named machine profile.  The remaining options configure the profile.  @option{-machine help} lists currently defined profiles.
 @item @ @ @ @option{-machine-desc @var{text}}
 @tab Description shown in @option{-machine help} and menu options.
@@ -1988,9 +1987,9 @@ configuration file.
 
 @multitable @columnfractions .30 .66
 @headitem Machines @tab @xref{Machines}.
-@item @option{-m @var{name}},@*@option{-default-machine @var{name}}
+@item @option{-default-machine @var{name}}
 @tab Default machine profile to select on startup.
-@item @option{-machine @var{name}}
+@item @option{-m @var{name}},@*@option{-machine @var{name}}
 @tab Create or modify named machine profile.  The remaining options configure the profile.  @option{-machine help} lists currently defined profiles.
 @item @ @ @ @option{-machine-desc @var{text}}
 @tab Description shown in @option{-machine help} and menu options.
