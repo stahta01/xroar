@@ -87,6 +87,8 @@ struct ser_handle *ser_open(const char *filename, enum ser_mode mode) {
 int ser_close(struct ser_handle *sh) {
 	if (!sh)
 		return ser_error_bad_handle;
+	if (sh->fd)
+		fclose(sh->fd);
 	int err = sh->error;
 	free(sh);
 	return err;
