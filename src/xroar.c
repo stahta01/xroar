@@ -364,6 +364,13 @@ static char const * const default_config[] = {
 	"tv-type ntsc",
 	"bas @mc10",
 	"ram 20",
+	// Matra & Hachette Alice
+	"machine alice",
+	"machine-desc 'Matra & Hachette Alice'",
+	"machine-arch mc10",
+	"tv-type pal",
+	"bas @alice",
+	"ram 20",
 #endif
 
 #ifdef WANT_CART_ARCH_DRAGON
@@ -465,8 +472,10 @@ static char const * const default_config[] = {
 #endif
 
 #ifdef WANT_MACHINE_ARCH_MC10
-	// MC-10
+	// MC-10 BASIC
 	"romlist mc10=mc10",
+	// Alice BASIC
+	"romlist alice=alice",
 #endif
 
 #ifdef WANT_CART_ARCH_DRAGON
@@ -520,6 +529,10 @@ static char const * const default_config[] = {
 #ifdef WANT_MACHINE_ARCH_MC10
 	// MC-10 BASIC
 	"crclist mc10=0x11fda97e",
+	// Alice BASIC
+	"crclist alice=0xf876abe9",
+	// Both
+	"crclist mc10_compat=@mc10,@alice",
 #endif
 
 	// Joysticks

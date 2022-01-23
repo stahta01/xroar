@@ -368,7 +368,7 @@ static _Bool mc10_finish(struct part *p) {
 		_Bool forced = 0, valid_crc = 0;
 
 		mp->crc_bas = crc32_block(CRC32_RESET, mp->rom0, 0x2000);
-		valid_crc = crclist_match("@mc10", mp->crc_bas);
+		valid_crc = crclist_match("@mc10_compat", mp->crc_bas);
 
 		if (xroar_cfg.force_crc_match) {
 			mp->crc_bas = 0x11fda97e;  // MC-10 ROM
