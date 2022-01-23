@@ -11,5 +11,8 @@ EXTRA_DIST = \
 SUBDIRS = portalib src doc
 DIST_SUBDIRS = tools portalib src doc
 
+clean-local:
+	rm -f a.wasm
+
 clena: clean
 	@echo "How much clena do you want it?"

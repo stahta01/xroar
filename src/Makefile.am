@@ -431,3 +431,6 @@ if FILEREQ_CLI
 xroar_SOURCES += \
 	filereq_cli.c
 endif
+
+clean-local:
+	rm -f xroar.wasm
