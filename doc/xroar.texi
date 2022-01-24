@@ -155,8 +155,8 @@ checkerboard pattern, reflecting the initial state of RAM, see
 These firmware images can be transferred from your original machine (with some
 effort, outside the scope of this document) or more likely found online on one
 of the archive websites.  XRoar searches certain directories for these images,
-depending on platform, including (where @samp{~} indicates your "home
-directory"):
+depending on platform, including (where @samp{~} indicates your ``home
+directory''):
 
 @multitable {Unix/Linux} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab ROM path
@@ -248,7 +248,7 @@ XRoar tries to make running programs easy; after all, it's probably why you
 installed an emulator in the first place.  Select @clicksequence{File @click{}
 Run} to open a file requester, and select the program media image; in the
 majority of cases, and so long as the program was intended for the machine you
-have selected, XRoar will "do the right thing" to try and start it.
+have selected, XRoar will ``do the right thing'' to try and start it.
 
 As with much automation, we can't foresee every eventuality, and sometimes
 you'll have to launch the program manually.  In this case, you can still simply
@@ -303,7 +303,7 @@ some and put them in the directory appropriate to your platform.
 You remember a program being in colour, but all you see is black and white.
 
 American software was often written to exploit cross-colour artefacts, where
-alternating patterns of black and white would "trick" the TV into displaying
+alternating patterns of black and white would ``trick'' the TV into displaying
 colour.  XRoar supports this, and should enable it by default when you choose
 an NTSC machine.  If you're running an NTSC game on a PAL machine, you can
 still force XRoar to render the colours by selecting a cross-colour option from
@@ -1048,9 +1048,9 @@ a choice in your selected keymap that doesn't conflict with a regular character
 in translated mode.
 
 When binding keys with @option{-kbd-bind}, if the emulated key @var{dkey} is
-prefixed with "preempt:" or "pre:", this binding preempts translation; useful
-for modifier keys.  Interpretation of @var{hkey} depends on which
-user-interface toolkit is in use, and it might be useful to run with
+prefixed with @samp{preempt:} or @samp{pre:}, this binding preempts
+translation; useful for modifier keys.  Interpretation of @var{hkey} depends on
+which user-interface toolkit is in use, and it might be useful to run with
 @option{-debug-ui 1} to see what the toolkit calls your host keys.
 
 Special values for @var{dkey} are: @samp{colon}, @samp{semicolon},
