@@ -142,7 +142,9 @@ static void mc10_config_complete(struct machine_config *mc) {
 		else
 			mc->ram = 4;
 	}
-	mc->keymap = dkbd_layout_mc10;
+	if (mc->keymap == ANY_AUTO) {
+		mc->keymap = dkbd_layout_mc10;
+	}
 	if (!mc->bas_dfn && !mc->bas_rom) {
 		mc->bas_rom = xstrdup("@mc10");
 	}

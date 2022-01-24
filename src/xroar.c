@@ -368,6 +368,7 @@ static char const * const default_config[] = {
 	"machine alice",
 	"machine-desc 'Matra & Hachette Alice'",
 	"machine-arch mc10",
+	"machine-keyboard alice",
 	"tv-type pal",
 	"bas @alice",
 	"ram 20",

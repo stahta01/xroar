@@ -95,6 +95,21 @@ static struct dkey_chord_mapping mc10_chord_mappings[] = {
 	{ '@', { DSCAN_AT, DK_MOD_UNSHIFT } },
 };
 
+static struct dkey_chord_mapping alice_chord_mappings[] = {
+	{ DKBD_U_CAPS_LOCK, { DSCAN_0, DK_MOD_SHIFT } },
+	{ DKBD_U_PAUSE_OUTPUT, { DSCAN_AT, DK_MOD_SHIFT } },
+	{ '@', { DSCAN_AT, DK_MOD_UNSHIFT } },
+	{ 'q', { DSCAN_A, DK_MOD_UNSHIFT } },
+	{ 'w', { DSCAN_Z, DK_MOD_UNSHIFT } },
+	{ 'a', { DSCAN_Q, DK_MOD_UNSHIFT } },
+	{ ';', { DSCAN_SLASH, DK_MOD_UNSHIFT } },
+	{ '+', { DSCAN_SLASH, DK_MOD_SHIFT } },
+	{ 'z', { DSCAN_W, DK_MOD_UNSHIFT } },
+	{ 'm', { DSCAN_SEMICOLON, DK_MOD_UNSHIFT } },
+	{ '/', { DSCAN_M, DK_MOD_UNSHIFT } },
+	{ '?', { DSCAN_M, DK_MOD_SHIFT } },
+};
+
 #define CMAPPING(m) .num_chord_mappings = ARRAY_N_ELEMENTS(m), .chord_mappings = (m)
 
 static struct dkbd_layout_variant dkbd_layout_variants[] = {
@@ -103,6 +118,7 @@ static struct dkbd_layout_variant dkbd_layout_variants[] = {
 	{ .base_layout = dkbd_layout_dragon, CMAPPING(dragon200e_chord_mappings), },
 	{ .base_layout = dkbd_layout_coco, CMAPPING(coco3_chord_mappings), },
 	{ .base_layout = dkbd_layout_mc10, CMAPPING(mc10_chord_mappings), },
+	{ .base_layout = dkbd_layout_mc10, CMAPPING(alice_chord_mappings), },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -126,7 +142,8 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 		unsigned col = i & 7;
 		unsigned row = (i >> 3) & 7;
 		if (variant->base_layout == dkbd_layout_coco ||
-		    variant->base_layout == dkbd_layout_mc10) {
+		    variant->base_layout == dkbd_layout_mc10 ||
+		    variant->base_layout == dkbd_layout_alice) {
 			if (row != 6)
 				row = (row + 4) % 6;
 		}
@@ -144,7 +161,7 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	map->point[DSCAN_BACKSPACE] = map->point[DSCAN_LEFT];
 
 	// MC-10
-	if (layout == dkbd_layout_mc10) {
+	if (layout == dkbd_layout_mc10 || layout == dkbd_layout_alice) {
 		// Tweak MC-10 layout
 		map->point[DSCAN_UP] = map->point[DSCAN_W];
 		map->point[DSCAN_DOWN] = map->point[DSCAN_Z];

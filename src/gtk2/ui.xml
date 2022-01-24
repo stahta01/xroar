@@ -55,6 +55,7 @@
         <menuitem action='keymap_coco'/>
         <menuitem action='keymap_coco3'/>
         <menuitem action='keymap_mc10'/>
+        <menuitem action='keymap_alice'/>
       </menu>
       <separator/>
       <menu name='JoyRightMenu' action='JoyRightMenuAction'>
