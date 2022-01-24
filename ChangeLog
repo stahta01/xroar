@@ -5,6 +5,9 @@
  * Support K7 cassette image files (read-only)
  * Support UTF-8 block characters in -type for MC-10
  * Type ASCII BASIC from file on MC-10
+ * Matra & Hachette Alice support (keyboard layout, built-in profile)
+ * New meta-options -machine-opt and -cart-opt
+ * New ide-addr=address cart-opt
 
 Version 1.0.9, Tue 18 Jan 2022
 
