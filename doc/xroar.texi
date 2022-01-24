@@ -85,7 +85,7 @@ MC-10; and some other similar machines or clones.  It runs on a wide variety of
 platforms.  Emulated hardware includes:
 
 @itemize @bullet
-@item Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10.
+@item Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10; Matra & Hachette Alice 4K.
 @item DragonDOS, Delta and RS-DOS disk controller cartridges.
 @item Orchestra 90-CC stereo sound cartridge.
 @item Games Master Cartridge, including the SN76489 sound chip.
@@ -117,9 +117,10 @@ may provide a convenient way for users to run your Dragon software.  See
 @section Notes for version 1.x
 
 Version 1.x comes with support for two new emulated machines: the Tandy Colour
-Computer 3 and the Tandy MC-10.  Some major changes have taken place under the
-hood, and although most things should remain familiar, for some special uses,
-here are the things you need to know.
+Computer 3 and the Tandy MC-10 (and in 1.1, the MC-10's French cousin, Alice).
+Some major changes have taken place under the hood, and although most things
+should remain familiar, for some special uses, here are the things you need to
+know.
 
 Snapshots now store much more state, and of course support the new emulated
 machines, but this means the format had to change.  Snapshots from the last 0.x
@@ -465,7 +466,7 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-machine-cpu @var{cpu}}
 @tab Fitted CPU.  One of @samp{6809} or @samp{6309}.  Not applicable to the MC-10.
 @item @ @ @ @option{-bas @var{rom}}
-@tab ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
+@tab ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10, Alice).
 @item @ @ @ @option{-extbas @var{rom}}
 @tab ROM image for Extended BASIC (Super Extended BASIC on the CoCo@w{ }3).
 @item @ @ @ @option{-altbas @var{rom}}
@@ -481,7 +482,7 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-vdg-type @var{type}}
 @tab Indicate the VDG variant fitted.  One of @samp{6847} or @samp{6847t1}.
 @item @ @ @ @option{-ram @var{kbytes}}
-@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
+@tab Amount of RAM fitted in kilobytes.  Valid sizes are 4K, 8K, 16K, 32K or 64K for Dragon and Tandy CoCo 1/2; 128K, 512K, 1024K or 2048K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10 and Alice.
 @item @ @ @ @option{-machine-cart @var{name}}
 @tab Default cartridge to attach.
 @item @ @ @ @option{-no-machine-cart}
@@ -569,6 +570,18 @@ Architecture @samp{mc10}.  Built-in machine profile @samp{mc10}.
 
 @c
 
+@node Matra & Hachette Alice
+@subsection Matra & Hachette Alice
+
+Basically the same machine as an MC-10, but with a French keyboard, 50Hz
+display and a nice bright red case.  Unlike the MC-10, the Alice line actually
+continued, with the Alice 32 and Alice 90, though these are not supported by
+XRoar.
+
+Architecture @samp{mc10}.  Built-in machine profile @samp{alice}.
+
+@c
+
 @node Tandy Colour Computer 3
 @subsection Tandy Colour Computer 3
 
@@ -622,11 +635,11 @@ type.
 @tab Auto-start cartridge using FIRQ.
 @end multitable
 
-There are no cartridges usable with the MC-10 yet (the 16K expansion is
+There are no cartridges usable with the MC-10/Alice yet (the 16K expansion is
 technically a cartridge, but XRoar currently emulates that as though it were
 on-board).
 
-Built-in cartridge profiles exists with sensible defaults for each of the
+Built-in cartridge profiles exist with sensible defaults for each of the
 cartridge types except @samp{rom} (for which a profile is simply created when
 you try to autorun a ROM image), each with the same name as the type.
 
@@ -1561,7 +1574,7 @@ with @kbd{@key{CTRL}+V}.  Trace mode can be enabled from startup with the
 can use simple text searches.
 
 Note that GDB support is not currently implemented for the 6803 used by the
-MC-10, but trace mode is.
+MC-10 and Alice, but trace mode is.
 
 User-interface debugging flag can be enabled with @option{-debug-ui
 @var{value}}, where only one value is currently supported:
@@ -1914,8 +1927,9 @@ wavelength to use for each bit.
 @item @file{.bas, .asc}
 
 @tab ASCII BASIC files.  XRoar will wrap the ASCII text in the appropriate file
-structure to present to the emulated machine as saved ASCII BASIC.  Does not
-work on the MC-10.  Read-only.
+structure to present to the emulated machine as saved ASCII BASIC.  On the
+MC-10, these will be ``quick-typed'' instead, as these machines do not support
+ASCII BASIC files on tape.  Read-only.
 
 @item @file{.wav}
 
