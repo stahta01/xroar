@@ -488,6 +488,8 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-no-machine-cart}
 @tab Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
 to this machine (the default is to try).
+@item @ @ @ @option{-machine-opt @var{string}}
+@tab Set machine arch-specific option.
 @end multitable
 
 For example, if the following lines were placed in your @file{xroar.conf}, a
@@ -633,6 +635,8 @@ type.
 @tab Enable Becker port where supported.
 @item @ @ @ @option{-cart-autorun}
 @tab Auto-start cartridge using FIRQ.
+@item @ @ @ @option{-cart-opt @var{string}}
+@tab Set cartridge type-specific option.
 @end multitable
 
 There are no cartridges usable with the MC-10/Alice yet (the 16K expansion is
@@ -2040,6 +2044,8 @@ configuration file.
 @item @ @ @ @option{-no-machine-cart}
 @tab Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
 to this machine (the default is to try).
+@item @ @ @ @option{-machine-opt @var{string}}
+@tab Set machine arch-specific option.
 @end multitable
 
 @c
@@ -2060,6 +2066,8 @@ to this machine (the default is to try).
 @tab Enable Becker port where supported.
 @item @ @ @ @option{-cart-autorun}
 @tab Auto-start cartridge using FIRQ.
+@item @ @ @ @option{-cart-opt @var{string}}
+@tab Set cartridge type-specific option.
 @end multitable
 
 @c
