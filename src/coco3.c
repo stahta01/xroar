@@ -146,7 +146,7 @@ static const struct ser_struct ser_struct_coco3[] = {
 static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data coco3_ser_struct_data = {
+static const struct ser_struct_data coco3_ser_struct_data = {
 	.elems = ser_struct_coco3,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_coco3),
 	.read_elem = coco3_read_elem,

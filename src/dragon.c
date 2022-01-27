@@ -148,7 +148,7 @@ static const struct ser_struct ser_struct_dragon[] = {
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data dragon_ser_struct_data = {
+static const struct ser_struct_data dragon_ser_struct_data = {
 	.elems = ser_struct_dragon,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_dragon),
 	.read_elem = dragon_read_elem,

@@ -108,7 +108,7 @@ static const struct ser_struct ser_struct_mc10[] = {
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data mc10_ser_struct_data = {
+static const struct ser_struct_data mc10_ser_struct_data = {
 	.elems = ser_struct_mc10,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc10),
 	.read_elem = mc10_read_elem,

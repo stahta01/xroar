@@ -193,7 +193,7 @@ static struct ser_struct ser_struct_mc6883[] = {
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data mc6883_ser_struct_data = {
+static const struct ser_struct_data mc6883_ser_struct_data = {
 	.elems = ser_struct_mc6883,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6883),
 	.read_elem = mc6883_read_elem,

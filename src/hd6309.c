@@ -71,7 +71,7 @@ static const struct ser_struct ser_struct_hd6309[] = {
 static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data hd6309_ser_struct_data = {
+static const struct ser_struct_data hd6309_ser_struct_data = {
 	.elems = ser_struct_hd6309,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_hd6309),
 	.read_elem = hd6309_read_elem,

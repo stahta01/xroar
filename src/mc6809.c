@@ -77,6 +77,7 @@ static const struct ser_struct ser_struct_mc6809[] = {
 
 #define N_SER_STRUCT_MC6809 ARRAY_N_ELEMENTS(ser_struct_mc6809)
 
+// External, as struct data is also used by 6809-compatible parts:
 const struct ser_struct_data mc6809_ser_struct_data = {
         .elems = ser_struct_mc6809,
         .num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6809),

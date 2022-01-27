@@ -69,7 +69,7 @@ static const struct ser_struct ser_struct_mc6801_port[] = {
 	SER_STRUCT_ELEM(struct MC6801_port, in_sink, ser_type_uint8),  // 4
 };
 
-const struct ser_struct_data mc6801_port_ser_struct_data = {
+static const struct ser_struct_data mc6801_port_ser_struct_data = {
 	.elems = ser_struct_mc6801_port,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6801_port),
 };
@@ -125,7 +125,7 @@ static const struct ser_struct ser_struct_mc6801[] = {
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data mc6801_ser_struct_data = {
+static const struct ser_struct_data mc6801_ser_struct_data = {
 	.elems = ser_struct_mc6801,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6801),
 	.read_elem = mc6801_read_elem,

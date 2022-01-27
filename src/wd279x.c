@@ -72,7 +72,7 @@ static const struct ser_struct ser_struct_wd279x[] = {
 	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8), // 27
 };
 
-const struct ser_struct_data wd279x_ser_struct_data = {
+static const struct ser_struct_data wd279x_ser_struct_data = {
 	.elems = ser_struct_wd279x,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_wd279x),
 };

@@ -67,6 +67,7 @@ static const struct ser_struct ser_struct_cart[] = {
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
+// External; struct data nested by machines:
 const struct ser_struct_data cart_ser_struct_data = {
 	.elems = ser_struct_cart,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart),

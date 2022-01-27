@@ -79,6 +79,7 @@ static const struct ser_struct ser_struct_machine[] = {
 static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
+// External; struct data nested by machines:
 const struct ser_struct_data machine_ser_struct_data = {
 	.elems = ser_struct_machine,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_machine),

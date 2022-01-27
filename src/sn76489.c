@@ -110,7 +110,7 @@ static struct ser_struct ser_struct_sn76489[] = {
 static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data sn76489_ser_struct_data = {
+static const struct ser_struct_data sn76489_ser_struct_data = {
 	.elems = ser_struct_sn76489,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_sn76489),
 	.read_elem = sn76489_read_elem,

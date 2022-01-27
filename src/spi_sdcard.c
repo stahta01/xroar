@@ -86,7 +86,7 @@ static const struct ser_struct ser_struct_spi_sdcard[] = {
 static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data spi_sdcard_ser_struct_data = {
+static const struct ser_struct_data spi_sdcard_ser_struct_data = {
 	.elems = ser_struct_spi_sdcard,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_spi_sdcard),
 	.read_elem = spi_sdcard_read_elem,

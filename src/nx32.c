@@ -58,7 +58,7 @@ static const struct ser_struct ser_struct_nx32[] = {
 static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-const struct ser_struct_data nx32_ser_struct_data = {
+static const struct ser_struct_data nx32_ser_struct_data = {
 	.elems = ser_struct_nx32,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_nx32),
 	.read_elem = nx32_read_elem,
