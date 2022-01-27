@@ -138,6 +138,22 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			else
 				*(int *)object = 1;
 			break;
+		case XCONFIG_UINT8:
+			{
+				assert(arg != NULL);
+				int val = strtol(arg, NULL, 0);
+				if (!(option->flags & XCONFIG_FLAG_CALL))
+					*(uint8_t *)object = val;
+			}
+			break;
+		case XCONFIG_UINT16:
+			{
+				assert(arg != NULL);
+				int val = strtol(arg, NULL, 0);
+				if (!(option->flags & XCONFIG_FLAG_CALL))
+					*(uint16_t *)object = val;
+			}
+			break;
 		case XCONFIG_DOUBLE:
 			{
 				assert(arg != NULL);

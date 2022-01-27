@@ -78,6 +78,8 @@ struct slist;
 #define XC_SET_INT(n,d) XC_OPT(INT,n,d)
 #define XC_SET_INT0(n,d) XC_OPT(INT0,n,d)
 #define XC_SET_INT1(n,d) XC_OPT(INT1,n,d)
+#define XC_SET_UINT8(n,d) XC_OPT(UINT8,n,d)
+#define XC_SET_UINT16(n,d) XC_OPT(UINT16,n,d)
 #define XC_SET_DOUBLE(n,d) XC_OPT(DOUBLE,n,d)
 #define XC_SET_STRING(n,d) XC_OPT(STRING,n,d)
 #define XC_SET_STRING_LIST(n,d) XC_OPT(STRING_LIST,n,d)
@@ -96,6 +98,8 @@ struct slist;
 #define XCO_SET_INT(n,s,m) XCO_OPT(INT,n,s,m)
 #define XCO_SET_INT0(n,s,m) XCO_OPT(INT0,n,s,m)
 #define XCO_SET_INT1(n,s,m) XCO_OPT(INT1,n,s,m)
+#define XCO_SET_UINT8(n,s,m) XCO_OPT(UINT8,n,s,m)
+#define XCO_SET_UINT16(n,s,m) XCO_OPT(UINT16,n,s,m)
 #define XCO_SET_DOUBLE(n,s,m) XCO_OPT(DOUBLE,n,s,m)
 #define XCO_SET_STRING(n,s,m) XCO_OPT(STRING,n,s,m)
 #define XCO_SET_STRING_LIST(n,s,m) XCO_OPT(STRING_LIST,n,s,m)
@@ -148,6 +152,8 @@ enum xconfig_option_type {
 	XCONFIG_INT,
 	XCONFIG_INT0,  // sets an INT to 0
 	XCONFIG_INT1,  // sets an INT to 1
+	XCONFIG_UINT8,
+	XCONFIG_UINT16,
 	XCONFIG_DOUBLE,
 	XCONFIG_STRING,
 	XCONFIG_STRING_LIST,
