@@ -274,6 +274,10 @@ void cart_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_string(f, all, "cart-rom2", cc->rom2, NULL);
 		xroar_cfg_print_bool(f, all, "cart-autorun", cc->autorun, (strcmp(cc->type, "rom") == 0));
 		xroar_cfg_print_bool(f, all, "cart-becker", cc->becker_port, 0);
+		for (struct slist *i2 = cc->opts; i2; i2 = i2->next) {
+			const char *s = i2->data;
+			xroar_cfg_print_string(f, all, "cart-opt", s, NULL);
+		}
 		xroar_cfg_print_dec_indent();
 		fprintf(f, "\n");
 	}

@@ -344,6 +344,10 @@ void machine_config_print_all(FILE *f, _Bool all) {
 		xroar_cfg_print_enum(f, all, "vdg-type", mc->vdg_type, ANY_AUTO, machine_vdg_type_list);
 		xroar_cfg_print_int_nz(f, all, "ram", mc->ram);
 		xroar_cfg_print_string(f, all, "machine-cart", mc->default_cart, NULL); // XXX definedness?
+		for (struct slist *i2 = mc->opts; i2; i2 = i2->next) {
+			const char *s = i2->data;
+			xroar_cfg_print_string(f, all, "machine-opt", s, NULL);
+		}
 		xroar_cfg_print_dec_indent();
 		fprintf(f, "\n");
 	}
