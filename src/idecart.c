@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,6 +35,7 @@
 #include "logging.h"
 #include "part.h"
 #include "serialise.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 #ifndef O_BINARY
@@ -68,6 +69,11 @@ const struct ser_struct_data idecart_ser_struct_data = {
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_idecart),
 	.read_elem = idecart_read_elem,
 	.write_elem = idecart_write_elem,
+};
+
+static struct xconfig_option const idecart_options[] = {
+	{ XCO_SET_UINT16("ide-addr", struct idecart, io_region) },
+	{ XC_OPT_END() }
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -134,6 +140,9 @@ static void idecart_initialise(struct part *p, void *options) {
 	struct cart *c = &ide->cart;
 
 	c->config = cc;
+
+	xconfig_parse_list_struct(idecart_options, cc->opts, ide);
+	ide->io_region &= 0xfff0;
 }
 
 static _Bool idecart_finish(struct part *p) {

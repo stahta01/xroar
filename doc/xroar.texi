@@ -726,6 +726,10 @@ Interfaces the Tandy CoCo to up to two IDE hard disks.  Its IO is generally
 memory mapped to addresses $FF50--$FF58.  Also optionally supports the  Becker
 port.
 
+To set the base address to some other value (the original cartridge can jumper
+IO to be from $FF70--, but this is incompatible with the MPI), use the
+@option{-cart-opt ide-addr=@var{addr}}.
+
 The controller supports up to two drives, and you can specify the image to use
 in each with @option{-load-hd0 @var{file}} or @option{-load-hd1
 @var{file}}.  If @var{file} does not exist, a 256MB empty image is
