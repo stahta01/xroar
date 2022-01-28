@@ -538,7 +538,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 			return tag;
 		if (type == ser_type_skip)
 			continue;
-		void *ptr = s + ss[tag-1].data.offset;
+		void *ptr = s + ss[tag-1].offset;
 		switch (type) {
 		case ser_type_bool:
 			ser_write_vuint32(sh, tag, *(_Bool *)ptr);
@@ -615,7 +615,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 			{
 				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
 				ser_write_open_string(sh, tag, "");
-				ser_write_struct_data(sh, nssd, s);
+				ser_write_struct_data(sh, nssd, ptr);
 			}
 			break;
 
@@ -638,7 +638,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 			return -1;
 		}
 		enum ser_type type = ss[tag-1].type;
-		void *ptr = s + ss[tag-1].data.offset;
+		void *ptr = s + ss[tag-1].offset;
 		SER_DEBUG("ser_read_struct(): tag=%d type=%d\n", tag, type);
 		switch (type) {
 		case ser_type_bool:
@@ -712,7 +712,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 		case ser_type_nest:
 			{
 				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
-				ser_read_struct_data(sh, nssd, s);
+				ser_read_struct_data(sh, nssd, ptr);
 			}
 			break;
 

@@ -111,15 +111,16 @@ enum ser_type {
 
 struct ser_struct {
 	enum ser_type type;
+	size_t offset;
 	union {
-		size_t offset;
 		const struct ser_struct_data *ser_struct_data;
 	} data;
 };
 
-#define SER_STRUCT_ELEM(s,e,t) { .type = t, .data.offset = offsetof(s,e) }
+#define SER_STRUCT_ELEM(s,e,t) { .type = t, .offset = offsetof(s,e) }
 #define SER_STRUCT_UNHANDLED() { .type = ser_type_unhandled }
-#define SER_STRUCT_NEST(s) { .type = ser_type_nest, .data.ser_struct_data = s }
+#define SER_STRUCT_SUBSTRUCT(s,e,d) { .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
+#define SER_STRUCT_NEST(d) { .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
 
 struct ser_struct_data {
 	const struct ser_struct *elems;
