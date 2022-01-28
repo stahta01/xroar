@@ -267,7 +267,7 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case MC6883_SER_XDIV3:
 	case MC6883_SER_XDIV2:
 		{
-			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
+			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
 			ser_read_struct_data(sh, &vcounter_ser_struct_data, ptr);
 		}
 		break;
@@ -294,7 +294,7 @@ static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case MC6883_SER_XDIV3:
 	case MC6883_SER_XDIV2:
 		{
-			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].data.offset;
+			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
 			ser_write_open_string(sh, tag, "");
 			ser_write_struct_data(sh, &vcounter_ser_struct_data, ptr);
 		}
