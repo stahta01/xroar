@@ -74,7 +74,7 @@ static void nx32_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// DragonDOS part creation
+// NX32 part creation
 
 static struct part *nx32_allocate(void);
 static void nx32_initialise(struct part *p, void *options);

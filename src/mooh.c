@@ -82,7 +82,7 @@ static void mooh_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// DragonDOS part creation
+// MOOH part creation
 
 static struct part *mooh_allocate(void);
 static void mooh_initialise(struct part *p, void *options);
