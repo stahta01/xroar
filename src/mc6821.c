@@ -51,21 +51,13 @@ static const struct ser_struct_data mc6821_side_ser_struct_data = {
 };
 
 static const struct ser_struct ser_struct_mc6821[] = {
-	SER_STRUCT_ELEM(struct MC6821, a, ser_type_unhandled),  // 1
-	SER_STRUCT_ELEM(struct MC6821, b, ser_type_unhandled),  // 2
+	SER_STRUCT_SUBSTRUCT(struct MC6821, a, &mc6821_side_ser_struct_data), // 1
+	SER_STRUCT_SUBSTRUCT(struct MC6821, b, &mc6821_side_ser_struct_data), // 2
 };
-
-#define MC6821_SER_A (1)
-#define MC6821_SER_B (2)
-
-static _Bool mc6821_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc6821_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data mc6821_ser_struct_data = {
 	.elems = ser_struct_mc6821,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mc6821),
-	.read_elem = mc6821_read_elem,
-	.write_elem = mc6821_write_elem,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -119,38 +111,6 @@ static void mc6821_free(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
 	event_dequeue(&pia->a.irq_event);
 	event_dequeue(&pia->b.irq_event);
-}
-
-static _Bool mc6821_read_elem(void *sptr, struct ser_handle *sh, int tag) {
-        struct MC6821 *pia = sptr;
-	switch (tag) {
-	case MC6821_SER_A:
-		ser_read_struct_data(sh, &mc6821_side_ser_struct_data, &pia->a);
-		break;
-	case MC6821_SER_B:
-		ser_read_struct_data(sh, &mc6821_side_ser_struct_data, &pia->b);
-		break;
-	default:
-		return 0;
-	}
-	return 1;
-}
-
-static _Bool mc6821_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct MC6821 *pia = sptr;
-	switch (tag) {
-	case MC6821_SER_A:
-		ser_write_open_string(sh, tag, "A");
-		ser_write_struct_data(sh, &mc6821_side_ser_struct_data, &pia->a);
-		break;
-	case MC6821_SER_B:
-		ser_write_open_string(sh, tag, "B");
-		ser_write_struct_data(sh, &mc6821_side_ser_struct_data, &pia->b);
-		break;
-	default:
-		return 0;
-	}
-	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
