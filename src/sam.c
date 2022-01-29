@@ -170,25 +170,17 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_STRUCT_ELEM(struct MC6883_private, vdg.f, ser_type_unhandled), // 18
 	SER_STRUCT_ELEM(struct MC6883_private, vdg.clr_mode, ser_type_int), // 19
 
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B15_5], ser_type_unhandled), // 20
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B4], ser_type_unhandled), // 21
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_B3_0], ser_type_unhandled), // 22
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV4], ser_type_unhandled), // 23
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV3], ser_type_unhandled), // 24
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_YDIV2], ser_type_unhandled), // 25
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_XDIV3], ser_type_unhandled), // 26
-	SER_STRUCT_ELEM(struct MC6883_private, vdg.vcounter[VC_XDIV2], ser_type_unhandled), // 27
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_B15_5], &vcounter_ser_struct_data), // 20
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_B4],    &vcounter_ser_struct_data), // 21
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_B3_0],  &vcounter_ser_struct_data), // 22
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_YDIV4], &vcounter_ser_struct_data), // 23
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_YDIV3], &vcounter_ser_struct_data), // 24
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_YDIV2], &vcounter_ser_struct_data), // 25
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_XDIV3], &vcounter_ser_struct_data), // 26
+	SER_STRUCT_SUBSTRUCT(struct MC6883_private, vdg.vcounter[VC_XDIV2], &vcounter_ser_struct_data), // 27
 };
 
 #define MC6883_SER_VDG_F (18)
-#define MC6883_SER_B15_5 (20)
-#define MC6883_SER_B4    (21)
-#define MC6883_SER_B3_0  (22)
-#define MC6883_SER_YDIV4 (23)
-#define MC6883_SER_YDIV3 (24)
-#define MC6883_SER_YDIV2 (25)
-#define MC6883_SER_XDIV3 (26)
-#define MC6883_SER_XDIV2 (27)
 
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -258,19 +250,6 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 			sam->vdg.f = f >> 5;
 		}
 		break;
-	case MC6883_SER_B15_5:
-	case MC6883_SER_B4:
-	case MC6883_SER_B3_0:
-	case MC6883_SER_YDIV4:
-	case MC6883_SER_YDIV3:
-	case MC6883_SER_YDIV2:
-	case MC6883_SER_XDIV3:
-	case MC6883_SER_XDIV2:
-		{
-			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
-			ser_read_struct_data(sh, &vcounter_ser_struct_data, ptr);
-		}
-		break;
 
 	default:
 		return 0;
@@ -285,20 +264,7 @@ static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 		// maintain compatibility
 		ser_write_vuint32(sh, tag, sam->vdg.f << 5);
 		break;
-	case MC6883_SER_B15_5:
-	case MC6883_SER_B4:
-	case MC6883_SER_B3_0:
-	case MC6883_SER_YDIV4:
-	case MC6883_SER_YDIV3:
-	case MC6883_SER_YDIV2:
-	case MC6883_SER_XDIV3:
-	case MC6883_SER_XDIV2:
-		{
-			void *ptr = (void *)sam + ser_struct_mc6883[tag-1].offset;
-			ser_write_open_string(sh, tag, "");
-			ser_write_struct_data(sh, &vcounter_ser_struct_data, ptr);
-		}
-		break;
+
 	default:
 		return 0;
 
