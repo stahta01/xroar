@@ -5,6 +5,7 @@
 	'_wasm_resize',
 	'_wasm_set_joystick',
 	'_wasm_set_machine_cart',
+	'_write_snapshot',
 	'_xroar_eject_disk',
 	'_xroar_eject_input_tape',
 	'_xroar_set_tape_playing',
