@@ -290,7 +290,7 @@ void part_add_component(struct part *p, struct part *c, const char *id) {
 	assert(p != NULL);
 	if (c == NULL)
 		return;
-	PART_DEBUG("part_add_component('%s', '%s', '%s')\n", p->name, c->name, id);
+	PART_DEBUG("part_add_component('%s', '%s', '%s')\n", p->partdb->name, c->partdb->name, id);
 	struct part_component *pc = xmalloc(sizeof(*pc));
 	pc->id = xstrdup(id);
 	pc->p = c;
@@ -300,7 +300,7 @@ void part_add_component(struct part *p, struct part *c, const char *id) {
 
 void part_remove_component(struct part *p, struct part *c) {
 	assert(p != NULL);
-	PART_DEBUG("part_remove_component('%s', '%s')\n", p->name, c->name);
+	PART_DEBUG("part_remove_component('%s', '%s')\n", p->partdb->name, c->partdb->name);
 	for (struct slist *ent = p->components; ent; ent = ent->next) {
 		struct part_component *pc = ent->data;
 		if (pc->p == c) {
