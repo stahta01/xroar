@@ -79,8 +79,8 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, irq1, ser_type_bool), // 2
 	SER_STRUCT_ELEM(struct MC6801, D, ser_type_uint8), // 3
 
-	SER_STRUCT_ELEM(struct MC6801, port1, ser_type_unhandled), // 4
-	SER_STRUCT_ELEM(struct MC6801, port2, ser_type_unhandled), // 5
+	SER_STRUCT_SUBSTRUCT(struct MC6801, port1, &mc6801_port_ser_struct_data), // 4
+	SER_STRUCT_SUBSTRUCT(struct MC6801, port2, &mc6801_port_ser_struct_data), // 5
 
 	SER_STRUCT_ELEM(struct MC6801, state, ser_type_unsigned), // 6
 	SER_STRUCT_ELEM(struct MC6801, running, ser_type_bool), // 7
@@ -117,8 +117,6 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_STRUCT_ELEM(struct MC6801, is_6801, ser_type_bool), // 32
 };
 
-#define MC6801_SER_PORT1 (4)
-#define MC6801_SER_PORT2 (5)
 #define MC6801_SER_REG   (13)
 #define MC6801_SER_RAM   (14)
 
@@ -290,12 +288,6 @@ static void mc6801_free(struct part *p) {
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
-	case MC6801_SER_PORT1:
-		ser_read_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port1);
-		break;
-	case MC6801_SER_PORT2:
-		ser_read_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port2);
-		break;
 	case MC6801_SER_REG:
 		ser_read(sh, cpu->reg, sizeof(cpu->reg));
 		break;
@@ -311,14 +303,6 @@ static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
-	case MC6801_SER_PORT1:
-		ser_write_open_vuint32(sh, tag, 1);
-		ser_write_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port1);
-		break;
-	case MC6801_SER_PORT2:
-		ser_write_open_vuint32(sh, tag, 2);
-		ser_write_struct_data(sh, &mc6801_port_ser_struct_data, &cpu->port2);
-		break;
 	case MC6801_SER_REG:
 		ser_write(sh, tag, cpu->reg, sizeof(cpu->reg));
 		break;
