@@ -253,23 +253,6 @@ void *ser_read_new(struct ser_handle *sh, size_t size);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// For each of these an array of struct ser_struct is passed (ss) and the
-// number of elements within it (nss).  Tag ID is always array index plus 1 (as
-// zero is reserved for closing tags).  Unhandled tags should still be included
-// in the array.
-
-// Old struct writer.  Writes successive fields starting from 'tag' until
-// either all are written (returns zero) or an unhandled tag is met (returns
-// tag).  Negative return value implies error.
-
-int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, int tag, void *s);
-
-// Old struct reader.  As below but also returns when an unhandler tag is met.
-// Caller deals.
-
-int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s);
-
-
 // Struct writer.  Writes fields in order, calling ss->write_elem when type is
 // unhandled.
 

@@ -530,16 +530,15 @@ void *ser_read_new(struct ser_handle *sh, size_t size) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, int tag, void *s) {
-	for (; tag <= nss && !sh->error; tag++) {
-		enum ser_type type = ss[tag-1].type;
+void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ssd, void *s) {
+	const struct ser_struct *ss = ssd->elems;
+	for (int i = 0; i < ssd->num_elems && !sh->error; i++) {
+		int tag = ss[i].tag ? ss[i].tag : i + 1;
+		enum ser_type type = ss[i].type;
 		SER_DEBUG("ser_write_struct(): tag=%d type=%d\n", tag, type);
-		if (type == ser_type_unhandled)
-			return tag;
-		if (type == ser_type_skip)
-			continue;
-		void *ptr = s + ss[tag-1].offset;
+		void *ptr = s + ss[i].offset;
 		switch (type) {
+
 		case ser_type_bool:
 			ser_write_vuint32(sh, tag, *(_Bool *)ptr);
 			break;
@@ -567,9 +566,11 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 		case ser_type_uint32:
 			ser_write_vuint32(sh, tag, *(uint32_t *)ptr);
 			break;
+
 		case ser_type_tick:
 			ser_write_vint32(sh, tag, *(event_ticks *)ptr - event_current_tick);
 			break;
+
 		case ser_type_event:
 			{
 				struct event *e = ptr;
@@ -578,6 +579,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+
 		case ser_type_eventp:
 			{
 				struct event *e = *(struct event **)ptr;
@@ -586,6 +588,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+
 		case ser_type_string:
 			{
 				char *str = *(char **)ptr;
@@ -594,6 +597,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+
 		case ser_type_sds:
 			{
 				sds str = *(sds *)ptr;
@@ -602,6 +606,7 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+
 		case ser_type_sds_list:
 			{
 				struct slist *l = *(struct slist **)ptr;
@@ -611,36 +616,59 @@ int ser_write_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss
 				}
 			}
 			break;
+
 		case ser_type_nest:
 			{
-				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
+				const struct ser_struct_data *nssd = ss[i].data.ser_struct_data;
 				ser_write_open_string(sh, tag, "");
 				ser_write_struct_data(sh, nssd, ptr);
 			}
 			break;
+
+		case ser_type_unhandled:
+			assert(ssd->write_elem != NULL);
+			if (!ssd->write_elem(s, sh, tag)) {
+				ser_set_error(sh, ser_error_bad_tag);
+				SER_DEBUG("ser_write_struct_data(%p) FAILED\n", ss);
+			}
+			break;
+
+		case ser_type_skip:
+			continue;
 
 		default:
 			ser_set_error(sh, ser_error_type);
 			break;
 		}
 	}
-	if (sh->error)
-		return -1;
-	return 0;
+	ser_write_close_tag(sh);
+	SER_DEBUG("ser_write_struct_data(%p) finished\n", ss);
 }
 
-int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss, void *s) {
-	int tag = -1;
+void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *ssd, void *s) {
+	const struct ser_struct *ss = ssd->elems;
+	int tag;
 	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
-		if (tag > nss) {
-			SER_DEBUG("ser_read_struct(): tag=%d invalid\n", tag);
-			ser_set_error(sh, ser_error_bad_tag);
-			return -1;
+		int i;
+		if (tag <= ssd->num_elems && ss[tag-1].tag == 0) {
+			i = tag - 1;
+		} else {
+			for (i = 0; i < ssd->num_elems; i++) {
+				if (ss[i].tag == tag)
+					break;
+			}
+			if (i >= ssd->num_elems) {
+				SER_DEBUG("ser_read_struct(): tag=%d invalid\n", tag);
+				ser_set_error(sh, ser_error_bad_tag);
+				break;
+			}
 		}
-		enum ser_type type = ss[tag-1].type;
-		void *ptr = s + ss[tag-1].offset;
+
+		enum ser_type type = ss[i].type;
+		void *ptr = s + ss[i].offset;
 		SER_DEBUG("ser_read_struct(): tag=%d type=%d\n", tag, type);
 		switch (type) {
+
 		case ser_type_bool:
 			*(_Bool *)ptr = ser_read_vuint32(sh);
 			break;
@@ -668,9 +696,11 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 		case ser_type_uint32:
 			*(uint32_t *)ptr = ser_read_vuint32(sh);
 			break;
+
 		case ser_type_tick:
 			*(event_ticks *)ptr = event_current_tick + ser_read_vint32(sh);
 			break;
+
 		case ser_type_event:
 			{
 				struct event *e = ptr;
@@ -678,6 +708,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				e->next = e;  // flag reader to queue
 			}
 			break;
+
 		case ser_type_eventp:
 			{
 				struct event *e = *(struct event **)ptr;
@@ -687,6 +718,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				}
 			}
 			break;
+
 		case ser_type_string:
 			{
 				if (*(char **)ptr != NULL)
@@ -694,6 +726,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				*(char **)ptr = ser_read_string(sh);
 			}
 			break;
+
 		case ser_type_sds:
 			{
 				if (*(sds *)ptr != NULL)
@@ -701,6 +734,7 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				*(sds *)ptr = ser_read_sds(sh);
 			}
 			break;
+
 		case ser_type_sds_list:
 			{
 				struct slist *l = *(struct slist **)ptr;
@@ -709,50 +743,27 @@ int ser_read_struct(struct ser_handle *sh, const struct ser_struct *ss, int nss,
 				*(struct slist **)ptr = l;
 			}
 			break;
+
 		case ser_type_nest:
 			{
-				const struct ser_struct_data *nssd = ss[tag-1].data.ser_struct_data;
+				const struct ser_struct_data *nssd = ss[i].data.ser_struct_data;
 				ser_read_struct_data(sh, nssd, ptr);
 			}
 			break;
 
 		case ser_type_unhandled:
-			return tag;
+			if (!ssd->read_elem || !ssd->read_elem(s, sh, tag)) {
+				ser_set_error(sh, ser_error_bad_tag);
+				SER_DEBUG("ser_read_struct_data(%p) FAILED\n", ss);
+			}
+			break;
+
 		case ser_type_skip:
 			continue;
+
 		default:
 			ser_set_error(sh, ser_error_type);
 			break;
 		}
 	}
-	if (sh->error)
-		return -1;
-	return tag;
-}
-
-void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s) {
-	SER_DEBUG("ser_write_struct_data(%p)\n", ss);
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ss->elems, ss->num_elems, tag, s)) > 0; tag++) {
-		assert(ss->write_elem != NULL);
-		if (!ss->write_elem(s, sh, tag)) {
-			ser_set_error(sh, ser_error_bad_tag);
-			SER_DEBUG("ser_write_struct_data(%p) FAILED\n", ss);
-			return;
-		}
-	}
-	ser_write_close_tag(sh);
-	SER_DEBUG("ser_write_struct_data(%p) finished\n", ss);
-}
-
-void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *ss, void *s) {
-	SER_DEBUG("ser_read_struct_data(%p)\n", ss);
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ss->elems, ss->num_elems, s)) > 0) {
-		if (!ss->read_elem || !ss->read_elem(s, sh, tag)) {
-			ser_set_error(sh, ser_error_bad_tag);
-			SER_DEBUG("ser_read_struct_data(%p) FAILED\n", ss);
-			return;
-		}
-	}
-	SER_DEBUG("ser_read_struct_data(%p) finished\n", ss);
 }
