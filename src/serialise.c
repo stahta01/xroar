@@ -58,11 +58,13 @@ struct ser_handle {
 
 static void s_write_uint8(struct ser_handle *sh, int v);
 static void s_write_uint16(struct ser_handle *sh, int v);
+static void s_write_uint32(struct ser_handle *sh, uint32_t v);
 static void s_write_vuint32(struct ser_handle *sh, uint32_t v);
 static void s_write_vint32(struct ser_handle *sh, int32_t v);
 static void s_write(struct ser_handle *sh, const void *ptr, size_t size);
 static int s_read_uint8(struct ser_handle *sh);
 static int s_read_uint16(struct ser_handle *sh);
+static uint32_t s_read_uint32(struct ser_handle *sh);
 static uint32_t s_read_vuint32(struct ser_handle *sh);
 static void s_read(struct ser_handle *sh, void *ptr, size_t size);
 static void *s_read_new(struct ser_handle *sh, size_t size);
@@ -216,6 +218,11 @@ static void s_write_uint16(struct ser_handle *sh, int v) {
 		ser_set_error(sh, ser_error_file_io);
 }
 
+static void s_write_uint32(struct ser_handle *sh, uint32_t v) {
+	s_write_uint16(sh, v >> 16);
+	s_write_uint16(sh, v & 0xffff);
+}
+
 static void s_write_vuint32(struct ser_handle *sh, uint32_t v) {
 	if (sh->error)
 		return;
@@ -253,6 +260,11 @@ static int s_read_uint16(struct ser_handle *sh) {
 	if (r < 0)
 		ser_set_error(sh, ser_error_file_io);
 	return r;
+}
+
+static uint32_t s_read_uint32(struct ser_handle *sh) {
+	uint32_t r = s_read_uint16(sh) << 16;
+	return r | s_read_uint16(sh);
 }
 
 static uint32_t s_read_vuint32(struct ser_handle *sh) {
