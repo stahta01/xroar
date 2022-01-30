@@ -115,6 +115,9 @@ struct ser_struct {
 	uint16_t tag;
 	// Type is one of enum ser_type.
 	uint8_t type;
+	// If alength is non-zero, it implies an array of fixed length integers
+	// (usually, integers are all written as vint32/vuint32).
+	uint8_t alength;
 	// Offset within the struct of member.
 	size_t offset;
 	// Extra data - currently only used when nesting ser_struct_data
