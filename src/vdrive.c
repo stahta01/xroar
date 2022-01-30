@@ -88,9 +88,18 @@ static const struct ser_struct ser_struct_vdrive[] = {
 	SER_STRUCT_ELEM(struct vdrive_interface_private, reset_index_pulse_event, ser_type_event), // 15
 
 };
-#define N_SER_STRUCT_VDRIVE ARRAY_N_ELEMENTS(ser_struct_vdrive)
 
 #define VDRIVE_SER_DRIVE (5)
+
+static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+static const struct ser_struct_data vdrive_ser_struct_data = {
+	.elems = ser_struct_vdrive,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_vdrive),
+	.read_elem = vdrive_read_elem,
+	.write_elem = vdrive_write_elem,
+};
 
 #define VDRIVE_SER_DRIVE_CYL (1)
 #define VDRIVE_SER_DRIVE_FILENAME (2)
@@ -185,29 +194,6 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 	free(vip);
 }
 
-void vdrive_interface_serialise(struct vdrive_interface *vi, struct ser_handle *sh, unsigned otag) {
-	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
-	ser_write_open_string(sh, otag, "vdrive");
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_vdrive, N_SER_STRUCT_VDRIVE, tag, vip)) > 0; tag++) {
-		switch (tag) {
-		case VDRIVE_SER_DRIVE:
-			for (unsigned i = 0; i < MAX_DRIVES; i++) {
-				ser_write_open_vuint32(sh, VDRIVE_SER_DRIVE, i);
-				ser_write_vuint32(sh, VDRIVE_SER_DRIVE_CYL, vip->drives[i].current_cyl);
-				if (vip->drives[i].disk) {
-					ser_write_string(sh, VDRIVE_SER_DRIVE_FILENAME, vip->drives[i].disk->filename);
-				}
-				ser_write_close_tag(sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
-}
-
 static void deserialise_drive_data(struct drive_data *drive, struct ser_handle *sh) {
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
@@ -231,6 +217,43 @@ static void deserialise_drive_data(struct drive_data *drive, struct ser_handle *
 	}
 }
 
+static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct vdrive_interface_private *vip = sptr;
+	switch (tag) {
+	case VDRIVE_SER_DRIVE:
+		{
+			unsigned drive = ser_read_vuint32(sh);
+			if (drive >= VDRIVE_MAX_DRIVES) {
+				return 0;
+			}
+			deserialise_drive_data(&vip->drives[drive], sh);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct vdrive_interface_private *vip = sptr;
+	switch (tag) {
+	case VDRIVE_SER_DRIVE:
+		for (unsigned i = 0; i < MAX_DRIVES; i++) {
+			ser_write_open_vuint32(sh, VDRIVE_SER_DRIVE, i);
+			ser_write_vuint32(sh, VDRIVE_SER_DRIVE_CYL, vip->drives[i].current_cyl);
+			if (vip->drives[i].disk) {
+				ser_write_string(sh, VDRIVE_SER_DRIVE_FILENAME, vip->drives[i].disk->filename);
+			}
+			ser_write_close_tag(sh);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
 void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle *sh) {
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
 
@@ -243,24 +266,7 @@ void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle
 	event_dequeue(&vip->index_pulse_event);
 	event_dequeue(&vip->reset_index_pulse_event);
 
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_vdrive, N_SER_STRUCT_VDRIVE, vip))) {
-		switch (tag) {
-		case VDRIVE_SER_DRIVE:
-			{
-				unsigned drive = ser_read_vuint32(sh);
-				if (drive >= VDRIVE_MAX_DRIVES) {
-					ser_set_error(sh, ser_error_format);
-					break;
-				}
-				deserialise_drive_data(&vip->drives[drive], sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
+	ser_read_struct_data(sh, &vdrive_ser_struct_data, vip);
 
 	vip->current_drive = &vip->drives[vip->cur_drive_number];
 	if (vip->current_drive->disk) {
@@ -275,6 +281,12 @@ void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle
 		vip->idamptr = NULL;
 		vip->track_base = NULL;
 	}
+}
+
+void vdrive_interface_serialise(struct vdrive_interface *vi, struct ser_handle *sh, unsigned otag) {
+	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+	ser_write_open_string(sh, otag, "vdrive");
+	ser_write_struct_data(sh, &vdrive_ser_struct_data, vip);
 }
 
 void vdrive_disconnect(struct vdrive_interface *vi) {

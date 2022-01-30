@@ -65,9 +65,18 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_string), // 20
 	SER_STRUCT_ELEM(struct machine_config, opts, ser_type_sds_list), // 21
 };
-#define N_SER_STRUCT_MACHINE_CONFIG ARRAY_N_ELEMENTS(ser_struct_machine_config)
 
 #define MACHINE_CONFIG_SER_ARCHITECTURE_OLD (2)
+
+static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+static const struct ser_struct_data machine_config_ser_struct_data = {
+	.elems = ser_struct_machine_config,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_machine_config),
+	.read_elem = machine_config_read_elem,
+	.write_elem = machine_config_write_elem,
+};
 
 static const struct ser_struct ser_struct_machine[] = {
         SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
@@ -164,23 +173,7 @@ struct machine_config *machine_config_deserialise(struct ser_handle *sh) {
 		mc->name = xstrdup(name);
 	}
 	free(name);
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, mc)) > 0) {
-		switch (tag) {
-		case MACHINE_CONFIG_SER_ARCHITECTURE_OLD: {
-			int old_arch = ser_read_vint32(sh);
-			if (mc->architecture)
-				free(mc->architecture);
-			if (old_arch < 0 || old_arch >= (int)ARRAY_N_ELEMENTS(int_arch_to_string))
-				old_arch = 0;
-			mc->architecture = xstrdup(int_arch_to_string[old_arch]);
-		} break;
-
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
+	ser_read_struct_data(sh, &machine_config_ser_struct_data, mc);
 	return mc;
 }
 
@@ -188,17 +181,38 @@ void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machi
 	if (!mc)
 		return;
 	ser_write_open_string(sh, otag, mc->name);
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_machine_config, N_SER_STRUCT_MACHINE_CONFIG, tag, mc)) > 0; tag++) {
-		switch (tag) {
-		case MACHINE_CONFIG_SER_ARCHITECTURE_OLD:
-			// old field, just ignore here for now
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+	ser_write_struct_data(sh, &machine_config_ser_struct_data, mc);
+}
+
+static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct machine_config *mc = sptr;
+	switch (tag) {
+	case MACHINE_CONFIG_SER_ARCHITECTURE_OLD: {
+		int old_arch = ser_read_vint32(sh);
+		if (mc->architecture)
+			free(mc->architecture);
+		if (old_arch < 0 || old_arch >= (int)ARRAY_N_ELEMENTS(int_arch_to_string))
+			old_arch = 0;
+		mc->architecture = xstrdup(int_arch_to_string[old_arch]);
+	} break;
+
+	default:
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
+}
+
+static _Bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	(void)sptr;
+	(void)sh;
+	switch (tag) {
+	case MACHINE_CONFIG_SER_ARCHITECTURE_OLD:
+		// old field, just ignore here for now
+		break;
+	default:
+		return 0;
+	}
+	return 1;
 }
 
 struct machine_config *machine_config_by_id(int id) {

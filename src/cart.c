@@ -53,7 +53,10 @@ static const struct ser_struct ser_struct_cart_config[] = {
 	SER_STRUCT_ELEM(struct cart_config, opts, ser_type_sds_list), // 7
 };
 
-#define N_SER_STRUCT_CART_CONFIG ARRAY_N_ELEMENTS(ser_struct_cart_config)
+static const struct ser_struct_data cart_config_ser_struct_data = {
+	.elems = ser_struct_cart_config,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart_config),
+};
 
 static const struct ser_struct ser_struct_cart[] = {
 	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
@@ -116,8 +119,7 @@ void cart_config_serialise(struct cart_config *cc, struct ser_handle *sh, unsign
 	if (!cc)
 		return;
 	ser_write_open_string(sh, otag, cc->name);
-	ser_write_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, 1, cc);
-	ser_write_close_tag(sh);
+	ser_write_struct_data(sh, &cart_config_ser_struct_data, cc);
 }
 
 struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
@@ -129,7 +131,7 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
 		cc = cart_config_new();
 		cc->name = xstrdup(name);
 	}
-	ser_read_struct(sh, ser_struct_cart_config, N_SER_STRUCT_CART_CONFIG, cc);
+	ser_read_struct_data(sh, &cart_config_ser_struct_data, cc);
 	if (strcmp(name, "romcart") == 0)
 		rom_cart_config = cc;
 	xroar_update_cartridge_menu();
