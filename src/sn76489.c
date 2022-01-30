@@ -87,20 +87,20 @@ struct SN76489_private {
 };
 
 static struct ser_struct ser_struct_sn76489[] = {
-	SER_STRUCT_ELEM(struct SN76489_private, public.ready, ser_type_bool), // 1
+	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct SN76489_private, public.ready),
 
-	SER_STRUCT_ELEM(struct SN76489_private, refrate, ser_type_int), // 2
-	SER_STRUCT_ELEM(struct SN76489_private, framerate, ser_type_skip), // 3 XXX
-	SER_STRUCT_ELEM(struct SN76489_private, tickrate, ser_type_int), // 4
+	SER_ID_STRUCT_ELEM(2, ser_type_int, struct SN76489_private, refrate),
+	// ID 3 used to be 'framerate', but this is a local parameter
+	SER_ID_STRUCT_ELEM(4, ser_type_int, struct SN76489_private, tickrate),
 
-	SER_STRUCT_ELEM(struct SN76489_private, reg_sel, ser_type_unsigned), // 5
-	SER_STRUCT_ELEM(struct SN76489_private, reg_val, ser_type_unhandled), // 6
+	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct SN76489_private, reg_sel),
+	SER_ID_STRUCT_ELEM(6, ser_type_unhandled, struct SN76489_private, reg_val),
 
-	SER_STRUCT_ELEM(struct SN76489_private, counter, ser_type_unhandled), // 7
-	SER_STRUCT_ELEM(struct SN76489_private, state, ser_type_unhandled), // 8
-	SER_STRUCT_ELEM(struct SN76489_private, nstate, ser_type_bool), // 9
+	SER_ID_STRUCT_ELEM(7, ser_type_unhandled, struct SN76489_private, counter),
+	SER_ID_STRUCT_ELEM(8, ser_type_unhandled, struct SN76489_private, state),
+	SER_ID_STRUCT_ELEM(9, ser_type_bool, struct SN76489_private, nstate),
 
-	SER_STRUCT_ELEM(struct SN76489_private, noise_lfsr, ser_type_unsigned), // 10
+	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct SN76489_private, noise_lfsr),
 };
 
 #define SN76489_SER_REG_VAL (6)
