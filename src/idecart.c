@@ -57,8 +57,6 @@ static const struct ser_struct ser_struct_idecart[] = {
 	SER_STRUCT_ELEM(struct idecart, data_latch, ser_type_uint8), // 4
 };
 
-#define N_SER_STRUCT_IDECART ARRAY_N_ELEMENTS(ser_struct_idecart)
-
 #define IDECART_SER_CONTROLLER (2)
 
 static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag);
