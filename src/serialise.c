@@ -658,9 +658,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 					break;
 			}
 			if (i >= ssd->num_elems) {
-				SER_DEBUG("ser_read_struct(): tag=%d invalid\n", tag);
-				ser_set_error(sh, ser_error_bad_tag);
-				break;
+				continue;
 			}
 		}
 
