@@ -974,11 +974,19 @@ static const struct ser_struct ser_struct_ide_drive[] = {
 	SER_STRUCT_ELEM(struct ide_drive, length, ser_type_int), // 19
 };
 
-#define N_SER_STRUCT_IDE_DRIVE ARRAY_N_ELEMENTS(ser_struct_ide_drive)
-
 #define IDE_DRIVE_SER_DATA   (15)
 #define IDE_DRIVE_SER_DPTR   (16)
 #define IDE_DRIVE_SER_OFFSET (18)
+
+static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+static const struct ser_struct_data ide_drive_ser_struct_data = {
+	.elems = ser_struct_ide_drive,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_ide_drive),
+	.read_elem = ide_drive_read_elem,
+	.write_elem = ide_drive_write_elem,
+};
 
 static const struct ser_struct ser_struct_ide_controller[] = {
 	SER_STRUCT_ELEM(struct ide_controller, drive, ser_type_unhandled), // 1
@@ -986,85 +994,94 @@ static const struct ser_struct ser_struct_ide_controller[] = {
 	SER_STRUCT_ELEM(struct ide_controller, data_latch, ser_type_uint16), // 3
 };
 
-#define N_SER_STRUCT_IDE_CONTROLLER ARRAY_N_ELEMENTS(ser_struct_ide_controller)
-
 #define IDE_CONTROLLER_SER_DRIVE (1)
 
-static void ide_drive_serialise(struct ide_drive *ided, struct ser_handle *sh) {
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_ide_drive, N_SER_STRUCT_IDE_DRIVE, tag, ided)) > 0; tag++) {
-		switch (tag) {
-		case IDE_DRIVE_SER_DATA:
-			ser_write(sh, tag, ided->data, sizeof(ided->data));
-			break;
-		case IDE_DRIVE_SER_DPTR:
-			ser_write_vuint32(sh, tag, ided->dptr - ided->data);
-			break;
-		case IDE_DRIVE_SER_OFFSET:
-			ser_write_vuint32(sh, tag, ided->offset);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
+static const struct ser_struct_data ide_controller_ser_struct_data = {
+	.elems = ser_struct_ide_controller,
+	.num_elems = ARRAY_N_ELEMENTS(ser_struct_ide_controller),
+	.read_elem = ide_controller_read_elem,
+	.write_elem = ide_controller_write_elem,
+};
+
+static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct ide_drive *ided = sptr;
+	switch (tag) {
+	case IDE_DRIVE_SER_DATA:
+		ser_read(sh, ided->data, sizeof(ided->data));
+		break;
+	case IDE_DRIVE_SER_DPTR:
+		ided->dptr = ided->data + ser_read_vuint32(sh);
+		break;
+	case IDE_DRIVE_SER_OFFSET:
+		ided->offset = ser_read_vuint32(sh);
+		break;
+	default:
+		ser_set_error(sh, ser_error_format);
+		return 0;
 	}
-	ser_write_close_tag(sh);
+	return 1;
 }
 
-static void ide_drive_deserialise(struct ide_drive *ided, struct ser_handle *sh) {
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_ide_drive, N_SER_STRUCT_IDE_DRIVE, ided))) {
-		switch (tag) {
-		case IDE_DRIVE_SER_DATA:
-			ser_read(sh, ided->data, sizeof(ided->data));
-			break;
-		case IDE_DRIVE_SER_DPTR:
-			ided->dptr = ided->data + ser_read_vuint32(sh);
-			break;
-		case IDE_DRIVE_SER_OFFSET:
-			ided->offset = ser_read_vuint32(sh);
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
+static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct ide_drive *ided = sptr;
+	switch (tag) {
+	case IDE_DRIVE_SER_DATA:
+		ser_write(sh, tag, ided->data, sizeof(ided->data));
+		break;
+	case IDE_DRIVE_SER_DPTR:
+		ser_write_vuint32(sh, tag, ided->dptr - ided->data);
+		break;
+	case IDE_DRIVE_SER_OFFSET:
+		ser_write_vuint32(sh, tag, ided->offset);
+		break;
+	default:
+		ser_set_error(sh, ser_error_format);
+		return 0;
 	}
+	return 1;
+}
+
+static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct ide_controller *ide = sptr;
+	switch (tag) {
+	case IDE_CONTROLLER_SER_DRIVE:
+		{
+			unsigned i = ser_read_vuint32(sh);
+			if (i >= 2) {
+				return 0;
+			}
+			ser_read_struct_data(sh, &ide_drive_ser_struct_data, &ide->drive[i]);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static _Bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct ide_controller *ide = sptr;
+	switch (tag) {
+	case IDE_CONTROLLER_SER_DRIVE:
+		for (unsigned i = 0; i < 2; i++) {
+			ser_write_open_vuint32(sh, tag, i);
+			ser_write_struct_data(sh, &ide_drive_ser_struct_data, &ide->drive[i]);
+		}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+void ide_deserialise(struct ide_controller *ide, struct ser_handle *sh) {
+	ser_read_struct_data(sh, &ide_controller_ser_struct_data, ide);
 }
 
 void ide_serialise(struct ide_controller *ide, struct ser_handle *sh, unsigned otag) {
 	ser_write_open_string(sh, otag, ide->name);
-	for (int tag = 1; !ser_error(sh) && (tag = ser_write_struct(sh, ser_struct_ide_controller, N_SER_STRUCT_IDE_CONTROLLER, tag, ide)) > 0; tag++) {
-		switch (tag) {
-		case IDE_CONTROLLER_SER_DRIVE:
-			for (unsigned i = 0; i < 2; i++) {
-				ser_write_open_vuint32(sh, tag, i);
-				ide_drive_serialise(&ide->drive[i], sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
-	ser_write_close_tag(sh);
-}
-
-void ide_deserialise(struct ide_controller *ide, struct ser_handle *sh) {
-	int tag;
-	while (!ser_error(sh) && (tag = ser_read_struct(sh, ser_struct_ide_controller, N_SER_STRUCT_IDE_CONTROLLER, ide))) {
-		switch (tag) {
-		case IDE_CONTROLLER_SER_DRIVE:
-			{
-				unsigned i = ser_read_vuint32(sh);
-				if (i >= 2) {
-					ser_set_error(sh, ser_error_format);
-					break;
-				}
-				ide_drive_deserialise(&ide->drive[i], sh);
-			}
-			break;
-		default:
-			ser_set_error(sh, ser_error_format);
-			break;
-		}
-	}
+	ser_write_struct_data(sh, &ide_controller_ser_struct_data, ide);
 }
