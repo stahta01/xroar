@@ -109,18 +109,35 @@ enum ser_type {
 	ser_type_skip,  // tag no longer handled: don't write, skip read
 };
 
+/** \brief Describes a struct member. */
 struct ser_struct {
-	enum ser_type type;
+	// While transitioning old code, a tag ID of 0 implies that ID is equal
+	// to its index into the metadata array + 1.
+	uint16_t tag;
+	// Type is one of enum ser_type.
+	uint8_t type;
+	// Offset within the struct of member.
 	size_t offset;
+	// Extra data - currently only used when nesting ser_struct_data
+	// definitions.
 	union {
 		const struct ser_struct_data *ser_struct_data;
 	} data;
 };
 
-#define SER_STRUCT_ELEM(s,e,t) { .type = t, .offset = offsetof(s,e) }
-#define SER_STRUCT_UNHANDLED() { .type = ser_type_unhandled }
-#define SER_STRUCT_SUBSTRUCT(s,e,d) { .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
-#define SER_STRUCT_NEST(d) { .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
+#define SER_ID_STRUCT_ELEM(i,t,s,e) { .tag = (i), .type = t, .offset = offsetof(s,e) }
+#define SER_ID_STRUCT_UNHANDLED(i) { .tag = (i), .type = ser_type_unhandled }
+#define SER_ID_STRUCT_SUBSTRUCT(i,s,e,d) { .tag = (i), .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
+#define SER_ID_STRUCT_NEST(i,d) { .tag = (i), .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
+
+// args to SER_STRUCT_ELEM are in odd order for compatibility
+#define SER_STRUCT_ELEM(s,e,t) SER_ID_STRUCT_ELEM(0,t,s,e)
+#define SER_STRUCT_UNHANDLED() SER_ID_STRUCT_UNHANDLED(0)
+#define SER_STRUCT_SUBSTRUCT(s,e,d) SER_ID_STRUCT_SUBSTRUCT(0,s,e,d)
+#define SER_STRUCT_NEST(d) SER_ID_STRUCT_NEST(0,d)
+
+// Collects a list of ser_struct member metadata with the size of the list,
+// and external handlers to deal with members of type ser_type_unhandled.
 
 struct ser_struct_data {
 	const struct ser_struct *elems;
