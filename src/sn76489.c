@@ -90,7 +90,7 @@ static struct ser_struct ser_struct_sn76489[] = {
 	SER_STRUCT_ELEM(struct SN76489_private, public.ready, ser_type_bool), // 1
 
 	SER_STRUCT_ELEM(struct SN76489_private, refrate, ser_type_int), // 2
-	SER_STRUCT_ELEM(struct SN76489_private, framerate, ser_type_int), // 3
+	SER_STRUCT_ELEM(struct SN76489_private, framerate, ser_type_skip), // 3 XXX
 	SER_STRUCT_ELEM(struct SN76489_private, tickrate, ser_type_int), // 4
 
 	SER_STRUCT_ELEM(struct SN76489_private, reg_sel, ser_type_unsigned), // 5
