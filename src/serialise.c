@@ -633,9 +633,6 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 			}
 			break;
 
-		case ser_type_skip:
-			continue;
-
 		default:
 			ser_set_error(sh, ser_error_type);
 			break;
@@ -755,9 +752,6 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 				SER_DEBUG("ser_read_struct_data(%p) FAILED\n", ss);
 			}
 			break;
-
-		case ser_type_skip:
-			continue;
 
 		default:
 			ser_set_error(sh, ser_error_type);

@@ -106,7 +106,6 @@ enum ser_type {
 	ser_type_sds_list,  // slist of sds strings
 	ser_type_unhandled,  // returns control to caller
 	ser_type_nest,  // recurse using data.ser_struct_data
-	ser_type_skip,  // tag no longer handled: don't write, skip read
 };
 
 /** \brief Describes a struct member. */
