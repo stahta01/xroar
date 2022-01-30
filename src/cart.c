@@ -340,6 +340,27 @@ struct cart *cart_create(const char *cc_name) {
 }
 
 void cart_finish(struct cart *c) {
+#ifdef HAVE_WASM
+	// This is a bodge to ensure that ROM files are fetched during snapshot
+	// loads in WASM builds.  Possible real fix is to a) have a "filename"
+	// string type during serialisation, and b) record actual filename used
+	// for any ROMs (after searching paths).
+	struct cart_config *cc = c->config;
+	if (cc->rom) {
+		if (cc->rom[0] != '@' && strchr(cc->rom, '/') == NULL) {
+			FILE *f = fopen(cc->rom, "a");
+			if (f)
+				fclose(f);
+		}
+	}
+	if (cc->rom2) {
+		if (cc->rom2[0] != '@' && strchr(cc->rom2, '/') == NULL) {
+			FILE *f = fopen(cc->rom2, "a");
+			if (f)
+				fclose(f);
+		}
+	}
+#endif
 	cart_rom_load(c);
 	if (c->firq_event.next == &c->firq_event) {
 		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
