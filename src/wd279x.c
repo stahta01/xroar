@@ -121,7 +121,7 @@ static const struct ser_struct_data wd279x_ser_struct_data = {
 
 #define SET_DIRECTION do { fdc->direction = 1; DELEGATE_CALL(fdc->set_dirc, 1); } while (0)
 #define RESET_DIRECTION do { \
-		fdc->direction = -1; DELEGATE_CALL(fdc->set_dirc, -1); \
+		fdc->direction = -1; DELEGATE_CALL(fdc->set_dirc, 0); \
 	} while (0)
 #define SET_SIDE(s) do { \
 		fdc->side = (s) ? 1 : 0; \
@@ -263,7 +263,7 @@ static void _vdrive_write(struct WD279X *fdc, uint8_t b) {
 void wd279x_disconnect(struct WD279X *fdc) {
 	if (!fdc)
 		return;
-	fdc->set_dirc = DELEGATE_DEFAULT1(void, int);
+	fdc->set_dirc = DELEGATE_DEFAULT1(void, bool);
 	fdc->set_dden = DELEGATE_DEFAULT1(void, bool);
 	fdc->set_sso = DELEGATE_DEFAULT1(void, unsigned);
 	fdc->set_drq = DELEGATE_DEFAULT1(void, bool);
@@ -343,7 +343,7 @@ void wd279x_update_connection(struct WD279X *fdc) {
 	DELEGATE_CALL(fdc->set_dden, fdc->double_density);
 	if (fdc->has_sso)
 		DELEGATE_CALL(fdc->set_sso, fdc->side);
-	DELEGATE_CALL(fdc->set_dirc, fdc->direction);
+	DELEGATE_CALL(fdc->set_dirc, fdc->direction >= 0);
 	DELEGATE_CALL(fdc->update_connection);
 }
 

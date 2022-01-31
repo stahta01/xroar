@@ -43,7 +43,7 @@ struct vdrive_interface {
 	DELEGATE_T3(void,unsigned,unsigned,unsigned) update_drive_cyl_head;
 
 	// Signals to all drives
-	void (*set_dirc)(void *sptr, int dirc);
+	void (*set_dirc)(void *sptr, _Bool dirc);
 	void (*set_dden)(void *sptr, _Bool dden);
 	void (*set_sso)(void *sptr, unsigned sso);
 

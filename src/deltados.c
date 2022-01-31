@@ -209,8 +209,8 @@ static void deltados_attach_interface(struct cart *c, const char *ifname, void *
 	struct deltados *d = (struct deltados *)c;
 	d->vdrive_interface = intf;
 
-	d->fdc->set_dirc = (DELEGATE_T1(void,int)){d->vdrive_interface->set_dirc, d->vdrive_interface};
-	d->fdc->set_dden = (DELEGATE_T1(void,bool)){d->vdrive_interface->set_dden, d->vdrive_interface};
+	d->fdc->set_dirc = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dirc, d->vdrive_interface);
+	d->fdc->set_dden = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dden, d->vdrive_interface);
 	d->fdc->step = DELEGATE_AS0(void, d->vdrive_interface->step, d->vdrive_interface);
 	d->fdc->write = DELEGATE_AS1(void, uint8, d->vdrive_interface->write, d->vdrive_interface);
 	d->fdc->skip = DELEGATE_AS0(void, d->vdrive_interface->skip, d->vdrive_interface);

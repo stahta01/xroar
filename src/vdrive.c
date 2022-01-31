@@ -108,7 +108,7 @@ static const struct ser_struct_data vdrive_ser_struct_data = {
 
 /* Public methods */
 
-static void vdrive_set_dirc(void *sptr, int direction);
+static void vdrive_set_dirc(void *sptr, _Bool dirc);
 static void vdrive_set_dden(void *sptr, _Bool dden);
 static void vdrive_set_sso(void *sptr, unsigned head);
 static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive);
@@ -340,9 +340,9 @@ void vdrive_flush(struct vdrive_interface *vi) {
 
 /* Signals to all drives */
 
-static void vdrive_set_dirc(void *sptr, int direction) {
+static void vdrive_set_dirc(void *sptr, _Bool dirc) {
 	struct vdrive_interface_private *vip = sptr;
-	vip->cur_direction = (direction > 0) ? 1 : -1;
+	vip->cur_direction = dirc ? 1 : -1;
 }
 
 static void vdrive_set_dden(void *sptr, _Bool dden) {

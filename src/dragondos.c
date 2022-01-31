@@ -253,7 +253,7 @@ static void dragondos_attach_interface(struct cart *c, const char *ifname, void 
 	struct dragondos *d = (struct dragondos *)c;
 	d->vdrive_interface = intf;
 
-	d->fdc->set_dirc = DELEGATE_AS1(void, int, d->vdrive_interface->set_dirc, d->vdrive_interface);
+	d->fdc->set_dirc = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dirc, d->vdrive_interface);
 	d->fdc->set_dden = DELEGATE_AS1(void, bool, d->vdrive_interface->set_dden, d->vdrive_interface);
 	d->fdc->set_sso = DELEGATE_AS1(void, unsigned, d->vdrive_interface->set_sso, d->vdrive_interface);
 	d->fdc->set_drq = DELEGATE_AS1(void, bool, set_drq, d);

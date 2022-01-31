@@ -75,7 +75,7 @@ struct WD279X {
 	uint8_t command_register;
 
 	/* External interface */
-	DELEGATE_T1(void, int) set_dirc;
+	DELEGATE_T1(void, bool) set_dirc;
 	DELEGATE_T1(void, bool) set_dden;
 	DELEGATE_T1(void, unsigned) set_sso;
 	DELEGATE_T1(void, bool) set_drq;
