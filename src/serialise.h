@@ -131,6 +131,7 @@ struct ser_struct {
 #define SER_ID_STRUCT_UNHANDLED(i) { .tag = (i), .type = ser_type_unhandled }
 #define SER_ID_STRUCT_SUBSTRUCT(i,s,e,d) { .tag = (i), .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
 #define SER_ID_STRUCT_NEST(i,d) { .tag = (i), .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
+#define SER_ID_STRUCT_ARRAY(i,t,n,s,e) { .tag = (i), .type = t, .alength = (n), .offset = offsetof(s,e) }
 
 // args to SER_STRUCT_ELEM are in odd order for compatibility
 #define SER_STRUCT_ELEM(s,e,t) SER_ID_STRUCT_ELEM(0,t,s,e)

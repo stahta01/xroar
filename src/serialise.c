@@ -549,6 +549,35 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 		enum ser_type type = ss[i].type;
 		SER_DEBUG("ser_write_struct(): tag=%d type=%d\n", tag, type);
 		void *ptr = s + ss[i].offset;
+
+		if (ss[i].alength > 0) {
+			// write array
+			switch (type) {
+			case ser_type_uint8:
+				ser_write_tag(sh, tag, ss[i].alength);
+				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
+					s_write_uint8(sh, ((uint8_t *)ptr)[j]);
+				}
+				break;
+			case ser_type_uint16:
+				ser_write_tag(sh, tag, ss[i].alength * 2);
+				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
+					s_write_uint16(sh, ((uint16_t *)ptr)[j]);
+				}
+				break;
+			case ser_type_uint32:
+				ser_write_tag(sh, tag, ss[i].alength * 4);
+				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
+					s_write_uint32(sh, ((uint32_t *)ptr)[j]);
+				}
+				break;
+			default:
+				ser_set_error(sh, ser_error_type);
+				break;
+			}
+			continue;
+		}
+
 		switch (type) {
 
 		case ser_type_bool:
@@ -674,6 +703,28 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 		enum ser_type type = ss[i].type;
 		void *ptr = s + ss[i].offset;
 		SER_DEBUG("ser_read_struct(): tag=%d type=%d\n", tag, type);
+
+		if (ss[i].alength > 0) {
+			// read array
+			for (int j = 0; !sh->error && j < ss[j].alength; j++) {
+				switch (type) {
+				case ser_type_uint8:
+					((uint8_t *)ptr)[j] = s_read_uint8(sh);
+					break;
+				case ser_type_uint16:
+					((uint16_t *)ptr)[j] = s_read_uint16(sh);
+					break;
+				case ser_type_uint32:
+					((uint32_t *)ptr)[j] = s_read_uint32(sh);
+					break;
+				default:
+					ser_set_error(sh, ser_error_type);
+					break;
+				}
+			}
+			continue;
+		}
+
 		switch (type) {
 
 		case ser_type_bool:
