@@ -81,7 +81,6 @@ struct WD279X {
 	DELEGATE_T1(void, bool) set_drq;
 	DELEGATE_T1(void, bool) set_intrq;
 
-	DELEGATE_T0(unsigned) get_head_pos;
 	DELEGATE_T0(void) step;
 	DELEGATE_T1(void, uint8) write;
 	DELEGATE_T0(void) skip;

@@ -51,7 +51,6 @@ struct vdrive_interface {
 	void (*set_drive)(struct vdrive_interface *vi, unsigned drive);
 
 	// Operations on selected drive
-	unsigned (*get_head_pos)(void *sptr);
 	void (*step)(void *sptr);
 	void (*write)(void *sptr, uint8_t data);
 	void (*skip)(void *sptr);

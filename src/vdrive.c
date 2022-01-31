@@ -113,7 +113,6 @@ static void vdrive_set_dden(void *sptr, _Bool dden);
 static void vdrive_set_sso(void *sptr, unsigned head);
 static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive);
 
-static unsigned vdrive_get_head_pos(void *sptr);
 static void vdrive_step(void *sptr);
 static void vdrive_write(void *sptr, uint8_t data);
 static void vdrive_skip(void *sptr);
@@ -162,7 +161,6 @@ struct vdrive_interface *vdrive_interface_new(void) {
 	vi->set_sso = vdrive_set_sso;
 	vi->set_drive = vdrive_set_drive;
 
-	vi->get_head_pos = vdrive_get_head_pos;
 	vi->step = vdrive_step;
 	vi->write = vdrive_write;
 	vi->skip = vdrive_skip;
@@ -372,11 +370,6 @@ static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive) {
 }
 
 /* Operations on selected drive */
-
-static unsigned vdrive_get_head_pos(void *sptr) {
-	struct vdrive_interface_private *vip = sptr;
-	return vip->head_pos;
-}
 
 void vdrive_step(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
