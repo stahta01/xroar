@@ -547,7 +547,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 	for (int i = 0; i < ssd->num_elems && !sh->error; i++) {
 		int tag = ss[i].tag ? ss[i].tag : i + 1;
 		enum ser_type type = ss[i].type;
-		SER_DEBUG("ser_write_struct(): tag=%d type=%d\n", tag, type);
+		SER_DEBUG("ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 		void *ptr = s + ss[i].offset;
 
 		if (ss[i].alength > 0) {
@@ -574,6 +574,9 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 			default:
 				ser_set_error(sh, ser_error_type);
 				break;
+			}
+			if (ser_error(sh)) {
+				SER_DEBUG("serialisation ERROR!\n");
 			}
 			continue;
 		}
@@ -678,6 +681,9 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 			ser_set_error(sh, ser_error_type);
 			break;
 		}
+		if (ser_error(sh)) {
+			SER_DEBUG("serialisation ERROR!\n");
+		}
 	}
 	ser_write_close_tag(sh);
 	SER_DEBUG("ser_write_struct_data(%p) finished\n", ss);
@@ -702,7 +708,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 
 		enum ser_type type = ss[i].type;
 		void *ptr = s + ss[i].offset;
-		SER_DEBUG("ser_read_struct(): tag=%d type=%d\n", tag, type);
+		SER_DEBUG("ser_read_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 
 		if (ss[i].alength > 0) {
 			// read array
