@@ -598,6 +598,9 @@ static struct {
 	{ "CCC", FILETYPE_ROM },
 	{ "BAS", FILETYPE_ASC },
 	{ "ASC", FILETYPE_ASC },
+	{ "VHD", FILETYPE_VHD },
+	{ "IDE", FILETYPE_IDE },
+	{ "IMG", FILETYPE_IMG },
 	{ NULL, FILETYPE_UNKNOWN }
 };
 
@@ -2165,8 +2168,12 @@ static enum media_slot add_load_file(const char *filename) {
 		slot = media_slot_cartridge;
 		break;
 
-	case FILETYPE_HD:
+	case FILETYPE_VHD:
+	case FILETYPE_IDE:
+	case FILETYPE_IMG:
 		// TODO: recognise media type and select cartridge accordingly
+		// TODO: If there's a way of auto-detecting an SD image for
+		//       MOOH/NX32, update .load_sd instead?
 		for (int i = 0; i < 2; i++) {
 			if (!xroar_cfg.load_hd[i]) {
 				xroar_cfg.load_hd[i] = xstrdup(filename);
@@ -2175,15 +2182,6 @@ static enum media_slot add_load_file(const char *filename) {
 			if (i == 1) {
 				LOG_WARN("No unused hard drive slot for '%s': ignoring\n", filename);
 			}
-		}
-		break;
-
-	case FILETYPE_SD:
-		// TODO: recognise media type and select cartridge accordingly
-		if (!xroar_cfg.load_sd) {
-			xroar_cfg.load_sd = xstrdup(filename);
-		} else {
-			LOG_WARN("No unused SD slot for '%s': ignoring\n", filename);
 		}
 		break;
 

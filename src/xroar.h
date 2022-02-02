@@ -45,21 +45,34 @@ struct xroar_timeout;
 
 enum xroar_filetype {
 	FILETYPE_UNKNOWN,
-	FILETYPE_VDK,
-	FILETYPE_JVC,
-	FILETYPE_OS9,  // special type of JVC
-	FILETYPE_DMK,
-	FILETYPE_BIN,
-	FILETYPE_HEX,
-	FILETYPE_CAS,
-	FILETYPE_K7,
-	FILETYPE_WAV,
-	FILETYPE_ASC,
-	FILETYPE_ROM,
-	FILETYPE_HD,
-	FILETYPE_SD,
-	FILETYPE_SNA,
-	FILETYPE_RAM,
+
+	// Disk types
+	FILETYPE_VDK,  // Often used for Dragon disks
+	FILETYPE_JVC,  // Basic, with optional headers
+	FILETYPE_OS9,  // JVC, but inspected to reveal OS9 metadata
+	FILETYPE_DMK,  // David Keil's format records more information
+
+	// Binary types
+	FILETYPE_BIN,  // Generic ".bin", needs analysing for subtype
+	FILETYPE_HEX,  // Intel HEX format
+
+	// Cassette types
+	FILETYPE_CAS,  // Simple bit format with optional CUE data
+	FILETYPE_ASC,  // ASCII text, converted on-the-fly to CAS
+	FILETYPE_K7,   // Logical blocks with header metadata
+	FILETYPE_WAV,  // Audio sample
+
+	// ROM images
+	FILETYPE_ROM,  // Binary dump with optional header ("DGN")
+
+	// Snapshots
+	FILETYPE_SNA,  // Machine state dump, V1 or V2
+	FILETYPE_RAM,  // Simple RAM dump (write only!)
+
+	// HD images
+	FILETYPE_VHD,  // 256 byte-per-sector image
+	FILETYPE_IDE,  // 512 byte-per-sector image with header
+	FILETYPE_IMG,  // Generic, heuristic decides if it's VHD or IDE
 };
 
 /**************************************************************************/
