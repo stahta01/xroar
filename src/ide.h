@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+struct blkdev;
 struct ser_handle;
 
 #define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
@@ -78,7 +79,7 @@ struct ide_drive {
 	uint16_t identify[256];
 	uint8_t *dptr;
 	int state;
-	int fd;
+	struct blkdev *bd;
 	off_t offset;
 	int length;
 };
@@ -101,7 +102,7 @@ uint8_t ide_read_latched(struct ide_controller *c, uint8_t r);
 void ide_write_latched(struct ide_controller *c, uint8_t r, uint8_t v);
 
 struct ide_controller *ide_allocate(const char *name);
-int ide_attach(struct ide_controller *c, int drive, int fd);
+int ide_attach(struct ide_controller *c, int drive, struct blkdev *bd);
 void ide_detach(struct ide_drive *d);
 void ide_free(struct ide_controller *c);
 

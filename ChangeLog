@@ -9,6 +9,7 @@
  * New meta-options -machine-opt and -cart-opt
  * New ide-addr=address cart-opt
  * New abstract block device handling
+ * IDE support adjusted to use abstracted block devices
 
 Version 1.0.9, Tue 18 Jan 2022
 

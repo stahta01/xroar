@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,6 +32,7 @@
 #include "array.h"
 #include "xalloc.h"
 
+#include "blockdev.h"
 #include "ide.h"
 #include "serialise.h"
 
@@ -123,16 +124,13 @@ static uint16_t le16(uint16_t v)
   return p[0] | (p[1] << 8);
 }
 
-static void ide_xlate_errno(struct ide_taskfile *t, int len)
+static void ide_xlate_errno(struct ide_taskfile *t)
 {
+  // This function used to differentiate between EIO ("correctable") and other
+  // errors.  Now that block device access is abstracted, we can only report
+  // uncorrectable errors.
   t->status |= ST_ERR;
-  if (len == -1) {
-    if (errno == EIO)
-      t->error = ERR_UNC;
-    else
-      t->error = ERR_AMNF;
-  } else
-    t->error = ERR_AMNF;
+  t->error = ERR_AMNF;
 }
 
 static void ide_fault(struct ide_drive *d, const char *p)
@@ -151,7 +149,7 @@ static off_t xlate_block(struct ide_taskfile *t)
 /*    fprintf(stderr, "XLATE LBA %02X:%02X:%02X:%02X\n",
       t->lba4, t->lba3, t->lba2, t->lba1);*/
     if (d->lba)
-      return 2 + (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
+      return (((t->lba4 & DEVH_HEAD) << 24) | (t->lba3 << 16) | (t->lba2 << 8) | t->lba1);
     ide_fault(d, "LBA on non LBA drive");
   }
 
@@ -169,7 +167,7 @@ static off_t xlate_block(struct ide_taskfile *t)
   /* Sector 1 is first */
   /* Images generally go cylinder/head/sector. This also matters if we ever
      implement more advanced geometry setting */
-  return 1 + ((cyl * d->heads) + (t->lba4 & DEVH_HEAD)) * d->sectors + t->lba1;
+  return (((cyl * d->heads) + (t->lba4 & DEVH_HEAD)) * d->sectors + t->lba1) - 1;
 }
 
 /* Indicate the drive is ready */
@@ -322,7 +320,7 @@ static void cmd_readsectors_complete(struct ide_taskfile *tf)
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
 /*  fprintf(stderr, "READ %d SECTORS @ %ld\n", d->length, d->offset); */
-  if (d->offset == -1 ||  lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 || !bd_seek_lsn(d->bd, d->offset)) {
     tf->status |= ST_ERR;
     tf->status &= ~ST_DSC;
     tf->error |= ERR_IDNF;
@@ -345,7 +343,7 @@ static void cmd_verifysectors_complete(struct ide_taskfile *tf)
   d->offset = xlate_block(tf);
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
-  if (d->offset == -1 || lseek(d->fd, 512 * (d->offset + d->length - 1), SEEK_SET) == -1) {
+  if (d->offset == -1 || !bd_read_lsn(d->bd, d->offset + d->length - 1, NULL, 0)) {
     tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
@@ -374,7 +372,7 @@ static void cmd_seek_complete(struct ide_taskfile *tf)
   if (d->failed)
     drive_failed(tf);
   d->offset = xlate_block(tf);
-  if (d->offset == -1 || lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 || !bd_seek_lsn(d->bd, d->offset)) {
     tf->status &= ~ST_DSC;
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
@@ -420,7 +418,7 @@ static void cmd_writesectors_complete(struct ide_taskfile *tf)
   /* 0 = 256 sectors */
   d->length = tf->count ? tf->count : 256;
 /*  fprintf(stderr, "WRITE %d SECTORS @ %ld\n", d->length, d->offset); */
-  if (d->offset == -1 ||  lseek(d->fd, 512 * d->offset, SEEK_SET) == -1) {
+  if (d->offset == -1 || !bd_seek_lsn(d->bd, d->offset)) {
     tf->status |= ST_ERR;
     tf->error |= ERR_IDNF;
     tf->status &= ~ST_DSC;
@@ -457,14 +455,12 @@ static void ide_set_error(struct ide_drive *d)
 
 static int ide_read_sector(struct ide_drive *d)
 {
-  int len;
-
   d->dptr = d->data;
-  if ((len = read(d->fd, d->data, 512)) != 512) {
+  if (!bd_read(d->bd, d->data, 512)) {
     perror("ide_read_sector");
     d->taskfile.status |= ST_ERR;
     d->taskfile.status &= ~ST_DSC;
-    ide_xlate_errno(&d->taskfile, len);
+    ide_xlate_errno(&d->taskfile);
     return -1;
   }
 //  hexdump(d->data);
@@ -474,13 +470,11 @@ static int ide_read_sector(struct ide_drive *d)
 
 static int ide_write_sector(struct ide_drive *d)
 {
-  int len;
-
   d->dptr = d->data;
-  if ((len = write(d->fd, d->data, 512)) != 512) {
+  if (!bd_write(d->bd, d->data, 512)) {
     d->taskfile.status |= ST_ERR;
     d->taskfile.status &= ~ST_DSC;
-    ide_xlate_errno(&d->taskfile, len);
+    ide_xlate_errno(&d->taskfile);
     return -1;
   }
 //  hexdump(d->data);
@@ -741,25 +735,18 @@ struct ide_controller *ide_allocate(const char *name)
 /*
  *      Attach a file to a device on the controller
  */
-int ide_attach(struct ide_controller *c, int drive, int fd)
+int ide_attach(struct ide_controller *c, int drive, struct blkdev *bd)
 {
   struct ide_drive *d = &c->drive[drive];
   if (d->present) {
     ide_fault(d, "double attach");
     return -1;
   }
-  d->fd = fd;
-  lseek(fd, 0, SEEK_SET);
-  if (read(d->fd, d->data, 512) != 512 ||
-      read(d->fd, d->identify, 512) != 512) {
-    ide_fault(d, "i/o error on attach");
+  if (!bd_ide_read_identify(bd, d->identify, 512)) {
+    ide_fault(d, "failed to read identify");
     return -1;
   }
-  if (memcmp(d->data, ide_magic, 8)) {
-    ide_fault(d, "bad magic");
-    return -1;
-  }
-  d->fd = fd;
+  d->bd = bd;
   d->present = 1;
   d->heads = le16(d->identify[3]);
   d->sectors = le16(d->identify[6]);
@@ -776,8 +763,8 @@ int ide_attach(struct ide_controller *c, int drive, int fd)
  */
 void ide_detach(struct ide_drive *d)
 {
-  close(d->fd);
-  d->fd = -1;
+  bd_close(d->bd);
+  d->bd = NULL;
   d->present = 0;
 }
 
