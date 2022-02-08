@@ -761,8 +761,8 @@ int ide_attach(struct ide_controller *c, int drive, int fd)
   }
   d->fd = fd;
   d->present = 1;
-  d->heads = d->identify[3];
-  d->sectors = d->identify[6];
+  d->heads = le16(d->identify[3]);
+  d->sectors = le16(d->identify[6]);
   d->cylinders = le16(d->identify[1]);
   if (d->identify[49] & le16(1 << 9))
     d->lba = 1;
