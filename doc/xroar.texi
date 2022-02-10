@@ -137,10 +137,12 @@ Previously, the Glenside IDE controller would use a fixed HD image file in the
 current working directory called @file{hd0.img}.  You must now specify an image
 with the @option{-load-hd0} option.  There is also the new ability to attach a
 @emph{second} hard disk image with @option{-load-hd1}, if you have software
-that can access it.
+that can access it.  Also note that old IDE images with headers must be renamed
+to have a @file{.ide} extension.
 
 Similarly, the NX32 and MOOH cartridges would use a fixed SD image file, and
-you must now specify it with the @option{-load-sd} option.
+you must now specify it with the @option{-load-hd0} option (changed from the
+now-deprecated @option{-load-sd} option).
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -321,8 +323,8 @@ fidelity of this rendering.  See @ref{Video output} for more details.
 @subsection Can't access HD/SD image
 
 If you've been using previous versions of XRoar with the IDE, MOOH, or NX32
-cartridges, you now need to specify the image filename with @option{-load-hd0}
-(HD image for IDE) or @option{-load-sd} (SD image for NX32, MOOH).
+cartridges, you now need to specify the image filename with @option{-load-hd0}.
+(HD image for IDE, SD image for NX32, MOOH).
 
 @c
 
@@ -751,8 +753,7 @@ Type @samp{ide}.  Built-in cartridge profile @samp{ide}.
 @subsection NX32 and MOOH cartridges
 
 Two memory expansion cartridges created by Tormod Volden for the Dragon.  Both
-accept an SD card image.  These images have no header information and contain
-256-byte sectors.
+accept an SD card image.
 
 The earlier NX32 provides simple bank switching, while the MOOH provides
 extensive MMU functionality very like that in the Tandy CoCo 3.
@@ -765,7 +766,7 @@ image specified, e.g.:
 cart mooh
   cart-rom sdbdos-eprom8-all-v1.rom
 
-load-sd "~/xroar/sdcard.img"
+load-hd0 "~/xroar/sdcard.img"
 @end example
 
 @c
@@ -1023,21 +1024,32 @@ extensions with @option{-no-disk-auto-os9}.
 @section Hard disks
 
 The Glenside IDE controller interfaces hard disks to the Tandy CoCo, and the
-MOOH and NX32 memory expansions can each provide access to an SD card.
+MOOH and NX32 memory expansions can each provide access to an SD card.  XRoar
+supports these types of hard disk image:
 
-Hard disk images consist of 512 bytes of header information, 512 bytes of
-IDENTIFY information, followed by sector data in LSN order, 512 bytes each.  If
-an image does not exist when accessed, a 256MB image is created for you, as the
-header information may be difficult to construct otherwise.
+IDE images with header information should have a @file{.ide} extension.  This
+is necessary to distinguish them from images with no header.  These images
+contain metadata describing an IDE drive, and are the only ones usable in CHS
+mode.  Starting with 512 bytes of ``magic'' and 512 bytes of IDENTIFY DEVICE
+information, sector data follows in LSN order, 512 bytes per sector.
 
-SD images contain no header information, just sector data in LSN order,
-256-bytes each.
+Raw images with 512 byte sectors should have a @file{.img} extension.  Previous
+versions of XRoar would create IDE images with this file extension, and you
+should rename them to @file{.ide}.  Unfortunately this is necessary to support
+raw images without a header: if you happened to write the ``magic'' identifying
+information to the start of it, any attempt to be clever about file contents
+would fail.
+
+Finally, files with the @file{.vhd} extension are assumed to be 256
+bytes per sector with no header information.
+
+When no IDE metadata is present, XRoar will fake some up so that raw images can
+still be used with the IDE controller emulation.  This means VHD images
+containing RSDOS filesystems are usable with YA-DOS or HDBDOS.
 
 @multitable @columnfractions .21 .75
 @item @option{-load-hd@var{X} @var{file}}
 @tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).
-@item @option{-load-sd @var{file}}
-@tab Use @var{file} as the SD card image.
 @end multitable
 
 @c = === === === === === === === === === === === === === === === === === ===
@@ -1265,8 +1277,6 @@ returns as line feeds (the Dragon default), each time you press
 @tab Load disk image file @var{file} into drive @var{X} (0--3).  @xref{Floppy disks}.
 @item @option{-load-hd@var{X} @var{file}}
 @tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).  @xref{Hard disks}.
-@item @option{-load-sd @var{file}}
-@tab Use @var{file} as the SD card image.  @xref{Hard disks}.
 @item @option{-lp-file @var{file}}
 @tab Append printer output to @var{file}.  @xref{Printers}.
 @end multitable
@@ -1982,6 +1992,19 @@ memory to load it.  Read-only.
 @tab ROM image file.  Simple binary dump of a ROM IC.  Machine firmware images
 and ROM cartridge images are in this format.  Read-only.
 
+@item @file{.ide}
+
+@tab HD image file assumed to be 512 bytes per sector with IDE ``magic'' and
+IDENTIFY DEVICE metadata in the first 1024 bytes.
+
+@item @file{.img}
+
+@tab HD image file assumed to be 512 bytes per sector with no header.
+
+@item @file{.vhd}
+
+@tab HD image file assumed to be 256 bytes per sector with no header.
+
 @end multitable
 
 @c = === === === === === === === === === === === === === === === === === ===
@@ -2140,8 +2163,6 @@ to this machine (the default is to try).
 @headitem Hard disks @tab @xref{Hard disks}.
 @item @option{-load-hd@var{X} @var{file}}
 @tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).
-@item @option{-load-sd @var{file}}
-@tab Use @var{file} as the SD card image.
 @end multitable
 
 @c
@@ -2204,8 +2225,6 @@ to this machine (the default is to try).
 @tab Load disk image file @var{file} into drive @var{X} (0--3).  @xref{Floppy disks}.
 @item @option{-load-hd@var{X} @var{file}}
 @tab Use @var{file} as the hard disk image for drive @var{X} (0 or 1).  @xref{Hard disks}.
-@item @option{-load-sd @var{file}}
-@tab Use @var{file} as the SD card image.  @xref{Hard disks}.
 @item @option{-lp-file @var{file}}
 @tab Append printer output to @var{file}.  @xref{Printers}.
 @end multitable
