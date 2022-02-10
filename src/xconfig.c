@@ -2,7 +2,7 @@
  *
  *  \brief Command-line and file-based configuration options.
  *
- *  \copyright Copyright 2009-2021 Ciaran Anscomb
+ *  \copyright Copyright 2009-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -283,7 +283,7 @@ static void xconfig_warn_deprecated(const struct xconfig_option *opt) {
 	if (!opt->deprecated)
 		return;
 	LOG_WARN("Deprecated option `%s'", opt->name);
-	if (opt->type == XCONFIG_ALIAS) {
+	if (opt->type == XCONFIG_ALIAS || opt->type == XCONFIG_ALIAS1) {
 		LOG_PRINT(".  Try `%s' instead.", (char *)opt->dest.object);
 	}
 	LOG_PRINT("\n");

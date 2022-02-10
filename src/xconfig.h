@@ -2,7 +2,7 @@
  *
  *  \brief Command-line and file-based configuration options.
  *
- *  \copyright Copyright 2009-2021 Ciaran Anscomb
+ *  \copyright Copyright 2009-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
