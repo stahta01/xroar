@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -104,7 +104,6 @@ struct xroar_cfg {
 	// Files
 	char *rompath;
 	char *load_hd[2];
-	char *load_sd;
 	// Cassettes
 	double tape_pan;
 	double tape_hysteresis;

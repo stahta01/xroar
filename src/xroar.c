@@ -2172,8 +2172,6 @@ static enum media_slot add_load_file(const char *filename) {
 	case FILETYPE_IDE:
 	case FILETYPE_IMG:
 		// TODO: recognise media type and select cartridge accordingly
-		// TODO: If there's a way of auto-detecting an SD image for
-		//       MOOH/NX32, update .load_sd instead?
 		for (int i = 0; i < 2; i++) {
 			if (!xroar_cfg.load_hd[i]) {
 				xroar_cfg.load_hd[i] = xstrdup(filename);
@@ -2452,7 +2450,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_NE("load-fd3", &private_cfg.load_fd[3]) },
 	{ XC_SET_STRING_NE("load-hd0", &xroar_cfg.load_hd[0]) },
 	{ XC_SET_STRING_NE("load-hd1", &xroar_cfg.load_hd[1]) },
-	{ XC_SET_STRING_NE("load-sd", &xroar_cfg.load_sd) },
+	{ XC_ALIAS_UARG("load-sd", "load-hd0"), .deprecated = 1 },
 	{ XC_SET_STRING_NE("load-tape", &private_cfg.load_tape) },
 	{ XC_SET_STRING_NE("load-text", &private_cfg.load_text) },
 
@@ -2807,7 +2805,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "load-fd3", private_cfg.load_fd[3], NULL);
 	xroar_cfg_print_string(f, all, "load-hd0", xroar_cfg.load_hd[0], NULL);
 	xroar_cfg_print_string(f, all, "load-hd1", xroar_cfg.load_hd[1], NULL);
-	xroar_cfg_print_string(f, all, "load-sd", xroar_cfg.load_sd, NULL);
 	xroar_cfg_print_string(f, all, "load-tape", private_cfg.load_tape, NULL);
 	xroar_cfg_print_string(f, all, "tape-write", private_cfg.tape_write, NULL);
 	xroar_cfg_print_string(f, all, "load-text", private_cfg.load_text, NULL);
