@@ -116,33 +116,33 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
-Version 1.x comes with support for two new emulated machines: the Tandy Colour
-Computer 3 and the Tandy MC-10 (and in 1.1, the MC-10's French cousin, Alice).
-Some major changes have taken place under the hood, and although most things
-should remain familiar, for some special uses, here are the things you need to
-know.
+Version 1.0 introduced support for the Tandy Colour Computer 3 and the Tandy
+MC-10.  Version 1.1 adds proper support for the MC-10's French cousin, the
+Matra & Hachette Alice (4K).
 
 Snapshots now store much more state, and of course support the new emulated
 machines, but this means the format had to change.  Snapshots from the last 0.x
 release are still recognised, and can be loaded, but this support is likely to
 be removed in time.
 
-The tape emulation now supports manual pause control.  On the MC-10, this
-defaults to paused, as it has no ability to remotely control the tape motor.
-You will need to un-pause after typing @code{CLOAD} or @code{CLOADM} on the
-MC-10 (@clicksequence{File @click{} Cassette @click{} Play}, or from the tape
-control tool; autorunning will do this automatically).
+Tape emulation now supports manual pause control.  On the MC-10, this defaults
+to paused, as it has no ability to remotely control the tape motor.  You will
+need to un-pause after typing @code{CLOAD} or @code{CLOADM} on the MC-10
+(@clicksequence{File @click{} Cassette @click{} Play}, or from the tape control
+tool; autorunning will do this automatically).
 
 Previously, the Glenside IDE controller would use a fixed HD image file in the
-current working directory called @file{hd0.img}.  You must now specify an image
-with the @option{-load-hd0} option.  There is also the new ability to attach a
-@emph{second} hard disk image with @option{-load-hd1}, if you have software
-that can access it.  Also note that old IDE images with headers must be renamed
-to have a @file{.ide} extension.
+current working directory.  You must now specify an image with the
+@option{-load-hd0} option.  You can also now attach a second hard disk image
+with @option{-load-hd1}, if you have software that can access it.
 
 Similarly, the NX32 and MOOH cartridges would use a fixed SD image file, and
-you must now specify it with the @option{-load-hd0} option (changed from the
-now-deprecated @option{-load-sd} option).
+you must now specify it with the @option{-load-hd0} option.
+
+Old IDE images, including those created by XRoar, will have a @file{.img} file
+extension.  In order to distinguish these files from similar images with no
+header information, you should now rename these to have a @file{.ide}
+extension.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
