@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ *  \copyright Copyright 2018-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,6 +28,7 @@
 #include "delegate.h"
 #include "xalloc.h"
 
+#include "blockdev.h"
 #include "logging.h"
 #include "part.h"
 #include "serialise.h"
@@ -48,8 +49,9 @@ static const char *state_dbg_desc[] = {
 struct spi_sdcard {
 	struct spi65_device spi65_device;
 
-	// Backing image filename
+	// Backing image
 	char *imagefile;
+	struct blkdev *bd;
 
 	// SD card registers
 	unsigned state_sd;
@@ -154,11 +156,15 @@ static _Bool spi_sdcard_finish(struct part *p) {
 	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
 	if (!sdcard->imagefile)
 		return 0;
+	if (!(sdcard->bd = bd_open(sdcard->imagefile)))
+		return 0;
 	return 1;
 }
 
 static void spi_sdcard_free(struct part *p) {
 	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
+	if (sdcard->bd)
+		bd_close(sdcard->bd);
 	if (sdcard->imagefile)
 		free(sdcard->imagefile);
 }
@@ -202,31 +208,15 @@ static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void read_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
-	FILE *sd_image = fopen(sdcard->imagefile, "rb");
-	if (!sd_image) {
-		LOG_WARN("SPI/SDCARD/READ: Error opening SD card image %s\n", sdcard->imagefile);
-		return;
+	if (!bd_read_lsn(sdcard->bd, lba, buffer, 512)) {
+		LOG_WARN("SPI/SDCARD/READ: Read failed from SD card image %s\n", sdcard->imagefile);
 	}
-	fseek(sd_image, lba * 512, SEEK_SET);
-	LOG_DEBUG(3, "Reading SD card image %s at LBA %d\n", sdcard->imagefile, lba);
-	if (fread(buffer, 512, 1, sd_image) != 1) {
-		LOG_WARN("SPI/SDCARD/READ: Short read from SD card image %s\n", sdcard->imagefile);
-	}
-	fclose(sd_image);
 }
 
 static void write_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
-	FILE *sd_image = fopen(sdcard->imagefile, "r+b");
-	if (!sd_image) {
-		LOG_WARN("SPI/SDCARD/WRITE: Error opening SD card image %s\n", sdcard->imagefile);
-		return;
+	if (!bd_write_lsn(sdcard->bd, lba, buffer, 512)) {
+		LOG_WARN("SPI/SDCARD/WRITE: Write failed to SD card image %s\n", sdcard->imagefile);
 	}
-	fseek(sd_image, lba * 512, SEEK_SET);
-	LOG_DEBUG(3, "Writing SD card image %s at LBA %d\n", sdcard->imagefile, lba);
-	if (fwrite(buffer, 512, 1, sd_image) != 1) {
-		LOG_WARN("SPI/SDCARD/WRITE: Short write to SD card image %s\n", sdcard->imagefile);
-	}
-	fclose(sd_image);
 }
 
 static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active) {
