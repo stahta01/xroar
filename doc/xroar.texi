@@ -113,8 +113,8 @@ may provide a convenient way for users to run your Dragon software.  See
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-@node Notes for version 1.x
-@section Notes for version 1.x
+@node Recent changes
+@section Recent changes
 
 Version 1.x comes with support for two new emulated machines: the Tandy Colour
 Computer 3 and the Tandy MC-10 (and in 1.1, the MC-10's French cousin, Alice).
