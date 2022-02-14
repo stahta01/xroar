@@ -2,7 +2,7 @@
  *
  *  \brief NTSC encoding & decoding.
  *
- *  \copyright Copyright 2016-2018 Ciaran Anscomb
+ *  \copyright Copyright 2016-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -82,9 +82,9 @@ inline struct ntsc_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *n
 		burstq[4]*ntsc[4] + burstq[5]*ntsc[5] + burstq[6]*ntsc[6];
 	// Integer maths here adds another 7 bits to the result,
 	// so divide by 2^22 rather than 2^15.
-	buf.x = (+128*y +122*i  +79*q) / (1 << 22);  // +1.0*y +0.956*i +0.621*q
-	buf.y = (+128*y  -35*i  -83*q) / (1 << 22);  // +1.0*y -0.272*i -0.647*q
-	buf.z = (+128*y -141*i +218*q) / (1 << 22);  // +1.0*y -1.105*i +1.702*q
+	buf.x = (+128*y +122*i  +79*q) >> 22;  // +1.0*y +0.956*i +0.621*q
+	buf.y = (+128*y  -35*i  -83*q) >> 22;  // +1.0*y -0.272*i -0.647*q
+	buf.z = (+128*y -141*i +218*q) >> 22;  // +1.0*y -1.105*i +1.702*q
 	ntsc_phase = (ntsc_phase + 1) & 3;
 	return buf;
 }

@@ -2,7 +2,7 @@
  *
  *  \brief NTSC encoding & decoding.
  *
- *  \copyright Copyright 2016-2021 Ciaran Anscomb
+ *  \copyright Copyright 2016-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
