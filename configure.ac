@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
-AC_INIT([xroar], [1.0.9])
+AC_PREREQ([2.69])
+AC_INIT([xroar],[1.0.9])
 AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([yes])
 
@@ -10,7 +10,7 @@ MANPAGE_DATE="November 2021"
 AC_SUBST(MANPAGE_DATE)
 
 AC_CONFIG_SRCDIR([src/xroar.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_CANONICAL_HOST
