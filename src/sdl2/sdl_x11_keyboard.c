@@ -2,7 +2,7 @@
  *
  *  \brief Extended keyboard handling for X11 using SDL.
  *
- *  \copyright Copyright 2015-2016 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -210,8 +210,10 @@ void sdl_x11_keyboard_init(SDL_Window *sw) {
 	SDL_VERSION(&sdlver);
 	sdlinfo.version = sdlver;
 	SDL_GetWindowWMInfo(sw, &sdlinfo);
-	Display *display = sdlinfo.info.x11.display;
-	update_mapping_tables(display);
+	if (sdlinfo.subsystem == SDL_SYSWM_X11) {
+		Display *display = sdlinfo.info.x11.display;
+		update_mapping_tables(display);
+	}
 }
 
 void sdl_x11_keyboard_free(SDL_Window *sw) {
@@ -228,6 +230,9 @@ void sdl_x11_keyboard_free(SDL_Window *sw) {
  * necessary. */
 
 void sdl_x11_mapping_notify(XMappingEvent *xmapping) {
+	if (!x11_to_sdl_keycode)
+		return;
+
 	if (xmapping->request == MappingModifier || xmapping->request == MappingKeyboard)
 		update_mapping_tables(xmapping->display);
 }
@@ -237,6 +242,9 @@ void sdl_x11_mapping_notify(XMappingEvent *xmapping) {
  * modifier state being changed while our window does not have focus. */
 
 void sdl_x11_keymap_notify(XKeymapEvent *xkeymap) {
+	if (!x11_to_sdl_keycode)
+		return;
+
 	mod_state = 0;
 	// Start from 1 - skip the first 8 (invalid) keycodes.
 	for (int i = 1; i < 32; i++) {
@@ -266,6 +274,9 @@ void sdl_x11_keymap_notify(XKeymapEvent *xkeymap) {
 /* Rewrite an SDL_KeyboardEvent based on the actual keyboard map. */
 
 void sdl_x11_fix_keyboard_event(SDL_Event *event) {
+	if (!x11_to_sdl_keycode)
+		return;
+
 	int keycode = keycode_table[event->key.keysym.scancode];
 	if (keycode < 8) {
 		event->key.keysym.sym = SDLK_UNKNOWN;
@@ -299,6 +310,9 @@ void sdl_x11_fix_keyboard_event(SDL_Event *event) {
  * state. This includes the symbols on modified keys. */
 
 int sdl_x11_keysym_to_unicode(SDL_Keysym *keysym) {
+	if (!x11_to_sdl_keycode)
+		return keysym->sym;
+
 	int shift_level = (keysym->mod & KMOD_MODE) ? 2 : 0;
 	shift_level |= (keysym->mod & (KMOD_LSHIFT|KMOD_RSHIFT)) ? 1 : 0;
 

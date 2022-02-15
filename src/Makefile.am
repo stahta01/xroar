@@ -279,7 +279,6 @@ xroar_SOURCES += \
 	sdl2/vo_sdl2.c
 
 if X11
-if KBD_TRANSLATE
 xroar_SOURCES += \
 	sdl2/sdl_x11.c \
 	sdl2/sdl_x11_keyboard.c \
@@ -287,14 +286,11 @@ xroar_SOURCES += \
 xroar_CFLAGS += $(X11_CFLAGS)
 xroar_LDADD += $(X11_LIBS)
 endif
-endif
 
 if MINGW
-if KBD_TRANSLATE
 xroar_SOURCES += \
 	sdl2/sdl_windows32_keyboard.c \
 	sdl2/sdl_windows32_vsc_table.h
-endif
 endif
 
 endif
@@ -309,10 +305,8 @@ xroar_LDADD += $(COCOA_LIBS)
 xroar_SOURCES += \
 	macosx/filereq_cocoa.m \
 	macosx/ui_macosx.m
-if KBD_TRANSLATE
 xroar_SOURCES += \
 	sdl2/sdl_cocoa_keyboard.c
-endif
 endif
 endif
 
