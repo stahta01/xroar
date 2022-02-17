@@ -825,7 +825,7 @@ static _Bool dragon_finish(struct part *p) {
 
 	// XXX until we serialise sound information
 	update_sound_mux_source(md);
-	sound_set_mux_enabled(md->snd, md->PIA1->b.control_register & 0x08);
+	sound_set_mux_enabled(md->snd, PIA_VALUE_CB2(md->PIA1));
 
 	return 1;
 }
@@ -1407,8 +1407,8 @@ static void keyboard_update(void *sptr) {
 
 static void joystick_update(void *sptr) {
 	struct machine_dragon *md = sptr;
-	int port = (md->PIA0->b.control_register & 0x08) >> 3;
-	int axis = (md->PIA0->a.control_register & 0x08) >> 3;
+	int port = PIA_VALUE_CB2(md->PIA0);
+	int axis = PIA_VALUE_CA2(md->PIA0);
 	int dac_value = ((md->PIA1->a.out_sink & 0xfc) | 2) << 8;
 	int js_value = joystick_read_axis(port, axis);
 	if (js_value >= dac_value)
@@ -1419,8 +1419,8 @@ static void joystick_update(void *sptr) {
 
 static void update_sound_mux_source(void *sptr) {
 	struct machine_dragon *md = sptr;
-	unsigned source = ((md->PIA0->b.control_register & (1<<3)) >> 2)
-	                  | ((md->PIA0->a.control_register & (1<<3)) >> 3);
+	unsigned source = (PIA_VALUE_CB2(md->PIA0) << 1)
+	                  | PIA_VALUE_CA2(md->PIA0);
 	sound_set_mux_source(md->snd, source);
 }
 
@@ -1463,7 +1463,7 @@ static void pia1a_data_postwrite(void *sptr) {
 
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
-	tape_set_motor(md->tape_interface, md->PIA1->a.control_register & 0x08);
+	tape_set_motor(md->tape_interface, PIA_VALUE_CA2(md->PIA1));
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 }
 
@@ -1509,7 +1509,7 @@ static void pia1b_data_postwrite(void *sptr) {
 
 static void pia1b_control_postwrite(void *sptr) {
 	struct machine_dragon *md = sptr;
-	sound_set_mux_enabled(md->snd, md->PIA1->b.control_register & 0x08);
+	sound_set_mux_enabled(md->snd, PIA_VALUE_CB2(md->PIA1));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
