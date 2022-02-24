@@ -2,7 +2,7 @@
  *
  *  \brief Event scheduling & dispatch.
  *
- *  \copyright Copyright 2005-2017 Ciaran Anscomb
+ *  \copyright Copyright 2005-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -61,6 +61,8 @@ void event_dequeue(struct event *event);
 // Allocate an event and queue it, flagged to autofree.  Event will be
 // scheduled for current time + dt.
 void event_queue_auto(struct event **list, DELEGATE_T0(void), int dt);
+
+#define event_queued(e) ((e)->queued)
 
 /* In theory, C99 6.5:7 combined with the fact that fixed width integers are
  * guaranteed 2s complement should make this safe.  Kinda hard to tell, though.
