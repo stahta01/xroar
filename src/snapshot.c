@@ -2,7 +2,7 @@
  *
  *  \brief Snapshotting of emulated system.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -561,12 +561,13 @@ static int read_v1_snapshot(const char *filename) {
 					pia->a.output_register = fs_read_uint8(fd);
 					pia->a.control_register = fs_read_uint8(fd);
 					size -= 3;
+					mc6821_update_a_state(pia);
 					if (size < 3) break;
 					pia->b.direction_register = fs_read_uint8(fd);
 					pia->b.output_register = fs_read_uint8(fd);
 					pia->b.control_register = fs_read_uint8(fd);
 					size -= 3;
-					mc6821_update_state(pia);
+					mc6821_update_b_state(pia);
 				}
 				break;
 
