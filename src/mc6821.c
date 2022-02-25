@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,17 +32,29 @@
 #include "xroar.h"
 
 static const struct ser_struct ser_struct_mc6821_side[] = {
-	SER_STRUCT_ELEM(struct MC6821_side, control_register, ser_type_uint8),  // 1
-	SER_STRUCT_ELEM(struct MC6821_side, direction_register, ser_type_uint8),  // 2
-	SER_STRUCT_ELEM(struct MC6821_side, output_register, ser_type_uint8),  // 3
-	SER_STRUCT_ELEM(struct MC6821_side, cx1, ser_type_bool),  // 4
-	SER_STRUCT_ELEM(struct MC6821_side, interrupt_received, ser_type_bool),  // 5
-	SER_STRUCT_ELEM(struct MC6821_side, irq, ser_type_bool),  // 6
-	SER_STRUCT_ELEM(struct MC6821_side, irq_event, ser_type_event),  // 7
-	SER_STRUCT_ELEM(struct MC6821_side, out_source, ser_type_uint8),  // 8
-	SER_STRUCT_ELEM(struct MC6821_side, out_sink, ser_type_uint8),  // 9
-	SER_STRUCT_ELEM(struct MC6821_side, in_source, ser_type_uint8),  // 10
-	SER_STRUCT_ELEM(struct MC6821_side, in_sink, ser_type_uint8),  // 11
+	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MC6821_side, control_register),
+	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct MC6821_side, direction_register),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct MC6821_side, output_register),
+
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6821_side, cx1),
+	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct MC6821_side, cx2),
+	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct MC6821_side, irq1_received),
+	SER_ID_STRUCT_ELEM(13, ser_type_uint8, struct MC6821_side, irq2_received),
+	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6821_side, irq),
+
+	SER_ID_STRUCT_ELEM(7, ser_type_event, struct MC6821_side, irq_event),
+	SER_ID_STRUCT_ELEM(14, ser_type_event, struct MC6821_side, strobe_event),
+	SER_ID_STRUCT_ELEM(15, ser_type_event, struct MC6821_side, restore_event),
+
+	SER_ID_STRUCT_ELEM(8, ser_type_uint8, struct MC6821_side, out_source),
+	SER_ID_STRUCT_ELEM(9, ser_type_uint8, struct MC6821_side, out_sink),
+	SER_ID_STRUCT_ELEM(10, ser_type_uint8, struct MC6821_side, in_source),
+	SER_ID_STRUCT_ELEM(11, ser_type_uint8, struct MC6821_side, in_sink),
+
+	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6821_side, cx2_out_source),
+	SER_ID_STRUCT_ELEM(17, ser_type_bool, struct MC6821_side, cx2_out_sink),
+	SER_ID_STRUCT_ELEM(18, ser_type_bool, struct MC6821_side, cx2_in_source),
+	SER_ID_STRUCT_ELEM(19, ser_type_bool, struct MC6821_side, cx2_in_sink),
 };
 
 static const struct ser_struct_data mc6821_side_ser_struct_data = {
@@ -63,6 +75,9 @@ static const struct ser_struct_data mc6821_ser_struct_data = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void do_irq(void *sptr);
+static void do_strobe_cx2(void *sptr);
+static void do_restore_cx2(void *sptr);
+static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -89,162 +104,275 @@ static struct part *mc6821_allocate(void) {
 	*pia = (struct MC6821){0};
 
 	pia->a.in_sink = 0xff;
+	pia->a.cx2_in_sink = 1;
 	pia->b.in_sink = 0xff;
+	pia->b.cx2_in_sink = 1;
 	event_init(&pia->a.irq_event, DELEGATE_AS0(void, do_irq, &pia->a));
+	event_init(&pia->a.strobe_event, DELEGATE_AS0(void, do_strobe_cx2, &pia->a));
+	event_init(&pia->a.restore_event, DELEGATE_AS0(void, do_restore_cx2, &pia->a));
 	event_init(&pia->b.irq_event, DELEGATE_AS0(void, do_irq, &pia->b));
+	event_init(&pia->b.strobe_event, DELEGATE_AS0(void, do_strobe_cx2, &pia->b));
+	event_init(&pia->b.restore_event, DELEGATE_AS0(void, do_restore_cx2, &pia->b));
 
 	return p;
 }
 
 static _Bool mc6821_finish(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
+
 	if (pia->a.irq_event.next == &pia->a.irq_event) {
 		event_queue(&MACHINE_EVENT_LIST, &pia->a.irq_event);
+	}
+	if (pia->a.strobe_event.next == &pia->a.strobe_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->a.strobe_event);
+	}
+	if (pia->a.restore_event.next == &pia->a.restore_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->a.restore_event);
 	}
 	if (pia->b.irq_event.next == &pia->b.irq_event) {
 		event_queue(&MACHINE_EVENT_LIST, &pia->b.irq_event);
 	}
+	if (pia->b.strobe_event.next == &pia->b.strobe_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->b.strobe_event);
+	}
+	if (pia->b.restore_event.next == &pia->b.restore_event) {
+		event_queue(&MACHINE_EVENT_LIST, &pia->b.restore_event);
+	}
+
+	// Old snapshots:
+	if (pia->a.irq1_received)
+		pia->a.irq1_received = 0x80;
+	if (pia->b.irq1_received)
+		pia->b.irq1_received = 0x80;
 	return 1;
 }
 
 static void mc6821_free(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
 	event_dequeue(&pia->a.irq_event);
+	event_dequeue(&pia->a.strobe_event);
+	event_dequeue(&pia->a.restore_event);
 	event_dequeue(&pia->b.irq_event);
+	event_dequeue(&pia->b.strobe_event);
+	event_dequeue(&pia->b.restore_event);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#define INTERRUPT_ENABLED(p) ((p).control_register & 0x01)
-#define ACTIVE_TRANSITION(p) ((p).control_register & 0x02)
-#define DDR_SELECTED(p)      (!((p).control_register & 0x04))
-#define PDR_SELECTED(p)      ((p).control_register & 0x04)
+#define IRQ1_ENABLED(p) ((p).control_register & 0x01)
+#define IRQ2_ENABLED(p) (((p).control_register & 0x28) == 0x08)
+#define DDR_SELECTED(p) (!((p).control_register & 0x04))
+#define PR_SELECTED(p) ((p).control_register & 0x04)
 
 void mc6821_reset(struct MC6821 *pia) {
-	if (pia == NULL) return;
 	pia->a.control_register = 0;
 	pia->a.direction_register = 0;
 	pia->a.output_register = 0;
-	pia->a.interrupt_received = 0;
 	pia->a.cx1 = 0;
+	pia->a.cx2_out_sink = 1;
+	pia->a.cx2 = 0;
 	pia->a.irq = 0;
+	mc6821_update_a_state(pia);
 	pia->b.control_register = 0;
 	pia->b.direction_register = 0;
 	pia->b.output_register = 0;
-	pia->b.interrupt_received = 0;
 	pia->b.cx1 = 0;
+	pia->b.cx2_out_source = 0;
+	pia->b.cx2_out_sink = 1;
+	pia->b.cx2 = 0;
 	pia->b.irq = 0;
-	mc6821_update_state(pia);
+	mc6821_update_b_state(pia);
 }
-
-#define PIA_INTERRUPT_ENABLED(s) ((s)->control_register & 0x01)
-#define PIA_DDR_SELECTED(s)      (!((s)->control_register & 0x04))
-#define PIA_PDR_SELECTED(s)      ((s)->control_register & 0x04)
 
 void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 	if (level == side->cx1)
 		return;
 	side->cx1 = level;
-	_Bool active_high = side->control_register & 2;
+	_Bool active_high = side->control_register & 0x02;
 	if (active_high == level) {
-		_Bool irq_enabled = side->control_register & 1;
-		side->interrupt_received = 1;
-		if (irq_enabled) {
-			side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-			event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
+		if ((side->control_register & 0x38) == 0x28) {
+			// Read/Write Strobe with Cx1 Restore
+			side->cx2_out_source = side->cx2_out_sink = 1;
+			DELEGATE_SAFE_CALL(side->control_postwrite);
+		}
+		_Bool irq1_enabled = side->control_register & 0x01;
+		side->irq1_received = 0x80;
+		if (irq1_enabled) {
+			// Figure 13, tRS3 = 1µs
+			if (!event_queued(&side->irq_event)) {
+				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
+				event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
+			}
 		} else {
-			side->irq = 0;
+			side->irq = side->control_register & 0x40;
 		}
 	}
 }
 
-#define UPDATE_OUTPUT_A(p) do { \
-		(p).out_sink = ~(~(p).output_register & (p).direction_register); \
-		DELEGATE_SAFE_CALL((p).data_postwrite); \
-	} while (0)
-
-#define UPDATE_OUTPUT_B(p) do { \
-		(p).out_source = (p).output_register & (p).direction_register; \
-		(p).out_sink = (p).output_register | ~(p).direction_register; \
-		DELEGATE_SAFE_CALL((p).data_postwrite); \
-	} while (0)
-
-void mc6821_update_state(struct MC6821 *pia) {
-	UPDATE_OUTPUT_A(pia->a);
-	UPDATE_OUTPUT_B(pia->b);
-	DELEGATE_SAFE_CALL(pia->a.control_postwrite);
-	DELEGATE_SAFE_CALL(pia->b.control_postwrite);
+void mc6821_update_a_state(struct MC6821 *pia) {
+	pia->a.out_sink = ~(~pia->a.output_register & pia->a.direction_register);
+	DELEGATE_SAFE_CALL(pia->a.data_postwrite);
 }
 
-#define READ_DR(p) do { \
-		DELEGATE_SAFE_CALL((p).data_preread); \
-		(p).interrupt_received = 0; \
-		(p).irq = 0; \
-	} while (0)
+void mc6821_update_b_state(struct MC6821 *pia) {
+	pia->b.out_source = pia->b.output_register & pia->b.direction_register;
+	pia->b.out_sink = pia->b.output_register | ~pia->b.direction_register;
+	DELEGATE_SAFE_CALL(pia->b.data_postwrite);
+}
 
-#define READ_CR(p) do { \
-		DELEGATE_SAFE_CALL((p).control_preread); \
-	} while (0)
+void mc6821_update_ca2_state(struct MC6821 *pia) {
+	mc6821_update_cx2_state(&pia->a, PIA_VALUE_CA2(pia));
+}
+
+void mc6821_update_cb2_state(struct MC6821 *pia) {
+	mc6821_update_cx2_state(&pia->b, PIA_VALUE_CB2(pia));
+}
 
 uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 	switch (A & 3) {
 		default:
 		case 0:
-			if (DDR_SELECTED(pia->a))
+			if (DDR_SELECTED(pia->a)) {
+				// Read DDRA
 				return pia->a.direction_register;
-			READ_DR(pia->a);
+			}
+
+			// Read PRA.  This may trigger a read strobe to CA2.
+			DELEGATE_SAFE_CALL(pia->a.data_preread);
+			pia->a.irq1_received = pia->a.irq2_received = 0;
+			pia->a.irq = 0;
+
+			if ((pia->a.control_register & 0x30) == 0x20) {
+				// Read Strobe
+				pia->a.strobe_event.at_tick = event_current_tick + 8;
+				event_queue(&MACHINE_EVENT_LIST, &pia->a.strobe_event);
+				if (!(pia->a.control_register & 0x08)) {
+					// Read Strobe with CA1 Restore
+					event_dequeue(&pia->a.restore_event);
+				} else {
+					// Read Strobe with E Restore
+					pia->a.restore_event.at_tick = event_current_tick + 24;
+					event_queue(&MACHINE_EVENT_LIST, &pia->a.restore_event);
+				}
+			}
+
 			return pia->a.out_sink & pia->a.in_sink;
+
 		case 1:
-			READ_CR(pia->a);
-			return (pia->a.control_register | (pia->a.interrupt_received ? 0x80 : 0));
+			return pia->a.control_register | pia->a.irq1_received | pia->a.irq2_received;
+
 		case 2:
-			if (DDR_SELECTED(pia->b))
+			if (DDR_SELECTED(pia->b)) {
+				// Read DDRB
 				return pia->b.direction_register;
-			READ_DR(pia->b);
-			return (pia->b.output_register & pia->b.direction_register) | ((pia->b.out_source | pia->b.in_source) & pia->b.out_sink & pia->b.in_sink & ~pia->b.direction_register);
+			}
+
+			// Read PRB
+			DELEGATE_SAFE_CALL(pia->b.data_preread);
+			pia->b.irq1_received = pia->b.irq2_received = 0;
+			pia->b.irq = 0;
+
+			return (pia->b.output_register & pia->b.direction_register) | (PIA_VALUE_B(pia) & ~pia->b.direction_register);
+
 		case 3:
-			READ_CR(pia->b);
-			return (pia->b.control_register | (pia->b.interrupt_received ? 0x80 : 0));
+			return pia->b.control_register | pia->b.irq1_received | pia->b.irq2_received;
 	}
 }
 
-#define WRITE_DR(p,v) do { \
-		if (PDR_SELECTED(p)) { \
-			(p).output_register = v; \
-			v &= (p).direction_register; \
-		} else { \
-			(p).direction_register = v; \
-			v &= (p).output_register; \
+#define WRITE_CR(side,v) do { \
+		(side).control_register = v & 0x3f; \
+		if (v & 0x20) { \
+			(side).irq2_received = 0; \
 		} \
-	} while (0)
-
-#define WRITE_CR(p,v) do { \
-		(p).control_register = v & 0x3f; \
-		if (INTERRUPT_ENABLED(p)) { \
-			if ((p).interrupt_received) \
-				(p).irq = 1; \
+		if (IRQ1_ENABLED(side)) { \
+			(side).irq |= (side).irq1_received; \
+		} else if (IRQ2_ENABLED(side)) { \
+			(side).irq |= (side).irq2_received; \
 		} else { \
-			(p).irq = 0; \
+			(side).irq = 0; \
 		} \
-		DELEGATE_SAFE_CALL((p).control_postwrite); \
 	} while (0)
 
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 	switch (A & 3) {
 		default:
+
 		case 0:
-			WRITE_DR(pia->a, D);
-			UPDATE_OUTPUT_A(pia->a);
+			if (DDR_SELECTED(pia->a)) {
+				// Write DDRA
+				pia->a.direction_register = D;
+			} else {
+				// Write PRA
+				pia->a.output_register = D;
+			}
+
+			mc6821_update_a_state(pia);
 			break;
+
 		case 1:
 			WRITE_CR(pia->a, D);
+			if (D & 0x20) {
+				// CA2 as output
+				if (D & 0x10) {
+					// Set/Reset CA2
+					pia->a.cx2_out_sink = D & 8;
+				} else {
+					pia->a.cx2_out_sink = 1;
+				}
+			} else {
+				// CA2 as input
+				pia->a.cx2_out_sink = 1;
+				mc6821_update_ca2_state(pia);
+			}
+			DELEGATE_SAFE_CALL(pia->a.control_postwrite);
 			break;
+
 		case 2:
-			WRITE_DR(pia->b, D);
-			UPDATE_OUTPUT_B(pia->b);
+			if (DDR_SELECTED(pia->b)) {
+				// Write DDRB
+				pia->b.direction_register = D;
+			} else {
+				// Write PRB.  This may trigger write strobe of CA2.
+				pia->b.output_register = D;
+
+				if ((pia->b.control_register & 0x30) == 0x20) {
+					// Write Strobe
+					pia->b.strobe_event.at_tick = event_current_tick + 16;
+					event_queue(&MACHINE_EVENT_LIST, &pia->b.strobe_event);
+					if (!(pia->b.control_register & 0x08)) {
+						// Write Strobe with CB1 Restore
+						event_dequeue(&pia->b.restore_event);
+					} else {
+						// Write Strobe with E Restore
+						pia->b.restore_event.at_tick = event_current_tick + 48;
+						event_queue(&MACHINE_EVENT_LIST, &pia->b.restore_event);
+					}
+				}
+
+			}
+
+			mc6821_update_b_state(pia);
 			break;
+
 		case 3:
 			WRITE_CR(pia->b, D);
+			if (D & 0x20) {
+				// CB2 as output
+				if (D & 0x10) {
+					// Set/Reset CB2
+					pia->b.cx2_out_source = D & 8;
+					pia->b.cx2_out_sink = D & 8;
+				} else {
+					pia->b.cx2_out_source = 1;
+					pia->b.cx2_out_sink = 1;
+				}
+			} else {
+				// CA2 as input
+				pia->b.cx2_out_source = 0;
+				pia->b.cx2_out_sink = 1;
+				mc6821_update_cb2_state(pia);
+			}
+			DELEGATE_SAFE_CALL(pia->b.control_postwrite);
 			break;
 	}
 }
@@ -252,4 +380,41 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 static void do_irq(void *sptr) {
 	struct MC6821_side *side = sptr;
 	side->irq = 1;
+}
+
+static void do_strobe_cx2(void *sptr) {
+	struct MC6821_side *side = sptr;
+	side->cx2_out_source = side->cx2_out_sink = 0;
+	DELEGATE_SAFE_CALL(side->control_postwrite);
+}
+
+static void do_restore_cx2(void *sptr) {
+	struct MC6821_side *side = sptr;
+	side->cx2_out_source = side->cx2_out_sink = 1;
+	DELEGATE_SAFE_CALL(side->control_postwrite);
+}
+
+static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
+	// Bit 5 set configures Cx2 as output
+	if (side->control_register & 0x20) {
+		side->irq2_received = 0;
+		return;
+	}
+	if (level == side->cx2)
+		return;
+	side->cx2 = level;
+	_Bool active_high = side->control_register & 0x10;
+	if (active_high == level) {
+		_Bool irq2_enabled = side->control_register & 0x08;
+		side->irq2_received = 0x40;
+		if (irq2_enabled) {
+			// Figure 13, tRS3 = 1µs
+			if (!event_queued(&side->irq_event)) {
+				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
+				event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
+			}
+		} else {
+			side->irq = side->control_register & 0x80;
+		}
+	}
 }
