@@ -544,7 +544,7 @@ static _Bool coco3_finish(struct part *p) {
 
 	// XXX until we serialise sound information
 	update_sound_mux_source(mcc3);
-	sound_set_mux_enabled(mcc3->snd, mcc3->PIA1->b.control_register & 0x08);
+	sound_set_mux_enabled(mcc3->snd, PIA_VALUE_CB2(mcc3->PIA1));
 
 	return 1;
 }
@@ -1094,8 +1094,8 @@ static void keyboard_update(void *sptr) {
 
 static void joystick_update(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	int port = (mcc3->PIA0->b.control_register & 0x08) >> 3;
-	int axis = (mcc3->PIA0->a.control_register & 0x08) >> 3;
+	int port = PIA_VALUE_CB2(mcc3->PIA0);
+	int axis = PIA_VALUE_CA2(mcc3->PIA0);
 	int dac_value = ((mcc3->PIA1->a.out_sink & 0xfc) | 2) << 8;
 	int js_value = joystick_read_axis(port, axis);
 	if (js_value >= dac_value)
@@ -1106,8 +1106,8 @@ static void joystick_update(void *sptr) {
 
 static void update_sound_mux_source(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	unsigned source = ((mcc3->PIA0->b.control_register & (1<<3)) >> 2)
-	                  | ((mcc3->PIA0->a.control_register & (1<<3)) >> 3);
+	unsigned source = (PIA_VALUE_CB2(mcc3->PIA0) << 1)
+	                  | PIA_VALUE_CA2(mcc3->PIA0);
 	sound_set_mux_source(mcc3->snd, source);
 }
 
@@ -1126,7 +1126,7 @@ static void pia1a_data_postwrite(void *sptr) {
 
 static void pia1a_control_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	tape_set_motor(mcc3->tape_interface, mcc3->PIA1->a.control_register & 0x08);
+	tape_set_motor(mcc3->tape_interface, PIA_VALUE_CA2(mcc3->PIA1));
 }
 
 static void pia1b_data_postwrite(void *sptr) {
@@ -1139,7 +1139,7 @@ static void pia1b_data_postwrite(void *sptr) {
 
 static void pia1b_control_postwrite(void *sptr) {
 	struct machine_coco3 *mcc3 = sptr;
-	sound_set_mux_enabled(mcc3->snd, mcc3->PIA1->b.control_register & 0x08);
+	sound_set_mux_enabled(mcc3->snd, PIA_VALUE_CB2(mcc3->PIA1));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
