@@ -47,9 +47,12 @@
 #define EPS         1e-10
 
 static inline double chypot(double complex c) { return hypot(creal(c), cimag(c)); }
+static inline double complex blt(double complex c) { return (2.0 + c) / (2.0 - c); }
+
+/* currently unused:
 static inline double catan2(double complex c) { return atan2(creal(c), cimag(c)); }
 static inline double complex csqr(double complex z) { return z*z; }
-static inline double complex blt(double complex c) { return (2.0 + c) / (2.0 - c); }
+*/
 
 static void expand(const double complex *, int, double complex *);
 static void multin(double complex, int, double complex *);
