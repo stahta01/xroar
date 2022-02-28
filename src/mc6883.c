@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -37,8 +37,8 @@
 #include "delegate.h"
 
 #include "events.h"
+#include "mc6883.h"
 #include "part.h"
-#include "sam.h"
 #include "serialise.h"
 
 // Constants for address multiplexer
@@ -275,11 +275,11 @@ static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void sam_reset(struct MC6883 *samp) {
+void mc6883_reset(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 
-	sam_set_register(samp, 0);
-	sam_vdg_fsync(samp, 1);
+	mc6883_set_register(samp, 0);
+	mc6883_vdg_fsync(samp, 1);
 	sam->running_fast = 0;
 	sam->extend_slow_cycle = 0;
 }
@@ -300,7 +300,7 @@ void sam_reset(struct MC6883 *samp) {
 static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static unsigned const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
@@ -397,7 +397,7 @@ static void vcounter_set(struct MC6883_private *sam, int i, int val) {
 	}
 }
 
-void sam_vdg_hsync(struct MC6883 *samp, _Bool level) {
+void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (level)
 		return;
@@ -440,7 +440,7 @@ static inline void vcounter_reset(struct MC6883_private *sam, int i) {
 	sam->vdg.vcounter[i].output = 0;
 }
 
-void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
+void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (!level) {
 		return;
@@ -466,7 +466,7 @@ void sam_vdg_fsync(struct MC6883 *samp, _Bool level) {
 // output, thus advancing bit 4.  This in turn alters the input to the Y
 // divider.
 
-int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
+int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 
 	// In fast mode, there's no time to latch video RAM, so just point at
@@ -497,13 +497,13 @@ int sam_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	return nbytes;
 }
 
-void sam_set_register(struct MC6883 *samp, unsigned int value) {
+void mc6883_set_register(struct MC6883 *samp, unsigned int value) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	sam->reg = value;
 	update_from_register(sam);
 }
 
-unsigned int sam_get_register(struct MC6883 *samp) {
+unsigned int mc6883_get_register(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	return sam->reg;
 }

@@ -43,11 +43,11 @@
 #include "mc6809/mc6809.h"
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
+#include "mc6883.h"
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
 #include "romlist.h"
-#include "sam.h"
 #include "serialise.h"
 #include "sound.h"
 #include "tape.h"
@@ -463,7 +463,7 @@ static _Bool dragon_finish(struct part *p) {
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
-	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, sam_mem_cycle, md->SAM);
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc6883_mem_cycle, md->SAM);
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
@@ -935,7 +935,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	if (md->cart && md->cart->reset) {
 		md->cart->reset(md->cart, hard);
 	}
-	sam_reset(md->SAM);
+	mc6883_reset(md->SAM);
 	md->CPU->reset(md->CPU);
 	mc6847_reset(md->VDG);
 	tape_reset(md->tape_interface);
@@ -1306,7 +1306,7 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	struct machine_dragon *md = sptr;
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
-		int n = sam_vdg_bytes(md->SAM, nbytes);
+		int n = mc6883_vdg_bytes(md->SAM, nbytes);
 		if (dest) {
 			uint16_t V = decode_Z(md, md->SAM->V);
 			for (int i = n; i; i--) {
@@ -1331,7 +1331,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	_Bool EnI = pia_vdg_mode & 0x10;
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
-		int n = sam_vdg_bytes(md->SAM, nbytes);
+		int n = mc6883_vdg_bytes(md->SAM, nbytes);
 		if (dest) {
 			uint16_t V = decode_Z(md, md->SAM->V);
 			for (int i = n; i; i--) {
@@ -1359,7 +1359,7 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
-	sam_mem_cycle(md->SAM, 1, A);
+	mc6883_mem_cycle(md->SAM, 1, A);
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	return md->CPU->D;
 }
@@ -1370,7 +1370,7 @@ static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_dragon *md = (struct machine_dragon *)m;
 	md->CPU->D = D;
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, md);
-	sam_mem_cycle(md->SAM, 0, A);
+	mc6883_mem_cycle(md->SAM, 0, A);
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 }
 
@@ -1519,7 +1519,7 @@ static void pia1b_control_postwrite(void *sptr) {
 static void vdg_hs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level);
-	sam_vdg_hsync(md->SAM, level);
+	mc6883_vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
 		_Bool GM0 = p1bval & 0x10;
@@ -1532,7 +1532,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, !level);
-	sam_vdg_hsync(md->SAM, level);
+	mc6883_vdg_hsync(md->SAM, level);
 	// PAL uses palletised output so this wouldn't technically matter, but
 	// user is able to cycle to a faux-NTSC colourscheme, so update phase
 	// here as in NTSC code:
@@ -1547,7 +1547,7 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 static void vdg_fs(void *sptr, _Bool level) {
 	struct machine_dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
-	sam_vdg_fsync(md->SAM, level);
+	mc6883_vdg_fsync(md->SAM, level);
 	if (level) {
 		sound_update(md->snd);
 		md->frame--;

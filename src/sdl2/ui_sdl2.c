@@ -42,7 +42,6 @@
 #include "logging.h"
 #include "machine.h"
 #include "module.h"
-#include "sam.h"
 #include "ui.h"
 #include "vo.h"
 #include "wasm/wasm.h"

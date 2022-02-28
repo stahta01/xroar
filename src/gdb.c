@@ -107,7 +107,7 @@
 #include "machine.h"
 #include "mc6809/hd6309.h"
 #include "mc6809/mc6809.h"
-#include "sam.h"
+#include "mc6883.h"
 #include "xroar.h"
 
 struct gdb_interface_private {
@@ -906,7 +906,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 #ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(query, "sam") && gip->sam) {
 			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: xroar.sam\n");
-			sprintf(packet, "%04x", sam_get_register(gip->sam));
+			sprintf(packet, "%04x", mc6883_get_register(gip->sam));
 			send_packet(gip, packet, 4);
 		}
 		return;
@@ -930,7 +930,7 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 		set += 6;
 #ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(set, "sam") && gip->sam) {
-			sam_set_register(gip->sam, hex16(args));
+			mc6883_set_register(gip->sam, hex16(args));
 			send_packet_string(gip, "OK");
 			return;
 		}

@@ -2,7 +2,7 @@
  *
  *  \brief CAS format tape images.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,8 +38,8 @@
 
 #include "fs.h"
 #include "logging.h"
+#include "mc6883.h"
 #include "tape.h"
-#include "sam.h"
 
 // CAS simulated sample rate chosen such that:
 // - converting to SAM ticks is trivial

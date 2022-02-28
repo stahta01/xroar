@@ -36,8 +36,8 @@
 #include "mc6809/mc6809.h"
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
+#include "mc6883.h"
 #include "part.h"
-#include "sam.h"
 #include "serialise.h"
 #include "snapshot.h"
 #include "tape.h"
@@ -598,7 +598,7 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_WARN("Snapshot v1 read: SAM not found - skipping SAM registers chunk\n");
 						break;
 					}
-					sam_set_register(sam, tmp);
+					mc6883_set_register(sam, tmp);
 				}
 				break;
 

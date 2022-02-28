@@ -39,7 +39,6 @@
 #include "logging.h"
 #include "machine.h"
 #include "module.h"
-#include "sam.h"
 #include "tape.h"
 #include "ui.h"
 #include "vdisk.h"
