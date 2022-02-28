@@ -7,6 +7,8 @@
 /jack/*.o
 /linux/*.o
 /macosx/*.o
+/mc6801/*.o
+/mc6809/*.o
 /mc6847/*.o
 /null/*.o
 /oss/*.o

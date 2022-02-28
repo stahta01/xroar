@@ -2,7 +2,7 @@
  *
  *  \brief GDB protocol support.
  *
- *  \copyright Copyright 2013-2021 Ciaran Anscomb
+ *  \copyright Copyright 2013-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -101,14 +101,14 @@
 #endif
 
 #include "breakpoint.h"
+#include "events.h"
 #include "gdb.h"
-#include "hd6309.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6809.h"
+#include "mc6809/hd6309.h"
+#include "mc6809/mc6809.h"
 #include "sam.h"
 #include "xroar.h"
-#include "events.h"
 
 struct gdb_interface_private {
 	struct machine *machine;

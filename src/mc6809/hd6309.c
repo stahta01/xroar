@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2021 Ciaran Anscomb
+ *  \copyright Copyright 2012-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -154,7 +154,7 @@ static void instruction_posthook(struct MC6809 *cpu);
 #define STRUCT_CPU struct MC6809
 
 #include "mc6809_common.c"
-#include "mc680x_ops.c"
+#include "mc680x/mc680x_ops.c"
 
 /* Mode register macros */
 

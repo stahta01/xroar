@@ -16,8 +16,8 @@
  *  \endlicenseblock
  */
 
-#ifndef XROAR_HD6309_H_
-#define XROAR_HD6309_H_
+#ifndef XROAR_MC6809_HD6309_H_
+#define XROAR_MC6809_HD6309_H_
 
 #include <stdint.h>
 

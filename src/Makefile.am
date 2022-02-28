@@ -73,13 +73,13 @@ endif
 
 if PART_MC6801
 xroar_SOURCES += \
-	mc6801.c mc6801.h
+	mc6801/mc6801.c mc6801/mc6801.h
 endif
 
 if PART_MC6809
 xroar_SOURCES += \
-	hd6309.c hd6309.h \
-	mc6809.c mc6809.h
+	mc6809/hd6309.c mc6809/hd6309.h \
+	mc6809/mc6809.c mc6809/mc6809.h
 endif
 
 if PART_MC6821
@@ -134,8 +134,8 @@ xroar_SOURCES += \
 EXTRA_DIST += \
 	mc6847/font-6847.c mc6847/font-6847.h \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \
-	mc6809_common.c \
-	mc680x_ops.c \
+	mc6809/mc6809_common.c \
+	mc680x/mc680x_ops.c \
 	tcc1014/font-gime.c tcc1014/font-gime.h \
 	vo_generic_ops.c
 
@@ -401,9 +401,9 @@ EXTRA_DIST += \
 # Trace mode support
 if TRACE
 xroar_SOURCES += \
-	mc6801_trace.c mc6801_trace.h \
-	mc6809_trace.c mc6809_trace.h \
-	hd6309_trace.c hd6309_trace.h
+	mc6801/mc6801_trace.c mc6801/mc6801_trace.h \
+	mc6809/mc6809_trace.c mc6809/mc6809_trace.h \
+	mc6809/hd6309_trace.c mc6809/hd6309_trace.h
 endif
 
 if PTHREADS

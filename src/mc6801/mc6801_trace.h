@@ -16,8 +16,8 @@
  *  \endlicenseblock
  */
 
-#ifndef XROAR_MC6801_TRACE_H_
-#define XROAR_MC6801_TRACE_H_
+#ifndef XROAR_MC6801_MC6801_TRACE_H_
+#define XROAR_MC6801_MC6801_TRACE_H_
 
 #include "mc6801.h"
 

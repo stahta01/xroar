@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -167,7 +167,7 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
 #define STRUCT_CPU struct MC6809
 
 #include "mc6809_common.c"
-#include "mc680x_ops.c"
+#include "mc680x/mc680x_ops.c"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

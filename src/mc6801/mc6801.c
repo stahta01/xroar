@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6801/6803 CPUs.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -195,7 +195,7 @@ static void instruction_posthook(struct MC6801 *cpu);
 
 #define STRUCT_CPU struct MC6801
 
-#include "mc680x_ops.c"
+#include "mc680x/mc680x_ops.c"
 
 // Internal memory-mapped registers
 

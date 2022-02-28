@@ -2,7 +2,7 @@
  *
  *  \brief Tandy MC-10 machine.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -36,7 +36,7 @@
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6801.h"
+#include "mc6801/mc6801.h"
 #include "mc6847/mc6847.h"
 #include "ntsc.h"
 #include "part.h"
