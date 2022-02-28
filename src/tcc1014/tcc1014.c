@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -53,7 +53,6 @@
 #include "events.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6809.h"
 #include "part.h"
 #include "serialise.h"
 #include "tcc1014/font-gime.h"

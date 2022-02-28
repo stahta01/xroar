@@ -2,7 +2,7 @@
  *
  *  \brief Support for various binary representations.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,11 +32,11 @@
 
 #include "delegate.h"
 
+#include "debug_cpu.h"
 #include "fs.h"
 #include "hexs19.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6809.h"
 #include "xroar.h"
 
 static int dragon_bin_load(FILE *fd, int autorun);

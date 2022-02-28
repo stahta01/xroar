@@ -2,7 +2,7 @@
  *
  *  \brief Breakpoint tracking for debugging.
  *
- *  \copyright Copyright 2011-2021 Ciaran Anscomb
+ *  \copyright Copyright 2011-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,7 +29,6 @@
 #include "debug_cpu.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6809.h"
 #include "part.h"
 
 struct bp_session_private {

@@ -60,7 +60,6 @@
 #include "path.h"
 #include "printer.h"
 #include "romlist.h"
-#include "sam.h"
 #include "snapshot.h"
 #include "sound.h"
 #include "tape.h"
