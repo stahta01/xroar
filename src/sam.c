@@ -36,6 +36,7 @@
 #include "array.h"
 #include "delegate.h"
 
+#include "events.h"
 #include "part.h"
 #include "sam.h"
 #include "serialise.h"
@@ -339,10 +340,10 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		// Last cycle was slow
 		if (!fast_cycle) {
 			// Slow cycle
-			ncycles = EVENT_SAM_CYCLES(16);
+			ncycles = EVENT_TICKS_14M31818(16);
 		} else {
 			// Transition slow to fast
-			ncycles = EVENT_SAM_CYCLES(15);
+			ncycles = EVENT_TICKS_14M31818(15);
 			sam->running_fast = 1;
 		}
 	} else {
@@ -351,16 +352,16 @@ void sam_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			// Transition fast to slow
 			if (!sam->extend_slow_cycle) {
 				// Still interleaved
-				ncycles = EVENT_SAM_CYCLES(17);
+				ncycles = EVENT_TICKS_14M31818(17);
 			} else {
 				// Re-interleave
-				ncycles = EVENT_SAM_CYCLES(25);
+				ncycles = EVENT_TICKS_14M31818(25);
 				sam->extend_slow_cycle = 0;
 			}
 			sam->running_fast = 0;
 		} else {
 			// Fast cycle, may become un-interleaved
-			ncycles = EVENT_SAM_CYCLES(8);
+			ncycles = EVENT_TICKS_14M31818(8);
 			sam->extend_slow_cycle = !sam->extend_slow_cycle;
 		}
 	}

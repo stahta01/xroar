@@ -915,7 +915,7 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 // Apply accumulated time skip to read state
 
 static void do_skip_read_time(struct tape_interface_private *tip) {
-	advance_read_time(tip, tip->cpuskip * EVENT_SAM_CYCLES(16));
+	advance_read_time(tip, tip->cpuskip * EVENT_TICKS_14M31818(16));
 	tip->cpuskip = 0;
 }
 

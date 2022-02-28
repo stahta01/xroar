@@ -2,7 +2,7 @@
  *
  *  \brief Cassette tape support.
  *
- *  \copyright Copyright 2003-2017 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -23,14 +23,13 @@
 
 #include "delegate.h"
 #include "events.h"
-#include "sam.h"
 
 struct ui_interface;
 
 /* These are the usual cycle lengths for each bit as written by the Dragon
  * BASIC ROM. */
-#define TAPE_BIT0_LENGTH (813 * EVENT_SAM_CYCLES(16))
-#define TAPE_BIT1_LENGTH (435 * EVENT_SAM_CYCLES(16))
+#define TAPE_BIT0_LENGTH (813 * EVENT_TICKS_14M31818(16))
+#define TAPE_BIT1_LENGTH (435 * EVENT_TICKS_14M31818(16))
 #define TAPE_AV_BIT_LENGTH ((TAPE_BIT0_LENGTH + TAPE_BIT1_LENGTH) / 2)
 
 struct machine;

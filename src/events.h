@@ -35,6 +35,7 @@ typedef uint32_t event_ticks;
 #define EVENT_S(s) (EVENT_TICK_RATE * (s))
 #define EVENT_MS(ms) ((EVENT_TICK_RATE * (ms)) / 1000)
 #define EVENT_US(us) ((EVENT_TICK_RATE * (us)) / 1000000)
+#define EVENT_TICKS_14M31818(t) (t)
 
 /* Current "time". */
 extern event_ticks event_current_tick;

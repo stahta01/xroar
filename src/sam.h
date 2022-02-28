@@ -25,8 +25,6 @@
 
 #include "part.h"
 
-#define EVENT_SAM_CYCLES(c) (c)
-
 struct MC6883 {
 	struct part part;
 

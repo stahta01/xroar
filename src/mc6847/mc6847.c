@@ -34,12 +34,11 @@
 #include "mc6847/font-6847t1.h"
 #include "mc6847/mc6847.h"
 #include "part.h"
-#include "sam.h"
 #include "serialise.h"
 #include "xroar.h"
 
 // Convert VDG timings (measured in quarter-VDG-cycles) to event ticks:
-#define EVENT_VDG_TIME(c) EVENT_SAM_CYCLES((c))
+#define EVENT_VDG_TIME(c) EVENT_TICKS_14M31818((c))
 
 static const unsigned GM_nLPR[8] = { 3, 3, 3, 2, 2, 1, 1, 1 };
 
