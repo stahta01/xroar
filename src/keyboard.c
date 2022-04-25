@@ -105,6 +105,7 @@ static void do_rts(void *);
 static int parse_char(struct keyboard_interface_private *kip, uint8_t c);
 
 static struct machine_bp basic_command_breakpoint[] = {
+	BP_DRAGON_ROM(.address = 0x851b, .handler = DELEGATE_INIT(do_rts, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
 	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
 	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),

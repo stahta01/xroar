@@ -1007,9 +1007,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		// Text (type ASCII BASIC)
 		if (private_cfg.load_text) {
 			keyboard_queue_basic_file(xroar_keyboard_interface, private_cfg.load_text);
-			keyboard_queue_basic(xroar_keyboard_interface, "\r");
+			keyboard_queue_basic(xroar_keyboard_interface, "\\r");
 			if (autorun_media_slot == media_slot_text) {
-				keyboard_queue_basic(xroar_keyboard_interface, "RUN\r");
+				keyboard_queue_basic(xroar_keyboard_interface, "RUN\\r");
 			}
 		}
 
@@ -1195,9 +1195,9 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 	default:
 		if (filetype == FILETYPE_ASC && part_is_a(&xroar_machine->part, "mc10")) {
 			keyboard_queue_basic_file(xroar_keyboard_interface, filename);
-			keyboard_queue_basic(xroar_keyboard_interface, "\r");
+			keyboard_queue_basic(xroar_keyboard_interface, "\\r");
 			if (autorun) {
-				keyboard_queue_basic(xroar_keyboard_interface, "RUN\r");
+				keyboard_queue_basic(xroar_keyboard_interface, "RUN\\r");
 			}
 		} else {
 			int r;
@@ -1238,9 +1238,9 @@ void xroar_load_disk(const char *filename, int drive, _Bool autorun) {
 		 * we're talking to */
 		if (strcmp(xroar_machine->config->architecture, "coco") == 0
 		    || strcmp(xroar_machine->config->architecture, "coco3") == 0) {
-			keyboard_queue_basic(xroar_keyboard_interface, "\\eDOS\\r");
+			keyboard_queue_basic(xroar_keyboard_interface, "\\025DOS\\r");
 		} else {
-			keyboard_queue_basic(xroar_keyboard_interface, "\\eBOOT\\r");
+			keyboard_queue_basic(xroar_keyboard_interface, "\\025BOOT\\r");
 		}
 	}
 }

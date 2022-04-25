@@ -460,7 +460,7 @@ static void do_wasm_load_file(void *sptr) {
 		break;
 	case wasm_load_file_type_text:
 		keyboard_queue_basic_file(xroar_keyboard_interface, ev->filename);
-		keyboard_queue_basic(xroar_keyboard_interface, "\r");
+		keyboard_queue_basic(xroar_keyboard_interface, "\\r");
 		break;
 	}
 	free(ev->filename);
