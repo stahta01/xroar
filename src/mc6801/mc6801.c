@@ -850,7 +850,13 @@ static void mc6801_run(struct MC6801 *cpu) {
 				}
 				switch (op & 0xf) {
 				case 0xd: // TST
-					NVMA_CYCLE;
+					switch ((op >> 4) & 0xf) {
+					case 0x0: case 0x6: case 0x7:
+						NVMA_CYCLE;
+						break;
+					default:
+						break;
+					}
 					NVMA_CYCLE;
 					break;
 				default: // the rest need storing
@@ -893,7 +899,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// 0x80 - 0xbf A register arithmetic ops
 			// 0xc0 - 0xff B register arithmetic ops
 			case 0x80: case 0x81: case 0x82:
-			case 0x84: case 0x85: case 0x86:
+			case 0x84: case 0x85: case 0x86: case 0x87:
 			case 0x88: case 0x89: case 0x8a: case 0x8b:
 			case 0x90: case 0x91: case 0x92:
 			case 0x94: case 0x95: case 0x96:
@@ -905,7 +911,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			case 0xb4: case 0xb5: case 0xb6:
 			case 0xb8: case 0xb9: case 0xba: case 0xbb:
 			case 0xc0: case 0xc1: case 0xc2:
-			case 0xc4: case 0xc5: case 0xc6:
+			case 0xc4: case 0xc5: case 0xc6: case 0xc7:
 			case 0xc8: case 0xc9: case 0xca: case 0xcb:
 			case 0xd0: case 0xd1: case 0xd2:
 			case 0xd4: case 0xd5: case 0xd6:
@@ -932,12 +938,14 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x4: tmp1 = op_and(cpu, tmp1, tmp2); break; // ANDA, ANDB
 				case 0x5: (void)op_and(cpu, tmp1, tmp2); break; // BITA, BITB
 				case 0x6: tmp1 = op_ld(cpu, 0, tmp2); break; // LDAA, LDAB
+				case 0x7: break;  // XXX illegal op 0x87, 0xc7
 				case 0x8: tmp1 = op_eor(cpu, tmp1, tmp2); break; // EORA, EORB
 				case 0x9: tmp1 = op_adc(cpu, tmp1, tmp2); break; // ADCA, ADCB
 				case 0xa: tmp1 = op_or(cpu, tmp1, tmp2); break; // ORA, ORB
 				case 0xb: tmp1 = op_add(cpu, tmp1, tmp2); break; // ADDA, ADDB
 				default: break;
 				}
+				// TODO verify behaviour of 0x87, 0xc7
 				if (!(op & 0x40)) {
 					REG_A = tmp1;
 				} else {
@@ -1018,6 +1026,24 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x4c: REG_D = tmp1; break;
 				case 0x4e: REG_X = tmp1; break;
 				}
+			} break;
+
+			// 0x8f XXX illegal
+			// 0xcd, 0xcf XXX illegal
+			// TODO: behaviour not tested, this just gets the cycle
+			// count right
+			case 0x8f:
+			case 0xcd: case 0xcf: {
+				unsigned tmp1;
+				(void)word_immediate(cpu);
+				switch (op & 0x4e) {
+				default:
+				case 0x0e: tmp1 = REG_SP; break;
+				case 0x4c: tmp1 = REG_D; break;
+				case 0x4e: tmp1 = REG_X; break;
+				}
+				CLR_NZV;
+				SET_NZ16(tmp1);
 			} break;
 
 			// 0x97, 0xa7, 0xb7 STAA
