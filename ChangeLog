@@ -11,6 +11,7 @@
  * New abstract block device handling
  * IDE support adjusted to use abstracted block devices
  * MOOH/NX32 support adjusted to use abstracted block devices
+ * 6801/6803: fix some illegal instruction timings [George Phillips]
 
 Version 1.0.9, Tue 18 Jan 2022
 
