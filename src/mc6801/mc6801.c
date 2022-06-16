@@ -370,13 +370,19 @@ static void mc6801_run(struct MC6801 *cpu) {
 		case mc6801_state_label_a:
 			if (cpu->nmi_active) {
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				peek_byte(cpu, REG_PC);
+				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
+				peek_byte(cpu, REG_SP);
 				cpu->state = mc6801_state_dispatch_irq;
 				continue;
 			}
 			if (!(REG_CC & CC_I) && (cpu->irq1_active || cpu->irq2_active)) {
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				peek_byte(cpu, REG_PC);
+				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
+				peek_byte(cpu, REG_SP);
 				cpu->state = mc6801_state_dispatch_irq;
 				continue;
 			}
@@ -387,9 +393,21 @@ static void mc6801_run(struct MC6801 *cpu) {
 			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
 			continue;
 
+		case mc6801_state_wai:
+			peek_byte(cpu, REG_SP);
+			if (cpu->nmi_active) {
+				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				cpu->state = mc6801_state_dispatch_irq;
+				continue;
+			}
+			if (!(REG_CC & CC_I) && (cpu->irq1_active || cpu->irq2_active)) {
+				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				cpu->state = mc6801_state_dispatch_irq;
+				continue;
+			}
+			continue;
+
 		case mc6801_state_dispatch_irq:
-			peek_byte(cpu, REG_PC);
-			peek_byte(cpu, REG_PC);
 			if (cpu->nmi_active) {
 				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
 				take_interrupt(cpu, MC6801_INT_VEC_NMI);
@@ -785,15 +803,18 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// 0x3e WAI inherent
 			case 0x3e:
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
-				cpu->state = mc6801_state_dispatch_irq;
+				cpu->state = mc6801_state_wai;
 				continue;
 
 			// 0x3f SWI inherent
 			case 0x3f:
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
+				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
+				peek_byte(cpu, REG_SP);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, MC6801_INT_VEC_SWI);
 				cpu->state = mc6801_state_label_a;
@@ -1323,18 +1344,14 @@ static uint16_t pull_s_word(struct MC6801 *cpu) {
 }
 
 static void stack_irq_registers(struct MC6801 *cpu) {
-	NVMA_CYCLE;
-	NVMA_CYCLE;
 	push_s_word(cpu, REG_PC);
 	push_s_word(cpu, REG_X);
 	push_s_byte(cpu, REG_A);
 	push_s_byte(cpu, REG_B);
 	push_s_byte(cpu, REG_CC);
-	peek_byte(cpu, REG_SP);  // XXX does this belong here?
 }
 
 static void take_interrupt(struct MC6801 *cpu, uint16_t vec) {
-	NVMA_CYCLE;
 #ifdef TRACE
 	if (logging.trace_cpu) {
 		mc6801_trace_irq(cpu->tracer, vec);
@@ -1344,7 +1361,6 @@ static void take_interrupt(struct MC6801 *cpu, uint16_t vec) {
 	cpu->itmp = CC_I;
 	cpu->nmi_latch = cpu->irq1_latch = cpu->irq2_latch = 0;
 	REG_PC = fetch_word(cpu, vec);
-	NVMA_CYCLE;
 }
 
 static void instruction_posthook(struct MC6801 *cpu) {

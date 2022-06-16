@@ -74,7 +74,7 @@ enum mc6801_state {
 	mc6801_state_dispatch_irq,
 	mc6801_state_label_b,
 	mc6801_state_next_instruction,
-	mc6801_state_wai_check_halt,
+	mc6801_state_wai,
 	mc6801_state_sync_check_halt,
 	mc6801_state_done_instruction,
 	mc6801_state_hcf
