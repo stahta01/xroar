@@ -1889,6 +1889,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				// XXX Two dead cycles?  Verify further!
 				peek_byte(cpu, cpu->reg_pc);
 				peek_byte(cpu, cpu->reg_pc);
+				REG_MD |= MD_IL;
 				stack_irq_registers(cpu, 1);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
