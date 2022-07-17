@@ -12,6 +12,7 @@
  * IDE support adjusted to use abstracted block devices
  * MOOH/NX32 support adjusted to use abstracted block devices
  * 6801/6803: fix some illegal instruction timings [George Phillips]
+ * Fixed uppercase 'G', lowercase 'j' and 'w' glyphs for 6847T1 [Tim Lindner]
 
 Version 1.0.9, Tue 18 Jan 2022
 
