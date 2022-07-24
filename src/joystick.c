@@ -44,7 +44,7 @@ static struct joystick_module * const joystick_module_list[] = {
 #ifdef HAVE_LINUX_JOYSTICK
 	&linux_js_mod,
 #endif
-#ifdef HAVE_SDL
+#ifdef HAVE_SDL2
 	&sdl_js_mod_exported,
 #endif
 	NULL

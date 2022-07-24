@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef HAVE_SDL
+#ifdef HAVE_SDL2
 #include <SDL.h>
 #else
 #include <errno.h>
@@ -83,7 +83,7 @@ static void *new(void *cfg) {
 }
 
 static unsigned int current_time(void) {
-#ifdef HAVE_SDL
+#ifdef HAVE_SDL2
 	return SDL_GetTicks();
 #else
 	struct timeval tp;
@@ -93,7 +93,7 @@ static unsigned int current_time(void) {
 }
 
 static void sleep_ms(unsigned int ms) {
-#ifdef HAVE_SDL
+#ifdef HAVE_SDL2
 	SDL_Delay(ms);
 #else
 	struct timespec elapsed, tv;
