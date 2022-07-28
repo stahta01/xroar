@@ -1381,6 +1381,7 @@ seen in the wild, the primary examples being:
 @item Tandy Super ECB (CoCo 3) @tab @samp{@@coco3} @tab @file{coco3.rom}
 @item Tandy Super ECB (PAL CoCo 3) @tab @samp{@@coco3p} @tab @file{coco3p.rom}
 @item Tandy Microcolour BASIC @tab @samp{@@mc10} @tab @file{mc10.rom}
+@item Alice Microcolour BASIC @tab @samp{@@alice} @tab @file{alice.rom}
 @item DragonDOS @tab @samp{@@dragondos_compat} @tab @file{dplus49b.rom, sdose6.rom, ddos10.rom}
 @item Delta System @tab @samp{@@delta} @tab @file{delta.rom}
 @item RS-DOS @tab @samp{@@rsdos} @tab @file{disk11.rom, disk10.rom}
