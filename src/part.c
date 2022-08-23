@@ -354,12 +354,13 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				char *name = ser_read_string(sh);
 				if (name) {
 					pe = partdb_find_entry(name);
-					free(name);
 					if (!pe) {
 						LOG_WARN("PART: can't deserialise '%s'\n", name);
+						free(name);
 						ser_set_error(sh, ser_error_format);
 						return NULL;
 					}
+					free(name);
 					assert(pe->funcs != NULL);
 					assert(pe->funcs->ser_struct_data != NULL);
 					p = pe->funcs->allocate();
