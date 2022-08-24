@@ -256,6 +256,8 @@ static uint8_t op_clr(STRUCT_CPU *cpu, uint8_t in) {
 }
 
 // This version of DAA used in 6809
+// TODO: [hoglet67] suggests 6809 actually uses op_daa_v(), but also that
+// 6309 behaviour differs.
 static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) out |= 0x06;
@@ -269,6 +271,7 @@ static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
 }
 
 // This version of DAA used in 6801/6803
+// TODO: [hoglet67] suggests this is actually also the 6809 behaviour - TEST
 static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned add = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;

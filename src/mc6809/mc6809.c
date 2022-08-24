@@ -25,8 +25,19 @@
  *  -  Dragon Update, Illegal Op-codes, Feb 1994 Ciaran Anscomb
  *
  *  -  Motorola 6809 and Hitachi 6309 Programmers Reference,
- *     2009 Darren Atkinson
+ *     2009 Darren Atkinson [darrena]
+ *
+ *  -  Undocumented 6809 Behaviours, David Banks [hoglet67]
+ *     https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6809-Behaviours
  */
+
+// TODO:
+//
+// - Many more instructions fall through to their unprefixed form after a
+//   prefix.
+//
+// - The store immediate illegal instructions apparently have different flag
+//   behaviour when unprefixed.
 
 #include "top-config.h"
 
@@ -118,7 +129,8 @@ static uint16_t ea_indexed(struct MC6809 *cpu);
 
 static void push_irq_registers(struct MC6809 *cpu);
 static void push_firq_registers(struct MC6809 *cpu);
-static void stack_irq_registers(struct MC6809 *cpu, _Bool entire);
+static void stack_irq_registers(struct MC6809 *cpu);
+static void stack_firq_registers(struct MC6809 *cpu);
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec);
 static void instruction_posthook(struct MC6809 *cpu);
 
@@ -129,6 +141,8 @@ static void instruction_posthook(struct MC6809 *cpu);
 /* Illegal 6809 8-bit arithmetic operations */
 
 static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
+static uint8_t op_xdec(struct MC6809 *cpu, uint8_t in);
+static uint8_t op_xclr(struct MC6809 *cpu, uint8_t in);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -295,21 +309,21 @@ static void mc6809_run(struct MC6809 *cpu) {
 			if (cpu->nmi_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 				continue;
 			}
 			if (!(REG_CC & CC_F) && cpu->firq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 0);
+				stack_firq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 				continue;
 			}
 			if (!(REG_CC & CC_I) && cpu->irq_active) {
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 				continue;
 			}
@@ -373,8 +387,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			}
 			continue;
 
-		case mc6809_state_next_instruction:
-			{
+		case mc6809_state_next_instruction: {
 			unsigned op;
 			cpu->state = mc6809_state_label_a;
 			// Fetch op-code and process
@@ -387,13 +400,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x50 - 0x5f inherent B register ops
 			// 0x60 - 0x6f indexed mode ops
 			// 0x70 - 0x7f extended mode ops
-			// XXX UNVERIFIED whether *all* of these operations
-			// work when prefixed by 0x10.
-			// 0x1000 - 0x100f direct mode ops illegal
-			// 0x1040 - 0x104f inherent A register ops illegal
-			// 0x1050 - 0x105f inherent B register ops illegal
-			// 0x1060 - 0x106f indexed mode ops illegal
-			// 0x1070 - 0x107f extended mode ops illegal
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x00: case 0x01: case 0x02: case 0x03:
 			case 0x04: case 0x05: case 0x06: case 0x07:
 			case 0x08: case 0x09: case 0x0a: case 0x0b:
@@ -401,11 +408,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x40: case 0x41: case 0x42: case 0x43:
 			case 0x44: case 0x45: case 0x46: case 0x47:
 			case 0x48: case 0x49: case 0x4a: case 0x4b:
-			case 0x4c: case 0x4d: case 0x4f:
+			case 0x4c: case 0x4d: case 0x4e: case 0x4f:
 			case 0x50: case 0x51: case 0x52: case 0x53:
 			case 0x54: case 0x55: case 0x56: case 0x57:
 			case 0x58: case 0x59: case 0x5a: case 0x5b:
-			case 0x5c: case 0x5d: case 0x5f:
+			case 0x5c: case 0x5d: case 0x5e: case 0x5f:
 			case 0x60: case 0x61: case 0x62: case 0x63:
 			case 0x64: case 0x65: case 0x66: case 0x67:
 			case 0x68: case 0x69: case 0x6a: case 0x6b:
@@ -414,6 +421,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x74: case 0x75: case 0x76: case 0x77:
 			case 0x78: case 0x79: case 0x7a: case 0x7b:
 			case 0x7c: case 0x7d: case 0x7f:
+
 			case 0x0200: case 0x0201: case 0x0202: case 0x0203:
 			case 0x0204: case 0x0205: case 0x0206: case 0x0207:
 			case 0x0208: case 0x0209: case 0x020a: case 0x020b:
@@ -421,11 +429,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x0240: case 0x0241: case 0x0242: case 0x0243:
 			case 0x0244: case 0x0245: case 0x0246: case 0x0247:
 			case 0x0248: case 0x0249: case 0x024a: case 0x024b:
-			case 0x024c: case 0x024d: case 0x024f:
+			case 0x024c: case 0x024d: case 0x024e: case 0x024f:
 			case 0x0250: case 0x0251: case 0x0252: case 0x0253:
 			case 0x0254: case 0x0255: case 0x0256: case 0x0257:
 			case 0x0258: case 0x0259: case 0x025a: case 0x025b:
-			case 0x025c: case 0x025d: case 0x025f:
+			case 0x025c: case 0x025d: case 0x025e: case 0x025f:
 			case 0x0260: case 0x0261: case 0x0262: case 0x0263:
 			case 0x0264: case 0x0265: case 0x0266: case 0x0267:
 			case 0x0268: case 0x0269: case 0x026a: case 0x026b:
@@ -433,7 +441,29 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x0270: case 0x0271: case 0x0272: case 0x0273:
 			case 0x0274: case 0x0275: case 0x0276: case 0x0277:
 			case 0x0278: case 0x0279: case 0x027a: case 0x027b:
-			case 0x027c: case 0x027d: case 0x027f: {
+			case 0x027c: case 0x027d: case 0x027f:
+
+			case 0x0300: case 0x0301: case 0x0302: case 0x0303:
+			case 0x0304: case 0x0305: case 0x0306: case 0x0307:
+			case 0x0308: case 0x0309: case 0x030a: case 0x030b:
+			case 0x030c: case 0x030d: case 0x030f:
+			case 0x0340: case 0x0341: case 0x0342: case 0x0343:
+			case 0x0344: case 0x0345: case 0x0346: case 0x0347:
+			case 0x0348: case 0x0349: case 0x034a: case 0x034b:
+			case 0x034c: case 0x034d: case 0x034e: case 0x034f:
+			case 0x0350: case 0x0351: case 0x0352: case 0x0353:
+			case 0x0354: case 0x0355: case 0x0356: case 0x0357:
+			case 0x0358: case 0x0359: case 0x035a: case 0x035b:
+			case 0x035c: case 0x035d: case 0x035e: case 0x035f:
+			case 0x0360: case 0x0361: case 0x0362: case 0x0363:
+			case 0x0364: case 0x0365: case 0x0366: case 0x0367:
+			case 0x0368: case 0x0369: case 0x036a: case 0x036b:
+			case 0x036c: case 0x036d: case 0x036f:
+			case 0x0370: case 0x0371: case 0x0372: case 0x0373:
+			case 0x0374: case 0x0375: case 0x0376: case 0x0377:
+			case 0x0378: case 0x0379: case 0x037a: case 0x037b:
+			case 0x037c: case 0x037d: case 0x037f: {
+
 				uint16_t ea;
 				unsigned tmp1;
 				switch ((op >> 4) & 0xf) {
@@ -455,10 +485,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
 				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
-				case 0xb: // DEC illegal
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
+				case 0xb: // DEC illegal [hoglet67]
+					  tmp1 = op_xdec(cpu, tmp1); break;
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
 				case 0xd: tmp1 = op_tst(cpu, tmp1); break; // TST, TSTA, TSTB
+				case 0xe: // CLRA, CLRB illegal [hoglet67]
+					tmp1 = op_xclr(cpu, tmp1); break;
 				case 0xf: tmp1 = op_clr(cpu, tmp1); break; // CLR, CLRA, CLRB
 				default: break;
 				}
@@ -489,7 +522,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x0e JMP direct
 			// 0x6e JMP indexed
 			// 0x7e JMP extended
-			case 0x0e: case 0x6e: case 0x7e: {
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x0e: case 0x6e: case 0x7e:
+			case 0x020e: case 0x026e: case 0x027e:
+			case 0x030e: case 0x036e: case 0x037e: {
 				unsigned ea;
 				switch ((op >> 4) & 0xf) {
 				case 0x0: ea = ea_direct(cpu); break;
@@ -519,10 +555,22 @@ static void mc6809_run(struct MC6809 *cpu) {
 				continue;
 
 			// 0x12 NOP inherent
-			case 0x12: peek_byte(cpu, REG_PC); break;
+			// 0x1b NOP inherent (illegal)
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x12:
+			case 0x1b:
+			case 0x0212:
+			case 0x021b:
+			case 0x0312:
+			case 0x031b:
+				peek_byte(cpu, REG_PC);
+				break;
 
 			// 0x13 SYNC inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x13:
+			case 0x0213:
+			case 0x0313:
 				peek_byte(cpu, REG_PC);
 				cpu->nmi_active = cpu->nmi_latch;
 				cpu->firq_active = cpu->firq_latch;
@@ -532,24 +580,30 @@ static void mc6809_run(struct MC6809 *cpu) {
 				continue;
 
 			// 0x14, 0x15 HCF? (illegal)
-			case 0x14:
-			case 0x15:
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x14: case 0x15: case 0xcd:
+			case 0x0214: case 0x0215: case 0x02cd:
+			case 0x0314: case 0x0315: case 0x03cd:
 				cpu->state = mc6809_state_hcf;
 				break;
 
 			// 0x16 LBRA relative
-			case 0x16: {
-				uint16_t ea;
-				ea = long_relative(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x16:
+			case 0x0216:
+			case 0x0316: {
+				uint16_t ea = long_relative(cpu);
 				REG_PC += ea;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 			} break;
 
 			// 0x17 LBSR relative
-			case 0x17: {
-				uint16_t ea;
-				ea = long_relative(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x17:
+			case 0x0217:
+			case 0x0317: {
+				uint16_t ea = long_relative(cpu);
 				ea += REG_PC;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -560,41 +614,51 @@ static void mc6809_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x18 Shift CC with mask inherent (illegal)
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			// Behaviour as defined in [hoglet67]
 			case 0x18:
-				REG_CC = (REG_CC << 1) & (CC_H | CC_Z);
+			case 0x0218:
+			case 0x0318: {
+				unsigned data = fetch_byte_notrace(cpu, REG_PC);
+				REG_CC = (REG_CC & data) << 1;
+				REG_CC |= (REG_CC >> 2) & 0x02;
 				NVMA_CYCLE;
-				peek_byte(cpu, REG_PC);
-				break;
+			} break;
 
 			// 0x19 DAA inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x19:
+			case 0x0219:
+			case 0x0319:
 				REG_A = op_daa(cpu, REG_A);
 				peek_byte(cpu, REG_PC);
 				break;
 
 			// 0x1a ORCC immediate
-			case 0x1a: {
-				unsigned data;
-				data = byte_immediate(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x1a:
+			case 0x021a:
+			case 0x031a: {
+				unsigned data = byte_immediate(cpu);
 				REG_CC |= data;
 				peek_byte(cpu, REG_PC);
 			} break;
 
-			// 0x1b NOP inherent (illegal)
-			case 0x1b:
-				peek_byte(cpu, REG_PC);
-				break;
-
 			// 0x1c ANDCC immediate
-			case 0x1c: {
-				unsigned data;
-				data = byte_immediate(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x1c:
+			case 0x021c:
+			case 0x031c: {
+				unsigned data = byte_immediate(cpu);
 				REG_CC &= data;
 				peek_byte(cpu, REG_PC);
 			} break;
 
 			// 0x1d SEX inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x1d:
+			case 0x021d:
+			case 0x031d:
 				REG_A = (REG_B & 0x80) ? 0xff : 0;
 				CLR_NZ;
 				SET_NZ16(REG_D);
@@ -602,10 +666,12 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x1e EXG immediate
-			case 0x1e: {
-				unsigned postbyte;
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x1e:
+			case 0x021e:
+			case 0x031e: {
 				uint16_t tmp1, tmp2;
-				postbyte = byte_immediate(cpu);
+				unsigned postbyte = byte_immediate(cpu);
 				switch (postbyte >> 4) {
 					case 0x0: tmp1 = REG_D; break;
 					case 0x1: tmp1 = REG_X; break;
@@ -656,10 +722,12 @@ static void mc6809_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x1f TFR immediate
-			case 0x1f: {
-				unsigned postbyte;
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x1f:
+			case 0x021f:
+			case 0x031f: {
 				uint16_t tmp1;
-				postbyte = byte_immediate(cpu);
+				unsigned postbyte = byte_immediate(cpu);
 				switch (postbyte >> 4) {
 					case 0x0: tmp1 = REG_D; break;
 					case 0x1: tmp1 = REG_X; break;
@@ -742,7 +810,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x34 PSHS immediate
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x34:
+			case 0x0234:
+			case 0x0334:
 				{
 					unsigned postbyte = byte_immediate(cpu);
 					NVMA_CYCLE;
@@ -760,7 +831,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x35 PULS immediate
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x35:
+			case 0x0235:
+			case 0x0335:
 				{
 					unsigned postbyte = byte_immediate(cpu);
 					NVMA_CYCLE;
@@ -778,7 +852,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x36 PSHU immediate
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x36:
+			case 0x0236:
+			case 0x0336:
 				{
 					unsigned postbyte = byte_immediate(cpu);
 					NVMA_CYCLE;
@@ -796,7 +873,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x37 PULU immediate
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x37:
+			case 0x0237:
+			case 0x0337:
 				{
 					unsigned postbyte = byte_immediate(cpu);
 					NVMA_CYCLE;
@@ -814,9 +894,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x38 ANDCC immediate, illegal
-			case 0x38: {
-				unsigned data;
-				data = byte_immediate(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x38:
+			case 0x0238:
+			case 0x0338: {
+				unsigned data = byte_immediate(cpu);
 				REG_CC &= data;
 				peek_byte(cpu, REG_PC);
 				/* Differs from legal 0x1c version by
@@ -825,21 +907,30 @@ static void mc6809_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x39 RTS inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x39:
+			case 0x0239:
+			case 0x0339:
 				peek_byte(cpu, REG_PC);
 				REG_PC = pull_s_word(cpu);
 				NVMA_CYCLE;
 				break;
 
 			// 0x3a ABX inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x3a:
+			case 0x023a:
+			case 0x033a:
 				REG_X += REG_B;
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
 				break;
 
 			// 0x3b RTI inherent
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x3b:
+			case 0x023b:
+			case 0x033b:
 				peek_byte(cpu, REG_PC);
 				REG_CC = pull_s_byte(cpu);
 				if (REG_CC & CC_E) {
@@ -858,19 +949,24 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 
 			// 0x3c CWAI immediate
-			case 0x3c: {
-				unsigned data;
-				data = byte_immediate(cpu);
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x3c:
+			case 0x023c:
+			case 0x033c: {
+				unsigned data = byte_immediate(cpu);
 				REG_CC &= data;
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				NVMA_CYCLE;
 				cpu->state = mc6809_state_dispatch_irq;
 			} break;
 
 			// 0x3d MUL inherent
-			case 0x3d: {
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x3d:
+			case 0x023d:
+			case 0x033d: {
 				unsigned tmp = REG_A * REG_B;
 				REG_D = tmp;
 				CLR_ZC;
@@ -889,19 +985,20 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
-			// 0x3e RESET, illegal
+			// 0x3e RESET inherent, illegal
+			// [hoglet67] F and I not set
 			case 0x3e:
 				peek_byte(cpu, REG_PC);
 				push_irq_registers(cpu);
 				instruction_posthook(cpu);
-				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_RESET);
+				take_interrupt(cpu, 0, MC6809_INT_VEC_RESET);
 				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x3f SWI inherent
 			case 0x3f:
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, CC_F|CC_I, MC6809_INT_VEC_SWI);
 				cpu->state = mc6809_state_label_a;
@@ -909,6 +1006,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 			// 0x80 - 0xbf A register arithmetic ops
 			// 0xc0 - 0xff B register arithmetic ops
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x80: case 0x81: case 0x82:
 			case 0x84: case 0x85: case 0x86: case 0x87:
 			case 0x88: case 0x89: case 0x8a: case 0x8b:
@@ -932,7 +1030,58 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0xe8: case 0xe9: case 0xea: case 0xeb:
 			case 0xf0: case 0xf1: case 0xf2:
 			case 0xf4: case 0xf5: case 0xf6:
-			case 0xf8: case 0xf9: case 0xfa: case 0xfb: {
+			case 0xf8: case 0xf9: case 0xfa: case 0xfb:
+
+			case 0x0280: case 0x0281: case 0x0282:
+			case 0x0284: case 0x0285: case 0x0286: case 0x0287:
+			case 0x0288: case 0x0289: case 0x028a: case 0x028b:
+			case 0x0290: case 0x0291: case 0x0292:
+			case 0x0294: case 0x0295: case 0x0296:
+			case 0x0298: case 0x0299: case 0x029a: case 0x029b:
+			case 0x02a0: case 0x02a1: case 0x02a2:
+			case 0x02a4: case 0x02a5: case 0x02a6:
+			case 0x02a8: case 0x02a9: case 0x02aa: case 0x02ab:
+			case 0x02b0: case 0x02b1: case 0x02b2:
+			case 0x02b4: case 0x02b5: case 0x02b6:
+			case 0x02b8: case 0x02b9: case 0x02ba: case 0x02bb:
+			case 0x02c0: case 0x02c1: case 0x02c2:
+			case 0x02c4: case 0x02c5: case 0x02c6: case 0x02c7:
+			case 0x02c8: case 0x02c9: case 0x02ca: case 0x02cb:
+			case 0x02d0: case 0x02d1: case 0x02d2:
+			case 0x02d4: case 0x02d5: case 0x02d6:
+			case 0x02d8: case 0x02d9: case 0x02da: case 0x02db:
+			case 0x02e0: case 0x02e1: case 0x02e2:
+			case 0x02e4: case 0x02e5: case 0x02e6:
+			case 0x02e8: case 0x02e9: case 0x02ea: case 0x02eb:
+			case 0x02f0: case 0x02f1: case 0x02f2:
+			case 0x02f4: case 0x02f5: case 0x02f6:
+			case 0x02f8: case 0x02f9: case 0x02fa: case 0x02fb:
+
+			case 0x0380: case 0x0381: case 0x0382:
+			case 0x0384: case 0x0385: case 0x0386: case 0x0387:
+			case 0x0388: case 0x0389: case 0x038a: case 0x038b:
+			case 0x0390: case 0x0391: case 0x0392:
+			case 0x0394: case 0x0395: case 0x0396:
+			case 0x0398: case 0x0399: case 0x039a: case 0x039b:
+			case 0x03a0: case 0x03a1: case 0x03a2:
+			case 0x03a4: case 0x03a5: case 0x03a6:
+			case 0x03a8: case 0x03a9: case 0x03aa: case 0x03ab:
+			case 0x03b0: case 0x03b1: case 0x03b2:
+			case 0x03b4: case 0x03b5: case 0x03b6:
+			case 0x03b8: case 0x03b9: case 0x03ba: case 0x03bb:
+			case 0x03c0: case 0x03c1: case 0x03c2:
+			case 0x03c4: case 0x03c5: case 0x03c6: case 0x03c7:
+			case 0x03c8: case 0x03c9: case 0x03ca: case 0x03cb:
+			case 0x03d0: case 0x03d1: case 0x03d2:
+			case 0x03d4: case 0x03d5: case 0x03d6:
+			case 0x03d8: case 0x03d9: case 0x03da: case 0x03db:
+			case 0x03e0: case 0x03e1: case 0x03e2:
+			case 0x03e4: case 0x03e5: case 0x03e6:
+			case 0x03e8: case 0x03e9: case 0x03ea: case 0x03eb:
+			case 0x03f0: case 0x03f1: case 0x03f2:
+			case 0x03f4: case 0x03f5: case 0x03f6:
+			case 0x03f8: case 0x03f9: case 0x03fa: case 0x03fb: {
+
 				unsigned tmp1, tmp2;
 				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
@@ -1015,9 +1164,42 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
+			// 0x10c3, 0x10d3, 0x10e3, 0x10f3 XADDD, illegal [hoglet67]
+			case 0x02c3: case 0x02d3: case 0x02e3: case 0x02f3: {
+				unsigned tmp1 = REG_D;
+				unsigned tmp2;
+				switch ((op >> 4) & 3) {
+				case 0: tmp2 = word_immediate(cpu); break;
+				case 1: tmp2 = word_direct(cpu); break;
+				case 2: tmp2 = word_indexed(cpu); break;
+				case 3: tmp2 = word_extended(cpu); break;
+				default: tmp2 = 0; break;
+				}
+				(void)op_add16(cpu, tmp1, tmp2);
+				NVMA_CYCLE;
+			} break;
+
+			// 0x11c3, 0x11d3, 0x11e3, 0x11f3 XADDU, illegal [hoglet67]
+			case 0x03c3: case 0x03d3: case 0x03e3: case 0x03f3: {
+				unsigned tmp1 = REG_U | 0xff00;
+				unsigned tmp2;
+				switch ((op >> 4) & 3) {
+				case 0: tmp2 = word_immediate(cpu); break;
+				case 1: tmp2 = word_direct(cpu); break;
+				case 2: tmp2 = word_indexed(cpu); break;
+				case 3: tmp2 = word_extended(cpu); break;
+				default: tmp2 = 0; break;
+				}
+				(void)op_add16(cpu, tmp1, tmp2);
+				NVMA_CYCLE;
+			} break;
+
 			// 0x8d BSR
 			// 0x9d, 0xad, 0xbd JSR
-			case 0x8d: case 0x9d: case 0xad: case 0xbd: {
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
+			case 0x8d: case 0x9d: case 0xad: case 0xbd:
+			case 0x028d: case 0x029d: case 0x02ad: case 0x02bd:
+			case 0x038d: case 0x039d: case 0x03ad: case 0x03bd: {
 				unsigned ea;
 				switch ((op >> 4) & 3) {
 				case 0: ea = short_relative(cpu); ea += REG_PC; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
@@ -1061,8 +1243,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 			// 0x8f STX immediate, illegal
 			// 0xcf STU immediate, illegal
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			// Illegal instruction only part working
-			case 0x8f: case 0xcf: {
+			case 0x8f: case 0xcf:
+			case 0x028f: case 0x02cf:
+			case 0x038f: case 0x03cf: {
 				unsigned tmp1;
 				tmp1 = !(op & 0x40) ? REG_X : REG_U;
 				(void)fetch_byte_notrace(cpu, REG_PC);
@@ -1075,8 +1260,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 			// 0x97, 0xa7, 0xb7 STA
 			// 0xd7, 0xe7, 0xf7 STB
+			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			case 0x97: case 0xa7: case 0xb7:
-			case 0xd7: case 0xe7: case 0xf7: {
+			case 0xd7: case 0xe7: case 0xf7:
+			case 0x0297: case 0x02a7: case 0x02b7:
+			case 0x02d7: case 0x02e7: case 0x02f7:
+			case 0x0397: case 0x03a7: case 0x03b7:
+			case 0x03d7: case 0x03e7: case 0x03f7: {
 				uint16_t ea;
 				uint8_t tmp1;
 				tmp1 = !(op & 0x40) ? REG_A : REG_B;
@@ -1122,11 +1312,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				store_byte(cpu, ea+1, tmp1);
 			} break;
 
-			// 0xcd HCF, illegal
-			case 0xcd:
-				cpu->state = mc6809_state_hcf;
-				break;
-
 			// 0x1020 - 0x102f long branches
 			case 0x0220: case 0x0221: case 0x0222: case 0x0223:
 			case 0x0224: case 0x0225: case 0x0226: case 0x0227:
@@ -1140,19 +1325,37 @@ static void mc6809_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 			} break;
 
+			// 0x103e SWI2 inherent, illegal
+			case 0x023e:
+				peek_byte(cpu, REG_PC);
+				push_irq_registers(cpu);
+				instruction_posthook(cpu);
+				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
+				cpu->state = mc6809_state_label_a;
+				continue;
+
 			// 0x103f SWI2 inherent
 			case 0x023f:
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
+				cpu->state = mc6809_state_label_a;
+				continue;
+
+			// 0x113e FIRQ inherent, illegal [hoglet67]
+			case 0x033e:
+				peek_byte(cpu, REG_PC);
+				push_irq_registers(cpu);
+				instruction_posthook(cpu);
+				take_interrupt(cpu, 0, MC6809_INT_VEC_FIRQ);
 				cpu->state = mc6809_state_label_a;
 				continue;
 
 			// 0x113f SWI3 inherent
 			case 0x033f:
 				peek_byte(cpu, REG_PC);
-				stack_irq_registers(cpu, 1);
+				stack_irq_registers(cpu);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI3);
 				cpu->state = mc6809_state_label_a;
@@ -1164,8 +1367,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				break;
 			}
 
-			break;
-			}
+		} break;
 
 		// Certain illegal instructions cause the CPU to lock up:
 		case mc6809_state_hcf:
@@ -1315,14 +1517,14 @@ static void push_firq_registers(struct MC6809 *cpu) {
 	push_s_byte(cpu, REG_CC);
 }
 
-static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
-	if (entire) {
-		REG_CC |= CC_E;
-		push_irq_registers(cpu);
-	} else {
-		REG_CC &= ~CC_E;
-		push_firq_registers(cpu);
-	}
+static void stack_irq_registers(struct MC6809 *cpu) {
+	REG_CC |= CC_E;
+	push_irq_registers(cpu);
+}
+
+static void stack_firq_registers(struct MC6809 *cpu) {
+	REG_CC &= ~CC_E;
+	push_firq_registers(cpu);
 }
 
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
@@ -1359,4 +1561,24 @@ static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b) {
 	CLR_NZV;
 	REG_CC |= CC_N;
 	return a;
+}
+
+// Illegal version of DEC [hoglet67]
+// Same as DEC, but modifies carry
+static uint8_t op_xdec(struct MC6809 *cpu, uint8_t in) {
+	unsigned out = in - 1;
+	CLR_NZVC;
+	SET_NZ8(out);
+	if (out == 0x7f) REG_CC |= CC_V;
+	if (in == 0) REG_CC |= CC_C;
+	return out;
+}
+
+// Illegal version of CLR [hoglet67]
+// Same as CLR, but C is unchanged
+static uint8_t op_xclr(struct MC6809 *cpu, uint8_t in) {
+	(void)in;
+	CLR_NZV;
+	REG_CC |= CC_Z;
+	return 0;
 }
