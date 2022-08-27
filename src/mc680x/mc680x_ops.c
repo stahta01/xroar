@@ -256,22 +256,23 @@ static uint8_t op_clr(STRUCT_CPU *cpu, uint8_t in) {
 }
 
 // This version of DAA used in 6809
-// TODO: [hoglet67] suggests 6809 actually uses op_daa_v(), but also that
-// 6309 behaviour differs.
+// V calculation from [hoglet67]
 static uint8_t op_daa(STRUCT_CPU *cpu, uint8_t in) {
-	unsigned out = 0;
-	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) out |= 0x06;
-	if (in >= 0x90 && (in & 0x0f) >= 0x0a) out |= 0x60;
-	if (in >= 0xa0 || REG_CC & CC_C) out |= 0x60;
-	out += in;
+	unsigned add = 0;
+	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;
+	if (in >= 0x90 && (in & 0x0f) >= 0x0a) add |= 0x60;
+	if (in >= 0xa0 || REG_CC & CC_C) add |= 0x60;
+	unsigned out = in + add;
 	// CC.C NOT cleared, only set if appropriate
 	CLR_NZV;
 	SET_NZC8(out);
+	REG_CC |= ((out >> 6) ^ ((REG_CC << 1))) & CC_V;
 	return out;
 }
 
 // This version of DAA used in 6801/6803
-// TODO: [hoglet67] suggests this is actually also the 6809 behaviour - TEST
+// TODO: check that it's not really the same as above, having recently modified
+// that to set V.
 static uint8_t op_daa_v(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned add = 0;
 	if ((in & 0x0f) >= 0x0a || REG_CC & CC_H) add |= 0x06;
