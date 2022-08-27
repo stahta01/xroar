@@ -64,10 +64,10 @@ struct HD6309 {
 	uint16_t reg_w;
 	uint8_t reg_md;
 	uint16_t reg_v;
+	uint8_t reg_m;
 	// TFM state
 	uint16_t *tfm_src;
 	uint16_t *tfm_dest;
-	uint8_t tfm_data;
 	uint16_t tfm_src_mod;
 	uint16_t tfm_dest_mod;
 };

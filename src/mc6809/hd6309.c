@@ -29,6 +29,9 @@
  *
  *  - Motorola 6809 and Hitachi 6309 Programmers Reference,
  *    2009 Darren Atkinson
+ *
+ *  - Undocumented 6309 Behaviours, David Banks [hoglet67]
+ *    https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6309-Behaviours
  */
 
 #include "top-config.h"
@@ -50,23 +53,23 @@
 #include "hd6309_trace.h"
 #endif
 
-static const struct ser_struct ser_struct_hd6309[] = {
-	SER_STRUCT_NEST(&mc6809_ser_struct_data), // 1
-
-	SER_STRUCT_ELEM(struct HD6309, state, ser_type_unsigned), // 2
-	SER_STRUCT_ELEM(struct HD6309, reg_w, ser_type_uint16), // 3
-	SER_STRUCT_ELEM(struct HD6309, reg_md, ser_type_uint8), // 4
-	SER_STRUCT_ELEM(struct HD6309, reg_v, ser_type_uint16), // 5
-
-	SER_STRUCT_ELEM(struct HD6309, tfm_src, ser_type_unhandled), // 6
-	SER_STRUCT_ELEM(struct HD6309, tfm_dest, ser_type_unhandled), // 7
-	SER_STRUCT_ELEM(struct HD6309, tfm_data, ser_type_uint8), // 8
-	SER_STRUCT_ELEM(struct HD6309, tfm_src_mod, ser_type_uint16), // 9
-	SER_STRUCT_ELEM(struct HD6309, tfm_dest_mod, ser_type_uint16), // 10
-};
-
 #define HD6309_SER_TFM_SRC  (6)
 #define HD6309_SER_TFM_DEST (7)
+
+static const struct ser_struct ser_struct_hd6309[] = {
+	SER_ID_STRUCT_NEST(1,  &mc6809_ser_struct_data), // 1
+
+	SER_ID_STRUCT_ELEM(2,  ser_type_unsigned, struct HD6309, state),
+	SER_ID_STRUCT_ELEM(3,  ser_type_uint16,   struct HD6309, reg_w),
+	SER_ID_STRUCT_ELEM(4,  ser_type_uint8,    struct HD6309, reg_md),
+	SER_ID_STRUCT_ELEM(5,  ser_type_uint16,   struct HD6309, reg_v),
+	SER_ID_STRUCT_ELEM(8,  ser_type_uint8,    struct HD6309, reg_m),  // replaces tfm_data
+
+	SER_ID_STRUCT_UNHANDLED(HD6309_SER_TFM_SRC),
+	SER_ID_STRUCT_UNHANDLED(HD6309_SER_TFM_DEST),
+	SER_ID_STRUCT_ELEM(9,  ser_type_uint16,   struct HD6309, tfm_src_mod),
+	SER_ID_STRUCT_ELEM(10, ser_type_uint16,   struct HD6309, tfm_dest_mod),
+};
 
 static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -136,6 +139,14 @@ static void instruction_posthook(struct MC6809 *cpu);
 #define REG_V (hcpu->reg_v)
 #define REG_MD (hcpu->reg_md)
 
+// 'M' is a pseudo-register used in internal calculations that can
+// be inspected with:
+//     LDX #0
+//     ADDR DP,X
+// [hoglet67]
+#define REG_M (hcpu->reg_m)
+
+// Read Q
 #define RREG_Q ((REG_D << 16) | REG_W)
 
 /* Condition code register macros */
@@ -433,10 +444,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// order is read, NVMA, write
 			if (REG_W == 0) {
 				REG_PC += 3;
+				REG_CC |= CC_Z; // [hoglet67]
 				hcpu->state = hd6309_state_label_a;
 				break;
 			}
-			hcpu->tfm_data = fetch_byte_notrace(cpu, *hcpu->tfm_src);
+			REG_M = fetch_byte_notrace(cpu, *hcpu->tfm_src);
 			NVMA_CYCLE;
 			hcpu->state = hd6309_state_tfm_write;
 			continue;
@@ -454,7 +466,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
-			store_byte(cpu, *hcpu->tfm_dest, hcpu->tfm_data);
+			store_byte(cpu, *hcpu->tfm_dest, REG_M);
 			*hcpu->tfm_src += hcpu->tfm_src_mod;
 			*hcpu->tfm_dest += hcpu->tfm_dest_mod;
 			REG_W--;
@@ -527,12 +539,14 @@ static void hd6309_run(struct MC6809 *cpu) {
 					NVMA_CYCLE;
 					if (!NATIVE_MODE)
 						NVMA_CYCLE;
+					// XXX does the result end up in M for TST?
 					break;
 				default: // the rest need storing
 					switch ((op >> 4) & 0xf) {
 					default:
 					case 0x0: case 0x6: case 0x7:
 						NVMA_CYCLE;
+						REG_M = tmp1;  // [hoglet67]
 						store_byte(cpu, ea, tmp1);
 						break;
 					case 0x4:
@@ -563,8 +577,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x02: case 0x62: case 0x72:
 			case 0x05: case 0x65: case 0x75:
 			case 0x0b: case 0x6b: case 0x7b: {
-				unsigned a, tmp1, tmp2;
-				tmp2 = byte_immediate(cpu);
+				unsigned a, tmp1;
+				REG_M = byte_immediate(cpu);  // [hoglet67]
 				switch ((op >> 4) & 0xf) {
 				default:
 				case 0x0: a = ea_direct(cpu); tmp1 = fetch_byte_notrace(cpu, a); break;
@@ -573,10 +587,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				}
 				switch (op & 0xf) {
 				default:
-				case 0x1: tmp1 = op_or(cpu, tmp1, tmp2); break;
-				case 0x2: tmp1 = op_and(cpu, tmp1, tmp2); break;
-				case 0x5: tmp1 = op_eor(cpu, tmp1, tmp2); break;
-				case 0xb: tmp1 = op_and(cpu, tmp1, tmp2); break;
+				case 0x1: tmp1 = op_or(cpu, tmp1, REG_M); break;
+				case 0x2: tmp1 = op_and(cpu, tmp1, REG_M); break;
+				case 0x5: tmp1 = op_eor(cpu, tmp1, REG_M); break;
+				case 0xb: tmp1 = op_and(cpu, tmp1, REG_M); break;
 				}
 				switch (op & 0xf) {
 				case 0xb: // TIM
@@ -624,6 +638,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x12: peek_byte(cpu, REG_PC); break;
 
 			// 0x13 SYNC inherent
+			// TODO: "There appears to be a bug with SYNC in native
+			// mode" [hoglet67]
 			case 0x13:
 				if (!NATIVE_MODE)
 					peek_byte(cpu, REG_PC);
@@ -673,6 +689,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x19 DAA inherent
 			case 0x19:
+				// TODO: behaviour for illegal input differs on
+				// the 6309 [hoglet67]
 				REG_A = op_daa(cpu, REG_A);
 				peek_byte(cpu, REG_PC);
 				break;
@@ -983,7 +1001,9 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x3d MUL inherent
 			case 0x3d: {
-				unsigned tmp = REG_A * REG_B;
+				unsigned tmp;
+				REG_M = REG_B;
+				tmp = REG_A * REG_B;
 				REG_D = tmp;
 				CLR_ZC;
 				SET_Z16(tmp);
@@ -1003,6 +1023,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x3f SWI inherent
+			// TODO: "There appears to be a bug with SWI in native
+			// mode, if it is interrupted with an NMI" [hoglet67]
 			case 0x3f:
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
@@ -1233,9 +1255,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0xcd: {
 				REG_D = word_immediate(cpu);
 				REG_W = word_immediate(cpu);
-				CLR_NZV;
+				CLR_NZ;  // V not cleared [hoglet67]
 				SET_N16(REG_D);
-				if (REG_D == 0 && REG_W == 0)
+				// lower 16 bits (REG_W) ignored [hoglet67]
+				if (REG_D == 0)
 					REG_CC |= CC_Z;
 			} break;
 
@@ -1297,7 +1320,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x6: tmp2 = REG_W; break;
 					case 0x7: tmp2 = REG_V; break;
 					case 0xa: tmp2 = REG_CC; break;
-					case 0xb: tmp2 = REG_DP << 8; break;
+					// [hoglet67] XXX unclear on whether
+					// this applies to all these ops.
+					// assuming it does for now.
+					// XXX also unclear whether using 'D'
+					// also works; example uses 'X'.
+					case 0xb: tmp2 = (REG_DP << 8) | REG_M; break;
 					default: tmp2 = 0; break;
 					}
 					switch (op & 0xf) {
@@ -1649,6 +1677,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				NVMA_CYCLE;
 				hcpu->tfm_src = tfm_reg_to_ptr(hcpu, postbyte >> 4);
 				hcpu->tfm_dest = tfm_reg_to_ptr(hcpu, postbyte & 0xf);
+				REG_CC &= ~(CC_Z); // [hoglet67]
 				if (!hcpu->tfm_src || !hcpu->tfm_dest) {
 					stack_irq_registers(cpu, 1);
 					instruction_posthook(cpu);
@@ -1663,9 +1692,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x113c BITMD immediate
 			case 0x033c: {
-				unsigned data;
-				data = byte_immediate(cpu);
-				data &= (MD_D0 | MD_IL);
+				REG_M = byte_immediate(cpu);
+				unsigned data = REG_M & (MD_D0 | MD_IL);
 				if (REG_MD & data)
 					REG_CC &= ~CC_Z;
 				else
@@ -1763,6 +1791,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x118d, 0x119d, 0x11ad, 0x11bd DIVD
+			// TODO: "The cycle count of DIVD is more complex that
+			// has previously been documented" [hoglet67]
 			case 0x038d: case 0x039d: case 0x03ad: case 0x03bd: {
 				uint16_t tmp1;
 				uint8_t tmp2;
@@ -1784,6 +1814,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				int16_t stmp1 = *((int16_t *)&tmp1);
 				int8_t stmp2 = *((int8_t *)&tmp2);
 				int quotient = stmp1 / stmp2;
+				REG_M = (quotient < 0) ? 0xff : 0x00;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -1812,6 +1843,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 			} break;
 
 			// 0x118e, 0x119e, 0x11ae, 0x11be DIVQ
+			// TODO: "The cycle count of DIVQ is more complex that
+			// has previously been documented" [hoglet67]
 			case 0x038e: case 0x039e: case 0x03ae: case 0x03be: {
 				uint32_t tmp1;
 				uint16_t tmp2;
@@ -1833,6 +1866,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				int32_t stmp1 = *((int32_t *)&tmp1);
 				int16_t stmp2 = *((int16_t *)&tmp2);
 				int quotient = stmp1 / stmp2;
+				REG_M = (quotient < 0) ? 0xff : 0x00;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -1873,6 +1907,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				int16_t stmp1 = *((int16_t *)&tmp1);
 				int16_t stmp2 = *((int16_t *)&tmp2);
 				int32_t result = stmp1 * stmp2;
+				REG_M = (result < 0) ? 0xff : 0x00;  // [hoglet67]
 				uint32_t uresult = *((uint32_t *)&result);
 				for (int i = 24; i; i--)
 					NVMA_CYCLE;
@@ -1880,7 +1915,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				REG_W = uresult & 0xffff;
 				CLR_NZ;
 				SET_N16(REG_D);
-				if (REG_D == 0 && REG_W == 0)
+				// lower 16 bits (REG_W) ignored [hoglet67]
+				if (REG_D == 0)
 					REG_CC |= CC_N;
 			} break;
 
@@ -1977,6 +2013,11 @@ static uint16_t ea_extended(struct MC6809 *cpu) {
 		NVMA_CYCLE;
 	return ea;
 }
+
+// Indexed addressing.
+
+// TODO: some undefined postbytes should trigger illegal instruction trap
+// [hoglet67]
 
 static uint16_t ea_indexed(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
