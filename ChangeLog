@@ -2,6 +2,7 @@
  * Fix SDL-only builds
  * 6809: flesh out some illegal instruction behaviours [David Banks]
  * 6309: flesh out some undocumented behaviour [David Banks]
+ * Fleshed out T1-compatibility in CoCo 3 GIME [R. Allen Murphy]
 
 Version 1.1, Thu 21 Jul 2022
 

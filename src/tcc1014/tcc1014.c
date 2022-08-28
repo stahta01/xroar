@@ -1012,10 +1012,16 @@ static void render_scanline(struct TCC1014_private *gime) {
 						// Alphanumeric
 						_Bool INV = vdata & 0x40;
 						INV ^= gime->GM1;  // 6847T1-compatible invert flag
-						uint8_t c = vdata & 0x3f;
-						if (c < 0x20)
-							c |= 0x40;
+						uint8_t c = vdata & 0x7f;
+						if (c < 0x20) {
+							c |= (gime->GM0 ? 0x60 : 0x40);
+							INV ^= gime->GM0;
+						} else if (c >= 0x60) {
+							c ^= 0x40;
+						}
 						gime->vram_g_data = font_gime[c*12+gime->row];
+
+						// Handle UI-specified inverse text mode:
 						if (INV ^ gime->inverted_text)
 							gime->vram_g_data = ~gime->vram_g_data;
 						gime->fg_colour = gime->CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
@@ -1194,10 +1200,16 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 
 	// Decode VDG-compatible mode setting
 	gime->GnA = gime->vmode & 0x80;
+	_Bool GM2 = gime->vmode & 0x40;
 	gime->GM1 = gime->vmode & 0x20;
 	gime->GM0 = gime->vmode & 0x10;
 	gime->CSS = gime->vmode & 0x08;
 	unsigned GM = (gime->vmode >> 4) & 7;
+
+	// T1-compatibility
+	_Bool text_border = !gime->GM1 && GM2;
+	unsigned text_border_colour = gime->CSS ? 0x26 : 0x12;
+
 	if (!gime->GnA || !(GM == 0 || (gime->GM0 && GM != 7))) {
 		gime->COCO_BPR = 32;
 		gime->COCO_resolution = 1;
@@ -1225,7 +1237,7 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 			gime->render_mode = !gime->SnA ? TCC1014_RENDER_RG : TCC1014_RENDER_SG;
 			gime->fg_colour = gime->CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
 			gime->bg_colour = gime->CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
-			gime->border_colour = 0;
+			gime->border_colour = text_border ? text_border_colour : 0;
 		} else {
 			gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
 			gime->fg_colour = gime->CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
