@@ -302,6 +302,8 @@ static void machine_config_free(struct machine_config *mc) {
 		free(mc->name);
 	if (mc->description)
 		free(mc->description);
+	if (mc->architecture)
+		free(mc->architecture);
 	if (mc->vdg_palette)
 		free(mc->vdg_palette);
 	if (mc->bas_rom)
