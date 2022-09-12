@@ -654,7 +654,7 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 			// delimiter?
 			// TODO: there's definitely a better way of doing this,
 			// but for now, run the match every time we get here.
-			if ((errcode = regexec(&preg, p, 1, &pmatch, 0)) == 0 && pmatch.rm_so == 0) {
+			if (regexec(&preg, p, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0) {
 				if (parse)
 					r = sdsx_cat_parse_str_len(r, sp, p - sp);
 				else
