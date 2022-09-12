@@ -335,6 +335,7 @@ void machine_config_remove_all(void) {
 }
 
 struct slist *machine_config_list(void) {
+	assert(config_list != NULL);
 	return config_list;
 }
 

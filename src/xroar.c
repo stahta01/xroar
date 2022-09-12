@@ -1714,8 +1714,8 @@ void xroar_configure_machine(struct machine_config *mc) {
 }
 
 void xroar_set_machine(_Bool notify, int id) {
-	int new = xroar_machine_config->id;
 	struct slist *mcl, *mcc;
+	int new;
 	switch (id) {
 		case XROAR_NEXT:
 			mcl = machine_config_list();
