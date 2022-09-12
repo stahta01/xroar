@@ -49,7 +49,7 @@ sds path_interp(const char *filename) {
 		return NULL;
 
 	const char *home = getenv(HOMEDIR);
-	if (*home == 0)
+	if (home && *home == 0)
 		home = NULL;
 
 	sds s = sdsempty();
@@ -100,7 +100,7 @@ sds find_in_path(const char *path, const char *filename) {
 	sdsfree(f);
 
 	home = getenv(HOMEDIR);
-	if (*home == 0)
+	if (home && *home == 0)
 		home = NULL;
 
 	const char *p = path;
