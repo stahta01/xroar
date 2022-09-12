@@ -260,8 +260,8 @@ void sound_interface_free(struct sound_interface *sndp) {
 // convert buffer to desired output format and send it to audio module
 static void send_buffer(struct sound_interface_private *snd) {
 	int nsamples = snd->output_nchannels * snd->buffer_nframes;
-	float *input = snd->mix_buffer;
-	if (snd->output_buffer) {
+	if (snd->output_buffer && snd->mix_buffer) {
+		float *input = snd->mix_buffer;
 		switch (snd->output_fmt) {
 		case SOUND_FMT_U8: {
 			int8_t *output = snd->output_buffer;
