@@ -171,26 +171,26 @@ static void hide_dc_window(GtkEntry *entry, gpointer user_data) {
 }
 
 static void dc_insert(GtkButton *button, gpointer user_data) {
-	int drive = (char *)user_data - (char *)0;
+	int drive = (intptr_t)user_data;
 	(void)button;
 	xroar_insert_disk(drive);
 }
 
 static void dc_eject(GtkButton *button, gpointer user_data) {
-	int drive = (char *)user_data - (char *)0;
+	int drive = (intptr_t)user_data;
 	(void)button;
 	xroar_eject_disk(drive);
 }
 
 static void dc_toggled_we(GtkToggleButton *togglebutton, gpointer user_data) {
 	int set = gtk_toggle_button_get_active(togglebutton) ? 1 : 0;
-	int drive = (char *)user_data - (char *)0;
+	int drive = (intptr_t)user_data;
 	xroar_set_write_enable(0, drive, set);
 }
 
 static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data) {
 	int set = gtk_toggle_button_get_active(togglebutton) ? 1 : 0;
-	int drive = (char *)user_data - (char *)0;
+	int drive = (intptr_t)user_data;
 	xroar_set_write_back(0, drive, set);
 }
 
