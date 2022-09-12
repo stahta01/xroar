@@ -789,11 +789,11 @@ static void commit_data(struct tape *t) {
 
 	off_t data_start = cas->output.data_start;
 	off_t data_end = ftello(cas->fd);
-	if (data_start == data_end)
-		return;
-	cue_add_raw_section(cas, data_end - data_start, data_start, NULL);
-	// update current file position (start of next data entry)
-	cas->output.data_start = data_end;
+	if (data_end > data_start) {
+		cue_add_raw_section(cas, data_end - data_start, data_start, NULL);
+		// update current file position (start of next data entry)
+		cas->output.data_start = data_end;
+	}
 }
 
 static void add_silence(struct tape *t, int ticks) {
@@ -986,9 +986,9 @@ static void cue_set_section_data(struct tape_cas *cas, struct cue_entry *entry, 
 }
 
 static void cue_add_raw_section(struct tape_cas *cas, int size, off_t offset, uint8_t *data) {
-	struct cue_entry *entry = cue_entry_new(cue_raw_section);
 	if (size == 0)
 		return;
+	struct cue_entry *entry = cue_entry_new(cue_raw_section);
 	entry->nsamples = size * 16 * cas->cue.builder->bit_av_pw;
 	cue_set_section_data(cas, entry, offset, size, data);
 	cue_entry_append(cas, entry);
