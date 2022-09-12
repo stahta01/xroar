@@ -373,7 +373,6 @@ static void cue_read_k7(struct tape_cas *cas) {
 				}
 				cue_add_raw_section(cas, block_length, block_start, NULL);
 				block_start += block_length;
-				block_length = 0;
 			}
 			block_length = leader_length + 1;
 			// now read type, length
