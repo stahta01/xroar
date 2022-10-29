@@ -165,10 +165,12 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	 * containing window, or indeed ask it to.  This will hopefully work
 	 * consistently.  It seems to be basically how GIMP "shrink wrap"s its
 	 * windows.  */
-	gint oldw = global_uigtk2->top_window->allocation.width;
-	gint oldh = global_uigtk2->top_window->allocation.height;
-	gint woff = oldw - global_uigtk2->drawing_area->allocation.width;
-	gint hoff = oldh - global_uigtk2->drawing_area->allocation.height;
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(global_uigtk2->top_window, &allocation);
+	gint oldw = allocation.width;
+	gint oldh = allocation.height;
+	gint woff = oldw - allocation.width;
+	gint hoff = oldh - allocation.height;
 	vogtkgl->woff = woff;
 	vogtkgl->hoff = hoff;
 	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w + woff, h + hoff);
@@ -190,8 +192,10 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 static void set_menubar(void *sptr, _Bool show_menubar) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_interface *vo = &vogtkgl->public;
-	int w = global_uigtk2->drawing_area->allocation.width;
-	int h = global_uigtk2->drawing_area->allocation.height;
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(global_uigtk2->drawing_area, &allocation);
+	int w = allocation.width;
+	int h = allocation.height;
 	if (show_menubar) {
 		w += vogtkgl->woff;
 		h += vogtkgl->hoff;
@@ -235,15 +239,19 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		g_assert_not_reached();
 	}
 
+	GtkAllocation allocation;
+
 	// Preserve geometry offsets introduced by menubar
 	if (vo->show_menubar) {
-		gint oldw = global_uigtk2->top_window->allocation.width;
-		gint oldh = global_uigtk2->top_window->allocation.height;
-		vogtkgl->woff = oldw - global_uigtk2->drawing_area->allocation.width;
-		vogtkgl->hoff = oldh - global_uigtk2->drawing_area->allocation.height;
+		gtk_widget_get_allocation(global_uigtk2->top_window, &allocation);
+		gint oldw = allocation.width;
+		gint oldh = allocation.height;
+		vogtkgl->woff = oldw - allocation.width;
+		vogtkgl->hoff = oldh - allocation.height;
 	}
 
-	DELEGATE_CALL(vogl->resize, da->allocation.width, da->allocation.height);
+	gtk_widget_get_allocation(da, &allocation);
+	DELEGATE_CALL(vogl->resize, allocation.width, allocation.height);
 	vo_opengl_get_display_rect(vogl, &global_uigtk2->display_rect);
 	vo_gtkgl_set_vsync(1);
 
@@ -307,8 +315,8 @@ static void vo_gtkgl_set_vsync(int val) {
 
 	PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");
 	if (glXSwapIntervalEXT) {
-		Display *dpy = gdk_x11_drawable_get_xdisplay(GTK_WIDGET(global_uigtk2->drawing_area)->window);
-		Window win = gdk_x11_drawable_get_xid(GTK_WIDGET(global_uigtk2->drawing_area)->window);
+		Display *dpy = gdk_x11_drawable_get_xdisplay(gtk_widget_get_window(global_uigtk2->drawing_area));
+		Window win = gdk_x11_drawable_get_xid(gtk_widget_get_window(global_uigtk2->drawing_area));
 		if (dpy && win) {
 			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);

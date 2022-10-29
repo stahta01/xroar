@@ -62,11 +62,11 @@ void gtk2_insert_disk(int drive) {
 			GTK_RESPONSE_ACCEPT, NULL));
 	}
 	if (!drive_combo) {
-		drive_combo = GTK_COMBO_BOX(gtk_combo_box_new_text());
-		gtk_combo_box_append_text(drive_combo, "Drive 1");
-		gtk_combo_box_append_text(drive_combo, "Drive 2");
-		gtk_combo_box_append_text(drive_combo, "Drive 3");
-		gtk_combo_box_append_text(drive_combo, "Drive 4");
+		drive_combo = (GtkComboBox *)gtk_combo_box_text_new();
+		gtk_combo_box_text_append_text((GtkComboBoxText *)drive_combo, "Drive 1");
+		gtk_combo_box_text_append_text((GtkComboBoxText *)drive_combo, "Drive 2");
+		gtk_combo_box_text_append_text((GtkComboBoxText *)drive_combo, "Drive 3");
+		gtk_combo_box_text_append_text((GtkComboBoxText *)drive_combo, "Drive 4");
 		gtk_file_chooser_set_extra_widget(file_dialog, GTK_WIDGET(drive_combo));
 		gtk_combo_box_set_active(drive_combo, 0);
 	}
