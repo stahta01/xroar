@@ -460,6 +460,11 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 	{ .name = "joy_left_mjoy0", .label = "Mouse", .value = 4 },
 };
 
+// Work around gtk_exit() being deprecated:
+static void ui_gtk2_destroy(GtkWidget *w, gpointer user_data) {
+	exit((intptr_t)user_data);
+}
+
 static void *ui_gtk2_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
@@ -495,8 +500,7 @@ static void *ui_gtk2_new(void *cfg) {
 
 	/* Fetch top level window */
 	uigtk2->top_window = GTK_WIDGET(gtk_builder_get_object(builder, "top_window"));
-	gtk_signal_connect(GTK_OBJECT(uigtk2->top_window), "destroy",
-			   GTK_SIGNAL_FUNC(gtk_exit), NULL);
+	g_signal_connect(uigtk2->top_window, "destroy", G_CALLBACK(ui_gtk2_destroy), NULL);
 
 	/* Fetch vbox */
 	GtkWidget *vbox = GTK_WIDGET(gtk_builder_get_object(builder, "vbox1"));
