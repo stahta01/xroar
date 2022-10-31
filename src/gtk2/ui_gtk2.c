@@ -475,17 +475,8 @@ static void *ui_gtk2_new(void *cfg) {
 
 	g_set_application_name("XRoar");
 
-	GtkBuilder *builder;
+	GtkBuilder *builder = gtk_builder_new_from_resource("/uk/org/6809/xroar/gtk2/application.ui");
 	GError *error = NULL;
-	builder = gtk_builder_new();
-
-	GBytes *res_top_window = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/top_window.glade", 0, NULL);
-	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_top_window, NULL), -1, &error)) {
-		g_warning("Couldn't create UI: %s", error->message);
-		g_error_free(error);
-		return NULL;
-	}
-	g_bytes_unref(res_top_window);
 
 	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_gtk2_interface){0};
@@ -508,7 +499,7 @@ static void *ui_gtk2_new(void *cfg) {
 	/* Create a UI from XML */
 	uigtk2->menu_manager = gtk_ui_manager_new();
 
-	GBytes *res_ui = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/ui.xml", 0, NULL);
+	GBytes *res_ui = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/menu.ui", 0, NULL);
 	const gchar *ui_xml_string = g_bytes_get_data(res_ui, NULL);
 
 	// Sigh, glib-compile-resources can strip blanks, but it then forcibly

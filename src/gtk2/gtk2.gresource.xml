@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+   <gresource prefix="/uk/org/6809/xroar/gtk2">
+      <file preprocess="xml-stripblanks">application.ui</file>
+      <file preprocess="xml-stripblanks">menu.ui</file>
+      <file preprocess="xml-stripblanks">tapecontrol.ui</file>
+      <file preprocess="xml-stripblanks">drivecontrol.ui</file>
+   </gresource>
+</gresources>

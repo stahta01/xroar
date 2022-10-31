@@ -63,3 +63,30 @@ void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gp
 	gtk_radio_action_set_current_value(o, v);
 	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
 }
+
+G_NORETURN static void do_g_abort(const gchar *format, GError *error) {
+	if (error) {
+		g_message("gtk_builder_new_from_resource() failed: %s", error->message);
+		g_error_free(error);
+	}
+	g_abort();
+}
+
+GtkBuilder *gtk_builder_new_from_resource(const gchar *path) {
+	GError *error = NULL;
+	GBytes *resource = g_resources_lookup_data(path, 0, &error);
+	if (!resource) {
+		do_g_abort("g_resources_lookup_data() failed: %s", error);
+	}
+
+	gsize xml_size;
+	const gchar *xml = g_bytes_get_data(resource, &xml_size);
+
+	GtkBuilder *builder = gtk_builder_new();
+	if (gtk_builder_add_from_string(builder, xml, xml_size, &error) == 0) {
+		do_g_abort("gtk_builder_add_from_string() failed: %s", error);
+	}
+
+	g_bytes_unref(resource);
+	return builder;
+}

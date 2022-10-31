@@ -110,7 +110,7 @@ void gtk2_create_tc_window(void) {
 	GError *error = NULL;
 	builder = gtk_builder_new();
 
-	GBytes *res_tapecontrol = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/tapecontrol.glade", 0, NULL);
+	GBytes *res_tapecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/tapecontrol.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_tapecontrol, NULL), -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);

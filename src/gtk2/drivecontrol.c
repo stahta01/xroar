@@ -96,7 +96,7 @@ void gtk2_create_dc_window(void) {
 	int i;
 	builder = gtk_builder_new();
 
-	GBytes *res_drivecontrol = g_resources_lookup_data("/uk/org/6809/xroar/ui_gtk2/drivecontrol.glade", 0, NULL);
+	GBytes *res_drivecontrol = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/drivecontrol.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_drivecontrol, NULL), -1, &error)) {
 		g_warning("Couldn't create UI: %s", error->message);
 		g_error_free(error);

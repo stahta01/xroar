@@ -224,14 +224,14 @@ xroar_SOURCES += \
 	gtk2/common.c gtk2/common.h \
 	gtk2/drivecontrol.c gtk2/drivecontrol.h \
 	gtk2/filereq_gtk2.c \
-	gtk2/ui_gtk2.gresource.c \
+	gtk2/gtk2.gresource.c \
 	gtk2/joystick_gtk2.c \
 	gtk2/keyboard_gtk2.c \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
 	gtk2/ui_gtk2.c
 
 BUILT_SOURCES += \
-	gtk2/ui_gtk2.gresource.c
+	gtk2/gtk2.gresource.c
 
 if GTKGL
 xroar_CFLAGS += $(GTKGL_CFLAGS)
@@ -242,25 +242,25 @@ endif
 endif
 
 GTK2_RESOURCES = \
-	gtk2/ui.xml \
-	gtk2/drivecontrol.glade \
-	gtk2/tapecontrol.glade \
-	gtk2/top_window.glade
+	gtk2/application.ui \
+	gtk2/menu.ui \
+	gtk2/drivecontrol.ui \
+	gtk2/tapecontrol.ui
 
 EXTRA_DIST += \
 	$(GTK2_RESOURCES) \
-	gtk2/ui_gtk2.gresource.c \
-	gtk2/ui_gtk2.gresource.xml \
+	gtk2/gtk2.gresource.c \
+	gtk2/gtk2.gresource.xml \
 	gtk2/keyboard_gtk2_mappings.c
 
-.INTERMEDIATE: gtk2/ui_gtk2.gresource.tmp
+.INTERMEDIATE: gtk2/gtk2.gresource.tmp
 
-gtk2/ui_gtk2.gresource.tmp: $(GTK2_RESOURCES)
+gtk2/gtk2.gresource.tmp: $(GTK2_RESOURCES)
 
-gtk2/ui_gtk2.gresource.tmp: gtk2/ui_gtk2.gresource.xml
+gtk2/gtk2.gresource.tmp: gtk2/gtk2.gresource.xml
 	$(GLIB_COMPILE_RESOURCES) $< --target=$@ --sourcedir=gtk2 --generate-source
 
-gtk2/ui_gtk2.gresource.c: gtk2/ui_gtk2.gresource.tmp
+gtk2/gtk2.gresource.c: gtk2/gtk2.gresource.tmp
 	echo "#include \"top-config.h\"" > $@
 	cat $< >> $@
 
