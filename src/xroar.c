@@ -2601,6 +2601,7 @@ static void helptext(void) {
 "    -no-altbas              disable 64K mode Extended BASIC\n"
 "    -ext-charset NAME       external character generator ROM to use\n"
 "    -tv-type TYPE           TV type (-tv-type help for list)\n"
+"    -tv-input INPUT         TV input (-tv-input help for list)\n"
 "    -vdg-type TYPE          VDG type (6847 or 6847t1)\n"
 "    -ram KBYTES             amount of RAM in K\n"
 "    -machine-cart NAME      default cartridge for selected machine\n"
