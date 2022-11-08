@@ -171,6 +171,7 @@ struct private_cfg {
 
 #ifndef HAVE_WASM
 	// Other options
+	_Bool ratelimit;
 	_Bool joystick_print_list;
 	_Bool config_print;
 	_Bool config_print_all;
@@ -191,6 +192,7 @@ static struct private_cfg private_cfg = {
 	// if volume set >=0, use that, else use gain value in dB
 	.gain = -3.0,
 	.volume = -1,
+	.ratelimit = 1,
 };
 
 static struct ui_cfg xroar_ui_cfg = {
@@ -972,7 +974,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	tape_select_state(xroar_tape_interface, private_cfg.tape_fast | private_cfg.tape_pad_auto | private_cfg.tape_rewrite);
 
 	xroar_set_vdg_inverted_text(1, xroar_cfg.vdg_inverted_text);
-	xroar_set_ratelimit_latch(1, XROAR_ON);
+	xroar_set_ratelimit_latch(1, private_cfg.ratelimit);
 
 	// Load media images
 
@@ -2546,6 +2548,7 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Other options: */
 #ifndef HAVE_WASM
+	{ XC_SET_BOOL("ratelimit", &private_cfg.ratelimit) },
 	{ XC_SET_BOOL("config-print", &private_cfg.config_print) },
 	{ XC_SET_BOOL("config-print-all", &private_cfg.config_print_all) },
 #endif
@@ -2731,6 +2734,7 @@ static void helptext(void) {
 "  -snap-motoroff FILE   write a snapshot each time tape motor switches off\n"
 
 "\n Other options:\n"
+"  -no-ratelimit       run cpu as fast as possible\n"
 "  -config-print       print configuration to standard out\n"
 "  -config-print-all   print configuration to standard out, including defaults\n"
 "  -h, --help          display this help and exit\n"
@@ -2897,6 +2901,9 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar_cfg.timeout_motoroff, NULL);
 	xroar_cfg_print_string(f, all, "snap-motoroff", xroar_cfg.snap_motoroff, NULL);
 	fputs("\n", f);
+
+	fputs("# Other options\n", f);
+	xroar_cfg_print_bool(f, all, "ratelimit", private_cfg.ratelimit, 1);
 }
 #endif
 
