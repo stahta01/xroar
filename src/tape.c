@@ -118,6 +118,7 @@ struct tape_interface_private {
 };
 
 static struct xroar_timeout *motoroff_timeout = NULL;
+static event_ticks motoron_time = 0;
 
 static void waggle_bit(void *);
 static void flush_output(void *);
@@ -726,8 +727,14 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 			xroar_cancel_timeout(motoroff_timeout);
 			motoroff_timeout = NULL;
 		}
+		if (motor) {
+			motoron_time = event_current_tick;
+		}
 		if (!motor && xroar_cfg.timeout_motoroff) {
-			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+			int delta = event_tick_delta(event_current_tick, motoron_time);
+			if (delta < 0 || delta > 416) {
+				motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+			}
 		}
 		if (!motor && xroar_cfg.snap_motoroff) {
 			write_snapshot(xroar_cfg.snap_motoroff);
