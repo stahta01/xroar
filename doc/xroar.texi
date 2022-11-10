@@ -1524,7 +1524,7 @@ Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
 @tab Specify total audio buffer size in frames.
 @item @option{-ao-gain @var{db}}
 @tab Specify audio gain in dB relative to 0 dBFS.  Only negative values really make sense here.  Default: @samp{-3.0}
-@item @option{-volume @var{volume}}
+@item @option{-ao-volume @var{volume}}
 @tab Older way to specify volume.  Simple linear scaling, using values 0--100.
 @end multitable
 
@@ -2298,7 +2298,7 @@ to this machine (the default is to try).
 @tab Specify total audio buffer size in frames.
 @item @option{-ao-gain @var{db}}
 @tab Specify audio gain in dB relative to 0 dBFS.  Only negative values really make sense here.  Default: @samp{-3.0}
-@item @option{-volume @var{volume}}
+@item @option{-ao-volume @var{volume}}
 @tab Older way to specify volume.  Simple linear scaling, using values 0--100.
 @end multitable
 

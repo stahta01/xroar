@@ -147,9 +147,11 @@ struct private_cfg {
 	int ccr;
 
 	// Audio
-	char *ao;
-	int volume;
-	double gain;
+	struct {
+		char *module;
+		int volume;
+		double gain;
+	} ao;
 
 	// Keyboard
 	struct slist *type_list;
@@ -190,8 +192,8 @@ static struct private_cfg private_cfg = {
 	.tape_pad_auto = 1,
 	.ccr = VO_CMP_CCR_5BIT,
 	// if volume set >=0, use that, else use gain value in dB
-	.gain = -3.0,
-	.volume = -1,
+	.ao.gain = -3.0,
+	.ao.volume = -1,
 	.ratelimit = 1,
 };
 
@@ -829,7 +831,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		ao_module_list = ui_module->ao_module_list;
 	// Select file requester, video & audio modules
 	struct module *filereq_module = (struct module *)module_select_by_arg((struct module * const *)filereq_module_list, private_cfg.filereq);
-	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao);
+	struct module *ao_module = module_select_by_arg((struct module * const *)ao_module_list, private_cfg.ao.module);
 	ui_joystick_module_list = ui_module->joystick_module_list;
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -927,10 +929,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		LOG_ERROR("No audio module initialised.\n");
 		return NULL;
 	}
-	if (private_cfg.volume >= 0) {
-		sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.volume);
+	if (private_cfg.ao.volume >= 0) {
+		sound_set_volume(xroar_ao_interface->sound_interface, private_cfg.ao.volume);
 	} else {
-		sound_set_gain(xroar_ao_interface->sound_interface, private_cfg.gain);
+		sound_set_gain(xroar_ao_interface->sound_interface, private_cfg.ao.gain);
 	}
 
 	// ... subsystems
@@ -2216,8 +2218,8 @@ static void add_run(const char *arg) {
 }
 
 static void set_gain(double gain) {
-	private_cfg.gain = gain;
-	private_cfg.volume = -1;
+	private_cfg.ao.gain = gain;
+	private_cfg.ao.volume = -1;
 }
 
 static void cfg_mpi_slot(int slot) {
@@ -2498,7 +2500,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 
 	/* Audio: */
-	{ XC_SET_STRING("ao", &private_cfg.ao) },
+	{ XC_SET_STRING("ao", &private_cfg.ao.module) },
 	{ XC_SET_STRING("ao-device", &xroar_cfg.ao_device) },
 	{ XC_SET_ENUM("ao-format", &xroar_cfg.ao_format, ao_format_list) },
 	{ XC_SET_INT("ao-rate", &xroar_cfg.ao_rate) },
@@ -2509,7 +2511,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("ao-buffer-ms", &xroar_cfg.ao_buffer_ms) },
 	{ XC_SET_INT("ao-buffer-frames", &xroar_cfg.ao_buffer_nframes) },
 	{ XC_CALL_DOUBLE("ao-gain", &set_gain) },
-	{ XC_SET_INT("volume", &private_cfg.volume) },
+	{ XC_SET_INT("ao-volume", &private_cfg.ao.volume) },
+	/* Deliberately undocumented: */
+	{ XC_SET_INT("volume", &private_cfg.ao.volume) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT("ao-buffer-samples", &xroar_cfg.ao_buffer_nframes), .deprecated = 1 },
 	{ XC_SET_BOOL("fast-sound", &dummy_value.v_bool), .deprecated = 1 },
@@ -2711,7 +2715,7 @@ static void helptext(void) {
 "  -ao-buffer-ms MS      set total audio buffer size in ms (if supported)\n"
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
 "  -ao-gain DB           audio gain in dB relative to 0 dBFS [-3.0]\n"
-"  -volume VOLUME        older way to specify audio volume, linear (0-100)\n"
+"  -ao-volume VOLUME     older way to specify audio volume, linear (0-100)\n"
 
 "\n Debugging:\n"
 #ifdef WANT_GDB_TARGET
@@ -2853,7 +2857,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Audio\n", f);
-	xroar_cfg_print_string(f, all, "ao", private_cfg.ao, NULL);
+	xroar_cfg_print_string(f, all, "ao", private_cfg.ao.module, NULL);
 	xroar_cfg_print_string(f, all, "ao-device", xroar_cfg.ao_device, NULL);
 	xroar_cfg_print_enum(f, all, "ao-format", xroar_cfg.ao_format, SOUND_FMT_NULL, ao_format_list);
 	xroar_cfg_print_int_nz(f, all, "ao-rate", xroar_cfg.ao_rate);
@@ -2863,8 +2867,8 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int_nz(f, all, "ao-fragment-frames", xroar_cfg.ao_fragment_nframes);
 	xroar_cfg_print_int_nz(f, all, "ao-buffer-ms", xroar_cfg.ao_buffer_ms);
 	xroar_cfg_print_int_nz(f, all, "ao-buffer-frames", xroar_cfg.ao_buffer_nframes);
-	xroar_cfg_print_double(f, all, "ao-gain", private_cfg.gain, -3.0);
-	xroar_cfg_print_int(f, all, "volume", private_cfg.volume, -1);
+	xroar_cfg_print_double(f, all, "ao-gain", private_cfg.ao.gain, -3.0);
+	xroar_cfg_print_int(f, all, "ao-volume", private_cfg.ao.volume, -1);
 	fputs("\n", f);
 
 	fputs("# Keyboard\n", f);
