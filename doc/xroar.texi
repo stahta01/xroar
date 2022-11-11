@@ -1561,9 +1561,9 @@ give plenty of headroom (at the expense of a quieter overall sound).
 @item @option{-debug-fdc @var{flags}}@*@option{-debug-file @var{flags}}@*@option{-debug-gdb @var{flags}}@*@option{-debug-ui @var{flags}}
 @tab Various per-subsystem debugging flags.  The special value @samp{-1} enables all flags for the subsystem.
 
-@item @option{-v @var{level}@*--verbose @var{level}}
+@item @option{-v @var{level}@*-verbose @var{level}}
 @tab General debug verbosity (0--3).  Default: @samp{1}
-@item @option{-q}@*@option{--quiet}
+@item @option{-q}@*@option{-quiet}
 @tab Equivalent to @option{-verbose 0}.
 
 @item @option{-timeout @var{n}}
@@ -2319,9 +2319,9 @@ to this machine (the default is to try).
 @item @option{-debug-fdc @var{flags}}@*@option{-debug-file @var{flags}}@*@option{-debug-gdb @var{flags}}@*@option{-debug-ui @var{flags}}
 @tab Various per-subsystem debugging flags.  The special value @samp{-1} enables all flags for the subsystem.
 
-@item @option{-v @var{level}@*--verbose @var{level}}
+@item @option{-v @var{level}@*-verbose @var{level}}
 @tab General debug verbosity (0--3).  Default: @samp{1}
-@item @option{-q}@*@option{--quiet}
+@item @option{-q}@*@option{-quiet}
 @tab Equivalent to @option{-verbose 0}.
 
 @item @option{-timeout @var{n}}
