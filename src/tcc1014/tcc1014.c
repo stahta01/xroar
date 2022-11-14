@@ -15,11 +15,8 @@
  *
  *  \endlicenseblock
  *
- *  Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED, and much is KNOWN NOT
- *  TO WORK.  Please do not use except for testing.
- *
  *  \par Sources
- *  Sock's GIME register reference http://users.axess.com/twilight/sock/gime.html
+ *  Sock's GIME register reference https://www.6809.org.uk/sock/gime.html
  */
 
 // The "border" interrupts appear to be accurately named - the IRQ line fall is

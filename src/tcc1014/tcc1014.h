@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -14,9 +14,6 @@
  *  See COPYING.GPL for redistribution conditions.
  *
  *  \endlicenseblock
- *
- *  Tandy CoCo 3 support is UNFINISHED and UNSUPPORTED, and much is KNOWN NOT
- *  TO WORK.  Please do not use except for testing.
  */
 
 #ifndef XROAR_TCC1014_TCC1014_H
