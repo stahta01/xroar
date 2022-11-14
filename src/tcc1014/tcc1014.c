@@ -118,8 +118,6 @@ struct TCC1014_private {
 	_Bool GM1;
 	_Bool GM0;
 	_Bool CSS;
-	unsigned COCO_BPR;  // bytes per row in COCO mode, derived from above
-	unsigned COCO_resolution;  // horizontal resolution in COCO mode
 
 	// $FF90: Initialisation register 0 - INIT0
 	// $FF91: Initialisation register 1 - INIT1
@@ -211,6 +209,11 @@ struct TCC1014_private {
 	uint32_t B;  // Current VRAM address
 	unsigned row;  // 0 <= row < nLPR
 	unsigned Xoff;
+
+	// Video resolution
+	unsigned BPR;  // bytes per row
+	unsigned row_stride;  // may be different from BPR
+	unsigned resolution;  // horizontal resolution
 
 	// Video timing
 	unsigned field_duration;  // 312 (PAL) or 262 (NTSC)
@@ -833,9 +836,9 @@ static void do_hs_fall(void *sptr) {
 			gime->row++;
 			if (gime->row >= gime->nLPR) {
 				gime->row = 0;
-				gime->B += gime->HVEN ? 256 : (gime->Xoff - gime->X);
+				gime->B += gime->row_stride;
 			}
-			gime->Xoff = gime->X;
+			gime->Xoff = gime->COCO ? 0 : gime->X;
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
 		// Total bodge to fix PAL display!  I think really we need the
@@ -844,6 +847,14 @@ static void do_hs_fall(void *sptr) {
 		if (!gime->H50 || gime->scanline > 26) {
 			DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->BPI);
 		}
+	}
+
+	if (gime->COCO) {
+		gime->row_stride = gime->BPR;
+	} else if (gime->BP) {
+		gime->row_stride = gime->HVEN ? 256 : gime->BPR;
+	} else {
+		gime->row_stride = gime->HVEN ? 256 : (gime->BPR << (gime->CRES & 1));
 	}
 
 	// HS falling edge.
@@ -862,13 +873,7 @@ static void do_hs_fall(void *sptr) {
 	// Next scanline
 	gime->vram_bit = 0;
 	gime->lborder_remaining = gime->pLB;
-	if (gime->COCO) {
-		gime->vram_remaining = gime->COCO_BPR;
-	} else if (gime->BP) {
-		gime->vram_remaining = VRES_HRES_BPR[gime->HRES];
-	} else {
-		gime->vram_remaining = VRES_HRES_BPR_TEXT[gime->HRES];
-	}
+	gime->vram_remaining = gime->BPR;
 	gime->rborder_remaining = gime->pRB;
 	gime->scanline++;
 	gime->lcount++;
@@ -1054,7 +1059,6 @@ static void render_scanline(struct TCC1014_private *gime) {
 		}
 
 		uint8_t c0, c1, c2, c3;
-		unsigned resolution;
 
 		if (gime->COCO) {
 			// CoCo 2 modes
@@ -1076,13 +1080,11 @@ static void render_scanline(struct TCC1014_private *gime) {
 			gime->vram_bit -= 4;
 			gime->vram_g_data <<= 4;
 			gime->vram_sg_data <<= 1;
-			resolution = gime->COCO_resolution;
 
 		} else {
 			// CoCo 3 modes
 			uint8_t vdata = gime->vram_g_data;
 			if (gime->BP) {
-				resolution = gime->HRES >> 1;
 				switch (gime->CRES) {
 				case 0: default:
 					c0 = gime->palette_reg[(vdata>>7)&1];
@@ -1102,7 +1104,6 @@ static void render_scanline(struct TCC1014_private *gime) {
 				}
 
 			} else {
-				resolution = (gime->HRES & 4) ? 2 : 1;
 				c0 = gime->palette_reg[(vdata&0x80)?gime->attr_fgnd:gime->attr_bgnd];
 				c1 = gime->palette_reg[(vdata&0x40)?gime->attr_fgnd:gime->attr_bgnd];
 				c2 = gime->palette_reg[(vdata&0x20)?gime->attr_fgnd:gime->attr_bgnd];
@@ -1113,7 +1114,7 @@ static void render_scanline(struct TCC1014_private *gime) {
 		}
 
 		// Render appropriate number of pixels
-		switch (resolution) {
+		switch (gime->resolution) {
 		case 0:
 			*(pixel) = c0;
 			*(pixel+1) = c0;
@@ -1203,37 +1204,32 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 	gime->CSS = gime->vmode & 0x08;
 	unsigned GM = (gime->vmode >> 4) & 7;
 
-	// T1-compatibility
-	_Bool text_border = !gime->GM1 && GM2;
-	unsigned text_border_colour = gime->CSS ? 0x26 : 0x12;
-
-	if (!gime->GnA || !(GM == 0 || (gime->GM0 && GM != 7))) {
-		gime->COCO_BPR = 32;
-		gime->COCO_resolution = 1;
-	} else {
-		gime->COCO_BPR = 16;
-		gime->COCO_resolution = 0;
-	}
-	gime->cg_colours = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
-
 	if (gime->COCO) {
+		// CoCo 1/2 compatibility mode
+
+		// Bytes per row, render resolution
+		if (!gime->GnA || !(GM == 0 || (gime->GM0 && GM != 7))) {
+			gime->BPR = 32;
+			gime->resolution = 1;
+		} else {
+			gime->BPR = 16;
+			gime->resolution = 0;
+		}
+
+		// Line counts
 		gime->nTB = gime->H50 ? 63 : 36;
 		gime->nAA = 192;
 		gime->nLB = 120 + (gime->H50 ? 25 : 0);
 		gime->nLPR = gime->GnA ? SAM_V_nLPR[gime->SAM_V] : VSC_nLPR[gime->VSC];
 
-	} else {
-		gime->nTB = gime->lTB;
-		gime->nAA = gime->lAA;
-		gime->nLB = gime->pLB + (gime->H50 ? 25 : 0);
-		gime->nLPR = gime->LPR;
-	}
-
-	if (gime->COCO) {
+		// Render mode, fixed colours
+		gime->cg_colours = !gime->CSS ? TCC1014_GREEN : TCC1014_WHITE;
 		if (!gime->GnA) {
 			gime->render_mode = !gime->SnA ? TCC1014_RENDER_RG : TCC1014_RENDER_SG;
 			gime->fg_colour = gime->CSS ? TCC1014_BRIGHT_ORANGE : TCC1014_BRIGHT_GREEN;
 			gime->bg_colour = gime->CSS ? TCC1014_DARK_ORANGE : TCC1014_DARK_GREEN;
+			_Bool text_border = !gime->GM1 && GM2;
+			unsigned text_border_colour = gime->CSS ? 0x26 : 0x12;
 			gime->border_colour = text_border ? text_border_colour : 0;
 		} else {
 			gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
@@ -1242,7 +1238,26 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 			gime->border_colour = gime->palette_reg[gime->cg_colours];
 		}
 	} else {
+		// CoCo 3 extra graphics modes
+
+		// Bytes per row, render resolution
+		if (gime->BP) {
+			gime->BPR = VRES_HRES_BPR[gime->HRES];
+			gime->resolution = gime->HRES >> 1;
+		} else {
+			gime->BPR = VRES_HRES_BPR_TEXT[gime->HRES];
+			gime->resolution = (gime->HRES & 4) ? 2 : 1;
+		}
+
+		// Line counts
+		gime->nTB = gime->lTB;
+		gime->nAA = gime->lAA;
+		gime->nLB = gime->pLB + (gime->H50 ? 25 : 0);
+		gime->nLPR = gime->LPR;
+
+		// Render mode, border colour
 		gime->render_mode = TCC1014_RENDER_RG;
 		gime->border_colour = gime->BRDR;
 	}
+
 }
