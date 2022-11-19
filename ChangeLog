@@ -1,4 +1,5 @@
  * Add -no-ratelimit option to start at maximum speed
+ * Further fixes to 6809 TFR/EXG involving CC/DP [Tim Lindner]
 
 Version 1.2, Thu 27 Oct 2022
 

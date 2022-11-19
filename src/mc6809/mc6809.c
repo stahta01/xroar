@@ -29,6 +29,9 @@
  *
  *  -  Undocumented 6809 Behaviours, David Banks [hoglet67]
  *     https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6809-Behaviours
+ *
+ *  -  6809 Exchange and Transfer Opcodes
+ *     http://tlindner.macmess.org/?p=945
  */
 
 // TODO:
@@ -681,7 +684,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 					case 0x5: tmp1 = REG_PC; break;
 					case 0x8: tmp1 = REG_A | 0xff00; break;
 					case 0x9: tmp1 = REG_B | 0xff00; break;
-					// TODO: verify this behaviour
 					case 0xa: tmp1 = (REG_CC << 8) | REG_CC; break;
 					case 0xb: tmp1 = (REG_DP << 8) | REG_DP; break;
 					default: tmp1 = 0xffff; break;
@@ -695,9 +697,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 					case 0x5: tmp2 = REG_PC; REG_PC = tmp1; break;
 					case 0x8: tmp2 = REG_A | 0xff00; REG_A = tmp1; break;
 					case 0x9: tmp2 = REG_B | 0xff00; REG_B = tmp1; break;
-					// TODO: verify this behaviour
-					case 0xa: tmp2 = (REG_CC << 8) | REG_CC; REG_CC = tmp1; break;
-					case 0xb: tmp2 = (REG_DP << 8) | REG_DP; REG_DP = tmp1; break;
+					case 0xa: tmp2 = REG_CC | 0xff00; REG_CC = tmp1; break;
+					case 0xb: tmp2 = REG_DP | 0xff00; REG_DP = tmp1; break;
 					default: tmp2 = 0xffff; break;
 				}
 				switch (postbyte >> 4) {
@@ -737,7 +738,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 					case 0x5: tmp1 = REG_PC; break;
 					case 0x8: tmp1 = REG_A | 0xff00; break;
 					case 0x9: tmp1 = REG_B | 0xff00; break;
-					// TODO: verify this behaviour
 					case 0xa: tmp1 = (REG_CC << 8) | REG_CC; break;
 					case 0xb: tmp1 = (REG_DP << 8) | REG_DP; break;
 					default: tmp1 = 0xffff; break;
