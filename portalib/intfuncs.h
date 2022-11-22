@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -20,6 +20,8 @@
 #define PORTALIB_INTFUNCS_H_
 
 #include "top-config.h"
+
+#include <stdint.h>
 
 // Integer division with rounding
 
@@ -45,6 +47,21 @@ void int_split(const int *buffer, int nelems, int *lowmean, int *highmean);
 
 inline int int_clamp_u8(int v) {
 	return (v < 0) ? 0 : ((v > 255) ? 255 : v);
+}
+
+// Unsigned parity function (number of bits set)
+//
+// from https://graphics.stanford.edu/~seander/bithacks.html
+
+inline _Bool u32_parity(uint32_t val) {
+#ifdef HAVE___BUILTIN_PARITY
+	return (_Bool)__builtin_parity(val);
+#else
+	val ^= val >> 16;
+	val ^= val >> 8;
+	val ^= val >> 4;
+	return (0x6996 >> (val & 15)) & 1;
+#endif
 }
 
 #endif

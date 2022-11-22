@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,6 +26,7 @@
 #include "xalloc.h"
 
 extern inline int int_clamp_u8(int v);
+extern inline _Bool u32_parity(uint32_t val);
 
 // Integer compare suitable for passing to qsort()
 

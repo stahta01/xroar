@@ -28,6 +28,7 @@
 #include <stdlib.h>
 
 #include "array.h"
+#include "intfuncs.h"
 
 #include "filter.h"
 #include "part.h"
@@ -362,22 +363,6 @@ void sn76489_write(struct SN76489 *csg, uint32_t tick, uint8_t D) {
 	update_reg(csg_, reg_sel, reg_val);
 }
 
-#ifdef HAVE___BUILTIN_PARITY
-
-#define parity(v) (unsigned)__builtin_parity(v)
-
-#else
-
-static unsigned parity(unsigned val) {
-	val ^= val >> 8;
-	val ^= val >> 4;
-	val ^= val >> 2;
-	val ^= val >> 1;
-	return val & 1;
-}
-
-#endif
-
 float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 	struct SN76489_private *csg_ = sptr;
 	struct SN76489 *csg = &csg_->public;
@@ -458,7 +443,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 			// input transition to high clocks the LFSR
 			csg_->noise_lfsr = (csg_->noise_lfsr >> 1) |
 			                   (csg_->noise_white
-					    ? parity(csg_->noise_lfsr & 0x0003) << 14
+					    ? u32_parity(csg_->noise_lfsr & 0x0003) << 14
 					    : (csg_->noise_lfsr & 1) << 14);
 			_Bool state = csg_->noise_lfsr & 1;
 			csg_->state[3] = state;
