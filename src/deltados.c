@@ -2,7 +2,7 @@
  *
  *  \brief Premier Microsystems' Delta disk system.
  *
- *  \copyright Copyright 2007-2021 Ciaran Anscomb
+ *  \copyright Copyright 2007-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,8 +21,7 @@
  *
  *  - Partly inferred from disassembly of Delta ROM,
  *
- *  - Partly from information provided by Phill Harvey-Smith on
- *    www.dragon-archive.co.uk.
+ *  - Partly from information provided by Phill Harvey-Smith.
  */
 
 #include "top-config.h"
@@ -241,8 +240,8 @@ static void latch_write(struct deltados *d, unsigned D) {
 		if ((D ^ d->latch_old) & 0x04) {
 			LOG_DEBUG(2, "SIDE %s, ", (D & 0x04)?"1":"0");
 		}
-		if ((D ^ d->latch_old) & 0x08) {
-			LOG_DEBUG(2, "DENSITY %s, ", (D & 0x08)?"DOUBLE":"SINGLE");
+		if ((D ^ d->latch_old) & 0x10) {
+			LOG_DEBUG(2, "DENSITY %s, ", (D & 0x10)?"DOUBLE":"SINGLE");
 		}
 		LOG_DEBUG(2, "\n");
 		d->latch_old = D;
@@ -251,6 +250,6 @@ static void latch_write(struct deltados *d, unsigned D) {
 	d->vdrive_interface->set_drive(d->vdrive_interface, d->latch_drive_select);
 	d->latch_side_select = D & 0x04;
 	d->vdrive_interface->set_sso(d->vdrive_interface, d->latch_side_select ? 1 : 0);
-	d->latch_density = !(D & 0x08);
+	d->latch_density = !(D & 0x10);
 	wd279x_set_dden(d->fdc, !d->latch_density);
 }
