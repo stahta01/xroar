@@ -1383,7 +1383,7 @@ seen in the wild, the primary examples being:
 @item Tandy Microcolour BASIC @tab @samp{@@mc10} @tab @file{mc10.rom}
 @item Alice Microcolour BASIC @tab @samp{@@alice} @tab @file{alice.rom}
 @item DragonDOS @tab @samp{@@dragondos_compat} @tab @file{dplus49b.rom, sdose6.rom, ddos10.rom}
-@item Delta System @tab @samp{@@delta} @tab @file{delta.rom}
+@item Delta System @tab @samp{@@delta} @tab @file{delta2.rom, delta.rom}
 @item RS-DOS @tab @samp{@@rsdos} @tab @file{disk11.rom, disk10.rom}
 @item RS-DOS with Becker port @tab @samp{@@rsdos_becker} @tab @file{hdbdw3bck.rom}
 @item Orchestra 90-CC @tab @samp{orch90.rom} @tab

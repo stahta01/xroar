@@ -514,7 +514,7 @@ static char const * const default_config[] = {
 	// RSDOS
 	"romlist rsdos=disk11,disk10",
 	// Delta
-	"romlist delta=delta,deltados,'Premier Micros - DeltaDOS'",
+	"romlist delta=delta2,delta1a,delta19,delta,deltados,'Premier Micros - DeltaDOS'",
 #ifndef HAVE_WASM
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
