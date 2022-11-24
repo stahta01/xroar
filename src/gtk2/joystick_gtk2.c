@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 joystick interfaces.
+ *  \brief GTK+ 2 joystick interfaces.
  *
  *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *

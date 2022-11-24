@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 user-interface common functions.
+ *  \brief GTK+ 2 user-interface common functions.
  *
  *  \copyright Copyright 2014-2019 Ciaran Anscomb
  *
@@ -30,7 +30,7 @@ struct ui_gtk2_interface {
 
 	struct ui_cfg *cfg;
 
-	// Shared GTK+2 objects
+	// Shared GTK+ objects
 	GtkWidget *top_window;
 	GtkUIManager *menu_manager;
 	GtkWidget *menubar;
@@ -83,7 +83,7 @@ void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
 
 void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data);
 
-// This function doesn't exist in GTK+2, but does in later versions:
+// This function doesn't exist in GTK+ 2, but does in later versions:
 GtkBuilder *gtk_builder_new_from_resource(const gchar *path);
 
 #endif

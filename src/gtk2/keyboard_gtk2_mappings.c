@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 keyboard mappings.
+ *  \brief GTK+ 2 keyboard mappings.
  *
  *  \copyright Copyright 2010-2014 Ciaran Anscomb
  *

@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 tape control window.
+ *  \brief GTK+ 2 tape control window.
  *
  *  \copyright Copyright 2011 Ciaran Anscomb
  *

@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 keyboard support.
+ *  \brief GTK+ 2 keyboard support.
  *
  *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *

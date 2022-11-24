@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 drive control window.
+ *  \brief GTK+ 2 drive control window.
  *
  *  \copyright Copyright 2011-2017 Ciaran Anscomb
  *

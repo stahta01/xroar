@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 user-interface common functions.
+ *  \brief GTK+ 2 user-interface common functions.
  *
  *  \copyright Copyright 2014-2019 Ciaran Anscomb
  *

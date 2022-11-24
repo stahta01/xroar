@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 file requester module.
+ *  \brief GTK+ 2 file requester module.
  *
  *  \copyright Copyright 2008-2019 Ciaran Anscomb
  *
@@ -50,7 +50,7 @@ static char *load_filename(void *sptr, char const * const *extensions);
 static char *save_filename(void *sptr, char const * const *extensions);
 
 struct module filereq_gtk2_module = {
-	.name = "gtk2", .description = "GTK+-2 file requester",
+	.name = "gtk2", .description = "GTK+ 2 file requester",
 	.new = filereq_gtk2_new
 };
 

@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief GTK+2 user-interface module.
+ *  \brief GTK+ 2 user-interface module.
  *
  *  \copyright Copyright 2010-2022 Ciaran Anscomb
  *
@@ -73,7 +73,7 @@ static struct module * const gtk2_vo_module_list[] = {
 static void *filereq_ui_gtk2_new(void *cfg);
 
 struct module filereq_ui_gtk2_module = {
-	.name = "gtk2", .description = "GTK+-2 file requester",
+	.name = "gtk2", .description = "GTK+ 2 file requester",
 	.new = filereq_ui_gtk2_new
 };
 extern struct module filereq_gtk2_module;
@@ -97,7 +97,7 @@ static void *filereq_ui_gtk2_new(void *cfg) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct ui_module ui_gtk2_module = {
-	.common = { .name = "gtk2", .description = "GTK+-2 UI",
+	.common = { .name = "gtk2", .description = "GTK+ 2 UI",
                     .new = ui_gtk2_new,
 	},
 	.filereq_module_list = gtk2_filereq_module_list,
@@ -481,7 +481,7 @@ static void *ui_gtk2_new(void *cfg) {
 	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_gtk2_interface){0};
 	struct ui_interface *ui = &uigtk2->public;
-	// Make available globally for other GTK+2 code
+	// Make available globally for other GTK+ 2 code
 	global_uigtk2 = uigtk2;
 	uigtk2->cfg = cfg;
 
