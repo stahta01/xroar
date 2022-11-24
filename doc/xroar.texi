@@ -963,15 +963,14 @@ expansion.
 If a disk interface cartridge is selected, XRoar supports virtual disks.  Three
 virtual disk formats are supported:
 
-@multitable @columnfractions .23 .73
-@item @option{-load-fd@var{X} @var{file}}
-@tab Load disk image file @var{file} into drive @var{X} (0--3).
-@item @option{-disk-write-back}
-@tab Default to enabling write-back for disk images.
-@item @option{-no-disk-auto-os9}
-@tab Don't try to detect headerless OS-9 JVC disk images.
-@item @option{-no-disk-auto-sd}
-@tab Don't assume single density for 10 sector-per-track disks.
+@multitable @columnfractions .15 .80
+@headitem Extension @tab Description
+@item .dmk
+@tab Disk image file in a format defined by David Keil.  These images store a lot of information about the structure of a disk and support both single and double density data.
+@item .jvc, .os9, .dsk
+@tab Disk image file in a basic sector-by-sector format with optional header information.
+@item .vdk
+@tab Another disk image file format, used by PC-Dragon.
 @end multitable
 
 Under Windows and Mac OS, the @clicksequence{File @click{} Drive @var{X}} menus
