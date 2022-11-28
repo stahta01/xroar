@@ -1707,7 +1707,7 @@ nail down bugs; read the ChangeLog for details.
 
 And thanks to all the people on the
 @myuref{https://archive.worldofdragon.org/phpBB3/, Dragon Archive Forums},
-CoCoTALK! Discord and IRC that have provided helpful feedback and insight.
+IRC and CoCo Discord that have provided helpful feedback and insight.
 
 
 @c = === === === === === === === === === === === === === === === === === ===
