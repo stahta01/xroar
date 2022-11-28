@@ -1019,6 +1019,9 @@ are ejected, changed, or you quit the emulator.  However, you can force
 rewriting the image files at any time by pressing
 @kbd{@key{CTRL}+@key{SHIFT}+D}.
 
+If a floppy image file is rewritten, XRoar will rename the old version to have
+a @file{.bak} extension if possible.
+
 The JVC format specifies that the disk images without headers are single-sided,
 but some double-sided disk images have been made available without headers.
 These cannot normally be distinguished from a single-sided disk that happens to
