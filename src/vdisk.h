@@ -63,6 +63,7 @@ struct vdisk {
 
 	enum xroar_filetype filetype;
 	char *filename;
+	_Bool dirty;  // modified: needs saving, if write_back is enabled
 	_Bool write_back;
 	_Bool write_protect;
 	unsigned num_cylinders;
@@ -139,7 +140,7 @@ struct vdisk *vdisk_ref(struct vdisk *disk);
 void vdisk_unref(struct vdisk *disk);
 
 struct vdisk *vdisk_load(const char *filename);
-int vdisk_save(struct vdisk *disk, _Bool force);
+int vdisk_save(struct vdisk *disk);
 
 /*
  * These both return a pointer to the beginning of the specified track's IDAM

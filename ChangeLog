@@ -1,6 +1,7 @@
  * Add -no-ratelimit option to start at maximum speed
  * Further fixes to 6809 TFR/EXG involving CC/DP [Tim Lindner]
  * Fix Delta density select [Phill Harvey-Smith]
+ * Track floppy disk 'dirty' state to avoid unnecessary image rewrites
 
 Version 1.2, Thu 27 Oct 2022
 

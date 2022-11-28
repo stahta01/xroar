@@ -313,7 +313,7 @@ void vdrive_eject_disk(struct vdrive_interface *vi, unsigned drive) {
 	assert(drive < MAX_DRIVES);
 	if (!vip->drives[drive].disk)
 		return;
-	vdisk_save(vip->drives[drive].disk, 0);
+	vdisk_save(vip->drives[drive].disk);
 	vdisk_unref(vip->drives[drive].disk);
 	vip->drives[drive].disk = NULL;
 	update_signals(vip);
@@ -331,7 +331,7 @@ void vdrive_flush(struct vdrive_interface *vi) {
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
 	for (unsigned drive = 0; drive < MAX_DRIVES; drive++) {
 		if (vip->drives[drive].disk) {
-			vdisk_save(vip->drives[drive].disk, 0);
+			vdisk_save(vip->drives[drive].disk);
 		}
 	}
 }
@@ -401,6 +401,7 @@ void vdrive_write(void *sptr, uint8_t data) {
 		}
 		vip->head_pos++;
 	}
+	vip->current_drive->disk->dirty = 1;
 	if (vip->head_pos >= vip->current_drive->disk->track_length) {
 		set_index_state(vip, 1);
 	}
@@ -453,6 +454,7 @@ void vdrive_write_idam(void *sptr) {
 		qsort(vip->idamptr, 64, sizeof(uint16_t), compar_idams);
 	}
 	vip->head_pos += vip->head_incr;
+	vip->current_drive->disk->dirty = 1;
 	if (vip->head_pos >= vip->current_drive->disk->track_length) {
 		set_index_state(vip, 1);
 	}

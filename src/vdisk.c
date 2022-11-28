@@ -158,29 +158,48 @@ void vdisk_unref(struct vdisk *disk) {
 	free(disk);
 }
 
+// Call a particular loader according to type of image.
+//
+// As loaders will tend to use functions that modify the in-RAM image and flag
+// it as dirty, they should clear the dirty flag before returning, but it's
+// done here anyway.
+
 struct vdisk *vdisk_load(const char *filename) {
 	if (filename == NULL) return NULL;
 	enum xroar_filetype filetype = xroar_filetype_by_ext(filename);
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(dispatch); i++) {
 		if (dispatch[i].filetype == filetype) {
-			return dispatch[i].load_func(filename);
+			struct vdisk *d = dispatch[i].load_func(filename);
+			if (d)
+				d->dirty = 0;
+			return d;
 		}
 	}
 	LOG_WARN("No reader for virtual disk file type.\n");
 	return NULL;
 }
 
-int vdisk_save(struct vdisk *disk, _Bool force) {
-	int i;
+// Call a saver based on type of image.
+//
+// Similarly, this should clear the dirty flag, as RAM should now reflect the
+// state of the image.
+
+int vdisk_save(struct vdisk *disk) {
 	if (!disk)
 		return -1;
-	if (!force && !disk->write_back) {
+	if (!disk->dirty) {
+		LOG_DEBUG(3, "Not saving disk file: not modified.\n");
+		// Disk not modified, so success:
+		return 0;
+	}
+	if (!disk->write_back) {
 		LOG_DEBUG(1, "Not saving disk file: write-back is disabled.\n");
 		// This is the requested behaviour, so success:
 		return 0;
 	}
 	// This should never happen:
 	assert(disk->filename != NULL);
+	int i;
 	for (i = 0; dispatch[i].filetype >= 0 && dispatch[i].filetype != disk->filetype; i++);
 	if (dispatch[i].save_func == NULL) {
 		LOG_WARN("No writer for virtual disk file type.\n");
@@ -193,7 +212,10 @@ int vdisk_save(struct vdisk *disk, _Bool force) {
 		rename(disk->filename, backup_filename);
 	}
 	sdsfree(backup_filename);
-	return dispatch[i].save_func(disk);
+	int r = dispatch[i].save_func(disk);
+	if (r == 0)
+		disk->dirty = 0;
+	return r;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -316,6 +338,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	}
 	fclose(fd);
 	vdisk_ctx_free(ctx);
+	disk->dirty = 0;
 	return disk;
 }
 
@@ -406,6 +429,7 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	}
 	vdisk_ctx_free(ctx);
 	fclose(fd);
+	disk->dirty = 0;
 	return 0;
 }
 
@@ -574,6 +598,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	}
 	fclose(fd);
 	vdisk_ctx_free(ctx);
+	disk->dirty = 0;
 	return disk;
 }
 
@@ -654,6 +679,7 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	}
 	fclose(fd);
 	vdisk_ctx_free(ctx);
+	disk->dirty = 0;
 	return 0;
 }
 
@@ -751,6 +777,7 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 		}
 	}
 	fclose(fd);
+	disk->dirty = 0;
 	return disk;
 }
 
@@ -785,6 +812,7 @@ static int vdisk_save_dmk(struct vdisk *disk) {
 		}
 	}
 	fclose(fd);
+	disk->dirty = 0;
 	return 0;
 }
 
@@ -877,6 +905,7 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 		ncyls = cyl + 1;
 	}
 	if (nheads > disk->num_heads || ncyls > disk->num_cylinders) {
+		disk->dirty = 1;
 		if (ncyls > disk->num_cylinders) {
 			// Allocate and clear new tracks
 			for (unsigned s = 0; s < disk->num_heads; s++) {
@@ -907,7 +936,9 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 static void write_bytes(struct vdisk_ctx *ctx, unsigned repeat, uint8_t data) {
 	assert(ctx->head_pos >= 128);
 	assert(ctx->head_pos < ctx->disk->track_length);
+	struct vdisk *disk = ctx->disk;
 	unsigned nbytes = ctx->dden ? 1 : 2;
+	disk->dirty = 1;
 	for ( ; repeat; repeat--) {
 		for (unsigned i = nbytes; i; i--) {
 			ctx->track_data[ctx->head_pos++] = data;
