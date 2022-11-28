@@ -176,8 +176,8 @@ Length of leaders in bytes to write in rewrite mode (1-2048 bytes, default 256).
 \fB\-load\-fd\fIX\fR\fR \fIfile\fR
 Insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3).
 .TP
-\fB\-disk\-write\-back\fR
-Default to enabling write\-back for disk images.
+\fB\-no\-disk\-write\-back\fR
+Don't default to enabling write\-back for disk images.
 .TP
 \fB\-no\-disk\-auto\-os9\fR
 Don't try to detect headerless OS\-9 JVC disk images.

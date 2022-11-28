@@ -82,6 +82,7 @@
 
 struct xroar_cfg xroar_cfg = {
 	.ao_fragments = -1,
+	.disk_write_back = 1,
 	.disk_auto_os9 = 1,
 	.disk_auto_sd = 1,
 	.tape_pan = 0.5,
@@ -2667,7 +2668,7 @@ static void helptext(void) {
 
 "\n Floppy disks:\n"
 "  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
-"  -disk-write-back      default to enabling write-back for disk images\n"
+"  -no-disk-write-back   don't default to enabling write-back for disk images\n"
 "  -no-disk-auto-os9     don't try to detect headerless OS-9 JVC disk images\n"
 "  -no-disk-auto-sd      don't assume single density for 10 sec/track disks\n"
 
@@ -2853,7 +2854,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Disks\n", f);
-	xroar_cfg_print_bool(f, all, "disk-write-back", xroar_cfg.disk_write_back, 0);
+	xroar_cfg_print_bool(f, all, "disk-write-back", xroar_cfg.disk_write_back, 1);
 	xroar_cfg_print_bool(f, all, "disk-auto-os9", xroar_cfg.disk_auto_os9, 1);
 	xroar_cfg_print_bool(f, all, "disk-auto-sd", xroar_cfg.disk_auto_sd, 1);
 	fputs("\n", f);

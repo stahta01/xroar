@@ -116,6 +116,16 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
+Version 1.3 changes the default floppy disk write-back behaviour.  The old
+behaviour erred on the side of protecting image files from accidental
+modification.  Enough people have complained about this---or at least, the
+small number that have complained have done so loudly---that XRoar will now
+rewrite changes to the backing file by default.  Run with the
+@option{-no-disk-write-back} option to revert to the old behaviour.  XRoar will
+still rename the old version of a file to have a @file{.bak} extension if
+possible, and also tries harder not to rewrite the file if no writes have
+occurred.
+
 Version 1.0 introduced support for the Tandy Colour Computer 3 and the Tandy
 MC-10.  Version 1.1 adds proper support for the MC-10's French cousin, the
 Matra & Hachette Alice (4K).
@@ -977,19 +987,19 @@ Under Windows and Mac OS, the @clicksequence{File @click{} Drive @var{X}} menus
 allow you to insert or eject disks, create new disks, or toggle the
 write-enable and write-back options.
 
-In the Unix/Linux GTK+ interface, these options are available from the disk
-control dialog, which you can open with @clicksequence{Tool @click{} Disk
+In the Unix/Linux GTK+ interface, these options are available from the drive
+control dialog, which you can open with @clicksequence{Tool @click{} Drive
 control} or by pressing @kbd{@key{CTRL}+D}.
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
 instead of one, so when you perform operations on Drive 1, from the CoCo's
 point of view, that will be Drive 0.
 
-@multitable @columnfractions .21 .75
+@multitable @columnfractions .26 .70
 @item @option{-load-fd@var{X} @var{file}}
 @tab Load disk image file @var{file} into drive @var{X} (0--3).
-@item @option{-disk-write-back}
-@tab Default to enabling write-back for disk images.
+@item @option{-no-disk-write-back}
+@tab Don't default to enabling write-back for disk images.
 @item @option{-no-disk-auto-os9}
 @tab Don't try to detect headerless OS-9 JVC disk images.
 @item @option{-no-disk-auto-sd}
@@ -997,11 +1007,12 @@ point of view, that will be Drive 0.
 @end multitable
 
 When you attach a disk, it is read into memory, and subsequent disk operations
-are performed on this in-memory copy.  Write enable defaults to on (so write
-operations on the copy will work), but write back defaults to off, so updates
-will not be written back to the disk image file.  This default protects your
-files from being corrupted, but you can change the default behaviour to turn
-write back on with the @option{-disk-write-back} option.
+are performed on this in-memory copy.  Write-enable defaults to on (write
+operations on the in-memory copy will work).  Write-back also defaults to on,
+so changes to the copy will be rewritten to the image file.  @emph{Warning}:
+This is a change in behaviour in new versions of XRoar.  If you wish to protect
+your floppy image files from accidental modification, run with the
+@option{-no-disk-write-back} option.
 
 Even with write-back enabled, disk images are not usually rewritten until they
 are ejected, changed, or you quit the emulator.  However, you can force
@@ -2145,12 +2156,12 @@ to this machine (the default is to try).
 
 @c
 
-@multitable @columnfractions .23 .73
+@multitable @columnfractions .26 .70
 @headitem Floppy disks @tab @xref{Floppy disks}.
 @item @option{-load-fd@var{X} @var{file}}
 @tab Load disk image file @var{file} into drive @var{X} (0--3).
-@item @option{-disk-write-back}
-@tab Default to enabling write-back for disk images.
+@item @option{-no-disk-write-back}
+@tab Don't default to enabling write-back for disk images.
 @item @option{-no-disk-auto-os9}
 @tab Don't try to detect headerless OS-9 JVC disk images.
 @item @option{-no-disk-auto-sd}
