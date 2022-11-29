@@ -25,7 +25,7 @@
  *  - HD6309E data sheet, Hitachi
  *
  *  - MC6809 Cycle-By-Cycle Performance,
- *    http://koti.mbnet.fi/~atjs/mc6809/Information/6809cyc.txt
+ *    http://atjs.great-site.net/mc6809/Information/6809cyc.txt
  *
  *  - Motorola 6809 and Hitachi 6309 Programmers Reference,
  *    2009 Darren Atkinson

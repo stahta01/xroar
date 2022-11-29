@@ -20,7 +20,7 @@
  *  -  MC6809E data sheet, Motorola
  *
  *  -  MC6809 Cycle-By-Cycle Performance,
- *     http://koti.mbnet.fi/~atjs/mc6809/Information/6809cyc.txt
+ *     http://atjs.great-site.net/mc6809/Information/6809cyc.txt
  *
  *  -  Dragon Update, Illegal Op-codes, Feb 1994 Ciaran Anscomb
  *
