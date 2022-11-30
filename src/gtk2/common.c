@@ -64,7 +64,7 @@ void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gp
 	g_signal_handlers_unblock_by_func(o, G_CALLBACK(func), data);
 }
 
-G_NORETURN static void do_g_abort(const gchar *format, GError *error) {
+FUNC_ATTR_NORETURN static void do_g_abort(const gchar *format, GError *error) {
 	if (error) {
 		g_message("gtk_builder_new_from_resource() failed: %s", error->message);
 		g_error_free(error);
