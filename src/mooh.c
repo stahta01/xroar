@@ -133,7 +133,7 @@ static void mooh_initialise(struct part *p, void *options) {
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 
 	// Attach an SD card (SPI mode) to 65SPI/B
-	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", xroar_cfg.load_hd[0]);
+	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", xroar_cfg.file.hd[0]);
 	spi65_add_device(spi65, sdcard, 0);
 }
 

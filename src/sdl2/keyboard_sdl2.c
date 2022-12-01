@@ -165,7 +165,7 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 		uisdl2->keyboard.unicode_last_scancode[i] = 0;
 
 	// Apply user-supplied binds:
-	for (struct slist *iter = xroar_cfg.kbd_bind_list; iter; iter = iter->next) {
+	for (struct slist *iter = xroar_cfg.kbd.bind_list; iter; iter = iter->next) {
 		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
 		SDL_Scancode scancode = SDL_GetScancodeFromName(bind->hostkey);
 		if (scancode != SDL_SCANCODE_UNKNOWN && scancode < SDL_NUM_SCANCODES) {

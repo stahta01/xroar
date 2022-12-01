@@ -79,48 +79,65 @@ enum xroar_filetype {
 /* Command line arguments */
 
 struct xroar_cfg {
-	/* Emulator interface */
-	// Video
-	int frameskip;
-	_Bool vdg_inverted_text;
+
 	// Audio
-	char *ao_device;
-	int ao_format;
-	int ao_rate;
-	int ao_channels;
-	int ao_fragments;
-	int ao_fragment_ms;
-	int ao_fragment_nframes;
-	int ao_buffer_ms;
-	int ao_buffer_nframes;
+	struct {
+		char *device;
+		int format;
+		int rate;
+		int channels;
+		int fragments;
+		int fragment_ms;
+		int fragment_nframes;
+		int buffer_ms;
+		int buffer_nframes;
+	} ao;
 
 	// Keyboard
-	_Bool kbd_translate;
-	struct slist *kbd_bind_list;
-	// Cartridges
-	_Bool becker;
-	char *becker_ip;
-	char *becker_port;
+	struct {
+		_Bool translate;
+		struct slist *bind_list;
+	} kbd;
+
+	// Becker port
+	struct {
+		_Bool prefer;
+		char *ip;
+		char *port;
+	} becker;
+
 	// Files
-	char *rompath;
-	char *load_hd[2];
+	struct {
+		char *rompath;
+		char *hd[2];
+	} file;
+
 	// Cassettes
-	double tape_pan;
-	double tape_hysteresis;
-	int tape_rewrite_gap_ms;
-	int tape_rewrite_leader;
+	struct {
+		double pan;
+		double hysteresis;
+		int rewrite_gap_ms;
+		int rewrite_leader;
+	} tape;
+
 	// Disks
-	_Bool disk_write_back;
-	_Bool disk_auto_os9;
-	_Bool disk_auto_sd;
-	// CRC lists
+	struct {
+		_Bool write_back;
+		_Bool auto_os9;
+		_Bool auto_sd;
+	} disk;
+
+	// XXX this might make more sense as a per-machine option
 	_Bool force_crc_match;
+
 	// Debugging
-	_Bool gdb;
-	char *gdb_ip;
-	char *gdb_port;
-	char *timeout_motoroff;
-	char *snap_motoroff;
+	struct {
+		_Bool gdb;
+		char *gdb_ip;
+		char *gdb_port;
+		char *timeout_motoroff;
+		char *snap_motoroff;
+	} debug;
 };
 
 extern struct xroar_cfg xroar_cfg;

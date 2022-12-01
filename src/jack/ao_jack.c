@@ -120,8 +120,8 @@ static void *new(void *cfg) {
 	jack_nframes_t fragment_nframes = jack_get_buffer_size(aojack->client);
 
 	aojack->nfragments = 1;
-	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
-		aojack->nfragments = xroar_cfg.ao_fragments;
+	if (xroar_cfg.ao.fragments > 0 && xroar_cfg.ao.fragments <= 64)
+		aojack->nfragments = xroar_cfg.ao.fragments;
 
 	aojack->timeout_us = (fragment_nframes * 1500000) / rate;
 

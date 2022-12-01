@@ -818,8 +818,8 @@ static _Bool dragon_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	if (xroar_cfg.gdb) {
-		md->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, md->bp_session);
+	if (xroar_cfg.debug.gdb) {
+		md->gdb_interface = gdb_interface_new(xroar_cfg.debug.gdb_ip, xroar_cfg.debug.gdb_port, m, md->bp_session);
 	}
 #endif
 

@@ -122,7 +122,7 @@ static sds find_rom(const char *romname) {
 	if (!romname) return NULL;
 	sds filename = sdsnew(romname);
 	size_t filename_len = sdslen(filename);
-	const char *rompath = xroar_cfg.rompath ? xroar_cfg.rompath : "";
+	const char *rompath = xroar_cfg.file.rompath ? xroar_cfg.file.rompath : "";
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(rom_extensions); i++) {
 		sdssetlen(filename, filename_len);
 		filename = sdscat(filename, rom_extensions[i]);

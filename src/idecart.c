@@ -150,21 +150,21 @@ static _Bool idecart_finish(struct part *p) {
 
 	// Controller code depends on a valid filehandle being attached.
 	for (int i = 0; i < 2; i++) {
-		if (xroar_cfg.load_hd[i]) {
-			struct blkdev *bd = bd_open(xroar_cfg.load_hd[i]);
+		if (xroar_cfg.file.hd[i]) {
+			struct blkdev *bd = bd_open(xroar_cfg.file.hd[i]);
 			if (!bd) {
-				int fd = open(xroar_cfg.load_hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0600);
+				int fd = open(xroar_cfg.file.hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0600);
 				if (fd == -1) {
-					perror(xroar_cfg.load_hd[i]);
+					perror(xroar_cfg.file.hd[i]);
 					continue;
 				}
 				if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
-					fprintf(stderr, "IDE: unable to create %s.\n", xroar_cfg.load_hd[i]);
+					fprintf(stderr, "IDE: unable to create %s.\n", xroar_cfg.file.hd[i]);
 					close(fd);
 					continue;
 				}
 				close(fd);
-				bd = bd_open(xroar_cfg.load_hd[i]);
+				bd = bd_open(xroar_cfg.file.hd[i]);
 			}
 			if (bd) {
 				ide_attach(ide->controller, i, bd);

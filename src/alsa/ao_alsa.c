@@ -67,12 +67,12 @@ static void *new(void *cfg) {
 
 	ao->free = DELEGATE_AS0(void, ao_alsa_free, ao);
 
-	const char *device = xroar_cfg.ao_device ? xroar_cfg.ao_device : "default";
+	const char *device = xroar_cfg.ao.device ? xroar_cfg.ao.device : "default";
 	int err;
 	snd_pcm_hw_params_t *hw_params;
 	snd_pcm_format_t format;
 
-	switch (xroar_cfg.ao_format) {
+	switch (xroar_cfg.ao.format) {
 	case SOUND_FMT_U8:
 		format = SND_PCM_FORMAT_U8;
 		break;
@@ -98,12 +98,12 @@ static void *new(void *cfg) {
 		format = SND_PCM_FORMAT_FLOAT;
 		break;
 	}
-	unsigned nchannels = xroar_cfg.ao_channels;
+	unsigned nchannels = xroar_cfg.ao.channels;
 	if (nchannels < 1 || nchannels > 2)
 		nchannels = 2;
 
 	unsigned rate;
-	rate = (xroar_cfg.ao_rate > 0) ? xroar_cfg.ao_rate : 48000;
+	rate = (xroar_cfg.ao.rate > 0) ? xroar_cfg.ao.rate : 48000;
 
 	if ((err = snd_pcm_open(&aoalsa->pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0)
 		goto failed;
@@ -127,10 +127,10 @@ static void *new(void *cfg) {
 		goto failed;
 
 	aoalsa->fragment_nframes = 0;
-	if (xroar_cfg.ao_fragment_ms > 0) {
-		aoalsa->fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
-	} else if (xroar_cfg.ao_fragment_nframes > 0) {
-		aoalsa->fragment_nframes = xroar_cfg.ao_fragment_nframes;
+	if (xroar_cfg.ao.fragment_ms > 0) {
+		aoalsa->fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
+	} else if (xroar_cfg.ao.fragment_nframes > 0) {
+		aoalsa->fragment_nframes = xroar_cfg.ao.fragment_nframes;
 	}
 	if (aoalsa->fragment_nframes > 0) {
 		if ((err = snd_pcm_hw_params_set_period_size_near(aoalsa->pcm_handle, hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
@@ -141,8 +141,8 @@ static void *new(void *cfg) {
 
 	unsigned nfragments = 0;
 	int nfragments_dir;
-	if (xroar_cfg.ao_fragments > 0) {
-		nfragments = xroar_cfg.ao_fragments;
+	if (xroar_cfg.ao.fragments > 0) {
+		nfragments = xroar_cfg.ao.fragments;
 	}
 	if (nfragments > 0) {
 		if ((err = snd_pcm_hw_params_set_periods_near(aoalsa->pcm_handle, hw_params, &nfragments, NULL)) < 0) {
@@ -152,10 +152,10 @@ static void *new(void *cfg) {
 	}
 
 	snd_pcm_uframes_t buffer_nframes = 0;
-	if (xroar_cfg.ao_buffer_ms > 0) {
-		buffer_nframes = (rate * xroar_cfg.ao_buffer_ms) / 1000;
-	} else if (xroar_cfg.ao_buffer_nframes > 0) {
-		buffer_nframes = xroar_cfg.ao_buffer_nframes;
+	if (xroar_cfg.ao.buffer_ms > 0) {
+		buffer_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
+	} else if (xroar_cfg.ao.buffer_nframes > 0) {
+		buffer_nframes = xroar_cfg.ao.buffer_nframes;
 	}
 	/* Pick a sensible default: */
 	if (nfragments == 0 && buffer_nframes == 0)

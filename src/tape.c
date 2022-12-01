@@ -201,7 +201,7 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	tip->ui = ui;
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
-	tip->rewrite.leader_count = xroar_cfg.tape_rewrite_leader;
+	tip->rewrite.leader_count = xroar_cfg.tape.rewrite_leader;
 	tip->rewrite.silence = 1;
 	tip->rewrite.bit0_pwt = 6403;
 	tip->rewrite.bit1_pwt = 3489;
@@ -286,7 +286,7 @@ int tape_seek(struct tape *t, long offset, int whence) {
 	// If seeking to beginning of tape, ensure any fake leader etc.
 	// is set up properly.
 	if (r >= 0 && t->offset == 0) {
-		tape_desync(tip, xroar_cfg.tape_rewrite_leader);
+		tape_desync(tip, xroar_cfg.tape.rewrite_leader);
 	}
 	return r;
 }
@@ -552,11 +552,11 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 #endif
 	}
 	if (ti->tape_input->module->set_panning)
-		ti->tape_input->module->set_panning(ti->tape_input, xroar_cfg.tape_pan);
+		ti->tape_input->module->set_panning(ti->tape_input, xroar_cfg.tape.pan);
 	if (ti->tape_input->module->set_hysteresis)
-		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar_cfg.tape_hysteresis);
+		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar_cfg.tape.hysteresis);
 
-	tape_desync(tip, xroar_cfg.tape_rewrite_leader);
+	tape_desync(tip, xroar_cfg.tape.rewrite_leader);
 	tape_set_playing(ti, !ti->default_paused, 1);
 	if (logging.level >= 1) {
 		LOG_PRINT("Tape: Attached '%s' for reading", filename);
@@ -730,14 +730,14 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 		if (motor) {
 			motoron_time = event_current_tick;
 		}
-		if (!motor && xroar_cfg.timeout_motoroff) {
+		if (!motor && xroar_cfg.debug.timeout_motoroff) {
 			int delta = event_tick_delta(event_current_tick, motoron_time);
 			if (delta < 0 || delta > 416) {
-				motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+				motoroff_timeout = xroar_set_timeout(xroar_cfg.debug.timeout_motoroff);
 			}
 		}
-		if (!motor && xroar_cfg.snap_motoroff) {
-			write_snapshot(xroar_cfg.snap_motoroff);
+		if (!motor && xroar_cfg.debug.snap_motoroff) {
+			write_snapshot(xroar_cfg.debug.snap_motoroff);
 		}
 		LOG_DEBUG(2, "Tape: motor %s\n", motor ? "ON" : "OFF");
 	}
@@ -832,7 +832,7 @@ static void update_motor(struct tape_interface_private *tip) {
 			ti->tape_output->module->motor_off(ti->tape_output);
 		}
 		if (tip->tape_rewrite) {
-			tape_desync(tip, xroar_cfg.tape_rewrite_leader);
+			tape_desync(tip, xroar_cfg.tape.rewrite_leader);
 		}
 	}
 	set_breakpoints(tip);
@@ -849,11 +849,11 @@ static void waggle_bit(void *sptr) {
 	case -1:
 		DELEGATE_CALL(ti->update_audio, 0.5);
 		event_dequeue(&tip->waggle_event);
-		if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
-			motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+		if (!motoroff_timeout && xroar_cfg.debug.timeout_motoroff) {
+			motoroff_timeout = xroar_set_timeout(xroar_cfg.debug.timeout_motoroff);
 		}
-		if (xroar_cfg.snap_motoroff) {
-			write_snapshot(xroar_cfg.snap_motoroff);
+		if (xroar_cfg.debug.snap_motoroff) {
+			write_snapshot(xroar_cfg.debug.snap_motoroff);
 		}
 		if (ti->default_paused) {
 			tape_set_playing(ti, 0, 1);
@@ -907,8 +907,8 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
 		if (tip->in_pulse < 0) {
 			event_dequeue(&tip->waggle_event);
-			if (!motoroff_timeout && xroar_cfg.timeout_motoroff) {
-				motoroff_timeout = xroar_set_timeout(xroar_cfg.timeout_motoroff);
+			if (!motoroff_timeout && xroar_cfg.debug.timeout_motoroff) {
+				motoroff_timeout = xroar_set_timeout(xroar_cfg.debug.timeout_motoroff);
 			}
 			return;
 		}
@@ -1376,9 +1376,9 @@ static void rewrite_tape_on(void *sptr) {
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
 	/* desync with long leader */
-	tape_desync(tip, xroar_cfg.tape_rewrite_leader);
+	tape_desync(tip, xroar_cfg.tape.rewrite_leader);
 	if (tip->tape_rewrite && ti->tape_output) {
-		tape_sample_out(ti->tape_output, 0x80, EVENT_MS(xroar_cfg.tape_rewrite_gap_ms));
+		tape_sample_out(ti->tape_output, 0x80, EVENT_MS(xroar_cfg.tape.rewrite_gap_ms));
 		tip->rewrite.silence = 1;
 	}
 }

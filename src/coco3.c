@@ -537,8 +537,8 @@ static _Bool coco3_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	if (xroar_cfg.gdb) {
-		mcc3->gdb_interface = gdb_interface_new(xroar_cfg.gdb_ip, xroar_cfg.gdb_port, m, mcc3->bp_session);
+	if (xroar_cfg.debug.gdb) {
+		mcc3->gdb_interface = gdb_interface_new(xroar_cfg.debug.gdb_ip, xroar_cfg.debug.gdb_port, m, mcc3->bp_session);
 	}
 #endif
 

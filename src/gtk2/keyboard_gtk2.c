@@ -229,7 +229,7 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	}
 
 	// Apply user-supplied binds:
-	for (struct slist *iter = xroar_cfg.kbd_bind_list; iter; iter = iter->next) {
+	for (struct slist *iter = xroar_cfg.kbd.bind_list; iter; iter = iter->next) {
 		struct dkbd_bind *bind = (struct dkbd_bind *)iter->data;
 		guint keyval = gdk_keyval_from_name(bind->hostkey);
 		// Docs say this returns GDK_KEY_VoidSymbol, but it seems to
@@ -406,7 +406,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		return FALSE;
 	}
 
-	if (xroar_cfg.kbd_translate) {
+	if (xroar_cfg.kbd.translate) {
 		guint16 keycode = event->hardware_keycode;
 		guint32 unicode = gdk_keyval_to_unicode(event->keyval);
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));
@@ -486,7 +486,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		return FALSE;
 	}
 
-	if (xroar_cfg.kbd_translate) {
+	if (xroar_cfg.kbd.translate) {
 		guint16 keycode = event->hardware_keycode;
 		guint32 unicode = last_unicode[keycode];
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   unicode %08x   %s\n", keycode, keyval, unicode, gdk_keyval_name(keyval));

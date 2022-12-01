@@ -110,8 +110,8 @@ static void *new(void *cfg) {
 		goto failed;
 
 	aomacosx->nfragments = 2;
-	if (xroar_cfg.ao_fragments > 0 && xroar_cfg.ao_fragments <= 64)
-		aomacosx->nfragments = xroar_cfg.ao_fragments;
+	if (xroar_cfg.ao.fragments > 0 && xroar_cfg.ao.fragments <= 64)
+		aomacosx->nfragments = xroar_cfg.ao.fragments;
 
 	unsigned rate = deviceFormat.mSampleRate;
 	unsigned nchannels = deviceFormat.mChannelsPerFrame;
@@ -121,15 +121,15 @@ static void *new(void *cfg) {
 	unsigned sample_nbytes = sizeof(float);
 	unsigned frame_nbytes = nchannels * sample_nbytes;
 
-	if (xroar_cfg.ao_fragment_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
-	} else if (xroar_cfg.ao_fragment_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao_fragment_nframes;
+	if (xroar_cfg.ao.fragment_ms > 0) {
+		fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
+	} else if (xroar_cfg.ao.fragment_nframes > 0) {
+		fragment_nframes = xroar_cfg.ao.fragment_nframes;
 	} else {
-		if (xroar_cfg.ao_buffer_ms > 0) {
-			buffer_nframes = (rate * xroar_cfg.ao_buffer_ms) / 1000;
-		} else if (xroar_cfg.ao_buffer_nframes > 0) {
-			buffer_nframes = xroar_cfg.ao_buffer_nframes;
+		if (xroar_cfg.ao.buffer_ms > 0) {
+			buffer_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
+		} else if (xroar_cfg.ao.buffer_nframes > 0) {
+			buffer_nframes = xroar_cfg.ao.buffer_nframes;
 		} else {
 			buffer_nframes = 1024;
 		}

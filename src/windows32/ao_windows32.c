@@ -56,17 +56,17 @@ static uint8_t *audio_buffer;
 
 static _Bool init(void *cfg) {
 	(void)cfg;
-	rate = (xroar_cfg.ao_rate > 0) ? xroar_cfg.ao_rate : 48000;
+	rate = (xroar_cfg.ao.rate > 0) ? xroar_cfg.ao.rate : 48000;
 
-	if (xroar_cfg.ao_buffer_ms > 0) {
-		buffer_nframes = (rate * xroar_cfg.ao_buffer_ms) / 1000;
-	} else if (xroar_cfg.ao_buffer_nframes > 0) {
-		buffer_nframes = xroar_cfg.ao_buffer_nframes;
+	if (xroar_cfg.ao.buffer_ms > 0) {
+		buffer_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
+	} else if (xroar_cfg.ao.buffer_nframes > 0) {
+		buffer_nframes = xroar_cfg.ao.buffer_nframes;
 	} else {
 		buffer_nframes = (rate * 23) / 1000;
 	}
 
-	int nchannels = xroar_cfg.ao_channels;
+	int nchannels = xroar_cfg.ao.channels;
 	if (nchannels < 1 || nchannels > 2)
 		nchannels = 2;
 	int request_fmt = SOUND_FMT_U8;

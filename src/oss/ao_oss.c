@@ -62,8 +62,8 @@ static void *new(void *cfg) {
 	ao->free = DELEGATE_AS0(void, ao_oss_free, ao);
 
 	const char *device = "/dev/dsp";
-	if (xroar_cfg.ao_device)
-		device = xroar_cfg.ao_device;
+	if (xroar_cfg.ao.device)
+		device = xroar_cfg.ao.device;
 
 	aooss->sound_fd = open(device, O_WRONLY);
 	if (aooss->sound_fd == -1) {
@@ -77,7 +77,7 @@ static void *new(void *cfg) {
 
 	// Find a supported format
 	int desired_format;
-	switch (xroar_cfg.ao_format) {
+	switch (xroar_cfg.ao.format) {
 	case SOUND_FMT_U8:
 		desired_format = AFMT_U8;
 		break;
@@ -139,7 +139,7 @@ static void *new(void *cfg) {
 	}
 
 	// Set stereo if desired
-	int nchannels = xroar_cfg.ao_channels - 1;
+	int nchannels = xroar_cfg.ao.channels - 1;
 	if (nchannels < 0 || nchannels > 1)
 		nchannels = 1;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_STEREO, &nchannels) == -1) {
@@ -150,8 +150,8 @@ static void *new(void *cfg) {
 
 	// Set rate
 	unsigned rate = 48000;
-	if (xroar_cfg.ao_rate > 0)
-		rate = xroar_cfg.ao_rate;
+	if (xroar_cfg.ao.rate > 0)
+		rate = xroar_cfg.ao.rate;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
 		LOG_ERROR("OSS: SNDCTL_DSP_SPEED failed\n");
 		goto failed;
@@ -164,19 +164,19 @@ static void *new(void *cfg) {
 	int buffer_nframes = 0;
 	int fragment_nframes = 0;
 
-	if (xroar_cfg.ao_fragments >= 2 && xroar_cfg.ao_fragments < 0x8000) {
-		nfragments = xroar_cfg.ao_fragments;
+	if (xroar_cfg.ao.fragments >= 2 && xroar_cfg.ao.fragments < 0x8000) {
+		nfragments = xroar_cfg.ao.fragments;
 	}
 
-	if (xroar_cfg.ao_fragment_ms > 0) {
-		fragment_nframes = (rate * xroar_cfg.ao_fragment_ms) / 1000;
-	} else if (xroar_cfg.ao_fragment_nframes > 0) {
-		fragment_nframes = xroar_cfg.ao_fragment_nframes;
+	if (xroar_cfg.ao.fragment_ms > 0) {
+		fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
+	} else if (xroar_cfg.ao.fragment_nframes > 0) {
+		fragment_nframes = xroar_cfg.ao.fragment_nframes;
 	} else {
-		if (xroar_cfg.ao_buffer_ms > 0) {
-			buffer_nframes = (rate * xroar_cfg.ao_buffer_ms) / 1000;
-		} else if (xroar_cfg.ao_buffer_nframes > 0) {
-			buffer_nframes = xroar_cfg.ao_buffer_nframes;
+		if (xroar_cfg.ao.buffer_ms > 0) {
+			buffer_nframes = (rate * xroar_cfg.ao.buffer_ms) / 1000;
+		} else if (xroar_cfg.ao.buffer_nframes > 0) {
+			buffer_nframes = xroar_cfg.ao.buffer_nframes;
 		} else {
 			buffer_nframes = 1024;
 		}

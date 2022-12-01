@@ -129,7 +129,7 @@ struct vdisk *vdisk_new(unsigned track_length) {
 	for (unsigned i = 0; i < MAX_HEADS; i++)
 		disk->side_data[i] = NULL;
 	disk->filetype = FILETYPE_DMK;
-	disk->write_back = xroar_cfg.disk_write_back;
+	disk->write_back = xroar_cfg.disk.write_back;
 	disk->track_length = track_length;
 	return disk;
 }
@@ -556,7 +556,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	if ((file_size % bytes_per_cyl) >= bytes_per_sector) {
 		ncyls++;
 	}
-	if (xroar_cfg.disk_auto_sd && nsectors == 10)
+	if (xroar_cfg.disk.auto_sd && nsectors == 10)
 		double_density = 0;
 
 	struct vdisk *disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
@@ -603,7 +603,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 }
 
 static struct vdisk *vdisk_load_jvc(const char *filename) {
-	return do_load_jvc(filename, xroar_cfg.disk_auto_os9);
+	return do_load_jvc(filename, xroar_cfg.disk.auto_os9);
 }
 
 static struct vdisk *vdisk_load_os9(const char *filename) {
