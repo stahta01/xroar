@@ -51,9 +51,9 @@ struct intf;
  * To allocate memory for the part, 'allocate' is called.
  *
  * Then, either part_create() calls 'initialise' to set up intial state, or
- * part_deserialise() calls 'deserialise' to restore a previous state.  Either
- * should end up creating and adding any required sub-parts.  Both initialise
- * 'partdb' within the part to point to its partdb entry.
+ * part_deserialise() populates the memory according to 'ser_struct_data'.
+ * Either should end up creating and adding any required sub-parts.  Both
+ * initialise 'partdb' within the part to point to its partdb entry.
  *
  * Finally, 'finish' is called, which is expected to find any sub-parts and set
  * up the connections between them.  If it returns false, a dependency wasn't
