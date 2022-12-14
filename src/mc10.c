@@ -94,16 +94,16 @@ struct machine_mc10 {
 	uint32_t crc_bas;
 };
 
-static const struct ser_struct ser_struct_mc10[] = {
-	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct machine_mc10, ram, ser_type_unhandled), // 2
-	SER_STRUCT_ELEM(struct machine_mc10, ram_size, ser_type_unsigned), // 3
-	SER_STRUCT_ELEM(struct machine_mc10, inverted_text, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct machine_mc10, video_mode, ser_type_unsigned), // 5
-	SER_STRUCT_ELEM(struct machine_mc10, video_attr, ser_type_unsigned), // 6
-};
+#define MC10_SER_RAM (2)
 
-#define MC10_SER_RAM     (2)
+static const struct ser_struct ser_struct_mc10[] = {
+	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
+	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM),
+	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct machine_mc10, ram_size),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct machine_mc10, inverted_text),
+	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct machine_mc10, video_mode),
+	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct machine_mc10, video_attr),
+};
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag);

@@ -121,59 +121,59 @@ struct MC6847_private {
 	uint8_t text_border_colour;
 };
 
-static struct ser_struct ser_struct_mc6847[] = {
-	SER_STRUCT_ELEM(struct MC6847, row, ser_type_unsigned), // 1
-	SER_STRUCT_ELEM(struct MC6847, is_dragon64, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct MC6847, is_dragon32, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct MC6847, is_coco, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct MC6847, is_pal, ser_type_bool), // 5
-
-	SER_STRUCT_ELEM(struct MC6847_private, GM, ser_type_unsigned), // 6
-	SER_STRUCT_ELEM(struct MC6847_private, nA_S, ser_type_bool), // 7
-	SER_STRUCT_ELEM(struct MC6847_private, nA_G, ser_type_bool), // 8
-	SER_STRUCT_ELEM(struct MC6847_private, EXT, ser_type_bool), // 9
-	SER_STRUCT_ELEM(struct MC6847_private, CSS, ser_type_bool), // 10
-	SER_STRUCT_ELEM(struct MC6847_private, CSSa, ser_type_bool), // 11
-	SER_STRUCT_ELEM(struct MC6847_private, CSSb, ser_type_bool), // 12
-	SER_STRUCT_ELEM(struct MC6847_private, inverted_text, ser_type_bool), // 13
-
-	SER_STRUCT_ELEM(struct MC6847_private, hs_fall_event, ser_type_event), // 14
-	SER_STRUCT_ELEM(struct MC6847_private, hs_rise_event, ser_type_event), // 15
-	SER_STRUCT_ELEM(struct MC6847_private, scanline_start, ser_type_tick), // 16
-	SER_STRUCT_ELEM(struct MC6847_private, beam_pos, ser_type_unsigned), // 17
-	SER_STRUCT_ELEM(struct MC6847_private, scanline, ser_type_unsigned), // 18
-
-	SER_STRUCT_ELEM(struct MC6847_private, vram_g_data, ser_type_uint8), // 19
-	SER_STRUCT_ELEM(struct MC6847_private, vram_sg_data, ser_type_uint8), // 20
-
-	SER_STRUCT_ELEM(struct MC6847_private, is_32byte, ser_type_bool), // 21
-	SER_STRUCT_ELEM(struct MC6847_private, GM0, ser_type_bool), // 22
-	SER_STRUCT_ELEM(struct MC6847_private, s_fg_colour, ser_type_uint8), // 23
-	SER_STRUCT_ELEM(struct MC6847_private, s_bg_colour, ser_type_uint8), // 24
-	SER_STRUCT_ELEM(struct MC6847_private, fg_colour, ser_type_uint8), // 25
-	SER_STRUCT_ELEM(struct MC6847_private, bg_colour, ser_type_uint8), // 26
-	SER_STRUCT_ELEM(struct MC6847_private, cg_colours, ser_type_uint8), // 27
-	SER_STRUCT_ELEM(struct MC6847_private, border_colour, ser_type_uint8), // 28
-	SER_STRUCT_ELEM(struct MC6847_private, bright_orange, ser_type_uint8), // 29
-	SER_STRUCT_ELEM(struct MC6847_private, vram_bit, ser_type_int), // 30
-	SER_STRUCT_ELEM(struct MC6847_private, render_mode, ser_type_unsigned), // 31
-	SER_STRUCT_ELEM(struct MC6847_private, pal_padding, ser_type_unsigned), // 32
-
-	SER_STRUCT_ELEM(struct MC6847_private, burst, ser_type_unsigned), // 33
-
-	SER_STRUCT_ELEM(struct MC6847_private, vram, ser_type_unhandled), // 34
-	SER_STRUCT_ELEM(struct MC6847_private, vram_index, ser_type_unsigned), // 35
-	SER_STRUCT_ELEM(struct MC6847_private, vram_nbytes, ser_type_unsigned), // 36
-
-	SER_STRUCT_ELEM(struct MC6847_private, lborder_remaining, ser_type_unsigned), // 37
-	SER_STRUCT_ELEM(struct MC6847_private, vram_remaining, ser_type_unsigned), // 38
-	SER_STRUCT_ELEM(struct MC6847_private, rborder_remaining, ser_type_unsigned), // 39
-
-	SER_STRUCT_ELEM(struct MC6847_private, nLPR, ser_type_unsigned), // 40
-	SER_STRUCT_ELEM(struct MC6847_private, is_t1, ser_type_bool), // 41
-};
-
 #define MC6847_SER_VRAM (34)
+
+static struct ser_struct ser_struct_mc6847[] = {
+	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6847, row),
+	SER_ID_STRUCT_ELEM(2, ser_type_bool, struct MC6847, is_dragon64),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct MC6847, is_dragon32),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6847, is_coco),
+	SER_ID_STRUCT_ELEM(5, ser_type_bool, struct MC6847, is_pal),
+
+	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct MC6847_private, GM),
+	SER_ID_STRUCT_ELEM(7, ser_type_bool, struct MC6847_private, nA_S),
+	SER_ID_STRUCT_ELEM(8, ser_type_bool, struct MC6847_private, nA_G),
+	SER_ID_STRUCT_ELEM(9, ser_type_bool, struct MC6847_private, EXT),
+	SER_ID_STRUCT_ELEM(10, ser_type_bool, struct MC6847_private, CSS),
+	SER_ID_STRUCT_ELEM(11, ser_type_bool, struct MC6847_private, CSSa),
+	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct MC6847_private, CSSb),
+	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct MC6847_private, inverted_text),
+
+	SER_ID_STRUCT_ELEM(14, ser_type_event, struct MC6847_private, hs_fall_event),
+	SER_ID_STRUCT_ELEM(15, ser_type_event, struct MC6847_private, hs_rise_event),
+	SER_ID_STRUCT_ELEM(16, ser_type_tick, struct MC6847_private, scanline_start),
+	SER_ID_STRUCT_ELEM(17, ser_type_unsigned, struct MC6847_private, beam_pos),
+	SER_ID_STRUCT_ELEM(18, ser_type_unsigned, struct MC6847_private, scanline),
+
+	SER_ID_STRUCT_ELEM(19, ser_type_uint8, struct MC6847_private, vram_g_data),
+	SER_ID_STRUCT_ELEM(20, ser_type_uint8, struct MC6847_private, vram_sg_data),
+
+	SER_ID_STRUCT_ELEM(21, ser_type_bool, struct MC6847_private, is_32byte),
+	SER_ID_STRUCT_ELEM(22, ser_type_bool, struct MC6847_private, GM0),
+	SER_ID_STRUCT_ELEM(23, ser_type_uint8, struct MC6847_private, s_fg_colour),
+	SER_ID_STRUCT_ELEM(24, ser_type_uint8, struct MC6847_private, s_bg_colour),
+	SER_ID_STRUCT_ELEM(25, ser_type_uint8, struct MC6847_private, fg_colour),
+	SER_ID_STRUCT_ELEM(26, ser_type_uint8, struct MC6847_private, bg_colour),
+	SER_ID_STRUCT_ELEM(27, ser_type_uint8, struct MC6847_private, cg_colours),
+	SER_ID_STRUCT_ELEM(28, ser_type_uint8, struct MC6847_private, border_colour),
+	SER_ID_STRUCT_ELEM(29, ser_type_uint8, struct MC6847_private, bright_orange),
+	SER_ID_STRUCT_ELEM(30, ser_type_int, struct MC6847_private, vram_bit),
+	SER_ID_STRUCT_ELEM(31, ser_type_unsigned, struct MC6847_private, render_mode),
+	SER_ID_STRUCT_ELEM(32, ser_type_unsigned, struct MC6847_private, pal_padding),
+
+	SER_ID_STRUCT_ELEM(33, ser_type_unsigned, struct MC6847_private, burst),
+
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_VRAM),
+	SER_ID_STRUCT_ELEM(35, ser_type_unsigned, struct MC6847_private, vram_index),
+	SER_ID_STRUCT_ELEM(36, ser_type_unsigned, struct MC6847_private, vram_nbytes),
+
+	SER_ID_STRUCT_ELEM(37, ser_type_unsigned, struct MC6847_private, lborder_remaining),
+	SER_ID_STRUCT_ELEM(38, ser_type_unsigned, struct MC6847_private, vram_remaining),
+	SER_ID_STRUCT_ELEM(39, ser_type_unsigned, struct MC6847_private, rborder_remaining),
+
+	SER_ID_STRUCT_ELEM(40, ser_type_unsigned, struct MC6847_private, nLPR),
+	SER_ID_STRUCT_ELEM(41, ser_type_bool, struct MC6847_private, is_t1),
+};
 
 static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag);

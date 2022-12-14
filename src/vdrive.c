@@ -2,7 +2,7 @@
  *
  *  \brief Virtual floppy drives.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -68,28 +68,29 @@ struct vdrive_interface_private {
 	struct event reset_index_pulse_event;
 };
 
+#define VDRIVE_SER_DRIVE (5)
+
 static const struct ser_struct ser_struct_vdrive[] = {
-	SER_STRUCT_ELEM(struct vdrive_interface_private, ready_state, ser_type_bool), // 1
-	SER_STRUCT_ELEM(struct vdrive_interface_private, tr00_state, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct vdrive_interface_private, index_state, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct vdrive_interface_private, write_protect_state, ser_type_bool), // 4
+	SER_ID_STRUCT_ELEM(1, ser_type_bool,      struct vdrive_interface_private, ready_state),
+	SER_ID_STRUCT_ELEM(2, ser_type_bool,      struct vdrive_interface_private, tr00_state),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool,      struct vdrive_interface_private, index_state),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool,      struct vdrive_interface_private, write_protect_state),
 
-	SER_STRUCT_ELEM(struct vdrive_interface_private, drives, ser_type_unhandled), // 5
-	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_direction, ser_type_int), // 6
-	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_drive_number, ser_type_unsigned), // 7
-	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_head, ser_type_unsigned), // 8
-	SER_STRUCT_ELEM(struct vdrive_interface_private, cur_density, ser_type_unsigned), // 9
-	SER_STRUCT_ELEM(struct vdrive_interface_private, head_incr, ser_type_unsigned), // 10
-	SER_STRUCT_ELEM(struct vdrive_interface_private, head_pos, ser_type_unsigned), // 11
+	SER_ID_STRUCT_UNHANDLED(VDRIVE_SER_DRIVE),
+	SER_ID_STRUCT_ELEM(5, ser_type_unhandled, struct vdrive_interface_private, drives),
+	SER_ID_STRUCT_ELEM(6, ser_type_int,       struct vdrive_interface_private, cur_direction),
+	SER_ID_STRUCT_ELEM(7, ser_type_unsigned,  struct vdrive_interface_private, cur_drive_number),
+	SER_ID_STRUCT_ELEM(8, ser_type_unsigned,  struct vdrive_interface_private, cur_head),
+	SER_ID_STRUCT_ELEM(9, ser_type_unsigned,  struct vdrive_interface_private, cur_density),
+	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct vdrive_interface_private, head_incr),
+	SER_ID_STRUCT_ELEM(11, ser_type_unsigned, struct vdrive_interface_private, head_pos),
 
-	SER_STRUCT_ELEM(struct vdrive_interface_private, last_update_cycle, ser_type_tick), // 12
-	SER_STRUCT_ELEM(struct vdrive_interface_private, track_start_cycle, ser_type_tick), // 13
-	SER_STRUCT_ELEM(struct vdrive_interface_private, index_pulse_event, ser_type_event), // 14
-	SER_STRUCT_ELEM(struct vdrive_interface_private, reset_index_pulse_event, ser_type_event), // 15
+	SER_ID_STRUCT_ELEM(12, ser_type_tick,     struct vdrive_interface_private, last_update_cycle),
+	SER_ID_STRUCT_ELEM(13, ser_type_tick,     struct vdrive_interface_private, track_start_cycle),
+	SER_ID_STRUCT_ELEM(14, ser_type_event,    struct vdrive_interface_private, index_pulse_event),
+	SER_ID_STRUCT_ELEM(15, ser_type_event,    struct vdrive_interface_private, reset_index_pulse_event),
 
 };
-
-#define VDRIVE_SER_DRIVE (5)
 
 static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag);

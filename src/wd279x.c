@@ -2,7 +2,7 @@
  *
  *  \brief WD279x Floppy Drive Controller.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -39,37 +39,37 @@
 #include "xroar.h"
 
 static const struct ser_struct ser_struct_wd279x[] = {
-	SER_STRUCT_ELEM(struct WD279X, type, ser_type_unsigned), // 1
+	SER_ID_STRUCT_ELEM(1,  ser_type_unsigned, struct WD279X, type),
 
-	SER_STRUCT_ELEM(struct WD279X, status_register, ser_type_uint8), // 2
-	SER_STRUCT_ELEM(struct WD279X, track_register, ser_type_uint8), // 3
-	SER_STRUCT_ELEM(struct WD279X, sector_register, ser_type_uint8), // 4
-	SER_STRUCT_ELEM(struct WD279X, data_register, ser_type_uint8), // 5
-	SER_STRUCT_ELEM(struct WD279X, command_register, ser_type_uint8), // 6
+	SER_ID_STRUCT_ELEM(2,  ser_type_uint8,    struct WD279X, status_register),
+	SER_ID_STRUCT_ELEM(3,  ser_type_uint8,    struct WD279X, track_register),
+	SER_ID_STRUCT_ELEM(4,  ser_type_uint8,    struct WD279X, sector_register),
+	SER_ID_STRUCT_ELEM(5,  ser_type_uint8,    struct WD279X, data_register),
+	SER_ID_STRUCT_ELEM(6,  ser_type_uint8,    struct WD279X, command_register),
 
-	SER_STRUCT_ELEM(struct WD279X, state, ser_type_unsigned), // 7
-	SER_STRUCT_ELEM(struct WD279X, state_event, ser_type_event), // 8
-	SER_STRUCT_ELEM(struct WD279X, direction, ser_type_int), // 9
-	SER_STRUCT_ELEM(struct WD279X, side, ser_type_int), // 10
-	SER_STRUCT_ELEM(struct WD279X, step_delay, ser_type_int), // 11
-	SER_STRUCT_ELEM(struct WD279X, double_density, ser_type_bool), // 12
-	SER_STRUCT_ELEM(struct WD279X, ready_state, ser_type_bool), // 13
-	SER_STRUCT_ELEM(struct WD279X, tr00_state, ser_type_bool), // 14
-	SER_STRUCT_ELEM(struct WD279X, index_state, ser_type_bool), // 15
-	SER_STRUCT_ELEM(struct WD279X, write_protect_state, ser_type_bool), // 16
-	SER_STRUCT_ELEM(struct WD279X, status_type1, ser_type_bool), // 17
+	SER_ID_STRUCT_ELEM(7,  ser_type_unsigned, struct WD279X, state),
+	SER_ID_STRUCT_ELEM(8,  ser_type_event,    struct WD279X, state_event),
+	SER_ID_STRUCT_ELEM(9,  ser_type_int,      struct WD279X, direction),
+	SER_ID_STRUCT_ELEM(10, ser_type_int,      struct WD279X, side),
+	SER_ID_STRUCT_ELEM(11, ser_type_int,      struct WD279X, step_delay),
+	SER_ID_STRUCT_ELEM(12, ser_type_bool,     struct WD279X, double_density),
+	SER_ID_STRUCT_ELEM(13, ser_type_bool,     struct WD279X, ready_state),
+	SER_ID_STRUCT_ELEM(14, ser_type_bool,     struct WD279X, tr00_state),
+	SER_ID_STRUCT_ELEM(15, ser_type_bool,     struct WD279X, index_state),
+	SER_ID_STRUCT_ELEM(16, ser_type_bool,     struct WD279X, write_protect_state),
+	SER_ID_STRUCT_ELEM(17, ser_type_bool,     struct WD279X, status_type1),
 
-	SER_STRUCT_ELEM(struct WD279X, intrq_nready_to_ready, ser_type_bool), // 18
-	SER_STRUCT_ELEM(struct WD279X, intrq_ready_to_nready, ser_type_bool), // 19
-	SER_STRUCT_ELEM(struct WD279X, intrq_index_pulse, ser_type_bool), // 20
-	SER_STRUCT_ELEM(struct WD279X, intrq_immediate, ser_type_bool), // 21
+	SER_ID_STRUCT_ELEM(18, ser_type_bool,     struct WD279X, intrq_nready_to_ready),
+	SER_ID_STRUCT_ELEM(19, ser_type_bool,     struct WD279X, intrq_ready_to_nready),
+	SER_ID_STRUCT_ELEM(20, ser_type_bool,     struct WD279X, intrq_index_pulse),
+	SER_ID_STRUCT_ELEM(21, ser_type_bool,     struct WD279X, intrq_immediate),
 
-	SER_STRUCT_ELEM(struct WD279X, is_step_cmd, ser_type_bool), // 22
-	SER_STRUCT_ELEM(struct WD279X, crc, ser_type_uint16), // 23
-	SER_STRUCT_ELEM(struct WD279X, dam, ser_type_int), // 24
-	SER_STRUCT_ELEM(struct WD279X, bytes_left, ser_type_int), // 25
-	SER_STRUCT_ELEM(struct WD279X, index_holes_count, ser_type_int), // 26
-	SER_STRUCT_ELEM(struct WD279X, track_register_tmp, ser_type_uint8), // 27
+	SER_ID_STRUCT_ELEM(22, ser_type_bool,     struct WD279X, is_step_cmd),
+	SER_ID_STRUCT_ELEM(23, ser_type_uint16,   struct WD279X, crc),
+	SER_ID_STRUCT_ELEM(24, ser_type_int,      struct WD279X, dam),
+	SER_ID_STRUCT_ELEM(25, ser_type_int,      struct WD279X, bytes_left),
+	SER_ID_STRUCT_ELEM(26, ser_type_int,      struct WD279X, index_holes_count),
+	SER_ID_STRUCT_ELEM(27, ser_type_uint8,    struct WD279X, track_register_tmp),
 };
 
 static const struct ser_struct_data wd279x_ser_struct_data = {

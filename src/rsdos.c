@@ -2,7 +2,7 @@
  *
  *  \brief Tandy CoCo disk controller ("RS-DOS").
  *
- *  \copyright Copyright 2005-2021 Ciaran Anscomb
+ *  \copyright Copyright 2005-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -54,12 +54,12 @@ struct rsdos {
 };
 
 static const struct ser_struct ser_struct_rsdos[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct rsdos, latch_drive_select, ser_type_unsigned), // 2
-	SER_STRUCT_ELEM(struct rsdos, latch_density, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct rsdos, drq_flag, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct rsdos, intrq_flag, ser_type_bool), // 5
-	SER_STRUCT_ELEM(struct rsdos, halt_enable, ser_type_bool), // 6
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct rsdos, latch_drive_select),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool,     struct rsdos, latch_density),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool,     struct rsdos, drq_flag),
+	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct rsdos, intrq_flag),
+	SER_ID_STRUCT_ELEM(6, ser_type_bool,     struct rsdos, halt_enable),
 };
 
 static const struct ser_struct_data rsdos_ser_struct_data = {

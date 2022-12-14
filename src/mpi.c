@@ -2,7 +2,7 @@
  *
  *  \brief Multi-Pak Interface (MPI) support.
  *
- *  \copyright Copyright 2014-2021 Ciaran Anscomb
+ *  \copyright Copyright 2014-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -72,16 +72,14 @@ struct mpi {
 };
 
 static const struct ser_struct ser_struct_mpi[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct mpi, switch_enable, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct mpi, cts_route, ser_type_unsigned), // 3
-	SER_STRUCT_ELEM(struct mpi, p2_route, ser_type_unsigned), // 4
-	SER_STRUCT_ELEM(struct mpi, firq_state, ser_type_unsigned), // 5
-	SER_STRUCT_ELEM(struct mpi, nmi_state, ser_type_unsigned), // 6
-	SER_STRUCT_ELEM(struct mpi, halt_state, ser_type_unsigned), // 7
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_ELEM(2, ser_type_bool, struct mpi, switch_enable),
+	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct mpi, cts_route),
+	SER_ID_STRUCT_ELEM(4, ser_type_unsigned, struct mpi, p2_route),
+	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct mpi, firq_state),
+	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct mpi, nmi_state),
+	SER_ID_STRUCT_ELEM(7, ser_type_unsigned, struct mpi, halt_state),
 };
-
-#define MPI_SER_CART (1)
 
 static const struct ser_struct_data mpi_ser_struct_data = {
 	.elems = ser_struct_mpi,

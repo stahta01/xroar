@@ -63,8 +63,8 @@ static const struct ser_struct_data mc6821_side_ser_struct_data = {
 };
 
 static const struct ser_struct ser_struct_mc6821[] = {
-	SER_STRUCT_SUBSTRUCT(struct MC6821, a, &mc6821_side_ser_struct_data), // 1
-	SER_STRUCT_SUBSTRUCT(struct MC6821, b, &mc6821_side_ser_struct_data), // 2
+	SER_ID_STRUCT_SUBSTRUCT(1, struct MC6821, a, &mc6821_side_ser_struct_data),
+	SER_ID_STRUCT_SUBSTRUCT(2, struct MC6821, b, &mc6821_side_ser_struct_data),
 };
 
 static const struct ser_struct_data mc6821_ser_struct_data = {

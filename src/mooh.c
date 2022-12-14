@@ -51,13 +51,13 @@ struct mooh {
 };
 
 static const struct ser_struct ser_struct_mooh[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct mooh, extmem, ser_type_unhandled), // 2
-	SER_STRUCT_ELEM(struct mooh, mmu_enable, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct mooh, crm_enable, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct mooh, taskreg, ser_type_unhandled), // 5
-	SER_STRUCT_ELEM(struct mooh, task, ser_type_uint8), // 6
-	SER_STRUCT_ELEM(struct mooh, rom_conf, ser_type_uint8), // 7
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_ELEM(2, ser_type_unhandled, struct mooh, extmem),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct mooh, mmu_enable),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct mooh, crm_enable),
+	SER_ID_STRUCT_ELEM(5, ser_type_unhandled, struct mooh, taskreg),
+	SER_ID_STRUCT_ELEM(6, ser_type_uint8, struct mooh, task),
+	SER_ID_STRUCT_ELEM(7, ser_type_uint8, struct mooh, rom_conf),
 };
 
 #define MOOH_SER_EXTMEM  (2)

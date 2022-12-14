@@ -2,7 +2,7 @@
  *
  *  \brief DragonDOS cartridge.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -54,12 +54,12 @@ struct dragondos {
 };
 
 static const struct ser_struct ser_struct_dragondos[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct dragondos, latch_drive_select, ser_type_unsigned), // 2
-	SER_STRUCT_ELEM(struct dragondos, latch_motor_enable, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct dragondos, latch_precomp_enable, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct dragondos, latch_density, ser_type_bool), // 5
-	SER_STRUCT_ELEM(struct dragondos, latch_nmi_enable, ser_type_bool), // 6
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct dragondos, latch_drive_select),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool,     struct dragondos, latch_motor_enable),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool,     struct dragondos, latch_precomp_enable),
+	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct dragondos, latch_density),
+	SER_ID_STRUCT_ELEM(6, ser_type_bool,     struct dragondos, latch_nmi_enable),
 };
 
 static const struct ser_struct_data dragondos_ser_struct_data = {

@@ -45,15 +45,15 @@ struct nx32 {
 	struct becker *becker;
 };
 
-static const struct ser_struct ser_struct_nx32[] = {
-        SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct nx32, extmem, ser_type_unhandled), // 2
-	SER_STRUCT_ELEM(struct nx32, extmem_map, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct nx32, extmem_ty, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct nx32, extmem_bank, ser_type_uint8), // 5
-};
-
 #define NX32_SER_EXTMEM  (2)
+
+static const struct ser_struct ser_struct_nx32[] = {
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_UNHANDLED(NX32_SER_EXTMEM),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct nx32, extmem_map),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct nx32, extmem_ty),
+	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct nx32, extmem_bank),
+};
 
 static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag);

@@ -87,6 +87,10 @@ struct SN76489_private {
 	struct filter *filter;
 };
 
+#define SN76489_SER_REG_VAL (6)
+#define SN76489_SER_COUNTER (7)
+#define SN76489_SER_STATE (8)
+
 static struct ser_struct ser_struct_sn76489[] = {
 	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct SN76489_private, public.ready),
 
@@ -95,18 +99,14 @@ static struct ser_struct ser_struct_sn76489[] = {
 	SER_ID_STRUCT_ELEM(4, ser_type_int, struct SN76489_private, tickrate),
 
 	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct SN76489_private, reg_sel),
-	SER_ID_STRUCT_ELEM(6, ser_type_unhandled, struct SN76489_private, reg_val),
+	SER_ID_STRUCT_UNHANDLED(SN76489_SER_REG_VAL),
 
-	SER_ID_STRUCT_ELEM(7, ser_type_unhandled, struct SN76489_private, counter),
-	SER_ID_STRUCT_ELEM(8, ser_type_unhandled, struct SN76489_private, state),
+	SER_ID_STRUCT_UNHANDLED(SN76489_SER_COUNTER),
+	SER_ID_STRUCT_UNHANDLED(SN76489_SER_STATE),
 	SER_ID_STRUCT_ELEM(9, ser_type_bool, struct SN76489_private, nstate),
 
 	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct SN76489_private, noise_lfsr),
 };
-
-#define SN76489_SER_REG_VAL (6)
-#define SN76489_SER_COUNTER (7)
-#define SN76489_SER_STATE (8)
 
 static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag);

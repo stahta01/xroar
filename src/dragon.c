@@ -135,15 +135,15 @@ struct machine_dragon {
 	_Bool have_acia;
 };
 
-static const struct ser_struct ser_struct_dragon[] = {
-	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
-        SER_STRUCT_ELEM(struct machine_dragon, ram, ser_type_unhandled), // 2
-        SER_STRUCT_ELEM(struct machine_dragon, ram_size, ser_type_unsigned), // 3
-        SER_STRUCT_ELEM(struct machine_dragon, ram_mask, ser_type_unsigned), // 4
-        SER_STRUCT_ELEM(struct machine_dragon, inverted_text, ser_type_bool), // 5
-};
-
 #define DRAGON_SER_RAM     (2)
+
+static const struct ser_struct ser_struct_dragon[] = {
+	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
+	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM),
+        SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct machine_dragon, ram_size),
+        SER_ID_STRUCT_ELEM(4, ser_type_unsigned, struct machine_dragon, ram_mask),
+        SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct machine_dragon, inverted_text),
+};
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);

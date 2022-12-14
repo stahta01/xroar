@@ -2,7 +2,7 @@
  *
  *  \brief Machine configuration.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -42,31 +42,31 @@
 #include "wasm/wasm.h"
 #endif
 
-static const struct ser_struct ser_struct_machine_config[] = {
-	SER_STRUCT_ELEM(struct machine_config, description, ser_type_string), // 1
-	SER_STRUCT_UNHANDLED(), // 2 - old 'architecture' as int
-	SER_STRUCT_ELEM(struct machine_config, cpu, ser_type_int), // 3
-	SER_STRUCT_ELEM(struct machine_config, vdg_palette, ser_type_string), // 4
-	SER_STRUCT_ELEM(struct machine_config, keymap, ser_type_int), // 5
-	SER_STRUCT_ELEM(struct machine_config, tv_standard, ser_type_int), // 6
-	SER_STRUCT_ELEM(struct machine_config, tv_input, ser_type_int), // 7
-	SER_STRUCT_ELEM(struct machine_config, vdg_type, ser_type_int), // 8
-	SER_STRUCT_ELEM(struct machine_config, ram, ser_type_int), // 9
-	SER_STRUCT_ELEM(struct machine_config, bas_dfn, ser_type_bool), // 10
-	SER_STRUCT_ELEM(struct machine_config, bas_rom, ser_type_string), // 11
-	SER_STRUCT_ELEM(struct machine_config, extbas_dfn, ser_type_bool), // 12
-	SER_STRUCT_ELEM(struct machine_config, extbas_rom, ser_type_string), // 13
-	SER_STRUCT_ELEM(struct machine_config, altbas_dfn, ser_type_bool), // 14
-	SER_STRUCT_ELEM(struct machine_config, altbas_rom, ser_type_string), // 15
-	SER_STRUCT_ELEM(struct machine_config, ext_charset_rom, ser_type_string), // 16
-	SER_STRUCT_ELEM(struct machine_config, default_cart_dfn, ser_type_bool), // 17
-	SER_STRUCT_ELEM(struct machine_config, default_cart, ser_type_string), // 18
-	SER_STRUCT_ELEM(struct machine_config, cart_enabled, ser_type_bool), // 19
-	SER_STRUCT_ELEM(struct machine_config, architecture, ser_type_string), // 20
-	SER_STRUCT_ELEM(struct machine_config, opts, ser_type_sds_list), // 21
-};
-
 #define MACHINE_CONFIG_SER_ARCHITECTURE_OLD (2)
+
+static const struct ser_struct ser_struct_machine_config[] = {
+	SER_ID_STRUCT_ELEM(1,  ser_type_string,   struct machine_config, description),
+	SER_ID_STRUCT_UNHANDLED(MACHINE_CONFIG_SER_ARCHITECTURE_OLD),  // old 'architecture'
+	SER_ID_STRUCT_ELEM(3,  ser_type_int,      struct machine_config, cpu),
+	SER_ID_STRUCT_ELEM(4,  ser_type_string,   struct machine_config, vdg_palette),
+	SER_ID_STRUCT_ELEM(5,  ser_type_int,      struct machine_config, keymap),
+	SER_ID_STRUCT_ELEM(6,  ser_type_int,      struct machine_config, tv_standard),
+	SER_ID_STRUCT_ELEM(7,  ser_type_int,      struct machine_config, tv_input),
+	SER_ID_STRUCT_ELEM(8,  ser_type_int,      struct machine_config, vdg_type),
+	SER_ID_STRUCT_ELEM(9,  ser_type_int,      struct machine_config, ram),
+	SER_ID_STRUCT_ELEM(10, ser_type_bool,     struct machine_config, bas_dfn),
+	SER_ID_STRUCT_ELEM(11, ser_type_string,   struct machine_config, bas_rom),
+	SER_ID_STRUCT_ELEM(12, ser_type_bool,     struct machine_config, extbas_dfn),
+	SER_ID_STRUCT_ELEM(13, ser_type_string,   struct machine_config, extbas_rom),
+	SER_ID_STRUCT_ELEM(14, ser_type_bool,     struct machine_config, altbas_dfn),
+	SER_ID_STRUCT_ELEM(15, ser_type_string,   struct machine_config, altbas_rom),
+	SER_ID_STRUCT_ELEM(16, ser_type_string,   struct machine_config, ext_charset_rom),
+	SER_ID_STRUCT_ELEM(17, ser_type_bool,     struct machine_config, default_cart_dfn),
+	SER_ID_STRUCT_ELEM(18, ser_type_string,   struct machine_config, default_cart),
+	SER_ID_STRUCT_ELEM(19, ser_type_bool,     struct machine_config, cart_enabled),
+	SER_ID_STRUCT_ELEM(20, ser_type_string,   struct machine_config, architecture),
+	SER_ID_STRUCT_ELEM(21, ser_type_sds_list, struct machine_config, opts),
+};
 
 static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -78,12 +78,12 @@ static const struct ser_struct_data machine_config_ser_struct_data = {
 	.write_elem = machine_config_write_elem,
 };
 
-static const struct ser_struct ser_struct_machine[] = {
-        SER_STRUCT_ELEM(struct machine, config, ser_type_unhandled), // 1
-        SER_STRUCT_ELEM(struct machine, keyboard.type, ser_type_int), // 2
-};
-
 #define MACHINE_SER_MACHINE_CONFIG (1)
+
+static const struct ser_struct ser_struct_machine[] = {
+	SER_ID_STRUCT_UNHANDLED(MACHINE_SER_MACHINE_CONFIG),
+	SER_ID_STRUCT_ELEM(2, ser_type_int, struct machine, keyboard.type),
+};
 
 static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);

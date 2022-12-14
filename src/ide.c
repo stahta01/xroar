@@ -939,31 +939,31 @@ int ide_make_drive(uint8_t type, int fd)
 // switching code styles would make merging that difficult!), but serialisation
 // code is a necessary inclusion here:
 
-static const struct ser_struct ser_struct_ide_drive[] = {
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.data, ser_type_uint16), // 1
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.error, ser_type_uint8), // 2
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.feature, ser_type_uint8), // 3
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.count, ser_type_uint8), // 4
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba1, ser_type_uint8), // 5
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba2, ser_type_uint8), // 6
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba3, ser_type_uint8), // 7
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.lba4, ser_type_uint8), // 8
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.status, ser_type_uint8), // 9
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.command, ser_type_uint8), // 10
-	SER_STRUCT_ELEM(struct ide_drive, taskfile.devctrl, ser_type_uint8), // 11
-	SER_STRUCT_ELEM(struct ide_drive, intrq, ser_type_bool), // 12
-	SER_STRUCT_ELEM(struct ide_drive, failed, ser_type_bool), // 13
-	SER_STRUCT_ELEM(struct ide_drive, eightbit, ser_type_bool), // 14
-	SER_STRUCT_ELEM(struct ide_drive, data, ser_type_unhandled), // 15
-	SER_STRUCT_ELEM(struct ide_drive, dptr, ser_type_unhandled), // 16
-	SER_STRUCT_ELEM(struct ide_drive, state, ser_type_int), // 17
-	SER_STRUCT_ELEM(struct ide_drive, offset, ser_type_unhandled), // 18
-	SER_STRUCT_ELEM(struct ide_drive, length, ser_type_int), // 19
-};
-
 #define IDE_DRIVE_SER_DATA   (15)
 #define IDE_DRIVE_SER_DPTR   (16)
 #define IDE_DRIVE_SER_OFFSET (18)
+
+static const struct ser_struct ser_struct_ide_drive[] = {
+	SER_ID_STRUCT_ELEM(1, ser_type_uint16, struct ide_drive, taskfile.data),
+	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct ide_drive, taskfile.error),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct ide_drive, taskfile.feature),
+	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct ide_drive, taskfile.count),
+	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct ide_drive, taskfile.lba1),
+	SER_ID_STRUCT_ELEM(6, ser_type_uint8, struct ide_drive, taskfile.lba2),
+	SER_ID_STRUCT_ELEM(7, ser_type_uint8, struct ide_drive, taskfile.lba3),
+	SER_ID_STRUCT_ELEM(8, ser_type_uint8, struct ide_drive, taskfile.lba4),
+	SER_ID_STRUCT_ELEM(9, ser_type_uint8, struct ide_drive, taskfile.status),
+	SER_ID_STRUCT_ELEM(10, ser_type_uint8, struct ide_drive, taskfile.command),
+	SER_ID_STRUCT_ELEM(11, ser_type_uint8, struct ide_drive, taskfile.devctrl),
+	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct ide_drive, intrq),
+	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct ide_drive, failed),
+	SER_ID_STRUCT_ELEM(14, ser_type_bool, struct ide_drive, eightbit),
+	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_DATA),
+	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_DPTR),
+	SER_ID_STRUCT_ELEM(17, ser_type_int, struct ide_drive, state),
+	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_OFFSET),
+	SER_ID_STRUCT_ELEM(19, ser_type_int, struct ide_drive, length),
+};
 
 static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -975,13 +975,13 @@ static const struct ser_struct_data ide_drive_ser_struct_data = {
 	.write_elem = ide_drive_write_elem,
 };
 
-static const struct ser_struct ser_struct_ide_controller[] = {
-	SER_STRUCT_ELEM(struct ide_controller, drive, ser_type_unhandled), // 1
-	SER_STRUCT_ELEM(struct ide_controller, selected, ser_type_int), // 2
-	SER_STRUCT_ELEM(struct ide_controller, data_latch, ser_type_uint16), // 3
-};
-
 #define IDE_CONTROLLER_SER_DRIVE (1)
+
+static const struct ser_struct ser_struct_ide_controller[] = {
+	SER_ID_STRUCT_UNHANDLED(IDE_CONTROLLER_SER_DRIVE),
+	SER_ID_STRUCT_ELEM(2, ser_type_int, struct ide_controller, selected),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint16, struct ide_controller, data_latch),
+};
 
 static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag);

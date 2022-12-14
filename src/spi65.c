@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ *  \copyright Copyright 2018-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -63,11 +63,11 @@ struct spi65_private {
 };
 
 static const struct ser_struct ser_struct_spi65[] = {
-	SER_STRUCT_ELEM(struct spi65_private, reg_data_in, ser_type_uint8), // 1
-	SER_STRUCT_ELEM(struct spi65_private, reg_data_out, ser_type_uint8), // 2
-	SER_STRUCT_ELEM(struct spi65_private, status, ser_type_uint8), // 3
-	SER_STRUCT_ELEM(struct spi65_private, clkdiv, ser_type_uint8), // 4
-	SER_STRUCT_ELEM(struct spi65_private, ss_ie, ser_type_uint8), // 5
+	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct spi65_private, reg_data_in),
+	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct spi65_private, reg_data_out),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct spi65_private, status),
+	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct spi65_private, clkdiv),
+	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct spi65_private, ss_ie),
 };
 
 static const struct ser_struct_data spi65_ser_struct_data = {

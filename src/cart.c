@@ -44,13 +44,13 @@
 #include "xroar.h"
 
 static const struct ser_struct ser_struct_cart_config[] = {
-	SER_STRUCT_ELEM(struct cart_config, description, ser_type_string), // 1
-	SER_STRUCT_ELEM(struct cart_config, type, ser_type_string), // 2
-	SER_STRUCT_ELEM(struct cart_config, rom, ser_type_string), // 3
-	SER_STRUCT_ELEM(struct cart_config, rom2, ser_type_string), // 4
-	SER_STRUCT_ELEM(struct cart_config, becker_port, ser_type_bool), // 5
-	SER_STRUCT_ELEM(struct cart_config, autorun, ser_type_int), // 6
-	SER_STRUCT_ELEM(struct cart_config, opts, ser_type_sds_list), // 7
+	SER_ID_STRUCT_ELEM(1, ser_type_string,   struct cart_config, description),
+	SER_ID_STRUCT_ELEM(2, ser_type_string,   struct cart_config, type),
+	SER_ID_STRUCT_ELEM(3, ser_type_string,   struct cart_config, rom),
+	SER_ID_STRUCT_ELEM(4, ser_type_string,   struct cart_config, rom2),
+	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct cart_config, becker_port),
+	SER_ID_STRUCT_ELEM(6, ser_type_int,      struct cart_config, autorun),
+	SER_ID_STRUCT_ELEM(7, ser_type_sds_list, struct cart_config, opts),
 };
 
 static const struct ser_struct_data cart_config_ser_struct_data = {
@@ -58,14 +58,14 @@ static const struct ser_struct_data cart_config_ser_struct_data = {
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart_config),
 };
 
-static const struct ser_struct ser_struct_cart[] = {
-	SER_STRUCT_ELEM(struct cart, config, ser_type_unhandled), // 1
-	SER_STRUCT_ELEM(struct cart, EXTMEM, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct cart, rom_bank, ser_type_uint16), // 3
-	SER_STRUCT_ELEM(struct cart, firq_event, ser_type_event), // 4
-};
-
 #define CART_SER_CART_CONFIG (1)
+
+static const struct ser_struct ser_struct_cart[] = {
+	SER_ID_STRUCT_UNHANDLED(CART_SER_CART_CONFIG),
+	SER_ID_STRUCT_ELEM(2, ser_type_bool,   struct cart, EXTMEM),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint16, struct cart, rom_bank),
+	SER_ID_STRUCT_ELEM(4, ser_type_event,  struct cart, firq_event),
+};
 
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -79,7 +79,7 @@ const struct ser_struct_data cart_ser_struct_data = {
 };
 
 static const struct ser_struct ser_struct_cart_rom[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
 };
 
 static const struct ser_struct_data cart_rom_ser_struct_data = {

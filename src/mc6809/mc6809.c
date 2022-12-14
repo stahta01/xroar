@@ -61,32 +61,32 @@
 #endif
 
 static const struct ser_struct ser_struct_mc6809[] = {
-	SER_STRUCT_ELEM(struct MC6809, halt, ser_type_bool), // 1
-	SER_STRUCT_ELEM(struct MC6809, nmi, ser_type_bool), // 2
-	SER_STRUCT_ELEM(struct MC6809, firq, ser_type_bool), // 3
-	SER_STRUCT_ELEM(struct MC6809, irq, ser_type_bool), // 4
-	SER_STRUCT_ELEM(struct MC6809, D, ser_type_uint8), // 5
+	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct MC6809, halt),
+	SER_ID_STRUCT_ELEM(2, ser_type_bool, struct MC6809, nmi),
+	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct MC6809, firq),
+	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6809, irq),
+	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct MC6809, D),
 
-	SER_STRUCT_ELEM(struct MC6809, state, ser_type_unsigned), // 6
-	SER_STRUCT_ELEM(struct MC6809, running, ser_type_bool), // 7
-	SER_STRUCT_ELEM(struct MC6809, page, ser_type_uint16), // 8
+	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct MC6809, state),
+	SER_ID_STRUCT_ELEM(7, ser_type_bool, struct MC6809, running),
+	SER_ID_STRUCT_ELEM(8, ser_type_uint16, struct MC6809, page),
 
-	SER_STRUCT_ELEM(struct MC6809, reg_cc, ser_type_uint8), // 9
-	SER_STRUCT_ELEM(struct MC6809, reg_d, ser_type_uint16), // 10
-	SER_STRUCT_ELEM(struct MC6809, reg_dp, ser_type_uint8), // 11
-	SER_STRUCT_ELEM(struct MC6809, reg_x, ser_type_uint16), // 12
-	SER_STRUCT_ELEM(struct MC6809, reg_y, ser_type_uint16), // 13
-	SER_STRUCT_ELEM(struct MC6809, reg_u, ser_type_uint16), // 14
-	SER_STRUCT_ELEM(struct MC6809, reg_s, ser_type_uint16), // 15
-	SER_STRUCT_ELEM(struct MC6809, reg_pc, ser_type_uint16), // 16
+	SER_ID_STRUCT_ELEM(9, ser_type_uint8, struct MC6809, reg_cc),
+	SER_ID_STRUCT_ELEM(10, ser_type_uint16, struct MC6809, reg_d),
+	SER_ID_STRUCT_ELEM(11, ser_type_uint8, struct MC6809, reg_dp),
+	SER_ID_STRUCT_ELEM(12, ser_type_uint16, struct MC6809, reg_x),
+	SER_ID_STRUCT_ELEM(13, ser_type_uint16, struct MC6809, reg_y),
+	SER_ID_STRUCT_ELEM(14, ser_type_uint16, struct MC6809, reg_u),
+	SER_ID_STRUCT_ELEM(15, ser_type_uint16, struct MC6809, reg_s),
+	SER_ID_STRUCT_ELEM(16, ser_type_uint16, struct MC6809, reg_pc),
 
-	SER_STRUCT_ELEM(struct MC6809, nmi_armed, ser_type_bool), // 17
-	SER_STRUCT_ELEM(struct MC6809, nmi_latch, ser_type_bool), // 18
-	SER_STRUCT_ELEM(struct MC6809, firq_latch, ser_type_bool), // 19
-	SER_STRUCT_ELEM(struct MC6809, irq_latch, ser_type_bool), // 20
-	SER_STRUCT_ELEM(struct MC6809, nmi_active, ser_type_bool), // 21
-	SER_STRUCT_ELEM(struct MC6809, firq_active, ser_type_bool), // 22
-	SER_STRUCT_ELEM(struct MC6809, irq_active, ser_type_bool), // 23
+	SER_ID_STRUCT_ELEM(17, ser_type_bool, struct MC6809, nmi_armed),
+	SER_ID_STRUCT_ELEM(18, ser_type_bool, struct MC6809, nmi_latch),
+	SER_ID_STRUCT_ELEM(19, ser_type_bool, struct MC6809, firq_latch),
+	SER_ID_STRUCT_ELEM(20, ser_type_bool, struct MC6809, irq_latch),
+	SER_ID_STRUCT_ELEM(21, ser_type_bool, struct MC6809, nmi_active),
+	SER_ID_STRUCT_ELEM(22, ser_type_bool, struct MC6809, firq_active),
+	SER_ID_STRUCT_ELEM(23, ser_type_bool, struct MC6809, irq_active),
 };
 
 // External, as struct data is also used by 6809-compatible parts:

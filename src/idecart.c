@@ -52,10 +52,10 @@ struct idecart {
 };
 
 static const struct ser_struct ser_struct_idecart[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct idecart, controller, ser_type_unhandled), // 2
-	SER_STRUCT_ELEM(struct idecart, io_region, ser_type_uint16), // 3
-	SER_STRUCT_ELEM(struct idecart, data_latch, ser_type_uint8), // 4
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
+	SER_ID_STRUCT_ELEM(2, ser_type_unhandled, struct idecart, controller),
+	SER_ID_STRUCT_ELEM(3, ser_type_uint16, struct idecart, io_region),
+	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct idecart, data_latch),
 };
 
 #define IDECART_SER_CONTROLLER (2)

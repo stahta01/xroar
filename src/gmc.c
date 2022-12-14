@@ -2,7 +2,7 @@
  *
  *  \brief Games Master Cartridge support.
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ *  \copyright Copyright 2018-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -49,7 +49,7 @@ struct gmc {
 };
 
 static const struct ser_struct ser_struct_gmc[] = {
-	SER_STRUCT_NEST(&cart_ser_struct_data), // 1
+	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
 };
 
 static const struct ser_struct_data gmc_ser_struct_data = {

@@ -125,23 +125,23 @@ struct machine_coco3 {
 	uint32_t crc_secb;
 };
 
-static const struct ser_struct ser_struct_coco3[] = {
-	SER_STRUCT_NEST(&machine_ser_struct_data), // 1
-	SER_STRUCT_ELEM(struct machine_coco3, ram, ser_type_unhandled), // 2
-	SER_STRUCT_ELEM(struct machine_coco3, ram_size, ser_type_unsigned), // 3
-	SER_STRUCT_ELEM(struct machine_coco3, ram_mask, ser_type_unsigned), // 4
-	SER_STRUCT_ELEM(struct machine_coco3, inverted_text, ser_type_bool), // 5
-	SER_STRUCT_ELEM(struct machine_coco3, dat.enabled, ser_type_bool), // 6
-	SER_STRUCT_ELEM(struct machine_coco3, dat.readable, ser_type_bool), // 7
-	SER_STRUCT_ELEM(struct machine_coco3, dat.MMUEN, ser_type_bool), // 8
-	SER_STRUCT_ELEM(struct machine_coco3, dat.MC3, ser_type_bool), // 9
-	SER_STRUCT_ELEM(struct machine_coco3, dat.task, ser_type_unsigned), // 10
-	SER_STRUCT_ELEM(struct machine_coco3, dat.mmu_bank, ser_type_unhandled), // 11
-	SER_STRUCT_ELEM(struct machine_coco3, dat.vram_bank, ser_type_uint32), // 12
-};
-
 #define COCO3_SER_RAM          (2)
 #define COCO3_SER_DAT_MMU_BANK (11)
+
+static const struct ser_struct ser_struct_coco3[] = {
+	SER_ID_STRUCT_NEST(1,  &machine_ser_struct_data),
+	SER_ID_STRUCT_UNHANDLED(COCO3_SER_RAM),
+	SER_ID_STRUCT_ELEM(3,  ser_type_unsigned, struct machine_coco3, ram_size),
+	SER_ID_STRUCT_ELEM(4,  ser_type_unsigned, struct machine_coco3, ram_mask),
+	SER_ID_STRUCT_ELEM(5,  ser_type_bool,     struct machine_coco3, inverted_text),
+	SER_ID_STRUCT_ELEM(6,  ser_type_bool,     struct machine_coco3, dat.enabled),
+	SER_ID_STRUCT_ELEM(7,  ser_type_bool,     struct machine_coco3, dat.readable),
+	SER_ID_STRUCT_ELEM(8,  ser_type_bool,     struct machine_coco3, dat.MMUEN),
+	SER_ID_STRUCT_ELEM(9,  ser_type_bool,     struct machine_coco3, dat.MC3),
+	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct machine_coco3, dat.task),
+	SER_ID_STRUCT_UNHANDLED(COCO3_SER_DAT_MMU_BANK),
+	SER_ID_STRUCT_ELEM(12, ser_type_uint32,   struct machine_coco3, dat.vram_bank),
+};
 
 static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag);
