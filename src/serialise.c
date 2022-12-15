@@ -2,7 +2,7 @@
  *
  *  \brief Serialisation and deserialisation helpers.
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -545,7 +545,7 @@ void *ser_read_new(struct ser_handle *sh, size_t size) {
 void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ssd, void *s) {
 	const struct ser_struct *ss = ssd->elems;
 	for (int i = 0; i < ssd->num_elems && !sh->error; i++) {
-		int tag = ss[i].tag ? ss[i].tag : i + 1;
+		int tag = ss[i].tag;
 		enum ser_type type = ss[i].type;
 		SER_DEBUG("ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 		void *ptr = s + ss[i].offset;
@@ -694,16 +694,12 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 	int tag;
 	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
 		int i;
-		if (tag <= ssd->num_elems && ss[tag-1].tag == 0) {
-			i = tag - 1;
-		} else {
-			for (i = 0; i < ssd->num_elems; i++) {
-				if (ss[i].tag == tag)
-					break;
-			}
-			if (i >= ssd->num_elems) {
-				continue;
-			}
+		for (i = 0; i < ssd->num_elems; i++) {
+			if (ss[i].tag == tag)
+				break;
+		}
+		if (i >= ssd->num_elems) {
+			continue;
 		}
 
 		enum ser_type type = ss[i].type;

@@ -2,7 +2,7 @@
  *
  *  \brief Serialisation and deserialisation helpers.
  *
- *  \copyright Copyright 2015-2021 Ciaran Anscomb
+ *  \copyright Copyright 2015-2022 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -132,12 +132,6 @@ struct ser_struct {
 #define SER_ID_STRUCT_SUBSTRUCT(i,s,e,d) { .tag = (i), .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
 #define SER_ID_STRUCT_NEST(i,d) { .tag = (i), .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
 #define SER_ID_STRUCT_ARRAY(i,t,n,s,e) { .tag = (i), .type = t, .alength = (n), .offset = offsetof(s,e) }
-
-// args to SER_STRUCT_ELEM are in odd order for compatibility
-#define SER_STRUCT_ELEM(s,e,t) SER_ID_STRUCT_ELEM(0,t,s,e)
-#define SER_STRUCT_UNHANDLED() SER_ID_STRUCT_UNHANDLED(0)
-#define SER_STRUCT_SUBSTRUCT(s,e,d) SER_ID_STRUCT_SUBSTRUCT(0,s,e,d)
-#define SER_STRUCT_NEST(d) SER_ID_STRUCT_NEST(0,d)
 
 // Collects a list of ser_struct member metadata with the size of the list,
 // and external handlers to deal with members of type ser_type_unhandled.
