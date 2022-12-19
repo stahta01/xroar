@@ -1287,6 +1287,8 @@ static void fast_bitin(void *sptr) {
 
 static void fast_cbin(void *sptr) {
 	struct tape_interface_private *tip = sptr;
+	if (tip->tape_rewrite)
+		return;  // incompatible
 	update_read_time(tip);
 	cbin(tip);
 	tip->machine->op_rts(tip->machine);
@@ -1395,29 +1397,7 @@ static void rewrite_end_of_block(void *sptr) {
 
 /* Configuring tape options */
 
-// Fast tape loading intercepts various ROM calls and uses equivalents provided
-// here to bypass the need for CPU emulation.
-
-static struct machine_bp bp_list_fast[] = {
-	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_COCO3_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbd99, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_COCO_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_COCO3_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_MC10_ROM(.address = 0xff38, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_MC10_ROM(.address = 0xff22, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-};
-
-// Need to enable these two aspects of fast loading if tape padding turned on
-// and short leader detected.
+// These fast loading intercepts are needed for "short leader" padding.
 
 static struct machine_bp bp_list_pad[] = {
 	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
@@ -1429,16 +1409,23 @@ static struct machine_bp bp_list_pad[] = {
 	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
 };
 
-// Intercepting CBIN for fast loading isn't compatible with tape-rewriting, so
-// listed separately.
+// Fast tape loading intercepts various ROM calls and uses equivalents provided
+// here to bypass the need for CPU emulation.
 
-static struct machine_bp bp_list_fast_cbin[] = {
+static struct machine_bp bp_list_fast[] = {
+	BP_DRAGON_ROM(.address = 0xbd99, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_COCO_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_COCO3_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_MC10_ROM(.address = 0xff38, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
+	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
+	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
+	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
+	BP_MC10_ROM(.address = 0xff22, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
 	BP_DRAGON_ROM(.address = 0xbdad, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_COCO_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_COCO3_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 	BP_MC10_ROM(.address = 0xff14, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
 };
-
 
 // Tape rewriting intercepts the returns from various ROM calls to interpret
 // the loading state - whether a leader is expected, etc.
@@ -1463,7 +1450,6 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 		return;
 	/* clear any old breakpoints */
 	machine_bp_remove_list(tip->machine, bp_list_fast);
-	machine_bp_remove_list(tip->machine, bp_list_fast_cbin);
 	machine_bp_remove_list(tip->machine, bp_list_rewrite);
 	if (!tip->motor || !tip->playing) {
 		return;
@@ -1475,14 +1461,11 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 		return;
 	}
 	// Add required breakpoints
-	if (tip->tape_fast) {
-		machine_bp_add_list(tip->machine, bp_list_fast, tip);
-		// CBIN intercept is incompatible with tape rewriting
-		if (!tip->tape_rewrite) {
-			machine_bp_add_list(tip->machine, bp_list_fast_cbin, tip);
-		}
-	} else if (tip->short_leader) {
+	if (tip->short_leader || tip->tape_fast) {
 		machine_bp_add_list(tip->machine, bp_list_pad, tip);
+		if (tip->tape_fast) {
+			machine_bp_add_list(tip->machine, bp_list_fast, tip);
+		}
 	}
 	if (tip->tape_rewrite) {
 		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
