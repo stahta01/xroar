@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2022 Ciaran Anscomb
+ *  \copyright Copyright 2012-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1594,6 +1594,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				postbyte = byte_immediate(cpu);
 				ea = ea_direct(cpu);
 				mem_byte = fetch_byte_notrace(cpu, ea);
+				NVMA_CYCLE;
 				int dest_bit = postbyte & 7;
 				int src_bit = (postbyte >> 3) & 7;
 				int src_lsl = dest_bit - src_bit;
