@@ -902,6 +902,7 @@ static void do_hs_fall(void *sptr) {
 		if (gime->lcount >= TCC1014_TOP_BORDER_START) {
 			gime->lcount = 0;
 			gime->vstate = gime->post_vblank_vstate;
+			memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		}
 		break;
 	case tcc1014_vstate_top_border:
@@ -921,6 +922,7 @@ static void do_hs_fall(void *sptr) {
 		if (gime->lcount >= gime->nAA) {
 			gime->lcount = 0;
 			gime->vstate = tcc1014_vstate_bottom_border;
+			memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		}
 		break;
 	case tcc1014_vstate_bottom_border:
