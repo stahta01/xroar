@@ -3,6 +3,8 @@
  * Fix Delta density select [Phill Harvey-Smith]
  * Track floppy disk 'dirty' state to avoid unnecessary image rewrites
  * Important: disk write-back now defaults to ENABLED
+ * Better Vertical SCroll register behaviour in GIME [Ralph Serpas]
+ * 6309 timing fix for bit operations
 
 Version 1.2, Thu 27 Oct 2022
 
