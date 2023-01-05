@@ -366,25 +366,12 @@ static const unsigned VRES_HRES_pRB[2] = { 124, 60 };
 // Time from HSYNC fall to horizontal border interrupt.  32/40.  Measured.
 static const unsigned VRES_HRES_pBRD[2] = { 760, 824 };
 
-static const unsigned VMODE_LPR[8] = { 1, 1, 2, 8, 9, 10, 11, 65535 };
+static const unsigned LPR_nLPR[8] = { 1, 1, 2, 8, 9, 10, 11, 65535 };
 static const unsigned VSC_nLPR[16] = { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 4, 3, 2, 1, 12 };
 static const unsigned SAM_V_nLPR[8] = { 12, 1, 3, 2, 2, 1, 1, 1 };
 static const unsigned VRES_HRES_BPR[8] = { 16, 20, 32, 40, 64, 80, 128, 160 };
 static const unsigned VRES_HRES_BPR_TEXT[8] = { 32, 40, 32, 40, 64, 80, 64, 80 };
-
-// Map lines-per-row and vertical scroll register to an initial text row.  I
-// feel there should be some simple logical progression to this, but right now
-// I can't see it, so big table it is.
-static const unsigned VSC_gtext_row[8][16] = {
-	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-	{  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-	{  0,  1,  2,  3,  4,  5,  6,  7,  0,  0,  0,  0,  0,  0,  0,  0 },
-	{  0,  1,  2,  3,  4,  5,  6,  7,  8,  0,  8,  0,  8,  0,  8,  0 },
-	{  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  0,  0,  8,  9,  0,  0 },
-	{  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,  0,  8,  9, 10,  0 },
-	{  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 },
-};
+static const unsigned LPR_rowmask_TEXT[8] = { 0, 1, 2, 8, 9, 10, 11, 16 };
 
 static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val);
 static void update_from_sam_register(struct TCC1014_private *gime);
@@ -778,10 +765,10 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->BPI = val & 0x20;
 		gime->MOCH = val & 0x10;
 		gime->H50 = val & 0x08;
-		gime->LPR = VMODE_LPR[val & 7];
+		gime->LPR = val & 7;
 		gime->field_duration = gime->H50 ? 312 : 262;
 		gime->lTB = VRES_LPF_lTB[gime->H50][gime->LPF];
-		GIME_DEBUG("GIME VMODE: BP=%d BPI=%d MOCH=%d H50=%d (l=%d) LPR=%d (%d)\n", (val&0x80)?1:0, (val&0x20)?1:0, (val&0x10)?1:0, (val&8)?1:0, gime->field_duration, val&7, gime->LPR);
+		GIME_DEBUG("GIME VMODE: BP=%d BPI=%d MOCH=%d H50=%d (l=%d) LPR=%d (%d)\n", (val&0x80)?1:0, (val&0x20)?1:0, (val&0x10)?1:0, (val&8)?1:0, gime->field_duration, val&7, LPR_nLPR[gime->LPR]);
 		tcc1014_update_graphics_mode(gime);
 		break;
 
@@ -845,9 +832,17 @@ static void do_hs_fall(void *sptr) {
 	if (gime->frame == 0) {
 		if (gime->vstate == tcc1014_vstate_active_area) {
 			render_scanline(gime);
-			gime->row = (gime->row + 1) % gime->nLPR;
-			if (gime->row == 0) {
-				gime->B += gime->row_stride;
+			if (!gime->COCO) {
+				gime->row = (gime->row + 1) & 15;
+				if ((gime->row & LPR_rowmask_TEXT[gime->LPR]) == LPR_rowmask_TEXT[gime->LPR]) {
+					gime->row = 0;
+					gime->B += gime->row_stride;
+				}
+			} else {
+				gime->row = (gime->row + 1) % gime->nLPR;
+				if (gime->row == 0) {
+					gime->B += gime->row_stride;
+				}
 			}
 			gime->Xoff = gime->COCO ? 0 : gime->X;
 		}
@@ -891,10 +886,11 @@ static void do_hs_fall(void *sptr) {
 
 	// Always check against this line three before field duration - could
 	// hit this during active area or bottom border.
-	if (gime->scanline == gime->field_duration - 3) {
+	if (gime->scanline >= gime->field_duration - 3) {
 		gime->fs_fall_event.at_tick = gime->scanline_start + gime->pVSYNC;
 		event_queue(&MACHINE_EVENT_LIST, &gime->fs_fall_event);
 		gime->lcount = 0;
+		gime->scanline = 0;
 		gime->vstate = tcc1014_vstate_vsync;
 		memset(gime->pixel_data, 0, sizeof(gime->pixel_data));
 	} else switch (gime->vstate) {
@@ -909,8 +905,10 @@ static void do_hs_fall(void *sptr) {
 		memset(gime->pixel_data, gime->border_colour, sizeof(gime->pixel_data));
 		if (gime->lcount >= gime->nTB) {
 			if (!gime->COCO) {
-				unsigned LPR = gime->registers[8] & 7;
-				gime->row = VSC_gtext_row[LPR][gime->VSC];
+				gime->row = gime->VSC;
+				if ((gime->row & LPR_rowmask_TEXT[gime->LPR]) == LPR_rowmask_TEXT[gime->LPR]) {
+					gime->row = 0;
+				}
 			} else {
 				gime->row = 0;
 			}
@@ -1070,7 +1068,7 @@ static void render_scanline(struct TCC1014_private *gime) {
 						gime->attr_bgnd = attr & 7;
 						if ((attr & 0x80) && gime->blink)
 							gime->attr_fgnd = gime->attr_bgnd;
-						if ((attr & 0x40) && (font_row == gime->LPR))
+						if ((attr & 0x40) && (font_row == LPR_nLPR[gime->LPR]))
 							gime->vram_g_data = 0xff;
 					} else {
 						gime->attr_fgnd = 1;
@@ -1275,7 +1273,7 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 		gime->nTB = gime->lTB;
 		gime->nAA = gime->lAA;
 		gime->nLB = gime->pLB + (gime->H50 ? 25 : 0);
-		gime->nLPR = gime->LPR;
+		gime->nLPR = LPR_nLPR[gime->LPR];
 
 		// Render mode, border colour
 		gime->render_mode = TCC1014_RENDER_RG;
