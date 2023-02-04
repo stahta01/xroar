@@ -19,6 +19,8 @@
 #ifndef XROAR_GTK2_COMMON_H_
 #define XROAR_GTK2_COMMON_H_
 
+#include <stdint.h>
+
 #include <gtk/gtk.h>
 
 #include "events.h"
@@ -43,6 +45,12 @@ struct ui_gtk2_interface {
 
 	// Window geometry
 	struct vo_rect display_rect;
+
+	// Keyboard state
+	struct {
+		// Is a non-preempted control key pressed?
+		_Bool control;
+	} keyboard;
 
 	// Mouse tracking
 	float mouse_xoffset;

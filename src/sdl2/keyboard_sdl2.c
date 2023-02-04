@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 keyboard module.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -389,6 +389,18 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	_Bool ralt = mod & KMOD_RALT;
 	_Bool control = !ralt && (mod & KMOD_CTRL);
 
+	// Always clear our "control" state if the modifier isn't set.
+	if (!control) {
+		uisdl2->keyboard.control = 0;
+	}
+
+	// If scancode has priority, never do a unicode lookup.
+	if (uisdl2->keyboard.scancode_priority[scancode]) {
+		keyboard_press(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
+		return;
+	}
+
+	// XXX surely SHIFT & CLEAR are handled by preemption here?
 	switch (sym) {
 	case SDLK_LSHIFT: case SDLK_RSHIFT:
 		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
@@ -397,7 +409,11 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		KEYBOARD_PRESS_CLEAR(xroar_keyboard_interface);
 		return;
 	case SDLK_LCTRL: case SDLK_RCTRL:
-		return;
+		if (control) {
+			uisdl2->keyboard.control = 1;
+			return;
+		}
+		break;
 #ifndef HAVE_WASM
 	case SDLK_F11:
 		xroar_set_fullscreen(1, XROAR_NEXT);
@@ -417,14 +433,8 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		break;
 	}
 
-	if (control) {
+	if (uisdl2->keyboard.control) {
 		control_keypress(uisdl2, keysym);
-		return;
-	}
-
-	// If scancode has priority, never do a unicode lookup.
-	if (uisdl2->keyboard.scancode_priority[scancode]) {
-		keyboard_press(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
 	}
 
@@ -494,29 +504,36 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 
 	_Bool shift = mod & KMOD_SHIFT;
 	//_Bool ralt = mod & KMOD_RALT;
-	//_Bool control = !ralt && (mod & KMOD_CTRL);
+	_Bool control = mod & KMOD_CTRL;
 
-	switch (sym) {
-	case SDLK_LSHIFT: case SDLK_RSHIFT:
-		if (!shift)
-			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
-		return;
-	case SDLK_CLEAR:
-		KEYBOARD_RELEASE_CLEAR(xroar_keyboard_interface);
-		return;
-	case SDLK_LCTRL: case SDLK_RCTRL:
-		return;
-	case SDLK_F12:
-		xroar_set_ratelimit(1);
-		return;
-	default:
-		break;
+	if (!control) {
+		uisdl2->keyboard.control = 0;
 	}
 
 	// If scancode has priority, never do a unicode lookup.
 	if (uisdl2->keyboard.scancode_priority[scancode]) {
 		keyboard_release(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
+	}
+
+	// XXX surely SHIFT & CLEAR are handled by preemption here?
+	switch (sym) {
+	case SDLK_LSHIFT: case SDLK_RSHIFT:
+		if (!shift) {
+			KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+		}
+		return;
+	case SDLK_CLEAR:
+		KEYBOARD_RELEASE_CLEAR(xroar_keyboard_interface);
+		return;
+	case SDLK_LCTRL: case SDLK_RCTRL:
+		uisdl2->keyboard.control = 0;
+		return;
+	case SDLK_F12:
+		xroar_set_ratelimit(1);
+		return;
+	default:
+		break;
 	}
 
 	if (uisdl2->keyboard.translate) {

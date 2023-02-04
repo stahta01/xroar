@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -18,6 +18,8 @@
 
 #ifndef XROAR_SDL2_COMMON_H_
 #define XROAR_SDL2_COMMON_H_
+
+#include <stdint.h>
 
 #include <SDL_syswm.h>
 
@@ -49,6 +51,8 @@ struct ui_sdl2_interface {
 		_Bool scancode_priority[SDL_NUM_SCANCODES];
 		// Last unicode value determined for each scancode
 		int unicode_last_scancode[SDL_NUM_SCANCODES];
+		// Is a control key pressed that's not bound to a dkey?
+		_Bool control;
 	} keyboard;
 
 	// Pointer state

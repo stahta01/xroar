@@ -24,6 +24,7 @@
 #define _DARWIN_C_SOURCE
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -268,8 +269,8 @@ void gtk2_keyboard_init(struct ui_cfg *ui_cfg) {
 	map_keyboard(gdk_keymap, selected_keymap);
 	g_signal_connect(G_OBJECT(gdk_keymap), "keys-changed", G_CALLBACK(map_keyboard), selected_keymap);
 	/* Connect GTK key press/release signals to handlers */
-	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-press-event", G_CALLBACK(keypress), NULL);
-	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-release-event", G_CALLBACK(keyrelease), NULL);
+	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-press-event", G_CALLBACK(keypress), global_uigtk2);
+	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-release-event", G_CALLBACK(keyrelease), global_uigtk2);
 }
 
 static void emulator_command(guint keyval, int shift) {
@@ -342,17 +343,22 @@ static void emulator_command(guint keyval, int shift) {
 }
 
 static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	int control, shift;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)widget;
-	(void)user_data;
-	if (gtk_window_activate_key(GTK_WINDOW(global_uigtk2->top_window), event) == TRUE) {
-		return TRUE;
-	}
+
 	if (event->hardware_keycode >= MAX_KEYCODE) {
-		return FALSE;
+		// In case the UI knows what it is
+		return gtk_window_activate_key(GTK_WINDOW(uigtk2->top_window), event);
 	}
+
 	guint keyval = keycode_to_keyval[event->hardware_keycode];
-	control = event->state & GDK_CONTROL_MASK;
+	_Bool shift = event->state & GDK_SHIFT_MASK;
+	_Bool control = event->state & GDK_CONTROL_MASK;
+
+	// Always clear our "control" state if the modifier isn't set.
+	if (!control) {
+		uigtk2->keyboard.control = 0;
+	}
 
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
@@ -375,11 +381,26 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		}
 	}
 
-	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
+	int keyval_i = keyval_index(keyval);
+	if (keyval_priority[keyval_i]) {
+		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
+		keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
 	}
-	shift = event->state & GDK_SHIFT_MASK;
+
+	if (uigtk2->keyboard.control && gtk_window_activate_key(GTK_WINDOW(uigtk2->top_window), event) == TRUE) {
+		return TRUE;
+	}
+
+	if (keyval == GDK_KEY_Control_L || keyval == GDK_KEY_Control_R) {
+		uigtk2->keyboard.control = 1;
+		return TRUE;
+	}
+
+	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
+		KEYBOARD_PRESS_SHIFT(xroar_keyboard_interface);
+		return TRUE;
+	}
 	if (!shift) {
 		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
 	}
@@ -389,21 +410,15 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 		} else {
 			xroar_set_ratelimit(0);
 		}
+		return TRUE;
 	}
 	if (keyval == GDK_KEY_Pause) {
 		xroar_set_pause(1, XROAR_NEXT);
-		return FALSE;
+		return TRUE;
 	}
-	if (control) {
+	if (uigtk2->keyboard.control) {
 		emulator_command(keyval, shift);
-		return FALSE;
-	}
-
-	int keyval_i = keyval_index(keyval);
-	if (keyval_priority[keyval_i]) {
-		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
-		keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
-		return FALSE;
+		return TRUE;
 	}
 
 	if (xroar_cfg.kbd.translate) {
@@ -427,22 +442,29 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 			unicode = shift ? DKBD_U_PAUSE_OUTPUT : 0x20;
 		last_unicode[keycode] = unicode;
 		keyboard_unicode_press(xroar_keyboard_interface, unicode);
-		return FALSE;
+		return TRUE;
 	}
 
 	LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
 	keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
-	return FALSE;
+	return TRUE;
 }
 
 static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	int shift;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)widget;
-	(void)user_data;
+
 	if (event->hardware_keycode >= MAX_KEYCODE) {
 		return FALSE;
 	}
+
 	guint keyval = keycode_to_keyval[event->hardware_keycode];
+	_Bool shift = event->state & GDK_SHIFT_MASK;
+	_Bool control = event->state & GDK_CONTROL_MASK;
+
+	if (!control) {
+		uigtk2->keyboard.control = 0;
+	}
 
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
@@ -467,22 +489,28 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 		}
 	}
 
-	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
-		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
-		return FALSE;
-	}
-	shift = event->state & GDK_SHIFT_MASK;
-	if (!shift) {
-		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
-	}
-	if (keyval == GDK_KEY_F12) {
-		xroar_set_ratelimit(1);
-	}
-
 	int keyval_i = keyval_index(keyval);
 	if (keyval_priority[keyval_i]) {
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
 		keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
+		return FALSE;
+	}
+
+	if (!shift) {
+		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+	}
+
+	if (keyval == GDK_KEY_Control_L || keyval == GDK_KEY_Control_R) {
+		uigtk2->keyboard.control = 0;
+		return FALSE;
+	}
+
+	if (keyval == GDK_KEY_Shift_L || keyval == GDK_KEY_Shift_R) {
+		KEYBOARD_RELEASE_SHIFT(xroar_keyboard_interface);
+		return FALSE;
+	}
+	if (keyval == GDK_KEY_F12) {
+		xroar_set_ratelimit(1);
 		return FALSE;
 	}
 
