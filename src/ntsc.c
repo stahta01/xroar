@@ -2,7 +2,7 @@
  *
  *  \brief NTSC encoding & decoding.
  *
- *  \copyright Copyright 2016-2022 Ciaran Anscomb
+ *  \copyright Copyright 2016-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -63,12 +63,23 @@ void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
 			np->byphase[p] = xrealloc(np->byphase[p], np->ncolours*sizeof(int));
 		}
 	}
-	float i = -0.27 * b_y + 0.74 * r_y;
-	float q =  0.41 * b_y + 0.48 * r_y;
-	np->byphase[0][c] = int_clamp_u8(255.*(y+i));
-	np->byphase[1][c] = int_clamp_u8(255.*(y+q));
-	np->byphase[2][c] = int_clamp_u8(255.*(y-i));
-	np->byphase[3][c] = int_clamp_u8(255.*(y-q));
+
+	// R'-Y' / B'-Y' -> Y'U'V' -> Y'I'Q'
+	double i = -0.2685 * b_y + 0.7355 * r_y;
+	double q =  0.4135 * b_y + 0.4776 * r_y;
+
+	// Datasheet for the MC1372 says that its Chroma Modulator B input
+	// leads Chroma Modulator A by 100°.  This does seem to result in a
+	// slightly more cyan cyan.
+	double ai = (2.0 * M_PI * 100.0) / 360.0;
+	double aq = (2.0 * M_PI *   0.0) / 360.0;
+
+	for (int p = 0; p < NTSC_NPHASES; p++) {
+		double a = (2.0 * M_PI * (double)p) / (double)NTSC_NPHASES;
+		double ii = i * sin(a+ai);
+		double qq = q * sin(a+aq);
+		np->byphase[p][c] = int_clamp_u8(255.*(y+ii+qq));
+	}
 }
 
 void ntsc_palette_add_direct(struct ntsc_palette *np, unsigned c) {
@@ -80,10 +91,9 @@ void ntsc_palette_add_direct(struct ntsc_palette *np, unsigned c) {
 			np->byphase[p] = xrealloc(np->byphase[p], np->ncolours*sizeof(int));
 		}
 	}
-	np->byphase[0][c] = c;
-	np->byphase[1][c] = c;
-	np->byphase[2][c] = c;
-	np->byphase[3][c] = c;
+	for (int p = 0; p < NTSC_NPHASES; p++) {
+		np->byphase[p][c] = c;
+	}
 }
 
 extern inline int ntsc_encode_from_palette(const struct ntsc_palette *np, unsigned c);
