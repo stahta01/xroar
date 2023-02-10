@@ -2,7 +2,7 @@
  *
  *  \brief Dragon keyboard mapping.
  *
- *  \copyright Copyright 2013 Ciaran Anscomb
+ *  \copyright Copyright 2013-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -142,7 +142,7 @@ struct dkbd_map {
 struct dkbd_bind {
 	const char *hostkey;
 	int8_t dk_key;
-	_Bool priority;
+	_Bool preempt;
 };
 
 void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout);

@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -2294,7 +2294,7 @@ static void set_kbd_bind(const char *spec) {
 			struct dkbd_bind *bind = xmalloc(sizeof(*bind));
 			bind->hostkey = xstrdup(hkey);
 			bind->dk_key = dk_key;
-			bind->priority = preempt;  // TODO: call this "preempt" elsewhere
+			bind->preempt = preempt;
 			xroar_cfg.kbd.bind_list = slist_append(xroar_cfg.kbd.bind_list, bind);
 		}
 	}

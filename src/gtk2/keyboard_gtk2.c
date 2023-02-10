@@ -91,7 +91,7 @@ static gboolean keyrelease(GtkWidget *, GdkEventKey *, gpointer);
 struct sym_dkey_mapping {
 	unsigned sym;
 	int8_t dkey;
-	_Bool priority;
+	_Bool preempt;
 };
 
 struct keymap {
@@ -112,7 +112,7 @@ struct keymap {
  */
 
 static int8_t keyval_to_dkey[0x0400];
-static _Bool keyval_priority[0x0400];
+static _Bool keyval_preempt[0x0400];
 
 /* Need to define some sort of sensible limit to the keycodes: */
 #define MAX_KEYCODE (256)
@@ -204,11 +204,11 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	/* First clear the table and map obvious keys */
 	for (unsigned i = 0; i < G_N_ELEMENTS(keyval_to_dkey); i++) {
 		keyval_to_dkey[i] = DSCAN_INVALID;
-		keyval_priority[i] = 0;
+		keyval_preempt[i] = 0;
 	}
 	for (unsigned i = 0; i < G_N_ELEMENTS(keyval_dkey_default); i++) {
 		keyval_to_dkey[keyval_index(keyval_dkey_default[i].sym)] = keyval_dkey_default[i].dkey;
-		keyval_priority[keyval_index(keyval_dkey_default[i].sym)] = keyval_dkey_default[i].priority;
+		keyval_preempt[keyval_index(keyval_dkey_default[i].sym)] = keyval_dkey_default[i].preempt;
 	}
 	// 0 - 9
 	for (int i = 0; i <= 9; i++) {
@@ -226,7 +226,7 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 	struct sym_dkey_mapping *mappings = keymap->mappings;
 	for (int i = 0; i < num_mappings; i++) {
 		keyval_to_dkey[keyval_index(mappings[i].sym)] = mappings[i].dkey;
-		keyval_priority[keyval_index(mappings[i].sym)] = mappings[i].priority;
+		keyval_preempt[keyval_index(mappings[i].sym)] = mappings[i].preempt;
 	}
 
 	// Apply user-supplied binds:
@@ -237,7 +237,7 @@ static gboolean map_keyboard(GdkKeymap *gdk_keymap, gpointer user_data) {
 		// return 0 for me when key names not found.
 		if (keyval != 0 && keyval != GDK_KEY_VoidSymbol) {
 			keyval_to_dkey[keyval_index(keyval)] = bind->dk_key;
-			keyval_priority[keyval_index(keyval)] = bind->priority;
+			keyval_preempt[keyval_index(keyval)] = bind->preempt;
 		} else {
 			LOG_WARN("GTK+ key named '%s' not found\n", bind->hostkey);
 		}
@@ -382,7 +382,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	}
 
 	int keyval_i = keyval_index(keyval);
-	if (keyval_priority[keyval_i]) {
+	if (keyval_preempt[keyval_i]) {
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk press   keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
 		keyboard_press(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;
@@ -490,7 +490,7 @@ static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_
 	}
 
 	int keyval_i = keyval_index(keyval);
-	if (keyval_priority[keyval_i]) {
+	if (keyval_preempt[keyval_i]) {
 		LOG_DEBUG_UI(LOG_UI_KBD_EVENT, "gtk release keycode %6d   keyval %04x   %s\n", event->hardware_keycode, keyval, gdk_keyval_name(keyval));
 		keyboard_release(xroar_keyboard_interface, keyval_to_dkey[keyval_i]);
 		return FALSE;

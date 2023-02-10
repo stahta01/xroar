@@ -52,7 +52,7 @@
 struct scancode_dkey_mapping {
 	SDL_Scancode scancode;
 	int8_t dkey;
-	_Bool priority;  // key overrides unicode translation
+	_Bool preempt;  // key overrides unicode translation
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -146,11 +146,11 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 	// First clear the table and map obvious keys.
 	for (unsigned i = 0; i < SDL_NUM_SCANCODES; i++) {
 		uisdl2->keyboard.scancode_to_dkey[i] = DSCAN_INVALID;
-		uisdl2->keyboard.scancode_priority[i] = 0;
+		uisdl2->keyboard.scancode_preempt[i] = 0;
 	}
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(scancode_dkey_default); i++) {
 		uisdl2->keyboard.scancode_to_dkey[scancode_dkey_default[i].scancode] = scancode_dkey_default[i].dkey;
-		uisdl2->keyboard.scancode_priority[scancode_dkey_default[i].scancode] = scancode_dkey_default[i].priority;
+		uisdl2->keyboard.scancode_preempt[scancode_dkey_default[i].scancode] = scancode_dkey_default[i].preempt;
 	}
 	for (unsigned i = 0; i < 9; i++) {
 		uisdl2->keyboard.scancode_to_dkey[SDL_SCANCODE_1 + i] = DSCAN_1 + i;
@@ -170,7 +170,7 @@ void sdl_keyboard_init(struct ui_sdl2_interface *uisdl2) {
 		SDL_Scancode scancode = SDL_GetScancodeFromName(bind->hostkey);
 		if (scancode != SDL_SCANCODE_UNKNOWN && scancode < SDL_NUM_SCANCODES) {
 			uisdl2->keyboard.scancode_to_dkey[scancode] = bind->dk_key;
-			uisdl2->keyboard.scancode_priority[scancode] = bind->priority;
+			uisdl2->keyboard.scancode_preempt[scancode] = bind->preempt;
 		} else {
 			LOG_WARN("SDL2 key named '%s' not found\n", bind->hostkey);
 		}
@@ -394,8 +394,8 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		uisdl2->keyboard.control = 0;
 	}
 
-	// If scancode has priority, never do a unicode lookup.
-	if (uisdl2->keyboard.scancode_priority[scancode]) {
+	// If scancode preempts, never do a unicode lookup.
+	if (uisdl2->keyboard.scancode_preempt[scancode]) {
 		keyboard_press(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
 	}
@@ -510,8 +510,8 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		uisdl2->keyboard.control = 0;
 	}
 
-	// If scancode has priority, never do a unicode lookup.
-	if (uisdl2->keyboard.scancode_priority[scancode]) {
+	// If scancode preempts, never do a unicode lookup.
+	if (uisdl2->keyboard.scancode_preempt[scancode]) {
 		keyboard_release(xroar_keyboard_interface, uisdl2->keyboard.scancode_to_dkey[scancode]);
 		return;
 	}

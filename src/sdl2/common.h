@@ -47,8 +47,8 @@ struct ui_sdl2_interface {
 		_Bool translate;
 		// Translate scancode into emulator key
 		int8_t scancode_to_dkey[SDL_NUM_SCANCODES];
-		// Scancode overrides unicode translation
-		_Bool scancode_priority[SDL_NUM_SCANCODES];
+		// Scancode preempts unicode translation, GUI
+		_Bool scancode_preempt[SDL_NUM_SCANCODES];
 		// Last unicode value determined for each scancode
 		int unicode_last_scancode[SDL_NUM_SCANCODES];
 		// Is a control key pressed that's not bound to a dkey?

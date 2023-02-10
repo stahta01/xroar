@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 keyboard mappings.
  *
- *  \copyright Copyright 2010-2014 Ciaran Anscomb
+ *  \copyright Copyright 2010-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -40,7 +40,7 @@ static struct sym_dkey_mapping keymap_uk[] = {
 	{ .sym = GDK_KEY_equal, .dkey = DSCAN_MINUS },
 	{ .sym = GDK_KEY_bracketleft, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_semicolon, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_grave, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_grave, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_slash, .dkey = DSCAN_SLASH },
@@ -65,7 +65,7 @@ static struct sym_dkey_mapping keymap_be[] = {
 	{ .sym = GDK_KEY_dead_circumflex, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_q, .dkey = DSCAN_A },
 	{ .sym = GDK_KEY_m, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_twosuperior, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_twosuperior, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_w, .dkey = DSCAN_Z },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_M },
 	{ .sym = GDK_KEY_semicolon, .dkey = DSCAN_COMMA },
@@ -80,7 +80,7 @@ static struct sym_dkey_mapping keymap_de[] = {
 	{ .sym = GDK_KEY_z, .dkey = DSCAN_Y },
 	{ .sym = GDK_KEY_udiaeresis, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_odiaeresis, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_dead_circumflex, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_dead_circumflex, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_y, .dkey = DSCAN_Z },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
@@ -93,8 +93,8 @@ static struct sym_dkey_mapping keymap_dk[] = {
 	{ .sym = GDK_KEY_dead_acute, .dkey = DSCAN_MINUS }, // dead acute
 	{ .sym = GDK_KEY_aring, .dkey = DSCAN_AT }, // å
 	{ .sym = GDK_KEY_ae, .dkey = DSCAN_SEMICOLON }, // æ
-	{ .sym = GDK_KEY_onehalf, .dkey = DSCAN_CLEAR, .priority = 1 }, // ½
-	{ .sym = GDK_KEY_oslash, .dkey = DSCAN_CLEAR, .priority = 1 }, // ø
+	{ .sym = GDK_KEY_onehalf, .dkey = DSCAN_CLEAR, .preempt = 1 }, // ½
+	{ .sym = GDK_KEY_oslash, .dkey = DSCAN_CLEAR, .preempt = 1 }, // ø
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -106,7 +106,7 @@ static struct sym_dkey_mapping keymap_es[] = {
 	{ .sym = GDK_KEY_exclamdown, .dkey = DSCAN_MINUS },
 	{ .sym = GDK_KEY_dead_grave, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_ntilde, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_masculine, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_masculine, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -118,7 +118,7 @@ static struct sym_dkey_mapping keymap_fi[] = {
 	{ .sym = GDK_KEY_dead_acute, .dkey = DSCAN_MINUS }, // dead acute
 	{ .sym = GDK_KEY_aring, .dkey = DSCAN_AT }, // å
 	{ .sym = GDK_KEY_odiaeresis, .dkey = DSCAN_SEMICOLON }, // ö
-	{ .sym = GDK_KEY_section, .dkey = DSCAN_CLEAR, .priority = 1 }, // §
+	{ .sym = GDK_KEY_section, .dkey = DSCAN_CLEAR, .preempt = 1 }, // §
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -143,7 +143,7 @@ static struct sym_dkey_mapping keymap_fr[] = {
 	{ .sym = GDK_KEY_dead_circumflex, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_q, .dkey = DSCAN_A },
 	{ .sym = GDK_KEY_m, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_twosuperior, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_twosuperior, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_w, .dkey = DSCAN_Z },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_M },
 	{ .sym = GDK_KEY_semicolon, .dkey = DSCAN_COMMA },
@@ -169,7 +169,7 @@ static struct sym_dkey_mapping keymap_is[] = {
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_MINUS },
 	{ .sym = GDK_KEY_eth, .dkey = DSCAN_AT }, // ð
 	{ .sym = GDK_KEY_ae, .dkey = DSCAN_SEMICOLON }, // æ
-	{ .sym = GDK_KEY_dead_abovering, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead ring
+	{ .sym = GDK_KEY_dead_abovering, .dkey = DSCAN_CLEAR, .preempt = 1 }, // dead ring
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_thorn, .dkey = DSCAN_SLASH }, // þ
@@ -181,7 +181,7 @@ static struct sym_dkey_mapping keymap_it[] = {
 	{ .sym = GDK_KEY_igrave, .dkey = DSCAN_MINUS }, // ì
 	{ .sym = GDK_KEY_egrave, .dkey = DSCAN_AT }, // è
 	{ .sym = GDK_KEY_ograve, .dkey = DSCAN_SEMICOLON }, // ò
-	{ .sym = GDK_KEY_ugrave, .dkey = DSCAN_CLEAR, .priority = 1 }, // ù
+	{ .sym = GDK_KEY_ugrave, .dkey = DSCAN_CLEAR, .preempt = 1 }, // ù
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -193,7 +193,7 @@ static struct sym_dkey_mapping keymap_nl[] = {
 	{ .sym = GDK_KEY_degree, .dkey = DSCAN_MINUS },
 	{ .sym = GDK_KEY_dead_diaeresis, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_plus, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_dead_acute, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_dead_acute, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -205,9 +205,9 @@ static struct sym_dkey_mapping keymap_no[] = {
 	{ .sym = GDK_KEY_backslash, .dkey = DSCAN_MINUS },
 	{ .sym = GDK_KEY_aring, .dkey = DSCAN_AT }, // å
 	{ .sym = GDK_KEY_oslash, .dkey = DSCAN_SEMICOLON }, // ø
-	{ .sym = GDK_KEY_ae, .dkey = DSCAN_CLEAR, .priority = 1 }, // æ
-	{ .sym = GDK_KEY_bar, .dkey = DSCAN_CLEAR, .priority = 1 },
-	{ .sym = GDK_KEY_dead_diaeresis, .dkey = DSCAN_CLEAR, .priority = 1 }, // dead diaeresis
+	{ .sym = GDK_KEY_ae, .dkey = DSCAN_CLEAR, .preempt = 1 }, // æ
+	{ .sym = GDK_KEY_bar, .dkey = DSCAN_CLEAR, .preempt = 1 },
+	{ .sym = GDK_KEY_dead_diaeresis, .dkey = DSCAN_CLEAR, .preempt = 1 }, // dead diaeresis
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -220,7 +220,7 @@ static struct sym_dkey_mapping keymap_pl[] = {
 	{ .sym = GDK_KEY_z, .dkey = DSCAN_Y },
 	{ .sym = GDK_KEY_zabovedot, .dkey = DSCAN_AT },
 	{ .sym = GDK_KEY_lstroke, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_abovedot, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_abovedot, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_y, .dkey = DSCAN_Z },
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
@@ -233,8 +233,8 @@ static struct sym_dkey_mapping keymap_se[] = {
 	{ .sym = GDK_KEY_dead_acute, .dkey = DSCAN_MINUS }, // dead acute
 	{ .sym = GDK_KEY_aring, .dkey = DSCAN_AT }, // å
 	{ .sym = GDK_KEY_odiaeresis, .dkey = DSCAN_SEMICOLON }, // ö
-	{ .sym = GDK_KEY_section, .dkey = DSCAN_CLEAR, .priority = 1 }, // §
-	{ .sym = GDK_KEY_adiaeresis, .dkey = DSCAN_CLEAR, .priority = 1 }, // ä
+	{ .sym = GDK_KEY_section, .dkey = DSCAN_CLEAR, .preempt = 1 }, // §
+	{ .sym = GDK_KEY_adiaeresis, .dkey = DSCAN_CLEAR, .preempt = 1 }, // ä
 	{ .sym = GDK_KEY_comma, .dkey = DSCAN_COMMA },
 	{ .sym = GDK_KEY_period, .dkey = DSCAN_FULL_STOP },
 	{ .sym = GDK_KEY_minus, .dkey = DSCAN_SLASH },
@@ -265,7 +265,7 @@ static struct sym_dkey_mapping keymap_dvorak[] = {
 	{ .sym = GDK_KEY_t, .dkey = DSCAN_K },
 	{ .sym = GDK_KEY_n, .dkey = DSCAN_L },
 	{ .sym = GDK_KEY_s, .dkey = DSCAN_SEMICOLON },
-	{ .sym = GDK_KEY_grave, .dkey = DSCAN_CLEAR, .priority = 1 },
+	{ .sym = GDK_KEY_grave, .dkey = DSCAN_CLEAR, .preempt = 1 },
 	{ .sym = GDK_KEY_semicolon, .dkey = DSCAN_Z },
 	{ .sym = GDK_KEY_q, .dkey = DSCAN_X },
 	{ .sym = GDK_KEY_j, .dkey = DSCAN_C },
