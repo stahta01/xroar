@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 tape control window.
  *
- *  \copyright Copyright 2011-2019 Ciaran Anscomb
+ *  \copyright Copyright 2011-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -140,7 +140,7 @@ void gtk2_create_tc_window(void) {
 
 	/* Connect signals */
 	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), NULL);
-	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), NULL);
+	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), global_uigtk2);
 	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), NULL);
 	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
 	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);

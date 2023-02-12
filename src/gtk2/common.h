@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface common functions.
  *
- *  \copyright Copyright 2014-2019 Ciaran Anscomb
+ *  \copyright Copyright 2014-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -72,7 +72,15 @@ struct ui_gtk2_interface {
 extern struct ui_gtk2_interface *global_uigtk2;
 
 void gtk2_keyboard_init(struct ui_cfg *ui_cfg);
+gboolean gtk2_keyboard_handle_key_press(GtkWidget *, GdkEventKey *, gpointer);
+gboolean gtk2_keyboard_handle_key_release(GtkWidget *, GdkEventKey *, gpointer);
+
 gboolean gtk2_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
+gboolean gtk2_handle_key_press(GtkWidget *, GdkEventKey *, gpointer);
+gboolean gtk2_handle_key_release(GtkWidget *, GdkEventKey *, gpointer);
+gboolean gtk2_handle_motion_notify(GtkWidget *, GdkEventMotion *, gpointer);
+gboolean gtk2_handle_button_press(GtkWidget *, GdkEventButton *, gpointer);
+gboolean gtk2_handle_button_release(GtkWidget *, GdkEventButton *, gpointer);
 
 extern struct joystick_module *gtk2_js_modlist[];
 

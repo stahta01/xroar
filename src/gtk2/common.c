@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface common functions.
  *
- *  \copyright Copyright 2014-2019 Ciaran Anscomb
+ *  \copyright Copyright 2014-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -32,12 +32,100 @@
 // globally.
 struct ui_gtk2_interface *global_uigtk2 = NULL;
 
+// Event handlers
+
+// Used within tape/drive control dialogs to eat keypresses but still allow GUI
+// controls.
+
 gboolean gtk2_dummy_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
 	(void)widget;
-	(void)user_data;
-	if (gtk_window_activate_key(GTK_WINDOW(global_uigtk2->top_window), event) == TRUE) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+
+	if (gtk_window_activate_key(GTK_WINDOW(uigtk2->top_window), event) == TRUE) {
 		return TRUE;
 	}
+
+	return FALSE;
+}
+
+// Key press/release
+
+gboolean gtk2_handle_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+
+#ifndef WINDOWS32
+	// Hide cursor
+	if (!uigtk2->cursor_hidden) {
+		GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
+		uigtk2->old_cursor = gdk_window_get_cursor(window);
+		gdk_window_set_cursor(window, uigtk2->blank_cursor);
+		uigtk2->cursor_hidden = 1;
+	}
+#endif
+
+	// Pass off to keyboard code
+	return gtk2_keyboard_handle_key_press(widget, event, user_data);
+}
+
+gboolean gtk2_handle_key_release(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+	// Pass off to keyboard code
+	return gtk2_keyboard_handle_key_release(widget, event, user_data);
+}
+
+// Pointer motion
+
+gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+
+#ifndef WINDOWS32
+	// Unhide cursor
+	if (uigtk2->cursor_hidden) {
+		GdkWindow *window = gtk_widget_get_window(uigtk2->drawing_area);
+		gdk_window_set_cursor(window, uigtk2->old_cursor);
+		uigtk2->cursor_hidden = 0;
+	}
+#endif
+
+	// Update position data (for mouse mapped joystick)
+	int x = (event->x - uigtk2->display_rect.x) * 320;
+	int y = (event->y - uigtk2->display_rect.y) * 240;
+	float xx = (float)x / (float)uigtk2->display_rect.w;
+	float yy = (float)y / (float)uigtk2->display_rect.h;
+	xx = (xx - uigtk2->mouse_xoffset) / uigtk2->mouse_xdiv;
+	yy = (yy - uigtk2->mouse_yoffset) / uigtk2->mouse_ydiv;
+	if (xx < 0.0) xx = 0.0;
+	if (xx > 1.0) xx = 1.0;
+	if (yy < 0.0) yy = 0.0;
+	if (yy > 1.0) yy = 1.0;
+	uigtk2->mouse_axis[0] = xx * 65535.;
+	uigtk2->mouse_axis[1] = yy * 65535.;
+
+	return FALSE;
+}
+
+// Button press/release
+
+gboolean gtk2_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+
+	// Update button data (for mouse mapped joystick)
+	int button = event->button - 1;
+	if (button >= 0 && button <= 2) {
+		uigtk2->mouse_button[button] = 1;
+	}
+
+	return FALSE;
+}
+
+gboolean gtk2_handle_button_release(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+
+	// Update button data (for mouse mapped joystick)
+	int button = event->button - 1;
+	if (button >= 0 && button <= 2) {
+		uigtk2->mouse_button[button] = 0;
+	}
+
 	return FALSE;
 }
 

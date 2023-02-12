@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 joystick interfaces.
  *
- *  \copyright Copyright 2010-2022 Ciaran Anscomb
+ *  \copyright Copyright 2010-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -23,8 +23,6 @@
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
-#include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,14 +34,10 @@
 #pragma GCC diagnostic pop
 
 #include "pl-string.h"
-#include "slist.h"
 
-#include "events.h"
 #include "joystick.h"
 #include "logging.h"
 #include "module.h"
-#include "ui.h"
-#include "xroar.h"
 
 #include "gtk2/common.h"
 
@@ -78,55 +72,12 @@ struct joystick_module *gtk2_js_modlist[] = {
 	NULL
 };
 
-static gboolean handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
-	int x = (event->x - global_uigtk2->display_rect.x) * 320;
-	int y = (event->y - global_uigtk2->display_rect.y) * 240;
-	float xx = (float)x / (float)global_uigtk2->display_rect.w;
-	float yy = (float)y / (float)global_uigtk2->display_rect.h;
-	xx = (xx - global_uigtk2->mouse_xoffset) / global_uigtk2->mouse_xdiv;
-	yy = (yy - global_uigtk2->mouse_yoffset) / global_uigtk2->mouse_ydiv;
-	if (xx < 0.0) xx = 0.0;
-	if (xx > 1.0) xx = 1.0;
-	if (yy < 0.0) yy = 0.0;
-	if (yy > 1.0) yy = 1.0;
-	global_uigtk2->mouse_axis[0] = xx * 65535.;
-	global_uigtk2->mouse_axis[1] = yy * 65535.;
-	return FALSE;
-}
-
-static gboolean handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-	int button = event->button - 1;
-	if (button >= 0 && button <= 2) {
-		global_uigtk2->mouse_button[button] = 1;
-	}
-	return FALSE;
-}
-
-static gboolean handle_button_release(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-	int button = event->button - 1;
-	if (button >= 0 && button <= 2) {
-		global_uigtk2->mouse_button[button] = 0;
-	}
-	return FALSE;
-}
-
 void gtk2_joystick_init(void) {
 	// Mouse tracking
 	global_uigtk2->mouse_xoffset = 34.0;
 	global_uigtk2->mouse_yoffset = 25.5;
 	global_uigtk2->mouse_xdiv = 252.;
 	global_uigtk2->mouse_ydiv = 189.;
-
-	// Connect GTK+ events to handlers
-	g_signal_connect(G_OBJECT(global_uigtk2->drawing_area), "motion-notify-event", G_CALLBACK(handle_motion_notify), NULL);
-	g_signal_connect(G_OBJECT(global_uigtk2->drawing_area), "button-press-event", G_CALLBACK(handle_button_press), NULL);
-	g_signal_connect(G_OBJECT(global_uigtk2->drawing_area), "button-release-event", G_CALLBACK(handle_button_release), NULL);
-
-	// Make sure we get those events
-	GdkWindow *window = gtk_widget_get_window(global_uigtk2->drawing_area);
-	GdkEventMask m = gdk_window_get_events(window);
-	m |= GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK;
-	gdk_window_set_events(window, m);
 }
 
 static unsigned read_axis(unsigned *a) {

@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 keyboard support.
  *
- *  \copyright Copyright 2010-2022 Ciaran Anscomb
+ *  \copyright Copyright 2010-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -84,9 +84,6 @@ static struct axis *enabled_axis[MAX_AXES];
 static struct button *enabled_button[MAX_BUTTONS];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static gboolean keypress(GtkWidget *, GdkEventKey *, gpointer);
-static gboolean keyrelease(GtkWidget *, GdkEventKey *, gpointer);
 
 struct sym_dkey_mapping {
 	unsigned sym;
@@ -268,9 +265,6 @@ void gtk2_keyboard_init(struct ui_cfg *ui_cfg) {
 	GdkKeymap *gdk_keymap = gdk_keymap_get_for_display(gdk_display_get_default());
 	map_keyboard(gdk_keymap, selected_keymap);
 	g_signal_connect(G_OBJECT(gdk_keymap), "keys-changed", G_CALLBACK(map_keyboard), selected_keymap);
-	/* Connect GTK key press/release signals to handlers */
-	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-press-event", G_CALLBACK(keypress), global_uigtk2);
-	g_signal_connect(G_OBJECT(global_uigtk2->top_window), "key-release-event", G_CALLBACK(keyrelease), global_uigtk2);
 }
 
 static void emulator_command(guint keyval, int shift) {
@@ -342,9 +336,9 @@ static void emulator_command(guint keyval, int shift) {
 	return;
 }
 
-static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	struct ui_gtk2_interface *uigtk2 = user_data;
+gboolean gtk2_keyboard_handle_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
 	(void)widget;
+	struct ui_gtk2_interface *uigtk2 = user_data;
 
 	if (event->hardware_keycode >= MAX_KEYCODE) {
 		// In case the UI knows what it is
@@ -450,7 +444,7 @@ static gboolean keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_da
 	return TRUE;
 }
 
-static gboolean keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+gboolean gtk2_keyboard_handle_key_release(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	(void)widget;
 

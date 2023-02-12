@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 user-interface module.
  *
- *  \copyright Copyright 2010-2022 Ciaran Anscomb
+ *  \copyright Copyright 2010-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -108,10 +108,6 @@ struct ui_module ui_gtk2_module = {
 /* Dynamic menus */
 static void gtk2_update_machine_menu(void *sptr);
 static void gtk2_update_cartridge_menu(void *sptr);
-
-/* for hiding cursor: */
-static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data);
-static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer data);
 
 static gboolean run_cpu(gpointer data);
 
@@ -564,19 +560,16 @@ static void *ui_gtk2_new(void *cfg) {
 		gtk_window_parse_geometry(GTK_WINDOW(uigtk2->top_window), ui_cfg->vo_cfg.geometry);
 	}
 
-	/* Cursor hiding */
-	uigtk2->blank_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
-	gtk_widget_add_events(uigtk2->drawing_area, GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
-	g_signal_connect(G_OBJECT(uigtk2->top_window), "key-press-event", G_CALLBACK(hide_cursor), NULL);
-	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "motion-notify-event", G_CALLBACK(show_cursor), NULL);
-
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
 
-	/* Create (hidden) drive control window */
+	// Cursor hiding
+	uigtk2->blank_cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
+
+	// Create (hidden) drive control window
 	gtk2_create_dc_window();
 
-	/* Create (hidden) tape control window */
+	// Create (hidden) tape control window
 	gtk2_create_tc_window();
 
 	// Window geometry sensible defaults
@@ -590,6 +583,17 @@ static void *ui_gtk2_new(void *cfg) {
 
 	gtk2_keyboard_init(ui_cfg);
 	gtk2_joystick_init();
+
+	// Connect relevant event signals
+	g_signal_connect(G_OBJECT(uigtk2->top_window), "key-press-event", G_CALLBACK(gtk2_handle_key_press), uigtk2);
+	g_signal_connect(G_OBJECT(uigtk2->top_window), "key-release-event", G_CALLBACK(gtk2_handle_key_release), uigtk2);
+	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "motion-notify-event", G_CALLBACK(gtk2_handle_motion_notify), uigtk2);
+	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "button-press-event", G_CALLBACK(gtk2_handle_button_press), uigtk2);
+	g_signal_connect(G_OBJECT(uigtk2->drawing_area), "button-release-event", G_CALLBACK(gtk2_handle_button_release), uigtk2);
+
+	// Ensure we get those events
+	gtk_widget_add_events(uigtk2->top_window, GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK);
+	gtk_widget_add_events(uigtk2->drawing_area, GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
 
 	return ui;
 }
@@ -851,37 +855,6 @@ static void gtk2_update_cartridge_menu(void *sptr) {
 	g_free(labels);
 	g_free(radio_entries);
 	slist_free(ccl);
-}
-
-/* Cursor hiding */
-
-static gboolean hide_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
-	(void)widget;
-	(void)event;
-	(void)user_data;
-#ifndef WINDOWS32
-	if (global_uigtk2->cursor_hidden)
-		return FALSE;
-	GdkWindow *window = gtk_widget_get_window(global_uigtk2->drawing_area);
-	global_uigtk2->old_cursor = gdk_window_get_cursor(window);
-	gdk_window_set_cursor(window, global_uigtk2->blank_cursor);
-	global_uigtk2->cursor_hidden = 1;
-#endif
-	return FALSE;
-}
-
-static gboolean show_cursor(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
-	(void)widget;
-	(void)event;
-	(void)user_data;
-#ifndef WINDOWS32
-	if (!global_uigtk2->cursor_hidden)
-		return FALSE;
-	GdkWindow *window = gtk_widget_get_window(global_uigtk2->drawing_area);
-	gdk_window_set_cursor(window, global_uigtk2->old_cursor);
-	global_uigtk2->cursor_hidden = 0;
-#endif
-	return FALSE;
 }
 
 /* Tool callbacks */

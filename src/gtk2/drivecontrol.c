@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 drive control window.
  *
- *  \copyright Copyright 2011-2017 Ciaran Anscomb
+ *  \copyright Copyright 2011-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -121,7 +121,7 @@ void gtk2_create_dc_window(void) {
 	dc_drive_cyl_head = GTK_WIDGET(gtk_builder_get_object(builder, "drive_cyl_head"));
 
 	/* Connect signals */
-	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), NULL);
+	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), global_uigtk2);
 	for (i = 0; i < 4; i++) {
 		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
 		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
