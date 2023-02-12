@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sds.h"
 #include "xalloc.h"
 
 #include "breakpoint.h"
@@ -32,10 +33,11 @@
 #include "delegate.h"
 #include "events.h"
 #include "logging.h"
+#include "machine.h"
 #include "mc6801/mc6801.h"
 #include "mc6809/mc6809.h"
-#include "machine.h"
 #include "part.h"
+#include "path.h"
 #include "printer.h"
 #include "xroar.h"
 
@@ -103,8 +105,10 @@ void printer_reset(struct printer_interface *pi) {
 void printer_open_file(struct printer_interface *pi, const char *filename) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	printer_close(pi);
-	if (pip->stream_dest) free(pip->stream_dest);
-	pip->stream_dest = xstrdup(filename);
+	if (pip->stream_dest) {
+		sdsfree(pip->stream_dest);
+	}
+	pip->stream_dest = path_interp(filename);
 	pip->is_pipe = 0;
 	pip->busy = 0;
 	machine_bp_add_list(pip->machine, coco_print_breakpoint, pip);
@@ -113,8 +117,10 @@ void printer_open_file(struct printer_interface *pi, const char *filename) {
 void printer_open_pipe(struct printer_interface *pi, const char *command) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	printer_close(pi);
-	if (pip->stream_dest) free(pip->stream_dest);
-	pip->stream_dest = xstrdup(command);
+	if (pip->stream_dest) {
+		sdsfree(pip->stream_dest);
+	}
+	pip->stream_dest = sdsnew(command);
 	pip->is_pipe = 1;
 	pip->busy = 0;
 	machine_bp_add_list(pip->machine, coco_print_breakpoint, pip);
@@ -124,7 +130,9 @@ void printer_close(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	/* flush stream, but destroy stream_dest so it won't be reopened */
 	printer_flush(pi);
-	if (pip->stream_dest) free(pip->stream_dest);
+	if (pip->stream_dest) {
+		sdsfree(pip->stream_dest);
+	}
 	pip->stream_dest = NULL;
 	pip->is_pipe = 0;
 	pip->busy = 1;
