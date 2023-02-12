@@ -2,7 +2,7 @@
  *
  *  \brief GtkGLExt video output module.
  *
- *  \copyright Copyright 2010-2021 Ciaran Anscomb
+ *  \copyright Copyright 2010-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -155,22 +155,29 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	if (vo->is_fullscreen) {
 		return;
 	}
+	GdkScreen *s = gtk_window_get_screen(GTK_WINDOW(global_uigtk2->top_window));
+	unsigned sw = 1024, sh = 768;
+	if (s) {
+		sw = gdk_screen_get_width(s);
+		sh = gdk_screen_get_height(s);
+	}
 	if (w < 160 || h < 120) {
 		return;
 	}
-	if (w > 1920 || h > 1440) {
+	if (w > sw || h > sh) {
 		return;
 	}
 	/* You can't just set the widget size and expect GTK to adapt the
 	 * containing window, or indeed ask it to.  This will hopefully work
 	 * consistently.  It seems to be basically how GIMP "shrink wrap"s its
 	 * windows.  */
-	GtkAllocation allocation;
-	gtk_widget_get_allocation(global_uigtk2->top_window, &allocation);
-	gint oldw = allocation.width;
-	gint oldh = allocation.height;
-	gint woff = oldw - allocation.width;
-	gint hoff = oldh - allocation.height;
+	GtkAllocation top_allocation, draw_allocation;
+	gtk_widget_get_allocation(global_uigtk2->top_window, &top_allocation);
+	gtk_widget_get_allocation(global_uigtk2->drawing_area, &draw_allocation);
+	gint oldw = top_allocation.width;
+	gint oldh = top_allocation.height;
+	gint woff = oldw - draw_allocation.width;
+	gint hoff = oldh - draw_allocation.height;
 	vogtkgl->woff = woff;
 	vogtkgl->hoff = hoff;
 	gtk_window_resize(GTK_WINDOW(global_uigtk2->top_window), w + woff, h + hoff);
