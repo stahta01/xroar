@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -23,6 +23,7 @@
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,7 @@
 
 #include "events.h"
 #include "joystick.h"
+#include "keyboard.h"
 #include "logging.h"
 #include "vo.h"
 #include "xroar.h"
@@ -136,6 +138,21 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			break;
 		case SDL_MOUSEBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
+			if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == 2) {
+				if (SDL_HasClipboardText()) {
+					_Bool uc = SDL_GetModState() & KMOD_SHIFT;
+					char *text = SDL_GetClipboardText();
+					for (char *p = text; *p; p++) {
+						if (*p == '\n')
+							*p = '\r';
+						if (uc)
+							*p = toupper(*p);
+					}
+					keyboard_queue_basic(xroar_keyboard_interface, text);
+					SDL_free(text);
+				}
+				break;
+			}
 			if (event.button.button >= 1 && event.button.button <= 3) {
 				mouse_button[event.button.button-1] = event.button.state;
 			}

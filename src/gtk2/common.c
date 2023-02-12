@@ -18,12 +18,19 @@
 
 #include "top-config.h"
 
+#include <ctype.h>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
 #pragma GCC diagnostic pop
 #include <gdk/gdkkeysyms.h>
+
+#include "xalloc.h"
+
+#include "keyboard.h"
+#include "xroar.h"
 
 #include "gtk2/common.h"
 
@@ -105,13 +112,37 @@ gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 
 // Button press/release
 
+static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, gpointer data) {
+	(void)clipboard;
+	(void)data;
+	char *ntext = xstrdup(text);
+	if (!ntext)
+		return;
+	guint state = (uintptr_t)data;
+	_Bool uc = state & GDK_SHIFT_MASK;
+	for (char *p = ntext; *p; p++) {
+		if (*p == '\n')
+			*p = '\r';
+		if (uc)
+			*p = toupper(*p);
+	}
+	keyboard_queue_basic(xroar_keyboard_interface, ntext);
+	free(ntext);
+}
+
 gboolean gtk2_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
 
+	if (event->button == 2) {
+		GdkDisplay *d = gtk_widget_get_display(uigtk2->top_window);
+		GtkClipboard *cb = gtk_clipboard_get_for_display(d, GDK_SELECTION_PRIMARY);
+		gtk_clipboard_request_text(cb, clipboard_text_received, (gpointer)(uintptr_t)event->state);
+		return FALSE;
+	}
+
 	// Update button data (for mouse mapped joystick)
-	int button = event->button - 1;
-	if (button >= 0 && button <= 2) {
-		uigtk2->mouse_button[button] = 1;
+	if (event->button >= 1 && event->button <= 3) {
+		uigtk2->mouse_button[event->button-1] = 1;
 	}
 
 	return FALSE;
@@ -121,9 +152,8 @@ gboolean gtk2_handle_button_release(GtkWidget *widget, GdkEventButton *event, gp
 	struct ui_gtk2_interface *uigtk2 = user_data;
 
 	// Update button data (for mouse mapped joystick)
-	int button = event->button - 1;
-	if (button >= 0 && button <= 2) {
-		uigtk2->mouse_button[button] = 0;
+	if (event->button >= 1 && event->button <= 3) {
+		uigtk2->mouse_button[event->button-1] = 0;
 	}
 
 	return FALSE;
