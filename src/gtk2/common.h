@@ -59,8 +59,6 @@ struct ui_gtk2_interface {
 	float mouse_ydiv;
 	unsigned mouse_axis[2];
 	_Bool mouse_button[3];
-	// Restrict polling rate
-	event_ticks last_mouse_update_time;
 	// Cursor hiding
 	_Bool cursor_hidden;
 	GdkCursor *old_cursor;
