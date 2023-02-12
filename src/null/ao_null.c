@@ -18,8 +18,10 @@
 
 #include "top-config.h"
 
+#ifndef HAVE_SDL2
 // for struct timespec, gettimeofday, nanosleep
 #define _POSIX_C_SOURCE 200112L
+#endif
 
 #include <signal.h>
 #include <stdint.h>
