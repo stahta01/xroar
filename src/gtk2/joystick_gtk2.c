@@ -72,12 +72,12 @@ struct joystick_module *gtk2_js_modlist[] = {
 	NULL
 };
 
-void gtk2_joystick_init(void) {
+void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2) {
 	// Mouse tracking
-	global_uigtk2->mouse_xoffset = 34.0;
-	global_uigtk2->mouse_yoffset = 25.5;
-	global_uigtk2->mouse_xdiv = 252.;
-	global_uigtk2->mouse_ydiv = 189.;
+	uigtk2->mouse_xoffset = 34.0;
+	uigtk2->mouse_yoffset = 25.5;
+	uigtk2->mouse_xdiv = 252.;
+	uigtk2->mouse_ydiv = 189.;
 }
 
 static unsigned read_axis(unsigned *a) {

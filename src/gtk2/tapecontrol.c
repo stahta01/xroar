@@ -104,7 +104,7 @@ static gboolean tc_output_progress_change(GtkRange *range, GtkScrollType scroll,
 
 /* Tape control */
 
-void gtk2_create_tc_window(void) {
+void gtk2_create_tc_window(struct ui_gtk2_interface *uigtk2) {
 	GtkBuilder *builder;
 	GtkWidget *widget;
 	GError *error = NULL;
@@ -139,8 +139,8 @@ void gtk2_create_tc_window(void) {
 	tc_rewrite = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "rewrite"));
 
 	/* Connect signals */
-	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), NULL);
-	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), global_uigtk2);
+	g_signal_connect(tc_window, "delete-event", G_CALLBACK(hide_tc_window), uigtk2);
+	g_signal_connect(tc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
 	g_signal_connect(tc_input_list, "row-activated", G_CALLBACK(input_file_selected), NULL);
 	g_signal_connect(tc_input_progress, "change-value", G_CALLBACK(tc_input_progress_change), NULL);
 	g_signal_connect(tc_output_progress, "change-value", G_CALLBACK(tc_output_progress_change), NULL);
@@ -283,8 +283,8 @@ void gtk2_update_tape_state(int flags) {
 	uigtk2_notify_toggle_button_set(tc_rewrite, (flags & TAPE_REWRITE) ? TRUE : FALSE, tc_toggled_rewrite, NULL);
 }
 
-void gtk2_input_tape_filename_cb(const char *filename) {
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(global_uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
+void gtk2_input_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_label_set_text(GTK_LABEL(tc_input_filename), filename);
 	GtkTreeIter iter;
 	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(tc_input_list_store), &iter)) {
@@ -301,7 +301,8 @@ void gtk2_input_tape_filename_cb(const char *filename) {
 	}
 }
 
-void gtk2_output_tape_filename_cb(const char *filename) {
+void gtk2_output_tape_filename_cb(struct ui_gtk2_interface *uigtk2, const char *filename) {
+	(void)uigtk2;
 	gtk_label_set_text(GTK_LABEL(tc_output_filename), filename);
 }
 
@@ -348,8 +349,8 @@ void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 
 static void hide_tc_window(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
-	(void)user_data;
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(global_uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_toggle_action_set_active(toggle, 0);
 }
 

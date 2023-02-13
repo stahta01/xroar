@@ -84,7 +84,7 @@ gboolean gtk2_handle_button_release(GtkWidget *, GdkEventButton *, gpointer);
 
 extern struct joystick_module *gtk2_js_modlist[];
 
-void gtk2_joystick_init(void);
+void gtk2_joystick_init(struct ui_gtk2_interface *uigtk2);
 
 // Wrappers for notify-only updating of UI elements.  Blocks callback so that
 // no further action is taken.

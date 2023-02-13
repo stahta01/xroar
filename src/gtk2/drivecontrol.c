@@ -50,13 +50,13 @@ static void hide_dc_window(GtkEntry *entry, gpointer user_data);
 static void dc_insert(GtkButton *button, gpointer user_data);
 static void dc_eject(GtkButton *button, gpointer user_data);
 
-void gtk2_insert_disk(int drive) {
+void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive) {
 	static GtkFileChooser *file_dialog = NULL;
 	static GtkComboBox *drive_combo = NULL;
 	if (!file_dialog) {
 		file_dialog = GTK_FILE_CHOOSER(
 		    gtk_file_chooser_dialog_new("Insert Disk",
-			GTK_WINDOW(global_uigtk2->top_window),
+			GTK_WINDOW(uigtk2->top_window),
 			GTK_FILE_CHOOSER_ACTION_OPEN, GTK_STOCK_CANCEL,
 			GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN,
 			GTK_RESPONSE_ACCEPT, NULL));
@@ -89,7 +89,7 @@ void gtk2_insert_disk(int drive) {
 static void dc_toggled_we(GtkToggleButton *togglebutton, gpointer user_data);
 static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data);
 
-void gtk2_create_dc_window(void) {
+void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
 	GtkBuilder *builder;
 	GtkWidget *widget;
 	GError *error = NULL;
@@ -121,12 +121,12 @@ void gtk2_create_dc_window(void) {
 	dc_drive_cyl_head = GTK_WIDGET(gtk_builder_get_object(builder, "drive_cyl_head"));
 
 	/* Connect signals */
-	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), global_uigtk2);
+	g_signal_connect(dc_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
 	for (i = 0; i < 4; i++) {
 		g_signal_connect(dc_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
 		g_signal_connect(dc_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
 	}
-	g_signal_connect(dc_window, "delete-event", G_CALLBACK(hide_dc_window), NULL);
+	g_signal_connect(dc_window, "delete-event", G_CALLBACK(hide_dc_window), uigtk2);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive1"));
 	g_signal_connect(widget, "clicked", G_CALLBACK(dc_eject), (gpointer)(intptr_t)0);
 	widget = GTK_WIDGET(gtk_builder_get_object(builder, "eject_drive2"));
@@ -145,7 +145,7 @@ void gtk2_create_dc_window(void) {
 	g_signal_connect(widget, "clicked", G_CALLBACK(dc_insert), (gpointer)(intptr_t)3);
 
 	/* In case any signals remain... */
-	gtk_builder_connect_signals(builder, global_uigtk2);
+	gtk_builder_connect_signals(builder, uigtk2);
 	g_object_unref(builder);
 
 	xroar_vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, NULL);
@@ -165,8 +165,8 @@ void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
 
 static void hide_dc_window(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
-	(void)user_data;
-	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(global_uigtk2->menu_manager, "/MainMenu/ToolMenu/DriveControl");
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/DriveControl");
 	gtk_toggle_action_set_active(toggle, 0);
 }
 
