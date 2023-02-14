@@ -515,7 +515,7 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	switch (type) {
 	case FILETYPE_CAS:
 		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open '%s'\n", filename);
+			LOG_WARN("Failed to open CAS: '%s'\n", filename);
 			return -1;
 		}
 		if (tip->tape_pad_auto) {
@@ -528,26 +528,26 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 
 	case FILETYPE_K7:
 		if ((ti->tape_input = tape_k7_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open '%s'\n", filename);
+			LOG_WARN("Failed to open K7: '%s'\n", filename);
 			return -1;
 		}
 		break;
 
 	case FILETYPE_ASC:
 		if ((ti->tape_input = tape_asc_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open '%s'\n", filename);
+			LOG_WARN("Failed to open ASCII: '%s'\n", filename);
 			return -1;
 		}
 		break;
 	default:
 #ifdef HAVE_SNDFILE
 		if ((ti->tape_input = tape_sndfile_open(ti, filename, "rb", -1)) == NULL) {
-			LOG_WARN("Failed to open '%s'\n", filename);
+			LOG_WARN("Failed to open audio: '%s'\n", filename);
 			return -1;
 		}
 		break;
 #else
-		LOG_WARN("Failed to open '%s'\n", filename);
+		LOG_WARN("Failed to open unknown type: '%s'\n", filename);
 		return -1;
 #endif
 	}
@@ -581,18 +581,18 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	case FILETYPE_CAS:
 	case FILETYPE_ASC:
 		if ((ti->tape_output = tape_cas_open(ti, filename, "wb")) == NULL) {
-			LOG_WARN("Failed to open '%s' for writing\n", filename);
+			LOG_WARN("Failed to open %s for writing: '%s'\n", type == FILETYPE_ASC ? "ASCII" : "CAS", filename);
 			return -1;
 		}
 		break;
 	default:
 #ifdef HAVE_SNDFILE
 		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
-			LOG_WARN("Failed to open '%s' for writing\n", filename);
+			LOG_WARN("Failed to open audio for writing: '%s'\n", filename);
 			return -1;
 		}
 #else
-		LOG_WARN("Failed to open '%s' for writing.\n", filename);
+		LOG_WARN("Failed to open unknown type for writing: '%s'\n", filename);
 		return -1;
 #endif
 		break;
