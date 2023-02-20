@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 
+#include <glib.h>
 #include <gtk/gtk.h>
 
 #include "events.h"
@@ -99,5 +100,9 @@ void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gp
 
 // This function doesn't exist in GTK+ 2, but does in later versions:
 GtkBuilder *gtk_builder_new_from_resource(const gchar *path);
+
+#ifndef GLIB_VERSION_2_50
+#define g_abort() abort()
+#endif
 
 #endif
