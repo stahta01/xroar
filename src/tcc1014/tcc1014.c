@@ -656,6 +656,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 				render_scanline(gime);
 			}
 			gime->palette_reg[A & 15] = *gimep->CPUD & 0x3f;
+			GIME_DEBUG("GIME PALETTE: %d=%02x\n", A & 15, gime->palette_reg[A & 15]);
 		} else {
 			*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->palette_reg[A & 15];
 		}
@@ -1255,7 +1256,7 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 			gime->render_mode = gime->GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
 			gime->fg_colour = gime->CSS ? TCC1014_RGCSS1_1 : TCC1014_RGCSS0_1;
 			gime->bg_colour = gime->CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
-			gime->border_colour = gime->palette_reg[gime->cg_colours];
+			gime->border_colour = gime->palette_reg[gime->fg_colour];
 		}
 	} else {
 		// CoCo 3 extra graphics modes
