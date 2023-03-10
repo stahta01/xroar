@@ -279,7 +279,7 @@ static struct xroar_state xroar_state = {
 	.noratelimit_latch = 0,
 };
 
-static struct ui_interface *xroar_ui_interface;
+struct ui_interface *xroar_ui_interface;
 static struct filereq_interface *xroar_filereq_interface;
 struct vo_interface *xroar_vo_interface;
 struct ao_interface *xroar_ao_interface;

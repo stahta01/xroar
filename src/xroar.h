@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -150,6 +150,7 @@ extern struct xroar_cfg xroar_cfg;
 extern struct event *xroar_ui_events;
 extern struct event *xroar_machine_events;
 
+extern struct ui_interface *xroar_ui_interface;
 extern struct vo_interface *xroar_vo_interface;
 extern struct ao_interface *xroar_ao_interface;
 
