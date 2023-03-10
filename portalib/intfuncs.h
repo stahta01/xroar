@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -22,6 +22,10 @@
 #include "top-config.h"
 
 #include <stdint.h>
+
+// General-purpose 3-tuple
+
+typedef struct { int x, y, z; } int_xyz;
 
 // Integer division with rounding
 
