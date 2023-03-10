@@ -46,7 +46,7 @@ static GtkToggleButton *dc_we_drive[4] = { NULL, NULL, NULL, NULL };
 static GtkToggleButton *dc_wb_drive[4] = { NULL, NULL, NULL, NULL };
 static GtkWidget *dc_drive_cyl_head = NULL;
 
-static void hide_dc_window(GtkEntry *entry, gpointer user_data);
+static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
 static void dc_insert(GtkButton *button, gpointer user_data);
 static void dc_eject(GtkButton *button, gpointer user_data);
 
@@ -163,11 +163,13 @@ void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
 	}
 }
 
-static void hide_dc_window(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
+static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
+	(void)widget;
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/DriveControl");
 	gtk_toggle_action_set_active(toggle, 0);
+	gtk_widget_hide(dc_window);
+	return TRUE;
 }
 
 static void dc_insert(GtkButton *button, gpointer user_data) {

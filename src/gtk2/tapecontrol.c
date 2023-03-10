@@ -62,7 +62,7 @@ static GtkToggleButton *tc_fast = NULL;
 static GtkToggleButton *tc_pad_auto = NULL;
 static GtkToggleButton *tc_rewrite = NULL;
 
-static void hide_tc_window(GtkEntry *entry, gpointer user_data);
+static gboolean hide_tc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
 static void tc_play(GtkButton *button, gpointer user_data);
 static void tc_pause(GtkButton *button, gpointer user_data);
 static void tc_input_rewind(GtkButton *button, gpointer user_data);
@@ -347,11 +347,13 @@ void gtk2_toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 	}
 }
 
-static void hide_tc_window(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
+static gboolean hide_tc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
+	(void)widget;
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/TapeControl");
 	gtk_toggle_action_set_active(toggle, 0);
+	gtk_widget_hide(tc_window);
+	return TRUE;
 }
 
 /* Tape Control - Signal Handlers - Input Tab */
