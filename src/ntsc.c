@@ -129,4 +129,4 @@ void ntsc_burst_free(struct ntsc_burst *nb) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-extern inline struct ntsc_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc);
+extern inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc);

@@ -357,7 +357,7 @@ static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_bu
 	ntsc_phase = ((generic->cmp_phase + generic->viewport.x) + 3) & 3;
 	LOCK_SURFACE(generic);
 	for (int j = generic->viewport.w; j; j--) {
-		struct ntsc_xyz rgb = ntsc_decode(burst, src++);
+		int_xyz rgb = ntsc_decode(burst, src++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
 		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];

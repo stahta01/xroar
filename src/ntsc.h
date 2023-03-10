@@ -2,7 +2,7 @@
  *
  *  \brief NTSC encoding & decoding.
  *
- *  \copyright Copyright 2016-2022 Ciaran Anscomb
+ *  \copyright Copyright 2016-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -27,6 +27,7 @@
 #ifndef XROAR_NTSC_H_
 #define XROAR_NTSC_H_
 
+#include "intfuncs.h"
 #include "machine.h"
 #include "xroar.h"
 
@@ -46,10 +47,6 @@ struct ntsc_burst {
 	int byphase[NTSC_NPHASES][7];
 };
 
-struct ntsc_xyz {
-	int x, y, z;
-};
-
 extern unsigned ntsc_phase;
 
 struct ntsc_palette *ntsc_palette_new(void);
@@ -67,8 +64,8 @@ inline int ntsc_encode_from_palette(const struct ntsc_palette *np, unsigned c) {
 struct ntsc_burst *ntsc_burst_new(int offset);
 void ntsc_burst_free(struct ntsc_burst *nb);
 
-inline struct ntsc_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc) {
-	struct ntsc_xyz buf;
+inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc) {
+	int_xyz buf;
 	const int *bursti = nb->byphase[(ntsc_phase+1)&3];
 	const int *burstq = nb->byphase[(ntsc_phase+0)&3];
 	int y = NTSC_C3*ntsc[0] + NTSC_C2*ntsc[1] + NTSC_C1*ntsc[2] +
