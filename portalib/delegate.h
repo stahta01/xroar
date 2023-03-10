@@ -2,7 +2,7 @@
  *
  *  \brief Delegates in C.
  *
- *  \copyright Copyright 2014-2021 Ciaran Anscomb
+ *  \copyright Copyright 2014-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -47,21 +47,28 @@ typedef DELEGATE_S0(void) DELEGATE_T0(void);
 typedef DELEGATE_S1(void, _Bool) DELEGATE_T1(void, bool);
 typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
 typedef DELEGATE_S1(void, int) DELEGATE_T1(void, int);
+typedef DELEGATE_S2(void, int, _Bool) DELEGATE_T2(void, int, bool);
+typedef DELEGATE_S2(void, int, int) DELEGATE_T2(void, int, int);
 typedef DELEGATE_S3(void, int, _Bool, uint16_t) DELEGATE_T3(void, int, bool, uint16);
 typedef DELEGATE_S3(void, int, int, const void *) DELEGATE_T3(void, int, int, cvoidp);
 typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
 typedef DELEGATE_S2(void, int, uint16_t *) DELEGATE_T2(void, int, uint16p);
 typedef DELEGATE_S1(void, unsigned) DELEGATE_T1(void, unsigned);
+typedef DELEGATE_S2(void, unsigned, int) DELEGATE_T2(void, unsigned, int);
 typedef DELEGATE_S2(void, unsigned, unsigned) DELEGATE_T2(void, unsigned, unsigned);
 typedef DELEGATE_S3(void, unsigned, unsigned, unsigned) DELEGATE_T3(void, unsigned, unsigned, unsigned);
 typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
+typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8, float, float, float);
 typedef DELEGATE_S2(void, uint8_t *, unsigned) DELEGATE_T2(void, uint8p, unsigned);
+typedef DELEGATE_S3(void, uint8_t const *, unsigned, unsigned)
+	DELEGATE_T3(void, uint8cp, unsigned, unsigned);
 typedef DELEGATE_S3(void, uint16_t, int, uint16_t *) DELEGATE_T3(void, uint16, int, uint16p);
 typedef DELEGATE_S2(void, uint16_t, uint8_t) DELEGATE_T2(void, uint16, uint8);
 typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
 typedef DELEGATE_S1(void *, void *) DELEGATE_T1(voidp, voidp);
 typedef DELEGATE_S0(_Bool) DELEGATE_T0(bool);
 typedef DELEGATE_S0(unsigned) DELEGATE_T0(unsigned);
+typedef DELEGATE_S1(unsigned, int) DELEGATE_T1(unsigned, int);
 typedef DELEGATE_S1(unsigned, void *) DELEGATE_T1(unsigned, voidp);
 typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
 typedef DELEGATE_S2(uint8_t, uint8_t, _Bool) DELEGATE_T2(uint8, uint8, bool);
@@ -107,21 +114,27 @@ DELEGATE_DEF_PROTO0(void, void);
 DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
 DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
 DELEGATE_DEF_PROTO1(void, void, int, int);
+DELEGATE_DEF_PROTO2(void, void, int, int, _Bool, bool);
+DELEGATE_DEF_PROTO2(void, void, int, int, int, int);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint8_t *, uint8p);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint16_t *, uint16p);
 DELEGATE_DEF_PROTO3(void, void, int, int, _Bool, bool, uint16_t, uint16);
 DELEGATE_DEF_PROTO3(void, void, int, int, int, int, const void *, cvoidp);
 DELEGATE_DEF_PROTO1(void, void, unsigned, unsigned);
+DELEGATE_DEF_PROTO2(void, void, unsigned, unsigned, int, int);
 DELEGATE_DEF_PROTO2(void, void, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
+DELEGATE_DEF_PROTO4(void, void, uint8_t, uint8, float, float, float, float, float, float);
 DELEGATE_DEF_PROTO2(void, void, uint8_t *, uint8p, unsigned, unsigned);
+DELEGATE_DEF_PROTO3(void, void, uint8_t const *, uint8cp, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, uint16_t, uint16, int, int, uint16_t *, uint16p);
 DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
 DELEGATE_DEF_PROTO1(void, void, float, float);
 DELEGATE_DEF_PROTO1(void *, voidp, void *, voidp);
 DELEGATE_DEF_PROTO0(_Bool, bool);
 DELEGATE_DEF_PROTO0(unsigned, unsigned);
+DELEGATE_DEF_PROTO1(unsigned, unsigned, int, int);
 DELEGATE_DEF_PROTO1(unsigned, unsigned, void *, voidp);
 DELEGATE_DEF_PROTO0(uint8_t, uint8);
 DELEGATE_DEF_PROTO2(uint8_t, uint8, uint8_t, uint8, _Bool, bool);
