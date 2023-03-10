@@ -2,7 +2,7 @@
  *
  *  \brief User-interface modules & interfaces.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -70,6 +70,8 @@ enum ui_tag {
 	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
+	ui_tag_brightness,
+	ui_tag_contrast,
 	// Audio
 	ui_tag_ratelimit,
 	// Keyboard

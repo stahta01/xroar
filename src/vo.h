@@ -99,6 +99,14 @@ struct vo_interface {
 	//     int input;  // VO_TV_*
 	DELEGATE_T1(void, int) set_input;
 
+	// Set brightness
+	//     int brightness;  // 0-100
+	DELEGATE_T1(void, int) set_brightness;
+
+	// Set contrast
+	//     int contrast;  // 0-100
+	DELEGATE_T1(void, int) set_contrast;
+
 	// Set cross-colour renderer
 	//     int ccr;  // VO_CMP_CCR_*
 	DELEGATE_T1(void, int) set_cmp_ccr;

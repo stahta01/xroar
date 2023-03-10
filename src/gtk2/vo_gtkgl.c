@@ -104,6 +104,8 @@ static void *new(void *sptr) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);
+	vo->set_brightness = vogl->set_brightness;
+	vo->set_contrast = vogl->set_contrast;
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_ccr, vo);
 	vo->set_cmp_phase = vogl->set_cmp_phase;
 

@@ -988,6 +988,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape.ao_rate);
 
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, 52);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, 50);
+
 	// Configure machine
 	xroar_configure_machine(xroar_machine_config);
 	if (xroar_machine_config->cart_enabled) {

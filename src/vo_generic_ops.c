@@ -29,12 +29,18 @@
 #include "module.h"
 #include "ntsc.h"
 #include "vdg_palette.h"
+#include "xroar.h"
+
 #include "mc6847/mc6847.h"
 
 struct vo_generic_interface {
 	VO_MODULE_INTERFACE module;
 
 	struct {
+		// Record values for recalculation
+		struct {
+			float y, pb, pr;
+		} colour[256];
 		// Composite output palette.
 		Pixel palette[256];
 		// Cache testing if each colour is black or white.
@@ -48,6 +54,10 @@ struct vo_generic_interface {
 	} cmp;
 
 	struct {
+		// Record values for recalculation
+		struct {
+			float r, g, b;
+		} colour[256];
 		// RGB output palette.
 		Pixel palette[256];
 	} rgb;
@@ -73,6 +83,8 @@ struct vo_generic_interface {
 	struct vo_rect viewport;
 
 	// Render configuration.
+	int brightness;
+	int contrast;
 	int input;      // VO_TV_CMP or VO_TV_RGB
 	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
 	int cmp_phase;  // 0 or 2 are useful
@@ -80,6 +92,8 @@ struct vo_generic_interface {
 };
 
 static void update_gamma_table(struct vo_generic_interface *generic);
+static void update_palette_ybr(struct vo_generic_interface *generic, uint8_t c);
+static void update_palette_rgb(struct vo_generic_interface *generic, uint8_t c);
 static void palette_set(Pixel *palette, uint8_t c, float R, float G, float B);
 static void update_render_parameters(struct vo_generic_interface *generic);
 
@@ -99,6 +113,8 @@ static void vo_generic_init(void *sptr) {
 #endif
 
 	// Populate inverse gamma LUT
+	generic->brightness = 50;
+	generic->contrast = 50;
 	update_gamma_table(generic);
 
 	for (int i = 0; i < 2; i++) {
@@ -150,6 +166,42 @@ static void set_input(void *sptr, int input) {
 	update_render_parameters(generic);
 }
 
+// Set brightness
+//     int brightness;  // 0-100
+
+static void set_brightness(void *sptr, int brightness) {
+	struct vo_generic_interface *generic = sptr;
+	if (brightness < 0) brightness = 0;
+	if (brightness > 100) brightness = 100;
+	generic->brightness = brightness;
+	for (unsigned i = 0; i < 256; i++) {
+		update_palette_ybr(generic, i);
+		update_palette_rgb(generic, i);
+	}
+	update_gamma_table(generic);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_brightness, brightness, NULL);
+	}
+}
+
+// Set contrast
+//     int contrast;  // 0-100
+
+static void set_contrast(void *sptr, int contrast) {
+	struct vo_generic_interface *generic = sptr;
+	if (contrast < 0) contrast = 0;
+	if (contrast > 100) contrast = 100;
+	generic->contrast = contrast;
+	for (unsigned i = 0; i < 256; i++) {
+		update_palette_ybr(generic, i);
+		update_palette_rgb(generic, i);
+	}
+	update_gamma_table(generic);
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_contrast, contrast, NULL);
+	}
+}
+
 // Set cross-colour renderer
 //     int ccr;  // VO_CMP_CCR_*
 
@@ -176,42 +228,11 @@ static void set_cmp_phase(void *sptr, int phase) {
 static void palette_set_ybr(void *sptr, uint8_t c, float y, float pb, float pr) {
 	struct vo_generic_interface *generic = sptr;
 
-	double u = 0.493 * pb;
-	double v = 0.877 * pr;
+	generic->cmp.colour[c].y = y;
+	generic->cmp.colour[c].pb = pb;
+	generic->cmp.colour[c].pr = pr;
 
-	double r = 1.0 * y + 0.000 * u + 1.140 * v;
-	double g = 1.0 * y - 0.396 * u - 0.581 * v;
-	double b = 1.0 * y + 2.029 * u + 0.000 * v;
-
-	/* These values directly relate to voltages fed to a modulator which,
-	 * I'm assuming, does nothing further to correct for the non-linearity
-	 * of the display device.  Therefore, these can be considered "gamma
-	 * corrected" values, and to work with them in linear RGB, we need to
-	 * undo the assumed characteristics of the display.  NTSC was
-	 * originally defined differently, but most SD televisions that people
-	 * will have used any time recently are probably close to Rec. 601, so
-	 * use that transfer function:
-	 *
-	 * L = V/4.5                        for V <  0.081
-	 * L = ((V + 0.099) / 1.099) ^ 2.2  for V >= 0.081
-	 *
-	 * Note: the same transfer function is specified for Rec. 709.
-	 */
-
-	float R, G, B;
-	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
-
-	palette_set(generic->cmp.palette, c, R, G, B);
-
-	ntsc_palette_add_ybr(generic->cmp.ntsc_palette, c, y, pb, pr);
-
-	if (r > 0.85 && g > 0.85 && b > 0.85) {
-		generic->cmp.is_black_or_white[c] = 3;
-	} else if (r < 0.20 && g < 0.20 && b < 0.20) {
-		generic->cmp.is_black_or_white[c] = 2;
-	} else {
-		generic->cmp.is_black_or_white[c] = 0;
-	}
+	update_palette_ybr(generic, c);
 }
 
 // Add palette entry to RGB palette as R', G', B'
@@ -219,10 +240,11 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float pb, float pr) 
 static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
 	struct vo_generic_interface *generic = sptr;
 
-	float R, G, B;
-	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+	generic->rgb.colour[c].r = r;
+	generic->rgb.colour[c].g = g;
+	generic->rgb.colour[c].b = b;
 
-	palette_set(generic->rgb.palette, c, R, G, B);
+	update_palette_rgb(generic, c);
 }
 
 // Set machine default cross-colour phase
@@ -260,14 +282,14 @@ static void generic_vsync(void *sptr) {
 // Update gamma LUT
 
 static void update_gamma_table(struct vo_generic_interface *generic) {
+	float brightness = (float)(generic->brightness - 50) / 50.;
+	float contrast = (float)generic->contrast / 50.;
 	for (int j = 0; j < 256; j++) {
 		float c = j / 255.0;
-		if (c <= (0.018 * 4.5)) {
-			c /= 4.5;
-		} else {
-			c = powf((c+0.099)/(1.+0.099), 2.2);
-		}
-		generic->ntsc_ungamma[j] = int_clamp_u8((int)(c * 255.0));
+		c *= contrast;
+		c += brightness;
+		float C = cs_mlaw_1(generic->cs, c);
+		generic->ntsc_ungamma[j] = int_clamp_u8((int)(C * 255.0));
 	}
 }
 
@@ -279,6 +301,65 @@ static void palette_set(Pixel *palette, uint8_t c, float R, float G, float B) {
 	G *= 255.0;
 	B *= 255.0;
 	palette[c] = MAPCOLOUR(generic, (int)R, (int)G, (int)B);
+}
+
+// Update a composite palette entry, applying brightness & contrast
+
+static void update_palette_ybr(struct vo_generic_interface *generic, uint8_t c) {
+	float y = generic->cmp.colour[c].y;
+	float pb = generic->cmp.colour[c].pb;
+	float pr = generic->cmp.colour[c].pr;
+
+	// Scale Pb,Pr to valid B'-Y',R'-Y'
+	float b_y = pb * 0.5/0.886;
+	float r_y = pr * 0.5/0.701;
+
+	// Convert to R'G'B'
+	float r = y + r_y;
+	float g = y - 0.1952 * b_y - 0.5095 * r_y;
+	float b = y + b_y;
+
+	// Apply brightness & contrast
+	float brightness = (float)(generic->brightness - 50) / 50.;
+	float contrast = (float)generic->contrast / 50.;
+	r = (r * contrast) + brightness;
+	g = (g * contrast) + brightness;
+	b = (b * contrast) + brightness;
+
+	float R, G, B;
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+
+	palette_set(generic->cmp.palette, c, R, G, B);
+
+	ntsc_palette_add_ybr(generic->cmp.ntsc_palette, c, y, pb, pr);
+
+	if (r > 0.85 && g > 0.85 && b > 0.85) {
+		generic->cmp.is_black_or_white[c] = 3;
+	} else if (r < 0.20 && g < 0.20 && b < 0.20) {
+		generic->cmp.is_black_or_white[c] = 2;
+	} else {
+		generic->cmp.is_black_or_white[c] = 0;
+	}
+}
+
+// Update an RGB palette entry, applying brightness & contrast
+
+static void update_palette_rgb(struct vo_generic_interface *generic, uint8_t c) {
+	float r = generic->rgb.colour[c].r;
+	float g = generic->rgb.colour[c].g;
+	float b = generic->rgb.colour[c].b;
+
+	// Apply brightness & contrast
+	float brightness = (float)(generic->brightness - 50) / 50.;
+	float contrast = (float)generic->contrast / 50.;
+	r = (r * contrast) + brightness;
+	g = (g * contrast) + brightness;
+	b = (b * contrast) + brightness;
+
+	float R, G, B;
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+
+	palette_set(generic->rgb.palette, c, R, G, B);
 }
 
 // Housekeeping after selecting TV input
@@ -483,9 +564,9 @@ static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burs
 		int_xyz rgb = ntsc_decode(burst, src++);
 		// 40 is a reasonable value for brightness
 		// TODO: make this adjustable
-		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];
-		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y+40)];
-		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z+40)];
+		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x)];
+		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y)];
+		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z)];
 		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
 		generic->pixel += XSTEP;
 	}

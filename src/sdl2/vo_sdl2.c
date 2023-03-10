@@ -120,6 +120,8 @@ static void *new(void *sptr) {
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
+	vo->set_brightness = DELEGATE_AS1(void, int, set_brightness, generic);
+	vo->set_contrast = DELEGATE_AS1(void, int, set_contrast, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
 
