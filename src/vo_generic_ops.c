@@ -2,7 +2,7 @@
  *
  *  \brief Video output module generic operations.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -79,6 +79,12 @@ struct vo_generic_interface {
 	int cmp_phase_offset;  // likewise
 };
 
+static void update_gamma_table(struct vo_generic_interface *generic);
+static void palette_set(Pixel *palette, uint8_t c, float R, float G, float B);
+static void update_render_parameters(struct vo_generic_interface *generic);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // Must be called by encapsulating video module on startup.
 
 static void vo_generic_init(void *sptr) {
@@ -92,16 +98,8 @@ static void vo_generic_init(void *sptr) {
 	RESET_PALETTE();
 #endif
 
-	// Populate NTSC inverse gamma LUT
-	for (int j = 0; j < 256; j++) {
-		float c = j / 255.0;
-		if (c <= (0.018 * 4.5)) {
-			c /= 4.5;
-		} else {
-			c = powf((c+0.099)/(1.+0.099), 2.2);
-		}
-		generic->ntsc_ungamma[j] = (int)(c * 255.0);
-	}
+	// Populate inverse gamma LUT
+	update_gamma_table(generic);
 
 	for (int i = 0; i < 2; i++) {
 		// 2-bit LUT NTSC cross-colour
@@ -127,48 +125,63 @@ static void vo_generic_free(void *sptr) {
 	ntsc_palette_free(generic->cmp.ntsc_palette);
 }
 
-// Set viewport geometry
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void set_viewport_xy(void *sptr, unsigned x, unsigned y) {
+// Used by UI to adjust viewing parameters
+
+// Configure viewport X and Y offset
+//     unsigned x0, y0;  // offset to top-left displayed pixel
+
+static void set_viewport_xy(void *sptr, unsigned x0, unsigned y0) {
 	struct vo_generic_interface *generic = sptr;
 	// XXX bounds checking?  Only really going to be needed if user ends up
 	// able to move the viewport...
-	generic->viewport.x = x;
-	generic->viewport.y = y;
-	generic->scanline = y + generic->viewport.h;
+	generic->viewport.x = x0;
+	generic->viewport.y = y0;
+	generic->scanline = y0 + generic->viewport.h;
 }
 
-// Set a palette entry.
+// Select TV "input"
+//     int input;  // VO_TV_*
 
-static void palette_set(uint8_t c, float R, float G, float B, Pixel *palette) {
-	cs_clamp(&R, &G, &B);
-	R *= 255.0;
-	G *= 255.0;
-	B *= 255.0;
-	palette[c] = MAPCOLOUR(generic, (int)R, (int)G, (int)B);
+static void set_input(void *sptr, int input) {
+	struct vo_generic_interface *generic = sptr;
+	generic->input = input;
+	update_render_parameters(generic);
 }
 
-// Add palette entry to RGB palette as R', G', B'
+// Set cross-colour renderer
+//     int ccr;  // VO_CMP_CCR_*
 
-static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
+static void set_cmp_ccr(void *sptr, int ccr) {
+	struct vo_generic_interface *generic = sptr;
+	generic->cmp_ccr = ccr;
+	update_render_parameters(generic);
+}
+
+// Set cross-colour phase
+//     int phase;  // VO_CMP_PHASE_*
+
+static void set_cmp_phase(void *sptr, int phase) {
+	struct vo_generic_interface *generic = sptr;
+	generic->cmp_phase = phase ^ generic->cmp_phase_offset;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Used by machine to configure video output
+
+// Add palette entry to composite palette as Y', Pb, Pr
+
+static void palette_set_ybr(void *sptr, uint8_t c, float y, float pb, float pr) {
 	struct vo_generic_interface *generic = sptr;
 
-	float R, G, B;
-	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+	double u = 0.493 * pb;
+	double v = 0.877 * pr;
 
-	palette_set(c, R, G, B, generic->rgb.palette);
-}
-
-// Add palette entry to composite palette as Y', B'-Y', R'-Y'
-
-static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y) {
-	struct vo_generic_interface *generic = sptr;
-
-	float u = 0.493 * b_y;
-	float v = 0.877 * r_y;
-	float r = 1.0 * y + 0.000 * u + 1.140 * v;
-	float g = 1.0 * y - 0.396 * u - 0.581 * v;
-	float b = 1.0 * y + 2.029 * u + 0.000 * v;
+	double r = 1.0 * y + 0.000 * u + 1.140 * v;
+	double g = 1.0 * y - 0.396 * u - 0.581 * v;
+	double b = 1.0 * y + 2.029 * u + 0.000 * v;
 
 	/* These values directly relate to voltages fed to a modulator which,
 	 * I'm assuming, does nothing further to correct for the non-linearity
@@ -188,9 +201,9 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y
 	float R, G, B;
 	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
 
-	palette_set(c, R, G, B, generic->cmp.palette);
+	palette_set(generic->cmp.palette, c, R, G, B);
 
-	ntsc_palette_add_ybr(generic->cmp.ntsc_palette, c, y, b_y, r_y);
+	ntsc_palette_add_ybr(generic->cmp.ntsc_palette, c, y, pb, pr);
 
 	if (r > 0.85 && g > 0.85 && b > 0.85) {
 		generic->cmp.is_black_or_white[c] = 3;
@@ -201,174 +214,74 @@ static void palette_set_ybr(void *sptr, uint8_t c, float y, float b_y, float r_y
 	}
 }
 
-// Render colour line using palette.  Used for RGB and palette-based CMP.
+// Add palette entry to RGB palette as R', G', B'
 
-static void render_palette(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
+static void palette_set_rgb(void *sptr, uint8_t c, float r, float g, float b) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
-	if (generic->scanline >= generic->viewport.y &&
-	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
-		scanline_data += generic->viewport.x;
-		LOCK_SURFACE(generic);
-		for (int i = generic->viewport.w >> 2; i; i--) {
-			uint8_t c0 = *(scanline_data++);
-			uint8_t c1 = *(scanline_data++);
-			uint8_t c2 = *(scanline_data++);
-			uint8_t c3 = *(scanline_data++);
-			Pixel p0 = generic->input_palette[c0];
-			Pixel p1 = generic->input_palette[c1];
-			Pixel p2 = generic->input_palette[c2];
-			Pixel p3 = generic->input_palette[c3];
-			*(generic->pixel+0*XSTEP) = p0;
-			*(generic->pixel+1*XSTEP) = p1;
-			*(generic->pixel+2*XSTEP) = p2;
-			*(generic->pixel+3*XSTEP) = p3;
-			generic->pixel += 4*XSTEP;
-		}
-		UNLOCK_SURFACE(generic);
-		generic->pixel += NEXTLINE;
-	}
-	generic->scanline++;
+
+	float R, G, B;
+	cs_mlaw(generic->cs, r, g, b, &R, &G, &B);
+
+	palette_set(generic->rgb.palette, c, R, G, B);
 }
 
-// Render artefact colours using simple 2-bit LUT.
+// Set machine default cross-colour phase
+//     int phase;  // VO_CMP_PHASE_*
 
-static void render_ccr_2bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
+static void set_cmp_phase_offset(void *sptr, int phase) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
-	unsigned p = !(generic->cmp_phase & 2);
-	if (generic->scanline >= generic->viewport.y &&
-	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
-		scanline_data += generic->viewport.x;
-		LOCK_SURFACE(generic);
-		for (int i = generic->viewport.w >> 2; i; i--) {
-			Pixel p0, p1, p2, p3;
-			uint8_t c0 = *scanline_data;
-			uint8_t c2 = *(scanline_data + 2);
-			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c2]) {
-				unsigned aindex = (generic->cmp.is_black_or_white[c0] << 1) | (generic->cmp.is_black_or_white[c2] & 1);
-				p0 = p1 = p2 = p3 = generic->cmp.cc_2bit[p][aindex & 3];
-			} else {
-				uint8_t c1 = *(scanline_data+1);
-				uint8_t c3 = *(scanline_data+3);
-				p0 = generic->cmp.palette[c0];
-				p1 = generic->cmp.palette[c1];
-				p2 = generic->cmp.palette[c2];
-				p3 = generic->cmp.palette[c3];
-			}
-			scanline_data += 4;
-			*(generic->pixel) = p0;
-			*(generic->pixel+1*XSTEP) = p1;
-			*(generic->pixel+2*XSTEP) = p2;
-			*(generic->pixel+3*XSTEP) = p3;
-			generic->pixel += 4*XSTEP;
-		}
-		UNLOCK_SURFACE(generic);
-		generic->pixel += NEXTLINE;
-	}
-	generic->scanline++;
+	int p = generic->cmp_phase ^ generic->cmp_phase_offset;
+	generic->cmp_phase_offset = phase ^ 2;
+	set_cmp_phase(generic, p);
 }
 
-// Render artefact colours using 5-bit LUT.  Only explicitly black or white
-// runs of pixels are considered to contribute to artefect colours, otherwise
-// they are passed through from the palette.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void render_ccr_5bit(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
+// Used by machine to render video
+
+// Submit a scanline for rendering
+//     const uint8_t *data;       // palettised data
+//     struct ntsc_burst *burst;  // colourburst for this line
+
+static void render_palette(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
+static void render_ccr_2bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
+static void render_ccr_5bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
+static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
+
+// Vertical sync
+
+static void generic_vsync(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
-	unsigned p = !(generic->cmp_phase & 2);
-	if (generic->scanline >= generic->viewport.y &&
-	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
-		unsigned ibwcount = 0;
-		unsigned aindex = 0;
-		scanline_data += generic->viewport.x;
-		uint8_t ibw0 = generic->cmp.is_black_or_white[*(scanline_data-6)];
-		uint8_t ibw1 = generic->cmp.is_black_or_white[*(scanline_data-2)];
-		if (ibw0 && ibw1) {
-			ibwcount = 7;
-			aindex = (ibw0 & 1) ? 14 : 0;
-			aindex |= (ibw1 & 1) ? 1 : 0;
-		}
-		LOCK_SURFACE(generic);
-		for (int i = generic->viewport.w >> 2; i; i--) {
-			Pixel p0, p1, p2, p3;
-
-			uint8_t ibw2 = generic->cmp.is_black_or_white[*(scanline_data+2)];
-			uint8_t ibw4 = generic->cmp.is_black_or_white[*(scanline_data+4)];
-			uint8_t ibw6 = generic->cmp.is_black_or_white[*(scanline_data+6)];
-
-			ibwcount = ((ibwcount << 1) | (ibw2 >> 1)) & 7;
-			aindex = ((aindex << 1) | (ibw4 & 1));
-			if (ibwcount == 7) {
-				p0 = p1 = generic->cmp.cc_5bit[p][aindex & 31];
-			} else {
-				uint8_t c0 = *scanline_data;
-				uint8_t c1 = *(scanline_data+1);
-				p0 = generic->cmp.palette[c0];
-				p1 = generic->cmp.palette[c1];
-			}
-
-			ibwcount = ((ibwcount << 1) | (ibw4 >> 1)) & 7;
-			aindex = ((aindex << 1) | (ibw6 & 1));
-			if (ibwcount == 7) {
-				p2 = p3 = generic->cmp.cc_5bit[!p][aindex & 31];
-			} else {
-				uint8_t c2 = *(scanline_data+2);
-				uint8_t c3 = *(scanline_data+3);
-				p2 = generic->cmp.palette[c2];
-				p3 = generic->cmp.palette[c3];
-			}
-
-			scanline_data += 4;
-			*(generic->pixel) = p0;
-			*(generic->pixel+1*XSTEP) = p1;
-			*(generic->pixel+2*XSTEP) = p2;
-			*(generic->pixel+3*XSTEP) = p3;
-			generic->pixel += 4*XSTEP;
-		}
-		UNLOCK_SURFACE(generic);
-		generic->pixel += NEXTLINE;
-	}
-	generic->scanline++;
+	generic->scanline = 0;
 }
 
-// NTSC composite video simulation.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void render_ntsc(void *sptr, uint8_t const *scanline_data, struct ntsc_burst *burst) {
-	struct vo_generic_interface *generic = sptr;
-	if (generic->scanline < generic->viewport.y ||
-	    generic->scanline >= (generic->viewport.y + generic->viewport.h)) {
-		generic->scanline++;
-		return;
-	}
-	generic->scanline++;
+// Update gamma LUT
 
-	// Encode NTSC
-	const uint8_t *src = scanline_data + generic->viewport.x - 3;
-	uint8_t *dst = generic->ntsc_buf;
-	ntsc_phase = (generic->cmp_phase + generic->viewport.x) & 3;
-	for (int i = generic->viewport.w + 6; i; i--) {
-		unsigned c = *(src++);
-		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
+static void update_gamma_table(struct vo_generic_interface *generic) {
+	for (int j = 0; j < 256; j++) {
+		float c = j / 255.0;
+		if (c <= (0.018 * 4.5)) {
+			c /= 4.5;
+		} else {
+			c = powf((c+0.099)/(1.+0.099), 2.2);
+		}
+		generic->ntsc_ungamma[j] = int_clamp_u8((int)(c * 255.0));
 	}
-
-	// And now decode
-	src = generic->ntsc_buf;
-	ntsc_phase = ((generic->cmp_phase + generic->viewport.x) + 3) & 3;
-	LOCK_SURFACE(generic);
-	for (int j = generic->viewport.w; j; j--) {
-		int_xyz rgb = ntsc_decode(burst, src++);
-		// 40 is a reasonable value for brightness
-		// TODO: make this adjustable
-		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];
-		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y+40)];
-		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z+40)];
-		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
-		generic->pixel += XSTEP;
-	}
-	UNLOCK_SURFACE(generic);
-	generic->pixel += NEXTLINE;
 }
+
+// Set a palette entry (called by palette_set_* after colour conversion)
+
+static void palette_set(Pixel *palette, uint8_t c, float R, float G, float B) {
+	cs_clamp(&R, &G, &B);
+	R *= 255.0;
+	G *= 255.0;
+	B *= 255.0;
+	palette[c] = MAPCOLOUR(generic, (int)R, (int)G, (int)B);
+}
+
+// Housekeeping after selecting TV input
 
 static void update_render_parameters(struct vo_generic_interface *generic) {
 	VO_MODULE_INTERFACE *vom = &generic->module;
@@ -407,31 +320,175 @@ static void update_render_parameters(struct vo_generic_interface *generic) {
 	}
 }
 
-static void set_input(void *sptr, int input) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Variants of render_line with different CPU/accuracy tradeoffs
+
+// Render colour line using palette.  Used for RGB and palette-based CMP.
+
+static void render_palette(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	generic->input = input;
-	update_render_parameters(generic);
+	(void)burst;
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
+		data += generic->viewport.x;
+		LOCK_SURFACE(generic);
+		for (int i = generic->viewport.w >> 2; i; i--) {
+			uint8_t c0 = *(data++);
+			uint8_t c1 = *(data++);
+			uint8_t c2 = *(data++);
+			uint8_t c3 = *(data++);
+			Pixel p0 = generic->input_palette[c0];
+			Pixel p1 = generic->input_palette[c1];
+			Pixel p2 = generic->input_palette[c2];
+			Pixel p3 = generic->input_palette[c3];
+			*(generic->pixel+0*XSTEP) = p0;
+			*(generic->pixel+1*XSTEP) = p1;
+			*(generic->pixel+2*XSTEP) = p2;
+			*(generic->pixel+3*XSTEP) = p3;
+			generic->pixel += 4*XSTEP;
+		}
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
+	}
+	generic->scanline++;
 }
 
-static void set_cmp_ccr(void *sptr, int ccr) {
+// Render artefact colours using simple 2-bit LUT.
+
+static void render_ccr_2bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	generic->cmp_ccr = ccr;
-	update_render_parameters(generic);
+	(void)burst;
+	unsigned p = !(generic->cmp_phase & 2);
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
+		data += generic->viewport.x;
+		LOCK_SURFACE(generic);
+		for (int i = generic->viewport.w >> 2; i; i--) {
+			Pixel p0, p1, p2, p3;
+			uint8_t c0 = *data;
+			uint8_t c2 = *(data + 2);
+			if (generic->cmp.is_black_or_white[c0] && generic->cmp.is_black_or_white[c2]) {
+				unsigned aindex = (generic->cmp.is_black_or_white[c0] << 1) | (generic->cmp.is_black_or_white[c2] & 1);
+				p0 = p1 = p2 = p3 = generic->cmp.cc_2bit[p][aindex & 3];
+			} else {
+				uint8_t c1 = *(data+1);
+				uint8_t c3 = *(data+3);
+				p0 = generic->cmp.palette[c0];
+				p1 = generic->cmp.palette[c1];
+				p2 = generic->cmp.palette[c2];
+				p3 = generic->cmp.palette[c3];
+			}
+			data += 4;
+			*(generic->pixel) = p0;
+			*(generic->pixel+1*XSTEP) = p1;
+			*(generic->pixel+2*XSTEP) = p2;
+			*(generic->pixel+3*XSTEP) = p3;
+			generic->pixel += 4*XSTEP;
+		}
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
+	}
+	generic->scanline++;
 }
 
-static void set_cmp_phase(void *sptr, int phase) {
+// Render artefact colours using 5-bit LUT.  Only explicitly black or white
+// runs of pixels are considered to contribute to artefect colours, otherwise
+// they are passed through from the palette.
+
+static void render_ccr_5bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	generic->cmp_phase = phase ^ generic->cmp_phase_offset;
+	(void)burst;
+	unsigned p = !(generic->cmp_phase & 2);
+	if (generic->scanline >= generic->viewport.y &&
+	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
+		unsigned ibwcount = 0;
+		unsigned aindex = 0;
+		data += generic->viewport.x;
+		uint8_t ibw0 = generic->cmp.is_black_or_white[*(data-6)];
+		uint8_t ibw1 = generic->cmp.is_black_or_white[*(data-2)];
+		if (ibw0 && ibw1) {
+			ibwcount = 7;
+			aindex = (ibw0 & 1) ? 14 : 0;
+			aindex |= (ibw1 & 1) ? 1 : 0;
+		}
+		LOCK_SURFACE(generic);
+		for (int i = generic->viewport.w >> 2; i; i--) {
+			Pixel p0, p1, p2, p3;
+
+			uint8_t ibw2 = generic->cmp.is_black_or_white[*(data+2)];
+			uint8_t ibw4 = generic->cmp.is_black_or_white[*(data+4)];
+			uint8_t ibw6 = generic->cmp.is_black_or_white[*(data+6)];
+
+			ibwcount = ((ibwcount << 1) | (ibw2 >> 1)) & 7;
+			aindex = ((aindex << 1) | (ibw4 & 1));
+			if (ibwcount == 7) {
+				p0 = p1 = generic->cmp.cc_5bit[p][aindex & 31];
+			} else {
+				uint8_t c0 = *data;
+				uint8_t c1 = *(data+1);
+				p0 = generic->cmp.palette[c0];
+				p1 = generic->cmp.palette[c1];
+			}
+
+			ibwcount = ((ibwcount << 1) | (ibw4 >> 1)) & 7;
+			aindex = ((aindex << 1) | (ibw6 & 1));
+			if (ibwcount == 7) {
+				p2 = p3 = generic->cmp.cc_5bit[!p][aindex & 31];
+			} else {
+				uint8_t c2 = *(data+2);
+				uint8_t c3 = *(data+3);
+				p2 = generic->cmp.palette[c2];
+				p3 = generic->cmp.palette[c3];
+			}
+
+			data += 4;
+			*(generic->pixel) = p0;
+			*(generic->pixel+1*XSTEP) = p1;
+			*(generic->pixel+2*XSTEP) = p2;
+			*(generic->pixel+3*XSTEP) = p3;
+			generic->pixel += 4*XSTEP;
+		}
+		UNLOCK_SURFACE(generic);
+		generic->pixel += NEXTLINE;
+	}
+	generic->scanline++;
 }
 
-static void set_cmp_phase_offset(void *sptr, int phase) {
-	struct vo_generic_interface *generic = sptr;
-	int p = generic->cmp_phase ^ generic->cmp_phase_offset;
-	generic->cmp_phase_offset = phase ^ 2;
-	set_cmp_phase(generic, p);
-}
+// NTSC composite video simulation.
 
-static void generic_vsync(void *sptr) {
+static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
 	struct vo_generic_interface *generic = sptr;
-	generic->scanline = 0;
+	if (generic->scanline < generic->viewport.y ||
+	    generic->scanline >= (generic->viewport.y + generic->viewport.h)) {
+		generic->scanline++;
+		return;
+	}
+	generic->scanline++;
+
+	// Encode NTSC
+	const uint8_t *src = data + generic->viewport.x - 3;
+	uint8_t *dst = generic->ntsc_buf;
+	ntsc_phase = (generic->cmp_phase + generic->viewport.x) & 3;
+	for (int i = generic->viewport.w + 6; i; i--) {
+		unsigned c = *(src++);
+		*(dst++) = ntsc_encode_from_palette(generic->cmp.ntsc_palette, c);
+	}
+
+	// And now decode
+	src = generic->ntsc_buf;
+	ntsc_phase = ((generic->cmp_phase + generic->viewport.x) + 3) & 3;
+	LOCK_SURFACE(generic);
+	for (int j = generic->viewport.w; j; j--) {
+		int_xyz rgb = ntsc_decode(burst, src++);
+		// 40 is a reasonable value for brightness
+		// TODO: make this adjustable
+		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x+40)];
+		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y+40)];
+		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z+40)];
+		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
+		generic->pixel += XSTEP;
+	}
+	UNLOCK_SURFACE(generic);
+	generic->pixel += NEXTLINE;
 }

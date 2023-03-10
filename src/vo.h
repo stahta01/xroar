@@ -2,7 +2,7 @@
  *
  *  \brief Video ouput modules & interfaces.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -14,6 +14,20 @@
  *  See COPYING.GPL for redistribution conditions.
  *
  *  \endlicenseblock
+ *
+ *  Successfully initialising a video module returns a (struct vo_interface),
+ *  which is used by various parts of XRoar to do different things:
+ *
+ *  - The UI may ask it to resize, toggle menubar, etc.
+ *
+ *  - Selecting a machine may define colour palettes and select how things are
+ *    to be rendered.
+ *
+ *  - While running, the emulated machine will use it to render scanlines,
+ *    indicate vertical sync, or just ask to refresh the screen.
+ *
+ *  Palette entries are specified either as YPbPr (Y scaled 0-1, Pb and Pr
+ *  scaled ±0.5) or as RGB (each scaled 0-1).
  */
 
 #ifndef XROAR_VO_H_
@@ -63,19 +77,65 @@ struct vo_interface {
 
 	DELEGATE_T0(void) free;
 
+	// Used by UI to adjust viewing parameters
+
+	// Resize window
+	//     unsigned w, h;  // dimensions in pixels
 	DELEGATE_T2(void, unsigned, unsigned) resize;
-	DELEGATE_T1(int, bool) set_fullscreen;
-	DELEGATE_T1(void, bool) set_menubar;
-	DELEGATE_T2(void, uint8cp, ntscburst) render_scanline;
-	DELEGATE_T0(void) vsync;
-	DELEGATE_T0(void) refresh;
+
+	// Configure viewport X and Y offset
+	//     unsigned x0, y0;  // offset to top-left displayed pixel
 	DELEGATE_T2(void, unsigned, unsigned) set_viewport_xy;
-	DELEGATE_T4(void, uint8, float, float, float) palette_set_ybr;  // Composite
-	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;  // RGB
+
+	// Set fullscreen mode on or off
+	//     _Bool fullscreen;
+	DELEGATE_T1(int, bool) set_fullscreen;
+
+	// Set menubar on or off
+	//     _Bool menubar;
+	DELEGATE_T1(void, bool) set_menubar;
+
+	// Select TV "input"
+	//     int input;  // VO_TV_*
 	DELEGATE_T1(void, int) set_input;
+
+	// Set cross-colour renderer
+	//     int ccr;  // VO_CMP_CCR_*
 	DELEGATE_T1(void, int) set_cmp_ccr;
-	DELEGATE_T1(void, int) set_cmp_phase;  // set by user
-	DELEGATE_T1(void, int) set_cmp_phase_offset;  // set per-machine
+
+	// Set cross-colour phase
+	//     int phase;  // VO_CMP_PHASE_*
+	DELEGATE_T1(void, int) set_cmp_phase;
+
+	// Used by machine to configure video output
+
+	// Add a colour to the palette using Y', Pb, Pr values
+	//     uint8_t index;    // palette index
+	//     float y, pb, pr;  // colour
+	DELEGATE_T4(void, uint8, float, float, float) palette_set_ybr;
+
+	// Add a colour to the palette usine RGB values
+	//     uint8_t index;  // palette index
+	//     float R, G, B;  // colour
+	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;
+
+	// Set machine default cross-colour phase
+	//     int phase;  // VO_CMP_PHASE_*
+	DELEGATE_T1(void, int) set_cmp_phase_offset;
+
+	// Used by machine to render video
+
+	// Submit a scanline for rendering
+	//     const uint8_t *data;       // palettised data
+	//     struct ntsc_burst *burst;  // colourburst for this line
+	DELEGATE_T2(void, uint8cp, ntscburst) render_scanline;
+
+	// Vertical sync
+	DELEGATE_T0(void) vsync;
+
+	// Refresh the display (useful while single-stepping, where the usual
+	// render functions won't be called)
+	DELEGATE_T0(void) refresh;
 };
 
 extern struct xconfig_enum vo_cmp_ccr_list[];
