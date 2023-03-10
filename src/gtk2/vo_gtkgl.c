@@ -97,18 +97,24 @@ static void *new(void *sptr) {
 	vogtkgl->vogl = vogl;
 
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
+
+	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
+	vo->set_viewport_xy = vogl->set_viewport_xy;
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
-	vo->refresh = DELEGATE_AS0(void, refresh, vo);
-	vo->vsync = DELEGATE_AS0(void, vsync, vo);
-	vo->set_viewport_xy = vogl->set_viewport_xy;
-	vo->palette_set_ybr = vogl->palette_set_ybr;
-	vo->palette_set_rgb = vogl->palette_set_rgb;
 	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_ccr, vo);
 	vo->set_cmp_phase = vogl->set_cmp_phase;
+
+	// Used by machine to configure video output
+	vo->palette_set_ybr = vogl->palette_set_ybr;
+	vo->palette_set_rgb = vogl->palette_set_rgb;
 	vo->set_cmp_phase_offset = vogl->set_cmp_phase_offset;
+
+	// Used by machine to render video
+	vo->vsync = DELEGATE_AS0(void, vsync, vo);
+	vo->refresh = DELEGATE_AS0(void, refresh, vo);
 
 	/* Configure drawing_area widget */
 	gtk_widget_set_size_request(global_uigtk2->drawing_area, 640, 480);

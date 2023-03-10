@@ -2,7 +2,7 @@
  *
  *  \brief Generic OpenGL support for video output modules.
  *
- *  \copyright Copyright 2012-2021 Ciaran Anscomb
+ *  \copyright Copyright 2012-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -98,17 +98,23 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 	vo_generic_init(generic);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
+
+	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
-	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
-	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
-	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
-	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
+
+	// Used by machine to configure video output
+	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
+	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
+
+	// Used by machine to render video
+	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
+	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 
 	vogl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
 	vogl->window_width = 640;

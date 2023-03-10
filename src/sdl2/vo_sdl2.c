@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 video output module.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -113,19 +113,25 @@ static void *new(void *sptr) {
 	vosdl->window_h = 480;
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, vo);
-	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
-	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
-	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+
+	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
+	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
-	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
-	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
-	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
+
+	// Used by machine to configure video output
+	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
+	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
 	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
+
+	// Used by machine to render video
+	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
+	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
