@@ -98,6 +98,9 @@ void uigtk2_notify_toggle_action_set(GtkToggleAction *o, gboolean v,
 
 void uigtk2_notify_radio_action_set(GtkRadioAction *o, gint v, gpointer func, gpointer data);
 
+void uigtk2_notify_spin_button_set(GtkSpinButton *spin_button, gdouble value,
+                                   gpointer func, gpointer data);
+
 // This function doesn't exist in GTK+ 2, but does in later versions:
 GtkBuilder *gtk_builder_new_from_resource(const gchar *path);
 

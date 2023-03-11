@@ -27,6 +27,7 @@
         <menuitem action='tv-input-cmp-krbw'/>
         <menuitem action='tv-input-rgb'/>
       </menu>
+      <menuitem name='VideoOptions' action='VideoOptionsAction'/>
       <separator/>
       <menuitem name='InverseText' action='InverseTextAction'/>
       <separator/>

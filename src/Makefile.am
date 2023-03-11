@@ -228,7 +228,8 @@ xroar_SOURCES += \
 	gtk2/joystick_gtk2.c \
 	gtk2/keyboard_gtk2.c \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
-	gtk2/ui_gtk2.c
+	gtk2/ui_gtk2.c \
+	gtk2/video_options.c gtk2/video_options.h
 
 BUILT_SOURCES += \
 	gtk2/gtk2.gresource.c
@@ -245,7 +246,8 @@ GTK2_RESOURCES = \
 	gtk2/application.ui \
 	gtk2/menu.ui \
 	gtk2/drivecontrol.ui \
-	gtk2/tapecontrol.ui
+	gtk2/tapecontrol.ui \
+	gtk2/video_options.ui
 
 EXTRA_DIST += \
 	$(GTK2_RESOURCES) \

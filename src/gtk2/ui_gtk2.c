@@ -48,6 +48,7 @@
 #include "gtk2/common.h"
 #include "gtk2/drivecontrol.h"
 #include "gtk2/tapecontrol.h"
+#include "gtk2/video_options.h"
 
 static void *ui_gtk2_new(void *cfg);
 static void ui_gtk2_free(void *sptr);
@@ -418,6 +419,9 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "RateLimitAction", .label = "_Rate Limit",
 	  .accelerator = "<shift>F12",
 	  .callback = G_CALLBACK(toggle_ratelimit) },
+	{ .name = "VideoOptionsAction", .label = "Video _Options",
+	  .accelerator = "<control><shift>V",
+	  .callback = G_CALLBACK(gtk2_vo_toggle_window) },
 };
 
 static GtkRadioActionEntry const ccr_radio_entries[] = {
@@ -575,6 +579,9 @@ static void *ui_gtk2_new(void *cfg) {
 	// Create (hidden) tape control window
 	gtk2_create_tc_window(uigtk2);
 
+	// Create (hidden) video options window
+	gtk2_vo_create_window(uigtk2);
+
 	// Window geometry sensible defaults
 	uigtk2->display_rect.w = 640;
 	uigtk2->display_rect.h = 480;
@@ -695,6 +702,14 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 	case ui_tag_tv_input:
 		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/TVInputMenu/tv-input-cmp");
 		uigtk2_notify_radio_action_set(radio, value, set_tv_input, NULL);
+		break;
+
+	case ui_tag_brightness:
+		gtk2_vo_update_brightness(uigtk2, value);
+		break;
+
+	case ui_tag_contrast:
+		gtk2_vo_update_contrast(uigtk2, value);
 		break;
 
 	/* Audio */
