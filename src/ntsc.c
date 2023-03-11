@@ -54,9 +54,14 @@ void ntsc_palette_free(struct ntsc_palette *np) {
 }
 
 void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
-			  double y, double b_y, double r_y) {
+			  double y, double pb, double pr) {
 	assert(np != NULL);
 	assert(c < 256);
+
+	// Scale Pb,Pr to valid B'-Y',R'-Y'
+	double b_y = pb * 0.5/0.886;
+	double r_y = pr * 0.5/0.701;
+
 	if (c >= np->ncolours) {
 		np->ncolours = c+1;
 		for (unsigned p = 0; p < NTSC_NPHASES; p++) {
@@ -64,7 +69,7 @@ void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
 		}
 	}
 
-	// R'-Y' / B'-Y' -> Y'U'V' -> Y'I'Q'
+	// Convert to I',Q'
 	double i = -0.2685 * b_y + 0.7355 * r_y;
 	double q =  0.4135 * b_y + 0.4776 * r_y;
 
