@@ -1076,7 +1076,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		sdsfree(data);
 	}
 
-	// Printint
+	// Printing
 	if (private_cfg.printer.file) {
 		printer_open_file(xroar_printer_interface, private_cfg.printer.file);
 	} else if (private_cfg.printer.pipe) {
