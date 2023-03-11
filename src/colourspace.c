@@ -2,7 +2,7 @@
  *
  *  \brief RGB colourspace conversions.
  *
- *  \copyright Copyright 2011-2020 Ciaran Anscomb
+ *  \copyright Copyright 2011-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -319,20 +319,16 @@ static void matrix_invert_3x3(float in[][3], float out[][3]) {
 
 void cs_mlaw(struct cs_profile *cs, float r, float g, float b,
 	     float *Rout, float *Gout, float *Bout) {
-	if (r < (cs->clim * cs->slope)) {
-		*Rout = r / cs->slope;
+	*Rout = cs_mlaw_1(cs, r);
+	*Gout = cs_mlaw_1(cs, g);
+	*Bout = cs_mlaw_1(cs, b);
+}
+
+float cs_mlaw_1(struct cs_profile *cs, float v) {
+	if (v < (cs->clim * cs->slope)) {
+		return v / cs->slope;
 	} else {
-		*Rout = powf((r+cs->poff)/(1.+cs->poff), cs->mlaw);
-	}
-	if (g < (cs->clim * cs->slope)) {
-		*Gout = g / cs->slope;
-	} else {
-		*Gout = powf((g+cs->poff)/(1.+cs->poff), cs->mlaw);
-	}
-	if (b < (cs->clim * cs->slope)) {
-		*Bout = b / cs->slope;
-	} else {
-		*Bout = powf((b+cs->poff)/(1.+cs->poff), cs->mlaw);
+		return powf((v+cs->poff)/(1.+cs->poff), cs->mlaw);
 	}
 }
 
@@ -359,20 +355,16 @@ void cs_inverse_mlaw(struct cs_profile *cs, float R, float G, float B,
 // Apply camera gamma (may be different to inverse of monitor gamma)
 void cs_claw(struct cs_profile *cs, float R, float G, float B,
 	     float *rout, float *gout, float *bout) {
-	if (R < cs->clim) {
-		*rout = R * cs->slope;
+	*rout = cs_claw_1(cs, R);
+	*gout = cs_claw_1(cs, G);
+	*bout = cs_claw_1(cs, B);
+}
+
+float cs_claw_1(struct cs_profile *cs, float V) {
+	if (V < cs->clim) {
+		return V * cs->slope;
 	} else {
-		*rout = ((1.+cs->poff)*powf(R, cs->claw)) - cs->poff;
-	}
-	if (G < cs->clim) {
-		*gout = G * cs->slope;
-	} else {
-		*gout = ((1.+cs->poff)*powf(G, cs->claw)) - cs->poff;
-	}
-	if (B < cs->clim) {
-		*bout = B * cs->slope;
-	} else {
-		*bout = ((1.+cs->poff)*powf(B, cs->claw)) - cs->poff;
+		return ((1.+cs->poff)*powf(V, cs->claw)) - cs->poff;
 	}
 }
 

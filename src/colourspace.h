@@ -2,7 +2,7 @@
  *
  *  \brief RGB colourspace conversions.
  *
- *  \copyright Copyright 2011-2016 Ciaran Anscomb
+ *  \copyright Copyright 2011-2023
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -85,6 +85,9 @@ void cs_clamp(float *x, float *y, float *z);
 void cs_mlaw(struct cs_profile *csin, float r, float g, float b,
 	     float *Rout, float *Gout, float *Bout);
 
+// Monitor gamma (single component)
+float cs_mlaw_1(struct cs_profile *cs, float v);
+
 // Invert monitor gamma (RGB to R'G'B')
 void cs_inverse_mlaw(struct cs_profile *csin, float R, float G, float B,
 		     float *rout, float *gout, float *bout);
@@ -92,6 +95,9 @@ void cs_inverse_mlaw(struct cs_profile *csin, float R, float G, float B,
 // Camera gamma (RGB to R'G'B') - may differ from inverse monitor gamma
 void cs_claw(struct cs_profile *csin, float R, float G, float B,
 	     float *rout, float *gout, float *bout);
+
+// Camera gamma (single component)
+float cs_claw_1(struct cs_profile *cs, float V);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
