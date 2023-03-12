@@ -72,6 +72,7 @@ enum ui_tag {
 	ui_tag_vdg_inverse,
 	ui_tag_brightness,
 	ui_tag_contrast,
+	ui_tag_hue,
 	// Audio
 	ui_tag_ratelimit,
 	// Keyboard

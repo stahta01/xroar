@@ -122,6 +122,7 @@ static void *new(void *sptr) {
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_brightness = DELEGATE_AS1(void, int, set_brightness, generic);
 	vo->set_contrast = DELEGATE_AS1(void, int, set_contrast, generic);
+	vo->set_hue = DELEGATE_AS1(void, int, set_hue, generic);
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
 

@@ -107,6 +107,10 @@ struct vo_interface {
 	//     int contrast;  // 0-100
 	DELEGATE_T1(void, int) set_contrast;
 
+	// Set hue
+	//     int hue;  // -179 to +180
+	DELEGATE_T1(void, int) set_hue;
+
 	// Set cross-colour renderer
 	//     int ccr;  // VO_CMP_CCR_*
 	DELEGATE_T1(void, int) set_cmp_ccr;

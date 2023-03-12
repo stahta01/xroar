@@ -33,6 +33,10 @@
 
 #include "mc6847/mc6847.h"
 
+#ifndef M_PI
+# define M_PI 3.14159265358979323846
+#endif
+
 struct vo_generic_interface {
 	VO_MODULE_INTERFACE module;
 
@@ -85,6 +89,7 @@ struct vo_generic_interface {
 	// Render configuration.
 	int brightness;
 	int contrast;
+	int hue;
 	int input;      // VO_TV_CMP or VO_TV_RGB
 	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
 	int cmp_phase;  // 0 or 2 are useful
@@ -115,6 +120,7 @@ static void vo_generic_init(void *sptr) {
 	// Populate inverse gamma LUT
 	generic->brightness = 50;
 	generic->contrast = 50;
+	generic->hue = 0;
 	update_gamma_table(generic);
 
 	for (int i = 0; i < 2; i++) {
@@ -199,6 +205,21 @@ static void set_contrast(void *sptr, int contrast) {
 	update_gamma_table(generic);
 	if (xroar_ui_interface) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_contrast, contrast, NULL);
+	}
+}
+
+// Set hue
+//     int hue;  // -179 to +180
+
+static void set_hue(void *sptr, int hue) {
+	struct vo_generic_interface *generic = sptr;
+	hue = ((hue + 179) % 360) - 179;
+	generic->hue = hue;
+	for (unsigned i = 0; i < 256; i++) {
+		update_palette_ybr(generic, i);
+	}
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_hue, hue, NULL);
 	}
 }
 
@@ -313,6 +334,20 @@ static void update_palette_ybr(struct vo_generic_interface *generic, uint8_t c) 
 	// Scale Pb,Pr to valid B'-Y',R'-Y'
 	float b_y = pb * 0.5/0.886;
 	float r_y = pr * 0.5/0.701;
+
+	// Apply hue
+	float w = 2. * M_PI;
+	float hue = (w * (float)generic->hue) / 360.;
+	float nb_y = r_y * sin(hue) + b_y * cos(hue);
+	float nr_y = r_y * cos(hue) - b_y * sin(hue);
+	b_y = nb_y;
+	r_y = nr_y;
+
+	// Limit chroma extents
+	if (b_y < -0.895) b_y = -0.895;
+	if (b_y > 0.895) b_y = 0.895;
+	if (r_y < -0.710) r_y = -0.710;
+	if (r_y > 0.710) r_y = 0.710;
 
 	// Convert to R'G'B'
 	float r = y + r_y;

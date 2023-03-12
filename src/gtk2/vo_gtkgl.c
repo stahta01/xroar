@@ -106,6 +106,7 @@ static void *new(void *sptr) {
 	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);
 	vo->set_brightness = vogl->set_brightness;
 	vo->set_contrast = vogl->set_contrast;
+	vo->set_hue = vogl->set_hue;
 	vo->set_cmp_ccr = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_ccr, vo);
 	vo->set_cmp_phase = vogl->set_cmp_phase;
 
