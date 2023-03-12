@@ -57,10 +57,6 @@ struct vo_rect {
 // colourburst.
 typedef DELEGATE_S2(void, uint8_t const *, struct ntsc_burst *) DELEGATE_T2(void, uint8cp, ntscburst);
 
-// For palette manipulation, accepts colour index and three colour values
-// (Y'PbPr or R'G'B').
-typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8, float, float, float);
-
 struct vo_interface {
 	_Bool is_fullscreen;
 	_Bool show_menubar;
