@@ -712,6 +712,10 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		gtk2_vo_update_contrast(uigtk2, value);
 		break;
 
+	case ui_tag_hue:
+		gtk2_vo_update_hue(uigtk2, value);
+		break;
+
 	/* Audio */
 
 	case ui_tag_ratelimit:

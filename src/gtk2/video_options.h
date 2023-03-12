@@ -26,5 +26,6 @@ void gtk2_vo_toggle_window(GtkToggleAction *current, gpointer user_data);
 
 void gtk2_vo_update_brightness(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_contrast(struct ui_gtk2_interface *uigtk2, int value);
+void gtk2_vo_update_hue(struct ui_gtk2_interface *uigtk2, int value);
 
 #endif
