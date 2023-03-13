@@ -4,6 +4,7 @@
 /*.o
 /alsa/*.o
 /gtk2/*.o
+/gtk2/gtk2.gresource.c
 /jack/*.o
 /linux/*.o
 /macosx/*.o
