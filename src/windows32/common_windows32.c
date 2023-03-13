@@ -22,12 +22,23 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>
+#include <commctrl.h>
 
 #include "logging.h"
 
 #include "windows32/common_windows32.h"
 #include "windows32/guicon.h"
 
+#pragma comment(lib, "C:\\Program Files\\Microsoft SDKs\\Windows\\v7.1\\Lib\\ComCtl32.Lib")
+
+#pragma comment(linker,"\"/manifestdependency:type                  = 'win32' \
+		name                  = 'Microsoft.Windows.Common-Controls' \
+		version               = '6.0.0.0' \
+		processorArchitecture = '*' \
+		publicKeyToken        = '6595b64144ccf1df' \
+		language              = '*'\"")
+
+//INITCOMMONCONTROLSEX icex;
 HWND windows32_main_hwnd = NULL;
 
 /** A console window is created if requested, thus this should be called _after_
@@ -50,6 +61,9 @@ int windows32_init(_Bool alloc_console) {
 		LOG_WARN("windows32: WSAStartup failed\n");
 		return -1;
 	}
+	//icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	//icex.dwICC = ICC_STANDARD_CLASSES;
+	//InitCommonControlsEx(&icex);
 	return 0;
 }
 

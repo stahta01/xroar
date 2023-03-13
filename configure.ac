@@ -256,7 +256,7 @@ AM_CONDITIONAL([MINGW], [test -n "$have_mingw"])
 AM_COND_IF([MINGW], [
 		AC_DEFINE([WINDOWS32], 1, [Windows])
 		MINGW_CFLAGS="-D__USE_MINGW_ANSI_STDIO=1"
-		MINGW_LIBS="-lmingw32 -lwinmm -mwindows -lws2_32"
+		MINGW_LIBS="-lmingw32 -lwinmm -mwindows -lws2_32 -lcomctl32"
 		])
 AC_SUBST(MINGW_CFLAGS)
 AC_SUBST(MINGW_LIBS)

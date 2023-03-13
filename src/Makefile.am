@@ -385,6 +385,7 @@ xroar_SOURCES += \
 	windows32/filereq_windows32.c \
 	windows32/guicon.c windows32/guicon.h \
 	windows32/ui_windows32.c \
+	windows32/video_options.c windows32/video_options.h \
 	windows32/xroar.rc
 
 .rc.o:

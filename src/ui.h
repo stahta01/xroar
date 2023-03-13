@@ -70,6 +70,7 @@ enum ui_tag {
 	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
+	ui_tag_tv_controls,
 	ui_tag_brightness,
 	ui_tag_contrast,
 	ui_tag_hue,

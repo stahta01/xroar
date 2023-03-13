@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface module.
  *
- *  \copyright Copyright 2014-2022 Ciaran Anscomb
+ *  \copyright Copyright 2014-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <commctrl.h>
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 
@@ -45,10 +47,10 @@
 #include "vo.h"
 #include "xroar.h"
 
-#ifdef HAVE_SDL2
 #include "sdl2/common.h"
-#endif
 #include "windows32/common_windows32.h"
+#include "windows32/resources.h"
+#include "windows32/video_options.h"
 
 #define TAG(t) (((t) & 0x7f) << 8)
 #define TAGV(t,v) (TAG(t) | ((v) & 0xff))
@@ -79,6 +81,7 @@ static HMENU top_menu;
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HWND about_dialog = NULL;
+static HWND tv_controls_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
 static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HMENU machine_menu = NULL;
@@ -99,6 +102,7 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	setup_hardware_menu(uisdl2);
 	setup_tool_menu();
 	setup_help_menu();
+	windows32_vo_create_window(uisdl2);
 }
 
 void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2) {
@@ -174,6 +178,8 @@ static void setup_view_menu(void) {
 	for (int i = 0; machine_tv_input_list[i].name; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tv_input, machine_tv_input_list[i].value), machine_tv_input_list[i].description);
 	}
+
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV Controls");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "Inverse Text");
@@ -307,14 +313,9 @@ void windows32_update_cartridge_menu(void *sptr) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
-#ifdef HAVE_SDL2
 	HWND hwnd = wmmsg->msg.win.hwnd;
 	UINT msg = wmmsg->msg.win.msg;
 	WPARAM wParam = wmmsg->msg.win.wParam;
-#else
-	UINT msg = wmmsg->msg;
-	WPARAM wParam = wmmsg->wParam;
-#endif
 
 	if (msg != WM_COMMAND)
 		return;
@@ -418,6 +419,12 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Video:
+
+	// TV controls:
+	case ui_tag_tv_controls:
+		windows32_vo_show_window(global_uisdl2);
+		break;
+
 	case ui_tag_fullscreen:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
@@ -532,6 +539,18 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
+	case ui_tag_brightness:
+		windows32_vo_update_brightness(uisdl2, value);
+		break;
+
+	case ui_tag_contrast:
+		windows32_vo_update_contrast(uisdl2, value);
+		break;
+
+	case ui_tag_hue:
+		windows32_vo_update_hue(uisdl2, value);
+		break;
+
 	// Keyboard
 
 	case ui_tag_keymap:
@@ -570,10 +589,8 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* SDL integration.  The SDL and SDL2 video modules call out to these when
- * WINDOWS32 is defined to add and remove the menu bar.  Note that SDL 1.2 only
- * handles one window, so the SDL_Window type is faked, and arguments of that
- * type are not used. */
+// SDL integration.  The SDL2 video modules call out to these when
+// WINDOWS32 is defined to add and remove the menu bar.
 
 /* Get underlying window handle from SDL. */
 
