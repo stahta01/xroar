@@ -35,8 +35,7 @@ struct module vo_null_module = {
 
 static void null_free(void *sptr);
 static void no_op(void *sptr);
-static void no_op_render(void *sptr, uint8_t const *data,
-			 struct ntsc_burst *burst);
+static void no_op_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr);
 
 static void *new(void *cfg) {
@@ -51,7 +50,7 @@ static void *new(void *cfg) {
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
 
 	// Used by machine to render video
-	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, no_op_render, vo);
+	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, no_op_render, vo);
 	vo->vsync = DELEGATE_AS0(void, no_op, vo);
 
 	return vo;
@@ -74,9 +73,9 @@ static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr
 	(void)pr;
 }
 
-static void no_op_render(void *sptr, uint8_t const *data,
-			 struct ntsc_burst *burst) {
+static void no_op_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
 	(void)sptr;
-	(void)data;
 	(void)burst;
+	(void)npixels;
+	(void)data;
 }

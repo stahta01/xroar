@@ -1726,13 +1726,23 @@ void xroar_connect_machine(void) {
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 	}
 	xroar_set_ccr(1, private_cfg.vo.ccr);
+	unsigned vx, vy;
+	int phase;
 	if (is_coco3) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_viewport_xy, 184, 16);
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, 2);
+		vx = 181;
+		vy = 16;
+		if (xroar_machine_config->tv_standard == TV_PAL)
+			vy += 25;
+		phase = 2;
 	} else {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_viewport_xy, 190, 14);
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, 0);
+		vx = 190;
+		vy = 14;
+		if (xroar_machine_config->tv_standard == TV_PAL)
+			vy += is_coco ? 24 : 25;
+		phase = 0;
 	}
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_viewport_xy, vx, vy);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, phase);
 	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }
 

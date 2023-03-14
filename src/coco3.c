@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Colour Computer 3 machine.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -96,10 +96,6 @@ struct machine_coco3 {
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
-
-	// NTSC colour bursts.  The GIME can choose to invert the phase, so we
-	// maintain one normal, one 180° shifted.
-	struct ntsc_burst *ntsc_burst[2];
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -245,7 +241,7 @@ static void cart_halt(void *sptr, _Bool level);
 static void gime_hs(void *sptr, _Bool level);
 // static void gime_hs_pal_coco(void *sptr, _Bool level);
 static void gime_fs(void *sptr, _Bool level);
-static void gime_render_line(void *sptr, const uint8_t *data, _Bool phase_invert);
+static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -407,8 +403,8 @@ static _Bool coco3_finish(struct part *p) {
 		DELEGATE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
 	}
 
-	mcc3->ntsc_burst[0] = ntsc_burst_new(0);    // Normal burst
-	mcc3->ntsc_burst[1] = ntsc_burst_new(180);  // Phase inverted burst
+	DELEGATE_SAFE_CALL(mcc3->vo->set_burst, 0, 0);    // Normal burst
+	DELEGATE_SAFE_CALL(mcc3->vo->set_burst, 1, 180);  // Phase inverted burst
 
 	// CPU
 
@@ -444,7 +440,7 @@ static _Bool coco3_finish(struct part *p) {
 
 	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
 	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
-	mcc3->GIME->render_line = (tcc1014_render_line_func){gime_render_line, mcc3};
+	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
 	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
 
 	// Load appropriate ROMs.  The CoCo 3 ROM is a single 32K image: Super
@@ -565,8 +561,6 @@ static void coco3_free(struct part *p) {
 	if (mcc3->bp_session) {
 		bp_session_free(mcc3->bp_session);
 	}
-	ntsc_burst_free(mcc3->ntsc_burst[1]);
-	ntsc_burst_free(mcc3->ntsc_burst[0]);
 	free(mcc3->ram);
 }
 
@@ -1173,10 +1167,9 @@ static void gime_fs(void *sptr, _Bool level) {
 	}
 }
 
-static void gime_render_line(void *sptr, const uint8_t *data, _Bool phase_invert) {
+static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
 	struct machine_coco3 *mcc3 = sptr;
-	struct ntsc_burst *nb = mcc3->ntsc_burst[phase_invert];
-	DELEGATE_CALL(mcc3->vo->render_scanline, data, nb);
+	DELEGATE_CALL(mcc3->vo->render_line, burst, npixels, data);
 }
 
 /* Sound output can feed back into the single bit sound pin when it's

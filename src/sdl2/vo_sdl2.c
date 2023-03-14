@@ -129,10 +129,11 @@ static void *new(void *sptr) {
 	// Used by machine to configure video output
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
+	vo->set_burst = DELEGATE_AS2(void, unsigned, int, set_burst, generic);
 	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
 
 	// Used by machine to render video
-	vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_palette, vo);
 	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 

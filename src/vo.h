@@ -131,6 +131,11 @@ struct vo_interface {
 	//     float R, G, B;  // colour
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;
 
+	// Set a burst phase
+	//     unsigned burstn;  // burst index
+	//     int phase;        // in degrees
+	DELEGATE_T2(void, unsigned, int) set_burst;
+
 	// Set machine default cross-colour phase
 	//     int phase;  // VO_CMP_PHASE_*
 	DELEGATE_T1(void, int) set_cmp_phase_offset;
@@ -138,9 +143,10 @@ struct vo_interface {
 	// Used by machine to render video
 
 	// Submit a scanline for rendering
-	//     const uint8_t *data;       // palettised data
-	//     struct ntsc_burst *burst;  // colourburst for this line
-	DELEGATE_T2(void, uint8cp, ntscburst) render_scanline;
+	//     unsigned burst;       // burst index for this line
+	//     unsigned npixels;     // no. pixels in scanline
+	//     const uint8_t *data;  // palettised data, NULL for dummy line
+	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
 
 	// Vertical sync
 	DELEGATE_T0(void) vsync;

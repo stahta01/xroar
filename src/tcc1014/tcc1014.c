@@ -848,13 +848,11 @@ static void do_hs_fall(void *sptr) {
 			gime->Xoff = gime->COCO ? 0 : gime->X;
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
-		// Total bodge to fix PAL display!  I think really we need the
-		// video module to know (either inferring or being told) that
-		// the signal is PAL.
-		if (!gime->H50 || gime->scanline > 26) {
-			DELEGATE_CALL(gime->public.render_line, gime->pixel_data, gime->BPI);
-		}
 	}
+
+	// The offset of 3 is a bodge!  It ensures the phase is correct so that
+	// artefact colours come out as intended.
+	DELEGATE_CALL(gime->public.render_line, gime->BPI, TCC1014_LINE_DURATION, gime->pixel_data+3);
 
 	if (gime->COCO) {
 		gime->row_stride = gime->BPR;

@@ -2,7 +2,7 @@
  *
  *  \brief Dragon and Tandy Colour Computer machines.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -118,7 +118,6 @@ struct machine_dragon {
 	// NTSC colour bursts
 	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
 	unsigned ntsc_burst_mod;
-	struct ntsc_burst *ntsc_burst[4];
 
 	// Useful configuration side-effect tracking
 	_Bool has_bas, has_extbas, has_altbas, has_combined;
@@ -312,7 +311,7 @@ static void cart_halt(void *sptr, _Bool level);
 static void vdg_hs(void *sptr, _Bool level);
 static void vdg_hs_pal_coco(void *sptr, _Bool level);
 static void vdg_fs(void *sptr, _Bool level);
-static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst);
+static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void printer_ack(void *sptr, _Bool ack);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -503,7 +502,7 @@ static _Bool dragon_finish(struct part *p) {
 		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, md);
 	}
 	md->VDG->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
-	md->VDG->render_line = DELEGATE_AS2(void, uint8p, unsigned, vdg_render_line, md);
+	md->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vdg_render_line, md);
 	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
 	mc6847_set_inverted_text(md->VDG, md->inverted_text);
 
@@ -526,15 +525,15 @@ static _Bool dragon_finish(struct part *p) {
 		}
 	}
 
-	md->ntsc_burst[0] = ntsc_burst_new(-33);  // No burst (hi-res, css=1)
-	md->ntsc_burst[1] = ntsc_burst_new(0);  // Normal burst (mode modes)
-	md->ntsc_burst[2] = ntsc_burst_new(33);  // Modified burst (coco hi-res css=1)
+	DELEGATE_SAFE_CALL(md->vo->set_burst, 0, -33);  // No burst (hi-res, css=1)
+	DELEGATE_SAFE_CALL(md->vo->set_burst, 1, 0);    // Normal burst (most modes)
+	DELEGATE_SAFE_CALL(md->vo->set_burst, 2, is_pal ? 33 : 66);  // Modified burst (coco hi-res css=1)
 	// This was going to represent the extra colourburst mode achievable by
 	// switching to/from colour modes at the right time that Sock Master
 	// demoed.  Until I look into that properly, it's actually used for CSS
 	// + GM0 in non-resolution-graphics mode, so just set it to same as
 	// normal burst.
-	md->ntsc_burst[3] = ntsc_burst_new(0);
+	DELEGATE_SAFE_CALL(md->vo->set_burst, 3, 0);
 
 	verify_ram_size(mc);
 	md->ram_size = mc->ram * 1024;
@@ -847,10 +846,6 @@ static void dragon_free(struct part *p) {
 	if (md->bp_session) {
 		bp_session_free(md->bp_session);
 	}
-	ntsc_burst_free(md->ntsc_burst[3]);
-	ntsc_burst_free(md->ntsc_burst[2]);
-	ntsc_burst_free(md->ntsc_burst[1]);
-	ntsc_burst_free(md->ntsc_burst[0]);
 }
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -1559,11 +1554,10 @@ static void vdg_fs(void *sptr, _Bool level) {
 	}
 }
 
-static void vdg_render_line(void *sptr, uint8_t *data, unsigned burst) {
+static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
 	struct machine_dragon *md = sptr;
 	burst = (burst | md->ntsc_burst_mod) & 3;
-	struct ntsc_burst *nb = md->ntsc_burst[burst];
-	DELEGATE_CALL(md->vo->render_scanline, data, nb);
+	DELEGATE_CALL(md->vo->render_line, burst, npixels, data);
 }
 
 /* Dragon parallel printer line delegate. */

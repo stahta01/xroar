@@ -76,6 +76,10 @@ struct vo_generic_interface {
 	// Colourspace definition.
 	struct cs_profile *cs;
 
+	// NTSC bursts
+	unsigned nbursts;
+	struct ntsc_burst **ntsc_burst;
+
 	// Buffer for NTSC line encode.
 	// XXX if window_w can change, this must too!
 	uint8_t ntsc_buf[647];
@@ -145,6 +149,9 @@ static void vo_generic_init(void *sptr) {
 static void vo_generic_free(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
 	ntsc_palette_free(generic->cmp.ntsc_palette);
+	for (unsigned i = 0; i < generic->nbursts; i++) {
+		ntsc_burst_free(generic->ntsc_burst[i]);
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -278,6 +285,21 @@ static void set_cmp_phase_offset(void *sptr, int phase) {
 	set_cmp_phase(generic, p);
 }
 
+// Set a burst phase
+//     unsigned burstn;  // burst index
+//     int phase;        // in degrees
+
+static void set_burst(void *sptr, unsigned burstn, int offset) {
+	struct vo_generic_interface *generic = sptr;
+	if (burstn >= generic->nbursts) {
+		generic->nbursts = burstn + 1;
+		generic->ntsc_burst = xrealloc(generic->ntsc_burst, generic->nbursts * sizeof(*(generic->ntsc_burst)));
+	} else if (generic->ntsc_burst[burstn]) {
+		ntsc_burst_free(generic->ntsc_burst[burstn]);
+	}
+	generic->ntsc_burst[burstn] = ntsc_burst_new(offset);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Used by machine to render video
@@ -286,10 +308,10 @@ static void set_cmp_phase_offset(void *sptr, int phase) {
 //     const uint8_t *data;       // palettised data
 //     struct ntsc_burst *burst;  // colourburst for this line
 
-static void render_palette(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
-static void render_ccr_2bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
-static void render_ccr_5bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
-static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burst);
+static void render_palette(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data);
+static void render_ccr_2bit(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data);
+static void render_ccr_5bit(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data);
+static void render_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data);
 
 // Vertical sync
 
@@ -415,23 +437,23 @@ static void update_render_parameters(struct vo_generic_interface *generic) {
 
 	// RGB is always palette-based
 	if (generic->input == VO_TV_RGB) {
-		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_palette, vo);
 		return;
 	}
 
 	// Composite video has more options
 	switch (generic->cmp_ccr) {
 	case VO_CMP_CCR_NONE:
-		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_palette, vo);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_palette, vo);
 		break;
 	case VO_CMP_CCR_2BIT:
-		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ccr_2bit, vo);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_ccr_2bit, vo);
 		break;
 	case VO_CMP_CCR_5BIT:
-		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ccr_5bit, vo);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_ccr_5bit, vo);
 		break;
 	case VO_CMP_CCR_SIMULATED:
-		vo->render_scanline = DELEGATE_AS2(void, uint8cp, ntscburst, render_ntsc, vo);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_ntsc, vo);
 		break;
 	}
 }
@@ -442,9 +464,9 @@ static void update_render_parameters(struct vo_generic_interface *generic) {
 
 // Render colour line using palette.  Used for RGB and palette-based CMP.
 
-static void render_palette(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
+static void render_palette(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
+	(void)burstn;
 	if (generic->scanline >= generic->viewport.y &&
 	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
 		data += generic->viewport.x;
@@ -472,9 +494,9 @@ static void render_palette(void *sptr, uint8_t const *data, struct ntsc_burst *b
 
 // Render artefact colours using simple 2-bit LUT.
 
-static void render_ccr_2bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
+static void render_ccr_2bit(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
+	(void)burstn;
 	unsigned p = !(generic->cmp_phase & 2);
 	if (generic->scanline >= generic->viewport.y &&
 	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
@@ -512,9 +534,9 @@ static void render_ccr_2bit(void *sptr, uint8_t const *data, struct ntsc_burst *
 // runs of pixels are considered to contribute to artefect colours, otherwise
 // they are passed through from the palette.
 
-static void render_ccr_5bit(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
+static void render_ccr_5bit(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_generic_interface *generic = sptr;
-	(void)burst;
+	(void)burstn;
 	unsigned p = !(generic->cmp_phase & 2);
 	if (generic->scanline >= generic->viewport.y &&
 	    generic->scanline < (generic->viewport.y + generic->viewport.h)) {
@@ -573,7 +595,7 @@ static void render_ccr_5bit(void *sptr, uint8_t const *data, struct ntsc_burst *
 
 // NTSC composite video simulation.
 
-static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burst) {
+static void render_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_generic_interface *generic = sptr;
 	if (generic->scanline < generic->viewport.y ||
 	    generic->scanline >= (generic->viewport.y + generic->viewport.h)) {
@@ -581,6 +603,8 @@ static void render_ntsc(void *sptr, uint8_t const *data, struct ntsc_burst *burs
 		return;
 	}
 	generic->scanline++;
+
+	struct ntsc_burst *burst = generic->ntsc_burst[burstn];
 
 	// Encode NTSC
 	const uint8_t *src = data + generic->viewport.x - 3;

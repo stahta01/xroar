@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -57,8 +57,6 @@ enum tcc1014_colour {
 	TCC1014_DARK_GREEN, TCC1014_BRIGHT_GREEN, TCC1014_DARK_ORANGE, TCC1014_BRIGHT_ORANGE
 };
 
-typedef DELEGATE_S2(void, uint8_t const *, _Bool) tcc1014_render_line_func;
-
 struct TCC1014 {
 	struct part part;
 
@@ -81,7 +79,14 @@ struct TCC1014 {
 	DELEGATE_T1(uint8, uint32) fetch_vram;
 
 	// Render line
-	tcc1014_render_line_func render_line;
+	//
+	//     unsigned burst;       // burst index for this line
+	//     unsigned npixels;     // no. pixels in scanline
+	//     const uint8_t *data;  // palettised data, NULL for dummy line
+	//
+	// GIME will set 'burst' to 0 (normal burst) or 1 (inverted burst).
+
+	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
 };
 
 /* Fetched data is a buffer of uint16_t, with bits:

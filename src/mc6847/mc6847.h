@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -98,7 +98,16 @@ struct MC6847 {
 	DELEGATE_T3(void, uint16, int, uint16p) fetch_data;
 
 	// Render line
-	DELEGATE_T2(void, uint8p, unsigned) render_line;
+	//
+	//     unsigned burst;       // burst index for this line
+	//     unsigned npixels;     // no. pixels in scanline
+	//     const uint8_t *data;  // palettised data, NULL for dummy line
+	//
+	// VDG will set 'burst' to 0 (no burst, specific mono modes) or 1
+	// (normal colour burst).  Machine-specific code is expected to alter
+	// that if required (eg for NTSC modified artefacting).
+
+	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
 
 	// Flags to affect behaviour.  Really, these should be handled by
 	// machine-specific code.

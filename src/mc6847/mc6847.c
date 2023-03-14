@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -306,7 +306,6 @@ static void do_hs_fall(void *data) {
 					*(v++) = vdg->border_colour;
 				}
 			}
-			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_START && vdg->scanline < VDG_ACTIVE_AREA_END) {
 			render_scanline(vdg);
 			vdg->public.row++;
@@ -314,7 +313,6 @@ static void do_hs_fall(void *data) {
 				vdg->public.row = 0;
 			if ((vdg->public.row % vdg->nLPR) == 0)
 				vdg->A += vdg->is_32byte ? 32 : 16;
-			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 			vdg->beam_pos = VDG_LEFT_BORDER_START;
 		} else if (vdg->scanline >= VDG_ACTIVE_AREA_END) {
 			if (vdg->scanline == VDG_ACTIVE_AREA_END) {
@@ -323,9 +321,9 @@ static void do_hs_fall(void *data) {
 					*(v++) = vdg->border_colour;
 				}
 			}
-			DELEGATE_CALL(vdg->public.render_line, vdg->pixel_data, vdg->burst);
 		}
 	}
+	DELEGATE_CALL(vdg->public.render_line, vdg->burst, VDG_LINE_DURATION, vdg->pixel_data);
 
 	// HS falling edge.
 	DELEGATE_CALL(vdg->public.signal_hs, 0);
@@ -343,19 +341,13 @@ static void do_hs_fall(void *data) {
 	// it's handled here for speed.
 
 	if (vdg->public.is_pal) {
-		if (vdg->public.is_dragon64) {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
-			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
-				vdg->hs_rise_event.at_tick += 25 * EVENT_VDG_TIME(VDG_PAL_PADDING_LINE);
-				vdg->hs_fall_event.at_tick += 25 * EVENT_VDG_TIME(VDG_PAL_PADDING_LINE);
-			}
-		} else if (vdg->public.is_dragon32) {
+		if (!vdg->public.is_coco) {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
 			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
 				vdg->pal_padding = 25;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
 			}
-		} else if (vdg->public.is_coco) {
+		} else {
 			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 26)) {
 				vdg->pal_padding = 26;
 				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
@@ -403,7 +395,10 @@ static void do_hs_rise(void *data) {
 static void do_hs_fall_pal(void *data) {
 	struct MC6847_private *vdg = data;
 	// HS falling edge
-	DELEGATE_CALL(vdg->public.signal_hs, 0);
+	DELEGATE_CALL(vdg->public.render_line, vdg->burst, VDG_LINE_DURATION, vdg->pixel_data);
+	if (!vdg->public.is_dragon64) {
+		DELEGATE_CALL(vdg->public.signal_hs, 0);
+	}
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall

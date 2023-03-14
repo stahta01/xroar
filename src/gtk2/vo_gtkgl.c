@@ -113,6 +113,7 @@ static void *new(void *sptr) {
 	// Used by machine to configure video output
 	vo->palette_set_ybr = vogl->palette_set_ybr;
 	vo->palette_set_rgb = vogl->palette_set_rgb;
+	vo->set_burst = vogl->set_burst;
 	vo->set_cmp_phase_offset = vogl->set_cmp_phase_offset;
 
 	// Used by machine to render video
@@ -313,7 +314,7 @@ static void vo_gtkgl_set_input(void *sptr, int input) {
 	struct vo_interface *vo = &vogtkgl->public;
 	struct vo_interface *vogl = vogtkgl->vogl;
 	DELEGATE_CALL(vogl->set_input, input);
-	vo->render_scanline = vogl->render_scanline;
+	vo->render_line = vogl->render_line;
 }
 
 static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr) {
@@ -321,7 +322,7 @@ static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr) {
 	struct vo_interface *vo = &vogtkgl->public;
 	struct vo_interface *vogl = vogtkgl->vogl;
 	DELEGATE_CALL(vogl->set_cmp_ccr, ccr);
-	vo->render_scanline = vogl->render_scanline;
+	vo->render_line = vogl->render_line;
 }
 
 static void vo_gtkgl_set_vsync(int val) {

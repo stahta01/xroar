@@ -2,7 +2,7 @@
  *
  *  \brief Tandy MC-10 machine.
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -86,8 +86,6 @@ struct machine_mc10 {
 		// CPU on appropriate port write.
 		unsigned rows;
 	} keyboard;
-
-	struct ntsc_burst *ntsc_burst[2];
 
 	// Useful configuration side-effect tracking
 	_Bool has_bas;
@@ -181,7 +179,7 @@ static void mc10_dump_ram(struct machine *m, FILE *fd);
 
 static void mc10_vdg_hs(void *sptr, _Bool level);
 static void mc10_vdg_fs(void *sptr, _Bool level);
-static void mc10_vdg_render_line(void *sptr, uint8_t *data, unsigned burst);
+static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 static void mc10_vdg_update_mode(void *sptr);
 
@@ -318,7 +316,7 @@ static _Bool mc10_finish(struct part *p) {
 
 	mp->VDG->signal_hs = DELEGATE_AS1(void, bool, mc10_vdg_hs, mp);
         mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
-        mp->VDG->render_line = DELEGATE_AS2(void, uint8p, unsigned, mc10_vdg_render_line, mp);
+        mp->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, mc10_vdg_render_line, mp);
         mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
         mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
 
@@ -341,8 +339,8 @@ static _Bool mc10_finish(struct part *p) {
 		}
 	}
 
-	mp->ntsc_burst[0] = ntsc_burst_new(0);    // Normal burst
-	mp->ntsc_burst[1] = ntsc_burst_new(180);  // Phase inverted burst
+	DELEGATE_SAFE_CALL(mp->vo->set_burst, 0, 0);    // Normal burst
+	DELEGATE_SAFE_CALL(mp->vo->set_burst, 1, 180);  // Phase inverted burst
 
 	// Tape
 	mp->tape_interface->update_audio = DELEGATE_AS1(void, float, mc10_update_tape_input, mp);
@@ -424,8 +422,6 @@ static void mc10_free(struct part *p) {
 	if (mp->bp_session) {
 		bp_session_free(mp->bp_session);
 	}
-	ntsc_burst_free(mp->ntsc_burst[1]);
-	ntsc_burst_free(mp->ntsc_burst[0]);
 }
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -696,11 +692,9 @@ static void mc10_vdg_fs(void *sptr, _Bool level) {
 	}
 }
 
-static void mc10_vdg_render_line(void *sptr, uint8_t *data, unsigned burst) {
+static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
 	struct machine_mc10 *mp = sptr;
-	(void)burst;
-	struct ntsc_burst *nb = mp->ntsc_burst[0];
-	DELEGATE_CALL(mp->vo->render_scanline, data, nb);
+	DELEGATE_CALL(mp->vo->render_line, burst, npixels, data);
 }
 
 static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
