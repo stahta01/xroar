@@ -120,21 +120,6 @@ static const struct ser_struct_data sn76489_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Butterworth IIR, order 3, fs 250kHz, -3dB at 20kHz.  Generated here:
-// https://www-users.cs.york.ac.uk/~fisher/mkfilter/
-
-// This very much assumes refclk of 4MHz, which is fine for this purpose, but
-// beware if you're using this code elsewhere.
-
-#define IIR_GAIN (9.820696921e+01)
-#define IIR_Z0 (1.0)
-#define IIR_Z1 (3.0)
-#define IIR_Z2 (3.0)
-#define IIR_Z3 (1.0)
-#define IIR_P0 (0.3617959282)
-#define IIR_P1 (-1.4470540195)
-#define IIR_P2 (2.0037974774)
-
 // attenuation lookup table, 10 ^ (-i / 10)
 static const float attenuation[16] = {
 	1.000000/4.0, 0.794328/4.0, 0.630957/4.0, 0.501187/4.0,
