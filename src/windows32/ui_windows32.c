@@ -539,6 +539,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		CheckMenuRadioItem(top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
+	case ui_tag_tv_controls:
+		windows32_vo_show_window(global_uisdl2);
+		break;
+
 	case ui_tag_brightness:
 		windows32_vo_update_brightness(uisdl2, value);
 		break;

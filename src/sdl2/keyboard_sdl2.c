@@ -31,6 +31,7 @@
 
 #include "array.h"
 #include "c-strcase.h"
+#include "delegate.h"
 #include "pl-string.h"
 #include "slist.h"
 #include "xalloc.h"
@@ -277,11 +278,15 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		xroar_insert_output_tape();
 		return;
 #endif
-#ifdef TRACE
 	case 'v':
-		xroar_set_trace(XROAR_NEXT);
-		return;
+		if (shift) {
+			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_tv_controls, 0, NULL);
+		} else {
+#ifdef TRACE
+			xroar_set_trace(XROAR_NEXT);
 #endif
+		}
+		return;
 	case 'z':
 		xroar_set_kbd_translate(1, XROAR_NEXT);
 		return;
