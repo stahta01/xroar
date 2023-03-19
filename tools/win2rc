@@ -1,0 +1,700 @@
+#!/usr/bin/perl -wT
+
+# win2rc - convert noddy markup to windows resource file format
+
+# Copyright 2023 Ciaran Anscomb
+#
+# License: GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl-3.0.html>.
+#
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+use strict;
+
+require v5.10;
+
+use Getopt::Long;
+use Pod::Usage;
+use Scalar::Util qw(looks_like_number);
+
+Getopt::Long::Configure("gnu_getopt", "pass_through");
+
+# de-taint PATH - else pod2usage doesn't work!
+if ($ENV{'PATH'} =~ /^(.*)$/) {
+        $ENV{'PATH'} = $1;
+}
+
+my $macro;
+my $want_htmlish = 0;
+my $want_headers = 0;
+my $want_rc = 0;
+
+GetOptions(
+		"macro|m=s" => \$macro,
+		"htmlish!" => \$want_htmlish,
+		"headers|h!" => \$want_headers,
+		"rc|r!" => \$want_rc,
+
+		"help|?" => sub { pod2usage(-verbose => 2); },
+	) or exit(2);
+
+my $filename = shift @ARGV or die "specify input file\n";
+
+if (!$want_htmlish && !$want_headers && !$want_rc) {
+	$want_headers = 1;
+	$want_rc = 1;
+}
+
+# XXX this is neither complete, nor implemented.  Notes for self:
+#
+# An element has:
+#
+#   A size.  This is either specified, a default (eg line_height for certain
+#   elements), or calculated from the sum of child elements box sizes.  In that
+#   order.  Special cases are 'tr' whose height grows or becomes equal to
+#   enclosing grid, and 'td' whose width grows or becomes equal to enclosing
+#   grid.
+#
+#   Padding.  Child elements are offset by this amount.  That's it.  It's not
+#   involved in sizing calculation.
+
+my $line;
+
+my %can_contain = (
+	top => {
+		dialog => 1,
+	},
+	dialog => {
+		table => 1,
+		'*heading' => 1,
+		'*content' => 1,
+		nop => 1,
+	},
+	table => {
+		tr => 1,
+	},
+	tr => {
+		td => 1,
+	},
+	td => {
+		'*content' => 1,
+		nop => 1,
+	},
+);
+
+my %class = (
+	h1 => '*heading',
+	h2 => '*heading',
+	h3 => '*heading',
+	text => '*content',
+	spinbox => '*content',
+	combobox => '*content',
+	button => '*content',
+);
+
+my %text_to_eol = (
+	'dialog' => 1,
+	'*heading' => 1,
+	'text' => 1,
+	'button' => 1,
+);
+
+my %height = (
+	h1 => 12,
+	h2 => 12,
+	h3 => 12,
+	'*content' => 12,
+);
+
+my %hexpand = (
+	nop => 1,
+	'*heading' => 1,
+	'*content' => 1,
+);
+
+my $attrs = {};
+my $top = { tag => 'top' };
+my $parent = $top;
+my @tagstack = ();
+
+# TODO: actually i imagine i can reuse control ids within each resource
+
+my %resource_id_by_number = ();
+my %resource_id_by_name = ();
+my $resource_idnumber = 1;
+
+my %control_id_by_number = ();
+my %control_id_by_name = (
+	IDOK => 1,
+	IDCANCEL => 2,
+	IDABORT => 3,
+	IDRETRY => 4,
+	IDIGNORE => 5,
+	IDYES => 6,
+	IDNO => 7,
+	IDCLOSE => 8,
+	IDHELP => 9,
+	IDTRYAGAIN => 10,
+	IDCONTINUE => 11,
+);
+my $control_idnumber = 100;
+
+my $in;
+open($in, "<", $filename) or die "Failed to open $filename: $!\n";
+
+WORD: while (my $tag = word($in)) {
+	if ($tag =~ /^(\w+)=(.*)$/) {
+		$attrs->{$1} = $2;
+		next;
+	}
+	my $class = $class{$tag} // $tag;
+	my $elem = {
+		tag => $tag,
+		attrs => $attrs,
+		children => [],
+	};
+	if (exists $text_to_eol{$tag}) {
+		$elem->{text} = line($in);
+	} elsif (exists $text_to_eol{$class}) {
+		$elem->{text} = line($in);
+	}
+	if (exists $height{$tag}) {
+		$attrs->{height} //= $height{$tag};
+	} elsif (exists $height{$class}) {
+		$attrs->{height} //= $height{$class};
+	}
+	if (exists $hexpand{$tag}) {
+		$attrs->{hexpand} //= $hexpand{$tag};
+	} elsif (exists $hexpand{$class}) {
+		$attrs->{hexpand} //= $hexpand{$class};
+	}
+	if (exists $attrs->{id} && !looks_like_number($attrs->{id})) {
+		my $id = $attrs->{id};
+		my $is_resource = 0;
+		if ($tag eq 'dialog') {
+			$id = "IDD_DLG_$id";
+			$is_resource = 1;
+		} elsif ($tag eq 'spinbox') {
+			$attrs->{editid} = "IDC_EDIT_$id";
+			add_control_id($attrs->{editid});
+			$id = "IDC_SPIN_$id";
+		} elsif ($tag eq 'combobox') {
+			$id = "IDC_CB_$id";
+		}
+		$attrs->{id} = $id;
+		if ($is_resource) {
+			add_resource_id($id);
+		} else {
+			add_control_id($id);
+		}
+	}
+	$attrs = {};
+	my @old_tagstack = @tagstack;
+	my $old_parent = $parent;
+	while (!exists $can_contain{$parent->{tag}}->{$class}) {
+		$parent = pop @tagstack;
+		if (!defined $parent) {
+			#print "WARNING '$tag' skipped\n";
+			@tagstack = @old_tagstack;
+			$parent = $old_parent;
+			next WORD;
+		}
+	}
+	$elem->{parent} = $parent;
+	push @{$parent->{children}}, $elem;
+	push @tagstack, $parent;
+	$parent = $elem;
+}
+
+close $in;
+
+layout($top);
+
+if ($want_htmlish) {
+
+	dump_htmlish($top);
+
+} else {
+
+	if ($want_headers) {
+		if (defined $macro) {
+			print <<__EOF__
+/* Automatically generated file */
+
+#ifndef ${macro}
+#define ${macro}
+
+__EOF__
+		}
+		dump_rc_ids();
+
+		if (defined $macro) {
+			print "\n#endif\n";
+		}
+
+		print "\n" if ($want_rc);
+	}
+
+	if ($want_rc) {
+		dump_rc($top);
+	}
+
+}
+
+exit 0;
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+sub word {
+	my $in = shift;
+	do {
+		if (defined $line && $line =~ /^\s*(\S+)(\s*(.*))$/) {
+			$line = $3;
+			return $1;
+		}
+		$line = <$in>;
+		return undef if (!defined $line);
+		chomp $line;
+		next if ($line =~ /^\s*(#.*)$/);
+	} while (defined $line);
+	return undef;
+}
+
+sub line {
+	my $in = shift;
+	my $ret = $line;
+	undef $line;
+	return $ret;
+}
+
+sub max {
+	my $max;
+	for (@_) {
+		$max = $_ if (!defined $max || defined $_ && $_ > $max);
+	}
+	return $max;
+}
+
+sub add_resource_id {
+	my ($id) = @_;
+	return if (exists $resource_id_by_name{$id});
+	while (exists $resource_id_by_number{$resource_idnumber}) {
+		$resource_idnumber++;
+	}
+	$resource_id_by_name{$id} = $resource_idnumber;
+	$resource_id_by_number{$resource_idnumber} = $id;
+}
+
+sub add_control_id {
+	my ($id) = @_;
+	return if (exists $control_id_by_name{$id});
+	while (exists $control_id_by_number{$control_idnumber}) {
+		$control_idnumber++;
+	}
+	$control_id_by_name{$id} = $control_idnumber;
+	$control_id_by_number{$control_idnumber} = $id;
+}
+
+# A row (tr) organises its children horizontally.  It inherits a colwidth table
+# from its parent.  Height is the maximum height of any child.  Width is the
+# sum of the colwidths.
+
+sub layout_row {
+	my ($elem) = @_;
+
+	$elem->{parent} //= {};
+	my $parent = $elem->{parent};
+	$parent->{attrs} //= {};
+	my $pattrs = $parent->{attrs};
+	my $eattrs = $elem->{attrs};
+
+	my $eresized = 0;
+	my $max_cheight;
+	my $total_cwidth;
+	my $colwidth = $parent->{colwidth} // [];
+	my $resized;
+	do {
+		$total_cwidth = 0;
+		$max_cheight = 0;
+		$resized = 0;
+		my $i = 0;
+		for my $child (@{$elem->{children}}) {
+			# temporarily let child know column width
+			$elem->{cwidth} = $colwidth->[$i] // 0;
+			$resized |= layout($child);
+			delete $elem->{cwidth};
+			my $cattrs = $child->{attrs};
+
+			my $cwidth = $cattrs->{width} // 0;
+			if ($cwidth > $colwidth->[$i]) {
+				$colwidth->[$i] = $cwidth;
+			}
+			$total_cwidth += $colwidth->[$i];
+
+			my $cheight = $cattrs->{height} // 0;
+			$max_cheight = max($max_cheight, $cheight, 0);
+
+			$i++;
+		}
+		if (!defined $eattrs->{width} || $total_cwidth > $eattrs->{width}) {
+			$eattrs->{width} = $total_cwidth;
+			$resized = 1;
+		}
+		if (!defined $eattrs->{height} || $max_cheight > $eattrs->{height}) {
+			$eattrs->{height} = $max_cheight;
+			$resized = 1;
+		}
+		$eresized |= $resized;
+	} while ($resized);
+
+	return $eresized;
+}
+
+# Column is the normal layout element.  Children are arranged vertically.
+# Width is the maximum width of any child.  If hexpand attribute set, minimum
+# width is parent's width.  Height is sum of all children's heights.  No need
+# to maintain a colheights array.
+
+sub layout_column {
+	my ($elem) = @_;
+
+	$elem->{parent} //= {};
+	my $parent = $elem->{parent};
+	$parent->{attrs} //= {};
+	my $pattrs = $parent->{attrs};
+	my $eattrs = $elem->{attrs};
+
+	my $ewidth = 0;
+	if (exists $eattrs->{hexpand} && $eattrs->{hexpand}) {
+		$ewidth = $parent->{cwidth} // $pattrs->{width} // 0;
+	}
+	if (defined $eattrs->{width} && $eattrs->{width} > $ewidth) {
+		$ewidth = $eattrs->{width};
+	}
+	# record so children can see parent width
+	$eattrs->{width} = $ewidth;
+
+	my $eresized = 0;
+	my $max_cwidth;
+	my $total_cheight;
+	my $resized;
+	do {
+		$max_cwidth = 0;
+		$total_cheight = 0;
+		$resized = 0;
+		my $i = 0;
+		for my $child (@{$elem->{children}}) {
+			$resized |= layout($child);
+			my $cattrs = $child->{attrs};
+			my $cheight = $cattrs->{height} // 0;
+			my $cwidth = $cattrs->{width} // 0;
+			if ($cwidth > $max_cwidth) {
+				$max_cwidth = $cwidth;
+			}
+			$total_cheight += $cheight;
+			$i++;
+		}
+		if (!defined $eattrs->{height} || $total_cheight > $eattrs->{height}) {
+			$eattrs->{height} = $total_cheight;
+			$resized = 1;
+		}
+		if (!defined $eattrs->{width} || $max_cwidth > $eattrs->{width}) {
+			$eattrs->{width} = $max_cwidth;
+			$resized = 1;
+		}
+		$eresized |= $resized;
+	} while ($resized);
+
+	return $eresized;
+}
+
+sub layout_grid {
+	my ($elem) = @_;
+
+	my @colwidth = ();
+	$elem->{colwidth} = \@colwidth;
+
+	my $eresized = 0;
+	my $eheight;
+	my $ewidth;
+	my $resized;
+	do {
+		$eheight = 0;
+		$resized = 0;
+		my $i = 0;
+		for my $child (@{$elem->{children}}) {
+			my $ctag = $child->{tag};
+			$resized |= layout($child);
+			my $cattrs = $child->{attrs};
+			my $cwidth = $cattrs->{width} // 0;
+			my $cheight = $cattrs->{height} // 0;
+			$cattrs->{width} = $cwidth;
+			$cattrs->{height} = $cheight;
+			$eheight += $cheight;
+			$i++;
+		}
+		$ewidth = 0;
+		for (@colwidth) {
+			$ewidth += $_ // 0;
+		}
+		$eresized |= $resized;
+	} while ($resized);
+	if (!defined $elem->{attrs}->{height} || $elem->{attrs}->{height} < $eheight) {
+		$elem->{attrs}->{height} = $eheight;
+		$resized = 1;
+	}
+	if (!defined $elem->{attrs}->{width} || $elem->{attrs}->{width} < $ewidth) {
+		$elem->{attrs}->{width} = $ewidth;
+		$resized = 1;
+	}
+	return $eresized;
+}
+
+sub layout {
+	my ($elem) = @_;
+	my $tag = $elem->{tag};
+	if ($tag eq 'table') {
+		return layout_grid(@_);
+	} elsif ($tag eq 'tr') {
+		return layout_row(@_);
+	} else {
+		return layout_column(@_);
+	}
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+sub dump_htmlish {
+	my ($elem,$indent) = @_;
+	$indent //= 0;
+
+	my $nspaces = $indent * 3;
+	print " " x $nspaces;
+	print "<$elem->{tag}";
+	for my $k (sort keys %{$elem->{attrs}}) {
+		print " $k=$elem->{attrs}->{$k}";
+	}
+	print ">";
+	if (exists $elem->{text}) {
+		print $elem->{text};
+	}
+	if (@{$elem->{children}}) {
+		print "\n";
+		for my $child (@{$elem->{children}}) {
+			dump_htmlish($child, $indent+1);
+		}
+		print " " x $nspaces;
+	}
+	print "</$elem->{tag}>\n";
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+sub dump_rc_ids {
+	for my $k (sort { $a <=> $b } keys %resource_id_by_number) {
+		my $v = $resource_id_by_number{$k};
+		print "#define $v ($k)\n";
+	}
+	print "\n";
+
+	for my $k (sort { $a <=> $b } keys %control_id_by_number) {
+		my $v = $control_id_by_number{$k};
+		print "#define $v ($k)\n";
+	}
+}
+
+sub dump_rc {
+	my ($elem, $x, $y) = @_;
+
+	my $dummyx = 0;
+	my $dummyy = 0;
+	$x //= \$dummyx;
+	$y //= \$dummyy;
+
+	my $tag = $elem->{tag};
+	my $attrs = $elem->{attrs};
+	my $text = $elem->{text} // "";
+	my $childrem = $elem->{children};
+	my $id = $attrs->{id};
+	my $editid = $attrs->{editid} // "";
+	my $w = $attrs->{width} // 0;
+	my $h = $attrs->{height} // 0;
+
+	my $padleft = $attrs->{pad_left} // 0;
+	my $padright = $attrs->{pad_right} // 0;
+
+	my $xpos = $$x + $padleft;
+	if (exists $attrs->{xalign}) {
+		my $parent = $elem->{parent};
+		#$parent = $parent->{parent} if ($parent->{tag} eq 'tr');
+		if ($attrs->{xalign} eq 'right') {
+			$xpos = $$x + $parent->{attrs}->{width} - $w - $padright;
+		}
+	}
+
+	if ($tag eq 'dialog') {
+		print "$id DIALOGEX 0, 0, $attrs->{width}, $attrs->{height}\n";
+		print "STYLE DS_SETFONT | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION | WS_SYSMENU\n";
+		print "CAPTION \"$text\"\n";
+		print "LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL\n";
+		print "FONT 9, \"Arial\"\n";
+		print "BEGIN\n";
+		$$x = 0;
+		$$y = 0;
+	} elsif ($tag eq 'text' || $tag eq 'h1') {
+		my $ctl = "LTEXT";
+		if (exists $attrs->{align}) {
+			$ctl = "CTEXT" if ($attrs->{align} eq 'centre');
+			$ctl = "RTEXT" if ($attrs->{align} eq 'right');
+		}
+		print "   $ctl \"$text\", IDC_STATIC, $xpos, $$y, $w, $h\n";
+	} elsif ($tag eq 'spinbox') {
+		print "   CONTROL \"0\", $editid, \"EDIT\", WS_BORDER | WS_CHILD | WS_VISIBLE | ES_NUMBER, $xpos, $$y, $w, $h\n";
+		print "   CONTROL \"\", $id, UPDOWN_CLASS, WS_CHILD | WS_VISIBLE | UDS_ARROWKEYS | UDS_SETBUDDYINT | UDS_AUTOBUDDY | UDS_ALIGNRIGHT, 0, 0, 0, 0\n";
+	} elsif ($tag eq 'combobox') {
+		print "   COMBOBOX $id, $xpos, $$y, $w, 110, WS_CHILD | WS_VISIBLE | CBS_DROPDOWN\n";
+	} elsif ($tag eq 'button') {
+		print "   CONTROL \"$text\", $id, \"BUTTON\", WS_CHILD | WS_VISIBLE | WS_TABSTOP, $xpos, $$y, $w, $h\n";
+	}
+
+	my $orig_x = $$x;
+	my $orig_y = $$y;
+	if (@{$elem->{children}}) {
+		for my $child (@{$elem->{children}}) {
+			dump_rc($child, $x, $y);
+			if ($tag eq 'tr') {
+				$$x += $child->{attrs}->{width} // 0;
+			} else {
+				$$x = $orig_x;
+				$$y += $child->{attrs}->{height} // 0;
+			}
+		}
+	}
+	$$x = $orig_x;
+	$$y = $orig_y;
+
+	if ($tag eq 'dialog') {
+		print "END\n\n";
+	}
+}
+
+__END__
+
+=encoding utf8
+
+=head1 NAME
+
+B<win2rc> - convert noddy markup to windows resource file format
+
+=head1 SYNOPSIS
+
+B<win2rc> [I<option>]... I<filename>
+
+=head1 DESCRIPTION
+
+Parses a trivial markup file, runs the result through a very bad layout engine,
+then prints the results to standard output.
+
+=head1 OPTIONS
+
+Options affecting output:
+
+=over
+
+=item B<-h>, B<--headers>
+
+output C headers defining IDs.
+
+=item B<-m>, B<--macro> I<MACRO>
+
+emit guard instructions around C headers using I<MACRO>.
+
+=item B<-r>, B<--rc>
+
+output Windows resource file definition.
+
+=item B<--htmlish>
+
+emit an HTML-esque dump of the parsed data for debugging.
+
+=back
+
+Other options:
+
+=over
+
+=item B<--help>
+
+show this help.
+
+=back
+
+=head1 USAGE
+
+Markup is very basic:
+
+    [<arg>=<value>]... <tag> [<text>]
+
+If a tag needs I<text>, it is read until the end of the current line.
+Arguments I<precede> the tag name.  Tags:
+
+=over
+
+=item B<dialog> I<text>
+
+=item B<h1> I<text>
+
+=item B<text> I<text>
+
+=item B<table>
+
+=item B<tr>
+
+=item B<spinbox>
+
+=item B<combobox>
+
+=item B<button>
+
+=back
+
+Arguments:
+
+=over
+
+=item B<width>=I<value>
+
+=item B<height>=I<value>
+
+=item B<align>=I<left|right|centre>
+
+Text alignment within its box.
+
+=item B<xalign>=I<right>
+
+Box alignment within its parent.
+
+=item B<id>=I<id>
+
+Either a number or the base name of a macro to define.  Note spinboxes define
+two macros: one for the updown control, one for a "buddy" edit control.
+
+=back
+
+=head1 LICENCE
+
+Copyright 2023 Ciaran Anscomb
+
+License: GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl-3.0.html>.
+
+This is free software: you are free to change and redistribute it.  There is NO
+WARRANTY, to the extent permitted by law.
+
+=head1 BUGS
+
+Probably full of them.  Also, definitely doesn't even implement its own
+box model properly.  It's just a convenience for me so I don't have to
+keep adjusting numbers in a resource file.  If you get something out of
+it, great, but I'm not suporting this!
+
+=cut

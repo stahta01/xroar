@@ -1,0 +1,23 @@
+id=ABOUT dialog About XRoar
+
+table
+tr height=7 nop
+tr align=centre width=194 height=18 text " to_str(PACKAGE_TEXT) "
+tr align=centre height=18 text Copyright \xa9 " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>
+tr align=centre height=18 text https://www.6809.org.uk/xroar/
+tr xalign=right width=29 pad_right=7 hexpand=0 id=IDOK button &Close
+tr height=7 nop
+
+id=TV_CONTROLS dialog XRoar TV Controls
+
+h1 General
+
+table
+tr width=40 text Brightness
+   width=47 id=BRIGHTNESS spinbox
+tr text Contrast
+   id=CONTRAST spinbox
+tr text Hue
+   id=HUE spinbox
+
+width=29 id=IDOK button &Close

@@ -28,7 +28,7 @@
 
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
-#include "windows32/resources.h"
+#include "windows32/dialogs.h"
 
 static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
