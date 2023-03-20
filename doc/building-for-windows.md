@@ -8,6 +8,7 @@ What's needed to cross-compile for Windows under Debian Linux (generally
  * g++-mingw-w64
  * gcc-mingw-w64
  * mingw-w64-tools
+ * autogen (required to build libsndfile, not related to autogen.sh)
 
 AFAICT that's it - the rest should come as dependencies.  You might also
 want to install wine to try out the end result.
@@ -27,6 +28,9 @@ chroot/container/VM.
  * Cross-platform development library
  * https://github.com/libsdl-org/SDL
  * http://libsdl.org/
+
+Be sure to checkout one of the 2.x release branches - the SDL developers have
+started developing SDL3, and XRoar probably won't be compatible with that.
 
 ~~~
 
