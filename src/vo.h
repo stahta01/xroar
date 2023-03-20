@@ -107,6 +107,10 @@ struct vo_interface {
 	//     int contrast;  // 0-100
 	DELEGATE_T1(void, int) set_contrast;
 
+	// Set colour saturation
+	//     int saturation;  // 0-100
+	DELEGATE_T1(void, int) set_saturation;
+
 	// Set hue
 	//     int hue;  // -179 to +180
 	DELEGATE_T1(void, int) set_hue;

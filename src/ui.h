@@ -73,6 +73,7 @@ enum ui_tag {
 	ui_tag_tv_controls,
 	ui_tag_brightness,
 	ui_tag_contrast,
+	ui_tag_saturation,
 	ui_tag_hue,
 	// Audio
 	ui_tag_ratelimit,

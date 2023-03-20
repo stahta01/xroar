@@ -93,6 +93,7 @@ struct vo_generic_interface {
 	// Render configuration.
 	int brightness;
 	int contrast;
+	int saturation;
 	int hue;
 	int input;      // VO_TV_CMP or VO_TV_RGB
 	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
@@ -212,6 +213,22 @@ static void set_contrast(void *sptr, int contrast) {
 	update_gamma_table(generic);
 	if (xroar_ui_interface) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_contrast, contrast, NULL);
+	}
+}
+
+// Set colour saturation
+//     int saturation;  // 0-100
+
+static void set_saturation(void *sptr, int saturation) {
+	struct vo_generic_interface *generic = sptr;
+	if (saturation < 0) saturation = 0;
+	if (saturation > 100) saturation = 100;
+	generic->saturation = saturation;
+	for (unsigned i = 0; i < 256; i++) {
+		update_palette_ybr(generic, i);
+	}
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_saturation, saturation, NULL);
 	}
 }
 
@@ -356,6 +373,11 @@ static void update_palette_ybr(struct vo_generic_interface *generic, uint8_t c) 
 	// Scale Pb,Pr to valid B'-Y',R'-Y'
 	float b_y = pb * 0.5/0.886;
 	float r_y = pr * 0.5/0.701;
+
+	// Apply colour saturation
+	float saturation = (float)generic->saturation / 50.;
+	b_y *= saturation;
+	r_y *= saturation;
 
 	// Apply hue
 	float w = 2. * M_PI;

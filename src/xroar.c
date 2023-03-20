@@ -990,6 +990,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, 52);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, 50);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, 50);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, 0);
 
 	// Configure machine
