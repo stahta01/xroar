@@ -38,12 +38,14 @@
 // Actions
 static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data);
+static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
 
 // Video Options control widgets
 static GtkWidget *vo_window = NULL;
 static GtkSpinButton *vo_brightness = NULL;
 static GtkSpinButton *vo_contrast = NULL;
+static GtkSpinButton *vo_saturation = NULL;
 static GtkSpinButton *vo_hue = NULL;
 
 // Signal handlers
@@ -70,6 +72,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	vo_window = GTK_WIDGET(gtk_builder_get_object(builder, "vo_window"));
 	vo_brightness = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_brightness"));
 	vo_contrast = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_contrast"));
+	vo_saturation = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_saturation"));
 	vo_hue = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_hue"));
 
 	// Connect signals
@@ -77,6 +80,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	g_signal_connect(vo_window, "delete-event", G_CALLBACK(hide_vo_window), uigtk2);
 	g_signal_connect(vo_brightness, "value-changed", G_CALLBACK(vo_change_brightness), uigtk2);
 	g_signal_connect(vo_contrast, "value-changed", G_CALLBACK(vo_change_contrast), uigtk2);
+	g_signal_connect(vo_saturation, "value-changed", G_CALLBACK(vo_change_saturation), uigtk2);
 	g_signal_connect(vo_hue, "value-changed", G_CALLBACK(vo_change_hue), uigtk2);
 
 	// In case any signals remain...
@@ -96,6 +100,11 @@ void gtk2_vo_update_brightness(struct ui_gtk2_interface *uigtk2, int value) {
 void gtk2_vo_update_contrast(struct ui_gtk2_interface *uigtk2, int value) {
 	(void)uigtk2;
 	uigtk2_notify_spin_button_set(vo_contrast, value, vo_change_contrast, uigtk2);
+}
+
+void gtk2_vo_update_saturation(struct ui_gtk2_interface *uigtk2, int value) {
+	(void)uigtk2;
+	uigtk2_notify_spin_button_set(vo_saturation, value, vo_change_saturation, uigtk2);
 }
 
 void gtk2_vo_update_hue(struct ui_gtk2_interface *uigtk2, int value) {
@@ -139,6 +148,14 @@ static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 	int value = (int)gtk_spin_button_get_value(spin_button);
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, value);
+	}
+}
+
+static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	int value = (int)gtk_spin_button_get_value(spin_button);
+	if (xroar_vo_interface) {
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, value);
 	}
 }
 

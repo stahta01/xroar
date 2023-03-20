@@ -10,7 +10,9 @@
 #define IDC_SPIN_BRIGHTNESS (101)
 #define IDC_EDIT_CONTRAST (102)
 #define IDC_SPIN_CONTRAST (103)
-#define IDC_EDIT_HUE (104)
-#define IDC_SPIN_HUE (105)
+#define IDC_EDIT_SATURATION (104)
+#define IDC_SPIN_SATURATION (105)
+#define IDC_EDIT_HUE (106)
+#define IDC_SPIN_HUE (107)
 
 #endif

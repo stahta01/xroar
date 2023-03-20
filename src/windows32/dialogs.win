@@ -17,6 +17,8 @@ tr width=40 text Brightness
    width=47 id=BRIGHTNESS spinbox
 tr text Contrast
    id=CONTRAST spinbox
+tr text Colour
+   id=SATURATION spinbox
 tr text Hue
    id=HUE spinbox
 

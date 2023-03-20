@@ -551,6 +551,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		windows32_vo_update_contrast(uisdl2, value);
 		break;
 
+	case ui_tag_saturation:
+		windows32_vo_update_saturation(uisdl2, value);
+		break;
+
 	case ui_tag_hue:
 		windows32_vo_update_hue(uisdl2, value);
 		break;

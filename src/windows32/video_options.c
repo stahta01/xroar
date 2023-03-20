@@ -35,6 +35,7 @@ static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 static HWND vo_window = NULL;
 static HWND vo_brightness = NULL;
 static HWND vo_contrast = NULL;
+static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
 
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
@@ -47,6 +48,10 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	vo_contrast = GetDlgItem(vo_window, IDC_SPIN_CONTRAST);
 	SendMessage(vo_contrast, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
 	SendMessage(vo_contrast, UDM_SETPOS, 0, 50);
+
+	vo_saturation = GetDlgItem(vo_window, IDC_SPIN_SATURATION);
+	SendMessage(vo_saturation, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
+	SendMessage(vo_saturation, UDM_SETPOS, 0, 0);
 
 	vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
@@ -67,6 +72,10 @@ void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value)
 
 void windows32_vo_update_contrast(struct ui_sdl2_interface *uisdl2, int value) {
 	SendMessage(vo_contrast, UDM_SETPOS, 0, value);
+}
+
+void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value) {
+	SendMessage(vo_saturation, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
@@ -93,6 +102,10 @@ static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
 			case IDC_SPIN_CONTRAST:
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				break;
+
+			case IDC_SPIN_SATURATION:
+				DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
 
 			case IDC_SPIN_HUE:
