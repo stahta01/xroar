@@ -86,10 +86,13 @@ my %class = (
 	h1 => '*heading',
 	h2 => '*heading',
 	h3 => '*heading',
-	text => '*content',
-	spinbox => '*content',
-	combobox => '*content',
+
 	button => '*content',
+	combobox => '*content',
+	scrollbar => '*content',
+	spinbox => '*content',
+	text => '*content',
+
 );
 
 my %text_to_eol = (
@@ -180,6 +183,8 @@ WORD: while (my $tag = word($in)) {
 			$id = "IDC_SPIN_$id";
 		} elsif ($tag eq 'combobox') {
 			$id = "IDC_CB_$id";
+		} elsif ($tag eq 'scrollbox') {
+			$id = "IDC_SCR_$id";
 		}
 		$attrs->{id} = $id;
 		if ($is_resource) {
@@ -553,6 +558,12 @@ sub dump_rc {
 		print "   CONTROL \"\", $id, UPDOWN_CLASS, WS_CHILD | WS_VISIBLE | UDS_ARROWKEYS | UDS_SETBUDDYINT | UDS_AUTOBUDDY | UDS_ALIGNRIGHT, 0, 0, 0, 0\n";
 	} elsif ($tag eq 'combobox') {
 		print "   COMBOBOX $id, $xpos, $$y, $w, 110, WS_CHILD | WS_VISIBLE | CBS_DROPDOWN\n";
+	} elsif ($tag eq 'scrollbar') {
+		my $style = "SBS_HORZ";
+		if (exists $attrs->{align}) {
+			$style = "SBS_VERT" if ($attrs->{align} eq 'vertical');
+		}
+		print "   SCROLLBAR $id, $xpos, $$y, $w, $h, $style\n";
 	} elsif ($tag eq 'button') {
 		print "   CONTROL \"$text\", $id, \"BUTTON\", WS_CHILD | WS_VISIBLE | WS_TABSTOP, $xpos, $$y, $w, $h\n";
 	}
