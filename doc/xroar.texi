@@ -1499,6 +1499,14 @@ to show for it.
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
 @tab Composite video cross-colour renderer.  One of @samp{simple} (very fast), @samp{5bit} (fast, more accurate) or @samp{simulated} (slow, very accurate).  Default is @samp{5bit}.
+@item @option{-vo-brightness @var{value}}
+@tab Set initial brightness (0-100).  Default is 50.
+@item @option{-vo-contrast @var{value}}
+@tab Set initial contrast (0-100).  Default is 50.
+@item @option{-vo-colour @var{value}}
+@tab Set initial colour saturation (0-100).  Default is 50.
+@item @option{-vo-hue @var{value}}
+@tab Set initial hue (-179 to +180).  Default is 0.
 @end multitable
 
 Real NTSC machines start in one of two cross-colour states at random.  Games
@@ -1508,6 +1516,11 @@ and Red-blue.  On the CoCo 3, a fourth mode is included that switches to the
 RGB output.
 
 Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
+
+In the GTK+ and Windows interfaces, @clicksequence{View @click{} TV Controls}
+opens a control window allowing you to dynamically modify various display
+options.  Pressing @kbd{@key{CTRL}+@key{SHIFT}+V} will also open this
+window.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1930,6 +1943,7 @@ A summary of commonly available keyboard shortcuts.
 @item @kbd{@key{CTRL}+S} @tab Save a snapshot.
 @item @kbd{@key{CTRL}+T} @tab Open the tape control tool (GTK+ only).
 @item @kbd{@key{CTRL}+V} @tab Toggle trace mode.
+@item @kbd{@key{CTRL}+@key{SHIFT}+V} @tab Open TV controls window (GTK+ & Windows only).
 @item @kbd{@key{CTRL}+W} @tab Attach a virtual cassette file for writing.
 @item @kbd{@key{CTRL}+Z} @tab Enable keyboard translation mode.
 @item @kbd{@key{F12}} @tab Run at maximum speed while held.
@@ -2283,6 +2297,14 @@ to this machine (the default is to try).
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
 @tab Composite video cross-colour renderer.  One of @samp{simple} (very fast), @samp{5bit} (fast, more accurate) or @samp{simulated} (slow, very accurate).  Default is @samp{5bit}.
+@item @option{-vo-brightness @var{value}}
+@tab Set initial brightness (0-100).  Default is 50.
+@item @option{-vo-contrast @var{value}}
+@tab Set initial contrast (0-100).  Default is 50.
+@item @option{-vo-colour @var{value}}
+@tab Set initial colour saturation (0-100).  Default is 50.
+@item @option{-vo-hue @var{value}}
+@tab Set initial hue (-179 to +180).  Default is 0.
 @end multitable
 
 @c
