@@ -164,6 +164,10 @@ struct private_cfg {
 		int frameskip;
 		int ccr;
 		_Bool vdg_inverted_text;
+		int brightness;
+		int contrast;
+		int saturation;
+		int hue;
 	} vo;
 
 	// Audio
@@ -216,6 +220,9 @@ static struct private_cfg private_cfg = {
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
 	.vo.ccr = VO_CMP_CCR_5BIT,
+	.vo.brightness = 50,
+	.vo.contrast = 50,
+	.vo.saturation = 50,
 	// if volume set >=0, use that, else use gain value in dB
 	.ao.gain = -3.0,
 	.ao.volume = -1,
@@ -988,10 +995,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar_tape_interface, private_cfg.tape.ao_rate);
 
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, 52);
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, 50);
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, 50);
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, 0);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, private_cfg.vo.brightness);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, private_cfg.vo.contrast);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, private_cfg.vo.saturation);
+	DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, private_cfg.vo.hue);
 
 	// Configure machine
 	xroar_configure_machine(xroar_machine_config);
@@ -2536,6 +2543,10 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_BOOL("invert-text", &private_cfg.vo.vdg_inverted_text) },
+	{ XC_SET_INT("vo-brightness", &private_cfg.vo.brightness) },
+	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
+	{ XC_SET_INT("vo-colour", &private_cfg.vo.saturation) },
+	{ XC_SET_INT("vo-hue", &private_cfg.vo.hue) },
 	/* Deliberately undocumented: */
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 
@@ -2744,6 +2755,10 @@ static void helptext(void) {
 "  -gl-filter FILTER     OpenGL texture filter (-gl-filter help for list)\n"
 "  -geometry WxH+X+Y     initial emulator geometry\n"
 "  -invert-text          start with text mode inverted\n"
+"  -vo-brightness N      set TV brightness (0-100) [50]\n"
+"  -vo-contrast N        set TV contrast (0-100) [50]\n"
+"  -vo-colour N          set TV colour saturation (0-100) [50]\n"
+"  -vo-hue N             set TV hue control (-179 to +180) [0]\n"
 
 "\n Audio:\n"
 "  -ao MODULE            audio module (-ao help for list)\n"
@@ -2896,6 +2911,10 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_bool(f, all, "invert-text", private_cfg.vo.vdg_inverted_text, 0);
+	xroar_cfg_print_int(f, all, "vo-brightness", private_cfg.vo.brightness, 50);
+	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);
+	xroar_cfg_print_int(f, all, "vo-colour", private_cfg.vo.saturation, 50);
+	xroar_cfg_print_int(f, all, "vo-hue", private_cfg.vo.hue, 0);
 	fputs("\n", f);
 
 	fputs("# Audio\n", f);
