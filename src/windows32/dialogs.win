@@ -4,11 +4,11 @@ pad=5 id=ABOUT dialog About XRoar
 
 table
 tr td align=centre width=194 text " to_str(PACKAGE_TEXT) "
-tr td align=centre text Copyright \xa9 " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>
+tr td align=centre width=194 text Copyright © " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>
 tr td align=centre text https://www.6809.org.uk/xroar/
 end table
 
-pad_top=5 xalign=right hexpand=0 width=29 id=IDOK button &Close
+pad_top=5 xalign=right id=IDOK button &Close
 
 # TV controls dialog
 
@@ -17,7 +17,7 @@ pad=5 id=TV_CONTROLS dialog XRoar TV Controls
 h1 General
 
 table
-tr td width=40 text Brightness
+tr td text Brightness
    td width=47 id=BRIGHTNESS spinbox
 tr td text Contrast
    td id=CONTRAST spinbox
@@ -27,4 +27,55 @@ tr td text Hue
    td id=HUE spinbox
 end table
 
-pad_top=5 xalign=right hexpand=0 width=29 id=IDOK button &Close
+pad_top=5 xalign=right id=IDOK button &Close
+
+# Tape control dialog
+
+pad=5 id=TAPE_CONTROLS dialog XRoar Tape Control
+
+h1 Input
+
+id=INPUT_FILENAME style=path hexpand=1 text
+pad_top=2 pad_bottom=4 width=100 height=56 id=INPUT_PROGRAMLIST listview
+
+table
+tr td width=112 id=INPUT_POSITION scrollbar
+   td id=INPUT_POSITION width=20 pad_top=2 pad_left=2 text 00:00
+end table
+
+table
+tr td id=TAPE_FAST checkbox Fast loading
+   td id=TAPE_PAD_AUTO checkbox CAS padding
+   td id=TAPE_REWRITE checkbox Rewrite
+end table
+
+pad=1 nop
+
+table
+tr td id=INPUT_PLAY button Play
+   td id=INPUT_PAUSE button Pause
+   td id=INPUT_REWIND button Rewind
+   td id=INPUT_EJECT button Eject
+   td id=INPUT_INSERT button Insert…
+end table
+
+pad=2 nop
+
+h1 Output
+
+id=OUTPUT_FILENAME style=path hexpand=1 text
+
+table
+tr td width=112 id=OUTPUT_POSITION scrollbar
+   td id=OUTPUT_POSITION width=20 pad_top=2 pad_left=2 text 00:00
+end table
+
+table
+tr td id=OUTPUT_RECORD button Record
+   td id=OUTPUT_PAUSE button Pause
+   td id=OUTPUT_REWIND button Rewind
+   td id=OUTPUT_EJECT button Eject
+   td id=OUTPUT_INSERT button Insert…
+end table
+
+pad_top=5 xalign=right id=IDOK button &Close

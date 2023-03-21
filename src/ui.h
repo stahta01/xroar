@@ -53,6 +53,7 @@ enum ui_tag {
 	ui_tag_machine,
 	ui_tag_cartridge,
 	// Tape
+	ui_tag_tape_control,  // tape control dialog, if supported
 	ui_tag_tape_flags,
 	ui_tag_tape_input_filename,  // .data = filename
 	ui_tag_tape_output_filename,  // .data = filename
@@ -70,7 +71,7 @@ enum ui_tag {
 	ui_tag_tv_input,
 	ui_tag_fullscreen,
 	ui_tag_vdg_inverse,
-	ui_tag_tv_controls,
+	ui_tag_tv_controls,  // tv control dialog, if supported
 	ui_tag_brightness,
 	ui_tag_contrast,
 	ui_tag_saturation,

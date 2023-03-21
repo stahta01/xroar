@@ -50,6 +50,7 @@
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
 #include "windows32/dialogs.h"
+#include "windows32/tapecontrol.h"
 #include "windows32/video_options.h"
 
 #define TAG(t) (((t) & 0x7f) << 8)
@@ -102,6 +103,7 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	setup_hardware_menu(uisdl2);
 	setup_tool_menu();
 	setup_help_menu();
+	windows32_tc_create_window(uisdl2);
 	windows32_vo_create_window(uisdl2);
 }
 
@@ -248,6 +250,8 @@ static void setup_tool_menu(void) {
 
 	tool_menu = CreatePopupMenu();
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "Keyboard Translation");
+
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "Tape Control");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
 }
@@ -397,6 +401,9 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Cassettes:
+	case ui_tag_tape_control:
+		windows32_tc_show_window(global_uisdl2);
+		break;
 	case ui_tag_tape_flags:
 		tape_select_state(xroar_tape_interface, tape_get_state(xroar_tape_interface) ^ tag_value);
 		break;
@@ -494,16 +501,26 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 
 	// Tape
 
+	case ui_tag_tape_control:
+		windows32_tc_show_window(global_uisdl2);
+		break;
+
 	case ui_tag_tape_flags:
 		for (int i = 0; i < 4; i++) {
 			int f = value & (1 << i);
 			int t = TAGV(tag, 1 << i);
 			CheckMenuItem(top_menu, t, MF_BYCOMMAND | (f ? MF_CHECKED : MF_UNCHECKED));
 		}
+		windows32_tc_update_tape_state(uisdl2, value);
+		break;
+
+	case ui_tag_tape_input_filename:
+		windows32_tc_update_input_filename(uisdl2, (const char *)data);
 		break;
 
 	case ui_tag_tape_playing:
 		CheckMenuItem(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		windows32_tc_update_tape_playing(uisdl2, value);
 		break;
 
 	// Disk

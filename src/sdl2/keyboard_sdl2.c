@@ -278,6 +278,10 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 		xroar_insert_output_tape();
 		return;
 #endif
+
+	case 't':
+		DELEGATE_CALL(uisdl2->public.update_state, ui_tag_tape_control, 0, NULL);
+		return;
 	case 'v':
 		if (shift) {
 			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_tv_controls, 0, NULL);
