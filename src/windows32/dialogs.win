@@ -1,25 +1,30 @@
-id=ABOUT dialog About XRoar
+# About dialog
+
+pad=5 id=ABOUT dialog About XRoar
 
 table
-tr height=7 nop
-tr align=centre width=194 height=18 text " to_str(PACKAGE_TEXT) "
-tr align=centre height=18 text Copyright \xa9 " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>
-tr align=centre height=18 text https://www.6809.org.uk/xroar/
-tr xalign=right width=29 pad_right=7 hexpand=0 id=IDOK button &Close
-tr height=7 nop
+tr td align=centre width=194 text " to_str(PACKAGE_TEXT) "
+tr td align=centre text Copyright \xa9 " to_str(PACKAGE_YEAR) " Ciaran Anscomb <xroar@6809.org.uk>
+tr td align=centre text https://www.6809.org.uk/xroar/
+end table
 
-id=TV_CONTROLS dialog XRoar TV Controls
+pad_top=5 xalign=right hexpand=0 width=29 id=IDOK button &Close
+
+# TV controls dialog
+
+pad=5 id=TV_CONTROLS dialog XRoar TV Controls
 
 h1 General
 
 table
-tr width=40 text Brightness
-   width=47 id=BRIGHTNESS spinbox
-tr text Contrast
-   id=CONTRAST spinbox
-tr text Colour
-   id=SATURATION spinbox
-tr text Hue
-   id=HUE spinbox
+tr td width=40 text Brightness
+   td width=47 id=BRIGHTNESS spinbox
+tr td text Contrast
+   td id=CONTRAST spinbox
+tr td text Colour
+   td id=SATURATION spinbox
+tr td text Hue
+   td id=HUE spinbox
+end table
 
-width=29 id=IDOK button &Close
+pad_top=5 xalign=right hexpand=0 width=29 id=IDOK button &Close

@@ -16,6 +16,7 @@ require v5.10;
 use Getopt::Long;
 use Pod::Usage;
 use Scalar::Util qw(looks_like_number);
+use Text::Iconv;
 
 Getopt::Long::Configure("gnu_getopt", "pass_through");
 
@@ -24,41 +25,36 @@ if ($ENV{'PATH'} =~ /^(.*)$/) {
         $ENV{'PATH'} = $1;
 }
 
+my $line_height = 12;
 my $macro;
 my $want_htmlish = 0;
 my $want_headers = 0;
 my $want_rc = 0;
+my $debug = 0;
+my $verbose = 0;
 
 GetOptions(
 		"macro|m=s" => \$macro,
 		"htmlish!" => \$want_htmlish,
 		"headers|h!" => \$want_headers,
 		"rc|r!" => \$want_rc,
+		"debug!" => \$debug,
+		"verbose|v!" => \$verbose,
 
 		"help|?" => sub { pod2usage(-verbose => 2); },
 	) or exit(2);
 
 my $filename = shift @ARGV or die "specify input file\n";
 
+my $iconv = Text::Iconv->new("UTF-8", "WINDOWS-1252");
+
 if (!$want_htmlish && !$want_headers && !$want_rc) {
 	$want_headers = 1;
 	$want_rc = 1;
 }
 
-# XXX this is neither complete, nor implemented.  Notes for self:
-#
-# An element has:
-#
-#   A size.  This is either specified, a default (eg line_height for certain
-#   elements), or calculated from the sum of child elements box sizes.  In that
-#   order.  Special cases are 'tr' whose height grows or becomes equal to
-#   enclosing grid, and 'td' whose width grows or becomes equal to enclosing
-#   grid.
-#
-#   Padding.  Child elements are offset by this amount.  That's it.  It's not
-#   involved in sizing calculation.
-
 my $line;
+my $line_number = 0;
 
 my %can_contain = (
 	top => {
@@ -88,7 +84,9 @@ my %class = (
 	h3 => '*heading',
 
 	button => '*content',
+	checkbox => '*content',
 	combobox => '*content',
+	listview => '*content',
 	scrollbar => '*content',
 	spinbox => '*content',
 	text => '*content',
@@ -96,23 +94,27 @@ my %class = (
 );
 
 my %text_to_eol = (
-	'dialog' => 1,
 	'*heading' => 1,
-	'text' => 1,
-	'button' => 1,
+	button => 1,
+	checkbox => 1,
+	dialog => 1,
+	text => 1,
+);
+
+my %base_width = (
+	checkbox => 4,
 );
 
 my %height = (
-	h1 => 12,
-	h2 => 12,
-	h3 => 12,
-	'*content' => 12,
+	'*heading' => $line_height,
+	'*content' => $line_height,
 );
 
 my %hexpand = (
-	nop => 1,
 	'*heading' => 1,
 	'*content' => 1,
+	button => 0,
+	scrollbar => 0,
 );
 
 my $attrs = {};
@@ -147,12 +149,42 @@ open($in, "<", $filename) or die "Failed to open $filename: $!\n";
 
 WORD: while (my $tag = word($in)) {
 	if ($tag =~ /^(\w+)=(.*)$/) {
-		$attrs->{$1} = $2;
+		if ($1 eq 'pad') {
+			$attrs->{pad_left} //= $2;
+			$attrs->{pad_right} //= $2;
+			$attrs->{pad_top} //= $2;
+			$attrs->{pad_bottom} //= $2;
+		} else {
+			$attrs->{$1} = $2;
+		}
 		next;
 	}
+	if ($tag eq 'end') {
+		my @old_tagstack = @tagstack;
+		$tag = word($in) or last WORD;
+		my $e;
+		do {
+			$e = pop @tagstack;
+		} while (defined $e && $e->{tag} ne $tag);
+		if (!defined $e) {
+			print STDERR "WARNING can't end '$tag'\n" if ($verbose);
+			@tagstack = @old_tagstack;
+			next WORD;
+		}
+		$parent = $e->{parent};
+		next WORD;
+	}
+
+	# predeclare an id
+	if ($tag eq 'id') {
+		my $ntag = word();
+		$attrs->{id} = add_id($ntag, $attrs->{id});
+	}
+
 	my $class = $class{$tag} // $tag;
 	my $elem = {
 		tag => $tag,
+		lno => $line_number,
 		attrs => $attrs,
 		children => [],
 	};
@@ -171,27 +203,20 @@ WORD: while (my $tag = word($in)) {
 	} elsif (exists $hexpand{$class}) {
 		$attrs->{hexpand} //= $hexpand{$class};
 	}
-	if (exists $attrs->{id} && !looks_like_number($attrs->{id})) {
-		my $id = $attrs->{id};
-		my $is_resource = 0;
-		if ($tag eq 'dialog') {
-			$id = "IDD_DLG_$id";
-			$is_resource = 1;
-		} elsif ($tag eq 'spinbox') {
-			$attrs->{editid} = "IDC_EDIT_$id";
-			add_control_id($attrs->{editid});
-			$id = "IDC_SPIN_$id";
-		} elsif ($tag eq 'combobox') {
-			$id = "IDC_CB_$id";
-		} elsif ($tag eq 'scrollbox') {
-			$id = "IDC_SCR_$id";
+	if (exists $attrs->{id} && !looks_like_number($attrs->{id}) && !exists $control_id_by_name{$attrs->{id}}) {
+		if ($tag eq 'spinbox') {
+			$attrs->{editid} = add_id('edit', $attrs->{id});
 		}
-		$attrs->{id} = $id;
-		if ($is_resource) {
-			add_resource_id($id);
-		} else {
-			add_control_id($id);
+		$attrs->{id} = add_id($tag, $attrs->{id});
+	}
+	if (!exists $attrs->{width} && exists $elem->{text}) {
+		$attrs->{width} = text_width($elem->{text}) + 2;
+		if (exists $base_width{$tag}) {
+			$attrs->{width} += $base_width{$tag};
 		}
+	}
+	if (!exists $attrs->{height} && exists $elem->{text}) {
+		$attrs->{height} = $line_height;
 	}
 	$attrs = {};
 	my @old_tagstack = @tagstack;
@@ -199,7 +224,7 @@ WORD: while (my $tag = word($in)) {
 	while (!exists $can_contain{$parent->{tag}}->{$class}) {
 		$parent = pop @tagstack;
 		if (!defined $parent) {
-			#print "WARNING '$tag' skipped\n";
+			print STDERR "WARNING '$tag' skipped\n" if ($verbose);
 			@tagstack = @old_tagstack;
 			$parent = $old_parent;
 			next WORD;
@@ -252,15 +277,17 @@ exit 0;
 
 sub word {
 	my $in = shift;
-	do {
+	WORD: do {
 		if (defined $line && $line =~ /^\s*(\S+)(\s*(.*))$/) {
 			$line = $3;
 			return $1;
 		}
-		$line = <$in>;
+		do {
+			$line = <$in>;
+			$line_number++;
+		} while (defined $line && $line =~ /^\s*(#.*)$/);
 		return undef if (!defined $line);
 		chomp $line;
-		next if ($line =~ /^\s*(#.*)$/);
 	} while (defined $line);
 	return undef;
 }
@@ -269,8 +296,237 @@ sub line {
 	my $in = shift;
 	my $ret = $line;
 	undef $line;
-	return $ret;
+	return $iconv->convert($ret);
 }
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# A grid (table) sets up new tracking arrays colwidths and colheights.
+# Children are expected to be rows (tr).
+
+sub layout_grid {
+	my ($elem) = @_;
+
+	$elem->{attrs} //= {};
+	my $eattrs = $elem->{attrs};
+	my $parent = $elem->{parent};
+	my $pattrs = $parent->{attrs};
+
+	$elem->{colwidths} //= [];
+	$elem->{colheights} //= [];
+	my $colwidths = $elem->{colwidths};
+	my $colheights = $elem->{colheights};
+
+	my $eresized = 0;
+	my $resized;
+	do {
+		my $ewidth = 0;
+		my $eheight = 0;
+		$resized = 0;
+		my $i = 0;
+		for my $child (@{$elem->{children}}) {
+			$child->{colwidths} = $colwidths;
+			$child->{colwidth} = $elem->{colwidth};
+			$colheights->[$i] //= 0;
+			$child->{colheight} = $colheights->[$i];
+			$resized |= layout($child);
+			my $cattrs = $child->{attrs};
+			my $cwidth = elem_box_width($child);
+			my $cheight = elem_box_height($child);
+			$ewidth = $cwidth if ($cwidth > $ewidth);
+			if ($cheight > $colheights->[$i]) {
+				DEBUG($elem, "child $i height: $cheight > $colheights->[$i]\n");
+				$colheights->[$i] = $cheight;
+				$resized = 1;
+			}
+			$eheight += $colheights->[$i];
+			$i++;
+		}
+		if ($ewidth > ($eattrs->{width}//0)) {
+			DEBUG($elem, "width: $ewidth > $eattrs->{width}\n");
+			$eattrs->{width} = $ewidth;
+			$resized = 1;
+		}
+		if ($eheight > ($eattrs->{height}//0)) {
+			DEBUG($elem, "height: $eheight > $eattrs->{height}\n");
+			$eattrs->{height} = $eheight;
+			$resized = 1;
+		}
+		$eresized |= $resized;
+	} while ($resized);
+
+	return $eresized;
+}
+
+# A row (tr) organises its children horizontally.  It inherits a colwidth table
+# from its parent.  Height is the maximum height of any child.  Width is the
+# sum of the colwidths.
+
+sub layout_row {
+	my ($elem) = @_;
+
+	$elem->{attrs} //= {};
+	my $eattrs = $elem->{attrs};
+	my $parent = $elem->{parent};
+	my $pattrs = $parent->{attrs};
+
+	$elem->{colwidths} //= [];
+	my $colwidths = $elem->{colwidths};
+
+	my $eresized = 0;
+	my $ewidth;
+	my $resized;
+	do {
+		$ewidth = 0;
+		my $eheight = 0;
+		$resized = 0;
+		my $i = 0;
+		for my $child (@{$elem->{children}}) {
+			$colwidths->[$i] //= 0;
+			$child->{colwidth} = $colwidths->[$i];
+			$child->{colheight} = $elem->{colheight};
+			$resized |= layout($child);
+			my $cattrs = $child->{attrs};
+			my $cwidth = elem_box_width($child);
+			my $cheight = elem_box_height($child);
+			if ($cwidth > $colwidths->[$i]) {
+				DEBUG($elem, "child $i width: $cwidth > $colwidths->[$i]\n");
+				$colwidths->[$i] = $cwidth;
+				$resized = 1;
+			}
+			$ewidth += $colwidths->[$i];
+			$eheight = $cheight if ($cheight > $eheight);
+			$i++;
+		}
+		if ($ewidth > ($eattrs->{width}//0)) {
+			DEBUG($elem, "width: $ewidth > $eattrs->{width}\n");
+			$eattrs->{width} = $ewidth;
+			$resized = 1;
+		}
+		if ($eheight > ($eattrs->{height}//0)) {
+			DEBUG($elem, "height: $eheight > $eattrs->{height}\n");
+			$eattrs->{height} = $eheight;
+			$resized = 1;
+		}
+
+		if ($eattrs->{width} > $ewidth) {
+			my $extra = $eattrs->{width} - $ewidth;
+			my $i = 0;
+			CHILD: for my $child (@{$elem->{children}}) {
+				my $cattrs = $child->{attrs};
+				if (exists $cattrs->{hexpand} && $cattrs->{hexpand}) {
+					$cattrs->{width} += $extra;
+					$resized = 1;
+					last CHILD;
+				}
+			}
+		}
+
+		$eresized |= $resized;
+	} while ($resized);
+
+	my $i = 0;
+	for my $child (@{$elem->{children}}) {
+		my $cattrs = $child->{attrs};
+		my $c_hpadding = ($cattrs->{pad_left}//0) + ($cattrs->{pad_right}//0);
+		my $c_vpadding = ($cattrs->{pad_top}//0) + ($cattrs->{pad_bottom}//0);
+		$cattrs->{width} = $colwidths->[$i] - $c_hpadding;
+		$cattrs->{height} = $elem->{colheight} - $c_vpadding;
+		$i++;
+	}
+
+	return $eresized;
+}
+
+# A column (td) organises its children vertically.  A colheight reference will
+# have been set by its parent (tr).  Height is the sum of all children's
+# heights.  Width is specified or the maximum width of any child.  Colheight is
+# increased if height is greater.
+
+sub layout_col {
+	my ($elem) = @_;
+
+	$elem->{attrs} //= {};
+	my $eattrs = $elem->{attrs};
+	my $parent = $elem->{parent};
+	my $pattrs = $parent->{attrs};
+
+	my $eresized = 0;
+	my $resized;
+	do {
+		my $ewidth = 0;
+		my $eheight = 0;
+		$resized = 0;
+		for my $child (@{$elem->{children}}) {
+			$child->{colheight} = $elem->{colheight};
+			$resized |= layout($child);
+			my $cattrs = $child->{attrs};
+			my $cwidth = elem_box_width($child);
+			my $cheight = elem_box_height($child);
+			$ewidth = $cwidth if ($cwidth > $ewidth);
+			$eheight += $cheight;
+		}
+
+		if ($ewidth > ($eattrs->{width}//0)) {
+			DEBUG($elem, "width: $ewidth > $eattrs->{width}\n");
+			$eattrs->{width} = $ewidth;
+			$resized = 1;
+		}
+		if ($eheight > ($eattrs->{height}//0)) {
+			DEBUG($elem, "height: $eheight > $eattrs->{height}\n");
+			$eattrs->{height} = $eheight;
+			$resized = 1;
+		}
+		$eresized |= $resized;
+	} while ($resized);
+
+	return $eresized;
+}
+
+sub layout {
+	my ($elem) = @_;
+
+	$elem->{attrs} //= {};
+	my $eattrs = $elem->{attrs};
+	my $parent = $elem->{parent};
+	my $pattrs = $parent->{attrs};
+
+	$pattrs->{width} //= 0;
+	$pattrs->{height} //= 0;
+	$eattrs->{pad_left} //= 0;
+	$eattrs->{pad_right} //= 0;
+	$eattrs->{pad_top} //= 0;
+	$eattrs->{pad_bottom} //= 0;
+
+	my $hpadding = $eattrs->{pad_left} + $eattrs->{pad_right};
+	my $vpadding = $eattrs->{pad_top} + $eattrs->{pad_bottom};
+
+	if ($eattrs->{hexpand}//0) {
+		if (defined $elem->{colwidth}) {
+			$eattrs->{width} = max($eattrs->{width}, $elem->{colwidth} - $hpadding, 0);
+		} else {
+			$eattrs->{width} = max($eattrs->{width}, $pattrs->{width} - $hpadding, 0);
+		}
+	}
+	if ($eattrs->{vexpand}//0) {
+		if (exists $elem->{colheight}) {
+			$eattrs->{height} = max($eattrs->{height}, $elem->{colheight} - $vpadding, 0);
+		} else {
+			$eattrs->{height} = max($eattrs->{height}, $pattrs->{height} - $vpadding, 0);
+		}
+	}
+
+	my $tag = $elem->{tag};
+	if ($tag eq 'table') {
+		return layout_grid(@_);
+	} elsif ($tag eq 'tr') {
+		return layout_row(@_);
+	} else {
+		return layout_col(@_);
+	}
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 sub max {
 	my $max;
@@ -300,171 +556,86 @@ sub add_control_id {
 	$control_id_by_number{$control_idnumber} = $id;
 }
 
-# A row (tr) organises its children horizontally.  It inherits a colwidth table
-# from its parent.  Height is the maximum height of any child.  Width is the
-# sum of the colwidths.
+sub add_id {
+	my ($tag, $id) = @_;
 
-sub layout_row {
-	my ($elem) = @_;
-
-	$elem->{parent} //= {};
-	my $parent = $elem->{parent};
-	$parent->{attrs} //= {};
-	my $pattrs = $parent->{attrs};
-	my $eattrs = $elem->{attrs};
-
-	my $eresized = 0;
-	my $max_cheight;
-	my $total_cwidth;
-	my $colwidth = $parent->{colwidth} // [];
-	my $resized;
-	do {
-		$total_cwidth = 0;
-		$max_cheight = 0;
-		$resized = 0;
-		my $i = 0;
-		for my $child (@{$elem->{children}}) {
-			# temporarily let child know column width
-			$elem->{cwidth} = $colwidth->[$i] // 0;
-			$resized |= layout($child);
-			delete $elem->{cwidth};
-			my $cattrs = $child->{attrs};
-
-			my $cwidth = $cattrs->{width} // 0;
-			if ($cwidth > $colwidth->[$i]) {
-				$colwidth->[$i] = $cwidth;
-			}
-			$total_cwidth += $colwidth->[$i];
-
-			my $cheight = $cattrs->{height} // 0;
-			$max_cheight = max($max_cheight, $cheight, 0);
-
-			$i++;
-		}
-		if (!defined $eattrs->{width} || $total_cwidth > $eattrs->{width}) {
-			$eattrs->{width} = $total_cwidth;
-			$resized = 1;
-		}
-		if (!defined $eattrs->{height} || $max_cheight > $eattrs->{height}) {
-			$eattrs->{height} = $max_cheight;
-			$resized = 1;
-		}
-		$eresized |= $resized;
-	} while ($resized);
-
-	return $eresized;
-}
-
-# Column is the normal layout element.  Children are arranged vertically.
-# Width is the maximum width of any child.  If hexpand attribute set, minimum
-# width is parent's width.  Height is sum of all children's heights.  No need
-# to maintain a colheights array.
-
-sub layout_column {
-	my ($elem) = @_;
-
-	$elem->{parent} //= {};
-	my $parent = $elem->{parent};
-	$parent->{attrs} //= {};
-	my $pattrs = $parent->{attrs};
-	my $eattrs = $elem->{attrs};
-
-	my $ewidth = 0;
-	if (exists $eattrs->{hexpand} && $eattrs->{hexpand}) {
-		$ewidth = $parent->{cwidth} // $pattrs->{width} // 0;
+	if ($tag eq 'button' || $tag eq 'checkbox') {
+		$id = "IDC_BN_$id";
+	} elsif ($tag eq 'combobox') {
+		$id = "IDC_CB_$id";
+	} elsif ($tag eq 'dialog') {
+		$id = "IDD_DLG_$id";
+	} elsif ($tag eq 'edit') {
+		$id = "IDC_EDIT_$id";
+	} elsif ($tag eq 'text') {
+		$id = "IDC_STM_$id";
+	} elsif ($tag eq 'listview') {
+		$id = "IDC_LVS_$id";
+	} elsif ($tag eq 'scrollbar') {
+		$id = "IDC_SBM_$id";
+	} elsif ($tag eq 'spinbox') {
+		$id = "IDC_SPIN_$id";
 	}
-	if (defined $eattrs->{width} && $eattrs->{width} > $ewidth) {
-		$ewidth = $eattrs->{width};
-	}
-	# record so children can see parent width
-	$eattrs->{width} = $ewidth;
 
-	my $eresized = 0;
-	my $max_cwidth;
-	my $total_cheight;
-	my $resized;
-	do {
-		$max_cwidth = 0;
-		$total_cheight = 0;
-		$resized = 0;
-		my $i = 0;
-		for my $child (@{$elem->{children}}) {
-			$resized |= layout($child);
-			my $cattrs = $child->{attrs};
-			my $cheight = $cattrs->{height} // 0;
-			my $cwidth = $cattrs->{width} // 0;
-			if ($cwidth > $max_cwidth) {
-				$max_cwidth = $cwidth;
-			}
-			$total_cheight += $cheight;
-			$i++;
-		}
-		if (!defined $eattrs->{height} || $total_cheight > $eattrs->{height}) {
-			$eattrs->{height} = $total_cheight;
-			$resized = 1;
-		}
-		if (!defined $eattrs->{width} || $max_cwidth > $eattrs->{width}) {
-			$eattrs->{width} = $max_cwidth;
-			$resized = 1;
-		}
-		$eresized |= $resized;
-	} while ($resized);
+	my $is_resource = 0;
+	$is_resource = 1 if ($tag eq 'dialog');
 
-	return $eresized;
-}
-
-sub layout_grid {
-	my ($elem) = @_;
-
-	my @colwidth = ();
-	$elem->{colwidth} = \@colwidth;
-
-	my $eresized = 0;
-	my $eheight;
-	my $ewidth;
-	my $resized;
-	do {
-		$eheight = 0;
-		$resized = 0;
-		my $i = 0;
-		for my $child (@{$elem->{children}}) {
-			my $ctag = $child->{tag};
-			$resized |= layout($child);
-			my $cattrs = $child->{attrs};
-			my $cwidth = $cattrs->{width} // 0;
-			my $cheight = $cattrs->{height} // 0;
-			$cattrs->{width} = $cwidth;
-			$cattrs->{height} = $cheight;
-			$eheight += $cheight;
-			$i++;
-		}
-		$ewidth = 0;
-		for (@colwidth) {
-			$ewidth += $_ // 0;
-		}
-		$eresized |= $resized;
-	} while ($resized);
-	if (!defined $elem->{attrs}->{height} || $elem->{attrs}->{height} < $eheight) {
-		$elem->{attrs}->{height} = $eheight;
-		$resized = 1;
-	}
-	if (!defined $elem->{attrs}->{width} || $elem->{attrs}->{width} < $ewidth) {
-		$elem->{attrs}->{width} = $ewidth;
-		$resized = 1;
-	}
-	return $eresized;
-}
-
-sub layout {
-	my ($elem) = @_;
-	my $tag = $elem->{tag};
-	if ($tag eq 'table') {
-		return layout_grid(@_);
-	} elsif ($tag eq 'tr') {
-		return layout_row(@_);
+	if ($is_resource) {
+		add_resource_id($id);
 	} else {
-		return layout_column(@_);
+		add_control_id($id);
 	}
+
+	return $id;
+}
+
+sub text_width {
+	my ($text) = @_;
+	$text =~ s/\\x.././g;
+	return length($text) * 4;
+}
+
+sub elem_width {
+	my ($elem) = @_;
+	my $eattrs = $elem->{attrs} // {};
+	my $ewidth = $eattrs->{width} // 0;
+	return $ewidth;
+}
+
+sub elem_height {
+	my ($elem) = @_;
+	my $eattrs = $elem->{attrs} // {};
+	my $eheight = $eattrs->{height} // 0;
+	return $eheight;
+}
+
+sub elem_box_width {
+	my ($elem) = @_;
+	my $eattrs = $elem->{attrs} // {};
+	my $ewidth = $eattrs->{width} // 0;
+	my $pad_left = $eattrs->{pad_left} // 0;
+	my $pad_right = $eattrs->{pad_right} // 0;
+	return $ewidth + $pad_left + $pad_right;
+}
+
+sub elem_box_height {
+	my ($elem) = @_;
+	my $eattrs = $elem->{attrs} // {};
+	my $eheight = $eattrs->{height} // 0;
+	my $pad_top = $eattrs->{pad_top} // 0;
+	my $pad_bottom = $eattrs->{pad_bottom} // 0;
+	return $eheight + $pad_top + $pad_bottom;
+}
+
+sub FDEBUG {
+	my $elem = shift;
+	print STDERR "$elem->{tag}: $elem->{lno}: ";
+	printf STDERR @_;
+}
+
+sub DEBUG {
+	return if (!$debug);
+	FDEBUG(@_);
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -511,78 +682,98 @@ sub dump_rc_ids {
 sub dump_rc {
 	my ($elem, $x, $y) = @_;
 
-	my $dummyx = 0;
-	my $dummyy = 0;
-	$x //= \$dummyx;
-	$y //= \$dummyy;
+	$x //= 0;
+	$y //= 0;
 
+	my $eattrs = $elem->{attrs};
 	my $tag = $elem->{tag};
-	my $attrs = $elem->{attrs};
 	my $text = $elem->{text} // "";
-	my $childrem = $elem->{children};
-	my $id = $attrs->{id};
-	my $editid = $attrs->{editid} // "";
-	my $w = $attrs->{width} // 0;
-	my $h = $attrs->{height} // 0;
+	my $id = $eattrs->{id} // "IDC_STATIC";
 
-	my $padleft = $attrs->{pad_left} // 0;
-	my $padright = $attrs->{pad_right} // 0;
+	my $w = elem_width($elem);
+	my $h = elem_height($elem);
+	my $box_width = elem_box_width($elem);
+	my $box_height = elem_box_height($elem);
 
-	my $xpos = $$x + $padleft;
-	if (exists $attrs->{xalign}) {
-		my $parent = $elem->{parent};
-		#$parent = $parent->{parent} if ($parent->{tag} eq 'tr');
-		if ($attrs->{xalign} eq 'right') {
-			$xpos = $$x + $parent->{attrs}->{width} - $w - $padright;
+	my $pad_left = $eattrs->{pad_left} // 0;
+	my $pad_right = $eattrs->{pad_right} // 0;
+	my $pad_top = $eattrs->{pad_top} // 0;
+	my $pad_bottom = $eattrs->{pad_bottom} // 0;
+
+	my $px = $x + $pad_left;
+	my $py = $y + $pad_top;
+
+	my $parent = $elem->{parent} // {};
+	my $parent_width = elem_width($parent);
+	my $parent_height = elem_height($parent);
+
+	if (exists $eattrs->{xalign}) {
+		if ($eattrs->{xalign} eq 'right') {
+			$px = $x + $parent_width - $box_width;
+		} elsif ($eattrs->{xalign} eq 'centre') {
+			$px = $x + int(($parent_width - $box_width) / 2);
 		}
 	}
 
-	if ($tag eq 'dialog') {
-		print "$id DIALOGEX 0, 0, $attrs->{width}, $attrs->{height}\n";
+	if (exists $eattrs->{yalign}) {
+		if ($eattrs->{yalign} eq 'bottom') {
+			$py = $y + $parent_height - $box_height;
+		} elsif ($eattrs->{yalign} eq 'centre') {
+			$py = $y + int(($parent_height - $box_height) / 2);
+		}
+	}
+
+	if ($tag eq 'button') {
+		print "   CONTROL \"$text\", $id, \"BUTTON\", WS_CHILD | WS_VISIBLE | WS_TABSTOP, $px, $py, $w, $h\n";
+	} elsif ($tag eq 'checkbox') {
+		print "   CHECKBOX \"$text\", $id, $px, $py, $w, $h\n";
+	} elsif ($tag eq 'combobox') {
+		print "   COMBOBOX $id, $px, $py, $w, 110, WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWN\n";
+	} elsif ($tag eq 'dialog') {
+		print "$id DIALOGEX 0, 0, $box_width, $box_height\n";
 		print "STYLE DS_SETFONT | DS_CENTERMOUSE | WS_POPUP | WS_CAPTION | WS_SYSMENU\n";
 		print "CAPTION \"$text\"\n";
 		print "LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL\n";
 		print "FONT 9, \"Arial\"\n";
 		print "BEGIN\n";
-		$$x = 0;
-		$$y = 0;
-	} elsif ($tag eq 'text' || $tag eq 'h1') {
-		my $ctl = "LTEXT";
-		if (exists $attrs->{align}) {
-			$ctl = "CTEXT" if ($attrs->{align} eq 'centre');
-			$ctl = "RTEXT" if ($attrs->{align} eq 'right');
-		}
-		print "   $ctl \"$text\", IDC_STATIC, $xpos, $$y, $w, $h\n";
-	} elsif ($tag eq 'spinbox') {
-		print "   CONTROL \"0\", $editid, \"EDIT\", WS_BORDER | WS_CHILD | WS_VISIBLE | ES_NUMBER, $xpos, $$y, $w, $h\n";
-		print "   CONTROL \"\", $id, UPDOWN_CLASS, WS_CHILD | WS_VISIBLE | UDS_ARROWKEYS | UDS_SETBUDDYINT | UDS_AUTOBUDDY | UDS_ALIGNRIGHT, 0, 0, 0, 0\n";
-	} elsif ($tag eq 'combobox') {
-		print "   COMBOBOX $id, $xpos, $$y, $w, 110, WS_CHILD | WS_VISIBLE | CBS_DROPDOWN\n";
+		$x = $pad_left;
+		$y = $pad_top;
+	} elsif ($tag eq 'listview') {
+		print "   CONTROL \"\", $id, WC_LISTVIEW, WS_CHILD | LVS_REPORT, $px, $py, $w, $h\n";
 	} elsif ($tag eq 'scrollbar') {
 		my $style = "SBS_HORZ";
-		if (exists $attrs->{align}) {
-			$style = "SBS_VERT" if ($attrs->{align} eq 'vertical');
+		if (exists $eattrs->{align}) {
+			$style = "SBS_VERT" if ($eattrs->{align} eq 'vertical');
 		}
-		print "   SCROLLBAR $id, $xpos, $$y, $w, $h, $style\n";
-	} elsif ($tag eq 'button') {
-		print "   CONTROL \"$text\", $id, \"BUTTON\", WS_CHILD | WS_VISIBLE | WS_TABSTOP, $xpos, $$y, $w, $h\n";
+		print "   SCROLLBAR $id, $px, $py, $w, $h, $style\n";
+	} elsif ($tag eq 'spinbox') {
+		my $editid = $eattrs->{editid} // "";
+		print "   CONTROL \"0\", $editid, \"EDIT\", WS_BORDER | WS_CHILD | WS_VISIBLE | ES_NUMBER, $px, $py, $w, $h\n";
+		print "   CONTROL \"\", $id, UPDOWN_CLASS, WS_CHILD | WS_VISIBLE | UDS_ARROWKEYS | UDS_SETBUDDYINT | UDS_NOTHOUSANDS | UDS_AUTOBUDDY | UDS_ALIGNRIGHT, 0, 0, 0, 0\n";
+	} elsif ($tag eq 'text' || $tag eq 'h1') {
+		my $ctl = "LTEXT";
+		my $style = "";
+		if (exists $eattrs->{align}) {
+			$ctl = "CTEXT" if ($eattrs->{align} eq 'centre');
+			$ctl = "RTEXT" if ($eattrs->{align} eq 'right');
+		}
+		if (exists $eattrs->{style}) {
+			$style = ", DT_PATH_ELLIPSIS | DT_SINGLELINE" if ($eattrs->{style} eq 'path');
+		}
+		print "   $ctl \"$text\", $id, $px, $py, $w, $h$style\n";
 	}
 
-	my $orig_x = $$x;
-	my $orig_y = $$y;
 	if (@{$elem->{children}}) {
 		for my $child (@{$elem->{children}}) {
+			my $cattrs = $child->{attrs};
 			dump_rc($child, $x, $y);
 			if ($tag eq 'tr') {
-				$$x += $child->{attrs}->{width} // 0;
+				$x += elem_box_width($child);
 			} else {
-				$$x = $orig_x;
-				$$y += $child->{attrs}->{height} // 0;
+				$y += elem_box_height($child);
 			}
 		}
 	}
-	$$x = $orig_x;
-	$$y = $orig_y;
 
 	if ($tag eq 'dialog') {
 		print "END\n\n";
@@ -690,6 +881,10 @@ Box alignment within its parent.
 Either a number or the base name of a macro to define.  Note spinboxes define
 two macros: one for the updown control, one for a "buddy" edit control.
 
+=item B<hexpand>=I<boolean>
+
+Flag that this element should expand to fit available space horizontally.
+
 =back
 
 =head1 LICENCE
@@ -703,9 +898,9 @@ WARRANTY, to the extent permitted by law.
 
 =head1 BUGS
 
-Probably full of them.  Also, definitely doesn't even implement its own
-box model properly.  It's just a convenience for me so I don't have to
-keep adjusting numbers in a resource file.  If you get something out of
-it, great, but I'm not suporting this!
+Probably full of them.  This is just a convenience for me so I don't have to
+keep adjusting numbers in a resource file.  It certainly doesn't feel elegantly
+written - just bashed into shape until it seemed to do the right thing.  If you
+get something out of it, great, but I'm not suporting this!
 
 =cut
