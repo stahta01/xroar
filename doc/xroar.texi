@@ -909,15 +909,14 @@ The tape used for writing is considered separate to the read tape (this is an
 emulator-friendly approach to prevent overwriting your programs, though it
 would have been possible with two cassette decks).
 
-Under Windows and Mac OS, the @clicksequence{File @click{} Cassette} menu
-contains controls to insert or rewind the input and output tapes, play/pause
-and toggle options.
+Under Mac OS, the @clicksequence{File @click{} Cassette} menu contains controls
+to insert or rewind the input and output tapes, play/pause and toggle options.
 
-In the Unix/Linux GTK+ interface, these options are available from the tape
-control dialog, which you can open with @clicksequence{Tool @click{} Tape
-control} or by pressing @kbd{@key{CTRL}+T}.  This dialog will also show you the
-programs found on a cassette and allow you to double click them to seek to the
-appropriate position.
+In the Unix/Linux GTK+ and Windows interfaces, these options are available from
+the tape control dialog, which you can open with @clicksequence{Tool @click{}
+Tape control} or by pressing @kbd{@key{CTRL}+T}.  This dialog will also show
+you the programs found on a cassette and allow you to double click them to seek
+to the appropriate position.
 
 @multitable @columnfractions .32 .64
 @item @option{-load-tape @var{file}}
@@ -983,13 +982,13 @@ virtual disk formats are supported:
 @tab Another disk image file format, used by PC-Dragon.
 @end multitable
 
-Under Windows and Mac OS, the @clicksequence{File @click{} Drive @var{X}} menus
-allow you to insert or eject disks, create new disks, or toggle the
-write-enable and write-back options.
+Under Mac OS, the @clicksequence{File @click{} Drive @var{X}} menus allow you
+to insert or eject disks, create new disks, or toggle the write-enable and
+write-back options.
 
-In the Unix/Linux GTK+ interface, these options are available from the drive
-control dialog, which you can open with @clicksequence{Tool @click{} Drive
-control} or by pressing @kbd{@key{CTRL}+D}.
+In the Unix/Linux GTK+ and Windows interfaces, these options are available from
+the drive control dialog, which you can open with @clicksequence{Tool @click{}
+Drive control} or by pressing @kbd{@key{CTRL}+D}.
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
 instead of one, so when you perform operations on Drive 1, from the CoCo's
@@ -1453,10 +1452,8 @@ strongly tied to the user interface.
 Select with @option{-ui gtk2}.
 
 This is the most full-featured user interface.  It provides extensive dynamic
-menus, and control tools for cassette and disk files.  This is the preferred
+menus, and control windows for video, cassette and disk.  This is the preferred
 interface under Linux.
-
-Only one video module is usable with this user interface: @samp{gtkgl}.
 
 @c
 
@@ -1465,11 +1462,14 @@ Only one video module is usable with this user interface: @samp{gtkgl}.
 
 Select with @option{-ui sdl}.
 
-More limited than the GTK+ interface, providing keyboard shortcuts and, in
-the Mac OS X and Windows variants, some basic menus.
+Under Windows, this interface provides menus and control tools for video,
+cassette and disk.
 
-Under Mac OS X, many operations are usable by pressing @kbd{Command}+@var{key}
-as well as the usual shortcut of @kbd{@key{CTRL}+@var{key}}.
+Under Mac OS X+, this interface provides basic menus.  Many operations are
+usable by pressing @kbd{Command}+@var{key} as well as the usual shortcut of
+@kbd{@key{CTRL}+@var{key}}.
+
+For other builds using SDL, only the keyboard shortcuts will be available.
 
 @c
 
@@ -1924,7 +1924,7 @@ A summary of commonly available keyboard shortcuts.
 @item @kbd{@key{CTRL}+[5-8]} @tab Toggle write enable on disk in drive 1--4.
 @item @kbd{@key{CTRL}+@key{SHIFT}+[5-8]} @tab Toggle write back on disk in drive 1--4.
 @item @kbd{@key{CTRL}+A} @tab Cycle through cross-colour modes (and RGB on CoCo 3).
-@item @kbd{@key{CTRL}+D} @tab Open disk control tool (GTK+ only).
+@item @kbd{@key{CTRL}+D} @tab Open disk control tool (GTK+ & Windows only).
 @item @kbd{@key{CTRL}+@key{SHIFT}+D} @tab Flush disk images.
 @item @kbd{@key{CTRL}+E} @tab Toggle cartridge on/off - reset to take effect.
 @item @kbd{@key{CTRL}+F}@*@ @ @ or @kbd{@key{F11}} @tab Toggle full screen mode.
@@ -1941,7 +1941,7 @@ A summary of commonly available keyboard shortcuts.
 @item @kbd{@key{CTRL}+R} @tab Soft reset emulated machine.
 @item @kbd{@key{CTRL}+@key{SHIFT}+R} @tab Hard reset emulated machine.
 @item @kbd{@key{CTRL}+S} @tab Save a snapshot.
-@item @kbd{@key{CTRL}+T} @tab Open the tape control tool (GTK+ only).
+@item @kbd{@key{CTRL}+T} @tab Open the tape control tool (GTK+ & Windows only).
 @item @kbd{@key{CTRL}+V} @tab Toggle trace mode.
 @item @kbd{@key{CTRL}+@key{SHIFT}+V} @tab Open TV controls window (GTK+ & Windows only).
 @item @kbd{@key{CTRL}+W} @tab Attach a virtual cassette file for writing.
