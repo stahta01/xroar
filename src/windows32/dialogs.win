@@ -1,3 +1,32 @@
+# The default way of generating Windows resource files is manual placement.
+# Well, I suppose people actually using Windows dev tools probably have GUI
+# editors and what-not, but it seems that manual placement is what it all boils
+# down to in the end.
+#
+# So because I'm not going to faff about adjusting X and Y values all the time,
+# I created this layout language.  It's almost, but not quite, entirely unlike
+# HTML.  Also, it's only exactly as featureful as it needs to be for anything
+# I've done so far, so don't expect super flexibility and DO expect bugs.
+#
+# The general syntax is: [ATTR=value]... TAG [text]
+#
+# [text] only read (to end of line) for the TAGs that need content.
+#
+# Run "tools/win2rc" with "--help" for more information.
+#
+# Strings are included in the resource file verbatim enclosed in double quotes,
+# so you can break up the string by just including your own pairs of double
+# quotes.  That's what's happening in the About dialog to reference C macros
+# defined while compiling.  Given win2rc doesn't know anything about that, you
+# can't depend on its algorithm for approximating text widths if you do that.
+#
+# NOTE: this file is assumed to be in UTF-8, win2rc will convert strings to
+# WINDOWS-1252.
+#
+# NOTE: case matters.  And "centre" is spelt correctly.
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 # About dialog
 
 pad=5 id=ABOUT dialog About XRoar
@@ -9,6 +38,8 @@ tr td align=centre text https://www.6809.org.uk/xroar/
 end table
 
 pad_top=5 xalign=right id=IDOK button &Close
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # TV controls dialog
 
@@ -28,6 +59,8 @@ tr td text Hue
 end table
 
 pad_top=5 xalign=right id=IDOK button &Close
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Tape control dialog
 
