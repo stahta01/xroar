@@ -111,6 +111,9 @@ static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 			case IDC_SPIN_HUE:
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
+
+			default:
+				break;
 			}
 		}
 		return TRUE;
@@ -125,6 +128,7 @@ static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 		default:
 			break;
 		}
+		break;
 
 	default:
 		break;
