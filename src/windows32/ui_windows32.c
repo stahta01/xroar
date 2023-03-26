@@ -125,38 +125,6 @@ static void setup_file_menu(void) {
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_load), "&Load...");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-
-	submenu = CreatePopupMenu();
-	AppendMenu(file_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cassette");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input), "Input Tape...");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_input_rewind), "Rewind Input Tape");
-	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output), "Output Tape...");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_output_rewind), "Rewind Output Tape");
-	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_tape_play_pause), "Play");
-	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_FAST), "Fast Loading");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO), "CAS padding");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tape_flags, TAPE_REWRITE), "Rewrite");
-
-	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-
-	for (int drive = 0; drive < 4; drive++) {
-		char title[9];
-		snprintf(title, sizeof(title), "Drive &%c", '1' + drive);
-		submenu = CreatePopupMenu();
-		AppendMenu(file_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, title);
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_insert, drive), "Insert Disk...");
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_new, drive), "New Disk...");
-		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_write_enable, drive), "Write Enable");
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_write_back, drive), "Write Back");
-		AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_disk_eject, drive), "Eject Disk");
-	}
-
-	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save Snapshot...");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
@@ -251,10 +219,11 @@ static void setup_tool_menu(void) {
 	HMENU tool_menu;
 
 	tool_menu = CreatePopupMenu();
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "Keyboard Translation");
 
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_drive_control), "Drive Control");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "Tape Control");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard Translation");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_drive_control), "&Drive Control");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "&Tape Control");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate Limit");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
 }
@@ -451,6 +420,12 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		xroar_set_vdg_inverted_text(1, XROAR_NEXT);
 		break;
 
+	// Audio:
+
+	case ui_tag_ratelimit:
+		xroar_set_ratelimit_latch(1, XROAR_NEXT);
+		break;
+
 	// Keyboard:
 	case ui_tag_keymap:
 		xroar_set_keyboard_type(1, tag_value);
@@ -512,11 +487,6 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		break;
 
 	case ui_tag_tape_flags:
-		for (int i = 0; i < 4; i++) {
-			int f = value & (1 << i);
-			int t = TAGV(tag, 1 << i);
-			CheckMenuItem(top_menu, t, MF_BYCOMMAND | (f ? MF_CHECKED : MF_UNCHECKED));
-		}
 		windows32_tc_update_tape_state(uisdl2, value);
 		break;
 
@@ -525,7 +495,6 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		break;
 
 	case ui_tag_tape_playing:
-		CheckMenuItem(top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		windows32_tc_update_tape_playing(uisdl2, value);
 		break;
 
@@ -536,26 +505,14 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		break;
 
 	case ui_tag_disk_data:
-		{
-			const struct vdisk *disk = data;
-			_Bool we = 1, wb = 0;
-			if (disk) {
-				we = !disk->write_protect;
-				wb = disk->write_back;
-			}
-			windows32_ui_update_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			windows32_ui_update_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
-		}
 		windows32_dc_update_drive_disk(uisdl2, value, (const struct vdisk *)data);
 		break;
 
 	case ui_tag_disk_write_enable:
-		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
 		windows32_dc_update_drive_write_enable(uisdl2, value, (intptr_t)data);
 		break;
 
 	case ui_tag_disk_write_back:
-		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
 		windows32_dc_update_drive_write_back(uisdl2, value, (intptr_t)data);
 		break;
 
@@ -589,6 +546,12 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		windows32_vo_update_hue(uisdl2, value);
 		break;
 
+	// Audio
+
+	case ui_tag_ratelimit:
+		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
 	// Keyboard
 
 	case ui_tag_keymap:
@@ -597,7 +560,6 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 
 	case ui_tag_kbd_translate:
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		uisdl2->keyboard.translate = value;
 		break;
 
 	// Joysticks
