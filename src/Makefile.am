@@ -383,6 +383,7 @@ xroar_LDADD += $(MINGW_LIBS)
 xroar_SOURCES += \
 	windows32/common_windows32.c windows32/common_windows32.h \
 	windows32/dialogs.h \
+	windows32/drivecontrol.c windows32/drivecontrol.h \
 	windows32/filereq_windows32.c \
 	windows32/guicon.c windows32/guicon.h \
 	windows32/tapecontrol.c windows32/tapecontrol.h \

@@ -50,6 +50,7 @@
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
 #include "windows32/dialogs.h"
+#include "windows32/drivecontrol.h"
 #include "windows32/tapecontrol.h"
 #include "windows32/video_options.h"
 
@@ -103,6 +104,7 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 	setup_hardware_menu(uisdl2);
 	setup_tool_menu();
 	setup_help_menu();
+	windows32_dc_create_window(uisdl2);
 	windows32_tc_create_window(uisdl2);
 	windows32_vo_create_window(uisdl2);
 }
@@ -251,6 +253,7 @@ static void setup_tool_menu(void) {
 	tool_menu = CreatePopupMenu();
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "Keyboard Translation");
 
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_drive_control), "Drive Control");
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "Tape Control");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
@@ -409,6 +412,9 @@ void sdl_windows32_handle_syswmevent(SDL_SysWMmsg *wmmsg) {
 		break;
 
 	// Disks:
+	case ui_tag_drive_control:
+		windows32_dc_show_window(global_uisdl2);
+		break;
 	case ui_tag_disk_insert:
 		xroar_insert_disk(tag_value);
 		break;
@@ -525,6 +531,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 
 	// Disk
 
+	case ui_tag_drive_control:
+		windows32_dc_show_window(global_uisdl2);
+		break;
+
 	case ui_tag_disk_data:
 		{
 			const struct vdisk *disk = data;
@@ -536,14 +546,17 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 			windows32_ui_update_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
 			windows32_ui_update_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
 		}
+		windows32_dc_update_drive_disk(uisdl2, value, (const struct vdisk *)data);
 		break;
 
 	case ui_tag_disk_write_enable:
 		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
+		windows32_dc_update_drive_write_enable(uisdl2, value, (intptr_t)data);
 		break;
 
 	case ui_tag_disk_write_back:
 		CheckMenuItem(top_menu, TAGV(tag, value), MF_BYCOMMAND | (data ? MF_CHECKED : MF_UNCHECKED));
+		windows32_dc_update_drive_write_back(uisdl2, value, (intptr_t)data);
 		break;
 
 	// Video

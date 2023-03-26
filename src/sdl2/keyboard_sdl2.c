@@ -211,6 +211,8 @@ static void emulator_command(struct ui_sdl2_interface *uisdl2, int cmdkey, _Bool
 	case 'd':
 		if (shift) {
 			vdrive_flush(xroar_vdrive_interface);
+		} else {
+			DELEGATE_CALL(uisdl2->public.update_state, ui_tag_drive_control, 0, NULL);
 		}
 		return;
 	case 'e':

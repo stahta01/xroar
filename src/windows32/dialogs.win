@@ -112,3 +112,96 @@ tr td id=OUTPUT_RECORD button Record
 end table
 
 pad_top=5 xalign=right id=IDOK button &Close
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# Drive control dialog
+
+# predeclare IDs so that they're sequential for each control type
+
+id=DRIVE1_FILENAME id text
+id=DRIVE2_FILENAME id text
+id=DRIVE3_FILENAME id text
+id=DRIVE4_FILENAME id text
+
+id=DRIVE1_WE id checkbox
+id=DRIVE2_WE id checkbox
+id=DRIVE3_WE id checkbox
+id=DRIVE4_WE id checkbox
+
+id=DRIVE1_WB id checkbox
+id=DRIVE2_WB id checkbox
+id=DRIVE3_WB id checkbox
+id=DRIVE4_WB id checkbox
+
+id=DRIVE1_EJECT id button
+id=DRIVE2_EJECT id button
+id=DRIVE3_EJECT id button
+id=DRIVE4_EJECT id button
+
+id=DRIVE1_INSERT id button
+id=DRIVE2_INSERT id button
+id=DRIVE3_INSERT id button
+id=DRIVE4_INSERT id button
+
+pad=5 id=DRIVE_CONTROLS dialog XRoar Drive Control
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text Drive 1
+   hexpand=1 td id=DRIVE1_FILENAME style=path hexpand=1 text
+end table
+
+table
+tr td id=DRIVE1_WE checkbox Write enable
+   td id=DRIVE1_WB checkbox Write back
+   td id=DRIVE1_EJECT button Eject
+   td id=DRIVE1_INSERT button Insert…
+end table
+
+pad=2 nop
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text Drive 2
+   hexpand=1 td id=DRIVE2_FILENAME style=path hexpand=1 text
+end table
+
+table
+tr td id=DRIVE2_WE checkbox Write enable
+   td id=DRIVE2_WB checkbox Write back
+   td id=DRIVE2_EJECT button Eject
+   td id=DRIVE2_INSERT button Insert…
+end table
+
+pad=2 nop
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text Drive 3
+   hexpand=1 td id=DRIVE3_FILENAME style=path hexpand=1 text
+end table
+
+table
+tr td id=DRIVE3_WE checkbox Write enable
+   td id=DRIVE3_WB checkbox Write back
+   td id=DRIVE3_EJECT button Eject
+   td id=DRIVE3_INSERT button Insert…
+end table
+
+pad=2 nop
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text Drive 4
+   hexpand=1 td id=DRIVE4_FILENAME style=path hexpand=1 text
+end table
+
+table
+tr td id=DRIVE4_WE checkbox Write enable
+   td id=DRIVE4_WB checkbox Write back
+   td id=DRIVE4_EJECT button Eject
+   td id=DRIVE4_INSERT button Insert…
+end table
+
+pad=2 nop
+
+id=DRIVE_CYL_HEAD align=centre text Dr ? Tr ?? He ?
+
+xalign=right id=IDOK button &Close

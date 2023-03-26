@@ -60,6 +60,7 @@ enum ui_tag {
 	ui_tag_tape_motor,  // automatic control
 	ui_tag_tape_playing,  // manual control (0 = paused)
 	// Disk
+	ui_tag_drive_control,  // drive control dialog, if supported
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
 	ui_tag_disk_eject,
