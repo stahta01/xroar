@@ -105,7 +105,7 @@ Other features include:
 @end itemize
 
 XRoar is easily built from source under Linux, and binary packages are provided
-for Mac OS X and Windows.
+for Mac OS X+ and Windows.
 
 XRoar can also be compiled to WebAssembly, and redistributing it in this form
 may provide a convenient way for users to run your Dragon software.  See
@@ -175,7 +175,7 @@ directory''):
 @headitem Platform @tab ROM path
 @item Unix/Linux @tab @file{~/.xroar/roms:@emph{prefix}/share/xroar/roms}
 @item Windows @tab @file{:~/Documents/XRoar/roms:~/AppData/Local/XRoar/roms:}@*@file{~/AppData/Roaming/XRoar/roms}
-@item Mac OS X @tab @file{~/Library/XRoar/roms:@emph{prefix}/share/xroar/roms}
+@item Mac OS X+ @tab @file{~/Library/XRoar/roms:@emph{prefix}/share/xroar/roms}
 @end multitable
 
 Firmware ROM image files should have a @file{.rom} extension, and be headerless
@@ -209,8 +209,8 @@ their own firmware.
 With the prerequisites satisfied, on running XRoar you should now be presented
 with a window showing an emulated machine with a menu bar at the top showing
 (at least) @clicksequence{File}, @clicksequence{View}, @clicksequence{Hardware}
-and @clicksequence{Tool} menus.  Mac OS users will see the menu bar at the top
-of the whole screen instead.  There are often keyboard shortcuts for these,
+and @clicksequence{Tool} menus.  Mac OS X+ users will see the menu bar at the
+top of the whole screen instead.  There are often keyboard shortcuts for these,
 detailed throughout this manual and listed in @ref{Keyboard shortcuts}.
 
 You can put XRoar into fullscreen mode by selecting @clicksequence{View
@@ -376,10 +376,10 @@ for in a list of directories.  You can override this search path with the
 @env{XROAR_CONF_PATH} environment variable, which contains a colon-separated
 (@samp{:}) list of directories.  Here are the defaults:
 
-@multitable {Mac OS X.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
+@multitable {Mac OS X+.} {:~/Local Settings/Application Data/XRoar:~/Application Data/XRoar.}
 @headitem Platform @tab Default @env{XROAR_CONF_PATH}
 @item Unix/Linux @tab @file{~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
-@item Mac OS X @tab @file{~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
+@item Mac OS X+ @tab @file{~/Library/XRoar:~/.xroar:@emph{prefix}/etc:@emph{prefix}/share/xroar}
 @item Windows @tab @file{:~\Documents\XRoar:~\AppData\Local\XRoar:~\AppData\Roaming\XRoar}
 @end multitable
 
@@ -909,8 +909,9 @@ The tape used for writing is considered separate to the read tape (this is an
 emulator-friendly approach to prevent overwriting your programs, though it
 would have been possible with two cassette decks).
 
-Under Mac OS, the @clicksequence{File @click{} Cassette} menu contains controls
-to insert or rewind the input and output tapes, play/pause and toggle options.
+Under Mac OS X+, the @clicksequence{File @click{} Cassette} menu contains
+controls to insert or rewind the input and output tapes, play/pause and toggle
+options.
 
 In the Unix/Linux GTK+ and Windows interfaces, these options are available from
 the tape control dialog, which you can open with @clicksequence{Tool @click{}
@@ -982,8 +983,8 @@ virtual disk formats are supported:
 @tab Another disk image file format, used by PC-Dragon.
 @end multitable
 
-Under Mac OS, the @clicksequence{File @click{} Drive @var{X}} menus allow you
-to insert or eject disks, create new disks, or toggle the write-enable and
+Under Mac OS X+, the @clicksequence{File @click{} Drive @var{X}} menus allow
+you to insert or eject disks, create new disks, or toggle the write-enable and
 write-back options.
 
 In the Unix/Linux GTK+ and Windows interfaces, these options are available from
@@ -1759,8 +1760,8 @@ not distributed in the XRoar packages.
 
 @c
 
-@node Mac OS X binary package
-@subsection Mac OS X binary package
+@node Mac OS X+ binary package
+@subsection Mac OS X+ binary package
 
 Download and unzip the appropriate @file{.zip} distribution for your system.
 Drag the application icon to @file{/Applications/}.
@@ -1782,7 +1783,7 @@ named @file{~/Library/XRoar/roms/} (not the system directory,
 @file{/Library/}).  Name any configuration file you create
 @file{~/Library/XRoar/xroar.conf}.
 
-The Mac OS X build provides a menu for access to certain features, and often
+The Mac OS X+ build provides a menu for access to certain features, and often
 accepts the more familiar @kbd{@key{Command}+@var{key}} in place of the
 @kbd{@key{CTRL}+@var{key}} shortcuts listed in this manual.
 
@@ -1827,7 +1828,7 @@ $ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
         libgtkglext1-dev libasound2-dev
 @end example
 
-Under Mac OS X, first be sure to install Apple's
+Under Mac OS X+, first be sure to install Apple's
 @myuref{https://developer.apple.com/xcode/, Xcode} package.  The easiest way to
 then ensure you have XRoar's dependencies available is to use a system like
 @myuref{https://brew.sh/, Homebrew} or @myuref{http://www.macports.org/,
@@ -1849,7 +1850,7 @@ use by other user interfaces.  Version 2 only.
 
 @myuref{http://www.libsdl.org/, SDL}, Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code under
-Mac OS X and Windows; any other target using SDL will support only keyboard
+Mac OS X+ and Windows; any other target using SDL will support only keyboard
 shortcuts.  Unless you are building for Linux, SDL is required to use
 joysticks.  Version 2 required.
 
