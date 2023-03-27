@@ -84,7 +84,7 @@ struct SN76489_private {
 	unsigned noise_lfsr;
 
 	// low-pass filter state
-	struct filter *filter;
+	struct filter_iir *filter;
 };
 
 #define SN76489_SER_REG_VAL (6)
@@ -260,9 +260,9 @@ void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tick
 	csg_->last_fragment_tick = tick;
 
 	if (csg_->filter) {
-		filter_free(csg_->filter);
+		filter_iir_free(csg_->filter);
 	}
-	csg_->filter = filter_new(FILTER_BU|FILTER_LP, 3, 250000, framerate/2, 0);
+	csg_->filter = filter_iir_new(FILTER_BU|FILTER_LP, 3, 250000, framerate/2, 0);
 }
 
 static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
@@ -439,7 +439,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 		new_output = csg_->level[0] + csg_->level[1] +
 		             csg_->level[2] + csg_->level[3];
 
-		output = filter_apply(csg_->filter, new_output);
+		output = filter_iir_apply(csg_->filter, new_output);
 	}
 
 	csg_->nticks = nticks;

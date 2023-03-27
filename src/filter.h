@@ -17,9 +17,9 @@
  *
  *  \endlicenseblock
  *
- *  Filter creation derived from A. J. Fisher's "mkfilter" tool.  Stripped back
- *  to only generate Butterworth low-pass filters.  Any errors introduced in
- *  the simplification are my fault...
+ *  Butterworth filter creation derived from A. J. Fisher's "mkfilter" tool.
+ *  Stripped back to only generate Butterworth low-pass filters.  Any errors
+ *  introduced in the simplification are my fault...
  *
  *  https://github.com/university-of-york/cs-www-users-fisher
  */
@@ -27,7 +27,9 @@
 #ifndef XROAR_FILTER_H_
 #define XROAR_FILTER_H_
 
-struct filter {
+// IIR filters
+
+struct filter_iir {
 	float dc_gain;  // gain at DC
 	int nz, np;     // number of zeroes, poles
 	float *z, *p;  // zeroes, poles
@@ -38,10 +40,10 @@ struct filter {
 #define FILTER_BU (1 << 0)
 #define FILTER_LP (1 << 4)
 
-struct filter *filter_new(unsigned flags, int order, double fs, double f0, double f1);
-void filter_free(struct filter *filter);
+struct filter_iir *filter_iir_new(unsigned flags, int order, double fs, double f0, double f1);
+void filter_iir_free(struct filter_iir *filter);
 
-inline float filter_apply(struct filter *filter, float value) {
+inline float filter_iir_apply(struct filter_iir *filter, float value) {
 	for (int i = 0; i < filter->nz-1; i++)
 		filter->zv[i] = filter->zv[i+1];
 	filter->zv[filter->nz-1] = value / filter->dc_gain;

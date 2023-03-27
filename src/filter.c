@@ -38,6 +38,8 @@
 
 #include "filter.h"
 
+// IIR filters
+
 // mkfilter -- given n, compute recurrence relation
 // to implement Butterworth, Bessel or Chebyshev filter of order n
 
@@ -59,13 +61,13 @@ static void multin(double complex, int, double complex *);
 static double complex evaluate(const double complex *, int nz, const double complex *, int, double complex);
 static double complex eval(const double complex *, int, double complex);
 
-struct filter *filter_new(unsigned flags, int order, double fs, double f0, double f1) {
+struct filter_iir *filter_iir_new(unsigned flags, int order, double fs, double f0, double f1) {
 	(void)flags;  // unused for now as always butterworth low-pass
 	(void)f1;  // unused for now as we only do low-pass
 	double raw_alpha1 = f0 / fs;
 
-	struct filter *filter = xmalloc(sizeof(*filter));
-	*filter = (struct filter){0};
+	struct filter_iir *filter = xmalloc(sizeof(*filter));
+	*filter = (struct filter_iir){0};
 
 	filter->z = xmalloc((order+1) * sizeof(*filter->z));
 	filter->p = xmalloc((order+1) * sizeof(*filter->p));
@@ -138,7 +140,7 @@ struct filter *filter_new(unsigned flags, int order, double fs, double f0, doubl
 	return filter;
 }
 
-void filter_free(struct filter *filter) {
+void filter_iir_free(struct filter_iir *filter) {
 	free(filter->z);
 	free(filter->p);
 	free(filter);
@@ -183,6 +185,6 @@ static double complex eval(const double complex *coeffs, int npz, double complex
 	return sum;
 }
 
+extern inline float filter_iir_apply(struct filter_iir *filter, float value);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-extern inline float filter_apply(struct filter *filter, float value);
