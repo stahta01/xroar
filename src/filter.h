@@ -4,7 +4,9 @@
  *
  *  \copyright Copyright 1992 A.J. Fisher, University of York
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2008-2011 Nicolas Bourdaud
+ *
+ *  \copyright Copyright 2021-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,6 +24,8 @@
  *  introduced in the simplification are my fault...
  *
  *  https://github.com/university-of-york/cs-www-users-fisher
+ *
+ *  Windowed sinc filter creation derived from rtfilter by Nicolas Bourdaud.
  */
 
 #ifndef XROAR_FILTER_H_
@@ -60,5 +64,26 @@ inline float filter_iir_apply(struct filter_iir *filter, float value) {
 
 	return output;
 }
+
+// FIR filters
+
+// This is only being added to support experimental code, and for now we're
+// only interested in generating the list of coefficients.
+
+enum filter_window {
+	FILTER_WINDOW_RECTANGULAR,
+	FILTER_WINDOW_HAMMING,
+	FILTER_WINDOW_BLACKMAN,
+};
+
+struct filter_fir {
+	unsigned ntaps;
+	double *taps;
+};
+
+struct filter_fir *filter_fir_lp_create(enum filter_window window, double fc, unsigned order);
+struct filter_fir *filter_fir_hp_create(enum filter_window window, double fc, unsigned order);
+
+void filter_fir_free(struct filter_fir *filter);
 
 #endif

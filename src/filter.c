@@ -4,7 +4,9 @@
  *
  *  \copyright Copyright 1992 A.J. Fisher, University of York
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2008-2011 Nicolas Bourdaud
+ *
+ *  \copyright Copyright 2021-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,6 +24,8 @@
  *  the simplification are my fault...
  *
  *  https://github.com/university-of-york/cs-www-users-fisher
+ *
+ *  Windowed sinc filter creation derived from rtfilter by Nicolas Bourdaud.
  */
 
 #include "top-config.h"
@@ -186,5 +190,77 @@ static double complex eval(const double complex *coeffs, int npz, double complex
 }
 
 extern inline float filter_iir_apply(struct filter_iir *filter, float value);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// FIR filters
+
+// rtfilter -- ... a library written in C implementing realtime digital
+// filtering functions ...
+
+// This is only being added to support experimental code, and for now we're
+// only interested in generating the list of coefficients.
+
+struct filter_fir *filter_fir_lp_create(enum filter_window window, double fc, unsigned order) {
+	struct filter_fir *filter = xmalloc(sizeof(*filter));
+	filter->ntaps = (order * 2) + 1;
+	filter->taps = xmalloc(filter->ntaps * sizeof(*filter->taps));
+
+	// compute_fir_lowpass
+	for (unsigned i = 0; i < filter->ntaps; i++) {
+		if (i != order) {
+			filter->taps[i] = sin(TWOPI * fc * (double)((int)i - (int)order)) / (double)((int)i - (int)order);
+		} else {
+			filter->taps[i] = TWOPI * fc;
+		}
+	}
+
+	// apply_window
+	double M = filter->ntaps - 1;
+	switch (window) {
+	case FILTER_WINDOW_RECTANGULAR:
+	default:
+		break;
+
+	case FILTER_WINDOW_HAMMING:
+		for (unsigned i = 0; i < filter->ntaps; i++) {
+			filter->taps[i] *= 0.54 + 0.46 * cos(TWOPI * ((double)i / M  - 0.5));
+		}
+		break;
+
+	case FILTER_WINDOW_BLACKMAN:
+		for (unsigned i = 0; i < filter->ntaps; i++) {
+			filter->taps[i] *= 0.42 + 0.5 * cos(TWOPI * ((double)i / M  - 0.5)) + 0.08 * cos(2.0 * TWOPI * ((double)i / M - 0.5));
+		}
+		break;
+	}
+
+	// normalize_fir
+	double sum = 0.0;
+	for (unsigned i = 0; i < filter->ntaps; i++) {
+		sum += filter->taps[i];
+	}
+	for (unsigned i = 0; i < filter->ntaps; i++) {
+		filter->taps[i] /= sum;
+	}
+
+	return filter;
+}
+
+struct filter_fir *filter_fir_hp_create(enum filter_window window, double fc, unsigned order) {
+	// create lowpass filter first
+	struct filter_fir *filter = filter_fir_lp_create(window, fc, order);
+
+	// reverse lowpass filter
+	for (unsigned i = 0; i < filter->ntaps; i++) {
+		filter->taps[i] = -1.0 * filter->taps[i];
+	}
+	filter->taps[order] += 1.0;
+
+	return filter;
+}
+
+void filter_fir_free(struct filter_fir *filter) {
+	free(filter->taps);
+	free(filter);
+}
