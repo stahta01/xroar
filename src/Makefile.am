@@ -412,6 +412,7 @@ BUILT_SOURCES += \
 	windows32/dialogs.h windows32/dialogs.rc
 
 EXTRA_DIST += \
+	windows32/dialogs.win \
 	windows32/dialogs.h windows32/dialogs.rc \
 	windows32/xroar-16x16.ico \
 	windows32/xroar-32x32.ico \
