@@ -427,9 +427,9 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 		if (noise_clock) {
 			// input transition to high clocks the LFSR
 			csg_->noise_lfsr = (csg_->noise_lfsr >> 1) |
-			                   (csg_->noise_white
-					    ? u32_parity(csg_->noise_lfsr & 0x0003) << 14
-					    : (csg_->noise_lfsr & 1) << 14);
+			                   ((unsigned)(csg_->noise_white
+					     ? u32_parity(csg_->noise_lfsr & 0x0003)
+					     : (csg_->noise_lfsr & 1)) << 14);
 			_Bool state = csg_->noise_lfsr & 1;
 			csg_->state[3] = state;
 			csg_->level[3] = csg_->amplitude[3][state];
