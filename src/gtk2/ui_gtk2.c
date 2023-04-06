@@ -465,6 +465,7 @@ static GtkRadioActionEntry const joy_left_radio_entries[] = {
 
 // Work around gtk_exit() being deprecated:
 static void ui_gtk2_destroy(GtkWidget *w, gpointer user_data) {
+	(void)w;
 	exit((intptr_t)user_data);
 }
 

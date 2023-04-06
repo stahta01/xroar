@@ -165,6 +165,7 @@ void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
 
 static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
 	(void)widget;
+	(void)event;
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ToolMenu/DriveControl");
 	gtk_toggle_action_set_active(toggle, 0);

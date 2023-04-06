@@ -83,6 +83,7 @@ gboolean gtk2_handle_key_release(GtkWidget *widget, GdkEventKey *event, gpointer
 
 gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)widget;
 
 #ifndef WINDOWS32
 	// Unhide cursor
@@ -132,6 +133,7 @@ static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, 
 
 gboolean gtk2_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)widget;
 
 	if (event->button == 2) {
 		GdkDisplay *d = gtk_widget_get_display(uigtk2->top_window);
@@ -150,6 +152,7 @@ gboolean gtk2_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpoi
 
 gboolean gtk2_handle_button_release(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)widget;
 
 	// Update button data (for mouse mapped joystick)
 	if (event->button >= 1 && event->button <= 3) {
@@ -190,6 +193,7 @@ void uigtk2_notify_spin_button_set(GtkSpinButton *o, gdouble value,
 }
 
 FUNC_ATTR_NORETURN static void do_g_abort(const gchar *format, GError *error) {
+	(void)format;
 	if (error) {
 		g_message("gtk_builder_new_from_resource() failed: %s", error->message);
 		g_error_free(error);
