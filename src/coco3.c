@@ -62,7 +62,13 @@
 # define M_PI 3.14159265358979323846
 #endif
 
-static float hue_intensity_map[4] = { 0.30, 0.50, 0.80, 1.0 };
+// Guesses, based on not much:
+static float rgb_intensity_map[4] = { 0.000, 0.333, 0.667, 1.000 };
+
+// Same:
+static float hue_intensity_map[4] = { 0.3773, 0.5145, 0.7203, 0.8575 };
+
+// These are the approximate values measured by John Kowalski:
 static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -384,22 +390,23 @@ static _Bool coco3_finish(struct part *p) {
 		int phase = j & 15;
 		double y, b_y, r_y;
 		if (phase == 0 || j == 63) {
-			y = (grey_intensity_map[intensity] * .6860) + .1715;
+			y = grey_intensity_map[intensity];
 			b_y = 0.0;
 			r_y = 0.0;
 		} else {
+			// Conversion gain of 0.6 for chroma through MC1372.
 			double hue = (2.0 * M_PI * (double)(phase+7.5)) / 15.0;
-			y = (hue_intensity_map[intensity] * .6860) + .1715;
-			b_y = 0.5 * sin(hue);
-			r_y = 0.5 * cos(hue);
+			y = hue_intensity_map[intensity];
+			b_y = 0.5 * sin(hue) * 0.6;
+			r_y = 0.5 * cos(hue) * 0.6;
 		}
 		DELEGATE_CALL(mcc3->vo->palette_set_ybr, j, y, b_y, r_y);
 	}
 
 	for (int j = 0; j < 64; j++) {
-		float r = hue_intensity_map[((j>>4)&2)|((j>>2)&1)];
-		float g = hue_intensity_map[((j>>3)&2)|((j>>1)&1)];
-		float b = hue_intensity_map[((j>>2)&2)|((j>>0)&1)];
+		float r = rgb_intensity_map[((j>>4)&2)|((j>>2)&1)];
+		float g = rgb_intensity_map[((j>>3)&2)|((j>>1)&1)];
+		float b = rgb_intensity_map[((j>>2)&2)|((j>>0)&1)];
 		DELEGATE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
 	}
 

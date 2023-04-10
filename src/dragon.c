@@ -512,15 +512,14 @@ static _Bool dragon_finish(struct part *p) {
 		if (!palette) {
 			palette = vdg_palette_by_name("ideal");
 		}
-		float blank_y = palette->blank_y;
-		//float white_y = palette->white_y;
-		//float scale_y = 1. / (blank_y - white_y);
 		for (int c = 0; c < NUM_VDG_COLOURS; c++) {
 			float y = palette->palette[c].y;
 			float chb = palette->palette[c].chb;
-			float b_y = palette->palette[c].b - chb;
-			float r_y = palette->palette[c].a - chb;
-			y = (blank_y - y) * 2.850;  //scale_y;
+			// Both the LM1889 and MC1372 datasheets suggest a
+			// conversion gain of 0.6 for the chroma inputs.
+			float b_y = (palette->palette[c].b - chb) * 0.6;
+			float r_y = (palette->palette[c].a - chb) * 0.6;
+			y = (palette->blank_y - y) / (palette->blank_y - palette->white_y);
 			DELEGATE_CALL(md->vo->palette_set_ybr, c, y, b_y, r_y);
 		}
 	}
