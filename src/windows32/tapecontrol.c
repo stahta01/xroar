@@ -35,7 +35,7 @@
 #include "windows32/dialogs.h"
 #include "windows32/tapecontrol.h"
 
-static BOOL CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static HWND tc_window = NULL;
 static HWND tc_stm_input_filename = NULL;
@@ -115,6 +115,7 @@ void windows32_tc_show_window(struct ui_sdl2_interface *uisdl2) {
 // Tape control - update values in UI
 
 void windows32_tc_update_tape_state(struct ui_sdl2_interface *uisdl2, int flags) {
+	(void)uisdl2;
 	SendMessage(tc_bn_tape_fast, BM_SETCHECK, (flags & TAPE_FAST) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_pad_auto, BM_SETCHECK, (flags & TAPE_PAD_AUTO) ? BST_CHECKED : BST_UNCHECKED, 0);
 	SendMessage(tc_bn_tape_rewrite, BM_SETCHECK, (flags & TAPE_REWRITE) ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -136,10 +137,12 @@ void windows32_tc_update_input_filename(struct ui_sdl2_interface *uisdl2, const 
 }
 
 void windows32_tc_update_output_filename(struct ui_sdl2_interface *uisdl2, const char *filename) {
+	(void)uisdl2;
 	SendMessage(tc_stm_output_filename, WM_SETTEXT, 0, (LPARAM)filename);
 }
 
 void windows32_tc_update_tape_playing(struct ui_sdl2_interface *uisdl2, int playing) {
+	(void)uisdl2;
 	EnableWindow(tc_bn_input_play, !playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_input_pause, playing ? TRUE : FALSE);
 	EnableWindow(tc_bn_output_record, !playing ? TRUE : FALSE);
@@ -150,7 +153,8 @@ void windows32_tc_update_tape_playing(struct ui_sdl2_interface *uisdl2, int play
 
 // Tape control - signal handlers
 
-static BOOL CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	(void)hwnd;
 	switch (msg) {
 
 	case WM_INITDIALOG:
@@ -315,6 +319,7 @@ static char *ms_to_string(int ms) {
 }
 
 static void update_programlist(struct ui_sdl2_interface *uisdl2) {
+	(void)uisdl2;
 	if (have_programlist)
 		return;
 	if (!xroar_tape_interface || !xroar_tape_interface->tape_input)
@@ -344,6 +349,7 @@ static void update_programlist(struct ui_sdl2_interface *uisdl2) {
 
 static void update_tape_counters(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
 
 	static long imax = -1, ipos = -1;
 	long new_imax = 0, new_ipos = 0;

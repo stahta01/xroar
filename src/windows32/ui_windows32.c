@@ -83,9 +83,8 @@ static HMENU top_menu;
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HWND about_dialog = NULL;
-static HWND tv_controls_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
-static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HMENU machine_menu = NULL;
 static HMENU cartridge_menu = NULL;
 
@@ -110,6 +109,7 @@ void windows32_create_menus(struct ui_sdl2_interface *uisdl2) {
 }
 
 void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2) {
+	(void)uisdl2;
 	DestroyMenu(top_menu);
 }
 
@@ -117,7 +117,6 @@ void windows32_destroy_menus(struct ui_sdl2_interface *uisdl2) {
 
 static void setup_file_menu(void) {
 	HMENU file_menu;
-	HMENU submenu;
 
 	file_menu = CreatePopupMenu();
 
@@ -687,7 +686,8 @@ void sdl_windows32_remove_menu(SDL_Window *sw) {
 	SetMenu(hwnd, NULL);
 }
 
-static BOOL CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	(void)lParam;
 	switch (msg) {
 
 	case WM_INITDIALOG:
