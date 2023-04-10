@@ -34,7 +34,7 @@
 #include "xroar.h"
 
 #define BYTE_TIME (EVENT_TICK_RATE / 31250)
-#define MAX_DRIVES VDRIVE_MAX_DRIVES
+#define MAX_DRIVES (VDRIVE_MAX_DRIVES)
 #define MAX_SIDES (2)
 #define MAX_TRACKS (256)
 
@@ -300,6 +300,8 @@ void vdrive_disconnect(struct vdrive_interface *vi) {
 void vdrive_insert_disk(struct vdrive_interface *vi, unsigned drive, struct vdisk *disk) {
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
 	assert(drive < MAX_DRIVES);
+	if (drive >= MAX_DRIVES)
+		return;
 	if (vip->drives[drive].disk) {
 		vdrive_eject_disk(vi, drive);
 	}
