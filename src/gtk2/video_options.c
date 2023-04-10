@@ -54,11 +54,8 @@ static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
-	GtkBuilder *builder;
-	GtkWidget *widget;
 	GError *error = NULL;
-	int i;
-	builder = gtk_builder_new();
+	GtkBuilder *builder = gtk_builder_new();
 
 	GBytes *res_video_options = g_resources_lookup_data("/uk/org/6809/xroar/gtk2/video_options.ui", 0, NULL);
 	if (!gtk_builder_add_from_string(builder, g_bytes_get_data(res_video_options, NULL), -1, &error)) {
@@ -128,6 +125,7 @@ void gtk2_vo_toggle_window(GtkToggleAction *current, gpointer user_data) {
 
 static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
 	(void)widget;
+	(void)event;
 	struct ui_gtk2_interface *uigtk2 = user_data;
 	GtkToggleAction *toggle = (GtkToggleAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/VideoOptions");
 	gtk_toggle_action_set_active(toggle, 0);
@@ -137,6 +135,7 @@ static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user
 
 static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, value);
@@ -145,6 +144,7 @@ static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data)
 
 static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, value);
@@ -153,6 +153,7 @@ static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 
 static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, value);
@@ -161,6 +162,7 @@ static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data)
 
 static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
 	int value = (int)gtk_spin_button_get_value(spin_button);
 	if (xroar_vo_interface) {
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, value);
