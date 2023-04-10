@@ -271,7 +271,7 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	gtk_widget_get_allocation(da, &allocation);
 	DELEGATE_CALL(vogl->resize, allocation.width, allocation.height);
 	vo_opengl_get_display_rect(vogl, &global_uigtk2->display_rect);
-	vo_gtkgl_set_vsync(1);
+	vo_gtkgl_set_vsync(-1);
 
 	gdk_gl_drawable_gl_end(gldrawable);
 
@@ -326,6 +326,54 @@ static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr) {
 	vo->render_line = vogl->render_line;
 }
 
+#ifdef HAVE_X11
+
+// Test glX extensions string for presence of a particular extension.
+
+static _Bool opengl_has_extension(Display *display, const char *extension) {
+        const char *(*glXQueryExtensionsStringFunc)(Display *, int) = (const char *(*)(Display *, int))glXGetProcAddress((const GLubyte *)"glXQueryExtensionsString");
+        if (!glXQueryExtensionsStringFunc)
+                return 0;
+
+        int screen = DefaultScreen(display);
+
+        const char *extensions = glXQueryExtensionsStringFunc(display, screen);
+        if (!extensions)
+                return 0;
+
+        LOG_DEBUG(3, "gtkgl: extensions: %s\n", extensions);
+
+        const char *start;
+        const char *where, *terminator;
+
+        // It takes a bit of care to be fool-proof about parsing the OpenGL
+        // extensions string. Don't be fooled by sub-strings, etc.
+
+        start = extensions;
+
+        for (;;) {
+                where = strstr(start, extension);
+                if (!where)
+                        break;
+
+                terminator = where + strlen(extension);
+                if (where == start || *(where - 1) == ' ')
+                        if (*terminator == ' ' || *terminator == '\0')
+                                return 1;
+
+                start = terminator;
+        }
+        return 0;
+}
+
+#endif
+
+// Set "swap interval" - that is, how many vsyncs should be waited for on
+// buffer swap.  Usually this should be 1.  However, a negative value here
+// tries to use GLX_EXT_swap_control_tear, which allows unsynchronised buffer
+// swaps if a vsync was already missed.  If that particular extension is not
+// found, just uses the absolute value.
+
 static void vo_gtkgl_set_vsync(int val) {
 	(void)val;
 
@@ -335,12 +383,17 @@ static void vo_gtkgl_set_vsync(int val) {
 	if (glXSwapIntervalEXT) {
 		Display *dpy = gdk_x11_drawable_get_xdisplay(gtk_widget_get_window(global_uigtk2->drawing_area));
 		Window win = gdk_x11_drawable_get_xid(gtk_widget_get_window(global_uigtk2->drawing_area));
+		if (!opengl_has_extension(dpy, "GLX_EXT_swap_control_tear")) {
+			val = abs(val);
+		}
 		if (dpy && win) {
 			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			return;
 		}
 	}
+
+	val = abs(val);
 
 	PFNGLXSWAPINTERVALMESAPROC glXSwapIntervalMESA = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalMESA");
 	if (glXSwapIntervalMESA) {
@@ -353,6 +406,7 @@ static void vo_gtkgl_set_vsync(int val) {
 	if (glXSwapIntervalSGI) {
 		LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalSGI(%d)\n", val);
 		glXSwapIntervalSGI(val);
+		return;
 	}
 
 #endif
