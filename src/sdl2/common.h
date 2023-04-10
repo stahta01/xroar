@@ -43,8 +43,6 @@ struct ui_sdl2_interface {
 
 	// Keyboard state
 	struct {
-		// Map according to unicode value, not key position
-		_Bool translate;
 		// Translate scancode into emulator key
 		int8_t scancode_to_dkey[SDL_NUM_SCANCODES];
 		// Scancode preempts unicode translation, GUI

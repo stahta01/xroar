@@ -449,7 +449,7 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		return;
 	}
 
-	if (uisdl2->keyboard.translate) {
+	if (xroar_cfg.kbd.translate) {
 		int unicode = sdl_os_keysym_to_unicode(keysym);
 		/* shift + backspace -> erase line */
 		if (shift && (unicode == 0x08 || unicode == 0x7f))
@@ -547,7 +547,7 @@ void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 		break;
 	}
 
-	if (uisdl2->keyboard.translate) {
+	if (xroar_cfg.kbd.translate) {
 		int unicode;
 		if (scancode >= SDL_NUM_SCANCODES)
 			return;

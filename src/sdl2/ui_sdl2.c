@@ -169,11 +169,10 @@ static void ui_sdl_free(void *sptr) {
 
 static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
+	(void)uisdl2;
+	(void)value;
 	(void)data;
 	switch (tag) {
-	case ui_tag_kbd_translate:
-		uisdl2->keyboard.translate = value;
-		break;
 	default:
 		break;
 	}
