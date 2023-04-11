@@ -85,7 +85,7 @@ struct vo_generic_interface {
 	uint8_t ntsc_buf[647];
 
 	// Gamma LUT.
-	uint8_t ntsc_ungamma[256];
+	uint8_t ungamma[256];
 
 	// Viewport
 	struct vo_rect viewport;
@@ -349,7 +349,7 @@ static void update_gamma_table(struct vo_generic_interface *generic) {
 		c *= contrast;
 		c += brightness;
 		float C = cs_mlaw_1(generic->cs, c);
-		generic->ntsc_ungamma[j] = int_clamp_u8((int)(C * 255.0));
+		generic->ungamma[j] = int_clamp_u8((int)(C * 255.0));
 	}
 }
 
@@ -659,9 +659,9 @@ static void render_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	LOCK_SURFACE(generic);
 	for (int j = generic->viewport.w; j; j--) {
 		int_xyz rgb = ntsc_decode(burst, src++);
-		int R = generic->ntsc_ungamma[int_clamp_u8(rgb.x)];
-		int G = generic->ntsc_ungamma[int_clamp_u8(rgb.y)];
-		int B = generic->ntsc_ungamma[int_clamp_u8(rgb.z)];
+		int R = generic->ungamma[int_clamp_u8(rgb.x)];
+		int G = generic->ungamma[int_clamp_u8(rgb.y)];
+		int B = generic->ungamma[int_clamp_u8(rgb.z)];
 		*(generic->pixel) = MAPCOLOUR(generic, R, G, B);
 		generic->pixel += XSTEP;
 	}
