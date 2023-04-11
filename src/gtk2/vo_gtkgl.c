@@ -100,7 +100,7 @@ static void *new(void *sptr) {
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_viewport_xy = vogl->set_viewport_xy;
+	vo->set_active_area = vogl->set_active_area;
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);

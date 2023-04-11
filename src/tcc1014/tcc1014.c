@@ -26,8 +26,7 @@
 // XXX PAL mode.
 //
 // At the moment I simply bodge 25 extra top/bottom border lines and set a
-// longer field duration.  There is then another bodge to skip sending the
-// first 25 scanlines to the video module.
+// longer field duration.
 //
 // If interrupts are timed somewhere during these bodges, I'll have to rethink
 // earlier than I want to!
@@ -849,10 +848,7 @@ static void do_hs_fall(void *sptr) {
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	}
-
-	// The offset of 3 is a bodge!  It ensures the phase is correct so that
-	// artefact colours come out as intended.
-	DELEGATE_CALL(gime->public.render_line, gime->BPI, TCC1014_LINE_DURATION, gime->pixel_data+3);
+	DELEGATE_CALL(gime->public.render_line, gime->BPI, TCC1014_LINE_DURATION, gime->pixel_data);
 
 	if (gime->COCO) {
 		gime->row_stride = gime->BPR;
@@ -1256,6 +1252,8 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 			gime->bg_colour = gime->CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
 			gime->border_colour = gime->palette_reg[gime->fg_colour];
 		}
+
+		DELEGATE_SAFE_CALL(gime->public.set_active_area, TCC1014_tWHS + TCC1014_tBP + gime->pLB, TCC1014_TOP_BORDER_START + gime->nTB, 512, gime->nAA);
 	} else {
 		// CoCo 3 extra graphics modes
 
@@ -1277,6 +1275,7 @@ static void tcc1014_update_graphics_mode(struct TCC1014_private *gime) {
 		// Render mode, border colour
 		gime->render_mode = TCC1014_RENDER_RG;
 		gime->border_colour = gime->BRDR;
-	}
 
+		DELEGATE_SAFE_CALL(gime->public.set_active_area, TCC1014_tWHS + TCC1014_tBP + gime->pLB, TCC1014_TOP_BORDER_START + gime->nTB, (gime->HRES & 1) ? 640 : 512, gime->nAA);
+	}
 }

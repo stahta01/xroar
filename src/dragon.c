@@ -506,6 +506,16 @@ static _Bool dragon_finish(struct part *p) {
 	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
 	mc6847_set_inverted_text(md->VDG, md->inverted_text);
 
+	// Active area is constant
+	{
+		int x = VDG_tWHS + VDG_tBP + VDG_tLB;
+		int y = VDG_ACTIVE_AREA_START;
+		if (is_pal) {
+			y += md->is_dragon ? 25 : 24;
+		}
+		DELEGATE_SAFE_CALL(md->vo->set_active_area, x, y, 512, 192);
+	}
+
 	// Set up VDG palette in video module
 	{
 		struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);

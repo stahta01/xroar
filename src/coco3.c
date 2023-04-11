@@ -385,6 +385,9 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
 	mcc3->GIME->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
 
+	// GIME reports changes in active area
+	mcc3->GIME->set_active_area = mcc3->vo->set_active_area;
+
 	for (int j = 0; j < 64; j++) {
 		int intensity = (j >> 4) & 3;
 		int phase = j & 15;

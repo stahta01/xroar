@@ -78,6 +78,16 @@ struct TCC1014 {
 	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 	DELEGATE_T1(uint8, uint32) fetch_vram;
 
+	// Report geometry
+	//
+	//     int x, y;  // top-left of active area
+	//     int w, h;  // size of active area
+	//
+	// When video mode changes, GIME will report the new active area.  This
+	// should allow a video module to centre it within its display area.
+
+	DELEGATE_T4(void, int, int, int, int) set_active_area;
+
 	// Render line
 	//
 	//     unsigned burst;       // burst index for this line

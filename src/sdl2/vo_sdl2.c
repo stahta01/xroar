@@ -116,7 +116,7 @@ static void *new(void *sptr) {
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
+	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, set_active_area, generic);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);

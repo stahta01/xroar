@@ -1734,22 +1734,7 @@ void xroar_connect_machine(void) {
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 	}
 	xroar_set_ccr(1, private_cfg.vo.ccr);
-	unsigned vx, vy;
-	int phase;
-	if (is_coco3) {
-		vx = 181;
-		vy = 16;
-		if (xroar_machine_config->tv_standard == TV_PAL)
-			vy += 25;
-		phase = 2;
-	} else {
-		vx = 190;
-		vy = 14;
-		if (xroar_machine_config->tv_standard == TV_PAL)
-			vy += is_coco ? 24 : 25;
-		phase = 0;
-	}
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_viewport_xy, vx, vy);
+	int phase = is_coco3 ? 2 : 0;
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, phase);
 	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }

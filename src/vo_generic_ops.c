@@ -88,6 +88,9 @@ struct vo_generic_interface {
 	uint8_t ungamma[256];
 
 	// Viewport
+	struct {
+		int x, y;
+	} new_viewport;
 	struct vo_rect viewport;
 
 	// Render configuration.
@@ -140,7 +143,9 @@ static void vo_generic_init(void *sptr) {
 		}
 	}
 
-	// Sensible defaults, should be overridden by call to set_viewport*()
+	// Sensible defaults, should be overridden by call to set_active_area()
+	generic->new_viewport.x = 190;
+	generic->new_viewport.y = 14;
 	generic->viewport = (struct vo_rect){ .x = 190, .y = 14, .w = 640, .h = 240 };
 	generic->cmp_phase_offset = 2;
 }
@@ -159,16 +164,16 @@ static void vo_generic_free(void *sptr) {
 
 // Used by UI to adjust viewing parameters
 
-// Configure viewport X and Y offset
-//     unsigned x0, y0;  // offset to top-left displayed pixel
+// Configure active area (used to centre display)
+//     int x, y;  // top-left of active area
+//     int w, h;  // size of active area
 
-static void set_viewport_xy(void *sptr, unsigned x0, unsigned y0) {
+static void set_active_area(void *sptr, int x, int y, int w, int h) {
 	struct vo_generic_interface *generic = sptr;
-	// XXX bounds checking?  Only really going to be needed if user ends up
-	// able to move the viewport...
-	generic->viewport.x = x0;
-	generic->viewport.y = y0;
-	generic->scanline = y0 + generic->viewport.h;
+	int xoff = x - (640 - w) / 2;
+	int yoff = y - (240 - h) / 2;
+	generic->new_viewport.x = xoff;
+	generic->new_viewport.y = yoff;
 }
 
 // Select TV "input"
@@ -335,6 +340,8 @@ static void render_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 static void generic_vsync(void *sptr) {
 	struct vo_generic_interface *generic = sptr;
 	generic->scanline = 0;
+	generic->viewport.x = generic->new_viewport.x;
+	generic->viewport.y = generic->new_viewport.y;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

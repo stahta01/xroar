@@ -83,9 +83,10 @@ struct vo_interface {
 	//     unsigned w, h;  // dimensions in pixels
 	DELEGATE_T2(void, unsigned, unsigned) resize;
 
-	// Configure viewport X and Y offset
-	//     unsigned x0, y0;  // offset to top-left displayed pixel
-	DELEGATE_T2(void, unsigned, unsigned) set_viewport_xy;
+	// Configure active area (used to centre display)
+	//     int x, y;  // top-left of active area
+	//     int w, h;  // size of active area
+	DELEGATE_T4(void, int, int, int, int) set_active_area;
 
 	// Set fullscreen mode on or off
 	//     _Bool fullscreen;

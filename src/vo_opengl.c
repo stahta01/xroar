@@ -101,7 +101,7 @@ struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
-	vo->set_viewport_xy = DELEGATE_AS2(void, unsigned, unsigned, set_viewport_xy, generic);
+	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, set_active_area, generic);
 	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
 	vo->set_brightness = DELEGATE_AS1(void, int, set_brightness, generic);
 	vo->set_contrast = DELEGATE_AS1(void, int, set_contrast, generic);

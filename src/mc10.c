@@ -320,6 +320,13 @@ static _Bool mc10_finish(struct part *p) {
         mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
         mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
 
+	// Active area is constant
+	{
+		int x = VDG_tWHS + VDG_tBP + VDG_tLB;
+		int y = VDG_ACTIVE_AREA_START + (is_pal ? 24 : 0);
+		DELEGATE_SAFE_CALL(mp->vo->set_active_area, x, y, 512, 192);
+	}
+
 	// Set up VDG palette in video module
 	{
 		struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);
