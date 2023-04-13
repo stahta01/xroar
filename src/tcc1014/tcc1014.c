@@ -245,6 +245,8 @@ struct TCC1014_private {
 	int vram_bit;
 	enum vdg_render_mode render_mode;
 	_Bool blink;
+	_Bool have_vdata_cache;
+	uint8_t vdata_cache;
 
 	// Unsafe warning: pixel_data[] *may* need to be 16 elements longer
 	// than a full scanline.  16 is the maximum number of elements rendered
@@ -975,8 +977,19 @@ static void do_fs_rise(void *sptr) {
 }
 
 static uint8_t fetch_byte_vram(struct TCC1014_private *gime) {
-	// X offset appears to be dynamically added to current video address
-	return DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff++ & 0xff));
+	// Fetch 16 bits at once.  16-colour 16 byte-per-row graphics modes
+	// "lose" the lower 8 bits (done here by clearing vdata_cache).
+	uint8_t r;
+	if (gime->have_vdata_cache) {
+		r = gime->vdata_cache;
+		gime->have_vdata_cache = 0;
+	} else {
+		// X offset appears to be dynamically added to current video address
+		r = DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff++ & 0xff));
+		gime->vdata_cache = DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff++ & 0xff));
+		gime->have_vdata_cache = 1;
+	}
+	return r;
 }
 
 static void render_scanline(struct TCC1014_private *gime) {
@@ -1052,7 +1065,11 @@ static void render_scanline(struct TCC1014_private *gime) {
 				if (gime->BP) {
 					// CoCo 3 graphics
 					gime->vram_g_data = vdata;
-
+					// 16 colour, 16 byte-per-row modes zero the second
+					// half of the data
+					if (gime->HRES == 0 && gime->CRES >= 2) {
+						gime->vdata_cache = 0;
+					}
 				} else {
 					// CoCo 3 text
 					int c = vdata & 0x7f;
