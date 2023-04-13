@@ -63,13 +63,13 @@
 #endif
 
 // Guesses, based on not much:
-static float rgb_intensity_map[4] = { 0.000, 0.333, 0.667, 1.000 };
+static float rgb_intensity_map[4] = { 0.00, 0.47, 0.75, 0.92 };
 
 // Same:
-static float hue_intensity_map[4] = { 0.3773, 0.5145, 0.7203, 0.8575 };
+static float hue_intensity_map[4] = { 0.36, 0.52, 0.66, 0.83 };
 
 // These are the approximate values measured by John Kowalski:
-static float grey_intensity_map[4] = { 0.03, 0.23, 0.5, 1.0 };
+static float grey_intensity_map[4] = { 0.03, 0.23, 0.50, 1.00 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -398,7 +398,7 @@ static _Bool coco3_finish(struct part *p) {
 			r_y = 0.0;
 		} else {
 			// Conversion gain of 0.6 for chroma through MC1372.
-			double hue = (2.0 * M_PI * (double)(phase+7.5)) / 15.0;
+			double hue = (2.0 * M_PI * (double)(phase+7.072)) / 14.0;
 			y = hue_intensity_map[intensity];
 			b_y = 0.5 * sin(hue) * 0.6;
 			r_y = 0.5 * cos(hue) * 0.6;
