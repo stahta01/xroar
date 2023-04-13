@@ -54,13 +54,9 @@ void ntsc_palette_free(struct ntsc_palette *np) {
 }
 
 void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
-			  double y, double pb, double pr) {
+			  double y, double b_y, double r_y) {
 	assert(np != NULL);
 	assert(c < 256);
-
-	// Scale Pb,Pr to valid B'-Y',R'-Y'
-	double b_y = pb * 0.5/0.886;
-	double r_y = pr * 0.5/0.701;
 
 	if (c >= np->ncolours) {
 		np->ncolours = c+1;
@@ -70,8 +66,9 @@ void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
 	}
 
 	// Convert to I',Q'
-	double i = -0.2685 * b_y + 0.7355 * r_y;
-	double q =  0.4135 * b_y + 0.4776 * r_y;
+	y *= 0.7572;
+	double i = -0.4795 * b_y + 1.0430 * r_y;
+	double q =  0.7403 * b_y + 0.6773 * r_y;
 
 	// Datasheet for the MC1372 says that its Chroma Modulator B input
 	// leads Chroma Modulator A by 100°.  This does seem to result in a

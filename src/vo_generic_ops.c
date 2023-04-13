@@ -349,8 +349,9 @@ static void generic_vsync(void *sptr) {
 // Update gamma LUT
 
 static void update_gamma_table(struct vo_generic_interface *generic) {
-	float brightness = (float)(generic->brightness - 50) / 50.;
-	float contrast = (float)generic->contrast / 50.;
+	// Tweak default brightness/contrast a little
+	float brightness = (float)(generic->brightness + 1 - 50) / 50.;
+	float contrast = (float)(generic->contrast + 11) / 50.;
 	for (int j = 0; j < 256; j++) {
 		float c = j / 255.0;
 		c *= contrast;
