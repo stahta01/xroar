@@ -76,7 +76,7 @@ struct TCC1014 {
 	DELEGATE_T1(void, bool) signal_fs;
 
 	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
-	DELEGATE_T1(uint8, uint32) fetch_vram;
+	DELEGATE_T1(uint16, uint32) fetch_vram;
 
 	// Report geometry
 	//

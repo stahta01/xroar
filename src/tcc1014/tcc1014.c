@@ -427,7 +427,7 @@ static struct part *tcc1014_allocate(void) {
 	gime->B = 0x60400;
 	gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	gime->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
-	gime->public.fetch_vram = DELEGATE_DEFAULT1(uint8, uint32);
+	gime->public.fetch_vram = DELEGATE_DEFAULT1(uint16, uint32);
 	gime->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	gime->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
 	event_init(&gime->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, gime));
@@ -564,6 +564,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
 	tcc1014_update_graphics_mode(gime);
 	gime->vram_bit = 0;
+	gime->have_vdata_cache = 0;
 	gime->lborder_remaining = gime->pLB;
 	gime->vram_remaining = 32;
 	gime->rborder_remaining = gime->pRB;
@@ -985,8 +986,10 @@ static uint8_t fetch_byte_vram(struct TCC1014_private *gime) {
 		gime->have_vdata_cache = 0;
 	} else {
 		// X offset appears to be dynamically added to current video address
-		r = DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff++ & 0xff));
-		gime->vdata_cache = DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff++ & 0xff));
+		uint16_t data = DELEGATE_CALL(gime->public.fetch_vram, gime->B + (gime->Xoff & 0xff));
+		gime->Xoff += 2;
+		r = data >> 8;
+		gime->vdata_cache = data;
 		gime->have_vdata_cache = 1;
 	}
 	return r;

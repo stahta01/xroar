@@ -252,7 +252,7 @@ static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void coco3_instruction_posthook(void *sptr);
-static uint8_t fetch_vram(void *sptr, uint32_t A);
+static uint16_t fetch_vram(void *sptr, uint32_t A);
 
 static void pia0a_data_preread(void *sptr);
 #define pia0a_data_postwrite NULL
@@ -383,7 +383,7 @@ static _Bool coco3_finish(struct part *p) {
 	// GIME
 
 	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
-	mcc3->GIME->fetch_vram = DELEGATE_AS1(uint8, uint32, fetch_vram, mcc3);
+	mcc3->GIME->fetch_vram = DELEGATE_AS1(uint16, uint32, fetch_vram, mcc3);
 
 	// GIME reports changes in active area
 	mcc3->GIME->set_active_area = mcc3->vo->set_active_area;
@@ -1071,9 +1071,10 @@ static void coco3_dump_ram(struct machine *m, FILE *fd) {
 	fwrite(mcc3->ram, mcc3->ram_size, 1, fd);
 }
 
-static uint8_t fetch_vram(void *sptr, uint32_t A) {
+static uint16_t fetch_vram(void *sptr, uint32_t A) {
 	struct machine_coco3 *mcc3 = sptr;
-	return mcc3->ram[mcc3->dat.vram_bank | (A & mcc3->ram_mask)];
+	A = (mcc3->dat.vram_bank | (A & mcc3->ram_mask)) & ~1;
+	return (mcc3->ram[A] << 8) | mcc3->ram[A+1];
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
