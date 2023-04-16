@@ -30,7 +30,7 @@
 #include "windows32/common_windows32.h"
 #include "windows32/dialogs.h"
 
-static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static HWND vo_window = NULL;
 static HWND vo_brightness = NULL;
@@ -39,6 +39,7 @@ static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
 
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
+	(void)uisdl2;
 	vo_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TV_CONTROLS), windows32_main_hwnd, (DLGPROC)tv_controls_proc);
 
 	vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
@@ -59,6 +60,7 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 }
 
 void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
+	(void)uisdl2;
 	ShowWindow(vo_window, SW_SHOW);
 }
 
@@ -67,18 +69,22 @@ void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
 // Video options - update values in UI
 
 void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
 	SendMessage(vo_brightness, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_contrast(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
 	SendMessage(vo_contrast, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
 	SendMessage(vo_saturation, UDM_SETPOS, 0, value);
 }
 
 void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
 	SendMessage(vo_hue, UDM_SETPOS, 0, value);
 }
 
@@ -86,7 +92,9 @@ void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
 
 // Video options - signal handlers
 
-static BOOL CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	(void)hwnd;
+
 	switch (msg) {
 
 	case WM_INITDIALOG:
