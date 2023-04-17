@@ -93,6 +93,7 @@ struct vo_opengl_interface {
 	int filter;
 
 	GLfloat vertices[4][2];
+	GLfloat tex_coords[4][2];
 };
 
 // Define stuff required for vo_generic_ops and include it.
@@ -105,14 +106,7 @@ struct vo_opengl_interface {
 
 #include "vo_generic_ops.c"
 
-/*** ***/
-
-static const GLfloat tex_coords[][2] = {
-	{ 0.0, 0.0 },
-	{ 0.0, 0.9375 },
-	{ 0.625, 0.0 },
-	{ 0.625, 0.9375 },
-};
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void vo_opengl_free(void *sptr);
 static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h);
@@ -252,10 +246,19 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	vogl->vertices[3][0] = vogl->window_width - vogl->vo_opengl_x;
 	vogl->vertices[3][1] = vogl->window_height - vogl->vo_opengl_y;
 
+	vogl->tex_coords[0][0] = 0.0;
+	vogl->tex_coords[0][1] = 0.0;
+	vogl->tex_coords[1][0] = 0.0;
+	vogl->tex_coords[1][1] = (double)TEX_BUF_HEIGHT / (double)TEX_INT_HEIGHT;
+	vogl->tex_coords[2][0] = (double)TEX_BUF_WIDTH / (double)TEX_INT_PITCH;
+	vogl->tex_coords[2][1] = 0.0;
+	vogl->tex_coords[3][0] = (double)TEX_BUF_WIDTH / (double)TEX_INT_PITCH;
+	vogl->tex_coords[3][1] = (double)TEX_BUF_HEIGHT / (double)TEX_INT_HEIGHT;
+
 	// The same vertex & texcoord lists will be used every draw,
 	// so configure them here rather than in vsync()
 	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
-	glTexCoordPointer(2, GL_FLOAT, 0, tex_coords);
+	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
 }
 
 static void vo_opengl_refresh(void *sptr) {
