@@ -50,7 +50,7 @@ static void *new(void *cfg) {
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, no_op_palette_set, vo);
 
 	// Used by machine to render video
-	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, no_op_render, vo);
+	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, no_op_render, vo->renderer);
 	vo->vsync = DELEGATE_AS0(void, no_op, vo);
 
 	return vo;

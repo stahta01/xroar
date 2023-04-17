@@ -31,6 +31,7 @@
 #include "mc6847/mc6847.h"
 #include "module.h"
 #include "vo.h"
+#include "vo_render.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
@@ -50,17 +51,13 @@
 
 // Low precision definitions
 #define TEX_INT_FMT SDL_PIXELFORMAT_ARGB4444
-#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
+#define VO_RENDER_FMT VO_RENDER_ARGB4
 typedef uint16_t Pixel;
 
 /*
 // Higher precision definitions
 # define TEX_INT_FMT SDL_PIXELFORMAT_RGBA32
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-# define MAPCOLOUR(vo,r,g,b) ( ((r) << 24) | ((g) << 16) | ((b) << 8) | 0xff )
-#else
-# define MAPCOLOUR(vo,r,g,b) ( 0xff000000 | ((b) << 16) | ((g) << 8) | (r) )
-#endif
+# define VO_RENDER_FMT VO_RENDER_RGBA32
 typedef uint32_t Pixel;
 */
 
@@ -78,7 +75,7 @@ struct module vo_sdl_module = {
 struct vo_sdl_interface {
 	struct vo_interface public;
 
-	SDL_Renderer *renderer;
+	SDL_Renderer *sdl_renderer;
 	SDL_Texture *texture;
 	Pixel *texture_pixels;
 	int filter;
@@ -90,17 +87,6 @@ struct vo_sdl_interface {
 	_Bool showing_menu;
 #endif
 };
-
-// Define stuff required for vo_generic_ops and include it.
-
-#define VO_MODULE_INTERFACE struct vo_sdl_interface
-#define XSTEP 1
-#define NEXTLINE 0
-#define LOCK_SURFACE(generic)
-#define UNLOCK_SURFACE(generic)
-#define VIDEO_MODULE_NAME vo_sdl_module
-
-#include "vo_generic_ops.c"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -126,16 +112,20 @@ static void *new(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
 
-	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
-	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_sdl_interface *vosdl = vo_interface_new(sizeof(*vosdl));
+	*vosdl = (struct vo_sdl_interface){0};
 	struct vo_interface *vo = &vosdl->public;
 
-	vo_generic_init(generic);
+	struct vo_render *vr = vo_render_new(VO_RENDER_FMT);
+	vr->buffer_pitch = TEX_BUF_WIDTH;
+
+	vo_set_renderer(vo, vr);
 
 	vosdl->texture_pixels = xmalloc(TEX_BUF_WIDTH * 240 * sizeof(Pixel));
 	for (int i = 0; i < TEX_BUF_WIDTH * 240; i++)
 		vosdl->texture_pixels[i] = 0;
 
+	vr->buffer = vosdl->texture_pixels;
 
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
@@ -145,25 +135,10 @@ static void *new(void *sptr) {
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, set_active_area, generic);
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
-	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
-	vo->set_brightness = DELEGATE_AS1(void, int, set_brightness, generic);
-	vo->set_contrast = DELEGATE_AS1(void, int, set_contrast, generic);
-	vo->set_saturation = DELEGATE_AS1(void, int, set_saturation, generic);
-	vo->set_hue = DELEGATE_AS1(void, int, set_hue, generic);
-	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
-	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
-
-	// Used by machine to configure video output
-	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
-	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
-	vo->set_burst = DELEGATE_AS2(void, unsigned, int, set_burst, generic);
-	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
 
 	// Used by machine to render video
-	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_palette, vo);
 	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
 
@@ -342,15 +317,15 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 
 #ifdef HAVE_WASM
 	// XXX see above
-	if (!vosdl->renderer) {
+	if (!vosdl->sdl_renderer) {
 #endif
 
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
-		vosdl->renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, renderer_flags[i]);
-		if (vosdl->renderer)
+		vosdl->sdl_renderer = SDL_CreateRenderer(global_uisdl2->vo_window, -1, renderer_flags[i]);
+		if (vosdl->sdl_renderer)
 			break;
 	}
-	if (!vosdl->renderer) {
+	if (!vosdl->sdl_renderer) {
 		LOG_ERROR("Failed to create renderer\n");
 		return 0;
 	}
@@ -361,7 +336,7 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 
 	if (logging.level >= 3) {
 		SDL_RendererInfo renderer_info;
-		if (SDL_GetRendererInfo(vosdl->renderer, &renderer_info) == 0) {
+		if (SDL_GetRendererInfo(vosdl->sdl_renderer, &renderer_info) == 0) {
 			LOG_PRINT("SDL_GetRendererInfo()\n");
 			LOG_PRINT("\tname = %s\n", renderer_info.name);
 			LOG_PRINT("\tflags = 0x%x\n", renderer_info.flags);
@@ -385,17 +360,17 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	// XXX see above
 	if (!vosdl->texture)
 #endif
-	vosdl->texture = SDL_CreateTexture(vosdl->renderer, TEX_INT_FMT, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
+	vosdl->texture = SDL_CreateTexture(vosdl->sdl_renderer, TEX_INT_FMT, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer(vosdl);
 		return 0;
 	}
 
-	SDL_RenderSetLogicalSize(vosdl->renderer, 640, 480);
+	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, 640, 480);
 
-	SDL_RenderClear(vosdl->renderer);
-	SDL_RenderPresent(vosdl->renderer);
+	SDL_RenderClear(vosdl->sdl_renderer);
+	SDL_RenderPresent(vosdl->sdl_renderer);
 
 	global_uisdl2->display_rect.x = global_uisdl2->display_rect.y = 0;
 	global_uisdl2->display_rect.w = w;
@@ -409,16 +384,14 @@ static void destroy_renderer(struct vo_sdl_interface *vosdl) {
 		SDL_DestroyTexture(vosdl->texture);
 		vosdl->texture = NULL;
 	}
-	if (vosdl->renderer) {
-		SDL_DestroyRenderer(vosdl->renderer);
-		vosdl->renderer = NULL;
+	if (vosdl->sdl_renderer) {
+		SDL_DestroyRenderer(vosdl->sdl_renderer);
+		vosdl->sdl_renderer = NULL;
 	}
 }
 
 static void vo_sdl_free(void *sptr) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_sdl_interface *vosdl = &generic->module;
-	vo_generic_free(generic);
+	struct vo_sdl_interface *vosdl = sptr;
 	if (vosdl->texture_pixels) {
 		free(vosdl->texture_pixels);
 		vosdl->texture_pixels = NULL;
@@ -435,16 +408,14 @@ static void vo_sdl_free(void *sptr) {
 static void vo_sdl_refresh(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
 	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEX_BUF_WIDTH * sizeof(Pixel));
-	SDL_RenderClear(vosdl->renderer);
-	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
-	SDL_RenderPresent(vosdl->renderer);
+	SDL_RenderClear(vosdl->sdl_renderer);
+	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture, NULL, NULL);
+	SDL_RenderPresent(vosdl->sdl_renderer);
 }
 
 static void vo_sdl_vsync(void *sptr) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_sdl_interface *vosdl = &generic->module;
+	struct vo_sdl_interface *vosdl = sptr;
 	struct vo_interface *vo = &vosdl->public;
 	vo_sdl_refresh(vosdl);
-	generic->pixel = vosdl->texture_pixels;
-	generic_vsync(vo);
+	vo_render_vsync(vo->renderer);
 }

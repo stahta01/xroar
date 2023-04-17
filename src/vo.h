@@ -37,10 +37,10 @@
 
 #include "delegate.h"
 
+#include "vo_render.h"
 #include "xconfig.h"
 
 struct module;
-struct ntsc_burst;
 
 // Select monitor input.
 #define VO_TV_CMP (0)
@@ -67,14 +67,21 @@ struct vo_rect {
 	unsigned w, h;
 };
 
-// For render_scanline(), accepts pointer to scanline data (uint8_t), and an NTSC
-// colourburst.
-typedef DELEGATE_S2(void, uint8_t const *, struct ntsc_burst *) DELEGATE_T2(void, uint8cp, ntscburst);
-
 struct vo_interface {
 	_Bool is_fullscreen;
 	_Bool show_menubar;
 
+	// Renderer
+	struct vo_render *renderer;
+
+	// Selected "TV input"
+	int input;      // VO_TV_CMP or VO_TV_RGB
+
+	// Selected cross-colour renderer
+	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
+
+	// Called by vo_free before freeing the struct to handle
+	// module-specific allocations
 	DELEGATE_T0(void) free;
 
 	// Used by UI to adjust viewing parameters
@@ -96,10 +103,6 @@ struct vo_interface {
 	//     _Bool menubar;
 	DELEGATE_T1(void, bool) set_menubar;
 
-	// Select TV "input"
-	//     int input;  // VO_TV_*
-	DELEGATE_T1(void, int) set_input;
-
 	// Set brightness
 	//     int brightness;  // 0-100
 	DELEGATE_T1(void, int) set_brightness;
@@ -115,10 +118,6 @@ struct vo_interface {
 	// Set hue
 	//     int hue;  // -179 to +180
 	DELEGATE_T1(void, int) set_hue;
-
-	// Set cross-colour renderer
-	//     int ccr;  // VO_CMP_CCR_*
-	DELEGATE_T1(void, int) set_cmp_ccr;
 
 	// Set cross-colour phase
 	//     int phase;  // VO_CMP_PHASE_*
@@ -147,7 +146,7 @@ struct vo_interface {
 
 	// Used by machine to render video
 
-	// Submit a scanline for rendering
+	// Currently selected line renderer
 	//     unsigned burst;       // burst index for this line
 	//     unsigned npixels;     // no. pixels in scanline
 	//     const uint8_t *data;  // palettised data, NULL for dummy line
@@ -165,5 +164,28 @@ extern struct xconfig_enum vo_cmp_ccr_list[];
 
 extern const uint8_t vo_cmp_lut_2bit[2][4][3];
 extern const uint8_t vo_cmp_lut_5bit[2][32][3];
+
+// Allocates at least enough space for (struct vo_interface)
+
+void *vo_interface_new(size_t isize);
+
+// Calls free() delegate then frees structure
+
+void vo_free(void *);
+
+// Set renderer and use its contents to prepopulate various delegates.  Call
+// this before overriding any locally in video modules.
+
+void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
+
+// Select TV "input"
+//     int input;  // VO_TV_*
+
+void vo_set_input(struct vo_interface *vo, int input);
+
+// Select cross-colour renderer
+//     int ccr;  // VO_CMP_CCR_*
+
+void vo_set_cmp_ccr(struct vo_interface *vo, int ccr);
 
 #endif

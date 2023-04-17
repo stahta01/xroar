@@ -67,8 +67,6 @@ static void vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_menubar(void *sptr, _Bool show_menubar);
-static void vo_gtkgl_set_input(void *sptr, int input);
-static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr);
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
@@ -91,24 +89,23 @@ static void *new(void *sptr) {
 		return NULL;
 	}
 
-	struct vo_gtkgl_interface *vogtkgl = xmalloc(sizeof(*vogtkgl));
-	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_gtkgl_interface *vogtkgl = vo_interface_new(sizeof(*vogtkgl));
 	*vogtkgl = (struct vo_gtkgl_interface){0};
+	struct vo_interface *vo = &vogtkgl->public;
 	vogtkgl->vogl = vogl;
 
 	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
+	vo->renderer = vogl->renderer;
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
 	vo->set_active_area = vogl->set_active_area;
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
-	vo->set_input = DELEGATE_AS1(void, int, vo_gtkgl_set_input, vo);
 	vo->set_brightness = vogl->set_brightness;
 	vo->set_contrast = vogl->set_contrast;
 	vo->set_saturation = vogl->set_saturation;
 	vo->set_hue = vogl->set_hue;
-	vo->set_cmp_ccr = DELEGATE_AS1(void, int, vo_gtkgl_set_cmp_ccr, vo);
 	vo->set_cmp_phase = vogl->set_cmp_phase;
 
 	// Used by machine to configure video output
@@ -308,22 +305,6 @@ static void vsync(void *sptr) {
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);
-}
-
-static void vo_gtkgl_set_input(void *sptr, int input) {
-	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vo = &vogtkgl->public;
-	struct vo_interface *vogl = vogtkgl->vogl;
-	DELEGATE_CALL(vogl->set_input, input);
-	vo->render_line = vogl->render_line;
-}
-
-static void vo_gtkgl_set_cmp_ccr(void *sptr, int ccr) {
-	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vo = &vogtkgl->public;
-	struct vo_interface *vogl = vogtkgl->vogl;
-	DELEGATE_CALL(vogl->set_cmp_ccr, ccr);
-	vo->render_line = vogl->render_line;
 }
 
 #ifdef HAVE_X11

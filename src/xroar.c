@@ -1499,13 +1499,13 @@ void xroar_set_tv_input(_Bool notify, int action) {
 	}
 
 	if (xroar_machine_config->tv_input == TV_INPUT_RGB) {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_input, VO_TV_RGB);
+		vo_set_input(xroar_vo_interface, VO_TV_RGB);
 	} else {
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_input, VO_TV_CMP);
+		vo_set_input(xroar_vo_interface, VO_TV_CMP);
 		if (xroar_machine_config->tv_input == TV_INPUT_CMP_PALETTE) {
-			DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, VO_CMP_CCR_NONE);
+			vo_set_cmp_ccr(xroar_vo_interface, VO_CMP_CCR_NONE);
 		} else {
-			DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_ccr, private_cfg.vo.ccr);
+			vo_set_cmp_ccr(xroar_vo_interface, private_cfg.vo.ccr);
 		}
 	}
 

@@ -53,6 +53,7 @@ xroar_SOURCES = \
 	vdisk.c vdisk.h \
 	vdrive.c vdrive.h \
 	vo.c vo.h \
+	vo_render.c vo_render.h \
 	xconfig.c xconfig.h \
 	xroar.c xroar.h
 
@@ -137,7 +138,7 @@ EXTRA_DIST += \
 	mc6809/mc6809_common.c \
 	mc680x/mc680x_ops.c \
 	tcc1014/font-gime.c tcc1014/font-gime.h \
-	vo_generic_ops.c
+	vo_render_tmpl.c
 
 # VDG bitmaps should be distributed, but can be generated from font image files
 # if needed.

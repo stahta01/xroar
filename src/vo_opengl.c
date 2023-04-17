@@ -42,6 +42,7 @@
 
 #include "vo.h"
 #include "vo_opengl.h"
+#include "vo_render.h"
 #include "xroar.h"
 
 // TEX_INT_FMT is the format OpenGL is asked to make the texture internally.
@@ -51,6 +52,8 @@
 //
 // TEX_BUF_TYPE is the data type used for those transfers, therefore also
 // linked to the data we manipulate.
+//
+// VO_RENDER_FMT is the renderer we request, and should match up to the above.
 
 // These definitions may need to be configurable - probably any modern system
 // can use ARGB8, but maybe not?
@@ -59,7 +62,7 @@
 #define TEX_INT_FMT GL_RGB5
 #define TEX_BUF_FMT GL_RGB
 #define TEX_BUF_TYPE GL_UNSIGNED_SHORT_5_6_5
-#define MAPCOLOUR(vo,r,g,b) ( (((r) & 0xf8) << 8) | (((g) & 0xfc) << 3) | (((b) & 0xf8) >> 3) )
+#define VO_RENDER_FMT VO_RENDER_RGB565
 typedef uint16_t Pixel;
 
 /*
@@ -67,7 +70,7 @@ typedef uint16_t Pixel;
 #define TEX_INT_FMT GL_RGB8
 #define TEX_BUF_FMT GL_RGBA
 #define TEX_BUF_TYPE GL_UNSIGNED_INT_8_8_8_8
-#define MAPCOLOUR(vo,r,g,b) ( ((r) << 24) | ((g) << 16) | ((b) << 8) | 0xff )
+#define VO_RENDER_FMT VO_RENDER_RGBA8
 typedef uint32_t Pixel;
 */
 
@@ -96,16 +99,6 @@ struct vo_opengl_interface {
 	GLfloat tex_coords[4][2];
 };
 
-// Define stuff required for vo_generic_ops and include it.
-
-#define VO_MODULE_INTERFACE struct vo_opengl_interface
-#define XSTEP 1
-#define NEXTLINE 0
-#define LOCK_SURFACE(vo)
-#define UNLOCK_SURFACE(vo)
-
-#include "vo_generic_ops.c"
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void vo_opengl_free(void *sptr);
@@ -114,43 +107,31 @@ static void vo_opengl_refresh(void *sptr);
 static void vo_opengl_vsync(void *sptr);
 
 struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
-	struct vo_generic_interface *generic = xmalloc(sizeof(*generic));
-	struct vo_opengl_interface *vogl = &generic->module;
+	struct vo_opengl_interface *vogl = xmalloc(sizeof(*vogl));
 	struct vo_interface *vo = &vogl->public;
 
-	vo_generic_init(generic);
+	struct vo_render *vr = vo_render_new(VO_RENDER_FMT);
+	vr->buffer_pitch = TEX_BUF_WIDTH;
+	vo_set_renderer(vo, vr);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
-	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, set_active_area, generic);
-	vo->set_input = DELEGATE_AS1(void, int, set_input, generic);
-	vo->set_brightness = DELEGATE_AS1(void, int, set_brightness, generic);
-	vo->set_contrast = DELEGATE_AS1(void, int, set_contrast, generic);
-	vo->set_saturation = DELEGATE_AS1(void, int, set_saturation, generic);
-	vo->set_hue = DELEGATE_AS1(void, int, set_hue, generic);
-	vo->set_cmp_ccr = DELEGATE_AS1(void, int, set_cmp_ccr, generic);
-	vo->set_cmp_phase = DELEGATE_AS1(void, int, set_cmp_phase, generic);
-
-	// Used by machine to configure video output
-	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, palette_set_ybr, generic);
-	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, palette_set_rgb, generic);
-	vo->set_burst = DELEGATE_AS2(void, unsigned, int, set_burst, generic);
-	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, set_cmp_phase_offset, generic);
+	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, vo_render_set_active_area, vr);
 
 	// Used by machine to render video
-	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, render_palette, vo);
 	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
 	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
 
 	vogl->texture_pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * sizeof(Pixel));
+	vr->buffer = vogl->texture_pixels;
+
 	vogl->window_width = 640;
 	vogl->window_height = 480;
 	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
 	vogl->filter = vo_cfg->gl_filter;
-	generic_vsync(generic);
-	generic->pixel = vogl->texture_pixels;
+	vo_render_vsync(vo->renderer);
 	return vo;
 }
 
@@ -163,9 +144,7 @@ void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp) {
 }
 
 static void vo_opengl_free(void *sptr) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_opengl_interface *vogl = &generic->module;
-	vo_generic_free(generic);
+	struct vo_opengl_interface *vogl = sptr;
 	glDeleteTextures(1, &vogl->texnum);
 	free(vogl->texture_pixels);
 	free(vogl);
@@ -273,9 +252,8 @@ static void vo_opengl_refresh(void *sptr) {
 }
 
 static void vo_opengl_vsync(void *sptr) {
-	struct vo_generic_interface *generic = sptr;
-	struct vo_opengl_interface *vogl = &generic->module;
+	struct vo_opengl_interface *vogl = sptr;
+	struct vo_interface *vo = &vogl->public;
 	vo_opengl_refresh(vogl);
-	generic->pixel = vogl->texture_pixels;
-	generic_vsync(generic);
+	vo_render_vsync(vo->renderer);
 }
