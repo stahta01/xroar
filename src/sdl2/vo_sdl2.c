@@ -35,7 +35,38 @@
 
 #include "sdl2/common.h"
 
-#define TEXTURE_WIDTH (640)
+// TEX_INT_FMT is the format SDL is asked to make the texture internally.
+//
+// TEX_BUF_FMT is the format used to transfer data to the texture; ie, the
+// format we allocate memory for and manipulate.
+//
+// TEX_BUF_TYPE is the data type used for those transfers, therefore also
+// linked to the data we manipulate.
+//
+// VO_RENDER_FMT is the renderer we request, and should match up to the above.
+//
+// These definitions may need to be configurable - probably any modern system
+// can use ARGB8, but maybe not?
+
+// Low precision definitions
+#define TEX_INT_FMT SDL_PIXELFORMAT_ARGB4444
+#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
+typedef uint16_t Pixel;
+
+/*
+// Higher precision definitions
+# define TEX_INT_FMT SDL_PIXELFORMAT_RGBA32
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+# define MAPCOLOUR(vo,r,g,b) ( ((r) << 24) | ((g) << 16) | ((b) << 8) | 0xff )
+#else
+# define MAPCOLOUR(vo,r,g,b) ( 0xff000000 | ((b) << 16) | ((g) << 8) | (r) )
+#endif
+typedef uint32_t Pixel;
+*/
+
+// TEX_BUF_WIDTH is the width of the buffer transferred to the texture.
+
+#define TEX_BUF_WIDTH (640)
 
 static void *new(void *cfg);
 
@@ -43,10 +74,6 @@ struct module vo_sdl_module = {
 	.name = "sdl", .description = "SDL2 video",
 	.new = new,
 };
-
-/*** ***/
-
-typedef uint16_t Pixel;
 
 struct vo_sdl_interface {
 	struct vo_interface public;
@@ -64,8 +91,9 @@ struct vo_sdl_interface {
 #endif
 };
 
+// Define stuff required for vo_generic_ops and include it.
+
 #define VO_MODULE_INTERFACE struct vo_sdl_interface
-#define MAPCOLOUR(vo,r,g,b) ( 0xf000 | (((r) & 0xf0) << 4) | (((g) & 0xf0)) | (((b) & 0xf0) >> 4) )
 #define XSTEP 1
 #define NEXTLINE 0
 #define LOCK_SURFACE(generic)
@@ -74,7 +102,7 @@ struct vo_sdl_interface {
 
 #include "vo_generic_ops.c"
 
-/*** ***/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static const Uint32 renderer_flags[] = {
 	SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC,
@@ -104,9 +132,10 @@ static void *new(void *sptr) {
 
 	vo_generic_init(generic);
 
-	vosdl->texture_pixels = xmalloc(TEXTURE_WIDTH * 240 * sizeof(Pixel));
-	for (int i = 0; i < TEXTURE_WIDTH * 240; i++)
-		vosdl->texture_pixels[i] = MAPCOLOUR(vosdl,0,0,0);
+	vosdl->texture_pixels = xmalloc(TEX_BUF_WIDTH * 240 * sizeof(Pixel));
+	for (int i = 0; i < TEX_BUF_WIDTH * 240; i++)
+		vosdl->texture_pixels[i] = 0;
+
 
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
@@ -356,7 +385,7 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	// XXX see above
 	if (!vosdl->texture)
 #endif
-	vosdl->texture = SDL_CreateTexture(vosdl->renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, TEXTURE_WIDTH, 240);
+	vosdl->texture = SDL_CreateTexture(vosdl->renderer, TEX_INT_FMT, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
 	if (!vosdl->texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer(vosdl);
@@ -405,7 +434,7 @@ static void vo_sdl_free(void *sptr) {
 
 static void vo_sdl_refresh(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEXTURE_WIDTH * sizeof(Pixel));
+	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEX_BUF_WIDTH * sizeof(Pixel));
 	SDL_RenderClear(vosdl->renderer);
 	SDL_RenderCopy(vosdl->renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->renderer);
