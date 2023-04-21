@@ -98,9 +98,8 @@ static const Uint32 renderer_flags[] = {
 };
 
 static void vo_sdl_free(void *sptr);
-static void vo_sdl_refresh(void *sptr);
-static void vo_sdl_vsync(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
+static void draw(void *sptr);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_menubar(void *sptr, _Bool show_menubar);
 
@@ -122,10 +121,10 @@ static void *new(void *sptr) {
 	vo_set_renderer(vo, vr);
 
 	vosdl->texture_pixels = xmalloc(TEX_BUF_WIDTH * 240 * sizeof(Pixel));
+	vo_render_set_buffer(vr, vosdl->texture_pixels);
 	for (int i = 0; i < TEX_BUF_WIDTH * 240; i++)
 		vosdl->texture_pixels[i] = 0;
 
-	vr->buffer = vosdl->texture_pixels;
 
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
@@ -139,8 +138,7 @@ static void *new(void *sptr) {
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
 
 	// Used by machine to render video
-	vo->vsync = DELEGATE_AS0(void, vo_sdl_vsync, vo);
-	vo->refresh = DELEGATE_AS0(void, vo_sdl_refresh, vosdl);
+	vo->draw = DELEGATE_AS0(void, draw, vo);
 
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
 	if (vo_cfg->fullscreen) {
@@ -164,7 +162,7 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	vo_sdl_vsync(vo);
+	vo_vsync(vo);
 
 	return vo;
 }
@@ -405,17 +403,10 @@ static void vo_sdl_free(void *sptr) {
 	free(vosdl);
 }
 
-static void vo_sdl_refresh(void *sptr) {
+static void draw(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
 	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEX_BUF_WIDTH * sizeof(Pixel));
 	SDL_RenderClear(vosdl->sdl_renderer);
 	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->sdl_renderer);
-}
-
-static void vo_sdl_vsync(void *sptr) {
-	struct vo_sdl_interface *vosdl = sptr;
-	struct vo_interface *vo = &vosdl->public;
-	vo_sdl_refresh(vosdl);
-	vo_render_vsync(vo->renderer);
 }

@@ -34,7 +34,6 @@
 #endif
 
 #ifdef WINDOWS32
-#include "windows32/common_windows32.h"
 #include <GL/glext.h>
 #endif
 
@@ -85,86 +84,52 @@ typedef uint32_t Pixel;
 #define TEX_BUF_WIDTH (640)
 #define TEX_BUF_HEIGHT (240)
 
-struct vo_opengl_interface {
-	struct vo_interface public;
-
-	Pixel *texture_pixels;
-	unsigned window_width, window_height;
-	GLuint texnum;
-	int vo_opengl_x, vo_opengl_y;
-	unsigned vo_opengl_w, vo_opengl_h;
-	int filter;
-
-	GLfloat vertices[4][2];
-	GLfloat tex_coords[4][2];
-};
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void vo_opengl_free(void *sptr);
-static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h);
-static void vo_opengl_refresh(void *sptr);
-static void vo_opengl_vsync(void *sptr);
+void *vo_opengl_new(size_t isize) {
+	if (isize < sizeof(struct vo_opengl_interface))
+		isize = sizeof(struct vo_opengl_interface);
+	struct vo_opengl_interface *vogl = xmalloc(isize);
+	*vogl = (struct vo_opengl_interface){0};
+	return vogl;
+}
 
-struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg) {
-	struct vo_opengl_interface *vogl = xmalloc(sizeof(*vogl));
-	struct vo_interface *vo = &vogl->public;
+void vo_opengl_free(void *sptr) {
+	struct vo_opengl_interface *vogl = sptr;
+	glDeleteTextures(1, &vogl->texnum);
+	free(vogl->texture_pixels);
+}
+
+void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
+	struct vo_interface *vo = &vogl->vo;
 
 	struct vo_render *vr = vo_render_new(VO_RENDER_FMT);
 	vr->buffer_pitch = TEX_BUF_WIDTH;
 	vo_set_renderer(vo, vr);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
-
-	// Used by UI to adjust viewing parameters
-	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, vo_opengl_set_window_size, vo);
-	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, vo_render_set_active_area, vr);
-
-	// Used by machine to render video
-	vo->vsync = DELEGATE_AS0(void, vo_opengl_vsync, vo);
-	vo->refresh = DELEGATE_AS0(void, vo_opengl_refresh, vo);
+	vo->draw = DELEGATE_AS0(void, vo_opengl_draw, vogl);
 
 	vogl->texture_pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * sizeof(Pixel));
-	vr->buffer = vogl->texture_pixels;
+	vo_render_set_buffer(vr, vogl->texture_pixels);
 
-	vogl->window_width = 640;
-	vogl->window_height = 480;
-	vogl->vo_opengl_x = vogl->vo_opengl_y = 0;
-	vogl->filter = vo_cfg->gl_filter;
+	vogl->viewport.x = vogl->viewport.y = 0;
+	vogl->filter = cfg->gl_filter;
 	vo_render_vsync(vo->renderer);
-	return vo;
 }
 
-void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp) {
-	struct vo_opengl_interface *vogl = (struct vo_opengl_interface *)vo;
-	disp->x = vogl->vo_opengl_x;
-	disp->y = vogl->vo_opengl_y;
-	disp->w = vogl->vo_opengl_w;
-	disp->h = vogl->vo_opengl_h;
-}
-
-static void vo_opengl_free(void *sptr) {
-	struct vo_opengl_interface *vogl = sptr;
-	glDeleteTextures(1, &vogl->texnum);
-	free(vogl->texture_pixels);
-	free(vogl);
-}
-
-static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
-	struct vo_opengl_interface *vogl = sptr;
-	vogl->window_width = w;
-	vogl->window_height = h;
-
-	if (((float)vogl->window_width/(float)vogl->window_height)>(4.0/3.0)) {
-		vogl->vo_opengl_h = vogl->window_height;
-		vogl->vo_opengl_w = (((float)vogl->vo_opengl_h/3.0)*4.0) + 0.5;
-		vogl->vo_opengl_x = (vogl->window_width - vogl->vo_opengl_w) / 2;
-		vogl->vo_opengl_y = 0;
+void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
+	// Set up viewport
+	if (((float)w/(float)h)>(4.0/3.0)) {
+		vogl->viewport.h = h;
+		vogl->viewport.w = (((float)vogl->viewport.h/3.0)*4.0) + 0.5;
+		vogl->viewport.x = (w - vogl->viewport.w) / 2;
+		vogl->viewport.y = 0;
 	} else {
-		vogl->vo_opengl_w = vogl->window_width;
-		vogl->vo_opengl_h = (((float)vogl->vo_opengl_w/4.0)*3.0) + 0.5;
-		vogl->vo_opengl_x = 0;
-		vogl->vo_opengl_y = (vogl->window_height - vogl->vo_opengl_h)/2;
+		vogl->viewport.w = w;
+		vogl->viewport.h = (((float)vogl->viewport.w/4.0)*3.0) + 0.5;
+		vogl->viewport.x = 0;
+		vogl->viewport.y = (h - vogl->viewport.h)/2;
 	}
 
 	// Configure OpenGL
@@ -177,10 +142,10 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-	glViewport(0, 0, vogl->window_width, vogl->window_height);
+	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, vogl->window_width, vogl->window_height , 0, -1.0, 1.0);
+	glOrtho(0, w, h , 0, -1.0, 1.0);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);
 
@@ -189,7 +154,7 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	glBindTexture(GL_TEXTURE_2D, vogl->texnum);
 	glTexImage2D(GL_TEXTURE_2D, 0, TEX_INT_FMT, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	if (vogl->filter == UI_GL_FILTER_NEAREST
-	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->vo_opengl_w % 320) == 0 && (vogl->vo_opengl_h % 240) == 0)) {
+	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->viewport.w % 320) == 0 && (vogl->viewport.h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	} else {
@@ -216,15 +181,10 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 				TEX_BUF_FMT, TEX_BUF_TYPE, vogl->texture_pixels);
 	}
 
-	vogl->vertices[0][0] = vogl->vo_opengl_x;
-	vogl->vertices[0][1] = vogl->vo_opengl_y;
-	vogl->vertices[1][0] = vogl->vo_opengl_x;
-	vogl->vertices[1][1] = vogl->window_height - vogl->vo_opengl_y;
-	vogl->vertices[2][0] = vogl->window_width - vogl->vo_opengl_x;
-	vogl->vertices[2][1] = vogl->vo_opengl_y;
-	vogl->vertices[3][0] = vogl->window_width - vogl->vo_opengl_x;
-	vogl->vertices[3][1] = vogl->window_height - vogl->vo_opengl_y;
+	// The same vertex & texcoord lists will be used every draw,
+	// so configure them here rather than in vsync()
 
+	// Texture coordinates select a subset of the texture to update
 	vogl->tex_coords[0][0] = 0.0;
 	vogl->tex_coords[0][1] = 0.0;
 	vogl->tex_coords[1][0] = 0.0;
@@ -233,27 +193,25 @@ static void vo_opengl_set_window_size(void *sptr, unsigned w, unsigned h) {
 	vogl->tex_coords[2][1] = 0.0;
 	vogl->tex_coords[3][0] = (double)TEX_BUF_WIDTH / (double)TEX_INT_PITCH;
 	vogl->tex_coords[3][1] = (double)TEX_BUF_HEIGHT / (double)TEX_INT_HEIGHT;
-
-	// The same vertex & texcoord lists will be used every draw,
-	// so configure them here rather than in vsync()
-	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
 	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
+
+	// Vertex array defines where in the window the texture will be rendered
+	vogl->vertices[0][0] = vogl->viewport.x;
+	vogl->vertices[0][1] = vogl->viewport.y;
+	vogl->vertices[1][0] = vogl->viewport.x;
+	vogl->vertices[1][1] = h - vogl->viewport.y;
+	vogl->vertices[2][0] = w - vogl->viewport.x;
+	vogl->vertices[2][1] = vogl->viewport.y;
+	vogl->vertices[3][0] = w - vogl->viewport.x;
+	vogl->vertices[3][1] = h - vogl->viewport.y;
+	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
 }
 
-static void vo_opengl_refresh(void *sptr) {
+void vo_opengl_draw(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
 	glClear(GL_COLOR_BUFFER_BIT);
-	// Draw main window
 	glTexSubImage2D(GL_TEXTURE_2D, 0,
 			0, 0, TEX_BUF_WIDTH, TEX_BUF_HEIGHT,
 			TEX_BUF_FMT, TEX_BUF_TYPE, vogl->texture_pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	// Video module should now do whatever's required to swap buffers
-}
-
-static void vo_opengl_vsync(void *sptr) {
-	struct vo_opengl_interface *vogl = sptr;
-	struct vo_interface *vo = &vogl->public;
-	vo_opengl_refresh(vogl);
-	vo_render_vsync(vo->renderer);
 }

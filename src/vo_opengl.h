@@ -2,7 +2,7 @@
  *
  *  \brief Generic OpenGL support for video output modules.
  *
- *  \copyright Copyright 2012-2016 Ciaran Anscomb
+ *  \copyright Copyright 2012-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -15,8 +15,8 @@
  *
  *  \endlicenseblock
  *
- * OpenGL code is common to several video modules.  All the stuff that's not
- * toolkit-specific goes in here.
+ * OpenGL code may be common to multiple video modules.  Anything not specific
+ * to a toolkit goes here.
  */
 
 #ifndef XROAR_VO_OPENGL_H_
@@ -24,10 +24,62 @@
 
 #include <stdint.h>
 
-struct vo_interface;
-struct vo_rect;
+#if defined(__APPLE_CC__)
+# include <OpenGL/gl.h>
+#else
+# include <GL/gl.h>
+#endif
 
-struct vo_interface *vo_opengl_new(struct vo_cfg *vo_cfg);
-void vo_opengl_get_display_rect(struct vo_interface *vo, struct vo_rect *disp);
+#ifdef WINDOWS32
+#include <GL/glext.h>
+#endif
+
+#include "vo.h"
+
+// Not a standalone video interface.  Intended for video modules to "subclass".
+
+struct vo_opengl_interface {
+	struct vo_interface vo;
+
+	void *texture_pixels;
+	GLuint texnum;
+
+	struct {
+		int w, h;
+	} draw_area;
+
+	struct {
+		int x, y;
+		int w, h;
+	} viewport;
+
+	int filter;
+
+	GLfloat vertices[4][2];
+	GLfloat tex_coords[4][2];
+};
+
+// Allocate new opengl interface (potentially with room for extra data)
+
+void *vo_opengl_new(size_t isize);
+
+// Free any allocated structures
+
+void vo_opengl_free(void *sptr);
+
+// Configure parameters.  This finishes setting things up, including creating a
+// renderer.
+
+void vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
+
+// Set up OpenGL context for rendering
+//
+//     int w, h;  // dimensions of window to draw into
+
+void vo_opengl_setup_context(struct vo_opengl_interface *, int w, int h);
+
+// Update texture and draw it
+
+void vo_opengl_draw(void *);
 
 #endif

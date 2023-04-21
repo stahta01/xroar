@@ -52,9 +52,7 @@ struct module vo_gtkgl_module = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct vo_gtkgl_interface {
-	struct vo_interface public;
-
-	struct vo_interface *vogl;  // OpenGL generic interface
+	struct vo_opengl_interface vogl;
 
 	int woff, hoff;  // geometry offsets introduced by menubar
 };
@@ -62,8 +60,7 @@ struct vo_gtkgl_interface {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void vo_gtkgl_free(void *sptr);
-static void refresh(void *sptr);
-static void vsync(void *sptr);
+static void draw(void *sptr);
 static void resize(void *sptr, unsigned int w, unsigned int h);
 static int set_fullscreen(void *sptr, _Bool fullscreen);
 static void set_menubar(void *sptr, _Bool show_menubar);
@@ -74,7 +71,6 @@ static void vo_gtkgl_set_vsync(int val);
 
 static void *new(void *sptr) {
 	(void)sptr;
-	struct vo_cfg *vo_cfg = &global_uigtk2->cfg->vo_cfg;
 
 	gtk_gl_init(NULL, NULL);
 
@@ -83,40 +79,21 @@ static void *new(void *sptr) {
 		return NULL;
 	}
 
-	struct vo_interface *vogl = vo_opengl_new(vo_cfg);
-	if (!vogl) {
-		LOG_ERROR("Failed to create OpenGL context\n");
-		return NULL;
-	}
-
-	struct vo_gtkgl_interface *vogtkgl = vo_interface_new(sizeof(*vogtkgl));
+	struct vo_gtkgl_interface *vogtkgl = vo_opengl_new(sizeof(*vogtkgl));
 	*vogtkgl = (struct vo_gtkgl_interface){0};
-	struct vo_interface *vo = &vogtkgl->public;
-	vogtkgl->vogl = vogl;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
 
-	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vo);
-	vo->renderer = vogl->renderer;
+	struct vo_cfg *vo_cfg = &global_uigtk2->cfg->vo_cfg;
+	vo_opengl_configure(vogl, vo_cfg);
+
+	vo->free = DELEGATE_AS0(void, vo_gtkgl_free, vogtkgl);
+	vo->draw = DELEGATE_AS0(void, draw, vogl);
 
 	// Used by UI to adjust viewing parameters
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, vo);
-	vo->set_active_area = vogl->set_active_area;
 	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, vo);
 	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, vo);
-	vo->set_brightness = vogl->set_brightness;
-	vo->set_contrast = vogl->set_contrast;
-	vo->set_saturation = vogl->set_saturation;
-	vo->set_hue = vogl->set_hue;
-	vo->set_cmp_phase = vogl->set_cmp_phase;
-
-	// Used by machine to configure video output
-	vo->palette_set_ybr = vogl->palette_set_ybr;
-	vo->palette_set_rgb = vogl->palette_set_rgb;
-	vo->set_burst = vogl->set_burst;
-	vo->set_cmp_phase_offset = vogl->set_cmp_phase_offset;
-
-	// Used by machine to render video
-	vo->vsync = DELEGATE_AS0(void, vsync, vo);
-	vo->refresh = DELEGATE_AS0(void, refresh, vo);
 
 	/* Configure drawing_area widget */
 	gtk_widget_set_size_request(global_uigtk2->drawing_area, 640, 480);
@@ -144,22 +121,21 @@ static void *new(void *sptr) {
 	/* Set fullscreen. */
 	set_fullscreen(vo, vo_cfg->fullscreen);
 
-	vsync(vo);
-
 	return vo;
 }
 
 static void vo_gtkgl_free(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vogl = vogtkgl->vogl;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
 	set_fullscreen(vogtkgl, 0);
-	DELEGATE_CALL(vogl->free);
-	free(vogtkgl);
+	vo_opengl_free(vogl);
 }
 
 static void resize(void *sptr, unsigned int w, unsigned int h) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
+
 	if (vo->is_fullscreen) {
 		return;
 	}
@@ -193,7 +169,9 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 
 static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
+
 	vo->is_fullscreen = fullscreen;
 	vo->show_menubar = !fullscreen;
 	if (fullscreen) {
@@ -206,7 +184,9 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 
 static void set_menubar(void *sptr, _Bool show_menubar) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vo = &vogtkgl->public;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
+
 	GtkAllocation allocation;
 	gtk_widget_get_allocation(global_uigtk2->drawing_area, &allocation);
 	int w = allocation.width;
@@ -243,8 +223,8 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 
 static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data) {
 	struct vo_gtkgl_interface *vogtkgl = data;
-	struct vo_interface *vo = &vogtkgl->public;
-	struct vo_interface *vogl = vogtkgl->vogl;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+	struct vo_interface *vo = &vogl->vo;
 	(void)event;
 
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(da);
@@ -266,8 +246,11 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	}
 
 	gtk_widget_get_allocation(da, &allocation);
-	DELEGATE_CALL(vogl->resize, allocation.width, allocation.height);
-	vo_opengl_get_display_rect(vogl, &global_uigtk2->display_rect);
+	vo_opengl_setup_context(vogl, allocation.width, allocation.height);
+	global_uigtk2->display_rect.x = vogl->viewport.x;
+	global_uigtk2->display_rect.y = vogl->viewport.y;
+	global_uigtk2->display_rect.w = vogl->viewport.w;
+	global_uigtk2->display_rect.h = vogl->viewport.h;
 	vo_gtkgl_set_vsync(-1);
 
 	gdk_gl_drawable_gl_end(gldrawable);
@@ -275,9 +258,10 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	return 0;
 }
 
-static void refresh(void *sptr) {
+static void draw(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vogl = vogtkgl->vogl;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+
 	GdkGLContext *glcontext = gtk_widget_get_gl_context(global_uigtk2->drawing_area);
 	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(global_uigtk2->drawing_area);
 
@@ -285,23 +269,7 @@ static void refresh(void *sptr) {
 		g_assert_not_reached();
 	}
 
-	DELEGATE_CALL(vogl->refresh);
-
-	gdk_gl_drawable_swap_buffers(gldrawable);
-	gdk_gl_drawable_gl_end(gldrawable);
-}
-
-static void vsync(void *sptr) {
-	struct vo_gtkgl_interface *vogtkgl = sptr;
-	struct vo_interface *vogl = vogtkgl->vogl;
-	GdkGLContext *glcontext = gtk_widget_get_gl_context(global_uigtk2->drawing_area);
-	GdkGLDrawable *gldrawable = gtk_widget_get_gl_drawable(global_uigtk2->drawing_area);
-
-	if (!gdk_gl_drawable_gl_begin(gldrawable, glcontext)) {
-		g_assert_not_reached();
-	}
-
-	DELEGATE_CALL(vogl->vsync);
+	vo_opengl_draw(vogl);
 
 	gdk_gl_drawable_swap_buffers(gldrawable);
 	gdk_gl_drawable_gl_end(gldrawable);

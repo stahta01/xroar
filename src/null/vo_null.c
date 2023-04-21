@@ -34,7 +34,6 @@ struct module vo_null_module = {
 };
 
 static void null_free(void *sptr);
-static void no_op(void *sptr);
 static void no_op_render(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr);
 
@@ -51,7 +50,6 @@ static void *new(void *cfg) {
 
 	// Used by machine to render video
 	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, no_op_render, vo->renderer);
-	vo->vsync = DELEGATE_AS0(void, no_op, vo);
 
 	return vo;
 }
@@ -59,10 +57,6 @@ static void *new(void *cfg) {
 static void null_free(void *sptr) {
 	struct vo_interface *vo = sptr;
 	free(vo);
-}
-
-static void no_op(void *sptr) {
-	(void)sptr;
 }
 
 static void no_op_palette_set(void *sptr, uint8_t c, float y, float pb, float pr) {

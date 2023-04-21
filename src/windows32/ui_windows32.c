@@ -635,7 +635,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		break;
 
 	case WM_UNINITMENUPOPUP:
-		DELEGATE_SAFE_CALL(xroar_vo_interface->refresh);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->draw);
 		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
 
 	default:

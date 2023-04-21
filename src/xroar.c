@@ -1167,7 +1167,7 @@ void xroar_run(int ncycles) {
 		return;
 	switch (xroar_machine->run(xroar_machine, ncycles)) {
 	case machine_run_state_stopped:
-		DELEGATE_SAFE_CALL(xroar_vo_interface->refresh);
+		vo_refresh(xroar_vo_interface);
 		break;
 	case machine_run_state_ok:
 	default:

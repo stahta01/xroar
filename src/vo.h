@@ -152,12 +152,8 @@ struct vo_interface {
 	//     const uint8_t *data;  // palettised data, NULL for dummy line
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
 
-	// Vertical sync
-	DELEGATE_T0(void) vsync;
-
-	// Refresh the display (useful while single-stepping, where the usual
-	// render functions won't be called)
-	DELEGATE_T0(void) refresh;
+	// Draw the current buffer.  Called by vo_vsync() and vo_refresh().
+	DELEGATE_T0(void) draw;
 };
 
 extern struct xconfig_enum vo_cmp_ccr_list[];
@@ -187,5 +183,20 @@ void vo_set_input(struct vo_interface *vo, int input);
 //     int ccr;  // VO_CMP_CCR_*
 
 void vo_set_cmp_ccr(struct vo_interface *vo, int ccr);
+
+// Vertical sync.  Calls any module-specific draw function, then
+// vo_render_vsync().
+
+inline void vo_vsync(struct vo_interface *vo) {
+	DELEGATE_SAFE_CALL(vo->draw);
+	vo_render_vsync(vo->renderer);
+}
+
+// Refresh the display by calling draw().  Useful while single-stepping, where
+// the usual render functions won't be called.
+
+inline void vo_refresh(struct vo_interface *vo) {
+	DELEGATE_SAFE_CALL(vo->draw);
+}
 
 #endif

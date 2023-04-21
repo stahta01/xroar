@@ -1173,7 +1173,7 @@ static void gime_fs(void *sptr, _Bool level) {
 		if (mcc3->frame < 0)
 			mcc3->frame = mcc3->frameskip;
 		if (mcc3->frame == 0) {
-			DELEGATE_CALL(mcc3->vo->vsync);
+			vo_vsync(mcc3->vo);
 		}
 	}
 }

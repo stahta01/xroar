@@ -168,7 +168,6 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr) {
 
 	// Used by machine to render video
 	vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vr->render_cmp_palette, vr);
-	vo->vsync = DELEGATE_AS0(void, vo_render_vsync, vr);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -177,6 +176,8 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr) {
 
 static void update_render_parameters(struct vo_interface *vo) {
 	struct vo_render *vr = vo->renderer;
+	if (!vr)
+		return;
 
 	// RGB is always palette-based
 	if (vo->input == VO_TV_RGB) {
@@ -214,3 +215,7 @@ void vo_set_cmp_ccr(struct vo_interface *vo, int ccr) {
 	vo->cmp_ccr = ccr;
 	update_render_parameters(vo);
 }
+
+extern inline void vo_vsync(struct vo_interface *vo);
+
+extern inline void vo_refresh(struct vo_interface *vo);
