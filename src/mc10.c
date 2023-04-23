@@ -333,6 +333,7 @@ static _Bool mc10_finish(struct part *p) {
 		if (!palette) {
 			palette = vdg_palette_by_name("ideal");
 		}
+		DELEGATE_SAFE_CALL(mp->vo->set_cmp_lead_lag, 0., 100.);
 		// MC1372 datasheet suggests a conversion gain of 0.6 for the
 		// chroma signals.
 		for (int c = 0; c < NUM_VDG_COLOURS; c++) {

@@ -522,6 +522,7 @@ static _Bool dragon_finish(struct part *p) {
 		if (!palette) {
 			palette = vdg_palette_by_name("ideal");
 		}
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_lead_lag, 0., 100.);
 		for (int c = 0; c < NUM_VDG_COLOURS; c++) {
 			float y = palette->palette[c].y;
 			float chb = palette->palette[c].chb;

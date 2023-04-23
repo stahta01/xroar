@@ -125,6 +125,11 @@ struct vo_interface {
 
 	// Used by machine to configure video output
 
+	// Set how the chroma components relate to each other (in degrees)
+	//     float chb_phase;  // øB phase, default 0°
+	//     float cha_phase;  // øA phase, default 90°
+	DELEGATE_T2(void, float, float) set_cmp_lead_lag;
+
 	// Add a colour to the palette using Y', Pb, Pr values
 	//     uint8_t index;    // palette index
 	//     float y, pb, pr;  // colour

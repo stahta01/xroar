@@ -25,6 +25,10 @@
 #include <math.h>
 #include <stdint.h>
 
+#ifndef M_PI
+# define M_PI 3.14159265358979323846
+#endif
+
 #include "intfuncs.h"
 #include "pl-endian.h"
 
@@ -118,6 +122,8 @@ struct vo_render *vo_render_new(int fmt) {
 	// Sensible defaults
 	vr->cs = cs_profile_by_name("ntsc");
 	vr->cmp.ntsc_palette = ntsc_palette_new();
+	vr->cmp.chb_phase = 0.;       // default 0°
+	vr->cmp.cha_phase = M_PI/2.;  // default 90°
 	vr->viewport.new_x = 190;
 	vr->viewport.new_y = 14;
 	vr->viewport.x = 190;
@@ -264,9 +270,16 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	float y = vr->cmp.colour[c].y;
 	float b_y = vr->cmp.colour[c].pb;
 	float r_y = vr->cmp.colour[c].pr;
+	float nb_y, nr_y;
 
 	// Add to NTSC palette before we process it
 	ntsc_palette_add_ybr(vr->cmp.ntsc_palette, c, y, b_y, r_y);
+
+	// Adjust according to chroma phase configuration
+	nb_y = b_y * cos(vr->cmp.chb_phase) + r_y * cos(vr->cmp.cha_phase);
+	nr_y = b_y * sin(vr->cmp.chb_phase) + r_y * sin(vr->cmp.cha_phase);
+	b_y = nb_y;
+	r_y = nr_y;
 
 	// Apply colour saturation
 	float saturation = (float)vr->saturation / 50.;
@@ -274,10 +287,9 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	r_y *= saturation;
 
 	// Apply hue
-	float w = 2. * M_PI;
-	float hue = (w * (float)vr->hue) / 360.;
-	float nb_y = r_y * sin(hue) + b_y * cos(hue);
-	float nr_y = r_y * cos(hue) - b_y * sin(hue);
+	float hue = (2. * M_PI * (float)vr->hue) / 360.;
+	nb_y = r_y * sin(hue) + b_y * cos(hue);
+	nr_y = r_y * cos(hue) - b_y * sin(hue);
 	b_y = nb_y;
 	r_y = nr_y;
 
@@ -448,6 +460,18 @@ void vo_render_set_active_area(void *sptr, int x, int y, int w, int h) {
 	int yoff = y - (240 - h) / 2;
 	vr->viewport.new_x = xoff;
 	vr->viewport.new_y = yoff;
+}
+
+// Set how the chroma components relate to each other (in degrees)
+//     float chb_phase;  // øB phase, default 0°
+//     float cha_phase;  // øA phase, default 90°
+void vo_render_set_cmp_lead_lag(void *sptr, float chb_phase, float cha_phase) {
+	struct vo_render *vr = sptr;
+	vr->cmp.chb_phase = (chb_phase * 2. * M_PI) / 360.;
+	vr->cmp.cha_phase = (cha_phase * 2. * M_PI) / 360.;
+	for (unsigned c = 0; c < 256; c++) {
+		update_cmp_palette(vr, c);
+	}
 }
 
 // Add palette entry to composite palette as Y', Pb, Pr

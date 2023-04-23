@@ -84,6 +84,10 @@ struct vo_render {
 		// Cache testing if each colour is black or white
 		uint8_t is_black_or_white[256];
 
+		// Lead/lag of chroma components
+		float chb_phase;  // default 0°
+		float cha_phase;  // default 90° = π/2
+
 		// And a full NTSC decode table
 		struct ntsc_palette *ntsc_palette;
 
@@ -183,6 +187,7 @@ void vo_render_set_cmp_phase(void *, int phase);
 // Used by machine to configure video output
 
 void vo_render_set_active_area(void *, int x, int y, int w, int h);
+void vo_render_set_cmp_lead_lag(void *, float cha_phase, float chb_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);
 void vo_render_set_burst(void *, unsigned burstn, int offset);

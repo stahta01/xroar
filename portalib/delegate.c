@@ -48,6 +48,7 @@ DELEGATE_DEF_FUNC3(void, void, uint8_t const *, uint8cp, unsigned, unsigned, uns
 DELEGATE_DEF_FUNC3(void, void, uint16_t, uint16, int, int, uint16_t *, uint16p, );
 DELEGATE_DEF_FUNC2(void, void, uint16_t, uint16, uint8_t, uint8, )
 DELEGATE_DEF_FUNC1(void, void, float, float, )
+DELEGATE_DEF_FUNC2(void, void, float, float, float, float, )
 DELEGATE_DEF_FUNC1(void *, voidp, void *, voidp, NULL)
 DELEGATE_DEF_FUNC0(_Bool, bool, 0)
 DELEGATE_DEF_FUNC0(unsigned, unsigned, 0)
