@@ -75,7 +75,7 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn,
 				   unsigned npixels, uint8_t const *data);
 static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn,
 				   unsigned npixels, uint8_t const *data);
-static void TNAME(next_line)(struct vo_render *vr);
+static void TNAME(next_line)(struct vo_render *vr, unsigned npixels);
 
 // Create an instance of the renderer for this basic type using the specified
 // colour mapping function.
@@ -134,6 +134,7 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
@@ -155,6 +156,7 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 		*(dest++) = p3;
 	}
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
+	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
 }
 
@@ -169,6 +171,7 @@ static void TNAME(render_rgb_palette)(void *sptr, unsigned burstn, unsigned npix
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
@@ -190,6 +193,7 @@ static void TNAME(render_rgb_palette)(void *sptr, unsigned burstn, unsigned npix
 		*(dest++) = p3;
 	}
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
+	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
 }
 
@@ -204,6 +208,7 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
@@ -233,6 +238,7 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 		*(dest++) = p3;
 	}
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
+	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
 }
 
@@ -249,6 +255,7 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
@@ -301,12 +308,14 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 		*(dest++) = p3;
 	}
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
+	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
 }
 
-// Advance pixel pointer to next line in buffer
+// Advance pixel pointer to next line in buffer; update current time 't'
 
-static void TNAME(next_line)(struct vo_render *vr) {
+static void TNAME(next_line)(struct vo_render *vr, unsigned npixels) {
 	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
+	vr->t = (vr->t + npixels) % vr->tmax;
 	vr->scanline++;
 }

@@ -130,6 +130,8 @@ struct vo_render *vo_render_new(int fmt) {
 	vr->viewport.y = 14;
 	vr->viewport.w = 640;
 	vr->viewport.h = 240;
+	vr->t = 0;
+	vr->tmax = 4;
 	vr->brightness = 50;
 	vr->contrast = 50;
 	vr->hue = 0;
@@ -546,6 +548,7 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
@@ -572,5 +575,5 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 
 	// Render from intermediate RGB buffer
 	vr->render_rgb(vr, rgb_buf, vr->pixel, vr->viewport.w);
-	vr->next_line(vr);
+	vr->next_line(vr, npixels);
 }

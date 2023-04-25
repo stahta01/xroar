@@ -116,6 +116,13 @@ struct vo_render {
 		int w, h;
 	} viewport;
 
+	// Current time, measured in pixels
+	unsigned t;
+
+	// Maximum time 't', ie number of pixels that span an exact
+	// multiple of chroma cycles
+	unsigned tmax;
+
 	// Colourspace definition
 	struct cs_profile *cs;
 
@@ -158,7 +165,8 @@ struct vo_render {
 	void (*render_rgb)(struct vo_render *, int_xyz *, void *, unsigned);
 
 	// Advance to next line
-	void (*next_line)(struct vo_render *);
+	//     unsigned npixels;  // elapsed time in pixels
+	void (*next_line)(struct vo_render *, unsigned);
 };
 
 // Create a new renderer for the specified pixel format
