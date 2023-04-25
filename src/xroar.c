@@ -1734,8 +1734,6 @@ void xroar_connect_machine(void) {
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 	}
 	xroar_set_ccr(1, private_cfg.vo.ccr);
-	int phase = is_coco3 ? 2 : 0;
-	DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase_offset, phase);
 	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }
 

@@ -388,6 +388,9 @@ static _Bool coco3_finish(struct part *p) {
 	// GIME reports changes in active area
 	mcc3->GIME->set_active_area = mcc3->vo->set_active_area;
 
+	// Video phase swapped for CoCo 3 - probably needs investigating!
+	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 2);
+
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_lead_lag, 0., 100.);
 	for (int j = 0; j < 64; j++) {
 		int intensity = (j >> 4) & 3;

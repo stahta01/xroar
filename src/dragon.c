@@ -516,6 +516,9 @@ static _Bool dragon_finish(struct part *p) {
 		DELEGATE_SAFE_CALL(md->vo->set_active_area, x, y, 512, 192);
 	}
 
+	// Normal video phase
+	DELEGATE_SAFE_CALL(md->vo->set_cmp_phase_offset, 0);
+
 	// Set up VDG palette in video module
 	{
 		struct vdg_palette *palette = vdg_palette_by_name(mc->vdg_palette);
