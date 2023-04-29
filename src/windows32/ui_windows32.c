@@ -128,7 +128,7 @@ static void setup_file_menu(void) {
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)file_menu, "&File");
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)file_menu, "&File");
 }
 
 static void setup_view_menu(void) {
@@ -138,7 +138,7 @@ static void setup_view_menu(void) {
 	view_menu = CreatePopupMenu();
 
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "&TV Input");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "&TV Input");
 	for (int i = 0; machine_tv_input_list[i].name; i++) {
 		if (!machine_tv_input_list[i].description)
 			continue;
@@ -146,7 +146,7 @@ static void setup_view_menu(void) {
 	}
 
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Composite &Rendering");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Composite &Rendering");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PALETTE), "None");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_2BIT), "Simple (2-bit LUT)");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_5BIT), "5-bit LUT");
@@ -159,14 +159,14 @@ static void setup_view_menu(void) {
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Zoom");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Zoom");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_in), "Zoom In");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full Screen");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
 }
 
 static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
@@ -176,15 +176,15 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 	hardware_menu = CreatePopupMenu();
 
 	machine_menu = submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Machine");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Machine");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	cartridge_menu = submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Cartridge");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Cartridge");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Keyboard Map");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard Map");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon), "Dragon Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_dragon200e), "Dragon 200-E Layout");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_keymap, dkbd_layout_coco), "CoCo Layout");
@@ -194,12 +194,12 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Right Joystick");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Right Joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_right, i), joystick_names[i].description);
 	}
 	submenu = CreatePopupMenu();
-	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Left Joystick");
+	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Left Joystick");
 	for (unsigned i = 0; i < NUM_JOYSTICK_NAMES; i++) {
 		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_joy_left, i), joystick_names[i].description);
 	}
@@ -209,7 +209,7 @@ static void setup_hardware_menu(struct ui_sdl2_interface *uisdl2) {
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft Reset");
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard Reset");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)hardware_menu, "&Hardware");
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 
 	windows32_ui_update_state(uisdl2, ui_tag_machine, xroar_machine_config ? xroar_machine_config->id : 0, NULL);
 	struct cart *cart = xroar_machine ? xroar_machine->get_interface(xroar_machine, "cart") : NULL;
@@ -226,7 +226,7 @@ static void setup_tool_menu(void) {
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_tape_control), "&Tape Control");
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate Limit");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)tool_menu, "&Tool");
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
 }
 
 static void setup_help_menu(void) {
@@ -235,7 +235,7 @@ static void setup_help_menu(void) {
 	help_menu = CreatePopupMenu();
 	AppendMenu(help_menu, MF_STRING, TAG(ui_tag_about), "About");
 
-	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)help_menu, "&Help");
+	AppendMenu(top_menu, MF_STRING | MF_POPUP, (UINT_PTR)help_menu, "&Help");
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
