@@ -638,6 +638,25 @@ static void setup_view_menu(void) {
 
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
+	submenu = [[NSMenu alloc] initWithTitle:@"TV Input"];
+
+	for (i = 0; machine_tv_input_list[i].name; i++) {
+		if (!machine_tv_input_list[i].description)
+			continue;
+		NSString *s = [[NSString alloc] initWithUTF8String:machine_tv_input_list[i].description];
+		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:(TAG_TV_INPUT | machine_tv_input_list[i].value)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[submenu addItem:item];
+		[item release];
+		[s release];
+	}
+
+	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
@@ -661,23 +680,6 @@ static void setup_view_menu(void) {
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
-	[item setSubmenu:submenu];
-	[view_menu addItem:item];
-	[item release];
-
-	submenu = [[NSMenu alloc] initWithTitle:@"TV Input"];
-
-	for (i = 0; machine_tv_input_list[i].name; i++) {
-		NSString *s = [[NSString alloc] initWithUTF8String:machine_tv_input_list[i].description];
-		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_TV_INPUT | machine_tv_input_list[i].value)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[submenu addItem:item];
-		[item release];
-		[s release];
-	}
-
-	item = [[NSMenuItem alloc] initWithTitle:@"TV Input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];

@@ -42,17 +42,27 @@
 
 struct module;
 
-// Select monitor input.
-#define VO_TV_CMP (0)
-#define VO_TV_RGB (1)
+// Monitor input signal
 
-// Select composite cross-colour renderer.
-#define VO_CMP_CCR_NONE (0)
-#define VO_CMP_CCR_2BIT (1)
-#define VO_CMP_CCR_5BIT (2)
-#define VO_CMP_CCR_SIMULATED (3)
+enum {
+	VO_SIGNAL_SVIDEO,
+	VO_SIGNAL_CMP,
+	VO_SIGNAL_RGB,
+	NUM_VO_SIGNAL
+};
 
-// Select phase relationship for composite cross-colour.
+// Composite cross-colour renderer.
+
+enum {
+	VO_CMP_CCR_PALETTE,
+	VO_CMP_CCR_2BIT,
+	VO_CMP_CCR_5BIT,
+	VO_CMP_CCR_SIMULATED,
+	NUM_VO_CMP_CCR
+};
+
+// phase relationship for composite cross-colour
+
 #define VO_CMP_PHASE_KBRW (0)
 #define VO_CMP_PHASE_KRBW (2)
 
@@ -74,11 +84,11 @@ struct vo_interface {
 	// Renderer
 	struct vo_render *renderer;
 
-	// Selected "TV input"
-	int input;      // VO_TV_CMP or VO_TV_RGB
+	// Selected input signal
+	int signal;      // VO_SIGNAL_*
 
 	// Selected cross-colour renderer
-	int cmp_ccr;    // VO_CMP_CCR_NONE, _2BIT, _5BIT or _SIMULATED
+	int cmp_ccr;    // VO_CMP_CCR_*
 
 	// Called by vo_free before freeing the struct to handle
 	// module-specific allocations
@@ -179,10 +189,10 @@ void vo_free(void *);
 
 void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
 
-// Select TV "input"
-//     int input;  // VO_TV_*
+// Select input signal
+//     int signal;  // VO_SIGNAL_*
 
-void vo_set_input(struct vo_interface *vo, int input);
+void vo_set_signal(struct vo_interface *vo, int signal);
 
 // Select cross-colour renderer
 //     int ccr;  // VO_CMP_CCR_*

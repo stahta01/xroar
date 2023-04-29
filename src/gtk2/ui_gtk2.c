@@ -358,8 +358,8 @@ static GtkActionEntry const ui_entries[] = {
 	  .tooltip = "Quit",
 	  .callback = G_CALLBACK(do_quit) },
 	/* View */
+	{ .name = "TVInputMenuAction", .label = "_TV Input" },
 	{ .name = "CCRMenuAction", .label = "Composite _Rendering" },
-	{ .name = "TVInputMenuAction", .label = "TV _Input" },
 	{ .name = "ZoomMenuAction", .label = "_Zoom" },
 	{ .name = "zoom_in", .label = "Zoom In",
 	  .accelerator = "<control>plus",
@@ -400,6 +400,9 @@ static GtkActionEntry const ui_entries[] = {
 
 static GtkToggleActionEntry const ui_toggles[] = {
 	/* View */
+	{ .name = "VideoOptionsAction", .label = "TV _Controls",
+	  .accelerator = "<control><shift>V",
+	  .callback = G_CALLBACK(gtk2_vo_toggle_window) },
 	{ .name = "InverseTextAction", .label = "_Inverse Text",
 	  .accelerator = "<shift><control>I",
 	  .callback = G_CALLBACK(toggle_inverse_text) },
@@ -419,22 +422,19 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "RateLimitAction", .label = "_Rate Limit",
 	  .accelerator = "<shift>F12",
 	  .callback = G_CALLBACK(toggle_ratelimit) },
-	{ .name = "VideoOptionsAction", .label = "Video _Options",
-	  .accelerator = "<control><shift>V",
-	  .callback = G_CALLBACK(gtk2_vo_toggle_window) },
 };
 
 static GtkRadioActionEntry const ccr_radio_entries[] = {
-	{ .name = "ccr-none", .label = "None", .value = VO_CMP_CCR_NONE },
+	{ .name = "ccr-palette", .label = "None", .value = VO_CMP_CCR_PALETTE },
 	{ .name = "ccr-2bit", .label = "Simple (2-bit LUT)", .value = VO_CMP_CCR_2BIT },
 	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = VO_CMP_CCR_5BIT },
 	{ .name = "ccr-simulated", .label = "Simulated", .value = VO_CMP_CCR_SIMULATED },
 };
 
 static GtkRadioActionEntry const tv_input_radio_entries[] = {
-	{ .name = "tv-input-cmp", .label = "Composite (no cross-colour)", .value = TV_INPUT_CMP_PALETTE },
-	{ .name = "tv-input-cmp-kbrw", .label = "Composite (blue-red cross-colour)", .value = TV_INPUT_CMP_KBRW },
-	{ .name = "tv-input-cmp-krbw", .label = "Composite (red-blue cross-colour)", .value = TV_INPUT_CMP_KRBW },
+	{ .name = "tv-input-svideo", .label = "S-Video", .value = TV_INPUT_SVIDEO },
+	{ .name = "tv-input-cmp-kbrw", .label = "Composite (blue-red)", .value = TV_INPUT_CMP_KBRW },
+	{ .name = "tv-input-cmp-krbw", .label = "Composite (red-blue)", .value = TV_INPUT_CMP_KRBW },
 	{ .name = "tv-input-rgb", .label = "RGB", .value = TV_INPUT_RGB },
 };
 
@@ -696,12 +696,12 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		break;
 
 	case ui_tag_ccr:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-none");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/CCRMenu/ccr-palette");
 		uigtk2_notify_radio_action_set(radio, value, set_ccr, NULL);
 		break;
 
 	case ui_tag_tv_input:
-		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/TVInputMenu/tv-input-cmp");
+		radio = (GtkRadioAction *)gtk_ui_manager_get_action(uigtk2->menu_manager, "/MainMenu/ViewMenu/TVInputMenu/tv-input-svideo");
 		uigtk2_notify_radio_action_set(radio, value, set_tv_input, NULL);
 		break;
 

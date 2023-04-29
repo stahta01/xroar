@@ -127,7 +127,7 @@ struct xconfig_enum machine_tv_type_list[] = {
 };
 
 struct xconfig_enum machine_tv_input_list[] = {
-	{ XC_ENUM_INT("cmp", TV_INPUT_CMP_PALETTE, "Composite (no cross-colour)") },
+	{ XC_ENUM_INT("cmp", TV_INPUT_SVIDEO, "S-Video") },
 	{ XC_ENUM_INT("cmp-br", TV_INPUT_CMP_KBRW, "Composite (blue-red)") },
 	{ XC_ENUM_INT("cmp-rb", TV_INPUT_CMP_KRBW, "Composite (red-blue)") },
 	{ XC_ENUM_INT("rgb", TV_INPUT_RGB, "RGB") },

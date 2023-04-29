@@ -36,7 +36,7 @@ static struct module * const default_vo_module_list[] = {
 struct module * const *vo_module_list = default_vo_module_list;
 
 struct xconfig_enum vo_cmp_ccr_list[] = {
-	{ XC_ENUM_INT("none", VO_CMP_CCR_NONE, "no cross-colour") },
+	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "no cross-colour") },
 	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
 	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit lookup table") },
 	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "simulated filtered analogue") },
@@ -181,14 +181,20 @@ static void update_render_parameters(struct vo_interface *vo) {
 		return;
 
 	// RGB is always palette-based
-	if (vo->input == VO_TV_RGB) {
+	if (vo->signal == VO_SIGNAL_RGB) {
 		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vr->render_rgb_palette, vr);
+		return;
+	}
+
+	// As is S-Video, though it uses the composite palette
+	if (vo->signal == VO_SIGNAL_SVIDEO) {
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vr->render_cmp_palette, vr);
 		return;
 	}
 
 	// Composite video has more options
 	switch (vo->cmp_ccr) {
-	case VO_CMP_CCR_NONE:
+	case VO_CMP_CCR_PALETTE:
 		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vr->render_cmp_palette, vr);
 		break;
 	case VO_CMP_CCR_2BIT:
@@ -203,10 +209,10 @@ static void update_render_parameters(struct vo_interface *vo) {
 	}
 }
 
-// Select "TV input"
+// Select input signal
 
-void vo_set_input(struct vo_interface *vo, int input) {
-	vo->input = input;
+void vo_set_signal(struct vo_interface *vo, int signal) {
+	vo->signal = signal;
 	update_render_parameters(vo);
 }
 

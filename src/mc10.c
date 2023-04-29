@@ -122,7 +122,7 @@ static void mc10_config_complete(struct machine_config *mc) {
 		switch (mc->tv_standard) {
 		default:
 		case TV_PAL:
-			mc->tv_input = TV_INPUT_CMP_PALETTE;
+			mc->tv_input = TV_INPUT_SVIDEO;
 			break;
 		case TV_NTSC:
 		case TV_PAL_M:

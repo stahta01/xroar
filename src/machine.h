@@ -56,7 +56,7 @@ struct vo_interface;
 // TV input profiles. These are converted into combinations of input,
 // cross-colour renderer and cross-colour phase to configure the video module.
 
-#define TV_INPUT_CMP_PALETTE (0)
+#define TV_INPUT_SVIDEO (0)
 #define TV_INPUT_CMP_KBRW (1)
 #define TV_INPUT_CMP_KRBW (2)
 #define TV_INPUT_RGB (3)

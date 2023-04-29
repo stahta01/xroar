@@ -15,17 +15,17 @@
       <menuitem name='Quit' action='QuitAction'/>
     </menu>
     <menu name='ViewMenu' action='ViewMenuAction'>
-      <menu name='CCRMenu' action='CCRMenuAction'>
-        <menuitem action='ccr-none'/>
-        <menuitem action='ccr-2bit'/>
-        <menuitem action='ccr-5bit'/>
-        <menuitem action='ccr-simulated'/>
-      </menu>
       <menu name='TVInputMenu' action='TVInputMenuAction'>
-        <menuitem action='tv-input-cmp'/>
+        <menuitem action='tv-input-svideo'/>
         <menuitem action='tv-input-cmp-kbrw'/>
         <menuitem action='tv-input-cmp-krbw'/>
         <menuitem action='tv-input-rgb'/>
+      </menu>
+      <menu name='CCRMenu' action='CCRMenuAction'>
+        <menuitem action='ccr-palette'/>
+        <menuitem action='ccr-2bit'/>
+        <menuitem action='ccr-5bit'/>
+        <menuitem action='ccr-simulated'/>
       </menu>
       <menuitem name='VideoOptions' action='VideoOptionsAction'/>
       <separator/>

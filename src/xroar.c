@@ -1452,71 +1452,50 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action) {
 }
 
 void xroar_set_ccr(_Bool notify, int action) {
-	switch (action) {
-	case VO_CMP_CCR_NONE:
-	case VO_CMP_CCR_2BIT:
-	case VO_CMP_CCR_5BIT:
-	case VO_CMP_CCR_SIMULATED:
-		private_cfg.vo.ccr = action;
-		break;
-	default:
-		private_cfg.vo.ccr = VO_CMP_CCR_NONE;
-		break;
+	if (action < 0 || action >= NUM_VO_CMP_CCR) {
+		action = VO_CMP_CCR_PALETTE;
 	}
+	private_cfg.vo.ccr = action;
+	vo_set_cmp_ccr(xroar_vo_interface, private_cfg.vo.ccr);
 	if (notify) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_ccr, private_cfg.vo.ccr, NULL);
 	}
-	xroar_set_tv_input(1, xroar_machine_config->tv_input);
 }
 
 void xroar_set_tv_input(_Bool notify, int action) {
 	_Bool is_coco3 = (strcmp(xroar_machine_config->architecture, "coco3") == 0);
-	switch (action) {
-	case TV_INPUT_CMP_PALETTE:
-	case TV_INPUT_CMP_KBRW:
-	case TV_INPUT_CMP_KRBW:
-	case TV_INPUT_RGB:  // CoCo 3 only
-		xroar_machine_config->tv_input = action;
-		break;
 
-	case XROAR_NEXT:
-		xroar_machine_config->tv_input++;
-		if (is_coco3) {
-			xroar_machine_config->tv_input %= NUM_TV_INPUTS_COCO3;
-		} else {
-			xroar_machine_config->tv_input %= NUM_TV_INPUTS_DRAGON;
-		}
-		break;
-
-	default:
-		xroar_machine_config->tv_input = TV_INPUT_CMP_PALETTE;
-		break;
+	if (action == XROAR_NEXT) {
+		action = xroar_machine_config->tv_input + 1;
 	}
 
-	if (!is_coco3 && xroar_machine_config->tv_input == TV_INPUT_RGB) {
-		xroar_machine_config->tv_input = TV_INPUT_CMP_PALETTE;
+	if (action < 0 ||
+	    (!is_coco3 && action >= NUM_TV_INPUTS_DRAGON) ||
+	    (is_coco3 && action >= NUM_TV_INPUTS_COCO3)) {
+		action = TV_INPUT_SVIDEO;
 		notify = 1;
 	}
 
-	if (xroar_machine_config->tv_input == TV_INPUT_RGB) {
-		vo_set_input(xroar_vo_interface, VO_TV_RGB);
-	} else {
-		vo_set_input(xroar_vo_interface, VO_TV_CMP);
-		if (xroar_machine_config->tv_input == TV_INPUT_CMP_PALETTE) {
-			vo_set_cmp_ccr(xroar_vo_interface, VO_CMP_CCR_NONE);
-		} else {
-			vo_set_cmp_ccr(xroar_vo_interface, private_cfg.vo.ccr);
-		}
-	}
+	xroar_machine_config->tv_input = action;
 
-	switch (xroar_machine_config->tv_input) {
+	switch (action) {
+	default:
+	case TV_INPUT_SVIDEO:
+		vo_set_signal(xroar_vo_interface, VO_SIGNAL_SVIDEO);
+		break;
+
 	case TV_INPUT_CMP_KBRW:
+		vo_set_signal(xroar_vo_interface, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KBRW);
 		break;
+
 	case TV_INPUT_CMP_KRBW:
+		vo_set_signal(xroar_vo_interface, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KRBW);
 		break;
-	default:
+
+	case TV_INPUT_RGB:
+		vo_set_signal(xroar_vo_interface, VO_SIGNAL_RGB);
 		break;
 	}
 

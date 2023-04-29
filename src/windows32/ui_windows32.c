@@ -138,22 +138,24 @@ static void setup_view_menu(void) {
 	view_menu = CreatePopupMenu();
 
 	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Composite Rendering");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_NONE), "None");
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "&TV Input");
+	for (int i = 0; machine_tv_input_list[i].name; i++) {
+		if (!machine_tv_input_list[i].description)
+			continue;
+		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tv_input, machine_tv_input_list[i].value), machine_tv_input_list[i].description);
+	}
+
+	submenu = CreatePopupMenu();
+	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "Composite &Rendering");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_PALETTE), "None");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_2BIT), "Simple (2-bit LUT)");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_5BIT), "5-bit LUT");
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_ccr, VO_CMP_CCR_SIMULATED), "Simulated");
 
-	submenu = CreatePopupMenu();
-	AppendMenu(view_menu, MF_STRING | MF_POPUP, (uintptr_t)submenu, "TV Input");
-	for (int i = 0; machine_tv_input_list[i].name; i++) {
-		AppendMenu(submenu, MF_STRING, TAGV(ui_tag_tv_input, machine_tv_input_list[i].value), machine_tv_input_list[i].description);
-	}
-
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV Controls");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_controls), "TV &Controls");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "Inverse Text");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "&Inverse Text");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
@@ -162,7 +164,7 @@ static void setup_view_menu(void) {
 	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "Full Screen");
+	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full Screen");
 
 	AppendMenu(top_menu, MF_STRING | MF_POPUP, (uintptr_t)view_menu, "&View");
 }
