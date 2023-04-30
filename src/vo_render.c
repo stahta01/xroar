@@ -61,14 +61,14 @@ static uint32_t map_rgba8(struct vo_render *vr, int R, int G, int B);
 static uint32_t map_argb8(struct vo_render *vr, int R, int G, int B);
 static uint32_t map_bgra8(struct vo_render *vr, int R, int G, int B);
 static uint32_t map_abgr8(struct vo_render *vr, int R, int G, int B);
-static uint16_t map_argb4(struct vo_render *vr, int R, int G, int B);
+static uint16_t map_rgba4(struct vo_render *vr, int R, int G, int B);
 static uint16_t map_rgb565(struct vo_render *vr, int R, int G, int B);
 
 static void render_rgba8(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
 static void render_argb8(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
 static void render_bgra8(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
 static void render_abgr8(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
-static void render_argb4(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
+static void render_rgba4(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
 static void render_rgb565(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -82,32 +82,32 @@ static void update_gamma_table(struct vo_render *vr);
 struct vo_render *vo_render_new(int fmt) {
 	struct vo_render *vr = NULL;
 	switch (fmt) {
-	case VO_RENDER_RGBA8:
+	case VO_RENDER_FMT_RGBA8:
 		vr = renderer_new_uint32(map_rgba8);
 		vr->render_rgb = render_rgba8;
 		break;
 
-	case VO_RENDER_ARGB8:
+	case VO_RENDER_FMT_ARGB8:
 		vr = renderer_new_uint32(map_argb8);
 		vr->render_rgb = render_argb8;
 		break;
 
-	case VO_RENDER_BGRA8:
+	case VO_RENDER_FMT_BGRA8:
 		vr = renderer_new_uint32(map_bgra8);
 		vr->render_rgb = render_bgra8;
 		break;
 
-	case VO_RENDER_ABGR8:
+	case VO_RENDER_FMT_ABGR8:
 		vr = renderer_new_uint32(map_abgr8);
 		vr->render_rgb = render_abgr8;
 		break;
 
-	case VO_RENDER_ARGB4:
-		vr = renderer_new_uint16(map_argb4);
-		vr->render_rgb = render_argb4;
+	case VO_RENDER_FMT_RGBA4:
+		vr = renderer_new_uint16(map_rgba4);
+		vr->render_rgb = render_rgba4;
 		break;
 
-	case VO_RENDER_RGB565:
+	case VO_RENDER_FMT_RGB565:
 		vr = renderer_new_uint16(map_rgb565);
 		vr->render_rgb = render_rgb565;
 		break;
@@ -189,9 +189,9 @@ static uint32_t map_abgr8(struct vo_render *vr, int R, int G, int B) {
 	return 0xff000000 | (B << 16) | (G << 8) | (R << 0);
 }
 
-static uint16_t map_argb4(struct vo_render *vr, int R, int G, int B) {
+static uint16_t map_rgba4(struct vo_render *vr, int R, int G, int B) {
 	(void)vr;
-	return 0xf000 | ((R & 0xf0) << 4) | (G & 0xf0) | ((B & 0xf0) >> 4);
+	return ((R & 0xf0) << 8) | ((G & 0xf0) << 4) | (B & 0xf0) | 0x0f;
 }
 
 static uint16_t map_rgb565(struct vo_render *vr, int R, int G, int B) {
@@ -242,13 +242,13 @@ static void render_abgr8(struct vo_render *vr, int_xyz *src, void *dest, unsigne
 	}
 }
 
-static void render_argb4(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels) {
+static void render_rgba4(struct vo_render *vr, int_xyz *src, void *dest, unsigned npixels) {
 	uint16_t *d = dest;
 	for (; npixels; src++, npixels--) {
 		int R = vr->ungamma[int_clamp_u8(src->x)];
 		int G = vr->ungamma[int_clamp_u8(src->y)];
 		int B = vr->ungamma[int_clamp_u8(src->z)];
-		*(d++) = map_argb4(vr, R, G, B);
+		*(d++) = map_rgba4(vr, R, G, B);
 	}
 }
 

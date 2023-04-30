@@ -36,31 +36,6 @@
 
 #include "sdl2/common.h"
 
-// TEX_INT_FMT is the format SDL is asked to make the texture internally.
-//
-// TEX_BUF_FMT is the format used to transfer data to the texture; ie, the
-// format we allocate memory for and manipulate.
-//
-// TEX_BUF_TYPE is the data type used for those transfers, therefore also
-// linked to the data we manipulate.
-//
-// VO_RENDER_FMT is the renderer we request, and should match up to the above.
-//
-// These definitions may need to be configurable - probably any modern system
-// can use ARGB8, but maybe not?
-
-// Low precision definitions
-#define TEX_INT_FMT SDL_PIXELFORMAT_ARGB4444
-#define VO_RENDER_FMT VO_RENDER_ARGB4
-typedef uint16_t Pixel;
-
-/*
-// Higher precision definitions
-# define TEX_INT_FMT SDL_PIXELFORMAT_RGBA32
-# define VO_RENDER_FMT VO_RENDER_RGBA32
-typedef uint32_t Pixel;
-*/
-
 // TEX_BUF_WIDTH is the width of the buffer transferred to the texture.
 
 #define TEX_BUF_WIDTH (640)
@@ -75,9 +50,21 @@ struct module vo_sdl_module = {
 struct vo_sdl_interface {
 	struct vo_interface public;
 
+	struct {
+		// Format SDL is asked to make the texture
+		Uint32 format;
+
+		// Texture handle
+		SDL_Texture *texture;
+
+		// Size of one pixel, in bytes
+		unsigned pixel_size;
+
+		// Pixel buffer
+		void *pixels;
+	} texture;
+
 	SDL_Renderer *sdl_renderer;
-	SDL_Texture *texture;
-	Pixel *texture_pixels;
 	int filter;
 
 	int window_w;
@@ -115,16 +102,50 @@ static void *new(void *sptr) {
 	*vosdl = (struct vo_sdl_interface){0};
 	struct vo_interface *vo = &vosdl->public;
 
-	struct vo_render *vr = vo_render_new(VO_RENDER_FMT);
+	switch (vo_cfg->pixel_fmt) {
+	default:
+		vo_cfg->pixel_fmt = VO_RENDER_FMT_RGBA8;
+		// fall through
+
+	case VO_RENDER_FMT_RGBA8:
+		vosdl->texture.format = SDL_PIXELFORMAT_RGBA8888;
+		vosdl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_BGRA8:
+		vosdl->texture.format = SDL_PIXELFORMAT_BGRA8888;
+		vosdl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_ARGB8:
+		vosdl->texture.format = SDL_PIXELFORMAT_ARGB8888;
+		vosdl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_ABGR8:
+		vosdl->texture.format = SDL_PIXELFORMAT_ABGR8888;
+		vosdl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_RGB565:
+		vosdl->texture.format = SDL_PIXELFORMAT_RGB565;
+		vosdl->texture.pixel_size = 2;
+		break;
+
+	case VO_RENDER_FMT_RGBA4:
+		vosdl->texture.format = SDL_PIXELFORMAT_RGBA4444;
+		vosdl->texture.pixel_size = 2;
+		break;
+	}
+
+	struct vo_render *vr = vo_render_new(vo_cfg->pixel_fmt);
 	vr->buffer_pitch = TEX_BUF_WIDTH;
 
 	vo_set_renderer(vo, vr);
 
-	vosdl->texture_pixels = xmalloc(TEX_BUF_WIDTH * 240 * sizeof(Pixel));
-	vo_render_set_buffer(vr, vosdl->texture_pixels);
-	for (int i = 0; i < TEX_BUF_WIDTH * 240; i++)
-		vosdl->texture_pixels[i] = 0;
-
+	vosdl->texture.pixels = xmalloc(TEX_BUF_WIDTH * 240 * vosdl->texture.pixel_size);
+	vo_render_set_buffer(vr, vosdl->texture.pixels);
+	memset(vosdl->texture.pixels, 0, TEX_BUF_WIDTH * 240 * vosdl->texture.pixel_size);
 
 	vosdl->filter = vo_cfg->gl_filter;
 	vosdl->window_w = 640;
@@ -253,9 +274,9 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	// Remove old renderer & texture, if they exist
 	destroy_renderer(vosdl);
 #else
-	if (vosdl->texture) {
-		SDL_DestroyTexture(vosdl->texture);
-		vosdl->texture = NULL;
+	if (vosdl->texture.texture) {
+		SDL_DestroyTexture(vosdl->texture.texture);
+		vosdl->texture.texture = NULL;
 	}
 #endif
 
@@ -356,10 +377,10 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 
 #ifdef HAVE_WASM
 	// XXX see above
-	if (!vosdl->texture)
+	if (!vosdl->texture.texture)
 #endif
-	vosdl->texture = SDL_CreateTexture(vosdl->sdl_renderer, TEX_INT_FMT, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
-	if (!vosdl->texture) {
+	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, TEX_BUF_WIDTH, 240);
+	if (!vosdl->texture.texture) {
 		LOG_ERROR("Failed to create texture\n");
 		destroy_renderer(vosdl);
 		return 0;
@@ -378,9 +399,9 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 }
 
 static void destroy_renderer(struct vo_sdl_interface *vosdl) {
-	if (vosdl->texture) {
-		SDL_DestroyTexture(vosdl->texture);
-		vosdl->texture = NULL;
+	if (vosdl->texture.texture) {
+		SDL_DestroyTexture(vosdl->texture.texture);
+		vosdl->texture.texture = NULL;
 	}
 	if (vosdl->sdl_renderer) {
 		SDL_DestroyRenderer(vosdl->sdl_renderer);
@@ -390,9 +411,9 @@ static void destroy_renderer(struct vo_sdl_interface *vosdl) {
 
 static void vo_sdl_free(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	if (vosdl->texture_pixels) {
-		free(vosdl->texture_pixels);
-		vosdl->texture_pixels = NULL;
+	if (vosdl->texture.pixels) {
+		free(vosdl->texture.pixels);
+		vosdl->texture.pixels = NULL;
 	}
 	// XXX even though destroy_renderer() is called every time the window
 	// resizes with no issues, for some reason calling it here (before or
@@ -405,8 +426,8 @@ static void vo_sdl_free(void *sptr) {
 
 static void draw(void *sptr) {
 	struct vo_sdl_interface *vosdl = sptr;
-	SDL_UpdateTexture(vosdl->texture, NULL, vosdl->texture_pixels, TEX_BUF_WIDTH * sizeof(Pixel));
+	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, TEX_BUF_WIDTH * vosdl->texture.pixel_size);
 	SDL_RenderClear(vosdl->sdl_renderer);
-	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture, NULL, NULL);
+	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture.texture, NULL, NULL);
 	SDL_RenderPresent(vosdl->sdl_renderer);
 }

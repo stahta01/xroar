@@ -1494,6 +1494,8 @@ to show for it.
 @tab Start full-screen.  Toggle full-screen with @kbd{@key{CTRL}+F} or @kbd{@key{F11}}.
 @item @option{-fskip @var{frames}}
 @tab Specify frameskip.  Default is @samp{0}.  May be helpful on slower machines.
+@item @option{-vo-pixel-fmt @var{format}}
+@tab Pixel format to use.  @option{-vo-pixel-fmt help} for a list.
 @item @option{-gl-filter @var{filter}}
 @tab Filtering method to use when scaling the screen.  One of @samp{linear}, @samp{nearest} or @samp{auto} (the default).  OpenGL output modules only.
 @item @option{-invert-text}
@@ -1509,6 +1511,10 @@ to show for it.
 @item @option{-vo-hue @var{value}}
 @tab Set initial hue (-179 to +180).  Default is 0.
 @end multitable
+
+The pixel format, specified with @option{-vo-pixel-fmt}, defaults to RGBA with
+8 bits per channel, but you may find other pixel layouts or lower bit depths
+render faster on your machine.
 
 Real NTSC machines start in one of two cross-colour states at random.  Games
 often prompt the user to ``Press Enter if the screen is red'', for example.
@@ -2292,6 +2298,8 @@ to this machine (the default is to try).
 @tab Start full-screen.  Toggle full-screen with @kbd{@key{CTRL}+F} or @kbd{@key{F11}}.
 @item @option{-fskip @var{frames}}
 @tab Specify frameskip.  Default is @samp{0}.  May be helpful on slower machines.
+@item @option{-vo-pixel-fmt @var{format}}
+@tab Pixel format to use.  @option{-vo-pixel-fmt help} for a list.
 @item @option{-gl-filter @var{filter}}
 @tab Filtering method to use when scaling the screen.  One of @samp{linear}, @samp{nearest} or @samp{auto} (the default).  OpenGL output modules only.
 @item @option{-invert-text}

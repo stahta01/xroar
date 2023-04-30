@@ -26,6 +26,7 @@
 #include "module.h"
 #include "vo.h"
 #include "vo_render.h"
+#include "xconfig.h"
 
 extern struct module vo_null_module;
 static struct module * const default_vo_module_list[] = {
@@ -40,6 +41,21 @@ struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
 	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit lookup table") },
 	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "simulated filtered analogue") },
+	{ XC_ENUM_END() }
+};
+
+struct xconfig_enum vo_pixel_fmt_list[] = {
+	{ XC_ENUM_INT("rgba8", VO_RENDER_FMT_RGBA8, "RGBA 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("argb8", VO_RENDER_FMT_ARGB8, "ARGB 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("bgra8", VO_RENDER_FMT_BGRA8, "BGRA 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("abgr8", VO_RENDER_FMT_ABGR8, "ABGR 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("rgb565", VO_RENDER_FMT_RGB565, "RGB 5-6-5") },
+	{ XC_ENUM_INT("rgba4", VO_RENDER_FMT_RGBA4, "RGBA 4-4-4") },
+	{ XC_ENUM_INT("rgba32", VO_RENDER_FMT_RGBA32, "RGBA 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("argb32", VO_RENDER_FMT_ARGB32, "ARGB 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("bgra32", VO_RENDER_FMT_BGRA32, "BGRA 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("abgr32", VO_RENDER_FMT_ABGR32, "ABGR 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_END() }
 };
 
 const uint8_t vo_cmp_lut_2bit[2][4][3] = {

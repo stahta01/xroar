@@ -41,8 +41,26 @@
 struct vo_opengl_interface {
 	struct vo_interface vo;
 
-	void *texture_pixels;
-	GLuint texnum;
+	struct {
+		// Format OpenGL is asked to make the texture internally
+		GLint internal_format;
+
+		// Texture ID
+		GLuint num;
+
+		// Format used to transfer data to the texture; ie, the format
+		// we allocate memory for and manipulate
+		GLenum buf_format;
+
+		// Data type used for those transfers, therefore also
+		GLenum buf_type;
+
+		// Size of one pixel, in bytes
+		unsigned pixel_size;
+
+		// Pixel buffer
+		void *pixels;
+	} texture;
 
 	struct {
 		int w, h;

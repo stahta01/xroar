@@ -232,6 +232,11 @@ static struct private_cfg private_cfg = {
 static struct ui_cfg xroar_ui_cfg = {
 	.vo_cfg = {
 		.gl_filter = UI_GL_FILTER_AUTO,
+#if __BYTE_ORDER == __BIG_ENDIAN
+		.pixel_fmt = VO_RENDER_FMT_RGBA32,
+#else
+		.pixel_fmt = VO_RENDER_FMT_BGRA32,
+#endif
 	},
 };
 
@@ -2502,6 +2507,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("fskip", &private_cfg.vo.frameskip) },
 	{ XC_SET_ENUM("ccr", &private_cfg.vo.ccr, vo_cmp_ccr_list) },
 	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, ui_gl_filter_list) },
+	{ XC_SET_ENUM("vo-pixel-fmt", &xroar_ui_cfg.vo_cfg.pixel_fmt, vo_pixel_fmt_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_BOOL("invert-text", &private_cfg.vo.vdg_inverted_text) },
@@ -2715,6 +2721,7 @@ static void helptext(void) {
 "  -fskip FRAMES         frameskip (default: 0)\n"
 "  -ccr RENDERER         cross-colour renderer (-ccr help for list)\n"
 "  -gl-filter FILTER     OpenGL texture filter (-gl-filter help for list)\n"
+"  -vo-pixel-fmt FMT     pixel format (-vo-pixel-fmt help for list)\n"
 "  -geometry WxH+X+Y     initial emulator geometry\n"
 "  -invert-text          start with text mode inverted\n"
 "  -vo-brightness N      set TV brightness (0-100) [50]\n"
@@ -2871,6 +2878,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int_nz(f, all, "fskip", private_cfg.vo.frameskip);
 	xroar_cfg_print_enum(f, all, "ccr", private_cfg.vo.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);
+	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_bool(f, all, "invert-text", private_cfg.vo.vdg_inverted_text, 0);
 	xroar_cfg_print_int(f, all, "vo-brightness", private_cfg.vo.brightness, 50);

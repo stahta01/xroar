@@ -44,35 +44,6 @@
 #include "vo_render.h"
 #include "xroar.h"
 
-// TEX_INT_FMT is the format OpenGL is asked to make the texture internally.
-//
-// TEX_BUF_FMT is the format used to transfer data to the texture; ie, the
-// format we allocate memory for and manipulate.
-//
-// TEX_BUF_TYPE is the data type used for those transfers, therefore also
-// linked to the data we manipulate.
-//
-// VO_RENDER_FMT is the renderer we request, and should match up to the above.
-
-// These definitions may need to be configurable - probably any modern system
-// can use ARGB8, but maybe not?
-
-// Low precision definitions
-#define TEX_INT_FMT GL_RGB5
-#define TEX_BUF_FMT GL_RGB
-#define TEX_BUF_TYPE GL_UNSIGNED_SHORT_5_6_5
-#define VO_RENDER_FMT VO_RENDER_RGB565
-typedef uint16_t Pixel;
-
-/*
-// Higher precision definitions
-#define TEX_INT_FMT GL_RGB8
-#define TEX_BUF_FMT GL_RGBA
-#define TEX_BUF_TYPE GL_UNSIGNED_INT_8_8_8_8
-#define VO_RENDER_FMT VO_RENDER_RGBA8
-typedef uint32_t Pixel;
-*/
-
 // TEX_INT_PITCH is the pitch of the texture internally.  This used to be
 // best kept as a power of 2 - no idea how necessary that still is, but might
 // as well keep it that way.
@@ -96,22 +67,72 @@ void *vo_opengl_new(size_t isize) {
 
 void vo_opengl_free(void *sptr) {
 	struct vo_opengl_interface *vogl = sptr;
-	glDeleteTextures(1, &vogl->texnum);
-	free(vogl->texture_pixels);
+	glDeleteTextures(1, &vogl->texture.num);
+	free(vogl->texture.pixels);
 }
 
 void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	struct vo_interface *vo = &vogl->vo;
 
-	struct vo_render *vr = vo_render_new(VO_RENDER_FMT);
+	vogl->texture.buf_format = GL_RGBA;
+
+	switch (cfg->pixel_fmt) {
+	default:
+		cfg->pixel_fmt = VO_RENDER_FMT_RGBA8;
+		// fall through
+
+	case VO_RENDER_FMT_RGBA8:
+		vogl->texture.internal_format = GL_RGB8;
+		vogl->texture.buf_format = GL_RGBA;
+		vogl->texture.buf_type = GL_UNSIGNED_INT_8_8_8_8;
+		vogl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_BGRA8:
+		vogl->texture.internal_format = GL_RGB8;
+		vogl->texture.buf_format = GL_BGRA;
+		vogl->texture.buf_type = GL_UNSIGNED_INT_8_8_8_8;
+		vogl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_ARGB8:
+		vogl->texture.internal_format = GL_RGB8;
+		vogl->texture.buf_format = GL_BGRA;
+		vogl->texture.buf_type = GL_UNSIGNED_INT_8_8_8_8_REV;
+		vogl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_ABGR8:
+		vogl->texture.internal_format = GL_RGB8;
+		vogl->texture.buf_format = GL_RGBA;
+		vogl->texture.buf_type = GL_UNSIGNED_INT_8_8_8_8_REV;
+		vogl->texture.pixel_size = 4;
+		break;
+
+	case VO_RENDER_FMT_RGB565:
+		vogl->texture.internal_format = GL_RGB565;
+		vogl->texture.buf_format = GL_RGB;
+		vogl->texture.buf_type = GL_UNSIGNED_SHORT_5_6_5;
+		vogl->texture.pixel_size = 2;
+		break;
+
+	case VO_RENDER_FMT_RGBA4:
+		vogl->texture.internal_format = GL_RGB4;
+		vogl->texture.buf_format = GL_RGBA;
+		vogl->texture.buf_type = GL_UNSIGNED_SHORT_4_4_4_4;
+		vogl->texture.pixel_size = 2;
+		break;
+	}
+
+	struct vo_render *vr = vo_render_new(cfg->pixel_fmt);
 	vr->buffer_pitch = TEX_BUF_WIDTH;
 	vo_set_renderer(vo, vr);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
 	vo->draw = DELEGATE_AS0(void, vo_opengl_draw, vogl);
 
-	vogl->texture_pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * sizeof(Pixel));
-	vo_render_set_buffer(vr, vogl->texture_pixels);
+	vogl->texture.pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * vogl->texture.pixel_size);
+	vo_render_set_buffer(vr, vogl->texture.pixels);
 
 	vogl->viewport.x = vogl->viewport.y = 0;
 	vogl->filter = cfg->gl_filter;
@@ -149,10 +170,10 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);
 
-	glDeleteTextures(1, &vogl->texnum);
-	glGenTextures(1, &vogl->texnum);
-	glBindTexture(GL_TEXTURE_2D, vogl->texnum);
-	glTexImage2D(GL_TEXTURE_2D, 0, TEX_INT_FMT, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glDeleteTextures(1, &vogl->texture.num);
+	glGenTextures(1, &vogl->texture.num);
+	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
+	glTexImage2D(GL_TEXTURE_2D, 0, vogl->texture.internal_format, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	if (vogl->filter == UI_GL_FILTER_NEAREST
 	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->viewport.w % 320) == 0 && (vogl->viewport.h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -169,16 +190,16 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
 	// line just to the right and just below the area in the texture we'll
 	// be updating.  This prevents weird fringing effects.
 	unsigned nclear = (TEX_INT_PITCH > TEX_INT_HEIGHT) ? TEX_INT_PITCH : TEX_INT_HEIGHT;
-	memset(vogl->texture_pixels, 0, nclear * sizeof(Pixel));
+	memset(vogl->texture.pixels, 0, nclear * vogl->texture.pixel_size);
 	if (TEX_INT_PITCH > TEX_BUF_WIDTH) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0,
 				TEX_BUF_WIDTH, 0, 1, TEX_INT_HEIGHT,
-				TEX_BUF_FMT, TEX_BUF_TYPE, vogl->texture_pixels);
+				vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
 	}
 	if (TEX_INT_HEIGHT > TEX_BUF_HEIGHT) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0,
 				0, TEX_BUF_HEIGHT, TEX_INT_PITCH, 1,
-				TEX_BUF_FMT, TEX_BUF_TYPE, vogl->texture_pixels);
+				vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
 	}
 
 	// The same vertex & texcoord lists will be used every draw,
@@ -212,6 +233,6 @@ void vo_opengl_draw(void *sptr) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glTexSubImage2D(GL_TEXTURE_2D, 0,
 			0, 0, TEX_BUF_WIDTH, TEX_BUF_HEIGHT,
-			TEX_BUF_FMT, TEX_BUF_TYPE, vogl->texture_pixels);
+			vogl->texture.buf_format, vogl->texture.buf_type, vogl->texture.pixels);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }

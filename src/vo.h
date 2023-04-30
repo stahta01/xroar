@@ -69,6 +69,7 @@ enum {
 struct vo_cfg {
 	char *geometry;
 	int gl_filter;
+	int pixel_fmt;
 	_Bool fullscreen;
 };
 
@@ -172,6 +173,7 @@ struct vo_interface {
 };
 
 extern struct xconfig_enum vo_cmp_ccr_list[];
+extern struct xconfig_enum vo_pixel_fmt_list[];
 
 extern const uint8_t vo_cmp_lut_2bit[2][4][3];
 extern const uint8_t vo_cmp_lut_5bit[2][32][3];
