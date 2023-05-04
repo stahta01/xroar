@@ -123,13 +123,11 @@ static void TNAME(set_palette_entry)(void *sptr, int palette, int index,
 
 // Variants of render_line with different CPU/accuracy tradeoffs
 
-// Render line using composite palette
+// Render line using a palette
 
-static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
-	struct TNAME(vo_render) *vrt = sptr;
+static void TNAME(do_render_palette)(struct TNAME(vo_render) *vrt, unsigned npixels,
+				     VR_PTYPE *palette, uint8_t const *data) {
 	struct vo_render *vr = &vrt->generic;
-	(void)burstn;
-	(void)npixels;
 
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
@@ -146,10 +144,10 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 		uint8_t c1 = *(src++);
 		uint8_t c2 = *(src++);
 		uint8_t c3 = *(src++);
-		VR_PTYPE p0 = vrt->cmp.palette[c0];
-		VR_PTYPE p1 = vrt->cmp.palette[c1];
-		VR_PTYPE p2 = vrt->cmp.palette[c2];
-		VR_PTYPE p3 = vrt->cmp.palette[c3];
+		VR_PTYPE p0 = palette[c0];
+		VR_PTYPE p1 = palette[c1];
+		VR_PTYPE p2 = palette[c2];
+		VR_PTYPE p3 = palette[c3];
 		*(dest++) = p0;
 		*(dest++) = p1;
 		*(dest++) = p2;
@@ -160,41 +158,19 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 	vr->scanline++;
 }
 
+// Render line using composite palette
+
+static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
+	struct TNAME(vo_render) *vrt = sptr;
+	TNAME(do_render_palette)(vrt, npixels, vrt->cmp.palette, data);
+}
+
 // Render line using RGB palette
 
 static void TNAME(render_rgb_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
-	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
-	(void)npixels;
-
-	if (!data ||
-	    vr->scanline < vr->viewport.y ||
-	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
-		vr->t = (vr->t + npixels) % vr->tmax;
-		vr->scanline++;
-		return;
-	}
-
-	uint8_t const *src = data + vr->viewport.x;
-	VR_PTYPE *dest = vr->pixel;
-	for (int i = vr->viewport.w >> 2; i; i--) {
-		uint8_t c0 = *(src++);
-		uint8_t c1 = *(src++);
-		uint8_t c2 = *(src++);
-		uint8_t c3 = *(src++);
-		VR_PTYPE p0 = vrt->rgb.palette[c0];
-		VR_PTYPE p1 = vrt->rgb.palette[c1];
-		VR_PTYPE p2 = vrt->rgb.palette[c2];
-		VR_PTYPE p3 = vrt->rgb.palette[c3];
-		*(dest++) = p0;
-		*(dest++) = p1;
-		*(dest++) = p2;
-		*(dest++) = p3;
-	}
-	vr->pixel = (VR_PTYPE *)vr->pixel + vr->buffer_pitch;
-	vr->t = (vr->t + npixels) % vr->tmax;
-	vr->scanline++;
+	TNAME(do_render_palette)(vrt, npixels, vrt->rgb.palette, data);
 }
 
 // Render artefact colours using simple 2-bit LUT.
@@ -203,7 +179,6 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 	struct TNAME(vo_render) *vrt = sptr;
 	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
-	(void)npixels;
 
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
@@ -250,7 +225,6 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 	struct TNAME(vo_render) *vrt = sptr;
 	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
-	(void)npixels;
 
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
