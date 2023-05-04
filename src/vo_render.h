@@ -37,6 +37,29 @@
 
 #include "intfuncs.h"
 
+// Composite Video simulation
+//
+// The supported signals are defined as:
+//
+// NTSC = Y' + U sin ωt + V cos ωt, burst 180° (-U)
+//
+// PAL  = Y' + U sin ωt ± V cos ωt, burst 180° ± 45°
+//
+// The normal burst phase isn't terribly important, because a decoder may
+// operate by synchronising to it, making colour always relative to it.
+// However, we definitely care when the phase is modified, as that changes the
+// relative phase of the colour information.
+
+// For speed we maintain tables for the modulation/demodulation of composite
+// video that can be indexed be an incrementing integer time 't', modulo
+// 'tmax'.  'tmax' is chosen such that a (near-enough) integer number of
+// samples at F(s) corresponds to a (near-enough) integer number of cycles at
+// F(sc).
+//
+// For NTSC machines with F(s) = 14.31818 MHz, this is very trivial: four
+// samples at F(s) exactly covers one cycle at 3.579545 MHz.  For other
+// combinations, 'tmax' will encompass more than one chroma cycle.
+
 // Pixel formats supported.  Note that the primary names here relate to how the
 // values are logically packed into their underlying data type.  The
 // VO_RENDER_xxxx32 aliases instead indicate the in-memory byte order, and
@@ -65,12 +88,42 @@ enum {
 };
 
 // For configuring per-renderer colour palette entries
+
 enum {
 	VO_RENDER_PALETTE_CMP,
 	VO_RENDER_PALETTE_CMP_2BIT,
 	VO_RENDER_PALETTE_CMP_5BIT,
 	VO_RENDER_PALETTE_RGB,
 };
+
+// Pixel rates - used as sampling frequency when filtering
+
+enum {
+	VO_RENDER_FS_14_31818,
+	VO_RENDER_FS_14_218,
+	VO_RENDER_FS_14_23753,
+	NUM_VO_RENDER_FS
+};
+
+// Colour subcarrier frequencies
+
+enum {
+	VO_RENDER_FSC_4_43361875,
+	VO_RENDER_FSC_3_579545,
+	NUM_VO_RENDER_FSC
+};
+
+// Colour systems
+
+enum {
+	VO_RENDER_SYSTEM_PAL_I,
+	VO_RENDER_SYSTEM_PAL_M,
+	VO_RENDER_SYSTEM_NTSC,
+	NUM_VO_RENDER_SYSTEM
+};
+
+// Largest value of 'tmax' (and thus 't')
+#define VO_RENDER_MAX_T (228)
 
 struct vo_render {
 	struct {
@@ -82,9 +135,31 @@ struct vo_render {
 		// Cache testing if each colour is black or white
 		uint8_t is_black_or_white[256];
 
+		// F(s); pixel rate
+		int fs;
+
+		// F(sc); chroma subcarrier
+		int fsc;
+
+		// Colour system
+		int system;
+
 		// Lead/lag of chroma components
 		float chb_phase;  // default 0°
 		float cha_phase;  // default 90° = π/2
+
+		// Values to multiply U and V at time 't' when modulating
+		struct {
+			int u[VO_RENDER_MAX_T];  // typically sin ωt
+			int v[VO_RENDER_MAX_T];  // typically cos ωt
+		} mod;
+
+		// Multiplied against signal and then low-pass filtered to
+		// extract U and V
+		struct {
+			int u[VO_RENDER_MAX_T];  // typically 2 sin ωt
+			int v[VO_RENDER_MAX_T];  // typically 2 cos ωt
+		} demod;
 
 		// And a full NTSC decode table
 		struct ntsc_palette *ntsc_palette;
@@ -193,6 +268,9 @@ void vo_render_set_cmp_phase(void *, int phase);
 // Used by machine to configure video output
 
 void vo_render_set_active_area(void *, int x, int y, int w, int h);
+void vo_render_set_cmp_fs(struct vo_render *, _Bool notify, int fs);
+void vo_render_set_cmp_fsc(struct vo_render *, _Bool notify, int fsc);
+void vo_render_set_cmp_system(struct vo_render *, _Bool notify, int system);
 void vo_render_set_cmp_lead_lag(void *, float cha_phase, float chb_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);

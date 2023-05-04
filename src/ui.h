@@ -68,6 +68,9 @@ enum ui_tag {
 	ui_tag_disk_write_back,
 	ui_tag_disk_data,  // .data = struct vdisk
 	// Video
+	ui_tag_cmp_fs,
+	ui_tag_cmp_fsc,
+	ui_tag_cmp_system,
 	ui_tag_ccr,
 	ui_tag_tv_input,
 	ui_tag_fullscreen,

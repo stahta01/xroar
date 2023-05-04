@@ -22,6 +22,7 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdint.h>
 
@@ -29,6 +30,7 @@
 # define M_PI 3.14159265358979323846
 #endif
 
+#include "delegate.h"
 #include "intfuncs.h"
 #include "pl-endian.h"
 
@@ -36,6 +38,11 @@
 #include "ntsc.h"
 #include "vo_render.h"
 #include "xroar.h"
+
+// At some point I will need these for generating filters:
+/* static double vo_render_fs_mhz[NUM_VO_RENDER_FS] = {
+	14.31818, 14.218, 14.23753
+}; */
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -369,6 +376,79 @@ static void update_gamma_table(struct vo_render *vr) {
 	}
 }
 
+static void update_cmp_system(struct vo_render *vr) {
+	vr->t = 0;
+
+	int ncycles;
+	int tmax;
+
+	switch (vr->cmp.fs) {
+	case VO_RENDER_FS_14_31818:
+	default:
+		// F(s) = 14.31818 MHz, US machines, early Dragons
+		switch (vr->cmp.fsc) {
+		case VO_RENDER_FSC_4_43361875:
+		default:
+			// F(sc) = 4.43361875 MHz, normal PAL
+			ncycles = 61;
+			tmax = 197;
+			break;
+
+		case VO_RENDER_FSC_3_579545:
+			// F(sc) = 3.579545 MHz, normal NTSC
+			ncycles = 1;
+			tmax = 4;
+			break;
+		}
+		break;
+
+	case VO_RENDER_FS_14_218:
+		// F(s) = 14.218 MHz, later Dragons
+		switch (vr->cmp.fsc) {
+		case VO_RENDER_FSC_4_43361875:
+		default:
+			// F(sc) = 4.43361875 MHz, normal PAL
+			ncycles = 29;
+			tmax = 93;
+			break;
+
+		case VO_RENDER_FSC_3_579545:
+			// F(sc) = 3.579545 MHz, unusual combo
+			ncycles = 36;
+			tmax = 143;
+			break;
+		}
+		break;
+
+	case VO_RENDER_FS_14_23753:
+		// F(s) = 14.23753 MHz, PAL CoCos
+		switch (vr->cmp.fsc) {
+		case VO_RENDER_FSC_4_43361875:
+		default:
+			// F(sc) = 4.43361875 MHz, normal PAL
+			ncycles = 71;
+			tmax = 228;
+			break;
+
+		case VO_RENDER_FSC_3_579545:
+			// F(sc) = 3.579545 MHz, unusual combo
+			ncycles = 44;  // 89 and 354 would
+			tmax = 174;    // have less error
+			break;
+		}
+		break;
+	}
+
+	// Sanity check
+	assert(tmax <= VO_RENDER_MAX_T);
+
+	vr->tmax = tmax;
+
+	// TODO: regenerate mod/demod tables based on these parameters
+	//double fratio = (double)ncycles / (double)tmax;
+	(void)ncycles;
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Used by UI to adjust viewing parameters
@@ -464,9 +544,49 @@ void vo_render_set_active_area(void *sptr, int x, int y, int w, int h) {
 	vr->viewport.new_y = yoff;
 }
 
+// Set sampling frequency (equal to pixel rate) to one of VO_RENDER_FS_*
+
+void vo_render_set_cmp_fs(struct vo_render *vr, _Bool notify, int fs) {
+	if (fs < 0 || fs >= NUM_VO_RENDER_FS) {
+		fs = VO_RENDER_FS_14_31818;
+	}
+	vr->cmp.fs = fs;
+	update_cmp_system(vr);
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_fs, fs, NULL);
+	}
+}
+
+// Set chroma subcarrier frequency to one of VO_RENDER_FSC_*
+
+void vo_render_set_cmp_fsc(struct vo_render *vr, _Bool notify, int fsc) {
+	if (fsc < 0 || fsc >= NUM_VO_RENDER_FSC) {
+		fsc = VO_RENDER_FSC_4_43361875;
+	}
+	vr->cmp.fsc = fsc;
+	update_cmp_system(vr);
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_fsc, fsc, NULL);
+	}
+}
+
+// Set colour system to one of VO_RENDER_SYSTEM_*
+
+void vo_render_set_cmp_system(struct vo_render *vr, _Bool notify, int system) {
+	if (system < 0 || system >= NUM_VO_RENDER_SYSTEM) {
+		system = VO_RENDER_SYSTEM_PAL_I;
+	}
+	vr->cmp.system = system;
+	update_cmp_system(vr);
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_system, system, NULL);
+	}
+}
+
 // Set how the chroma components relate to each other (in degrees)
 //     float chb_phase;  // øB phase, default 0°
 //     float cha_phase;  // øA phase, default 90°
+
 void vo_render_set_cmp_lead_lag(void *sptr, float chb_phase, float cha_phase) {
 	struct vo_render *vr = sptr;
 	vr->cmp.chb_phase = (chb_phase * 2. * M_PI) / 360.;
