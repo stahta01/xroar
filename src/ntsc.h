@@ -86,4 +86,14 @@ inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc) {
 	return buf;
 }
 
+inline int_xyz ntsc_decode_mono(const uint8_t *ntsc) {
+	int_xyz buf;
+	int y = NTSC_C3*ntsc[0] + NTSC_C2*ntsc[1] + NTSC_C1*ntsc[2] +
+		NTSC_C0*ntsc[3] +
+		NTSC_C1*ntsc[4] + NTSC_C2*ntsc[5] + NTSC_C3*ntsc[6];
+	buf.x = buf.y = buf.z = y >> 15;
+	ntsc_phase = (ntsc_phase + 1) & 3;
+	return buf;
+}
+
 #endif
