@@ -149,8 +149,7 @@ struct TCC1014_private {
 
 	// $FF98: Video mode register - VMODE
 	_Bool BP;  // 1=Graphics; 0=Text
-	_Bool BPI;  // 1=Composite phase invert
-	_Bool MOCH;  // 1=Monochrome on composite out
+	unsigned burstn;  // 0=Monochrome, 1=Normal, 2=180°
 	_Bool H50;  // 1=50Hz video; 0=60Hz video
 	unsigned LPR;  // Lines Per Row: 1, 2, 8, 9, 10, 11 or 65535 (=infinite)
 
@@ -765,8 +764,7 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 
 	case 8:
 		gime->BP = val & 0x80;
-		gime->BPI = val & 0x20;
-		gime->MOCH = val & 0x10;
+		gime->burstn = (val & 0x10) ? 0 : ((val & 0x20) >> 5) + 1;
 		gime->H50 = val & 0x08;
 		gime->LPR = val & 7;
 		gime->field_duration = gime->H50 ? 312 : 262;
@@ -851,7 +849,7 @@ static void do_hs_fall(void *sptr) {
 		}
 		gime->beam_pos = TCC1014_LEFT_BORDER_START;
 	}
-	DELEGATE_CALL(gime->public.render_line, gime->BPI, TCC1014_LINE_DURATION, gime->pixel_data);
+	DELEGATE_CALL(gime->public.render_line, gime->burstn, TCC1014_LINE_DURATION, gime->pixel_data);
 
 	if (gime->COCO) {
 		gime->row_stride = gime->BPR;

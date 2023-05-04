@@ -349,8 +349,7 @@ static _Bool mc10_finish(struct part *p) {
 		}
 	}
 
-	DELEGATE_SAFE_CALL(mp->vo->set_burst, 0, -33);  // No burst (hi-res, css=1)
-	DELEGATE_SAFE_CALL(mp->vo->set_burst, 1, 0);    // Normal burst (most modes)
+	DELEGATE_SAFE_CALL(mp->vo->set_cmp_burst, 1, 0);    // Normal burst (most modes)
 
 	// Tape
 	mp->tape_interface->update_audio = DELEGATE_AS1(void, float, mc10_update_tape_input, mp);

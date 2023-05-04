@@ -180,7 +180,7 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr) {
 	vo->set_cmp_lead_lag = DELEGATE_AS2(void, float, float, vo_render_set_cmp_lead_lag, vr);
 	vo->palette_set_ybr = DELEGATE_AS4(void, uint8, float, float, float, vo_render_set_cmp_palette, vr);
 	vo->palette_set_rgb = DELEGATE_AS4(void, uint8, float, float, float, vo_render_set_rgb_palette, vr);
-	vo->set_burst = DELEGATE_AS2(void, unsigned, int, vo_render_set_burst, vr);
+	vo->set_cmp_burst = DELEGATE_AS2(void, unsigned, int, vo_render_set_cmp_burst, vr);
 	vo->set_cmp_phase_offset = DELEGATE_AS1(void, int, vo_render_set_cmp_phase_offset, vr);
 
 	// Used by machine to render video

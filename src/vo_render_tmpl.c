@@ -53,6 +53,7 @@ struct TNAME(vo_render) {
 
 	struct {
 		VR_PTYPE palette[256];
+		VR_PTYPE mono_palette[256];
 		VR_PTYPE cc_2bit[2][4];
 		VR_PTYPE cc_5bit[2][32];
 	} cmp;
@@ -102,10 +103,12 @@ static void TNAME(set_palette_entry)(void *sptr, int palette, int index,
 	struct vo_render *vr = &vrt->generic;
 
 	VR_PTYPE colour = vrt->map_rgb(vr, R, G, B);
+	int y = (int)(0.299 * (float)R + 0.587 * (float)G + 0.114 * (float)B);
 
 	switch (palette) {
 	case VO_RENDER_PALETTE_CMP:
 		vrt->cmp.palette[index & 0xff] = colour;
+		vrt->cmp.mono_palette[index & 0xff] = vrt->map_rgb(vr, y, y, y);
 		break;
 	case VO_RENDER_PALETTE_RGB:
 		vrt->rgb.palette[index & 0xff] = colour;
@@ -162,7 +165,8 @@ static void TNAME(do_render_palette)(struct TNAME(vo_render) *vrt, unsigned npix
 
 static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
-	TNAME(do_render_palette)(vrt, npixels, vrt->cmp.palette, data);
+	VR_PTYPE *palette = burstn ? vrt->cmp.palette : vrt->cmp.mono_palette;
+	TNAME(do_render_palette)(vrt, npixels, palette, data);
 }
 
 // Render line using RGB palette

@@ -538,15 +538,16 @@ static _Bool dragon_finish(struct part *p) {
 		}
 	}
 
-	DELEGATE_SAFE_CALL(md->vo->set_burst, 0, -33);  // No burst (hi-res, css=1)
-	DELEGATE_SAFE_CALL(md->vo->set_burst, 1, 0);    // Normal burst (most modes)
-	DELEGATE_SAFE_CALL(md->vo->set_burst, 2, is_pal ? 33 : 66);  // Modified burst (coco hi-res css=1)
-	// This was going to represent the extra colourburst mode achievable by
-	// switching to/from colour modes at the right time that Sock Master
-	// demoed.  Until I look into that properly, it's actually used for CSS
-	// + GM0 in non-resolution-graphics mode, so just set it to same as
-	// normal burst.
-	DELEGATE_SAFE_CALL(md->vo->set_burst, 3, 0);
+	// Normal burst (most modes)
+	DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 1, 0);
+	// Modified bursts (coco hi-res css=1)
+	if (mc->tv_standard != TV_PAL_M) {
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 33);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 63);
+	} else {
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 90);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 0);
+	}
 
 	verify_ram_size(mc);
 	md->ram_size = mc->ram * 1024;

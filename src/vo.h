@@ -154,7 +154,7 @@ struct vo_interface {
 	// Set a burst phase
 	//     unsigned burstn;  // burst index
 	//     int phase;        // in degrees
-	DELEGATE_T2(void, unsigned, int) set_burst;
+	DELEGATE_T2(void, unsigned, int) set_cmp_burst;
 
 	// Set machine default cross-colour phase
 	//     int phase;  // VO_CMP_PHASE_*

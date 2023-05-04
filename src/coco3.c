@@ -417,8 +417,8 @@ static _Bool coco3_finish(struct part *p) {
 		DELEGATE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
 	}
 
-	DELEGATE_SAFE_CALL(mcc3->vo->set_burst, 0, 0);    // Normal burst
-	DELEGATE_SAFE_CALL(mcc3->vo->set_burst, 1, 180);  // Phase inverted burst
+	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_burst, 1, 0);    // Normal burst
+	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_burst, 2, 180);  // Phase inverted burst
 
 	// CPU
 

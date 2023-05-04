@@ -196,7 +196,7 @@ void vo_render_set_active_area(void *, int x, int y, int w, int h);
 void vo_render_set_cmp_lead_lag(void *, float cha_phase, float chb_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);
-void vo_render_set_burst(void *, unsigned burstn, int offset);
+void vo_render_set_cmp_burst(void *, unsigned burstn, int offset);
 void vo_render_set_cmp_phase_offset(void *sptr, int phase);
 
 // Used by machine to render video

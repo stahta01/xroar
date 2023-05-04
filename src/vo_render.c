@@ -498,9 +498,9 @@ void vo_render_set_rgb_palette(void *sptr, uint8_t c, float r, float g, float b)
 
 // Set a burst phase
 //     unsigned burstn;  // burst index
-//     int phase;        // in degrees
+//     int offset;       // in degrees
 
-void vo_render_set_burst(void *sptr, unsigned burstn, int offset) {
+void vo_render_set_cmp_burst(void *sptr, unsigned burstn, int offset) {
 	struct vo_render *vr = sptr;
 	if (burstn >= vr->cmp.nbursts) {
 		vr->cmp.nbursts = burstn + 1;
@@ -569,8 +569,14 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	int_xyz rgb_buf[912];
 	int_xyz *idest = rgb_buf;
 	ntsc_phase = ((vr->cmp.phase + vr->viewport.x) + 3) & 3;
-	for (int i = vr->viewport.w; i; i--) {
-		*(idest++) = ntsc_decode(burst, src++);
+	if (burstn) {
+		for (int i = vr->viewport.w; i; i--) {
+			*(idest++) = ntsc_decode(burst, src++);
+		}
+	} else {
+		for (int i = vr->viewport.w; i; i--) {
+			*(idest++) = ntsc_decode_mono(src++);
+		}
 	}
 
 	// Render from intermediate RGB buffer
