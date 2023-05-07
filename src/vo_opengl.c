@@ -110,7 +110,11 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 		break;
 
 	case VO_RENDER_FMT_RGB565:
+#ifdef GL_RGB565
 		vogl->texture.internal_format = GL_RGB565;
+#else
+		vogl->texture.internal_format = GL_RGB5;
+#endif
 		vogl->texture.buf_format = GL_RGB;
 		vogl->texture.buf_type = GL_UNSIGNED_SHORT_5_6_5;
 		vogl->texture.pixel_size = 2;

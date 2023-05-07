@@ -660,7 +660,7 @@ static void setup_view_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite Rendering"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CCR | VO_CMP_CCR_NONE)];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_PALETTE)];
 	[submenu addItem:item];
 	[item release];
 
@@ -1179,10 +1179,6 @@ void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_keymap:
 		current_keymap = TAG_KEYMAP | value;
-		break;
-
-	case ui_tag_kbd_translate:
-		uisdl2->keyboard.translate = value;
 		break;
 
 	default:
