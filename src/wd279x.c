@@ -821,9 +821,9 @@ static void state_machine(void *sptr) {
 		case WD279X_state_write_sector_4:
 			fdc->crc = CRC16_RESET;
 			if (IS_DOUBLE_DENSITY) {
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
-				fdc->crc = crc16_byte(fdc->crc, 0xa1);
+				_vdrive_write(fdc, 0xa1);
+				_vdrive_write(fdc, 0xa1);
+				_vdrive_write(fdc, 0xa1);
 			}
 			if (fdc->command_register & 1)
 				_vdrive_write(fdc, 0xf8);
