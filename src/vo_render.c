@@ -320,9 +320,9 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	cs_clamp(&R, &G, &B);
 
 	// Track "black or white" for simple artefact renderers
-	if (r > 0.85 && g > 0.85 && b > 0.85) {
+	if (y > 0.85 && fabsf(b_y) < 0.10 && fabsf(r_y) < 0.10) {
 		vr->cmp.is_black_or_white[c] = 3;
-	} else if (r < 0.20 && g < 0.20 && b < 0.20) {
+	} else if (y < 0.20 && fabsf(b_y) < 0.10 && fabsf(r_y) < 0.10) {
 		vr->cmp.is_black_or_white[c] = 2;
 	} else {
 		vr->cmp.is_black_or_white[c] = 0;
