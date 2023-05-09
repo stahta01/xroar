@@ -516,6 +516,35 @@ static _Bool dragon_finish(struct part *p) {
 		DELEGATE_SAFE_CALL(md->vo->set_active_area, x, y, 512, 192);
 	}
 
+	// Configure composite video
+	if (!is_pal || md->is_dragon32) {
+		vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_31818);
+	} else {
+		if (md->is_dragon) {
+			vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_218);
+		} else {
+			vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_23753);
+		}
+	}
+
+	switch (mc->tv_standard) {
+	case TV_PAL:
+	default:
+		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_4_43361875);
+		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_PAL_I);
+		break;
+
+	case TV_NTSC:
+		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_3_579545);
+		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_NTSC);
+		break;
+
+	case TV_PAL_M:
+		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_3_579545);
+		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_PAL_M);
+		break;
+	}
+
 	// Normal video phase
 	DELEGATE_SAFE_CALL(md->vo->set_cmp_phase_offset, 0);
 

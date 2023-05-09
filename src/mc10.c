@@ -327,6 +327,28 @@ static _Bool mc10_finish(struct part *p) {
 		DELEGATE_SAFE_CALL(mp->vo->set_active_area, x, y, 512, 192);
 	}
 
+	// Configure composite video
+	switch (mc->tv_standard) {
+	case TV_PAL:
+	default:
+		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_23753);  // assumed
+		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_4_43361875);
+		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_PAL_I);
+		break;
+
+	case TV_NTSC:
+		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_31818);
+		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_3_579545);
+		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_NTSC);
+		break;
+
+	case TV_PAL_M:
+		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_31818);
+		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_3_579545);
+		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_PAL_M);
+		break;
+	}
+
 	// Normal video phase
 	DELEGATE_SAFE_CALL(mp->vo->set_cmp_phase_offset, 0);
 
