@@ -91,8 +91,11 @@ static void do_retry_read_snapshot(void *sptr) {
 
 int read_snapshot(const char *filename) {
 #ifndef HAVE_WASM
-	if (read_v2_snapshot(filename) < 0 &&
-	    read_v1_snapshot(filename) < 0) {
+	if (read_v2_snapshot(filename) < 0 
+#ifdef WANT_V1_SNAPSHOTS
+		&& read_v1_snapshot(filename) < 0
+#endif
+	) {
 		LOG_WARN("Snapshot: read failed\n");
 		return -1;
 	}
