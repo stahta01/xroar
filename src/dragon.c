@@ -494,7 +494,7 @@ static _Bool dragon_finish(struct part *p) {
 	md->VDG->is_coco = !md->is_dragon;
 	_Bool is_pal = (mc->tv_standard == TV_PAL);
 	md->VDG->is_pal = is_pal;
-	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL_M);
+	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL);
 
 	if (!md->is_dragon && is_pal) {
 		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, md);
@@ -539,14 +539,23 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	// Normal burst (most modes)
-	DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 1, 0);
+	DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 1, -0.25, 0.0);
 	// Modified bursts (coco hi-res css=1)
 	if (mc->tv_standard != TV_PAL_M) {
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 33);
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 63);
+		// In an NTSC machine, a timer circuit provides a modified
+		// burst in hi-res otherwise-mono modes in order to generate
+		// red & blue hues.  Pulling øA low sets the burst along that
+		// negative axis - +80° relative to the normal burst along
+		// negative øB.
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 2,  0.0,  -1.5);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 3, -0.25, -1.5);
 	} else {
+		// PAL-M; not sure of the measurements here, or how the
+		// Brazilian clones generated the swinging burst.  Youtube
+		// videos seem to show green/blue artefacts (not green/purple),
+		// and a 90° offset seems to achieve that.
 		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 90);
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 0);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 90);
 	}
 
 	verify_ram_size(mc);
