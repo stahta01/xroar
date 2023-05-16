@@ -37,19 +37,6 @@
 
 #include "intfuncs.h"
 
-// Composite Video simulation
-//
-// The supported signals are defined as:
-//
-// NTSC = Y' + U sin ωt + V cos ωt, burst 180° (-U)
-//
-// PAL  = Y' + U sin ωt ± V cos ωt, burst 180° ± 45°
-//
-// The normal burst phase isn't terribly important, because a decoder may
-// operate by synchronising to it, making colour always relative to it.
-// However, we definitely care when the phase is modified, as that changes the
-// relative phase of the colour information.
-
 // For speed we maintain tables for the modulation/demodulation of composite
 // video that can be indexed be an incrementing integer time 't', modulo
 // 'tmax'.  'tmax' is chosen such that a (near-enough) integer number of
@@ -125,12 +112,74 @@ enum {
 // Largest value of 'tmax' (and thus 't')
 #define VO_RENDER_MAX_T (228)
 
+// Composite Video simulation
+//
+// The supported signals are defined as:
+//
+// NTSC = Y' + U sin ωt + V cos ωt, burst 180° (-U)
+//
+// PAL  = Y' + U sin ωt ± V cos ωt, burst 180° ± 45°
+//
+// The normal burst phase isn't terribly important, because a decoder may
+// operate by synchronising to it, making colour always relative to it.
+// However, we definitely care when the phase is modified, as that changes the
+// relative phase of the colour information.
+//
+// Burst index 0 is reserved for indicating "no burst" - ie that a display may
+// choose not to decode any colour information.  Burst index 1 is typically
+// used with a phase offset of 0; ie, "normal" colour.  Extra bursts are used
+// in the cases where the initial burst phase is modified, but the scanline
+// colour information maintains its usual phase.
+//
+// We store demodulation tables here too, as a demodulator would synchronise
+// with the colourburst it received.
+
+struct vo_render_burst {
+	// Offset from "normal" phase
+	double phase_offset;
+
+	// Values to multiply U and V at time 't' when modulating
+	struct {
+		int u[VO_RENDER_MAX_T];     // typically  sin ωt
+		int v[2][VO_RENDER_MAX_T];  // typically ±cos ωt
+	} mod;
+
+	// Multiplied against signal and then low-pass filtered to
+	// extract U and V
+	struct {
+		int u[VO_RENDER_MAX_T];     // typically  2 sin ωt
+		int v[2][VO_RENDER_MAX_T];  // typically ±2 cos ωt
+	} demod;
+};
+
+// Filter definition.  'coeff' actually points to the centre value, so can be
+// indexed from -order to +order.
+
+struct vo_render_filter {
+	int order;
+	int *coeff;
+};
+
 struct vo_render {
 	struct {
 		// Record values for recalculation
 		struct {
 			float y, pb, pr;
 		} colour[256];
+
+		// Precalculated values for composite renderer
+		struct {
+			// Multipliers to get from Y',R'-Y',B'-Y' to Y'UV
+			double yconv;
+			struct {
+				double umul;
+				double vmul;
+			} uconv, vconv;
+
+			int y[256];
+			int u[256];
+			int v[256];
+		} palette;
 
 		// Cache testing if each colour is black or white
 		uint8_t is_black_or_white[256];
@@ -145,20 +194,48 @@ struct vo_render {
 		int system;
 
 		// Lead/lag of chroma components
-		float chb_phase;  // default 0°
 		float cha_phase;  // default 90° = π/2
 
-		// Values to multiply U and V at time 't' when modulating
+		// Whether to chroma average successive lines (eg PAL)
+		_Bool average_chroma;
+
+		// PAL v-switch
+		int vswitch;
+
 		struct {
-			int u[VO_RENDER_MAX_T];  // typically sin ωt
-			int v[VO_RENDER_MAX_T];  // typically cos ωt
+			// Chroma low pass filters
+			int corder;  // max of ufilter.order, vfilter.order
+			struct vo_render_filter ufilter;
+			struct vo_render_filter vfilter;
 		} mod;
 
-		// Multiplied against signal and then low-pass filtered to
-		// extract U and V
 		struct {
-			int u[VO_RENDER_MAX_T];  // typically 2 sin ωt
-			int v[VO_RENDER_MAX_T];  // typically 2 cos ωt
+			// Luma low pass filter
+			struct vo_render_filter yfilter;
+
+			// Chroma low pass filters
+			int corder;  // max of ufilter.order, vfilter.order
+			struct vo_render_filter ufilter;
+			struct vo_render_filter vfilter;
+
+			// Filter chroma line delay.  Used in PAL averaging.
+			int fubuf[2][1024];
+			int fvbuf[2][1024];
+
+			// Saturation converted to integer
+			int saturation;
+
+			// Upper & lower limits of decoded U/V values
+			struct {
+				int lower;
+				int upper;
+			} ulimit, vlimit;
+
+			// Multipliers to get from U/V to R'G'B' (Y' assumed)
+			struct {
+				int umul;
+				int vmul;
+			} rconv, gconv, bconv;
 		} demod;
 
 		// And a full NTSC decode table
@@ -166,10 +243,8 @@ struct vo_render {
 
 		// NTSC bursts
 		unsigned nbursts;
+		struct vo_render_burst *burst;
 		struct ntsc_burst **ntsc_burst;
-
-		// Buffer for NTSC line encode
-		uint8_t ntsc_buf[912];
 
 		// Machine defined default cross-colour phase
 		int phase_offset;
@@ -271,10 +346,11 @@ void vo_render_set_active_area(void *, int x, int y, int w, int h);
 void vo_render_set_cmp_fs(struct vo_render *, _Bool notify, int fs);
 void vo_render_set_cmp_fsc(struct vo_render *, _Bool notify, int fsc);
 void vo_render_set_cmp_system(struct vo_render *, _Bool notify, int system);
-void vo_render_set_cmp_lead_lag(void *, float cha_phase, float chb_phase);
+void vo_render_set_cmp_lead_lag(void *, float chb_phase, float cha_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);
 void vo_render_set_cmp_burst(void *, unsigned burstn, int offset);
+void vo_render_set_cmp_burst_br(void *sptr, unsigned burstn, float b_y, float r_y);
 void vo_render_set_cmp_phase_offset(void *sptr, int phase);
 
 // Used by machine to render video

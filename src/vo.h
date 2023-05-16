@@ -156,6 +156,11 @@ struct vo_interface {
 	//     int phase;        // in degrees
 	DELEGATE_T2(void, unsigned, int) set_cmp_burst;
 
+	// Set burst phase in terms of B'-Y' and R'-Y'
+	//     unsigned burstn;  // burst index
+	//     float b_y, r_y;
+	DELEGATE_T3(void, unsigned, float, float) set_cmp_burst_br;
+
 	// Set machine default cross-colour phase
 	//     int phase;  // VO_CMP_PHASE_*
 	DELEGATE_T1(void, int) set_cmp_phase_offset;
@@ -200,6 +205,20 @@ void vo_set_signal(struct vo_interface *vo, int signal);
 //     int ccr;  // VO_CMP_CCR_*
 
 void vo_set_cmp_ccr(struct vo_interface *vo, int ccr);
+
+// Configure composite video
+
+inline void vo_set_cmp_fs(struct vo_interface *vo, _Bool notify, int value) {
+	vo_render_set_cmp_fs(vo->renderer, notify, value);
+}
+
+inline void vo_set_cmp_fsc(struct vo_interface *vo, _Bool notify, int value) {
+	vo_render_set_cmp_fsc(vo->renderer, notify, value);
+}
+
+inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value) {
+	vo_render_set_cmp_system(vo->renderer, notify, value);
+}
 
 // Vertical sync.  Calls any module-specific draw function, then
 // vo_render_vsync().

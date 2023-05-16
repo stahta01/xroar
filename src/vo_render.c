@@ -35,14 +35,39 @@
 #include "pl-endian.h"
 
 #include "colourspace.h"
+#include "filter.h"
 #include "ntsc.h"
 #include "vo_render.h"
 #include "xroar.h"
 
-// At some point I will need these for generating filters:
-/* static double vo_render_fs_mhz[NUM_VO_RENDER_FS] = {
-	14.31818, 14.218, 14.23753
-}; */
+#define MAX_FILTER_ORDER (15)
+
+static const struct {
+	const int tmax;     // number of samples at F(s)
+	const int ncycles;  // number of cycles at F(sc)
+} f_ratios[NUM_VO_RENDER_FS][NUM_VO_RENDER_FSC] = {
+	// F(s) = 14.31818 MHz (NTSC, early Dragons)
+	{
+		{ .ncycles = 61, .tmax = 197 },  // F(sc) = 4.43361875 MHz (PAL)
+		{ .ncycles =  1, .tmax =   4 },  // F(sc) = 3.579545 MHz (NTSC)
+	},
+	// F(s) = 14.218 MHz (later Dragons)
+	{
+		{ .ncycles = 29, .tmax =  93 },  // F(sc) = 4.43361875 MHz (PAL)
+		{ .ncycles = 36, .tmax = 143 },  // F(sc) = 3.579545 MHz (NTSC)
+	},
+	// F(s) = 14.23753 MHz (PAL CoCos)
+	{
+		{ .ncycles = 71, .tmax = 228 },  // F(sc) = 4.43361875 MHz (PAL)
+		{ .ncycles = 44, .tmax = 174 },  // F(sc) = 3.579545 MHz (NTSC)
+	},
+};
+
+// Used to calculate filters
+
+static const double vo_render_fs_mhz[NUM_VO_RENDER_FS] = {
+        14.31818, 14.218, 14.23753
+};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -127,9 +152,11 @@ struct vo_render *vo_render_new(int fmt) {
 		return NULL;
 
 	// Sensible defaults
-	vr->cs = cs_profile_by_name("ntsc");
+	vo_render_set_cmp_fs(vr, 1, VO_RENDER_FS_14_31818);
+	vo_render_set_cmp_fsc(vr, 1, VO_RENDER_FSC_4_43361875);
+	vo_render_set_cmp_system(vr, 1, VO_RENDER_SYSTEM_PAL_I);
+
 	vr->cmp.ntsc_palette = ntsc_palette_new();
-	vr->cmp.chb_phase = 0.;       // default 0°
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
 	vr->viewport.new_x = 190;
 	vr->viewport.new_y = 14;
@@ -169,6 +196,21 @@ void vo_render_free(struct vo_render *vr) {
 		ntsc_burst_free(vr->cmp.ntsc_burst[i]);
 	}
 	free(vr->cmp.ntsc_burst);
+	if (vr->cmp.mod.ufilter.coeff) {
+		free(vr->cmp.mod.ufilter.coeff - MAX_FILTER_ORDER);
+	}
+	if (vr->cmp.mod.vfilter.coeff) {
+		free(vr->cmp.mod.vfilter.coeff - MAX_FILTER_ORDER);
+	}
+	if (vr->cmp.demod.yfilter.coeff) {
+		free(vr->cmp.demod.yfilter.coeff - MAX_FILTER_ORDER);
+	}
+	if (vr->cmp.demod.ufilter.coeff) {
+		free(vr->cmp.demod.ufilter.coeff - MAX_FILTER_ORDER);
+	}
+	if (vr->cmp.demod.vfilter.coeff) {
+		free(vr->cmp.demod.vfilter.coeff - MAX_FILTER_ORDER);
+	}
 	free(vr);
 }
 
@@ -284,9 +326,15 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	// Add to NTSC palette before we process it
 	ntsc_palette_add_ybr(vr->cmp.ntsc_palette, c, y, b_y, r_y);
 
+	double mu = vr->cmp.palette.uconv.umul * b_y + vr->cmp.palette.uconv.vmul * r_y;
+	double mv = vr->cmp.palette.vconv.umul * b_y + vr->cmp.palette.vconv.vmul * r_y;
+	vr->cmp.palette.y[c] = 656. * y * vr->cmp.palette.yconv;
+	vr->cmp.palette.u[c] = 896. * mu;
+	vr->cmp.palette.v[c] = 896. * mv;
+
 	// Adjust according to chroma phase configuration
-	nb_y = b_y * cos(vr->cmp.chb_phase) + r_y * cos(vr->cmp.cha_phase);
-	nr_y = b_y * sin(vr->cmp.chb_phase) + r_y * sin(vr->cmp.cha_phase);
+	nb_y = b_y - (r_y / tan(vr->cmp.cha_phase));
+	nr_y = r_y / sin(vr->cmp.cha_phase);
 	b_y = nb_y;
 	r_y = nr_y;
 
@@ -376,77 +424,135 @@ static void update_gamma_table(struct vo_render *vr) {
 	}
 }
 
+// Generate encode and decode tables for indexed burst phase offset
+//
+// Lead/lag is incorporated into the encode tables, hue control into the decode
+// tables.
+//
+// PAL doesn't need a hue control, but to provide the function anyway, we need
+// to offset positively for V on one scanline and negatively on the next.
+
+static void update_cmp_burst(struct vo_render *vr, unsigned burstn) {
+	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
+	unsigned tmax = f_ratios[vr->cmp.fs][vr->cmp.fsc].tmax;
+	unsigned ncycles = f_ratios[vr->cmp.fs][vr->cmp.fsc].ncycles;
+	double wratio = 2. * M_PI * (double)ncycles / (double)tmax;
+	double hue = (2. * M_PI * (double)vr->hue) / 360.;
+	const double uv45 = (2. * M_PI * 45.) / 360.;
+	for (unsigned t = 0; t < tmax; t++) {
+		double a = wratio * (double)t;
+		if (vr->cmp.system == VO_RENDER_SYSTEM_NTSC) {
+			burst->mod.u[t] =            512. * sin(a);
+			burst->mod.v[0][t] =         512. * sin(a + vr->cmp.cha_phase);
+			burst->mod.v[1][t] =         512. * sin(a + vr->cmp.cha_phase);
+			burst->demod.u[t] =     2. * 512. * sin(a - burst->phase_offset + hue);
+			burst->demod.v[0][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
+			burst->demod.v[1][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
+		} else {
+			a -= uv45;
+			burst->mod.u[t] =            512. * sin(a);
+			burst->mod.v[0][t] =         512. * sin(a + vr->cmp.cha_phase);
+			burst->mod.v[1][t] =        -512. * sin(a + vr->cmp.cha_phase);
+			burst->demod.u[t] =     2. * 512. * sin(a - burst->phase_offset + hue);
+			burst->demod.v[0][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
+			burst->demod.v[1][t] = -2. * 512. * cos(a - burst->phase_offset - hue);
+		}
+	}
+}
+
+static void set_lp_filter(struct vo_render_filter *f, double fc, int order) {
+	if (order < 1) {
+		// order=0 flags filter as "not used"
+		f->order = 0;
+		return;
+	}
+	if (!f->coeff) {
+		int ntaps = (MAX_FILTER_ORDER * 2) + 1;
+		int *coeff = xmalloc(ntaps * sizeof(int));
+		f->coeff = coeff + MAX_FILTER_ORDER;
+	}
+	if (order > MAX_FILTER_ORDER) {
+		order = MAX_FILTER_ORDER;
+	}
+	struct filter_fir *src = filter_fir_lp_create(FILTER_WINDOW_BLACKMAN, fc, order);
+	for (int ft = -MAX_FILTER_ORDER; ft <= MAX_FILTER_ORDER; ft++) {
+		if (ft >= -order && ft <= order) {
+			f->coeff[ft] = 32768. * src->taps[ft+order];
+		} else {
+			f->coeff[ft] = 0;
+		}
+	}
+	filter_fir_free(src);
+	f->order = order;
+}
+
 static void update_cmp_system(struct vo_render *vr) {
+	vr->tmax = f_ratios[vr->cmp.fs][vr->cmp.fsc].tmax;
+	assert(vr->tmax <= VO_RENDER_MAX_T);  // sanity check
 	vr->t = 0;
 
-	int ncycles;
-	int tmax;
+	double fs_mhz = vo_render_fs_mhz[vr->cmp.fs];
 
-	switch (vr->cmp.fs) {
-	case VO_RENDER_FS_14_31818:
+	switch (vr->cmp.system) {
+	case VO_RENDER_SYSTEM_NTSC:
+	case VO_RENDER_SYSTEM_PAL_M:
+		vr->cmp.palette.yconv = 0.591;
+		vr->cmp.palette.uconv.umul = 0.504; vr->cmp.palette.uconv.vmul = 0.000;
+		vr->cmp.palette.vconv.umul = 0.000; vr->cmp.palette.vconv.vmul = 0.711;
+
+		vr->cmp.demod.ulimit.lower = -244; vr->cmp.demod.ulimit.upper = 244;
+		vr->cmp.demod.vlimit.lower = -319; vr->cmp.demod.vlimit.upper = 319;
+		vr->cmp.demod.rconv.umul =  0.000*512.; vr->cmp.demod.rconv.vmul =  1.140*512.;
+		vr->cmp.demod.gconv.umul = -0.396*512.; vr->cmp.demod.gconv.vmul = -0.581*512.;
+		vr->cmp.demod.bconv.umul =  2.029*512.; vr->cmp.demod.bconv.vmul =  0.000*512.;
+
+		set_lp_filter(&vr->cmp.mod.ufilter, 1.3, 6);
+		set_lp_filter(&vr->cmp.mod.vfilter, 0.5, 6);
+		set_lp_filter(&vr->cmp.demod.yfilter, 2.1/fs_mhz, 10);
+		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 6);
+		set_lp_filter(&vr->cmp.demod.vfilter, 0.5/fs_mhz, 6);
+		vr->cmp.average_chroma = 0;
+		break;
+
 	default:
-		// F(s) = 14.31818 MHz, US machines, early Dragons
-		switch (vr->cmp.fsc) {
-		case VO_RENDER_FSC_4_43361875:
-		default:
-			// F(sc) = 4.43361875 MHz, normal PAL
-			ncycles = 61;
-			tmax = 197;
-			break;
+		vr->cmp.palette.yconv = 0.625;
+		vr->cmp.palette.uconv.umul = 0.533; vr->cmp.palette.uconv.vmul = 0.000;
+		vr->cmp.palette.vconv.umul = 0.000; vr->cmp.palette.vconv.vmul = 0.752;
 
-		case VO_RENDER_FSC_3_579545:
-			// F(sc) = 3.579545 MHz, normal NTSC
-			ncycles = 1;
-			tmax = 4;
-			break;
-		}
-		break;
+		vr->cmp.demod.ulimit.lower = -239; vr->cmp.demod.ulimit.upper = 239;
+		vr->cmp.demod.vlimit.lower = -337; vr->cmp.demod.vlimit.upper = 337;
+		vr->cmp.demod.rconv.umul =  0.000*512.; vr->cmp.demod.rconv.vmul =  1.140*512.;
+		vr->cmp.demod.gconv.umul = -0.396*512.; vr->cmp.demod.gconv.vmul = -0.581*512.;
+		vr->cmp.demod.bconv.umul =  2.029*512.; vr->cmp.demod.bconv.vmul =  0.000*512.;
 
-	case VO_RENDER_FS_14_218:
-		// F(s) = 14.218 MHz, later Dragons
-		switch (vr->cmp.fsc) {
-		case VO_RENDER_FSC_4_43361875:
-		default:
-			// F(sc) = 4.43361875 MHz, normal PAL
-			ncycles = 29;
-			tmax = 93;
-			break;
-
-		case VO_RENDER_FSC_3_579545:
-			// F(sc) = 3.579545 MHz, unusual combo
-			ncycles = 36;
-			tmax = 143;
-			break;
-		}
-		break;
-
-	case VO_RENDER_FS_14_23753:
-		// F(s) = 14.23753 MHz, PAL CoCos
-		switch (vr->cmp.fsc) {
-		case VO_RENDER_FSC_4_43361875:
-		default:
-			// F(sc) = 4.43361875 MHz, normal PAL
-			ncycles = 71;
-			tmax = 228;
-			break;
-
-		case VO_RENDER_FSC_3_579545:
-			// F(sc) = 3.579545 MHz, unusual combo
-			ncycles = 44;  // 89 and 354 would
-			tmax = 174;    // have less error
-			break;
-		}
+		set_lp_filter(&vr->cmp.mod.ufilter, 1.3/fs_mhz, 6);
+		set_lp_filter(&vr->cmp.mod.vfilter, 1.3/fs_mhz, 6);
+		set_lp_filter(&vr->cmp.demod.yfilter, 3.0/fs_mhz, 10);
+		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 6);
+		set_lp_filter(&vr->cmp.demod.vfilter, 1.3/fs_mhz, 6);
+		vr->cmp.average_chroma = 1;
 		break;
 	}
 
-	// Sanity check
-	assert(tmax <= VO_RENDER_MAX_T);
+	switch (vr->cmp.system) {
+	case VO_RENDER_SYSTEM_PAL_I:
+		vr->cs = cs_profile_by_name("pal");
+		break;
 
-	vr->tmax = tmax;
+	default:
+		// PAL-M displays are closer to NTSC
+		vr->cs = cs_profile_by_name("ntsc");
+		break;
+	}
 
-	// TODO: regenerate mod/demod tables based on these parameters
-	//double fratio = (double)ncycles / (double)tmax;
-	(void)ncycles;
+	vr->cmp.mod.corder = (vr->cmp.mod.ufilter.order > vr->cmp.mod.vfilter.order) ?
+	                     vr->cmp.mod.ufilter.order : vr->cmp.mod.vfilter.order;
+	vr->cmp.demod.corder = (vr->cmp.demod.ufilter.order > vr->cmp.demod.vfilter.order) ?
+	                       vr->cmp.demod.ufilter.order : vr->cmp.demod.vfilter.order;
+
+	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
+		update_cmp_burst(vr, i);
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -497,6 +603,7 @@ void vo_render_set_saturation(void *sptr, int value) {
 	if (value < 0) value = 0;
 	if (value > 100) value = 100;
 	vr->saturation = value;
+	vr->cmp.demod.saturation = (int)(((double)vr->saturation * 512.) / 100.);
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 	}
@@ -514,6 +621,9 @@ void vo_render_set_hue(void *sptr, int value) {
 	vr->hue = value;
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
+	}
+	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
+		update_cmp_burst(vr, i);
 	}
 	if (xroar_ui_interface) {
 		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_hue, value, NULL);
@@ -584,12 +694,12 @@ void vo_render_set_cmp_system(struct vo_render *vr, _Bool notify, int system) {
 }
 
 // Set how the chroma components relate to each other (in degrees)
-//     float chb_phase;  // øB phase, default 0°
+//     float chb_phase;  // ignored TODO: remove argument
 //     float cha_phase;  // øA phase, default 90°
 
 void vo_render_set_cmp_lead_lag(void *sptr, float chb_phase, float cha_phase) {
 	struct vo_render *vr = sptr;
-	vr->cmp.chb_phase = (chb_phase * 2. * M_PI) / 360.;
+	(void)chb_phase;
 	vr->cmp.cha_phase = (cha_phase * 2. * M_PI) / 360.;
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
@@ -624,11 +734,29 @@ void vo_render_set_cmp_burst(void *sptr, unsigned burstn, int offset) {
 	struct vo_render *vr = sptr;
 	if (burstn >= vr->cmp.nbursts) {
 		vr->cmp.nbursts = burstn + 1;
+		vr->cmp.burst = xrealloc(vr->cmp.burst, vr->cmp.nbursts * sizeof(*(vr->cmp.burst)));
 		vr->cmp.ntsc_burst = xrealloc(vr->cmp.ntsc_burst, vr->cmp.nbursts * sizeof(*(vr->cmp.ntsc_burst)));
 	} else if (vr->cmp.ntsc_burst[burstn]) {
 		ntsc_burst_free(vr->cmp.ntsc_burst[burstn]);
 	}
 	vr->cmp.ntsc_burst[burstn] = ntsc_burst_new(offset);
+	vr->cmp.burst[burstn].phase_offset = (2. * M_PI * (double)offset) / 360.;
+	update_cmp_burst(vr, burstn);
+}
+
+// Same, but in terms of B'-Y' and R'-Y', ie the voltages present on a motherboard
+
+void vo_render_set_cmp_burst_br(void *sptr, unsigned burstn, float b_y, float r_y) {
+	struct vo_render *vr = sptr;
+
+	// Adjust according to chroma phase configuration
+	double mu = b_y - (r_y / tan(vr->cmp.cha_phase));
+	double mv = r_y / sin(vr->cmp.cha_phase);
+
+	double a = atan2(mv, mu) - M_PI;
+	int offset = (int)(((a * 360.) / (2 * M_PI)) + 360.5) % 360;
+
+	vo_render_set_cmp_burst(sptr, burstn, offset);
 }
 
 // Set machine default cross-colour phase
@@ -655,6 +783,7 @@ void vo_render_vsync(void *sptr) {
 	vr->scanline = 0;
 	vr->viewport.x = vr->viewport.new_x;
 	vr->viewport.y = vr->viewport.new_y;
+	vr->cmp.vswitch = !(vr->cmp.system == VO_RENDER_SYSTEM_NTSC || vr->cmp.phase == 0);
 }
 
 // NTSC composite video simulation
@@ -677,7 +806,8 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 
 	// Encode NTSC
 	uint8_t const *src = data + vr->viewport.x - 3;
-	uint8_t *ntsc_dest = vr->cmp.ntsc_buf;
+	// Reuse a convenient buffer from other renderer
+	uint8_t *ntsc_dest = (uint8_t *)vr->cmp.demod.fubuf[0];
 	ntsc_phase = (vr->cmp.phase + vr->viewport.x) & 3;
 	for (int i = vr->viewport.w + 6; i; i--) {
 		unsigned c = *(src++);
@@ -685,9 +815,9 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	}
 
 	// Decode into intermediate RGB buffer
-	src = vr->cmp.ntsc_buf;
-	int_xyz rgb_buf[912];
-	int_xyz *idest = rgb_buf;
+	src = (uint8_t *)vr->cmp.demod.fubuf[0];
+	int_xyz rgb[912];
+	int_xyz *idest = rgb;
 	ntsc_phase = ((vr->cmp.phase + vr->viewport.x) + 3) & 3;
 	if (burstn) {
 		for (int i = vr->viewport.w; i; i--) {
@@ -700,6 +830,117 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	}
 
 	// Render from intermediate RGB buffer
-	vr->render_rgb(vr, rgb_buf, vr->pixel, vr->viewport.w);
+	vr->render_rgb(vr, rgb, vr->pixel, vr->viewport.w);
+	vr->next_line(vr, npixels);
+}
+
+void vo_render_cmp_new(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
+	struct vo_render *vr = sptr;
+
+	if (!data ||
+	    vr->scanline < vr->viewport.y ||
+	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
+		vr->t = (vr->t + npixels) % vr->tmax;
+		vr->scanline++;
+		return;
+	}
+
+	// Temporary buffers
+	int mbuf[1024];  // Y' + U sin(ωt) + V cos(ωt), U/V optionally lowpassed
+	int ubuf[1024];  // mbuf * 2 sin(ωt) (lowpass to recover U)
+	int vbuf[1024];  // mbuf * 2 cos(ωt) (lowpass to recover V)
+
+	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
+	unsigned tmax = vr->tmax;
+	unsigned t = (vr->t + vr->cmp.phase_offset) % tmax;
+
+	int vswitch = vr->cmp.vswitch;
+	if (vr->cmp.average_chroma)
+		vr->cmp.vswitch = !vswitch;
+
+	// Optionally apply lowpass filters to U and V.  Modulate results.
+	// Multiply resultant U&V buffers by 2sin(wt)/2cos(wt) preempting
+	// demodulation.
+	for (unsigned i = MAX_FILTER_ORDER; i < npixels - MAX_FILTER_ORDER; i++) {
+		int c = data[i];
+		int py = vr->cmp.palette.y[c];
+
+		int fu, fv;
+		if (vr->cmp.mod.corder) {
+			fu = fv = 0;
+			for (int ft = -vr->cmp.mod.corder; ft <= vr->cmp.mod.corder; ft++) {
+				int ct = data[i+ft];
+				fu += vr->cmp.palette.u[ct] * vr->cmp.mod.ufilter.coeff[ft];
+				fv += vr->cmp.palette.v[ct] * vr->cmp.mod.vfilter.coeff[ft];
+			}
+			fu >>= 15;
+			fv >>= 15;
+		} else {
+			fu = vr->cmp.palette.u[c];
+			fv = vr->cmp.palette.v[c];
+		}
+
+		int fu_sin_wt = (fu * burst->mod.u[(i+t) % tmax]) >> 9;
+		int fv_cos_wt = (fv * burst->mod.v[vswitch][(i+t) % tmax]) >> 9;
+
+		mbuf[i] = py + fu_sin_wt + fv_cos_wt;
+
+		if (burstn) {
+			ubuf[i] = (mbuf[i] * burst->demod.u[(i+t) % tmax]) >> 9;
+			vbuf[i] = (mbuf[i] * burst->demod.v[vswitch][(i+t) % tmax]) >> 9;
+		}
+	}
+
+	int *fubuf0 = vr->cmp.demod.fubuf[vswitch];
+	int *fvbuf0 = vr->cmp.demod.fvbuf[vswitch];
+	int *fubuf1 = vr->cmp.demod.fubuf[vr->cmp.vswitch];
+	int *fvbuf1 = vr->cmp.demod.fvbuf[vr->cmp.vswitch];
+
+	int_xyz rgb[1024];
+
+	for (unsigned i = MAX_FILTER_ORDER; i < npixels - MAX_FILTER_ORDER; i++) {
+		int fy = 0;
+		int yorder = vr->cmp.demod.yfilter.order;
+		for (int ft = -yorder; ft <= yorder; ft++) {
+			fy += vr->cmp.demod.yfilter.coeff[ft] * mbuf[i+ft];
+		}
+		fy >>= (15-9);  // fy won't be multiplied by [rgb]_conv
+
+		int fu0 = 0, fv0 = 0;
+		if (burstn) {
+			int corder = vr->cmp.demod.corder;
+			for (int ft = -corder; ft <= corder; ft++) {
+				fu0 += vr->cmp.demod.ufilter.coeff[ft] * ubuf[i+ft];
+				fv0 += vr->cmp.demod.vfilter.coeff[ft] * vbuf[i+ft];
+			}
+			fu0 >>= 15;
+			fv0 >>= 15;
+		}
+		fubuf0[i] = fu0;
+		fvbuf0[i] = fv0;
+
+		int fu1 = fubuf1[i];
+		int fu = (fu0 + fu1) >> 1;
+		int fv1 = fvbuf1[i];
+		int fv = (fv0 + fv1) >> 1;
+
+		// Apply saturation control
+		int ru = (fu * vr->cmp.demod.saturation) >> 9;
+                int rv = (fv * vr->cmp.demod.saturation) >> 9;
+
+		// Limits on chroma values
+		if (ru < vr->cmp.demod.ulimit.lower) ru = vr->cmp.demod.ulimit.lower;
+		if (ru > vr->cmp.demod.ulimit.upper) ru = vr->cmp.demod.ulimit.upper;
+		if (rv < vr->cmp.demod.vlimit.lower) rv = vr->cmp.demod.vlimit.lower;
+		if (rv > vr->cmp.demod.vlimit.upper) rv = vr->cmp.demod.vlimit.upper;
+
+		// Convert to R'G'B' in supplied output buffer
+		rgb[i].x = (fy + ru*vr->cmp.demod.rconv.umul + rv*vr->cmp.demod.rconv.vmul) >> 10;
+		rgb[i].y = (fy + ru*vr->cmp.demod.gconv.umul + rv*vr->cmp.demod.gconv.vmul) >> 10;
+		rgb[i].z = (fy + ru*vr->cmp.demod.bconv.umul + rv*vr->cmp.demod.bconv.vmul) >> 10;
+	}
+
+	// Render from intermediate RGB buffer
+	vr->render_rgb(vr, rgb + vr->viewport.x, vr->pixel, vr->viewport.w);
 	vr->next_line(vr, npixels);
 }
