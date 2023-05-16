@@ -61,6 +61,7 @@ typedef DELEGATE_S2(void, unsigned, unsigned) DELEGATE_T2(void, unsigned, unsign
 typedef DELEGATE_S3(void, unsigned, unsigned, unsigned) DELEGATE_T3(void, unsigned, unsigned, unsigned);
 typedef DELEGATE_S3(void, unsigned, unsigned, uint8_t const *)
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp);
+typedef DELEGATE_S3(void, unsigned, float, float) DELEGATE_T3(void, unsigned, float, float);
 typedef DELEGATE_S1(void, uint8_t) DELEGATE_T1(void, uint8);
 typedef DELEGATE_S4(void, uint8_t, float, float, float) DELEGATE_T4(void, uint8, float, float, float);
 typedef DELEGATE_S2(void, uint8_t *, unsigned) DELEGATE_T2(void, uint8p, unsigned);
@@ -133,6 +134,7 @@ DELEGATE_DEF_PROTO2(void, void, unsigned, unsigned, int, int);
 DELEGATE_DEF_PROTO2(void, void, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, unsigned, unsigned, unsigned, unsigned, uint8_t const *, uint8cp);
+DELEGATE_DEF_PROTO3(void, void, unsigned, unsigned, float, float, float, float);
 DELEGATE_DEF_PROTO1(void, void, uint8_t, uint8);
 DELEGATE_DEF_PROTO4(void, void, uint8_t, uint8, float, float, float, float, float, float);
 DELEGATE_DEF_PROTO2(void, void, uint8_t *, uint8p, unsigned, unsigned);
