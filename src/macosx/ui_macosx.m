@@ -674,6 +674,11 @@ static void setup_view_menu(void) {
 	[submenu addItem:item];
 	[item release];
 
+	item = [[NSMenuItem alloc] initWithTitle:@"Partial NTSC" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CCR | VO_CMP_CCR_PARTIAL)];
+	[submenu addItem:item];
+	[item release];
+
 	item = [[NSMenuItem alloc] initWithTitle:@"Simulated" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setTag:(TAG_CCR | VO_CMP_CCR_SIMULATED)];
 	[submenu addItem:item];

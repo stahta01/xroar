@@ -786,11 +786,11 @@ void vo_render_vsync(void *sptr) {
 	vr->cmp.vswitch = !(vr->cmp.system == VO_RENDER_SYSTEM_NTSC || vr->cmp.phase == 0);
 }
 
-// NTSC composite video simulation
+// NTSC partial composite video simulation
 //
 // Uses render_rgb(), so doesn't need to be duplicated per-type
 
-void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
+void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_render *vr = sptr;
 	(void)npixels;
 
@@ -834,7 +834,11 @@ void vo_render_cmp_ntsc(void *sptr, unsigned burstn, unsigned npixels, uint8_t c
 	vr->next_line(vr, npixels);
 }
 
-void vo_render_cmp_new(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
+// Fully simulated composite video
+//
+// Uses render_rgb(), so doesn't need to be duplicated per-type
+
+void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_render *vr = sptr;
 
 	if (!data ||
@@ -859,8 +863,6 @@ void vo_render_cmp_new(void *sptr, unsigned burstn, unsigned npixels, uint8_t co
 		vr->cmp.vswitch = !vswitch;
 
 	// Optionally apply lowpass filters to U and V.  Modulate results.
-	// Multiply resultant U&V buffers by 2sin(wt)/2cos(wt) preempting
-	// demodulation.
 	for (unsigned i = MAX_FILTER_ORDER; i < npixels - MAX_FILTER_ORDER; i++) {
 		int c = data[i];
 		int py = vr->cmp.palette.y[c];
@@ -885,6 +887,8 @@ void vo_render_cmp_new(void *sptr, unsigned burstn, unsigned npixels, uint8_t co
 
 		mbuf[i] = py + fu_sin_wt + fv_cos_wt;
 
+		// Multiply results by 2sin(wt)/2cos(wt), preempting
+		// demodulation:
 		if (burstn) {
 			ubuf[i] = (mbuf[i] * burst->demod.u[(i+t) % tmax]) >> 9;
 			vbuf[i] = (mbuf[i] * burst->demod.v[vswitch][(i+t) % tmax]) >> 9;

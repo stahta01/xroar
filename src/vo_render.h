@@ -356,6 +356,7 @@ void vo_render_set_cmp_phase_offset(void *sptr, int phase);
 // Used by machine to render video
 
 void vo_render_vsync(void *);
-void vo_render_cmp_ntsc(void *, unsigned burstn, unsigned npixels, uint8_t const *data);
+void vo_render_cmp_partial(void *, unsigned burstn, unsigned npixels, uint8_t const *data);
+void vo_render_cmp_simulated(void *, unsigned burstn, unsigned npixels, uint8_t const *data);
 
 #endif

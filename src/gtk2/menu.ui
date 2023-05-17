@@ -25,6 +25,7 @@
         <menuitem action='ccr-palette'/>
         <menuitem action='ccr-2bit'/>
         <menuitem action='ccr-5bit'/>
+        <menuitem action='ccr-partial'/>
         <menuitem action='ccr-simulated'/>
       </menu>
       <menuitem name='VideoOptions' action='VideoOptionsAction'/>

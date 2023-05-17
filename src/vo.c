@@ -40,6 +40,7 @@ struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "no cross-colour") },
 	{ XC_ENUM_INT("simple", VO_CMP_CCR_2BIT, "four colour palette") },
 	{ XC_ENUM_INT("5bit", VO_CMP_CCR_5BIT, "5-bit lookup table") },
+	{ XC_ENUM_INT("partial", VO_CMP_CCR_PARTIAL, "partial simulated NTSC-only") },
 	{ XC_ENUM_INT("simulated", VO_CMP_CCR_SIMULATED, "simulated filtered analogue") },
 	{ XC_ENUM_END() }
 };
@@ -220,8 +221,11 @@ static void update_render_parameters(struct vo_interface *vo) {
 	case VO_CMP_CCR_5BIT:
 		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vr->render_cmp_5bit, vr);
 		break;
+	case VO_CMP_CCR_PARTIAL:
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vo_render_cmp_partial, vr);
+		break;
 	case VO_CMP_CCR_SIMULATED:
-		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vo_render_cmp_ntsc, vr);
+		vo->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vo_render_cmp_simulated, vr);
 		break;
 	}
 }

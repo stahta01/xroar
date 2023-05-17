@@ -428,6 +428,7 @@ static GtkRadioActionEntry const ccr_radio_entries[] = {
 	{ .name = "ccr-palette", .label = "None", .value = VO_CMP_CCR_PALETTE },
 	{ .name = "ccr-2bit", .label = "Simple (2-bit LUT)", .value = VO_CMP_CCR_2BIT },
 	{ .name = "ccr-5bit", .label = "5-bit LUT", .value = VO_CMP_CCR_5BIT },
+	{ .name = "ccr-partial", .label = "Partial NTSC", .value = VO_CMP_CCR_PARTIAL },
 	{ .name = "ccr-simulated", .label = "Simulated", .value = VO_CMP_CCR_SIMULATED },
 };
 
