@@ -488,7 +488,7 @@ supported architectures, and which machine profiles are built-in.
 @item @ @ @ @option{-ext-charset @var{rom}}
 @tab ROM image to use for external character generator.
 @item @ @ @ @option{-tv-type @var{type}}
-@tab One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.  PAL-M is treated the same as NTSC, except with magenta-green cross-colour instead of blue-red (simulated composite rendering only at the moment).
+@tab One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.
 @item @ @ @ @option{-tv-input @var{input}}
 @tab One of @samp{cmp} (composite video, no cross-colour), @samp{cmp-br} (composite video, blue-red cross-colour), @samp{cmp-rb} (composite video, red-blue cross-colour) or @samp{rgb} (RGB video, CoCo 3 only).
 @item @ @ @ @option{-vdg-type @var{type}}
@@ -1501,7 +1501,7 @@ to show for it.
 @item @option{-invert-text}
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
-@tab Composite video cross-colour renderer.  One of @samp{simple} (very fast), @samp{5bit} (fast, more accurate) or @samp{simulated} (slow, very accurate).  Default is @samp{5bit}.
+@tab Composite video cross-colour renderer.  One of @samp{none}, @samp{simple}, @samp{5bit}, @samp{partial} or @samp{simulated}.  Default is @samp{5bit}.
 @item @option{-vo-brightness @var{value}}
 @tab Set initial brightness (0-100).  Default is 50.
 @item @option{-vo-contrast @var{value}}
@@ -1516,11 +1516,19 @@ The pixel format, specified with @option{-vo-pixel-fmt}, defaults to RGBA with
 8 bits per channel, but you may find other pixel layouts or lower bit depths
 render faster on your machine.
 
+Various levels of composite video rendering precision can be selected with
+@option{-ccr}, trading off CPU with accuracy.  @option{-ccr simulated} is the
+only option that tackles PAL video.  @option{-ccr partial} does pretty well for
+NTSC.  @option{-ccr 5bit} and @option{-ccr simple} both use LUTs to convert
+sequences of black & white into NTSC cross-colour.
+
 Real NTSC machines start in one of two cross-colour states at random.  Games
 often prompt the user to ``Press Enter if the screen is red'', for example.
 You can press @kbd{@key{CTRL}+A}, to cycle through three modes: Off, Blue-red
 and Red-blue.  On the CoCo 3, a fourth mode is included that switches to the
-RGB output.
+RGB output.  In PAL machines, "Blue-red" and "Red-blue" also select the
+alternate line phase switch, allowing for correct colour in games such as
+@cite{Tetris} by Ola Eldøy or @cite{Donut Dilemma} by Nick Marentes.
 
 Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
 
@@ -1742,6 +1750,10 @@ nail down bugs; read the ChangeLog for details.
 And thanks to all the people on the
 @myuref{https://archive.worldofdragon.org/phpBB3/, Dragon Archive Forums},
 IRC and CoCo Discord that have provided helpful feedback and insight.
+
+Various @myuref{https://www.bbc.co.uk/rd/publications, BBC R&D White Papers}
+and @cite{Video Demystified} by Keith Jack were good references while working
+on composite video simulation.
 
 
 @c = === === === === === === === === === === === === === === === === === ===
@@ -2090,7 +2102,7 @@ configuration file.
 @item @ @ @ @option{-ext-charset @var{rom}}
 @tab ROM image to use for external character generator.
 @item @ @ @ @option{-tv-type @var{type}}
-@tab One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.  PAL-M is treated the same as NTSC, except with magenta-green cross-colour instead of blue-red (simulated composite rendering only at the moment).
+@tab One of @samp{pal}, @samp{ntsc} or @samp{pal-m}.
 @item @ @ @ @option{-tv-input @var{input}}
 @tab One of @samp{cmp} (composite video, no cross-colour), @samp{cmp-br} (composite video, blue-red cross-colour), @samp{cmp-rb} (composite video, red-blue cross-colour) or @samp{rgb} (RGB video, CoCo 3 only).
 @item @ @ @ @option{-vdg-type @var{type}}
@@ -2305,7 +2317,7 @@ to this machine (the default is to try).
 @item @option{-invert-text}
 @tab Start up with inverted text mode.
 @item @option{-ccr @var{renderer}}
-@tab Composite video cross-colour renderer.  One of @samp{simple} (very fast), @samp{5bit} (fast, more accurate) or @samp{simulated} (slow, very accurate).  Default is @samp{5bit}.
+@tab Composite video cross-colour renderer.  One of @samp{none}, @samp{simple}, @samp{5bit}, @samp{partial} or @samp{simulated}.  Default is @samp{5bit}.
 @item @option{-vo-brightness @var{value}}
 @tab Set initial brightness (0-100).  Default is 50.
 @item @option{-vo-contrast @var{value}}
