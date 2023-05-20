@@ -569,8 +569,12 @@ static _Bool dragon_finish(struct part *p) {
 
 	// Normal burst (most modes)
 	DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 1, -0.25, 0.0);
+
 	// Modified bursts (coco hi-res css=1)
-	if (mc->tv_standard != TV_PAL_M) {
+	switch (mc->tv_standard) {
+	case TV_NTSC:
+	case TV_PAL:
+	default:
 		// In an NTSC machine, a timer circuit provides a modified
 		// burst in hi-res otherwise-mono modes in order to generate
 		// red & blue hues.  Pulling øA low sets the burst along that
@@ -578,13 +582,15 @@ static _Bool dragon_finish(struct part *p) {
 		// negative øB.
 		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 2,  0.0,  -1.5);
 		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst_br, 3, -0.25, -1.5);
-	} else {
+		break;
+
+	case TV_PAL_M:
 		// PAL-M; not sure of the measurements here, or how the
 		// Brazilian clones generated the swinging burst.  Youtube
-		// videos seem to show green/blue artefacts (not green/purple),
-		// and a 90° offset seems to achieve that.
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 90);
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 90);
+		// videos seem to show green/blue artefacts (not green/purple).
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 2, 0);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_burst, 3, 0);
+		break;
 	}
 
 	verify_ram_size(mc);

@@ -37,6 +37,8 @@
 
 #include "intfuncs.h"
 
+#include "ntsc.h"
+
 // For speed we maintain tables for the modulation/demodulation of composite
 // video that can be indexed be an incrementing integer time 't', modulo
 // 'tmax'.  'tmax' is chosen such that a (near-enough) integer number of
@@ -136,7 +138,7 @@ enum {
 
 struct vo_render_burst {
 	// Offset from "normal" phase
-	double phase_offset;
+	int phase_offset;
 
 	// Values to multiply U and V at time 't' when modulating
 	struct {
@@ -150,6 +152,9 @@ struct vo_render_burst {
 		int u[VO_RENDER_MAX_T];     // typically  2 sin ωt
 		int v[2][VO_RENDER_MAX_T];  // typically ±2 cos ωt
 	} demod;
+
+	// Data for the 'partial' renderer
+	struct ntsc_burst ntsc_burst;
 };
 
 // Filter definition.  'coeff' actually points to the centre value, so can be
@@ -239,12 +244,11 @@ struct vo_render {
 		} demod;
 
 		// And a full NTSC decode table
-		struct ntsc_palette *ntsc_palette;
+		struct ntsc_palette ntsc_palette;
 
 		// NTSC bursts
 		unsigned nbursts;
 		struct vo_render_burst *burst;
-		struct ntsc_burst **ntsc_burst;
 
 		// Machine defined default cross-colour phase
 		int phase_offset;

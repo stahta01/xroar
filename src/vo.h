@@ -62,11 +62,6 @@ enum {
 	NUM_VO_CMP_CCR
 };
 
-// phase relationship for composite cross-colour
-
-#define VO_CMP_PHASE_KBRW (0)
-#define VO_CMP_PHASE_KRBW (2)
-
 struct vo_cfg {
 	char *geometry;
 	int gl_filter;
@@ -132,7 +127,7 @@ struct vo_interface {
 	DELEGATE_T1(void, int) set_hue;
 
 	// Set cross-colour phase
-	//     int phase;  // VO_CMP_PHASE_*
+	//     int phase;  // in degrees
 	DELEGATE_T1(void, int) set_cmp_phase;
 
 	// Used by machine to configure video output
@@ -163,7 +158,7 @@ struct vo_interface {
 	DELEGATE_T3(void, unsigned, float, float) set_cmp_burst_br;
 
 	// Set machine default cross-colour phase
-	//     int phase;  // VO_CMP_PHASE_*
+	//     int phase;  // in degrees
 	DELEGATE_T1(void, int) set_cmp_phase_offset;
 
 	// Used by machine to render video

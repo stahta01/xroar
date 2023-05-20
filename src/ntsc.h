@@ -28,8 +28,6 @@
 #define XROAR_NTSC_H_
 
 #include "intfuncs.h"
-#include "machine.h"
-#include "xroar.h"
 
 #define NTSC_NPHASES (4)
 
@@ -38,51 +36,38 @@
 #define NTSC_C2 (4189)
 #define NTSC_C3 (899)
 
+struct vo_render;
+
 struct ntsc_palette {
-	unsigned ncolours;
-	int *byphase[NTSC_NPHASES];
+	int byphase[NTSC_NPHASES][256];
 };
 
 struct ntsc_burst {
 	int byphase[NTSC_NPHASES][7];
 };
 
-extern unsigned ntsc_phase;
+void ntsc_palette_set_ybr(struct vo_render *vr, unsigned c);
 
-struct ntsc_palette *ntsc_palette_new(void);
-void ntsc_palette_free(struct ntsc_palette *np);
-void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
-			  double y, double b_y, double r_y);
-void ntsc_palette_add_direct(struct ntsc_palette *np, unsigned c);
+void ntsc_burst_set(struct vo_render *vr, unsigned burstn);
 
-inline int ntsc_encode_from_palette(const struct ntsc_palette *np, unsigned c) {
-	int r = np->byphase[ntsc_phase][c];
-	ntsc_phase = (ntsc_phase + 1) & 3;
-	return r;
-}
-
-struct ntsc_burst *ntsc_burst_new(int offset);
-void ntsc_burst_free(struct ntsc_burst *nb);
-
-inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc) {
+inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc, unsigned t) {
 	int_xyz buf;
-	const int *bursti = nb->byphase[(ntsc_phase+1)&3];
-	const int *burstq = nb->byphase[(ntsc_phase+0)&3];
+	const int *burstu = nb->byphase[(t+0) % NTSC_NPHASES];
+	const int *burstv = nb->byphase[(t+1) % NTSC_NPHASES];
 	int y = NTSC_C3*ntsc[0] + NTSC_C2*ntsc[1] + NTSC_C1*ntsc[2] +
 		NTSC_C0*ntsc[3] +
 		NTSC_C1*ntsc[4] + NTSC_C2*ntsc[5] + NTSC_C3*ntsc[6];
-	int i = bursti[0]*ntsc[0] + bursti[1]*ntsc[1] + bursti[2]*ntsc[2] +
-		bursti[3]*ntsc[3] +
-		bursti[4]*ntsc[4] + bursti[5]*ntsc[5] + bursti[6]*ntsc[6];
-	int q = burstq[0]*ntsc[0] + burstq[1]*ntsc[1] + burstq[2]*ntsc[2] +
-		burstq[3]*ntsc[3] +
-		burstq[4]*ntsc[4] + burstq[5]*ntsc[5] + burstq[6]*ntsc[6];
+	int u = burstu[0]*ntsc[0] + burstu[1]*ntsc[1] + burstu[2]*ntsc[2] +
+		burstu[3]*ntsc[3] +
+		burstu[4]*ntsc[4] + burstu[5]*ntsc[5] + burstu[6]*ntsc[6];
+	int v = burstv[0]*ntsc[0] + burstv[1]*ntsc[1] + burstv[2]*ntsc[2] +
+		burstv[3]*ntsc[3] +
+		burstv[4]*ntsc[4] + burstv[5]*ntsc[5] + burstv[6]*ntsc[6];
 	// Integer maths here adds another 7 bits to the result,
 	// so divide by 2^22 rather than 2^15.
-	buf.x = (+128*y +122*i  +79*q) >> 22;  // +1.0*y +0.956*i +0.621*q
-	buf.y = (+128*y  -35*i  -83*q) >> 22;  // +1.0*y -0.272*i -0.647*q
-	buf.z = (+128*y -141*i +218*q) >> 22;  // +1.0*y -1.105*i +1.702*q
-	ntsc_phase = (ntsc_phase + 1) & 3;
+	buf.x = (+155*y   +0*u +177*v) >> 22;  // +1.691*y          +1.928*v
+	buf.y = (+155*y  -61*u  -90*v) >> 22;  // +1.691*y -0.667*u -0.982*v
+	buf.z = (+155*y +315*u   +0*v) >> 22;  // +1.691*y +3.436*u
 	return buf;
 }
 
@@ -91,8 +76,7 @@ inline int_xyz ntsc_decode_mono(const uint8_t *ntsc) {
 	int y = NTSC_C3*ntsc[0] + NTSC_C2*ntsc[1] + NTSC_C1*ntsc[2] +
 		NTSC_C0*ntsc[3] +
 		NTSC_C1*ntsc[4] + NTSC_C2*ntsc[5] + NTSC_C3*ntsc[6];
-	buf.x = buf.y = buf.z = y >> 15;
-	ntsc_phase = (ntsc_phase + 1) & 3;
+	buf.x = buf.y = buf.z = (155 * y) >> 22;
 	return buf;
 }
 

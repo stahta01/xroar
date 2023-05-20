@@ -30,106 +30,70 @@
 #include "xalloc.h"
 
 #include "ntsc.h"
+#include "vo_render.h"
 
-unsigned ntsc_phase = 0;
+// NTSC sync to white is 140 IRE = 1000mV, sync to peak is 160 IRE = 1143mV
+//
+// Video Demystified recommends 1305mV across 10 bits (0-1023)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct ntsc_palette *ntsc_palette_new(void) {
-	struct ntsc_palette *np = xmalloc(sizeof(*np));
-	*np = (struct ntsc_palette){0};
-	return np;
-}
+void ntsc_palette_set_ybr(struct vo_render *vr, unsigned c) {
+	struct ntsc_palette *np = &vr->cmp.ntsc_palette;
 
-void ntsc_palette_free(struct ntsc_palette *np) {
-	if (!np)
-		return;
-	for (unsigned p = 0; p < NTSC_NPHASES; p++) {
-		if (np->byphase[p]) {
-			free(np->byphase[p]);
-			np->byphase[p] = NULL;
-		}
-	}
-	free(np);
-}
+	unsigned tmax = NTSC_NPHASES;
+	unsigned ncycles = 1;
+	double wratio = 2. * M_PI * (double)ncycles / (double)tmax;
 
-void ntsc_palette_add_ybr(struct ntsc_palette *np, unsigned c,
-			  double y, double b_y, double r_y) {
-	assert(np != NULL);
-	assert(c < 256);
+	int moff_i = vr->cmp.phase + vr->cmp.phase_offset;
+	double moff = (2. * M_PI * (double)moff_i) / 360.;
 
-	if (c >= np->ncolours) {
-		np->ncolours = c+1;
-		for (unsigned p = 0; p < NTSC_NPHASES; p++) {
-			np->byphase[p] = xrealloc(np->byphase[p], np->ncolours*sizeof(int));
-		}
-	}
+	double y = vr->cmp.colour[c].y;
+	double b_y = vr->cmp.colour[c].pb;
+	double r_y = vr->cmp.colour[c].pr;
 
-	// Convert to I',Q'
-	y *= 0.7572;
-	double i = -0.4795 * b_y + 1.0430 * r_y;
-	double q =  0.7403 * b_y + 0.6773 * r_y;
+	// Convert to U,V
+	y *= 0.6812;
+	double u = 0.594 * b_y;
+	double v = 0.838 * r_y;
 
-	// Datasheet for the MC1372 says that its Chroma Modulator B input
-	// leads Chroma Modulator A by 100°.  This does seem to result in a
-	// slightly more cyan cyan.
-	double ai = (2.0 * M_PI * 100.0) / 360.0;
-	double aq = (2.0 * M_PI *   0.0) / 360.0;
-
-	for (int p = 0; p < NTSC_NPHASES; p++) {
-		double a = (2.0 * M_PI * (double)p) / (double)NTSC_NPHASES;
-		double ii = i * sin(a+ai);
-		double qq = q * sin(a+aq);
-		np->byphase[p][c] = int_clamp_u8(255.*(y+ii+qq));
+	for (unsigned t = 0; t < NTSC_NPHASES; t++) {
+		double a = wratio * (double)t + moff;
+		double uu = u * sin(a);
+		double vv = v * sin(a + vr->cmp.cha_phase);
+		np->byphase[t][c] = int_clamp_u8(255.*(y+uu+vv));
 	}
 }
 
-void ntsc_palette_add_direct(struct ntsc_palette *np, unsigned c) {
-	assert(np != NULL);
-	assert(c < 256);
-	if (c >= np->ncolours) {
-		np->ncolours = c+1;
-		for (unsigned p = 0; p < NTSC_NPHASES; p++) {
-			np->byphase[p] = xrealloc(np->byphase[p], np->ncolours*sizeof(int));
-		}
-	}
-	for (int p = 0; p < NTSC_NPHASES; p++) {
-		np->byphase[p][c] = c;
-	}
-}
+void ntsc_burst_set(struct vo_render *vr, unsigned burstn) {
+	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
+	struct ntsc_burst *nb = &burst->ntsc_burst;
 
-extern inline int ntsc_encode_from_palette(const struct ntsc_palette *np, unsigned c);
+	unsigned tmax = NTSC_NPHASES;
+	unsigned ncycles = 1;
+	double wratio = 2. * M_PI * (double)ncycles / (double)tmax;
 
-struct ntsc_burst *ntsc_burst_new(int offset) {
-	struct ntsc_burst *nb = xmalloc(sizeof(*nb));
-	*nb = (struct ntsc_burst){0};
-	while (offset < 0)
-		offset += 360;
-	offset %= 360;
-	float hue = (2.0 * M_PI * (float)offset) / 360.0;
-	for (int p = 0; p < 4; p++) {
-		double p0 = sin(hue+((2.*M_PI)*(double)(p+0))/4.);
-		double p1 = sin(hue+((2.*M_PI)*(double)(p+1))/4.);
-		double p2 = sin(hue+((2.*M_PI)*(double)(p+2))/4.);
-		double p3 = sin(hue+((2.*M_PI)*(double)(p+3))/4.);
-		nb->byphase[p][0] = NTSC_C3*p1;
-		nb->byphase[p][1] = NTSC_C2*p2;
-		nb->byphase[p][2] = NTSC_C1*p3;
-		nb->byphase[p][3] = NTSC_C0*p0;
-		nb->byphase[p][4] = NTSC_C1*p1;
-		nb->byphase[p][5] = NTSC_C2*p2;
-		nb->byphase[p][6] = NTSC_C3*p3;
+	int moff_i = vr->cmp.phase + vr->cmp.phase_offset;
+	double moff = (2. * M_PI * (double)moff_i) / 360.;
+	double boff = (2. * M_PI * (double)burst->phase_offset) / 360.;
+	double hue = (2. * M_PI * (double)vr->hue) / 360.;
+
+	for (unsigned t = 0; t < tmax; t++) {
+		double a0 = sin((wratio * (double)(t+0)) + moff - boff + hue);
+		double a1 = sin((wratio * (double)(t+1)) + moff - boff + hue);
+		double a2 = sin((wratio * (double)(t+2)) + moff - boff + hue);
+		double a3 = sin((wratio * (double)(t+3)) + moff - boff + hue);
+		nb->byphase[t][0] = NTSC_C3*a1;
+		nb->byphase[t][1] = NTSC_C2*a2;
+		nb->byphase[t][2] = NTSC_C1*a3;
+		nb->byphase[t][3] = NTSC_C0*a0;
+		nb->byphase[t][4] = NTSC_C1*a1;
+		nb->byphase[t][5] = NTSC_C2*a2;
+		nb->byphase[t][6] = NTSC_C3*a3;
 	}
-	return nb;
-}
-
-void ntsc_burst_free(struct ntsc_burst *nb) {
-	if (!nb)
-		return;
-	free(nb);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-extern inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc);
+extern inline int_xyz ntsc_decode(const struct ntsc_burst *nb, const uint8_t *ntsc, unsigned t);
 extern inline int_xyz ntsc_decode_mono(const uint8_t *ntsc);

@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifndef M_PI
 # define M_PI 3.14159265358979323846
@@ -33,6 +34,7 @@
 #include "delegate.h"
 #include "intfuncs.h"
 #include "pl-endian.h"
+#include "xalloc.h"
 
 #include "colourspace.h"
 #include "filter.h"
@@ -156,7 +158,6 @@ struct vo_render *vo_render_new(int fmt) {
 	vo_render_set_cmp_fsc(vr, 1, VO_RENDER_FSC_4_43361875);
 	vo_render_set_cmp_system(vr, 1, VO_RENDER_SYSTEM_PAL_I);
 
-	vr->cmp.ntsc_palette = ntsc_palette_new();
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
 	vr->viewport.new_x = 190;
 	vr->viewport.new_y = 14;
@@ -169,7 +170,7 @@ struct vo_render *vo_render_new(int fmt) {
 	vr->brightness = 50;
 	vr->contrast = 50;
 	vr->hue = 0;
-	vr->cmp.phase_offset = 2;
+	vr->cmp.phase_offset = 0;
 
 	// Populate LUTs
 	for (int i = 0; i < 2; i++) {
@@ -191,11 +192,7 @@ struct vo_render *vo_render_new(int fmt) {
 // Free renderer
 
 void vo_render_free(struct vo_render *vr) {
-	ntsc_palette_free(vr->cmp.ntsc_palette);
-	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
-		ntsc_burst_free(vr->cmp.ntsc_burst[i]);
-	}
-	free(vr->cmp.ntsc_burst);
+	free(vr->cmp.burst);
 	if (vr->cmp.mod.ufilter.coeff) {
 		free(vr->cmp.mod.ufilter.coeff - MAX_FILTER_ORDER);
 	}
@@ -318,13 +315,13 @@ static void render_rgb565(struct vo_render *vr, int_xyz *src, void *dest, unsign
 // Update a composite palette entry, applying brightness & contrast
 
 static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
-	float y = vr->cmp.colour[c].y;
-	float b_y = vr->cmp.colour[c].pb;
-	float r_y = vr->cmp.colour[c].pr;
-	float nb_y, nr_y;
+	double y = vr->cmp.colour[c].y;
+	double b_y = vr->cmp.colour[c].pb;
+	double r_y = vr->cmp.colour[c].pr;
+	double nb_y, nr_y;
 
-	// Add to NTSC palette before we process it
-	ntsc_palette_add_ybr(vr->cmp.ntsc_palette, c, y, b_y, r_y);
+	// Update in partial NTSC palette
+	ntsc_palette_set_ybr(vr, c);
 
 	double mu = vr->cmp.palette.uconv.umul * b_y + vr->cmp.palette.uconv.vmul * r_y;
 	double mv = vr->cmp.palette.vconv.umul * b_y + vr->cmp.palette.vconv.vmul * r_y;
@@ -368,9 +365,9 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	cs_clamp(&R, &G, &B);
 
 	// Track "black or white" for simple artefact renderers
-	if (y > 0.85 && fabsf(b_y) < 0.10 && fabsf(r_y) < 0.10) {
+	if (y > 0.85 && fabs(b_y) < 0.10 && fabs(r_y) < 0.10) {
 		vr->cmp.is_black_or_white[c] = 3;
-	} else if (y < 0.20 && fabsf(b_y) < 0.10 && fabsf(r_y) < 0.10) {
+	} else if (y < 0.20 && fabs(b_y) < 0.10 && fabs(r_y) < 0.10) {
 		vr->cmp.is_black_or_white[c] = 2;
 	} else {
 		vr->cmp.is_black_or_white[c] = 0;
@@ -428,35 +425,50 @@ static void update_gamma_table(struct vo_render *vr) {
 //
 // Lead/lag is incorporated into the encode tables, hue control into the decode
 // tables.
-//
-// PAL doesn't need a hue control, but to provide the function anyway, we need
-// to offset positively for V on one scanline and negatively on the next.
 
 static void update_cmp_burst(struct vo_render *vr, unsigned burstn) {
 	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
+
 	unsigned tmax = f_ratios[vr->cmp.fs][vr->cmp.fsc].tmax;
 	unsigned ncycles = f_ratios[vr->cmp.fs][vr->cmp.fsc].ncycles;
 	double wratio = 2. * M_PI * (double)ncycles / (double)tmax;
+
+	int moff_i = vr->cmp.phase + vr->cmp.phase_offset;
+	double moff = (2. * M_PI * (double)moff_i) / 360.;
+	double boff = (2. * M_PI * (double)burst->phase_offset) / 360.;
 	double hue = (2. * M_PI * (double)vr->hue) / 360.;
-	const double uv45 = (2. * M_PI * 45.) / 360.;
+
 	for (unsigned t = 0; t < tmax; t++) {
-		double a = wratio * (double)t;
+		double a = wratio * (double)t + moff;
 		if (vr->cmp.system == VO_RENDER_SYSTEM_NTSC) {
 			burst->mod.u[t] =            512. * sin(a);
 			burst->mod.v[0][t] =         512. * sin(a + vr->cmp.cha_phase);
 			burst->mod.v[1][t] =         512. * sin(a + vr->cmp.cha_phase);
-			burst->demod.u[t] =     2. * 512. * sin(a - burst->phase_offset + hue);
-			burst->demod.v[0][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
-			burst->demod.v[1][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
+			burst->demod.u[t] =     2. * 512. * sin(a - boff + hue);
+			burst->demod.v[0][t] =  2. * 512. * cos(a - boff + hue);
+			burst->demod.v[1][t] =  2. * 512. * cos(a - boff + hue);
 		} else {
-			a -= uv45;
+			// PAL doesn't need a hue control, but to provide the
+			// function anyway, we need to offset positively for V
+			// on one scanline and negatively on the next.
 			burst->mod.u[t] =            512. * sin(a);
 			burst->mod.v[0][t] =         512. * sin(a + vr->cmp.cha_phase);
 			burst->mod.v[1][t] =        -512. * sin(a + vr->cmp.cha_phase);
-			burst->demod.u[t] =     2. * 512. * sin(a - burst->phase_offset + hue);
-			burst->demod.v[0][t] =  2. * 512. * cos(a - burst->phase_offset + hue);
-			burst->demod.v[1][t] = -2. * 512. * cos(a - burst->phase_offset - hue);
+			burst->demod.u[t] =     2. * 512. * sin(a - boff + hue);
+			burst->demod.v[0][t] =  2. * 512. * cos(a - boff + hue);
+			burst->demod.v[1][t] = -2. * 512. * cos(a + boff - hue);
 		}
+	}
+
+	ntsc_burst_set(vr, burstn);
+}
+
+static void update_phase_offset(struct vo_render *vr) {
+	for (unsigned i = 0; i < 256; i++) {
+		ntsc_palette_set_ybr(vr, i);
+	}
+	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
+		update_cmp_burst(vr, i);
 	}
 }
 
@@ -506,12 +518,11 @@ static void update_cmp_system(struct vo_render *vr) {
 		vr->cmp.demod.gconv.umul = -0.396*512.; vr->cmp.demod.gconv.vmul = -0.581*512.;
 		vr->cmp.demod.bconv.umul =  2.029*512.; vr->cmp.demod.bconv.vmul =  0.000*512.;
 
-		set_lp_filter(&vr->cmp.mod.ufilter, 1.3, 6);
-		set_lp_filter(&vr->cmp.mod.vfilter, 0.5, 6);
-		set_lp_filter(&vr->cmp.demod.yfilter, 2.1/fs_mhz, 10);
-		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 6);
-		set_lp_filter(&vr->cmp.demod.vfilter, 0.5/fs_mhz, 6);
-		vr->cmp.average_chroma = 0;
+		set_lp_filter(&vr->cmp.mod.ufilter, 0.0, 0);
+		set_lp_filter(&vr->cmp.mod.vfilter, 0.0, 0);
+		set_lp_filter(&vr->cmp.demod.yfilter, 2.1/fs_mhz, 11);
+		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 8);
+		set_lp_filter(&vr->cmp.demod.vfilter, 1.3/fs_mhz, 8);
 		break;
 
 	default:
@@ -530,6 +541,14 @@ static void update_cmp_system(struct vo_render *vr) {
 		set_lp_filter(&vr->cmp.demod.yfilter, 3.0/fs_mhz, 10);
 		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 6);
 		set_lp_filter(&vr->cmp.demod.vfilter, 1.3/fs_mhz, 6);
+		break;
+	}
+
+	switch (vr->cmp.system) {
+	case VO_RENDER_SYSTEM_NTSC:
+		vr->cmp.average_chroma = 0;
+		break;
+	default:
 		vr->cmp.average_chroma = 1;
 		break;
 	}
@@ -631,11 +650,12 @@ void vo_render_set_hue(void *sptr, int value) {
 }
 
 // Set cross-colour phase
-//     int phase;  // VO_CMP_PHASE_*
+//     int phase;  // in degrees
 
 void vo_render_set_cmp_phase(void *sptr, int value) {
 	struct vo_render *vr = sptr;
-	vr->cmp.phase = value ^ vr->cmp.phase_offset;
+	vr->cmp.phase = value;
+	update_phase_offset(vr);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -733,14 +753,14 @@ void vo_render_set_rgb_palette(void *sptr, uint8_t c, float r, float g, float b)
 void vo_render_set_cmp_burst(void *sptr, unsigned burstn, int offset) {
 	struct vo_render *vr = sptr;
 	if (burstn >= vr->cmp.nbursts) {
-		vr->cmp.nbursts = burstn + 1;
-		vr->cmp.burst = xrealloc(vr->cmp.burst, vr->cmp.nbursts * sizeof(*(vr->cmp.burst)));
-		vr->cmp.ntsc_burst = xrealloc(vr->cmp.ntsc_burst, vr->cmp.nbursts * sizeof(*(vr->cmp.ntsc_burst)));
-	} else if (vr->cmp.ntsc_burst[burstn]) {
-		ntsc_burst_free(vr->cmp.ntsc_burst[burstn]);
+		unsigned nbursts = burstn + 1;
+		vr->cmp.burst = xrealloc(vr->cmp.burst, nbursts * sizeof(*(vr->cmp.burst)));
+		for (unsigned i = vr->cmp.nbursts; i < nbursts; i++) {
+			vr->cmp.burst[i] = (struct vo_render_burst){0};
+		}
+		vr->cmp.nbursts = nbursts;
 	}
-	vr->cmp.ntsc_burst[burstn] = ntsc_burst_new(offset);
-	vr->cmp.burst[burstn].phase_offset = (2. * M_PI * (double)offset) / 360.;
+	vr->cmp.burst[burstn].phase_offset = offset;
 	update_cmp_burst(vr, burstn);
 }
 
@@ -759,14 +779,13 @@ void vo_render_set_cmp_burst_br(void *sptr, unsigned burstn, float b_y, float r_
 	vo_render_set_cmp_burst(sptr, burstn, offset);
 }
 
-// Set machine default cross-colour phase
-//     int phase;  // VO_CMP_PHASE_*
+// Set machine pixel to burst phase offset
+//     int phase;  // in degrees
 
-void vo_render_set_cmp_phase_offset(void *sptr, int phase) {
+void vo_render_set_cmp_phase_offset(void *sptr, int offset) {
 	struct vo_render *vr = sptr;
-	int p = vr->cmp.phase ^ vr->cmp.phase_offset;
-	vr->cmp.phase_offset = phase ^ 2;
-	vo_render_set_cmp_phase(vr, p);
+	vr->cmp.phase_offset = offset;
+	update_phase_offset(vr);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -788,7 +807,9 @@ void vo_render_vsync(void *sptr) {
 
 // NTSC partial composite video simulation
 //
-// Uses render_rgb(), so doesn't need to be duplicated per-type
+// Uses render_rgb(), so doesn't need to be duplicated per-type.
+//
+// Time 't' not kept accurate, as scanlines are all aligned to chroma.
 
 void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct vo_render *vr = sptr;
@@ -797,31 +818,29 @@ void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_
 	if (!data ||
 	    vr->scanline < vr->viewport.y ||
 	    vr->scanline >= (vr->viewport.y + vr->viewport.h)) {
-		vr->t = (vr->t + npixels) % vr->tmax;
 		vr->scanline++;
 		return;
 	}
 
-	struct ntsc_burst *burst = vr->cmp.ntsc_burst[burstn];
+	struct ntsc_burst *burst = &vr->cmp.burst[burstn].ntsc_burst;
+	const unsigned tmax = NTSC_NPHASES;
 
 	// Encode NTSC
-	uint8_t const *src = data + vr->viewport.x - 3;
 	// Reuse a convenient buffer from other renderer
 	uint8_t *ntsc_dest = (uint8_t *)vr->cmp.demod.fubuf[0];
-	ntsc_phase = (vr->cmp.phase + vr->viewport.x) & 3;
-	for (int i = vr->viewport.w + 6; i; i--) {
-		unsigned c = *(src++);
-		*(ntsc_dest++) = ntsc_encode_from_palette(vr->cmp.ntsc_palette, c);
+	struct ntsc_palette *np = &vr->cmp.ntsc_palette;
+	for (int i = vr->viewport.x - 3; i < (vr->viewport.x + vr->viewport.w + 3); i++) {
+		uint8_t c = data[i];
+		*(ntsc_dest++) = np->byphase[i % tmax][c];
 	}
 
 	// Decode into intermediate RGB buffer
-	src = (uint8_t *)vr->cmp.demod.fubuf[0];
+	uint8_t const *src = (uint8_t *)vr->cmp.demod.fubuf[0];
 	int_xyz rgb[912];
 	int_xyz *idest = rgb;
-	ntsc_phase = ((vr->cmp.phase + vr->viewport.x) + 3) & 3;
 	if (burstn) {
-		for (int i = vr->viewport.w; i; i--) {
-			*(idest++) = ntsc_decode(burst, src++);
+		for (int i = vr->viewport.x; i < (vr->viewport.x + vr->viewport.w); i++) {
+			*(idest++) = ntsc_decode(burst, src++, i);
 		}
 	} else {
 		for (int i = vr->viewport.w; i; i--) {
@@ -856,7 +875,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 
 	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
 	unsigned tmax = vr->tmax;
-	unsigned t = (vr->t + vr->cmp.phase_offset) % tmax;
+	unsigned t = vr->t % tmax;
 
 	int vswitch = vr->cmp.vswitch;
 	if (vr->cmp.average_chroma)

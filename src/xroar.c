@@ -1491,12 +1491,12 @@ void xroar_set_tv_input(_Bool notify, int action) {
 
 	case TV_INPUT_CMP_KBRW:
 		vo_set_signal(xroar_vo_interface, VO_SIGNAL_CMP);
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KBRW);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, 180);
 		break;
 
 	case TV_INPUT_CMP_KRBW:
 		vo_set_signal(xroar_vo_interface, VO_SIGNAL_CMP);
-		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, VO_CMP_PHASE_KRBW);
+		DELEGATE_SAFE_CALL(xroar_vo_interface->set_cmp_phase, 0);
 		break;
 
 	case TV_INPUT_RGB:

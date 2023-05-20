@@ -395,8 +395,8 @@ static _Bool coco3_finish(struct part *p) {
 	vo_set_cmp_fsc(mcc3->vo, 1, VO_RENDER_FSC_3_579545);
 	vo_set_cmp_system(mcc3->vo, 1, VO_RENDER_SYSTEM_NTSC);
 
-	// Video phase swapped for CoCo 3 - probably needs investigating!
-	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 2);
+	// Bodge factor to bring centred active area in line with chroma
+	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 90);
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_lead_lag, 0., 100.);
 	for (int j = 0; j < 64; j++) {
