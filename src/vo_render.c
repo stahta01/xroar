@@ -44,6 +44,23 @@
 
 #define MAX_FILTER_ORDER (15)
 
+const char *vo_render_fs_name[NUM_VO_RENDER_FS] = {
+	"14.31818 MHz",
+	"14.218 MHz",
+	"14.23753 MHz",
+};
+
+const char *vo_render_fsc_name[NUM_VO_RENDER_FSC] = {
+	"4.43361875 MHz",
+	"3.579545 MHz",
+};
+
+const char *vo_render_system_name[NUM_VO_RENDER_SYSTEM] = {
+	"PAL-I",
+	"PAL-M",
+	"NTSC",
+};
+
 static const struct {
 	const int tmax;     // number of samples at F(s)
 	const int ncycles;  // number of cycles at F(sc)

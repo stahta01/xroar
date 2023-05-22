@@ -94,6 +94,8 @@ enum {
 	NUM_VO_RENDER_FS
 };
 
+extern const char *vo_render_fs_name[NUM_VO_RENDER_FS];
+
 // Colour subcarrier frequencies
 
 enum {
@@ -101,6 +103,8 @@ enum {
 	VO_RENDER_FSC_3_579545,
 	NUM_VO_RENDER_FSC
 };
+
+extern const char *vo_render_fsc_name[NUM_VO_RENDER_FSC];
 
 // Colour systems
 
@@ -110,6 +114,8 @@ enum {
 	VO_RENDER_SYSTEM_NTSC,
 	NUM_VO_RENDER_SYSTEM
 };
+
+extern const char *vo_render_system_name[NUM_VO_RENDER_SYSTEM];
 
 // Largest value of 'tmax' (and thus 't')
 #define VO_RENDER_MAX_T (228)
