@@ -29,6 +29,8 @@
 #include <gtk/gtk.h>
 #pragma GCC diagnostic pop
 
+#include "ao.h"
+#include "sound.h"
 #include "vo.h"
 #include "xroar.h"
 
@@ -36,6 +38,7 @@
 #include "gtk2/video_options.h"
 
 // Actions
+static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data);
@@ -43,6 +46,7 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
 
 // Video Options control widgets
 static GtkWidget *vo_window = NULL;
+static GtkSpinButton *vo_gain = NULL;
 static GtkSpinButton *vo_brightness = NULL;
 static GtkSpinButton *vo_contrast = NULL;
 static GtkSpinButton *vo_saturation = NULL;
@@ -67,6 +71,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 
 	// Extract UI elements modified elsewhere
 	vo_window = GTK_WIDGET(gtk_builder_get_object(builder, "vo_window"));
+	vo_gain = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_gain"));
 	vo_brightness = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_brightness"));
 	vo_contrast = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_contrast"));
 	vo_saturation = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "sb_saturation"));
@@ -75,6 +80,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	// Connect signals
 	g_signal_connect(vo_window, "key-press-event", G_CALLBACK(gtk2_dummy_keypress), uigtk2);
 	g_signal_connect(vo_window, "delete-event", G_CALLBACK(hide_vo_window), uigtk2);
+	g_signal_connect(vo_gain, "value-changed", G_CALLBACK(vo_change_gain), uigtk2);
 	g_signal_connect(vo_brightness, "value-changed", G_CALLBACK(vo_change_brightness), uigtk2);
 	g_signal_connect(vo_contrast, "value-changed", G_CALLBACK(vo_change_contrast), uigtk2);
 	g_signal_connect(vo_saturation, "value-changed", G_CALLBACK(vo_change_saturation), uigtk2);
@@ -88,6 +94,11 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Video options - update values in UI
+
+void gtk2_vo_update_gain(struct ui_gtk2_interface *uigtk2, float value) {
+	(void)uigtk2;
+	uigtk2_notify_spin_button_set(vo_gain, value, vo_change_gain, uigtk2);
+}
 
 void gtk2_vo_update_brightness(struct ui_gtk2_interface *uigtk2, int value) {
 	(void)uigtk2;
@@ -131,6 +142,17 @@ static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user
 	gtk_toggle_action_set_active(toggle, 0);
 	gtk_widget_hide(vo_window);
 	return TRUE;
+}
+
+static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	float value = (float)gtk_spin_button_get_value(spin_button);
+	if (value < -49.9)
+		value = -999.;
+	if (xroar_ao_interface) {
+		sound_set_gain(xroar_ao_interface->sound_interface, value);
+	}
 }
 
 static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {

@@ -24,6 +24,8 @@ struct ui_gtk2_interface;
 void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2);
 void gtk2_vo_toggle_window(GtkToggleAction *current, gpointer user_data);
 
+void gtk2_vo_update_gain(struct ui_gtk2_interface *uigtk2, float value);
+
 void gtk2_vo_update_brightness(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_contrast(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_saturation(struct ui_gtk2_interface *uigtk2, int value);

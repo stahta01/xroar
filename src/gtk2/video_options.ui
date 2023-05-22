@@ -14,6 +14,13 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
+  <object class="GtkAdjustment" id="adj_gain">
+    <property name="lower">-50</property>
+    <property name="upper">3</property>
+    <property name="value">-3</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">3</property>
+  </object>
   <object class="GtkAdjustment" id="adj_hue">
     <property name="lower">-179</property>
     <property name="upper">180</property>
@@ -47,7 +54,7 @@
                   <object class="GtkTable" id="table1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="n_rows">4</property>
+                    <property name="n_rows">5</property>
                     <property name="n_columns">2</property>
                     <property name="column_spacing">4</property>
                     <property name="row_spacing">4</property>
@@ -59,6 +66,8 @@
                         <property name="label" translatable="yes">Brightness</property>
                       </object>
                       <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
                         <property name="x_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">8</property>
@@ -79,6 +88,8 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">4</property>
                       </packing>
@@ -91,8 +102,8 @@
                         <property name="label" translatable="yes">Contrast</property>
                       </object>
                       <packing>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
                         <property name="x_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">8</property>
@@ -113,8 +124,8 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="top_attach">1</property>
-                        <property name="bottom_attach">2</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">4</property>
                       </packing>
@@ -127,8 +138,8 @@
                         <property name="label" translatable="yes">Hue</property>
                       </object>
                       <packing>
-                        <property name="top_attach">3</property>
-                        <property name="bottom_attach">4</property>
+                        <property name="top_attach">4</property>
+                        <property name="bottom_attach">5</property>
                         <property name="x_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">8</property>
@@ -150,8 +161,8 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="top_attach">3</property>
-                        <property name="bottom_attach">4</property>
+                        <property name="top_attach">4</property>
+                        <property name="bottom_attach">5</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">4</property>
                       </packing>
@@ -164,8 +175,8 @@
                         <property name="label" translatable="yes">Colour</property>
                       </object>
                       <packing>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
+                        <property name="top_attach">3</property>
+                        <property name="bottom_attach">4</property>
                         <property name="x_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">8</property>
@@ -185,8 +196,41 @@
                       <packing>
                         <property name="left_attach">1</property>
                         <property name="right_attach">2</property>
-                        <property name="top_attach">2</property>
-                        <property name="bottom_attach">3</property>
+                        <property name="top_attach">3</property>
+                        <property name="bottom_attach">4</property>
+                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="x_padding">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="lbl_gain">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="ypad">16</property>
+                        <property name="label" translatable="yes">Audio Gain</property>
+                      </object>
+                      <packing>
+                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="x_padding">8</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSpinButton" id="sb_gain">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">●</property>
+                        <property name="primary_icon_activatable">False</property>
+                        <property name="secondary_icon_activatable">False</property>
+                        <property name="primary_icon_sensitive">True</property>
+                        <property name="secondary_icon_sensitive">True</property>
+                        <property name="adjustment">adj_gain</property>
+                        <property name="numeric">True</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
                         <property name="y_options">GTK_SHRINK | GTK_FILL</property>
                         <property name="x_padding">4</property>
                       </packing>
