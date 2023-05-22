@@ -49,9 +49,11 @@
               <object class="GtkAlignment" id="align_general">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="top_padding">8</property>
+                <property name="bottom_padding">8</property>
                 <property name="left_padding">12</property>
                 <child>
-                  <object class="GtkTable" id="table1">
+                  <object class="GtkTable" id="tbl_general">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="n_rows">5</property>
@@ -207,7 +209,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="xalign">0</property>
-                        <property name="ypad">16</property>
                         <property name="label" translatable="yes">Audio Gain</property>
                       </object>
                       <packing>
@@ -252,6 +253,124 @@
             <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkFrame" id="frm_cmp">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label_xalign">0</property>
+            <property name="shadow_type">none</property>
+            <child>
+              <object class="GtkAlignment" id="align_cmp">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="top_padding">8</property>
+                <property name="bottom_padding">8</property>
+                <property name="left_padding">12</property>
+                <child>
+                  <object class="GtkTable" id="table2">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="n_rows">3</property>
+                    <property name="n_columns">2</property>
+                    <child>
+                      <object class="GtkLabel" id="lbl_cmp_fs">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">F&lt;sub&gt;S&lt;/sub&gt;</property>
+                        <property name="use_markup">True</property>
+                      </object>
+                      <packing>
+                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="x_padding">8</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="cbt_cmp_fs">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="lbl_cmp_fsc">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">F&lt;sub&gt;SC&lt;/sub&gt;</property>
+                        <property name="use_markup">True</property>
+                      </object>
+                      <packing>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="x_padding">8</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="cbt_cmp_fsc">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">1</property>
+                        <property name="bottom_attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="lbl_cmp_system">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">System</property>
+                        <property name="use_markup">True</property>
+                      </object>
+                      <packing>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                        <property name="x_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="y_options">GTK_SHRINK | GTK_FILL</property>
+                        <property name="x_padding">8</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="cbt_cmp_system">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="right_attach">2</property>
+                        <property name="top_attach">2</property>
+                        <property name="bottom_attach">3</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="label">
+              <object class="GtkLabel" id="lbl_cmp">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">&lt;b&gt;Composite Video&lt;/b&gt;</property>
+                <property name="use_markup">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>

@@ -40,6 +40,9 @@ static HWND vo_brightness = NULL;
 static HWND vo_contrast = NULL;
 static HWND vo_saturation = NULL;
 static HWND vo_hue = NULL;
+static HWND cbt_cmp_fs = NULL;
+static HWND cbt_cmp_fsc = NULL;
+static HWND cbt_cmp_system = NULL;
 
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
@@ -64,6 +67,21 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	vo_hue = GetDlgItem(vo_window, IDC_SPIN_HUE);
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
 	SendMessage(vo_hue, UDM_SETPOS, 0, 0);
+
+	cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
+	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
+		SendMessage(cbt_cmp_fs, CB_ADDSTRING, 0, (LPARAM)vo_render_fs_name[i]);
+	}
+
+	cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
+	for (unsigned i = 0; i < NUM_VO_RENDER_FSC; i++) {
+		SendMessage(cbt_cmp_fsc, CB_ADDSTRING, 0, (LPARAM)vo_render_fsc_name[i]);
+	}
+
+	cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
+	for (unsigned i = 0; i < NUM_VO_RENDER_SYSTEM; i++) {
+		SendMessage(cbt_cmp_system, CB_ADDSTRING, 0, (LPARAM)vo_render_system_name[i]);
+	}
 }
 
 void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
@@ -98,6 +116,21 @@ void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value)
 void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
 	SendMessage(vo_hue, UDM_SETPOS, 0, value);
+}
+
+void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(cbt_cmp_fs, CB_SETCURSEL, value, 0);
+}
+
+void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(cbt_cmp_fsc, CB_SETCURSEL, value, 0);
+}
+
+void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(cbt_cmp_system, CB_SETCURSEL, value, 0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -145,14 +178,44 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		return TRUE;
 
 	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
-		case IDOK:
-		case IDCANCEL:
-			ShowWindow(vo_window, SW_HIDE);
-			return TRUE;
+		if (HIWORD(wParam) == CBN_SELCHANGE) {
+			int id = LOWORD(wParam);
+			HWND cb = (HWND)lParam;
+			int value = SendMessage(cb, CB_GETCURSEL, 0, 0);
 
-		default:
-			break;
+			switch (id) {
+			case IDC_CB_FS:
+				if (xroar_vo_interface) {
+					vo_set_cmp_fs(xroar_vo_interface, 0, value);
+				}
+				break;
+
+			case IDC_CB_FSC:
+				if (xroar_vo_interface) {
+					vo_set_cmp_fsc(xroar_vo_interface, 0, value);
+				}
+				break;
+
+			case IDC_CB_SYSTEM:
+				if (xroar_vo_interface) {
+					vo_set_cmp_system(xroar_vo_interface, 0, value);
+				}
+				break;
+
+			default: break;
+			}
+		} else if (HIWORD(wParam) == BN_CLICKED) {
+			int id = LOWORD(wParam);
+
+			switch (id) {
+			case IDOK:
+			case IDCANCEL:
+				ShowWindow(vo_window, SW_HIDE);
+				return TRUE;
+
+			default:
+				break;
+			}
 		}
 		break;
 

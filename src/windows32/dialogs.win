@@ -61,6 +61,17 @@ tr td text Hue
    td id=HUE spinbox
 end table
 
+h1 Composite Video
+
+table
+tr td width=40 text F(s)
+   td width=80 id=FS combobox
+tr td text F(sc)
+   td id=FSC combobox
+tr td text System
+   td id=SYSTEM combobox
+end table
+
 pad_top=5 xalign=right id=IDOK button &Close
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
