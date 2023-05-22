@@ -204,6 +204,9 @@ struct vo_render {
 		// Whether to chroma average successive lines (eg PAL)
 		_Bool average_chroma;
 
+		// Whether colour-killer is enabled for no colourburst (burstn=0)
+		_Bool colour_killer;
+
 		// PAL v-switch
 		int vswitch;
 

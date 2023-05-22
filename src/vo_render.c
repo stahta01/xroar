@@ -822,6 +822,9 @@ void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_
 		return;
 	}
 
+	if (!burstn && !vr->cmp.colour_killer)
+		burstn = 1;
+
 	struct ntsc_burst *burst = &vr->cmp.burst[burstn].ntsc_burst;
 	const unsigned tmax = NTSC_NPHASES;
 
@@ -872,6 +875,9 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 	int mbuf[1024];  // Y' + U sin(ωt) + V cos(ωt), U/V optionally lowpassed
 	int ubuf[1024];  // mbuf * 2 sin(ωt) (lowpass to recover U)
 	int vbuf[1024];  // mbuf * 2 cos(ωt) (lowpass to recover V)
+
+	if (!burstn && !vr->cmp.colour_killer)
+		burstn = 1;
 
 	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
 	unsigned tmax = vr->tmax;

@@ -237,6 +237,7 @@ static struct ui_cfg xroar_ui_cfg = {
 #else
 		.pixel_fmt = VO_RENDER_FMT_BGRA32,
 #endif
+		.colour_killer = 1,
 	},
 };
 
@@ -2515,6 +2516,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
 	{ XC_SET_INT("vo-colour", &private_cfg.vo.saturation) },
 	{ XC_SET_INT("vo-hue", &private_cfg.vo.hue) },
+	{ XC_SET_BOOL("vo-colour-killer", &xroar_ui_cfg.vo_cfg.colour_killer) },
 	/* Deliberately undocumented: */
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
 
@@ -2728,6 +2730,7 @@ static void helptext(void) {
 "  -vo-contrast N        set TV contrast (0-100) [50]\n"
 "  -vo-colour N          set TV colour saturation (0-100) [50]\n"
 "  -vo-hue N             set TV hue control (-179 to +180) [0]\n"
+"  -no-vo-colour-killer  disable colour killer (enabled by default)\n"
 
 "\n Audio:\n"
 "  -ao MODULE            audio module (-ao help for list)\n"
@@ -2885,6 +2888,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);
 	xroar_cfg_print_int(f, all, "vo-colour", private_cfg.vo.saturation, 50);
 	xroar_cfg_print_int(f, all, "vo-hue", private_cfg.vo.hue, 0);
+	xroar_cfg_print_bool(f, all, "vo-colour-killer", xroar_ui_cfg.vo_cfg.colour_killer, 1);
 	fputs("\n", f);
 
 	fputs("# Audio\n", f);

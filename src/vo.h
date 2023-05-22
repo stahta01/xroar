@@ -67,6 +67,7 @@ struct vo_cfg {
 	int gl_filter;
 	int pixel_fmt;
 	_Bool fullscreen;
+	_Bool colour_killer;
 };
 
 struct vo_rect {

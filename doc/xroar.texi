@@ -1510,6 +1510,8 @@ to show for it.
 @tab Set initial colour saturation (0-100).  Default is 50.
 @item @option{-vo-hue @var{value}}
 @tab Set initial hue (-179 to +180).  Default is 0.
+@item @option{-no-vo-colour-killer}
+@tab Disable colour killer (enabled by default).
 @end multitable
 
 The pixel format, specified with @option{-vo-pixel-fmt}, defaults to RGBA with
@@ -1522,13 +1524,25 @@ only option that tackles PAL video.  @option{-ccr partial} does pretty well for
 NTSC.  @option{-ccr 5bit} and @option{-ccr simple} both use LUTs to convert
 sequences of black & white into NTSC cross-colour.
 
-Real NTSC machines start in one of two cross-colour states at random.  Games
-often prompt the user to ``Press Enter if the screen is red'', for example.
-You can press @kbd{@key{CTRL}+A}, to cycle through three modes: Off, Blue-red
-and Red-blue.  On the CoCo 3, a fourth mode is included that switches to the
-RGB output.  In PAL machines, "Blue-red" and "Red-blue" also select the
-alternate line phase switch, allowing for correct colour in games such as
-@cite{Tetris} by Ola Eldøy or @cite{Donut Dilemma} by Nick Marentes.
+When the VDG is configured to generate black & white (resolution) graphics, it
+stops emitting a colourburst signal.  Colour displays may (but not always)
+recognise the lack of burst and stop trying to decode colour, giving a crisper
+display.  You can disable this behaviour with @option{-no-vo-colour-killer}.
+NTSC machines add circuitry to reintroduce a (modified) burst to enable
+cross-colour in high resolution black & white, so the colour killer being
+enabled by default does not prevent colour in these modes.
+
+A quirk of the VDG is that it can operate in-phase or 180° out of phase with
+its clock signal, and how it starts up is essentially random.  This clock
+signal is also used in NTSC machines to generate the colour subcarrier, which
+leads to machines generating the blue and red artefact colours randomly (but
+consistently, once running) swapped.  Games often prompt the user to ``Press
+Enter if the screen is red'', for example.  You can press @kbd{@key{CTRL}+A},
+to cycle through three modes: Off, Blue-red and Red-blue.  On the CoCo 3, a
+fourth mode is included that switches to the RGB output.  In PAL machines,
+"Blue-red" and "Red-blue" also select the alternate line phase switch, allowing
+for correct colour in games such as @cite{Tetris} by Ola Eldøy or @cite{Donut
+Dilemma} by Nick Marentes.
 
 Inverted text mode may be toggled by pressing @kbd{@key{CTRL}+@key{SHIFT}+I}.
 
@@ -2326,6 +2340,8 @@ to this machine (the default is to try).
 @tab Set initial colour saturation (0-100).  Default is 50.
 @item @option{-vo-hue @var{value}}
 @tab Set initial hue (-179 to +180).  Default is 0.
+@item @option{-no-vo-colour-killer}
+@tab Disable colour killer (enabled by default).
 @end multitable
 
 @c

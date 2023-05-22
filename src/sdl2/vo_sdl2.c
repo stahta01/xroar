@@ -140,6 +140,7 @@ static void *new(void *sptr) {
 
 	struct vo_render *vr = vo_render_new(vo_cfg->pixel_fmt);
 	vr->buffer_pitch = TEX_BUF_WIDTH;
+	vr->cmp.colour_killer = vo_cfg->colour_killer;
 
 	vo_set_renderer(vo, vr);
 
