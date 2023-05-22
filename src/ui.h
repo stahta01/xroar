@@ -82,6 +82,7 @@ enum ui_tag {
 	ui_tag_hue,
 	// Audio
 	ui_tag_ratelimit,
+	ui_tag_gain,
 	// Keyboard
 	ui_tag_keymap,
 	ui_tag_kbd_translate,

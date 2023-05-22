@@ -448,6 +448,9 @@ void sound_set_gain(struct sound_interface *sndp, double db) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	float v = powf(10., db / 20.);
 	snd->gain = v;
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_gain, (int)(v * 100.), &db);
+	}
 }
 
 // Old way to set the gain by specifying a percentage of full scale (linear).
@@ -456,6 +459,10 @@ void sound_set_volume(struct sound_interface *sndp, int v) {
 	if (v < 0) v = 0;
 	if (v > 200) v = 200;
 	snd->gain = (float)v / 100.;
+	float db = log10f(snd->gain) * 20.;
+	if (xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_gain, v, &db);
+	}
 }
 
 void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level) {
