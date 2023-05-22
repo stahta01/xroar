@@ -2434,11 +2434,11 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_ALIAS_ARG("ntsc", "tv-type", "ntsc") },
 	// Deliberately undocumented:
 	{ XC_SET_STRING("machine-palette", &private_cfg.machine.palette) },
+	{ XC_ALIAS_NOARG("nodos", "no-machine-cart") },
 	// Backwards compatibility:
 	{ XC_ALIAS_NOARG("nobas", "no-bas"), .deprecated = 1 },
 	{ XC_ALIAS_NOARG("noextbas", "no-extbas"), .deprecated = 1 },
 	{ XC_ALIAS_NOARG("noaltbas", "no-altbas"), .deprecated = 1 },
-	{ XC_ALIAS_NOARG("nodos", "no-machine-cart"), .deprecated = 1 },
 
 	/* Cartridges: */
 	{ XC_CALL_STRING("cart", &set_cart) },
