@@ -554,6 +554,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		CheckMenuItem(top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
+	case ui_tag_gain:
+		windows32_vo_update_volume(uisdl2, value);
+		break;
+
 	// Keyboard
 
 	case ui_tag_keymap:

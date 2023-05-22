@@ -48,8 +48,11 @@ pad=5 id=TV_CONTROLS dialog XRoar TV Controls
 h1 General
 
 table
+tr td text Volume
+   td width=47 id=VOLUME spinbox
+height=4 tr td td
 tr td text Brightness
-   td width=47 id=BRIGHTNESS spinbox
+   td id=BRIGHTNESS spinbox
 tr td text Contrast
    td id=CONTRAST spinbox
 tr td text Colour

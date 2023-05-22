@@ -24,6 +24,8 @@ struct ui_sdl2_interface;
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2);
 void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2);
 
+void windows32_vo_update_volume(struct ui_sdl2_interface *uisdl2, int value);
+
 void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_contrast(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_saturation(struct ui_sdl2_interface *uisdl2, int value);

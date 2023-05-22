@@ -24,6 +24,8 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 
+#include "ao.h"
+#include "sound.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
@@ -33,6 +35,7 @@
 static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static HWND vo_window = NULL;
+static HWND vo_volume = NULL;
 static HWND vo_brightness = NULL;
 static HWND vo_contrast = NULL;
 static HWND vo_saturation = NULL;
@@ -41,6 +44,10 @@ static HWND vo_hue = NULL;
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
 	vo_window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_TV_CONTROLS), windows32_main_hwnd, (DLGPROC)tv_controls_proc);
+
+	vo_volume = GetDlgItem(vo_window, IDC_SPIN_VOLUME);
+	SendMessage(vo_volume, UDM_SETRANGE, 0, MAKELPARAM(150, 0));
+	SendMessage(vo_volume, UDM_SETPOS, 0, 70);
 
 	vo_brightness = GetDlgItem(vo_window, IDC_SPIN_BRIGHTNESS);
 	SendMessage(vo_brightness, UDM_SETRANGE, 0, MAKELPARAM(100, 0));
@@ -67,6 +74,11 @@ void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Video options - update values in UI
+
+void windows32_vo_update_volume(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(vo_volume, UDM_SETPOS, 0, value);
+}
 
 void windows32_vo_update_brightness(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
@@ -104,6 +116,12 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		if (xroar_vo_interface) {
 			UINT id = ((LPNMHDR)lParam)->idFrom;
 			switch (id) {
+			case IDC_SPIN_VOLUME:
+				if (xroar_ao_interface) {
+					sound_set_volume(xroar_ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+				}
+				break;
+
 			case IDC_SPIN_BRIGHTNESS:
 				DELEGATE_SAFE_CALL(xroar_vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
 				break;
