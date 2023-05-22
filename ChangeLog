@@ -1,6 +1,7 @@
  * NTSC colour tweaks for slightly better "cyan"
  * Initial support for middle-button paste
  * Add brightness, contrast, saturation & hue controls to GTK+ and Windows UIs
+ * Add gain/volume controls to GTK+ and Windows UIs
  * New options: -vo-brightness, -vo-contrast, -vo-colour, -vo-hue
  * New tape control & drive control windows in Windows UI
  * GIME: implement bug in 16-colour, 16 byte-per-row modes
