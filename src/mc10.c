@@ -717,9 +717,7 @@ static void mc10_vdg_fs(void *sptr, _Bool level) {
 		mp->frame--;
 		if (mp->frame < 0)
 			mp->frame = mp->frameskip;
-		if (mp->frame == 0) {
-			vo_vsync(mp->vo);
-		}
+		vo_vsync(mp->vo, mp->frame == 0);
 	}
 }
 

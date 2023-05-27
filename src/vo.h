@@ -217,11 +217,13 @@ inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value) 
 	vo_render_set_cmp_system(vo->renderer, notify, value);
 }
 
-// Vertical sync.  Calls any module-specific draw function, then
-// vo_render_vsync().
+// Vertical sync.  Calls any module-specific draw function if requested, then
+// vo_render_vsync().  Called with draw=0 during frameskip, as we still want to
+// count scanlines.
 
-inline void vo_vsync(struct vo_interface *vo) {
-	DELEGATE_SAFE_CALL(vo->draw);
+inline void vo_vsync(struct vo_interface *vo, _Bool draw) {
+	if (draw)
+		DELEGATE_SAFE_CALL(vo->draw);
 	vo_render_vsync(vo->renderer);
 }
 

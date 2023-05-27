@@ -1606,9 +1606,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 		md->frame--;
 		if (md->frame < 0)
 			md->frame = md->frameskip;
-		if (md->frame == 0) {
-			vo_vsync(md->vo);
-		}
+		vo_vsync(md->vo, md->frame == 0);
 	}
 }
 

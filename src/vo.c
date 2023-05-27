@@ -248,5 +248,5 @@ extern inline void vo_set_cmp_fs(struct vo_interface *vo, _Bool notify, int valu
 extern inline void vo_set_cmp_fsc(struct vo_interface *vo, _Bool notify, int value);
 extern inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value);
 
-extern inline void vo_vsync(struct vo_interface *vo);
+extern inline void vo_vsync(struct vo_interface *vo, _Bool draw);
 extern inline void vo_refresh(struct vo_interface *vo);
