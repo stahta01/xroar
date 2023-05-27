@@ -877,6 +877,7 @@ static void do_hs_fall(void *sptr) {
 	gime->lborder_remaining = gime->pLB;
 	gime->vram_remaining = gime->BPR;
 	gime->rborder_remaining = gime->pRB;
+	gime->have_vdata_cache = 0;
 	gime->scanline++;
 	gime->lcount++;
 
