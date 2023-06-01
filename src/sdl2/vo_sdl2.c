@@ -184,8 +184,6 @@ static void *new(void *sptr) {
 	// Initialise keyboard
 	sdl_os_keyboard_init(global_uisdl2->vo_window);
 
-	vo_vsync(vo);
-
 	return vo;
 }
 

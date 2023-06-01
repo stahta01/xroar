@@ -342,7 +342,7 @@ void vo_render_free(struct vo_render *vr);
 
 // Set buffer to render into
 inline void vo_render_set_buffer(struct vo_render *vr, void *buffer) {
-	vr->buffer = buffer;
+	vr->pixel = vr->buffer = buffer;
 }
 
 // Used by UI to adjust viewing parameters

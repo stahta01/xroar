@@ -141,7 +141,6 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 
 	vogl->viewport.x = vogl->viewport.y = 0;
 	vogl->filter = cfg->gl_filter;
-	vo_render_vsync(vo->renderer);
 }
 
 void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
