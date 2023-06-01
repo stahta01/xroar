@@ -1,3 +1,5 @@
+Version 1.4, Mon  5 Jun 2023
+
  * NTSC colour tweaks for slightly better "cyan"
  * Initial support for middle-button paste
  * Add brightness, contrast, saturation & hue controls to GTK+ and Windows UIs
