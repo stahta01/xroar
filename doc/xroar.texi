@@ -116,6 +116,11 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
+Version 1.4 replaces the @option{-ccr simulated} cross-colour renderer with
+more CPU-intensive code that also handles PAL.  The old NTSC-only renderer is
+still available using @option{-ccr partial}.  Some video options can be changed
+on the fly in a new TV Controls dialog.
+
 Version 1.3 changes the default floppy disk write-back behaviour.  The old
 behaviour erred on the side of protecting image files from accidental
 modification.  Enough people have complained about this---or at least, the
