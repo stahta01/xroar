@@ -6,7 +6,7 @@ AC_INIT([xroar],[1.3])
 AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([yes])
 
-MANPAGE_DATE="November 2021"
+MANPAGE_DATE="June 2023"
 AC_SUBST(MANPAGE_DATE)
 
 AC_CONFIG_SRCDIR([src/xroar.c])
