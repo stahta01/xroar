@@ -46,6 +46,7 @@
 #include "ui.h"
 #include "vdisk.h"
 #include "vo.h"
+#include "vo_render.h"
 #include "xroar.h"
 #include "sdl2/common.h"
 
@@ -73,8 +74,12 @@
 
 #define TAG_FULLSCREEN (9 << 24)
 #define TAG_VDG_INVERSE (16 << 24)
-#define TAG_CCR (18 << 24)
 #define TAG_TV_INPUT (10 << 24)
+#define TAG_CCR (18 << 24)
+#define TAG_CMP_FS (20 << 24)
+#define TAG_CMP_FSC (21 << 24)
+#define TAG_CMP_SYSTEM (22 << 24)
+#define TAG_CMP_COLOUR_KILLER (23 << 24)
 
 #define TAG_KEYMAP (12 << 24)
 #define TAG_KBD_TRANSLATE (13 << 24)
@@ -310,13 +315,25 @@ int cocoa_super_all_keys = 0;
 		is_fullscreen = !is_fullscreen;
 		xroar_set_fullscreen(0, is_fullscreen);
 		break;
+	case TAG_TV_INPUT:
+		current_cc = tag;
+		xroar_set_tv_input(0, tag_value);
+		break;
 	case TAG_CCR:
 		current_ccr = tag;
 		xroar_set_ccr(0, tag_value);
 		break;
-	case TAG_TV_INPUT:
-		current_cc = tag;
-		xroar_set_tv_input(0, tag_value);
+	case TAG_CMP_FS:
+		vo_set_cmp_fs(xroar_vo_interface, 0, tag_value);
+		break;
+	case TAG_CMP_FSC:
+		vo_set_cmp_fsc(xroar_vo_interface, 0, tag_value);
+		break;
+	case TAG_CMP_SYSTEM:
+		vo_set_cmp_system(xroar_vo_interface, 0, tag_value);
+		break;
+	case TAG_CMP_COLOUR_KILLER:
+		vo_set_cmp_colour_killer(xroar_vo_interface, 0, !xroar_vo_interface->renderer->cmp.colour_killer);
 		break;
 	case TAG_VDG_INVERSE:
 		vdg_inverted = !vdg_inverted;
@@ -358,6 +375,9 @@ int cocoa_super_all_keys = 0;
 	int tag = [item tag];
 	int tag_type = tag & TAG_TYPE_MASK;
 	int tag_value = tag & TAG_VALUE_MASK;
+
+	struct vo_render *vr = xroar_vo_interface ? xroar_vo_interface->renderer : NULL;
+
 	switch (tag_type) {
 
 	case TAG_MACHINE:
@@ -388,11 +408,23 @@ int cocoa_super_all_keys = 0;
 	case TAG_VDG_INVERSE:
 		[item setState:(vdg_inverted ? NSOnState : NSOffState)];
 		break;
+	case TAG_TV_INPUT:
+		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
+		break;
 	case TAG_CCR:
 		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
 		break;
-	case TAG_TV_INPUT:
-		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
+	case TAG_CMP_FS:
+		[item setState:((vr && vr->cmp.fs == tag_value) ? NSOnState : NSOffState)];
+		break;
+	case TAG_CMP_FSC:
+		[item setState:((vr && vr->cmp.fsc == tag_value) ? NSOnState : NSOffState)];
+		break;
+	case TAG_CMP_SYSTEM:
+		[item setState:((vr && vr->cmp.system == tag_value) ? NSOnState : NSOffState)];
+		break;
+	case TAG_CMP_COLOUR_KILLER:
+		[item setState:((vr && vr->cmp.colour_killer) ? NSOnState : NSOffState)];
 		break;
 
 	case TAG_KEYMAP:
@@ -685,6 +717,65 @@ static void setup_view_menu(void) {
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Composite Rendering" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
+	[item release];
+
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite Options"];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.31818 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_31818)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.218 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_218)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.23753 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_23753)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 4.43361875 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_FSC | VO_RENDER_FSC_4_43361875)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 3.579545 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_FSC | VO_RENDER_FSC_3_579545)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"PAL-I" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_PAL_I)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"PAL-M" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_PAL_M)];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"NTSC" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_NTSC)];
+	[submenu addItem:item];
+	[item release];
+
+	[submenu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Colour Killer" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
+	[item setTag:TAG_CMP_COLOUR_KILLER];
+	[submenu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite Options" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
