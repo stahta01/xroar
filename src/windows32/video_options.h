@@ -34,5 +34,6 @@ void windows32_vo_update_hue(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_fs(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value);
 void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value);
+void windows32_vo_update_cmp_colour_killer(struct ui_sdl2_interface *uisdl2, int value);
 
 #endif

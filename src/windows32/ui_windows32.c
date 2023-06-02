@@ -560,6 +560,10 @@ void windows32_ui_update_state(void *sptr, int tag, int value, const void *data)
 		windows32_vo_update_cmp_system(uisdl2, value);
 		break;
 
+	case ui_tag_cmp_colour_killer:
+		windows32_vo_update_cmp_colour_killer(uisdl2, value);
+		break;
+
 	// Audio
 
 	case ui_tag_ratelimit:

@@ -217,6 +217,10 @@ inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value) 
 	vo_render_set_cmp_system(vo->renderer, notify, value);
 }
 
+inline void vo_set_cmp_colour_killer(struct vo_interface *vo, _Bool notify, _Bool value) {
+	vo_render_set_cmp_colour_killer(vo->renderer, notify, value);
+}
+
 // Vertical sync.  Calls any module-specific draw function if requested, then
 // vo_render_vsync().  Called with draw=0 during frameskip, as we still want to
 // count scanlines.

@@ -34,5 +34,6 @@ void gtk2_vo_update_hue(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_cmp_fs(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_cmp_fsc(struct ui_gtk2_interface *uigtk2, int value);
 void gtk2_vo_update_cmp_system(struct ui_gtk2_interface *uigtk2, int value);
+void gtk2_vo_update_cmp_colour_killer(struct ui_gtk2_interface *uigtk2, int value);
 
 #endif

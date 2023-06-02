@@ -734,6 +734,10 @@ static void ui_gtk2_set_state(void *sptr, int tag, int value, const void *data) 
 		gtk2_vo_update_cmp_system(uigtk2, value);
 		break;
 
+	case ui_tag_cmp_colour_killer:
+		gtk2_vo_update_cmp_colour_killer(uigtk2, value);
+		break;
+
 	/* Audio */
 
 	case ui_tag_ratelimit:

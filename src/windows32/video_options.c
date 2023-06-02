@@ -43,6 +43,7 @@ static HWND vo_hue = NULL;
 static HWND cbt_cmp_fs = NULL;
 static HWND cbt_cmp_fsc = NULL;
 static HWND cbt_cmp_system = NULL;
+static HWND tb_cmp_colour_killer = NULL;
 
 void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	(void)uisdl2;
@@ -82,6 +83,8 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	for (unsigned i = 0; i < NUM_VO_RENDER_SYSTEM; i++) {
 		SendMessage(cbt_cmp_system, CB_ADDSTRING, 0, (LPARAM)vo_render_system_name[i]);
 	}
+
+	tb_cmp_colour_killer = GetDlgItem(vo_window, IDC_BN_COLOUR_KILLER);
 }
 
 void windows32_vo_show_window(struct ui_sdl2_interface *uisdl2) {
@@ -131,6 +134,11 @@ void windows32_vo_update_cmp_fsc(struct ui_sdl2_interface *uisdl2, int value) {
 void windows32_vo_update_cmp_system(struct ui_sdl2_interface *uisdl2, int value) {
 	(void)uisdl2;
 	SendMessage(cbt_cmp_system, CB_SETCURSEL, value, 0);
+}
+
+void windows32_vo_update_cmp_colour_killer(struct ui_sdl2_interface *uisdl2, int value) {
+	(void)uisdl2;
+	SendMessage(tb_cmp_colour_killer, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -208,6 +216,12 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			int id = LOWORD(wParam);
 
 			switch (id) {
+			case IDC_BN_COLOUR_KILLER:
+				if (xroar_vo_interface) {
+					int value = !(SendMessage(tb_cmp_colour_killer, BM_GETCHECK, 0, 0) == BST_CHECKED);
+					vo_set_cmp_colour_killer(xroar_vo_interface, 1, value);
+				}
+				return FALSE;
 			case IDOK:
 			case IDCANCEL:
 				ShowWindow(vo_window, SW_HIDE);

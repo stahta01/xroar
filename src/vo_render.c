@@ -730,6 +730,16 @@ void vo_render_set_cmp_system(struct vo_render *vr, _Bool notify, int system) {
 	}
 }
 
+// Set whether colour decoding is to be disabled when no colourburst indicated
+// (where supported)
+
+void vo_render_set_cmp_colour_killer(struct vo_render *vr, _Bool notify, _Bool value) {
+	vr->cmp.colour_killer = value;
+	if (notify && xroar_ui_interface) {
+		DELEGATE_CALL(xroar_ui_interface->update_state, ui_tag_cmp_colour_killer, (int)value, NULL);
+	}
+}
+
 // Set how the chroma components relate to each other (in degrees)
 //     float chb_phase;  // ignored TODO: remove argument
 //     float cha_phase;  // øA phase, default 90°

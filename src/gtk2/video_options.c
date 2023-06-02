@@ -46,6 +46,7 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data);
 static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data);
 static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data);
+static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data);
 
 // Video Options control widgets
 static GtkWidget *vo_window = NULL;
@@ -57,6 +58,7 @@ static GtkSpinButton *vo_hue = NULL;
 static GtkComboBoxText *cbt_cmp_fs = NULL;
 static GtkComboBoxText *cbt_cmp_fsc = NULL;
 static GtkComboBoxText *cbt_cmp_system = NULL;
+static GtkToggleButton *tb_cmp_colour_killer = NULL;
 
 // Signal handlers
 static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
@@ -85,6 +87,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	cbt_cmp_fs = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_fs"));
 	cbt_cmp_fsc = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_fsc"));
 	cbt_cmp_system = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "cbt_cmp_system"));
+	tb_cmp_colour_killer = GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "tb_cmp_colour_killer"));
 
 	// Build lists
 	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
@@ -108,6 +111,7 @@ void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2) {
 	g_signal_connect(cbt_cmp_fs, "changed", G_CALLBACK(vo_change_cmp_fs), uigtk2);
 	g_signal_connect(cbt_cmp_fsc, "changed", G_CALLBACK(vo_change_cmp_fsc), uigtk2);
 	g_signal_connect(cbt_cmp_system, "changed", G_CALLBACK(vo_change_cmp_system), uigtk2);
+	g_signal_connect(tb_cmp_colour_killer, "toggled", G_CALLBACK(vo_change_cmp_colour_killer), uigtk2);
 
 	// In case any signals remain...
 	gtk_builder_connect_signals(builder, uigtk2);
@@ -156,6 +160,11 @@ void gtk2_vo_update_cmp_fsc(struct ui_gtk2_interface *uigtk2, int value) {
 void gtk2_vo_update_cmp_system(struct ui_gtk2_interface *uigtk2, int value) {
 	(void)uigtk2;
 	gtk_combo_box_set_active(GTK_COMBO_BOX(cbt_cmp_system), value);
+}
+
+void gtk2_vo_update_cmp_colour_killer(struct ui_gtk2_interface *uigtk2, int value) {
+	(void)uigtk2;
+	uigtk2_notify_toggle_button_set(tb_cmp_colour_killer, value, vo_change_cmp_colour_killer, uigtk2);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -254,4 +263,11 @@ static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
         if (xroar_vo_interface) {
                 vo_set_cmp_system(xroar_vo_interface, 0, value);
         }
+}
+
+static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {
+	struct ui_gtk2_interface *uigtk2 = user_data;
+	(void)uigtk2;
+	int value = gtk_toggle_button_get_active(widget);
+	vo_set_cmp_colour_killer(xroar_vo_interface, 0, value);
 }

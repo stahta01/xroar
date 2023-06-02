@@ -1005,6 +1005,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_contrast, private_cfg.vo.contrast);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_saturation, private_cfg.vo.saturation);
 	DELEGATE_SAFE_CALL(xroar_vo_interface->set_hue, private_cfg.vo.hue);
+	vo_set_cmp_colour_killer(xroar_vo_interface, 1, xroar_ui_cfg.vo_cfg.colour_killer);
 
 	// Configure machine
 	xroar_configure_machine(xroar_machine_config);

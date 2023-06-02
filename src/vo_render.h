@@ -359,6 +359,7 @@ void vo_render_set_active_area(void *, int x, int y, int w, int h);
 void vo_render_set_cmp_fs(struct vo_render *, _Bool notify, int fs);
 void vo_render_set_cmp_fsc(struct vo_render *, _Bool notify, int fsc);
 void vo_render_set_cmp_system(struct vo_render *, _Bool notify, int system);
+void vo_render_set_cmp_colour_killer(struct vo_render *, _Bool notify, _Bool value);
 void vo_render_set_cmp_lead_lag(void *, float chb_phase, float cha_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);

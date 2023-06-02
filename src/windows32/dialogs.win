@@ -70,6 +70,8 @@ tr td text F(sc)
    td id=FSC combobox
 tr td text System
    td id=SYSTEM combobox
+tr td text Colour Killer
+   td id=COLOUR_KILLER checkbox
 end table
 
 pad_top=5 xalign=right id=IDOK button &Close
