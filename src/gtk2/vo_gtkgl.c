@@ -247,10 +247,10 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 
 	gtk_widget_get_allocation(da, &allocation);
 	vo_opengl_setup_context(vogl, allocation.width, allocation.height);
-	global_uigtk2->display_rect.x = vogl->viewport.x;
-	global_uigtk2->display_rect.y = vogl->viewport.y;
-	global_uigtk2->display_rect.w = vogl->viewport.w;
-	global_uigtk2->display_rect.h = vogl->viewport.h;
+	global_uigtk2->draw_area.x = vogl->draw_area.x;
+	global_uigtk2->draw_area.y = vogl->draw_area.y;
+	global_uigtk2->draw_area.w = vogl->draw_area.w;
+	global_uigtk2->draw_area.h = vogl->draw_area.h;
 	vo_gtkgl_set_vsync(-1);
 
 	gdk_gl_drawable_gl_end(gldrawable);

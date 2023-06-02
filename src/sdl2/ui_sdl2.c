@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface module.
  *
- *  \copyright Copyright 2015-2022 Ciaran Anscomb
+ *  \copyright Copyright 2015-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -137,8 +137,8 @@ static void *ui_sdl_new(void *cfg) {
 #endif
 
 	// Window geometry sensible defaults
-	uisdl2->display_rect.w = 320;
-	uisdl2->display_rect.h = 240;
+	uisdl2->draw_area.w = 320;
+	uisdl2->draw_area.h = 240;
 
 	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)sdl2_vo_module_list, uisdl2->cfg->vo);
 	if (!(uisdl2->public.vo_interface = module_init(vo_mod, uisdl2))) {

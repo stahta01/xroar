@@ -95,10 +95,10 @@ gboolean gtk2_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpo
 #endif
 
 	// Update position data (for mouse mapped joystick)
-	int x = (event->x - uigtk2->display_rect.x) * 320;
-	int y = (event->y - uigtk2->display_rect.y) * 240;
-	float xx = (float)x / (float)uigtk2->display_rect.w;
-	float yy = (float)y / (float)uigtk2->display_rect.h;
+	int x = (event->x - uigtk2->draw_area.x) * 320;
+	int y = (event->y - uigtk2->draw_area.y) * 240;
+	float xx = (float)x / (float)uigtk2->draw_area.w;
+	float yy = (float)y / (float)uigtk2->draw_area.h;
 	xx = (xx - uigtk2->mouse_xoffset) / uigtk2->mouse_xdiv;
 	yy = (yy - uigtk2->mouse_yoffset) / uigtk2->mouse_ydiv;
 	if (xx < 0.0) xx = 0.0;

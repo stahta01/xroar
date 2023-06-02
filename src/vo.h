@@ -70,10 +70,35 @@ struct vo_cfg {
 	_Bool colour_killer;
 };
 
-struct vo_rect {
-	unsigned x, y;
-	unsigned w, h;
+// Window Area is the obvious top level.  Defined in host screen pixels, and
+// mainly of interest to the video modules.  Most toolkits can present the Draw
+// Area as a target directly, so may not need to record the whole window
+// dimensions.
+
+struct vo_window_area {
+	int w, h;
 };
+
+// Draw Area is the space within the Window Area that we're allowed to draw
+// into.  This may account for areas used by a menu bar, for example.  Also
+// defined in host screen pixels.
+
+struct vo_draw_area {
+	int x, y;
+	int w, h;
+};
+
+// Picture Area is the largest 4:3 region contained within the Draw Area.  A
+// renderer's Picture Area will be copied (probably with scaling) into this
+// region.  Also defined in host screen pixels.  Origin defined relative to
+// Window Area.
+
+struct vo_picture_area {
+	int x, y;
+	int w, h;
+};
+
+// Viewport and Active Area defined in vo_render.h.
 
 struct vo_interface {
 	_Bool is_fullscreen;

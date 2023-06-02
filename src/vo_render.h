@@ -39,6 +39,33 @@
 
 #include "ntsc.h"
 
+// Window Area, Draw Area and Picture Area defined in vo.h.
+
+// Viewport defines the region of the emulated video output that is to be
+// mapped into the Picture Area, defined horizontally in terms of emulated
+// pixels at F(s) from HSync fall, and vertically in scanlines from VSync rise.
+//
+// Offset is calculated from Active Area into (new_x,new_y), updated into (x,y)
+// on vertical sync.
+//
+// Note that any system currently emulated sends a progressive signal to an
+// interlaced display, so the vertical resolution will appear to be halved.
+
+struct vo_viewport {
+	int new_x, new_y; 
+	int x, y;
+	int w, h;
+};
+
+// Active Area is updated by the emulated system on mode change to indicate
+// where useful picture resides (excluding borders).  It is only used to update
+// the Viewport offset, and has the same units.
+
+struct vo_active_area {
+	int x, y;
+	int w, h;
+};
+
 // For speed we maintain tables for the modulation/demodulation of composite
 // video that can be indexed be an incrementing integer time 't', modulo
 // 'tmax'.  'tmax' is chosen such that a (near-enough) integer number of
@@ -273,11 +300,7 @@ struct vo_render {
 		} colour[256];
 	} rgb;
 
-	struct {
-		int new_x, new_y;
-		int x, y;
-		int w, h;
-	} viewport;
+	struct vo_viewport viewport;
 
 	// Current time, measured in pixels
 	unsigned t;

@@ -215,8 +215,8 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	struct joystick_axis *axis = xmalloc(sizeof(*axis));
 	axis->read = (js_read_axis_func)read_axis;
 	axis->data = &mouse_axis[jaxis];
-	mouse_xscale = 320. / global_uisdl2->display_rect.w;
-	mouse_yscale = 240. / global_uisdl2->display_rect.h;
+	mouse_xscale = 320. / global_uisdl2->draw_area.w;
+	mouse_yscale = 240. / global_uisdl2->draw_area.h;
 	return axis;
 }
 
@@ -235,8 +235,8 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
-	int xscale = uisdl2->display_rect.w / 160;
-	int yscale = uisdl2->display_rect.h / 120;
+	int xscale = uisdl2->draw_area.w / 160;
+	int yscale = uisdl2->draw_area.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = yscale;
@@ -250,8 +250,8 @@ void sdl_zoom_in(struct ui_sdl2_interface *uisdl2) {
 }
 
 void sdl_zoom_out(struct ui_sdl2_interface *uisdl2) {
-	int xscale = uisdl2->display_rect.w / 160;
-	int yscale = uisdl2->display_rect.h / 120;
+	int xscale = uisdl2->draw_area.w / 160;
+	int yscale = uisdl2->draw_area.h / 120;
 	int scale;
 	if (xscale < yscale)
 		scale = xscale;

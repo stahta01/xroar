@@ -139,22 +139,22 @@ void vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	vogl->texture.pixels = xmalloc(TEX_BUF_WIDTH * TEX_BUF_HEIGHT * vogl->texture.pixel_size);
 	vo_render_set_buffer(vr, vogl->texture.pixels);
 
-	vogl->viewport.x = vogl->viewport.y = 0;
+	vogl->draw_area.x = vogl->draw_area.y = 0;
 	vogl->filter = cfg->gl_filter;
 }
 
 void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
-	// Set up viewport
+	// Set up draw area
 	if (((float)w/(float)h)>(4.0/3.0)) {
-		vogl->viewport.h = h;
-		vogl->viewport.w = (((float)vogl->viewport.h/3.0)*4.0) + 0.5;
-		vogl->viewport.x = (w - vogl->viewport.w) / 2;
-		vogl->viewport.y = 0;
+		vogl->draw_area.h = h;
+		vogl->draw_area.w = (((float)vogl->draw_area.h/3.0)*4.0) + 0.5;
+		vogl->draw_area.x = (w - vogl->draw_area.w) / 2;
+		vogl->draw_area.y = 0;
 	} else {
-		vogl->viewport.w = w;
-		vogl->viewport.h = (((float)vogl->viewport.w/4.0)*3.0) + 0.5;
-		vogl->viewport.x = 0;
-		vogl->viewport.y = (h - vogl->viewport.h)/2;
+		vogl->draw_area.w = w;
+		vogl->draw_area.h = (((float)vogl->draw_area.w/4.0)*3.0) + 0.5;
+		vogl->draw_area.x = 0;
+		vogl->draw_area.y = (h - vogl->draw_area.h)/2;
 	}
 
 	// Configure OpenGL
@@ -179,7 +179,7 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
 	glBindTexture(GL_TEXTURE_2D, vogl->texture.num);
 	glTexImage2D(GL_TEXTURE_2D, 0, vogl->texture.internal_format, TEX_INT_PITCH, TEX_INT_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	if (vogl->filter == UI_GL_FILTER_NEAREST
-	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->viewport.w % 320) == 0 && (vogl->viewport.h % 240) == 0)) {
+	    || (vogl->filter == UI_GL_FILTER_AUTO && (vogl->draw_area.w % 320) == 0 && (vogl->draw_area.h % 240) == 0)) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	} else {
@@ -221,14 +221,14 @@ void vo_opengl_setup_context(struct vo_opengl_interface *vogl, int w, int h) {
 	glTexCoordPointer(2, GL_FLOAT, 0, vogl->tex_coords);
 
 	// Vertex array defines where in the window the texture will be rendered
-	vogl->vertices[0][0] = vogl->viewport.x;
-	vogl->vertices[0][1] = vogl->viewport.y;
-	vogl->vertices[1][0] = vogl->viewport.x;
-	vogl->vertices[1][1] = h - vogl->viewport.y;
-	vogl->vertices[2][0] = w - vogl->viewport.x;
-	vogl->vertices[2][1] = vogl->viewport.y;
-	vogl->vertices[3][0] = w - vogl->viewport.x;
-	vogl->vertices[3][1] = h - vogl->viewport.y;
+	vogl->vertices[0][0] = vogl->draw_area.x;
+	vogl->vertices[0][1] = vogl->draw_area.y;
+	vogl->vertices[1][0] = vogl->draw_area.x;
+	vogl->vertices[1][1] = h - vogl->draw_area.y;
+	vogl->vertices[2][0] = w - vogl->draw_area.x;
+	vogl->vertices[2][1] = vogl->draw_area.y;
+	vogl->vertices[3][0] = w - vogl->draw_area.x;
+	vogl->vertices[3][1] = h - vogl->draw_area.y;
 	glVertexPointer(2, GL_FLOAT, 0, vogl->vertices);
 }
 

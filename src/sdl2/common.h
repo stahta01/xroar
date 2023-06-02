@@ -39,7 +39,7 @@ struct ui_sdl2_interface {
 	Uint32 vo_window_id;
 
 	// Window geometry
-	struct vo_rect display_rect;
+	struct vo_draw_area draw_area;
 
 	// Keyboard state
 	struct {

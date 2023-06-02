@@ -390,9 +390,9 @@ static _Bool create_renderer(struct vo_sdl_interface *vosdl) {
 	SDL_RenderClear(vosdl->sdl_renderer);
 	SDL_RenderPresent(vosdl->sdl_renderer);
 
-	global_uisdl2->display_rect.x = global_uisdl2->display_rect.y = 0;
-	global_uisdl2->display_rect.w = w;
-	global_uisdl2->display_rect.h = h;
+	global_uisdl2->draw_area.x = global_uisdl2->draw_area.y = 0;
+	global_uisdl2->draw_area.w = w;
+	global_uisdl2->draw_area.h = h;
 
 	return 1;
 }

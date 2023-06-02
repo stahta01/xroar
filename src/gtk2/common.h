@@ -45,7 +45,7 @@ struct ui_gtk2_interface {
 	guint merge_carts;
 
 	// Window geometry
-	struct vo_rect display_rect;
+	struct vo_draw_area draw_area;
 
 	// Keyboard state
 	struct {

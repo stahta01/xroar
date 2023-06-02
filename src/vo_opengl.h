@@ -62,14 +62,7 @@ struct vo_opengl_interface {
 		void *pixels;
 	} texture;
 
-	struct {
-		int w, h;
-	} draw_area;
-
-	struct {
-		int x, y;
-		int w, h;
-	} viewport;
+	struct vo_draw_area draw_area;
 
 	int filter;
 
