@@ -172,8 +172,8 @@ static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = uigtk2->draw_area.w / 160;
-	int yscale = uigtk2->draw_area.h / 120;
+	int xscale = uigtk2->picture_area.w / 160;
+	int yscale = uigtk2->picture_area.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = yscale;
@@ -191,8 +191,8 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	if (!xroar_vo_interface)
 		return;
-	int xscale = uigtk2->draw_area.w / 160;
-	int yscale = uigtk2->draw_area.h / 120;
+	int xscale = uigtk2->picture_area.w / 160;
+	int yscale = uigtk2->picture_area.h / 120;
 	int scale = 1;
 	if (xscale < yscale)
 		scale = xscale;
@@ -585,8 +585,8 @@ static void *ui_gtk2_new(void *cfg) {
 	gtk2_vo_create_window(uigtk2);
 
 	// Window geometry sensible defaults
-	uigtk2->draw_area.w = 640;
-	uigtk2->draw_area.h = 480;
+	uigtk2->picture_area.w = 640;
+	uigtk2->picture_area.h = 480;
 
 	struct module *vo_mod = (struct module *)module_select_by_arg((struct module * const *)gtk2_vo_module_list, uigtk2->cfg->vo);
 	if (!(uigtk2->public.vo_interface = module_init(vo_mod, uigtk2))) {

@@ -62,7 +62,7 @@ struct vo_opengl_interface {
 		void *pixels;
 	} texture;
 
-	struct vo_draw_area draw_area;
+	struct vo_picture_area picture_area;
 
 	int filter;
 
@@ -85,9 +85,9 @@ void vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
 
 // Set up OpenGL context for rendering
 //
-//     int w, h;  // dimensions of window to draw into
+//     struct vo_draw_area *draw_area;  // dimensions of window to draw into
 
-void vo_opengl_setup_context(struct vo_opengl_interface *, int w, int h);
+void vo_opengl_setup_context(struct vo_opengl_interface *, struct vo_draw_area *draw_area);
 
 // Update texture and draw it
 

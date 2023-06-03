@@ -249,11 +249,23 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		vogtkgl->hoff = draw_allocation.y;
 	}
 
-	vo_opengl_setup_context(vogl, draw_allocation.width, draw_allocation.height);
-	global_uigtk2->draw_area.x = vogl->draw_area.x;
-	global_uigtk2->draw_area.y = vogl->draw_area.y;
-	global_uigtk2->draw_area.w = vogl->draw_area.w;
-	global_uigtk2->draw_area.h = vogl->draw_area.h;
+	// Although GTK+ reports how the drawable is offset into the window,
+	// the OpenGL context will render with the drawable's origin, so set X
+	// and Y to 0.
+	struct vo_draw_area draw_area = {
+		.x = 0,
+		.y = 0,
+		.w = draw_allocation.width,
+		.h = draw_allocation.height
+	};
+	vo_opengl_setup_context(vogl, &draw_area);
+
+	// Copy dimensions back out (for mouse calculations)
+	global_uigtk2->picture_area.x = vogl->picture_area.x;
+	global_uigtk2->picture_area.y = vogl->picture_area.y;
+	global_uigtk2->picture_area.w = vogl->picture_area.w;
+	global_uigtk2->picture_area.h = vogl->picture_area.h;
+
 	vo_gtkgl_set_vsync(-1);
 
 	gdk_gl_drawable_gl_end(gldrawable);
