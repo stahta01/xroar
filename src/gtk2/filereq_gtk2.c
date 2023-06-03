@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 file requester module.
  *
- *  \copyright Copyright 2008-2019 Ciaran Anscomb
+ *  \copyright Copyright 2008-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

@@ -2,7 +2,7 @@
  *
  *  \brief ROM CRC database.
  *
- *  \copyright Copyright 2012-2017 Ciaran Anscomb
+ *  \copyright Copyright 2012-2020 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

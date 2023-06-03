@@ -2,7 +2,7 @@
  *
  *  \brief RGB colourspace conversions.
  *
- *  \copyright Copyright 2011-2023
+ *  \copyright Copyright 2011-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

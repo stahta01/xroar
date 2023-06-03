@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 drive control window.
  *
- *  \copyright Copyright 2011-2015 Ciaran Anscomb
+ *  \copyright Copyright 2011-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

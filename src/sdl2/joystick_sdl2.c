@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 joystick module.
  *
- *  \copyright Copyright 2015-2016 Ciaran Anscomb
+ *  \copyright Copyright 2015-2021 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
