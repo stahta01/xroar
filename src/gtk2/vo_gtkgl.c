@@ -155,11 +155,11 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	 * containing window, or indeed ask it to.  This will hopefully work
 	 * consistently.  It seems to be basically how GIMP "shrink wrap"s its
 	 * windows.  */
-	GtkAllocation top_allocation, draw_allocation;
-	gtk_widget_get_allocation(global_uigtk2->top_window, &top_allocation);
+	GtkAllocation win_allocation, draw_allocation;
+	gtk_widget_get_allocation(global_uigtk2->top_window, &win_allocation);
 	gtk_widget_get_allocation(global_uigtk2->drawing_area, &draw_allocation);
-	gint oldw = top_allocation.width;
-	gint oldh = top_allocation.height;
+	gint oldw = win_allocation.width;
+	gint oldh = win_allocation.height;
 	gint woff = oldw - draw_allocation.width;
 	gint hoff = oldh - draw_allocation.height;
 	vogtkgl->woff = woff;
@@ -188,13 +188,19 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 	struct vo_interface *vo = &vogl->vo;
 
 	GtkAllocation allocation;
-	gtk_widget_get_allocation(global_uigtk2->drawing_area, &allocation);
+	if (vo->is_fullscreen) {
+		gtk_widget_get_allocation(global_uigtk2->top_window, &allocation);
+	} else {
+		gtk_widget_get_allocation(global_uigtk2->drawing_area, &allocation);
+	}
 	int w = allocation.width;
 	int h = allocation.height;
-	if (show_menubar) {
+
+	if (show_menubar && !vo->is_fullscreen) {
 		w += vogtkgl->woff;
 		h += vogtkgl->hoff;
 	}
+
 	vo->show_menubar = show_menubar;
 	if (show_menubar) {
 		gtk_widget_show(global_uigtk2->menubar);
@@ -234,19 +240,16 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 		g_assert_not_reached();
 	}
 
-	GtkAllocation allocation;
+	GtkAllocation draw_allocation;
+	gtk_widget_get_allocation(da, &draw_allocation);
 
 	// Preserve geometry offsets introduced by menubar
 	if (vo->show_menubar) {
-		gtk_widget_get_allocation(global_uigtk2->top_window, &allocation);
-		gint oldw = allocation.width;
-		gint oldh = allocation.height;
-		vogtkgl->woff = oldw - allocation.width;
-		vogtkgl->hoff = oldh - allocation.height;
+		vogtkgl->woff = draw_allocation.x;
+		vogtkgl->hoff = draw_allocation.y;
 	}
 
-	gtk_widget_get_allocation(da, &allocation);
-	vo_opengl_setup_context(vogl, allocation.width, allocation.height);
+	vo_opengl_setup_context(vogl, draw_allocation.width, draw_allocation.height);
 	global_uigtk2->draw_area.x = vogl->draw_area.x;
 	global_uigtk2->draw_area.y = vogl->draw_area.y;
 	global_uigtk2->draw_area.w = vogl->draw_area.w;
