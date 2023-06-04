@@ -2,7 +2,7 @@
  *
  *  \brief ALSA sound module.
  *
- *  \copyright Copyright 2009-2016 Ciaran Anscomb
+ *  \copyright Copyright 2009-2023 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -131,6 +131,18 @@ static void *new(void *cfg) {
 		aoalsa->fragment_nframes = (rate * xroar_cfg.ao.fragment_ms) / 1000;
 	} else if (xroar_cfg.ao.fragment_nframes > 0) {
 		aoalsa->fragment_nframes = xroar_cfg.ao.fragment_nframes;
+	} else {
+		// For a sensible default, try for 20ms per fragment and round
+		// up to the next power of 2
+		unsigned v = (rate * 20) / 1000;
+		v--;
+		v |= v >> 1;
+		v |= v >> 2;
+		v |= v >> 4;
+		v |= v >> 8;
+		v |= v >> 16;
+		v++;
+		aoalsa->fragment_nframes = v;
 	}
 	if (aoalsa->fragment_nframes > 0) {
 		if ((err = snd_pcm_hw_params_set_period_size_near(aoalsa->pcm_handle, hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
@@ -230,6 +242,7 @@ static void *new(void *cfg) {
 
 	unsigned buffer_size = aoalsa->fragment_nframes * nchannels * sample_nbytes;
 	aoalsa->audio_buffer = xmalloc(buffer_size);
+	LOG_DEBUG(2, "\tALSA audio device: %s\n", device);
 	ao->sound_interface = sound_interface_new(aoalsa->audio_buffer, buffer_fmt, rate, nchannels, aoalsa->fragment_nframes);
 	if (!ao->sound_interface) {
 		errstr = "XRoar internal error";
