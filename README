@@ -9,7 +9,8 @@ XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the
 Tandy MC-10; and some other similar machines or clones.  It runs on a
 wide variety of platforms.  Emulated hardware includes:
 
-   * Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10.
+   * Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10; Matra
+     & Hachette Alice 4K.
    * DragonDOS, Delta and RS-DOS disk controller cartridges.
    * Orchestra 90-CC stereo sound cartridge.
    * Games Master Cartridge, including the SN76489 sound chip.
@@ -27,7 +28,7 @@ wide variety of platforms.  Emulated hardware includes:
    * GDB target for remote debugging.
 
    XRoar is easily built from source under Linux, and binary packages
-are provided for Mac OS X and Windows.
+are provided for Mac OS X+ and Windows.
 
    XRoar can also be compiled to WebAssembly, and redistributing it in
 this form may provide a convenient way for users to run your Dragon
@@ -51,33 +52,51 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 contain the full manual as a PDF, which is also available from the XRoar
 home page (https://www.6809.org.uk/xroar/).
 
-Notes for version 1.x
-=====================
+Recent changes
+==============
 
-Version 1.x comes with support for two new emulated machines: the Tandy
-Colour Computer 3 and the Tandy MC-10.  Some major changes have taken
-place under the hood, and although most things should remain familiar,
-for some special uses, here are the things you need to know.
+Version 1.4 replaces the '-ccr simulated' cross-colour renderer with
+more CPU-intensive code that also handles PAL. The old NTSC-only
+renderer is still available using '-ccr partial'.  Some video options
+can be changed on the fly in a new TV Controls dialog.
+
+   Version 1.3 changes the default floppy disk write-back behaviour.
+The old behaviour erred on the side of protecting image files from
+accidental modification.  Enough people have complained about this--or
+at least, the small number that have complained have done so
+loudly--that XRoar will now rewrite changes to the backing file by
+default.  Run with the '-no-disk-write-back' option to revert to the old
+behaviour.  XRoar will still rename the old version of a file to have a
+'.bak' extension if possible, and also tries harder not to rewrite the
+file if no writes have occurred.
+
+   Version 1.0 introduced support for the Tandy Colour Computer 3 and
+the Tandy MC-10.  Version 1.1 adds proper support for the MC-10's French
+cousin, the Matra & Hachette Alice (4K).
 
    Snapshots now store much more state, and of course support the new
 emulated machines, but this means the format had to change.  Snapshots
 from the last 0.x release are still recognised, and can be loaded, but
 this support is likely to be removed in time.
 
-   The tape emulation now supports manual pause control.  On the MC-10,
-this defaults to paused, as it has no ability to remotely control the
-tape motor.  You will need to un-pause after typing 'CLOAD' or 'CLOADM'
-on the MC-10 (File -> Cassette -> Play, or from the tape control tool;
+   Tape emulation now supports manual pause control.  On the MC-10, this
+defaults to paused, as it has no ability to remotely control the tape
+motor.  You will need to un-pause after typing 'CLOAD' or 'CLOADM' on
+the MC-10 (File -> Cassette -> Play, or from the tape control tool;
 autorunning will do this automatically).
 
    Previously, the Glenside IDE controller would use a fixed HD image
-file in the current working directory called 'hd0.img'.  You must now
-specify an image with the '-load-hd0' option.  There is also the new
-ability to attach a _second_ hard disk image with '-load-hd1', if you
-have software that can access it.
+file in the current working directory.  You must now specify an image
+with the '-load-hd0' option.  You can also now attach a second hard disk
+image with '-load-hd1', if you have software that can access it.
 
    Similarly, the NX32 and MOOH cartridges would use a fixed SD image
-file, and you must now specify it with the '-load-sd' option.
+file, and you must now specify it with the '-load-hd0' option.
+
+   Old IDE images, including those created by XRoar, will have a '.img'
+file extension.  In order to distinguish these files from similar images
+with no header information, you should now rename these to have a '.ide'
+extension.
 
 
 Installation
@@ -95,8 +114,8 @@ and run on any POSIX-like system for which SDL version 2 is available.
 from an original machine.  The originals were part-written by Microsoft,
 so they are not distributed in the XRoar packages.
 
-Mac OS X binary package
------------------------
+Mac OS X+ binary package
+------------------------
 
 Download and unzip the appropriate '.zip' distribution for your system.
 Drag the application icon to '/Applications/'.
@@ -117,7 +136,7 @@ followed by any command line options.
 '/Library/').  Name any configuration file you create
 '~/Library/XRoar/xroar.conf'.
 
-   The Mac OS X build provides a menu for access to certain features,
+   The Mac OS X+ build provides a menu for access to certain features,
 and often accepts the more familiar '<Command>+KEY' in place of the
 '<CTRL>+KEY' shortcuts listed in this manual.
 
@@ -157,7 +176,7 @@ simple command:
      $ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
              libgtkglext1-dev libasound2-dev
 
-   Under Mac OS X, first be sure to install Apple's Xcode
+   Under Mac OS X+, first be sure to install Apple's Xcode
 (https://developer.apple.com/xcode/) package.  The easiest way to then
 ensure you have XRoar's dependencies available is to use a system like
 Homebrew (https://brew.sh/) or MacPorts (http://www.macports.org/).  For
@@ -176,7 +195,7 @@ requester for use by other user interfaces.  Version 2 only.
 
    SDL (http://www.libsdl.org/), Simple Directmedia Layer, provides a
 slightly more basic user experience.  Menus are added using native code
-under Mac OS X and Windows; any other target using SDL will support only
+under Mac OS X+ and Windows; any other target using SDL will support only
 keyboard shortcuts.  Unless you are building for Linux, SDL is required
 to use joysticks.  Version 2 required.
 
@@ -195,7 +214,7 @@ Compilation
 -----------
 
 Once you have the dependencies, building XRoar follows a familiar
-procedure:
+procedure:(1)
 
      $ gzip -dc xroar-1.3.tar.gz | tar xvf -
      $ cd xroar-1.3
@@ -231,3 +250,8 @@ the details are beyond the scope of this manual.
 'emmake make'.  HTML/JavaScript and CSS examples for interfacing to the
 output are included in the 'wasm/' subdirectory.
 
+   ---------- Footnotes ----------
+
+   (1) If you have cloned the git repository, you will need GNU Build
+System packages installed: 'autoconf', etc.  Running './autogen.sh'
+should then generate the configure script, which you can run as normal.
