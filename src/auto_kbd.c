@@ -2,7 +2,7 @@
  *
  *  \brief Automatic keyboard entry.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -367,102 +367,102 @@ static int translate_mc10(struct auto_kbd *ak, int32_t uchr) {
 	switch (uchr) {
 
 		// U+258x and U+259x, "Block Elements"
-	case 0x2580: return ak->sg4_colour ^ 0b1100;
-	case 0x2584: return ak->sg4_colour ^ 0b0011;
+	case 0x2580: return ak->sg4_colour ^ 0x0c;
+	case 0x2584: return ak->sg4_colour ^ 0x03;
 	case 0x2588: // FULL BLOCK
 		     if (ak->sg6_mode) {
-			     return ak->sg6_colour ^ 0b111111;
+			     return ak->sg6_colour ^ 0x3f;
 		     }
-		     return ak->sg4_colour ^ 0b1111;
+		     return ak->sg4_colour ^ 0x0f;
 	case 0x258c: // LEFT HALF BLOCK
 		     if (ak->sg6_mode) {
-			     return ak->sg6_colour ^ 0b101010;
+			     return ak->sg6_colour ^ 0x2a;
 		     }
-		     return ak->sg4_colour ^ 0b1010;
+		     return ak->sg4_colour ^ 0x0a;
 	case 0x2590: // RIGHT HALF BLOCK
 		     if (ak->sg6_mode) {
-			     return ak->sg6_colour ^ 0b010101;
+			     return ak->sg6_colour ^ 0x15;
 		     }
-		     return ak->sg4_colour ^ 0b0101;
+		     return ak->sg4_colour ^ 0x05;
 	case 0x2591: // LIGHT SHADE
 	case 0x2592: // MEDIUM SHADE
 	case 0x2593: // DARK SHADE
 		     return ak->sg6_mode ? ak->sg6_colour : ak->sg4_colour;
-	case 0x2596: return ak->sg4_colour ^ 0b0010;
-	case 0x2597: return ak->sg4_colour ^ 0b0001;
-	case 0x2598: return ak->sg4_colour ^ 0b1000;
-	case 0x2599: return ak->sg4_colour ^ 0b1011;
-	case 0x259a: return ak->sg4_colour ^ 0b1001;
-	case 0x259b: return ak->sg4_colour ^ 0b1110;
-	case 0x259c: return ak->sg4_colour ^ 0b1101;
-	case 0x259d: return ak->sg4_colour ^ 0b0100;
-	case 0x259e: return ak->sg4_colour ^ 0b0110;
-	case 0x259f: return ak->sg4_colour ^ 0b0111;
+	case 0x2596: return ak->sg4_colour ^ 0x02;
+	case 0x2597: return ak->sg4_colour ^ 0x01;
+	case 0x2598: return ak->sg4_colour ^ 0x08;
+	case 0x2599: return ak->sg4_colour ^ 0x0b;
+	case 0x259a: return ak->sg4_colour ^ 0x09;
+	case 0x259b: return ak->sg4_colour ^ 0x0e;
+	case 0x259c: return ak->sg4_colour ^ 0x0d;
+	case 0x259d: return ak->sg4_colour ^ 0x04;
+	case 0x259e: return ak->sg4_colour ^ 0x06;
+	case 0x259f: return ak->sg4_colour ^ 0x07;
 
 		     // U+1FB0x to U+1FB3x, "Symbols for Legacy Computing"
-	case 0x1fb00: return ak->sg6_colour ^ 0b100000;
-	case 0x1fb01: return ak->sg6_colour ^ 0b010000;
-	case 0x1fb02: return ak->sg6_colour ^ 0b110000;
-	case 0x1fb03: return ak->sg6_colour ^ 0b001000;
-	case 0x1fb04: return ak->sg6_colour ^ 0b101000;
-	case 0x1fb05: return ak->sg6_colour ^ 0b011000;
-	case 0x1fb06: return ak->sg6_colour ^ 0b111000;
-	case 0x1fb07: return ak->sg6_colour ^ 0b000100;
-	case 0x1fb08: return ak->sg6_colour ^ 0b100100;
-	case 0x1fb09: return ak->sg6_colour ^ 0b010100;
-	case 0x1fb0a: return ak->sg6_colour ^ 0b110100;
-	case 0x1fb0b: return ak->sg6_colour ^ 0b001100;
-	case 0x1fb0c: return ak->sg6_colour ^ 0b101100;
-	case 0x1fb0d: return ak->sg6_colour ^ 0b011100;
-	case 0x1fb0e: return ak->sg6_colour ^ 0b111100;
+	case 0x1fb00: return ak->sg6_colour ^ 0x20;
+	case 0x1fb01: return ak->sg6_colour ^ 0x10;
+	case 0x1fb02: return ak->sg6_colour ^ 0x30;
+	case 0x1fb03: return ak->sg6_colour ^ 0x08;
+	case 0x1fb04: return ak->sg6_colour ^ 0x28;
+	case 0x1fb05: return ak->sg6_colour ^ 0x18;
+	case 0x1fb06: return ak->sg6_colour ^ 0x38;
+	case 0x1fb07: return ak->sg6_colour ^ 0x04;
+	case 0x1fb08: return ak->sg6_colour ^ 0x24;
+	case 0x1fb09: return ak->sg6_colour ^ 0x14;
+	case 0x1fb0a: return ak->sg6_colour ^ 0x34;
+	case 0x1fb0b: return ak->sg6_colour ^ 0x0c;
+	case 0x1fb0c: return ak->sg6_colour ^ 0x2c;
+	case 0x1fb0d: return ak->sg6_colour ^ 0x1c;
+	case 0x1fb0e: return ak->sg6_colour ^ 0x3c;
 
-	case 0x1fb0f: return ak->sg6_colour ^ 0b000010;
-	case 0x1fb10: return ak->sg6_colour ^ 0b100010;
-	case 0x1fb11: return ak->sg6_colour ^ 0b010010;
-	case 0x1fb12: return ak->sg6_colour ^ 0b110010;
-	case 0x1fb13: return ak->sg6_colour ^ 0b001010;
-	case 0x1fb14: return ak->sg6_colour ^ 0b011010;
-	case 0x1fb15: return ak->sg6_colour ^ 0b111010;
-	case 0x1fb16: return ak->sg6_colour ^ 0b000110;
-	case 0x1fb17: return ak->sg6_colour ^ 0b100110;
-	case 0x1fb18: return ak->sg6_colour ^ 0b010110;
-	case 0x1fb19: return ak->sg6_colour ^ 0b110110;
-	case 0x1fb1a: return ak->sg6_colour ^ 0b001110;
-	case 0x1fb1b: return ak->sg6_colour ^ 0b101110;
-	case 0x1fb1c: return ak->sg6_colour ^ 0b011110;
-	case 0x1fb1d: return ak->sg6_colour ^ 0b111110;
+	case 0x1fb0f: return ak->sg6_colour ^ 0x02;
+	case 0x1fb10: return ak->sg6_colour ^ 0x22;
+	case 0x1fb11: return ak->sg6_colour ^ 0x12;
+	case 0x1fb12: return ak->sg6_colour ^ 0x32;
+	case 0x1fb13: return ak->sg6_colour ^ 0x0a;
+	case 0x1fb14: return ak->sg6_colour ^ 0x1a;
+	case 0x1fb15: return ak->sg6_colour ^ 0x3a;
+	case 0x1fb16: return ak->sg6_colour ^ 0x06;
+	case 0x1fb17: return ak->sg6_colour ^ 0x26;
+	case 0x1fb18: return ak->sg6_colour ^ 0x16;
+	case 0x1fb19: return ak->sg6_colour ^ 0x36;
+	case 0x1fb1a: return ak->sg6_colour ^ 0x0e;
+	case 0x1fb1b: return ak->sg6_colour ^ 0x2e;
+	case 0x1fb1c: return ak->sg6_colour ^ 0x1e;
+	case 0x1fb1d: return ak->sg6_colour ^ 0x3e;
 
-	case 0x1fb1e: return ak->sg6_colour ^ 0b000001;
-	case 0x1fb1f: return ak->sg6_colour ^ 0b100001;
-	case 0x1fb20: return ak->sg6_colour ^ 0b010001;
-	case 0x1fb21: return ak->sg6_colour ^ 0b110001;
-	case 0x1fb22: return ak->sg6_colour ^ 0b001001;
-	case 0x1fb23: return ak->sg6_colour ^ 0b101001;
-	case 0x1fb24: return ak->sg6_colour ^ 0b011001;
-	case 0x1fb25: return ak->sg6_colour ^ 0b111001;
-	case 0x1fb26: return ak->sg6_colour ^ 0b000101;
-	case 0x1fb27: return ak->sg6_colour ^ 0b100101;
-	case 0x1fb28: return ak->sg6_colour ^ 0b110101;
-	case 0x1fb29: return ak->sg6_colour ^ 0b001101;
-	case 0x1fb2a: return ak->sg6_colour ^ 0b101101;
-	case 0x1fb2b: return ak->sg6_colour ^ 0b011101;
-	case 0x1fb2c: return ak->sg6_colour ^ 0b111101;
+	case 0x1fb1e: return ak->sg6_colour ^ 0x01;
+	case 0x1fb1f: return ak->sg6_colour ^ 0x21;
+	case 0x1fb20: return ak->sg6_colour ^ 0x11;
+	case 0x1fb21: return ak->sg6_colour ^ 0x31;
+	case 0x1fb22: return ak->sg6_colour ^ 0x09;
+	case 0x1fb23: return ak->sg6_colour ^ 0x29;
+	case 0x1fb24: return ak->sg6_colour ^ 0x19;
+	case 0x1fb25: return ak->sg6_colour ^ 0x39;
+	case 0x1fb26: return ak->sg6_colour ^ 0x05;
+	case 0x1fb27: return ak->sg6_colour ^ 0x25;
+	case 0x1fb28: return ak->sg6_colour ^ 0x35;
+	case 0x1fb29: return ak->sg6_colour ^ 0x0d;
+	case 0x1fb2a: return ak->sg6_colour ^ 0x2d;
+	case 0x1fb2b: return ak->sg6_colour ^ 0x1d;
+	case 0x1fb2c: return ak->sg6_colour ^ 0x3d;
 
-	case 0x1fb2d: return ak->sg6_colour ^ 0b000011;
-	case 0x1fb2e: return ak->sg6_colour ^ 0b100011;
-	case 0x1fb2f: return ak->sg6_colour ^ 0b010011;
-	case 0x1fb30: return ak->sg6_colour ^ 0b110011;
-	case 0x1fb31: return ak->sg6_colour ^ 0b001011;
-	case 0x1fb32: return ak->sg6_colour ^ 0b101011;
-	case 0x1fb33: return ak->sg6_colour ^ 0b011011;
-	case 0x1fb34: return ak->sg6_colour ^ 0b111011;
-	case 0x1fb35: return ak->sg6_colour ^ 0b000111;
-	case 0x1fb36: return ak->sg6_colour ^ 0b100111;
-	case 0x1fb37: return ak->sg6_colour ^ 0b010111;
-	case 0x1fb38: return ak->sg6_colour ^ 0b110111;
-	case 0x1fb39: return ak->sg6_colour ^ 0b001111;
-	case 0x1fb3a: return ak->sg6_colour ^ 0b101111;
-	case 0x1fb3b: return ak->sg6_colour ^ 0b011111;
+	case 0x1fb2d: return ak->sg6_colour ^ 0x03;
+	case 0x1fb2e: return ak->sg6_colour ^ 0x23;
+	case 0x1fb2f: return ak->sg6_colour ^ 0x13;
+	case 0x1fb30: return ak->sg6_colour ^ 0x33;
+	case 0x1fb31: return ak->sg6_colour ^ 0x0b;
+	case 0x1fb32: return ak->sg6_colour ^ 0x2b;
+	case 0x1fb33: return ak->sg6_colour ^ 0x1b;
+	case 0x1fb34: return ak->sg6_colour ^ 0x3b;
+	case 0x1fb35: return ak->sg6_colour ^ 0x07;
+	case 0x1fb36: return ak->sg6_colour ^ 0x27;
+	case 0x1fb37: return ak->sg6_colour ^ 0x17;
+	case 0x1fb38: return ak->sg6_colour ^ 0x37;
+	case 0x1fb39: return ak->sg6_colour ^ 0x0f;
+	case 0x1fb3a: return ak->sg6_colour ^ 0x2f;
+	case 0x1fb3b: return ak->sg6_colour ^ 0x1f;
 
 	default: break;
 	}
