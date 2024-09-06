@@ -170,11 +170,11 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	// Hardware
 
 	case ui_tag_machine:
-		EM_ASM_({ ui_update_machine($0); }, value);
+		EM_ASM_({ ui_menu_select($0, $1); }, "machine", value);
 		break;
 
 	case ui_tag_cartridge:
-		EM_ASM_({ ui_update_cart($0); }, value);
+		EM_ASM_({ ui_menu_select($0, $1); }, "cart", value);
 		break;
 
 	// Tape
@@ -243,16 +243,19 @@ static void wasm_update_machine_menu(void *sptr) {
 	struct slist *mcl = machine_config_list();
 	// Note: this list is not a copy, so does not need freeing
 
+	// Remove old entries
+	EM_ASM_({ ui_menu_clear($0); }, "machine");
+
 	// Note: this list isn't even currently updated, so not removing old
 	// entries.
 
 	// Add new entries
 	for (struct slist *iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
-		EM_ASM_({ ui_add_machine($0, $1); }, mc->id, mc->description);
+		EM_ASM_({ ui_menu_add($0, $1, $2); }, "machine", mc->description, mc->id);
 	}
 	if (xroar.machine_config) {
-		EM_ASM_({ ui_update_machine($0); }, xroar.machine_config->id);
+		EM_ASM_({ ui_menu_select($0, $1); }, "machine", xroar.machine_config->id);
 	}
 }
 
@@ -269,12 +272,13 @@ static void wasm_update_cartridge_menu(void *sptr) {
 	}
 
 	// Remove old entries
-	EM_ASM_({ ui_clear_carts(); });
+	EM_ASM_({ ui_menu_clear($0); }, "cart");
 
 	// Add new entries
+	EM_ASM_({ ui_menu_add($0, $1, $2); }, "cart", "None", -1);
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		EM_ASM_({ ui_add_cart($0, $1); }, cc->id, cc->description);
+		EM_ASM_({ ui_menu_add($0, $1, $2); }, "cart", cc->description, cc->id);
 	}
 	slist_free(ccl);
 }
@@ -288,12 +292,16 @@ static void wasm_update_joystick_menus(void *sptr) {
 	// Note: this list is not a copy, so does not need freeing
 
 	// Remove old entries
-	EM_ASM_({ ui_clear_joysticks(); });
+	EM_ASM_({ ui_menu_clear($0); }, "right-joystick");
+	EM_ASM_({ ui_menu_clear($0); }, "left-joystick");
 
 	// Add new entries
+	EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "right-joystick", "None", "");
+	EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "left-joystick", "None", "");
 	for (struct slist *iter = jcl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
-		EM_ASM_({ ui_add_joystick($0, $1); }, jc->name, jc->description);
+		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "right-joystick", jc->description, jc->name);
+		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "left-joystick", jc->description, jc->name);
 	}
 }
 

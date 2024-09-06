@@ -508,86 +508,44 @@ be a better way to make this usable...
 	// Anything under here is a function provided as callback from the main
 	// WebAssembly code.
 
-	// Called to populate the machine select drop-down
-	function ui_add_machine(index, description) {
-		var machine_select = document.getElementById("machine");
-		var el = document.createElement("OPTION");
-		el.setAttribute("value", index);
-		el.innerHTML = UTF8ToString(description, 80);
-		machine_select.appendChild(el);
-	}
-
-	// Clear cartridge drop-down in anticipation of repopulating
-	function ui_clear_carts() {
-		var cart_select = document.getElementById("cart");
-		while (cart_select.lastChild) {
-			cart_select.removeChild(cart_select.lastChild);
-		}
-		ui_add_cart_(-1, "None");
-	}
-
-	// Helper to populate the cartridge select drop-down
-	function ui_add_cart_(index, description) {
-		var cart_select = document.getElementById("cart");
-		var opt = document.createElement("OPTION");
-		opt.setAttribute("value", index);
-		opt.innerHTML = description;
-		cart_select.appendChild(opt);
-	}
-
-	// Called to populate the cartridge select drop-down
-	function ui_add_cart(index, description) {
-		ui_add_cart_(index, UTF8ToString(description, 80));
-	}
-
-	// Clear joystick drop-downs in anticipation of repopulating
-	function ui_clear_joysticks() {
-		{
-			var joystick_select = document.getElementById("right-joystick");
-			while (joystick_select.lastChild) {
-				joystick_select.removeChild(joystick_select.lastChild);
+	// Clear a menu ready to repopulate
+	function ui_menu_clear(menu) {
+		var select = document.getElementById(UTF8ToString(menu, 80));
+		if (select != null) {
+			while (select.lastChild) {
+				select.removeChild(select.lastChild);
 			}
 		}
-		{
-			var joystick_select = document.getElementById("left-joystick");
-			while (joystick_select.lastChild) {
-				joystick_select.removeChild(joystick_select.lastChild);
-			}
-		}
-		ui_add_joystick_("", "None");
 	}
 
-	// Helper to populate the joystick select drop-downs
-	function ui_add_joystick_(name, description) {
-		{
-			var joystick_select = document.getElementById("right-joystick");
-			var opt = document.createElement("OPTION");
-			opt.setAttribute("value", name);
-			opt.innerHTML = description;
-			joystick_select.appendChild(opt);
-		}
-		{
-			var joystick_select = document.getElementById("left-joystick");
-			var opt = document.createElement("OPTION");
-			opt.setAttribute("value", name);
-			opt.innerHTML = description;
-			joystick_select.appendChild(opt);
+	// Add to a menu (int value)
+	function ui_menu_add(menu, label, value) {
+		var select = document.getElementById(UTF8ToString(menu, 80));
+		if (select != null) {
+			var el = document.createElement("OPTION");
+			el.innerHTML = UTF8ToString(label, 80);
+			el.setAttribute("value", value);
+			select.appendChild(el);
 		}
 	}
 
-	// Called to populate the joystick select drop-downs
-	function ui_add_joystick(name, description) {
-		ui_add_joystick_(UTF8ToString(name, 80), UTF8ToString(description, 80));
+	// Add to a menu (string value)
+	function ui_menu_add_str(menu, label, value) {
+		var select = document.getElementById(UTF8ToString(menu, 80));
+		if (select != null) {
+			var el = document.createElement("OPTION");
+			el.innerHTML = UTF8ToString(label, 80);
+			el.setAttribute("value", UTF8ToString(value, 80));
+			select.appendChild(el);
+		}
 	}
 
-	// Called when machine changes
-	function ui_update_machine(id) {
-		document.getElementById('machine').value = id;
-	}
-
-	// Called when cartridge changes
-	function ui_update_cart(id) {
-		document.getElementById("cart").value = id;
+	// Select menu entry by int value
+	function ui_menu_select(menu, value) {
+		var select = document.getElementById(UTF8ToString(menu, 80));
+		if (select != null) {
+			select.value = value;
+		}
 	}
 
 	// Called when disk information changes for a drive
