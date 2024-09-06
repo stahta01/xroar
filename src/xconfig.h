@@ -230,6 +230,13 @@ enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
 enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *options,
 		int argc, char **argv, int *argn, void *sptr);
 
+// Return members of an enum searching by other members
+
+int xconfig_enum_name_value(struct xconfig_enum *, const char *name, int undef);
+const char *xconfig_enum_value_name(struct xconfig_enum *, int value);
+const char *xconfig_enum_name_description(struct xconfig_enum *, const char *name);
+const char *xconfig_enum_value_description(struct xconfig_enum *, int value);
+
 // Sanity check value assigned to an enumeration type.  Pass in assigned and
 // default values.  Returns assigned value if valid, else the default.
 

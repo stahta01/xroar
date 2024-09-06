@@ -51,24 +51,24 @@ static struct xconfig_option const *find_option(struct xconfig_option const *opt
 	return NULL;
 }
 
-static int lookup_enum(const char *name, struct xconfig_enum *list, int undef_value) {
+static int lookup_enum(struct xconfig_enum *list, const char *name, int undef) {
 	assert(name != NULL);
 	assert(list != NULL);
-	for (int i = 0; list[i].name; i++) {
-		if (0 == c_strcasecmp(name, list[i].name)) {
-			return list[i].value;
+	for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+		if (0 == c_strcasecmp(name, iter->name)) {
+			return iter->value;
 		}
 	}
 	// Only check this afterwards, as "help" could be a valid name
 	if (0 == c_strcasecmp(name, "help")) {
-		for (int i = 0; list[i].name; i++) {
-			if (list[i].description) {
-				printf("\t%-10s %s\n", list[i].name, list[i].description);
+		for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+			if (iter->description) {
+				printf("\t%-10s %s\n", iter->name, iter->description);
 			}
 		}
 		exit(EXIT_SUCCESS);
 	}
-	return undef_value;
+	return undef;
 }
 
 static void print_part_name_description(const struct partdb_entry *pe, void *idata) {
@@ -185,7 +185,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 				option->dest.func_null();
 			break;
 		case XCONFIG_ENUM: {
-			int val = lookup_enum(arg, (struct xconfig_enum *)option->ref, -1);
+			int val = lookup_enum((struct xconfig_enum *)option->ref, arg, -1);
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_int(val);
 			else
@@ -555,6 +555,57 @@ enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *option
 	}
 	if (argn) *argn = _argn;
 	return XCONFIG_OK;
+}
+
+// This is basically the same as lookup_enum(), but doesn't test for "help".
+
+int xconfig_enum_name_value(struct xconfig_enum *list, const char *name, int undef) {
+	assert(name != NULL);
+	assert(list != NULL);
+	for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+		if (0 == c_strcasecmp(name, iter->name)) {
+			return iter->value;
+		}
+	}
+	return undef;
+}
+
+const char *xconfig_enum_value_name(struct xconfig_enum *list, int value) {
+	assert(list != NULL);
+	for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		if (iter->value == value) {
+			return iter->name;
+		}
+	}
+	return NULL;
+}
+
+const char *xconfig_enum_name_description(struct xconfig_enum *list, const char *name) {
+	for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		if (0 == c_strcasecmp(name, iter->name)) {
+			return iter->description;
+		}
+	}
+	return NULL;
+}
+
+const char *xconfig_enum_value_description(struct xconfig_enum *list, int value) {
+	assert(list != NULL);
+	for (struct xconfig_enum *iter = list; iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		if (iter->value == value) {
+			return iter->description;
+		}
+	}
+	return NULL;
 }
 
 int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl) {
