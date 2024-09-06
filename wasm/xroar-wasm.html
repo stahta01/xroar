@@ -486,6 +486,7 @@ be a better way to make this usable...
 		Module.ccall('wasm_resize', null, [ 'number', 'number' ], [ Module.canvas.width, Module.canvas.height ]);
 	}
 
+	// Call write_snapshot(), then offer the resultant file for download
 	function download_snapshot() {
 		Module.ccall('write_snapshot', null, [ 'string' ], [ 'xroar.sna' ]);
 		let content = Module.FS.readFile('xroar.sna');
@@ -545,6 +546,14 @@ be a better way to make this usable...
 		var select = document.getElementById(UTF8ToString(menu, 80));
 		if (select != null) {
 			select.value = value;
+		}
+	}
+
+	// Select menu entry by string value
+	function ui_menu_select_str(menu, value) {
+		var select = document.getElementById(UTF8ToString(menu, 80));
+		if (select != null) {
+			select.value = UTF8ToString(value, 80);
 		}
 	}
 
@@ -618,11 +627,13 @@ be a better way to make this usable...
 	// Called when XRoar has finished initialising, before the main loop
 	function ui_done_initialising() {
 		// Do the initial resize that Chromium/Linux seems to require
-		var program = {};
 		if (!Module.initial_resize) {
 			Module.initial_resize = 1;
 			wasm_set_fullscreen(1, 0);
 		}
+
+		// Scan arguments for key=value pairs to populate a program struct
+		var program = {};
 		let args = window.location.search.substr(1).split('&');
 		for (let arg of args) {
 			if (arg.includes('=')) {
@@ -639,6 +650,8 @@ be a better way to make this usable...
 				wasm_set_fullscreen(1, 1);
 			}
 		}
+
+		// Start that program, if any were specified
 		if (Object.entries(program).length !== 0) {
 			start_program(program);
 		}
