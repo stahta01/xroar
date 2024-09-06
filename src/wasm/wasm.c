@@ -615,7 +615,6 @@ void wasm_set_joystick(int port, const char *value) {
 	struct wasm_event_set_joystick *ev = xmalloc(sizeof(*ev));
 	ev->port = port;
 	ev->value = xstrdup(value);
-	LOG_PRINT("wasm_set_joystick(%d, %s)\n", port, value);
 	WASM_DEBUG("wasm_set_joystick(%d, %s): queueing do_wasm_set_joystick()\n", port, value);
 	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_joystick, ev), 1);
 }
