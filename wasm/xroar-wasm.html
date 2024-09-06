@@ -354,13 +354,10 @@ be a better way to make this usable...
 
 		Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ program.machine, program.cart, program.cart_rom, program.cart_rom2 ]);
 
-		var ljoy = ('joy_left' in program) ? program.joy_left : '';
 		var rjoy = ('joy_right' in program) ? program.joy_right : '';
-		wasm_set_joystick(1, ljoy);
+		var ljoy = ('joy_left' in program) ? program.joy_left : '';
 		wasm_set_joystick(0, rjoy);
-		// TODO: make this feed back as a UI notification
-		document.getElementById('left-joystick').value = ljoy;
-		document.getElementById('right-joystick').value = rjoy;
+		wasm_set_joystick(1, ljoy);
 
 		var { title, name, author, publisher, text } = program;
 

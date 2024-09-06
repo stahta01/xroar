@@ -230,6 +230,16 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 		EM_ASM_({ ui_update_tv_input($0); }, value);
 		break;
 
+	// Joysticks
+
+	case ui_tag_joy_right:
+		EM_ASM_({ ui_menu_select_str($0, $1); }, "right-joystick", (char *)data);
+		break;
+
+	case ui_tag_joy_left:
+		EM_ASM_({ ui_menu_select_str($0, $1); }, "left-joystick", (char *)data);
+		break;
+
 	default:
 		break;
 	}
