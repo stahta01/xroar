@@ -43,6 +43,7 @@
 #include "machine.h"
 #include "romlist.h"
 #include "vdisk.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 // Currently tied to SDL2, as we need to poll SDL events.  Refactor soon...
@@ -79,6 +80,7 @@ struct ui_module ui_wasm_module = {
 static void wasm_update_machine_menu(void *sptr);
 static void wasm_update_cartridge_menu(void *sptr);
 static void wasm_update_joystick_menus(void *sptr);
+static void wasm_update_radio_menu_from_enum(const char *menu, struct xconfig_enum *xc_enum);
 
 static void *ui_wasm_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -103,6 +105,8 @@ static void *ui_wasm_new(void *cfg) {
 		return NULL;
 	}
 
+	wasm_update_radio_menu_from_enum("tv-input", machine_tv_input_list);
+	wasm_update_radio_menu_from_enum("ccr", vo_cmp_ccr_list);
 	wasm_update_machine_menu(uiwasm);
 	wasm_update_cartridge_menu(uiwasm);
 	wasm_update_joystick_menus(uiwasm);
@@ -218,16 +222,16 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	// Video
 
 	case ui_tag_fullscreen:
-		EM_ASM_({ ui_set_fullscreen($0); } ,value);
+		EM_ASM_({ ui_set_fullscreen($0); }, value);
 		xroar.vo_interface->is_fullscreen = value;
 		break;
 
 	case ui_tag_ccr:
-		EM_ASM_({ ui_update_ccr($0); }, value);
+		EM_ASM_({ ui_menu_select($0, $1); }, "ccr", value);
 		break;
 
 	case ui_tag_tv_input:
-		EM_ASM_({ ui_update_tv_input($0); }, value);
+		EM_ASM_({ ui_menu_select($0, $1); }, "tv-input", value);
 		break;
 
 	// Joysticks
@@ -312,6 +316,23 @@ static void wasm_update_joystick_menus(void *sptr) {
 		struct joystick_config *jc = iter->data;
 		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "right-joystick", jc->description, jc->name);
 		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "left-joystick", jc->description, jc->name);
+	}
+}
+
+static void wasm_update_radio_menu_from_enum(const char *menu, struct xconfig_enum *xc_enum) {
+	// Remove old entries
+	EM_ASM_({ ui_menu_clear($0); }, menu);
+
+	// Add new entries
+	while (xc_enum->name) {
+		if (!xc_enum->description) {
+			++xc_enum;
+			continue;
+		}
+		const char *label = xc_enum->description;
+		int value = xc_enum->value;
+		EM_ASM_({ ui_menu_add($0, $1, $2); }, menu, label, value);
+		++xc_enum;
 	}
 }
 

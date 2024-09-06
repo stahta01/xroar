@@ -126,20 +126,9 @@ be a better way to make this usable...
 <!-- View tab, no columns -->
 <table class='vheader centre-vertically'>
 
-<tr title="TV Input"><th>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(false, this.options[this.selectedIndex].value)'>
-	<option value='0'>S-Video (no cross-colour)</option>
-	<option value='1'>Composite (blue-red)</option>
-	<option value='2'>Composite (red-blue)</option>
-	<option value='3'>RGB</option>
-	</select></td></tr>
+<tr title="TV Input"><th>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(false, this.options[this.selectedIndex].value)'/></td></tr>
 
-<tr title="Cross-colour renderer"><th>Renderer:</td><td><select id='ccr' onchange='wasm_set_ccr(this.options[this.selectedIndex].value)'>
-	<option value='0'>Palette-based</option>
-	<option value='1'>Simple (2-bit LUT)</option>
-	<option value='2'>Intermediate (5-bit LUT)</option>
-	<option value='3'>Partial NTSC</option>
-	<option value='4'>Simulated</option>
-	</select></td></tr>
+<tr title="Cross-colour renderer"><th>Renderer:</td><td><select id='ccr' onchange='wasm_set_ccr(this.options[this.selectedIndex].value)'/></td></tr>
 
 </table>
 
@@ -159,13 +148,13 @@ be a better way to make this usable...
 
 <!-- Machine and cartridge selections are dynamically populated -->
 
-<tr title="Machine to emulate"><th>Machine:</td><td><select id='machine' onchange='wasm_set_machine(this.options[this.selectedIndex].value)'></select></td></tr>
+<tr title="Machine to emulate"><th>Machine:</td><td><select id='machine' onchange='wasm_set_machine(this.options[this.selectedIndex].value)'/></td></tr>
 
-<tr title="Use cartridge in current machine (may need hard reset)"><th>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'></select></td></tr>
+<tr title="Use cartridge in current machine (may need hard reset)"><th>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'/></td></tr>
 
-<tr title="Right joystick emulation"><th>Right joystick:</td><td><select id='right-joystick' onchange='wasm_set_joystick(0,this.options[this.selectedIndex].value)'></select></td></tr>
+<tr title="Right joystick emulation"><th>Right joystick:</td><td><select id='right-joystick' onchange='wasm_set_joystick(0,this.options[this.selectedIndex].value)'/></td></tr>
 
-<tr title="Left joystick emulation"><th>Left joystick:</td><td><select id='left-joystick' onchange='wasm_set_joystick(1,this.options[this.selectedIndex].value)'></select></td></tr>
+<tr title="Left joystick emulation"><th>Left joystick:</td><td><select id='left-joystick' onchange='wasm_set_joystick(1,this.options[this.selectedIndex].value)'/></td></tr>
 
 </table>
 
@@ -614,11 +603,6 @@ be a better way to make this usable...
 	// Called when cross-colour renderer changes
 	function ui_update_ccr(value) {
 		document.getElementById('ccr').value = value;
-	}
-
-	// Called when colourburst phase relationship changes
-	function ui_update_tv_input(value) {
-		document.getElementById('tv-input').value = value;
 	}
 
 	// Called when XRoar has finished initialising, before the main loop
