@@ -2646,15 +2646,6 @@ static struct xconfig_enum ao_format_list[] = {
 	{ XC_ENUM_END() }
 };
 
-// XXX make a proper enum for these magic numbers
-static struct xconfig_enum vo_viewport_list[] = {
-	{ XC_ENUM_INT("zoomed", 0, "512x384 (zoomed)") },
-	{ XC_ENUM_INT("title", 1, "640x480 (title safe)") },
-	{ XC_ENUM_INT("action", 2, "720x540 (action safe)") },
-	{ XC_ENUM_INT("underscan", 3, "736x552 (underscan)") },
-	{ XC_ENUM_END() }
-};
-
 /* Configuration directives */
 
 static union {

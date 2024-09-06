@@ -62,6 +62,14 @@ struct xconfig_enum vo_pixel_fmt_list[] = {
 	{ XC_ENUM_END() }
 };
 
+struct xconfig_enum vo_viewport_list[] = {
+	{ XC_ENUM_INT("zoomed", VO_PICTURE_ZOOMED, "Zoomed (512x384)") },
+	{ XC_ENUM_INT("title", VO_PICTURE_TITLE, "Title (640x480)") },
+	{ XC_ENUM_INT("action", VO_PICTURE_ACTION, "Action (720x540)") },
+	{ XC_ENUM_INT("underscan", VO_PICTURE_UNDERSCAN, "Underscan (736x552)") },
+	{ XC_ENUM_END() }
+};
+
 const uint8_t vo_cmp_lut_2bit[2][4][3] = {
 	{
 		{ 0x00, 0x00, 0x00 },
