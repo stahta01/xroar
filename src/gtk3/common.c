@@ -25,9 +25,11 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 
+#include "slist.h"
 #include "xalloc.h"
 
 #include "auto_kbd.h"
+#include "logging.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -416,4 +418,101 @@ void uigtk3_free_action_group(GtkActionGroup *action_group) {
 	GList *list = gtk_action_group_list_actions(action_group);
 	g_list_foreach(list, remove_action_from_group, action_group);
 	g_list_free(list);
+}
+
+// ComboBoxText with Value
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_new(struct ui_gtk3_interface *uigtk3,
+					      const char *name) {
+	GtkComboBoxText *cbt = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(uigtk3->builder, name));
+	if (!cbt) {
+		return NULL;
+	}
+	struct uigtk3_cbt_value *cbtv = g_malloc(sizeof(*cbt));
+	*cbtv = (struct uigtk3_cbt_value){0};
+	cbtv->uigtk3 = uigtk3;
+	cbtv->name = xstrdup(name);
+	cbtv->cbt = cbt;
+	cbtv->nvalues = 0;
+	uigtk3->cbtv_list = slist_prepend(uigtk3->cbtv_list, cbtv);
+	return cbtv;
+}
+
+void uigtk3_cbt_value_free(struct uigtk3_cbt_value *cbtv) {
+	if (cbtv->values) {
+		free(cbtv->values);
+	}
+	free(cbtv->name);
+	free(cbtv);
+}
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_by_name(struct ui_gtk3_interface *uigtk3,
+						  const char *name) {
+	for (struct slist *iter = uigtk3->cbtv_list; iter; iter = iter->next) {
+		struct uigtk3_cbt_value *cbtv = iter->data;
+		if (0 == strcmp(cbtv->name, name)) {
+			return cbtv;
+		}
+	}
+	return NULL;
+}
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_from_enum(struct ui_gtk3_interface *uigtk3,
+						    const char *name,
+						    struct xconfig_enum *xc_list,
+						    GCallback changed_handler) {
+	// Count entries
+	unsigned nvalues = 0;
+	for (struct xconfig_enum *iter = xc_list; iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		++nvalues;
+	}
+	// Assuming an empty list might be possible here
+
+	struct uigtk3_cbt_value *cbtv = uigtk3_cbt_value_new(uigtk3, name);
+	if (!cbtv) {
+		return NULL;
+	}
+
+	cbtv->nvalues = nvalues;
+	cbtv->values = g_malloc(nvalues * sizeof(*cbtv->values));
+	unsigned i = 0;
+	for (struct xconfig_enum *iter = xc_list; i < nvalues && iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		gtk_combo_box_text_append_text(cbtv->cbt, iter->description);
+		cbtv->values[i++] = (void *)(intptr_t)iter->value;
+	}
+
+	if (changed_handler) {
+		g_signal_connect(cbtv->cbt, "changed", changed_handler, cbtv);
+	}
+	return cbtv;
+}
+
+void *uigtk3_cbt_value_get_value(struct uigtk3_cbt_value *cbtv) {
+	if (!cbtv) {
+		return NULL;
+	}
+	gint active = gtk_combo_box_get_active(GTK_COMBO_BOX(cbtv->cbt));
+	if (active < 0 || (unsigned)active >= cbtv->nvalues) {
+		LOG_WARN("GTK+ 3 combo box index '%d' out of bounds for '%s'\n", active, cbtv->name);
+		return 0;
+	}
+	return cbtv->values[active];
+}
+
+void uigtk3_cbt_value_set_value(struct uigtk3_cbt_value *cbtv, void *value) {
+	if (!cbtv) {
+		return;
+	}
+	for (unsigned i = 0; i < cbtv->nvalues; i++) {
+		if (cbtv->values[i] == value) {
+			gtk_combo_box_set_active(GTK_COMBO_BOX(cbtv->cbt), i);
+			return;
+		}
+	}
 }

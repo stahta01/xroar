@@ -28,6 +28,7 @@
 #include "ui.h"
 #include "vo.h"
 
+struct slist;
 struct xconfig_enum;
 
 #define GTK_KBD_JS_MAX_AXES (4)
@@ -47,6 +48,21 @@ struct uigtk3_radio_menu {
 	guint merge_id;
 	GCallback callback;
 };
+
+// Combo boxes can either be over-complicated ComboBox (requiring ListStores,
+// CellRenderers and who knows what else) or ComboBoxText which doesn't have
+// _any_ data other than index and label.  Bridge the gap here by storing
+// values for a ComboBoxText.
+
+struct uigtk3_cbt_value {
+	struct ui_gtk3_interface *uigtk3;
+	char *name;
+	GtkComboBoxText *cbt;
+	unsigned nvalues;
+	void **values;
+};
+
+// All the data associated with the GTK+ UI.
 
 struct ui_gtk3_interface {
 	struct ui_interface public;
@@ -75,6 +91,9 @@ struct ui_gtk3_interface {
 	struct uigtk3_radio_menu *joy_left_radio_menu;
 	struct uigtk3_radio_menu *hkbd_layout_radio_menu;
 	struct uigtk3_radio_menu *hkbd_lang_radio_menu;
+
+	// Track Combo Boxes with Values to free
+	struct slist *cbtv_list;
 
 	// Window geometry
 	_Bool user_specified_geometry;
@@ -209,6 +228,34 @@ void uigtk3_update_radio_menu_from_enum(struct uigtk3_radio_menu *rm,
 					struct xconfig_enum *xc_enum,
 					const char *name_fmt, const char *label_fmt,
 					int selected);
+
+// Create ComboBoxText with Value store.  Added to UI list for freeing.
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_new(struct ui_gtk3_interface *,
+					      const char *name);
+
+// Create ComboBoxText with Value store from xconfig_enum
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_from_enum(struct ui_gtk3_interface *,
+						    const char *name,
+						    struct xconfig_enum *xc_list,
+						    GCallback changed_handler);
+
+struct uigtk3_cbt_value *uigtk3_cbt_value_by_name(struct ui_gtk3_interface *uigtk3,
+						  const char *name);
+
+// Free ComboBoxText with Value.  Doesn't remove it from the UI list, that's
+// done all in one go within ui_gtk3_free().
+
+void uigtk3_cbt_value_free(struct uigtk3_cbt_value *);
+
+void *uigtk3_cbt_value_get_value(struct uigtk3_cbt_value *);
+
+void uigtk3_cbt_value_set_value(struct uigtk3_cbt_value *, void *value);
+
+#define uigtk3_cbt_value_by_name_get_value(u,n) uigtk3_cbt_value_get_value(uigtk3_cbt_value_by_name((u), (n)))
+
+#define uigtk3_cbt_value_by_name_set_value(u,n,v) uigtk3_cbt_value_set_value(uigtk3_cbt_value_by_name((u), (n)), (v))
 
 void uigtk3_free_action_group(GtkActionGroup *action_group);
 
