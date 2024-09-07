@@ -61,7 +61,8 @@ enum {
 	NUM_VO_PICTURE
 };
 
-extern const char *vo_picture_name[NUM_VO_PICTURE];
+extern const char *vo_picture_name[NUM_VO_PICTURE];  // XXX DEPRECATED
+extern struct xconfig_enum vo_viewport_list[];
 
 // Composite cross-colour renderer.
 
@@ -73,6 +74,8 @@ enum {
 	VO_CMP_CCR_SIMULATED,
 	NUM_VO_CMP_CCR
 };
+
+extern struct xconfig_enum vo_cmp_ccr_list[];
 
 struct vo_cfg {
 	char *geometry;
@@ -244,10 +247,6 @@ struct vo_geometry {
 	int w, h;
 	int x, y;
 };
-
-extern struct xconfig_enum vo_cmp_ccr_list[];
-extern struct xconfig_enum vo_pixel_fmt_list[];
-extern struct xconfig_enum vo_viewport_list[];
 
 extern const uint8_t vo_cmp_lut_2bit[2][4][3];
 extern const uint8_t vo_cmp_lut_5bit[2][32][3];

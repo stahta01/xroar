@@ -48,20 +48,6 @@ struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_END() }
 };
 
-struct xconfig_enum vo_pixel_fmt_list[] = {
-	{ XC_ENUM_INT("rgba8", VO_RENDER_FMT_RGBA8, "RGBA 8-8-8-8, byte order") },
-	{ XC_ENUM_INT("argb8", VO_RENDER_FMT_ARGB8, "ARGB 8-8-8-8, byte order") },
-	{ XC_ENUM_INT("bgra8", VO_RENDER_FMT_BGRA8, "BGRA 8-8-8-8, byte order") },
-	{ XC_ENUM_INT("abgr8", VO_RENDER_FMT_ABGR8, "ABGR 8-8-8-8, byte order") },
-	{ XC_ENUM_INT("rgb565", VO_RENDER_FMT_RGB565, "RGB 5-6-5") },
-	{ XC_ENUM_INT("rgba4", VO_RENDER_FMT_RGBA4, "RGBA 4-4-4") },
-	{ XC_ENUM_INT("rgba32", VO_RENDER_FMT_RGBA32, "RGBA 8-8-8-8, host 32-bit packing") },
-	{ XC_ENUM_INT("argb32", VO_RENDER_FMT_ARGB32, "ARGB 8-8-8-8, host 32-bit packing") },
-	{ XC_ENUM_INT("bgra32", VO_RENDER_FMT_BGRA32, "BGRA 8-8-8-8, host 32-bit packing") },
-	{ XC_ENUM_INT("abgr32", VO_RENDER_FMT_ABGR32, "ABGR 8-8-8-8, host 32-bit packing") },
-	{ XC_ENUM_END() }
-};
-
 struct xconfig_enum vo_viewport_list[] = {
 	{ XC_ENUM_INT("zoomed", VO_PICTURE_ZOOMED, "Zoomed (512x384)") },
 	{ XC_ENUM_INT("title", VO_PICTURE_TITLE, "Title (640x480)") },

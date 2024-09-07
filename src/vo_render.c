@@ -44,22 +44,69 @@
 
 #define MAX_FILTER_ORDER (15)
 
+// Pixel formats supported
+
+struct xconfig_enum vo_pixel_fmt_list[] = {
+	{ XC_ENUM_INT("rgba8", VO_RENDER_FMT_RGBA8, "RGBA 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("argb8", VO_RENDER_FMT_ARGB8, "ARGB 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("bgra8", VO_RENDER_FMT_BGRA8, "BGRA 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("abgr8", VO_RENDER_FMT_ABGR8, "ABGR 8-8-8-8, byte order") },
+	{ XC_ENUM_INT("rgb565", VO_RENDER_FMT_RGB565, "RGB 5-6-5") },
+	{ XC_ENUM_INT("rgba4", VO_RENDER_FMT_RGBA4, "RGBA 4-4-4") },
+	{ XC_ENUM_INT("rgba32", VO_RENDER_FMT_RGBA32, "RGBA 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("argb32", VO_RENDER_FMT_ARGB32, "ARGB 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("bgra32", VO_RENDER_FMT_BGRA32, "BGRA 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_INT("abgr32", VO_RENDER_FMT_ABGR32, "ABGR 8-8-8-8, host 32-bit packing") },
+	{ XC_ENUM_END() }
+};
+
+// Pixel rates - used as sampling frequency when filtering
+
+// XXX DEPRECATED
 const char *vo_render_fs_name[NUM_VO_RENDER_FS] = {
 	"14.31818 MHz",
 	"14.218 MHz",
 	"14.23753 MHz",
 };
 
+struct xconfig_enum vo_render_fs_list[] = {
+	{ XC_ENUM_INT("ntsc", VO_RENDER_FS_14_31818, "14.31818 MHz") },
+	{ XC_ENUM_INT("pal-dragon", VO_RENDER_FS_14_218, "14.218 MHz") },
+	{ XC_ENUM_INT("pal-coco", VO_RENDER_FS_14_23753, "14.23753 MHz") },
+	{ XC_ENUM_END() }
+};
+
+// Colour subcarrier frequencies
+
+// XXX DEPRECATED
 const char *vo_render_fsc_name[NUM_VO_RENDER_FSC] = {
 	"4.43361875 MHz",
 	"3.579545 MHz",
 };
 
+struct xconfig_enum vo_render_fsc_list[] = {
+	{ XC_ENUM_INT("pal", VO_RENDER_FSC_4_43361875, "4.43361875 MHz") },
+	{ XC_ENUM_INT("ntsc", VO_RENDER_FSC_3_579545, "3.579545 MHz") },
+	{ XC_ENUM_END() }
+};
+
+// Colour systems
+
+// XXX DEPRECATED
 const char *vo_render_system_name[NUM_VO_RENDER_SYSTEM] = {
 	"PAL-I",
 	"PAL-M",
 	"NTSC",
 };
+
+struct xconfig_enum vo_render_system_list[] = {
+	{ XC_ENUM_INT("pal-i", VO_RENDER_SYSTEM_PAL_I, "PAL-I") },
+	{ XC_ENUM_INT("pal-m", VO_RENDER_SYSTEM_PAL_M, "PAL-M") },
+	{ XC_ENUM_INT("ntsc", VO_RENDER_SYSTEM_NTSC, "NTSC") },
+	{ XC_ENUM_END() }
+};
+
+// Map (Fs, Fsc) to sets of ratios used to generate burst tables
 
 static const struct {
 	const int tmax;     // number of samples at F(s)
