@@ -1178,6 +1178,7 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
+	messenger_shutdown();
 	if (xroar.auto_kbd) {
 		auto_kbd_free(xroar.auto_kbd);
 		xroar.auto_kbd = NULL;

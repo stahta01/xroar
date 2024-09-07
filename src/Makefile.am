@@ -39,6 +39,7 @@ xroar_SOURCES = \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
 	machine.c machine.h \
+	messenger.c messenger.h \
 	module.c module.h \
 	mos6551.c mos6551.h \
 	ntsc.c ntsc.h \
