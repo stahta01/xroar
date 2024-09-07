@@ -27,6 +27,7 @@
 #include <gtk/gtk.h>
 
 #include "ao.h"
+#include "machine.h"
 #include "sound.h"
 #include "vo.h"
 #include "xroar.h"
@@ -42,6 +43,7 @@ static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data)
 static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data);
 static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
+static void vo_change_tv_input(GtkComboBox *widget, gpointer user_data);
 static void vo_change_picture(GtkComboBox *widget, gpointer user_data);
 static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data);
 static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data);
@@ -59,6 +61,7 @@ void gtk3_vo_create_window(struct ui_gtk3_interface *uigtk3) {
 	uigtk3_add_from_resource(uigtk3, "/uk/org/6809/xroar/gtk3/video_options.ui");
 
 	// Build lists
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_tv_input", machine_tv_input_list, G_CALLBACK(vo_change_tv_input));
 	uigtk3_cbt_value_from_enum(uigtk3, "cbt_picture", vo_viewport_list, G_CALLBACK(vo_change_picture));
 	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_renderer", vo_cmp_ccr_list, G_CALLBACK(vo_change_cmp_renderer));
 	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_fs", vo_render_fs_list, G_CALLBACK(vo_change_cmp_fs));
@@ -143,6 +146,10 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 	}
 }
 
+void gtk3_vo_update_tv_input(struct ui_gtk3_interface *uigtk3, int value) {
+	uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_tv_input", (void *)(intptr_t)value);
+}
+
 void gtk3_vo_update_cmp_renderer(struct ui_gtk3_interface *uigtk3, int value) {
 	uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_renderer", (void *)(intptr_t)value);
 }
@@ -205,6 +212,13 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 	if (xroar.vo_interface) {
 		DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, value);
 	}
+}
+
+static void vo_change_tv_input(GtkComboBox *widget, gpointer user_data) {
+	(void)widget;
+	struct uigtk3_cbt_value *cbtv = user_data;
+	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
+	xroar_set_tv_input(0, value);
 }
 
 static void vo_change_picture(GtkComboBox *widget, gpointer user_data) {

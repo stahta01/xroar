@@ -170,19 +170,20 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 	xroar_set_fullscreen(0, val);
 }
 
-static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)action;
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_ccr(0, val);
-	gtk3_vo_update_cmp_renderer(uigtk3, val);
+	xroar_set_tv_input(0, val);
+	gtk3_vo_update_tv_input(uigtk3, val);
 }
 
-static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
+static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	(void)action;
-	xroar_set_tv_input(0, val);
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	xroar_set_ccr(0, val);
+	gtk3_vo_update_cmp_renderer(uigtk3, val);
 }
 
 static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -661,6 +662,7 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 
 	case ui_tag_tv_input:
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->tv_input_radio_menu, value);
+		gtk3_vo_update_tv_input(uigtk3, value);
 		break;
 
 	case ui_tag_gain:

@@ -27,6 +27,7 @@ void gtk3_vo_toggle_window(GtkToggleAction *current, gpointer user_data);
 void gtk3_vo_update_state(struct ui_gtk3_interface *,
 			  int tag, int value, const void *data);
 
+void gtk3_vo_update_tv_input(struct ui_gtk3_interface *uigtk3, int value);
 void gtk3_vo_update_cmp_renderer(struct ui_gtk3_interface *uigtk3, int value);
 
 #endif
