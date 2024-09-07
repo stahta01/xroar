@@ -92,6 +92,9 @@ struct ui_gtk3_interface {
 	struct uigtk3_radio_menu *hkbd_layout_radio_menu;
 	struct uigtk3_radio_menu *hkbd_lang_radio_menu;
 
+	// Track radio menus to free
+	struct slist *rm_list;
+
 	// Track Combo Boxes with Values to free
 	struct slist *cbtv_list;
 

@@ -588,15 +588,7 @@ static void *ui_gtk3_new(void *cfg) {
 static void ui_gtk3_free(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	DELEGATE_SAFE_CALL(uigtk3->public.filereq_interface->free);
-	uigtk3_radio_menu_free(uigtk3->hkbd_lang_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->hkbd_layout_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->joy_left_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->joy_right_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->keymap_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->cart_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->machine_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->ccr_radio_menu);
-	uigtk3_radio_menu_free(uigtk3->tv_input_radio_menu);
+	slist_free_full(uigtk3->rm_list, (slist_free_func)uigtk3_radio_menu_free);
 	slist_free_full(uigtk3->cbtv_list, (slist_free_func)uigtk3_cbt_value_free);
 	g_object_unref(uigtk3->builder);
 	gtk_widget_destroy(uigtk3->drawing_area);

@@ -339,6 +339,7 @@ struct uigtk3_radio_menu *uigtk3_radio_menu_new(struct ui_gtk3_interface *uigtk3
 	gtk_ui_manager_insert_action_group(uigtk3->menu_manager, rm->action_group, -1);
 	rm->merge_id = gtk_ui_manager_new_merge_id(uigtk3->menu_manager);
 	rm->callback = callback;
+	uigtk3->rm_list = slist_prepend(uigtk3->rm_list, rm);
 	return rm;
 }
 
