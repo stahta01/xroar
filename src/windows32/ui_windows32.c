@@ -42,6 +42,7 @@
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
+#include "messenger.h"
 #include "module.h"
 #include "sound.h"
 #include "tape.h"
@@ -90,6 +91,8 @@ static void windows32_update_machine_menu(void *);
 static void windows32_update_cartridge_menu(void *);
 static void windows32_update_joystick_menus(void *);
 
+static void uiw32_ui_state_notify(void *, int tag, void *smsg);
+
 static void *ui_windows32_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
@@ -107,6 +110,9 @@ static void *ui_windows32_new(void *cfg) {
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uiw32);
 	ui->update_joystick_menus = DELEGATE_AS0(void, windows32_update_joystick_menus, uiw32);
 
+	// Register with messenger
+	uiw32->msgr_client_id = messenger_client_register();
+
 	windows32_create_menus(uiw32);
 
 	if (!sdl_vo_init(uisdl2)) {
@@ -123,6 +129,7 @@ static void *ui_windows32_new(void *cfg) {
 
 static void ui_windows32_free(void *sptr) {
 	struct ui_windows32_interface *uiw32 = sptr;
+	messenger_client_unregister(uiw32->msgr_client_id);
 	DestroyMenu(uiw32->top_menu);
 	ui_sdl_free(uiw32);
 }
@@ -652,6 +659,19 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	}
 
+}
+
+static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_windows32_interface *uiw32 = sptr;
+	struct ui_state_message *msg = smsg;
+	int value = msg->value;
+	//const void *data = msg->data;
+
+	switch (tag) {
+
+	default:
+		break;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

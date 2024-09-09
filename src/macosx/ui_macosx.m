@@ -42,6 +42,7 @@
 #include "joystick.h"
 #include "keyboard.h"
 #include "machine.h"
+#include "messenger.h"
 #include "module.h"
 #include "printer.h"
 #include "tape.h"
@@ -1127,6 +1128,7 @@ int main(int argc, char **argv) {
 // XRoar UI definition
 
 static void *ui_cocoa_new(void *cfg);
+static void ui_cocoa_free(void *);
 
 struct ui_module ui_cocoa_module = {
 	.common = { .name = "macosx", .description = "Mac OS X+ SDL2 UI",
@@ -1139,6 +1141,7 @@ static void cocoa_update_machine_menu(void *);
 static void cocoa_update_cartridge_menu(void *);
 static void cocoa_update_joystick_menus(void *);
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data);
+static void cocoa_ui_state_notify(void *, int tag, void *smsg);
 
 static void *ui_cocoa_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -1153,10 +1156,14 @@ static void *ui_cocoa_new(void *cfg) {
 	struct ui_sdl2_interface *uisdl2 = &uimac->ui_sdl2_interface;
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
+	ui->free = DELEGATE_AS0(void, ui_cocoa_free, uimac);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uimac);
 	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uimac);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uimac);
 	ui->update_joystick_menus = DELEGATE_AS0(void, cocoa_update_joystick_menus, uimac);
+
+	// Register with messenger
+	uimac->msgr_client_id = messenger_client_register();
 
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
@@ -1168,6 +1175,11 @@ static void *ui_cocoa_new(void *cfg) {
 	}
 
 	return uisdl2;
+}
+
+static void ui_cocoa_free(void *sptr) {
+	struct ui_macosx_interface *uimac = sptr;
+	messenger_client_unregister(uimac->msgr_client_id);
 }
 
 static void cocoa_update_machine_menu(void *sptr) {
@@ -1403,6 +1415,19 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 	default:
 		break;
 
+	}
+}
+
+static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_macosx_interface *uimac = sptr;
+	struct ui_state_message *uimsg = smsg;
+	(void)uimac;
+	(void)uimsg;
+
+	switch (tag) {
+
+	default:
+		break;
 	}
 }
 

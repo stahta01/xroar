@@ -40,6 +40,7 @@
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
+#include "messenger.h"
 #include "module.h"
 #include "ui.h"
 #include "vdrive.h"
@@ -97,6 +98,8 @@ static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; str
 static void insert_disk2(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 1); }
 static void insert_disk3(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 2); }
 static void insert_disk4(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 3); }
+
+static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg);
 
 static void save_snapshot(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
@@ -405,6 +408,9 @@ static void *ui_gtk3_new(void *cfg) {
 	ui->run = DELEGATE_AS0(void, ui_gtk3_run, uigtk3);
 	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk3_update_state, uigtk3);
 
+	// Register with messenger
+	uigtk3->msgr_client_id = messenger_client_register();
+
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
 	g_signal_connect(uigtk3->top_window, "destroy", G_CALLBACK(ui_gtk3_destroy), (gpointer)(intptr_t)0);
@@ -549,6 +555,7 @@ static void ui_gtk3_free(void *sptr) {
 	g_object_unref(uigtk3->builder);
 	gtk_widget_destroy(uigtk3->drawing_area);
 	gtk_widget_destroy(uigtk3->top_window);
+	messenger_client_unregister(uigtk3->msgr_client_id);
 	// we can't actually have more than one, but i also can't stop myself
 	// coding it like this:
 	if (global_uigtk3 == uigtk3)
@@ -685,6 +692,12 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	default:
 		break;
 	}
+}
+
+static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct ui_state_message *msg = smsg;
+	ui_gtk3_update_state(uigtk3, tag, msg->value, msg->data);
 }
 
 // Dynamic machine menu

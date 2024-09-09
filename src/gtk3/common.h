@@ -98,6 +98,9 @@ struct ui_gtk3_interface {
 	// Track Combo Boxes with Values to free
 	struct slist *cbtv_list;
 
+	// Top level messenger client id
+	int msgr_client_id;
+
 	// Window geometry
 	_Bool user_specified_geometry;
 

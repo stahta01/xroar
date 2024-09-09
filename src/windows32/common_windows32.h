@@ -33,6 +33,9 @@ struct xconfig_enum;
 struct ui_windows32_interface {
 	struct ui_sdl2_interface ui_sdl2_interface;
 
+	// Messenger client ID
+	int msgr_client_id;
+
 	HMENU top_menu;
 	HMENU machine_menu;
 	HMENU cartridge_menu;

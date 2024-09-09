@@ -29,6 +29,9 @@
 struct ui_macosx_interface {
 	struct ui_sdl2_interface ui_sdl2_interface;
 
+	// Top level messenger client id
+	int msgr_client_id;
+
 	// UI state tracking
 
 	struct {
