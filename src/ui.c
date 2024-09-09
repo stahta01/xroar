@@ -18,9 +18,15 @@
 
 #include "top-config.h"
 
-#include <stdlib.h>
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "array.h"
+
+#include "logging.h"
+#include "messenger.h"
 #include "module.h"
 #include "ui.h"
 #include "xconfig.h"
@@ -100,3 +106,44 @@ struct xconfig_enum ui_gl_filter_list[] = {
 	{ XC_ENUM_INT("linear", UI_GL_FILTER_LINEAR, "Linear filter") },
 	{ XC_ENUM_END() }
 };
+
+// We want a message group per tag, as otherwise the blocking behaviour would
+// prevent messages about one tag affecting others.  Note: not sure if that's
+// actually needed...
+
+int ui_tag_to_group_id[ui_num_tags];
+
+// We make up a group name for each tag based on its tag value.  Nothing uses
+// the names directly (we abstract group joins by id) so to they don't need to
+// be human-readable.
+
+static const char *ui_group_by_tag(int tag) {
+	static char group[18];
+	assert(tag >= 0 && tag < ui_num_tags);
+	snprintf(group, sizeof(group), "uimsg-%d", tag);
+	return group;
+}
+
+void ui_init(void) {
+	for (unsigned i = 0; i < ui_num_tags; ++i) {
+		ui_tag_to_group_id[i] = -1;
+	}
+	// Get an ID for each group.  No need to register as a client, we only
+	// ever proxy messages.
+	for (int tag = 0; tag < ui_num_tags; ++tag) {
+		const char *group = ui_group_by_tag(tag);
+		ui_tag_to_group_id[tag] = messenger_join_group(-1, group, MESSENGER_NO_NOTIFY_DELEGATE);
+	}
+}
+
+int ui_messenger_join_group(int client_id, int tag, messenger_notify_delegate notify) {
+	const char *group = ui_group_by_tag(tag);
+	return messenger_join_group(client_id, group, notify);
+}
+
+int ui_messenger_preempt_group(int client_id, int tag, messenger_notify_delegate notify) {
+	const char *group = ui_group_by_tag(tag);
+	return messenger_preempt_group(client_id, group, notify);
+}
+
+extern inline void ui_update_state(int client_id, int tag, int value, const void *data);

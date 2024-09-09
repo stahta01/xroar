@@ -897,6 +897,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+	// Initialise non-module UI stuff.  This may actually simplify a lot
+	// of things eventually.
+	ui_init();
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	// Select a UI module.
 	struct ui_module *ui_module = (struct ui_module *)module_select_by_arg((struct module * const *)ui_module_list, private_cfg.ui_module);
 	if (ui_module == NULL) {

@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 
+#include "messenger.h"
 #include "module.h"
 #include "vo.h"
 #include "xconfig.h"
@@ -116,6 +117,7 @@ enum ui_tag {
 	ui_tag_print_count,  // chars printed since last flush
 	// Misc
 	ui_tag_about,
+	ui_num_tags
 };
 
 /* Actions (simple responses to user input) are probably handled internally,
@@ -197,6 +199,24 @@ struct ui_interface {
 	struct vo_interface *vo_interface;
 };
 
+struct ui_state_message {
+	int value;
+	const void *data;
+};
+
+extern int ui_tag_to_group_id[ui_num_tags];
+
 extern struct ui_module * const *ui_module_list;
+
+void ui_init(void);
+
+// Wrappers around messenger_join_group() et al. to join by UI tag
+int ui_messenger_join_group(int client_id, int tag, messenger_notify_delegate notify);
+int ui_messenger_preempt_group(int client_id, int tag, messenger_notify_delegate notify);
+
+inline void ui_update_state(int client_id, int tag, int value, const void *data) {
+	struct ui_state_message msg = { .value = value, .data = data };
+	messenger_send_message(ui_tag_to_group_id[tag], client_id, tag, &msg);
+}
 
 #endif
