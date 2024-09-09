@@ -365,6 +365,10 @@ static int read_v1_snapshot(const char *filename) {
 	if (buffer[0] != 'X') {
 		old_set_registers(xroar.machine, buffer + 3);
 	}
+
+	// Cache values to set once done
+	int keymap = -1;
+
 	struct cart_config *cart_config = NULL;
 	while ((section = fs_read_uint8(fd)) >= 0) {
 		unsigned size = fs_read_uint16(fd);
@@ -386,8 +390,7 @@ static int read_v1_snapshot(const char *filename) {
 			case ID_KEYBOARD_MAP:
 				// Deprecated: Keyboard map
 				if (size < 1) break;
-				tmp = fs_read_uint8(fd);
-				xroar_set_keyboard_type(1, tmp);
+				keymap = fs_read_uint8(fd);
 				size--;
 				break;
 			case ID_REGISTER_DUMP:
@@ -713,6 +716,9 @@ static int read_v1_snapshot(const char *filename) {
 		// embedded cart config may have changed description.  more
 		// importantly, the UI won't know about the id.
 		xroar_set_cart(1, cart_config->name);
+	}
+	if (keymap >= 0) {
+		ui_update_state(-1, ui_tag_keymap, keymap, NULL);
 	}
 	return 0;
 }

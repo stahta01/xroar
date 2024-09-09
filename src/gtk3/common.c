@@ -260,6 +260,17 @@ void uigtk3_radio_menu_free(struct uigtk3_radio_menu *rm) {
 	g_free(rm);
 }
 
+void uigtk3_radio_menu_set_current_value(struct uigtk3_radio_menu *rm, gint v) {
+	if (!rm)
+		return;
+	GList *list = gtk_action_group_list_actions(rm->action_group);
+	if (!list)
+		return;
+	GtkRadioAction *ra = GTK_RADIO_ACTION(list->data);
+	g_list_free(list);
+	gtk_radio_action_set_current_value(ra, v);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // [Re-]build a menu from an xconfig_enum

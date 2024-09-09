@@ -196,6 +196,7 @@ static void mc10_vdg_update_mode(void *sptr);
 
 static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
+static void mc10_ui_set_keymap(void *, int tag, void *smsg);
 static void mc10_ui_set_text_invert(void *, int tag, void *smsg);
 static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_set_frameskip(struct machine *m, unsigned fskip);
@@ -378,6 +379,7 @@ static _Bool mc10_finish(struct part *p) {
 
 	// Join the ui messenger groups we're interested in
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_text_invert, mp));
+	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_keymap, mp));
 
 	// ROM
 	mp->ROM0 = rombank_new(8, 8192, 1);
@@ -500,7 +502,7 @@ static _Bool mc10_finish(struct part *p) {
 	// Keyboard interface
 	mp->keyboard.interface = keyboard_interface_new();
 	mp->keyboard.interface->update = DELEGATE_AS0(void, mc10_keyboard_update, mp);
-	keyboard_set_keymap(mp->keyboard.interface, m->keyboard.type);
+	ui_update_state(-1, ui_tag_keymap, m->keyboard.type, NULL);
 
 	// Printer interface
 	mp->printer_interface = printer_interface_new();
@@ -615,7 +617,6 @@ static void mc10_attach_interface(struct part *p, const char *ifname, void *intf
 static void mc10_reset(struct machine *m, _Bool hard) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	struct machine_config *mc = m->config;
-	xroar_set_keyboard_type(1, xroar.machine_config->keymap);
 	if (hard) {
 		ram_clear(mp->RAM0, mc->ram_init);
 		if (mp->RAM1)
@@ -840,6 +841,29 @@ static void mc10_dump_ram(struct machine *m, FILE *fd) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
+	struct machine_mc10 *mp = sptr;
+	struct machine *m = &mp->machine;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_keymap);
+
+	int type = m->keyboard.type;
+	switch (uimsg->value) {
+	case UI_NEXT:
+		type = (type == dkbd_layout_mc10) ? dkbd_layout_alice : dkbd_layout_mc10;
+		break;
+	case UI_AUTO:
+		type = m->config->keymap;
+		break;
+	default:
+		type = uimsg->value;
+		break;
+	}
+	m->keyboard.type = type;
+	keyboard_set_keymap(mp->keyboard.interface, type);
+	uimsg->value = type;
+}
 
 static void mc10_ui_set_text_invert(void *sptr, int tag, void *smsg) {
 	struct machine_mc10 *mp = sptr;

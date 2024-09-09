@@ -216,7 +216,6 @@ void xroar_set_printer_destination(_Bool notify, int dest);
 void xroar_set_printer_file(_Bool notify, const char *filename);
 void xroar_set_printer_pipe(_Bool notify, const char *pipe);
 void xroar_flush_printer(void);
-void xroar_set_keyboard_type(_Bool notify, int action);
 void xroar_set_hkbd_layout(_Bool notify, int hk_layout);
 void xroar_set_hkbd_lang(_Bool notify, int hk_lang);
 void xroar_set_kbd_translate(_Bool notify, int kbd_translate);

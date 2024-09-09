@@ -1667,7 +1667,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 	case hk_sym_k:
-		xroar_set_keyboard_type(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_keymap, UI_NEXT, NULL);
 		return;
 
 #ifndef HAVE_WASM

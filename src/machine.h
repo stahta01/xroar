@@ -238,7 +238,6 @@ struct machine {
 	void (*bp_add_n)(struct machine *m, struct machine_bp *list, int n, void *sptr);
 	void (*bp_remove_n)(struct machine *m, struct machine_bp *list, int n);
 
-	int (*set_keyboard_type)(struct machine *m, int action);
 	_Bool (*set_pause)(struct machine *m, int action);
 	void *(*get_interface)(struct machine *m, const char *ifname);
 	void (*set_composite)(struct machine *, _Bool);

@@ -202,10 +202,10 @@ static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer u
 }
 
 static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)action;
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_keyboard_type(0, val);
+	ui_update_state(-1, ui_tag_keymap, val, NULL);
 }
 
 static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -412,6 +412,7 @@ static void *ui_gtk3_new(void *cfg) {
 	uigtk3->msgr_client_id = messenger_client_register();
 
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
@@ -649,10 +650,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 
 	// Keyboard
 
-	case ui_tag_keymap:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->keymap_radio_menu, value);
-		break;
-
 	case ui_tag_hkbd_layout:
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->hkbd_layout_radio_menu, value);
 		break;
@@ -710,6 +707,12 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_vdg_inverse:
 		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE);
+		break;
+
+	// Keyboard
+
+	case ui_tag_keymap:
+		uigtk3_radio_menu_set_current_value(uigtk3->keymap_radio_menu, value);
 		break;
 
 	default:

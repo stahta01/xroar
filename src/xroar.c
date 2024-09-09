@@ -1775,16 +1775,6 @@ void xroar_flush_printer(void) {
 	printer_flush(xroar.printer_interface);
 }
 
-void xroar_set_keyboard_type(_Bool notify, int action) {
-	int type = xroar.machine_config->keymap;
-	if (xroar.machine->set_keyboard_type) {
-		type = xroar.machine->set_keyboard_type(xroar.machine, action);
-	}
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_keymap, type, NULL);
-	}
-}
-
 void xroar_set_hkbd_layout(_Bool notify, int hk_layout) {
 	xroar.cfg.kbd.layout = hk_layout;
 	hk_update_keymap();

@@ -301,7 +301,7 @@ static void dragon_trap(void *sptr);
 static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
-static int dragon_set_keyboard_type(struct machine *m, int action);
+static void dragon_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool dragon_set_pause(struct machine *m, int state);
 static void dragon_ui_set_text_invert(void *, int tag, void *smsg);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
@@ -403,7 +403,6 @@ static void dragon_allocate_common(struct machine_dragon_common *md) {
 	m->bp_add_n = dragon_bp_add_n;
 	m->bp_remove_n = dragon_bp_remove_n;
 
-	m->set_keyboard_type = dragon_set_keyboard_type;
 	m->set_pause = dragon_set_pause;
 	m->get_interface = dragon_get_interface;
 	m->set_frameskip = dragon_set_frameskip;
@@ -499,6 +498,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 
 	// Join the ui messenger groups we're interested in
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_text_invert, md));
+	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_keymap, md));
 
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
@@ -738,7 +738,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	} else {
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_coco_basic);
 	}
-	keyboard_set_keymap(md->keyboard.interface, m->keyboard.type);
+	ui_update_state(-1, ui_tag_keymap, m->keyboard.type, NULL);
 
 	// Printer interface
 	md->printer_interface = printer_interface_new();
@@ -1004,7 +1004,6 @@ static void dragon_remove_cart(struct machine *m) {
 static void dragon_reset(struct machine *m, _Bool hard) {
 	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
 	struct machine_config *mc = m->config;
-	xroar_set_keyboard_type(1, m->keyboard.type);
 	if (hard) {
 		ram_clear(md->RAM, mc->ram_init);
 	}
@@ -1110,11 +1109,15 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int dragon_set_keyboard_type(struct machine *m, int action) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+static void dragon_ui_set_keymap(void *sptr, int tag, void *smsg) {
+	struct machine_dragon_common *md = sptr;
+	struct machine *m = &md->public;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_keymap);
+
 	int type = m->keyboard.type;
-	switch (action) {
-	case XROAR_NEXT:
+	switch (uimsg->value) {
+	case UI_NEXT:
 		if (type == m->config->keymap) {
 			switch (m->config->keymap) {
 			case dkbd_layout_dragon:
@@ -1129,16 +1132,16 @@ static int dragon_set_keyboard_type(struct machine *m, int action) {
 			type = m->config->keymap;
 		}
 		break;
-	case XROAR_AUTO:
+	case UI_AUTO:
 		type = m->config->keymap;
 		break;
 	default:
-		type = action;
+		type = uimsg->value;
 		break;
 	}
 	m->keyboard.type = type;
 	keyboard_set_keymap(md->keyboard.interface, type);
-	return type;
+	uimsg->value = type;
 }
 
 static _Bool dragon_set_pause(struct machine *m, int state) {

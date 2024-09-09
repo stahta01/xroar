@@ -288,8 +288,7 @@ int cocoa_super_all_keys = 0;
 
 	/* Keyboard: */
 	case ui_tag_keymap:
-		uimac->machine.keymap = value;
-		xroar_set_keyboard_type(0, value);
+		ui_update_state(-1, ui_tag_keymap, value, NULL);
 		break;
 
 	// Tool
@@ -1165,6 +1164,7 @@ static void *ui_cocoa_new(void *cfg) {
 	uimac->msgr_client_id = messenger_client_register();
 
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
@@ -1377,10 +1377,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	/* Keyboard */
 
-	case ui_tag_keymap:
-		uimac->machine.keymap = value;
-		break;
-
 	case ui_tag_hkbd_layout:
 		uimac->kbd.layout = value;
 		break;
@@ -1426,6 +1422,12 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_vdg_inverse:
 		uimac->vo.invert_text = value;
+		break;
+
+	// Keyboard
+
+	case ui_tag_keymap:
+		uimac->machine.keymap = value;
 		break;
 
 	default:

@@ -232,6 +232,8 @@ struct uigtk3_radio_menu *uigtk3_radio_menu_new(struct ui_gtk3_interface *uigtk3
 
 void uigtk3_radio_menu_free(struct uigtk3_radio_menu *);
 
+void uigtk3_radio_menu_set_current_value(struct uigtk3_radio_menu *rm, gint v);
+
 void uigtk3_update_radio_menu_from_enum(struct uigtk3_radio_menu *rm,
 					struct xconfig_enum *xc_enum,
 					const char *name_fmt, const char *label_fmt,
