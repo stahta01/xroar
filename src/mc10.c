@@ -38,6 +38,7 @@
 #include "machine.h"
 #include "mc6801/mc6801.h"
 #include "mc6847/mc6847.h"
+#include "messenger.h"
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
@@ -47,6 +48,7 @@
 #include "serialise.h"
 #include "sound.h"
 #include "tape.h"
+#include "ui.h"
 #include "vdg_palette.h"
 #include "vo.h"
 #include "xroar.h"
@@ -89,6 +91,9 @@ struct machine_mc10 {
 		// CPU on appropriate port write.
 		unsigned rows;
 	} keyboard;
+
+	// UI message receipt
+	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
 	_Bool has_bas;
@@ -369,6 +374,9 @@ static _Bool mc10_finish(struct part *p) {
 		return 0;
 	}
 
+	// Register as a messenger client
+	mp->msgr_client_id = messenger_client_register();
+
 	// ROM
 	mp->ROM0 = rombank_new(8, 8192, 1);
 
@@ -508,10 +516,12 @@ static _Bool mc10_finish(struct part *p) {
 // Called from part_free(), which handles freeing the struct itself
 static void mc10_free(struct part *p) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	// Stop receiving any UI state updates
+	messenger_client_unregister(mp->msgr_client_id);
 #ifdef WANT_GDB_TARGET
 	/* if (mp->gdb_interface) {
-		gdb_interface_free(mp->gdb_interface);
-	} */
+	   gdb_interface_free(mp->gdb_interface);
+	   } */
 #endif
 	if (mp->keyboard.interface) {
 		keyboard_interface_free(mp->keyboard.interface);

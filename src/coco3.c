@@ -47,6 +47,7 @@
 #include "mc6809/hd6309.h"
 #include "mc6809/mc6809.h"
 #include "mc6821.h"
+#include "messenger.h"
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
@@ -57,6 +58,7 @@
 #include "sound.h"
 #include "tape.h"
 #include "tcc1014/tcc1014.h"
+#include "ui.h"
 #include "vo.h"
 #include "xroar.h"
 
@@ -174,6 +176,9 @@ struct machine_coco3 {
 		uint32_t mmu_bank[16];
 		uint32_t vram_bank;
 	} dat;
+
+	// UI message receipt
+	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
 	_Bool has_secb;
@@ -499,6 +504,9 @@ static _Bool coco3_finish(struct part *p) {
 		return 0;
 	}
 
+	// Register as a messenger client
+	mcc3->msgr_client_id = messenger_client_register();
+
 	// ROM
 	mcc3->ROM0 = rombank_new(8, 32768, 1);
 
@@ -670,6 +678,8 @@ static _Bool coco3_finish(struct part *p) {
 
 static void coco3_free(struct part *p) {
 	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	// Stop receiving any UI state updates
+	messenger_client_unregister(mcc3->msgr_client_id);
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
 		gdb_interface_free(mcc3->gdb_interface);

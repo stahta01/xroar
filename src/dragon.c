@@ -44,6 +44,7 @@
 #include "mc6821.h"
 #include "mc6847/mc6847.h"
 #include "mc6883.h"
+#include "messenger.h"
 #include "ntsc.h"
 #include "part.h"
 #include "printer.h"
@@ -53,6 +54,7 @@
 #include "serialise.h"
 #include "sound.h"
 #include "tape.h"
+#include "ui.h"
 #include "vdg_palette.h"
 #include "vo.h"
 #include "xroar.h"
@@ -110,6 +112,9 @@ struct machine_dragon_common {
 	// NTSC colour bursts
 	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
 	unsigned ntsc_burst_mod;
+
+	// UI message receipt
+	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
 	_Bool has_bas, has_extbas, has_altbas, has_combined;
@@ -490,6 +495,9 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 		return 0;
 	}
 
+	// Register as a messenger client
+	md->msgr_client_id = messenger_client_register();
+
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
 	md->has_combined = md->has_extbas = md->has_bas = md->has_altbas = 0;
@@ -819,6 +827,8 @@ static _Bool dragon_finish(struct part *p) {
 // Called from part_free(), which handles freeing the struct itself
 static void dragon_free_common(struct part *p) {
 	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	// Stop receiving any UI state updates
+	messenger_client_unregister(md->msgr_client_id);
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);
