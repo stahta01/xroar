@@ -196,7 +196,7 @@ static void mc10_vdg_update_mode(void *sptr);
 
 static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
-static _Bool mc10_set_inverted_text(struct machine *m, int action);
+static void mc10_ui_set_text_invert(void *, int tag, void *smsg);
 static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_set_frameskip(struct machine *m, unsigned fskip);
 static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit);
@@ -259,7 +259,6 @@ static struct part *mc10_allocate(void) {
 	m->op_rts = mc10_op_rts;
 	m->dump_ram = mc10_dump_ram;
 
-	m->set_inverted_text = mc10_set_inverted_text;
 	m->get_interface = mc10_get_interface;
 	m->set_frameskip = mc10_set_frameskip;
 	m->set_ratelimit = mc10_set_ratelimit;
@@ -377,6 +376,9 @@ static _Bool mc10_finish(struct part *p) {
 	// Register as a messenger client
 	mp->msgr_client_id = messenger_client_register();
 
+	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_text_invert, mp));
+
 	// ROM
 	mp->ROM0 = rombank_new(8, 8192, 1);
 
@@ -437,7 +439,7 @@ static _Bool mc10_finish(struct part *p) {
         mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
         mp->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, mc10_vdg_render_line, mp);
         mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
-        mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
+	ui_update_state(-1, ui_tag_vdg_inverse, mp->inverted_text, NULL);
 
 	// Active area is constant
 	{
@@ -839,20 +841,14 @@ static void mc10_dump_ram(struct machine *m, FILE *fd) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool mc10_set_inverted_text(struct machine *m, int action) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	switch (action) {
-	case 0: case 1:
-		mp->inverted_text = action;
-		break;
-	case -2:
-		mp->inverted_text = !mp->inverted_text;
-		break;
-	default:
-		break;
-	}
+static void mc10_ui_set_text_invert(void *sptr, int tag, void *smsg) {
+	struct machine_mc10 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_vdg_inverse);
+
+	mp->inverted_text = ui_msg_adjust_value_range(uimsg, mp->inverted_text, 0,
+						      0, 1, UI_ADJUST_FLAG_CYCLE);
 	mc6847_set_inverted_text(mp->VDG, mp->inverted_text);
-	return mp->inverted_text;
 }
 
 static void *mc10_get_interface(struct machine *m, const char *ifname) {

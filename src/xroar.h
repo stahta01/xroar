@@ -203,7 +203,6 @@ _Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_insert_hd_file(int drive, const char *filename);
 void xroar_set_ccr(_Bool notify, int action);
 void xroar_set_tv_input(_Bool notify, int action);
-void xroar_set_vdg_inverted_text(_Bool notify, int action);
 void xroar_set_picture(_Bool notify, int action);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);

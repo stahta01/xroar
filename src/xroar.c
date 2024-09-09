@@ -1090,7 +1090,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	xroar_hard_reset();
 	tape_select_state(xroar.tape_interface, private_cfg.tape.fast | private_cfg.tape.pad_auto | private_cfg.tape.rewrite);
 
-	xroar_set_vdg_inverted_text(1, private_cfg.vo.vdg_inverted_text);
+	ui_update_state(-1, ui_tag_vdg_inverse, private_cfg.vo.vdg_inverted_text, NULL);
 	xroar_set_ratelimit_latch(1, private_cfg.debug.ratelimit);
 
 	// Load media images
@@ -1598,15 +1598,6 @@ void xroar_set_tv_input(_Bool notify, int action) {
 
 	if (notify) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tv_input, xroar.machine_config->tv_input, NULL);
-	}
-}
-
-void xroar_set_vdg_inverted_text(_Bool notify, int action) {
-	if (!xroar.machine->set_inverted_text)
-		return;
-	_Bool state = xroar.machine->set_inverted_text(xroar.machine, action);
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_vdg_inverse, state, NULL);
 	}
 }
 

@@ -292,7 +292,7 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 
 static int coco3_set_keyboard_type(struct machine *m, int action);
 static _Bool coco3_set_pause(struct machine *m, int state);
-static _Bool coco3_set_inverted_text(struct machine *m, int state);
+static void coco3_ui_set_text_invert(void *, int tag, void *smsg);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
 static void coco3_set_composite(struct machine *, _Bool);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
@@ -390,7 +390,6 @@ static struct part *coco3_allocate(void) {
 
 	m->set_keyboard_type = coco3_set_keyboard_type;
 	m->set_pause = coco3_set_pause;
-	m->set_inverted_text = coco3_set_inverted_text;
 	m->get_interface = coco3_get_interface;
 	m->set_composite = coco3_set_composite;
 	m->set_frameskip = coco3_set_frameskip;
@@ -506,6 +505,9 @@ static _Bool coco3_finish(struct part *p) {
 
 	// Register as a messenger client
 	mcc3->msgr_client_id = messenger_client_register();
+
+	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_text_invert, mcc3));
 
 	// ROM
 	mcc3->ROM0 = rombank_new(8, 32768, 1);
@@ -638,7 +640,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
 	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
 	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
-	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
+	ui_update_state(-1, ui_tag_vdg_inverse, mcc3->inverted_text, NULL);
 
 	// Default all PIA connections to unconnected (no source, no sink)
 	mcc3->PIA0->b.in_source = 0;
@@ -975,20 +977,14 @@ static _Bool coco3_set_pause(struct machine *m, int state) {
 	return mcc3->CPU->halt;
 }
 
-static _Bool coco3_set_inverted_text(struct machine *m, int action) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	switch (action) {
-	case 0: case 1:
-		mcc3->inverted_text = action;
-		break;
-	case 2:
-		mcc3->inverted_text = !mcc3->inverted_text;
-		break;
-	default:
-		break;
-	}
+static void coco3_ui_set_text_invert(void *sptr, int tag, void *smsg) {
+	struct machine_coco3 *mcc3 = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_vdg_inverse);
+
+	mcc3->inverted_text = ui_msg_adjust_value_range(uimsg, mcc3->inverted_text, 0,
+							0, 1, UI_ADJUST_FLAG_CYCLE);
 	tcc1014_set_inverted_text(mcc3->GIME, mcc3->inverted_text);
-	return mcc3->inverted_text;
 }
 
 /*

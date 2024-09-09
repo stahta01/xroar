@@ -161,7 +161,7 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 	(void)user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
-	xroar_set_vdg_inverted_text(0, val);
+	ui_update_state(-1, ui_tag_vdg_inverse, val, NULL);
 }
 
 static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
@@ -411,6 +411,8 @@ static void *ui_gtk3_new(void *cfg) {
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
 	g_signal_connect(uigtk3->top_window, "destroy", G_CALLBACK(ui_gtk3_destroy), (gpointer)(intptr_t)0);
@@ -575,6 +577,8 @@ static void ui_gtk3_run(void *sptr) {
 	gtk_main();
 }
 
+// State change notification - the old way.
+
 static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 
@@ -611,10 +615,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 
 	case ui_tag_fullscreen:
 		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/FullScreen", value ? TRUE : FALSE, set_fullscreen);
-		break;
-
-	case ui_tag_vdg_inverse:
-		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE, toggle_inverse_text);
 		break;
 
 	case ui_tag_ccr:
@@ -694,10 +694,27 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	}
 }
 
+// State change notification - for anything migrated to the message group
+// interface.  Blocking UI updates no longer necessary, as we won't receive the
+// messages we send.
+
 static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	struct ui_state_message *msg = smsg;
-	ui_gtk3_update_state(uigtk3, tag, msg->value, msg->data);
+	int value = msg->value;
+	//const void *data = msg->data;
+
+	switch (tag) {
+
+	// Video
+
+	case ui_tag_vdg_inverse:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE);
+		break;
+
+	default:
+		break;
+	}
 }
 
 // Dynamic machine menu

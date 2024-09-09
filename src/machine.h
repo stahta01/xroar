@@ -240,7 +240,6 @@ struct machine {
 
 	int (*set_keyboard_type)(struct machine *m, int action);
 	_Bool (*set_pause)(struct machine *m, int action);
-	_Bool (*set_inverted_text)(struct machine *m, int action);
 	void *(*get_interface)(struct machine *m, const char *ifname);
 	void (*set_composite)(struct machine *, _Bool);
 	void (*set_frameskip)(struct machine *m, unsigned fskip);

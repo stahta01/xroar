@@ -1650,7 +1650,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 	case hk_sym_i:
 		if (shift) {
-			xroar_set_vdg_inverted_text(1, XROAR_NEXT);
+			ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
 #ifndef HAVE_WASM
 		} else {
 			xroar_run_file();

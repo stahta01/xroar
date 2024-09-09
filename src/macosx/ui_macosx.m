@@ -283,8 +283,7 @@ int cocoa_super_all_keys = 0;
 		vo_set_cmp_colour_killer(xroar.vo_interface, 0, !xroar.vo_interface->renderer->cmp.colour_killer);
 		break;
 	case ui_tag_vdg_inverse:
-		uimac->vo.invert_text = !uimac->vo.invert_text;
-		xroar_set_vdg_inverted_text(0, uimac->vo.invert_text);
+		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
 		break;
 
 	/* Keyboard: */
@@ -1165,6 +1164,8 @@ static void *ui_cocoa_new(void *cfg) {
 	// Register with messenger
 	uimac->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
 	cocoa_update_joystick_menus(uisdl2);
@@ -1362,10 +1363,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->vo.fullscreen = value ? 1 : 0;
 		break;
 
-	case ui_tag_vdg_inverse:
-		uimac->vo.invert_text = value ? 1 : 0;
-		break;
-
 	case ui_tag_tv_input:
 		uimac->vo.tv_input = value;
 		break;
@@ -1421,10 +1418,15 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_macosx_interface *uimac = sptr;
 	struct ui_state_message *uimsg = smsg;
-	(void)uimac;
-	(void)uimsg;
+	int value = uimsg->value;
 
 	switch (tag) {
+
+	// Video
+
+	case ui_tag_vdg_inverse:
+		uimac->vo.invert_text = value;
+		break;
 
 	default:
 		break;

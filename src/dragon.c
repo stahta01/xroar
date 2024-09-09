@@ -303,7 +303,7 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 static int dragon_set_keyboard_type(struct machine *m, int action);
 static _Bool dragon_set_pause(struct machine *m, int state);
-static _Bool dragon_set_inverted_text(struct machine *m, int state);
+static void dragon_ui_set_text_invert(void *, int tag, void *smsg);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
 static void dragon_set_frameskip(struct machine *m, unsigned fskip);
 static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
@@ -405,7 +405,6 @@ static void dragon_allocate_common(struct machine_dragon_common *md) {
 
 	m->set_keyboard_type = dragon_set_keyboard_type;
 	m->set_pause = dragon_set_pause;
-	m->set_inverted_text = dragon_set_inverted_text;
 	m->get_interface = dragon_get_interface;
 	m->set_frameskip = dragon_set_frameskip;
 	m->set_ratelimit = dragon_set_ratelimit;
@@ -498,6 +497,9 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	// Register as a messenger client
 	md->msgr_client_id = messenger_client_register();
 
+	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_text_invert, md));
+
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
 	md->has_combined = md->has_extbas = md->has_bas = md->has_altbas = 0;
@@ -575,7 +577,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	md->VDG->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
 	md->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vdg_render_line, md);
 	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
-	mc6847_set_inverted_text(md->VDG, md->inverted_text);
+	ui_update_state(-1, ui_tag_vdg_inverse, md->inverted_text, NULL);
 
 	// Active area is constant
 	{
@@ -1154,20 +1156,14 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 	return md->CPU->halt;
 }
 
-static _Bool dragon_set_inverted_text(struct machine *m, int action) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
-	switch (action) {
-	case 0: case 1:
-		md->inverted_text = action;
-		break;
-	case -2:
-		md->inverted_text = !md->inverted_text;
-		break;
-	default:
-		break;
-	}
+static void dragon_ui_set_text_invert(void *sptr, int tag, void *smsg) {
+	struct machine_dragon_common *md = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_vdg_inverse);
+
+	md->inverted_text = ui_msg_adjust_value_range(uimsg, md->inverted_text, 0,
+						      0, 1, UI_ADJUST_FLAG_CYCLE);
 	mc6847_set_inverted_text(md->VDG, md->inverted_text);
-	return md->inverted_text;
 }
 
 /*
