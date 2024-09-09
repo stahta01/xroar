@@ -251,10 +251,6 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	/* Video: */
-	case ui_tag_fullscreen:
-		uimac->vo.fullscreen = !uimac->vo.fullscreen;
-		xroar_set_fullscreen(0, uimac->vo.fullscreen);
-		break;
 	case ui_tag_ccr:
 		ui_update_state(-1, ui_tag_ccr, value, NULL);
 		break;
@@ -266,6 +262,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case ui_tag_tv_input:
 		ui_update_state(-1, ui_tag_tv_input, value, NULL);
+		break;
+	case ui_tag_fullscreen:
+		ui_update_state(-1, ui_tag_fullscreen, UI_NEXT, NULL);
 		break;
 	case ui_tag_cmp_fs:
 		vo_set_cmp_fs(xroar.vo_interface, 0, value);
@@ -1152,6 +1151,7 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
@@ -1346,12 +1346,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->lp.destination = value;
 		break;
 
-	/* Video */
-
-	case ui_tag_fullscreen:
-		uimac->vo.fullscreen = value ? 1 : 0;
-		break;
-
 	/* Keyboard */
 
 	case ui_tag_hkbd_layout:
@@ -1407,6 +1401,10 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_tv_input:
 		uimac->vo.tv_input = value;
+		break;
+
+	case ui_tag_fullscreen:
+		uimac->vo.fullscreen = value;
 		break;
 
 	case ui_tag_vdg_inverse:

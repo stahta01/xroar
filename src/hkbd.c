@@ -1356,7 +1356,7 @@ void hk_scan_press(uint8_t code) {
 
 	switch (sym) {
 	case hk_sym_F11:
-		xroar_set_fullscreen(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_fullscreen, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_F12:
@@ -1639,7 +1639,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 	case hk_sym_f:
-		xroar_set_fullscreen(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_fullscreen, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_h:
@@ -1680,7 +1680,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 	case hk_sym_m:
-		xroar_set_menubar(XROAR_NEXT);
+		ui_update_state(-1, ui_tag_menubar, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_p:

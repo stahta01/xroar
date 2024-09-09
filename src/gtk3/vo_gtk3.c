@@ -31,6 +31,7 @@
 
 #include "logging.h"
 #include "machine.h"
+#include "messenger.h"
 #include "vo.h"
 #include "vo_opengl.h"
 #include "xroar.h"
@@ -46,6 +47,9 @@
 
 struct vo_gtk3_interface {
 	struct vo_opengl_interface vogl;
+
+	// Messenger client id
+	int msgr_client_id;
 
 	// Menus affect the size of the draw area, so we need to track how much
 	// to add to the window size to get the draw area we want.
@@ -63,12 +67,13 @@ struct vo_gtk3_interface {
 
 static void vo_gtk3_free(void *);
 static void resize(void *, unsigned int w, unsigned int h);
-static int set_fullscreen(void *, _Bool fullscreen);
-static void set_menubar(void *, _Bool show_menubar);
 static void draw(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
+
+static void vogtk3_ui_set_fullscreen(void *, int tag, void *smsg);
+static void vogtk3_ui_set_menubar(void *, int tag, void *smsg);
 
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 //static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
@@ -99,11 +104,13 @@ _Bool gtk3_vo_init(struct ui_gtk3_interface *uigtk3) {
 
 	struct vo_render *vr = vo->renderer;
 
+	vogtk3->msgr_client_id = messenger_client_register();
+	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_fullscreen, uigtk3));
+	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_menubar, uigtk3));
+
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uigtk3);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, uigtk3);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, uigtk3);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, uigtk3);
 
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vogtk3);
 
@@ -150,8 +157,6 @@ _Bool gtk3_vo_init(struct ui_gtk3_interface *uigtk3) {
 	 * right size even if we then fullscreen.  */
 	vo->show_menubar = 1;
 	gtk_widget_show(uigtk3->top_window);
-	/* Set fullscreen. */
-	set_fullscreen(uigtk3, vo_cfg->fullscreen);
 
 	return 1;
 }
@@ -163,7 +168,8 @@ static void vo_gtk3_free(void *sptr) {
 	struct vo_gtk3_interface *vogtk3 = (struct vo_gtk3_interface *)vo;
 	struct vo_opengl_interface *vogl = &vogtk3->vogl;
 
-	set_fullscreen(uigtk3, 0);
+	messenger_client_unregister(vogtk3->msgr_client_id);
+	gtk_window_unfullscreen(GTK_WINDOW(uigtk3->top_window));
 	vo_opengl_free(vogl);
 }
 
@@ -261,25 +267,31 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	gtk_window_resize(GTK_WINDOW(uigtk3->top_window), w + woff, h + hoff);
 }
 
-static int set_fullscreen(void *sptr, _Bool fullscreen) {
+static void vogtk3_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_gtk3_interface *uigtk3 = sptr;
-
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uigtk3->public.vo_interface;
 
-	vo->show_menubar = !fullscreen;
-	if (fullscreen) {
+	_Bool want_fullscreen = uimsg->value;
+
+	if (want_fullscreen) {
+		vo->show_menubar = 0;
 		gtk_window_fullscreen(GTK_WINDOW(uigtk3->top_window));
 	} else {
+		vo->show_menubar = 1;
 		gtk_window_unfullscreen(GTK_WINDOW(uigtk3->top_window));
 	}
-	return 0;
 }
 
-static void set_menubar(void *sptr, _Bool show_menubar) {
+static void vogtk3_ui_set_menubar(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_gtk3_interface *uigtk3 = sptr;
-
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uigtk3->public.vo_interface;
 	struct vo_gtk3_interface *vogtk3 = (struct vo_gtk3_interface *)vo;
+
+	_Bool want_menubar = uimsg->value;
 
 	GtkAllocation allocation;
 	if (vo->is_fullscreen) {
@@ -290,13 +302,13 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 	int w = allocation.width;
 	int h = allocation.height;
 
-	if (show_menubar && !vo->is_fullscreen) {
+	if (want_menubar && !vo->is_fullscreen) {
 		w += vogtk3->woff;
 		h += vogtk3->hoff;
 	}
 
-	vo->show_menubar = show_menubar;
-	if (show_menubar) {
+	vo->show_menubar = want_menubar;
+	if (want_menubar) {
 		gtk_widget_show(uigtk3->menubar);
 	} else {
 		gtk_widget_hide(uigtk3->menubar);
@@ -307,8 +319,8 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer data) {
 	(void)tw;
 	struct ui_gtk3_interface *uigtk3 = data;
-
 	struct vo_interface *vo = uigtk3->public.vo_interface;
+	struct vo_gtk3_interface *vogtk3 = (struct vo_gtk3_interface *)vo;
 
 	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo->is_fullscreen) {
 		gtk_widget_hide(uigtk3->menubar);
@@ -320,6 +332,7 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 		vo->is_fullscreen = 0;
 		vo->show_menubar = 1;
 	}
+	ui_update_state(vogtk3->msgr_client_id, ui_tag_fullscreen, vo->is_fullscreen, NULL);
 	return 0;
 }
 

@@ -117,6 +117,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
@@ -487,7 +488,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		break;
 
 	case ui_tag_fullscreen:
-		xroar_set_fullscreen(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_fullscreen, UI_NEXT, NULL);
 		break;
 	case ui_tag_ccr:
 		ui_update_state(-1, ui_tag_ccr, tag_value, NULL);
@@ -561,12 +562,6 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 static void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_windows32_interface *uiw32 = sptr;
 	switch (tag) {
-
-	// Simple toggles
-
-	case ui_tag_fullscreen:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		break;
 
 	// Hardware
 
@@ -671,6 +666,12 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	//const void *data = msg->data;
 
 	switch (tag) {
+
+	// Simple toggles
+
+	case ui_tag_fullscreen:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
 
 	// Video
 

@@ -167,6 +167,7 @@ struct private_cfg {
 
 	// Video
 	struct {
+		_Bool fullscreen;
 		int frameskip;
 		int ccr;
 		_Bool vdg_inverted_text;
@@ -1074,7 +1075,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Notify UI of starting options:
 	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
+	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, xroar.cfg.kbd.layout, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, xroar.cfg.kbd.lang, NULL);
 	xroar_set_kbd_translate(1, xroar.cfg.kbd.translate);
@@ -1622,43 +1623,6 @@ void xroar_set_pause(_Bool notify, int action) {
 
 void xroar_quit(void) {
 	exit(EXIT_SUCCESS);
-}
-
-void xroar_set_fullscreen(_Bool notify, int action) {
-	_Bool set_to;
-	switch (action) {
-		case XROAR_OFF:
-			set_to = 0;
-			break;
-		case XROAR_ON:
-			set_to = 1;
-			break;
-		case XROAR_NEXT:
-		default:
-			set_to = !xroar.vo_interface->is_fullscreen;
-			break;
-	}
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, set_to);
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_fullscreen, set_to, NULL);
-	}
-}
-
-void xroar_set_menubar(int action) {
-	_Bool set_to;
-	switch (action) {
-		case XROAR_OFF:
-			set_to = 0;
-			break;
-		case XROAR_ON:
-			set_to = 1;
-			break;
-		case XROAR_NEXT:
-		default:
-			set_to = !xroar.vo_interface->show_menubar;
-			break;
-	}
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_menubar, set_to);
 }
 
 void xroar_load_file(void) {
@@ -2655,7 +2619,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("filereq", &xroar_ui_cfg.filereq) },
 
 	/* Video: */
-	{ XC_SET_BOOL("fs", &xroar_ui_cfg.vo_cfg.fullscreen) },
+	{ XC_SET_BOOL("fs", &private_cfg.vo.fullscreen) },
 	{ XC_SET_INT("fskip", &private_cfg.vo.frameskip) },
 	{ XC_SET_ENUM("ccr", &private_cfg.vo.ccr, vo_cmp_ccr_list) },
 	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, ui_gl_filter_list) },
@@ -3036,7 +3000,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Video\n", f);
-	xroar_cfg_print_bool(f, all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
+	xroar_cfg_print_bool(f, all, "fs", private_cfg.vo.fullscreen, 0);
 	xroar_cfg_print_int_nz(f, all, "fskip", private_cfg.vo.frameskip);
 	xroar_cfg_print_enum(f, all, "ccr", private_cfg.vo.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);
 	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, ui_gl_filter_list);

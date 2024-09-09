@@ -81,7 +81,6 @@ struct vo_cfg {
 	char *geometry;
 	int gl_filter;
 	int pixel_fmt;
-	_Bool fullscreen;
 	_Bool colour_killer;
 };
 
@@ -164,14 +163,6 @@ struct vo_interface {
 	//     int x, y;  // top-left of active area
 	//     int w, h;  // size of active area
 	DELEGATE_T4(void, int, int, int, int) set_active_area;
-
-	// Set fullscreen mode on or off
-	//     _Bool fullscreen;
-	DELEGATE_T1(int, bool) set_fullscreen;
-
-	// Set menubar on or off
-	//     _Bool menubar;
-	DELEGATE_T1(void, bool) set_menubar;
 
 	// Set brightness
 	//     int brightness;  // 0-100

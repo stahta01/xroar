@@ -48,6 +48,9 @@
 struct vo_sdl_interface {
 	struct vo_interface vo_interface;
 
+	// Messenger client id
+	int msgr_client_id;
+
 	struct {
 		// Format SDL is asked to make the texture
 		Uint32 format;
@@ -82,8 +85,8 @@ static void vo_sdl_free(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
 static void resize(void *, unsigned int w, unsigned int h);
-static int set_fullscreen(void *, _Bool fullscreen);
-static void set_menubar(void *, _Bool show_menubar);
+static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
+static void vosdl_ui_set_menubar(void *, int tag, void *smsg);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
@@ -146,10 +149,12 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, uisdl2);
 
+	vosdl->msgr_client_id = messenger_client_register();
+
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, uisdl2);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, uisdl2);
+	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_fullscreen, uisdl2));
+	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_menubar, uisdl2));
 
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, uisdl2);
 
@@ -173,9 +178,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Create window, setting fullscreen hint if appropriate
 	Uint32 wflags = SDL_WINDOW_RESIZABLE;
-	if (vo_cfg->fullscreen) {
-		wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-	}
 	uisdl2->vo_window = SDL_CreateWindow("XRoar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, vosdl->window_area.w, vosdl->window_area.h, wflags);
 	SDL_SetWindowMinimumSize(uisdl2->vo_window, 160, 120);
 	uisdl2->vo_window_id = SDL_GetWindowID(uisdl2->vo_window);
@@ -388,9 +390,10 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	update_viewport(uisdl2);
 }
 
-static int set_fullscreen(void *sptr, _Bool fullscreen) {
+static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_sdl2_interface *uisdl2 = sptr;
-
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 
 #ifdef HAVE_WASM
@@ -399,41 +402,43 @@ static int set_fullscreen(void *sptr, _Bool fullscreen) {
 	return 0;
 #endif
 
+	_Bool want_fullscreen = uimsg->value;
 	_Bool is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-	if (is_fullscreen == fullscreen) {
-		return 0;
+	if (is_fullscreen == want_fullscreen) {
+		return;
 	}
 
-	if (fullscreen && vo->show_menubar) {
+	if (want_fullscreen && vo->show_menubar) {
 #ifdef WINDOWS32
 		sdl_windows32_set_menu_visible(uisdl2, 0);
 #endif
 		vo->show_menubar = 0;
-	} else if (!fullscreen && !vo->show_menubar) {
+	} else if (!want_fullscreen && !vo->show_menubar) {
 #ifdef WINDOWS32
 		sdl_windows32_set_menu_visible(uisdl2, 1);
 #endif
 		vo->show_menubar = 1;
 	}
 
-	vo->is_fullscreen = fullscreen;
-	SDL_SetWindowFullscreen(uisdl2->vo_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-
-	return 0;
+	vo->is_fullscreen = want_fullscreen;
+	SDL_SetWindowFullscreen(uisdl2->vo_window, want_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
-static void set_menubar(void *sptr, _Bool show_menubar) {
+static void vosdl_ui_set_menubar(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_sdl2_interface *uisdl2 = sptr;
-
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	(void)vosdl;
 
+	_Bool want_menubar = uimsg->value;
+
 #ifdef WINDOWS32
-	if (show_menubar && !vo->show_menubar) {
+	if (want_menubar && !vo->show_menubar) {
 		sdl_windows32_set_menu_visible(uisdl2, 1);
-	} else if (!show_menubar && vo->show_menubar) {
+	} else if (!want_menubar && vo->show_menubar) {
 		sdl_windows32_set_menu_visible(uisdl2, 0);
 	}
 	if (!vo->is_fullscreen) {
@@ -444,7 +449,7 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 		sdl_vo_notify_size_changed(uisdl2, w, h);
 	}
 #endif
-	vo->show_menubar = show_menubar;
+	vo->show_menubar = want_menubar;
 }
 
 static void vo_sdl_free(void *sptr) {
@@ -453,6 +458,8 @@ static void vo_sdl_free(void *sptr) {
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	struct vo_render *vr = vo->renderer;
+
+	messenger_client_unregister(vosdl->msgr_client_id);
 
 	vo_render_free(vr);
 

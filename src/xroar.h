@@ -213,8 +213,6 @@ void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);
 FUNC_ATTR_NORETURN void xroar_quit(void);
-void xroar_set_fullscreen(_Bool notify, int action);
-void xroar_set_menubar(int action);
 void xroar_load_file(void);
 void xroar_run_file(void);
 void xroar_set_printer_destination(_Bool notify, int dest);

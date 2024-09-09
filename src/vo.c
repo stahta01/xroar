@@ -30,7 +30,6 @@
 #include "vo.h"
 #include "vo_render.h"
 #include "xconfig.h"
-#include "xroar.h"
 
 // It's important that the order here is correct, as UI modules index into the
 // list for descriptive text.
@@ -138,6 +137,8 @@ const uint8_t vo_cmp_lut_5bit[2][32][3] = {
 };
 
 static void vo_ui_set_ccr(void *, int tag, void *smsg);
+static void vo_ui_set_fullscreen(void *, int tag, void *smsg);
+static void vo_ui_set_menubar(void *, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -156,6 +157,8 @@ void *vo_interface_new(size_t isize) {
 void vo_interface_init(struct vo_interface *vo) {
 	vo->msgr_client_id = messenger_client_register();
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_ccr, vo));
+	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_fullscreen, vo));
+	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_menubar, vo));
 }
 
 // Calls free() delegate then frees structure
@@ -401,4 +404,26 @@ static void vo_ui_set_ccr(void *sptr, int tag, void *smsg) {
 						VO_CMP_CCR_PALETTE, VO_CMP_CCR_SIMULATED,
 						UI_ADJUST_FLAG_CYCLE);
 	update_render_parameters(vo);
+}
+
+static void vo_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
+	struct vo_interface *vo = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_fullscreen);
+
+	// Just adjust the message value, video modules will also join this
+	// group and react accordingly.
+	(void)ui_msg_adjust_value_range(uimsg, vo->is_fullscreen, 0, 0, 1,
+					UI_ADJUST_FLAG_CYCLE);
+}
+
+static void vo_ui_set_menubar(void *sptr, int tag, void *smsg) {
+	struct vo_interface *vo = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_menubar);
+
+	// Just adjust the message value, video modules will also join this
+	// group and react accordingly.
+	(void)ui_msg_adjust_value_range(uimsg, vo->show_menubar, 1, 0, 1,
+					UI_ADJUST_FLAG_CYCLE);
 }

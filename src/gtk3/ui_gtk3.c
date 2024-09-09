@@ -174,7 +174,7 @@ static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 	(void)user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
-	xroar_set_fullscreen(0, val);
+	ui_update_state(-1, ui_tag_fullscreen, val, NULL);
 }
 
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -419,6 +419,7 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
@@ -623,10 +624,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 
 	// Video
 
-	case ui_tag_fullscreen:
-		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/FullScreen", value ? TRUE : FALSE, set_fullscreen);
-		break;
-
 	case ui_tag_gain:
 	case ui_tag_brightness:
 	case ui_tag_contrast:
@@ -713,6 +710,10 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_tv_input:
 		uigtk3_radio_menu_set_current_value(uigtk3->tv_input_radio_menu, value);
+		break;
+
+	case ui_tag_fullscreen:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/FullScreen", value ? TRUE : FALSE);
 		break;
 
 	case ui_tag_vdg_inverse:
