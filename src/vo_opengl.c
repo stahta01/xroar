@@ -101,6 +101,7 @@ void vo_opengl_free(void *sptr) {
 	glDeleteTextures(1, &vogl->texture.num);
 	glDeleteFramebuffers(1, &vogl->blit_fbo);
 	free(vogl->texture.pixels);
+	free(vogl);
 }
 
 _Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
