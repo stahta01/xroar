@@ -255,10 +255,9 @@ static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
 static void show_about_window(GtkMenuItem *item, gpointer user_data);
 
 static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
-	xroar_set_kbd_translate(0, val);
+	ui_update_state(-1, ui_tag_kbd_translate, val, NULL);
 }
 
 static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
@@ -422,6 +421,7 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
@@ -653,10 +653,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->hkbd_lang_radio_menu, value);
 		break;
 
-	case ui_tag_kbd_translate:
-		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/TranslateKeyboard", value ? TRUE : FALSE, toggle_keyboard_translation);
-		break;
-
 	// Joysticks
 
 	case ui_tag_joy_right:
@@ -724,6 +720,10 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_keymap:
 		uigtk3_radio_menu_set_current_value(uigtk3->keymap_radio_menu, value);
+		break;
+
+	case ui_tag_kbd_translate:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/TranslateKeyboard", value ? TRUE : FALSE);
 		break;
 
 	default:

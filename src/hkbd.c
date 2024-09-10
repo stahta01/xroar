@@ -22,6 +22,7 @@
  * User can then configure consistently whichever toolkit is in use.
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,6 +38,7 @@
 #include "hkbd.h"
 #include "keyboard.h"
 #include "logging.h"
+#include "messenger.h"
 #include "ui.h"
 #include "vdrive.h"
 #include "xconfig.h"
@@ -1106,17 +1108,25 @@ static void apply_lang_table(unsigned lang);
 static _Bool is_dragon_key(uint16_t sym);
 static void emulator_command(uint16_t sym, _Bool shift);
 
+static void hk_ui_set_kbd_translate(void *, int tag, void *smsg);
+
 _Bool hkbd_js_keypress(uint8_t code);
 _Bool hkbd_js_keyrelease(uint8_t code);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void hk_init(void) {
+	// Register with messenger
+	hkbd.msgr_client_id = messenger_client_register();
+
+	ui_messenger_preempt_group(hkbd.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(hk_ui_set_kbd_translate, &hkbd));
+
 	// Initialise to a known state
 	hk_update_keymap();
 }
 
 void hk_shutdown(void) {
+	messenger_client_unregister(hkbd.msgr_client_id);
 	if (os_scancode_to_hk_scancode) {
 		free(os_scancode_to_hk_scancode);
 		os_scancode_to_hk_scancode = NULL;
@@ -1377,7 +1387,7 @@ void hk_scan_press(uint8_t code) {
 
 	// Translated mode.  The HK symbol is usually its Unicode value so most
 	// are used directly.  There are a few special supplementary cases.
-	if (xroar.cfg.kbd.translate) {
+	if (hkbd.translate) {
 		unsigned unicode = sym;
 		if (shift && (sym == hk_sym_BackSpace || sym == hk_sym_Delete)) {
 			// shift + backspace -> erase line
@@ -1448,7 +1458,7 @@ void hk_scan_release(uint8_t code) {
 		break;
 	}
 
-	if (xroar.cfg.kbd.translate) {
+	if (hkbd.translate) {
 		// Use the last recorded Unicode value for this scancode
 		unsigned unicode = hkbd.scancode_pressed_unicode[code];
 		keyboard_unicode_release(xroar.keyboard_interface, unicode);
@@ -1735,7 +1745,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 	case hk_sym_z:
-		xroar_set_kbd_translate(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_kbd_translate, UI_NEXT, NULL);
 		return;
 
 #ifndef HAVE_WASM
@@ -1765,4 +1775,12 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 	default:
 		break;
 	}
+}
+
+static void hk_ui_set_kbd_translate(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_kbd_translate);
+	hkbd.translate = ui_msg_adjust_value_range(uimsg, hkbd.translate, 0, 0, 1,
+						   UI_ADJUST_FLAG_CYCLE);
 }

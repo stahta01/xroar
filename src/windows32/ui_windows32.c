@@ -120,6 +120,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
 	windows32_create_menus(uiw32);
 
@@ -522,7 +523,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_keymap, tag_value, NULL);
 		break;
 	case ui_tag_kbd_translate:
-		xroar_set_kbd_translate(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_kbd_translate, UI_NEXT, NULL);
 		break;
 
 	// Joysticks:
@@ -638,10 +639,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 0xff), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
-	case ui_tag_kbd_translate:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		break;
-
 	// Joysticks
 
 	case ui_tag_joy_right:
@@ -695,6 +692,10 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_keymap:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	case ui_tag_kbd_translate:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	default:

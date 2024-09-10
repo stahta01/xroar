@@ -99,7 +99,6 @@ struct xroar_cfg {
 	struct {
 		int layout;
 		int lang;
-		_Bool translate;
 		struct slist *bind_list;
 	} kbd;
 
@@ -221,7 +220,6 @@ void xroar_set_printer_pipe(_Bool notify, const char *pipe);
 void xroar_flush_printer(void);
 void xroar_set_hkbd_layout(_Bool notify, int hk_layout);
 void xroar_set_hkbd_lang(_Bool notify, int hk_lang);
-void xroar_set_kbd_translate(_Bool notify, int kbd_translate);
 void xroar_set_joystick(_Bool notify, int port, const char *name);
 void xroar_swap_joysticks(_Bool notify);
 void xroar_cycle_joysticks(_Bool notify);

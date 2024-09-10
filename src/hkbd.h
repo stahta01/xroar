@@ -1128,10 +1128,16 @@ extern struct xconfig_enum hkbd_lang_list[];
 // Host keyboard state.
 
 struct hkbd {
+	// Messenger client id
+	int msgr_client_id;
+
 	int layout;  // one of hk_layout_*
 
 	uint8_t scancode_mod[HK_NUM_SCANCODES];
 	uint16_t code_to_sym[HK_NUM_LEVELS][HK_NUM_SCANCODES];
+
+	// Symbol translation enabled
+	_Bool translate;
 
 	// The symbol that was registered as pressed last by each scancode.
 	// Lets us report release of the same symbol as was pressed, even if

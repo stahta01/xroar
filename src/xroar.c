@@ -149,6 +149,7 @@ struct private_cfg {
 
 	// Keyboard
 	struct {
+		_Bool translate;
 		struct slist *type_list;
 	} kbd;
 
@@ -1078,7 +1079,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, xroar.cfg.kbd.layout, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, xroar.cfg.kbd.lang, NULL);
-	xroar_set_kbd_translate(1, xroar.cfg.kbd.translate);
+	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
 
 	xroar.tape_interface = tape_interface_new(xroar.ui_interface);
 	if (private_cfg.tape.ao_rate > 0)
@@ -1683,20 +1684,6 @@ void xroar_set_hkbd_lang(_Bool notify, int hk_lang) {
 	hk_update_keymap();
 	if (notify && xroar.ui_interface) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, hk_lang, NULL);
-	}
-}
-
-void xroar_set_kbd_translate(_Bool notify, int kbd_translate) {
-	switch (kbd_translate) {
-		case XROAR_NEXT:
-			xroar.cfg.kbd.translate = !xroar.cfg.kbd.translate;
-			break;
-		default:
-			xroar.cfg.kbd.translate = kbd_translate;
-			break;
-	}
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_kbd_translate, xroar.cfg.kbd.translate, NULL);
 	}
 }
 
@@ -2660,7 +2647,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_ENUM("kbd-layout", &xroar.cfg.kbd.layout, hkbd_layout_list) },
 	{ XC_SET_ENUM("kbd-lang", &xroar.cfg.kbd.lang, hkbd_lang_list) },
 	{ XC_SET_ENUM("keymap", &xroar.cfg.kbd.lang, hkbd_lang_list), .deprecated = 1 },
-	{ XC_SET_BOOL("kbd-translate", &xroar.cfg.kbd.translate) },
+	{ XC_SET_BOOL("kbd-translate", &private_cfg.kbd.translate) },
 	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 
 	/* Joysticks: */
@@ -3034,7 +3021,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("# Keyboard\n", f);
 	xroar_cfg_print_enum(f, all, "kbd-layout", xroar.cfg.kbd.layout, hk_layout_auto, hkbd_layout_list);
 	xroar_cfg_print_enum(f, all, "kbd-lang", xroar.cfg.kbd.lang, hk_lang_auto, hkbd_lang_list);
-	xroar_cfg_print_bool(f, all, "kbd-translate", xroar.cfg.kbd.translate, 0);
+	xroar_cfg_print_bool(f, all, "kbd-translate", private_cfg.kbd.translate, 0);
 	for (struct slist *l = private_cfg.kbd.type_list; l; l = l->next) {
 		sds s = sdsx_quote(l->data);
 		fprintf(f, "type %s\n", s);
