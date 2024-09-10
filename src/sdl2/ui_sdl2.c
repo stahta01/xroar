@@ -95,7 +95,11 @@ void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 
 void ui_sdl_free(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
+	struct ui_interface *ui = &uisdl2->ui_interface;
 
+	if (ui->filereq_interface) {
+		DELEGATE_SAFE_CALL(ui->filereq_interface->free);
+	}
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	global_uisdl2 = NULL;
 	free(uisdl2);
