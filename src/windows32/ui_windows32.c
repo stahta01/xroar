@@ -610,6 +610,7 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_tv_input:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
+		windows32_vo_update_state(uiw32, tag, value, data);
 		break;
 
 	case ui_tag_tv_dialog:

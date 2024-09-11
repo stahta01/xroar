@@ -25,6 +25,7 @@
 #include <SDL_syswm.h>
 
 #include "ao.h"
+#include "machine.h"
 #include "sound.h"
 #include "xroar.h"
 
@@ -60,6 +61,7 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
 	SendMessage(vo_hue, UDM_SETPOS, 0, 0);
 
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_TV_INPUT, machine_tv_input_list);
 	uiw32_combo_box_from_enum(vo_window, IDC_CB_PICTURE, vo_viewport_list);
 	uiw32_combo_box_from_enum(vo_window, IDC_CB_RENDERER, vo_cmp_ccr_list);
 	uiw32_combo_box_from_enum(vo_window, IDC_CB_FS, vo_render_fs_list);
@@ -83,6 +85,10 @@ void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
 
 	case ui_tag_gain:
 		windows32_send_message_dlg_item(vo_window, IDC_SPIN_VOLUME, UDM_SETPOS, 0, value);
+		break;
+
+	case ui_tag_tv_input:
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_TV_INPUT, value);
 		break;
 
 	case ui_tag_brightness:
@@ -196,6 +202,10 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			int value = SendMessage(cb, CB_GETITEMDATA, idx, 0);
 
 			switch (id) {
+			case IDC_CB_TV_INPUT:
+				xroar_set_tv_input(1, value);
+				break;
+
 			case IDC_CB_PICTURE:
 				xroar_set_picture(0, value);
 				break;

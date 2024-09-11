@@ -55,6 +55,8 @@ end table
 h1 Video
 
 table
+tr td width=40 text TV input
+   td width=84 id=TV_INPUT combobox
 tr td text Brightness
    td width=47 id=BRIGHTNESS spinbox
 tr td text Contrast
