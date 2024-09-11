@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "delegate.h"
 #include "xalloc.h"
 
 /* Windows has a habit of making include order important: */
@@ -32,8 +33,7 @@
 #include "fs.h"
 #include "logging.h"
 #include "module.h"
-#include "vo.h"
-#include "xroar.h"
+#include "ui.h"
 
 #include "windows32/common_windows32.h"
 
@@ -82,10 +82,6 @@ static const char *lpstrFilter =
 static char *load_filename(void *sptr, char const *title) {
 	struct windows32_filereq_interface *frw32 = sptr;
 
-	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
-	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
-
 	OPENFILENAME ofn = (OPENFILENAME){0};
 	char fn_buf[260];
 
@@ -110,17 +106,11 @@ static char *load_filename(void *sptr, char const *title) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 
-	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }
 
 static char *save_filename(void *sptr, char const *title) {
 	struct windows32_filereq_interface *frw32 = sptr;
-
-	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
-	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
 
 	OPENFILENAME ofn = (OPENFILENAME){0};
 	char fn_buf[260];
@@ -146,7 +136,5 @@ static char *save_filename(void *sptr, char const *title) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
 	}
 
-	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 	return frw32->filename;
 }

@@ -2,7 +2,7 @@
  *
  *  \brief Command-line file requester.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "delegate.h"
 #include "sds.h"
 #include "sdsx.h"
 #include "slist.h"
@@ -33,8 +34,8 @@
 
 #include "fs.h"
 #include "logging.h"
-#include "vo.h"
-#include "xroar.h"
+#include "module.h"
+#include "ui.h"
 
 static void *filereq_cli_new(void *cfg);
 
@@ -113,10 +114,6 @@ static char *get_filename(struct cli_filereq_interface *frcli, const char *promp
 		}
 	}
 
-	_Bool was_fullscreen = xroar.vo_interface->is_fullscreen;
-	if (was_fullscreen)
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 0);
-
 	frcli->exists = 0;
 
 	puts(
@@ -182,8 +179,6 @@ static char *get_filename(struct cli_filereq_interface *frcli, const char *promp
 		}
 		// if the new path either doesn't exist, or is not a directory,
 		// return it.
-		if (was_fullscreen)
-			DELEGATE_SAFE_CALL(xroar.vo_interface->set_fullscreen, 1);
 		return frcli->path;
 	}
 }
