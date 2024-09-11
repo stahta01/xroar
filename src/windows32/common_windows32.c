@@ -135,3 +135,18 @@ void uiw32_combo_box_from_enum(HWND hDlg, int nIDDlgItem, struct xconfig_enum *x
 		SendMessage(cb_hWnd, CB_SETITEMDATA, idx, iter->value);
 	}
 }
+
+void uiw32_combo_box_select_by_data(HWND hDlg, int nIDDlgItem, int value) {
+	HWND cb_hWnd = GetDlgItem(hDlg, nIDDlgItem);
+	LRESULT nitems = SendMessage(cb_hWnd, CB_GETCOUNT, 0, 0);
+	if (nitems == CB_ERR || nitems < 1) {
+		return;
+	}
+	for (unsigned i = 0; i < (unsigned)nitems; ++i) {
+		LRESULT data = SendMessage(cb_hWnd, CB_GETITEMDATA, i, 0);
+		if (data == value) {
+			SendMessage(cb_hWnd, CB_SETCURSEL, i, 0);
+			return;
+		}
+	}
+}

@@ -83,4 +83,8 @@ void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum,
 
 void uiw32_combo_box_from_enum(HWND hDlg, int nIDDlgItem, struct xconfig_enum *xc_list);
 
+// Select combo box entry by comparing its data
+
+void uiw32_combo_box_select_by_data(HWND hDlg, int nIDDlgItem, int value);
+
 #endif
