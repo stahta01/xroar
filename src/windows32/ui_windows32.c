@@ -401,24 +401,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		case ui_action_file_screenshot:
 			xroar_screenshot();
 			break;
-		case ui_action_tape_input:
-			xroar_insert_input_tape();
-			break;
-		case ui_action_tape_input_rewind:
-			if (xroar.tape_interface && xroar.tape_interface->tape_input)
-				tape_rewind(xroar.tape_interface->tape_input);
-			break;
-		case ui_action_tape_output:
-			xroar_insert_output_tape();
-			break;
 
-		case ui_action_tape_output_rewind:
-			if (xroar.tape_interface && xroar.tape_interface->tape_output)
-				tape_rewind(xroar.tape_interface->tape_output);
-			break;
-		case ui_action_tape_play_pause:
-			tape_set_playing(xroar.tape_interface, !(GetMenuState(uiw32->top_menu, TAGV(ui_tag_action, ui_action_tape_play_pause), MF_BYCOMMAND) & MF_CHECKED), 1);
-			break;
 		case ui_action_zoom_in:
 			vo_zoom_in(xroar.vo_interface);
 			break;
