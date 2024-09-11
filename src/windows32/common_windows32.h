@@ -79,4 +79,8 @@ LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
 
 void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum, unsigned tag);
 
+// Create combo box from enum
+
+void uiw32_combo_box_from_enum(HWND hDlg, int nIDDlgItem, struct xconfig_enum *xc_list);
+
 #endif

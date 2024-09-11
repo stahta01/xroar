@@ -121,3 +121,17 @@ void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum,
 		++xc_enum;
 	}
 }
+
+void uiw32_combo_box_from_enum(HWND hDlg, int nIDDlgItem, struct xconfig_enum *xc_list) {
+	HWND cb_hWnd = GetDlgItem(hDlg, nIDDlgItem);
+	if (cb_hWnd == NULL) {
+		return;
+	}
+	for (struct xconfig_enum *iter = xc_list; iter->name; ++iter) {
+		if (!iter->description) {
+			continue;
+		}
+		LRESULT idx = SendMessage(cb_hWnd, CB_ADDSTRING, 0, (LPARAM)iter->description);
+		SendMessage(cb_hWnd, CB_SETITEMDATA, idx, iter->value);
+	}
+}
