@@ -20,11 +20,8 @@
 #define XROAR_GTK3_TAPECONTROL_H_
 
 struct ui_gtk3_interface;
+struct uigtk3_dialog;
 
-void gtk3_create_tc_window(struct ui_gtk3_interface *uigtk3);
-void gtk3_toggle_tc_window(GtkToggleAction *current, gpointer user_data);
-
-void gtk3_tc_update_state(struct ui_gtk3_interface *,
-			  int tag, int value, const void *data);
+struct uigtk3_dialog *gtk3_tc_dialog_new(struct ui_gtk3_interface *);
 
 #endif

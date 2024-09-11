@@ -45,9 +45,9 @@ struct ui_macosx_interface {
 
 	struct {
 		int playing;
-		//int fast;
-		//int pad_auto;
-		//int rewrite;
+		int fast;
+		int pad_auto;
+		int rewrite;
 	} tape;
 
 	struct {

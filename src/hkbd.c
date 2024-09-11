@@ -1731,7 +1731,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 #endif
 
 	case hk_sym_t:
-		DELEGATE_CALL(ui->update_state, ui_tag_tape_dialog, 0, NULL);
+		ui_update_state(-1, ui_tag_tape_dialog, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_v:

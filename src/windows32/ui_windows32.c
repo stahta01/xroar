@@ -114,6 +114,7 @@ static void *ui_windows32_new(void *cfg) {
 	// Register with messenger
 	uiw32->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
@@ -160,7 +161,7 @@ static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 	setup_tool_menu(uiw32);
 	setup_help_menu(uiw32);
 	windows32_dc_create_window(uiw32);
-	windows32_tc_create_window(uiw32);
+	(void)uiw32_tc_dialog_new(uiw32);
 	(void)uiw32_tv_dialog_new(uiw32);
 	windows32_pc_create_window(uiw32);
 }
@@ -455,10 +456,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Cassettes:
 	case ui_tag_tape_dialog:
-		windows32_tc_update_state(uiw32, ui_tag_tape_dialog, 0, NULL);
-		break;
-	case ui_tag_tape_flags:
-		tape_select_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
+		ui_update_state(-1, ui_tag_tape_dialog, UI_NEXT, NULL);
 		break;
 
 	// Disks:
@@ -574,16 +572,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
 		break;
 
-	// Tape
-
-	case ui_tag_tape_dialog:
-	case ui_tag_tape_flags:
-	case ui_tag_tape_input_filename:
-	case ui_tag_tape_output_filename:
-	case ui_tag_tape_playing:
-		windows32_tc_update_state(uiw32, tag, value, data);
-		break;
-
 	// Disk
 
 	case ui_tag_disk_dialog:
@@ -667,6 +655,12 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	// Simple toggles
 
 	case ui_tag_fullscreen:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	// Cassettes
+
+	case ui_tag_tape_dialog:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 

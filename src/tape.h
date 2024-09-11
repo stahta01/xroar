@@ -134,18 +134,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename);
 // Automatic motor control.  Simulates cassette relay.
 void tape_set_motor(struct tape_interface *ti, _Bool motor);
 
-// Manual motor control.  UI-triggered play/pause.  Call with play=0 to pause.
-void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify);
-
 // Called by machine to reflect change in tape output level.
 void tape_update_output(struct tape_interface *ti, uint8_t value);
-
-#define TAPE_FAST (1 << 0)
-#define TAPE_PAD_AUTO (1 << 2)
-#define TAPE_REWRITE (1 << 3)
-
-void tape_set_state(struct tape_interface *ti, int flags);
-void tape_select_state(struct tape_interface *ti, int flags);  /* set & update UI */
-int tape_get_state(struct tape_interface *ti);
 
 #endif

@@ -159,6 +159,12 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	vo_zoom_out(vo);
 }
 
+static void toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_tape_dialog, val, NULL);
+}
+
 static void toggle_tv_window(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
@@ -348,7 +354,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	// File
 	{ .name = "TapeControlAction", .label = "Cassette _tapes",
 	  .accelerator = "<control>T",
-	  .callback = G_CALLBACK(gtk3_toggle_tc_window) },
+	  .callback = G_CALLBACK(toggle_tc_window) },
 	{ .name = "DriveControlAction", .label = "Floppy _disks",
 	  .accelerator = "<control>D",
 	  .callback = G_CALLBACK(gtk3_toggle_dc_window) },
@@ -415,6 +421,7 @@ static void *ui_gtk3_new(void *cfg) {
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
@@ -517,7 +524,7 @@ static void *ui_gtk3_new(void *cfg) {
 	gtk3_create_pc_window(uigtk3);
 
 	// Create (hidden) tape control window
-	gtk3_create_tc_window(uigtk3);
+	(void)gtk3_tc_dialog_new(uigtk3);
 
 	// Create (hidden) video options window
 	(void)gtk3_tv_dialog_new(uigtk3);
@@ -605,15 +612,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
 		break;
 
-	// Tape
-
-	case ui_tag_tape_flags:
-	case ui_tag_tape_input_filename:
-	case ui_tag_tape_output_filename:
-	case ui_tag_tape_playing:
-		gtk3_tc_update_state(uigtk3, tag, value, data);
-		break;
-
 	// Disk
 
 	case ui_tag_disk_write_enable:
@@ -693,6 +691,12 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	//const void *data = msg->data;
 
 	switch (tag) {
+
+	// Cassettes
+
+	case ui_tag_tape_dialog:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/FileMenu/TapeControl", value ? TRUE : FALSE);
+		break;
 
 	// Video
 

@@ -934,9 +934,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.vo.frameskip < 0)
 		private_cfg.vo.frameskip = 0;
 
-	private_cfg.tape.pad_auto = private_cfg.tape.pad_auto ? TAPE_PAD_AUTO : 0;
-	private_cfg.tape.fast = private_cfg.tape.fast ? TAPE_FAST : 0;
-	private_cfg.tape.rewrite = private_cfg.tape.rewrite ? TAPE_REWRITE : 0;
 	if (xroar.cfg.tape.rewrite_gap_ms <= 0 || xroar.cfg.tape.rewrite_gap_ms > 5000) {
 		xroar.cfg.tape.rewrite_gap_ms = 500;
 	}
@@ -1102,7 +1099,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Reset everything
 	xroar_hard_reset();
-	tape_select_state(xroar.tape_interface, private_cfg.tape.fast | private_cfg.tape.pad_auto | private_cfg.tape.rewrite);
+	ui_update_state(-1, ui_tag_tape_flag_fast, private_cfg.tape.fast, NULL);
+	ui_update_state(-1, ui_tag_tape_flag_pad_auto, private_cfg.tape.pad_auto, NULL);
+	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
 
 	ui_update_state(-1, ui_tag_vdg_inverse, private_cfg.vo.vdg_inverted_text, NULL);
 	xroar_set_ratelimit_latch(1, private_cfg.debug.ratelimit);
@@ -1133,7 +1132,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 				r = tape_open_reading(xroar.tape_interface, private_cfg.file.tape);
 			}
 			if (r != -1) {
-				DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_input_filename, 0, private_cfg.file.tape);
+				ui_update_state(-1, ui_tag_tape_input_filename, 0, private_cfg.file.tape);
 			}
 		}
 
@@ -1154,7 +1153,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			case FILETYPE_K7:
 			case FILETYPE_WAV:
 				tape_open_writing(xroar.tape_interface, private_cfg.file.tape_write);
-				DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_output_filename, 0, private_cfg.file.tape_write);
+				ui_update_state(-1, ui_tag_tape_output_filename, 0, private_cfg.file.tape_write);
 				break;
 			default:
 				break;
@@ -1333,7 +1332,7 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 				r = tape_open_reading(xroar.tape_interface, filename);
 			}
 			if (r != -1) {
-				DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_input_filename, 0, filename);
+				ui_update_state(-1, ui_tag_tape_input_filename, 0, filename);
 			}
 		}
 		break;
@@ -1945,7 +1944,7 @@ void xroar_save_snapshot(void) {
 void xroar_insert_input_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_reading(xroar.tape_interface, filename);
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_input_filename, 0, filename);
+	ui_update_state(-1, ui_tag_tape_input_filename, 0, filename);
 }
 
 void xroar_insert_input_tape(void) {
@@ -1955,13 +1954,13 @@ void xroar_insert_input_tape(void) {
 
 void xroar_eject_input_tape(void) {
 	tape_close_reading(xroar.tape_interface);
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_input_filename, 0, NULL);
+	ui_update_state(-1, ui_tag_tape_input_filename, 0, NULL);
 }
 
 void xroar_insert_output_tape_file(const char *filename) {
 	if (!filename) return;
 	tape_open_writing(xroar.tape_interface, filename);
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_output_filename, 0, filename);
+	ui_update_state(-1, ui_tag_tape_output_filename, 0, filename);
 }
 
 void xroar_insert_output_tape(void) {
@@ -1971,11 +1970,7 @@ void xroar_insert_output_tape(void) {
 
 void xroar_eject_output_tape(void) {
 	tape_close_writing(xroar.tape_interface);
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tape_output_filename, 0, NULL);
-}
-
-void xroar_set_tape_playing(_Bool notify, _Bool play) {
-	tape_set_playing(xroar.tape_interface, play, notify);
+	ui_update_state(-1, ui_tag_tape_output_filename, 0, NULL);
 }
 
 void xroar_soft_reset(void) {

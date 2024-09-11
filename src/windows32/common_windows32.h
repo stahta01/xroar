@@ -42,17 +42,6 @@ struct ui_windows32_interface {
 	HMENU right_joystick_menu;
 	HMENU left_joystick_menu;
 
-	// Cassette tapes dialog
-	struct {
-		HWND window;
-		int num_programs;
-		struct {
-			struct tape_file *file;
-			char *filename;
-			char *position;
-		} *programs;
-	} tape;
-
 	// Floppy disks dialog
 	struct {
 		HWND window;

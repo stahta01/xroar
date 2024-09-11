@@ -39,6 +39,7 @@
 #include "machine.h"
 #include "mc6801/mc6801.h"
 #include "mc6809/mc6809.h"
+#include "messenger.h"
 #include "part.h"
 #include "snapshot.h"
 #include "sound.h"
@@ -51,6 +52,9 @@
 
 struct tape_interface_private {
 	struct tape_interface public;
+
+	// Messenger client id
+	int msgr_client_id;
 
 	struct machine *machine;
 	struct ui_interface *ui;
@@ -121,6 +125,8 @@ static event_ticks motoron_time = 0;
 
 static void waggle_bit(void *);
 static void flush_output(void *);
+static void tape_ui_set_playing(void *, int tag, void *smsg);
+static void tape_ui_set_tape_flag(void *, int tag, void *smsg);
 static void update_motor(struct tape_interface_private *tip);
 
 static void tape_desync(struct tape_interface_private *tip, int leader);
@@ -202,6 +208,14 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	*tip = (struct tape_interface_private){0};
 	struct tape_interface *ti = &tip->public;
 
+	// Register with messenger
+	tip->msgr_client_id = messenger_client_register();
+
+	ui_messenger_preempt_group(tip->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(tape_ui_set_playing, tip));
+	ui_messenger_preempt_group(tip->msgr_client_id, ui_tag_tape_flag_fast, MESSENGER_NOTIFY_DELEGATE(tape_ui_set_tape_flag, tip));
+	ui_messenger_preempt_group(tip->msgr_client_id, ui_tag_tape_flag_pad_auto, MESSENGER_NOTIFY_DELEGATE(tape_ui_set_tape_flag, tip));
+	ui_messenger_preempt_group(tip->msgr_client_id, ui_tag_tape_flag_rewrite, MESSENGER_NOTIFY_DELEGATE(tape_ui_set_tape_flag, tip));
+
 	tip->ui = ui;
 	tip->in_pulse = -1;
 	tip->ao_rate = 9600;
@@ -222,6 +236,7 @@ void tape_interface_free(struct tape_interface *ti) {
 	if (!ti)
 		return;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	messenger_client_unregister(tip->msgr_client_id);
 	tape_close_reading(ti);
 	tape_close_writing(ti);
 	event_dequeue(&tip->flush_event);
@@ -497,7 +512,7 @@ void tape_reset(struct tape_interface *ti) {
 	tape_close_writing(ti);
 	tip->motor = 0;
 	event_dequeue(&tip->waggle_event);
-	tape_set_playing(ti, !ti->default_paused, 1);
+	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 }
 
 void tape_set_ao_rate(struct tape_interface *ti, int rate) {
@@ -553,7 +568,7 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar.cfg.tape.hysteresis);
 
 	tape_desync(tip, xroar.cfg.tape.rewrite_leader);
-	tape_set_playing(ti, !ti->default_paused, 1);
+	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 	if (logging.level >= 1) {
 		LOG_PRINT("Tape: Attached '%s' for reading", filename);
 		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
@@ -589,7 +604,7 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 		break;
 	}
 
-	tape_set_playing(ti, !ti->default_paused, 1);
+	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 	tip->rewrite.bit_count = 0;
 	tip->rewrite.silence = 1;
 	if (logging.level >= 1) {
@@ -636,8 +651,7 @@ static struct machine_bp bp_list_press_play[] = {
 
 static void press_play(void *sptr) {
 	struct tape_interface_private *tip = sptr;
-	struct tape_interface *ti = &tip->public;
-	tape_set_playing(ti, 1, 1);
+	ui_update_state(-1, ui_tag_tape_playing, 1, NULL);
 	machine_bp_remove_list(tip->machine, bp_list_press_play);
 }
 
@@ -748,13 +762,17 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 		}
 		LOG_DEBUG(2, "Tape: motor %s\n", motor ? "ON" : "OFF");
 	}
-	DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_motor, tip->motor, NULL);
+	ui_update_state(tip->msgr_client_id, ui_tag_tape_motor, tip->motor, NULL);
 }
 
 // Manual motor control.  UI-triggered play/pause.  Call with play=0 to pause.
 
-void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+static void tape_ui_set_playing(void *sptr, int tag, void *smsg) {
+	struct tape_interface_private *tip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_tape_playing);
+	_Bool play = ui_msg_adjust_value_range(uimsg, tip->playing, 0, 0, 1,
+					       UI_ADJUST_FLAG_CYCLE);
 	tip->playing = play;
 	update_motor(tip);
 	// Might be confusing if user presses play but EOF immediately stops it
@@ -765,9 +783,6 @@ void tape_set_playing(struct tape_interface *ti, _Bool play, _Bool notify) {
 			LOG_PRINT(" -> [%s]", tip->playing ? "PLAYING" : "PAUSED");
 		}
 		LOG_PRINT("\n");
-	}
-	if (notify) {
-		DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_playing, tip->playing, NULL);
 	}
 }
 
@@ -783,33 +798,27 @@ void tape_update_output(struct tape_interface *ti, uint8_t value) {
 	tip->last_tape_output = value;
 }
 
-// Updates flags and sets appropriate breakpoints.
+// Update flags
 
-void tape_set_state(struct tape_interface *ti, int flags) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	tip->tape_fast = flags & TAPE_FAST;
-	tip->tape_pad_auto = flags & TAPE_PAD_AUTO;
-	tip->tape_rewrite = flags & TAPE_REWRITE;
+static void tape_ui_set_tape_flag(void *sptr, int tag, void *smsg) {
+	struct tape_interface_private *tip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	switch (tag) {
+	case ui_tag_tape_flag_fast:
+		tip->tape_fast = ui_msg_adjust_value_range(uimsg, tip->tape_fast, 1,
+							   0, 1, UI_ADJUST_FLAG_CYCLE);
+		break;
+	case ui_tag_tape_flag_pad_auto:
+		tip->tape_pad_auto = ui_msg_adjust_value_range(uimsg, tip->tape_pad_auto, 1,
+							       0, 1, UI_ADJUST_FLAG_CYCLE);
+		break;
+	case ui_tag_tape_flag_rewrite:
+		tip->tape_rewrite = ui_msg_adjust_value_range(uimsg, tip->tape_rewrite, 0,
+							      0, 1, 0);
+		break;
+	default: break;
+	}
 	set_breakpoints(tip);
-}
-
-// Sets tape flags and updates UI.
-
-void tape_select_state(struct tape_interface *ti, int flags) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	tape_set_state(ti, flags);
-	DELEGATE_CALL(tip->ui->update_state, ui_tag_tape_flags, flags, NULL);
-}
-
-// Get current tape flags.
-
-int tape_get_state(struct tape_interface *ti) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	int flags = 0;
-	if (tip->tape_fast) flags |= TAPE_FAST;
-	if (tip->tape_pad_auto) flags |= TAPE_PAD_AUTO;
-	if (tip->tape_rewrite) flags |= TAPE_REWRITE;
-	return flags;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -863,7 +872,7 @@ static void waggle_bit(void *sptr) {
 			write_snapshot(xroar.cfg.debug.snap_motoroff);
 		}
 		if (ti->default_paused) {
-			tape_set_playing(ti, 0, 1);
+			ui_update_state(-1, ui_tag_tape_playing, 0, NULL);
 		}
 		return;
 	case 0:

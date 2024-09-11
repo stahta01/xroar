@@ -212,12 +212,17 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	/* Cassettes: */
-	case ui_tag_tape_flags:
-		tape_set_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ value);
+	case ui_tag_tape_flag_fast:
+		ui_update_state(-1, ui_tag_tape_flag_fast, UI_NEXT, NULL);
+		break;
+	case ui_tag_tape_flag_pad_auto:
+		ui_update_state(-1, ui_tag_tape_flag_pad_auto, UI_NEXT, NULL);
+		break;
+	case ui_tag_tape_flag_rewrite:
+		ui_update_state(-1, ui_tag_tape_flag_rewrite, UI_NEXT, NULL);
 		break;
 	case ui_tag_tape_playing:
-		uimac->tape.playing = !uimac->tape.playing;
-		tape_set_playing(xroar.tape_interface, uimac->tape.playing, 0);
+		ui_update_state(-1, ui_tag_tape_playing, UI_NEXT, NULL);
 		break;
 
 	/* Disks: */
@@ -344,8 +349,14 @@ int cocoa_super_all_keys = 0;
 		[item setState:((value == uimac->cart.id) ? NSOnState : NSOffState)];
 		break;
 
-	case ui_tag_tape_flags:
-		[item setState:((tape_get_state(xroar.tape_interface) & value) ? NSOnState : NSOffState)];
+	case ui_tag_tape_flag_fast:
+		[item setState:(uimac->tape.fast ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_tape_flag_pad_auto:
+		[item setState:(uimac->tape.pad_auto ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_tape_flag_rewrite:
+		[item setState:(uimac->tape.rewrite ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_tape_playing:
 		[item setState:(uimac->tape.playing ? NSOnState : NSOffState)];
@@ -542,17 +553,17 @@ static void setup_file_menu(void) {
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Fast loading" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_FAST)];
+	[item setTag:UIMAC_TAG(ui_tag_tape_flag_fast)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"CAS padding" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO)];
+	[item setTag:UIMAC_TAG(ui_tag_tape_flag_pad_auto)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Rewrite" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_REWRITE)];
+	[item setTag:UIMAC_TAG(ui_tag_tape_flag_rewrite)];
 	[submenu addItem:item];
 	[item release];
 
@@ -1147,6 +1158,10 @@ static void *ui_cocoa_new(void *cfg) {
 	// Register with messenger
 	uimac->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_fast, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_pad_auto, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_rewrite, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1305,12 +1320,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->cart.id = value;
 		break;
 
-	/* Cassettes */
-
-	case ui_tag_tape_playing:
-		uimac->tape.playing = value;
-		break;
-
 	/* Disk */
 
 	case ui_tag_disk_data:
@@ -1384,6 +1393,24 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	int value = uimsg->value;
 
 	switch (tag) {
+
+	// Cassettes
+
+	case ui_tag_tape_flag_fast:
+		uimac->tape.fast = value;
+		break;
+
+	case ui_tag_tape_flag_pad_auto:
+		uimac->tape.pad_auto = value;
+		break;
+
+	case ui_tag_tape_flag_rewrite:
+		uimac->tape.rewrite = value;
+		break;
+
+	case ui_tag_tape_playing:
+		uimac->tape.playing = value;
+		break;
 
 	// Video
 

@@ -69,7 +69,9 @@ enum ui_tag {
 	ui_tag_cartridge,
 	// Tape
 	ui_tag_tape_dialog,  // tape control dialog, if supported
-	ui_tag_tape_flags,
+	ui_tag_tape_flag_fast,  // fast tape loading
+	ui_tag_tape_flag_pad_auto,  // automatic tape padding
+	ui_tag_tape_flag_rewrite,  // tape rewrite mode
 	ui_tag_tape_input_filename,  // .data = filename
 	ui_tag_tape_output_filename,  // .data = filename
 	ui_tag_tape_motor,  // automatic control
