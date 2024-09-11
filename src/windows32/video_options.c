@@ -60,30 +60,11 @@ void windows32_vo_create_window(struct ui_sdl2_interface *uisdl2) {
 	SendMessage(vo_hue, UDM_SETRANGE, 0, MAKELPARAM(180, -179));
 	SendMessage(vo_hue, UDM_SETPOS, 0, 0);
 
-	HWND cbt_picture = GetDlgItem(vo_window, IDC_CB_PICTURE);
-	for (unsigned i = 0; i < NUM_VO_PICTURE; i++) {
-		SendMessage(cbt_picture, CB_ADDSTRING, 0, (LPARAM)vo_picture_name[i]);
-	}
-
-	HWND cbt_cmp_renderer = GetDlgItem(vo_window, IDC_CB_RENDERER);
-	for (unsigned i = 0; vo_cmp_ccr_list[i].name; i++) {
-		SendMessage(cbt_cmp_renderer, CB_ADDSTRING, 0, (LPARAM)vo_cmp_ccr_list[i].description);
-	}
-
-	HWND cbt_cmp_fs = GetDlgItem(vo_window, IDC_CB_FS);
-	for (unsigned i = 0; i < NUM_VO_RENDER_FS; i++) {
-		SendMessage(cbt_cmp_fs, CB_ADDSTRING, 0, (LPARAM)vo_render_fs_name[i]);
-	}
-
-	HWND cbt_cmp_fsc = GetDlgItem(vo_window, IDC_CB_FSC);
-	for (unsigned i = 0; i < NUM_VO_RENDER_FSC; i++) {
-		SendMessage(cbt_cmp_fsc, CB_ADDSTRING, 0, (LPARAM)vo_render_fsc_name[i]);
-	}
-
-	HWND cbt_cmp_system = GetDlgItem(vo_window, IDC_CB_SYSTEM);
-	for (unsigned i = 0; i < NUM_VO_RENDER_SYSTEM; i++) {
-		SendMessage(cbt_cmp_system, CB_ADDSTRING, 0, (LPARAM)vo_render_system_name[i]);
-	}
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_PICTURE, vo_viewport_list);
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_RENDERER, vo_cmp_ccr_list);
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_FS, vo_render_fs_list);
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_FSC, vo_render_fsc_list);
+	uiw32_combo_box_from_enum(vo_window, IDC_CB_SYSTEM, vo_render_system_list);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -121,7 +102,7 @@ void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
 		break;
 
 	case ui_tag_picture:
-		windows32_send_message_dlg_item(vo_window, IDC_CB_PICTURE, CB_SETCURSEL, value, 0);
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_PICTURE, value);
 		break;
 
 	case ui_tag_ntsc_scaling:
@@ -129,19 +110,19 @@ void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
 		break;
 
 	case ui_tag_ccr:
-		windows32_send_message_dlg_item(vo_window, IDC_CB_RENDERER, CB_SETCURSEL, value, 0);
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_RENDERER, value);
 		break;
 
 	case ui_tag_cmp_fs:
-		windows32_send_message_dlg_item(vo_window, IDC_CB_FS, CB_SETCURSEL, value, 0);
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_FS, value);
 		break;
 
 	case ui_tag_cmp_fsc:
-		windows32_send_message_dlg_item(vo_window, IDC_CB_FSC, CB_SETCURSEL, value, 0);
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_FSC, value);
 		break;
 
 	case ui_tag_cmp_system:
-		windows32_send_message_dlg_item(vo_window, IDC_CB_SYSTEM, CB_SETCURSEL, value, 0);
+		uiw32_combo_box_select_by_data(vo_window, IDC_CB_SYSTEM, value);
 		break;
 
 	case ui_tag_cmp_colour_killer:
@@ -210,7 +191,9 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		if (HIWORD(wParam) == CBN_SELCHANGE) {
 			int id = LOWORD(wParam);
 			HWND cb = (HWND)lParam;
-			int value = SendMessage(cb, CB_GETCURSEL, 0, 0);
+			int idx = SendMessage(cb, CB_GETCURSEL, 0, 0);
+			int old_value = idx;
+			int value = SendMessage(cb, CB_GETITEMDATA, idx, 0);
 
 			switch (id) {
 			case IDC_CB_PICTURE:
@@ -225,19 +208,19 @@ static INT_PTR CALLBACK tv_controls_proc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			case IDC_CB_FS:
 				if (xroar.vo_interface) {
-					vo_set_cmp_fs(xroar.vo_interface, 0, value);
+					vo_set_cmp_fs(xroar.vo_interface, 0, old_value);
 				}
 				break;
 
 			case IDC_CB_FSC:
 				if (xroar.vo_interface) {
-					vo_set_cmp_fsc(xroar.vo_interface, 0, value);
+					vo_set_cmp_fsc(xroar.vo_interface, 0, old_value);
 				}
 				break;
 
 			case IDC_CB_SYSTEM:
 				if (xroar.vo_interface) {
-					vo_set_cmp_system(xroar.vo_interface, 0, value);
+					vo_set_cmp_system(xroar.vo_interface, 0, old_value);
 				}
 				break;
 
