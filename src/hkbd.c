@@ -1334,6 +1334,8 @@ void hk_scan_press(uint8_t code) {
 		uint16_t shifted_sym = hkbd.code_to_sym[level|HK_LEVEL_SHIFT][code];
 		if (shifted_sym >= hk_sym_0 && shifted_sym <= hk_sym_9) {
 			sym = shifted_sym;
+		} else if (unshifted_sym >= hk_sym_0 && unshifted_sym <= hk_sym_9) {
+			sym = unshifted_sym;
 		} else if (unshifted_sym >= hk_sym_a && unshifted_sym <= hk_sym_z) {
 			sym = unshifted_sym;
 		}

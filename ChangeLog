@@ -1,3 +1,5 @@
+ * Fix Control+Shift+digit shortcuts
+
 Version 1.6.3, Thu 12 Sep 2024
 
  * Ensure data chunk in WAV output is of even length [Stacey Vetzal]
