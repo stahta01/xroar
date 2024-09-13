@@ -104,21 +104,19 @@ static char *escape_string(const char *str) {
 	return r;
 }
 
-void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum, unsigned tag) {
+void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_list, unsigned tag) {
 	// Remove old entries
 	while (DeleteMenu(menu, 0, MF_BYPOSITION))
 		;
 
 	// Add entries
-	while (xc_enum->name) {
-		if (!xc_enum->description) {
-			++xc_enum;
+	for (struct xconfig_enum *iter = xc_list; iter->name; ++iter) {
+		if (!iter->description) {
 			continue;
 		}
-		char *label = escape_string(xc_enum->description);
-		AppendMenu(menu, MF_STRING, UIW32_TAGV(tag, xc_enum->value), label);
+		char *label = escape_string(iter->description);
+		AppendMenu(menu, MF_STRING, UIW32_TAGV(tag, iter->value), label);
 		free(label);
-		++xc_enum;
 	}
 }
 

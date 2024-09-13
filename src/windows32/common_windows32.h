@@ -77,7 +77,7 @@ void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
 LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
 					WPARAM wParam, LPARAM lParam);
 
-void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_enum, unsigned tag);
+void uiw32_update_radio_menu_from_enum(HMENU menu, struct xconfig_enum *xc_list, unsigned tag);
 
 // Create combo box from enum
 

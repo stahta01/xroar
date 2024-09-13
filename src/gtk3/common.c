@@ -357,10 +357,10 @@ void uigtk3_radio_menu_free(struct uigtk3_radio_menu *rm) {
 // [Re-]build a menu from an xconfig_enum
 
 void uigtk3_update_radio_menu_from_enum(struct uigtk3_radio_menu *rm,
-					struct xconfig_enum *xc_enum,
+					struct xconfig_enum *xc_list,
 					const char *name_fmt, const char *label_fmt,
 					int selected) {
-	if (!rm || !xc_enum)
+	if (!rm || !xc_list)
 		return;
 	struct ui_gtk3_interface *uigtk3 = rm->uigtk3;
 	if (!name_fmt)
@@ -373,39 +373,34 @@ void uigtk3_update_radio_menu_from_enum(struct uigtk3_radio_menu *rm,
 	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
 	// Count entries
-	int num_entries = 0;
-	int enum_index = 0;
-	for (enum_index = 0; xc_enum[enum_index].name; enum_index++) {
-		if (!xc_enum[enum_index].description)
+	unsigned num_entries = 0;
+	for (struct xconfig_enum *iter = xc_list; iter->name; ++iter) {
+		if (!iter->description) {
 			continue;
-		num_entries++;
+		}
+		++num_entries;
 	}
 
-	// Add entries in reverse order
+	// Add entries
 	GtkRadioActionEntry *entries = g_malloc0(num_entries * sizeof(*entries));
-	gchar **names = g_malloc0(num_entries * sizeof(gchar *));
-	gchar **labels = g_malloc0(num_entries * sizeof(gchar *));
-	for (int i = 0; i < num_entries && enum_index > 0; ) {
-		--enum_index;
-		if (!xc_enum[enum_index].description)
+	unsigned i = 0;
+	for (struct xconfig_enum *iter = xc_list; iter->name; ++iter) {
+		if (!iter->description) {
 			continue;
-		names[i] = g_strdup_printf(name_fmt, xc_enum[enum_index].name);
-		labels[i] = g_strdup_printf(label_fmt, xc_enum[enum_index].description);
-		entries[i].name = names[i];
-		entries[i].label = xc_enum[enum_index].description;
-		entries[i].value = xc_enum[enum_index].value;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		}
+		entries[i].name = g_strdup_printf(name_fmt, iter->name);
+		entries[i].label = g_strdup_printf(label_fmt, iter->description);
+		entries[i].value = iter->value;
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 		++i;
 	}
 	gtk_action_group_add_radio_actions(rm->action_group, entries, num_entries, selected, rm->callback, uigtk3);
 
 	// Free everything
-	for (int i = 0; i < num_entries; i++) {
-		g_free(names[i]);
-		g_free(labels[i]);
+	for (i = 0; i < num_entries; i++) {
+		g_free((gpointer)entries[i].name);
+		g_free((gpointer)entries[i].label);
 	}
-	g_free(names);
-	g_free(labels);
 	g_free(entries);
 }
 

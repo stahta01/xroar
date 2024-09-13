@@ -739,44 +739,35 @@ static void gtk3_update_machine_menu(void *sptr) {
 	struct uigtk3_radio_menu *rm = uigtk3->machine_radio_menu;
 
 	// Get list of machine configs
-	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
+	struct slist *mcl = machine_config_list();
 	int num_machines = slist_length(mcl);
 
 	// Remove old entries
 	uigtk3_free_action_group(rm->action_group);
 	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
-	// Jump through alloc hoops just to avoid const-ness warnings
-	GtkRadioActionEntry *radio_entries = g_malloc0(num_machines * sizeof(*radio_entries));
-	gchar **names = g_malloc0(num_machines * sizeof(gchar *));
-	gchar **labels = g_malloc0(num_machines * sizeof(gchar *));
-
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
+	// Add entries
+	GtkRadioActionEntry *entries = g_malloc0(num_machines * sizeof(*entries));
 	int selected = -1;
 	int i = 0;
-	for (struct slist *iter = mcl; iter; iter = iter->next, i++) {
+	for (struct slist *iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
 		if (mc == xroar.machine_config)
 			selected = mc->id;
-		names[i] = g_strdup_printf("machine%d", i+1);
-		radio_entries[i].name = names[i];
-		labels[i] = escape_underscores(mc->description);
-		radio_entries[i].label = labels[i];
-		radio_entries[i].value = mc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		entries[i].name = g_strdup_printf("machine%d", i+1);
+		entries[i].label = escape_underscores(mc->description);
+		entries[i].value = mc->id;
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
+		++i;
 	}
-	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_machines, selected, (GCallback)set_machine, uigtk3);
+	gtk_action_group_add_radio_actions(rm->action_group, entries, num_machines, selected, (GCallback)set_machine, uigtk3);
 
-	// Back through the hoops
+	// Free everything
 	for (i = 0; i < num_machines; i++) {
-		g_free(names[i]);
-		g_free(labels[i]);
+		g_free((gpointer)entries[i].name);
+		g_free((gpointer)entries[i].label);
 	}
-	g_free(names);
-	g_free(labels);
-	g_free(radio_entries);
-	slist_free(mcl);
+	g_free(entries);
 }
 
 // Dynamic cartridge menu
@@ -792,7 +783,7 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 	if (xroar.machine) {
 		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
 		const char *cart_arch = mpe->cart_arch;
-		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
+		ccl = cart_config_list_is_a(cart_arch);
 		num_carts = slist_length(ccl);
 		cart = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	}
@@ -801,42 +792,32 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 	uigtk3_free_action_group(rm->action_group);
 	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
-	// Jump through alloc hoops just to avoid const-ness warnings.
-	// Note: final entry's name & label is const, no need to allow space
-	// for it in names[] & labels[].
-	GtkRadioActionEntry *radio_entries = g_malloc0((num_carts+1) * sizeof(*radio_entries));
-	gchar **names = g_malloc0(num_carts * sizeof(gchar *));
-	gchar **labels = g_malloc0(num_carts * sizeof(gchar *));
-
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
+	// Add entries
+	GtkRadioActionEntry *entries = g_malloc0((num_carts+1) * sizeof(*entries));
 	int selected = 0;
-	int i = 0;
-	for (struct slist *iter = ccl; iter; iter = iter->next, i++) {
+	entries[0].name = "cart0";
+	entries[0].label = "None";
+	entries[0].value = -1;
+	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[0].name, entries[0].name, GTK_UI_MANAGER_MENUITEM, FALSE);
+	int i = 1;
+	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (cart && cc == cart->config)
 			selected = cc->id;
-		names[i] = g_strdup_printf("cart%d", i+1);
-		radio_entries[i].name = names[i];
-		labels[i] = escape_underscores(cc->description);
-		radio_entries[i].label = labels[i];
-		radio_entries[i].value = cc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		entries[i].name = g_strdup_printf("cart%d", i+1);
+		entries[i].label = escape_underscores(cc->description);
+		entries[i].value = cc->id;
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
+		++i;
 	}
-	radio_entries[num_carts].name = "cart0";
-	radio_entries[num_carts].label = "None";
-	radio_entries[num_carts].value = -1;
-	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[num_carts].name, radio_entries[num_carts].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_carts+1, selected, (GCallback)set_cart, uigtk3);
+	gtk_action_group_add_radio_actions(rm->action_group, entries, num_carts+1, selected, (GCallback)set_cart, uigtk3);
 
-	// Back through the hoops
-	for (i = 0; i < num_carts; i++) {
-		g_free(names[i]);
-		g_free(labels[i]);
+	// Free everything
+	for (i = 1; i <= num_carts; i++) {
+		g_free((gpointer)entries[i].name);
+		g_free((gpointer)entries[i].label);
 	}
-	g_free(names);
-	g_free(labels);
-	g_free(radio_entries);
+	g_free(entries);
 	slist_free(ccl);
 }
 
@@ -846,7 +827,7 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 				 struct uigtk3_radio_menu *rm,
 				 const char *name_fmt, const char *name0) {
 	// Get list of joystick configs
-	struct slist *jcl = slist_reverse(slist_copy(joystick_config_list()));
+	struct slist *jcl = joystick_config_list();
 
 	int num_joystick_configs = slist_length(jcl);
 
@@ -854,39 +835,29 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 	uigtk3_free_action_group(rm->action_group);
 	gtk_ui_manager_remove_ui(uigtk3->menu_manager, rm->merge_id);
 
-	// Jump through alloc hoops just to avoid const-ness warnings.
-	GtkRadioActionEntry *radio_entries = g_malloc0((num_joystick_configs+1) * sizeof(*radio_entries));
-	gchar **names = g_malloc0(num_joystick_configs * sizeof(gchar *));
-	gchar **labels = g_malloc0(num_joystick_configs * sizeof(gchar *));
-
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
-	int i = 0;
-	for (struct slist *iter = jcl; iter; iter = iter->next, i++) {
+	// Add entries
+	GtkRadioActionEntry *entries = g_malloc0((num_joystick_configs+1) * sizeof(*entries));
+	entries[0].name = name0;
+	entries[0].label = "None";
+	entries[0].value = -1;
+	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[0].name, entries[0].name, GTK_UI_MANAGER_MENUITEM, FALSE);
+	int i = 1;
+	for (struct slist *iter = jcl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
-		names[i] = g_strdup_printf(name_fmt, i+1);
-		radio_entries[i].name = names[i];
-		labels[i] = escape_underscores(jc->description);
-		radio_entries[i].label = labels[i];
-		radio_entries[i].value = jc->id;
-		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[i].name, radio_entries[i].name, GTK_UI_MANAGER_MENUITEM, TRUE);
+		entries[i].name = g_strdup_printf(name_fmt, i+1);
+		entries[i].label = escape_underscores(jc->description);
+		entries[i].value = jc->id;
+		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
+		++i;
 	}
-	radio_entries[num_joystick_configs].name = name0;
-	radio_entries[num_joystick_configs].label = "None";
-	radio_entries[num_joystick_configs].value = -1;
+	gtk_action_group_add_radio_actions(rm->action_group, entries, num_joystick_configs+1, 0, rm->callback, uigtk3);
 
-	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, radio_entries[num_joystick_configs].name, radio_entries[num_joystick_configs].name, GTK_UI_MANAGER_MENUITEM, TRUE);
-	gtk_action_group_add_radio_actions(rm->action_group, radio_entries, num_joystick_configs+1, 0, rm->callback, uigtk3);
-
-	// Back through the hoops
-	for (i = 0; i < num_joystick_configs; i++) {
-		g_free(names[i]);
-		g_free(labels[i]);
+	// Free everything
+	for (i = 1; i <= num_joystick_configs; i++) {
+		g_free((gpointer)entries[i].name);
+		g_free((gpointer)entries[i].label);
 	}
-	g_free(names);
-	g_free(labels);
-	g_free(radio_entries);
-	slist_free(jcl);
+	g_free(entries);
 }
 
 static void gtk3_update_joystick_menus(void *sptr) {
