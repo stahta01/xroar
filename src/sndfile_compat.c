@@ -409,6 +409,49 @@ static _Bool wav_write_header(SNDFILE *sf) {
 	return error;
 }
 
+// Update previously-written header in-place, preserving file position.
+// Returns error code.
+
+static int wav_update_header(SNDFILE *sf) {
+	assert(sf != NULL);
+	assert(sf->mode == SFM_WRITE || sf->mode == SFM_RDWR);
+
+	off_t old_position = ftello(sf->fd);
+	if (old_position < 0)
+		return SF_ERR_SYSTEM;
+
+	uint32_t data_bytes = sf->data_size * sf->bytes_per_frame;
+	// Turns out the data chunk has to be an even number of bytes:
+	if (data_bytes & 1) {
+		off_t byte_offset = sf->data.wav.data_offset + (sf->data_size * sf->bytes_per_frame);
+		if (fseeko(sf->fd, byte_offset, SEEK_SET) < 0)
+			return SF_ERR_SYSTEM;
+		if (!write_uint8(sf, 0))
+			return SF_ERR_SYSTEM;
+		data_bytes++;
+	}
+	if (fseeko(sf->fd, sf->data.wav.data_offset - 4, SEEK_SET) < 0)
+		return SF_ERR_SYSTEM;
+	if (!write_uint32(sf, data_bytes))
+		return SF_ERR_SYSTEM;
+	if (sf->data.wav.fact_offset > 0) {
+		if (fseeko(sf->fd, sf->data.wav.fact_offset, SEEK_SET) < 0)
+			return SF_ERR_SYSTEM;
+		if (!write_uint32(sf, sf->data_size))
+			return SF_ERR_SYSTEM;
+	}
+	if (fseeko(sf->fd, 4, SEEK_SET) < 0)
+		return SF_ERR_SYSTEM;
+	uint32_t riff_bytes = sf->data.wav.data_offset + data_bytes - 8;
+	if (!write_uint32(sf, riff_bytes))
+		return SF_ERR_SYSTEM;
+
+	if (fseeko(sf->fd, old_position, SEEK_SET) < 0)
+		return SF_ERR_SYSTEM;
+
+	return SF_ERR_NO_ERROR;
+}
+
 SNDFILE *sf_open(const char *path, int mode, SF_INFO *sf_info) {
 	sndfile_compat_error = SF_ERR_NO_ERROR;
 
@@ -516,30 +559,9 @@ int sf_close(SNDFILE *sf) {
 	if (!sf)
 		return SF_ERR_SYSTEM;
 	if (sf->mode == SFM_WRITE || sf->mode == SFM_RDWR) {
-		uint32_t data_bytes = sf->data_size * sf->bytes_per_frame;
-		// Turns out the data chunk has to be an even number of bytes:
-		if (data_bytes & 1) {
-			if (fseeko(sf->fd, 0, SEEK_END) < 0)
-				return SF_ERR_SYSTEM;
-			if (!write_uint8(sf, 0))
-				return SF_ERR_SYSTEM;
-			data_bytes++;
-		}
-		if (fseeko(sf->fd, sf->data.wav.data_offset - 4, SEEK_SET) < 0)
-			return SF_ERR_SYSTEM;
-		if (!write_uint32(sf, data_bytes))
-			return SF_ERR_SYSTEM;
-		if (sf->data.wav.fact_offset > 0) {
-			if (fseeko(sf->fd, sf->data.wav.fact_offset, SEEK_SET) < 0)
-				return SF_ERR_SYSTEM;
-			if (!write_uint32(sf, sf->data_size))
-				return SF_ERR_SYSTEM;
-		}
-		if (fseeko(sf->fd, 4, SEEK_SET) < 0)
-			return SF_ERR_SYSTEM;
-		uint32_t riff_bytes = sf->data.wav.data_offset + data_bytes - 8;
-		if (!write_uint32(sf, riff_bytes))
-			return SF_ERR_SYSTEM;
+		int err = wav_update_header(sf);
+		if (err != SF_ERR_NO_ERROR)
+			return err;
 	}
 	fclose(sf->fd);
 	free(sf);
