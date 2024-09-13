@@ -251,6 +251,7 @@ static void sndfile_motor_off(struct tape *t) {
 		sndfile->block_length = 0;
 		sndfile->cursor = 0;
 	}
+	sf_write_sync(sndfile->fd);
 }
 
 static void sndfile_set_panning(struct tape *t, float pan) {
