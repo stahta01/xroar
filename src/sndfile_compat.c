@@ -569,6 +569,15 @@ int sf_close(SNDFILE *sf) {
 	return SF_ERR_NO_ERROR;
 }
 
+void sf_write_sync(SNDFILE *sf) {
+	int err = wav_update_header(sf);
+	if (err != SF_ERR_NO_ERROR) {
+		set_error(sf, err);
+	} else {
+		fflush(sf->fd);
+	}
+}
+
 int sf_error(SNDFILE *sf) {
 	if (!sf)
 		return sndfile_compat_error;

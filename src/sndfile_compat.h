@@ -91,6 +91,10 @@ typedef struct SNDFILE SNDFILE;
 SNDFILE *sf_open(const char *path, int mode, SF_INFO *sf_info);
 int sf_close(SNDFILE *);
 
+// Unlike actual libsndfile, this will also ensure the on-disk file is valid by
+// updating WAV headers as well.
+void sf_write_sync(SNDFILE *);
+
 int sf_error(SNDFILE *);
 
 sf_count_t sf_seek(SNDFILE *, sf_count_t frames, int whence);
