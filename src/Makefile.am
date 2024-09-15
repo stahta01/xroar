@@ -459,6 +459,7 @@ if MINGW
 xroar_CFLAGS += $(MINGW_CFLAGS)
 xroar_LDADD += $(MINGW_LIBS)
 xroar_SOURCES += \
+	windows32/about.c \
 	windows32/common_windows32.c windows32/common_windows32.h \
 	windows32/dialogs.h \
 	windows32/drivecontrol.c windows32/drivecontrol.h \

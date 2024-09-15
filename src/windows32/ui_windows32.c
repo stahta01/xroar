@@ -70,9 +70,7 @@ static unsigned max_joystick_id = 0;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-static HWND about_dialog = NULL;
 static WNDPROC sdl_window_proc = NULL;
-static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -360,7 +358,6 @@ static void windows32_update_joystick_menus(void *sptr) {
 void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWMmsg *wmmsg) {
 	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl2;
 
-	HWND hwnd = wmmsg->msg.win.hwnd;
 	UINT msg = wmmsg->msg.win.msg;
 	WPARAM wParam = wmmsg->msg.win.wParam;
 
@@ -529,12 +526,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Help:
 	case ui_tag_about:
-		if (!IsWindow(about_dialog)) {
-			about_dialog = CreateDialog(NULL, MAKEINTRESOURCE(1), hwnd, (DLGPROC)about_proc);
-			if (about_dialog) {
-				ShowWindow(about_dialog, SW_SHOW);
-			}
-		}
+		uiw32_create_about_window(uiw32);
 		break;
 
 	default:
@@ -759,29 +751,4 @@ void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *uisdl2, _Bool visi
 	} else if (is_visible && !visible) {
 		SetMenu(hwnd, NULL);
 	}
-}
-
-static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	(void)lParam;
-	switch (msg) {
-
-	case WM_INITDIALOG:
-		return TRUE;
-
-	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
-		case IDOK:
-		case IDCANCEL:
-			DestroyWindow(hwnd);
-			about_dialog = NULL;
-			return TRUE;
-
-		default:
-			break;
-		}
-
-	default:
-		break;
-	}
-	return FALSE;
 }

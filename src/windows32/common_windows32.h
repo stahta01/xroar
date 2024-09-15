@@ -59,6 +59,11 @@ struct ui_windows32_interface {
 	struct {
 		HWND window;
 	} printer;
+
+	// About dialog
+	struct {
+		HWND window;
+	} about;
 };
 
 extern HWND windows32_main_hwnd;
@@ -68,6 +73,9 @@ int windows32_init(_Bool alloc_console);
 
 /// Cleanup before exit.
 void windows32_shutdown(void);
+
+// Create "About" dialog
+void uiw32_create_about_window(struct ui_windows32_interface *);
 
 // Draw a control using DrawText() with DT_PATH_ELLIPSIS
 void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
