@@ -18,20 +18,15 @@
 
 #include "top-config.h"
 
-#include <ctype.h>
-
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 
 #include "slist.h"
 #include "xalloc.h"
 
-#include "auto_kbd.h"
 #include "logging.h"
 #include "xconfig.h"
-#include "xroar.h"
 
 #include "gtk3/common.h"
 
@@ -39,124 +34,6 @@
 // there is only ever one instantiation of ui_gtk3 and make it available
 // globally.
 struct ui_gtk3_interface *global_uigtk3 = NULL;
-
-// Event handlers
-
-// Used within tape/drive control dialogs to eat keypresses but still allow GUI
-// controls.
-
-gboolean gtk3_dummy_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	(void)widget;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-
-	if (gtk_window_activate_key(GTK_WINDOW(uigtk3->top_window), event) == TRUE) {
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
-// Key press/release
-
-gboolean gtk3_handle_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-
-#ifndef WINDOWS32
-	// Hide cursor
-	if (!uigtk3->cursor_hidden) {
-		GdkWindow *window = gtk_widget_get_window(uigtk3->drawing_area);
-		uigtk3->old_cursor = gdk_window_get_cursor(window);
-		gdk_window_set_cursor(window, uigtk3->blank_cursor);
-		uigtk3->cursor_hidden = 1;
-	}
-#endif
-
-	// Pass off to keyboard code
-	return gtk3_keyboard_handle_key_press(widget, event, user_data);
-}
-
-gboolean gtk3_handle_key_release(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
-	// Pass off to keyboard code
-	return gtk3_keyboard_handle_key_release(widget, event, user_data);
-}
-
-// Pointer motion
-
-gboolean gtk3_handle_motion_notify(GtkWidget *widget, GdkEventMotion *event, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	(void)widget;
-
-#ifndef WINDOWS32
-	// Unhide cursor
-	if (uigtk3->cursor_hidden) {
-		GdkWindow *window = gtk_widget_get_window(uigtk3->drawing_area);
-		gdk_window_set_cursor(window, uigtk3->old_cursor);
-		uigtk3->cursor_hidden = 0;
-	}
-#endif
-
-	// Update position data (for mouse mapped joystick)
-	vo->mouse.axis[0] = event->x;
-	vo->mouse.axis[1] = event->y;
-
-	return FALSE;
-}
-
-// Button press/release
-
-static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text, gpointer data) {
-	(void)clipboard;
-	(void)data;
-	if (!text)
-		return;
-	char *ntext = xstrdup(text);
-	if (!ntext)
-		return;
-	guint state = (uintptr_t)data;
-	_Bool uc = state & GDK_SHIFT_MASK;
-	for (char *p = ntext; *p; p++) {
-		if (*p == '\n')
-			*p = '\r';
-		if (uc)
-			*p = toupper(*p);
-	}
-	ak_parse_type_string(xroar.auto_kbd, ntext);
-	free(ntext);
-}
-
-gboolean gtk3_handle_button_press(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	(void)widget;
-
-	if (event->button == 2) {
-		GdkDisplay *d = gtk_widget_get_display(uigtk3->top_window);
-		GtkClipboard *cb = gtk_clipboard_get_for_display(d, GDK_SELECTION_PRIMARY);
-		gtk_clipboard_request_text(cb, clipboard_text_received, (gpointer)(uintptr_t)event->state);
-		return FALSE;
-	}
-
-	// Update button data (for mouse mapped joystick)
-	if (event->button >= 1 && event->button <= 3) {
-		vo->mouse.button[event->button-1] = 1;
-	}
-
-	return FALSE;
-}
-
-gboolean gtk3_handle_button_release(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	(void)widget;
-
-	// Update button data (for mouse mapped joystick)
-	if (event->button >= 1 && event->button <= 3) {
-		vo->mouse.button[event->button-1] = 0;
-	}
-
-	return FALSE;
-}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

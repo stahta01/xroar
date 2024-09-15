@@ -33,6 +33,7 @@
 #include "xroar.h"
 
 #include "gtk3/common.h"
+#include "gtk3/event_handlers.h"
 #include "gtk3/tapecontrol.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

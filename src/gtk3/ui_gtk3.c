@@ -48,6 +48,7 @@
 
 #include "gtk3/common.h"
 #include "gtk3/drivecontrol.h"
+#include "gtk3/event_handlers.h"
 #include "gtk3/printercontrol.h"
 #include "gtk3/tapecontrol.h"
 #include "gtk3/video_options.h"
@@ -90,9 +91,6 @@ static void gtk3_update_joystick_menus(void *);
 static gboolean run_cpu(gpointer data);
 
 // Helpers
-
-static gboolean gtk3_handle_focus_in(GtkWidget *self, GdkEventFocus *event,
-				     gpointer user_data);
 
 // This feels stupid...
 static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 0); }
@@ -565,7 +563,10 @@ static void *ui_gtk3_new(void *cfg) {
 		ui->filereq_interface = module_init(fr_module, NULL);
 	}
 
-	gtk3_keyboard_init(ui_cfg);
+	hk_init();
+	GdkKeymap *gdk_keymap = gdk_keymap_get_for_display(gdk_display_get_default());
+	gtk3_handle_keys_changed(gdk_keymap, NULL);
+	g_signal_connect(G_OBJECT(gdk_keymap), "keys-changed", G_CALLBACK(gtk3_handle_keys_changed), NULL);
 
 	// Connect relevant event signals
 	g_signal_connect(G_OBJECT(uigtk3->top_window), "key-press-event", G_CALLBACK(gtk3_handle_key_press), uigtk3);
@@ -864,15 +865,4 @@ static void gtk3_update_joystick_menus(void *sptr) {
 
 	update_joystick_menu(uigtk3, uigtk3->joy_right_radio_menu, "rjoy%d", "rjoy0");
 	update_joystick_menu(uigtk3, uigtk3->joy_left_radio_menu, "ljoy%d", "ljoy0");
-}
-
-// Event handlers
-
-static gboolean gtk3_handle_focus_in(GtkWidget *self, GdkEventFocus *event,
-				     gpointer user_data) {
-	(void)self;
-	(void)event;
-	(void)user_data;
-	hk_focus_in();
-	return TRUE;
 }

@@ -253,10 +253,10 @@ xroar_LDADD += $(GTK3_LIBS)
 xroar_SOURCES += \
 	gtk3/common.c gtk3/common.h \
 	gtk3/drivecontrol.c gtk3/drivecontrol.h \
+	gtk3/event_handlers.c gtk3/event_handlers.h \
 	gtk3/filereq_gtk3.c \
 	gtk3/gtk3.gresource.c \
 	gtk3/joystick_gtk3.c \
-	gtk3/keyboard_gtk3.c \
 	gtk3/printercontrol.c gtk3/printercontrol.h \
 	gtk3/tapecontrol.c gtk3/tapecontrol.h \
 	gtk3/ui_gtk3.c \

@@ -128,17 +128,6 @@ extern struct ui_gtk3_interface *global_uigtk3;
 
 _Bool gtk3_vo_init(struct ui_gtk3_interface *);
 
-void gtk3_keyboard_init(struct ui_cfg *ui_cfg);
-gboolean gtk3_keyboard_handle_key_press(GtkWidget *, GdkEventKey *, gpointer);
-gboolean gtk3_keyboard_handle_key_release(GtkWidget *, GdkEventKey *, gpointer);
-
-gboolean gtk3_dummy_keypress(GtkWidget *, GdkEventKey *, gpointer);
-gboolean gtk3_handle_key_press(GtkWidget *, GdkEventKey *, gpointer);
-gboolean gtk3_handle_key_release(GtkWidget *, GdkEventKey *, gpointer);
-gboolean gtk3_handle_motion_notify(GtkWidget *, GdkEventMotion *, gpointer);
-gboolean gtk3_handle_button_press(GtkWidget *, GdkEventButton *, gpointer);
-gboolean gtk3_handle_button_release(GtkWidget *, GdkEventButton *, gpointer);
-
 extern struct joystick_module *gtk3_js_modlist[];
 
 #ifndef GLIB_VERSION_2_50

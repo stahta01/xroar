@@ -32,6 +32,7 @@
 
 #include "gtk3/common.h"
 #include "gtk3/drivecontrol.h"
+#include "gtk3/event_handlers.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
