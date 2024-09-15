@@ -19,9 +19,7 @@
 #include "top-config.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
@@ -30,7 +28,6 @@
 #include <gdk/gdkx.h>
 #endif
 
-#include "pl-string.h"
 #include "slist.h"
 
 #include "cart.h"
@@ -55,12 +52,13 @@
 #include "gtk3/tapecontrol.h"
 #include "gtk3/video_options.h"
 
+#ifdef HAVE_X11
 #include "x11/hkbd_x11.h"
+#endif
+
+// Module definition
 
 static void *ui_gtk3_new(void *cfg);
-static void ui_gtk3_free(void *);
-static void ui_gtk3_run(void *);
-static void ui_gtk3_update_state(void *, int tag, int value, const void *data);
 
 extern struct module filereq_gtk3_module;
 extern struct module filereq_cli_module;
@@ -75,8 +73,6 @@ static struct module * const gtk3_filereq_module_list[] = {
 	NULL
 };
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 struct ui_module ui_gtk3_module = {
 	.common = { .name = "gtk3", .description = "GTK+ 3 UI",
 		.new = ui_gtk3_new,
@@ -85,202 +81,74 @@ struct ui_module ui_gtk3_module = {
 	.joystick_module_list = gtk3_js_modlist,
 };
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // Dynamic menus
+
 static void gtk3_update_machine_menu(void *);
 static void gtk3_update_cartridge_menu(void *);
 static void gtk3_update_joystick_menus(void *);
 
-static gboolean run_cpu(gpointer data);
+// File menu callbacks
 
-// Helpers
+static void do_load_file(GtkEntry *entry, gpointer user_data);
+static void do_run_file(GtkEntry *entry, gpointer user_data);
+static void insert_disk1(GtkEntry *entry, gpointer user_data);
+static void insert_disk2(GtkEntry *entry, gpointer user_data);
+static void insert_disk3(GtkEntry *entry, gpointer user_data);
+static void insert_disk4(GtkEntry *entry, gpointer user_data);
+static void toggle_dc_window(GtkToggleAction *current, gpointer user_data);
+static void toggle_tc_window(GtkToggleAction *current, gpointer user_data);
+static void toggle_tv_window(GtkToggleAction *current, gpointer user_data);
+static void save_snapshot(GtkEntry *entry, gpointer user_data);
+static void save_screenshot(GtkEntry *entry, gpointer user_data);
+static void do_quit(GtkEntry *entry, gpointer user_data);
 
-// This feels stupid...
-static void insert_disk1(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 0); }
-static void insert_disk2(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 1); }
-static void insert_disk3(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 2); }
-static void insert_disk4(GtkEntry *entry, gpointer user_data) { (void)entry; struct ui_gtk3_interface *uigtk3 = user_data; gtk3_insert_disk(uigtk3, 3); }
+// View menu callbacks
 
-static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg);
+static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data);
+static void zoom_in(GtkEntry *entry, gpointer user_data);
+static void zoom_out(GtkEntry *entry, gpointer user_data);
+static void zoom_reset(GtkEntry *entry, gpointer user_data);
+static void set_fullscreen(GtkToggleAction *current, gpointer user_data);
 
-static void save_snapshot(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	g_idle_remove_by_data(uigtk3->top_window);
-	xroar_save_snapshot();
-	g_idle_add(run_cpu, uigtk3->top_window);
-}
+// Hardware menu callbacks
 
-static void save_screenshot(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	g_idle_remove_by_data(uigtk3->top_window);
-#ifdef SCREENSHOT
-	xroar_screenshot();
-#endif
-	g_idle_add(run_cpu, uigtk3->top_window);
-}
+static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void set_joy_right(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void set_joy_left(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void swap_joysticks(GtkEntry *entry, gpointer user_data);
+static void do_soft_reset(GtkEntry *entry, gpointer user_data);
+static void do_hard_reset(GtkEntry *entry, gpointer user_data);
 
-static void do_quit(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	(void)user_data;
-	xroar_quit();
-}
+// Tool menu callbacks
 
-static void do_soft_reset(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	(void)user_data;
-	xroar_soft_reset();
-}
+static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current,
+			    gpointer user_data);
+static void set_hkbd_lang(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
+static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data);
+static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data);
 
-static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	(void)user_data;
-	xroar_hard_reset();
-}
-
-static void zoom_reset(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_reset(vo);
-}
-
-static void zoom_in(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_in(vo);
-}
-
-static void zoom_out(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_out(vo);
-}
-
-static void toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(uigtk3->msgr_client_id, ui_tag_disk_dialog, val, NULL);
-}
-
-static void toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(uigtk3->msgr_client_id, ui_tag_tape_dialog, val, NULL);
-}
-
-static void toggle_tv_window(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(uigtk3->msgr_client_id, ui_tag_tv_dialog, val, NULL);
-}
-
-static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
-	(void)user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(-1, ui_tag_vdg_inverse, val, NULL);
-}
-
-static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
-	(void)user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(-1, ui_tag_fullscreen, val, NULL);
-}
-
-static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)action;
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	ui_update_state(-1, ui_tag_tv_input, val, NULL);
-}
-
-static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)action;
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	ui_update_state(-1, ui_tag_ccr, val, NULL);
-}
-
-static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_machine(1, val);
-}
-
-static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	struct cart_config *cc = cart_config_by_id(val);
-	xroar_set_cart(1, cc ? cc->name : NULL);
-}
-
-static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)action;
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	ui_update_state(-1, ui_tag_keymap, val, NULL);
-}
-
-static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_hkbd_layout(0, val);
-}
-
-static void set_hkbd_lang(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	(void)user_data;
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_hkbd_lang(0, val);
-}
-
-static void set_joy_right(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	struct joystick_config *jc = joystick_config_by_id(val);
-	xroar_set_joystick(0, 0, jc ? jc->name : NULL);
-}
-
-static void set_joy_left(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	struct joystick_config *jc = joystick_config_by_id(val);
-	xroar_set_joystick(0, 1, jc ? jc->name : NULL);
-}
-
-static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
-	(void)entry;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	xroar_swap_joysticks(1);
-}
+// Help menu callbacks
 
 static void show_about_window(GtkMenuItem *item, gpointer user_data);
 
-static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data) {
-	(void)user_data;
-	gboolean val = gtk_toggle_action_get_active(current);
-	ui_update_state(-1, ui_tag_kbd_translate, val, NULL);
-}
+// General callbacks
 
-static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	gboolean val = gtk_toggle_action_get_active(current);
-	xroar_set_ratelimit_latch(0, val);
-}
+static void ui_gtk3_destroy(GtkWidget *w, gpointer user_data);
 
-static void do_load_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_load_file(); }
-static void do_run_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_run_file(); }
+// UI message reception
+
+static void uigtk3_ui_update_state(void *, int tag, int value, const void *data);
+static void uigtk3_ui_state_notify(void *, int tag, void *smsg);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// GTK+ actions
 
 static GtkActionEntry const ui_entries[] = {
 	// Top level
@@ -289,33 +157,39 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "HardwareMenuAction", .label = "H_ardware" },
 	{ .name = "ToolMenuAction", .label = "_Tool" },
 	{ .name = "HelpMenuAction", .label = "_Help" },
+
 	// File
-	{ .name = "RunAction", /*.stock_id = GTK_STOCK_EXECUTE,*/ .label = "_Run…",
+	{ .name = "RunAction", .label = "_Run…",
 	  .accelerator = "<shift><control>L",
-	  .tooltip = "Load and attempt to autorun a file",
+	  .tooltip = "Load & attempt to autorun file",
 	  .callback = G_CALLBACK(do_run_file) },
-	{ .name = "LoadAction", /*.stock_id = GTK_STOCK_OPEN,*/ .label = "_Load…",
+	{ .name = "LoadAction", .label = "_Load…",
 	  .accelerator = "<control>L",
-	  .tooltip = "Load a file",
+	  .tooltip = "Load file",
 	  .callback = G_CALLBACK(do_load_file) },
-	/* XXX { .name = "InsertDiskAction",
-	  .label = "Insert _disk…",
-	  .tooltip = "Load a virtual disk image",
-	  .callback = G_CALLBACK(insert_disk) }, */
-	{ .name = "InsertDisk1Action", .accelerator = "<control>1", .callback = G_CALLBACK(insert_disk1) },
-	{ .name = "InsertDisk2Action", .accelerator = "<control>2", .callback = G_CALLBACK(insert_disk2) },
-	{ .name = "InsertDisk3Action", .accelerator = "<control>3", .callback = G_CALLBACK(insert_disk3) },
-	{ .name = "InsertDisk4Action", .accelerator = "<control>4", .callback = G_CALLBACK(insert_disk4) },
-	{ .name = "SaveSnapshotAction", /*.stock_id = GTK_STOCK_SAVE_AS,*/ .label = "_Save Snapshot…",
+	{ .name = "InsertDisk1Action",
+	  .accelerator = "<control>1",
+	  .callback = G_CALLBACK(insert_disk1) },
+	{ .name = "InsertDisk2Action",
+	  .accelerator = "<control>2",
+	  .callback = G_CALLBACK(insert_disk2) },
+	{ .name = "InsertDisk3Action",
+	  .accelerator = "<control>3",
+	  .callback = G_CALLBACK(insert_disk3) },
+	{ .name = "InsertDisk4Action",
+	  .accelerator = "<control>4",
+	  .callback = G_CALLBACK(insert_disk4) },
+	{ .name = "SaveSnapshotAction", .label = "_Save Snapshot…",
 	  .accelerator = "<control>S",
 	  .callback = G_CALLBACK(save_snapshot) },
 	{ .name = "ScreenshotAction", .label = "Screenshot to PNG…",
 	  .accelerator = "<control><shift>S",
 	  .callback = G_CALLBACK(save_screenshot) },
-	{ .name = "QuitAction", /*.stock_id = GTK_STOCK_QUIT,*/ .label = "_Quit",
+	{ .name = "QuitAction", .label = "_Quit",
 	  .accelerator = "<control>Q",
 	  .tooltip = "Quit",
 	  .callback = G_CALLBACK(do_quit) },
+
 	// View
 	{ .name = "TVInputMenuAction", .label = "_TV input" },
 	{ .name = "CCRMenuAction", .label = "Composite _rendering" },
@@ -329,6 +203,7 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "zoom_reset", .label = "Reset",
 	  .accelerator = "<control>0",
 	  .callback = G_CALLBACK(zoom_reset) },
+
 	// Hardware
 	{ .name = "MachineMenuAction", .label = "_Machine" },
 	{ .name = "CartridgeMenuAction", .label = "_Cartridge" },
@@ -340,18 +215,20 @@ static GtkActionEntry const ui_entries[] = {
 	  .callback = G_CALLBACK(swap_joysticks) },
 	{ .name = "SoftResetAction", .label = "_Soft reset",
 	  .accelerator = "<control>R",
-	  .tooltip = "Soft reset machine",
+	  .tooltip = "Soft reset machine (press reset)",
 	  .callback = G_CALLBACK(do_soft_reset) },
 	{ .name = "HardResetAction",
 	  .label = "_Hard reset",
 	  .accelerator = "<shift><control>R",
 	  .tooltip = "Hard reset machine (power cycle)",
 	  .callback = G_CALLBACK(do_hard_reset) },
+
 	// Tool
 	{ .name = "HKBDLayoutMenuAction", .label = "Keyboard la_yout" },
 	{ .name = "HKBDLangMenuAction", .label = "Keyboard lan_guage" },
+
 	// Help
-	{ .name = "AboutAction", /*.stock_id = GTK_STOCK_ABOUT,*/
+	{ .name = "AboutAction",
 	  .label = "_About",
 	  .callback = G_CALLBACK(show_about_window) },
 };
@@ -367,6 +244,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "PrinterControlAction", .label = "_Printer control",
 	  .accelerator = "<control>P",
 	  .callback = G_CALLBACK(gtk3_toggle_pc_window) },
+
 	// View
 	{ .name = "VideoOptionsAction", .label = "TV _controls",
 	  .accelerator = "<control><shift>V",
@@ -375,8 +253,9 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .accelerator = "<shift><control>I",
 	  .callback = G_CALLBACK(toggle_inverse_text) },
 	{ .name = "FullScreenAction", .label = "_Full screen",
-	  /*.stock_id = GTK_STOCK_FULLSCREEN,*/
-	  .accelerator = "F11", .callback = G_CALLBACK(set_fullscreen) },
+	  .accelerator = "F11",
+	  .callback = G_CALLBACK(set_fullscreen) },
+
 	// Tool
 	{ .name = "TranslateKeyboardAction", .label = "_Keyboard translation",
 	  .accelerator = "<control>Z",
@@ -386,11 +265,12 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(toggle_ratelimit) },
 };
 
-// Work around gtk_exit() being deprecated:
-static void ui_gtk3_destroy(GtkWidget *w, gpointer user_data) {
-	(void)w;
-	exit((intptr_t)user_data);
-}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Create GTK+ UI module instance
+
+static void ui_gtk3_free(void *);
+static void ui_gtk3_run(void *);
 
 static void *ui_gtk3_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -422,7 +302,7 @@ static void *ui_gtk3_new(void *cfg) {
 
 	ui->free = DELEGATE_AS0(void, ui_gtk3_free, uigtk3);
 	ui->run = DELEGATE_AS0(void, ui_gtk3_run, uigtk3);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_gtk3_update_state, uigtk3);
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, uigtk3_ui_update_state, uigtk3);
 
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
@@ -573,6 +453,8 @@ static void *ui_gtk3_new(void *cfg) {
 	return ui;
 }
 
+// Shut down GTK+ UI module instance
+
 static void ui_gtk3_free(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	DELEGATE_SAFE_CALL(uigtk3->public.filereq_interface->free);
@@ -590,6 +472,9 @@ static void ui_gtk3_free(void *sptr) {
 	g_free(uigtk3);
 }
 
+// GTK+ module run() sets up xroar_run() as what to do when the interface is
+// "idle", and runs the GTK main loop.
+
 static gboolean run_cpu(gpointer data) {
 	(void)data;
 	xroar_run(EVENT_MS(10));
@@ -602,9 +487,12 @@ static void ui_gtk3_run(void *sptr) {
 	gtk_main();
 }
 
-// State change notification - the old way.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *data) {
+// State change notification - the old way.  This should all disappear once
+// everything is moved to message based notifications.
+
+static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 
 	switch (tag) {
@@ -679,9 +567,7 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 	}
 }
 
-// State change notification - for anything migrated to the message group
-// interface.  Blocking UI updates no longer necessary, as we won't receive the
-// messages we send.
+// UI message reception
 
 static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
@@ -739,6 +625,10 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 		break;
 	}
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Dynamic menus
 
 // Dynamic machine menu
 
@@ -875,10 +765,247 @@ static void gtk3_update_joystick_menus(void *sptr) {
 	update_joystick_menu(uigtk3, uigtk3->joy_left_radio_menu, "ljoy%d", "ljoy0");
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Callbacks
+
+// File menu callbacks
+
+static void do_load_file(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_load_file();
+}
+
+static void do_run_file(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_run_file();
+}
+
+// insert_disk*() don't actually appear in the menu any more, but are
+// associated with accelerators:
+
+static void insert_disk1(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gtk3_insert_disk(uigtk3, 0);
+}
+
+static void insert_disk2(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gtk3_insert_disk(uigtk3, 1);
+}
+
+static void insert_disk3(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gtk3_insert_disk(uigtk3, 2);
+}
+
+static void insert_disk4(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gtk3_insert_disk(uigtk3, 3);
+}
+
+static void toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_disk_dialog, val, NULL);
+}
+
+static void toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_tape_dialog, val, NULL);
+}
+
+static void toggle_tv_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_tv_dialog, val, NULL);
+}
+
+static void save_snapshot(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	g_idle_remove_by_data(uigtk3->top_window);
+	xroar_save_snapshot();
+	g_idle_add(run_cpu, uigtk3->top_window);
+}
+
+static void save_screenshot(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	g_idle_remove_by_data(uigtk3->top_window);
+#ifdef SCREENSHOT
+	xroar_screenshot();
+#endif
+	g_idle_add(run_cpu, uigtk3->top_window);
+}
+
+static void do_quit(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_quit();
+}
+
+// View menu callbacks
+
+static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)action;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	ui_update_state(-1, ui_tag_tv_input, val, NULL);
+}
+
+static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)action;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	ui_update_state(-1, ui_tag_ccr, val, NULL);
+}
+
+static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
+	(void)user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(-1, ui_tag_vdg_inverse, val, NULL);
+}
+
+static void zoom_in(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
+	vo_zoom_in(vo);
+}
+
+static void zoom_out(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
+	vo_zoom_out(vo);
+}
+
+static void zoom_reset(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
+	vo_zoom_reset(vo);
+}
+
+static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
+	(void)user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(-1, ui_tag_fullscreen, val, NULL);
+}
+
+// Hardware menu callbacks
+
+static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	xroar_set_machine(1, val);
+}
+
+static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	struct cart_config *cc = cart_config_by_id(val);
+	xroar_set_cart(1, cc ? cc->name : NULL);
+}
+
+static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	(void)action;
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	ui_update_state(-1, ui_tag_keymap, val, NULL);
+}
+
+static void set_joy_right(GtkRadioAction *action, GtkRadioAction *current,
+			  gpointer user_data) {
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)uigtk3;
+	struct joystick_config *jc = joystick_config_by_id(val);
+	xroar_set_joystick(0, 0, jc ? jc->name : NULL);
+}
+
+static void set_joy_left(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)uigtk3;
+	struct joystick_config *jc = joystick_config_by_id(val);
+	xroar_set_joystick(0, 1, jc ? jc->name : NULL);
+}
+
+static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)uigtk3;
+	xroar_swap_joysticks(1);
+}
+
+static void do_soft_reset(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_soft_reset();
+}
+
+static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_hard_reset();
+}
+
+// Tool menu callbacks
+
+static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current,
+			    gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	xroar_set_hkbd_layout(0, val);
+}
+
+static void set_hkbd_lang(GtkRadioAction *action, GtkRadioAction *current,
+			  gpointer user_data) {
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	(void)action;
+	xroar_set_hkbd_lang(0, val);
+}
+
+static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data) {
+	(void)user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(-1, ui_tag_kbd_translate, val, NULL);
+}
+
+static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)uigtk3;
+	gboolean val = gtk_toggle_action_get_active(current);
+	xroar_set_ratelimit_latch(0, val);
+}
+
 // Help menu callbacks
 
 static void show_about_window(GtkMenuItem *item, gpointer user_data) {
 	(void)item;
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	gtk3_create_about_window(uigtk3);
+}
+
+// General callbacks
+
+// Work around gtk_exit() being deprecated:
+static void ui_gtk3_destroy(GtkWidget *w, gpointer user_data) {
+	(void)w;
+	exit((intptr_t)user_data);
 }
