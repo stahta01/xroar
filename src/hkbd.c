@@ -1626,9 +1626,9 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 	case hk_sym_5: case hk_sym_6: case hk_sym_7: case hk_sym_8:
 		if (shift) {
-			xroar_set_write_back(1, sym - hk_sym_5, XROAR_NEXT);
+			ui_update_state(-1, ui_tag_disk_write_back, UI_NEXT, (void *)(intptr_t)(sym - hk_sym_5));
 		} else {
-			xroar_set_write_enable(1, sym - hk_sym_5, XROAR_NEXT);
+			ui_update_state(-1, ui_tag_disk_write_enable, UI_NEXT, (void *)(intptr_t)(sym - hk_sym_5));
 		}
 		break;
 
@@ -1640,7 +1640,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		if (shift) {
 			vdrive_flush(xroar.vdrive_interface);
 		} else {
-			DELEGATE_CALL(ui->update_state, ui_tag_disk_dialog, 0, NULL);
+			ui_update_state(-1, ui_tag_disk_dialog, UI_NEXT, NULL);
 		}
 		return;
 

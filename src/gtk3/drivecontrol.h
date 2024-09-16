@@ -20,15 +20,10 @@
 #define XROAR_GTK3_DRIVECONTROL_H_
 
 struct ui_gtk3_interface;
+struct uigtk3_dialog;
 
-struct vdisk;
+struct uigtk3_dialog *gtk3_dc_dialog_new(struct ui_gtk3_interface *);
 
-void gtk3_create_dc_window(struct ui_gtk3_interface *uigtk3);
-void gtk3_toggle_dc_window(GtkToggleAction *current, gpointer user_data);
-
-void gtk3_dc_update_state(struct ui_gtk3_interface *,
-			  int tag, int value, const void *data);
-
-void gtk3_insert_disk(struct ui_gtk3_interface *uigtk3, int drive);
+void gtk3_insert_disk(struct ui_gtk3_interface *, int drive);
 
 #endif

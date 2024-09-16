@@ -205,8 +205,6 @@ void xroar_new_disk(int drive);
 void xroar_insert_disk_file(int drive, const char *filename);
 void xroar_insert_disk(int drive);
 void xroar_eject_disk(int drive);
-_Bool xroar_set_write_enable(_Bool notify, int drive, int action);
-_Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_insert_hd_file(int drive, const char *filename);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);

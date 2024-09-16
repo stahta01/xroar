@@ -29,6 +29,7 @@
 #include "vo.h"
 
 struct slist;
+struct uigtk3_dialog;
 struct xconfig_enum;
 
 #define GTK_KBD_JS_MAX_AXES (4)

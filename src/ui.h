@@ -81,9 +81,10 @@ enum ui_tag {
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
 	ui_tag_disk_eject,
+	ui_tag_disk_data,  // .data = struct vdisk
 	ui_tag_disk_write_enable,
 	ui_tag_disk_write_back,
-	ui_tag_disk_data,  // .data = struct vdisk
+	ui_tag_disk_drive_info,  // update drive, cylinder, head indicators
 	// Video
 	ui_tag_tv_dialog,  // tv control dialog, if supported
 	ui_tag_cmp_fs,

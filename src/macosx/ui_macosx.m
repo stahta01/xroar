@@ -233,12 +233,10 @@ int cocoa_super_all_keys = 0;
 		xroar_new_disk(value);
 		break;
 	case ui_tag_disk_write_enable:
-		uimac->disk.drive[value].write_enable = !uimac->disk.drive[value].write_enable;
-		xroar_set_write_enable(1, value, uimac->disk.drive[value].write_enable);
+		ui_update_state(-1, ui_tag_disk_write_enable, UI_NEXT, (void *)(intptr_t)value);
 		break;
 	case ui_tag_disk_write_back:
-		uimac->disk.drive[value].write_back = !uimac->disk.drive[value].write_back;
-		xroar_set_write_back(1, value, uimac->disk.drive[value].write_back);
+		ui_update_state(-1, ui_tag_disk_write_back, UI_NEXT, (void *)(intptr_t)value);
 		break;
 	case ui_tag_disk_eject:
 		xroar_eject_disk(value);
@@ -1162,6 +1160,8 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_pad_auto, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_rewrite, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1306,7 +1306,6 @@ static void cocoa_update_joystick_menus(void *sptr) {
 
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_macosx_interface *uimac = sptr;
-	struct ui_sdl2_interface *uisdl2 = &uimac->ui_sdl2_interface;
 
 	switch (tag) {
 
@@ -1318,29 +1317,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	case ui_tag_cartridge:
 		uimac->cart.id = value;
-		break;
-
-	/* Disk */
-
-	case ui_tag_disk_data:
-		{
-			const struct vdisk *disk = data;
-			int we = 1, wb = 0;
-			if (disk) {
-				we = !disk->write_protect;
-				wb = disk->write_back;
-			}
-			cocoa_ui_update_state(uisdl2, ui_tag_disk_write_enable, value, (void *)(intptr_t)we);
-			cocoa_ui_update_state(uisdl2, ui_tag_disk_write_back, value, (void *)(intptr_t)wb);
-		}
-		break;
-
-	case ui_tag_disk_write_enable:
-		uimac->disk.drive[value].write_enable = data ? 1 : 0;
-		break;
-
-	case ui_tag_disk_write_back:
-		uimac->disk.drive[value].write_back = data ? 1 : 0;
 		break;
 
 	// Audio
@@ -1391,6 +1367,7 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_macosx_interface *uimac = sptr;
 	struct ui_state_message *uimsg = smsg;
 	int value = uimsg->value;
+	const void *data = uimsg->data;
 
 	switch (tag) {
 
@@ -1410,6 +1387,26 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_tape_playing:
 		uimac->tape.playing = value;
+		break;
+
+	// Disk
+
+	case ui_tag_disk_write_enable:
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uimac->disk.drive[drive].write_enable = value;
+			}
+		}
+		break;
+
+	case ui_tag_disk_write_back:
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uimac->disk.drive[drive].write_back = value;
+			}
+		}
 		break;
 
 	// Video

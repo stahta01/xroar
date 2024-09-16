@@ -42,11 +42,6 @@ struct ui_windows32_interface {
 	HMENU right_joystick_menu;
 	HMENU left_joystick_menu;
 
-	// Floppy disks dialog
-	struct {
-		HWND window;
-	} disk;
-
 	// Printer control dialog
 	struct {
 		HWND window;

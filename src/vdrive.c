@@ -28,7 +28,9 @@
 
 #include "events.h"
 #include "logging.h"
+#include "messenger.h"
 #include "serialise.h"
+#include "ui.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
@@ -45,6 +47,9 @@ struct drive_data {
 
 struct vdrive_interface_private {
 	struct vdrive_interface public;
+
+	// Messenger client id
+	int msgr_client_id;
 
 	_Bool ready_state;
 	_Bool tr00_state;
@@ -105,6 +110,11 @@ static const struct ser_struct_data vdrive_ser_struct_data = {
 #define VDRIVE_SER_DRIVE_CYL (1)
 #define VDRIVE_SER_DRIVE_FILENAME (2)
 
+// UI interaction
+
+void vdrive_ui_set_write_enable(void *, int tag, void *smsg);
+void vdrive_ui_set_write_back(void *, int tag, void *smsg);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* Public methods */
@@ -149,6 +159,12 @@ struct vdrive_interface *vdrive_interface_new(void) {
 	*vip = (struct vdrive_interface_private){0};
 	struct vdrive_interface *vi = &vip->public;
 
+	// Register with messenger
+	vip->msgr_client_id = messenger_client_register();
+
+	ui_messenger_preempt_group(vip->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(vdrive_ui_set_write_enable, vip));
+	ui_messenger_preempt_group(vip->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(vdrive_ui_set_write_back, vip));
+
 	vip->tr00_state = 1;
 	vip->current_drive = &vip->drives[0];
 	vip->cur_direction = 1;
@@ -183,6 +199,7 @@ void vdrive_interface_free(struct vdrive_interface *vi) {
 	if (!vi)
 		return;
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
+	messenger_client_unregister(vip->msgr_client_id);
 	event_dequeue(&vip->index_pulse_event);
 	event_dequeue(&vip->reset_index_pulse_event);
 	for (unsigned i = 0; i < MAX_DRIVES; i++) {
@@ -337,6 +354,47 @@ void vdrive_flush(struct vdrive_interface *vi) {
 			vdisk_save(vip->drives[drive].disk);
 		}
 	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// UI interaction
+
+void vdrive_ui_set_write_enable(void *sptr, int tag, void *smsg) {
+	struct vdrive_interface_private *vip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_disk_write_enable);
+
+	int drive = (intptr_t)uimsg->data;
+	if (drive < 0 || drive >= MAX_DRIVES) {
+		return;
+	}
+	struct vdisk *vd = vip->drives[drive].disk;
+	if (!vd) {
+		uimsg->value = 0;
+		return;
+	}
+	// Note supplied current and return values are inverted (protect = !enable)
+	vd->write_protect = !ui_msg_adjust_value_range(uimsg, !vd->write_protect, 0, 0, 1,
+						       UI_ADJUST_FLAG_CYCLE);
+}
+
+void vdrive_ui_set_write_back(void *sptr, int tag, void *smsg) {
+	struct vdrive_interface_private *vip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_disk_write_back);
+
+	int drive = (intptr_t)uimsg->data;
+	if (drive < 0 || drive >= MAX_DRIVES) {
+		return;
+	}
+	struct vdisk *vd = vip->drives[drive].disk;
+	if (!vd) {
+		uimsg->value = 0;
+		return;
+	}
+	vd->write_back = ui_msg_adjust_value_range(uimsg, vd->write_back, 0, 0, 1,
+						   UI_ADJUST_FLAG_CYCLE);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -578,10 +636,14 @@ static void set_write_protect_state(struct vdrive_interface_private *vip, _Bool 
 }
 
 static void update_signals(struct vdrive_interface_private *vip) {
-	struct vdrive_interface *vi = &vip->public;
 	set_ready_state(vip, vip->current_drive->disk != NULL);
 	set_tr00_state(vip, vip->current_drive->current_cyl == 0);
-	DELEGATE_SAFE_CALL(vi->update_drive_cyl_head, vip->cur_drive_number, vip->current_drive->current_cyl, vip->cur_head);
+	struct vdrive_info vdrive_info = {
+		.drive = vip->cur_drive_number,
+		.cylinder = vip->current_drive->current_cyl,
+		.head = vip->cur_head,
+	};
+	ui_update_state(vip->msgr_client_id, ui_tag_disk_drive_info, 0, &vdrive_info);
 	if (!vip->ready_state) {
 		set_write_protect_state(vip, 0);
 		vip->track_base = NULL;

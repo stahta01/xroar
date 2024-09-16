@@ -30,6 +30,14 @@ struct vdisk;
 
 #define VDRIVE_MAX_DRIVES (4)
 
+// Used to update disk UI
+
+struct vdrive_info {
+	unsigned drive;
+	unsigned cylinder;
+	unsigned head;
+};
+
 /* Interface to be connected to a disk controller. */
 
 struct vdrive_interface {
@@ -38,9 +46,6 @@ struct vdrive_interface {
 	DELEGATE_T1(void,bool) tr00;
 	DELEGATE_T1(void,bool) index_pulse;
 	DELEGATE_T1(void,bool) write_protect;
-
-	// UI callbacks
-	DELEGATE_T3(void,unsigned,unsigned,unsigned) update_drive_cyl_head;
 
 	// Signals to all drives
 	void (*set_dirc)(void *sptr, _Bool dirc);

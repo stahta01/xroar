@@ -1469,9 +1469,9 @@ void xroar_new_disk(int drive) {
 	new_disk->dirty = 1;  // always write empty disk
 	vdrive_insert_disk(xroar.vdrive_interface, drive, new_disk);
 	vdisk_unref(new_disk);
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_data, drive, new_disk);
-	}
+	ui_update_state(-1, ui_tag_disk_data, drive, new_disk);
+	ui_update_state(-1, ui_tag_disk_write_enable, 1, (void *)(intptr_t)drive);
+	ui_update_state(-1, ui_tag_disk_write_back, 1, (void *)(intptr_t)drive);
 	LOG_DEBUG(1, "New unformatted disk in drive %d: %s\n", 1+drive, filename);
 }
 
@@ -1479,12 +1479,18 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar.vdrive_interface, drive, disk);
+	_Bool write_enable = 0;
+	_Bool write_back = 0;
 	if (disk) {
+		write_enable = !disk->write_protect;  // note inverted
+		write_back = disk->write_back;
 		vdisk_unref(disk);
+	} else {
+		filename = NULL;
 	}
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_data, drive, disk);
-	}
+	ui_update_state(-1, ui_tag_disk_data, drive, disk);
+	ui_update_state(-1, ui_tag_disk_write_enable, write_enable, (void *)(intptr_t)drive);
+	ui_update_state(-1, ui_tag_disk_write_back, write_back, (void *)(intptr_t)drive);
 }
 
 void xroar_insert_disk(int drive) {
@@ -1498,51 +1504,9 @@ void xroar_insert_disk(int drive) {
 
 void xroar_eject_disk(int drive) {
 	vdrive_eject_disk(xroar.vdrive_interface, drive);
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_data, drive, NULL);
-	}
-}
-
-_Bool xroar_set_write_enable(_Bool notify, int drive, int action) {
-	assert(drive >= 0 && drive < 4);
-	struct vdisk *vd = vdrive_disk_in_drive(xroar.vdrive_interface, drive);
-	if (!vd)
-		return 0;
-	_Bool new_we = !vd->write_protect;
-	switch (action) {
-	case XROAR_NEXT:
-		new_we = !new_we;
-		break;
-	default:
-		new_we = action;
-		break;
-	}
-	vd->write_protect = !new_we;
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_write_enable, drive, (void *)(uintptr_t)new_we);
-	}
-	return new_we;
-}
-
-_Bool xroar_set_write_back(_Bool notify, int drive, int action) {
-	assert(drive >= 0 && drive < 4);
-	struct vdisk *vd = vdrive_disk_in_drive(xroar.vdrive_interface, drive);
-	if (!vd)
-		return 0;
-	_Bool new_wb = vd->write_back;
-	switch (action) {
-	case XROAR_NEXT:
-		new_wb = !new_wb;
-		break;
-	default:
-		new_wb = action;
-		break;
-	}
-	vd->write_back = new_wb;
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_disk_write_back, drive, (void *)(uintptr_t)new_wb);
-	}
-	return new_wb;
+	ui_update_state(-1, ui_tag_disk_data, drive, NULL);
+	ui_update_state(-1, ui_tag_disk_write_enable, 0, (void *)(intptr_t)drive);
+	ui_update_state(-1, ui_tag_disk_write_back, 0, (void *)(intptr_t)drive);
 }
 
 void xroar_insert_hd_file(int drive, const char *filename) {

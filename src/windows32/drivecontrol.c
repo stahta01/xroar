@@ -26,57 +26,94 @@
 
 #include "xalloc.h"
 
-#include "events.h"
+#include "messenger.h"
+#include "ui.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
 
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
+#include "windows32/dialog.h"
 #include "windows32/drivecontrol.h"
 #include "windows32/resources.h"
 
-static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
+// UI message reception
+
+static void dc_ui_state_notify(void *sptr, int tag, void *smsg);
+
+// Dialog box procedure
+
+static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void windows32_dc_create_window(struct ui_windows32_interface *uiw32) {
-	// Main dialog window handle
-	uiw32->disk.window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_DRIVE_CONTROLS), windows32_main_hwnd, (DLGPROC)dc_proc);
+// Create floppy disks dialog window
 
-	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uiw32);
+struct uiw32_dialog *uiw32_dc_dialog_new(struct ui_windows32_interface *uiw32) {
+        struct uiw32_dialog *dlg = uiw32_dialog_new(uiw32, IDD_DLG_DRIVE_CONTROLS, ui_tag_disk_dialog, dc_proc);
+
+	// Join each UI group we're interested in
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
+
+	return dlg;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Drive control - update values in UI
+// UI message reception
 
-static void windows32_dc_update_drive_disk(struct ui_windows32_interface *,
-					   int drive, const struct vdisk *disk);
-static void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *,
-						   int drive, _Bool write_enable);
-static void windows32_dc_update_drive_write_back(struct ui_windows32_interface *,
-						 int drive, _Bool write_back);
+static void dc_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct uiw32_dialog *dlg = sptr;
+	struct ui_state_message *uimsg = smsg;
+	int value = uimsg->value;
+	const void *data = uimsg->data;
 
-void windows32_dc_update_state(struct ui_windows32_interface *uiw32,
-			       int tag, int value, const void *data) {
 	switch (tag) {
-	case ui_tag_disk_dialog:
-		ShowWindow(uiw32->disk.window, SW_SHOW);
-		break;
 
 	case ui_tag_disk_data:
-		windows32_dc_update_drive_disk(uiw32, value, (const struct vdisk *)data);
+		if (value >= 0 && value <= 3) {
+			int drive = value;
+			const struct vdisk *disk = data;
+			const char *filename = disk ? disk->filename : NULL;
+			uiw32_send_message(dlg->hWnd, IDC_STM_DRIVE1_FILENAME + drive, WM_SETTEXT, 0, (LPARAM)filename);
+		}
 		break;
 
 	case ui_tag_disk_write_enable:
-		windows32_dc_update_drive_write_enable(uiw32, value, (intptr_t)data);
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uiw32_send_message(dlg->hWnd, IDC_BN_DRIVE1_WE + drive, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+			}
+		}
 		break;
 
 	case ui_tag_disk_write_back:
-		windows32_dc_update_drive_write_back(uiw32, value, (intptr_t)data);
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uiw32_send_message(dlg->hWnd, IDC_BN_DRIVE1_WB + drive, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+			}
+		}
+		break;
+
+	case ui_tag_disk_drive_info:
+		{
+			const struct vdrive_info *vi = data;
+			unsigned d = vi->drive + 1;
+			unsigned c = vi->cylinder;
+			unsigned h = vi->head;
+			char string[16];
+			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
+			HWND hWnd = GetDlgItem(dlg->hWnd, IDC_STM_DRIVE_CYL_HEAD);
+			SendMessage(hWnd, WM_SETTEXT, 0, (LPARAM)string);
+		}
 		break;
 
 	default:
@@ -84,56 +121,22 @@ void windows32_dc_update_state(struct ui_windows32_interface *uiw32,
 	}
 }
 
-static void windows32_dc_update_drive_disk(struct ui_windows32_interface *uiw32,
-					   int drive, const struct vdisk *disk) {
-	if (drive < 0 || drive > 3)
-		return;
-	char *filename = NULL;
-	_Bool we = 0, wb = 0;
-	if (disk) {
-		filename = disk->filename;
-		we = !disk->write_protect;
-		wb = disk->write_back;
-	}
-	HWND dc_stm_drive_filename = GetDlgItem(uiw32->disk.window, IDC_STM_DRIVE1_FILENAME + drive);
-	HWND dc_bn_drive_we = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WE + drive);
-	HWND dc_bn_drive_wb = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WB + drive);
-	SendMessage(dc_stm_drive_filename, WM_SETTEXT, 0, (LPARAM)filename);
-	SendMessage(dc_bn_drive_we, BM_SETCHECK, we ? BST_CHECKED : BST_UNCHECKED, 0);
-	SendMessage(dc_bn_drive_wb, BM_SETCHECK, wb ? BST_CHECKED : BST_UNCHECKED, 0);
-}
-
-static void windows32_dc_update_drive_write_enable(struct ui_windows32_interface *uiw32,
-						   int drive, _Bool write_enable) {
-	if (drive >= 0 && drive <= 3) {
-		HWND dc_bn_drive_we = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WE + drive);
-		SendMessage(dc_bn_drive_we, BM_SETCHECK, write_enable ? BST_CHECKED : BST_UNCHECKED, 0);
-	}
-}
-
-static void windows32_dc_update_drive_write_back(struct ui_windows32_interface *uiw32,
-						 int drive, _Bool write_back) {
-	if (drive >= 0 && drive <= 3) {
-		HWND dc_bn_drive_wb = GetDlgItem(uiw32->disk.window, IDC_BN_DRIVE1_WB + drive);
-		SendMessage(dc_bn_drive_wb, BM_SETCHECK, write_back ? BST_CHECKED : BST_UNCHECKED, 0);
-	}
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Drive control - signal handlers
 
-static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	// hwnd is the handle for the dialog window, i.e. dc_window
-	(void)lParam;
+// WM_COMMAND is received for checkboxes, but Windows does not itself alter the
+// control's state.  We query its current value and invert it.  The UI message
+// we send will then later be received by dc_ui_state_notify() which will
+// update the control.
 
+// Some controls are marked with SS_OWNERDRAW (style=ownerdraw in .win file).
+// We receive WM_DRAWITEM events for these when they need to be drawn, and we
+// can use a custom style, e.g. using uiw32_drawtext_path() to draw with
+// DT_PATH_ELLIPSIS.
+
+static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
-
-	case WM_INITDIALOG:
-		return TRUE;
-
-	case WM_HSCROLL:
-		break;
 
 	case WM_NOTIFY:
 		return TRUE;
@@ -142,7 +145,7 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		{
 			int id = LOWORD(wParam);
 			if (id >= IDC_STM_DRIVE1_FILENAME && id <= IDC_STM_DRIVE4_FILENAME) {
-				uiw32_drawtext_path(hwnd, id, (LPDRAWITEMSTRUCT)lParam);
+				uiw32_drawtext_path(dlg->hWnd, id, (LPDRAWITEMSTRUCT)lParam);
 				return TRUE;
 			}
 		}
@@ -150,41 +153,38 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 	case WM_COMMAND:
 		if (HIWORD(wParam) == BN_CLICKED) {
+			int id = LOWORD(wParam);
+
 			// Per-drive checkbox toggles & buttons
 
-			int id = LOWORD(wParam);
 			if (id >= IDC_BN_DRIVE1_WE && id <= IDC_BN_DRIVE4_WE) {
+				// Write enable checkbox
 				int drive = id - IDC_BN_DRIVE1_WE;
-				HWND dc_bn_drive_we = GetDlgItem(hwnd, IDC_BN_DRIVE1_WE + drive);
-				int set = (SendMessage(dc_bn_drive_we, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
-				xroar_set_write_enable(1, drive, set);
+				int value = !uiw32_bm_getcheck(dlg->hWnd, id);  // toggle
+				ui_update_state(-1, ui_tag_disk_write_enable, value, (void *)(intptr_t)drive);
 
 			} else if (id >= IDC_BN_DRIVE1_WB && id <= IDC_BN_DRIVE4_WB) {
+				// Write back checkbox
 				int drive = id - IDC_BN_DRIVE1_WB;
-				HWND dc_bn_drive_wb = GetDlgItem(hwnd, IDC_BN_DRIVE1_WB + drive);
-				int set = (SendMessage(dc_bn_drive_wb, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 0 : 1;
-				xroar_set_write_back(1, drive, set);
+				int value = !uiw32_bm_getcheck(dlg->hWnd, id);  // toggle
+				ui_update_state(-1, ui_tag_disk_write_back, value, (void *)(intptr_t)drive);
 
 			} else if (id >= IDC_BN_DRIVE1_INSERT && id <= IDC_BN_DRIVE4_INSERT) {
+				// Insert button
 				int drive = id - IDC_BN_DRIVE1_INSERT;
 				xroar_insert_disk(drive);
 
 			} else if (id >= IDC_BN_DRIVE1_NEW && id <= IDC_BN_DRIVE4_NEW) {
+				// New button
 				int drive = id - IDC_BN_DRIVE1_NEW;
 				xroar_new_disk(drive);
 
 			} else if (id >= IDC_BN_DRIVE1_EJECT && id <= IDC_BN_DRIVE4_EJECT) {
+				// Eject button
 				int drive = id - IDC_BN_DRIVE1_EJECT;
 				xroar_eject_disk(drive);
 
 			} else switch (id) {
-
-			// Standard buttons
-
-			case IDOK:
-			case IDCANCEL:
-				ShowWindow(hwnd, SW_HIDE);
-				return TRUE;
 
 			default:
 				break;
@@ -196,12 +196,4 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		break;
 	}
 	return FALSE;
-}
-
-static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head) {
-	struct ui_windows32_interface *uiw32 = sptr;
-	char string[16];
-	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
-	HWND dc_stm_drive_cyl_head = GetDlgItem(uiw32->disk.window, IDC_STM_DRIVE_CYL_HEAD);
-	SendMessage(dc_stm_drive_cyl_head, WM_SETTEXT, 0, (LPARAM)string);
 }

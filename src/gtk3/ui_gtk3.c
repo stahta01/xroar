@@ -159,6 +159,12 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	vo_zoom_out(vo);
 }
 
+static void toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_disk_dialog, val, NULL);
+}
+
 static void toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
@@ -357,7 +363,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(toggle_tc_window) },
 	{ .name = "DriveControlAction", .label = "Floppy _disks",
 	  .accelerator = "<control>D",
-	  .callback = G_CALLBACK(gtk3_toggle_dc_window) },
+	  .callback = G_CALLBACK(toggle_dc_window) },
 	{ .name = "PrinterControlAction", .label = "_Printer control",
 	  .accelerator = "<control>P",
 	  .callback = G_CALLBACK(gtk3_toggle_pc_window) },
@@ -422,6 +428,7 @@ static void *ui_gtk3_new(void *cfg) {
 	uigtk3->msgr_client_id = messenger_client_register();
 
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_disk_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
@@ -518,7 +525,7 @@ static void *ui_gtk3_new(void *cfg) {
 	uigtk3->blank_cursor = gdk_cursor_new_for_display(uigtk3->display, GDK_BLANK_CURSOR);
 
 	// Create (hidden) drive control window
-	gtk3_create_dc_window(uigtk3);
+	(void)gtk3_dc_dialog_new(uigtk3);
 
 	// Create (hidden) printer control window
 	gtk3_create_pc_window(uigtk3);
@@ -612,14 +619,6 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
 		break;
 
-	// Disk
-
-	case ui_tag_disk_write_enable:
-	case ui_tag_disk_write_back:
-	case ui_tag_disk_data:
-		gtk3_dc_update_state(uigtk3, tag, value, data);
-		break;
-
 	// Video
 
 	case ui_tag_gain:
@@ -696,6 +695,12 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_tape_dialog:
 		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/FileMenu/TapeControl", value ? TRUE : FALSE);
+		break;
+
+	// Floppy disks
+
+	case ui_tag_disk_dialog:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/FileMenu/DriveControl", value ? TRUE : FALSE);
 		break;
 
 	// Video
