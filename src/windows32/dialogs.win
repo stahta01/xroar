@@ -268,7 +268,7 @@ end table
 pad_top=1 pad_bottom=1 height=1 hseparator
 
 hexpand=1 table
-hexpand=1 tr td width=60 text Characters printed:
+hexpand=1 tr td width=62 text Characters printed:
    hexpand=1 td id=PRINT_CHARS text 0
    td id=PRINT_FLUSH button Flush
 end table

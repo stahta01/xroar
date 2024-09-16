@@ -57,7 +57,7 @@ void windows32_tc_create_window(struct ui_windows32_interface *uiw32) {
 		.pszText = "Filename",
 	};
 	SendMessage(tc_lvs_input_programlist, LVM_INSERTCOLUMN, 0, (LPARAM)&col);
-	col.cx = 80;
+	col.cx = 92;
 	col.pszText = "Position";
 	SendMessage(tc_lvs_input_programlist, LVM_INSERTCOLUMN, 1, (LPARAM)&col);
 
