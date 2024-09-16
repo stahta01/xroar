@@ -262,4 +262,13 @@ void uigtk3_cbt_value_set_value(struct uigtk3_cbt_value *, void *value);
 
 void uigtk3_free_action_group(GtkActionGroup *action_group);
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// General helpers
+
+// Escape underscores in a string, making it suitable to use as a menu label.
+// Allocates new space that should be freed with g_free().
+
+char *uigtk3_escape_underscores(const char *);
+
 #endif

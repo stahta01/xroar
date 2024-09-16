@@ -512,3 +512,30 @@ void uigtk3_cbt_value_set_value(struct uigtk3_cbt_value *cbtv, void *value) {
 		}
 	}
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// General helpers
+
+// Escape underscores in a string, making it suitable to use as a menu label.
+// Allocates new space that should be freed with g_free().
+
+char *uigtk3_escape_underscores(const char *str) {
+	if (!str) return NULL;
+	int len = strlen(str);
+	const char *in;
+	char *out;
+	for (in = str; *in; in++) {
+		if (*in == '_')
+			len++;
+	}
+	char *ret_str = g_malloc(len + 1);
+	for (in = str, out = ret_str; *in; in++) {
+		*(out++) = *in;
+		if (*in == '_') {
+			*(out++) = '_';
+		}
+	}
+	*out = 0;
+	return ret_str;
+}

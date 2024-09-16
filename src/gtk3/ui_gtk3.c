@@ -90,7 +90,6 @@ static void gtk3_update_joystick_menus(void *);
 static gboolean run_cpu(gpointer data);
 
 // Helpers
-static char *escape_underscores(const char *str);
 
 static gboolean gtk3_handle_focus_in(GtkWidget *self, GdkEventFocus *event,
 				     gpointer user_data);
@@ -755,7 +754,7 @@ static void gtk3_update_machine_menu(void *sptr) {
 		if (mc == xroar.machine_config)
 			selected = mc->id;
 		entries[i].name = g_strdup_printf("machine%d", i+1);
-		entries[i].label = escape_underscores(mc->description);
+		entries[i].label = uigtk3_escape_underscores(mc->description);
 		entries[i].value = mc->id;
 		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 		++i;
@@ -805,7 +804,7 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 		if (cart && cc == cart->config)
 			selected = cc->id;
 		entries[i].name = g_strdup_printf("cart%d", i+1);
-		entries[i].label = escape_underscores(cc->description);
+		entries[i].label = uigtk3_escape_underscores(cc->description);
 		entries[i].value = cc->id;
 		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 		++i;
@@ -845,7 +844,7 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 	for (struct slist *iter = jcl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
 		entries[i].name = g_strdup_printf(name_fmt, i+1);
-		entries[i].label = escape_underscores(jc->description);
+		entries[i].label = uigtk3_escape_underscores(jc->description);
 		entries[i].value = jc->id;
 		gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[i].name, entries[i].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 		++i;
@@ -865,28 +864,6 @@ static void gtk3_update_joystick_menus(void *sptr) {
 
 	update_joystick_menu(uigtk3, uigtk3->joy_right_radio_menu, "rjoy%d", "rjoy0");
 	update_joystick_menu(uigtk3, uigtk3->joy_left_radio_menu, "ljoy%d", "ljoy0");
-}
-
-// Tool callbacks
-
-static char *escape_underscores(const char *str) {
-	if (!str) return NULL;
-	int len = strlen(str);
-	const char *in;
-	char *out;
-	for (in = str; *in; in++) {
-		if (*in == '_')
-			len++;
-	}
-	char *ret_str = g_malloc(len + 1);
-	for (in = str, out = ret_str; *in; in++) {
-		*(out++) = *in;
-		if (*in == '_') {
-			*(out++) = '_';
-		}
-	}
-	*out = 0;
-	return ret_str;
 }
 
 // Event handlers
