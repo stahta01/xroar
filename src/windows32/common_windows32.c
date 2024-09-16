@@ -148,3 +148,25 @@ void uiw32_combo_box_select_by_data(HWND hDlg, int nIDDlgItem, int value) {
 		}
 	}
 }
+
+UINT uiw32_update_scrollbar(HWND hDlg, int nIDDlgItem, int nMin, int nMax, int nPos) {
+	HWND hWnd = GetDlgItem(hDlg, nIDDlgItem);
+	SCROLLINFO si = {
+		.cbSize = sizeof(SCROLLINFO),
+		.fMask = SIF_POS | SIF_RANGE
+	};
+	GetScrollInfo(hWnd, SB_CTL, &si);
+	UINT fMask = 0;
+	if (si.nPos != nPos) {
+		si.nPos = nPos;
+		fMask |= SIF_POS;
+	}
+	if (si.nMin != nMin || si.nMax != nMax) {
+		si.nMin = nMin;
+		si.nMax = nMax;
+		fMask |= SIF_RANGE;
+	}
+	si.fMask = fMask;
+	SetScrollInfo(hWnd, SB_CTL, &si, TRUE);
+	return fMask;
+}

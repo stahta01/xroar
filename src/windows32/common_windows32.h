@@ -87,4 +87,9 @@ void uiw32_combo_box_from_enum(HWND hDlg, int nIDDlgItem, struct xconfig_enum *x
 
 void uiw32_combo_box_select_by_data(HWND hDlg, int nIDDlgItem, int value);
 
+// Update scrollbar information and redraw.  Returns SCROLLINFO fMask field
+// indicating which other fields needed to change.
+
+UINT uiw32_update_scrollbar(HWND hDlg, int nIDDlgItem, int nMin, int nMax, int nPos);
+
 #endif
