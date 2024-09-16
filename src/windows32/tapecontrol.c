@@ -145,12 +145,18 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 	case WM_HSCROLL:
 		{
-			HWND tc_sbm_input_position = GetDlgItem(hwnd, IDC_SBM_INPUT_POSITION);
-			HWND tc_sbm_output_position = GetDlgItem(hwnd, IDC_SBM_OUTPUT_POSITION);
-			if ((HWND)lParam == tc_sbm_input_position) {
-				tc_seek(xroar.tape_interface->tape_input, LOWORD(wParam), HIWORD(wParam));
-			} else if ((HWND)lParam == tc_sbm_output_position) {
-				tc_seek(xroar.tape_interface->tape_output, LOWORD(wParam), HIWORD(wParam));
+			HWND hDlg = (HWND)lParam;
+			int nIDDlgItem = GetDlgCtrlID(hDlg);
+			SCROLLINFO si = {
+				.cbSize = sizeof(SCROLLINFO),
+				.fMask = SIF_TRACKPOS
+			};
+			GetScrollInfo(hDlg, SB_CTL, &si);
+			int pos = si.nTrackPos;
+			if (nIDDlgItem == IDC_SBM_INPUT_POSITION) {
+				tc_seek(xroar.tape_interface->tape_input, LOWORD(wParam), pos);
+			} else if (nIDDlgItem == IDC_SBM_OUTPUT_POSITION) {
+				tc_seek(xroar.tape_interface->tape_output, LOWORD(wParam), pos);
 			}
 		}
 		break;
@@ -362,56 +368,28 @@ static void update_programlist(struct ui_windows32_interface *uiw32) {
 static void update_tape_counters(void *sptr) {
 	struct ui_windows32_interface *uiw32 = sptr;
 	HWND tc_stm_input_position = GetDlgItem(uiw32->tape.window, IDC_STM_INPUT_POSITION);
-	HWND tc_sbm_input_position = GetDlgItem(uiw32->tape.window, IDC_SBM_INPUT_POSITION);
 	HWND tc_stm_output_position = GetDlgItem(uiw32->tape.window, IDC_STM_OUTPUT_POSITION);
-	HWND tc_sbm_output_position = GetDlgItem(uiw32->tape.window, IDC_SBM_OUTPUT_POSITION);
 
-	static long imax = -1, ipos = -1;
 	long new_imax = 0, new_ipos = 0;
 	if (xroar.tape_interface->tape_input) {
 		new_imax = tape_to_ms(xroar.tape_interface->tape_input, xroar.tape_interface->tape_input->size);
 		new_ipos = tape_to_ms(xroar.tape_interface->tape_input, xroar.tape_interface->tape_input->offset);
 	}
-	SCROLLINFO si = {
-		.cbSize = sizeof(SCROLLINFO),
-		.fMask = 0,
-		.nMin = 0,
-	};
-	if (imax != new_imax) {
-		imax = new_imax;
-		si.fMask |= SIF_RANGE;
-		si.nMax = imax / 16;
-	}
-	if (ipos != new_ipos) {
-		ipos = new_ipos;
-		si.fMask |= SIF_POS;
-		si.nPos = ipos / 16;
+	UINT fMask = uiw32_update_scrollbar(uiw32->tape.window, IDC_SBM_INPUT_POSITION,
+					    0, new_imax, new_ipos);
+	if (fMask & SIF_POS) {
 		SendMessage(tc_stm_input_position, WM_SETTEXT, 0, (LPARAM)ms_to_string(new_ipos));
 	}
-	if (si.fMask) {
-		SendMessage(tc_sbm_input_position, SBM_SETSCROLLINFO, (WPARAM)TRUE, (LPARAM)&si);
-	}
 
-	static long omax = -1, opos = -1;
 	long new_omax = 0, new_opos = 0;
 	if (xroar.tape_interface->tape_output) {
 		new_omax = tape_to_ms(xroar.tape_interface->tape_output, xroar.tape_interface->tape_output->size);
 		new_opos = tape_to_ms(xroar.tape_interface->tape_output, xroar.tape_interface->tape_output->offset);
 	}
-	si.fMask = 0;
-	if (omax != new_omax) {
-		omax = new_omax;
-		si.fMask |= SIF_RANGE;
-		si.nMax = omax / 16;
-	}
-	if (opos != new_opos) {
-		opos = new_opos;
-		si.fMask |= SIF_POS;
-		si.nPos = opos / 16;
+	fMask = uiw32_update_scrollbar(uiw32->tape.window, IDC_SBM_OUTPUT_POSITION,
+					    0, new_omax, new_opos);
+	if (fMask & SIF_POS) {
 		SendMessage(tc_stm_output_position, WM_SETTEXT, 0, (LPARAM)ms_to_string(new_opos));
-	}
-	if (si.fMask) {
-		SendMessage(tc_sbm_output_position, SBM_SETSCROLLINFO, (WPARAM)TRUE, (LPARAM)&si);
 	}
 
 	ev_update_tape_counters.at_tick += EVENT_MS(500);
@@ -439,7 +417,7 @@ static void tc_seek(struct tape *tape, int scroll, int value) {
 
 	case SB_THUMBPOSITION:
 	case SB_THUMBTRACK:
-		seekms = value * 16;
+		seekms = value;
 		break;
 
 	default:
