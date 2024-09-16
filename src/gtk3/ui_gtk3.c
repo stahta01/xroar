@@ -315,6 +315,8 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
@@ -377,8 +379,8 @@ static void *ui_gtk3_new(void *cfg) {
 	gtk3_update_cartridge_menu(uigtk3);
 	uigtk3_update_radio_menu_from_enum(uigtk3->keymap_radio_menu, machine_keyboard_list, "machine-keyboard-%s", NULL, 0);
 	gtk3_update_joystick_menus(uigtk3);
-	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_layout_radio_menu, hkbd_layout_list, "hkbd-layout-%s", NULL, xroar.cfg.kbd.layout);
-	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_lang_radio_menu, hkbd_lang_list, "hkbd-lang-%s", NULL, xroar.cfg.kbd.lang);
+	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_layout_radio_menu, hkbd_layout_list, "hkbd-layout-%s", NULL, 0);
+	uigtk3_update_radio_menu_from_enum(uigtk3->hkbd_lang_radio_menu, hkbd_lang_list, "hkbd-lang-%s", NULL, 0);
 
 	// Extract menubar widget and add to vbox
 	uigtk3->menubar = gtk_ui_manager_get_widget(uigtk3->menu_manager, "/MainMenu");
@@ -528,16 +530,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/RateLimit", value ? TRUE : FALSE, toggle_ratelimit);
 		break;
 
-	// Keyboard
-
-	case ui_tag_hkbd_layout:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->hkbd_layout_radio_menu, value);
-		break;
-
-	case ui_tag_hkbd_lang:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->hkbd_lang_radio_menu, value);
-		break;
-
 	// Joysticks
 
 	case ui_tag_joy_right:
@@ -615,6 +607,14 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_keymap:
 		uigtk3_radio_menu_set_current_value(uigtk3->keymap_radio_menu, value);
+		break;
+
+	case ui_tag_hkbd_layout:
+		uigtk3_radio_menu_set_current_value(uigtk3->hkbd_layout_radio_menu, value);
+		break;
+
+	case ui_tag_hkbd_lang:
+		uigtk3_radio_menu_set_current_value(uigtk3->hkbd_lang_radio_menu, value);
 		break;
 
 	case ui_tag_kbd_translate:
@@ -967,18 +967,18 @@ static void do_hard_reset(GtkEntry *entry, gpointer user_data) {
 
 static void set_hkbd_layout(GtkRadioAction *action, GtkRadioAction *current,
 			    gpointer user_data) {
+	(void)action;
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_hkbd_layout(0, val);
+	ui_update_state(-1, ui_tag_hkbd_layout, val, NULL);
 }
 
 static void set_hkbd_lang(GtkRadioAction *action, GtkRadioAction *current,
 			  gpointer user_data) {
+	(void)action;
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	(void)action;
-	xroar_set_hkbd_lang(0, val);
+	ui_update_state(-1, ui_tag_hkbd_lang, val, NULL);
 }
 
 static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data) {

@@ -149,6 +149,8 @@ struct private_cfg {
 
 	// Keyboard
 	struct {
+		int layout;
+		int lang;
 		_Bool translate;
 		struct slist *type_list;
 	} kbd;
@@ -1074,8 +1076,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Notify UI of starting options:
 	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
 	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
-	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, xroar.cfg.kbd.layout, NULL);
-	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, xroar.cfg.kbd.lang, NULL);
+	ui_update_state(-1, ui_tag_hkbd_layout, private_cfg.kbd.layout, NULL);
+	ui_update_state(-1, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
 	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
 
 	xroar.tape_interface = tape_interface_new(xroar.ui_interface);
@@ -1632,22 +1634,6 @@ void xroar_flush_printer(void) {
 	if (!xroar.printer_interface)
 		return;
 	printer_flush(xroar.printer_interface);
-}
-
-void xroar_set_hkbd_layout(_Bool notify, int hk_layout) {
-	xroar.cfg.kbd.layout = hk_layout;
-	hk_update_keymap();
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, hk_layout, NULL);
-	}
-}
-
-void xroar_set_hkbd_lang(_Bool notify, int hk_lang) {
-	xroar.cfg.kbd.lang = hk_lang;
-	hk_update_keymap();
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, hk_lang, NULL);
-	}
 }
 
 static void update_ui_joysticks(int port) {
@@ -2603,9 +2589,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("fast-sound", &dummy_value.v_bool), .deprecated = 1 },
 
 	/* Keyboard: */
-	{ XC_SET_ENUM("kbd-layout", &xroar.cfg.kbd.layout, hkbd_layout_list) },
-	{ XC_SET_ENUM("kbd-lang", &xroar.cfg.kbd.lang, hkbd_lang_list) },
-	{ XC_SET_ENUM("keymap", &xroar.cfg.kbd.lang, hkbd_lang_list), .deprecated = 1 },
+	{ XC_SET_ENUM("kbd-layout", &private_cfg.kbd.layout, hkbd_layout_list) },
+	{ XC_SET_ENUM("kbd-lang", &private_cfg.kbd.lang, hkbd_lang_list) },
+	{ XC_SET_ENUM("keymap", &private_cfg.kbd.lang, hkbd_lang_list), .deprecated = 1 },
 	{ XC_SET_BOOL("kbd-translate", &private_cfg.kbd.translate) },
 	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 
@@ -2978,8 +2964,8 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Keyboard\n", f);
-	xroar_cfg_print_enum(f, all, "kbd-layout", xroar.cfg.kbd.layout, hk_layout_auto, hkbd_layout_list);
-	xroar_cfg_print_enum(f, all, "kbd-lang", xroar.cfg.kbd.lang, hk_lang_auto, hkbd_lang_list);
+	xroar_cfg_print_enum(f, all, "kbd-layout", private_cfg.kbd.layout, hk_layout_auto, hkbd_layout_list);
+	xroar_cfg_print_enum(f, all, "kbd-lang", private_cfg.kbd.lang, hk_lang_auto, hkbd_lang_list);
 	xroar_cfg_print_bool(f, all, "kbd-translate", private_cfg.kbd.translate, 0);
 	for (struct slist *l = private_cfg.kbd.type_list; l; l = l->next) {
 		sds s = sdsx_quote(l->data);

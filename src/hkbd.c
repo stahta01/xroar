@@ -1108,6 +1108,8 @@ static void apply_lang_table(unsigned lang);
 static _Bool is_dragon_key(uint16_t sym);
 static void emulator_command(uint16_t sym, _Bool shift);
 
+static void hk_ui_set_hkbd_layout(void *, int tag, void *smsg);
+static void hk_ui_set_hkbd_lang(void *, int tag, void *smsg);
 static void hk_ui_set_kbd_translate(void *, int tag, void *smsg);
 
 _Bool hkbd_js_keypress(uint8_t code);
@@ -1119,6 +1121,8 @@ void hk_init(void) {
 	// Register with messenger
 	hkbd.msgr_client_id = messenger_client_register();
 
+	ui_messenger_preempt_group(hkbd.msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(hk_ui_set_hkbd_layout, &hkbd));
+	ui_messenger_preempt_group(hkbd.msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(hk_ui_set_hkbd_lang, &hkbd));
 	ui_messenger_preempt_group(hkbd.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(hk_ui_set_kbd_translate, &hkbd));
 
 	// Initialise to a known state
@@ -1142,7 +1146,7 @@ void hk_update_keymap(void) {
 		hkbd.scancode_mod[c] = 0;
 	}
 
-	hkbd.layout = xroar.cfg.kbd.layout;
+	hkbd.layout = hkbd.cfg.layout;
 
 	if (os_scancode_to_hk_scancode) {
 		free(os_scancode_to_hk_scancode);
@@ -1158,7 +1162,7 @@ void hk_update_keymap(void) {
 #elif defined(HAVE_COCOA)
 	have_keymap = have_keymap || hk_darwin_update_keymap();
 #endif
-	if (xroar.cfg.kbd.lang != hk_lang_auto) {
+	if (hkbd.cfg.lang != hk_lang_auto) {
 		have_keymap = 0;
 	}
 	have_keymap = have_keymap || hk_default_update_keymap();
@@ -1488,7 +1492,7 @@ static _Bool hk_default_update_keymap(void) {
 		hkbd.scancode_mod[c] = 0;
 	}
 
-	unsigned lang = (unsigned)xroar.cfg.kbd.lang;
+	unsigned lang = (unsigned)hkbd.cfg.lang;
 	if (hkbd.layout == hk_layout_auto) {
 		// Japanese -> JIS, else ANSI
 		hkbd.layout = lang == hk_lang_jp ? hk_layout_jis : hk_layout_ansi;
@@ -1775,6 +1779,46 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 	default:
 		break;
 	}
+}
+
+static void hk_ui_set_hkbd_layout(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_hkbd_layout);
+	int layout = uimsg->value;
+	if (uimsg->value == XROAR_NEXT) {
+		layout = hkbd.cfg.layout + 1;
+	} else if (uimsg->value == XROAR_PREV) {
+		layout = hkbd.cfg.layout - 1;
+	}
+	if (layout < hk_layout_auto) {
+		layout = hk_layout_jis;
+	} else if (layout > hk_layout_jis) {
+		layout = hk_layout_auto;
+	}
+	hkbd.cfg.layout = layout;
+	hk_update_keymap();
+	uimsg->value = layout;
+}
+
+static void hk_ui_set_hkbd_lang(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_hkbd_lang);
+	int lang = uimsg->value;
+	if (uimsg->value == XROAR_NEXT) {
+		lang = hkbd.cfg.lang + 1;
+	} else if (uimsg->value == XROAR_PREV) {
+		lang = hkbd.cfg.lang - 1;
+	}
+	if (lang < hk_lang_auto) {
+		lang = hk_lang_dvorak;
+	} else if (lang > hk_lang_dvorak) {
+		lang = hk_lang_auto;
+	}
+	hkbd.cfg.lang = lang;
+	hk_update_keymap();
+	uimsg->value = lang;
 }
 
 static void hk_ui_set_kbd_translate(void *sptr, int tag, void *smsg) {

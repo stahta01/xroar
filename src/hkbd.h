@@ -1128,6 +1128,12 @@ extern struct xconfig_enum hkbd_lang_list[];
 // Host keyboard state.
 
 struct hkbd {
+	// Configured values (can be auto)
+	struct {
+		int layout;
+		int lang;
+	} cfg;
+
 	// Messenger client id
 	int msgr_client_id;
 

@@ -292,12 +292,10 @@ int cocoa_super_all_keys = 0;
 
 	// Tool
 	case ui_tag_hkbd_layout:
-		uimac->kbd.layout = value;
-		xroar_set_hkbd_layout(0, value);
+		ui_update_state(-1, ui_tag_hkbd_layout, value, NULL);
 		break;
 	case ui_tag_hkbd_lang:
-		uimac->kbd.lang = value;
-		xroar_set_hkbd_lang(0, value);
+		ui_update_state(-1, ui_tag_hkbd_lang, value, NULL);
 		break;
 	case ui_tag_kbd_translate:
 		ui_update_state(-1, ui_tag_kbd_translate, UI_NEXT, NULL);
@@ -1168,6 +1166,8 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
 	cocoa_update_machine_menu(uisdl2);
@@ -1331,16 +1331,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->lp.destination = value;
 		break;
 
-	/* Keyboard */
-
-	case ui_tag_hkbd_layout:
-		uimac->kbd.layout = value;
-		break;
-
-	case ui_tag_hkbd_lang:
-		uimac->kbd.lang = value;
-		break;
-
 	/* Joystick */
 
 	case ui_tag_joy_right:
@@ -1435,6 +1425,14 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_keymap:
 		uimac->machine.keymap = value;
+		break;
+
+	case ui_tag_hkbd_layout:
+		uimac->kbd.layout = value;
+		break;
+
+	case ui_tag_hkbd_lang:
+		uimac->kbd.lang = value;
 		break;
 
 	case ui_tag_kbd_translate:
