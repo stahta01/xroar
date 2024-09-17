@@ -1423,8 +1423,9 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 				uint16_t D;
 				if (!GnA && !SnA) {
 					unsigned Aext = (md->VDG->row << 8) | Aram7 | Dram;
-					uint8_t *d_ext = rombank_a8(md->ext_charset, Aext);
-					D = *d_ext | 0x100;  // set INV
+					uint8_t Dext = 0xff;
+					rombank_d8(md->ext_charset, Aext, &Dext);
+					D = Dext | 0x100;  // set INV
 					D |= (~Dram & 0x80) << 3;
 				} else {
 					D = Dram;
