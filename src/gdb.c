@@ -875,10 +875,13 @@ static int qRcmd(struct gdb_interface_private *gip, char *args) {
 	}
 	*np = '\0';
 
-	/* parse our own gdb "monitor" command */
-	char *cmd = strsep(&args, " ");
-	if (!args)		/* no arguments to our cmd */
-		args = "";	/* always printable below */
+	// Parse our own gdb "monitor" command.  If no args found, use an empty
+	// string for printing later.  Note: The temporary assignment to argptr
+	// here works around the GCC -fanalyzer false positive
+	// -Wanalyzer-deref-before-check.
+	char *argptr = args;
+	char *cmd = strsep(&argptr, " ");
+	args = argptr ? argptr : "";
 
 	char reply[255];
 	*reply = '\0';
@@ -899,10 +902,14 @@ static int qRcmd(struct gdb_interface_private *gip, char *args) {
 
 static void general_query(struct gdb_interface_private *gip, char *args) {
 	if (0 == strncmp(args, "Rcmd", 4)) {
-		/* this query uses comma instead of colon as separator */
-		strsep(&args, ",");
-		if (!args || qRcmd(gip, args))
+		// This query uses comma instead of colon as separator.
+		// Copying args to argptr works around the GCC -fanalyzer false
+		// positive -Wanalyzer-deref-before-check.
+		char *argptr = args;
+		strsep(&argptr, ",");
+		if (!argptr || qRcmd(gip, argptr)) {
 			send_packet_string(gip, "E00");
+		}
 		return;
 	}
 	char *query = strsep(&args, ":");
