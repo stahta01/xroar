@@ -178,6 +178,12 @@ void uigtk3_label_set_text(struct ui_gtk3_interface *uigtk3, const gchar *l_name
 	gtk_label_set_text(l, str);
 }
 
+void uigtk3_spin_button_set_value(struct ui_gtk3_interface *uigtk3,
+				  const gchar *sb_name, gdouble value) {
+	GtkSpinButton *sb = GTK_SPIN_BUTTON(gtk_builder_get_object(uigtk3->builder, sb_name));
+	gtk_spin_button_set_value(sb, value);
+}
+
 void uigtk3_toggle_button_set_active(struct ui_gtk3_interface *uigtk3, const gchar *tb_name,
 				     gboolean v) {
 	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk3->builder, tb_name));

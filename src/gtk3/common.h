@@ -205,6 +205,9 @@ void uigtk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar 
 void uigtk3_label_set_text(struct ui_gtk3_interface *uigtk3, const gchar *l_name,
 			   const gchar *str);
 
+void uigtk3_spin_button_set_value(struct ui_gtk3_interface *,
+				  const gchar *sb_name, gdouble value);
+
 void uigtk3_toggle_button_set_active(struct ui_gtk3_interface *uigtk3, const gchar *tb_name,
                                      gboolean v);
 
