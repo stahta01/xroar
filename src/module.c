@@ -27,7 +27,7 @@
 #include "logging.h"
 #include "module.h"
 
-void module_print_list(struct module * const *list) {
+static void module_print_list(struct module * const *list) {
 	int i;
 	if (list == NULL || list[0]->name == NULL) {
 		puts("\tNone found.");

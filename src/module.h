@@ -29,7 +29,6 @@ struct module {
 	void *(*new)(void *cfg);
 };
 
-void module_print_list(struct module * const *list);
 struct module *module_select(struct module * const *list, const char *name);
 struct module *module_select_by_arg(struct module * const *list, const char *name);
 void *module_init(struct module *module, void *cfg);
