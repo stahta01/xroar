@@ -646,11 +646,13 @@ static int read_v1_snapshot(const char *filename) {
 					drive = fs_read_uint8(fd);
 					vdrive_eject_disk(xroar.vdrive_interface, drive);
 					if (size > 0) {
-						char *name = malloc(size);
-						if (name != NULL) {
-							size -= fread(name, 1, size, fd);
-							vdrive_insert_disk(xroar.vdrive_interface, drive, vdisk_load(name));
-						}
+						char *name = xmalloc(size);
+						size -= fread(name, 1, size, fd);
+						// the NUL should be in the snapshot, but
+						// terminate explicitly just in case:
+						name[size-1] = 0;
+						vdrive_insert_disk(xroar.vdrive_interface, drive, vdisk_load(name));
+						free(name);
 					}
 				}
 				break;
