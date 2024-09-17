@@ -71,6 +71,7 @@ struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 
 	// Build lists
 
@@ -102,9 +103,6 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 			  int tag, int value, const void *data) {
 	(void)data;
 	switch (tag) {
-	case ui_tag_gain:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_gain", *(float *)data, tv_change_gain);
-		break;
 
 	case ui_tag_brightness:
 		uigtk3_notify_spin_button_set_value(uigtk3, "sb_brightness", value, tv_change_brightness);
@@ -153,7 +151,7 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	struct ui_state_message *msg = smsg;
 	int value = msg->value;
-	//const void *data = msg->data;
+	const void *data = msg->data;
 
 	switch (tag) {
 
@@ -171,6 +169,12 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_tv_input", (void *)(intptr_t)value);
 		break;
 
+	// Audio
+
+	case ui_tag_gain:
+		uigtk3_spin_button_set_value(uigtk3, "sb_gain", *(float *)data);
+		break;
+
 	default:
 		break;
 	}
@@ -182,14 +186,9 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
 // Callbacks
 
 static void tv_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	float value = (float)gtk_spin_button_get_value(spin_button);
-	if (value < -49.9)
-		value = -999.;
-	if (xroar.ao_interface) {
-		sound_set_gain(xroar.ao_interface->sound_interface, value);
-	}
+	ui_update_state(-1, ui_tag_gain, 0, &value);
 }
 
 static void tv_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {

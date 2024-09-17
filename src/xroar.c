@@ -1051,9 +1051,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		return NULL;
 	}
 	if (private_cfg.ao.volume >= 0) {
-		sound_set_volume(xroar.ao_interface->sound_interface, private_cfg.ao.volume);
+		ui_update_state(-1, ui_tag_gain, private_cfg.ao.volume, NULL);
 	} else {
-		sound_set_gain(xroar.ao_interface->sound_interface, private_cfg.ao.gain);
+		float gain_f = private_cfg.ao.gain;
+		ui_update_state(-1, ui_tag_gain, 0, &gain_f);
 	}
 
 	// Default joystick mapping

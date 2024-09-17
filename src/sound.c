@@ -21,6 +21,7 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,6 +33,7 @@
 
 #include "events.h"
 #include "logging.h"
+#include "messenger.h"
 #include "module.h"
 #include "sound.h"
 #include "tape.h"
@@ -42,6 +44,9 @@ static void flush_buffer(void *sptr);
 struct sound_interface_private {
 
 	struct sound_interface public;
+
+	// Messenger client id
+	int msgr_client_id;
 
 	// Describes the mix & output buffers:
 	unsigned buffer_nframes;
@@ -149,13 +154,20 @@ static const float source_offset_v[NUM_SOURCES][3] = {
 	{ 0.00/MAX_V, 0.00/MAX_V, 3.90/MAX_V }   // Single-bit
 };
 
+static void sound_ui_set_gain(void *, int tag, void *smsg);
+
 struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsigned rate,
 					    unsigned nchannels, unsigned nframes) {
 	struct sound_interface_private *snd = xmalloc(sizeof(*snd));
 	*snd = (struct sound_interface_private){0};
 	struct sound_interface *sndp = &snd->public;
 
-	sound_set_gain(sndp, -3.0);
+	// Register with messenger
+	snd->msgr_client_id = messenger_client_register();
+
+	ui_messenger_preempt_group(snd->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(sound_ui_set_gain, snd));
+
+	snd->gain = 0.7;  // -3dBFS
 
 	_Bool fmt_big_endian = 1;
 
@@ -254,6 +266,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 void sound_interface_free(struct sound_interface *sndp) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
+	messenger_client_unregister(snd->msgr_client_id);
 	event_dequeue(&snd->flush_event);
 	if (snd->output_fmt != SOUND_FMT_FLOAT) {
 		free(snd->mix_buffer);
@@ -522,32 +535,43 @@ void sound_set_ratelimit(struct sound_interface *sndp, _Bool ratelimit) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Sets the overall gain applied after mixing sources.  Generally a negative
-// number relative to 0dBFS.
-void sound_set_gain(struct sound_interface *sndp, float db) {
-	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	float v = powf(10., db / 20.);
-	snd->gain = v;
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_gain, (int)(v * 100.), &db);
-	}
-}
-
-// Old way to set the gain by specifying a percentage of full scale (linear).
-void sound_set_volume(struct sound_interface *sndp, int v) {
-	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
-	float db;
-	if (v <= 0) {
-		snd->gain = v = 0;
-		db = -50.0;
+static void sound_ui_set_gain(void *sptr, int tag, void *smsg) {
+	struct sound_interface_private *snd = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_gain);
+	if (uimsg->data) {
+		float db = *(float *)uimsg->data;
+		float v;
+		int vi;
+		if (db < -49.9) {
+			v = 0.;
+			vi = 0;
+			db = -50.;
+		} else {
+			v = powf(10., db / 20.);
+			vi = (int)(v * 100.);
+		}
+		snd->gain = v;
+		uimsg->value = vi;
+		*(float *)uimsg->data = db;
 	} else {
-		if (v > 200)
-			v = 200;
-		snd->gain = (float)v / 100.;
-		db = log10f(snd->gain) * 20.;
-	}
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_gain, v, &db);
+		int vi = uimsg->value;
+		float v;
+		static float db;
+		if (vi <= 0) {
+			vi = 0;
+			v = 0.;
+			db = -50.;
+		} else {
+			if (vi > 200) {
+				vi = 200;
+			}
+			v = (float)vi / 100.;
+			db = log10f(v) * 20.;
+		}
+		snd->gain = v;
+		uimsg->value = vi;
+		uimsg->data = &db;
 	}
 }
 

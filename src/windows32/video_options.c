@@ -54,9 +54,10 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *, UINT msg, WPARAM wParam, 
 struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *uiw32) {
 	struct uiw32_dialog *dlg = uiw32_dialog_new(uiw32, IDD_DLG_TV_CONTROLS, ui_tag_tv_dialog, tv_proc);
 
-	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, uiw32));
-	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, uiw32));
-	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, uiw32));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 
 	HWND vo_volume = GetDlgItem(dlg->hWnd, IDC_SPIN_VOLUME);
 	SendMessage(vo_volume, UDM_SETRANGE, 0, MAKELPARAM(150, 0));
@@ -97,10 +98,6 @@ void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
 	(void)data;
 
 	switch (tag) {
-
-	case ui_tag_gain:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_VOLUME, UDM_SETPOS, 0, value);
-		break;
 
 	case ui_tag_brightness:
 		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_BRIGHTNESS, UDM_SETPOS, 0, value);
@@ -177,6 +174,12 @@ static void vo_ui_state_notify(void *sptr, int tag, void *smsg) {
 		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_TV_INPUT, value);
 		break;
 
+	// Audio
+
+	case ui_tag_gain:
+		uiw32_udm_setpos(dlg->hWnd, IDC_SPIN_VOLUME, value);
+		break;
+
 	default:
 		break;
 	}
@@ -202,9 +205,9 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 	case WM_NOTIFY:
 		switch (((LPNMHDR)lParam)->idFrom) {
 		case IDC_SPIN_VOLUME:
-			if (xroar.ao_interface) {
-				HWND vo_volume = GetDlgItem(dlg->hWnd, IDC_SPIN_VOLUME);
-				sound_set_volume(xroar.ao_interface->sound_interface, (int16_t)SendMessage(vo_volume, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			{
+				int value = uiw32_udm_getpos(dlg->hWnd, IDC_SPIN_VOLUME);
+				ui_update_state(-1, ui_tag_gain, value, NULL);
 			}
 			break;
 

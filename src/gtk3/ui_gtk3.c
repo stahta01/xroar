@@ -511,7 +511,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 
 	// Video
 
-	case ui_tag_gain:
 	case ui_tag_brightness:
 	case ui_tag_contrast:
 	case ui_tag_saturation:

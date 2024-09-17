@@ -567,7 +567,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		windows32_vo_update_state(uiw32, tag, value, data);
 		break;
 
-	case ui_tag_gain:
 	case ui_tag_brightness:
 	case ui_tag_contrast:
 	case ui_tag_saturation:
