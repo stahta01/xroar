@@ -879,11 +879,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Help text
 
-	// Useful for -vo help to list the video modules within all available UIs
-	if (xroar_ui_cfg.vo && 0 == c_strcasecmp(xroar_ui_cfg.vo, "help")) {
-		ui_print_vo_help();
-		exit(EXIT_SUCCESS);
-	}
 #ifndef HAVE_WASM
 	if (private_cfg.help.config_print) {
 		config_print_all(stdout, 0);
@@ -2765,7 +2760,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("vo-hue", &private_cfg.vo.hue) },
 	{ XC_SET_BOOL("vo-colour-killer", &xroar_ui_cfg.vo_cfg.colour_killer) },
 	/* Deliberately undocumented: */
-	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo) },
+	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo), .deprecated = 1 },
 
 	/* Audio: */
 	{ XC_SET_STRING("ao", &private_cfg.ao_module) },
@@ -3130,7 +3125,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	fputs("\n", f);
 
 	fputs("# Video\n", f);
-	xroar_cfg_print_string(f, all, "vo", xroar_ui_cfg.vo, NULL);
 	xroar_cfg_print_bool(f, all, "fs", xroar_ui_cfg.vo_cfg.fullscreen, 0);
 	xroar_cfg_print_int_nz(f, all, "fskip", private_cfg.vo.frameskip);
 	xroar_cfg_print_enum(f, all, "ccr", private_cfg.vo.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);

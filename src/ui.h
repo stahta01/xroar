@@ -198,6 +198,4 @@ struct ui_interface {
 
 extern struct ui_module * const *ui_module_list;
 
-void ui_print_vo_help(void);
-
 #endif
