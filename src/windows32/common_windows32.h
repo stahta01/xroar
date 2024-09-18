@@ -78,6 +78,9 @@ LRESULT uiw32_send_message(HWND hDlg, int nIDDlgItem, UINT Msg, WPARAM wParam, L
 
 #define windows32_send_message_dlg_item(d,i,m,w,l) uiw32_send_message((d), (i), (m), (w), (l))
 
+#define uiw32_bm_getcheck(d,i) (uiw32_send_message((d), (i), BM_GETCHECK, 0, 0) == BST_CHECKED)
+#define uiw32_bm_setcheck(d,i,v) uiw32_send_message((d), (i), BM_SETCHECK, (v) ? BST_CHECKED : BST_UNCHECKED, 0)
+
 // These only deal in 16-bit values, so cast appropriately
 #define uiw32_udm_getpos(d,i) ((int16_t)uiw32_send_message((d), (i), UDM_GETPOS, 0, 0))
 #define uiw32_udm_setpos(d,i,v) uiw32_send_message((d), (i), UDM_SETPOS, 0, (int16_t)(v))
