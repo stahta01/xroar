@@ -244,6 +244,8 @@ static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
 	xroar_swap_joysticks(1);
 }
 
+static void show_about_window(GtkMenuItem *item, gpointer user_data);
+
 static void toggle_keyboard_translation(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
@@ -256,53 +258,6 @@ static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
 	(void)uigtk3;
 	gboolean val = gtk_toggle_action_get_active(current);
 	xroar_set_ratelimit_latch(0, val);
-}
-
-static void close_about(GtkDialog *dialog, gint response_id, gpointer user_data) {
-	(void)response_id;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	gtk_widget_hide(GTK_WIDGET(dialog));
-	gtk_widget_destroy(GTK_WIDGET(dialog));
-}
-
-static void about(GtkMenuItem *item, gpointer user_data) {
-	(void)item;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-
-	GdkPixbuf *logo_pixbuf = NULL;
-	GError *error = NULL;
-	GBytes *logo_bytes = g_resources_lookup_data("/uk/org/6809/xroar/gtk3/xroar-48x48.raw", 0, &error);
-	if (logo_bytes) {
-		logo_pixbuf = gdk_pixbuf_new_from_bytes(logo_bytes, GDK_COLORSPACE_RGB, 1, 8, 48, 48, 192);
-		g_bytes_unref(logo_bytes);
-	}
-
-	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
-	if (logo_pixbuf) {
-		gtk_about_dialog_set_logo(dialog, logo_pixbuf);
-		gdk_pixbuf_unref(logo_pixbuf);
-	}
-	gtk_about_dialog_set_version(dialog, VERSION);
-	gtk_about_dialog_set_copyright(dialog, "Copyright © " PACKAGE_YEAR " Ciaran Anscomb <xroar@6809.org.uk>");
-	gtk_about_dialog_set_license(dialog,
-"XRoar is free software; you can redistribute it and/or modify it under\n"
-"the terms of the GNU General Public License as published by the Free Free\n"
-"Software Foundation, either version 3 of the License, or (at your option)\n"
-"any later version.\n"
-"\n"
-"XRoar is distributed in the hope that it will be useful, but WITHOUT\n"
-"ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or\n"
-"FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License\n"
-"for more details.\n"
-"\n"
-"You should have received a copy of the GNU General Public License along\n"
-"with XRoar.  If not, see <https://www.gnu.org/licenses/>."
-	);
-	gtk_about_dialog_set_website(dialog, "https://www.6809.org.uk/xroar/");
-	gtk_about_dialog_set_website_label(dialog, "https://www.6809.org.uk/xroar/");
-	g_signal_connect(dialog, "response", G_CALLBACK(close_about), uigtk3);
-	gtk_widget_show(GTK_WIDGET(dialog));
 }
 
 static void do_load_file(GtkEntry *entry, gpointer user_data) { (void)entry; (void)user_data; xroar_load_file(); }
@@ -379,7 +334,7 @@ static GtkActionEntry const ui_entries[] = {
 	// Help
 	{ .name = "AboutAction", /*.stock_id = GTK_STOCK_ABOUT,*/
 	  .label = "_About",
-	  .callback = G_CALLBACK(about) },
+	  .callback = G_CALLBACK(show_about_window) },
 };
 
 static GtkToggleActionEntry const ui_toggles[] = {
@@ -865,4 +820,12 @@ static void gtk3_update_joystick_menus(void *sptr) {
 
 	update_joystick_menu(uigtk3, uigtk3->joy_right_radio_menu, "rjoy%d", "rjoy0");
 	update_joystick_menu(uigtk3, uigtk3->joy_left_radio_menu, "ljoy%d", "ljoy0");
+}
+
+// Help menu callbacks
+
+static void show_about_window(GtkMenuItem *item, gpointer user_data) {
+	(void)item;
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gtk3_create_about_window(uigtk3);
 }

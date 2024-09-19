@@ -126,6 +126,8 @@ struct ui_gtk3_interface {
 // globally.
 extern struct ui_gtk3_interface *global_uigtk3;
 
+void gtk3_create_about_window(struct ui_gtk3_interface *);
+
 _Bool gtk3_vo_init(struct ui_gtk3_interface *);
 
 extern struct joystick_module *gtk3_js_modlist[];
