@@ -507,7 +507,9 @@ void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap) {
 }
 
 // Call on focus event.  This does a better job at syncing keyboard state than
-// the default, which just releases all keys.
+// the default, which just releases all keys.  Note: we _only_ release keys,
+// not press them here, otherwise phantom keypresses fall through to us when a
+// dialog window is closed and we happen to get focus next.
 
 _Bool hk_x11_focus_in(void) {
 	if (!display || !os_scancode_to_hk_scancode)
@@ -519,11 +521,7 @@ _Bool hk_x11_focus_in(void) {
 		uint8_t code = os_scancode_to_hk_scancode[i];
 		if (code == hk_scan_None)
 			continue;
-		if (keys[i >> 3] & (1 << (i & 7))) {
-			if (hkbd.scancode_pressed_sym[code] == hk_sym_None) {
-				hk_scan_press(code);
-			}
-		} else {
+		if (!(keys[i >> 3] & (1 << (i & 7)))) {
 			if (hkbd.scancode_pressed_sym[code] != hk_sym_None) {
 				hk_scan_release(code);
 			}
