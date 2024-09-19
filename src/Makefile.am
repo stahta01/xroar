@@ -254,6 +254,7 @@ xroar_LDADD += $(GTK3_LIBS)
 xroar_SOURCES += \
 	gtk3/about.c \
 	gtk3/common.c gtk3/common.h \
+	gtk3/dialog.c gtk3/dialog.h \
 	gtk3/drivecontrol.c gtk3/drivecontrol.h \
 	gtk3/event_handlers.c gtk3/event_handlers.h \
 	gtk3/filereq_gtk3.c \
