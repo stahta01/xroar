@@ -213,6 +213,8 @@ void uigtk3_label_set_text(struct ui_gtk3_interface *uigtk3, const gchar *l_name
 void uigtk3_toggle_button_set_active(struct ui_gtk3_interface *uigtk3, const gchar *tb_name,
                                      gboolean v);
 
+gboolean uigtk3_widget_is_visible(struct ui_gtk3_interface *uigtk3, const gchar *w_name);
+
 void uigtk3_widget_hide(struct ui_gtk3_interface *uigtk3, const gchar *w_name);
 
 void uigtk3_widget_set_sensitive(struct ui_gtk3_interface *uigtk3, const gchar *w_name,
