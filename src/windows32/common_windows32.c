@@ -70,8 +70,7 @@ void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS) {
 	free(text);
 }
 
-LRESULT windows32_send_message_dlg_item(HWND hDlg, int nIDDlgItem, UINT Msg,
-					WPARAM wParam, LPARAM lParam) {
+LRESULT uiw32_send_message(HWND hDlg, int nIDDlgItem, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	HWND hWnd = GetDlgItem(hDlg, nIDDlgItem);
 	return SendMessage(hWnd, Msg, wParam, lParam);
 }
