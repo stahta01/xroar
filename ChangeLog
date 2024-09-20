@@ -1,4 +1,5 @@
  * Fix Control+Shift+digit shortcuts
+ * Fix LUT-based composite rendering for CoCo 3 [Christian M]
 
 Version 1.6.3, Thu 12 Sep 2024
 
