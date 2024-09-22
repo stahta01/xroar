@@ -225,9 +225,6 @@ struct vo_geometry {
 	int x, y;
 };
 
-extern const uint8_t vo_cmp_lut_2bit[2][4][3];
-extern const uint8_t vo_cmp_lut_5bit[2][32][3];
-
 // Allocates at least enough space for (struct vo_interface)
 
 void *vo_interface_new(size_t isize);
