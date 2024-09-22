@@ -147,3 +147,34 @@ int ui_messenger_preempt_group(int client_id, int tag, messenger_notify_delegate
 }
 
 extern inline void ui_update_state(int client_id, int tag, int value, const void *data);
+
+int ui_msg_adjust_value_range(struct ui_state_message *uimsg, int cur, int dfl,
+			      int min, int max, unsigned flags) {
+	assert(uimsg != NULL);
+	assert(min <= max);  // I could just swap them, I suppose...
+	int value = uimsg->value;
+	_Bool keep_auto = 0;
+	if (min >= 0 && uimsg->value == UI_NEXT) {
+		value = cur + 1;
+		if ((flags & UI_ADJUST_FLAG_CYCLE) && value > max) {
+			value = min;
+		}
+	} else if (min >= 0 && uimsg->value == UI_PREV) {
+		value = cur - 1;
+		if ((flags & UI_ADJUST_FLAG_CYCLE) && value < min) {
+			value = max;
+		}
+	} else if (min >= 0 && uimsg->value == UI_AUTO) {
+		keep_auto = flags & UI_ADJUST_FLAG_KEEP_AUTO;
+		value = dfl;
+	}
+	if (value < min) {
+		value = min;
+	} else if (value > max) {
+		value = max;
+	}
+	if (!keep_auto) {
+		uimsg->value = value;
+	}
+	return value;
+}

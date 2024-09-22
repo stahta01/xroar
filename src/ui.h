@@ -199,6 +199,10 @@ struct ui_interface {
 	struct vo_interface *vo_interface;
 };
 
+#define UI_PREV (-3)
+#define UI_NEXT (-2)
+#define UI_AUTO (-1)
+
 struct ui_state_message {
 	int value;
 	const void *data;
@@ -218,5 +222,29 @@ inline void ui_update_state(int client_id, int tag, int value, const void *data)
 	struct ui_state_message msg = { .value = value, .data = data };
 	messenger_send_message(ui_tag_to_group_id[tag], client_id, tag, &msg);
 }
+
+// UI message receivers that apply configuration take simple integer values.
+// This function applies adjustment and range checking to the value in a UI
+// message.
+//
+// UI_PREV and UI_NEXT subtracts or adds 1 to 'cur'.  If UI_ADJUST_FLAG_CYCLE
+// is set, the result is cycled through 'min' to 'max' and vice-versa.
+// Otherwise the result is clamped.
+//
+// UI_AUTO sets value to 'dfl'.
+//
+// Note that if the range includes the special command values, i.e. if 'min' is
+// negative, then commands will not take effect.
+//
+// The new value is returned, and the 'value' field in the UI message is
+// updated.  If UI_ADJUST_FLAG_KEEP_AUTO is set, the value of UI_AUTO is kept
+// in the message, even though the returned value differs, allowing an
+// "automatic" selection to be defined.
+
+#define UI_ADJUST_FLAG_CYCLE     (1 << 0)
+#define UI_ADJUST_FLAG_KEEP_AUTO (1 << 1)
+
+int ui_msg_adjust_value_range(struct ui_state_message *, int cur, int dfl,
+			      int min, int max, unsigned flags);
 
 #endif
