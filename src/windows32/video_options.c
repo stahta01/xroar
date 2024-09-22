@@ -54,9 +54,18 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *, UINT msg, WPARAM wParam, 
 struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *uiw32) {
 	struct uiw32_dialog *dlg = uiw32_dialog_new(uiw32, IDD_DLG_TV_CONTROLS, ui_tag_tv_dialog, tv_proc);
 
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 
 	HWND vo_volume = GetDlgItem(dlg->hWnd, IDC_SPIN_VOLUME);
@@ -91,54 +100,7 @@ struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *uiw32) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Video options - update values in UI
-
-void windows32_vo_update_state(struct ui_windows32_interface *uiw32,
-			       int tag, int value, const void *data) {
-	(void)data;
-
-	switch (tag) {
-
-	case ui_tag_brightness:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_BRIGHTNESS, UDM_SETPOS, 0, value);
-		break;
-
-	case ui_tag_contrast:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_CONTRAST, UDM_SETPOS, 0, value);
-		break;
-
-	case ui_tag_saturation:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_SATURATION, UDM_SETPOS, 0, value);
-		break;
-
-	case ui_tag_hue:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_SPIN_HUE, UDM_SETPOS, 0, value);
-		break;
-
-	case ui_tag_ntsc_scaling:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_BN_NTSC_SCALING, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
-		break;
-
-	case ui_tag_cmp_fs:
-		uiw32_combo_box_select_by_data(uiw32->tv_dialog->hWnd, IDC_CB_FS, value);
-		break;
-
-	case ui_tag_cmp_fsc:
-		uiw32_combo_box_select_by_data(uiw32->tv_dialog->hWnd, IDC_CB_FSC, value);
-		break;
-
-	case ui_tag_cmp_system:
-		uiw32_combo_box_select_by_data(uiw32->tv_dialog->hWnd, IDC_CB_SYSTEM, value);
-		break;
-
-	case ui_tag_cmp_colour_killer:
-		uiw32_send_message(uiw32->tv_dialog->hWnd, IDC_BN_COLOUR_KILLER, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
-		break;
-
-	default:
-		break;
-	}
-}
+// UI message reception
 
 static void vo_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct uiw32_dialog *dlg = sptr;
@@ -148,18 +110,22 @@ static void vo_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	switch (tag) {
 
-	case ui_tag_tv_dialog:
-		{
-			_Bool show;
-			if (value == UI_NEXT || value == UI_PREV) {
-				LONG style = GetWindowLongA(dlg->hWnd, GWL_STYLE);
-				show = (style & WS_VISIBLE) ? 0 : 1;
-			} else {
-				show = value;
-			}
-			ShowWindow(dlg->hWnd, show ? SW_SHOW : SW_HIDE);
-			uimsg->value = show;
-		}
+	// Video
+
+	case ui_tag_cmp_fs:
+		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_FS, value);
+		break;
+
+	case ui_tag_cmp_fsc:
+		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_FSC, value);
+		break;
+
+	case ui_tag_cmp_system:
+		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_SYSTEM, value);
+		break;
+
+	case ui_tag_cmp_colour_killer:
+		uiw32_send_message(dlg->hWnd, IDC_BN_COLOUR_KILLER, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 		break;
 
 	case ui_tag_ccr:
@@ -170,8 +136,28 @@ static void vo_ui_state_notify(void *sptr, int tag, void *smsg) {
 		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_PICTURE, value);
 		break;
 
+	case ui_tag_ntsc_scaling:
+		uiw32_send_message(dlg->hWnd, IDC_BN_NTSC_SCALING, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
+		break;
+
 	case ui_tag_tv_input:
 		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_TV_INPUT, value);
+		break;
+
+	case ui_tag_brightness:
+		uiw32_udm_setpos(dlg->hWnd, IDC_SPIN_BRIGHTNESS, value);
+		break;
+
+	case ui_tag_contrast:
+		uiw32_udm_setpos(dlg->hWnd, IDC_SPIN_CONTRAST, value);
+		break;
+
+	case ui_tag_saturation:
+		uiw32_udm_setpos(dlg->hWnd, IDC_SPIN_SATURATION, value);
+		break;
+
+	case ui_tag_hue:
+		uiw32_udm_setpos(dlg->hWnd, IDC_SPIN_HUE, value);
 		break;
 
 	// Audio
@@ -212,30 +198,30 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 			break;
 
 		case IDC_SPIN_BRIGHTNESS:
-			if (xroar.vo_interface) {
-				HWND vo_brightness = GetDlgItem(dlg->hWnd, IDC_SPIN_BRIGHTNESS);
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, (int16_t)SendMessage(vo_brightness, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			{
+				int value = uiw32_udm_getpos(dlg->hWnd, IDC_SPIN_BRIGHTNESS);
+				ui_update_state(-1, ui_tag_brightness, value, NULL);
 			}
 			break;
 
 		case IDC_SPIN_CONTRAST:
-			if (xroar.vo_interface) {
-				HWND vo_contrast = GetDlgItem(dlg->hWnd, IDC_SPIN_CONTRAST);
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, (int16_t)SendMessage(vo_contrast, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			{
+				int value = uiw32_udm_getpos(dlg->hWnd, IDC_SPIN_CONTRAST);
+				ui_update_state(-1, ui_tag_contrast, value, NULL);
 			}
 			break;
 
 		case IDC_SPIN_SATURATION:
-			if (xroar.vo_interface) {
-				HWND vo_saturation = GetDlgItem(dlg->hWnd, IDC_SPIN_SATURATION);
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, (int16_t)SendMessage(vo_saturation, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			{
+				int value = uiw32_udm_getpos(dlg->hWnd, IDC_SPIN_SATURATION);
+				ui_update_state(-1, ui_tag_saturation, value, NULL);
 			}
 			break;
 
 		case IDC_SPIN_HUE:
-			if (xroar.vo_interface) {
-				HWND vo_hue = GetDlgItem(dlg->hWnd, IDC_SPIN_HUE);
-				DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, (int16_t)SendMessage(vo_hue, UDM_GETPOS, (WPARAM)0, (LPARAM)0));
+			{
+				int value = uiw32_udm_getpos(dlg->hWnd, IDC_SPIN_HUE);
+				ui_update_state(-1, ui_tag_hue, value, NULL);
 			}
 			break;
 
@@ -266,21 +252,15 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 				break;
 
 			case IDC_CB_FS:
-				if (xroar.vo_interface) {
-					vo_set_cmp_fs(xroar.vo_interface, 0, old_value);
-				}
+				ui_update_state(-1, ui_tag_cmp_fs, old_value, NULL);
 				break;
 
 			case IDC_CB_FSC:
-				if (xroar.vo_interface) {
-					vo_set_cmp_fsc(xroar.vo_interface, 0, old_value);
-				}
+				ui_update_state(-1, ui_tag_cmp_fsc, old_value, NULL);
 				break;
 
 			case IDC_CB_SYSTEM:
-				if (xroar.vo_interface) {
-					vo_set_cmp_system(xroar.vo_interface, 0, old_value);
-				}
+				ui_update_state(-1, ui_tag_cmp_system, old_value, NULL);
 				break;
 
 			default: break;
@@ -290,18 +270,16 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 
 			switch (id) {
 			case IDC_BN_NTSC_SCALING:
-				if (xroar.vo_interface) {
-					HWND tb_ntsc_scaling = GetDlgItem(dlg->hWnd, IDC_BN_NTSC_SCALING);
-					int value = !(SendMessage(tb_ntsc_scaling, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					vo_set_ntsc_scaling(xroar.vo_interface, 1, value);
+				{
+					int value = !uiw32_bm_getcheck(dlg->hWnd, IDC_BN_NTSC_SCALING);
+					ui_update_state(-1, ui_tag_ntsc_scaling, value, NULL);
 				}
 				return FALSE;
 
 			case IDC_BN_COLOUR_KILLER:
-				if (xroar.vo_interface) {
-					HWND tb_cmp_colour_killer = GetDlgItem(dlg->hWnd, IDC_BN_COLOUR_KILLER);
-					int value = !(SendMessage(tb_cmp_colour_killer, BM_GETCHECK, 0, 0) == BST_CHECKED);
-					vo_set_cmp_colour_killer(xroar.vo_interface, 1, value);
+				{
+					int value = !uiw32_bm_getcheck(dlg->hWnd, IDC_BN_COLOUR_KILLER);
+					ui_update_state(-1, ui_tag_cmp_colour_killer, value, NULL);
 				}
 				return FALSE;
 

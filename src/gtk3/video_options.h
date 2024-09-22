@@ -24,7 +24,4 @@ struct uigtk3_dialog;
 
 struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *);
 
-void gtk3_vo_update_state(struct ui_gtk3_interface *,
-			  int tag, int value, const void *data);
-
 #endif

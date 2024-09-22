@@ -178,10 +178,6 @@ void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr) {
 
 	// Used by UI to adjust viewing parameters
 	vo->set_active_area = DELEGATE_AS4(void, int, int, int, int, vo_render_set_active_area, vr);
-	vo->set_brightness = DELEGATE_AS1(void, int, vo_render_set_brightness, vr);
-	vo->set_contrast = DELEGATE_AS1(void, int, vo_render_set_contrast, vr);
-	vo->set_saturation = DELEGATE_AS1(void, int, vo_render_set_saturation, vr);
-	vo->set_hue = DELEGATE_AS1(void, int, vo_render_set_hue, vr);
 	vo->set_cmp_phase = DELEGATE_AS1(void, int, vo_render_set_cmp_phase, vr);
 
 	// Used by machine to configure video output
@@ -292,15 +288,6 @@ void vo_set_draw_area(struct vo_interface *vo, int x, int y, int w, int h) {
 		vo->picture_area.y = y + (h - vo->picture_area.h)/2;
 	}
 }
-
-extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value);
-
-// Select cross-colour renderer
-
-extern inline void vo_set_cmp_fs(struct vo_interface *vo, _Bool notify, int value);
-extern inline void vo_set_cmp_fsc(struct vo_interface *vo, _Bool notify, int value);
-extern inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value);
-extern inline void vo_set_cmp_colour_killer(struct vo_interface *vo, _Bool notify, _Bool value);
 
 extern inline void vo_vsync(struct vo_interface *vo, _Bool draw);
 extern inline void vo_refresh(struct vo_interface *vo);

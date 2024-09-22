@@ -24,7 +24,4 @@ struct uiw32_dialog;
 
 struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *);
 
-void windows32_vo_update_state(struct ui_windows32_interface *,
-			       int tag, int value, const void *data);
-
 #endif

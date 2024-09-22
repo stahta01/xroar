@@ -309,6 +309,9 @@ struct vo_render {
 		} colour[256];
 	} rgb;
 
+	// Messenger client id
+	int msgr_client_id;
+
 	struct vo_viewport viewport;
 	struct vo_active_area active_area;
 
@@ -401,20 +404,11 @@ inline void vo_render_set_buffer(struct vo_render *vr, void *buffer) {
 // Used by UI to adjust viewing parameters
 
 void vo_render_set_viewport(struct vo_render *, int w, int h);
-void vo_render_set_ntsc_scaling(struct vo_render *, _Bool notify, _Bool enabled);
-void vo_render_set_brightness(void *, int value);
-void vo_render_set_contrast(void *, int value);
-void vo_render_set_saturation(void *, int value);
-void vo_render_set_hue(void *, int value);
 void vo_render_set_cmp_phase(void *, int phase);
 
 // Used by machine to configure video output
 
 void vo_render_set_active_area(void *, int x, int y, int w, int h);
-void vo_render_set_cmp_fs(struct vo_render *, _Bool notify, int fs);
-void vo_render_set_cmp_fsc(struct vo_render *, _Bool notify, int fsc);
-void vo_render_set_cmp_system(struct vo_render *, _Bool notify, int system);
-void vo_render_set_cmp_colour_killer(struct vo_render *, _Bool notify, _Bool value);
 void vo_render_set_cmp_lead_lag(void *, float chb_phase, float cha_phase);
 void vo_render_set_cmp_palette(void *, uint8_t c, float y, float pb, float pr);
 void vo_render_set_rgb_palette(void *, uint8_t c, float r, float g, float b);

@@ -38,6 +38,7 @@
 
 #include "colourspace.h"
 #include "filter.h"
+#include "messenger.h"
 #include "ntsc.h"
 #include "vo_render.h"
 #include "xroar.h"
@@ -178,6 +179,16 @@ static void render_rgb565(struct vo_render *vr, int_xyz *src, void *dest, unsign
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void update_cmp_system(struct vo_render *vr);
+static void vr_ui_set_cmp_fs(void *, int tag, void *smsg);
+static void vr_ui_set_cmp_fsc(void *, int tag, void *smsg);
+static void vr_ui_set_cmp_system(void *, int tag, void *smsg);
+static void vr_ui_set_cmp_colour_killer(void *, int tag, void *smsg);
+static void vr_ui_set_ntsc_scaling(void *, int tag, void *smsg);
+static void vr_ui_set_brightness(void *, int tag, void *smsg);
+static void vr_ui_set_contrast(void *, int tag, void *smsg);
+static void vr_ui_set_saturation(void *, int tag, void *smsg);
+static void vr_ui_set_hue(void *, int tag, void *smsg);
 static void update_gamma_table(struct vo_render *vr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -224,10 +235,22 @@ struct vo_render *vo_render_new(int fmt) {
 	if (!vr)
 		return NULL;
 
+	vr->msgr_client_id = messenger_client_register();
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_fs, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_fsc, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_system, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_colour_killer, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_ntsc_scaling, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_brightness, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_contrast, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_saturation, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_hue, vr));
+
 	// Sensible defaults
-	vo_render_set_cmp_fs(vr, 1, VO_RENDER_FS_14_31818);
-	vo_render_set_cmp_fsc(vr, 1, VO_RENDER_FSC_4_43361875);
-	vo_render_set_cmp_system(vr, 1, VO_RENDER_SYSTEM_PAL_I);
+	vr->cmp.fs = VO_RENDER_FS_14_31818;
+	vr->cmp.fsc = VO_RENDER_FSC_4_43361875;
+	vr->cmp.system = VO_RENDER_SYSTEM_PAL_I;
+	update_cmp_system(vr);
 
 	vr->cmp.cha_phase = M_PI/2.;  // default 90°
 
@@ -266,6 +289,7 @@ struct vo_render *vo_render_new(int fmt) {
 // Free renderer
 
 void vo_render_free(struct vo_render *vr) {
+	messenger_client_unregister(vr->msgr_client_id);
 	free(vr->cmp.burst);
 	if (vr->cmp.mod.ufilter.coeff) {
 		free(vr->cmp.mod.ufilter.coeff - MAX_FILTER_ORDER);
@@ -689,86 +713,79 @@ void vo_render_set_viewport(struct vo_render *vr, int w, int h) {
 }
 
 // Set 60Hz scaling
-//
-//     _Bool enabled;
+//     value = enabled
 
-void vo_render_set_ntsc_scaling(struct vo_render *vr, _Bool notify, _Bool enabled) {
-	if (!vr)
-		return;
-	vr->ntsc_scaling = enabled;
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ntsc_scaling, enabled, NULL);
-	}
+static void vr_ui_set_ntsc_scaling(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_ntsc_scaling);
+
+	vr->ntsc_scaling = ui_msg_adjust_value_range(uimsg, vr->ntsc_scaling, 0, 0, 1,
+						     UI_ADJUST_FLAG_CYCLE);
 }
 
 // Set brightness
-//     int brightness;  // 0-100
+//     value = brightness (0-100)
 
-void vo_render_set_brightness(void *sptr, int value) {
+static void vr_ui_set_brightness(void *sptr, int tag, void *smsg) {
 	struct vo_render *vr = sptr;
-	if (value < 0) value = 0;
-	if (value > 100) value = 100;
-	vr->brightness = value;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_brightness);
+
+	vr->brightness = ui_msg_adjust_value_range(uimsg, vr->brightness, 50, 0, 100, 0);
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 		update_rgb_palette(vr, c);
 	}
 	update_gamma_table(vr);
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_brightness, value, NULL);
-	}
 }
 
 // Set contrast
-//     int contrast;  // 0-100
+//     value = contrast (0-100)
 
-void vo_render_set_contrast(void *sptr, int value) {
+static void vr_ui_set_contrast(void *sptr, int tag, void *smsg) {
 	struct vo_render *vr = sptr;
-	if (value < 0) value = 0;
-	if (value > 100) value = 100;
-	vr->contrast = value;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_contrast);
+
+	vr->contrast = ui_msg_adjust_value_range(uimsg, vr->contrast, 50, 0, 100, 0);
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 		update_rgb_palette(vr, c);
 	}
 	update_gamma_table(vr);
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_contrast, value, NULL);
-	}
 }
 
 // Set colour saturation
-//     int saturation;  // 0-100
+//     value = saturation (0-100)
 
-void vo_render_set_saturation(void *sptr, int value) {
+static void vr_ui_set_saturation(void *sptr, int tag, void *smsg) {
 	struct vo_render *vr = sptr;
-	if (value < 0) value = 0;
-	if (value > 100) value = 100;
-	vr->saturation = value;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_saturation);
+
+	vr->saturation = ui_msg_adjust_value_range(uimsg, vr->saturation, 50, 0, 100, 0);
 	vr->cmp.demod.saturation = (int)(((double)vr->saturation * 512.) / 100.);
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 	}
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_saturation, value, NULL);
-	}
 }
 
 // Set hue
-//     int hue;  // -179 to +180
+//     value = hue (-179 to +180)
 
-void vo_render_set_hue(void *sptr, int value) {
+static void vr_ui_set_hue(void *sptr, int tag, void *smsg) {
 	struct vo_render *vr = sptr;
-	value = ((value + 179) % 360) - 179;
-	vr->hue = value;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_hue);
+
+	vr->hue = ui_msg_adjust_value_range(uimsg, vr->hue, 0, -179, 180,
+					    UI_ADJUST_FLAG_CYCLE);
 	for (unsigned c = 0; c < 256; c++) {
 		update_cmp_palette(vr, c);
 	}
 	for (unsigned i = 0; i < vr->cmp.nbursts; i++) {
 		update_cmp_burst(vr, i);
-	}
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_hue, value, NULL);
 	}
 }
 
@@ -798,61 +815,58 @@ void vo_render_set_active_area(void *sptr, int x, int y, int w, int h) {
 	update_viewport(vr);
 }
 
-// Set sampling frequency (equal to pixel rate) to one of VO_RENDER_FS_*
+// Set sampling frequency (equal to pixel rate)
+//     value = VO_RENDER_FS_*
 
-void vo_render_set_cmp_fs(struct vo_render *vr, _Bool notify, int fs) {
-	if (!vr)
-		return;
-	if (fs < 0 || fs >= NUM_VO_RENDER_FS) {
-		fs = VO_RENDER_FS_14_31818;
-	}
-	vr->cmp.fs = fs;
+static void vr_ui_set_cmp_fs(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_cmp_fs);
+
+	vr->cmp.fs = ui_msg_adjust_value_range(uimsg, vr->cmp.fs, VO_RENDER_FS_14_31818,
+					       VO_RENDER_FS_14_31818, VO_RENDER_FS_14_23753, 0);
 	update_cmp_system(vr);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_fs, fs, NULL);
-	}
 }
 
-// Set chroma subcarrier frequency to one of VO_RENDER_FSC_*
+// Set chroma subcarrier frequency
+//     value = VO_RENDER_FSC_*
 
-void vo_render_set_cmp_fsc(struct vo_render *vr, _Bool notify, int fsc) {
-	if (!vr)
-		return;
-	if (fsc < 0 || fsc >= NUM_VO_RENDER_FSC) {
-		fsc = VO_RENDER_FSC_4_43361875;
-	}
-	vr->cmp.fsc = fsc;
+static void vr_ui_set_cmp_fsc(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_cmp_fsc);
+
+	vr->cmp.fsc = ui_msg_adjust_value_range(uimsg, vr->cmp.fsc, VO_RENDER_FSC_4_43361875,
+						VO_RENDER_FSC_4_43361875,
+						VO_RENDER_FSC_3_579545, 0);
 	update_cmp_system(vr);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_fsc, fsc, NULL);
-	}
 }
 
-// Set colour system to one of VO_RENDER_SYSTEM_*
+// Set colour system
+//     value = VO_RENDER_SYSTEM_*
 
-void vo_render_set_cmp_system(struct vo_render *vr, _Bool notify, int system) {
-	if (!vr)
-		return;
-	if (system < 0 || system >= NUM_VO_RENDER_SYSTEM) {
-		system = VO_RENDER_SYSTEM_PAL_I;
-	}
-	vr->cmp.system = system;
+static void vr_ui_set_cmp_system(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_cmp_system);
+
+	vr->cmp.system = ui_msg_adjust_value_range(uimsg, vr->cmp.system,
+						   VO_RENDER_SYSTEM_PAL_I,
+						   VO_RENDER_SYSTEM_PAL_I,
+						   VO_RENDER_SYSTEM_NTSC, 0);
 	update_cmp_system(vr);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_system, system, NULL);
-	}
 }
 
-// Set whether colour decoding is to be disabled when no colourburst indicated
-// (where supported)
+// Set whether colour decoding disabled when no colourburst indicated
+//     value = enabled
 
-void vo_render_set_cmp_colour_killer(struct vo_render *vr, _Bool notify, _Bool value) {
-	if (!vr)
-		return;
-	vr->cmp.colour_killer = value;
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cmp_colour_killer, (int)value, NULL);
-	}
+static void vr_ui_set_cmp_colour_killer(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_cmp_colour_killer);
+
+	vr->cmp.colour_killer = ui_msg_adjust_value_range(uimsg, vr->cmp.colour_killer, 0,
+							  0, 1, UI_ADJUST_FLAG_CYCLE);
 }
 
 // Set how the chroma components relate to each other (in degrees)

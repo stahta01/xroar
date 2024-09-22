@@ -1085,12 +1085,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar.tape_interface, private_cfg.tape.ao_rate);
 
-	vo_set_ntsc_scaling(xroar.vo_interface, 1, private_cfg.vo.ntsc_scaling);
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, private_cfg.vo.brightness);
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, private_cfg.vo.contrast);
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, private_cfg.vo.saturation);
-	DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, private_cfg.vo.hue);
-	vo_set_cmp_colour_killer(xroar.vo_interface, 1, xroar_ui_cfg.vo_cfg.colour_killer);
+	ui_update_state(-1, ui_tag_cmp_colour_killer, xroar_ui_cfg.vo_cfg.colour_killer, NULL);
+	ui_update_state(-1, ui_tag_ntsc_scaling, private_cfg.vo.ntsc_scaling, NULL);
+	ui_update_state(-1, ui_tag_brightness, private_cfg.vo.brightness, NULL);
+	ui_update_state(-1, ui_tag_contrast, private_cfg.vo.contrast, NULL);
+	ui_update_state(-1, ui_tag_saturation, private_cfg.vo.saturation, NULL);
+	ui_update_state(-1, ui_tag_hue, private_cfg.vo.hue, NULL);
 
 	// Configure machine
 	xroar_configure_machine(xroar.machine_config);

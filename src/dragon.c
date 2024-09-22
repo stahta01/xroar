@@ -596,30 +596,30 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 
 	// Configure composite video
 	if (!is_pal || is_dragon32) {
-		vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_31818);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
 	} else {
 		if (md->is_dragon) {
-			vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_218);
+			ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_218, NULL);
 		} else {
-			vo_set_cmp_fs(md->vo, 1, VO_RENDER_FS_14_23753);
+			ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_23753, NULL);
 		}
 	}
 
 	switch (mc->tv_standard) {
 	case TV_PAL:
 	default:
-		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_4_43361875);
-		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_PAL_I);
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_4_43361875, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_I, NULL);
 		break;
 
 	case TV_NTSC:
-		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_3_579545);
-		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_NTSC);
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_NTSC, NULL);
 		break;
 
 	case TV_PAL_M:
-		vo_set_cmp_fsc(md->vo, 1, VO_RENDER_FSC_3_579545);
-		vo_set_cmp_system(md->vo, 1, VO_RENDER_SYSTEM_PAL_M);
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_M, NULL);
 		break;
 	}
 

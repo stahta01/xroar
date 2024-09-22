@@ -254,6 +254,18 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	/* Video: */
+	case ui_tag_cmp_fs:
+		ui_update_state(-1, ui_tag_cmp_fs, value, NULL);
+		break;
+	case ui_tag_cmp_fsc:
+		ui_update_state(-1, ui_tag_cmp_fsc, value, NULL);
+		break;
+	case ui_tag_cmp_system:
+		ui_update_state(-1, ui_tag_cmp_system, value, NULL);
+		break;
+	case ui_tag_cmp_colour_killer:
+		ui_update_state(-1, ui_tag_cmp_colour_killer, UI_NEXT, NULL);
+		break;
 	case ui_tag_ccr:
 		ui_update_state(-1, ui_tag_ccr, value, NULL);
 		break;
@@ -261,25 +273,13 @@ int cocoa_super_all_keys = 0;
 		ui_update_state(-1, ui_tag_picture, value, NULL);
 		break;
 	case ui_tag_ntsc_scaling:
-		vo_set_ntsc_scaling(xroar.vo_interface, 0, !xroar.vo_interface->renderer->ntsc_scaling);
+		ui_update_state(-1, ui_tag_ntsc_scaling, UI_NEXT, NULL);
 		break;
 	case ui_tag_tv_input:
 		ui_update_state(-1, ui_tag_tv_input, value, NULL);
 		break;
 	case ui_tag_fullscreen:
 		ui_update_state(-1, ui_tag_fullscreen, UI_NEXT, NULL);
-		break;
-	case ui_tag_cmp_fs:
-		vo_set_cmp_fs(xroar.vo_interface, 0, value);
-		break;
-	case ui_tag_cmp_fsc:
-		vo_set_cmp_fsc(xroar.vo_interface, 0, value);
-		break;
-	case ui_tag_cmp_system:
-		vo_set_cmp_system(xroar.vo_interface, 0, value);
-		break;
-	case ui_tag_cmp_colour_killer:
-		vo_set_cmp_colour_killer(xroar.vo_interface, 0, !xroar.vo_interface->renderer->cmp.colour_killer);
 		break;
 	case ui_tag_vdg_inverse:
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
@@ -333,8 +333,6 @@ int cocoa_super_all_keys = 0;
 	int tag = UIMAC_TAG_TYPE(item_tag);
 	int value = UIMAC_TAG_VALUE(item_tag);
 
-	struct vo_render *vr = xroar.vo_interface ? xroar.vo_interface->renderer : NULL;
-
 	switch (tag) {
 
 	case ui_tag_machine:
@@ -382,22 +380,22 @@ int cocoa_super_all_keys = 0;
 		[item setState:((value == uimac->vo.picture) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_ntsc_scaling:
-		[item setState:((vr && vr->ntsc_scaling) ? NSOnState : NSOffState)];
+		[item setState:((value == uimac->vo.ntsc_scaling) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_tv_input:
 		[item setState:((value == uimac->vo.tv_input) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_fs:
-		[item setState:((vr && vr->cmp.fs == value) ? NSOnState : NSOffState)];
+		[item setState:((value == uimac->vo.cmp_fs) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_fsc:
-		[item setState:((vr && vr->cmp.fsc == value) ? NSOnState : NSOffState)];
+		[item setState:((value == uimac->vo.cmp_fsc) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_system:
-		[item setState:((vr && vr->cmp.system == value) ? NSOnState : NSOffState)];
+		[item setState:((value == uimac->vo.cmp_system) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_colour_killer:
-		[item setState:((vr && vr->cmp.colour_killer) ? NSOnState : NSOffState)];
+		[item setState:((uimac->vo.cmp_colour_killer) ? NSOnState : NSOffState)];
 		break;
 
 	case ui_tag_keymap:
@@ -722,62 +720,30 @@ static void setup_view_menu(void) {
 	[view_menu addItem:item];
 	[item release];
 
-	submenu = [[NSMenu alloc] initWithTitle:@"Composite options"];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.31818 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_31818)];
-	[submenu addItem:item];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite F(s)"];
+	cocoa_update_radio_menu_from_enum(submenu, vo_render_fs_list, ui_tag_cmp_fs);
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite F(s)" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.218 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_218)];
-	[submenu addItem:item];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite F(sc)"];
+	cocoa_update_radio_menu_from_enum(submenu, vo_render_fsc_list, ui_tag_cmp_fsc);
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite F(sc)" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
 	[item release];
 
-	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.23753 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_23753)];
-	[submenu addItem:item];
+	submenu = [[NSMenu alloc] initWithTitle:@"Composite system"];
+	cocoa_update_radio_menu_from_enum(submenu, vo_render_system_list, ui_tag_cmp_system);
+	item = [[NSMenuItem alloc] initWithTitle:@"Composite system" action:nil keyEquivalent:@""];
+	[item setSubmenu:submenu];
+	[view_menu addItem:item];
 	[item release];
-
-	[submenu addItem:[NSMenuItem separatorItem]];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 4.43361875 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_fsc, VO_RENDER_FSC_4_43361875)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 3.579545 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545)];
-	[submenu addItem:item];
-	[item release];
-
-	[submenu addItem:[NSMenuItem separatorItem]];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"PAL-I" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_I)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"PAL-M" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_M)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"NTSC" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_NTSC)];
-	[submenu addItem:item];
-	[item release];
-
-	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Colour killer" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
 	[item setTag:UIMAC_TAG(ui_tag_cmp_colour_killer)];
-	[submenu addItem:item];
-	[item release];
-
-	item = [[NSMenuItem alloc] initWithTitle:@"Composite options" action:nil keyEquivalent:@""];
-	[item setSubmenu:submenu];
 	[view_menu addItem:item];
 	[item release];
 
@@ -1160,8 +1126,13 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1401,12 +1372,32 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	// Video
 
+	case ui_tag_cmp_fs:
+		uimac->vo.cmp_fs = value;
+		break;
+
+	case ui_tag_cmp_fsc:
+		uimac->vo.cmp_fsc = value;
+		break;
+
+	case ui_tag_cmp_system:
+		uimac->vo.cmp_system = value;
+		break;
+
+	case ui_tag_cmp_colour_killer:
+		uimac->vo.cmp_colour_killer = value;
+		break;
+
 	case ui_tag_ccr:
 		uimac->vo.ccr = value;
 		break;
 
 	case ui_tag_picture:
 		uimac->vo.picture = value;
+		break;
+
+	case ui_tag_ntsc_scaling:
+		uimac->vo.ntsc_scaling = value;
 		break;
 
 	case ui_tag_tv_input:

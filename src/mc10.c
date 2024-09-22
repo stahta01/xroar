@@ -459,21 +459,21 @@ static _Bool mc10_finish(struct part *p) {
 	switch (mc->tv_standard) {
 	case TV_PAL:
 	default:
-		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_23753);  // assumed
-		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_4_43361875);
-		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_PAL_I);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_23753, NULL);  // assumed
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_4_43361875, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_I, NULL);
 		break;
 
 	case TV_NTSC:
-		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_31818);
-		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_3_579545);
-		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_NTSC);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_NTSC, NULL);
 		break;
 
 	case TV_PAL_M:
-		vo_set_cmp_fs(mp->vo, 1, VO_RENDER_FS_14_31818);
-		vo_set_cmp_fsc(mp->vo, 1, VO_RENDER_FSC_3_579545);
-		vo_set_cmp_system(mp->vo, 1, VO_RENDER_SYSTEM_PAL_M);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
+		ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545, NULL);
+		ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_M, NULL);
 		break;
 	}
 

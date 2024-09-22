@@ -509,20 +509,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
 		break;
 
-	// Video
-
-	case ui_tag_brightness:
-	case ui_tag_contrast:
-	case ui_tag_saturation:
-	case ui_tag_hue:
-	case ui_tag_ntsc_scaling:
-	case ui_tag_cmp_fs:
-	case ui_tag_cmp_fsc:
-	case ui_tag_cmp_system:
-	case ui_tag_cmp_colour_killer:
-		gtk3_vo_update_state(uigtk3, tag, value, data);
-		break;
-
 	// Audio
 
 	case ui_tag_ratelimit:
@@ -855,14 +841,14 @@ static void do_quit(GtkEntry *entry, gpointer user_data) {
 
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	ui_update_state(-1, ui_tag_tv_input, val, NULL);
 }
 
 static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	ui_update_state(-1, ui_tag_ccr, val, NULL);
 }

@@ -58,13 +58,13 @@ struct ui_macosx_interface {
 	} disk;
 
 	struct {
-		//int cmp_fs;
-		//int cmp_fsc;
-		//int cmp_system;
-		//int cmp_colour_killer;
+		int cmp_fs;
+		int cmp_fsc;
+		int cmp_system;
+		int cmp_colour_killer;
 		int ccr;
 		int picture;
-		//int ntsc_scaling;
+		int ntsc_scaling;
 		int tv_input;
 		int fullscreen;
 		int invert_text;

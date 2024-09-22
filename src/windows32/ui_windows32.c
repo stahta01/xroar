@@ -560,25 +560,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
 		break;
 
-	// Video
-
-	case ui_tag_tv_input:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
-		windows32_vo_update_state(uiw32, tag, value, data);
-		break;
-
-	case ui_tag_brightness:
-	case ui_tag_contrast:
-	case ui_tag_saturation:
-	case ui_tag_hue:
-	case ui_tag_ntsc_scaling:
-	case ui_tag_cmp_fs:
-	case ui_tag_cmp_fsc:
-	case ui_tag_cmp_system:
-	case ui_tag_cmp_colour_killer:
-		windows32_vo_update_state(uiw32, tag, value, data);
-		break;
-
 	// Audio
 
 	case ui_tag_ratelimit:

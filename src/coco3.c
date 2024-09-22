@@ -553,9 +553,9 @@ static _Bool coco3_finish(struct part *p) {
 	// PAL machines is 28.475MHz (2 * 14.2373MHz).
 
 	// Actual GIME clock is 2× this, but we treat it the same as a SAM
-	vo_set_cmp_fs(mcc3->vo, 1, VO_RENDER_FS_14_31818);
-	vo_set_cmp_fsc(mcc3->vo, 1, VO_RENDER_FSC_3_579545);
-	vo_set_cmp_system(mcc3->vo, 1, VO_RENDER_SYSTEM_NTSC);
+	ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
+	ui_update_state(-1, ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545, NULL);
+	ui_update_state(-1, ui_tag_cmp_system, VO_RENDER_SYSTEM_NTSC, NULL);
 
 	// Bodge factor to bring centred active area in line with chroma
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 0);

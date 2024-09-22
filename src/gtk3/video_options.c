@@ -63,14 +63,25 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Create dialog window
+
 struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
 	struct uigtk3_dialog *dlg = uigtk3_dialog_new(uigtk3, "/uk/org/6809/xroar/gtk3/video_options.ui", "vo_window", ui_tag_tv_dialog);
 
 	// Join each UI group we're interested in
 
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 
 	// Build lists
@@ -97,32 +108,17 @@ struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Video options - update values in UI
+// UI message reception
 
-void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
-			  int tag, int value, const void *data) {
-	(void)data;
+static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct ui_state_message *uimsg = smsg;
+	int value = uimsg->value;
+	const void *data = uimsg->data;
+
 	switch (tag) {
 
-	case ui_tag_brightness:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_brightness", value, tv_change_brightness);
-		break;
-
-	case ui_tag_contrast:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_contrast", value, tv_change_contrast);
-		break;
-
-	case ui_tag_saturation:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_saturation", value, tv_change_saturation);
-		break;
-
-	case ui_tag_hue:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_hue", value, tv_change_hue);
-		break;
-
-	case ui_tag_ntsc_scaling:
-		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_ntsc_scaling", value, tv_change_ntsc_scaling);
-		break;
+	// Video
 
 	case ui_tag_cmp_fs:
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_fs", (void *)(intptr_t)value);
@@ -137,25 +133,8 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 		break;
 
 	case ui_tag_cmp_colour_killer:
-		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_cmp_colour_killer", value, tv_change_cmp_colour_killer);
+		uigtk3_toggle_button_set_active(uigtk3, "tb_cmp_colour_killer", value);
 		break;
-
-	default:
-		break;
-	}
-}
-
-// UI message reception
-
-static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
-	struct ui_gtk3_interface *uigtk3 = sptr;
-	struct ui_state_message *msg = smsg;
-	int value = msg->value;
-	const void *data = msg->data;
-
-	switch (tag) {
-
-	// Video
 
 	case ui_tag_ccr:
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_renderer", (void *)(intptr_t)value);
@@ -165,8 +144,28 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_picture", (void *)(intptr_t)value);
 		break;
 
+	case ui_tag_ntsc_scaling:
+		uigtk3_toggle_button_set_active(uigtk3, "tb_ntsc_scaling", value);
+		break;
+
 	case ui_tag_tv_input:
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_tv_input", (void *)(intptr_t)value);
+		break;
+
+	case ui_tag_brightness:
+		uigtk3_spin_button_set_value(uigtk3, "sb_brightness", value);
+		break;
+
+	case ui_tag_contrast:
+		uigtk3_spin_button_set_value(uigtk3, "sb_contrast", value);
+		break;
+
+	case ui_tag_saturation:
+		uigtk3_spin_button_set_value(uigtk3, "sb_saturation", value);
+		break;
+
+	case ui_tag_hue:
+		uigtk3_spin_button_set_value(uigtk3, "sb_hue", value);
 		break;
 
 	// Audio
@@ -192,39 +191,27 @@ static void tv_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
 }
 
 static void tv_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar.vo_interface) {
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_brightness, value);
-	}
+	ui_update_state(-1, ui_tag_brightness, value, NULL);
 }
 
 static void tv_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar.vo_interface) {
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_contrast, value);
-	}
+	ui_update_state(-1, ui_tag_contrast, value, NULL);
 }
 
 static void tv_change_saturation(GtkSpinButton *spin_button, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar.vo_interface) {
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_saturation, value);
-	}
+	ui_update_state(-1, ui_tag_saturation, value, NULL);
 }
 
 static void tv_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = (int)gtk_spin_button_get_value(spin_button);
-	if (xroar.vo_interface) {
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_hue, value);
-	}
+	ui_update_state(-1, ui_tag_hue, value, NULL);
 }
 
 static void tv_change_tv_input(GtkComboBox *widget, gpointer user_data) {
@@ -242,10 +229,9 @@ static void tv_change_picture(GtkComboBox *widget, gpointer user_data) {
 }
 
 static void tv_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = gtk_toggle_button_get_active(widget);
-	vo_set_ntsc_scaling(xroar.vo_interface, 0, value);
+	ui_update_state(-1, ui_tag_ntsc_scaling, value, NULL);
 }
 
 static void tv_change_cmp_renderer(GtkComboBox *widget, gpointer user_data) {
@@ -259,26 +245,25 @@ static void tv_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	vo_set_cmp_fs(xroar.vo_interface, 0, value);
+	ui_update_state(-1, ui_tag_cmp_fs, value, NULL);
 }
 
 static void tv_change_cmp_fsc(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	vo_set_cmp_fsc(xroar.vo_interface, 0, value);
+	ui_update_state(-1, ui_tag_cmp_fsc, value, NULL);
 }
 
 static void tv_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	vo_set_cmp_system(xroar.vo_interface, 0, value);
+	ui_update_state(-1, ui_tag_cmp_system, value, NULL);
 }
 
 static void tv_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
+	(void)user_data;
 	int value = gtk_toggle_button_get_active(widget);
-	vo_set_cmp_colour_killer(xroar.vo_interface, 0, value);
+	ui_update_state(-1, ui_tag_cmp_colour_killer, value, NULL);
 }
