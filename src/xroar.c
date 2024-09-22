@@ -180,6 +180,7 @@ struct private_cfg {
 		int contrast;
 		int saturation;
 		int hue;
+		_Bool colour_killer;
 	} vo;
 
 	// Audio
@@ -1100,7 +1101,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	if (private_cfg.tape.ao_rate > 0)
 		tape_set_ao_rate(xroar.tape_interface, private_cfg.tape.ao_rate);
 
-	ui_update_state(-1, ui_tag_cmp_colour_killer, xroar_ui_cfg.vo_cfg.colour_killer, NULL);
+	ui_update_state(-1, ui_tag_cmp_colour_killer, private_cfg.vo.colour_killer, NULL);
 	ui_update_state(-1, ui_tag_ntsc_scaling, private_cfg.vo.ntsc_scaling, NULL);
 	ui_update_state(-1, ui_tag_brightness, private_cfg.vo.brightness, NULL);
 	ui_update_state(-1, ui_tag_contrast, private_cfg.vo.contrast, NULL);
@@ -2592,7 +2593,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
 	{ XC_SET_INT("vo-colour", &private_cfg.vo.saturation) },
 	{ XC_SET_INT("vo-hue", &private_cfg.vo.hue) },
-	{ XC_SET_BOOL("vo-colour-killer", &xroar_ui_cfg.vo_cfg.colour_killer) },
+	{ XC_SET_BOOL("vo-colour-killer", &private_cfg.vo.colour_killer) },
 	/* Deliberately undocumented: */
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo), .deprecated = 1 },
 
@@ -2972,7 +2973,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);
 	xroar_cfg_print_int(f, all, "vo-colour", private_cfg.vo.saturation, 50);
 	xroar_cfg_print_int(f, all, "vo-hue", private_cfg.vo.hue, 0);
-	xroar_cfg_print_bool(f, all, "vo-colour-killer", xroar_ui_cfg.vo_cfg.colour_killer, 0);
+	xroar_cfg_print_bool(f, all, "vo-colour-killer", private_cfg.vo.colour_killer, 0);
 	fputs("\n", f);
 
 	fputs("# Audio\n", f);

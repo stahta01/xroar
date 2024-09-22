@@ -137,7 +137,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	}
 
 	struct vo_render *vr = vo_render_new(vo_cfg->pixel_fmt);
-	vr->cmp.colour_killer = vo_cfg->colour_killer;
 
 	vo_set_renderer(vo, vr);
 

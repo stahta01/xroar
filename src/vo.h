@@ -91,7 +91,6 @@ struct vo_cfg {
 	char *geometry;
 	int gl_filter;
 	int pixel_fmt;
-	_Bool colour_killer;
 };
 
 // Window Area is the obvious top level.  Defined in host screen pixels, and

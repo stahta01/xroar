@@ -162,7 +162,6 @@ _Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) 
 	}
 
 	struct vo_render *vr = vo_render_new(cfg->pixel_fmt);
-	vr->cmp.colour_killer = cfg->colour_killer;
 	vo_set_renderer(vo, vr);
 
 	vo->free = DELEGATE_AS0(void, vo_opengl_free, vo);
