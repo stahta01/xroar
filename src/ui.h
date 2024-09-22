@@ -85,6 +85,7 @@ enum ui_tag {
 	ui_tag_cmp_system,
 	ui_tag_cmp_colour_killer,
 	ui_tag_ccr,
+	ui_tag_gl_filter,
 	ui_tag_picture,
 	ui_tag_ntsc_scaling,
 	ui_tag_tv_input,

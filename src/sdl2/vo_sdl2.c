@@ -66,7 +66,6 @@ struct vo_sdl_interface {
 	} texture;
 
 	SDL_Renderer *sdl_renderer;
-	int filter;
 
 	struct vo_window_area window_area;
 	_Bool scale_60hz;
@@ -143,8 +142,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	vosdl->texture.pixels = xmalloc(MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vosdl->texture.pixel_size);
 	vo_render_set_buffer(vr, vosdl->texture.pixels);
 	memset(vosdl->texture.pixels, 0, MAX_VIEWPORT_WIDTH * MAX_VIEWPORT_HEIGHT * vosdl->texture.pixel_size);
-
-	vosdl->filter = vo_cfg->gl_filter;
 
 	vo->free = DELEGATE_AS0(void, vo_sdl_free, uisdl2);
 
@@ -283,8 +280,8 @@ static void recreate_texture(struct ui_sdl2_interface *uisdl2) {
 	int vp_h = vr->viewport.h;
 
 	// Set scaling method according to options and window dimensions
-	if (!vosdl->scale_60hz && (vosdl->filter == VO_GL_FILTER_NEAREST ||
-				   (vosdl->filter == VO_GL_FILTER_AUTO &&
+	if (!vosdl->scale_60hz && (vo->gl_filter == VO_GL_FILTER_NEAREST ||
+				   (vo->gl_filter == VO_GL_FILTER_AUTO &&
 				    (vosdl->window_area.w % vp_w) == 0 &&
 				    (vosdl->window_area.h % vp_h) == 0))) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");

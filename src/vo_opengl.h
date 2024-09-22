@@ -66,7 +66,6 @@ struct vo_opengl_interface {
 
 	_Bool scale_60hz;
 
-	int filter;
 	GLuint blit_fbo;
 	GLenum blit_filter;
 };

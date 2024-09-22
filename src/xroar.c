@@ -173,6 +173,7 @@ struct private_cfg {
 		_Bool fullscreen;
 		int frameskip;
 		int ccr;
+		int gl_filter;
 		_Bool vdg_inverted_text;
 		int picture;
 		_Bool ntsc_scaling;
@@ -1115,6 +1116,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	} else {
 		xroar_set_cart(1, NULL);
 	}
+
+	// We set this here so that configuring the machine can update the
+	// picture (viewport) first.  Otherwise, this call will set a picture
+	// first (probably 0), then the request to change it will resize the
+	// window.  TODO: add a separate code path for updating gl_filter.
+	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
 
 	// Reset everything
 	xroar_hard_reset();
@@ -2582,7 +2589,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("fs", &private_cfg.vo.fullscreen) },
 	{ XC_SET_INT("fskip", &private_cfg.vo.frameskip) },
 	{ XC_SET_ENUM("ccr", &private_cfg.vo.ccr, vo_cmp_ccr_list) },
-	{ XC_SET_ENUM("gl-filter", &xroar_ui_cfg.vo_cfg.gl_filter, vo_gl_filter_list) },
+	{ XC_SET_ENUM("gl-filter", &private_cfg.vo.gl_filter, vo_gl_filter_list) },
 	{ XC_SET_ENUM("vo-pixel-fmt", &xroar_ui_cfg.vo_cfg.pixel_fmt, vo_pixel_fmt_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
@@ -2963,7 +2970,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_bool(f, all, "fs", private_cfg.vo.fullscreen, 0);
 	xroar_cfg_print_int_nz(f, all, "fskip", private_cfg.vo.frameskip);
 	xroar_cfg_print_enum(f, all, "ccr", private_cfg.vo.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);
-	xroar_cfg_print_enum(f, all, "gl-filter", xroar_ui_cfg.vo_cfg.gl_filter, ANY_AUTO, vo_gl_filter_list);
+	xroar_cfg_print_enum(f, all, "gl-filter", private_cfg.vo.gl_filter, ANY_AUTO, vo_gl_filter_list);
 	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, 0, vo_viewport_list);

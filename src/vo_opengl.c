@@ -174,7 +174,6 @@ _Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) 
 	vo->picture_area.x = vo->picture_area.y = 0;
 	vogl->viewport.w = 640;
 	vogl->viewport.h = 240;
-	vogl->filter = cfg->gl_filter;
 
 	return 1;
 }
@@ -209,8 +208,8 @@ static void update_viewport(struct vo_opengl_interface *vogl) {
 			       GL_TEXTURE_2D, vogl->texture.num, 0);
 
 	// Set scaling method according to options and window dimensions
-	if (!vogl->scale_60hz && (vogl->filter == VO_GL_FILTER_NEAREST ||
-				  (vogl->filter == VO_GL_FILTER_AUTO &&
+	if (!vogl->scale_60hz && (vo->gl_filter == VO_GL_FILTER_NEAREST ||
+				  (vo->gl_filter == VO_GL_FILTER_AUTO &&
 				   (vo->picture_area.w % hw) == 0 &&
 				   (vo->picture_area.h % hh) == 0))) {
 		vogl->blit_filter = GL_NEAREST;

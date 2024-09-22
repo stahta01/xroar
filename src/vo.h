@@ -89,7 +89,6 @@ extern struct xconfig_enum vo_gl_filter_list[];
 
 struct vo_cfg {
 	char *geometry;
-	int gl_filter;
 	int pixel_fmt;
 };
 
@@ -138,6 +137,9 @@ struct vo_interface {
 
 	// Selected cross-colour renderer
 	int cmp_ccr;    // VO_CMP_CCR_*
+
+	// Pixel filter (typically OpenGL option)
+	int gl_filter;  // VO_GL_FILTER_*
 
 	// Current defined picture area
 	int picture;    // VO_PICTURE_*
