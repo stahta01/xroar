@@ -247,10 +247,10 @@ int cocoa_super_all_keys = 0;
 		if (value == PRINTER_DESTINATION_FILE) {
 			char *filename = DELEGATE_CALL(global_uisdl2->ui_interface.filereq_interface->save_filename, "Print to file");
 			if (filename) {
-				xroar_set_printer_file(1, filename);
+				ui_update_state(-1, ui_tag_print_file, 0, filename);
 			}
 		}
-		xroar_set_printer_destination(1, value);
+		ui_update_state(-1, ui_tag_print_destination, value, NULL);
 		break;
 
 	/* Video: */
@@ -1140,6 +1140,7 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
@@ -1296,12 +1297,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->misc.ratelimit_latch = value;
 		break;
 
-	// Printer
-
-	case ui_tag_print_destination:
-		uimac->lp.destination = value;
-		break;
-
 	/* Joystick */
 
 	case ui_tag_joy_right:
@@ -1428,6 +1423,12 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_kbd_translate:
 		uimac->kbd.translate = value;
+		break;
+
+	// Printer
+
+	case ui_tag_print_destination:
+		uimac->lp.destination = value;
 		break;
 
 	default:

@@ -201,6 +201,7 @@ struct private_cfg {
 
 	// Printing
 	struct {
+		int destination;
 		char *file;
 		char *pipe;
 	} printer;
@@ -292,6 +293,9 @@ static void config_print_all(FILE *f, _Bool all);
 #endif
 
 static void xroar_ui_set_picture(void *, int tag, void *smsg);
+static void xroar_ui_set_print_destination(void *, int tag, void *smsg);
+static void xroar_ui_set_print_file(void *, int tag, void *smsg);
+static void xroar_ui_set_print_pipe(void *, int tag, void *smsg);
 
 static int load_disk_to_drive = 0;
 
@@ -1012,6 +1016,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Receive notifications when the picture (viewport) is changed by user
 	// so we know to stop trying to set it automatically.
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_destination, NULL));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	// UI module
 	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
@@ -1072,6 +1079,15 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		joystick_set_virtual(joystick_config_by_name(private_cfg.joy.virtual));
 	} else {
 		joystick_set_virtual(joystick_config_by_name("kjoy0"));
+	}
+
+	// Default print destination
+	if (private_cfg.printer.file) {
+		private_cfg.printer.destination = PRINTER_DESTINATION_FILE;
+	} else if (private_cfg.printer.pipe) {
+		private_cfg.printer.destination = PRINTER_DESTINATION_PIPE;
+	} else {
+		private_cfg.printer.destination = PRINTER_DESTINATION_NONE;
 	}
 
 	// Notify UI of starting options:
@@ -1604,32 +1620,47 @@ void xroar_run_file(void) {
 
 // Printer interface
 
-void xroar_set_printer_destination(_Bool notify, int dest) {
-	if (!xroar.printer_interface)
-		return;
-	printer_set_destination(xroar.printer_interface, dest);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_destination, dest, NULL);
-	}
+// A set of UI message receivers that just record the new values.  Ideally, we
+// maybe shouldn't be instantiating a new printer for each machine, then UI
+// changes would persist...
+
+static void xroar_ui_set_print_destination(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	(void)tag;
+	struct ui_state_message *uimsg = smsg;
+	private_cfg.printer.destination = uimsg->value;
 }
 
-void xroar_set_printer_file(_Bool notify, const char *filename) {
-	if (!xroar.printer_interface)
+static void xroar_ui_set_print_file(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	(void)tag;
+	struct ui_state_message *uimsg = smsg;
+	if (private_cfg.printer.file == (const char *)uimsg->data) {
 		return;
-	printer_set_file(xroar.printer_interface, filename);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_file, 0, filename);
 	}
+	char *new_file = uimsg->data ? xstrdup((const char *)uimsg->data) : NULL;
+	if (private_cfg.printer.file) {
+		free(private_cfg.printer.file);
+	}
+	private_cfg.printer.file = new_file;
+	uimsg->data = new_file;
 }
 
-void xroar_set_printer_pipe(_Bool notify, const char *pipe) {
-	if (!xroar.printer_interface)
+static void xroar_ui_set_print_pipe(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	(void)tag;
+	struct ui_state_message *uimsg = smsg;
+	if (private_cfg.printer.pipe == (const char *)uimsg->data) {
 		return;
-	printer_set_pipe(xroar.printer_interface, pipe);
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_pipe, 0, pipe);
 	}
+	char *new_pipe = uimsg->data ? xstrdup((const char *)uimsg->data) : NULL;
+	if (private_cfg.printer.pipe) {
+		free(private_cfg.printer.pipe);
+	}
+	private_cfg.printer.pipe = new_pipe;
+	uimsg->data = new_pipe;
 }
+
 
 void xroar_flush_printer(void) {
 	if (!xroar.printer_interface)
@@ -1718,15 +1749,11 @@ void xroar_connect_machine(void) {
 
 	// Printing
 	xroar.printer_interface = xroar.machine->get_interface(xroar.machine, "printer");
-	xroar_set_printer_file(1, private_cfg.printer.file);
-	xroar_set_printer_pipe(1, private_cfg.printer.pipe);
-	if (private_cfg.printer.file) {
-		xroar_set_printer_destination(1, PRINTER_DESTINATION_FILE);
-	} else if (private_cfg.printer.pipe) {
-		xroar_set_printer_destination(1, PRINTER_DESTINATION_PIPE);
-	} else {
-		xroar_set_printer_destination(1, PRINTER_DESTINATION_NONE);
-	}
+	// Note: if we migrate to having a persistent printer interface, move
+	// these to the main initialisation section.
+	ui_update_state(-1, ui_tag_print_destination, private_cfg.printer.destination, NULL);
+	ui_update_state(-1, ui_tag_print_file, 0, private_cfg.printer.file);
+	ui_update_state(-1, ui_tag_print_pipe, 0, private_cfg.printer.pipe);
 
 	struct cart *c = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	if (c && !part_is_a((struct part *)c, "cart")) {

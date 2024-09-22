@@ -21,6 +21,7 @@
 // for popen, pclose
 #define _POSIX_C_SOURCE 200112L
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,9 @@
 struct printer_interface_private {
 	struct printer_interface public;
 
+	// Messenger client id
+	int msgr_client_id;
+
 	int destination;
 	sds filename;  // for PRINTER_DESTINATION_FILE
 	sds pipe;      // for PRINTER_DESTINATION_PIPE
@@ -53,6 +57,10 @@ struct printer_interface_private {
 	struct event update_chars_printed_event;
 };
 
+static void printer_ui_set_print_destination(void *, int tag, void *smsg);
+static void printer_ui_set_print_file(void *, int tag, void *smsg);
+static void printer_ui_set_print_pipe(void *, int tag, void *smsg);
+
 static void open_stream(struct printer_interface_private *pip);
 static void close_stream(struct printer_interface_private *pip);
 static void do_ack_clear(void *);
@@ -63,6 +71,12 @@ static void do_update_chars_printed(void *);
 struct printer_interface *printer_interface_new(void) {
 	struct printer_interface_private *pip = xmalloc(sizeof(*pip));
 	*pip = (struct printer_interface_private){0};
+
+	pip->msgr_client_id = messenger_client_register();
+	ui_messenger_preempt_group(pip->msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(printer_ui_set_print_destination, pip));
+	ui_messenger_preempt_group(pip->msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(printer_ui_set_print_file, pip));
+	ui_messenger_preempt_group(pip->msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(printer_ui_set_print_pipe, pip));
+
 	pip->destination = PRINTER_DESTINATION_NONE;
 	pip->filename = NULL;
 	pip->pipe = NULL;
@@ -76,6 +90,7 @@ struct printer_interface *printer_interface_new(void) {
 
 void printer_interface_free(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
+	messenger_client_unregister(pip->msgr_client_id);
 	close_stream(pip);
 	if (pip->filename)
 		sdsfree(pip->filename);
@@ -92,49 +107,63 @@ void printer_reset(struct printer_interface *pi) {
 	pip->strobe_state = 1;
 }
 
-void printer_set_file(struct printer_interface *pi, const char *filename) {
-	if (!pi)
-		return;
-	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	if (pip->destination == PRINTER_DESTINATION_FILE)
+static void printer_ui_set_print_destination(void *sptr, int tag, void *smsg) {
+	struct printer_interface_private *pip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_print_destination);
+
+	int dest = uimsg->value;
+	if (dest != PRINTER_DESTINATION_FILE && dest != PRINTER_DESTINATION_PIPE) {
+		dest = PRINTER_DESTINATION_NONE;
+	}
+	if (dest != pip->destination) {
+		printer_flush(&pip->public);
+		pip->destination = dest;
+		pip->busy = 0;
+	}
+	uimsg->value = dest;
+}
+
+static void printer_ui_set_print_file(void *sptr, int tag, void *smsg) {
+	struct printer_interface_private *pip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_print_file);
+
+	const char *filename = uimsg->data;
+	if (pip->destination == PRINTER_DESTINATION_FILE) {
 		close_stream(pip);
-	if (pip->filename)
+	}
+	if (pip->filename) {
 		sdsfree(pip->filename);
-	pip->filename = NULL;
+		pip->filename = NULL;
+	}
 	if (filename) {
 		pip->filename = path_interp(filename);
 	}
-	if (pip->destination == PRINTER_DESTINATION_FILE)
+	if (pip->destination == PRINTER_DESTINATION_FILE) {
 		pip->busy = 0;
+	}
 }
 
-void printer_set_pipe(struct printer_interface *pi, const char *pipe) {
-	if (!pi)
-		return;
-	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	if (pip->destination == PRINTER_DESTINATION_PIPE)
+static void printer_ui_set_print_pipe(void *sptr, int tag, void *smsg) {
+	struct printer_interface_private *pip = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_print_pipe);
+
+	const char *pipe = uimsg->data;
+	if (pip->destination == PRINTER_DESTINATION_PIPE) {
 		close_stream(pip);
-	if (pip->pipe)
+	}
+	if (pip->pipe) {
 		sdsfree(pip->pipe);
-	pip->pipe = NULL;
+		pip->pipe = NULL;
+	}
 	if (pipe) {
 		pip->pipe = sdsnew(pipe);
 	}
-	if (pip->destination == PRINTER_DESTINATION_PIPE)
+	if (pip->destination == PRINTER_DESTINATION_PIPE) {
 		pip->busy = 0;
-}
-
-void printer_set_destination(struct printer_interface *pi, int dest) {
-	if (!pi)
-		return;
-	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
-	if (dest != PRINTER_DESTINATION_FILE && dest != PRINTER_DESTINATION_PIPE)
-		dest = PRINTER_DESTINATION_NONE;
-	if (dest == pip->destination)
-		return;
-	printer_flush(pi);
-	pip->destination = dest;
-	pip->busy = 0;
+	}
 }
 
 /* close stream but leave stream_dest intact so it will be reopened */
@@ -218,7 +247,5 @@ static void do_ack_clear(void *sptr) {
 
 static void do_update_chars_printed(void *sptr) {
 	struct printer_interface_private *pip = sptr;
-	if (xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_print_count, pip->chars_printed, NULL);
-	}
+	ui_update_state(-1, ui_tag_print_count, pip->chars_printed, NULL);
 }

@@ -125,6 +125,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_print_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
 	windows32_create_menus(uiw32);
 
@@ -164,9 +165,9 @@ static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 	setup_tool_menu(uiw32);
 	setup_help_menu(uiw32);
 	(void)uiw32_dc_dialog_new(uiw32);
+	(void)uiw32_pc_dialog_new(uiw32);
 	(void)uiw32_tc_dialog_new(uiw32);
 	(void)uiw32_tv_dialog_new(uiw32);
-	windows32_pc_create_window(uiw32);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -493,11 +494,6 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		xroar_set_ratelimit_latch(1, XROAR_NEXT);
 		break;
 
-	// Printer
-	case ui_tag_print_dialog:
-		windows32_pc_update_state(uiw32, ui_tag_print_dialog, 0, NULL);
-		break;
-
 	// Keyboard:
 	case ui_tag_hkbd_layout:
 		ui_update_state(-1, ui_tag_hkbd_layout, tag_value, NULL);
@@ -534,6 +530,11 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		}
 		break;
 
+	// Printers
+	case ui_tag_print_dialog:
+		ui_update_state(-1, ui_tag_print_dialog, UI_NEXT, NULL);
+		break;
+
 	// Help:
 	case ui_tag_about:
 		uiw32_create_about_window(uiw32);
@@ -564,16 +565,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_ratelimit:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
-		break;
-
-	// Printer
-
-	case ui_tag_print_dialog:
-	case ui_tag_print_destination:
-	case ui_tag_print_file:
-	case ui_tag_print_pipe:
-	case ui_tag_print_count:
-		windows32_pc_update_state(uiw32, tag, value, data);
 		break;
 
 	// Joysticks
@@ -652,6 +643,10 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 		break;
 
 	case ui_tag_kbd_translate:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	case ui_tag_print_dialog:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 

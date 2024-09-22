@@ -20,11 +20,8 @@
 #define XROAR_GTK3_PRINTERCONTROL_H_
 
 struct ui_gtk3_interface;
+struct uigtk3_dialog;
 
-void gtk3_create_pc_window(struct ui_gtk3_interface *uigtk3);
-void gtk3_toggle_pc_window(GtkToggleAction *current, gpointer user_data);
-
-void gtk3_pc_update_state(struct ui_gtk3_interface *,
-			  int tag, int value, const void *data);
+struct uigtk3_dialog *gtk3_pc_dialog_new(struct ui_gtk3_interface *);
 
 #endif

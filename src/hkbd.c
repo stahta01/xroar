@@ -1701,7 +1701,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		if (shift) {
 			xroar_flush_printer();
 		} else {
-			DELEGATE_CALL(ui->update_state, ui_tag_print_dialog, 0, NULL);
+			ui_update_state(-1, ui_tag_print_dialog, UI_NEXT, NULL);
 		}
 		return;
 

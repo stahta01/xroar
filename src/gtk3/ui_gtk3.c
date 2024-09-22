@@ -98,6 +98,7 @@ static void insert_disk2(GtkEntry *entry, gpointer user_data);
 static void insert_disk3(GtkEntry *entry, gpointer user_data);
 static void insert_disk4(GtkEntry *entry, gpointer user_data);
 static void toggle_dc_window(GtkToggleAction *current, gpointer user_data);
+static void toggle_pc_window(GtkToggleAction *current, gpointer user_data);
 static void toggle_tc_window(GtkToggleAction *current, gpointer user_data);
 static void toggle_tv_window(GtkToggleAction *current, gpointer user_data);
 static void save_snapshot(GtkEntry *entry, gpointer user_data);
@@ -243,7 +244,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	  .callback = G_CALLBACK(toggle_dc_window) },
 	{ .name = "PrinterControlAction", .label = "_Printer control",
 	  .accelerator = "<control>P",
-	  .callback = G_CALLBACK(gtk3_toggle_pc_window) },
+	  .callback = G_CALLBACK(toggle_pc_window) },
 
 	// View
 	{ .name = "VideoOptionsAction", .label = "TV _controls",
@@ -410,7 +411,7 @@ static void *ui_gtk3_new(void *cfg) {
 	(void)gtk3_dc_dialog_new(uigtk3);
 
 	// Create (hidden) printer control window
-	gtk3_create_pc_window(uigtk3);
+	(void)gtk3_pc_dialog_new(uigtk3);
 
 	// Create (hidden) tape control window
 	(void)gtk3_tc_dialog_new(uigtk3);
@@ -529,14 +530,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 			struct joystick_config *jc = joystick_config_by_name(data);
 			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_left_radio_menu, jc ? jc->id : (unsigned)-1);
 		}
-		break;
-
-	// Printer
-	case ui_tag_print_destination:
-	case ui_tag_print_file:
-	case ui_tag_print_pipe:
-	case ui_tag_print_count:
-		gtk3_pc_update_state(uigtk3, tag, value, data);
 		break;
 
 	default:
@@ -799,6 +792,12 @@ static void toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
 	ui_update_state(uigtk3->msgr_client_id, ui_tag_disk_dialog, val, NULL);
+}
+
+static void toggle_pc_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_print_dialog, val, NULL);
 }
 
 static void toggle_tc_window(GtkToggleAction *current, gpointer user_data) {
