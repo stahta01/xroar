@@ -100,13 +100,6 @@ static struct ui_module * const default_ui_module_list[] = {
 
 struct ui_module * const *ui_module_list = default_ui_module_list;
 
-struct xconfig_enum ui_gl_filter_list[] = {
-	{ XC_ENUM_INT("auto", UI_GL_FILTER_AUTO, "Automatic") },
-	{ XC_ENUM_INT("nearest", UI_GL_FILTER_NEAREST, "Nearest-neighbour filter") },
-	{ XC_ENUM_INT("linear", UI_GL_FILTER_LINEAR, "Linear filter") },
-	{ XC_ENUM_END() }
-};
-
 // We want a message group per tag, as otherwise the blocking behaviour would
 // prevent messages about one tag affecting others.  Note: not sure if that's
 // actually needed...

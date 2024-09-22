@@ -28,11 +28,6 @@
 
 struct joystick_module;
 
-/* Filtering option for OpenGL video */
-#define UI_GL_FILTER_AUTO (-1)
-#define UI_GL_FILTER_NEAREST (0)
-#define UI_GL_FILTER_LINEAR  (1)
-
 struct ui_cfg {
 	// File requester
 	char *filereq;
@@ -40,8 +35,6 @@ struct ui_cfg {
 	char *vo;  // video output module
 	struct vo_cfg vo_cfg;
 };
-
-extern struct xconfig_enum ui_gl_filter_list[];
 
 // File requesters
 

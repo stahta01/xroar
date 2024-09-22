@@ -284,8 +284,8 @@ static void recreate_texture(struct ui_sdl2_interface *uisdl2) {
 	int vp_h = vr->viewport.h;
 
 	// Set scaling method according to options and window dimensions
-	if (!vosdl->scale_60hz && (vosdl->filter == UI_GL_FILTER_NEAREST ||
-				   (vosdl->filter == UI_GL_FILTER_AUTO &&
+	if (!vosdl->scale_60hz && (vosdl->filter == VO_GL_FILTER_NEAREST ||
+				   (vosdl->filter == VO_GL_FILTER_AUTO &&
 				    (vosdl->window_area.w % vp_w) == 0 &&
 				    (vosdl->window_area.h % vp_h) == 0))) {
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");

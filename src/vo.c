@@ -31,8 +31,14 @@
 #include "vo_render.h"
 #include "xconfig.h"
 
-// It's important that the order here is correct, as UI modules index into the
-// list for descriptive text.
+struct xconfig_enum vo_viewport_list[] = {
+	{ XC_ENUM_INT("auto", UI_AUTO, "Automatic") },
+	{ XC_ENUM_INT("zoomed", VO_PICTURE_ZOOMED, "Zoomed (512x384)") },
+	{ XC_ENUM_INT("title", VO_PICTURE_TITLE, "Title (640x480)") },
+	{ XC_ENUM_INT("action", VO_PICTURE_ACTION, "Action (720x540)") },
+	{ XC_ENUM_INT("underscan", VO_PICTURE_UNDERSCAN, "Underscan (736x552)") },
+	{ XC_ENUM_END() }
+};
 
 struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_INT("none", VO_CMP_CCR_PALETTE, "None") },
@@ -43,12 +49,10 @@ struct xconfig_enum vo_cmp_ccr_list[] = {
 	{ XC_ENUM_END() }
 };
 
-struct xconfig_enum vo_viewport_list[] = {
-	{ XC_ENUM_INT("auto", UI_AUTO, "Automatic") },
-	{ XC_ENUM_INT("zoomed", VO_PICTURE_ZOOMED, "Zoomed (512x384)") },
-	{ XC_ENUM_INT("title", VO_PICTURE_TITLE, "Title (640x480)") },
-	{ XC_ENUM_INT("action", VO_PICTURE_ACTION, "Action (720x540)") },
-	{ XC_ENUM_INT("underscan", VO_PICTURE_UNDERSCAN, "Underscan (736x552)") },
+struct xconfig_enum vo_gl_filter_list[] = {
+	{ XC_ENUM_INT("auto", VO_GL_FILTER_AUTO, "Automatic") },
+	{ XC_ENUM_INT("nearest", VO_GL_FILTER_NEAREST, "Nearest-neighbour") },
+	{ XC_ENUM_INT("linear", VO_GL_FILTER_LINEAR, "Linear") },
 	{ XC_ENUM_END() }
 };
 

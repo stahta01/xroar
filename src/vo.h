@@ -76,6 +76,17 @@ enum {
 
 extern struct xconfig_enum vo_cmp_ccr_list[];
 
+// Pixel filter.  Optionally interpreted by video module, typically an OpenGL
+// option.
+
+enum {
+	VO_GL_FILTER_AUTO,
+	VO_GL_FILTER_NEAREST,
+	VO_GL_FILTER_LINEAR,
+};
+
+extern struct xconfig_enum vo_gl_filter_list[];
+
 struct vo_cfg {
 	char *geometry;
 	int gl_filter;
