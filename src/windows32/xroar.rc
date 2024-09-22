@@ -4,7 +4,7 @@
 #define IDC_STATIC (-1)
 #endif
 
-#include "dialogs.h"
+#include "resources.h"
 
 #define to_str(s) to_str_(s)
 #define to_str_(s) #s
@@ -53,4 +53,4 @@ END
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#include "dialogs.rc"
+#include "resources.rc"

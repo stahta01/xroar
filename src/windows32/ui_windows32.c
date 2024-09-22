@@ -52,9 +52,9 @@
 
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
-#include "windows32/dialogs.h"
 #include "windows32/drivecontrol.h"
 #include "windows32/printercontrol.h"
+#include "windows32/resources.h"
 #include "windows32/tapecontrol.h"
 #include "windows32/video_options.h"
 

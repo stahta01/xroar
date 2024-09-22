@@ -48,17 +48,17 @@ pad=5 id=TV_CONTROLS dialog XRoar · TV controls
 h1 Audio
 
 table
-tr td text Volume
-   td width=47 id=VOLUME spinbox
+tr td width=54 text Volume
+   td width=86 id=VOLUME spinbox
 end table
 
 h1 Video
 
 table
-tr td width=40 text TV input
-   td width=84 id=TV_INPUT combobox
+tr td width=54 text TV input
+   td width=86 id=TV_INPUT combobox
 tr td text Brightness
-   td width=47 id=BRIGHTNESS spinbox
+   td id=BRIGHTNESS spinbox
 tr td text Contrast
    td id=CONTRAST spinbox
 tr td text Colour
@@ -66,7 +66,7 @@ tr td text Colour
 tr td text Hue
    td id=HUE spinbox
 tr td text Picture Area
-   td width=78 id=PICTURE combobox
+   td id=PICTURE combobox
 tr td text 60Hz Scaling
    td id=NTSC_SCALING checkbox
 end table
@@ -74,8 +74,8 @@ end table
 h1 Composite Video
 
 table
-tr td width=40 text Renderer
-   td width=80 id=RENDERER combobox
+tr td width=54 text Renderer
+   td width=86 id=RENDERER combobox
 tr td text F(s)
    td id=FS combobox
 tr td text F(sc)

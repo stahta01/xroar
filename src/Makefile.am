@@ -461,18 +461,18 @@ xroar_LDADD += $(MINGW_LIBS)
 xroar_SOURCES += \
 	windows32/about.c \
 	windows32/common_windows32.c windows32/common_windows32.h \
-	windows32/dialogs.h \
 	windows32/drivecontrol.c windows32/drivecontrol.h \
 	windows32/filereq_windows32.c \
 	windows32/guicon.c windows32/guicon.h \
 	windows32/hkbd_windows.c windows32/hkbd_windows.h \
 	windows32/printercontrol.c windows32/printercontrol.h \
+	windows32/resources.h \
 	windows32/tapecontrol.c windows32/tapecontrol.h \
 	windows32/ui_windows32.c \
 	windows32/video_options.c windows32/video_options.h \
 	windows32/xroar.rc
 
-windows32/xroar.o: windows32/dialogs.h windows32/dialogs.rc
+windows32/xroar.o: windows32/resources.h windows32/resources.rc
 
 .rc.o:
 	$(RC) -o $@ -O coff -DPACKAGE_TEXT="$(PACKAGE_TEXT)" -DPACKAGE_YEAR="$(PACKAGE_YEAR)" -DRC_VERSION=$(RC_VERSION) -DRC_VER_MAJOR=$(RC_VER_MAJOR) -DRC_VER_MINOR=$(RC_VER_MINOR) -DRC_REV_MAJOR=$(RC_REV_MAJOR) -DRC_REV_MINOR=$(RC_REV_MINOR) $<
@@ -483,18 +483,18 @@ endif
 
 WIN2RC = $(top_builddir)/tools/win2rc
 
-windows32/dialogs.h: windows32/dialogs.win
-	$(WIN2RC) -h -m XROAR_WINDOWS_DIALOGS_H_ $< > $@
+windows32/resources.h: windows32/resources.win
+	$(WIN2RC) -h -m XROAR_WINDOWS_RESOURCES_H_ $< > $@
 
-windows32/dialogs.rc: windows32/dialogs.win
+windows32/resources.rc: windows32/resources.win
 	$(WIN2RC) -r $< > $@
 
 BUILT_SOURCES += \
-	windows32/dialogs.h windows32/dialogs.rc
+	windows32/resources.h windows32/resources.rc
 
 EXTRA_DIST += \
-	windows32/dialogs.win \
-	windows32/dialogs.h windows32/dialogs.rc \
+	windows32/resources.win \
+	windows32/resources.h windows32/resources.rc \
 	windows32/xroar-16x16.ico \
 	windows32/xroar-32x32.ico \
 	windows32/xroar-48x48.ico \

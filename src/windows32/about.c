@@ -21,7 +21,7 @@
 #include <windows.h>
 
 #include "windows32/common_windows32.h"
-#include "windows32/dialogs.h"
+#include "windows32/resources.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

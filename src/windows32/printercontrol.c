@@ -31,8 +31,8 @@
 
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
-#include "windows32/dialogs.h"
 #include "windows32/printercontrol.h"
+#include "windows32/resources.h"
 
 static INT_PTR CALLBACK pc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 

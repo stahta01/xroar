@@ -1,7 +1,7 @@
 /* Automatically generated file */
 
-#ifndef XROAR_WINDOWS_DIALOGS_H_
-#define XROAR_WINDOWS_DIALOGS_H_
+#ifndef XROAR_WINDOWS_RESOURCES_H_
+#define XROAR_WINDOWS_RESOURCES_H_
 
 #define IDD_DLG_ABOUT (1)
 #define IDD_DLG_TV_CONTROLS (2)
