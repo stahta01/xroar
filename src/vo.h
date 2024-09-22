@@ -61,7 +61,6 @@ enum {
 	NUM_VO_PICTURE
 };
 
-extern const char *vo_picture_name[NUM_VO_PICTURE];  // XXX DEPRECATED
 extern struct xconfig_enum vo_viewport_list[];
 
 // Composite cross-colour renderer.
