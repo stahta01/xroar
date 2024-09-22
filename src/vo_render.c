@@ -63,13 +63,6 @@ struct xconfig_enum vo_pixel_fmt_list[] = {
 
 // Pixel rates - used as sampling frequency when filtering
 
-// XXX DEPRECATED
-const char *vo_render_fs_name[NUM_VO_RENDER_FS] = {
-	"14.31818 MHz",
-	"14.218 MHz",
-	"14.23753 MHz",
-};
-
 struct xconfig_enum vo_render_fs_list[] = {
 	{ XC_ENUM_INT("ntsc", VO_RENDER_FS_14_31818, "14.31818 MHz") },
 	{ XC_ENUM_INT("pal-dragon", VO_RENDER_FS_14_218, "14.218 MHz") },
@@ -79,12 +72,6 @@ struct xconfig_enum vo_render_fs_list[] = {
 
 // Colour subcarrier frequencies
 
-// XXX DEPRECATED
-const char *vo_render_fsc_name[NUM_VO_RENDER_FSC] = {
-	"4.43361875 MHz",
-	"3.579545 MHz",
-};
-
 struct xconfig_enum vo_render_fsc_list[] = {
 	{ XC_ENUM_INT("pal", VO_RENDER_FSC_4_43361875, "4.43361875 MHz") },
 	{ XC_ENUM_INT("ntsc", VO_RENDER_FSC_3_579545, "3.579545 MHz") },
@@ -92,13 +79,6 @@ struct xconfig_enum vo_render_fsc_list[] = {
 };
 
 // Colour systems
-
-// XXX DEPRECATED
-const char *vo_render_system_name[NUM_VO_RENDER_SYSTEM] = {
-	"PAL-I",
-	"PAL-M",
-	"NTSC",
-};
 
 struct xconfig_enum vo_render_system_list[] = {
 	{ XC_ENUM_INT("pal-i", VO_RENDER_SYSTEM_PAL_I, "PAL-I") },

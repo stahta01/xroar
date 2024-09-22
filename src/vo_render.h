@@ -125,7 +125,6 @@ enum {
 	NUM_VO_RENDER_FS
 };
 
-extern const char *vo_render_fs_name[NUM_VO_RENDER_FS];  // XXX DEPRECATED
 extern struct xconfig_enum vo_render_fs_list[];
 
 // Colour subcarrier frequencies
@@ -136,7 +135,6 @@ enum {
 	NUM_VO_RENDER_FSC
 };
 
-extern const char *vo_render_fsc_name[NUM_VO_RENDER_FSC];  // XXX DEPRECATED
 extern struct xconfig_enum vo_render_fsc_list[];
 
 // Colour systems
@@ -148,7 +146,6 @@ enum {
 	NUM_VO_RENDER_SYSTEM
 };
 
-extern const char *vo_render_system_name[NUM_VO_RENDER_SYSTEM];  // XXX DEPRECATED
 extern struct xconfig_enum vo_render_system_list[];
 
 // Largest value of 'tmax' (and thus 't')
