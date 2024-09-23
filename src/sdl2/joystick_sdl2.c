@@ -329,17 +329,6 @@ static void close_device(struct device *d) {
 			SDL_JoystickClose(d->handle.joystick);
 		}
 	}
-	_Bool quit = 1;
-	for (int i = 0; i < num_devices; i++) {
-		if (d->open_count)
-			quit = 0;
-	}
-	if (quit) {
-		SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
-		free(devices);
-		devices = NULL;
-		num_devices = max_devices = 0;
-	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
