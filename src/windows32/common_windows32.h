@@ -77,8 +77,11 @@ void windows32_shutdown(void);
 // Create "About" dialog
 void uiw32_create_about_window(struct ui_windows32_interface *);
 
-// Draw a control using DrawText() with DT_PATH_ELLIPSIS
-void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS);
+// Draw a control with DrawText()
+void uiw32_drawtext(HWND hDlg, int nIDDlgItem, LPDRAWITEMSTRUCT pDIS, UINT format);
+
+// Draw a control using DrawText(), using DT_PATH_ELLIPSIS format
+#define uiw32_drawtext_path(d,i,s) uiw32_drawtext((d), (i), (s), DT_PATH_ELLIPSIS)
 
 // Shortcut for finding handle of a control within a dialog and sending a
 // message to it.

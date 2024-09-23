@@ -61,12 +61,13 @@ void windows32_shutdown(void) {
 	WSACleanup();
 }
 
-void windows32_drawtext_path(HWND hWnd, LPDRAWITEMSTRUCT pDIS) {
+void uiw32_drawtext(HWND hDlg, int nIDDlgItem, LPDRAWITEMSTRUCT pDIS, UINT format) {
+	HWND hWnd = GetDlgItem(hDlg, nIDDlgItem);
 	int length = SendMessage(hWnd, WM_GETTEXTLENGTH, 0, 0) + 1;
 	char *text = xmalloc(length);
 	length = SendMessage(hWnd, WM_GETTEXT, length, (LPARAM)text);
 	FillRect(pDIS->hDC, &pDIS->rcItem, (HBRUSH)(COLOR_WINDOW+1));
-	DrawText(pDIS->hDC, text, length, &pDIS->rcItem, DT_PATH_ELLIPSIS);
+	DrawText(pDIS->hDC, text, length, &pDIS->rcItem, format);
 	free(text);
 }
 

@@ -140,12 +140,9 @@ static INT_PTR CALLBACK dc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 	case WM_DRAWITEM:
 		{
-			LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
 			int id = LOWORD(wParam);
 			if (id >= IDC_STM_DRIVE1_FILENAME && id <= IDC_STM_DRIVE4_FILENAME) {
-				int drive = id - IDC_STM_DRIVE1_FILENAME;
-				HWND dc_stm_drive_filename = GetDlgItem(hwnd, IDC_STM_DRIVE1_FILENAME + drive);
-				windows32_drawtext_path(dc_stm_drive_filename, pDIS);
+				uiw32_drawtext_path(hwnd, id, (LPDRAWITEMSTRUCT)lParam);
 				return TRUE;
 			}
 		}

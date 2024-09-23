@@ -197,27 +197,19 @@ static INT_PTR CALLBACK tc_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		return TRUE;
 
 	case WM_DRAWITEM:
-		switch (LOWORD(wParam)) {
-		case IDC_STM_INPUT_FILENAME:
-			{
-				HWND tc_stm_input_filename = GetDlgItem(hwnd, IDC_STM_INPUT_FILENAME);
-				LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
-				windows32_drawtext_path(tc_stm_input_filename, pDIS);
-			}
-			return TRUE;
+		{
+			int id = LOWORD(wParam);
+			switch (id) {
+			case IDC_STM_INPUT_FILENAME:
+			case IDC_STM_OUTPUT_FILENAME:
+				uiw32_drawtext_path(hwnd, id, (LPDRAWITEMSTRUCT)lParam);
+				return TRUE;
 
-		case IDC_STM_OUTPUT_FILENAME:
-			{
-				HWND tc_stm_output_filename = GetDlgItem(hwnd, IDC_STM_OUTPUT_FILENAME);
-				LPDRAWITEMSTRUCT pDIS = (LPDRAWITEMSTRUCT)lParam;
-				windows32_drawtext_path(tc_stm_output_filename, pDIS);
+			default:
+				break;
 			}
-			return TRUE;
-
-		default:
-			break;
 		}
-		return FALSE;
+		break;
 
 	case WM_COMMAND:
 		if (HIWORD(wParam) == BN_CLICKED) {
