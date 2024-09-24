@@ -213,6 +213,15 @@ void uigtk3_widget_set_sensitive(struct ui_gtk3_interface *uigtk3, const gchar *
 
 void uigtk3_widget_show(struct ui_gtk3_interface *uigtk3, const gchar *w_name);
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Update an adjustment.  Returns true if any parameter changed.
+
+_Bool uigtk3_update_adjustment(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
+			       gdouble min, gdouble max, gdouble pos);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // [Re-]build a menu from an xconfig_enum
 
 struct uigtk3_radio_menu *uigtk3_radio_menu_new(struct ui_gtk3_interface *uigtk3,
