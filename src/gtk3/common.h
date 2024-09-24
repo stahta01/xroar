@@ -159,24 +159,10 @@ void do_uigtk3_signal_connect(struct ui_gtk3_interface *uigtk3, const gchar *o_n
 //
 // Blocks callback so that no further action is taken.
 
-void uigtk3_notify_radio_action_set_current_value(struct ui_gtk3_interface *uigtk3,
-						  const gchar *path, gint v, gpointer func);
-
 void uigtk3_notify_radio_menu_set_current_value(struct uigtk3_radio_menu *rm, gint v);
 
 void uigtk3_notify_toggle_action_set_active(struct ui_gtk3_interface *uigtk3,
 					    const gchar *path, gboolean v, gpointer func);
-
-// Notify-only UI update helpers.
-//
-// Blocks callback so that no further action is taken.
-
-void uigtk3_notify_spin_button_set_value(struct ui_gtk3_interface *uigtk3,
-					 const gchar *sb_name, gdouble value, gpointer func);
-
-void uigtk3_notify_toggle_button_set_active(struct ui_gtk3_interface *uigtk3,
-					    const gchar *tb_name,
-					    gboolean v, gpointer func);
 
 // Menu manager update helpers
 
@@ -186,18 +172,6 @@ void uigtk3_toggle_action_set_active(struct ui_gtk3_interface *uigtk3, const gch
 				     gboolean v);
 
 // UI update helpers
-
-void uigtk3_adjustment_set_lower(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble lower);
-
-void uigtk3_adjustment_set_upper(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble upper);
-
-void uigtk3_adjustment_set_value(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble value);
-
-void uigtk3_combo_box_set_active(struct ui_gtk3_interface *uigtk3, const gchar *cbt_name,
-				 gint index_);
 
 void uigtk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
 				  gboolean is_editable);
@@ -210,8 +184,6 @@ void uigtk3_spin_button_set_value(struct ui_gtk3_interface *,
 
 void uigtk3_toggle_button_set_active(struct ui_gtk3_interface *uigtk3, const gchar *tb_name,
                                      gboolean v);
-
-gboolean uigtk3_widget_is_visible(struct ui_gtk3_interface *uigtk3, const gchar *w_name);
 
 void uigtk3_widget_hide(struct ui_gtk3_interface *uigtk3, const gchar *w_name);
 

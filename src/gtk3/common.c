@@ -77,14 +77,6 @@ void do_uigtk3_signal_connect(struct ui_gtk3_interface *uigtk3, const gchar *o_n
 //
 // Blocks callback so that no further action is taken.
 
-void uigtk3_notify_radio_action_set_current_value(struct ui_gtk3_interface *uigtk3,
-						  const gchar *path, gint v, gpointer func) {
-	GtkRadioAction *ra = GTK_RADIO_ACTION(gtk_ui_manager_get_action(uigtk3->menu_manager, path));
-	g_signal_handlers_block_by_func(ra, G_CALLBACK(func), uigtk3);
-	gtk_radio_action_set_current_value(ra, v);
-	g_signal_handlers_unblock_by_func(ra, G_CALLBACK(func), uigtk3);
-}
-
 void uigtk3_notify_radio_menu_set_current_value(struct uigtk3_radio_menu *rm, gint v) {
 	if (!rm)
 		return;
@@ -106,27 +98,6 @@ void uigtk3_notify_toggle_action_set_active(struct ui_gtk3_interface *uigtk3,
 	g_signal_handlers_unblock_by_func(ta, G_CALLBACK(func), uigtk3);
 }
 
-// Notify-only UI update helpers.
-//
-// Blocks callback so that no further action is taken.
-
-void uigtk3_notify_spin_button_set_value(struct ui_gtk3_interface *uigtk3,
-					 const gchar *sb_name, gdouble value, gpointer func) {
-	GtkSpinButton *sb = GTK_SPIN_BUTTON(gtk_builder_get_object(uigtk3->builder, sb_name));
-	g_signal_handlers_block_by_func(sb, G_CALLBACK(func), uigtk3);
-	gtk_spin_button_set_value(sb, value);
-	g_signal_handlers_unblock_by_func(sb, G_CALLBACK(func), uigtk3);
-}
-
-void uigtk3_notify_toggle_button_set_active(struct ui_gtk3_interface *uigtk3,
-					    const gchar *tb_name,
-					    gboolean v, gpointer func) {
-	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk3->builder, tb_name));
-	g_signal_handlers_block_by_func(tb, G_CALLBACK(func), uigtk3);
-	gtk_toggle_button_set_active(tb, v);
-	g_signal_handlers_unblock_by_func(tb, G_CALLBACK(func), uigtk3);
-}
-
 // Menu manager helpers
 
 gboolean uigtk3_toggle_action_get_active(struct ui_gtk3_interface *uigtk3, const gchar *path) {
@@ -141,30 +112,6 @@ void uigtk3_toggle_action_set_active(struct ui_gtk3_interface *uigtk3, const gch
 }
 
 // UI helpers
-
-void uigtk3_adjustment_set_lower(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble lower) {
-	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk3->builder, a_name));
-	gtk_adjustment_set_lower(a, lower);
-}
-
-void uigtk3_adjustment_set_upper(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble upper) {
-	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk3->builder, a_name));
-	gtk_adjustment_set_upper(a, upper);
-}
-
-void uigtk3_adjustment_set_value(struct ui_gtk3_interface *uigtk3, const gchar *a_name,
-				 gdouble value) {
-	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk3->builder, a_name));
-	gtk_adjustment_set_value(a, value);
-}
-
-void uigtk3_combo_box_set_active(struct ui_gtk3_interface *uigtk3, const gchar *cbt_name,
-				 gint index_) {
-	GtkComboBoxText *cbt = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(uigtk3->builder, cbt_name));
-	gtk_combo_box_set_active(GTK_COMBO_BOX(cbt), index_);
-}
 
 void uigtk3_editable_set_editable(struct ui_gtk3_interface *uigtk3, const gchar *e_name,
 				 gboolean is_editable) {
@@ -188,11 +135,6 @@ void uigtk3_toggle_button_set_active(struct ui_gtk3_interface *uigtk3, const gch
 				     gboolean v) {
 	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(gtk_builder_get_object(uigtk3->builder, tb_name));
 	gtk_toggle_button_set_active(tb, v);
-}
-
-gboolean uigtk3_widget_is_visible(struct ui_gtk3_interface *uigtk3, const gchar *w_name) {
-	GtkWidget *w = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, w_name));
-	return gtk_widget_is_visible(w);
 }
 
 void uigtk3_widget_hide(struct ui_gtk3_interface *uigtk3, const gchar *w_name) {
