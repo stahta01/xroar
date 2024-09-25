@@ -308,6 +308,7 @@ static void *ui_gtk3_new(void *cfg) {
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_disk_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
@@ -506,10 +507,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
 		break;
 
-	case ui_tag_cartridge:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
-		break;
-
 	// Audio
 
 	case ui_tag_ratelimit:
@@ -546,6 +543,12 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	//const void *data = msg->data;
 
 	switch (tag) {
+
+	// Hardware
+
+	case ui_tag_cartridge:
+		uigtk3_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
+		break;
 
 	// Cassettes
 
@@ -673,7 +676,7 @@ static void gtk3_update_cartridge_menu(void *sptr) {
 	int selected = 0;
 	entries[0].name = "cart0";
 	entries[0].label = "None";
-	entries[0].value = -1;
+	entries[0].value = 0;
 	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[0].name, entries[0].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 	int i = 1;
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
@@ -898,8 +901,7 @@ static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer u
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	struct cart_config *cc = cart_config_by_id(val);
-	xroar_set_cart(1, cc ? cc->name : NULL);
+	ui_update_state(-1, ui_tag_cartridge, val, NULL);
 }
 
 static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {

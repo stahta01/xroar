@@ -203,12 +203,7 @@ int cocoa_super_all_keys = 0;
 
 	/* Cartridges: */
 	case ui_tag_cartridge:
-		{
-			if (value & (1 << 23))
-				value = -1;
-			struct cart_config *cc = cart_config_by_id(value);
-			xroar_set_cart(0, cc ? cc->name : NULL);
-		}
+		ui_update_state(-1, ui_tag_cartridge, value, NULL);
 		break;
 
 	/* Cassettes: */
@@ -1120,6 +1115,7 @@ static void *ui_cocoa_new(void *cfg) {
 	// Register with messenger
 	uimac->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_fast, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_pad_auto, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_rewrite, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1191,6 +1187,7 @@ static void cocoa_update_machine_menu(void *sptr) {
 
 static void cocoa_update_cartridge_menu(void *sptr) {
 	struct ui_macosx_interface *uimac = sptr;
+	(void)uimac;
 
 	// Get list of cart configs
 	struct slist *ccl = NULL;
@@ -1198,35 +1195,33 @@ static void cocoa_update_cartridge_menu(void *sptr) {
 	if (xroar.machine) {
 		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
 		const char *cart_arch = mpe->cart_arch;
-		ccl = slist_reverse(cart_config_list_is_a(cart_arch));
+		ccl = cart_config_list_is_a(cart_arch);
 		cart = (struct cart *)part_component_by_id(&xroar.machine->part, "cart");
 	}
 
 	// Remove old entries
-	while ([cartridge_menu numberOfItems] > 0)
+	while ([cartridge_menu numberOfItems] > 0) {
 		[cartridge_menu removeItem:[cartridge_menu itemAtIndex:0]];
+	}
 
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
+	// Add entries
 	NSMenuItem *item;
-	struct slist *iter;
-	for (iter = ccl; iter; iter = iter->next) {
+	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:UIMAC_TAGV(ui_tag_cartridge, 0)];
+	[cartridge_menu addItem:item];
+	[item release];
+	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		if (cart && cc == cart->config) {
-			uimac->cart.id = cc->id;
-		}
 		NSString *description = [[NSString alloc] initWithUTF8String:cc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
 		[item setTag:UIMAC_TAGV(ui_tag_cartridge, cc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
-		[cartridge_menu insertItem:item atIndex:0];
+		[cartridge_menu addItem:item];
 		[item release];
 	}
-	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_cartridge, -1)];
-	[cartridge_menu insertItem:item atIndex:0];
-	[item release];
+
+	// Free everything
 	slist_free(ccl);
 }
 
@@ -1287,10 +1282,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->machine.id = value;
 		break;
 
-	case ui_tag_cartridge:
-		uimac->cart.id = value;
-		break;
-
 	// Audio
 
 	case ui_tag_ratelimit:
@@ -1326,6 +1317,12 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	const void *data = uimsg->data;
 
 	switch (tag) {
+
+	// Hardware
+
+	case ui_tag_cartridge:
+		uimac->cart.id = value;
+		break;
 
 	// Cassettes
 

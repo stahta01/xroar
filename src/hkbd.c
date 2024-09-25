@@ -1649,7 +1649,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		return;
 
 	case hk_sym_e:
-		xroar_toggle_cart();
+		ui_update_state(-1, ui_tag_cartridge, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_f:

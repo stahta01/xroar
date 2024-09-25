@@ -103,7 +103,7 @@ static const struct ser_struct_data cart_rom_ser_struct_data = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct slist *config_list = NULL;
-static int next_id = 0;
+static int next_id = 1;  // 0 is reserved to mean "no cartridge"
 
 /* Single config for auto-defined ROM carts */
 static struct cart_config *rom_cart_config = NULL;
@@ -384,11 +384,10 @@ static struct cart_fingerprint cart_special[] = {
 struct cart_config *cart_config_new(void) {
 	struct cart_config *new = xmalloc(sizeof(*new));
 	*new = (struct cart_config){0};
-	new->id = next_id;
+	new->id = next_id++;
 	new->autorun = ANY_AUTO;
 	new->mpi.initial_slot = ANY_AUTO;
 	config_list = slist_append(config_list, new);
-	next_id++;
 	return new;
 }
 
@@ -702,11 +701,10 @@ void cart_config_remove_all(void) {
 
 /* ---------------------------------------------------------------------- */
 
-struct cart *cart_create(const char *cc_name) {
-	struct cart_config *cc = cart_config_by_name(cc_name);
-	if (!cc)
+struct cart *cart_create_from_config(struct cart_config *cc) {
+	if (!cc) {
 		return NULL;
-
+	}
 	cart_config_complete(cc);
 	if (!partdb_is_a(cc->type, "cart")) {
 		return NULL;
@@ -720,9 +718,15 @@ struct cart *cart_create(const char *cc_name) {
 		LOG_WARN("Cartridge create FAILED: [%s]\n", cc->type);
 		return NULL;
 	}
-	if (c->attach)
+	if (c->attach) {
 		c->attach(c);
+	}
 	return c;
+}
+
+struct cart *cart_create(const char *cc_name) {
+	struct cart_config *cc = cart_config_by_name(cc_name);
+	return cart_create_from_config(cc);
 }
 
 _Bool cart_finish(struct part *p) {

@@ -66,7 +66,6 @@
 #define TAG_VALUE(t) ((t) & 0xff)
 
 static int max_machine_id = 0;
-static int max_cartridge_id = 0;
 static unsigned max_joystick_id = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -114,6 +113,7 @@ static void *ui_windows32_new(void *cfg) {
 	// Register with messenger
 	uiw32->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_disk_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
@@ -340,12 +340,13 @@ static void windows32_update_cartridge_menu(void *sptr) {
 
 	// Add new entries
 	AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
-	max_cartridge_id = 0;
+	uiw32->max_cartridge_id = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		if ((cc->id + 1) > max_cartridge_id)
-			max_cartridge_id = cc->id + 1;
-		AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id + 1), cc->description);
+		if (cc->id > uiw32->max_cartridge_id) {
+			uiw32->max_cartridge_id = cc->id;
+		}
+		AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id), cc->description);
 	}
 	slist_free(ccl);
 }
@@ -452,10 +453,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Cartridges:
 	case ui_tag_cartridge:
-		{
-			struct cart_config *cc = cart_config_by_id(tag_value - 1);
-			xroar_set_cart(1, cc ? cc->name : NULL);
-		}
+		ui_update_state(-1, ui_tag_cartridge, tag_value, NULL);
 		break;
 
 	// Cassettes:
@@ -557,10 +555,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
-	case ui_tag_cartridge:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_cartridge_id), TAGV(tag, value + 1), MF_BYCOMMAND);
-		break;
-
 	// Audio
 
 	case ui_tag_ratelimit:
@@ -596,6 +590,12 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_fullscreen:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	// Hardware
+
+	case ui_tag_cartridge:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, uiw32->max_cartridge_id), TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	// Cassettes

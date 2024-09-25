@@ -293,6 +293,7 @@ static void versiontext(void);
 static void config_print_all(FILE *f, _Bool all);
 #endif
 
+static void xroar_ui_set_cartridge(void *, int tag, void *smsg);
 static void xroar_ui_set_picture(void *, int tag, void *smsg);
 static void xroar_ui_set_print_destination(void *, int tag, void *smsg);
 static void xroar_ui_set_print_file(void *, int tag, void *smsg);
@@ -1014,8 +1015,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Register with messenger.
 	xroar.msgr_client_id = messenger_client_register();
 
-	// Receive notifications when the picture (viewport) is changed by user
-	// so we know to stop trying to set it automatically.
+	// Join each UI group we're interested in
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_cartridge, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_destination, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
@@ -1112,9 +1113,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Configure machine
 	xroar_configure_machine(xroar.machine_config);
 	if (xroar.machine_config->cart_enabled) {
-		xroar_set_cart(1, xroar.machine_config->default_cart);
+		ui_update_state(-1, ui_tag_cartridge, 0, xroar.machine_config->default_cart);
 	} else {
-		xroar_set_cart(1, NULL);
+		ui_update_state(-1, ui_tag_cartridge, 0, NULL);
 	}
 
 	// We set this here so that configuring the machine can update the
@@ -1331,7 +1332,7 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 			cc = cart_config_by_name(filename);
 			if (cc) {
 				cc->autorun = autorun;
-				xroar_set_cart(1, cc->name);
+				ui_update_state(-1, ui_tag_cartridge, cc->id, NULL);
 				if (autorun) {
 					xroar_hard_reset();
 				}
@@ -1725,8 +1726,7 @@ void xroar_remove_joystick_config(const char *name) {
 
 // Connect various external interfaces to the machine.  May well end up
 // delegated to a sub-part of the machine.  Called during
-// xroar_connect_machine(), and when cartridge is changed with
-// xroar_set_cart().
+// xroar_connect_machine(), and when cartridge is changed.
 
 static void connect_interfaces(void) {
 	struct machine *m = xroar.machine;
@@ -1836,9 +1836,9 @@ void xroar_set_machine(_Bool notify, int id) {
 #endif
 	xroar_configure_machine(mc);
 	if (mc->cart_enabled) {
-		xroar_set_cart(1, mc->default_cart);
+		ui_update_state(-1, ui_tag_cartridge, 0, mc->default_cart);
 	} else {
-		xroar_set_cart(1, NULL);
+		ui_update_state(-1, ui_tag_cartridge, 0, NULL);
 	}
 	xroar_hard_reset();
 	if (notify) {
@@ -1852,70 +1852,106 @@ void xroar_update_cartridge_menu(void) {
 	}
 }
 
-void xroar_toggle_cart(void) {
-	assert(xroar.machine_config != NULL);
-	xroar.machine_config->cart_enabled = !xroar.machine_config->cart_enabled;
-	if (xroar.machine_config->cart_enabled) {
-		xroar_set_cart(1, xroar.machine_config->default_cart);
-	} else {
-		xroar_set_cart(1, NULL);
-	}
-}
-
-void xroar_set_cart_by_id(_Bool notify, int id) {
-	struct cart_config *cc = cart_config_by_id(id);
-	const char *name = cc ? cc->name : NULL;
 #ifdef HAVE_WASM
-	if (!wasm_ui_prepare_cartridge(cc)) {
+static void do_wasm_ui_set_cartridge(void *sptr) {
+	int ccid = (intptr_t)sptr;
+	ui_update_state(-1, ui_tag_cartridge, ccid, NULL);
+}
+#endif
+
+static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_cartridge);
+
+	struct machine *m = emu->machine;
+
+	// Nothing to do if the current machine doesn't support carts
+	if (!m || !m->insert_cart) {
+		uimsg->value = 0;
+		uimsg->data = NULL;
+		return;
+	}
+
+	struct machine_config *mc = m->config;
+	assert(mc != NULL);
+
+	if (uimsg->value == UI_PREV || uimsg->value == UI_NEXT) {
+		// Toggle cart enabled/disabled flag.  Then adjust the message
+		// so we apply that action.
+		mc->cart_enabled = !mc->cart_enabled;
+		uimsg->value = 0;
+		if (emu->machine_config->cart_enabled) {
+			uimsg->data = mc->default_cart;
+		} else {
+			uimsg->data = NULL;
+		}
+	}
+
+	struct cart *old_cart = m->get_interface(m, "cart");
+	struct cart_config *old_cc = old_cart ? old_cart->config : NULL;
+	int old_ccid = old_cc ? old_cc->id : 0;
+
+	struct cart_config *cc = NULL;
+	if (uimsg->data) {
+		// If the 'data' field is non-NULL it's a cartridge name
+		cc = cart_config_by_name((const char *)uimsg->data);
+	} else if (uimsg->value > 0) {
+		// A 'value' > 0 is a cart ID
+		cc = cart_config_by_id(uimsg->value);
+	} else if (uimsg->value < 0) {
+		// Else if not 0 (none), try to find something automatically
+		cc = cart_find_working_dos(m->config);
+	}
+
+#ifdef HAVE_WASM
+	_Bool waiting = !wasm_ui_prepare_cartridge(cc);
+	if (waiting) {
+		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_ui_set_cartridge, (void *)(intptr_t)cc->id), 1);
+		uimsg->value = old_ccid;
+		uimsg->data = NULL;
 		return;
 	}
 #endif
-	xroar_set_cart(notify, name);
-}
 
-void xroar_set_cart(_Bool notify, const char *cc_name) {
-	assert(xroar.machine_config != NULL);
+	// Canonify message
+	if (cc) {
+		uimsg->value = cc->id;
+	} else if (old_cc) {
+		uimsg->value = old_ccid;
+	}
+	uimsg->data = NULL;
 
-	struct cart *old_cart = xroar.machine->get_interface(xroar.machine, "cart");
-	if (!old_cart && !cc_name)
-		return;
-	// This trips GCC-10's static analyser at the moment, as it doesn't
-	// seem to account for the short-circuit "&&".
-	if (old_cart && cc_name && 0 == strcmp(cc_name, old_cart->config->name))
-		return;
-
-	// Some machines don't actually support carts yet
-	if (!xroar.machine->insert_cart) {
-		if (notify) {
-			DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cartridge, -1, NULL);
-		}
+	// If cart isn't changing, done
+	if ((!cc && !old_cc) || (cc && old_cc && cc->id == old_ccid)) {
 		return;
 	}
 
-	xroar.machine->remove_cart(xroar.machine);
+	// Remove the old cart
+	m->remove_cart(m);
 
-	struct cart *new_cart = NULL;
-	if (!cc_name) {
-		xroar.machine_config->cart_enabled = 0;
+	// Attempt to create the cart
+	struct cart *c = cart_create_from_config(cc);
+
+	// Update machine config; this change becomes permanent for this
+	// machine for this session.  TODO: would this be desirable if we were
+	// storing the config between sessions?
+	if (!c) {
+		mc->cart_enabled = 0;
+		uimsg->value = 0;
 	} else {
-		if (xroar.machine_config->default_cart != cc_name) {
-			free(xroar.machine_config->default_cart);
-			xroar.machine_config->default_cart = xstrdup(cc_name);
+		mc->cart_enabled = 1;
+		if (mc->default_cart) {
+			free(mc->default_cart);
 		}
-		xroar.machine_config->cart_enabled = 1;
-		new_cart = cart_create(cc_name);
-		if (new_cart) {
-			xroar.machine->insert_cart(xroar.machine, new_cart);
-			connect_interfaces();
-			// Reset the cart once all interfaces are attached
-			if (new_cart->reset)
-				new_cart->reset(new_cart, 1);
-		}
-	}
+		mc->default_cart = xstrdup(cc->name);
 
-	if (notify) {
-		int id = new_cart ? new_cart->config->id : -1;
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cartridge, id, NULL);
+		// Create and attach the cart
+		m->insert_cart(m, c);
+		connect_interfaces();
+		if (c->reset) {
+			c->reset(c, 1);
+		}
 	}
 }
 

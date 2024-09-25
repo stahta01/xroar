@@ -539,13 +539,13 @@ static int read_v1_snapshot(const char *filename) {
 					// v1.8 adds a separate cart chunk
 					switch (tmp) {
 					case 1: // DragonDOS
-						xroar_set_cart(1, "dragondos");
+						cart_config = cart_config_by_name("dragondos");
 						break;
 					case 2: // RSDOS
-						xroar_set_cart(1, "rsdos");
+						cart_config = cart_config_by_name("rsdos");
 						break;
 					case 3: // Delta
-						xroar_set_cart(1, "delta");
+						cart_config = cart_config_by_name("delta");
 						break;
 					default: break;
 					}
@@ -712,10 +712,7 @@ static int read_v1_snapshot(const char *filename) {
 	}
 	fclose(fd);
 	if (cart_config) {
-		// XXX really we need something to update the UI here, the
-		// embedded cart config may have changed description.  more
-		// importantly, the UI won't know about the id.
-		xroar_set_cart(1, cart_config->name);
+		ui_update_state(-1, ui_tag_cartridge, cart_config->id, NULL);
 	}
 	if (keymap >= 0) {
 		ui_update_state(-1, ui_tag_keymap, keymap, NULL);
