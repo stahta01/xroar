@@ -3,7 +3,7 @@ Copyright 2003-2024 Ciaran Anscomb <xroar@6809.org.uk>
 
 
 Introduction
-============
+************
 
 XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the
 Tandy MC-10; and some other similar machines or clones.  It runs on a
@@ -11,7 +11,9 @@ wide variety of platforms.  Emulated hardware includes:
 
    * Dragon 32, 64, and 200-E; Tandy CoCo 1, 2, & 3; Tandy MC-10; Matra
      & Hachette Alice 4K.
-   * DragonDOS, Delta and RS-DOS disk controller cartridges.
+   * Dragon Professional and Tandy Deluxe Colour Computer prototypes,
+     both including the AY-3-891x sound chip.
+   * DragonDOS, Delta and RS-DOS floppy disk controller cartridges.
    * Orchestra 90-CC stereo sound cartridge.
    * Games Master Cartridge, including the SN76489 sound chip.
    * Glenside IDE cartridge, with IDE hard disk image support.
@@ -20,9 +22,8 @@ wide variety of platforms.  Emulated hardware includes:
    Other features include:
 
    * Raw and translated keyboard modes.
-   * Read and write tape images (compact '.cas' files or audio, e.g.
-     '.wav').
-   * Read and write VDK, JVC and DMK format floppy disk images.
+   * Read and write cassette tape images.
+   * Read and write floppy disk images.
    * Becker port for communication with remote servers.
    * Save and load machine snapshots.
    * GDB target for remote debugging.
@@ -55,80 +56,197 @@ home page (https://www.6809.org.uk/xroar/).
 Recent changes
 ==============
 
-Version 1.5 allows larger or smaller picture areas to be selected,
-showing more or less border.  It also introduces optional 60Hz scaling,
-stretching pictures vertically to reproduce the image shape more
-familiar to users in 60Hz regions (where fewer vertical lines span the
-same vertical space).  Both of these can be adjusted in the TV Controls
-dialog (or through menu options in the case of Mac OS X+).  MPI slot
-configuration is now per-cart rather than global, and you can save
-screenshots in PNG format if built against libpng.  In addition, a few
-CoCo 3 cartridge games that did not work before now do.
+Changes in version 1.6 include:
 
-   Version 1.4 replaces the '-ccr simulated' cross-colour renderer with
-more CPU-intensive code that also handles PAL. The old NTSC-only
-renderer is still available using '-ccr partial'.  Some video options
-can be changed on the fly in a new TV Controls dialog.
+   * New '-ram-org' option to specify RAM addressing.
+   * New '-ram-init' option to specify initial RAM state.
+   * 6309 DIVD behaviour fixed against Tim Lindner's fuzzing tool.
+   * 6309 DIVD timing fixed according to David Banks's behaviour notes.
+   * 6309 DIVQ behaviour & timing adjusted similarly, though untested.
+   * More accurate observed NTSC CoCo 3 GIME composite video behaviour.
+   * New GTK+ 3 UI.
+   * New printer control dialog (GTK+ 3, Windows) or menu options (Mac
+     OS X+).
+   * More keyboard virtual joystick profiles included by default.
+   * All physical joysticks selectable from menus by default.
 
-   Version 1.3 changes the default floppy disk write-back behaviour.
-The old behaviour erred on the side of protecting image files from
-accidental modification.  Enough people have complained about this--or
-at least, the small number that have complained have done so
-loudly--that XRoar will now rewrite changes to the backing file by
-default.  Run with the '-no-disk-write-back' option to revert to the old
-behaviour.  XRoar will still rename the old version of a file to have a
-'.bak' extension if possible, and also tries harder not to rewrite the
-file if no writes have occurred.
+   Previous changes in 1.x include:
 
-   Version 1.0 introduced support for the Tandy Colour Computer 3 and
-the Tandy MC-10.  Version 1.1 adds proper support for the MC-10's French
-cousin, the Matra & Hachette Alice (4K).
+   *Important:* Floppy disk write-back is now _enabled_ by default.
+Writes to images held in memory will overwrite the on-disk file when
+ejected (or quitting XRoar).  You can get the old file-preserving
+default behaviour back with '-no-disk-write-back'.
 
-   Snapshots now store much more state, and of course support the new
-emulated machines, but this means the format had to change.  Snapshots
-from the last 0.x release are still recognised, and can be loaded, but
-this support is likely to be removed in time.
+   The '-ccr simulated' renderer is replaced with more CPU-intensive
+code that also handles PAL. The old NTSC-only renderer is still
+available using '-ccr partial'.
 
-   Tape emulation now supports manual pause control.  On the MC-10, this
-defaults to paused, as it has no ability to remotely control the tape
-motor.  You will need to un-pause after typing 'CLOAD' or 'CLOADM' on
-the MC-10 (File -> Cassette -> Play, or from the tape control tool;
-autorunning will do this automatically).
+   Larger or smaller picture area can be selected, and XRoar can stretch
+60Hz output to reproduce the apparent aspect ratio seen on CRTs in those
+countries.
 
-   Previously, the Glenside IDE controller would use a fixed HD image
-file in the current working directory.  You must now specify an image
-with the '-load-hd0' option.  You can also now attach a second hard disk
-image with '-load-hd1', if you have software that can access it.
+   Many video options can be changed on the fly in a new TV Controls
+dialog.
 
-   Similarly, the NX32 and MOOH cartridges would use a fixed SD image
-file, and you must now specify it with the '-load-hd0' option.
+   Screenshots in PNG format can be saved if XRoar is built with libpng.
 
-   Old IDE images, including those created by XRoar, will have a '.img'
-file extension.  In order to distinguish these files from similar images
-with no header information, you should now rename these to have a '.ide'
-extension.
+   More machines are emulated than in 0.x.  A new snapshot format that
+preserves more state was required to support these.  Old snapshots
+should still load for now, though this will likely be removed in time.
+
+   Tape emulation now supports manual pause control, required for using
+the MC-10 & Alice, as they have no remote tape motor control.
+
+   HD/SD images are now specified with '-load-hd0' and '-load-hd1'.  IDE
+images with a header should be distinguished from headerless files by
+giving them a '.ide' extension.
+
+   MPI slot configuration is now per-cart rather than global.
 
 
-Installation
-************
+Getting started
+***************
 
-Binary packages
-===============
+Prerequisites
+=============
 
-Pre-built binary packages are available from the XRoar home page
-(https://www.6809.org.uk/xroar/).  If one is not available for your
-architecture, you will need to build from source.  XRoar should build
-and run on any POSIX-like system for which SDL version 2 is available.
+To run XRoar, you will need to make sure you have the firmware ROM
+images available for the system you wish to emulate.  These images can
+be transferred from your original machine (with some effort, outside the
+scope of this document) or more likely found online on one of the
+archive websites.  Where XRoar looks to find these images depends on
+your host OS; the rest of this chapter will go into detail.
 
-   You will also need BASIC ROM images--binary dumps of the firmware
-from an original machine.  The originals were part-written by Microsoft,
-so they are not distributed in the XRoar packages.
+   Firmware ROM image files should have a '.rom' extension, and be
+headerless (so their file size will be an exact power of two bytes).
+For most use cases, you'll need the BASIC ROM image(s) and a disk
+controller ROM image.  Here are the expected filenames and sizes (in
+bytes) for some of the most commonly-required images:
 
-Mac OS X+ binary package
-------------------------
+Firmware ROM                      Filename         File size
+-----------------------------------------------------------------------
+Dragon 32 BASIC                   'd32.rom'        16384
+Dragon 64 32K BASIC               'd64_1.rom'      16384
+Dragon 64 64K BASIC               'd64_2.rom'      16384
+DragonDOS                         'ddos10.rom'     8192
+Tandy Colour BASIC                'bas13.rom'      8192
+Tandy Extended BASIC              'extbas11.rom'   8192
+Tandy Super ECB (CoCo 3)          'coco3.rom'      32768
+Tandy Super ECB (PAL CoCo 3)      'coco3p.rom'     32768
+Tandy RS-DOS                      'disk11.rom'     8192
+Tandy Microcolour BASIC (MC-10)   'mc10.rom'       8192
+
+   Other machines (e.g.  the less common Dragon 200-E) will need a
+different set of ROM images, and supported peripherals may also need
+their own firmware.
+
+Getting started under Linux/Unix
+================================
+
+If you configure a suitable Apt repository under Debian or Ubuntu, you
+should simply be able to 'apt install xroar' (as root, or using 'sudo').
+See the XRoar homepage (https://www.6809.org.uk/xroar/) for links to an
+Apt repository for Debian, or to Launchpad for Ubuntu.
+
+   Otherwise, if you are comfortable building from source, see *note
+Building from source::.
+
+   In your home directory, create directories '~/.xroar/' and
+'~/.xroar/roms/':
+
+     $ mkdir -p ~/.xroar/roms
+
+   Copy your firmware ROM images (*note Prerequisites::) into
+'~/.xroar/roms/'.  For example, covering the most common machines, you
+might end up with a directory looking like this:
+
+     $ ls -l ~/.xroar/roms/
+     [...]
+     -rw-r--r-- 1 user group  8192 Jan  1  1982 bas13.rom
+     -rw-r--r-- 1 user group 32768 Jul 30  1986 coco3.rom
+     -rw-r--r-- 1 user group 32768 Jul 30  1986 coco3p.rom
+     -rw-r--r-- 1 user group 16384 Aug  1  1982 d32.rom
+     -rw-r--r-- 1 user group 16384 Aug  1  1983 d64_1.rom
+     -rw-r--r-- 1 user group 16384 Aug  1  1983 d64_2.rom
+     -rw-r--r-- 1 user group  8192 Jun  1  1983 ddos10.rom
+     -rw-r--r-- 1 user group  8192 Jan  1  1982 disk11.rom
+     -rw-r--r-- 1 user group  8192 Jan  1  1982 extbas11.rom
+     -rw-r--r-- 1 user group  8192 Oct  1  1983 mc10.rom
+
+   Start the emulator by typing 'xroar' at the command line, or by
+selecting it from Applications -> Games if your environment provides an
+applications menu.
+
+   Running 'xroar --help' will display the supported command line
+options.  Each of the command line options can also appear in a
+configuration file, which should be called '~/.xroar/xroar.conf'.  You
+can configure many defaults and even extra machines and cartridges in
+this file.  See *note Configuring XRoar:: for more details.
+
+Getting started under Windows
+=============================
+
+The simplest way to get going under Windows is to unpack the '.zip' file
+and copy all your ROM images into the created subdirectory, alongside
+the executable.  You can also create a configuration file here called
+'xroar.conf'.  Double click 'xroar.exe' to run, and XRoar will look in
+the same directory that you start it from, and everything should work.
+
+   However, if you want a more organised installation where you don't
+have to re-copy files around every time you upgrade, read on.
+
+   In your user profile, there should exists a LocalAppData directory.
+This is something Windows calls a "Known Folder".  You should be able to
+browse to it by entering '%LOCALAPPDATA%' as a path in an explorer
+window.  (1)
+
+   Under '%LOCALAPPDATA%', create a subdirectory called 'XRoar'.  Then
+within _that_, create a further subdirectory named 'roms'.  You can then
+copy your ROM images into '%LOCALAPPDATA%\XRoar\roms\'.
+
+   Start the emulator by double clicking 'xroar.exe' or, if you
+installed the '.msi', by selecting XRoar from the start menu.
+
+
+   You can also run XRoar from the command line, and it supports the
+same options as under Linux/Unix.  By default GUI applications under
+Windows have no access to a console, so run XRoar with '-C' as the very
+first option and it will first try to attach to the console of the
+parent process--that is, send text output to the shell window you have
+open--and if that fails, it will create its own console window.  This
+lets you see various notifications that can be useful when determining
+why something isn't working the way you expect.
+
+   For example, run 'xroar.exe -C --help' to display a list of the
+supported command line options.  Each of the command line options can
+also appear in a configuration file, which should be called
+'%LOCALAPPDATA%\XRoar\xroar.conf'.  You can configure many defaults and
+even extra machines and cartridges in this file.  See *note Configuring
+XRoar:: for more details.
+
+   ---------- Footnotes ----------
+
+   (1) The reason for using the _local_ version version of the AppData
+directory under Windows is that recent versions of Windows may offload
+files in other places to the cloud--I'm told this can happen without it
+ever informing the user--and we want to keep files local to the machine,
+as cloud access may require specific application support.
+
+Getting started under Mac OS X+
+===============================
 
 Download and unzip the appropriate '.zip' distribution for your system.
 Drag the application icon to '/Applications/'.
+
+   ROM images should be placed in a directory you create named
+'~/Library/XRoar/roms/' (under your 'HOME' directory, not the system
+directory, '/Library/').
+
+   The Mac OS X+ build provides a menu for access to certain features,
+and often accepts the more familiar '<Command>+KEY' in place of the
+'<CTRL>+KEY' shortcuts listed in this manual.  It does not provide
+control dialog boxes; often, options in these dialogs will instead be
+found in the menu hierarchy.
 
    For troubleshooting or testing options, it's often a good idea to run
 from the command line, but application packages don't make that trivial.
@@ -141,95 +259,53 @@ e.g.:
    After this, you can start the emulator by simply typing 'xroar'
 followed by any command line options.
 
-   ROM images should be placed in a directory you create under your
-'HOME' named '~/Library/XRoar/roms/' (not the system directory,
-'/Library/').  Name any configuration file you create
-'~/Library/XRoar/xroar.conf'.
-
-   The Mac OS X+ build provides a menu for access to certain features,
-and often accepts the more familiar '<Command>+KEY' in place of the
-'<CTRL>+KEY' shortcuts listed in this manual.  It does not provide
-control dialog boxes.
-
-Windows binary package
-----------------------
-
-Download and unzip the appropriate '.zip' distribution for your system.
-
-   The easiest way forward is to simply put ROM images into the
-directory created when you unzip the distribution, and then run the
-'.exe' straight from there, or see *note Prerequisites:: for information
-on keeping them in a location that should work after installing new
-versions.
-
-   You can also put any configuration file ('xroar.conf') in the same
-directory.  Again, this can also be placed in a common location.  *Note
-The configuration file::.
-
-   Note when troubleshooting that the logging from the Windows binary is
-probably only going to be visible if you run it with the '-C' option
-(must be the first option) to allocate a console.
-
-   The Windows build provides a reasonably full user-interface,
-including menus and control dialogs.
+   For example, run 'xroar --help' to display a list of the supported
+command line options.  Each of the command line options can also appear
+in a configuration file, which should be called
+'~/Library/XRoar/xroar.conf' (under your 'HOME' directory).  You can
+configure many defaults and even extra machines and cartridges in this
+file.  See *note Configuring XRoar:: for more details.
 
 Building from source
 ====================
 
-Dependencies
-------------
+It is straightforward to build XRoar from source on any Unix-like OS so
+long as you have the normal build tools installed, and satisfy a few
+dependencies.
 
-If there is no binary package for your system, you will have to build
-from source.  XRoar can use various backend toolkits, and you will need
-to ensure you have their development files installed.  If you're using
-Debian, this can (at the time of writing) be achieved with the following
-simple command:
+   The binary packages for Windows are cross-compiled under Linux using
+MinGW; it may be possible to build natively using something like MSYS2
+or Cygwin, but this is untested.
 
-     $ sudo apt install build-essential libsndfile1-dev libgtk2.0-dev \
-             libgtkglext1-dev libasound2-dev libpng-dev
+   XRoar depends on external libraries for most aspects of its user
+interface:
 
-   Under Mac OS X+, first be sure to install Apple's Xcode
-(https://developer.apple.com/xcode/) package.  The easiest way to then
-ensure you have XRoar's dependencies available is to use a system like
-Homebrew (https://brew.sh/) or MacPorts (http://www.macports.org/).  For
-Homebrew, the following command will install the required dependencies:
+   * GTK+ 3 (https://www.gtk.org/) is recommended, and provides video,
+     menus, and dialogs.  It may be possible to use GTK+ under Mac OS
+     X+, but this is untested.
 
-     $ brew install libsndfile sdl2
+   * SDL 2 (https://libsdl.org/) provides a simpler interface, but extra
+     code for Mac OS X+ adds some basic menus and file requester
+     dialogs.  For non-Linux systems, it may also be the easiest way to
+     get support for joysticks and audio.
 
-   Otherwise, you'll have to do a bit of platform-specific research to
-ensure you have all the dependencies for a full build:
+   * PulseAudio or ALSA can also be used for audio support.  Older code
+     still exists for OSS and Jack, but these have not been tested for a
+     while.
 
-   GTK+ (http://www.gtk.org/), the GIMP toolkit, provides the most
-full-featured user interface.  It is only usable as such if you also
-have GtkGlExt (http://projects.gnome.org/gtkglext/), an OpenGL extension
-used to provide video output.  Otherwise, it can provide a file
-requester for use by other user interfaces.  Version 2 only.
+   * libpng (http://www.libpng.org/pub/png/libpng.html) is recommended,
+     and allows the saving of screenshots in PNG format.
 
-   SDL (http://www.libsdl.org/), Simple Directmedia Layer, provides a
-slightly more basic user experience.  Menus are added using native code
-under Windows and Mac OS X+; any other target using SDL will support
-only keyboard shortcuts.  Unless you are building for Linux, SDL is
-required to use joysticks.  Version 2 required.
+   Under Debian, these dependencies can be satisfied with this simple
+invocation of Apt:
 
-   If libpng (http://www.libpng.org/pub/png/libpng.html) is available,
-screenshots can be saved in PNG format.
+     $ sudo apt install build-essential libgtk-3-dev \
+                        libpulse-dev libpng-dev
 
-   POSIX Regular Expressions are used in option parsing, so TRE
-(https://laurikari.net/tre/about/) is required on non-POSIX platforms
-(e.g.  Windows).
-
-   Other supported audio APIs: OSS, ALSA, PulseAudio, CoreAudio.  Some
-other options are still in the code base, but have not been tested in a
-while.
-
-   libsndfile (http://www.mega-nerd.com/libsndfile/) is recommended to
-enable support for using audio files as cassette images.
-
-Compilation
------------
-
-Once you have the dependencies, building XRoar follows a familiar
-procedure:(1)
+   XRoar uses the GNU Build System (Autotools), so the compilation
+process should be very familiar.  The following process compiles XRoar
+and installs it into '/usr/local', like most other software built this
+way:
 
      $ gzip -dc xroar-1.6.5.tar.gz | tar xvf -
      $ cd xroar-1.6.5
@@ -237,36 +313,11 @@ procedure:(1)
      $ make
      $ sudo make install
 
+   If you have cloned the git repository, you will also need GNU Build
+System packages installed ('autoconf', etc.)  Running './autogen.sh'
+should then generate the configure script, which you can then run as
+normal.
+
    The 'configure' script has a lot of options guiding what it tests
 for, specifying cross-compilation, changing the install path, etc.  List
 them all with the '--help' option.
-
-   By default, 'configure' will set up an install _prefix_ of
-'/usr/local', but this can be changed by using the '--prefix=PATH'
-option.
-
-   Once built, run 'make install' as root (or use 'sudo', as in the
-example above) to install the binary and info documentation on your
-system.  The executable is called 'xroar'.  ROM images should be placed
-either in your home directory as '~/.xroar/roms/', or under the
-installation _prefix_ as '_prefix_/share/xroar/roms/'.  Any
-configuration file should be created as '~/.xroar/xroar.conf'.
-
-   XRoar can be built on one platform to run on another.  The Windows
-binary package is built like this.  To specify a cross-compile, use the
-'--host=HOST' argument to 'configure'.  For example, to build for
-Windows, you might use './configure --host=i686-w64-mingw32'.  Getting
-everything _just so_ for a cross-build can be a tricky procedure, and
-the details are beyond the scope of this manual.
-
-   XRoar can be built to a WebAssembly target using Emscripten
-(https://emscripten.org/).  With the SDK installed, run 'emconfigure
-./configure --enable-wasm' to set up the build environment.  Build with
-'emmake make'.  HTML/JavaScript and CSS examples for interfacing to the
-output are included in the 'wasm/' subdirectory.
-
-   ---------- Footnotes ----------
-
-   (1) If you have cloned the git repository, you will need GNU Build
-System packages installed: 'autoconf', etc.  Running './autogen.sh'
-should then generate the configure script, which you can run as normal.
