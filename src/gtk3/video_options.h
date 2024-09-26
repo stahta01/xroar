@@ -20,14 +20,11 @@
 #define XROAR_GTK3_VIDEO_OPTIONS_H_
 
 struct ui_gtk3_interface;
+struct uigtk3_dialog;
 
-void gtk3_vo_create_window(struct ui_gtk3_interface *uigtk3);
-void gtk3_vo_toggle_window(GtkToggleAction *current, gpointer user_data);
+struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *);
 
 void gtk3_vo_update_state(struct ui_gtk3_interface *,
 			  int tag, int value, const void *data);
-
-void gtk3_vo_update_tv_input(struct ui_gtk3_interface *uigtk3, int value);
-void gtk3_vo_update_cmp_renderer(struct ui_gtk3_interface *uigtk3, int value);
 
 #endif

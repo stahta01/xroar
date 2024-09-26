@@ -20,8 +20,9 @@
 #define XROAR_WINDOWS_VIDEO_OPTIONS_H_
 
 struct ui_windows32_interface;
+struct uiw32_dialog;
 
-void windows32_vo_create_window(struct ui_windows32_interface *);
+struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *);
 
 void windows32_vo_update_state(struct ui_windows32_interface *,
 			       int tag, int value, const void *data);

@@ -292,9 +292,10 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 
 static void coco3_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool coco3_set_pause(struct machine *m, int state);
+static void coco3_ui_set_picture(void *, int tag, void *smsg);
+static void coco3_ui_set_tv_input(void *, int tag, void *smsg);
 static void coco3_ui_set_text_invert(void *, int tag, void *smsg);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
-static void coco3_set_composite(struct machine *, _Bool);
 static void coco3_set_frameskip(struct machine *m, unsigned fskip);
 static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
 
@@ -390,7 +391,6 @@ static struct part *coco3_allocate(void) {
 
 	m->set_pause = coco3_set_pause;
 	m->get_interface = coco3_get_interface;
-	m->set_composite = coco3_set_composite;
 	m->set_frameskip = coco3_set_frameskip;
 	m->set_ratelimit = coco3_set_ratelimit;
 
@@ -506,6 +506,8 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->msgr_client_id = messenger_client_register();
 
 	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_picture, mcc3));
+	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_tv_input, mcc3));
 	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_text_invert, mcc3));
 	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_keymap, mcc3));
 
@@ -640,6 +642,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
 	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
 	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
+	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
 	ui_update_state(-1, ui_tag_vdg_inverse, mcc3->inverted_text, NULL);
 
 	// Default all PIA connections to unconnected (no source, no sink)
@@ -980,6 +983,52 @@ static _Bool coco3_set_pause(struct machine *m, int state) {
 	return mcc3->CPU->halt;
 }
 
+static void coco3_ui_set_picture(void *sptr, int tag, void *smsg) {
+	struct machine_coco3 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_picture);
+	int picture = ui_msg_adjust_value_range(uimsg, mp->vo->picture, VO_PICTURE_ACTION,
+						VO_PICTURE_ZOOMED, VO_PICTURE_UNDERSCAN,
+						UI_ADJUST_FLAG_KEEP_AUTO);
+	vo_set_viewport(mp->vo, picture);
+}
+
+static void coco3_ui_set_tv_input(void *sptr, int tag, void *smsg) {
+	struct machine_coco3 *mcc3 = sptr;
+	struct machine *m = &mcc3->public;
+	struct machine_config *mc = m->config;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_tv_input);
+
+	mc->tv_input = ui_msg_adjust_value_range(uimsg, mc->tv_input, TV_INPUT_SVIDEO,
+						 TV_INPUT_SVIDEO, TV_INPUT_RGB,
+						 UI_ADJUST_FLAG_CYCLE);
+	switch (mc->tv_input) {
+	default:
+	case TV_INPUT_SVIDEO:
+		vo_set_signal(mcc3->vo, VO_SIGNAL_SVIDEO);
+		tcc1014_set_composite(mcc3->GIME, 1);
+		break;
+
+	case TV_INPUT_CMP_KBRW:
+		vo_set_signal(mcc3->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase, 180);
+		tcc1014_set_composite(mcc3->GIME, 1);
+		break;
+
+	case TV_INPUT_CMP_KRBW:
+		vo_set_signal(mcc3->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase, 0);
+		tcc1014_set_composite(mcc3->GIME, 1);
+		break;
+
+	case TV_INPUT_RGB:
+		vo_set_signal(mcc3->vo, VO_SIGNAL_RGB);
+		tcc1014_set_composite(mcc3->GIME, 0);
+		break;
+	}
+}
+
 static void coco3_ui_set_text_invert(void *sptr, int tag, void *smsg) {
 	struct machine_coco3 *mcc3 = sptr;
 	struct ui_state_message *uimsg = smsg;
@@ -1008,11 +1057,6 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 		return update_audio_from_tape;
 	}
 	return NULL;
-}
-
-static void coco3_set_composite(struct machine *m, _Bool value) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	tcc1014_set_composite(mcc3->GIME, value);
 }
 
 static void coco3_set_frameskip(struct machine *m, unsigned fskip) {

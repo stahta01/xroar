@@ -303,6 +303,8 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 
 static void dragon_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool dragon_set_pause(struct machine *m, int state);
+static void dragon_ui_set_picture(void *, int tag, void *smsg);
+static void dragon_ui_set_tv_input(void *, int tag, void *smsg);
 static void dragon_ui_set_text_invert(void *, int tag, void *smsg);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
 static void dragon_set_frameskip(struct machine *m, unsigned fskip);
@@ -497,6 +499,8 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	md->msgr_client_id = messenger_client_register();
 
 	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_picture, md));
+	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_tv_input, md));
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_text_invert, md));
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_keymap, md));
 
@@ -577,6 +581,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	md->VDG->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
 	md->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vdg_render_line, md);
 	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
+	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
 	ui_update_state(-1, ui_tag_vdg_inverse, md->inverted_text, NULL);
 
 	// Active area is constant
@@ -1157,6 +1162,44 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 		break;
 	}
 	return md->CPU->halt;
+}
+
+static void dragon_ui_set_picture(void *sptr, int tag, void *smsg) {
+	struct machine_dragon_common *md = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_picture);
+	int picture = ui_msg_adjust_value_range(uimsg, md->vo->picture, VO_PICTURE_TITLE,
+						VO_PICTURE_ZOOMED, VO_PICTURE_UNDERSCAN,
+						UI_ADJUST_FLAG_KEEP_AUTO);
+	vo_set_viewport(md->vo, picture);
+}
+
+static void dragon_ui_set_tv_input(void *sptr, int tag, void *smsg) {
+	struct machine_dragon_common *md = sptr;
+	struct machine *m = &md->public;
+	struct machine_config *mc = m->config;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_tv_input);
+
+	mc->tv_input = ui_msg_adjust_value_range(uimsg, mc->tv_input, TV_INPUT_SVIDEO,
+						 TV_INPUT_SVIDEO, TV_INPUT_CMP_KRBW,
+						 UI_ADJUST_FLAG_CYCLE);
+	switch (mc->tv_input) {
+	default:
+	case TV_INPUT_SVIDEO:
+		vo_set_signal(md->vo, VO_SIGNAL_SVIDEO);
+		break;
+
+	case TV_INPUT_CMP_KBRW:
+		vo_set_signal(md->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_phase, 180);
+		break;
+
+	case TV_INPUT_CMP_KRBW:
+		vo_set_signal(md->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_phase, 0);
+		break;
+	}
 }
 
 static void dragon_ui_set_text_invert(void *sptr, int tag, void *smsg) {

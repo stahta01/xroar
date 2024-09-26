@@ -53,6 +53,7 @@
 
 #include "sdl2/common.h"
 #include "windows32/common_windows32.h"
+#include "windows32/dialog.h"
 #include "windows32/drivecontrol.h"
 #include "windows32/printercontrol.h"
 #include "windows32/resources.h"
@@ -113,6 +114,9 @@ static void *ui_windows32_new(void *cfg) {
 	// Register with messenger
 	uiw32->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
@@ -132,6 +136,7 @@ static void *ui_windows32_new(void *cfg) {
 
 static void ui_windows32_free(void *sptr) {
 	struct ui_windows32_interface *uiw32 = sptr;
+	uiw32_dialog_shutdown();
 	messenger_client_unregister(uiw32->msgr_client_id);
 	DestroyMenu(uiw32->top_menu);
 	ui_sdl_free(uiw32);
@@ -154,7 +159,7 @@ static void windows32_create_menus(struct ui_windows32_interface *uiw32) {
 	setup_help_menu(uiw32);
 	windows32_dc_create_window(uiw32);
 	windows32_tc_create_window(uiw32);
-	windows32_vo_create_window(uiw32);
+	(void)uiw32_tv_dialog_new(uiw32);
 	windows32_pc_create_window(uiw32);
 }
 
@@ -478,17 +483,17 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// TV controls:
 	case ui_tag_tv_dialog:
-		windows32_vo_update_state(uiw32, ui_tag_tv_dialog, 0, NULL);
+		ui_update_state(-1, ui_tag_tv_dialog, UI_NEXT, NULL);
 		break;
 
 	case ui_tag_fullscreen:
 		xroar_set_fullscreen(1, XROAR_NEXT);
 		break;
 	case ui_tag_ccr:
-		vo_set_cmp_ccr(xroar.vo_interface, 1, tag_value);
+		ui_update_state(-1, ui_tag_ccr, tag_value, NULL);
 		break;
 	case ui_tag_tv_input:
-		xroar_set_tv_input(1, tag_value);
+		ui_update_state(-1, ui_tag_tv_input, tag_value, NULL);
 		break;
 	case ui_tag_vdg_inverse:
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
@@ -594,23 +599,16 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	// Video
 
-	case ui_tag_ccr:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
-		windows32_vo_update_state(uiw32, tag, value, data);
-		break;
-
 	case ui_tag_tv_input:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
 		windows32_vo_update_state(uiw32, tag, value, data);
 		break;
 
-	case ui_tag_tv_dialog:
 	case ui_tag_gain:
 	case ui_tag_brightness:
 	case ui_tag_contrast:
 	case ui_tag_saturation:
 	case ui_tag_hue:
-	case ui_tag_picture:
 	case ui_tag_ntsc_scaling:
 	case ui_tag_cmp_fs:
 	case ui_tag_cmp_fsc:
@@ -675,6 +673,18 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	switch (tag) {
 
 	// Video
+
+	case ui_tag_tv_dialog:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	case ui_tag_ccr:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
+		break;
+
+	case ui_tag_tv_input:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
+		break;
 
 	case ui_tag_vdg_inverse:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));

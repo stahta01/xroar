@@ -119,6 +119,9 @@ struct vo_interface {
 	_Bool is_fullscreen;
 	_Bool show_menubar;
 
+	// Messenger client id
+	int msgr_client_id;
+
 	// Renderer
 	struct vo_render *renderer;
 
@@ -255,6 +258,10 @@ extern const uint8_t vo_cmp_lut_5bit[2][32][3];
 
 void *vo_interface_new(size_t isize);
 
+// Initialise common features of a vo_interface
+
+void vo_interface_init(struct vo_interface *);
+
 // Calls free() delegate then frees structure
 
 void vo_free(void *);
@@ -282,11 +289,6 @@ void vo_set_draw_area(struct vo_interface *, int x, int y, int w, int h);
 inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _Bool value) {
 	vo_render_set_ntsc_scaling(vo->renderer, notify, value);
 }
-
-// Select cross-colour renderer
-//     int ccr;  // VO_CMP_CCR_*
-
-void vo_set_cmp_ccr(struct vo_interface *vo, _Bool notify, int value);
 
 // Configure composite video
 

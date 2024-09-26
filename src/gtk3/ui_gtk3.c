@@ -48,6 +48,7 @@
 #include "xroar.h"
 
 #include "gtk3/common.h"
+#include "gtk3/dialog.h"
 #include "gtk3/drivecontrol.h"
 #include "gtk3/event_handlers.h"
 #include "gtk3/printercontrol.h"
@@ -158,6 +159,12 @@ static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	vo_zoom_out(vo);
 }
 
+static void toggle_tv_window(GtkToggleAction *current, gpointer user_data) {
+	struct ui_gtk3_interface *uigtk3 = user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(uigtk3->msgr_client_id, ui_tag_tv_dialog, val, NULL);
+}
+
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 	(void)user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
@@ -172,18 +179,16 @@ static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {
 
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	xroar_set_tv_input(0, val);
-	gtk3_vo_update_tv_input(uigtk3, val);
+	ui_update_state(-1, ui_tag_tv_input, val, NULL);
 }
 
 static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
+	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
-	xroar_set_ccr(0, val);
-	gtk3_vo_update_cmp_renderer(uigtk3, val);
+	ui_update_state(-1, ui_tag_ccr, val, NULL);
 }
 
 static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
@@ -354,7 +359,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	// View
 	{ .name = "VideoOptionsAction", .label = "TV _controls",
 	  .accelerator = "<control><shift>V",
-	  .callback = G_CALLBACK(gtk3_vo_toggle_window) },
+	  .callback = G_CALLBACK(toggle_tv_window) },
 	{ .name = "InverseTextAction", .label = "_Inverse text",
 	  .accelerator = "<shift><control>I",
 	  .callback = G_CALLBACK(toggle_inverse_text) },
@@ -411,6 +416,9 @@ static void *ui_gtk3_new(void *cfg) {
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
@@ -511,7 +519,7 @@ static void *ui_gtk3_new(void *cfg) {
 	gtk3_create_tc_window(uigtk3);
 
 	// Create (hidden) video options window
-	gtk3_vo_create_window(uigtk3);
+	(void)gtk3_tv_dialog_new(uigtk3);
 
 	// Video output
 	if (!gtk3_vo_init(uigtk3)) {
@@ -553,6 +561,7 @@ static void *ui_gtk3_new(void *cfg) {
 static void ui_gtk3_free(void *sptr) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	DELEGATE_SAFE_CALL(uigtk3->public.filereq_interface->free);
+	uigtk3_dialog_shutdown();
 	slist_free_full(uigtk3->rm_list, (slist_free_func)uigtk3_radio_menu_free);
 	slist_free_full(uigtk3->cbtv_list, (slist_free_func)uigtk3_cbt_value_free);
 	g_object_unref(uigtk3->builder);
@@ -618,22 +627,11 @@ static void ui_gtk3_update_state(void *sptr, int tag, int value, const void *dat
 		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/FullScreen", value ? TRUE : FALSE, set_fullscreen);
 		break;
 
-	case ui_tag_ccr:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->ccr_radio_menu, value);
-		gtk3_vo_update_cmp_renderer(uigtk3, value);
-		break;
-
-	case ui_tag_tv_input:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->tv_input_radio_menu, value);
-		gtk3_vo_update_tv_input(uigtk3, value);
-		break;
-
 	case ui_tag_gain:
 	case ui_tag_brightness:
 	case ui_tag_contrast:
 	case ui_tag_saturation:
 	case ui_tag_hue:
-	case ui_tag_picture:
 	case ui_tag_ntsc_scaling:
 	case ui_tag_cmp_fs:
 	case ui_tag_cmp_fsc:
@@ -704,6 +702,18 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	switch (tag) {
 
 	// Video
+
+	case ui_tag_tv_dialog:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/VideoOptions", value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_ccr:
+		uigtk3_radio_menu_set_current_value(uigtk3->ccr_radio_menu, value);
+		break;
+
+	case ui_tag_tv_input:
+		uigtk3_radio_menu_set_current_value(uigtk3->tv_input_radio_menu, value);
+		break;
 
 	case ui_tag_vdg_inverse:
 		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE);

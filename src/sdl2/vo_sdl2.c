@@ -95,6 +95,8 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	struct vo_interface *vo = &vosdl->vo_interface;
 	uisdl2->ui_interface.vo_interface = vo;
 
+	vo_interface_init(vo);
+
 	switch (vo_cfg->pixel_fmt) {
 	default:
 		vo_cfg->pixel_fmt = VO_RENDER_FMT_RGBA8;

@@ -255,20 +255,17 @@ int cocoa_super_all_keys = 0;
 		uimac->vo.fullscreen = !uimac->vo.fullscreen;
 		xroar_set_fullscreen(0, uimac->vo.fullscreen);
 		break;
-	case ui_tag_tv_input:
-		uimac->vo.tv_input = value;
-		xroar_set_tv_input(0, value);
+	case ui_tag_ccr:
+		ui_update_state(-1, ui_tag_ccr, value, NULL);
 		break;
 	case ui_tag_picture:
-		uimac->vo.picture = value;
-		xroar_set_picture(0, value);
+		ui_update_state(-1, ui_tag_picture, value, NULL);
 		break;
 	case ui_tag_ntsc_scaling:
 		vo_set_ntsc_scaling(xroar.vo_interface, 0, !xroar.vo_interface->renderer->ntsc_scaling);
 		break;
-	case ui_tag_ccr:
-		uimac->vo.ccr = value;
-		xroar_set_ccr(0, value);
+	case ui_tag_tv_input:
+		ui_update_state(-1, ui_tag_tv_input, value, NULL);
 		break;
 	case ui_tag_cmp_fs:
 		vo_set_cmp_fs(xroar.vo_interface, 0, value);
@@ -373,8 +370,8 @@ int cocoa_super_all_keys = 0;
 	case ui_tag_vdg_inverse:
 		[item setState:(uimac->vo.invert_text ? NSOnState : NSOffState)];
 		break;
-	case ui_tag_tv_input:
-		[item setState:((value == uimac->vo.tv_input) ? NSOnState : NSOffState)];
+	case ui_tag_ccr:
+		[item setState:((value == uimac->vo.ccr) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_picture:
 		[item setState:((value == uimac->vo.picture) ? NSOnState : NSOffState)];
@@ -382,8 +379,8 @@ int cocoa_super_all_keys = 0;
 	case ui_tag_ntsc_scaling:
 		[item setState:((vr && vr->ntsc_scaling) ? NSOnState : NSOffState)];
 		break;
-	case ui_tag_ccr:
-		[item setState:((value == uimac->vo.ccr) ? NSOnState : NSOffState)];
+	case ui_tag_tv_input:
+		[item setState:((value == uimac->vo.tv_input) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_fs:
 		[item setState:((vr && vr->cmp.fs == value) ? NSOnState : NSOffState)];
@@ -690,7 +687,6 @@ static void setup_view_menu(void) {
 	NSMenuItem *view_menu_item;
 	NSMenuItem *item;
 	NSMenu *submenu;
-	int i;
 
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
@@ -702,17 +698,7 @@ static void setup_view_menu(void) {
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Picture area"];
-
-	for (i = 0; i < NUM_VO_PICTURE; i++) {
-		NSString *s = [[NSString alloc] initWithUTF8String:vo_picture_name[i]];
-		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:UIMAC_TAGV(ui_tag_picture, i)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[submenu addItem:item];
-		[item release];
-		[s release];
-	}
-
+	cocoa_update_radio_menu_from_enum(submenu, vo_viewport_list, ui_tag_picture);
 	item = [[NSMenuItem alloc] initWithTitle:@"Picture area" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
@@ -1163,6 +1149,9 @@ static void *ui_cocoa_new(void *cfg) {
 	// Register with messenger
 	uimac->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
@@ -1363,18 +1352,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		uimac->vo.fullscreen = value ? 1 : 0;
 		break;
 
-	case ui_tag_tv_input:
-		uimac->vo.tv_input = value;
-		break;
-
-	case ui_tag_picture:
-		uimac->vo.picture = value;
-		break;
-
-	case ui_tag_ccr:
-		uimac->vo.ccr = value;
-		break;
-
 	/* Keyboard */
 
 	case ui_tag_hkbd_layout:
@@ -1419,6 +1396,18 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	switch (tag) {
 
 	// Video
+
+	case ui_tag_ccr:
+		uimac->vo.ccr = value;
+		break;
+
+	case ui_tag_picture:
+		uimac->vo.picture = value;
+		break;
+
+	case ui_tag_tv_input:
+		uimac->vo.tv_input = value;
+		break;
 
 	case ui_tag_vdg_inverse:
 		uimac->vo.invert_text = value;

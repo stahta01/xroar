@@ -18,23 +18,19 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <stdlib.h>
 
 #include "delegate.h"
 #include "xalloc.h"
 
+#include "messenger.h"
 #include "module.h"
+#include "ui.h"
 #include "vo.h"
 #include "vo_render.h"
 #include "xconfig.h"
 #include "xroar.h"
-
-const char *vo_picture_name[NUM_VO_PICTURE] = {
-	"Zoomed (512x384)",
-	"Title (640x480)",
-	"Action (720x540)",
-	"Underscan (736x552)"
-};
 
 // It's important that the order here is correct, as UI modules index into the
 // list for descriptive text.
@@ -49,6 +45,7 @@ struct xconfig_enum vo_cmp_ccr_list[] = {
 };
 
 struct xconfig_enum vo_viewport_list[] = {
+	{ XC_ENUM_INT("auto", UI_AUTO, "Automatic") },
 	{ XC_ENUM_INT("zoomed", VO_PICTURE_ZOOMED, "Zoomed (512x384)") },
 	{ XC_ENUM_INT("title", VO_PICTURE_TITLE, "Title (640x480)") },
 	{ XC_ENUM_INT("action", VO_PICTURE_ACTION, "Action (720x540)") },
@@ -140,6 +137,8 @@ const uint8_t vo_cmp_lut_5bit[2][32][3] = {
 	}
 };
 
+static void vo_ui_set_ccr(void *, int tag, void *smsg);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Allocates at least enough space for (struct vo_interface)
@@ -152,10 +151,18 @@ void *vo_interface_new(size_t isize) {
 	return vo;
 }
 
+// Initialise common features of a vo_interface
+
+void vo_interface_init(struct vo_interface *vo) {
+	vo->msgr_client_id = messenger_client_register();
+	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_ccr, vo));
+}
+
 // Calls free() delegate then frees structure
 
 void vo_free(void *sptr) {
 	struct vo_interface *vo = sptr;
+	messenger_client_unregister(vo->msgr_client_id);
 	DELEGATE_SAFE_CALL(vo->free);
 	free(vo);
 }
@@ -287,16 +294,6 @@ extern inline void vo_set_ntsc_scaling(struct vo_interface *vo, _Bool notify, _B
 
 // Select cross-colour renderer
 
-void vo_set_cmp_ccr(struct vo_interface *vo, _Bool notify, int value) {
-	if (vo) {
-		vo->cmp_ccr = value;
-		update_render_parameters(vo);
-	}
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ccr, value, NULL);
-	}
-}
-
 extern inline void vo_set_cmp_fs(struct vo_interface *vo, _Bool notify, int value);
 extern inline void vo_set_cmp_fsc(struct vo_interface *vo, _Bool notify, int value);
 extern inline void vo_set_cmp_system(struct vo_interface *vo, _Bool notify, int value);
@@ -391,4 +388,17 @@ void vo_parse_geometry(const char *str, struct vo_geometry *geometry) {
 
 		str = next;
 	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void vo_ui_set_ccr(void *sptr, int tag, void *smsg) {
+	struct vo_interface *vo = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_ccr);
+
+	vo->cmp_ccr = ui_msg_adjust_value_range(uimsg, vo->cmp_ccr, VO_CMP_CCR_PALETTE,
+						VO_CMP_CCR_PALETTE, VO_CMP_CCR_SIMULATED,
+						UI_ADJUST_FLAG_CYCLE);
+	update_render_parameters(vo);
 }

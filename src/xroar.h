@@ -166,6 +166,14 @@ struct xroar {
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
 	struct vdrive_interface *vdrive_interface;
+
+	int msgr_client_id;
+
+	struct {
+		struct {
+			int picture;
+		} vo;
+	} state;
 };
 
 extern struct xroar xroar;
@@ -201,9 +209,6 @@ void xroar_eject_disk(int drive);
 _Bool xroar_set_write_enable(_Bool notify, int drive, int action);
 _Bool xroar_set_write_back(_Bool notify, int drive, int action);
 void xroar_insert_hd_file(int drive, const char *filename);
-void xroar_set_ccr(_Bool notify, int action);
-void xroar_set_tv_input(_Bool notify, int action);
-void xroar_set_picture(_Bool notify, int action);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);

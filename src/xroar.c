@@ -230,7 +230,7 @@ static struct private_cfg private_cfg = {
 	.cart.mpi.initial_slot = ANY_AUTO,
 	.tape.fast = 1,
 	.tape.pad_auto = 1,
-	.vo.picture = ANY_AUTO,
+	.vo.picture = UI_AUTO,
 	.vo.ntsc_scaling = 1,
 	.vo.ccr = VO_CMP_CCR_5BIT,
 	.vo.brightness = 52,
@@ -286,6 +286,8 @@ static void helptext(void);
 static void versiontext(void);
 static void config_print_all(FILE *f, _Bool all);
 #endif
+
+static void xroar_ui_set_picture(void *, int tag, void *smsg);
 
 static int load_disk_to_drive = 0;
 
@@ -1003,6 +1005,13 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 #endif
 #endif
 
+	// Register with messenger.
+	xroar.msgr_client_id = messenger_client_register();
+
+	// Receive notifications when the picture (viewport) is changed by user
+	// so we know to stop trying to set it automatically.
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
+
 	// UI module
 	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
 	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
@@ -1027,6 +1036,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 #endif
 #endif
+
+	ui_update_state(-1, ui_tag_ccr, private_cfg.vo.ccr, NULL);
 
 	if (xroar.ui_interface) {
 		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
@@ -1062,6 +1073,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	// Notify UI of starting options:
+	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
 	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_fullscreen, xroar_ui_cfg.vo_cfg.fullscreen, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_layout, xroar.cfg.kbd.layout, NULL);
 	DELEGATE_SAFE_CALL(xroar.ui_interface->update_state, ui_tag_hkbd_lang, xroar.cfg.kbd.lang, NULL);
@@ -1543,95 +1555,14 @@ void xroar_insert_hd_file(int drive, const char *filename) {
 	xroar.cfg.file.hd[drive] = xstrdup(filename);
 }
 
-void xroar_set_ccr(_Bool notify, int action) {
-	if (action < 0 || action >= NUM_VO_CMP_CCR) {
-		action = VO_CMP_CCR_PALETTE;
-	}
-	private_cfg.vo.ccr = action;
-	vo_set_cmp_ccr(xroar.vo_interface, notify, private_cfg.vo.ccr);
-}
+// Receive notifications when the picture (viewport) is changed by user so we
+// know to stop trying to set it automatically.
 
-void xroar_set_tv_input(_Bool notify, int action) {
-	_Bool is_coco3 = (strcmp(xroar.machine_config->architecture, "coco3") == 0);
-
-	if (action == XROAR_NEXT) {
-		action = xroar.machine_config->tv_input + 1;
-	}
-
-	if (action < 0 ||
-	    (!is_coco3 && action >= NUM_TV_INPUTS_DRAGON) ||
-	    (is_coco3 && action >= NUM_TV_INPUTS_COCO3)) {
-		action = TV_INPUT_SVIDEO;
-		notify = 1;
-	}
-
-	xroar.machine_config->tv_input = action;
-
-	switch (action) {
-	default:
-	case TV_INPUT_SVIDEO:
-		vo_set_signal(xroar.vo_interface, VO_SIGNAL_SVIDEO);
-		if (xroar.machine->set_composite)
-			xroar.machine->set_composite(xroar.machine, 1);
-		break;
-
-	case TV_INPUT_CMP_KBRW:
-		vo_set_signal(xroar.vo_interface, VO_SIGNAL_CMP);
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_cmp_phase, 180);
-		if (xroar.machine->set_composite)
-			xroar.machine->set_composite(xroar.machine, 1);
-		break;
-
-	case TV_INPUT_CMP_KRBW:
-		vo_set_signal(xroar.vo_interface, VO_SIGNAL_CMP);
-		DELEGATE_SAFE_CALL(xroar.vo_interface->set_cmp_phase, 0);
-		if (xroar.machine->set_composite)
-			xroar.machine->set_composite(xroar.machine, 1);
-		break;
-
-	case TV_INPUT_RGB:
-		vo_set_signal(xroar.vo_interface, VO_SIGNAL_RGB);
-		if (xroar.machine->set_composite)
-			xroar.machine->set_composite(xroar.machine, 0);
-		break;
-	}
-
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_tv_input, xroar.machine_config->tv_input, NULL);
-	}
-}
-
-void xroar_set_picture(_Bool notify, int action) {
-	if (!xroar.vo_interface)
-		return;
-
-	int picture = xroar.vo_interface->picture;
-	switch (action) {
-	case XROAR_PREV:
-		picture--;
-		break;
-
-	case XROAR_NEXT:
-		picture++;
-		break;
-
-	default:
-		picture = action;
-		break;
-	}
-
-	if (picture < 0)
-		picture = 0;
-	if (picture >= NUM_VO_PICTURE)
-		picture = NUM_VO_PICTURE - 1;
-
-	private_cfg.vo.picture = picture;
-
-	vo_set_viewport(xroar.vo_interface, picture);
-
-	if (notify && xroar.ui_interface) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_picture, picture, NULL);
-	}
+static void xroar_ui_set_picture(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	emu->state.vo.picture = uimsg->value;
 }
 
 void xroar_set_ratelimit(int action) {
@@ -1922,16 +1853,8 @@ void xroar_connect_machine(void) {
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 2);
 		vdisk_set_interleave(VDISK_DOUBLE_DENSITY, 2);
 	}
-	xroar_set_ccr(1, private_cfg.vo.ccr);
-	xroar_set_tv_input(1, xroar.machine_config->tv_input);
 
-	int old_picture = private_cfg.vo.picture;
-	int picture = old_picture;
-	if (picture == ANY_AUTO) {
-		picture = is_coco3 ? VO_PICTURE_ACTION : VO_PICTURE_TITLE;
-	}
-	xroar_set_picture(1, picture);
-	private_cfg.vo.picture = old_picture;
+	ui_update_state(xroar.msgr_client_id, ui_tag_picture, xroar.state.vo.picture, NULL);
 }
 
 void xroar_configure_machine(struct machine_config *mc) {

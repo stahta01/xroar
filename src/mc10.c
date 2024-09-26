@@ -197,6 +197,8 @@ static void mc10_vdg_update_mode(void *sptr);
 static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
 
 static void mc10_ui_set_keymap(void *, int tag, void *smsg);
+static void mc10_ui_set_picture(void *, int tag, void *smsg);
+static void mc10_ui_set_tv_input(void *, int tag, void *smsg);
 static void mc10_ui_set_text_invert(void *, int tag, void *smsg);
 static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_set_frameskip(struct machine *m, unsigned fskip);
@@ -378,6 +380,8 @@ static _Bool mc10_finish(struct part *p) {
 	mp->msgr_client_id = messenger_client_register();
 
 	// Join the ui messenger groups we're interested in
+	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_picture, mp));
+	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_tv_input, mp));
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_text_invert, mp));
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_keymap, mp));
 
@@ -441,6 +445,7 @@ static _Bool mc10_finish(struct part *p) {
         mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
         mp->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, mc10_vdg_render_line, mp);
         mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
+	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
 	ui_update_state(-1, ui_tag_vdg_inverse, mp->inverted_text, NULL);
 
 	// Active area is constant
@@ -863,6 +868,44 @@ static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
 	m->keyboard.type = type;
 	keyboard_set_keymap(mp->keyboard.interface, type);
 	uimsg->value = type;
+}
+
+static void mc10_ui_set_picture(void *sptr, int tag, void *smsg) {
+	struct machine_mc10 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_picture);
+	int picture = ui_msg_adjust_value_range(uimsg, mp->vo->picture, VO_PICTURE_TITLE,
+						VO_PICTURE_ZOOMED, VO_PICTURE_UNDERSCAN,
+						UI_ADJUST_FLAG_KEEP_AUTO);
+	vo_set_viewport(mp->vo, picture);
+}
+
+static void mc10_ui_set_tv_input(void *sptr, int tag, void *smsg) {
+	struct machine_mc10 *mp = sptr;
+	struct machine *m = &mp->machine;
+	struct machine_config *mc = m->config;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_tv_input);
+
+	mc->tv_input = ui_msg_adjust_value_range(uimsg, mc->tv_input, TV_INPUT_SVIDEO,
+						 TV_INPUT_SVIDEO, TV_INPUT_CMP_KRBW,
+						 UI_ADJUST_FLAG_CYCLE);
+	switch (mc->tv_input) {
+	default:
+	case TV_INPUT_SVIDEO:
+		vo_set_signal(mp->vo, VO_SIGNAL_SVIDEO);
+		break;
+
+	case TV_INPUT_CMP_KBRW:
+		vo_set_signal(mp->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(mp->vo->set_cmp_phase, 180);
+		break;
+
+	case TV_INPUT_CMP_KRBW:
+		vo_set_signal(mp->vo, VO_SIGNAL_CMP);
+		DELEGATE_SAFE_CALL(mp->vo->set_cmp_phase, 0);
+		break;
+	}
 }
 
 static void mc10_ui_set_text_invert(void *sptr, int tag, void *smsg) {

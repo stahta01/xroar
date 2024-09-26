@@ -87,6 +87,8 @@ _Bool gtk3_vo_init(struct ui_gtk3_interface *uigtk3) {
 	struct vo_interface *vo = &vogl->vo;
 	uigtk3->public.vo_interface = vo;
 
+	vo_interface_init(vo);
+
 	if (!vo_opengl_configure(vogl, vo_cfg)) {
 		free(vogtk3);
 		return NULL;

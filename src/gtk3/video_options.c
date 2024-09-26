@@ -28,66 +28,70 @@
 
 #include "ao.h"
 #include "machine.h"
+#include "messenger.h"
 #include "sound.h"
+#include "ui.h"
 #include "vo.h"
 #include "xroar.h"
 
 #include "gtk3/common.h"
+#include "gtk3/dialog.h"
 #include "gtk3/event_handlers.h"
 #include "gtk3/video_options.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Callbacks
-static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data);
-static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data);
-static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data);
-static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data);
-static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data);
-static void vo_change_tv_input(GtkComboBox *widget, gpointer user_data);
-static void vo_change_picture(GtkComboBox *widget, gpointer user_data);
-static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data);
-static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data);
-static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data);
-static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data);
-static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data);
-static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data);
 
-// Signal handlers
-static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
+static void tv_change_gain(GtkSpinButton *spin_button, gpointer user_data);
+static void tv_change_brightness(GtkSpinButton *spin_button, gpointer user_data);
+static void tv_change_contrast(GtkSpinButton *spin_button, gpointer user_data);
+static void tv_change_saturation(GtkSpinButton *spin_button, gpointer user_data);
+static void tv_change_hue(GtkSpinButton *spin_button, gpointer user_data);
+static void tv_change_tv_input(GtkComboBox *widget, gpointer user_data);
+static void tv_change_picture(GtkComboBox *widget, gpointer user_data);
+static void tv_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data);
+static void tv_change_cmp_renderer(GtkComboBox *widget, gpointer user_data);
+static void tv_change_cmp_fs(GtkComboBox *widget, gpointer user_data);
+static void tv_change_cmp_fsc(GtkComboBox *widget, gpointer user_data);
+static void tv_change_cmp_system(GtkComboBox *widget, gpointer user_data);
+static void tv_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data);
+
+// UI message reception
+
+static void tv_ui_state_notify(void *sptr, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void gtk3_vo_create_window(struct ui_gtk3_interface *uigtk3) {
-	uigtk3_add_from_resource(uigtk3, "/uk/org/6809/xroar/gtk3/video_options.ui");
+struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
+	struct uigtk3_dialog *dlg = uigtk3_dialog_new(uigtk3, "/uk/org/6809/xroar/gtk3/video_options.ui", "vo_window", ui_tag_tv_dialog);
+
+	// Join each UI group we're interested in
+
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 
 	// Build lists
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_tv_input", machine_tv_input_list, G_CALLBACK(vo_change_tv_input));
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_picture", vo_viewport_list, G_CALLBACK(vo_change_picture));
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_renderer", vo_cmp_ccr_list, G_CALLBACK(vo_change_cmp_renderer));
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_fs", vo_render_fs_list, G_CALLBACK(vo_change_cmp_fs));
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_fsc", vo_render_fsc_list, G_CALLBACK(vo_change_cmp_fsc));
-	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_system", vo_render_system_list, G_CALLBACK(vo_change_cmp_system));
+
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_tv_input", machine_tv_input_list, G_CALLBACK(tv_change_tv_input));
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_picture", vo_viewport_list, G_CALLBACK(tv_change_picture));
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_renderer", vo_cmp_ccr_list, G_CALLBACK(tv_change_cmp_renderer));
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_fs", vo_render_fs_list, G_CALLBACK(tv_change_cmp_fs));
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_fsc", vo_render_fsc_list, G_CALLBACK(tv_change_cmp_fsc));
+	uigtk3_cbt_value_from_enum(uigtk3, "cbt_cmp_system", vo_render_system_list, G_CALLBACK(tv_change_cmp_system));
 
 	// Connect signals
-	uigtk3_signal_connect(uigtk3, "vo_window", "delete-event", G_CALLBACK(hide_vo_window), uigtk3);
-	uigtk3_signal_connect(uigtk3, "vo_window", "key-press-event", G_CALLBACK(gtk3_dummy_keypress), uigtk3);
-	uigtk3_signal_connect(uigtk3, "sb_gain", "value-changed", G_CALLBACK(vo_change_gain), uigtk3);
-	uigtk3_signal_connect(uigtk3, "sb_brightness", "value-changed", G_CALLBACK(vo_change_brightness), uigtk3);
-	uigtk3_signal_connect(uigtk3, "sb_contrast", "value-changed", G_CALLBACK(vo_change_contrast), uigtk3);
-	uigtk3_signal_connect(uigtk3, "sb_saturation", "value-changed", G_CALLBACK(vo_change_saturation), uigtk3);
-	uigtk3_signal_connect(uigtk3, "sb_hue", "value-changed", G_CALLBACK(vo_change_hue), uigtk3);
-	uigtk3_signal_connect(uigtk3, "tb_ntsc_scaling", "toggled", G_CALLBACK(vo_change_ntsc_scaling), uigtk3);
-	uigtk3_signal_connect(uigtk3, "tb_cmp_colour_killer", "toggled", G_CALLBACK(vo_change_cmp_colour_killer), uigtk3);
-}
 
-void gtk3_vo_toggle_window(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	if (gtk_toggle_action_get_active(current)) {
-		uigtk3_widget_show(uigtk3, "vo_window");
-	} else {
-		uigtk3_widget_hide(uigtk3, "vo_window");
-	}
+	uigtk3_signal_connect(uigtk3, "sb_gain", "value-changed", G_CALLBACK(tv_change_gain), uigtk3);
+	uigtk3_signal_connect(uigtk3, "sb_brightness", "value-changed", G_CALLBACK(tv_change_brightness), uigtk3);
+	uigtk3_signal_connect(uigtk3, "sb_contrast", "value-changed", G_CALLBACK(tv_change_contrast), uigtk3);
+	uigtk3_signal_connect(uigtk3, "sb_saturation", "value-changed", G_CALLBACK(tv_change_saturation), uigtk3);
+	uigtk3_signal_connect(uigtk3, "sb_hue", "value-changed", G_CALLBACK(tv_change_hue), uigtk3);
+	uigtk3_signal_connect(uigtk3, "tb_ntsc_scaling", "toggled", G_CALLBACK(tv_change_ntsc_scaling), uigtk3);
+	uigtk3_signal_connect(uigtk3, "tb_cmp_colour_killer", "toggled", G_CALLBACK(tv_change_cmp_colour_killer), uigtk3);
+
+	return dlg;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -99,31 +103,27 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 	(void)data;
 	switch (tag) {
 	case ui_tag_gain:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_gain", *(float *)data, vo_change_gain);
+		uigtk3_notify_spin_button_set_value(uigtk3, "sb_gain", *(float *)data, tv_change_gain);
 		break;
 
 	case ui_tag_brightness:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_brightness", value, vo_change_brightness);
+		uigtk3_notify_spin_button_set_value(uigtk3, "sb_brightness", value, tv_change_brightness);
 		break;
 
 	case ui_tag_contrast:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_contrast", value, vo_change_contrast);
+		uigtk3_notify_spin_button_set_value(uigtk3, "sb_contrast", value, tv_change_contrast);
 		break;
 
 	case ui_tag_saturation:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_saturation", value, vo_change_saturation);
+		uigtk3_notify_spin_button_set_value(uigtk3, "sb_saturation", value, tv_change_saturation);
 		break;
 
 	case ui_tag_hue:
-		uigtk3_notify_spin_button_set_value(uigtk3, "sb_hue", value, vo_change_hue);
-		break;
-
-	case ui_tag_picture:
-		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_picture", (void *)(intptr_t)value);
+		uigtk3_notify_spin_button_set_value(uigtk3, "sb_hue", value, tv_change_hue);
 		break;
 
 	case ui_tag_ntsc_scaling:
-		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_ntsc_scaling", value, vo_change_ntsc_scaling);
+		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_ntsc_scaling", value, tv_change_ntsc_scaling);
 		break;
 
 	case ui_tag_cmp_fs:
@@ -139,7 +139,7 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 		break;
 
 	case ui_tag_cmp_colour_killer:
-		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_cmp_colour_killer", value, vo_change_cmp_colour_killer);
+		uigtk3_notify_toggle_button_set_active(uigtk3, "tb_cmp_colour_killer", value, tv_change_cmp_colour_killer);
 		break;
 
 	default:
@@ -147,28 +147,41 @@ void gtk3_vo_update_state(struct ui_gtk3_interface *uigtk3,
 	}
 }
 
-void gtk3_vo_update_tv_input(struct ui_gtk3_interface *uigtk3, int value) {
-	uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_tv_input", (void *)(intptr_t)value);
-}
+// UI message reception
 
-void gtk3_vo_update_cmp_renderer(struct ui_gtk3_interface *uigtk3, int value) {
-	uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_renderer", (void *)(intptr_t)value);
+static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct ui_state_message *msg = smsg;
+	int value = msg->value;
+	//const void *data = msg->data;
+
+	switch (tag) {
+
+	// Video
+
+	case ui_tag_ccr:
+		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_renderer", (void *)(intptr_t)value);
+		break;
+
+	case ui_tag_picture:
+		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_picture", (void *)(intptr_t)value);
+		break;
+
+	case ui_tag_tv_input:
+		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_tv_input", (void *)(intptr_t)value);
+		break;
+
+	default:
+		break;
+	}
+
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Video options - signal handlers
+// Callbacks
 
-static gboolean hide_vo_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
-	(void)widget;
-	(void)event;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ViewMenu/VideoOptions", 0);
-	uigtk3_widget_hide(uigtk3, "vo_window");
-	return TRUE;
-}
-
-static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
+static void tv_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	float value = (float)gtk_spin_button_get_value(spin_button);
@@ -179,7 +192,7 @@ static void vo_change_gain(GtkSpinButton *spin_button, gpointer user_data) {
 	}
 }
 
-static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {
+static void tv_change_brightness(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = (int)gtk_spin_button_get_value(spin_button);
@@ -188,7 +201,7 @@ static void vo_change_brightness(GtkSpinButton *spin_button, gpointer user_data)
 	}
 }
 
-static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
+static void tv_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = (int)gtk_spin_button_get_value(spin_button);
@@ -197,7 +210,7 @@ static void vo_change_contrast(GtkSpinButton *spin_button, gpointer user_data) {
 	}
 }
 
-static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data) {
+static void tv_change_saturation(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = (int)gtk_spin_button_get_value(spin_button);
@@ -206,7 +219,7 @@ static void vo_change_saturation(GtkSpinButton *spin_button, gpointer user_data)
 	}
 }
 
-static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
+static void tv_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = (int)gtk_spin_button_get_value(spin_button);
@@ -215,56 +228,56 @@ static void vo_change_hue(GtkSpinButton *spin_button, gpointer user_data) {
 	}
 }
 
-static void vo_change_tv_input(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_tv_input(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	xroar_set_tv_input(0, value);
+	ui_update_state(-1, ui_tag_tv_input, value, NULL);
 }
 
-static void vo_change_picture(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_picture(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	xroar_set_picture(0, value);
+	ui_update_state(-1, ui_tag_picture, value, NULL);
 }
 
-static void vo_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) {
+static void tv_change_ntsc_scaling(GtkToggleButton *widget, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = gtk_toggle_button_get_active(widget);
 	vo_set_ntsc_scaling(xroar.vo_interface, 0, value);
 }
 
-static void vo_change_cmp_renderer(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_cmp_renderer(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
-	vo_set_cmp_ccr(xroar.vo_interface, 1, value);
+	ui_update_state(-1, ui_tag_ccr, value, NULL);
 }
 
-static void vo_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_cmp_fs(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
 	vo_set_cmp_fs(xroar.vo_interface, 0, value);
 }
 
-static void vo_change_cmp_fsc(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_cmp_fsc(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
 	vo_set_cmp_fsc(xroar.vo_interface, 0, value);
 }
 
-static void vo_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
+static void tv_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
 	(void)widget;
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
 	vo_set_cmp_system(xroar.vo_interface, 0, value);
 }
 
-static void vo_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {
+static void tv_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	int value = gtk_toggle_button_get_active(widget);

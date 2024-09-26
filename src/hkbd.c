@@ -1623,7 +1623,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 		break;
 
 	case hk_sym_a:
-		xroar_set_tv_input(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_tv_input, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_d:
@@ -1726,7 +1726,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 	case hk_sym_v:
 		if (shift) {
-			DELEGATE_CALL(ui->update_state, ui_tag_tv_dialog, 0, NULL);
+			ui_update_state(-1, ui_tag_tv_dialog, UI_NEXT, NULL);
 		} else {
 #ifdef TRACE
 			xroar_set_trace(XROAR_NEXT);
@@ -1754,12 +1754,12 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 	case hk_sym_comma:
 	case hk_sym_less:
-		xroar_set_picture(1, XROAR_NEXT);
+		ui_update_state(-1, ui_tag_picture, UI_NEXT, NULL);
 		return;
 
 	case hk_sym_period:
 	case hk_sym_greater:
-		xroar_set_picture(1, XROAR_PREV);
+		ui_update_state(-1, ui_tag_picture, UI_PREV, NULL);
 		return;
 
 	default:
