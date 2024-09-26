@@ -71,6 +71,7 @@ struct machine_mc10 {
 	unsigned ram0_inhibit_bit;
 
 	_Bool inverted_text;
+	unsigned configured_frameskip;
 	unsigned frameskip;
 	unsigned video_mode;
 	uint16_t video_attr;
@@ -201,8 +202,8 @@ static void mc10_ui_set_picture(void *, int tag, void *smsg);
 static void mc10_ui_set_tv_input(void *, int tag, void *smsg);
 static void mc10_ui_set_text_invert(void *, int tag, void *smsg);
 static void *mc10_get_interface(struct machine *m, const char *ifname);
-static void mc10_set_frameskip(struct machine *m, unsigned fskip);
-static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit);
+static void mc10_ui_set_frameskip(void *, int tag, void *smsg);
+static void mc10_ui_set_ratelimit(void *, int tag, void *smsg);
 
 static void mc10_print_byte(void *);
 static void mc10_keyboard_update(void *sptr);
@@ -263,8 +264,6 @@ static struct part *mc10_allocate(void) {
 	m->dump_ram = mc10_dump_ram;
 
 	m->get_interface = mc10_get_interface;
-	m->set_frameskip = mc10_set_frameskip;
-	m->set_ratelimit = mc10_set_ratelimit;
 
 	m->keyboard.type = dkbd_layout_mc10;
 
@@ -384,6 +383,8 @@ static _Bool mc10_finish(struct part *p) {
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_tv_input, mp));
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_text_invert, mp));
 	ui_messenger_preempt_group(mp->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_keymap, mp));
+	ui_messenger_join_group(mp->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_frameskip, mp));
+	ui_messenger_join_group(mp->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_ratelimit, mp));
 
 	// ROM
 	mp->ROM0 = rombank_new(8, 8192, 1);
@@ -1011,14 +1012,23 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mc10_set_frameskip(struct machine *m, unsigned fskip) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	mp->frameskip = fskip;
+static void mc10_ui_set_frameskip(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_mc10 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	mp->configured_frameskip = mp->frameskip = uimsg->value;
 }
 
-static void mc10_set_ratelimit(struct machine *m, _Bool ratelimit) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
-	sound_set_ratelimit(mp->snd, ratelimit);
+static void mc10_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_mc10 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	sound_set_ratelimit(mp->snd, uimsg->value);
+	if (uimsg->value) {
+		mp->frameskip = mp->configured_frameskip;
+	} else {
+		mp->frameskip = 10;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

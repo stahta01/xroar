@@ -320,6 +320,7 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
@@ -507,12 +508,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
 		break;
 
-	// Audio
-
-	case ui_tag_ratelimit:
-		uigtk3_notify_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/RateLimit", value ? TRUE : FALSE, toggle_ratelimit);
-		break;
-
 	// Joysticks
 
 	case ui_tag_joy_right:
@@ -600,6 +595,12 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_kbd_translate:
 		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/TranslateKeyboard", value ? TRUE : FALSE);
+		break;
+
+	// Debugging
+
+	case ui_tag_ratelimit_latch:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/RateLimit", value ? TRUE : FALSE);
 		break;
 
 	default:
@@ -977,7 +978,7 @@ static void toggle_ratelimit(GtkToggleAction *current, gpointer user_data) {
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
 	gboolean val = gtk_toggle_action_get_active(current);
-	xroar_set_ratelimit_latch(0, val);
+	ui_update_state(-1, ui_tag_ratelimit_latch, val, NULL);
 }
 
 // Help menu callbacks

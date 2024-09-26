@@ -126,6 +126,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_print_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
 	windows32_create_menus(uiw32);
 
@@ -283,7 +284,7 @@ static void setup_tool_menu(struct ui_windows32_interface *uiw32) {
 	uiw32_update_radio_menu_from_enum(submenu, hkbd_lang_list, ui_tag_hkbd_lang);
 
 	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard translation");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit), "&Rate limit");
+	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit_latch), "&Rate limit");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
 }
@@ -486,12 +487,6 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
 		break;
 
-	// Audio:
-
-	case ui_tag_ratelimit:
-		xroar_set_ratelimit_latch(1, XROAR_NEXT);
-		break;
-
 	// Keyboard:
 	case ui_tag_hkbd_layout:
 		ui_update_state(-1, ui_tag_hkbd_layout, tag_value, NULL);
@@ -533,6 +528,12 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_print_dialog, UI_NEXT, NULL);
 		break;
 
+	// Debugging
+
+	case ui_tag_ratelimit_latch:
+		ui_update_state(-1, ui_tag_ratelimit_latch, UI_NEXT, NULL);
+		break;
+
 	// Help:
 	case ui_tag_about:
 		uiw32_create_about_window(uiw32);
@@ -553,12 +554,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_machine:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
-		break;
-
-	// Audio
-
-	case ui_tag_ratelimit:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Joysticks
@@ -647,6 +642,12 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 		break;
 
 	case ui_tag_print_dialog:
+		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	// Debugging
+
+	case ui_tag_ratelimit_latch:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 

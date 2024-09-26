@@ -146,6 +146,7 @@ struct machine_coco3 {
 
 	_Bool inverted_text;
 	struct cart *cart;
+	unsigned configured_frameskip;
 	unsigned frameskip;
 
 	int cycles;
@@ -296,8 +297,8 @@ static void coco3_ui_set_picture(void *, int tag, void *smsg);
 static void coco3_ui_set_tv_input(void *, int tag, void *smsg);
 static void coco3_ui_set_text_invert(void *, int tag, void *smsg);
 static void *coco3_get_interface(struct machine *m, const char *ifname);
-static void coco3_set_frameskip(struct machine *m, unsigned fskip);
-static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit);
+static void coco3_ui_set_frameskip(void *, int tag, void *smsg);
+static void coco3_ui_set_ratelimit(void *, int tag, void *smsg);
 
 static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D);
@@ -391,8 +392,6 @@ static struct part *coco3_allocate(void) {
 
 	m->set_pause = coco3_set_pause;
 	m->get_interface = coco3_get_interface;
-	m->set_frameskip = coco3_set_frameskip;
-	m->set_ratelimit = coco3_set_ratelimit;
 
 	m->read_byte = coco3_read_byte;
 	m->write_byte = coco3_write_byte;
@@ -510,6 +509,8 @@ static _Bool coco3_finish(struct part *p) {
 	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_tv_input, mcc3));
 	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_text_invert, mcc3));
 	ui_messenger_preempt_group(mcc3->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_keymap, mcc3));
+	ui_messenger_join_group(mcc3->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_frameskip, mcc3));
+	ui_messenger_join_group(mcc3->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_ratelimit, mcc3));
 
 	// ROM
 	mcc3->ROM0 = rombank_new(8, 32768, 1);
@@ -1059,14 +1060,23 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 	return NULL;
 }
 
-static void coco3_set_frameskip(struct machine *m, unsigned fskip) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	mcc3->frameskip = fskip;
+static void coco3_ui_set_frameskip(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_coco3 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	mp->configured_frameskip = mp->frameskip = uimsg->value;
 }
 
-static void coco3_set_ratelimit(struct machine *m, _Bool ratelimit) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
-	sound_set_ratelimit(mcc3->snd, ratelimit);
+static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_coco3 *mp = sptr;
+	struct ui_state_message *uimsg = smsg;
+	sound_set_ratelimit(mp->snd, uimsg->value);
+	if (uimsg->value) {
+		mp->frameskip = mp->configured_frameskip;
+	} else {
+		mp->frameskip = 10;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -96,7 +96,9 @@ enum ui_tag {
 	ui_tag_contrast,
 	ui_tag_saturation,
 	ui_tag_hue,
+	ui_tag_frameskip,
 	// Audio
+	ui_tag_ratelimit_latch,
 	ui_tag_ratelimit,
 	ui_tag_gain,
 	// Keyboard

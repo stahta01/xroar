@@ -1375,9 +1375,9 @@ void hk_scan_press(uint8_t code) {
 
 	case hk_sym_F12:
 		if (shift) {
-			xroar_set_ratelimit_latch(1, XROAR_NEXT);
+			ui_update_state(-1, ui_tag_ratelimit_latch, UI_NEXT, NULL);
 		} else {
-			xroar_set_ratelimit(0);
+			ui_update_state(-1, ui_tag_ratelimit, 0, NULL);
 		}
 		return;
 
@@ -1455,7 +1455,7 @@ void hk_scan_release(uint8_t code) {
 
 	switch (sym) {
 	case hk_sym_F12:
-		xroar_set_ratelimit(1);
+		ui_update_state(-1, ui_tag_ratelimit, 1, NULL);
 		return;
 
 	default:

@@ -83,6 +83,7 @@ struct machine_dragon_common {
 
 	_Bool inverted_text;
 	struct cart *cart;
+	unsigned configured_frameskip;
 	unsigned frameskip;
 
 	int cycles;
@@ -307,8 +308,8 @@ static void dragon_ui_set_picture(void *, int tag, void *smsg);
 static void dragon_ui_set_tv_input(void *, int tag, void *smsg);
 static void dragon_ui_set_text_invert(void *, int tag, void *smsg);
 static void *dragon_get_interface(struct machine *m, const char *ifname);
-static void dragon_set_frameskip(struct machine *m, unsigned fskip);
-static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit);
+static void dragon_ui_set_frameskip(void *, int tag, void *smsg);
+static void dragon_ui_set_ratelimit(void *, int tag, void *smsg);
 
 static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D);
@@ -407,8 +408,6 @@ static void dragon_allocate_common(struct machine_dragon_common *md) {
 
 	m->set_pause = dragon_set_pause;
 	m->get_interface = dragon_get_interface;
-	m->set_frameskip = dragon_set_frameskip;
-	m->set_ratelimit = dragon_set_ratelimit;
 
 	m->read_byte = dragon_read_byte;
 	m->write_byte = dragon_write_byte;
@@ -503,6 +502,8 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_tv_input, md));
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_text_invert, md));
 	ui_messenger_preempt_group(md->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_keymap, md));
+	ui_messenger_join_group(md->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_frameskip, md));
+	ui_messenger_join_group(md->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_ratelimit, md));
 
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
@@ -1234,14 +1235,23 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 	return NULL;
 }
 
-static void dragon_set_frameskip(struct machine *m, unsigned fskip) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
-	md->frameskip = fskip;
+static void dragon_ui_set_frameskip(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_dragon_common *md = sptr;
+	struct ui_state_message *uimsg = smsg;
+	md->configured_frameskip = md->frameskip = uimsg->value;
 }
 
-static void dragon_set_ratelimit(struct machine *m, _Bool ratelimit) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
-	sound_set_ratelimit(md->snd, ratelimit);
+static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	struct machine_dragon_common *md = sptr;
+	struct ui_state_message *uimsg = smsg;
+	sound_set_ratelimit(md->snd, uimsg->value);
+	if (uimsg->value) {
+		md->frameskip = md->configured_frameskip;
+	} else {
+		md->frameskip = 10;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

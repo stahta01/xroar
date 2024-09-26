@@ -294,10 +294,13 @@ static void config_print_all(FILE *f, _Bool all);
 #endif
 
 static void xroar_ui_set_cartridge(void *, int tag, void *smsg);
+static void xroar_ui_set_frameskip(void *, int tag, void *smsg);
 static void xroar_ui_set_picture(void *, int tag, void *smsg);
 static void xroar_ui_set_print_destination(void *, int tag, void *smsg);
 static void xroar_ui_set_print_file(void *, int tag, void *smsg);
 static void xroar_ui_set_print_pipe(void *, int tag, void *smsg);
+static void xroar_ui_set_ratelimit(void *, int tag, void *smsg);
+static void xroar_ui_set_ratelimit_latch(void *, int tag, void *smsg);
 
 static int load_disk_to_drive = 0;
 
@@ -307,14 +310,6 @@ static struct xconfig_option const xroar_options[];
 
 /**************************************************************************/
 /* Global flags */
-
-struct xroar_state {
-	_Bool noratelimit_latch;
-};
-
-static struct xroar_state xroar_state = {
-	.noratelimit_latch = 0,
-};
 
 static struct cart_config *selected_cart_config;
 
@@ -939,9 +934,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Sanitise other command-line options.
 
-	if (private_cfg.vo.frameskip < 0)
-		private_cfg.vo.frameskip = 0;
-
 	if (xroar.cfg.tape.rewrite_gap_ms <= 0 || xroar.cfg.tape.rewrite_gap_ms > 5000) {
 		xroar.cfg.tape.rewrite_gap_ms = 500;
 	}
@@ -1016,7 +1008,12 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	xroar.msgr_client_id = messenger_client_register();
 
 	// Join each UI group we're interested in
+
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_cartridge, &xroar));
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_frameskip, &xroar));
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit, &xroar));
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit_latch, &xroar));
+
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_destination, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
@@ -1131,7 +1128,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
 
 	ui_update_state(-1, ui_tag_vdg_inverse, private_cfg.vo.vdg_inverted_text, NULL);
-	xroar_set_ratelimit_latch(1, private_cfg.debug.ratelimit);
+	ui_update_state(-1, ui_tag_frameskip, private_cfg.vo.frameskip, NULL);
+	ui_update_state(-1, ui_tag_ratelimit, 1, NULL);
+	ui_update_state(-1, ui_tag_ratelimit_latch, private_cfg.debug.ratelimit, NULL);
 
 	// Load media images
 
@@ -1557,47 +1556,41 @@ static void xroar_ui_set_picture(void *sptr, int tag, void *smsg) {
 	emu->state.vo.picture = uimsg->value;
 }
 
-void xroar_set_ratelimit(int action) {
-	if (!xroar.machine->set_frameskip || !xroar.machine->set_ratelimit)
-		return;
-	if (xroar_state.noratelimit_latch)
-		return;
-	if (action) {
-		xroar.machine->set_frameskip(xroar.machine, private_cfg.vo.frameskip);
-		xroar.machine->set_ratelimit(xroar.machine, 1);
-	} else {
-		xroar.machine->set_frameskip(xroar.machine, 10);
-		xroar.machine->set_ratelimit(xroar.machine, 0);
-	}
+// If ratelimit_latch is 0 (no rate limit), it overrides ephemeral ratelimit
+// setting.  Thus this is a simple AND operation.
+
+static void xroar_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_ratelimit);
+
+	uimsg->value = emu->state.ratelimit_latch && uimsg->value;
 }
 
-void xroar_set_ratelimit_latch(_Bool notify, int action) {
-	if (!xroar.machine->set_frameskip || !xroar.machine->set_ratelimit)
-		return;
-	_Bool state = !xroar_state.noratelimit_latch;
-	switch (action) {
-	case XROAR_ON:
-	default:
-		state = 1;
-		break;
-	case XROAR_OFF:
-		state = 0;
-		break;
-	case XROAR_NEXT:
-		state = !state;
-		break;
-	}
-	xroar_state.noratelimit_latch = !state;
-	if (state) {
-		xroar.machine->set_frameskip(xroar.machine, private_cfg.vo.frameskip);
-		xroar.machine->set_ratelimit(xroar.machine, 1);
+static void xroar_ui_set_ratelimit_latch(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_ratelimit_latch);
+
+	if (uimsg->value == UI_PREV || uimsg->value == UI_NEXT) {
+		emu->state.ratelimit_latch = !emu->state.ratelimit_latch;
 	} else {
-		xroar.machine->set_frameskip(xroar.machine, 10);
-		xroar.machine->set_ratelimit(xroar.machine, 0);
+		emu->state.ratelimit_latch = uimsg->value;
 	}
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_ratelimit, state, NULL);
+	uimsg->value = emu->state.ratelimit_latch;
+	ui_update_state(-1, ui_tag_ratelimit, emu->state.ratelimit_latch, NULL);
+}
+
+static void xroar_ui_set_frameskip(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_frameskip);
+	if (uimsg->value < 0) {
+		uimsg->value = 0;
+	} else if (uimsg->value > 1000) {
+		uimsg->value = 1000;
 	}
+	emu->state.vo.frameskip = uimsg->value;
 }
 
 void xroar_set_pause(_Bool notify, int action) {
@@ -1840,6 +1833,8 @@ void xroar_set_machine(_Bool notify, int id) {
 	} else {
 		ui_update_state(-1, ui_tag_cartridge, 0, NULL);
 	}
+	ui_update_state(-1, ui_tag_frameskip, xroar.state.vo.frameskip, NULL);
+	ui_update_state(-1, ui_tag_ratelimit_latch, xroar.state.ratelimit_latch, NULL);
 	xroar_hard_reset();
 	if (notify) {
 		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_machine, new, NULL);

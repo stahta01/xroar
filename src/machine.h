@@ -240,8 +240,6 @@ struct machine {
 
 	_Bool (*set_pause)(struct machine *m, int action);
 	void *(*get_interface)(struct machine *m, const char *ifname);
-	void (*set_frameskip)(struct machine *m, unsigned fskip);
-	void (*set_ratelimit)(struct machine *m, _Bool ratelimit);
 
 	// Query if machine (or possibly sub-part) supports a named interface.
 	_Bool (*has_interface)(struct part *p, const char *ifname);

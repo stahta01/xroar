@@ -169,7 +169,10 @@ struct xroar {
 	struct {
 		struct {
 			int picture;
+			_Bool frameskip;
 		} vo;
+
+		_Bool ratelimit_latch;
 	} state;
 };
 
