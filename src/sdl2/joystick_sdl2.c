@@ -140,7 +140,7 @@ static void sdl_js_physical_init(void) {
 	// If there are now fewer joysticks, we need to remove some configs
 	for (int i = num_devices; i < old_num_devices; i++) {
 		sds name = sdscatprintf(sdsempty(), "joy%u", i);
-		xroar_remove_joystick_config(name);
+		joystick_config_remove(name);
 		sdsfree(name);
 	}
 

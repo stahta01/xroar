@@ -77,8 +77,7 @@ struct ui_macosx_interface {
 	} kbd;
 
 	struct {
-		int right_id;
-		int left_id;
+		int id[2];
 	} joy;
 
 	struct {

@@ -55,6 +55,13 @@
 
 #include "macosx/ui_macosx.h"
 
+// Extend the UI tags for our own purposes
+
+enum {
+	uimac_tag_joystick_right = ui_num_tags,
+	uimac_tag_joystick_left
+};
+
 @interface SDLMain : NSObject <NSApplicationDelegate>
 @end
 
@@ -188,7 +195,7 @@ int cocoa_super_all_keys = 0;
 			vo_zoom_reset(xroar.vo_interface);
 			break;
 		case ui_action_joystick_swap:
-			joystick_swap();
+			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 			break;
 		default:
 			break;
@@ -300,19 +307,11 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	/* Joysticks: */
-	case ui_tag_joy_right:
-		{
-			struct joystick_config *jc = joystick_config_by_id(value);
-			xroar_set_joystick(1, 0, jc ? jc->name : NULL);
-			uimac->joy.right_id = value;
-		}
+	case uimac_tag_joystick_right:
+		ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)value);
 		break;
-	case ui_tag_joy_left:
-		{
-			struct joystick_config *jc = joystick_config_by_id(value);
-			xroar_set_joystick(1, 1, jc ? jc->name : NULL);
-			uimac->joy.left_id = value;
-		}
+	case uimac_tag_joystick_left:
+		ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)value);
 		break;
 
 	default:
@@ -408,11 +407,11 @@ int cocoa_super_all_keys = 0;
 		[item setState:(uimac->misc.ratelimit_latch ? NSOnState : NSOffState)];
 		break;
 
-	case ui_tag_joy_right:
-		[item setState:((value == uimac->joy.right_id) ? NSOnState : NSOffState)];
+	case uimac_tag_joystick_right:
+		[item setState:((value == uimac->joy.id[0]) ? NSOnState : NSOffState)];
 		break;
-	case ui_tag_joy_left:
-		[item setState:((value == uimac->joy.left_id) ? NSOnState : NSOffState)];
+	case uimac_tag_joystick_left:
+		[item setState:((value == uimac->joy.id[1]) ? NSOnState : NSOffState)];
 		break;
 
 	}
@@ -1135,6 +1134,7 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
@@ -1226,53 +1226,54 @@ static void cocoa_update_cartridge_menu(void *sptr) {
 }
 
 static void cocoa_update_joystick_menus(void *sptr) {
-	(void)sptr;
+	struct ui_macosx_interface *uimac = sptr;
+	(void)uimac;
 
 	// Get list of joystick configs
-	struct slist *jcl = slist_reverse(slist_copy(joystick_config_list()));
+	struct slist *jcl = joystick_config_list();
 
 	// Remove old entries
-	while ([joy_right_menu numberOfItems] > 0)
+	while ([joy_right_menu numberOfItems] > 0) {
 		[joy_right_menu removeItem:[joy_right_menu itemAtIndex:0]];
-	while ([joy_left_menu numberOfItems] > 0)
+	}
+	while ([joy_left_menu numberOfItems] > 0) {
 		[joy_left_menu removeItem:[joy_left_menu itemAtIndex:0]];
-
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
-	NSMenuItem *item;
-	struct slist *iter;
-	for (iter = jcl; iter; iter = iter->next) {
-		struct joystick_config *jc = iter->data;
-		NSString *description = [[NSString alloc] initWithUTF8String:jc->description];
-		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:UIMAC_TAGV(ui_tag_joy_right, jc->id)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[joy_right_menu insertItem:item atIndex:0];
-		[item release];
-
-		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:UIMAC_TAGV(ui_tag_joy_left, jc->id)];
-		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
-		[description release];
-		[joy_left_menu insertItem:item atIndex:0];
-		[item release];
 	}
 
+	// Add entries
+	NSMenuItem *item;
+
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_joy_right, -1)];
+	[item setTag:UIMAC_TAGV(uimac_tag_joystick_right, 0)];
 	[joy_right_menu insertItem:item atIndex:0];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:UIMAC_TAGV(ui_tag_joy_left, -1)];
+	[item setTag:UIMAC_TAGV(uimac_tag_joystick_left, 0)];
 	[joy_left_menu insertItem:item atIndex:0];
 	[item release];
 
-	slist_free(jcl);
+	for (struct slist *iter = jcl; iter; iter = iter->next) {
+		struct joystick_config *jc = iter->data;
+		NSString *description = [[NSString alloc] initWithUTF8String:jc->description];
+		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:UIMAC_TAGV(uimac_tag_joystick_right, jc->id)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[joy_right_menu addItem:item];
+		[item release];
+
+		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:UIMAC_TAGV(uimac_tag_joystick_left, jc->id)];
+		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
+		[description release];
+		[joy_left_menu addItem:item];
+		[item release];
+	}
 }
 
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_macosx_interface *uimac = sptr;
+	(void)data;
 
 	switch (tag) {
 
@@ -1280,22 +1281,6 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 
 	case ui_tag_machine:
 		uimac->machine.id = value;
-		break;
-
-	/* Joystick */
-
-	case ui_tag_joy_right:
-		{
-			struct joystick_config *jc = joystick_config_by_name(data);
-			uimac->joy.right_id = jc ? jc->id : -1;
-		}
-		break;
-
-	case ui_tag_joy_left:
-		{
-			struct joystick_config *jc = joystick_config_by_name(data);
-			uimac->joy.left_id = jc ? jc->id : -1;
-		}
 		break;
 
 	default:
@@ -1414,6 +1399,14 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_kbd_translate:
 		uimac->kbd.translate = value;
+		break;
+
+	// Joysticks
+
+	case ui_tag_joystick_port:
+		if (value >= 0 && value <= 1) {
+			uimac->joy.id[value] = (intptr_t)data;
+		}
 		break;
 
 	// Printer

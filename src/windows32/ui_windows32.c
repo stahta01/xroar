@@ -66,7 +66,6 @@
 #define TAG_VALUE(t) ((t) & 0xff)
 
 static int max_machine_id = 0;
-static unsigned max_joystick_id = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -127,6 +126,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_print_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
 	windows32_create_menus(uiw32);
 
@@ -364,16 +364,16 @@ static void windows32_update_joystick_menus(void *sptr) {
 	while (DeleteMenu(uiw32->left_joystick_menu, 0, MF_BYPOSITION))
 		;
 
-	AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(ui_tag_joy_right, 0), "None");
-	AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(ui_tag_joy_left, 0), "None");
-	max_joystick_id = 0;
+	AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_right, 0), "None");
+	AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_left, 0), "None");
+	uiw32->max_joystick_id = 0;
 	for (struct slist *iter = jl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
-		if ((jc->id + 1) > max_joystick_id) {
-			max_joystick_id = jc->id + 1;
+		if (jc->id > uiw32->max_joystick_id) {
+			uiw32->max_joystick_id = jc->id;
 		}
-		AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(ui_tag_joy_right, jc->id + 1), jc->description);
-		AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(ui_tag_joy_left, jc->id + 1), jc->description);
+		AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_right, jc->id), jc->description);
+		AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_left, jc->id), jc->description);
 	}
 }
 
@@ -440,7 +440,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 			vo_zoom_reset(xroar.vo_interface);
 			break;
 		case ui_action_joystick_swap:
-			xroar_swap_joysticks(1);
+			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 			break;
 		default:
 			break;
@@ -501,29 +501,17 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_kbd_translate, UI_NEXT, NULL);
 		break;
 
-	// Joysticks:
-	case ui_tag_joy_right:
-		{
-			const char *name = NULL;
-			if (tag_value > 0) {
-				struct joystick_config *jc = joystick_config_by_id(tag_value - 1);
-				name = jc ? jc->name : NULL;
-			}
-			xroar_set_joystick(1, 0, name);
-		}
+	// Joysticks
+
+	case uiw32_tag_joystick_right:
+		ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)tag_value);
 		break;
-	case ui_tag_joy_left:
-		{
-			const char *name = NULL;
-			if (tag_value > 0) {
-				struct joystick_config *jc = joystick_config_by_id(tag_value - 1);
-				name = jc ? jc->name : NULL;
-			}
-			xroar_set_joystick(1, 1, name);
-		}
+	case uiw32_tag_joystick_left:
+		ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)tag_value);
 		break;
 
 	// Printers
+
 	case ui_tag_print_dialog:
 		ui_update_state(-1, ui_tag_print_dialog, UI_NEXT, NULL);
 		break;
@@ -547,6 +535,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
+	(void)data;
 	struct ui_windows32_interface *uiw32 = sptr;
 	switch (tag) {
 
@@ -554,16 +543,6 @@ static void windows32_ui_update_state(void *sptr, int tag, int value, const void
 
 	case ui_tag_machine:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
-		break;
-
-	// Joysticks
-
-	case ui_tag_joy_right:
-	case ui_tag_joy_left:
-		{
-			struct joystick_config *jc = joystick_config_by_name(data);
-			CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_joystick_id), TAGV(tag, jc ? jc->id + 1 : 0), MF_BYCOMMAND);
-		}
 		break;
 
 	default:
@@ -577,7 +556,7 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_windows32_interface *uiw32 = sptr;
 	struct ui_state_message *msg = smsg;
 	int value = msg->value;
-	//const void *data = msg->data;
+	const void *data = msg->data;
 
 	switch (tag) {
 
@@ -640,6 +619,17 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	case ui_tag_kbd_translate:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
+
+	// Joysticks
+
+	case ui_tag_joystick_port:
+		{
+			int xtag = uiw32_tag_joystick_right + value;
+			CheckMenuRadioItem(uiw32->top_menu, TAGV(xtag, 0), TAGV(xtag, uiw32->max_joystick_id), TAGV(xtag, (intptr_t)data), MF_BYCOMMAND);
+		}
+		break;
+
+	// Printers
 
 	case ui_tag_print_dialog:
 		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));

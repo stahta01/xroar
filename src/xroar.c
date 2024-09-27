@@ -1064,20 +1064,25 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	// Default joystick mapping
-	if (private_cfg.joy.right) {
-		xroar_set_joystick(1, 0, private_cfg.joy.right);
-	} else {
-		xroar_set_joystick(1, 0, "joy0");
+	{
+		struct joystick_config *dfl_jc0 = joystick_config_by_name("joy0");
+		struct joystick_config *dfl_jc1 = joystick_config_by_name("joy1");
+		struct joystick_config *jc0 = joystick_config_by_name(private_cfg.joy.right);
+		struct joystick_config *jc1 = joystick_config_by_name(private_cfg.joy.left);
+		if (!jc0 && jc1 != dfl_jc0) {
+			jc0 = dfl_jc0;
+		}
+		if (!jc1 && jc0 != dfl_jc1) {
+			jc1 = dfl_jc1;
+		}
+		int jid0 = jc0 ? jc0->id : 0;
+		int jid1 = jc1 ? jc1->id : 0;
+		ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)jid0);
+		ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)jid1);
 	}
-	if (private_cfg.joy.left) {
-		xroar_set_joystick(1, 1, private_cfg.joy.left);
-	} else {
-		xroar_set_joystick(1, 1, "joy1");
-	}
-	if (private_cfg.joy.virtual) {
-		joystick_set_virtual(joystick_config_by_name(private_cfg.joy.virtual));
-	} else {
-		joystick_set_virtual(joystick_config_by_name("kjoy0"));
+	{
+		const char *name = private_cfg.joy.virtual ? private_cfg.joy.virtual : "kjoy0";
+		joystick_set_virtual(joystick_config_by_name(name));
 	}
 
 	// Default print destination
@@ -1667,54 +1672,6 @@ void xroar_flush_printer(void) {
 	if (!xroar.printer_interface)
 		return;
 	printer_flush(xroar.printer_interface);
-}
-
-static void update_ui_joysticks(int port) {
-	const char *name = NULL;
-	if (joystick_port_config[port] && joystick_port_config[port]->name) {
-		name = joystick_port_config[port]->name;
-	}
-	DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_joy_right + port, 0, name);
-}
-
-void xroar_set_joystick(_Bool notify, int port, const char *name) {
-	if (port < 0 || port > 1)
-		return;
-	if (name && *name) {
-		joystick_map(joystick_config_by_name(name), port);
-	} else {
-		joystick_unmap(port);
-	}
-	if (notify)
-		update_ui_joysticks(port);
-}
-
-void xroar_swap_joysticks(_Bool notify) {
-	joystick_swap();
-	if (notify) {
-		update_ui_joysticks(0);
-		update_ui_joysticks(1);
-	}
-}
-
-void xroar_cycle_joysticks(_Bool notify) {
-	joystick_cycle();
-	if (notify) {
-		update_ui_joysticks(0);
-		update_ui_joysticks(1);
-	}
-}
-
-void xroar_remove_joystick_config(const char *name) {
-	for (int i = 0; i <= 1; i++) {
-		if (!joystick_port_config[i])
-			continue;
-		if (0 == strcmp(joystick_port_config[i]->name, name)) {
-			joystick_unmap(i);
-			update_ui_joysticks(i);
-		}
-	}
-	joystick_config_remove(name);
 }
 
 // Connect various external interfaces to the machine.  May well end up

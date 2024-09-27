@@ -1674,9 +1674,9 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 	case hk_sym_j:
 		if (shift) {
-			xroar_swap_joysticks(1);
+			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 		} else {
-			xroar_cycle_joysticks(1);
+			ui_update_state(-1, ui_tag_joystick_cycle, UI_NEXT, NULL);
 		}
 		return;
 

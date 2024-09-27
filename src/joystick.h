@@ -70,7 +70,7 @@ struct joystick_module {
 struct joystick_config {
 	char *name;
 	char *description;
-	unsigned id;
+	int id;
 	char *axis_specs[JOYSTICK_NUM_AXES];
 	char *button_specs[JOYSTICK_NUM_BUTTONS];
 };
@@ -119,21 +119,25 @@ struct joystick_submodule {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Initialisation & shutdown
+
+void joystick_init(void);
+void joystick_shutdown(void);
+
+// Configuration profile management
+
 struct joystick_config *joystick_config_new(void);
-struct joystick_config *joystick_config_by_id(unsigned i);
+struct joystick_config *joystick_config_by_id(int i);
 struct joystick_config *joystick_config_by_name(const char *name);
 void joystick_config_print_all(FILE *f, _Bool all);
 _Bool joystick_config_remove(const char *name);
 struct slist *joystick_config_list(void);
 
-void joystick_init(void);
-void joystick_shutdown(void);
+// Port mapping
 
-void joystick_map(struct joystick_config const *, unsigned port);
-void joystick_unmap(unsigned port);
 void joystick_set_virtual(struct joystick_config const *);
-void joystick_swap(void);
-void joystick_cycle(void);
+
+// Joystick reading
 
 int joystick_read_axis(int port, int axis);
 int joystick_read_buttons(void);

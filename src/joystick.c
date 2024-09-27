@@ -23,6 +23,7 @@
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -35,6 +36,7 @@
 
 #include "joystick.h"
 #include "logging.h"
+#include "messenger.h"
 #include "module.h"
 #include "ui.h"
 #include "vo.h"
@@ -56,73 +58,101 @@ struct joystick_module * const *ui_joystick_module_list = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct slist *config_list = NULL;
-static unsigned next_id = 0;
-
-// Current configuration, per-port:
-struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
-
-static struct joystick_submodule *selected_interface = NULL;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 struct joystick {
+	const struct joystick_config *config;
 	struct joystick_axis *axes[JOYSTICK_NUM_AXES];
 	struct joystick_button *buttons[JOYSTICK_NUM_BUTTONS];
 };
 
+// Messenger client ID
+int msgr_client_id = -1;
+
+// Defined configurations
+static struct slist *config_list = NULL;
+static int next_id = 1;  // 0 is reserved to mean "no joystick"
+
+// Current configuration assigned to each port
+struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
+
+// Current joystick created for each port
 static struct joystick *joystick_port[JOYSTICK_NUM_PORTS];
 
 // Support the swap/cycle shortcuts:
-static struct joystick_config const *virtual_joystick_config;
+static struct joystick_config const *virtual_joystick_config = NULL;
 static struct joystick const *virtual_joystick = NULL;
 static struct joystick_config const *cycled_config = NULL;
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void joystick_config_free(struct joystick_config *jc);
+
+static void joystick_ui_set_joystick_port(void *, int tag, void *smsg);
+static void joystick_ui_set_joystick_cycle(void *, int tag, void *smsg);
+static void joystick_map(const struct joystick_config *, unsigned port);
+static void joystick_unmap(unsigned port);
+
+static struct joystick *joystick_new_from_config(const struct joystick_config *);
+static void joystick_free(struct joystick *);
+
+static void init_submod(const char *submod_name);
+static struct joystick_submodule *submod_by_name(const char *submod_name);
+static struct joystick_submodule *select_submod(struct joystick_submodule *submod,
+						char **spec);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void init_if(const char *if_name);
+// Initialisation & shutdown
 
 void joystick_init(void) {
-	for (unsigned p = 0; p < JOYSTICK_NUM_PORTS; p++) {
-		joystick_port[p] = NULL;
+	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		joystick_port_config[i] = NULL;
 	}
-	init_if("physical");
-	init_if("mouse");
-	init_if("keyboard");
+	init_submod("physical");
+	init_submod("mouse");
+	init_submod("keyboard");
+	msgr_client_id = messenger_client_register();
+	ui_messenger_preempt_group(msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(joystick_ui_set_joystick_port, NULL));
+	ui_messenger_preempt_group(msgr_client_id, ui_tag_joystick_cycle, MESSENGER_NOTIFY_DELEGATE(joystick_ui_set_joystick_cycle, NULL));
 }
 
 void joystick_shutdown(void) {
-	for (unsigned p = 0; p < JOYSTICK_NUM_PORTS; p++) {
-		joystick_unmap(p);
+	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		joystick_unmap(i);
 	}
+	messenger_client_unregister(msgr_client_id);
 	slist_free_full(config_list, (slist_free_func)joystick_config_free);
 	config_list = NULL;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Configuration profile management
+
 struct joystick_config *joystick_config_new(void) {
 	struct joystick_config *new = xmalloc(sizeof(*new));
 	*new = (struct joystick_config){0};
-	new->id = next_id;
+	new->id = next_id++;
 	config_list = slist_append(config_list, new);
-	next_id++;
 	return new;
 }
 
-struct joystick_config *joystick_config_by_id(unsigned id) {
+struct joystick_config *joystick_config_by_id(int id) {
+	if (id == 0) {
+		return NULL;
+	}
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct joystick_config *jc = l->data;
-		if (jc->id == id)
+		if (jc->id == id) {
 			return jc;
+		}
 	}
 	return NULL;
 }
 
 struct joystick_config *joystick_config_by_name(const char *name) {
-	if (!name) return NULL;
+	if (!name) {
+		return NULL;
+	}
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct joystick_config *jc = l->data;
 		if (0 == strcmp(jc->name, name)) {
@@ -164,13 +194,13 @@ static void joystick_config_free(struct joystick_config *jc) {
 		free(jc->name);
 	if (jc->description)
 		free(jc->description);
-	for (int i = 0; i < JOYSTICK_NUM_AXES; i++) {
+	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; ++i) {
 		if (jc->axis_specs[i]) {
 			free(jc->axis_specs[i]);
 			jc->axis_specs[i] = NULL;
 		}
 	}
-	for (int i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
+	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; ++i) {
 		if (jc->button_specs[i]) {
 			free(jc->button_specs[i]);
 			jc->button_specs[i] = NULL;
@@ -181,8 +211,15 @@ static void joystick_config_free(struct joystick_config *jc) {
 
 _Bool joystick_config_remove(const char *name) {
 	struct joystick_config *jc = joystick_config_by_name(name);
-	if (!jc)
+	if (!jc) {
 		return 0;
+	}
+	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		if (joystick_port_config[i] == jc) {
+			joystick_unmap(i);
+		}
+	}
+
 	config_list = slist_remove(config_list, jc);
 	joystick_config_free(jc);
 	return 1;
@@ -194,95 +231,171 @@ struct slist *joystick_config_list(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_submodule *find_if_in_modlist(struct joystick_module * const *list, const char *if_name) {
-	if (!list || !if_name)
-		return NULL;
-	for (unsigned j = 0; list[j]; j++) {
-		struct joystick_module *module = list[j];
-		for (unsigned i = 0; module->submodule_list[i]; i++) {
-			if (strcmp(module->submodule_list[i]->name, if_name) == 0) {
-				return module->submodule_list[i];
-			}
-		}
-	}
-	return NULL;
-}
+// Port mapping
 
-static struct joystick_submodule *find_if(const char *if_name) {
-	struct joystick_submodule *submod;
-	if ((submod = find_if_in_modlist(ui_joystick_module_list, if_name)))
-		return submod;
-	return find_if_in_modlist(joystick_module_list, if_name);
-}
-
-static void select_interface(char **spec) {
-	char *if_name = NULL;
-	if (spec && *spec && strchr(*spec, ':')) {
-		if_name = strsep(spec, ":");
+static void joystick_ui_set_joystick_port(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_joystick_port);
+	int port = uimsg->value;
+	int jsid = (intptr_t)uimsg->data;
+	if (port < 0 || (unsigned)port >= JOYSTICK_NUM_PORTS) {
+		LOG_WARN("Joystick port %d out of range\n", port);
+		uimsg->value = -1;
+		return;
 	}
-	if (if_name) {
-		selected_interface = find_if(if_name);
-	} else if (!selected_interface) {
-		selected_interface = find_if("physical");
+	struct joystick_config *jc = joystick_config_by_id(jsid);
+	joystick_map(jc, port);
+	if (!jc) {
+		uimsg->data = (void *)(intptr_t)0;
 	}
 }
 
-static void init_if(const char *if_name) {
-	struct joystick_submodule *submod = find_if(if_name);
-	if (submod && submod->init) {
-		submod->init();
+static void joystick_ui_set_joystick_cycle(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_joystick_cycle);
+
+	// 0 means do-nothing.
+	if (uimsg->value == 0) {
+		return;
 	}
+
+	struct joystick_config const *tmp0 = joystick_port_config[0];
+	struct joystick_config const *tmp1 = joystick_port_config[1];
+	if (cycled_config == NULL &&
+	    tmp0 != virtual_joystick_config && tmp1 != virtual_joystick_config) {
+		cycled_config = virtual_joystick_config;
+	}
+	int port0_id = tmp0 ? tmp0->id : 0;
+	int port1_id = tmp1 ? tmp1->id : 0;
+	int cycled_id = cycled_config ? cycled_config->id : 0;
+
+	if (uimsg->value == UI_NEXT) {
+		// Cycle virtual joystick right, left, off
+		ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)cycled_id);
+		ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)port0_id);
+		cycled_config = tmp1;
+		return;
+	} else if (uimsg->value == UI_PREV) {
+		// Cycle virtual joystick left, right, off
+		ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)port1_id);
+		ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)cycled_id);
+		cycled_config = tmp0;
+		return;
+	}
+
+	// Any other value means swap joysticks
+	ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)port1_id);
+	ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)port0_id);
 }
 
-void joystick_map(struct joystick_config const *jc, unsigned port) {
-	selected_interface = NULL;
+static void joystick_map(const struct joystick_config *jc, unsigned port) {
 	if (port >= JOYSTICK_NUM_PORTS)
 		return;
 	if (joystick_port_config[port] == jc)
 		return;
 	joystick_unmap(port);
-	if (!jc)
+	struct joystick *j = NULL;
+	if (jc) {
+		j = joystick_new_from_config(jc);
+	}
+	if (j) {
+		const char *description = jc->description ? jc->description : jc->name;
+		LOG_DEBUG(1, "[joystick] port %u = %s\n", port, description);
+		joystick_port[port] = j;
+		joystick_port_config[port] = jc;
+	} else {
+		LOG_DEBUG(1, "[joystick] port %u unplugged\n", port);
+	}
+}
+
+static void joystick_unmap(unsigned port) {
+	if (port >= JOYSTICK_NUM_PORTS)
 		return;
+	struct joystick *j = joystick_port[port];
+	joystick_port_config[port] = NULL;
+	joystick_port[port] = NULL;
+	joystick_free(j);
+}
+
+void joystick_set_virtual(struct joystick_config const *jc) {
+	unsigned remap_virtual = 0;
+	if (virtual_joystick) {
+		for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+			if (joystick_port[i] == virtual_joystick) {
+				joystick_unmap(i);
+				remap_virtual |= (1 << i);
+			}
+		}
+	}
+	virtual_joystick_config = jc;
+	if (jc) {
+		const char *description = jc->description ? jc->description : jc->name;
+		LOG_DEBUG(1, "[joystick] virtual joystick = %s\n", description);
+	} else {
+		LOG_DEBUG(1, "[joystick] virtual joystick = None\n");
+	}
+	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		if (remap_virtual & (1 << i)) {
+			joystick_map(jc, i);
+		}
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Joystick creation
+
+static struct joystick *joystick_new_from_config(const struct joystick_config *jc) {
+	if (!jc) {
+		return NULL;
+	}
 	struct joystick *j = xmalloc(sizeof(*j));
-	*j = (struct joystick){.axes={0}};
+	*j = (struct joystick){0};
+	j->config = jc;
+
+	// We parse joystick specs here, so a config could still be invalid
 	_Bool valid_joystick = 0;
-	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
-		if (!jc->axis_specs[i])
+	struct joystick_submodule *submod = NULL;
+	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; ++i) {
+		if (!jc->axis_specs[i]) {
 			continue;
+		}
 		char *spec_copy = xstrdup(jc->axis_specs[i]);
 		char *spec = spec_copy;
-		select_interface(&spec);
-		if (!selected_interface) {
+		submod = select_submod(submod, &spec);
+		if (!submod) {
 			free(spec_copy);
 			free(j);
-			return;
+			return NULL;
 		}
-		struct joystick_axis *axis = selected_interface->configure_axis(spec, i);
+		struct joystick_axis *axis = submod->configure_axis(spec, i);
 		j->axes[i] = axis;
 		if (axis) {
 			if (!DELEGATE_DEFINED(axis->as_control.read)) {
-				axis->submod = selected_interface;
+				axis->submod = submod;
 			}
 			valid_joystick = 1;
 		}
 		free(spec_copy);
 	}
-	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
+	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; ++i) {
 		if (!jc->button_specs[i])
 			continue;
 		char *spec_copy = xstrdup(jc->button_specs[i]);
 		char *spec = spec_copy;
-		select_interface(&spec);
-		if (!selected_interface) {
+		submod = select_submod(submod, &spec);
+		if (!submod) {
 			free(spec_copy);
 			free(j);
-			return;
+			return NULL;
 		}
-		struct joystick_button *button = selected_interface->configure_button(spec, i);
+		struct joystick_button *button = submod->configure_button(spec, i);
 		j->buttons[i] = button;
 		if (button) {
 			if (!DELEGATE_DEFINED(button->as_control.read)) {
-				button->submod = selected_interface;
+				button->submod = submod;
 			}
 			valid_joystick = 1;
 		}
@@ -290,22 +403,17 @@ void joystick_map(struct joystick_config const *jc, unsigned port) {
 	}
 	if (!valid_joystick) {
 		free(j);
-		return;
+		return NULL;
 	}
-	LOG_DEBUG(1, "Joystick port %u = %s\n", port, jc->name);
-	joystick_port[port] = j;
-	joystick_port_config[port] = jc;
+
+	return j;
 }
 
-void joystick_unmap(unsigned port) {
-	if (port >= JOYSTICK_NUM_PORTS)
+static void joystick_free(struct joystick *j) {
+	if (!j) {
 		return;
-	struct joystick *j = joystick_port[port];
-	joystick_port_config[port] = NULL;
-	joystick_port[port] = NULL;
-	if (!j)
-		return;
-	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; a++) {
+	}
+	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; ++a) {
 		struct joystick_axis *axis = j->axes[a];
 		struct joystick_control *control = &axis->as_control;
 		if (axis) {
@@ -322,7 +430,7 @@ void joystick_unmap(unsigned port) {
 			}
 		}
 	}
-	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; b++) {
+	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; ++b) {
 		struct joystick_button *button = j->buttons[b];
 		struct joystick_control *control = &button->as_control;
 		if (button) {
@@ -342,48 +450,57 @@ void joystick_unmap(unsigned port) {
 	free(j);
 }
 
-void joystick_set_virtual(struct joystick_config const *jc) {
-	int remap_virtual_to = -1;
-	if (virtual_joystick) {
-		if (joystick_port[0] == virtual_joystick) {
-			joystick_unmap(0);
-			remap_virtual_to = 0;
-		}
-		if (joystick_port[1] == virtual_joystick) {
-			joystick_unmap(1);
-			remap_virtual_to = 1;
-		}
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Submodule handling
+
+static void init_submod(const char *submod_name) {
+	struct joystick_submodule *submod = submod_by_name(submod_name);
+	if (submod && submod->init) {
+		submod->init();
 	}
-	virtual_joystick_config = jc;
-	if (remap_virtual_to >= 0)
-		joystick_map(jc, remap_virtual_to);
 }
 
-// Swap the right & left joysticks
-void joystick_swap(void) {
-	struct joystick_config const *tmp = joystick_port_config[0];
-	joystick_map(joystick_port_config[1], 0);
-	joystick_map(tmp, 1);
+static struct joystick_submodule *submod_by_name_in_modlist(struct joystick_module * const *list, const char *submod_name) {
+	if (!list || !submod_name) {
+		return NULL;
+	}
+	for (unsigned j = 0; list[j]; ++j) {
+		struct joystick_module *module = list[j];
+		for (unsigned i = 0; module->submodule_list[i]; ++i) {
+			if (strcmp(module->submodule_list[i]->name, submod_name) == 0) {
+				return module->submodule_list[i];
+			}
+		}
+	}
+	return NULL;
 }
 
-// Cycle the virtual joystick through right and left joystick ports
-void joystick_cycle(void) {
-	if (!virtual_joystick_config) {
-		joystick_swap();
-		return;
+static struct joystick_submodule *submod_by_name(const char *submod_name) {
+	struct joystick_submodule *submod;
+	if ((submod = submod_by_name_in_modlist(ui_joystick_module_list, submod_name))) {
+		return submod;
 	}
-	struct joystick_config const *tmp0 = joystick_port_config[0];
-	struct joystick_config const *tmp1 = joystick_port_config[1];
-	if (cycled_config == NULL &&
-	    tmp0 != virtual_joystick_config && tmp1 != virtual_joystick_config) {
-		cycled_config = virtual_joystick_config;
+	return submod_by_name_in_modlist(joystick_module_list, submod_name);
+}
+
+static struct joystick_submodule *select_submod(struct joystick_submodule *submod,
+						char **spec) {
+	char *submod_name = NULL;
+	if (spec && *spec && strchr(*spec, ':')) {
+		submod_name = strsep(spec, ":");
 	}
-	joystick_map(cycled_config, 0);
-	joystick_map(tmp0, 1);
-	cycled_config = tmp1;
+	if (submod_name) {
+		submod = submod_by_name(submod_name);
+	} else if (!submod) {
+		submod = submod_by_name("physical");
+	}
+	return submod;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Joystick reading
 
 int joystick_read_axis(int port, int axis_index) {
 	struct joystick *j = joystick_port[port];

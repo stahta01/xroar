@@ -28,6 +28,13 @@
 #define UIW32_TAG_TYPE(t) (((t) >> 8) & 0x7f)
 #define UIW32_TAG_VALUE(t) ((t) & 0xff)
 
+// Extend the UI tags for our own purposes
+
+enum {
+	uiw32_tag_joystick_right = ui_num_tags,
+	uiw32_tag_joystick_left
+};
+
 struct xconfig_enum;
 
 struct ui_windows32_interface {
@@ -43,6 +50,7 @@ struct ui_windows32_interface {
 	HMENU left_joystick_menu;
 
 	int max_cartridge_id;
+	int max_joystick_id;
 
 	// About dialog
 	struct {

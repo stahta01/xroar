@@ -321,6 +321,7 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
@@ -499,6 +500,7 @@ static void ui_gtk3_run(void *sptr) {
 
 static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
+	(void)data;
 
 	switch (tag) {
 
@@ -506,22 +508,6 @@ static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *d
 
 	case ui_tag_machine:
 		uigtk3_notify_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
-		break;
-
-	// Joysticks
-
-	case ui_tag_joy_right:
-		{
-			struct joystick_config *jc = joystick_config_by_name(data);
-			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_right_radio_menu, jc ? jc->id : (unsigned)-1);
-		}
-		break;
-
-	case ui_tag_joy_left:
-		{
-			struct joystick_config *jc = joystick_config_by_name(data);
-			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_left_radio_menu, jc ? jc->id : (unsigned)-1);
-		}
 		break;
 
 	default:
@@ -535,7 +521,7 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_gtk3_interface *uigtk3 = sptr;
 	struct ui_state_message *msg = smsg;
 	int value = msg->value;
-	//const void *data = msg->data;
+	const void *data = msg->data;
 
 	switch (tag) {
 
@@ -595,6 +581,16 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_kbd_translate:
 		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/ToolMenu/TranslateKeyboard", value ? TRUE : FALSE);
+		break;
+
+	// Joysticks
+
+	case ui_tag_joystick_port:
+		if (value == 0) {
+			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_right_radio_menu, (intptr_t)data);
+		} else if (value == 1) {
+			uigtk3_notify_radio_menu_set_current_value(uigtk3->joy_left_radio_menu, (intptr_t)data);
+		}
 		break;
 
 	// Debugging
@@ -719,7 +715,7 @@ static void update_joystick_menu(struct ui_gtk3_interface *uigtk3,
 	GtkRadioActionEntry *entries = g_malloc0((num_joystick_configs+1) * sizeof(*entries));
 	entries[0].name = name0;
 	entries[0].label = "None";
-	entries[0].value = -1;
+	entries[0].value = 0;
 	gtk_ui_manager_add_ui(uigtk3->menu_manager, rm->merge_id, rm->path, entries[0].name, entries[0].name, GTK_UI_MANAGER_MENUITEM, FALSE);
 	int i = 1;
 	for (struct slist *iter = jcl; iter; iter = iter->next) {
@@ -914,28 +910,24 @@ static void set_keymap(GtkRadioAction *action, GtkRadioAction *current, gpointer
 
 static void set_joy_right(GtkRadioAction *action, GtkRadioAction *current,
 			  gpointer user_data) {
-	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	struct joystick_config *jc = joystick_config_by_id(val);
-	xroar_set_joystick(0, 0, jc ? jc->name : NULL);
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	ui_update_state(-1, ui_tag_joystick_port, 0, (void *)(intptr_t)val);
 }
 
 static void set_joy_left(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {
-	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	struct ui_gtk3_interface *uigtk3 = user_data;
-	(void)uigtk3;
-	struct joystick_config *jc = joystick_config_by_id(val);
-	xroar_set_joystick(0, 1, jc ? jc->name : NULL);
+	(void)user_data;
+	gint val = gtk_radio_action_get_current_value(current);
+	ui_update_state(-1, ui_tag_joystick_port, 1, (void *)(intptr_t)val);
 }
 
 static void swap_joysticks(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	struct ui_gtk3_interface *uigtk3 = user_data;
 	(void)uigtk3;
-	xroar_swap_joysticks(1);
+	ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 }
 
 static void do_soft_reset(GtkEntry *entry, gpointer user_data) {

@@ -107,8 +107,8 @@ enum ui_tag {
 	ui_tag_hkbd_lang,
 	ui_tag_kbd_translate,
 	// Joysticks
-	ui_tag_joy_right,
-	ui_tag_joy_left,
+	ui_tag_joystick_port,
+	ui_tag_joystick_cycle,
 	// Printer
 	ui_tag_print_dialog,  // print control dialog, if supported
 	ui_tag_print_destination,  // 0=none, 1=file, 2=pipe
