@@ -83,15 +83,16 @@ void hkbd_js_init(void) {
 // Returns true if handled as a virtual joystick control
 
 _Bool hkbd_js_keypress(uint8_t code) {
+	_Bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (code == enabled_axis[i]->key0_code) {
 				enabled_axis[i]->value = 0;
-				return 1;
+				handled = 1;
 			}
 			if (code == enabled_axis[i]->key1_code) {
 				enabled_axis[i]->value = 65535;
-				return 1;
+				handled = 1;
 			}
 		}
 	}
@@ -99,25 +100,26 @@ _Bool hkbd_js_keypress(uint8_t code) {
 		if (enabled_button[i]) {
 			if (code == enabled_button[i]->key_code) {
 				enabled_button[i]->value = 1;
-				return 1;
+				handled = 1;
 			}
 		}
 	}
-	return 0;
+	return handled;
 }
 
 _Bool hkbd_js_keyrelease(uint8_t code) {
+	_Bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (code == enabled_axis[i]->key0_code) {
 				if (enabled_axis[i]->value < 32768)
 					enabled_axis[i]->value = 32256;
-				return 1;
+				handled = 1;
 			}
 			if (code == enabled_axis[i]->key1_code) {
 				if (enabled_axis[i]->value >= 32768)
 					enabled_axis[i]->value = 33280;
-				return 1;
+				handled = 1;
 			}
 		}
 	}
@@ -125,11 +127,11 @@ _Bool hkbd_js_keyrelease(uint8_t code) {
 		if (enabled_button[i]) {
 			if (code == enabled_button[i]->key_code) {
 				enabled_button[i]->value = 0;
-				return 1;
+				handled = 1;
 			}
 		}
 	}
-	return 0;
+	return handled;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
