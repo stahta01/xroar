@@ -38,8 +38,6 @@ static struct module * const null_filereq_module_list[] = {
 	&filereq_null_module, NULL
 };
 
-static void update_state(void *sptr, int tag, int value, const void *data);
-
 static void *new(void *cfg);
 
 struct ui_module ui_null_module = {
@@ -64,7 +62,6 @@ static void *new(void *cfg) {
 	*uinull = (struct ui_interface){0};
 
 	uinull->free = DELEGATE_AS0(void, null_free, uinull);
-	uinull->update_state = DELEGATE_AS3(void, int, int, cvoidp, update_state, uinull);
 
 	struct vo_interface *vo = xmalloc(sizeof(*vo));
 	uinull->vo_interface = vo;
@@ -79,13 +76,6 @@ static void null_free(void *sptr) {
 	struct ui_interface *uinull = sptr;
 	free(uinull->vo_interface);
 	free(uinull);
-}
-
-static void update_state(void *sptr, int tag, int value, const void *data) {
-	(void)sptr;
-	(void)tag;
-	(void)value;
-	(void)data;
 }
 
 static void *filereq_null_new(void *cfg) {

@@ -216,7 +216,6 @@ void xroar_run_file(void);
 void xroar_flush_printer(void);
 void xroar_connect_machine(void);
 void xroar_configure_machine(struct machine_config *mc);
-void xroar_set_machine(_Bool notify, int id);
 void xroar_update_cartridge_menu(void);
 void xroar_save_snapshot(void);
 void xroar_insert_input_tape_file(const char *filename);

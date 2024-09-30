@@ -49,6 +49,7 @@ struct ui_windows32_interface {
 	HMENU right_joystick_menu;
 	HMENU left_joystick_menu;
 
+	int max_machine_id;
 	int max_cartridge_id;
 	int max_joystick_id;
 

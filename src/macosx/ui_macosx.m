@@ -130,8 +130,6 @@ int cocoa_super_all_keys = 0;
 }
 
 - (void)do_set_state:(id)sender {
-	struct ui_macosx_interface *uimac = (struct ui_macosx_interface *)global_uisdl2;
-
 	int sender_tag = [sender tag];
 	int tag = UIMAC_TAG_TYPE(sender_tag);
 	int value = UIMAC_TAG_VALUE(sender_tag);
@@ -204,8 +202,7 @@ int cocoa_super_all_keys = 0;
 
 	/* Machines: */
 	case ui_tag_machine:
-		uimac->machine.id = value;
-		xroar_set_machine(0, value);
+		ui_update_state(-1, ui_tag_machine, value, NULL);
 		break;
 
 	/* Cartridges: */
@@ -1088,7 +1085,6 @@ struct ui_module ui_cocoa_module = {
 static void cocoa_update_machine_menu(void *);
 static void cocoa_update_cartridge_menu(void *);
 static void cocoa_update_joystick_menus(void *);
-static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data);
 static void cocoa_ui_state_notify(void *, int tag, void *smsg);
 
 static void *ui_cocoa_new(void *cfg) {
@@ -1105,7 +1101,6 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_cocoa_free, uimac);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uimac);
 	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uimac);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uimac);
 	ui->update_joystick_menus = DELEGATE_AS0(void, cocoa_update_joystick_menus, uimac);
@@ -1113,6 +1108,7 @@ static void *ui_cocoa_new(void *cfg) {
 	// Register with messenger
 	uimac->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_machine, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_fast, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_tape_flag_pad_auto, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1157,32 +1153,28 @@ static void ui_cocoa_free(void *sptr) {
 
 static void cocoa_update_machine_menu(void *sptr) {
 	struct ui_macosx_interface *uimac = sptr;
+	(void)uimac;
 
 	// Get list of machine configs
-	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
+	struct slist *mcl = machine_config_list();
 
 	// Remove old entries
-	while ([machine_menu numberOfItems] > 0)
+	while ([machine_menu numberOfItems] > 0) {
 		[machine_menu removeItem:[machine_menu itemAtIndex:0]];
+	}
 
-	// Add new entries in reverse order, as each will be inserted before
-	// the previous.
+	// Add entries
 	NSMenuItem *item;
-	struct slist *iter;
-	for (iter = mcl; iter; iter = iter->next) {
+	for (struct slist *iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
-		if (mc == xroar.machine_config) {
-			uimac->machine.id = mc->id;
-		}
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
 		[item setTag:UIMAC_TAGV(ui_tag_machine, mc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
-		[machine_menu insertItem:item atIndex:0];
+		[machine_menu addItem:item];
 		[item release];
 	}
-	slist_free(mcl);
 }
 
 static void cocoa_update_cartridge_menu(void *sptr) {
@@ -1271,24 +1263,6 @@ static void cocoa_update_joystick_menus(void *sptr) {
 	}
 }
 
-static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_macosx_interface *uimac = sptr;
-	(void)data;
-
-	switch (tag) {
-
-	/* Hardware */
-
-	case ui_tag_machine:
-		uimac->machine.id = value;
-		break;
-
-	default:
-		break;
-
-	}
-}
-
 static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_macosx_interface *uimac = sptr;
 	struct ui_state_message *uimsg = smsg;
@@ -1298,6 +1272,10 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	switch (tag) {
 
 	// Hardware
+
+	case ui_tag_machine:
+		uimac->machine.id = value;
+		break;
 
 	case ui_tag_cartridge:
 		uimac->cart.id = value;

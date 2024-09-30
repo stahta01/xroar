@@ -293,6 +293,7 @@ static void versiontext(void);
 static void config_print_all(FILE *f, _Bool all);
 #endif
 
+static void xroar_ui_set_machine(void *, int tag, void *smsg);
 static void xroar_ui_set_cartridge(void *, int tag, void *smsg);
 static void xroar_ui_set_frameskip(void *, int tag, void *smsg);
 static void xroar_ui_set_picture(void *, int tag, void *smsg);
@@ -1009,6 +1010,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Join each UI group we're interested in
 
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_machine, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_machine, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_cartridge, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_frameskip, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit, &xroar));
@@ -1113,7 +1115,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_hue, private_cfg.vo.hue, NULL);
 
 	// Configure machine
-	xroar_configure_machine(xroar.machine_config);
+	//xroar_configure_machine(xroar.machine_config);
+	ui_update_state(-1, ui_tag_machine, xroar.machine_config->id, NULL);
 	if (xroar.machine_config->cart_enabled) {
 		ui_update_state(-1, ui_tag_cartridge, 0, xroar.machine_config->default_cart);
 	} else {
@@ -1212,7 +1215,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 #ifdef HAVE_WASM
 	if (xroar.machine_config) {
-		xroar_set_machine(1, xroar.machine_config->id);
+		ui_update_state(-1, ui_tag_machine, xroar.machine_config->id, NULL);
 	}
 #endif
 	return xroar.ui_interface;
@@ -1718,14 +1721,6 @@ void xroar_connect_machine(void) {
 		c = NULL;
 	}
 
-	if (xroar.ui_interface) {
-		int mcid = xroar.machine_config->id;
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_machine, mcid, NULL);
-		int ccid = (c && c->config) ? c->config->id : -1;
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_cartridge, ccid, NULL);
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_keymap, xroar.machine->keyboard.type, NULL);
-	}
-
 	connect_interfaces();
 
 	_Bool is_coco3 = strcmp(xroar.machine_config->architecture, "coco3") == 0;
@@ -1756,52 +1751,57 @@ void xroar_configure_machine(struct machine_config *mc) {
 	xroar_connect_machine();
 }
 
-void xroar_set_machine(_Bool notify, int id) {
-	struct slist *mcl, *mcc;
-	int new;
-	switch (id) {
-		case XROAR_NEXT:
-			mcl = machine_config_list();
-			mcc = slist_find(mcl, xroar.machine_config);
-			if (mcc && mcc->next) {
-				new = ((struct machine_config *)mcc->next->data)->id;
-			} else {
-				new = ((struct machine_config *)mcl->data)->id;
-			}
-			break;
-		default:
-			new = (id >= 0 ? id : 0);
-			break;
+void xroar_update_cartridge_menu(void) {
+	if (xroar.ui_interface) {
+		DELEGATE_SAFE_CALL(xroar.ui_interface->update_cartridge_menu);
 	}
-	struct machine_config *mc = machine_config_by_id(new);
-	machine_config_complete(mc);
+}
+
 #ifdef HAVE_WASM
-	_Bool waiting = !wasm_ui_prepare_machine(mc);;
+static void do_wasm_ui_set_machine(void *sptr) {
+	int mcid = (intptr_t)sptr;
+	ui_update_state(-1, ui_tag_machine, mcid, NULL);
+}
+#endif
+
+static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_machine);
+
+	int old_mcid = emu->machine ? emu->machine->config->id : -1;
+
+	struct machine_config *mc = machine_config_by_id(uimsg->value);
+	if (!mc) {
+		uimsg->value = old_mcid;
+		return;
+	}
+
+	machine_config_complete(mc);
+
+#ifdef HAVE_WASM
+	_Bool waiting = !wasm_ui_prepare_machine(mc);
 	if (mc->default_cart) {
 		struct cart_config *cc = cart_config_by_name(mc->default_cart);
 		waiting |= !wasm_ui_prepare_cartridge(cc);
 	}
-	if (waiting)
+	if (waiting) {
+		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_ui_set_machine, (void *)(intptr_t)mc->id), 1);
+		uimsg->value = old_mcid;
 		return;
+	}
 #endif
+
+	uimsg->value = mc->id;
 	xroar_configure_machine(mc);
 	if (mc->cart_enabled) {
 		ui_update_state(-1, ui_tag_cartridge, 0, mc->default_cart);
 	} else {
 		ui_update_state(-1, ui_tag_cartridge, 0, NULL);
 	}
-	ui_update_state(-1, ui_tag_frameskip, xroar.state.vo.frameskip, NULL);
-	ui_update_state(-1, ui_tag_ratelimit_latch, xroar.state.ratelimit_latch, NULL);
+	ui_update_state(-1, ui_tag_frameskip, emu->state.vo.frameskip, NULL);
+	ui_update_state(-1, ui_tag_ratelimit_latch, emu->state.ratelimit_latch, NULL);
 	xroar_hard_reset();
-	if (notify) {
-		DELEGATE_CALL(xroar.ui_interface->update_state, ui_tag_machine, new, NULL);
-	}
-}
-
-void xroar_update_cartridge_menu(void) {
-	if (xroar.ui_interface) {
-		DELEGATE_SAFE_CALL(xroar.ui_interface->update_cartridge_menu);
-	}
 }
 
 #ifdef HAVE_WASM

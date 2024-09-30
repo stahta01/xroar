@@ -40,8 +40,6 @@
 #include "xroar.h"
 #include "sdl2/common.h"
 
-static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data);
-
 // Initialise SDL video and allocate at least enough space for a struct
 // ui_sdl2_interface.
 //
@@ -82,7 +80,6 @@ void ui_sdl_init(struct ui_sdl2_interface *uisdl2, struct ui_cfg *ui_cfg) {
 	struct ui_interface *ui = &uisdl2->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_sdl_free, uisdl2);
 	ui->run = DELEGATE_AS0(void, ui_sdl_run, uisdl2);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, ui_sdl_update_state, uisdl2);
 
 	// Make available globally for other SDL2 code
 	global_uisdl2 = uisdl2;
@@ -110,17 +107,6 @@ void ui_sdl_run(void *sptr) {
 	for (;;) {
 		run_sdl_event_loop(uisdl2);
 		xroar_run(EVENT_MS(10));
-	}
-}
-
-static void ui_sdl_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
-	(void)value;
-	(void)data;
-	switch (tag) {
-	default:
-		break;
 	}
 }
 

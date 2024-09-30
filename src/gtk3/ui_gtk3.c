@@ -144,7 +144,6 @@ static void ui_gtk3_destroy(GtkWidget *w, gpointer user_data);
 
 // UI message reception
 
-static void uigtk3_ui_update_state(void *, int tag, int value, const void *data);
 static void uigtk3_ui_state_notify(void *, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -303,11 +302,11 @@ static void *ui_gtk3_new(void *cfg) {
 
 	ui->free = DELEGATE_AS0(void, ui_gtk3_free, uigtk3);
 	ui->run = DELEGATE_AS0(void, ui_gtk3_run, uigtk3);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, uigtk3_ui_update_state, uigtk3);
 
 	// Register with messenger
 	uigtk3->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_machine, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_disk_dialog, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
@@ -495,26 +494,6 @@ static void ui_gtk3_run(void *sptr) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// State change notification - the old way.  This should all disappear once
-// everything is moved to message based notifications.
-
-static void uigtk3_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_gtk3_interface *uigtk3 = sptr;
-	(void)data;
-
-	switch (tag) {
-
-	// Hardware
-
-	case ui_tag_machine:
-		uigtk3_notify_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
-		break;
-
-	default:
-		break;
-	}
-}
-
 // UI message reception
 
 static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
@@ -526,6 +505,10 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	switch (tag) {
 
 	// Hardware
+
+	case ui_tag_machine:
+		uigtk3_radio_menu_set_current_value(uigtk3->machine_radio_menu, value);
+		break;
 
 	case ui_tag_cartridge:
 		uigtk3_radio_menu_set_current_value(uigtk3->cart_radio_menu, value);
@@ -628,8 +611,6 @@ static void gtk3_update_machine_menu(void *sptr) {
 	int i = 0;
 	for (struct slist *iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
-		if (mc == xroar.machine_config)
-			selected = mc->id;
 		entries[i].name = g_strdup_printf("machine%d", i+1);
 		entries[i].label = uigtk3_escape_underscores(mc->description);
 		entries[i].value = mc->id;
@@ -891,7 +872,7 @@ static void set_machine(GtkRadioAction *action, GtkRadioAction *current, gpointe
 	(void)user_data;
 	gint val = gtk_radio_action_get_current_value(current);
 	(void)action;
-	xroar_set_machine(1, val);
+	ui_update_state(-1, ui_tag_machine, val, NULL);
 }
 
 static void set_cart(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data) {

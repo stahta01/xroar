@@ -163,15 +163,6 @@ struct ui_interface {
 	 */
 	DELEGATE_T0(void) run;
 
-	/** \brief Update UI to reflect a change in emulator state.
-	 *  \param ui_tag  from enum ui_tag.
-	 *  \param value   value to set.
-	 *  \param data    other tag-specific data.
-	 *
-	 * Calling this shall not in itself change any emulator state.
-	 */
-	DELEGATE_T3(void, int, int, cvoidp) update_state;  // ui_tag, value, data
-
 	/** \brief Create or update machine menu.
 	 *
 	 * Called at startup, and whenever the machine config list changes.

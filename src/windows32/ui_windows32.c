@@ -65,8 +65,6 @@
 #define TAG_TYPE(t) (((t) >> 8) & 0x7f)
 #define TAG_VALUE(t) ((t) & 0xff)
 
-static int max_machine_id = 0;
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -84,7 +82,6 @@ struct ui_module ui_windows32_module = {
 	.joystick_module_list = sdl_js_modlist,
 };
 
-static void windows32_ui_update_state(void *, int tag, int value, const void *data);
 static void windows32_create_menus(struct ui_windows32_interface *);
 static void windows32_update_machine_menu(void *);
 static void windows32_update_cartridge_menu(void *);
@@ -104,7 +101,6 @@ static void *ui_windows32_new(void *cfg) {
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_windows32_free, uiw32);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, windows32_ui_update_state, uiw32);
 	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uiw32);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uiw32);
 	ui->update_joystick_menus = DELEGATE_AS0(void, windows32_update_joystick_menus, uiw32);
@@ -112,6 +108,7 @@ static void *ui_windows32_new(void *cfg) {
 	// Register with messenger
 	uiw32->msgr_client_id = messenger_client_register();
 
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_machine, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_disk_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
@@ -263,10 +260,6 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard reset");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
-
-	windows32_ui_update_state(uiw32, ui_tag_machine, xroar.machine_config ? xroar.machine_config->id : 0, NULL);
-	struct cart *cart = xroar.machine ? xroar.machine->get_interface(xroar.machine, "cart") : NULL;
-	windows32_ui_update_state(uiw32, ui_tag_cartridge, cart ? cart->config->id : 0, NULL);
 }
 
 static void setup_tool_menu(struct ui_windows32_interface *uiw32) {
@@ -313,11 +306,12 @@ static void windows32_update_machine_menu(void *sptr) {
 		;
 
 	// Add new entries
-	max_machine_id = 0;
+	uiw32->max_machine_id = 0;
 	while (mcl) {
 		struct machine_config *mc = mcl->data;
-		if (mc->id > max_machine_id)
-			max_machine_id = mc->id;
+		if (mc->id > uiw32->max_machine_id) {
+			uiw32->max_machine_id = mc->id;
+		}
 		AppendMenu(uiw32->machine_menu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
 		mcl = mcl->next;
 	}
@@ -449,7 +443,7 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	// Machines:
 	case ui_tag_machine:
-		xroar_set_machine(1, tag_value);
+		ui_update_state(-1, ui_tag_machine, tag_value, NULL);
 		break;
 
 	// Cartridges:
@@ -534,24 +528,6 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void windows32_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	(void)data;
-	struct ui_windows32_interface *uiw32 = sptr;
-	switch (tag) {
-
-	// Hardware
-
-	case ui_tag_machine:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
-		break;
-
-	default:
-		break;
-
-	}
-
-}
-
 static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_windows32_interface *uiw32 = sptr;
 	struct ui_state_message *msg = smsg;
@@ -567,6 +543,10 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 		break;
 
 	// Hardware
+
+	case ui_tag_machine:
+		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, uiw32->max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
+		break;
 
 	case ui_tag_cartridge:
 		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, uiw32->max_cartridge_id), TAGV(tag, value), MF_BYCOMMAND);
