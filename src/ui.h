@@ -138,6 +138,7 @@ enum ui_action {
 	ui_action_zoom_out,
 	ui_action_zoom_reset,
 	ui_action_joystick_swap,
+	ui_action_print_flush,
 };
 
 struct ui_module {
