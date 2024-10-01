@@ -52,66 +52,7 @@
 #include "xroar.h"
 #include "sdl2/common.h"
 
-#define TAG(ui_tag,value) ((((ui_tag) & 0x7f) << 24) | ((value) & 0xffffff))
-#define TAG_TYPE(t) (((t) >> 24) & 0x7f)
-#define TAG_VALUE(t) ((t) & 0xffffff)
-
-#define TAG_TYPE_MASK (0x7f << 24)
-#define TAG_VALUE_MASK (0xffffff)
-
-#define TAG_SIMPLE_ACTION (1 << 24)
-
-#define TAG_MACHINE (2 << 24)
-
-#define TAG_CARTRIDGE (3 << 24)
-
-#define TAG_TAPE_FLAGS (4 << 24)
-#define TAG_TAPE_PLAY_PAUSE (19 << 24)
-
-#define TAG_INSERT_DISK (5 << 24)
-#define TAG_NEW_DISK (6 << 24)
-#define TAG_WRITE_ENABLE (7 << 24)
-#define TAG_WRITE_BACK (8 << 24)
-#define TAG_EJECT_DISK (17 << 24)
-
-#define TAG_FULLSCREEN (9 << 24)
-#define TAG_VDG_INVERSE (16 << 24)
-#define TAG_TV_INPUT (10 << 24)
-#define TAG_TV_PICTURE (24 << 24)
-#define TAG_NTSC_SCALING (25 << 24)
-#define TAG_CCR (18 << 24)
-#define TAG_CMP_FS (20 << 24)
-#define TAG_CMP_FSC (21 << 24)
-#define TAG_CMP_SYSTEM (22 << 24)
-#define TAG_CMP_COLOUR_KILLER (23 << 24)
-
-#define TAG_KEYMAP (12 << 24)
-#define TAG_HKBD_LAYOUT (27 << 24)
-#define TAG_HKBD_LANG (28 << 24)
-#define TAG_KBD_TRANSLATE (13 << 24)
-#define TAG_RATELIMIT (29 << 24)
-#define TAG_JOY_RIGHT (14 << 24)
-#define TAG_JOY_LEFT (15 << 24)
-
-#define TAG_PRINT (26 << 24)
-
-enum {
-	TAG_QUIT,
-	TAG_RESET_SOFT,
-	TAG_RESET_HARD,
-	TAG_FILE_LOAD,
-	TAG_FILE_RUN,
-	TAG_FILE_SAVE_SNAPSHOT,
-	TAG_FILE_SCREENSHOT,
-	TAG_TAPE_INPUT,
-	TAG_TAPE_OUTPUT,
-	TAG_TAPE_INPUT_REWIND,
-	TAG_PRINT_FLUSH,
-	TAG_ZOOM_IN,
-	TAG_ZOOM_OUT,
-	TAG_ZOOM_RESET,
-	TAG_JOY_SWAP,
-};
+#include "macosx/ui_macosx.h"
 
 @interface SDLMain : NSObject <NSApplicationDelegate>
 @end
@@ -145,25 +86,6 @@ static NSString *get_application_name(void) {
 
 static void cocoa_update_radio_menu_from_enum(NSMenu *menu, struct xconfig_enum *xc_enum,
 					      unsigned tag);
-
-static int current_picture = 0;
-static int current_cc = 0;
-static int current_ccr = 0;
-static int current_machine = 0;
-static int current_cartridge = 0;
-static int current_joy_right = 0;
-static int current_joy_left = 0;
-static int current_keymap = 0;
-static int current_hkbd_layout = 0;
-static int current_hkbd_lang = 0;
-static int is_fullscreen = 0;
-static int tape_is_playing = 0;
-static int vdg_inverted = 0;
-static int is_kbd_translate = 0;
-static int is_ratelimit = 1;
-static _Bool disk_write_enable[4] = { 1, 1, 1, 1 };
-static _Bool disk_write_back[4] = { 0, 0, 0, 0 };
-static int print_destination = 0;
 
 /* Setting this to true is a massive hack so that cocoa file dialogues receive
  * keypresses.  Ideally, need to sort SDL out or turn this into a regular
@@ -200,69 +122,71 @@ int cocoa_super_all_keys = 0;
 }
 
 - (void)do_set_state:(id)sender {
-	int tag = [sender tag];
-	int tag_type = tag & TAG_TYPE_MASK;
-	int tag_value = tag & TAG_VALUE_MASK;
+	struct ui_macosx_interface *uimac = (struct ui_macosx_interface *)global_uisdl2;
+
+	int sender_tag = [sender tag];
+	int tag = UIMAC_TAG_TYPE(sender_tag);
+	int value = UIMAC_TAG_VALUE(sender_tag);
 
 	// Try and ensure that the keydown event that (maybe) caused this
 	// menuitem dispatch is not then handled by the main loop as well.
 	SDL_PumpEvents();
 	SDL_FlushEvent(SDL_KEYDOWN);
 
-	switch (tag_type) {
+	switch (tag) {
 
 	/* Simple actions: */
-	case TAG_SIMPLE_ACTION:
-		switch (tag_value) {
-		case TAG_QUIT:
+	case ui_tag_action:
+		switch (value) {
+		case ui_action_quit:
 			{
 				SDL_Event event;
 				event.type = SDL_QUIT;
 				SDL_PushEvent(&event);
 			}
 			break;
-		case TAG_RESET_SOFT:
+		case ui_action_reset_soft:
 			xroar_soft_reset();
 			break;
-		case TAG_RESET_HARD:
+		case ui_action_reset_hard:
 			xroar_hard_reset();
 			break;
-		case TAG_FILE_RUN:
+		case ui_action_file_run:
 			xroar_run_file();
 			break;
-		case TAG_FILE_LOAD:
+		case ui_action_file_load:
 			xroar_load_file();
 			break;
-		case TAG_FILE_SAVE_SNAPSHOT:
+		case ui_action_file_save_snapshot:
 			xroar_save_snapshot();
 			break;
-		case TAG_FILE_SCREENSHOT:
+		case ui_action_file_screenshot:
 			xroar_screenshot();
 			break;
-		case TAG_TAPE_INPUT:
+		case ui_action_tape_input:
 			xroar_insert_input_tape();
 			break;
-		case TAG_TAPE_OUTPUT:
+		case ui_action_tape_output:
 			xroar_insert_output_tape();
 			break;
-		case TAG_TAPE_INPUT_REWIND:
+		case ui_action_tape_input_rewind:
 			if (xroar.tape_interface->tape_input) {
 				tape_seek(xroar.tape_interface->tape_input, 0, SEEK_SET);
 			}
 			break;
-		case TAG_PRINT_FLUSH:
+		case ui_action_print_flush:
 			xroar_flush_printer();
 			break;
-		case TAG_ZOOM_IN:
+		case ui_action_zoom_in:
 			vo_zoom_in(xroar.vo_interface);
 			break;
-		case TAG_ZOOM_OUT:
+		case ui_action_zoom_out:
 			vo_zoom_out(xroar.vo_interface);
 			break;
-		case TAG_ZOOM_RESET:
+		case ui_action_zoom_reset:
 			vo_zoom_reset(xroar.vo_interface);
 			break;
-		case TAG_JOY_SWAP:
+		case ui_action_joystick_swap:
 			joystick_swap();
 			break;
 		default:
@@ -271,132 +195,134 @@ int cocoa_super_all_keys = 0;
 		break;
 
 	/* Machines: */
-	case TAG_MACHINE:
-		current_machine = tag;
-		xroar_set_machine(0, tag_value);
+	case ui_tag_machine:
+		uimac->machine.id = value;
+		xroar_set_machine(0, value);
 		break;
 
 	/* Cartridges: */
-	case TAG_CARTRIDGE:
+	case ui_tag_cartridge:
 		{
-			if (tag_value & (1 << 23))
-				tag_value = -1;
-			struct cart_config *cc = cart_config_by_id(tag_value);
+			if (value & (1 << 23))
+				value = -1;
+			struct cart_config *cc = cart_config_by_id(value);
 			xroar_set_cart(0, cc ? cc->name : NULL);
 		}
 		break;
 
 	/* Cassettes: */
-	case TAG_TAPE_FLAGS:
-		tape_set_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ tag_value);
+	case ui_tag_tape_flags:
+		tape_set_state(xroar.tape_interface, tape_get_state(xroar.tape_interface) ^ value);
 		break;
-	case TAG_TAPE_PLAY_PAUSE:
-		tape_is_playing = !tape_is_playing;
-		tape_set_playing(xroar.tape_interface, tape_is_playing, 0);
+	case ui_tag_tape_playing:
+		uimac->tape.playing = !uimac->tape.playing;
+		tape_set_playing(xroar.tape_interface, uimac->tape.playing, 0);
 		break;
 
 	/* Disks: */
-	case TAG_INSERT_DISK:
-		xroar_insert_disk(tag_value);
+	case ui_tag_disk_insert:
+		xroar_insert_disk(value);
 		break;
-	case TAG_NEW_DISK:
-		xroar_new_disk(tag_value);
+	case ui_tag_disk_new:
+		xroar_new_disk(value);
 		break;
-	case TAG_WRITE_ENABLE:
-		disk_write_enable[tag_value] = !disk_write_enable[tag_value];
-		xroar_set_write_enable(1, tag_value, disk_write_enable[tag_value]);
+	case ui_tag_disk_write_enable:
+		uimac->disk.drive[value].write_enable = !uimac->disk.drive[value].write_enable;
+		xroar_set_write_enable(1, value, uimac->disk.drive[value].write_enable);
 		break;
-	case TAG_WRITE_BACK:
-		disk_write_back[tag_value] = !disk_write_back[tag_value];
-		xroar_set_write_back(1, tag_value, disk_write_back[tag_value]);
+	case ui_tag_disk_write_back:
+		uimac->disk.drive[value].write_back = !uimac->disk.drive[value].write_back;
+		xroar_set_write_back(1, value, uimac->disk.drive[value].write_back);
 		break;
-	case TAG_EJECT_DISK:
-		xroar_eject_disk(tag_value);
+	case ui_tag_disk_eject:
+		xroar_eject_disk(value);
 		break;
 
 	// Printers:
-	case TAG_PRINT:
-		if (tag_value == PRINTER_DESTINATION_FILE) {
+	case ui_tag_print_destination:
+		if (value == PRINTER_DESTINATION_FILE) {
 			char *filename = DELEGATE_CALL(global_uisdl2->ui_interface.filereq_interface->save_filename, "Print to file");
 			if (filename) {
 				xroar_set_printer_file(1, filename);
 			}
 		}
-		xroar_set_printer_destination(1, tag_value);
+		xroar_set_printer_destination(1, value);
 		break;
 
 	/* Video: */
-	case TAG_FULLSCREEN:
-		is_fullscreen = !is_fullscreen;
-		xroar_set_fullscreen(0, is_fullscreen);
+	case ui_tag_fullscreen:
+		uimac->vo.fullscreen = !uimac->vo.fullscreen;
+		xroar_set_fullscreen(0, uimac->vo.fullscreen);
 		break;
-	case TAG_TV_INPUT:
-		current_cc = tag;
-		xroar_set_tv_input(0, tag_value);
+	case ui_tag_tv_input:
+		uimac->vo.tv_input = value;
+		xroar_set_tv_input(0, value);
 		break;
-	case TAG_TV_PICTURE:
-		current_picture = tag;
-		xroar_set_picture(0, tag_value);
+	case ui_tag_picture:
+		uimac->vo.picture = value;
+		xroar_set_picture(0, value);
 		break;
-	case TAG_NTSC_SCALING:
+	case ui_tag_ntsc_scaling:
 		vo_set_ntsc_scaling(xroar.vo_interface, 0, !xroar.vo_interface->renderer->ntsc_scaling);
 		break;
-	case TAG_CCR:
-		current_ccr = tag;
-		xroar_set_ccr(0, tag_value);
+	case ui_tag_ccr:
+		uimac->vo.ccr = value;
+		xroar_set_ccr(0, value);
 		break;
-	case TAG_CMP_FS:
-		vo_set_cmp_fs(xroar.vo_interface, 0, tag_value);
+	case ui_tag_cmp_fs:
+		vo_set_cmp_fs(xroar.vo_interface, 0, value);
 		break;
-	case TAG_CMP_FSC:
-		vo_set_cmp_fsc(xroar.vo_interface, 0, tag_value);
+	case ui_tag_cmp_fsc:
+		vo_set_cmp_fsc(xroar.vo_interface, 0, value);
 		break;
-	case TAG_CMP_SYSTEM:
-		vo_set_cmp_system(xroar.vo_interface, 0, tag_value);
+	case ui_tag_cmp_system:
+		vo_set_cmp_system(xroar.vo_interface, 0, value);
 		break;
-	case TAG_CMP_COLOUR_KILLER:
+	case ui_tag_cmp_colour_killer:
 		vo_set_cmp_colour_killer(xroar.vo_interface, 0, !xroar.vo_interface->renderer->cmp.colour_killer);
 		break;
-	case TAG_VDG_INVERSE:
-		vdg_inverted = !vdg_inverted;
-		xroar_set_vdg_inverted_text(0, vdg_inverted);
+	case ui_tag_vdg_inverse:
+		uimac->vo.invert_text = !uimac->vo.invert_text;
+		xroar_set_vdg_inverted_text(0, uimac->vo.invert_text);
 		break;
 
 	/* Keyboard: */
-	case TAG_KEYMAP:
-		current_keymap = tag;
-		xroar_set_keyboard_type(0, tag_value);
+	case ui_tag_keymap:
+		uimac->machine.keymap = value;
+		xroar_set_keyboard_type(0, value);
 		break;
 
 	// Tool
-	case TAG_HKBD_LAYOUT:
-		current_hkbd_layout = tag;
-		xroar_set_hkbd_layout(0, tag_value);
+	case ui_tag_hkbd_layout:
+		uimac->kbd.layout = value;
+		xroar_set_hkbd_layout(0, value);
 		break;
-	case TAG_HKBD_LANG:
-		current_hkbd_lang = tag;
-		xroar_set_hkbd_lang(0, tag_value);
+	case ui_tag_hkbd_lang:
+		uimac->kbd.lang = value;
+		xroar_set_hkbd_lang(0, value);
 		break;
-	case TAG_KBD_TRANSLATE:
-		is_kbd_translate = !is_kbd_translate;
-		xroar_set_kbd_translate(1, is_kbd_translate);
+	case ui_tag_kbd_translate:
+		uimac->kbd.translate = !uimac->kbd.translate;
+		xroar_set_kbd_translate(1, uimac->kbd.translate);
 		break;
-	case TAG_RATELIMIT:
-		is_ratelimit = !is_ratelimit;
-		xroar_set_ratelimit_latch(1, is_ratelimit);
+	case ui_tag_ratelimit:
+		uimac->misc.ratelimit_latch = !uimac->misc.ratelimit_latch;
+		xroar_set_ratelimit_latch(1, uimac->misc.ratelimit_latch);
 		break;
 
 	/* Joysticks: */
-	case TAG_JOY_RIGHT:
+	case ui_tag_joy_right:
 		{
-			struct joystick_config *jc = joystick_config_by_id(tag_value);
+			struct joystick_config *jc = joystick_config_by_id(value);
 			xroar_set_joystick(1, 0, jc ? jc->name : NULL);
+			uimac->joy.right_id = value;
 		}
 		break;
-	case TAG_JOY_LEFT:
+	case ui_tag_joy_left:
 		{
-			struct joystick_config *jc = joystick_config_by_id(tag_value);
+			struct joystick_config *jc = joystick_config_by_id(value);
 			xroar_set_joystick(1, 1, jc ? jc->name : NULL);
+			uimac->joy.left_id = value;
 		}
 		break;
 
@@ -406,92 +332,94 @@ int cocoa_super_all_keys = 0;
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)item {
-	int tag = [item tag];
-	int tag_type = tag & TAG_TYPE_MASK;
-	int tag_value = tag & TAG_VALUE_MASK;
+	struct ui_macosx_interface *uimac = (struct ui_macosx_interface *)global_uisdl2;
+
+	int item_tag = [item tag];
+	int tag = UIMAC_TAG_TYPE(item_tag);
+	int value = UIMAC_TAG_VALUE(item_tag);
 
 	struct vo_render *vr = xroar.vo_interface ? xroar.vo_interface->renderer : NULL;
 
-	switch (tag_type) {
+	switch (tag) {
 
-	case TAG_MACHINE:
-		[item setState:((tag == current_machine) ? NSOnState : NSOffState)];
-		break;
-
-	case TAG_CARTRIDGE:
-		[item setState:((tag == current_cartridge) ? NSOnState : NSOffState)];
+	case ui_tag_machine:
+		[item setState:((value == uimac->machine.id) ? NSOnState : NSOffState)];
 		break;
 
-	case TAG_TAPE_FLAGS:
-		[item setState:((tape_get_state(xroar.tape_interface) & tag_value) ? NSOnState : NSOffState)];
-		break;
-	case TAG_TAPE_PLAY_PAUSE:
-		[item setState:(tape_is_playing ? NSOnState : NSOffState)];
+	case ui_tag_cartridge:
+		[item setState:((value == uimac->cart.id) ? NSOnState : NSOffState)];
 		break;
 
-	case TAG_WRITE_ENABLE:
-		[item setState:(disk_write_enable[tag_value] ? NSOnState : NSOffState)];
+	case ui_tag_tape_flags:
+		[item setState:((tape_get_state(xroar.tape_interface) & value) ? NSOnState : NSOffState)];
 		break;
-	case TAG_WRITE_BACK:
-		[item setState:(disk_write_back[tag_value] ? NSOnState : NSOffState)];
-		break;
-
-	case TAG_PRINT:
-		[item setState:((tag_value == print_destination) ? NSOnState : NSOffState)];
+	case ui_tag_tape_playing:
+		[item setState:(uimac->tape.playing ? NSOnState : NSOffState)];
 		break;
 
-	case TAG_FULLSCREEN:
-		[item setState:(is_fullscreen ? NSOnState : NSOffState)];
+	case ui_tag_disk_write_enable:
+		[item setState:(uimac->disk.drive[value].write_enable ? NSOnState : NSOffState)];
 		break;
-	case TAG_VDG_INVERSE:
-		[item setState:(vdg_inverted ? NSOnState : NSOffState)];
+	case ui_tag_disk_write_back:
+		[item setState:(uimac->disk.drive[value].write_back ? NSOnState : NSOffState)];
 		break;
-	case TAG_TV_INPUT:
-		[item setState:((tag == current_cc) ? NSOnState : NSOffState)];
+
+	case ui_tag_print_destination:
+		[item setState:((value == uimac->lp.destination) ? NSOnState : NSOffState)];
 		break;
-	case TAG_TV_PICTURE:
-		[item setState:((tag == current_picture) ? NSOnState : NSOffState)];
+
+	case ui_tag_fullscreen:
+		[item setState:(uimac->vo.fullscreen ? NSOnState : NSOffState)];
 		break;
-	case TAG_NTSC_SCALING:
+	case ui_tag_vdg_inverse:
+		[item setState:(uimac->vo.invert_text ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_tv_input:
+		[item setState:((value == uimac->vo.tv_input) ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_picture:
+		[item setState:((value == uimac->vo.picture) ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_ntsc_scaling:
 		[item setState:((vr && vr->ntsc_scaling) ? NSOnState : NSOffState)];
 		break;
-	case TAG_CCR:
-		[item setState:((tag == current_ccr) ? NSOnState : NSOffState)];
+	case ui_tag_ccr:
+		[item setState:((value == uimac->vo.ccr) ? NSOnState : NSOffState)];
 		break;
-	case TAG_CMP_FS:
-		[item setState:((vr && vr->cmp.fs == tag_value) ? NSOnState : NSOffState)];
+	case ui_tag_cmp_fs:
+		[item setState:((vr && vr->cmp.fs == value) ? NSOnState : NSOffState)];
 		break;
-	case TAG_CMP_FSC:
-		[item setState:((vr && vr->cmp.fsc == tag_value) ? NSOnState : NSOffState)];
+	case ui_tag_cmp_fsc:
+		[item setState:((vr && vr->cmp.fsc == value) ? NSOnState : NSOffState)];
 		break;
-	case TAG_CMP_SYSTEM:
-		[item setState:((vr && vr->cmp.system == tag_value) ? NSOnState : NSOffState)];
+	case ui_tag_cmp_system:
+		[item setState:((vr && vr->cmp.system == value) ? NSOnState : NSOffState)];
 		break;
-	case TAG_CMP_COLOUR_KILLER:
+	case ui_tag_cmp_colour_killer:
 		[item setState:((vr && vr->cmp.colour_killer) ? NSOnState : NSOffState)];
 		break;
 
-	case TAG_KEYMAP:
-		[item setState:((tag == current_keymap) ? NSOnState : NSOffState)];
+	case ui_tag_keymap:
+		[item setState:((value == uimac->machine.keymap) ? NSOnState : NSOffState)];
 		break;
-	case TAG_HKBD_LAYOUT:
-		[item setState:((tag == current_hkbd_layout) ? NSOnState : NSOffState)];
+	case ui_tag_hkbd_layout:
+		[item setState:((value == uimac->kbd.layout) ? NSOnState : NSOffState)];
 		break;
-	case TAG_HKBD_LANG:
-		[item setState:((tag == current_hkbd_lang) ? NSOnState : NSOffState)];
+	case ui_tag_hkbd_lang:
+		[item setState:((value == uimac->kbd.lang) ? NSOnState : NSOffState)];
 		break;
-	case TAG_KBD_TRANSLATE:
-		[item setState:(is_kbd_translate ? NSOnState : NSOffState)];
+	case ui_tag_kbd_translate:
+		[item setState:(uimac->kbd.translate ? NSOnState : NSOffState)];
 		break;
-	case TAG_RATELIMIT:
-		[item setState:(is_ratelimit ? NSOnState : NSOffState)];
+	case ui_tag_ratelimit:
+		[item setState:(uimac->misc.ratelimit_latch ? NSOnState : NSOffState)];
 		break;
 
-	case TAG_JOY_RIGHT:
-		[item setState:((tag == current_joy_right) ? NSOnState : NSOffState)];
+	case ui_tag_joy_right:
+		[item setState:((value == uimac->joy.right_id) ? NSOnState : NSOffState)];
 		break;
-	case TAG_JOY_LEFT:
-		[item setState:((tag == current_joy_left) ? NSOnState : NSOffState)];
+	case ui_tag_joy_left:
+		[item setState:((value == uimac->joy.left_id) ? NSOnState : NSOffState)];
 		break;
 
 	}
@@ -545,7 +473,7 @@ static void setApplicationMenu(void) {
 
 	title = [@"Quit " stringByAppendingString:app_name];
 	item = [[NSMenuItem alloc] initWithTitle:title action:@selector(do_set_state:) keyEquivalent:@"q"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_QUIT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_quit)];
 	[apple_menu addItem:item];
 
 	/* Put menu into the menubar */
@@ -573,14 +501,14 @@ static void setup_file_menu(void) {
 
 	tmp = [NSString stringWithFormat:@"Run%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"L"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_RUN)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_file_run)];
 	[file_menu addItem:item];
 	[item release];
 	[tmp release];
 
 	tmp = [NSString stringWithFormat:@"Load%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"l"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_LOAD)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_file_load)];
 	[file_menu addItem:item];
 	[item release];
 	[tmp release];
@@ -591,14 +519,14 @@ static void setup_file_menu(void) {
 
 	tmp = [NSString stringWithFormat:@"Input tape%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_INPUT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_tape_input)];
 	[submenu addItem:item];
 	[item release];
 	[tmp release];
 
 	tmp = [NSString stringWithFormat:@"Output tape%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"w"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_OUTPUT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_tape_output)];
 	[submenu addItem:item];
 	[item release];
 	[tmp release];
@@ -606,31 +534,31 @@ static void setup_file_menu(void) {
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Rewind input tape" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_TAPE_INPUT_REWIND)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_tape_input_rewind)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Play" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:TAG_TAPE_PLAY_PAUSE];
+	[item setTag:UIMAC_TAG(ui_tag_tape_playing)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Fast loading" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_TAPE_FLAGS | TAPE_FAST)];
+	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_FAST)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"CAS padding" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_TAPE_FLAGS | TAPE_PAD_AUTO)];
+	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_PAD_AUTO)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Rewrite" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_TAPE_FLAGS | TAPE_REWRITE)];
+	[item setTag:UIMAC_TAGV(ui_tag_tape_flags, TAPE_REWRITE)];
 	[submenu addItem:item];
 	[item release];
 
@@ -652,7 +580,7 @@ static void setup_file_menu(void) {
 
 		tmp = [NSString stringWithFormat:@"Insert disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:key1];
-		[item setTag:(TAG_INSERT_DISK | drive)];
+		[item setTag:UIMAC_TAGV(ui_tag_disk_insert, drive)];
 		[submenu addItem:item];
 		[item release];
 		[tmp release];
@@ -660,7 +588,7 @@ static void setup_file_menu(void) {
 		tmp = [NSString stringWithFormat:@"New disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:key1];
 		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-		[item setTag:(TAG_NEW_DISK | drive)];
+		[item setTag:UIMAC_TAGV(ui_tag_disk_new, drive)];
 		[submenu addItem:item];
 		[item release];
 		[tmp release];
@@ -668,13 +596,13 @@ static void setup_file_menu(void) {
 		[submenu addItem:[NSMenuItem separatorItem]];
 
 		item = [[NSMenuItem alloc] initWithTitle:@"Write enable" action:@selector(do_set_state:) keyEquivalent:key2];
-		[item setTag:(TAG_WRITE_ENABLE | drive)];
+		[item setTag:UIMAC_TAGV(ui_tag_disk_write_enable, drive)];
 		[submenu addItem:item];
 		[item release];
 
 		item = [[NSMenuItem alloc] initWithTitle:@"Write back" action:@selector(do_set_state:) keyEquivalent:key2];
 		[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-		[item setTag:(TAG_WRITE_BACK | drive)];
+		[item setTag:UIMAC_TAGV(ui_tag_disk_write_back, drive)];
 		[submenu addItem:item];
 		[item release];
 
@@ -682,7 +610,7 @@ static void setup_file_menu(void) {
 
 		tmp = [NSString stringWithFormat:@"Eject disk%C", 0x2026];
 		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_EJECT_DISK | drive)];
+		[item setTag:UIMAC_TAGV(ui_tag_disk_eject, drive)];
 		[submenu addItem:item];
 		[item release];
 		[tmp release];
@@ -702,26 +630,26 @@ static void setup_file_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Printer"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"No printer" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_NONE)];
+	[item setTag:UIMAC_TAGV(ui_tag_print_destination, PRINTER_DESTINATION_NONE)];
 	[submenu addItem:item];
 	[item release];
 
 	tmp = [NSString stringWithFormat:@"Print to file%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_FILE)];
+	[item setTag:UIMAC_TAGV(ui_tag_print_destination, PRINTER_DESTINATION_FILE)];
 	[submenu addItem:item];
 	[item release];
 	[tmp release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Print to pipe" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_PRINT | PRINTER_DESTINATION_PIPE)];
+	[item setTag:UIMAC_TAGV(ui_tag_print_destination, PRINTER_DESTINATION_PIPE)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Flush" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_PRINT_FLUSH)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_print_flush)];
 	[submenu addItem:item];
 	[item release];
 
@@ -734,7 +662,7 @@ static void setup_file_menu(void) {
 
 	tmp = [NSString stringWithFormat:@"Save snapshot%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@"s"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_SAVE_SNAPSHOT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_file_save_snapshot)];
 	[file_menu addItem:item];
 	[item release];
 	[tmp release];
@@ -744,7 +672,7 @@ static void setup_file_menu(void) {
 
 	tmp = [NSString stringWithFormat:@"Screenshot to PNG%C", 0x2026];
 	item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_FILE_SCREENSHOT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_file_screenshot)];
 	[file_menu addItem:item];
 	[item release];
 	[tmp release];
@@ -768,7 +696,7 @@ static void setup_view_menu(void) {
 	view_menu = [[NSMenu alloc] initWithTitle:@"View"];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"TV input"];
-	cocoa_update_radio_menu_from_enum(submenu, machine_tv_input_list, TAG_TV_INPUT);
+	cocoa_update_radio_menu_from_enum(submenu, machine_tv_input_list, ui_tag_tv_input);
 	item = [[NSMenuItem alloc] initWithTitle:@"TV input" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
@@ -779,7 +707,7 @@ static void setup_view_menu(void) {
 	for (i = 0; i < NUM_VO_PICTURE; i++) {
 		NSString *s = [[NSString alloc] initWithUTF8String:vo_picture_name[i]];
 		item = [[NSMenuItem alloc] initWithTitle:s action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_TV_PICTURE | i)];
+		[item setTag:UIMAC_TAGV(ui_tag_picture, i)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[submenu addItem:item];
 		[item release];
@@ -793,12 +721,12 @@ static void setup_view_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"60Hz scaling" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-	[item setTag:TAG_NTSC_SCALING];
+	[item setTag:UIMAC_TAG(ui_tag_ntsc_scaling)];
 	[view_menu addItem:item];
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite rendering"];
-	cocoa_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, TAG_CCR);
+	cocoa_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, ui_tag_ccr);
 	item = [[NSMenuItem alloc] initWithTitle:@"Composite rendering" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[view_menu addItem:item];
@@ -807,46 +735,46 @@ static void setup_view_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Composite options"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.31818 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_31818)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_31818)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.218 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_218)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_218)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(s) = 14.23753 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_FS | VO_RENDER_FS_14_23753)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_fs, VO_RENDER_FS_14_23753)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 4.43361875 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_FSC | VO_RENDER_FSC_4_43361875)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_fsc, VO_RENDER_FSC_4_43361875)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"F(sc) = 3.579545 MHz" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_FSC | VO_RENDER_FSC_3_579545)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_fsc, VO_RENDER_FSC_3_579545)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"PAL-I" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_PAL_I)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_I)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"PAL-M" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_PAL_M)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_PAL_M)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"NTSC" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CMP_SYSTEM | VO_RENDER_SYSTEM_NTSC)];
+	[item setTag:UIMAC_TAGV(ui_tag_cmp_system, VO_RENDER_SYSTEM_NTSC)];
 	[submenu addItem:item];
 	[item release];
 
@@ -854,7 +782,7 @@ static void setup_view_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Colour killer" action:@selector(do_set_state:) keyEquivalent:@""];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-	[item setTag:TAG_CMP_COLOUR_KILLER];
+	[item setTag:UIMAC_TAG(ui_tag_cmp_colour_killer)];
 	[submenu addItem:item];
 	[item release];
 
@@ -867,7 +795,7 @@ static void setup_view_menu(void) {
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Inverse text" action:@selector(do_set_state:) keyEquivalent:@"i"];
 	[item setKeyEquivalentModifierMask:NSEventModifierFlagCommand|NSEventModifierFlagShift];
-	[item setTag:TAG_VDG_INVERSE];
+	[item setTag:UIMAC_TAG(ui_tag_vdg_inverse)];
 	[view_menu addItem:item];
 	[item release];
 
@@ -876,19 +804,19 @@ static void setup_view_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Zoom in" action:@selector(do_set_state:) keyEquivalent:@"+"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_IN)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_in)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Zoom out" action:@selector(do_set_state:) keyEquivalent:@"-"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_OUT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_out)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Reset" action:@selector(do_set_state:) keyEquivalent:@"0"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_ZOOM_RESET)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_reset)];
 	[submenu addItem:item];
 	[item release];
 
@@ -900,7 +828,7 @@ static void setup_view_menu(void) {
 	[view_menu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Full screen" action:@selector(do_set_state:) keyEquivalent:@"f"];
-	[item setTag:TAG_FULLSCREEN];
+	[item setTag:UIMAC_TAG(ui_tag_fullscreen)];
 	[view_menu addItem:item];
 	[item release];
 
@@ -941,7 +869,7 @@ static void setup_hardware_menu(void) {
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard type"];
-	cocoa_update_radio_menu_from_enum(submenu, machine_keyboard_list, TAG_KEYMAP);
+	cocoa_update_radio_menu_from_enum(submenu, machine_keyboard_list, ui_tag_keymap);
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard type" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[hardware_menu addItem:item];
@@ -962,19 +890,19 @@ static void setup_hardware_menu(void) {
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Swap joysticks" action:@selector(do_set_state:) keyEquivalent:@"J"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_JOY_SWAP)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_joystick_swap)];
 	[hardware_menu addItem:item];
 	[item release];
 
 	[hardware_menu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Soft reset" action:@selector(do_set_state:) keyEquivalent:@"r"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_SOFT)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_reset_soft)];
 	[hardware_menu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Hard reset" action:@selector(do_set_state:) keyEquivalent:@"R"];
-	[item setTag:(TAG_SIMPLE_ACTION | TAG_RESET_HARD)];
+	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_reset_hard)];
 	[hardware_menu addItem:item];
 	[item release];
 
@@ -994,26 +922,26 @@ static void setup_tool_menu(void) {
 	tool_menu = [[NSMenu alloc] initWithTitle:@"Tool"];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard layout"];
-	cocoa_update_radio_menu_from_enum(submenu, hkbd_layout_list, TAG_HKBD_LAYOUT);
+	cocoa_update_radio_menu_from_enum(submenu, hkbd_layout_list, ui_tag_hkbd_layout);
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard layout" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[tool_menu addItem:item];
 	[item release];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Keyboard language"];
-	cocoa_update_radio_menu_from_enum(submenu, hkbd_lang_list, TAG_HKBD_LANG);
+	cocoa_update_radio_menu_from_enum(submenu, hkbd_lang_list, ui_tag_hkbd_lang);
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard language" action:nil keyEquivalent:@""];
 	[item setSubmenu:submenu];
 	[tool_menu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Keyboard translation" action:@selector(do_set_state:) keyEquivalent:@"z"];
-	[item setTag:TAG_KBD_TRANSLATE];
+	[item setTag:UIMAC_TAG(ui_tag_kbd_translate)];
 	[tool_menu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Rate limit" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:TAG_RATELIMIT];
+	[item setTag:UIMAC_TAG(ui_tag_ratelimit)];
 	[tool_menu addItem:item];
 	[item release];
 
@@ -1199,7 +1127,6 @@ int main(int argc, char **argv) {
 // XRoar UI definition
 
 static void *ui_cocoa_new(void *cfg);
-static void cocoa_ui_run(void *);
 
 struct ui_module ui_cocoa_module = {
 	.common = { .name = "macosx", .description = "Mac OS X+ SDL2 UI",
@@ -1218,18 +1145,19 @@ static void *ui_cocoa_new(void *cfg) {
 
 	cocoa_register_app();
 
-	struct ui_sdl2_interface *uisdl2 = ui_sdl_allocate(sizeof(*uisdl2));
-	if (!uisdl2) {
+	struct ui_macosx_interface *uimac = (struct ui_macosx_interface *)ui_sdl_allocate(sizeof(*uimac));
+	if (!uimac) {
 		return NULL;
 	}
-	*uisdl2 = (struct ui_sdl2_interface){0};
+	*uimac = (struct ui_macosx_interface){0};
+	struct ui_sdl2_interface *uisdl2 = &uimac->ui_sdl2_interface;
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
+	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uimac);
+	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uimac);
+	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uimac);
+	ui->update_joystick_menus = DELEGATE_AS0(void, cocoa_update_joystick_menus, uimac);
 
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, cocoa_ui_update_state, uisdl2);
-	ui->update_machine_menu = DELEGATE_AS0(void, cocoa_update_machine_menu, uisdl2);
-	ui->update_cartridge_menu = DELEGATE_AS0(void, cocoa_update_cartridge_menu, uisdl2);
-	ui->update_joystick_menus = DELEGATE_AS0(void, cocoa_update_joystick_menus, uisdl2);
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
 	cocoa_update_joystick_menus(uisdl2);
@@ -1243,8 +1171,7 @@ static void *ui_cocoa_new(void *cfg) {
 }
 
 static void cocoa_update_machine_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	struct ui_macosx_interface *uimac = sptr;
 
 	// Get list of machine configs
 	struct slist *mcl = slist_reverse(slist_copy(machine_config_list()));
@@ -1259,11 +1186,12 @@ static void cocoa_update_machine_menu(void *sptr) {
 	struct slist *iter;
 	for (iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
-		if (mc == xroar.machine_config)
-			current_machine = TAG(ui_tag_machine, mc->id);
+		if (mc == xroar.machine_config) {
+			uimac->machine.id = mc->id;
+		}
 		NSString *description = [[NSString alloc] initWithUTF8String:mc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG(ui_tag_machine, mc->id))];
+		[item setTag:UIMAC_TAGV(ui_tag_machine, mc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[machine_menu insertItem:item atIndex:0];
@@ -1273,8 +1201,7 @@ static void cocoa_update_machine_menu(void *sptr) {
 }
 
 static void cocoa_update_cartridge_menu(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	struct ui_macosx_interface *uimac = sptr;
 
 	// Get list of cart configs
 	struct slist *ccl = NULL;
@@ -1296,26 +1223,26 @@ static void cocoa_update_cartridge_menu(void *sptr) {
 	struct slist *iter;
 	for (iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
-		if (cart && cc == cart->config)
-			current_cartridge = TAG_CARTRIDGE | cc->id;
+		if (cart && cc == cart->config) {
+			uimac->cart.id = cc->id;
+		}
 		NSString *description = [[NSString alloc] initWithUTF8String:cc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_CARTRIDGE | cc->id)];
+		[item setTag:UIMAC_TAGV(ui_tag_cartridge, cc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[cartridge_menu insertItem:item atIndex:0];
 		[item release];
 	}
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_CARTRIDGE | (-1 & TAG_VALUE_MASK))];
+	[item setTag:UIMAC_TAGV(ui_tag_cartridge, -1)];
 	[cartridge_menu insertItem:item atIndex:0];
 	[item release];
 	slist_free(ccl);
 }
 
 static void cocoa_update_joystick_menus(void *sptr) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	(void)sptr;
 
 	// Get list of joystick configs
 	struct slist *jcl = slist_reverse(slist_copy(joystick_config_list()));
@@ -1334,13 +1261,13 @@ static void cocoa_update_joystick_menus(void *sptr) {
 		struct joystick_config *jc = iter->data;
 		NSString *description = [[NSString alloc] initWithUTF8String:jc->description];
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_JOY_RIGHT | jc->id)];
+		[item setTag:UIMAC_TAGV(ui_tag_joy_right, jc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[joy_right_menu insertItem:item atIndex:0];
 		[item release];
 
 		item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(TAG_JOY_LEFT | jc->id)];
+		[item setTag:UIMAC_TAGV(ui_tag_joy_left, jc->id)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[description release];
 		[joy_left_menu insertItem:item atIndex:0];
@@ -1348,12 +1275,12 @@ static void cocoa_update_joystick_menus(void *sptr) {
 	}
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_JOY_RIGHT | (-1 & TAG_VALUE_MASK))];
+	[item setTag:UIMAC_TAGV(ui_tag_joy_right, -1)];
 	[joy_right_menu insertItem:item atIndex:0];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"None" action:@selector(do_set_state:) keyEquivalent:@""];
-	[item setTag:(TAG_JOY_LEFT | (-1 & TAG_VALUE_MASK))];
+	[item setTag:UIMAC_TAGV(ui_tag_joy_left, -1)];
 	[joy_left_menu insertItem:item atIndex:0];
 	[item release];
 
@@ -1361,25 +1288,25 @@ static void cocoa_update_joystick_menus(void *sptr) {
 }
 
 static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	struct ui_sdl2_interface *uisdl2 = sptr;
-	(void)uisdl2;
+	struct ui_macosx_interface *uimac = sptr;
+	struct ui_sdl2_interface *uisdl2 = &uimac->ui_sdl2_interface;
 
 	switch (tag) {
 
 	/* Hardware */
 
 	case ui_tag_machine:
-		current_machine = TAG_MACHINE | value;
+		uimac->machine.id = value;
 		break;
 
 	case ui_tag_cartridge:
-		current_cartridge = TAG_CARTRIDGE | value;
+		uimac->cart.id = value;
 		break;
 
 	/* Cassettes */
 
 	case ui_tag_tape_playing:
-		tape_is_playing = value ? 1 : 0;
+		uimac->tape.playing = value;
 		break;
 
 	/* Disk */
@@ -1398,63 +1325,63 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 		break;
 
 	case ui_tag_disk_write_enable:
-		disk_write_enable[value] = data ? 1 : 0;
+		uimac->disk.drive[value].write_enable = data ? 1 : 0;
 		break;
 
 	case ui_tag_disk_write_back:
-		disk_write_back[value] = data ? 1 : 0;
+		uimac->disk.drive[value].write_back = data ? 1 : 0;
 		break;
 
 	// Audio
 
 	case ui_tag_ratelimit:
-		is_ratelimit = value;
+		uimac->misc.ratelimit_latch = value;
 		break;
 
 	// Printer
 
 	case ui_tag_print_destination:
-		print_destination = value;
+		uimac->lp.destination = value;
 		break;
 
 	/* Video */
 
 	case ui_tag_fullscreen:
-		is_fullscreen = value ? 1 : 0;
+		uimac->vo.fullscreen = value ? 1 : 0;
 		break;
 
 	case ui_tag_vdg_inverse:
-		vdg_inverted = value ? 1 : 0;
+		uimac->vo.invert_text = value ? 1 : 0;
 		break;
 
 	case ui_tag_tv_input:
-		current_cc = TAG_TV_INPUT | value;
+		uimac->vo.tv_input = value;
 		break;
 
 	case ui_tag_picture:
-		current_picture = TAG_TV_PICTURE | value;
+		uimac->vo.picture = value;
 		break;
 
 	case ui_tag_ccr:
-		current_ccr = TAG_CCR | value;
+		uimac->vo.ccr = value;
 		break;
 
 	/* Keyboard */
 
 	case ui_tag_keymap:
-		current_keymap = TAG_KEYMAP | value;
+		uimac->machine.keymap = value;
 		break;
 
 	case ui_tag_hkbd_layout:
-		current_hkbd_layout = TAG_HKBD_LAYOUT | value;
+		uimac->kbd.layout = value;
 		break;
 
 	case ui_tag_hkbd_lang:
-		current_hkbd_lang = TAG_HKBD_LANG | value;
+		uimac->kbd.lang = value;
 		break;
 
 	case ui_tag_kbd_translate:
-		is_kbd_translate = value;
+		uimac->kbd.translate = value;
 		break;
 
 	/* Joystick */
@@ -1462,16 +1389,14 @@ static void cocoa_ui_update_state(void *sptr, int tag, int value, const void *da
 	case ui_tag_joy_right:
 		{
 			struct joystick_config *jc = joystick_config_by_name(data);
-			current_joy_right = jc ? jc->id : (-1 & TAG_VALUE_MASK);
-			current_joy_right |= TAG_JOY_RIGHT;
+			uimac->joy.right_id = jc ? jc->id : -1;
 		}
 		break;
 
 	case ui_tag_joy_left:
 		{
 			struct joystick_config *jc = joystick_config_by_name(data);
-			current_joy_left = jc ? jc->id : (-1 & TAG_VALUE_MASK);
-			current_joy_left |= TAG_JOY_LEFT;
+			uimac->joy.left_id = jc ? jc->id : -1;
 		}
 		break;
 
@@ -1502,7 +1427,7 @@ static void cocoa_update_radio_menu_from_enum(NSMenu *menu, struct xconfig_enum 
 		}
 		NSString *description = [[NSString alloc] initWithUTF8String:xc_enum[enum_index].description];
 		NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:description action:@selector(do_set_state:) keyEquivalent:@""];
-		[item setTag:(tag | xc_enum[enum_index].value)];
+		[item setTag:UIMAC_TAGV(tag, xc_enum[enum_index].value)];
 		[item setOnStateImage:[NSImage imageNamed:@"NSMenuRadio"]];
 		[menu insertItem:item atIndex:0];
 		[item release];
