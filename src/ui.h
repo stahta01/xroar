@@ -269,6 +269,14 @@ enum ui_tag {
 	// in xroar.c, but the result is used per-machine.  TODO: consider
 	// moving.
 
+	ui_tag_zoom,
+	// value = UI_PREV zooms out
+	// value = UI_NEXT zooms in
+	// value = 0 reset zoom level
+	// vale  > 0 set zoom level
+	//
+	// Set zoom level in multiples of half the viewport size.
+
 	// Audio
 
 	ui_tag_gain,
@@ -373,9 +381,6 @@ enum ui_action {
 	ui_action_tape_play_pause,
 	ui_action_tape_input_rewind,
 	ui_action_tape_output_rewind,
-	ui_action_zoom_in,
-	ui_action_zoom_out,
-	ui_action_zoom_reset,
 	ui_action_joystick_swap,
 	ui_action_print_flush,
 };

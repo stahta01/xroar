@@ -1617,8 +1617,6 @@ static _Bool is_dragon_key(uint16_t sym) {
 // tend to steal all those keys for themselves.
 
 static void emulator_command(uint16_t sym, _Bool shift) {
-	struct ui_interface *ui = xroar.ui_interface;
-
 	switch (sym) {
 	case hk_sym_1: case hk_sym_2: case hk_sym_3: case hk_sym_4:
 		if (shift) {
@@ -1754,15 +1752,15 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 
 #ifndef HAVE_WASM
 	case hk_sym_0:
-		vo_zoom_reset(ui->vo_interface);
+		ui_update_state(-1, ui_tag_zoom, 0, NULL);
 		return;
 
 	case hk_sym_minus:
-		vo_zoom_out(ui->vo_interface);
+		ui_update_state(-1, ui_tag_zoom, UI_PREV, NULL);
 		return;
 
 	case hk_sym_plus:
-		vo_zoom_in(ui->vo_interface);
+		ui_update_state(-1, ui_tag_zoom, UI_NEXT, NULL);
 		return;
 #endif
 

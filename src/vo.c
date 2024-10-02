@@ -60,6 +60,7 @@ static void vo_ui_set_ccr(void *, int tag, void *smsg);
 static void vo_ui_set_gl_filter(void *, int tag, void *smsg);
 static void vo_ui_set_fullscreen(void *, int tag, void *smsg);
 static void vo_ui_set_menubar(void *, int tag, void *smsg);
+static void vo_ui_set_zoom(void *, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -81,6 +82,7 @@ void vo_interface_init(struct vo_interface *vo) {
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_gl_filter, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_fullscreen, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_menubar, vo));
+	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_zoom, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_zoom, vo));
 }
 
 // Calls free() delegate then frees structure
@@ -214,43 +216,6 @@ void vo_set_draw_area(struct vo_interface *vo, int x, int y, int w, int h) {
 extern inline void vo_vsync(struct vo_interface *vo, _Bool draw);
 extern inline void vo_refresh(struct vo_interface *vo);
 
-// Zoom helpers
-
-void vo_zoom_reset(struct vo_interface *vo) {
-	if (!vo || !vo->renderer)
-		return;
-	struct vo_render *vr = vo->renderer;
-	int w = vr->viewport.w;
-	int h = vr->is_60hz ? (vr->viewport.h * 12) / 5 : vr->viewport.h * 2;
-	DELEGATE_SAFE_CALL(vo->resize, w, h);
-}
-
-void vo_zoom_in(struct vo_interface *vo) {
-	if (!vo || !vo->renderer)
-		return;
-	struct vo_render *vr = vo->renderer;
-	int qw = vr->viewport.w / 4;
-	int qh = vr->is_60hz ? (vr->viewport.h * 6) / 10 : vr->viewport.h / 2;
-	int xscale = vo->draw_area.w / qw;
-	int yscale = vo->draw_area.h / qh;
-	int scale = (xscale < yscale) ? xscale + 1 : yscale + 1;
-	DELEGATE_SAFE_CALL(vo->resize, qw * scale, qh * scale);
-}
-
-void vo_zoom_out(struct vo_interface *vo) {
-	if (!vo || !vo->renderer)
-		return;
-	struct vo_render *vr = vo->renderer;
-	int qw = vr->viewport.w / 4;
-	int qh = vr->is_60hz ? (vr->viewport.h * 6) / 10 : vr->viewport.h / 2;
-	int xscale = vo->draw_area.w / qw;
-	int yscale = vo->draw_area.h / qh;
-	int scale = (xscale < yscale) ? xscale - 1 : yscale - 1;
-	if (scale < 1)
-		scale = 1;
-	DELEGATE_SAFE_CALL(vo->resize, qw * scale, qh * scale);
-}
-
 // Helper function to parse geometry string
 
 void vo_parse_geometry(const char *str, struct vo_geometry *geometry) {
@@ -346,4 +311,30 @@ static void vo_ui_set_menubar(void *sptr, int tag, void *smsg) {
 	// group and react accordingly.
 	(void)ui_msg_adjust_value_range(uimsg, vo->show_menubar, 1, 0, 1,
 					UI_ADJUST_FLAG_CYCLE);
+}
+
+// Zoom helpers
+
+static void vo_ui_set_zoom(void *sptr, int tag, void *smsg) {
+	struct vo_interface *vo = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_zoom);
+
+	struct vo_render *vr = vo->renderer;
+	int qw = vr->viewport.w / 4;
+	int qh = vr->is_60hz ? (vr->viewport.h * 6) / 10 : vr->viewport.h / 2;
+	int xscale = vo->draw_area.w / qw;
+	int yscale = vo->draw_area.h / qh;
+	int scale;
+	if (uimsg->value == UI_PREV) {
+		scale = (xscale < yscale) ? xscale - 1 : yscale - 1;
+	} else if (uimsg->value == UI_NEXT) {
+		scale = (xscale < yscale) ? xscale + 1 : yscale + 1;
+	} else if (uimsg->value > 0) {
+		scale = uimsg->value;
+	} else {
+		scale = 4;
+	}
+	DELEGATE_SAFE_CALL(vo->resize, qw * scale, qh * scale);
+	uimsg->value = scale;
 }

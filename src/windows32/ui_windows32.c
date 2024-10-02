@@ -63,7 +63,7 @@
 #define TAG(t) (((t) & 0x7f) << 8)
 #define TAGV(t,v) (TAG(t) | ((v) & 0xff))
 #define TAG_TYPE(t) (((t) >> 8) & 0x7f)
-#define TAG_VALUE(t) ((t) & 0xff)
+#define TAG_VALUE(t) ((int8_t)((t) & 0xff))
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -219,10 +219,10 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Zoom");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_in), "Zoom In");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_out), "Zoom Out");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, UI_NEXT), "Zoom In");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, UI_PREV), "Zoom Out");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_action, ui_action_zoom_reset), "Reset");
+	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, 0), "Reset");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full screen");
@@ -424,15 +424,6 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 			xroar_screenshot();
 			break;
 
-		case ui_action_zoom_in:
-			vo_zoom_in(xroar.vo_interface);
-			break;
-		case ui_action_zoom_out:
-			vo_zoom_out(xroar.vo_interface);
-			break;
-		case ui_action_zoom_reset:
-			vo_zoom_reset(xroar.vo_interface);
-			break;
 		case ui_action_joystick_swap:
 			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 			break;
@@ -479,6 +470,10 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		break;
 	case ui_tag_vdg_inverse:
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
+		break;
+
+	case ui_tag_zoom:
+		ui_update_state(-1, tag_type, tag_value, NULL);
 		break;
 
 	// Keyboard:

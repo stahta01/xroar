@@ -842,22 +842,22 @@ static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 static void zoom_in(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_in(vo);
+	(void)uigtk3;
+	ui_update_state(-1, ui_tag_zoom, UI_NEXT, NULL);
 }
 
 static void zoom_out(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_out(vo);
+	(void)uigtk3;
+	ui_update_state(-1, ui_tag_zoom, UI_PREV, NULL);
 }
 
 static void zoom_reset(GtkEntry *entry, gpointer user_data) {
 	(void)entry;
 	struct ui_gtk3_interface *uigtk3 = user_data;
-	struct vo_interface *vo = uigtk3->public.vo_interface;
-	vo_zoom_reset(vo);
+	(void)uigtk3;
+	ui_update_state(-1, ui_tag_zoom, 0, NULL);
 }
 
 static void set_fullscreen(GtkToggleAction *current, gpointer user_data) {

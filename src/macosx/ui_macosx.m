@@ -183,15 +183,6 @@ int cocoa_super_all_keys = 0;
 		case ui_action_print_flush:
 			xroar_flush_printer();
 			break;
-		case ui_action_zoom_in:
-			vo_zoom_in(xroar.vo_interface);
-			break;
-		case ui_action_zoom_out:
-			vo_zoom_out(xroar.vo_interface);
-			break;
-		case ui_action_zoom_reset:
-			vo_zoom_reset(xroar.vo_interface);
-			break;
 		case ui_action_joystick_swap:
 			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);
 			break;
@@ -282,6 +273,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case ui_tag_vdg_inverse:
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
+		break;
+	case ui_tag_zoom:
+		ui_update_state(-1, tag, value, NULL);
 		break;
 
 	/* Keyboard: */
@@ -750,19 +744,19 @@ static void setup_view_menu(void) {
 	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Zoom in" action:@selector(do_set_state:) keyEquivalent:@"+"];
-	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_in)];
+	[item setTag:UIMAC_TAGV(ui_tag_zoom, UI_NEXT)];
 	[submenu addItem:item];
 	[item release];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Zoom out" action:@selector(do_set_state:) keyEquivalent:@"-"];
-	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_out)];
+	[item setTag:UIMAC_TAGV(ui_tag_zoom, UI_PREV)];
 	[submenu addItem:item];
 	[item release];
 
 	[submenu addItem:[NSMenuItem separatorItem]];
 
 	item = [[NSMenuItem alloc] initWithTitle:@"Reset" action:@selector(do_set_state:) keyEquivalent:@"0"];
-	[item setTag:UIMAC_TAGV(ui_tag_action, ui_action_zoom_reset)];
+	[item setTag:UIMAC_TAGV(ui_tag_zoom, 0)];
 	[submenu addItem:item];
 	[item release];
 
