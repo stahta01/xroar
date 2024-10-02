@@ -183,8 +183,17 @@ extern struct xroar xroar;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// XXX
+//
+// consider splitting this up into bits.  can i have a final init part that
+// works through a state machine and we keep calling it until the return value
+// is zero ("done")?  that way wasm can wait until things are ready...
+
 /// Configure XRoar, initialise modules and start machine.
 struct ui_interface *xroar_init(int argc, char **argv);
+
+/// Finish initialisation (sets first machine options, attaches media).
+void xroar_init_finish(void);
 
 /// Cleanly shut down before program exit.
 void xroar_shutdown(void);

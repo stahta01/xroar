@@ -546,7 +546,14 @@ static char const * const default_config[] = {
 	"romlist coco2_ext=extbas11,@coco_ext",
 	"romlist coco2b=bas13,@coco",
 	// Deluxe CoCo
+#ifdef HAVE_WASM
+	// This is a bodge to make the WebAssembly build look for the combined
+	// image first.  It can be removed once proper named ROM slots
+	// per-machine are implemented.
+	"romlist deluxecoco=deluxe,adv070_u24",
+#else
 	"romlist deluxecoco=adv070_u24,deluxe",
+#endif
 	"romlist deluxecoco1=adv071_u24",
 	"romlist deluxecoco2=adv072_u24",
 	"romlist deluxecoco3=adv073-2_u24,adv073_u24",
@@ -1096,49 +1103,74 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		private_cfg.printer.destination = PRINTER_DESTINATION_NONE;
 	}
 
-	// Notify UI of starting options:
-	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
-	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
-	ui_update_state(-1, ui_tag_hkbd_layout, private_cfg.kbd.layout, NULL);
-	ui_update_state(-1, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
-	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
-
+	// Create tape interface
 	xroar.tape_interface = tape_interface_new(xroar.ui_interface);
-	if (private_cfg.tape.ao_rate > 0)
+
+	// Notify UI of starting options:
+
+	if (private_cfg.tape.ao_rate > 0) {
 		tape_set_ao_rate(xroar.tape_interface, private_cfg.tape.ao_rate);
+	}
+	ui_update_state(-1, ui_tag_tape_flag_fast, private_cfg.tape.fast, NULL);
+	ui_update_state(-1, ui_tag_tape_flag_pad_auto, private_cfg.tape.pad_auto, NULL);
+	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
 
 	ui_update_state(-1, ui_tag_cmp_colour_killer, private_cfg.vo.colour_killer, NULL);
+	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
+	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
 	ui_update_state(-1, ui_tag_ntsc_scaling, private_cfg.vo.ntsc_scaling, NULL);
 	ui_update_state(-1, ui_tag_brightness, private_cfg.vo.brightness, NULL);
 	ui_update_state(-1, ui_tag_contrast, private_cfg.vo.contrast, NULL);
 	ui_update_state(-1, ui_tag_saturation, private_cfg.vo.saturation, NULL);
 	ui_update_state(-1, ui_tag_hue, private_cfg.vo.hue, NULL);
 
-	// Configure machine
-	//xroar_configure_machine(xroar.machine_config);
-	ui_update_state(-1, ui_tag_machine, xroar.machine_config->id, NULL);
-	if (xroar.machine_config->cart_enabled) {
-		ui_update_state(-1, ui_tag_cartridge, 0, xroar.machine_config->default_cart);
-	} else {
-		ui_update_state(-1, ui_tag_cartridge, 0, NULL);
-	}
+	ui_update_state(-1, ui_tag_hkbd_layout, private_cfg.kbd.layout, NULL);
+	ui_update_state(-1, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
+	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
+	ui_update_state(-1, ui_tag_ratelimit_latch, private_cfg.debug.ratelimit, NULL);
 
+	// Configure machine.  Note some options that persist across machine
+	// changes are set in xroar_ui_set_machine(), the handler for this
+	// message.
+
+	ui_update_state(-1, ui_tag_machine, xroar.machine_config->id, NULL);
+
+	// Ensure any requested media is available
+
+#ifdef HAVE_WASM
+	for (struct slist *iter = private_cfg.file.binaries; iter; iter = iter->next) {
+		wasm_wget((const char *)iter->data);
+	}
+	for (unsigned i = 0; i < 4; ++i) {
+		wasm_wget(private_cfg.file.fd[i]);
+	}
+	wasm_wget(private_cfg.file.snapshot);
+	wasm_wget(private_cfg.file.tape);
+	wasm_wget(private_cfg.file.text);
+	wasm_ui_prepare_cartridge(selected_cart_config);
+#endif
+
+	// Done for now.  main() will call xroar_init_finish() to do the rest
+	// of the one-time initialisation.  This gives the WebAssembly build an
+	// opportunity to wait for ROM image downloads to complete.
+
+	return xroar.ui_interface;
+}
+
+void xroar_init_finish(void) {
 	// We set this here so that configuring the machine can update the
 	// picture (viewport) first.  Otherwise, this call will set a picture
 	// first (probably 0), then the request to change it will resize the
 	// window.  TODO: add a separate code path for updating gl_filter.
 	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
 
-	// Reset everything
-	xroar_hard_reset();
-	ui_update_state(-1, ui_tag_tape_flag_fast, private_cfg.tape.fast, NULL);
-	ui_update_state(-1, ui_tag_tape_flag_pad_auto, private_cfg.tape.pad_auto, NULL);
-	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
+	// These options apply to the first running machine:
 
 	ui_update_state(-1, ui_tag_vdg_inverse, private_cfg.vo.vdg_inverted_text, NULL);
-	ui_update_state(-1, ui_tag_frameskip, private_cfg.vo.frameskip, NULL);
 	ui_update_state(-1, ui_tag_ratelimit, 1, NULL);
-	ui_update_state(-1, ui_tag_ratelimit_latch, private_cfg.debug.ratelimit, NULL);
+
+	// Reset everything
+	xroar_hard_reset();
 
 	// Load media images
 
@@ -1212,13 +1244,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		private_cfg.kbd.type_list = slist_remove(private_cfg.kbd.type_list, data);
 		sdsfree(data);
 	}
-
-#ifdef HAVE_WASM
-	if (xroar.machine_config) {
-		ui_update_state(-1, ui_tag_machine, xroar.machine_config->id, NULL);
-	}
-#endif
-	return xroar.ui_interface;
 }
 
 /** Generally set as an atexit() handler by main(), this function flushes any
@@ -1768,13 +1793,6 @@ void xroar_update_cartridge_menu(void) {
 	}
 }
 
-#ifdef HAVE_WASM
-static void do_wasm_ui_set_machine(void *sptr) {
-	int mcid = (intptr_t)sptr;
-	ui_update_state(-1, ui_tag_machine, mcid, NULL);
-}
-#endif
-
 static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	struct xroar *emu = sptr;
 	struct ui_state_message *uimsg = smsg;
@@ -1791,13 +1809,16 @@ static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	machine_config_complete(mc);
 
 #ifdef HAVE_WASM
+	// Verify ROMs required by this machine (and any default cartridge)
+	// are available in the WebAssembly build.  If not, schedule an event
+	// to retry once any file transfers are complete.
 	_Bool waiting = !wasm_ui_prepare_machine(mc);
-	if (mc->default_cart) {
+	if (mc->cart_enabled && mc->default_cart) {
 		struct cart_config *cc = cart_config_by_name(mc->default_cart);
 		waiting |= !wasm_ui_prepare_cartridge(cc);
 	}
 	if (waiting) {
-		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_ui_set_machine, (void *)(intptr_t)mc->id), 1);
+		wasm_queue_message_value_event(ui_tag_machine, mc ? mc->id : 0);
 		uimsg->value = old_mcid;
 		return;
 	}
@@ -1814,13 +1835,6 @@ static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	ui_update_state(-1, ui_tag_ratelimit_latch, emu->state.ratelimit_latch, NULL);
 	xroar_hard_reset();
 }
-
-#ifdef HAVE_WASM
-static void do_wasm_ui_set_cartridge(void *sptr) {
-	int ccid = (intptr_t)sptr;
-	ui_update_state(-1, ui_tag_cartridge, ccid, NULL);
-}
-#endif
 
 static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 	struct xroar *emu = sptr;
@@ -1868,9 +1882,12 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 	}
 
 #ifdef HAVE_WASM
+	// Verify ROMs required by this cartridge are available in the
+	// WebAssembly build.  If not, schedule an event to retry once any file
+	// transfers are complete.
 	_Bool waiting = !wasm_ui_prepare_cartridge(cc);
 	if (waiting) {
-		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_ui_set_cartridge, (void *)(intptr_t)cc->id), 1);
+		wasm_queue_message_value_event(ui_tag_cartridge, cc ? cc->id : 0);
 		uimsg->value = old_ccid;
 		uimsg->data = NULL;
 		return;
@@ -1958,11 +1975,15 @@ void xroar_eject_output_tape(void) {
 }
 
 void xroar_soft_reset(void) {
-	xroar.machine->reset(xroar.machine, RESET_SOFT);
+	if (xroar.machine) {
+		xroar.machine->reset(xroar.machine, RESET_SOFT);
+	}
 }
 
 void xroar_hard_reset(void) {
-	xroar.machine->reset(xroar.machine, RESET_HARD);
+	if (xroar.machine) {
+		xroar.machine->reset(xroar.machine, RESET_HARD);
+	}
 }
 
 #ifdef SCREENSHOT

@@ -82,6 +82,8 @@ static void wasm_update_cartridge_menu(void *sptr);
 static void wasm_update_joystick_menus(void *sptr);
 static void wasm_update_radio_menu_from_enum(const char *menu, struct xconfig_enum *xc_enum);
 
+static void wasm_ui_state_notify(void *, int tag, void *smsg);
+
 static void *ui_wasm_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
 
@@ -93,25 +95,98 @@ static void *ui_wasm_new(void *cfg) {
 	struct ui_sdl2_interface *uisdl2 = &uiwasm->ui_sdl2_interface;
 	ui_sdl_init(uisdl2, ui_cfg);
 	struct ui_interface *ui = &uisdl2->ui_interface;
-
 	ui->run = DELEGATE_AS0(void, wasm_ui_run, uiwasm);
-	ui->update_state = DELEGATE_AS3(void, int, int, cvoidp, wasm_ui_update_state, uiwasm);
 	ui->update_machine_menu = DELEGATE_AS0(void, wasm_update_machine_menu, uiwasm);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, wasm_update_cartridge_menu, uiwasm);
 	ui->update_joystick_menus = DELEGATE_AS0(void, wasm_update_joystick_menus, uiwasm);
+
+	// Register with messenger
+	uiwasm->msgr_client_id = messenger_client_register();
+
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_machine, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cartridge, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_input_filename, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 
 	if (!sdl_vo_init(uisdl2)) {
 		free(uiwasm);
 		return NULL;
 	}
 
-	wasm_update_radio_menu_from_enum("tv-input", machine_tv_input_list);
+	wasm_update_radio_menu_from_enum("cmp_fs", vo_render_fs_list);
+	wasm_update_radio_menu_from_enum("cmp_fsc", vo_render_fsc_list);
+	wasm_update_radio_menu_from_enum("cmp_system", vo_render_system_list);
 	wasm_update_radio_menu_from_enum("ccr", vo_cmp_ccr_list);
+	wasm_update_radio_menu_from_enum("picture", vo_viewport_list);
+	wasm_update_radio_menu_from_enum("tv_input", machine_tv_input_list);
 	wasm_update_machine_menu(uiwasm);
 	wasm_update_cartridge_menu(uiwasm);
 	wasm_update_joystick_menus(uiwasm);
 
 	return uiwasm;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Finish the initialisation started in main().  We point the browser to a
+// temporary handler that waits for file transfers to complete before finishing
+// initialisation.  This then transfers control to wasm_ui_run().
+
+static void finish_init(void *);
+
+void wasm_finish_init(struct ui_interface *ui) {
+	emscripten_set_main_loop_arg(finish_init, ui, 0, 0);
+}
+
+static void finish_init(void *sptr) {
+	struct ui_wasm_interface *uiwasm = sptr;
+	struct ui_sdl2_interface *uisdl2 = &uiwasm->ui_sdl2_interface;
+	struct ui_interface *ui = &uisdl2->ui_interface;
+
+	// We'll be called by the browser repeatedly, but we don't want to do
+	// anything until all file transfers have completed.
+	if (wasm_waiting_files) {
+		return;
+	}
+
+	// During initialisation, the UI event list is used to reschedule
+	// things that failed due to needing incomplete file transfers.
+	// Process it without checking against scheduled time.
+	while (UI_EVENT_LIST) {
+		event_dispatch_next(&UI_EVENT_LIST);
+	}
+
+	// Running the events could lead to more waiting...
+	if (wasm_waiting_files) {
+		return;
+	}
+
+	// Everything done, finish up initialisation and repoint the emscripten
+	// main loop to the UI's run() delegate.
+	xroar_init_finish();
+	EM_ASM( ui_done_initialising(); );
+	emscripten_cancel_main_loop();
+	emscripten_set_main_loop_arg(ui->run.func, ui->run.sptr, 0, 0);
+
+	// Record current time so the first "real" call has a reference point.
+	uiwasm->last_t = emscripten_get_now();
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -129,13 +204,6 @@ static void wasm_ui_run(void *sptr) {
 	double t = emscripten_get_now();
 	double dt = t - uiwasm->last_t;
 	uiwasm->last_t = t;
-
-	// For the first call, we definitely don't have an accurate time delta,
-	// so wait until the second frame...
-	if (!uiwasm->done_first_frame) {
-		uiwasm->done_first_frame = 1;
-		return;
-	}
 
 	// Try and head off insane situations:
 	if (dt < 0. || dt > 400.) {
@@ -165,9 +233,13 @@ static void wasm_ui_run(void *sptr) {
 
 // Wasm event handler relays information to web page handlers.
 
-void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
-	(void)sptr;
-	WASM_DEBUG("wasm_ui_update_state(tag=%d, value=%d)\n", tag, value);
+static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_wasm_interface *uiwasm = sptr;
+	(void)uiwasm;
+	struct ui_state_message *uimsg = smsg;
+	int value = uimsg->value;
+	const void *data = uimsg->data;
+	WASM_DEBUG("wasm_ui_state_notify(tag=%d, value=%d)\n", tag, value);
 
 	switch (tag) {
 
@@ -184,13 +256,13 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 	// Tape
 
 	case ui_tag_tape_input_filename:
-		if (data) {
-			char *fn = xstrdup((char *)data);
-			char *bn = basename(fn);
+		{
+			char *fn = data ? xstrdup((const char *)data) : NULL;
+			char *bn = fn ? basename(fn) : NULL;
 			EM_ASM_({ ui_update_tape_input_filename($0); }, bn);
-			free(fn);
-		} else {
-			EM_ASM_({ ui_update_tape_input_filename($0); }, "");
+			if (fn) {
+				free(fn);
+			}
 		}
 		break;
 
@@ -202,13 +274,10 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 
 	case ui_tag_disk_data:
 		{
-			const struct vdisk *disk = (const struct vdisk *)data;
+			const struct vdisk *disk = data;
 			if (disk) {
-				char *fn = NULL, *bn = NULL;
-				if (disk->filename) {
-					fn = xstrdup(disk->filename);
-					bn = basename(fn);
-				}
+				char *fn = disk->filename ? xstrdup(disk->filename) : NULL;
+				char *bn = fn ? basename(fn) : NULL;
 				EM_ASM_({ ui_update_disk_info($0, $1, $2, $3, $4, $5); }, value, bn, disk->write_back, disk->write_protect, disk->num_cylinders, disk->num_heads);
 				if (fn) {
 					free(fn);
@@ -226,22 +295,70 @@ void wasm_ui_update_state(void *sptr, int tag, int value, const void *data) {
 		xroar.vo_interface->is_fullscreen = value;
 		break;
 
+	case ui_tag_cmp_fs:
+		EM_ASM_({ ui_menu_select($0, $1); }, "cmp_fs", value);
+		break;
+
+	case ui_tag_cmp_fsc:
+		EM_ASM_({ ui_menu_select($0, $1); }, "cmp_fsc", value);
+		break;
+
+	case ui_tag_cmp_system:
+		EM_ASM_({ ui_menu_select($0, $1); }, "cmp_system", value);
+		break;
+
+	case ui_tag_cmp_colour_killer:
+		EM_ASM_({ ui_set_checkbox($0, $1); }, "cmp_colour_killer", value);
+		break;
+
 	case ui_tag_ccr:
 		EM_ASM_({ ui_menu_select($0, $1); }, "ccr", value);
 		break;
 
+	case ui_tag_picture:
+		EM_ASM_({ ui_menu_select($0, $1); }, "picture", value);
+		break;
+
+	case ui_tag_ntsc_scaling:
+		EM_ASM_({ ui_set_checkbox($0, $1); }, "ntsc_scaling", value);
+		break;
+
 	case ui_tag_tv_input:
-		EM_ASM_({ ui_menu_select($0, $1); }, "tv-input", value);
+		EM_ASM_({ ui_menu_select($0, $1); }, "tv_input", value);
+		break;
+
+	case ui_tag_vdg_inverse:
+		EM_ASM_({ ui_set_checkbox($0, $1); }, "vdg_inverse", value);
+		break;
+
+	case ui_tag_brightness:
+		EM_ASM_({ ui_set_value($0, $1); }, "brightness", value);
+		break;
+
+	case ui_tag_contrast:
+		EM_ASM_({ ui_set_value($0, $1); }, "contrast", value);
+		break;
+
+	case ui_tag_saturation:
+		EM_ASM_({ ui_set_value($0, $1); }, "saturation", value);
+		break;
+
+	case ui_tag_hue:
+		EM_ASM_({ ui_set_value($0, $1); }, "hue", value);
+		break;
+
+	case ui_tag_gain:
+		EM_ASM_({ ui_set_value($0, $1); }, "gain", *(float *)data);
 		break;
 
 	// Joysticks
 
-	case ui_tag_joy_right:
-		EM_ASM_({ ui_menu_select_str($0, $1); }, "right-joystick", (char *)data);
-		break;
-
-	case ui_tag_joy_left:
-		EM_ASM_({ ui_menu_select_str($0, $1); }, "left-joystick", (char *)data);
+	case ui_tag_joystick_port:
+		if (value == 0) {
+			EM_ASM_({ ui_menu_select($0, $1); }, "right-joystick", (intptr_t)data);
+		} else if (value == 1) {
+			EM_ASM_({ ui_menu_select($0, $1); }, "left-joystick", (intptr_t)data);
+		}
 		break;
 
 	default:
@@ -289,7 +406,7 @@ static void wasm_update_cartridge_menu(void *sptr) {
 	EM_ASM_({ ui_menu_clear($0); }, "cart");
 
 	// Add new entries
-	EM_ASM_({ ui_menu_add($0, $1, $2); }, "cart", "None", -1);
+	EM_ASM_({ ui_menu_add($0, $1, $2); }, "cart", "None", 0);
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		EM_ASM_({ ui_menu_add($0, $1, $2); }, "cart", cc->description, cc->id);
@@ -310,12 +427,12 @@ static void wasm_update_joystick_menus(void *sptr) {
 	EM_ASM_({ ui_menu_clear($0); }, "left-joystick");
 
 	// Add new entries
-	EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "right-joystick", "None", "");
-	EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "left-joystick", "None", "");
+	EM_ASM_({ ui_menu_add($0, $1, $2); }, "right-joystick", "None", 0);
+	EM_ASM_({ ui_menu_add($0, $1, $2); }, "left-joystick", "None", 0);
 	for (struct slist *iter = jcl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
-		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "right-joystick", jc->description, jc->name);
-		EM_ASM_({ ui_menu_add_str($0, $1, $2); }, "left-joystick", jc->description, jc->name);
+		EM_ASM_({ ui_menu_add($0, $1, $2); }, "right-joystick", jc->description, jc->id);
+		EM_ASM_({ ui_menu_add($0, $1, $2); }, "left-joystick", jc->description, jc->id);
 	}
 }
 
@@ -338,16 +455,75 @@ static void wasm_update_radio_menu_from_enum(const char *menu, struct xconfig_en
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static int mkdir_recursive(const char *pathname) {
+	// Ensure the destination directory exists.  Fine for MEMFS in the
+	// sandbox, just don't use this anywhere important, I've barely given
+	// it more than a few seconds of thought.
+	if (!pathname) {
+		return -1;
+	}
+	char *path = xstrdup(pathname);
+	char *dir = path;
+	for (char *x = dir; *x; ) {
+		while (*x == '/')
+			++x;
+		while (*x && *x != '/')
+			++x;
+		char old = *x;
+		*x = 0;
+		// Skip attempt to create if already exists as directory
+		struct stat statbuf;
+		if (stat(dir, &statbuf) == 0) {
+			if (statbuf.st_mode & S_IFDIR) {
+				*x = old;
+				continue;
+			}
+		}
+		// Anything we still can't deal with is a hard fail
+		if (mkdir(dir, 0700) == -1) {
+			free(path);
+			return -1;
+		}
+		*x = old;
+	}
+	free(path);
+	return 0;
+}
+
+static sds rehomed_path(const char *root, const char *file) {
+	char *dirc = xstrdup(file);
+	char *basec = xstrdup(file);
+	char *dir = dirname(dirc);
+	char *base = basename(basec);
+
+	sds newfile = sdsnew(root);
+	newfile = sdscat(newfile, "/");
+	newfile = sdscat(newfile, dir);
+
+	// Ensure rehomed directory exists
+	if (mkdir_recursive(newfile) < 0) {
+		sdsfree(newfile);
+		free(basec);
+		free(dirc);
+		return NULL;
+	}
+
+	newfile = sdscat(newfile, "/");
+	newfile = sdscat(newfile, base);
+	free(basec);
+	free(dirc);
+	return newfile;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // File fetching.  Locks files to prevent multiple attempts to fetch the same
-// file, and deals with "stub" files (zero length preloaded equivalents only
-// present to enable automatic machine configuration).  This half-baked
-// approach to file locking is probably fine for our purposes.  It seems to
-// work :)
+// file.  This half-baked approach to file locking is probably fine for our
+// purposes.  It seems to work :)
 
 static _Bool lock_fetch(const char *file) {
 	WASM_DEBUG("lock_fetch(%s)\n", file);
-	sds lockfile = sdsnew(file);
-	lockfile = sdscat(lockfile, ".lock");
+	sds lockfile = rehomed_path("/.lock", file);
 	int fd = open(lockfile, O_CREAT|O_EXCL|O_WRONLY, 0666);
 	sdsfree(lockfile);
 	if (fd == -1) {
@@ -361,8 +537,7 @@ static _Bool lock_fetch(const char *file) {
 
 static void unlock_fetch(const char *file) {
 	WASM_DEBUG("unlock_fetch(%s)\n", file);
-	sds lockfile = sdsnew(file);
-	lockfile = sdscat(lockfile, ".lock");
+	sds lockfile = rehomed_path("/.lock", file);
 	int fd = open(lockfile, O_RDONLY);
 	if (fd == -1) {
 		WASM_DEBUG("unlock_fetch() failed: invalid fd\n");
@@ -385,73 +560,79 @@ static void wasm_onload(const char *file) {
 static void wasm_onerror(const char *file) {
 	LOG_WARN("Error fetching '%s'\n", file);
 	unlock_fetch(file);
+	// Create failure tracking file
+	sds failfile = rehomed_path("/.fail", file);
+	if (failfile) {
+		FILE *fd;
+		if ((fd = fopen(failfile, "w"))) {
+			WASM_DEBUG("wasm_onerror(): created: %s\n", failfile);
+			fclose(fd);
+		}
+	}
+	sdsfree(failfile);
 }
 
-static void wasm_wget(const char *file) {
+// Fetch a file.  Locks the file to prevent simultaneous fetch attempts.  Won't
+// re-fetch the same file (whether or not it succeeded).
+
+void wasm_wget(const char *file) {
 	if (!file || *file == 0) {
-		WASM_DEBUG("wasm_wget(NULL) - ignored\n");
+		WASM_DEBUG("wasm_wget: NULL: ignoring\n");
 		return;
 	}
-
-	WASM_DEBUG("wasm_wget(%s)\n", file);
-
-	// Ensure the destination directory exists.  Fine for MEMFS in the
-	// sandbox, just don't use this anywhere important, I've barely given
-	// it more than a few seconds of thought.
-	char *filecp = xstrdup(file);
-	char *dir = dirname(filecp);
-	for (char *x = dir; *x; ) {
-		while (*x == '/')
-			x++;
-		while (*x && *x != '/')
-			x++;
-		char old = *x;
-		*x = 0;
-		// Skip attempt to create if already exists as directory
-		struct stat statbuf;
-		if (stat(dir, &statbuf) == 0) {
-			if (statbuf.st_mode & S_IFDIR) {
-				*x = old;
-				continue;
-			}
-		}
-		// Anything we still can't deal with is a hard fail
-		if (mkdir(dir, 0700) == -1) {
-			perror(dir);
-			free(filecp);
-			return;
-		}
-		*x = old;
-	}
-	free(filecp);
 
 	if (!lock_fetch(file)) {
 		// Couldn't lock file - either it's already being downloaded,
 		// or there was an error.  Either way, just bail.
+		WASM_DEBUG("wasm_wget: %s: file locked\n", file);
+		return;
+	}
+
+	sds failfile = rehomed_path("/.fail", file);
+	if (!failfile) {
+		LOG_ERROR("wasm_wget: %s: failed to create fail tracking\n", file);
+		unlock_fetch(file);
 		return;
 	}
 
 	FILE *fd;
-	if ((fd = fopen(file, "rb"))) {
-		if (fs_file_size(fd) > 0) {
-			// File already exists - no need to fetch, so unlock
-			// and return.
-			WASM_DEBUG("wasm_wget(): file exists; unlocking\n");
-			fclose(fd);
-			unlock_fetch(file);
-			return;
-		}
+	if ((fd = fopen(failfile, "r"))) {
+		WASM_DEBUG("wasm_wget: %s: not re-attempting failed download\n", file);
 		fclose(fd);
-		// File exists but is a zero-length stub: remove stub, then
-		// fall through to fetch its replacement (still locked).
-		unlink(file);
+		sdsfree(failfile);
+		unlock_fetch(file);
+		return;
+	}
+	sdsfree(failfile);
+
+	// Ensure the destination directory exists.  Fine for MEMFS in the
+	// sandbox, just don't use this anywhere important, I've barely given
+	// it more than a few seconds of thought.
+	char *dirc = xstrdup(file);
+	char *dir = dirname(dirc);
+	if (mkdir_recursive(dir) < 0) {
+		WASM_DEBUG("wasm_wget: %s: failed to create destination dir: %s\n", file, dir);
+		perror(dir);
+		free(dirc);
+		unlock_fetch(file);
+		return;
+	}
+	free(dirc);
+
+	if ((fd = fopen(file, "rb"))) {
+		// File already exists - no need to fetch, so unlock
+		// and return.
+		WASM_DEBUG("wasm_wget: %s: not re-downloading\n", file);
+		fclose(fd);
+		unlock_fetch(file);
+		return;
 	}
 
 	// Submit fetch.  Callbacks will unlock the fetch when done.  The more
 	// full-featured Emscripten wget function would allow us to display
 	// progress bars, etc., but nothing we'll ever fetch is really large
 	// enough to justify that.
-	WASM_DEBUG("emscripten_async_wget(%s)\n", file);
+	WASM_DEBUG("wasm_wget: %s: submitting call to emscripten_async_wget\n", file);
 	emscripten_async_wget(file, file, wasm_onload, wasm_onerror);
 }
 
@@ -469,20 +650,6 @@ FILE *wasm_fopen(const char *pathname, const char *mode) {
 	return fd;
 }
 
-// Set machine & its default cart
-
-static void do_wasm_set_machine(void *sptr) {
-	int id = (intptr_t)sptr;
-	WASM_DEBUG("do_wasm_set_machine(%d)\n", id);
-	xroar_set_machine(1, id);
-}
-
-static void do_wasm_set_cartridge(void *sptr) {
-	int id = (intptr_t)sptr;
-	WASM_DEBUG("do_wasm_set_cartridge(%d)\n", id);
-	xroar_set_cart_by_id(1, id);
-}
-
 // Lookup ROM in romlist before trying to fetch it.
 
 static void wasm_wget_rom(const char *rom) {
@@ -495,12 +662,17 @@ static void wasm_wget_rom(const char *rom) {
 	}
 }
 
-// xroar_set_machine() is redirected here in order to allow asynchronous fetching
-// of a machine's ROMs.  If all the ROMs are present, 1 is returned and the normal
-// code is allowed to proceed, otherwise an event is queued to call it again once
-// all fetches have completed.
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Try to ensure all ROM images required for a machine or cartridge are
+// available.  Returns true if all ROMs are present, or at least a download has
+// been attempted.  If any weren't already downloaded, submits wasm_wget()
+// requests and returns false.
 
 _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
+	if (!mc) {
+		return 1;
+	}
 	WASM_DEBUG("wasm_ui_prepare_machine(%s)\n", mc->name);
 	if (mc->bas_rom) {
 		wasm_wget_rom(mc->bas_rom);
@@ -517,14 +689,13 @@ _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
 	if (wasm_waiting_files == 0) {
 		return 1;
 	}
-	WASM_DEBUG("queueing do_wasm_set_machine()\n");
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 1);
 	return 0;
 }
 
-// Similarly, xroar_set_cart() redirects here.
-
 _Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
+	if (!cc) {
+		return 1;
+	}
 	WASM_DEBUG("wasm_ui_prepare_cartridge(%s)\n", cc->name);
 	if (cc->rom) {
 		wasm_wget_rom(cc->rom);
@@ -535,10 +706,119 @@ _Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
 	if (wasm_waiting_files == 0) {
 		return 1;
 	}
-	WASM_DEBUG("queueing do_wasm_set_cartridge()\n");
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_cartridge, (void *)(intptr_t)cc->id), 1);
 	return 0;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Queue simple value-only message as an event
+
+struct wasm_message_value {
+	int tag;
+	int value;
+};
+
+static void do_message_value_event(void *sptr) {
+	struct wasm_message_value *mv = sptr;
+	int tag = mv->tag;
+	int value = mv->value;
+	free(mv);
+	ui_update_state(-1, tag, value, NULL);
+}
+
+void wasm_queue_message_value_event(int tag, int value) {
+	struct wasm_message_value *mv = xmalloc(sizeof(*mv));
+	mv->tag = tag;
+	mv->value = value;
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_message_value_event, mv), 1);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// UI message wrappers
+
+void wasm_set_machine(int value) {
+	ui_update_state(-1, ui_tag_machine, value, NULL);
+}
+
+void wasm_set_cartridge(int value) {
+	ui_update_state(-1, ui_tag_cartridge, value, NULL);
+}
+
+void wasm_set_tape_playing(int value) {
+	ui_update_state(-1, ui_tag_tape_playing, value, NULL);
+}
+
+void wasm_set_fullscreen(int value) {
+	ui_update_state(-1, ui_tag_fullscreen, value, NULL);
+}
+
+void wasm_set_cmp_fs(int value) {
+	ui_update_state(-1, ui_tag_cmp_fs, value, NULL);
+}
+
+void wasm_set_cmp_fsc(int value) {
+	ui_update_state(-1, ui_tag_cmp_fsc, value, NULL);
+}
+
+void wasm_set_cmp_system(int value) {
+	ui_update_state(-1, ui_tag_cmp_system, value, NULL);
+}
+
+void wasm_set_cmp_colour_killer(int value) {
+	ui_update_state(-1, ui_tag_cmp_colour_killer, value, NULL);
+}
+
+void wasm_set_ccr(int value) {
+	ui_update_state(-1, ui_tag_ccr, value, NULL);
+}
+
+void wasm_set_picture(int value) {
+	ui_update_state(-1, ui_tag_picture, value, NULL);
+}
+
+void wasm_set_ntsc_scaling(int value) {
+	ui_update_state(-1, ui_tag_ntsc_scaling, value, NULL);
+}
+
+void wasm_set_tv_input(int value) {
+	ui_update_state(-1, ui_tag_tv_input, value, NULL);
+}
+
+void wasm_set_vdg_inverse(int value) {
+	ui_update_state(-1, ui_tag_vdg_inverse, value, NULL);
+}
+
+void wasm_set_brightness(int value) {
+	ui_update_state(-1, ui_tag_brightness, value, NULL);
+}
+
+void wasm_set_contrast(int value) {
+	ui_update_state(-1, ui_tag_contrast, value, NULL);
+}
+
+void wasm_set_saturation(int value) {
+	ui_update_state(-1, ui_tag_saturation, value, NULL);
+}
+
+void wasm_set_hue(int value) {
+	ui_update_state(-1, ui_tag_hue, value, NULL);
+}
+
+void wasm_set_gain(float value) {
+	ui_update_state(-1, ui_tag_gain, 0, &value);
+}
+
+void wasm_set_joystick_port(int port, int value) {
+	ui_update_state(-1, ui_tag_joystick_port, port, (void *)(intptr_t)value);
+}
+
+void wasm_set_joystick_by_name(int port, const char *name) {
+	struct joystick_config *jc = joystick_config_by_name(name);
+	wasm_set_joystick_port(port, jc ? jc->id : 0);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Helper while loading software from the browser - prepare a specific machine
 // with a specific default cartridge.
@@ -547,25 +827,13 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 			   const char *cart_rom, const char *cart_rom2) {
 	WASM_DEBUG("wasm_set_machine_cart(%s, %s, %s, %s)\n", machine, cart ? cart : "[none]", cart_rom ? cart_rom : "[none]", cart_rom2 ? cart_rom2 : "[none]");
 	struct machine_config *mc = machine_config_by_name(machine);
+	wasm_set_machine(mc ? mc->id : 0);
 	struct cart_config *cc = cart_config_by_name(cart);
-	if (!mc) {
-		WASM_DEBUG("wasm_set_machine_cart() - invalid machine config, ignoring\n");
-		return;
-	}
-	wasm_ui_prepare_machine(mc);
-	if (mc->default_cart) {
-		free(mc->default_cart);
-		mc->default_cart = NULL;
-		mc->nodos = 1;
-	}
-	mc->cart_enabled = 0;
-	if (cc && cc->name) {
-		mc->default_cart = xstrdup(cc->name);
-		mc->cart_enabled = 1;
-		mc->nodos = 0;
+	if (cc) {
 		if (cart_rom) {
 			if (cc->rom) {
 				free(cc->rom);
+				cc->rom = NULL;
 			}
 			cc->rom = xstrdup(cart_rom);
 		}
@@ -576,10 +844,10 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 		if (cart_rom2) {
 			cc->rom2 = xstrdup(cart_rom2);
 		}
-		wasm_ui_prepare_cartridge(cc);
 	}
-	WASM_DEBUG("queueing do_wasm_set_machine()\n");
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_machine, (void *)(intptr_t)mc->id), 1);
+	wasm_set_cartridge(cc ? cc->id : 0);
+	xroar_hard_reset();
+	return;
 }
 
 // Load (and optionally autorun) file from web
@@ -641,22 +909,6 @@ struct wasm_event_set_joystick {
 	int port;
 	char *value;
 };
-
-static void do_wasm_set_joystick(void *sptr) {
-	struct wasm_event_set_joystick *ev = sptr;
-	WASM_DEBUG("do_wasm_set_joystick(%d, %s)\n", ev->port, ev->value);
-	xroar_set_joystick(1, ev->port, ev->value);
-	free(ev->value);
-	free(ev);
-}
-
-void wasm_set_joystick(int port, const char *value) {
-	struct wasm_event_set_joystick *ev = xmalloc(sizeof(*ev));
-	ev->port = port;
-	ev->value = xstrdup(value);
-	WASM_DEBUG("wasm_set_joystick(%d, %s): queueing do_wasm_set_joystick()\n", port, value);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_set_joystick, ev), 1);
-}
 
 // Submit BASIC commands
 

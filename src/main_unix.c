@@ -23,21 +23,21 @@
 #include <time.h>
 #include <unistd.h>
 
-#ifdef HAVE_WASM
-#include <emscripten.h>
-#endif
-
 #include "events.h"
 #include "ui.h"
 #include "xroar.h"
 #include "logging.h"
 
+#include "wasm/wasm.h"
+
 /** \brief Entry point.
  *
  * Sets up the exit handler and calls xroar_init(), which will process all
- * configuration and return a UI interface.  If the returned interface provides
- * its own run() method, calls that, otherwise provides a default "main loop"
- * that repeatedly calls xroar_run().
+ * configuration and return a UI interface.
+ *
+ * xroar_init_finish() is then called to finish initialisation and attach any
+ * media.  If the interface provides its own run() method, it is called,
+ * otherwise a default "main loop" repeatedly calls xroar_run().
  */
 
 int main(int argc, char **argv) {
@@ -50,11 +50,14 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-#ifdef HAVE_WASM
-	EM_ASM( ui_done_initialising(); );
-	emscripten_set_main_loop_arg(ui->run.func, ui->run.sptr, 0, 0);
-	// In Wasm, main() will now return!
-#else
+#ifndef HAVE_WASM
+	// In normal builds, just finish up initialisation.
+	xroar_init_finish();
+
+	// If the UI interface provides its own run() delegate, just call that
+	// (e.g. the GTK+ UI sets up emulated execution as an idle function and
+	// passes control to GTK's own main loop).  Otherwise just repeatedly
+	// call xroar_run().
 	if (DELEGATE_DEFINED(ui->run)) {
 		DELEGATE_CALL(ui->run);
 	} else {
@@ -62,6 +65,11 @@ int main(int argc, char **argv) {
 			xroar_run(EVENT_MS(10));
 		}
 	}
+#else
+	// The WebAssembly build has its own approach to completing
+	// initialisation in order to allow initial required file transfers to
+	// complete.
+	wasm_finish_init(ui);
 #endif
 	return 0;
 }

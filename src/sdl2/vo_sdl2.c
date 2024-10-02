@@ -84,7 +84,9 @@ static void vo_sdl_free(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
 static void resize(void *, unsigned int w, unsigned int h);
+#ifndef HAVE_WASM
 static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
+#endif
 static void vosdl_ui_set_menubar(void *, int tag, void *smsg);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
@@ -149,7 +151,9 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
+#ifndef HAVE_WASM
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_fullscreen, uisdl2));
+#endif
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_menubar, uisdl2));
 
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, uisdl2);
@@ -386,17 +390,12 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	update_viewport(uisdl2);
 }
 
+#ifndef HAVE_WASM
 static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	(void)tag;
 	struct ui_sdl2_interface *uisdl2 = sptr;
 	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
-
-#ifdef HAVE_WASM
-	// Until WebAssembly fullscreen interaction becomes a little more
-	// predictable, we just don't support it.
-	return 0;
-#endif
 
 	_Bool want_fullscreen = uimsg->value;
 	_Bool is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -420,6 +419,7 @@ static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	vo->is_fullscreen = want_fullscreen;
 	SDL_SetWindowFullscreen(uisdl2->vo_window, want_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
+#endif
 
 static void vosdl_ui_set_menubar(void *sptr, int tag, void *smsg) {
 	(void)tag;

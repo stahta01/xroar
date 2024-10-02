@@ -20,9 +20,7 @@ be a better way to make this usable...
 -->
 
 <!-- This file declares an object called 'software' that is used to populate a
-     selection of drop-downs providing access to online software images.  It
-     also declares an array called 'romstubs', which is a list of ROM image
-     stubs required up-front for XRoar's autoconfiguration to work. -->
+     selection of drop-downs providing access to online software images. -->
 <script src="software.js"></script>
 
 <!-- Canvas for Wasm to draw into -->
@@ -107,7 +105,7 @@ be a better way to make this usable...
 </tr>
 
 <tr><th>Tape:</th>
-    <td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_tape_playing(true,true)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_tape_playing(true,false)' style='display:none'>&#x23f8;</span></td>
+    <td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_value("tape_playing", 1, 1)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_value("tape_playing", 0, 1)' style='display:none'>&#x23f8;</span></td>
     <td><span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span></td>
     <td><label title="Use local tape image file" class='button'><input type='file' onchange='file_input_onload(this,load_type.tape,0)'>Insert...</label></td>
     <td><span id='tape' class='filename'></span></td>
@@ -123,17 +121,58 @@ be a better way to make this usable...
 <label for="tab2" class="tab-label">View</label>
 <div class="tab-content">
 
-<!-- View tab, no columns -->
+<!-- View tab, column 1 -->
+<div class='column' style='width:49%'>
+
 <table class='vheader centre-vertically'>
 
-<tr title="TV Input"><th>Input:</td><td><select id='tv-input' onchange='wasm_set_tv_input(false, this.options[this.selectedIndex].value)'/></td></tr>
+<tr title="Audio gain (dBFS)"><th>Audio gain:</td><td><input type='range' min="-50.0" max="3.0" step="1.0" id='gain' onchange='console.log(this.value)' oninput='wasm_set_value("gain", this.value, 0)'/></td><td id='gain_value' onclick='wasm_set_value("gain", -3.0, 1)'></td></tr>
 
-<tr title="Cross-colour renderer"><th>Renderer:</td><td><select id='ccr' onchange='wasm_set_ccr(this.options[this.selectedIndex].value)'/></td></tr>
+<tr title="Picture viewport"><th>Picture:</td><td><select id='picture' onchange='wasm_set_value("picture", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Brightness"><th>Brightness:</td><td><input type='range' min="0" max="100" step="1" id='brightness' oninput='wasm_set_value("brightness", this.value, 0)'/></td><td id='brightness_value' onclick='wasm_set_value("brightness", 52, 1)'></td></tr>
+
+<tr title="Contrast"><th>Contrast:</td><td><input type='range' min="0" max="100" step="1" id='contrast' oninput='wasm_set_value("contrast", this.value, 0)'/></td><td id='contrast_value' onclick='wasm_set_value("contrast", 52, 1)'></td></tr>
+
+<tr title="Colour (saturation)"><th>Colour:</td><td><input type='range' min="0" max="100" step="1" id='saturation' oninput='wasm_set_value("saturation", this.value, 0)'/></td><td id='saturation_value' onclick='wasm_set_value("saturation", 50, 1)'></td></tr>
+
+<tr title="Hue"><th>Hue:</td><td><input type='range' min="-179" max="180" step="1" id='hue' oninput='wasm_set_value("hue", this.value, 0)'/></td><td id='hue_value' onclick='wasm_set_value("hue", 0, 1)'></td></tr>
+
+<tr title="Vertically scale 60Hz display"><th>60Hz scaling:</td><td><input type='checkbox' id='ntsc_scaling' onchange='wasm_set_value("ntsc_scaling", this.checked, 1)'/></td><td/></tr>
 
 </table>
 
+</div>
+
+<!-- View tab, column 2 -->
+<div class='column' style='width:49%'>
+
+<table class='vheader centre-vertically'>
+
+<tr title="TV Input"><th>Input:</td><td><select id='tv_input' onchange='wasm_set_value("tv_input", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Cross-colour renderer complexity"><th>Renderer:</td><td><select id='ccr' onchange='wasm_set_value("ccr", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Sampling frequency"><th>F<sub>S</sub>:</td><td><select id='cmp_fs' onchange='wasm_set_value("cmp_fs", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Colour subcarrier frequency"><th>F<sub>SC</sub>:</td><td><select id='cmp_fsc' onchange='wasm_set_value("cmp_fsc", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Colour system"><th>System:</td><td><select id='cmp_system' onchange='wasm_set_value("cmp_system", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
+
+<tr title="Disable colour processing in mono video modes"><th>Colour killer:</td><td><input type='checkbox' id='cmp_colour_killer' onchange='wasm_set_value("cmp_colour_killer", this.checked, 1)'/></td><td/></tr>
+
+<tr><td colspan='3'>&nbsp;</td></tr>
+
+<tr><th title="Invert text mode characters">Inverse text:</td><td><input type='checkbox' id='vdg_inverse' onchange='wasm_set_value("vdg_inverse", this.checked, 1)'/></td><td/></tr>
+
+</table>
+
+</div>
+
+<div class='breakfloat'></div>
+
 <!-- View tab, button bar -->
-<p><span class='button' onclick='wasm_set_fullscreen(1,1)'>Full Screen</span> (<kbd>Control</kbd>+<kbd>F</kbd> to exit)
+<p><span class='button' onclick='wasm_set_value("fullscreen", 1, 1)'>Full Screen</span> (<kbd>Control</kbd>+<kbd>F</kbd> to exit)
 
 </div>
 <!-- end tab -->
@@ -148,9 +187,9 @@ be a better way to make this usable...
 
 <!-- Machine and cartridge selections are dynamically populated -->
 
-<tr title="Machine to emulate"><th>Machine:</td><td><select id='machine' onchange='wasm_set_machine(this.options[this.selectedIndex].value)'/></td></tr>
+<tr title="Machine to emulate"><th>Machine:</td><td><select id='machine' onchange='wasm_set_value("machine", this.options[this.selectedIndex].value, 1)'/></td></tr>
 
-<tr title="Use cartridge in current machine (may need hard reset)"><th>Cartridge:</td><td><select id='cart' onchange='wasm_set_cart(this.options[this.selectedIndex].value)'/></td></tr>
+<tr title="Use cartridge in current machine (may need hard reset)"><th>Cartridge:</td><td><select id='cart' onchange='wasm_set_value("cartridge", this.options[this.selectedIndex].value, 1)'/></td></tr>
 
 <tr title="Right joystick emulation"><th>Right joystick:</td><td><select id='right-joystick' onchange='wasm_set_joystick(0,this.options[this.selectedIndex].value)'/></td></tr>
 
@@ -205,10 +244,6 @@ be a better way to make this usable...
 	Module.onRuntimeInitialized = function() {
 		// Wrap C functions in JS for convenience:
 		wasm_load_file = Module.cwrap('wasm_load_file', null, [ 'string', 'number', 'number' ]);
-		// Create ROM stub files
-		for (const romfile of romstubs) {
-			Module.FS.writeFile(romfile, '');
-		}
 
 		let args = window.location.search.substr(1).split('&');
 		for (let arg of args) {
@@ -344,8 +379,8 @@ be a better way to make this usable...
 
 		var rjoy = ('joy_right' in program) ? program.joy_right : '';
 		var ljoy = ('joy_left' in program) ? program.joy_left : '';
-		wasm_set_joystick(0, rjoy);
-		wasm_set_joystick(1, ljoy);
+		wasm_set_joystick_by_name(0, rjoy);
+		wasm_set_joystick_by_name(1, ljoy);
 
 		var { title, name, author, publisher, text } = program;
 
@@ -355,11 +390,11 @@ be a better way to make this usable...
 		document.getElementById("software-text").innerHTML = text ? text : "";
 
 		if ('ccr' in program) {
-			wasm_set_ccr(program.ccr);
+			wasm_set_value("ccr", program.ccr, 1);
 		}
 
 		if ('tv_input' in program) {
-			setTimeout(wasm_set_tv_input, 500, true, program.tv_input);
+			setTimeout(wasm_set_value, 500, "tv_input", program.tv_input);
 		}
 
 		wasm_eject_tape();
@@ -387,20 +422,6 @@ be a better way to make this usable...
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	// Set machine
-	function wasm_set_machine(index) {
-		resumeAudio();
-		Module.ccall('xroar_set_machine', null, [ 'boolean', 'number' ], [ false, index ]);
-		Module.canvas.focus();
-	}
-
-	// Set cartridge for current machine
-	function wasm_set_cart(index) {
-		resumeAudio();
-		Module.ccall('xroar_set_cart_by_id', null, [ 'boolean', 'number' ], [ false, index ]);
-		Module.canvas.focus();
-	}
-
 	// Hard reset machine
 	function wasm_hard_reset() {
 		resumeAudio();
@@ -416,7 +437,15 @@ be a better way to make this usable...
 	// Map a supported input device to emulated joystick port
 	function wasm_set_joystick(joy, value) {
 		resumeAudio();
-		Module.ccall('wasm_set_joystick', null, [ 'number', 'string' ], [ joy, value ]);
+		Module.ccall('wasm_set_joystick_port', null, [ 'number', 'number' ], [ joy, value ]);
+		Module.canvas.focus();
+	}
+
+	// Map a supported input device to emulated joystick port by name (used when
+	// starting software from the menu)
+	function wasm_set_joystick_by_name(joy, value) {
+		resumeAudio();
+		Module.ccall('wasm_set_joystick_by_name', null, [ 'number', 'string' ], [ joy, value ]);
 		Module.canvas.focus();
 	}
 
@@ -426,36 +455,20 @@ be a better way to make this usable...
 		Module.ccall('xroar_eject_disk', null, [ 'number' ], [ drive ]);
 	}
 
-	function wasm_set_tape_playing(notify, value) {
-		resumeAudio();
-		Module.ccall('xroar_set_tape_playing', null, [ 'boolean', 'boolean' ], [ notify, value ]);
-	}
-
 	// Eject current tape
 	function wasm_eject_tape() {
 		resumeAudio();
 		Module.ccall('xroar_eject_input_tape', null, [ ], [ ]);
 	}
 
-	// Set fullscreen
-	function wasm_set_fullscreen(notify, value) {
+	// Set simple value
+	function wasm_set_value(control, value, refocus) {
 		resumeAudio();
-		Module.ccall('xroar_set_fullscreen', null, [ 'boolean', 'number' ], [ notify, value ]);
-		Module.canvas.focus();
-	}
-
-	// Set cross-colour renderer
-	function wasm_set_ccr(value) {
-		resumeAudio();
-		Module.ccall('xroar_set_ccr', null, [ 'boolean', 'number' ], [ false, value ]);
-		Module.canvas.focus();
-	}
-
-	// Set TV input
-	function wasm_set_tv_input(notify, value) {
-		resumeAudio();
-		Module.ccall('xroar_set_tv_input', null, [ 'boolean', 'number' ], [ notify, value ]);
-		Module.canvas.focus();
+		var function_name = "wasm_set_" + control;
+		Module.ccall(function_name, null, [ 'number' ], [ value ]);
+		if (refocus) {
+			Module.canvas.focus();
+		}
 	}
 
 	// Resize canvas and notify emulator
@@ -496,7 +509,7 @@ be a better way to make this usable...
 
 	// Clear a menu ready to repopulate
 	function ui_menu_clear(menu) {
-		var select = document.getElementById(UTF8ToString(menu, 80));
+		var select = document.getElementById(UTF8ToString(menu));
 		if (select != null) {
 			while (select.lastChild) {
 				select.removeChild(select.lastChild);
@@ -506,10 +519,10 @@ be a better way to make this usable...
 
 	// Add to a menu (int value)
 	function ui_menu_add(menu, label, value) {
-		var select = document.getElementById(UTF8ToString(menu, 80));
+		var select = document.getElementById(UTF8ToString(menu));
 		if (select != null) {
 			var el = document.createElement("OPTION");
-			el.innerHTML = UTF8ToString(label, 80);
+			el.innerHTML = UTF8ToString(label);
 			el.setAttribute("value", value);
 			select.appendChild(el);
 		}
@@ -517,18 +530,18 @@ be a better way to make this usable...
 
 	// Add to a menu (string value)
 	function ui_menu_add_str(menu, label, value) {
-		var select = document.getElementById(UTF8ToString(menu, 80));
+		var select = document.getElementById(UTF8ToString(menu));
 		if (select != null) {
 			var el = document.createElement("OPTION");
-			el.innerHTML = UTF8ToString(label, 80);
-			el.setAttribute("value", UTF8ToString(value, 80));
+			el.innerHTML = UTF8ToString(label);
+			el.setAttribute("value", UTF8ToString(value));
 			select.appendChild(el);
 		}
 	}
 
 	// Select menu entry by int value
 	function ui_menu_select(menu, value) {
-		var select = document.getElementById(UTF8ToString(menu, 80));
+		var select = document.getElementById(UTF8ToString(menu));
 		if (select != null) {
 			select.value = value;
 		}
@@ -536,38 +549,46 @@ be a better way to make this usable...
 
 	// Select menu entry by string value
 	function ui_menu_select_str(menu, value) {
-		var select = document.getElementById(UTF8ToString(menu, 80));
+		var select = document.getElementById(UTF8ToString(menu));
 		if (select != null) {
-			select.value = UTF8ToString(value, 80);
+			select.value = UTF8ToString(value);
 		}
 	}
 
-	// Called when disk information changes for a drive
-	function ui_update_disk_info(drive, fnp, wb, wp, ncyls, nheads) {
-		var el = document.getElementById('disk' + drive);
-		if (ncyls < 0) {
-			el.innerHTML = 'Insert...';
-		} else {
-			el.innerHTML = ncyls.toString().padStart(2, '0') + 'C ' + nheads + 'H';
-			if (fnp != 0) {
-				var filename = UTF8ToString(fnp, 80);
-				el.innerHTML += ' | ' + filename;
-			}
+	// Set checkbox value
+	function ui_set_checkbox(idp, value) {
+		var el = document.getElementById(UTF8ToString(idp));
+		if (el != null) {
+			el.checked = value;
+		}
+	}
+
+	// Set numerical value
+	function ui_set_value(idp, value) {
+		var id = UTF8ToString(idp);
+		var id_value = id + "_value";
+		var el = document.getElementById(id);
+		var el_value = document.getElementById(id_value);
+		if (el != null) {
+			el.value = value;
+		}
+		if (el_value != null) {
+			el_value.innerHTML = value;
 		}
 	}
 
 	// Called when input tape information changes
 	function ui_update_tape_input_filename(fnp) {
 		var el = document.getElementById('tape');
-		var filename = UTF8ToString(fnp, 80);
-		if (filename == '') {
-			el.innerHTML = 'Insert...';
+		if (fnp != 0) {
+			el.innerHTML = UTF8ToString(fnp);
 		} else {
-			el.innerHTML = filename;
+			el.innerHTML = '';
 		}
 	}
 
-	// Called when tape playing status changes
+	// Called when tape playing status changes.  This special case hides one
+	// control (play or pause) and shows the other.
 	function ui_update_tape_playing(value) {
 		if (value) {
 			document.getElementById('tape_play').style.display = 'none';
@@ -575,6 +596,20 @@ be a better way to make this usable...
 		} else {
 			document.getElementById('tape_play').style.display = '';
 			document.getElementById('tape_pause').style.display = 'none';
+		}
+	}
+
+	// Called when disk information changes for a drive
+	function ui_update_disk_info(drive, fnp, wb, wp, ncyls, nheads) {
+		var el = document.getElementById('disk' + drive);
+		if (ncyls < 0) {
+			el.innerHTML = '';
+		} else {
+			el.innerHTML = ncyls.toString().padStart(2, '0') + 'C ' + nheads + 'H';
+			if (fnp != 0) {
+				var filename = UTF8ToString(fnp);
+				el.innerHTML += ' | ' + filename;
+			}
 		}
 	}
 
@@ -609,13 +644,16 @@ be a better way to make this usable...
 		// Do the initial resize that Chromium/Linux seems to require
 		if (!Module.initial_resize) {
 			Module.initial_resize = 1;
-			wasm_set_fullscreen(1, 0);
+			wasm_set_value("fullscreen", 0, 1);
 		}
 
 		// Scan arguments for key=value pairs to populate a program struct
 		var program = {};
 		let args = window.location.search.substr(1).split('&');
 		for (let arg of args) {
+			if (arg.substring(0, 1) == '-') {
+				continue;
+			}
 			if (arg.includes('=')) {
 				let [k, v] = arg.split('=');
 				v = decodeURIComponent(v.replace(/\+/g, '%20'));
@@ -627,7 +665,7 @@ be a better way to make this usable...
 			} else if (arg === 'nodos') {
 				Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ 'dragon32', null, null, null ]);
 			} else if (arg === 'fs') {
-				wasm_set_fullscreen(1, 1);
+				wasm_set_value("fullscreen", 1, 1);
 			}
 		}
 

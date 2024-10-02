@@ -2,7 +2,7 @@
  *
  *  \brief ROM filename database.
  *
- *  \copyright Copyright 2012-2020 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -42,9 +42,11 @@ struct romlist {
 /* List containing all defined rom lists */
 static struct slist *romlist_list = NULL;
 
+#ifndef HAVE_WASM
 static char const * const rom_extensions[] = {
 	"", ".rom", ".ROM", ".dgn", ".DGN"
 };
+#endif
 
 static int compare_entry(struct romlist *a, char *b) {
 	return strcmp(a->name, b);
@@ -117,6 +119,7 @@ void romlist_assign(const char *name, struct sdsx_list *values) {
 }
 
 /* Find a ROM within ROMPATH */
+#ifndef HAVE_WASM
 static sds find_rom(const char *romname) {
 	sds path = NULL;
 	if (!romname) return NULL;
@@ -132,15 +135,29 @@ static sds find_rom(const char *romname) {
 	sdsfree(filename);
 	return path;
 }
+#endif
 
 /* Attempt to find a ROM image.  If name starts with '@', search the named
  * list for the first accessible entry, otherwise search for a single entry. */
 sds romlist_find(const char *name) {
 	if (!name) return NULL;
-	sds path = NULL;
 	/* not prefixed with an '@'?  then it's not a list! */
 	if (name[0] != '@') {
+#ifdef HAVE_WASM
+		// For WebAssembly we short-circuit the ROM list and only
+		// consider the first non-list entry we encounter.  We also
+		// ensure it ends with ".rom".
+		sds filename = sdsnew(name);
+		size_t filename_length = sdslen(filename);
+		if (filename_length >= 4 &&
+		    0 == strcmp(".rom", filename + filename_length - 4)) {
+			return filename;
+		}
+		filename = sdscat(filename, ".rom");
+		return filename;
+#else
 		return find_rom(name);
+#endif
 	}
 	struct romlist *romlist = find_romlist(name+1);
 	/* found an appropriate list?  flag it and start scanning it */
@@ -150,16 +167,17 @@ sds romlist_find(const char *name) {
 	if (romlist->flag)
 		return NULL;
 	romlist->flag = 1;
+	sds path = NULL;
 	for (iter = romlist->list; iter; iter = iter->next) {
 		char *ent = iter->data;
 		if (ent) {
-			if (ent[0] == '@') {
-				path = romlist_find(ent);
-				if (path)
+			//if (ent[0] == '@') {
+				if ((path = romlist_find(ent))) {
 					break;
-			} else if ((path = find_rom(ent))) {
-				break;
-			}
+				}
+			//} else if ((path = find_rom(ent))) {
+			//	break;
+			//}
 		}
 	}
 	romlist->flag = 0;
