@@ -20,8 +20,6 @@
 
 #include "top-config.h"
 
-#ifdef WANT_BECKER
-
 // for addrinfo
 #define _POSIX_C_SOURCE 200112L
 
@@ -52,6 +50,8 @@
 #include "becker.h"
 #include "logging.h"
 #include "xroar.h"
+
+#ifdef WANT_BECKER
 
 /* In theory no reponse should be longer than this (though it doesn't actually
  * matter, this only constrains how much is read at a time). */
@@ -219,5 +219,14 @@ void becker_write_data(struct becker *b, uint8_t D) {
 	}
 	write_output(b);
 }
+
+#else
+
+extern inline struct becker *becker_open(void);
+extern inline void becker_close(struct becker *b);
+extern inline void becker_reset(struct becker *b);
+extern inline uint8_t becker_read_status(struct becker *b);
+extern inline uint8_t becker_read_data(struct becker *b);
+extern inline void becker_write_data(struct becker *b, uint8_t D);
 
 #endif
