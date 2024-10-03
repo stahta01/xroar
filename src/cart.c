@@ -520,52 +520,10 @@ struct cart_config *cart_config_by_name(const char *name) {
 			rom_cart_config->description = xstrdup("ROM cartridge");
 		}
 		sdsfree(tmp_name);
-		if (rom_cart_config->rom)
+		if (rom_cart_config->rom) {
 			free(rom_cart_config->rom);
-		rom_cart_config->rom = xstrdup(name);
-		FILE *fd = fopen(name, "rb");
-		if (fd) {
-			off_t fsize = fs_file_size(fd);
-			uint32_t crc32 = CRC32_RESET;
-			if (fsize > 0) {
-				crc32 = fs_file_crc32(fd);
-				// Round up file size to a multiple of 4K for
-				// matching, padding the CRC32 with 0xff bytes
-				// for matching.
-				while ((fsize & 0xfff) != 0) {
-					uint8_t dummy = 0xff;
-					crc32 = crc32_block(crc32, &dummy, 1);
-					fsize++;
-				}
-				// Hide this away in debug logging for now
-				if (logging.level >= 3) {
-					LOG_PRINT("Cartridge: %s\n", name);
-					LOG_PRINT("\tsize 0x%lx\n", (long)fsize);
-					LOG_PRINT("\tcrc32 0x%x\n", crc32);
-				}
-			}
-			for (unsigned i = 0; i < ARRAY_N_ELEMENTS(cart_special); i++) {
-				if (cart_special[i].size == fsize &&
-				    cart_special[i].crc32 == crc32) {
-					LOG_DEBUG(1, "Cartridge: using cart-type '%s' for '%s'\n", cart_special[i].type, cart_special[i].name);
-					rom_cart_config->type = xstrdup(cart_special[i].type);
-					// We ONLY recognise headerless files here,
-					// so flag that there's no need to try being
-					// over-smart about that.
-					rom_cart_config->no_header = 1;
-					rom_cart_config->autorun = !cart_special[i].no_autorun;
-					break;
-				}
-			}
-			// If not found, and cart size exceeds 16K, assume a
-			// banked ROM (so use GMC cart to handle it).
-			if (!rom_cart_config->type && fsize > 0x4000) {
-				LOG_DEBUG(1, "Cartridge: assuming cart-type 'gmc' for '%s'\n", name);
-				rom_cart_config->type = xstrdup("gmc");
-				rom_cart_config->autorun = 1;
-			}
-			fclose(fd);
 		}
+		rom_cart_config->rom = xstrdup(name);
 		if (!rom_cart_config->type) {
 			rom_cart_config->type = xstrdup("rom");
 			rom_cart_config->autorun = 1;
@@ -604,7 +562,74 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 	return cc;
 }
 
+static void cart_config_update_romcart(void);
+
+// Re-check the type of the automatically-created ROM cartridge.  This is
+// necessary for WebAssembly builds where the file was probably not available
+// at the time the profile was created.
+
+static void cart_config_update_romcart(void) {
+	struct cart_config *cc = rom_cart_config;
+	if (!cc) {
+		return;
+	}
+	if (cc->type) {
+		free(cc->type);
+		cc->type = NULL;
+	}
+	FILE *fd = fopen(rom_cart_config->rom, "rb");
+	if (fd) {
+		off_t fsize = fs_file_size(fd);
+		uint32_t crc32 = CRC32_RESET;
+		if (fsize > 0) {
+			crc32 = fs_file_crc32(fd);
+			// Round up file size to a multiple of 4K for
+			// matching, padding the CRC32 with 0xff bytes
+			// for matching.
+			while ((fsize & 0xfff) != 0) {
+				uint8_t dummy = 0xff;
+				crc32 = crc32_block(crc32, &dummy, 1);
+				fsize++;
+			}
+			// Hide this away in debug logging for now
+			if (logging.level >= 3) {
+				LOG_PRINT("Cartridge: %s\n", rom_cart_config->rom);
+				LOG_PRINT("\tsize 0x%lx\n", (long)fsize);
+				LOG_PRINT("\tcrc32 0x%x\n", crc32);
+			}
+		}
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(cart_special); i++) {
+			if (cart_special[i].size == fsize &&
+			    cart_special[i].crc32 == crc32) {
+				LOG_DEBUG(1, "Cartridge: using cart-type '%s' for '%s'\n", cart_special[i].type, cart_special[i].name);
+				cc->type = xstrdup(cart_special[i].type);
+				// We ONLY recognise headerless files here,
+				// so flag that there's no need to try being
+				// over-smart about that.
+				cc->no_header = 1;
+				cc->autorun = !cart_special[i].no_autorun;
+				break;
+			}
+		}
+		// If not found, and cart size exceeds 16K, assume a
+		// banked ROM (so use GMC cart to handle it).
+		if (!cc->type && fsize > 0x4000) {
+			LOG_DEBUG(1, "Cartridge: assuming cart-type 'gmc' for '%s'\n", rom_cart_config->rom);
+			cc->type = xstrdup("gmc");
+			cc->autorun = 1;
+		}
+		fclose(fd);
+	}
+	if (!cc->type) {
+		cc->type = xstrdup("rom");
+		cc->autorun = 1;
+	}
+}
+
 void cart_config_complete(struct cart_config *cc) {
+	if (0 == strcmp(cc->name, "romcart")) {
+		cart_config_update_romcart();
+	}
 	if (!cc->type) {
 		cc->type = xstrdup("rom");
 	}
