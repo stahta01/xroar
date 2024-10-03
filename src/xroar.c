@@ -1697,8 +1697,9 @@ static void connect_interfaces(void) {
 	}
 }
 
-/** \brief Connect UI to machine.
- */
+// Connect UI to machine.  This is called as part of switching machine, but
+// also as part of snapshot loading.  For the latter case, we send messages
+// informing the UI of which machine and cartridge are in use.
 
 void xroar_connect_machine(void) {
 	assert(xroar.machine_config != NULL);
@@ -1706,6 +1707,11 @@ void xroar_connect_machine(void) {
 	tape_interface_connect_machine(xroar.tape_interface, xroar.machine);
 	xroar.auto_kbd = auto_kbd_new(xroar.machine);
 	xroar.keyboard_interface = xroar.machine->get_interface(xroar.machine, "keyboard");
+
+	// Tell everyone what hardware we're using.  This will only actually
+	// have an effect during snapshot load, as otherwise the message should
+	// be blocked.
+	ui_update_state(xroar.msgr_client_id, ui_tag_machine, xroar.machine_config->id, NULL);
 
 	// Printing
 	xroar.printer_interface = xroar.machine->get_interface(xroar.machine, "printer");
@@ -1720,6 +1726,11 @@ void xroar_connect_machine(void) {
 		part_free((struct part *)c);
 		c = NULL;
 	}
+
+	// Similarly, inform everyone what the cartridge is.  This will probably
+	// go out whatever, but sending it from our client ID means we don't
+	// reinitialise the cart in the case of snapshot loading.
+	ui_update_state(xroar.msgr_client_id, ui_tag_cartridge, c ? c->config->id : 0, NULL);
 
 	connect_interfaces();
 
