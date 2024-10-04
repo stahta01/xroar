@@ -449,6 +449,7 @@ void vdrive_write(void *sptr, uint8_t data) {
 	if (!vip->track_base) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
 		vip->track_base = (uint8_t *)vip->idamptr;
+		ui_update_state(-1, ui_tag_disk_data, vip->cur_drive_number, vip->current_drive->disk);
 	}
 	for (unsigned i = vip->head_incr; i; i--) {
 		if (vip->track_base && vip->head_pos < vip->current_drive->disk->track_length) {
@@ -496,6 +497,7 @@ void vdrive_write_idam(void *sptr) {
 	if (!vip->track_base) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
 		vip->track_base = (uint8_t *)vip->idamptr;
+		ui_update_state(-1, ui_tag_disk_data, vip->cur_drive_number, vip->current_drive->disk);
 	}
 	if (vip->track_base && (vip->head_pos+vip->head_incr) < vip->current_drive->disk->track_length) {
 		// Write 0xfe
