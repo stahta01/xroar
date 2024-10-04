@@ -949,6 +949,32 @@ void wasm_resize(int w, int h) {
 	}
 }
 
+// Insert new disk in drive, only if one is not present!
+
+void wasm_new_disk(int drive) {
+	if (drive < 0 || drive > 3) {
+		return;
+	}
+	if (vdrive_disk_in_drive(xroar.vdrive_interface, drive)) {
+		return;
+	}
+	struct vdisk *new_disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
+	if (new_disk) {
+		char name[12];
+		snprintf(name, sizeof(name), "drive%d.dmk", drive);
+		new_disk->filetype = FILETYPE_DMK;
+		new_disk->filename = xstrdup(name);
+		new_disk->write_back = 1;
+		new_disk->new_disk = 1;
+		new_disk->dirty = 1;
+		vdrive_insert_disk(xroar.vdrive_interface, drive, new_disk);
+		ui_update_state(-1, ui_tag_disk_data, drive, new_disk);
+		ui_update_state(-1, ui_tag_disk_write_enable, 1, (void *)(intptr_t)drive);
+		ui_update_state(-1, ui_tag_disk_write_back, 1, (void *)(intptr_t)drive);
+		vdisk_unref(new_disk);
+	}
+}
+
 // Flush changes to disk images (before offering up to download)
 
 void wasm_vdrive_flush(void) {

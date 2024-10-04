@@ -72,34 +72,39 @@ be a better way to make this usable...
 <label title="Load local file and try to autorun" class='button'><input type='file' onchange='file_input_onload(this,load_type.run,0)'>Run...</label>
 <label title="Type from file" class='button'><input type='file' onchange='file_input_onload(this,load_type.text,0)'>Type...</label>
 <span class='button' onclick='download_snapshot()'>Save snapshot...</span>
+<span id='drive_info'></span>
 
 <!-- File tab, no columns -->
 <table class='vheader centre-vertically'>
 
 <tr><th>Drive 1:</th>
-    <td></td>
+    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(0)'>+</span></td>
     <td><span title="Eject disk in drive 1" class='button' onclick='wasm_eject_disk(0)'>&#x23cf;</span></td>
+    <td><span title="Save disk in drive 1" class='button' onclick='download_disk(0)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 1" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,0)'>Insert...</label></td>
     <td><span id='disk0' class='filename'></span></td>
 </tr>
 
 <tr><th>Drive 2:</th>
-    <td></td>
+    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(1)'>+</span></td>
     <td><span title="Eject disk in drive 2" class='button' onclick='wasm_eject_disk(1)'>&#x23cf;</span></td>
+    <td><span title="Save disk in drive 2" class='button' onclick='download_disk(1)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 2" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,1)'>Insert...</label></td>
     <td><span id='disk1' class='filename'></span></td>
 </tr>
 
 <tr><th>Drive 3:</th>
-    <td></td>
+    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(2)'>+</span></td>
     <td><span title="Eject disk in drive 3" class='button' onclick='wasm_eject_disk(2)'>&#x23cf;</span></td>
+    <td><span title="Save disk in drive 3" class='button' onclick='download_disk(2)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 3" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,2)'>Insert...</label></td>
     <td><span id='disk2' class='filename'></span></td>
 </tr>
 
 <tr><th>Drive 4:</th>
-    <td></td>
+    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(3)'>+</span></td>
     <td><span title="Eject disk in drive 4" class='button' onclick='wasm_eject_disk(3)'>&#x23cf;</span></td>
+    <td><span title="Save disk in drive 4" class='button' onclick='download_disk(3)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 4" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,3)'>Insert...</label></td>
     <td><span id='disk3' class='filename'></span></td>
 </tr>
@@ -238,6 +243,8 @@ be a better way to make this usable...
 		is_fullscreen: 0,
 		arguments: [ '-no-vo-colour-killer', '-no-disk-auto-os9', '-ao-fragments', '3' ],
 	};
+
+	var drive_filename = [ null, null, null, null ];
 
 	// Initialisation that depends on the emscripten runtime being fully
 	// initialised.
@@ -449,6 +456,11 @@ be a better way to make this usable...
 		Module.canvas.focus();
 	}
 
+	// Insert new disk into specific drive
+	function wasm_new_disk(drive) {
+		Module.ccall('wasm_new_disk', null, [ 'number' ], [ drive ]);
+	}
+
 	// Eject disk in specific drive
 	function wasm_eject_disk(drive) {
 		resumeAudio();
@@ -502,6 +514,25 @@ be a better way to make this usable...
 			}, 2000);
 	}
 
+	// Flush disk writes then offer disk in specified drive for download
+	function download_disk(drive) {
+		Module.ccall('wasm_vdrive_flush', null, [], []);
+		if (drive_filename[drive]) {
+			let content = Module.FS.readFile(drive_filename[drive]);
+			var a = document.createElement('a');
+			a.download = drive_filename[drive];
+			a.href = URL.createObjectURL(new Blob([content], {type: 'application/octet-stream'}));
+			a.style.display = 'none';
+
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(() => {
+					document.body.removeChild(a);
+					URL.revokeObjectURL(a.href);
+					}, 2000);
+		}
+	}
+
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	// Anything under here is a function provided as callback from the main
@@ -525,6 +556,14 @@ be a better way to make this usable...
 			el.innerHTML = UTF8ToString(label);
 			el.setAttribute("value", value);
 			select.appendChild(el);
+		}
+	}
+
+	// Update displayed text in an element
+	function ui_set_html(elname, value) {
+		var el = document.getElementById(UTF8ToString(elname));
+		if (el != null) {
+			el.innerHTML = UTF8ToString(value);
 		}
 	}
 
@@ -604,10 +643,12 @@ be a better way to make this usable...
 		var el = document.getElementById('disk' + drive);
 		if (ncyls < 0) {
 			el.innerHTML = '';
+			drive_filename[drive] = null;
 		} else {
 			el.innerHTML = ncyls.toString().padStart(2, '0') + 'C ' + nheads + 'H';
 			if (fnp != 0) {
 				var filename = UTF8ToString(fnp);
+				drive_filename[drive] = filename;
 				el.innerHTML += ' | ' + filename;
 			}
 		}
