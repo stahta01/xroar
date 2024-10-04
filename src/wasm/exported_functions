@@ -24,6 +24,7 @@
 	'_wasm_set_tape_playing',
 	'_wasm_set_tv_input',
 	'_wasm_set_vdg_inverse',
+	'_wasm_vdrive_flush',
 	'_write_snapshot',
 	'_xroar_eject_disk',
 	'_xroar_eject_input_tape',

@@ -100,6 +100,7 @@ void wasm_set_machine_cart(const char *machine, const char *cart, const char *ca
 void wasm_load_file(const char *filename, int type, int drive);
 void wasm_queue_basic(const char *string);
 void wasm_resize(int w, int h);
+void wasm_vdrive_flush(void);
 
 #endif
 

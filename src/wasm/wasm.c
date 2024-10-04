@@ -43,6 +43,7 @@
 #include "machine.h"
 #include "romlist.h"
 #include "vdisk.h"
+#include "vdrive.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -108,6 +109,7 @@ static void *ui_wasm_new(void *cfg) {
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_input_filename, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
@@ -285,6 +287,18 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 			} else {
 				EM_ASM_({ ui_update_disk_info($0, null, 0, 0, -1, 0); }, value);
 			}
+		}
+		break;
+
+	case ui_tag_disk_drive_info:
+		{
+			const struct vdrive_info *vi = data;
+			unsigned d = vi->drive + 1;
+			unsigned c = vi->cylinder;
+			unsigned h = vi->head;
+			char string[16];
+			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
+			EM_ASM_({ ui_set_html($0, $1); }, "drive_info", string);
 		}
 		break;
 
@@ -933,4 +947,10 @@ void wasm_resize(int w, int h) {
 	if (global_uisdl2 && global_uisdl2->vo_window) {
 		SDL_SetWindowSize(global_uisdl2->vo_window, w, h);
 	}
+}
+
+// Flush changes to disk images (before offering up to download)
+
+void wasm_vdrive_flush(void) {
+	vdrive_flush(xroar.vdrive_interface);
 }
