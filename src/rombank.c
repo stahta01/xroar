@@ -181,20 +181,15 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 		return -1;
 	}
 
-#ifdef HAVE_WASM
-	FILE *fd = wasm_fopen(filename, "rb");
-#else
 	FILE *fd = fopen(filename, "rb");
-#endif
-
 	if (!fd) {
 		LOG_DEBUG(2, "[rom] failed to open: %s\n", filename);
 		return -1;
 	}
 
-	LOG_DEBUG(2, "[rom] opened: %s\n", filename);
-
 	off_t file_size = fs_file_size(fd);
+
+	LOG_DEBUG(2, "[rom] opened: %s (%lld bytes)\n", filename, (long long)file_size);
 
 	if (file_size > 256 && (file_size % 256) != 0) {
 		offset += (file_size % 256);

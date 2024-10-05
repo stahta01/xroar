@@ -38,12 +38,6 @@ struct ui_wasm_interface {
 	double tickerr;
 };
 
-// Global flag.  TODO: Currently only used outside wasm-specific code during
-// snapshot loading; need to look at whether that's still necessary.
-
-extern _Bool wasm_retry_open;
-extern int wasm_waiting_files;
-
 // Finish the initialisation started in main().
 
 void wasm_finish_init(struct ui_interface *ui);
@@ -52,12 +46,6 @@ void wasm_finish_init(struct ui_interface *ui);
 // re-fetch the same file (whether or not it succeeded).
 
 void wasm_wget(const char *file);
-
-// Front-end to fopen().  On failure, submits a wasm_wget() request if global
-// flag 'wasm_retry_open' is set.  Caller can then retry once all files are
-// fetched.
-
-FILE *wasm_fopen(const char *pathname, const char *mode);
 
 // Try to ensure all ROM images required for a machine or cartridge are
 // available.  Returns true if all ROMs are present, or at least a download has

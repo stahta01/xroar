@@ -847,27 +847,6 @@ _Bool cart_rom_finish(struct part *p) {
 	struct cart *c = (struct cart *)p;
 	struct cart_config *cc = c->config;
 
-#ifdef HAVE_WASM
-	// This is a bodge to ensure that ROM files are fetched during snapshot
-	// loads in WASM builds.  Possible real fix is to a) have a "filename"
-	// string type during serialisation, and b) record actual filename used
-	// for any ROMs (after searching paths).
-	if (cc->rom) {
-		if (cc->rom[0] != '@' && strchr(cc->rom, '/') == NULL) {
-			FILE *f = fopen(cc->rom, "a");
-			if (f)
-				fclose(f);
-		}
-	}
-	if (cc->rom2) {
-		if (cc->rom2[0] != '@' && strchr(cc->rom2, '/') == NULL) {
-			FILE *f = fopen(cc->rom2, "a");
-			if (f)
-				fclose(f);
-		}
-	}
-#endif
-
 	{
 		// Default to 2 * 8K
 		unsigned slot_size = 8192;

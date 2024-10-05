@@ -60,11 +60,8 @@
 // environment.  Other functions prefixed wasm_ are exported and called from
 // the JavaScript support code.
 
-// Global flag indicates a download was required - retry open.
-_Bool wasm_retry_open = 0;
-
 // Flag pending downloads.  Emulator will not run while waiting for files.
-int wasm_waiting_files = 0;
+static int wasm_waiting_files = 0;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -648,20 +645,6 @@ void wasm_wget(const char *file) {
 	// enough to justify that.
 	WASM_DEBUG("wasm_wget: %s: submitting call to emscripten_async_wget\n", file);
 	emscripten_async_wget(file, file, wasm_onload, wasm_onerror);
-}
-
-// Front-end to fopen().  On failure, submits a wasm_wget() request if global
-// flag 'wasm_retry_open' is set.  Caller can then retry once all files are
-// fetched.
-
-FILE *wasm_fopen(const char *pathname, const char *mode) {
-	FILE *fd = fopen(pathname, mode);
-	if (wasm_retry_open) {
-		if (!fd || fs_file_size(fd) == 0) {
-			wasm_wget(pathname);
-		}
-	}
-	return fd;
 }
 
 // Lookup ROM in romlist before trying to fetch it.

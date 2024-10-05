@@ -103,18 +103,17 @@ int read_snapshot(const char *filename) {
 		return -1;
 	}
 #else
-	wasm_retry_open = 1;
-	if (read_v2_snapshot(filename) < 0) {
-		wasm_retry_open = 0;
-		LOG_WARN("Snapshot: read failed\n");
-		return -1;
+	read_v2_snapshot(filename);
+	if (xroar.machine) {
+		wasm_ui_prepare_machine(xroar.machine->config);
+		struct cart *c = xroar.machine->get_interface(xroar.machine, "cart");
+		if (c) {
+			wasm_ui_prepare_cartridge(c->config);
+		}
 	}
-	wasm_retry_open = 0;
-	if (wasm_waiting_files) {
-		char *fncopy = xstrdup(filename);
-		event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_retry_read_snapshot, fncopy), 1);
-		return -1;
-	}
+	char *fncopy = xstrdup(filename);
+	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_retry_read_snapshot, fncopy), 1);
+	return -1;
 #endif
 	return 0;
 }
