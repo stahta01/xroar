@@ -2,7 +2,7 @@
  *
  *  \brief Screenshots.
  *
- *  \copyright Copyright 2023 Ciaran Anscomb
+ *  \copyright Copyright 2023-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -99,6 +99,7 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 
 	// finish
 	png_write_end(png_ptr, NULL);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
 	free(line);
 	fclose(f);
 	return 0;
