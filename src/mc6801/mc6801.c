@@ -358,7 +358,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			cpu->counter_lsb_buf = 0;
 			cpu->output_compare = 0xffff;
 #ifdef TRACE
-			if (logging.trace_cpu) {
+			if (UNLIKELY(logging.trace_cpu)) {
 				mc6801_trace_irq(cpu->tracer, MC6801_INT_VEC_RESET);
 			}
 #endif
@@ -368,7 +368,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			continue;
 
 		case mc6801_state_label_a:
-			if (cpu->nmi_active) {
+			if (UNLIKELY(cpu->nmi_active)) {
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
@@ -377,7 +377,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				cpu->state = mc6801_state_dispatch_irq;
 				continue;
 			}
-			if (!(REG_CC & CC_I) && (cpu->irq1_active || cpu->irq2_active)) {
+			if (UNLIKELY(!(REG_CC & CC_I) && (cpu->irq1_active || cpu->irq2_active))) {
 				REG_CC = (REG_CC & ~CC_I) | cpu->itmp;
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
@@ -1280,7 +1280,7 @@ static uint16_t fetch_word_notrace(struct MC6801 *cpu, uint16_t a) {
 static uint8_t fetch_byte(struct MC6801 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
-	if (logging.trace_cpu) {
+	if (UNLIKELY(logging.trace_cpu)) {
 		mc6801_trace_byte(cpu->tracer, v, a);
 	}
 #endif
@@ -1291,7 +1291,7 @@ static uint16_t fetch_word(struct MC6801 *cpu, uint16_t a) {
 #ifndef TRACE
 	return fetch_word_notrace(cpu, a);
 #else
-	if (!logging.trace_cpu) {
+	if (LIKELY(!logging.trace_cpu)) {
 		return fetch_word_notrace(cpu, a);
 	}
 	unsigned v0 = fetch_byte_notrace(cpu, a);
@@ -1353,7 +1353,7 @@ static void stack_irq_registers(struct MC6801 *cpu) {
 
 static void take_interrupt(struct MC6801 *cpu, uint16_t vec) {
 #ifdef TRACE
-	if (logging.trace_cpu) {
+	if (UNLIKELY(logging.trace_cpu)) {
 		mc6801_trace_irq(cpu->tracer, vec);
 	}
 #endif
@@ -1365,7 +1365,7 @@ static void take_interrupt(struct MC6801 *cpu, uint16_t vec) {
 
 static void instruction_posthook(struct MC6801 *cpu) {
 #ifdef TRACE
-	if (logging.trace_cpu) {
+	if (UNLIKELY(logging.trace_cpu)) {
 		mc6801_trace_print(cpu->tracer);
 	}
 #endif
