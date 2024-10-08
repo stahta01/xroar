@@ -65,7 +65,7 @@ struct joystick {
 };
 
 // Messenger client ID
-int msgr_client_id = -1;
+static int msgr_client_id = -1;
 
 // Defined configurations
 static struct slist *config_list = NULL;
@@ -190,39 +190,51 @@ void joystick_config_print_all(FILE *f, _Bool all) {
 }
 
 static void joystick_config_free(struct joystick_config *jc) {
-	if (jc->name)
+	if (!jc) {
+		return;
+	}
+	if (jc->name) {
 		free(jc->name);
-	if (jc->description)
+	}
+	if (jc->description) {
 		free(jc->description);
+	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; ++i) {
 		if (jc->axis_specs[i]) {
 			free(jc->axis_specs[i]);
-			jc->axis_specs[i] = NULL;
 		}
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; ++i) {
 		if (jc->button_specs[i]) {
 			free(jc->button_specs[i]);
-			jc->button_specs[i] = NULL;
 		}
 	}
 	free(jc);
 }
 
-_Bool joystick_config_remove(const char *name) {
-	struct joystick_config *jc = joystick_config_by_name(name);
+void joystick_config_remove(struct joystick_config *jc) {
 	if (!jc) {
-		return 0;
+		return;
 	}
+
+	// Unmap it from any ports
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		if (joystick_port_config[i] == jc) {
 			joystick_unmap(i);
 		}
 	}
 
+	// Remove config from list and free
 	config_list = slist_remove(config_list, jc);
 	joystick_config_free(jc);
-	return 1;
+}
+
+void joystick_config_remove_by_id(int jsid) {
+	joystick_config_remove(joystick_config_by_id(jsid));
+}
+
+void joystick_config_remove_by_name(const char *name) {
+	joystick_config_remove(joystick_config_by_name(name));
 }
 
 struct slist *joystick_config_list(void) {

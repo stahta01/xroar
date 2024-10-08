@@ -127,10 +127,12 @@ void joystick_shutdown(void);
 // Configuration profile management
 
 struct joystick_config *joystick_config_new(void);
-struct joystick_config *joystick_config_by_id(int i);
+struct joystick_config *joystick_config_by_id(int jsid);
 struct joystick_config *joystick_config_by_name(const char *name);
 void joystick_config_print_all(FILE *f, _Bool all);
-_Bool joystick_config_remove(const char *name);
+void joystick_config_remove(struct joystick_config *);
+void joystick_config_remove_by_id(int jsid);
+void joystick_config_remove_by_name(const char *name);
 struct slist *joystick_config_list(void);
 
 // Port mapping
