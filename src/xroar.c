@@ -1085,8 +1085,16 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Default joystick mapping
 	{
-		struct joystick_config *dfl_jc0 = joystick_config_by_name("joy0");
-		struct joystick_config *dfl_jc1 = joystick_config_by_name("joy1");
+		struct joystick_config *dfl_jc0 = NULL;
+		struct joystick_config *dfl_jc1 = NULL;
+		dfl_jc1 = joystick_config_by_name("joy1");
+		if (!dfl_jc1) {
+			dfl_jc0 = joystick_config_by_name("joy0/l");
+			dfl_jc1 = joystick_config_by_name("joy0/r");
+		}
+		if (!dfl_jc0) {
+			dfl_jc0 = joystick_config_by_name("joy0");
+		}
 		struct joystick_config *jc0 = joystick_config_by_name(private_cfg.joy.right);
 		struct joystick_config *jc1 = joystick_config_by_name(private_cfg.joy.left);
 		if (!jc0 && jc1 != dfl_jc0) {
