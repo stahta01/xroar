@@ -132,6 +132,9 @@ AC_ARG_WITH([jack],
 AC_ARG_ENABLE([ao_null],
 	AS_HELP_STRING([--disable-ao-null], [don't build null audio driver]) )
 
+AC_ARG_WITH([evdev],
+	AS_HELP_STRING([--without-evdev], [don't test for libevdev]) )
+
 AC_ARG_WITH([joydev],
 	AS_HELP_STRING([--without-joydev], [don't test for Linux joydev interface]) )
 
@@ -263,6 +266,7 @@ AM_COND_IF([WASM], [
 		test -z "$with_oss" && with_oss=no
 		test -z "$with_pulse" && with_pulse=no
 		test -z "$with_coreaudio" && with_coreaudio=no
+		test -z "$with_evdev" && with_evdev=no
 		test -z "$with_joydev" && with_joydev=no
 		test -z "$with_sndfile" && with_sndfile=no
 		test -z "$with_tre" && with_tre=no
@@ -606,6 +610,32 @@ AS_IF([test -n "$have_gtkgl"], [
 	])
 
 AM_CONDITIONAL([OPENGL], [test -n "$have_opengl"])
+
+### libevdev
+
+AS_IF([test "x$with_evdev" != "xno"], [
+		PKG_CHECK_MODULES([EVDEV], [libevdev], :, :)], :)
+
+unset have_evdev
+AS_IF([test -n "$EVDEV_LIBS"], [
+	OLD_CFLAGS="$CFLAGS"
+	OLD_LIBS="$LIBS"
+	CFLAGS="$CFLAGS $EVDEV_CFLAGS"
+	LIBS="$LIBS $EVDEV_LIBS"
+	AC_MSG_CHECKING([if libevdev is usable])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <libevdev/libevdev.h>
+int main(int argc, char **argv) { (void)argc; (void)argv; struct libevdev *d = libevdev_new(); (void)d; return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_evdev=1
+			], [AC_MSG_RESULT([no])] )
+	CFLAGS="$OLD_CFLAGS"
+	LIBS="$OLD_LIBS"
+	])
+
+AM_CONDITIONAL([EVDEV], [test -n "$have_evdev"])
+AM_COND_IF([EVDEV], [AC_DEFINE([HAVE_EVDEV], 1, [Use libevdev])])
 
 ### Linux joydev interface
 

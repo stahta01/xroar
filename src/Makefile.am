@@ -451,6 +451,12 @@ xroar_CFLAGS += $(ZLIB_CFLAGS)
 xroar_LDADD += $(ZLIB_LIBS)
 endif
 
+# Linux evdev joysticks
+if EVDEV
+xroar_CFLAGS += $(EVDEV_CFLAGS)
+xroar_LDADD += $(EVDEV_LIBS)
+endif
+
 # Linux joydev joysticks
 if JOYDEV
 xroar_SOURCES += \
