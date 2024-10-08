@@ -62,8 +62,8 @@
 #ifdef TRACE
 // Tracing supported:
 #include "mc6809_trace.h"
-#define MC6809_TRACE_VECTOR(c) if (logging.trace_cpu) { mc6809_trace_vector((c)->tracer); }
-#define MC6809_TRACE_INSTRUCTION(c) if (logging.trace_cpu) { mc6809_trace_instruction((c)->tracer); }
+#define MC6809_TRACE_VECTOR(c) if (UNLIKELY(logging.trace_cpu)) { mc6809_trace_vector((c)->tracer); }
+#define MC6809_TRACE_INSTRUCTION(c) if (UNLIKELY(logging.trace_cpu)) { mc6809_trace_instruction((c)->tracer); }
 #else
 // Tracing not supported - no-op macros:
 #define MC6809_TRACE_VECTOR(c)
@@ -318,19 +318,19 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// fall through
 
 		case mc6809_state_label_b:
-			if (cpu->nmi_active) {
+			if (UNLIKELY(cpu->nmi_active)) {
 				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
-			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (UNLIKELY(!(REG_CC & CC_F) && cpu->firq_active)) {
 				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_firq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
-			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (UNLIKELY(!(REG_CC & CC_I) && cpu->irq_active)) {
 				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
@@ -1406,7 +1406,7 @@ static void mc6809_set_pc(void *sptr, unsigned pc) {
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
-	if (logging.trace_cpu) {
+	if (UNLIKELY(logging.trace_cpu)) {
 		mc6809_trace_byte(cpu->tracer, v, a);
 	}
 #endif
@@ -1417,7 +1417,7 @@ static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
 #ifndef TRACE
 	return fetch_word_notrace(cpu, a);
 #else
-	if (!logging.trace_cpu) {
+	if (LIKELY(!logging.trace_cpu)) {
 		return fetch_word_notrace(cpu, a);
 	}
 	unsigned v0 = fetch_byte_notrace(cpu, a);

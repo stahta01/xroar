@@ -55,8 +55,8 @@
 #ifdef TRACE
 // Tracing supported:
 #include "hd6309_trace.h"
-#define HD6309_TRACE_VECTOR(c) if (logging.trace_cpu) { hd6309_trace_vector((c)->tracer); }
-#define HD6309_TRACE_INSTRUCTION(c) if (logging.trace_cpu) { hd6309_trace_instruction((c)->tracer); }
+#define HD6309_TRACE_VECTOR(c) if (UNLIKELY(logging.trace_cpu)) { hd6309_trace_vector((c)->tracer); }
+#define HD6309_TRACE_INSTRUCTION(c) if (UNLIKELY(logging.trace_cpu)) { hd6309_trace_instruction((c)->tracer); }
 #else
 // Tracing not supported - no-op macros:
 #define HD6309_TRACE_VECTOR(c)
@@ -381,19 +381,19 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// fall through
 
 		case hd6309_state_label_b:
-			if (cpu->nmi_active) {
+			if (UNLIKELY(cpu->nmi_active)) {
 				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
-			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
+			} else if (UNLIKELY(!(REG_CC & CC_F) && cpu->firq_active)) {
 				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, FIRQ_STACK_ALL);
 				hcpu->state = hd6309_state_dispatch_irq;
-			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
+			} else if (UNLIKELY(!(REG_CC & CC_I) && cpu->irq_active)) {
 				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
@@ -2056,7 +2056,7 @@ static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (logging.trace_cpu) {
+	if (UNLIKELY(logging.trace_cpu)) {
 		hd6309_trace_byte(hcpu->tracer, v, a);
 	}
 #endif
@@ -2068,7 +2068,7 @@ static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
 	return fetch_word_notrace(cpu, a);
 #else
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (!logging.trace_cpu) {
+	if (LIKELY(!logging.trace_cpu)) {
 		return fetch_word_notrace(cpu, a);
 	}
 	unsigned v0 = fetch_byte_notrace(cpu, a);
