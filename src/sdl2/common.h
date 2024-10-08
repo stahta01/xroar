@@ -68,6 +68,10 @@ int filter_sdl_events(void *userdata, SDL_Event *event);
 void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2);
 void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
 void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym);
+
+void sdl_js_enable_events(void);
+void sdl_js_device_added(int index);
+void sdl_js_device_removed(int index);
 void sdl_js_physical_shutdown(void);
 
 void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h);

@@ -113,6 +113,23 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 		case SDL_KEYUP:
 			sdl_keyrelease(uisdl2, &event.key.keysym);
 			break;
+
+		case SDL_JOYDEVICEADDED:
+			sdl_js_device_added(event.jdevice.which);
+			break;
+
+		case SDL_CONTROLLERDEVICEADDED:
+			sdl_js_device_added(event.cdevice.which);
+			break;
+
+		case SDL_JOYDEVICEREMOVED:
+			sdl_js_device_removed(event.jdevice.which);
+			break;
+
+		case SDL_CONTROLLERDEVICEREMOVED:
+			sdl_js_device_removed(event.cdevice.which);
+			break;
+
 		case SDL_MOUSEMOTION:
 			if (uisdl2->mouse_hidden) {
 				SDL_ShowCursor(SDL_ENABLE);

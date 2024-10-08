@@ -104,6 +104,7 @@ void ui_sdl_free(void *sptr) {
 
 void ui_sdl_run(void *sptr) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
+	sdl_js_enable_events();
 	for (;;) {
 		run_sdl_event_loop(uisdl2);
 		xroar_run(EVENT_MS(10));
