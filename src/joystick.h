@@ -69,6 +69,7 @@ struct joystick_module {
 
 struct joystick_config {
 	char *name;
+	char *alias;  // "joyN", "joyN/l" or "joyN/r"
 	char *description;
 	int id;
 	char *axis_specs[JOYSTICK_NUM_AXES];

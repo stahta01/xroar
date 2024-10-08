@@ -159,6 +159,12 @@ struct joystick_config *joystick_config_by_name(const char *name) {
 			return jc;
 		}
 	}
+	for (struct slist *l = config_list; l; l = l->next) {
+		struct joystick_config *jc = l->data;
+		if (jc->alias && 0 == strcmp(jc->alias, name)) {
+			return jc;
+		}
+	}
 	return NULL;
 }
 
@@ -195,6 +201,9 @@ static void joystick_config_free(struct joystick_config *jc) {
 	}
 	if (jc->name) {
 		free(jc->name);
+	}
+	if (jc->alias) {
+		free(jc->alias);
 	}
 	if (jc->description) {
 		free(jc->description);
