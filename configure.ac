@@ -51,6 +51,7 @@ AC_CHECK_SIZEOF([double])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([getaddrinfo popen strnlen strsep])
+AX_GCC_BUILTIN(__builtin_expect)
 AX_GCC_BUILTIN(__builtin_parity)
 AX_GCC_FUNC_ATTRIBUTE(const)
 AX_GCC_FUNC_ATTRIBUTE(format)

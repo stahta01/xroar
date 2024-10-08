@@ -8,6 +8,14 @@
 #include "config.h"
 #endif
 
+#ifdef HAVE___BUILTIN_EXPECT
+#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define LIKELY(x)   (x)
+#define UNLIKELY(x) (x)
+#endif
+
 #ifdef HAVE_FUNC_ATTRIBUTE_CONST
 #define FUNC_ATTR_CONST __attribute__ ((const))
 #else
