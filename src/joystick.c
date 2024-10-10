@@ -42,11 +42,11 @@
 #include "vo.h"
 #include "xroar.h"
 
-extern struct joystick_module linux_js_mod;
+extern struct joystick_module joydev_js_mod;
 extern struct joystick_module sdl_js_mod_exported;
 static struct joystick_module * const joystick_module_list[] = {
-#ifdef HAVE_LINUX_JOYSTICK
-	&linux_js_mod,
+#ifdef HAVE_JOYDEV
+	&joydev_js_mod,
 #endif
 #ifdef HAVE_SDL2
 	&sdl_js_mod_exported,

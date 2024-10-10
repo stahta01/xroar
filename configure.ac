@@ -133,7 +133,7 @@ AC_ARG_ENABLE([ao_null],
 	AS_HELP_STRING([--disable-ao-null], [don't build null audio driver]) )
 
 AC_ARG_WITH([joydev],
-	AS_HELP_STRING([--without-joydev], [don't test for Linux joystick interface]) )
+	AS_HELP_STRING([--without-joydev], [don't test for Linux joydev interface]) )
 
 AC_ARG_WITH([sndfile],
 	AS_HELP_STRING([--with-sndfile], [test for libsndfile]) )
@@ -607,14 +607,14 @@ AS_IF([test -n "$have_gtkgl"], [
 
 AM_CONDITIONAL([OPENGL], [test -n "$have_opengl"])
 
-### Linux joysticks
+### Linux joydev interface
 
-unset have_linux_joystick
+unset have_joydev
 AS_IF([test "x$with_joydev" != "xno"], [
-		AC_CHECK_HEADER([linux/joystick.h], [have_linux_joystick=1], :) ])
+		AC_CHECK_HEADER([linux/joystick.h], [have_joydev=1], :) ])
 
-AM_CONDITIONAL([LINUX_JOYSTICK], [test -n "$have_linux_joystick"])
-AM_COND_IF([LINUX_JOYSTICK], [AC_DEFINE([HAVE_LINUX_JOYSTICK], 1, [Have linux/joystick.h])])
+AM_CONDITIONAL([JOYDEV], [test -n "$have_joydev"])
+AM_COND_IF([JOYDEV], [AC_DEFINE([HAVE_JOYDEV], 1, [Have linux/joystick.h])])
 
 ### SDL2
 

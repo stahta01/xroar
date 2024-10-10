@@ -451,10 +451,10 @@ xroar_CFLAGS += $(ZLIB_CFLAGS)
 xroar_LDADD += $(ZLIB_LIBS)
 endif
 
-# Linux joysticks
-if LINUX_JOYSTICK
+# Linux joydev joysticks
+if JOYDEV
 xroar_SOURCES += \
-	linux/joystick_linux.c
+	joydev/js_joydev.c
 endif
 
 # MinGW

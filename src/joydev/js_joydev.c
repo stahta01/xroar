@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief Linux joystick module.
+ *  \brief Linux joystick module (joydev interface).
  *
  *  \copyright Copyright 2010-2024 Ciaran Anscomb
  *
@@ -46,13 +46,13 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void linux_js_physical_init(void);
+static void joydev_js_physical_init(void);
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
 
-static struct joystick_submodule linux_js_submod_physical = {
+static struct joystick_submodule joydev_js_submod_physical = {
 	.name = "physical",
-	.init = linux_js_physical_init,
+	.init = joydev_js_physical_init,
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
 };
@@ -60,25 +60,25 @@ static struct joystick_submodule linux_js_submod_physical = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct joystick_submodule *js_submodlist[] = {
-	&linux_js_submod_physical,
+	&joydev_js_submod_physical,
 	NULL
 };
 
-struct joystick_module linux_js_mod = {
+struct joystick_module joydev_js_mod = {
 	.common = { .name = "linux", .description = "Linux joystick input" },
 	.submodule_list = js_submodlist,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct linux_js_context {
+struct joydev_js_context {
 	// List of opened devices
 	struct slist *device_list;
 };
-static struct linux_js_context *global_linux_js_context = NULL;
+static struct joydev_js_context *global_joydev_js_context = NULL;
 
-struct linux_js_device {
-	struct linux_js_context *ctx;
+struct joydev_js_device {
+	struct joydev_js_context *ctx;
 
 	int joystick_index;
 	int fd;
@@ -89,23 +89,23 @@ struct linux_js_device {
 	_Bool *button_value;
 };
 
-struct linux_js_control {
+struct joydev_js_control {
 	struct joystick_control joystick_control;
 
-	struct linux_js_device *device;
+	struct joydev_js_device *device;
 	unsigned control;
 	_Bool inverted;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct linux_js_context *init_context(void) {
-	if (!global_linux_js_context) {
-		struct linux_js_context *ctx = xmalloc(sizeof(*ctx));
-		*ctx = (struct linux_js_context){0};
-		global_linux_js_context = ctx;
+static struct joydev_js_context *init_context(void) {
+	if (!global_joydev_js_context) {
+		struct joydev_js_context *ctx = xmalloc(sizeof(*ctx));
+		*ctx = (struct joydev_js_context){0};
+		global_joydev_js_context = ctx;
 	}
-	return global_linux_js_context;
+	return global_joydev_js_context;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -128,8 +128,8 @@ static int compar_device_path(const void *ap, const void *bp) {
 	return 1;
 }
 
-static void linux_js_physical_init(void) {
-	if (global_linux_js_context)
+static void joydev_js_physical_init(void) {
+	if (global_joydev_js_context)
 		return;
 
 	glob_t globbuf;
@@ -219,13 +219,13 @@ static void linux_js_physical_init(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct linux_js_device *open_device(int joystick_index) {
+static struct joydev_js_device *open_device(int joystick_index) {
 	// TODO: context becomes a module that is initialised
-	struct linux_js_context *ctx = init_context();
+	struct joydev_js_context *ctx = init_context();
 
 	// If the device is already open, just up its count and return it
 	for (struct slist *iter = ctx->device_list; iter; iter = iter->next) {
-		struct linux_js_device *d = iter->data;
+		struct joydev_js_device *d = iter->data;
 		if (d->joystick_index == joystick_index) {
 			d->open_count++;
 			return d;
@@ -243,8 +243,8 @@ static struct linux_js_device *open_device(int joystick_index) {
 	if (fd < 0)
 		return NULL;
 
-	struct linux_js_device *d = xmalloc(sizeof(*d));
-	*d = (struct linux_js_device){0};
+	struct joydev_js_device *d = xmalloc(sizeof(*d));
+	*d = (struct joydev_js_device){0};
 	d->ctx = ctx;
 	d->joystick_index = joystick_index;
 	d->fd = fd;
@@ -273,8 +273,8 @@ static struct linux_js_device *open_device(int joystick_index) {
 	return d;
 }
 
-static void close_device(struct linux_js_device *d) {
-	struct linux_js_context *ctx = d->ctx;
+static void close_device(struct joydev_js_device *d) {
+	struct joydev_js_context *ctx = d->ctx;
 	d->open_count--;
 	if (d->open_count == 0) {
 		close(d->fd);
@@ -287,9 +287,9 @@ static void close_device(struct linux_js_device *d) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void poll_devices(struct linux_js_context *ctx) {
+static void poll_devices(struct joydev_js_context *ctx) {
 	for (struct slist *iter = ctx->device_list; iter; iter = iter->next) {
-		struct linux_js_device *d = iter->data;
+		struct joydev_js_device *d = iter->data;
 		struct js_event e;
 		while (read(d->fd, &e, sizeof(e)) == sizeof(e)) {
 			switch (e.type) {
@@ -312,15 +312,15 @@ static void poll_devices(struct linux_js_context *ctx) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int linux_js_axis_read(void *);
-static int linux_js_button_read(void *);
-static void linux_js_control_free(void *);
+static int joydev_js_axis_read(void *);
+static int joydev_js_button_read(void *);
+static void joydev_js_control_free(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // axis & button specs are basically the same, just track a different
 // "selected" variable.
-static struct linux_js_control *configure_control(char *spec, unsigned control) {
+static struct joydev_js_control *configure_control(char *spec, unsigned control) {
 	unsigned joystick = 0;
 	_Bool inverted = 0;
 	char *tmp = NULL;
@@ -340,12 +340,12 @@ static struct linux_js_control *configure_control(char *spec, unsigned control) 
 		}
 	}
 
-	struct linux_js_device *d = open_device(joystick);
+	struct joydev_js_device *d = open_device(joystick);
 	if (!d)
 		return NULL;
 
-	struct linux_js_control *c = xmalloc(sizeof(*c));
-	*c = (struct linux_js_control){0};
+	struct joydev_js_control *c = xmalloc(sizeof(*c));
+	*c = (struct joydev_js_control){0};
 	c->device = d;
 	c->control = control;
 	c->inverted = inverted;
@@ -353,7 +353,7 @@ static struct linux_js_control *configure_control(char *spec, unsigned control) 
 }
 
 static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
-	struct linux_js_control *c = configure_control(spec, jaxis);
+	struct joydev_js_control *c = configure_control(spec, jaxis);
 	if (!c)
 		return NULL;
 	if (c->control >= c->device->num_axes) {
@@ -363,14 +363,14 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	}
 
 	struct joystick_control *axis = &c->joystick_control;
-	axis->read = DELEGATE_AS0(int, linux_js_axis_read, c);
-	axis->free = DELEGATE_AS0(void, linux_js_control_free, c);
+	axis->read = DELEGATE_AS0(int, joydev_js_axis_read, c);
+	axis->free = DELEGATE_AS0(void, joydev_js_control_free, c);
 
 	return (struct joystick_axis *)axis;
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
-	struct linux_js_control *c = configure_control(spec, jbutton);
+	struct joydev_js_control *c = configure_control(spec, jbutton);
 	if (!c)
 		return NULL;
 	if (c->control >= c->device->num_buttons) {
@@ -379,14 +379,14 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 		return NULL;
 	}
 	struct joystick_control *button = &c->joystick_control;
-	button->read = DELEGATE_AS0(int, linux_js_button_read, c);
-	button->free = DELEGATE_AS0(void, linux_js_control_free, c);
+	button->read = DELEGATE_AS0(int, joydev_js_button_read, c);
+	button->free = DELEGATE_AS0(void, joydev_js_control_free, c);
 
 	return (struct joystick_button *)button;
 }
 
-static int linux_js_axis_read(void *sptr) {
-	struct linux_js_control *c = sptr;
+static int joydev_js_axis_read(void *sptr) {
+	struct joydev_js_control *c = sptr;
 	poll_devices(c->device->ctx);
 	unsigned ret = c->device->axis_value[c->control];
 	if (c->inverted)
@@ -394,14 +394,14 @@ static int linux_js_axis_read(void *sptr) {
 	return (int)ret;
 }
 
-static int linux_js_button_read(void *sptr) {
-	struct linux_js_control *c = sptr;
+static int joydev_js_button_read(void *sptr) {
+	struct joydev_js_control *c = sptr;
 	poll_devices(c->device->ctx);
 	return c->device->button_value[c->control];
 }
 
-static void linux_js_control_free(void *sptr) {
-	struct linux_js_control *c = sptr;
+static void joydev_js_control_free(void *sptr) {
+	struct joydev_js_control *c = sptr;
 	close_device(c->device);
 	free(c);
 }
