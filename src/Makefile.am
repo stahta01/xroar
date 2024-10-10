@@ -455,6 +455,8 @@ endif
 if EVDEV
 xroar_CFLAGS += $(EVDEV_CFLAGS)
 xroar_LDADD += $(EVDEV_LIBS)
+xroar_SOURCES += \
+	evdev/js_evdev.c
 endif
 
 # Linux joydev joysticks

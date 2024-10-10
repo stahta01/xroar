@@ -44,9 +44,13 @@
 #include "vo.h"
 #include "xroar.h"
 
+extern struct joystick_module evdev_js_mod;
 extern struct joystick_module joydev_js_mod;
 extern struct joystick_module sdl_js_mod_exported;
 static struct joystick_module * const joystick_module_list[] = {
+#ifdef HAVE_EVDEV
+	&evdev_js_mod,
+#endif
 #ifdef HAVE_JOYDEV
 	&joydev_js_mod,
 #endif

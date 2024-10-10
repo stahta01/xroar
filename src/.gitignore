@@ -3,6 +3,7 @@
 ## build files
 /*.o
 /alsa/*.o
+/evdev/*.o
 /gtk3/*.o
 /gtk2/*.o
 /jack/*.o
