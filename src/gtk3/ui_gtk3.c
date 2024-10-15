@@ -18,6 +18,9 @@
 
 #include "top-config.h"
 
+// for setenv()
+#define _POSIX_C_SOURCE 200112L
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -277,6 +280,14 @@ static void *ui_gtk3_new(void *cfg) {
 
 	// Be sure we've not made more than one of these
 	assert(global_uigtk3 == NULL);
+
+#ifdef HAVE_X11
+	// Force use of X11 backend.  If we don't do this, the call to
+	// gdk_x11_get_default_xdisplay() later will still return some non-NULL
+	// Display and I know of no way to tell that it's valid, which leads
+	// to a crash later on.
+	setenv("GDK_BACKEND", "x11", 0);
+#endif
 
 	gtk_init(NULL, NULL);
 
