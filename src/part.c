@@ -54,6 +54,7 @@ extern const struct partdb_entry deltados_part;
 extern const struct partdb_entry dragondos_part;
 extern const struct partdb_entry gmc_part;
 extern const struct partdb_entry idecart_part;
+extern const struct partdb_entry ikon_part;
 extern const struct partdb_entry mooh_part;
 extern const struct partdb_entry mpi_part;
 extern const struct partdb_entry nx32_part;
@@ -110,6 +111,9 @@ const struct partdb_entry *partdb[] = {
 	&rsdos_part,
 	&idecart_part,
 #ifndef HAVE_WASM
+#ifdef WANT_EXPERIMENTAL
+	&ikon_part,
+#endif
 	&mooh_part,
 	&mpi_part,
 	&nx32_part,

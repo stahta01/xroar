@@ -504,6 +504,13 @@ static char const * const default_config[] = {
 	"cart-rom @glenside_ide",
 	"cart-becker",
 #ifndef HAVE_WASM
+#ifdef WANT_EXPERIMENTAL
+	// Ikon Ultra Drive cartridge
+	"cart ikon",
+	"cart-desc 'Ikon Ultra Drive cartridge'",
+	"cart-type ikon",
+	"cart-rom @ikon",
+#endif
 	// NX32 memory cartridge
 	"cart nx32",
 	"cart-desc 'NX32 memory cartridge'",
@@ -588,6 +595,10 @@ static char const * const default_config[] = {
 	// Delta
 	"romlist delta=delta2,delta1a,delta19,delta,deltados,'Premier Micros - DeltaDOS'",
 #ifndef HAVE_WASM
+#ifdef WANT_EXPERIMENTAL
+	// Ikon Ultra Drive cartridge
+	"romlist ikon=dragonfly-2.3,dragonfly-1.3",
+#endif
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
 #endif

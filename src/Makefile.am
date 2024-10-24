@@ -123,6 +123,7 @@ xroar_SOURCES += \
 	gmc.c \
 	ide.c ide.h \
 	idecart.c idecart.h \
+	ikon.c \
 	mooh.c \
 	mpi.c \
 	nx32.c \
