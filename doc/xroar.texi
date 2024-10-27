@@ -2353,10 +2353,6 @@ platform, and is detailed in @ref{Getting started}.  This path can can be
 overridden with the option @option{-rompath @var{path}}, where @var{path} is a
 colon-separated list of directories to search.
 
-The @env{XROAR_ROM_PATH} environment variable can also be used to specify the
-search path, but this behaviour is deprecated and may be removed in a future
-version.
-
 A CRC32 value is calculated and reported for each ROM image loaded.  XRoar uses
 these CRCs to determine whether certain breakpoints can be used (e.g. for fast
 tape loading).  The lists of CRCs matched can be defined in a similar way to
