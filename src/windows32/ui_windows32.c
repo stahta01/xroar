@@ -189,8 +189,10 @@ static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
+#ifdef SCREENSHOT
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
+#endif
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
@@ -420,9 +422,11 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		case ui_action_file_save_snapshot:
 			xroar_save_snapshot();
 			break;
+#ifdef SCREENSHOT
 		case ui_action_file_screenshot:
 			xroar_screenshot();
 			break;
+#endif
 
 		case ui_action_joystick_swap:
 			ui_update_state(-1, ui_tag_joystick_cycle, 1, NULL);

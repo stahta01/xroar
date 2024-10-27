@@ -166,9 +166,11 @@ int cocoa_super_all_keys = 0;
 		case ui_action_file_save_snapshot:
 			xroar_save_snapshot();
 			break;
+#ifdef SCREENSHOT
 		case ui_action_file_screenshot:
 			xroar_screenshot();
 			break;
+#endif
 		case ui_action_tape_input:
 			xroar_insert_input_tape();
 			break;
@@ -650,7 +652,7 @@ static void setup_file_menu(void) {
 	[item release];
 	[tmp release];
 
-#ifdef HAVE_PNG
+#ifdef SCREENSHOT
 	[file_menu addItem:[NSMenuItem separatorItem]];
 
 	tmp = [NSString stringWithFormat:@"Screenshot to PNG%C", 0x2026];
