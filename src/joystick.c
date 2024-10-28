@@ -72,7 +72,10 @@ static struct slist *config_list = NULL;
 static int next_id = 1;  // 0 is reserved to mean "no joystick"
 
 // Current configuration assigned to each port
-struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
+static struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
+
+// Old config name for each port
+static char *joystick_port_config_name[JOYSTICK_NUM_PORTS];
 
 // Current joystick created for each port
 static struct joystick *joystick_port[JOYSTICK_NUM_PORTS];
@@ -230,6 +233,7 @@ void joystick_config_remove(struct joystick_config *jc) {
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		if (joystick_port_config[i] == jc) {
 			joystick_unmap(i);
+			LOG_DEBUG(1, "[joystick] port %u unplugged\n", i);
 		}
 	}
 
@@ -316,10 +320,15 @@ static void joystick_map(const struct joystick_config *jc, unsigned port) {
 		return;
 	if (joystick_port_config[port] == jc)
 		return;
+	if (joystick_port_config_name[port]) {
+		free(joystick_port_config_name[port]);
+		joystick_port_config_name[port] = NULL;
+	}
 	joystick_unmap(port);
 	struct joystick *j = NULL;
 	if (jc) {
 		j = joystick_new_from_config(jc);
+		joystick_port_config_name[port] = xstrdup(jc->name);
 	}
 	if (j) {
 		const char *description = jc->description ? jc->description : jc->name;
@@ -360,6 +369,17 @@ void joystick_set_virtual(struct joystick_config const *jc) {
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		if (remap_virtual & (1 << i)) {
 			joystick_map(jc, i);
+		}
+	}
+}
+
+void joystick_reconnect(void) {
+	for (int i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		if (!joystick_port_config[i] && joystick_port_config_name[i]) {
+			struct joystick_config *jc = joystick_config_by_name(joystick_port_config_name[i]);
+			if (jc) {
+				ui_update_state(-1, ui_tag_joystick_port, i, (void *)(intptr_t)jc->id);
+			}
 		}
 	}
 }

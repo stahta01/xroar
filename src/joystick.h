@@ -76,7 +76,6 @@ struct joystick_config {
 	char *button_specs[JOYSTICK_NUM_BUTTONS];
 };
 
-extern struct joystick_config const *joystick_port_config[JOYSTICK_NUM_PORTS];
 extern struct joystick_module * const *ui_joystick_module_list;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -139,6 +138,10 @@ struct slist *joystick_config_list(void);
 // Port mapping
 
 void joystick_set_virtual(struct joystick_config const *);
+
+// Reconnect joysticks
+
+void joystick_reconnect(void);
 
 // Joystick reading
 
