@@ -208,7 +208,7 @@ void sdl_js_device_added(int index) {
 		//
 		LOG_DEBUG(1, "[sdl/joystick] added: %s ", jc->description);
 		if (d->is_gamecontroller) {
-			LOG_DEBUG(1, "(game controller)\n");
+			LOG_DEBUG(1, "(gamepad)\n");
 		} else {
 			LOG_DEBUG(1, "(%d %s, ", d->num_axes, (d->num_axes == 1) ? "axis" : "axes");
 			LOG_DEBUG(1, "%d button%s)\n", d->num_buttons, (d->num_buttons == 1) ? "" : "s");
