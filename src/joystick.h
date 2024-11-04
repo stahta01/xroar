@@ -119,6 +119,105 @@ struct joystick_submodule {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Physical joysticks & gamepads
+
+enum js_control {
+	JS_CONTROL_INVALID = 0,
+
+	JS_AXIS_MIN = 1,
+	JS_AXIS_LEFTX = JS_AXIS_MIN,
+	JS_AXIS_LEFTY,
+	JS_AXIS_RIGHTX,
+	JS_AXIS_RIGHTY,
+	JS_AXIS_LEFTTRIGGER,
+	JS_AXIS_RIGHTTRIGGER,
+	JS_AXIS_MAX = JS_AXIS_RIGHTTRIGGER,
+
+	JS_BUTTON_MIN,
+	JS_BUTTON_A = JS_BUTTON_MIN,
+	JS_BUTTON_B,
+	JS_BUTTON_X,
+	JS_BUTTON_Y,
+	JS_BUTTON_BACK,
+	JS_BUTTON_GUIDE,
+	JS_BUTTON_START,
+	JS_BUTTON_LEFTSTICK,
+	JS_BUTTON_RIGHTSTICK,
+	JS_BUTTON_LEFTSHOULDER,
+	JS_BUTTON_RIGHTSHOULDER,
+	JS_BUTTON_MAX = JS_BUTTON_RIGHTSHOULDER,
+
+	JS_DP_MIN,
+	JS_DP_LEFT = JS_DP_MIN,
+	JS_DP_RIGHT,
+	JS_DP_UP,
+	JS_DP_DOWN,
+	JS_DP_MAX = JS_DP_DOWN,
+};
+
+#define JS_NUM_NAMED_AXES (6)
+#define JS_NUM_NAMED_BUTTONS (11)
+
+// The states interpreted for an input
+enum {
+	// Input value is used directly
+	JS_INPUT_STATE_DIRECT = 0,
+	// Input value is compared against a low threshold (axis inputs only)
+	JS_INPUT_STATE_LOW,
+	// Input value is compared against a high threshold (axis inputs only)
+	JS_INPUT_STATE_HIGH,
+	NUM_JS_INPUT_STATES
+};
+
+// The actions that the inputs perform on controls
+enum {
+	// Control mapped from input directly
+	JS_CONTROL_ACTION_DIRECT = 0,
+	// Control set low when input active (axis controls only)
+	JS_CONTROL_ACTION_LOW,
+	// Control set high when input active (axis controls only)
+	JS_CONTROL_ACTION_HIGH,
+	JS_NUM_CONTROL_ACTIONS
+};
+
+struct js_db_control {
+	// Input index.  In the order in which they report themselves.
+	int index;
+	// A control/action pair for each input state.
+	struct {
+		int control;
+		int action;
+	} input_state[NUM_JS_INPUT_STATES];
+};
+
+struct js_db_entry {
+	// GUID is stored with CRC portion zeroed, but that CRC is still held
+	// separately.  This lets us choose to do a strict or loose match.
+	uint8_t guid[16];
+	uint16_t crc;
+
+	// For display purposes, the name stored in the mapping DB.
+	char *name;
+
+	// We store axis and button mappings in linked lists.  An allocated
+	// mapping table would get blown out of proportion as some DB entries
+	// suggest buttons into the hundreds.
+	struct slist *axes;
+	struct slist *buttons;
+
+	// Hats are just specially-named axes.
+	struct slist *hats;
+};
+
+#define JS_DB_FALLBACK_NONE     (-1)
+#define JS_DB_FALLBACK_JOYSTICK  (0)
+#define JS_DB_FALLBACK_GAMEPAD   (1)
+
+void js_read_db_file(const char *filename);
+struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // Initialisation & shutdown
 
 void joystick_init(void);

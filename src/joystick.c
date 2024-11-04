@@ -28,6 +28,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "array.h"
+#include "c-strcase.h"
 #include "pl-string.h"
 #include "sds.h"
 #include "sdsx.h"
@@ -104,6 +106,10 @@ static struct joystick_submodule *select_submod(struct joystick_submodule *submo
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void js_db_free(void);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // Initialisation & shutdown
 
 void joystick_init(void) {
@@ -125,6 +131,7 @@ void joystick_shutdown(void) {
 	messenger_client_unregister(msgr_client_id);
 	slist_free_full(config_list, (slist_free_func)joystick_config_free);
 	config_list = NULL;
+	js_db_free();
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -252,6 +259,334 @@ void joystick_config_remove_by_name(const char *name) {
 
 struct slist *joystick_config_list(void) {
 	return config_list;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Physical joysticks & gamepads
+
+static struct {
+	const char *name;
+	int control;
+} named_controls[] = {
+	{ "leftx",      JS_AXIS_LEFTX },
+	{ "lx",         JS_AXIS_LEFTX },
+	{ "lefty",      JS_AXIS_LEFTY },
+	{ "ly",         JS_AXIS_LEFTY },
+	{ "rightx",     JS_AXIS_RIGHTX },
+	{ "rx",         JS_AXIS_RIGHTX },
+	{ "righty",     JS_AXIS_RIGHTY },
+	{ "ry",         JS_AXIS_RIGHTY },
+	{ "lefttrigger", JS_AXIS_LEFTTRIGGER },
+	{ "lt",         JS_AXIS_LEFTTRIGGER },
+	{ "righttrigger", JS_AXIS_RIGHTTRIGGER },
+	{ "rt",         JS_AXIS_RIGHTTRIGGER },
+
+	{ "a",          JS_BUTTON_A },
+	{ "b",          JS_BUTTON_B },
+	{ "x",          JS_BUTTON_X },
+	{ "y",          JS_BUTTON_Y },
+	{ "back",       JS_BUTTON_BACK },
+	{ "guide",      JS_BUTTON_GUIDE },
+	{ "start",      JS_BUTTON_START },
+	{ "leftstick",  JS_BUTTON_LEFTSTICK },
+	{ "lb",         JS_BUTTON_LEFTSTICK },
+	{ "rightstick", JS_BUTTON_RIGHTSTICK },
+	{ "rb",         JS_BUTTON_RIGHTSTICK },
+	{ "leftshoulder", JS_BUTTON_LEFTSHOULDER },
+	{ "ls",         JS_BUTTON_LEFTSHOULDER },
+	{ "rightshoulder", JS_BUTTON_RIGHTSHOULDER },
+	{ "rs",         JS_BUTTON_RIGHTSHOULDER },
+
+	{ "dpup",       JS_DP_UP },
+	{ "du",         JS_DP_UP },
+	{ "dpdown",     JS_DP_DOWN },
+	{ "dd",         JS_DP_DOWN },
+	{ "dpleft",     JS_DP_LEFT },
+	{ "dl",         JS_DP_LEFT },
+	{ "dpright",    JS_DP_RIGHT },
+	{ "dr",         JS_DP_RIGHT },
+};
+
+static int nmappings = 0;
+static struct js_db_entry *mappings = NULL;
+static struct js_db_entry *fallback_gamepad_mapping = NULL;
+static struct js_db_entry *fallback_joystick_mapping = NULL;
+
+static int hexdigit(char c) {
+	if (c >= '0' && c <= '9') {
+		return c - '0';
+	}
+	if (c >= 'a' && c <= 'f') {
+		return (c - 'a') + 10;
+	}
+	if (c >= 'A' && c <= 'F') {
+		return (c - 'A') + 10;
+	}
+	return -1;
+}
+
+static _Bool string_to_guid(const char *str, uint8_t *guid) {
+	for (int i = 0; i < 16; ++i) {
+		if (!*str || !*(str+1)) {
+			return 0;
+		}
+		int n0 = hexdigit(*(str++));
+		int n1 = hexdigit(*(str++));
+		if (n0 < 0 || n1 < 0) {
+			return 0;
+		}
+		*(guid++) = (n0 << 4) | n1;
+	}
+	return 1;
+}
+
+static int cmp_control(const void *a, const void *b) {
+	const struct js_db_control *aa = a;
+	const struct js_db_control *bb = b;
+	if (aa->index < bb->index) {
+		return -1;
+	}
+	return (aa->index > bb->index);
+}
+
+static struct js_db_control *control_by_index(struct slist **list, int index) {
+	assert(list != NULL);
+
+	for (struct slist *iter = *list; iter; iter = iter->next) {
+		struct js_db_control *control = iter->data;
+		if (control->index == index) {
+			return control;
+		}
+	}
+	struct js_db_control *control = xmalloc(sizeof(*control));
+	*control = (struct js_db_control){0};
+	control->index = index;
+	*list = slist_prepend(*list, control);
+	return control;
+}
+
+static void js_db_entry_clear(struct js_db_entry *map);
+
+static void js_parse_db_entry(const char *db_string, struct js_db_entry *map) {
+	char *dbcopy = xstrdup(db_string);
+	char *dbnext = dbcopy;
+	const char *guid_str = strsep(&dbnext, ",");
+	const char *map_name = strsep(&dbnext, ",");
+
+	js_db_entry_clear(map);
+
+	if (!string_to_guid(guid_str, map->guid)) {
+		memset(map->guid, 0, sizeof(map->guid));
+		guid_str = "*";
+	}
+	map->crc = (map->guid[3] << 8) | map->guid[2];
+	map->name = xstrdup(map_name);
+
+	char *dbctrl;
+	while ((dbctrl = strsep(&dbnext, ","))) {
+		char *input = dbctrl;
+		char *ctl_name = strsep(&input, ":");
+		if (!ctl_name || !*ctl_name || !input || !*input) {
+			continue;
+		}
+		// Is this mapping direct, or to set a control low/high?
+		int caction = JS_CONTROL_ACTION_DIRECT;
+		while (*ctl_name) {
+			if (*ctl_name == '-') {
+				caction = JS_CONTROL_ACTION_LOW;
+				++ctl_name;
+			} else if (*ctl_name == '+') {
+				caction = JS_CONTROL_ACTION_HIGH;
+				++ctl_name;
+			} else {
+				break;
+			}
+		}
+		for (int i = 0; i < (int)ARRAY_N_ELEMENTS(named_controls); ++i) {
+			if (0 == c_strcasecmp(ctl_name, named_controls[i].name)) {
+				int ctl = named_controls[i].control;
+				int istate = JS_INPUT_STATE_DIRECT;
+				while (*input) {
+					if (*input == '-') {
+						istate = JS_INPUT_STATE_LOW;
+						++input;
+					} else if (*input == '+') {
+						istate = JS_INPUT_STATE_HIGH;
+						++input;
+					} else {
+						break;
+					}
+				}
+
+				struct js_db_control *ctl_map = NULL;
+				char *subindex_str = NULL;
+				int index = strtol(input + 1, &subindex_str, 10);
+				int subindex = -1;
+				if (subindex_str && *subindex_str == '.') {
+					subindex = strtol(subindex_str + 1, NULL, 10);
+				}
+				if (*input == 'a') {
+					ctl_map = control_by_index(&map->axes, index);
+				} else if (*input == 'b') {
+					ctl_map = control_by_index(&map->buttons, index);
+				} else if (*input == 'h' && subindex >= 0) {
+					index *= 2;
+					switch (subindex) {
+					default:
+						continue;
+					case 8:
+						istate = JS_INPUT_STATE_LOW;
+						break;
+					case 2:
+						istate = JS_INPUT_STATE_HIGH;
+						break;
+					case 1:
+						++index;
+						istate = JS_INPUT_STATE_LOW;
+						break;
+					case 4:
+						++index;
+						istate = JS_INPUT_STATE_HIGH;
+						break;
+					}
+					ctl_map = control_by_index(&map->hats, index);
+				}
+
+				if (ctl_map) {
+					ctl_map->input_state[istate].control = ctl;
+					ctl_map->input_state[istate].action = caction;
+				}
+			}
+		}
+	}
+	free(dbcopy);
+	map->axes = slist_sort(map->axes, cmp_control);
+	map->buttons = slist_sort(map->buttons, cmp_control);
+	map->hats = slist_sort(map->hats, cmp_control);
+}
+
+static struct js_db_entry *js_find_db_entry_by_guid(const uint8_t guid[16], _Bool match_crc) {
+	uint16_t crc = (guid[3] << 8) | guid[2];
+	for (int i = 0; i < nmappings; ++i) {
+		struct js_db_entry *map = &mappings[i];
+		if (map->guid[0] == guid[0] && map->guid[1] == guid[1] &&
+		    0 == memcmp(map->guid + 4, guid + 4, 12)) {
+			if (!match_crc || map->crc == crc) {
+				return map;
+			}
+		}
+	}
+	return NULL;
+}
+
+static _Bool js_add_db_entry(const char *db_string) {
+	uint8_t guid[16];
+	if (!string_to_guid(db_string, guid)) {
+		return 0;
+	}
+	struct js_db_entry *map = js_find_db_entry_by_guid(guid, 1);
+	if (!map) {
+		int next = nmappings++;
+		mappings = xrealloc(mappings, nmappings * sizeof(*mappings));
+		map = &mappings[next];
+		*map = (struct js_db_entry){0};
+	}
+	js_parse_db_entry(db_string, map);
+	return 1;
+}
+
+static void ensure_fallbacks_exist(void) {
+	if (!fallback_gamepad_mapping) {
+		fallback_gamepad_mapping = xmalloc(sizeof(*fallback_gamepad_mapping));
+		*fallback_gamepad_mapping = (struct js_db_entry){0};
+		js_parse_db_entry("*,Fallback gamepad,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpleft:h0.8,dpright:h0.2,dpup:h0.1,dpdown:h0.4,", fallback_gamepad_mapping);
+	}
+	if (!fallback_joystick_mapping) {
+		fallback_joystick_mapping = xmalloc(sizeof(*fallback_joystick_mapping));
+		*fallback_joystick_mapping = (struct js_db_entry){0};
+		js_parse_db_entry("*,Fallback joystick,", fallback_joystick_mapping);
+	}
+}
+
+void js_read_db_file(const char *filename) {
+	ensure_fallbacks_exist();
+	FILE *fd = fopen(filename, "r");
+	if (!fd) {
+		return;
+	}
+	sds line;
+	int count = 0;
+	while ((line = sdsx_fgets(fd))) {
+		sds trimline = sdsx_trim_qe(sdsnew(line), NULL);
+		sdsfree(line);
+		if (!*trimline || *trimline == '#') {
+			sdsfree(trimline);
+			continue;
+		}
+		if (js_add_db_entry(trimline)) {
+			++count;
+		}
+		sdsfree(trimline);
+	}
+	fclose(fd);
+	LOG_DEBUG(1, "[joystick] loaded %d mapping%s from %s\n", count, (count == 1) ? "" : "s", filename);
+}
+
+struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback) {
+	struct js_db_entry *ent = NULL;
+	uint8_t guid[16];
+	if (string_to_guid(guid_str, guid)) {
+		ent = js_find_db_entry_by_guid(guid, 1);
+		if (!ent) {
+			ent = js_find_db_entry_by_guid(guid, 0);
+		}
+	}
+	if (ent) {
+		return ent;
+	}
+
+	ensure_fallbacks_exist();
+
+	switch (fallback) {
+	case JS_DB_FALLBACK_GAMEPAD:
+		return fallback_gamepad_mapping;
+	case JS_DB_FALLBACK_JOYSTICK:
+		return fallback_joystick_mapping;
+	default:
+		break;
+	}
+	return NULL;
+}
+
+static void js_db_entry_clear(struct js_db_entry *map) {
+	if (map->name) {
+		free(map->name);
+	}
+	slist_free_full(map->axes, free);
+	slist_free_full(map->buttons, free);
+	slist_free_full(map->hats, free);
+	*map = (struct js_db_entry){0};
+}
+
+static void js_db_free(void) {
+	for (int i = 0; i < nmappings; ++i) {
+		struct js_db_entry *map = &mappings[i];
+		js_db_entry_clear(map);
+	}
+	free(mappings);
+	mappings = NULL;
+	nmappings = 0;
+	if (fallback_gamepad_mapping) {
+		js_db_entry_clear(fallback_gamepad_mapping);
+		free(fallback_gamepad_mapping);
+		fallback_gamepad_mapping = NULL;
+	}
+	if (fallback_joystick_mapping) {
+		js_db_entry_clear(fallback_joystick_mapping);
+		free(fallback_joystick_mapping);
+		fallback_joystick_mapping = NULL;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
