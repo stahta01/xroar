@@ -193,6 +193,7 @@ struct private_cfg {
 
 	// Joysticks
 	struct {
+		char *db_file;
 		char *description;
 		char *axis[JOYSTICK_NUM_AXES];
 		char *button[JOYSTICK_NUM_BUTTONS];
@@ -1048,6 +1049,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	xroar.vo_interface = xroar.ui_interface->vo_interface;
 
 	// Joysticks
+	if (private_cfg.joy.db_file) {
+		sds filename = path_interp(private_cfg.joy.db_file);
+		js_read_db_file(filename);
+		sdsfree(filename);
+	}
 	joystick_init();
 
 #ifdef LOGGING
@@ -2670,6 +2676,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 
 	/* Joysticks: */
+	{ XC_SET_STRING_NE("joy-db-file", &private_cfg.joy.db_file) },
 	{ XC_CALL_STRING("joy", &set_joystick) },
 	{ XC_SET_STRING("joy-desc", &private_cfg.joy.description) },
 	{ XC_CALL_STRING("joy-axis", &set_joystick_axis) },
@@ -2810,6 +2817,7 @@ static void helptext(void) {
 "  -load-text FILE         type FILE into BASIC\n"
 
 "\n Joysticks:\n"
+"  -joy-db-file FILE     load gamepad mappings from file\n"
 "  -joy NAME             configure named joystick profile (-joy help for list)\n"
 "    -joy-desc TEXT        joystick description\n"
 "    -joy-axis AXIS=SPEC   configure joystick axis\n"
