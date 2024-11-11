@@ -101,15 +101,14 @@ struct uiw32_dialog *uiw32_dialog_new(struct ui_windows32_interface *uiw32,
 }
 
 void uiw32_dialog_free(struct uiw32_dialog *dlg) {
-	if (!dlg) {
-		return;
-	}
-	DELEGATE_SAFE_CALL(dlg->free);
-	if (dlg->msgr_client_id >= 0) {
-		messenger_client_unregister(dlg->msgr_client_id);
-	}
-	if (dlg->hWnd) {
-		DestroyWindow(dlg->hWnd);
+	if (dlg) {
+		DELEGATE_SAFE_CALL(dlg->free);
+		if (dlg->msgr_client_id >= 0) {
+			messenger_client_unregister(dlg->msgr_client_id);
+		}
+		if (dlg->hWnd) {
+			DestroyWindow(dlg->hWnd);
+		}
 	}
 
 	for (int i = 0; i < ndialogs; ++i) {
@@ -126,7 +125,9 @@ void uiw32_dialog_free(struct uiw32_dialog *dlg) {
 		}
 	}
 
-	free(dlg);
+	if (dlg) {
+		free(dlg);
+	}
 	if (ndialogs == 0) {
 		free(dialogs);
 		dialogs = NULL;
