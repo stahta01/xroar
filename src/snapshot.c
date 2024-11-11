@@ -2,7 +2,7 @@
  *
  *  \brief Snapshotting of emulated system.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -591,9 +591,7 @@ static int read_v1_snapshot(const char *filename) {
 					if (ram && ram->d && ram->d[0]) {
 						size_t psize = (ram->bank_nelems < size) ? ram->bank_nelems : size;
 						uint8_t *ram_dst = ram->d[0];
-						if (ram_dst) {
-							size -= fread(ram_dst, 1, psize, fd);
-						}
+						size -= fread(ram_dst, 1, psize, fd);
 					}
 				}
 				break;
@@ -604,9 +602,7 @@ static int read_v1_snapshot(const char *filename) {
 					if (ram && ram->d && ram->d[0]) {
 						size_t psize = (ram->bank_nelems < (size + 0x8000)) ? ram->bank_nelems - 0x8000: size;
 						uint8_t *ram_dst = (uint8_t *)ram->d[0] + 0x8000;
-						if (ram_dst) {
-							size -= fread(ram_dst, 1, psize, fd);
-						}
+						size -= fread(ram_dst, 1, psize, fd);
 					}
 				}
 				break;
