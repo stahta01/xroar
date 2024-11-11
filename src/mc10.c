@@ -160,9 +160,8 @@ static void mc10_config_complete(struct machine_config *mc) {
 static _Bool mc10_is_working_config(struct machine_config *mc) {
 	if (!mc)
 		return 0;
-	sds tmp;
 	if (mc->bas_rom) {
-		tmp = romlist_find(mc->bas_rom);
+		sds tmp = romlist_find(mc->bas_rom);
 		if (!tmp)
 			return 0;
 		sdsfree(tmp);
