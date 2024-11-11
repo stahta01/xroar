@@ -2,7 +2,7 @@
  *
  *  \brief WD279x Floppy Drive Controller.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1125,7 +1125,7 @@ static void debug_state(struct WD279X *fdc) {
 	if (level == 0)
 		return;
 	_Bool forced_interrupt = ((fdc->command_register & 0xf0) == 0xd0);
-	if (fdc->state <= WD279X_state_accept_command || forced_interrupt) {
+	if (fdc->state == WD279X_state_accept_command || forced_interrupt) {
 		// command (incl. forced interrupt)
 		unsigned type = ((fdc->command_register) >> 4) & 15;
 		LOG_PRINT("WD279X: CR=%02x ST=%02x TR=%02x SR=%02x DR=%02x state=%s [%s]\n",
