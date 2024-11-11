@@ -293,7 +293,7 @@ static void latch_write(struct rsdos *d, unsigned D) {
 		D &= ~0x40;  // prevent interpreting as side select
 	}
 	if (D != d->latch_old) {
-		LOG_DEBUG(2, "RSDOS: Write to latch: ");
+		LOG_MOD_DEBUG(2, "rsdos", "config reg: ");
 		if (new_drive_select != d->latch_drive_select) {
 			LOG_DEBUG(2, "DRIVE SELECT %u, ", new_drive_select);
 		}

@@ -279,7 +279,7 @@ static void dragondos_attach_interface(struct cart *c, const char *ifname, void 
 
 static void latch_write(struct dragondos *d, unsigned D) {
 	if (D != d->latch_old) {
-		LOG_DEBUG(2, "DragonDOS: Write to latch: ");
+		LOG_MOD_DEBUG(2, "dragondos", "config reg: ");
 		if ((D ^ d->latch_old) & 0x03) {
 			LOG_DEBUG(2, "DRIVE SELECT %01u, ", D & 0x03);
 		}
