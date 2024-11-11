@@ -228,10 +228,6 @@ static void mooh_detach(struct cart *c) {
 
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mooh *n = (struct mooh *)c;
-	int segment;
-	int offset;
-	int bank;
-	int crm;
 
 	c->EXTMEM = 0;
 
@@ -256,8 +252,10 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 		return n->task;
 #endif
 	} else if (n->mmu_enable && (A < 0xFF00 || (A >= 0xFFF0 && n->crm_enable))) {
-		segment = A >> 13;
-		offset = A & 0x1FFF;
+		int segment = A >> 13;
+		int offset = A & 0x1FFF;
+		int bank;
+		int crm;
 		if (n->crm_enable && (A >> 8) == 0xFE) {
 			crm = 1;
 			bank = 0x3F; /* used for storing crm */
@@ -290,12 +288,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct mooh *n = (struct mooh *)c;
-	int segment;
-	int offset;
-	int bank;
-	int crm;
 
-	(void)R2;
 	c->EXTMEM = 0;
 
         if (R2) {
@@ -326,8 +319,10 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	} else if (A == 0xFF91) {
 		n->task = D & 1;
 	} else if (n->mmu_enable && (A < 0xFF00 || (A >= 0xFFF0 && n->crm_enable))) {
-		segment = A >> 13;
-		offset = A & 0x1FFF;
+		int segment = A >> 13;
+		int offset = A & 0x1FFF;
+		int bank;
+		int crm;
 		if (n->crm_enable && (A >> 8) == 0xFE) {
 			crm = 1;
 			bank = 0x3F; /* last 8K bank */
