@@ -390,6 +390,7 @@ static _Bool wav_write_header(SNDFILE *sf) {
 		error = error || !write_uint16(sf, 0);
 		fmt_length -= 2;
 	}
+	assert(fmt_length == 0);
 
 	// fact chunk
 	if (want_fact) {
