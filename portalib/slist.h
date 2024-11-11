@@ -2,7 +2,7 @@
  *
  *  \brief Singly linked lists.
  *
- *  \copyright Copyright 2014 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -54,7 +54,7 @@ typedef int (*slist_cmp_func)(const void *, const void *);
 struct slist *slist_append(struct slist *, void *);
 struct slist *slist_prepend(struct slist *, void *);
 struct slist *slist_insert_before(struct slist *, struct slist *, void *);
-struct slist *slist_remove(struct slist *, void *);
+struct slist *slist_remove(struct slist *, const void *);
 
 /* Free entire list (not data). */
 void slist_free(struct slist *);

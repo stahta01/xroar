@@ -2,7 +2,7 @@
  *
  *  \brief SDS extras.
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock
  *
@@ -187,6 +187,6 @@ sds sdsx_join(struct sdsx_list *sl, const char *sep);
 
 // Join a list of C strings using a common separator.
 
-sds sdsx_join_str(struct sdsx_list *sl, const char *sep);
+sds sdsx_join_str(const struct sdsx_list *sl, const char *sep);
 
 #endif

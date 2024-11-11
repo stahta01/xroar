@@ -290,7 +290,6 @@ static void do_auto_event(void *sptr) {
 		ak->auto_event_list = slist_remove(ak->auto_event_list, ae);
 		ak->command_index = 0;
 		auto_event_free(ae);
-		ae = ak->auto_event_list ? ak->auto_event_list->data : NULL;
 	}
 
 	// Use CPU read routine to pull return address back off stack

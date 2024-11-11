@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -42,7 +42,7 @@ int int_cmp(const void *a, const void *b) {
 
 // Calculate the mean of a set of integers
 
-int int_mean(int *values, int nvalues) {
+int int_mean(const int *values, int nvalues) {
 	float sum = 0.0;
 	for (int i = 0; i < nvalues; i++) {
 		sum += values[i];

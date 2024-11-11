@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021-2023 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -37,7 +37,7 @@ int int_cmp(const void *a, const void *b) FUNC_ATTR_PURE;
 
 // Calculate the mean of a set of integers
 
-int int_mean(int *values, int nvalues) FUNC_ATTR_PURE;
+int int_mean(const int *values, int nvalues) FUNC_ATTR_PURE;
 
 // Split a set of integers into two and calculate the mean of each
 

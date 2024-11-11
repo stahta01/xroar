@@ -2,7 +2,7 @@
  *
  *  \brief Singly linked lists.
  *
- *  \copyright Copyright 2014-2015 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \copyright Copyright 2016 Stewart Orchard
  *
@@ -66,7 +66,7 @@ struct slist *slist_insert_before(struct slist *list, struct slist *before, void
 }
 
 /* Remove list entry containing data. */
-struct slist *slist_remove(struct slist *list, void *data) {
+struct slist *slist_remove(struct slist *list, const void *data) {
 	struct slist **entp;
 	for (entp = &list; *entp; entp = &(*entp)->next) {
 		if ((*entp)->data == data) break;
