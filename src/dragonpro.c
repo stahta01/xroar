@@ -575,7 +575,6 @@ static void dragonpro_ay891x_data_postwrite(void *sptr) {
 		}
 		if (changed & 0x80) {
 			LOG_PRINT("%sDRIVE %s", comma, (D & 0x80)?"8\"":"5.25\"");
-			comma = ", ";
 		}
 		LOG_PRINT("\n");
 	}
