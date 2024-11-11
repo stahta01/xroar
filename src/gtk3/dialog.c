@@ -107,18 +107,17 @@ struct uigtk3_dialog *uigtk3_dialog_new(struct ui_gtk3_interface *uigtk3,
 }
 
 void uigtk3_dialog_free(struct uigtk3_dialog *dlg) {
-	if (!dlg) {
-		return;
-	}
-	DELEGATE_SAFE_CALL(dlg->free);
-	if (dlg->msgr_client_id >= 0) {
-		messenger_client_unregister(dlg->msgr_client_id);
-	}
-	if (dlg->window) {
-		gtk_widget_destroy(GTK_WIDGET(dlg->window));
-	}
-	if (dlg->name) {
-		free(dlg->name);
+	if (dlg) {
+		DELEGATE_SAFE_CALL(dlg->free);
+		if (dlg->msgr_client_id >= 0) {
+			messenger_client_unregister(dlg->msgr_client_id);
+		}
+		if (dlg->window) {
+			gtk_widget_destroy(GTK_WIDGET(dlg->window));
+		}
+		if (dlg->name) {
+			free(dlg->name);
+		}
 	}
 
 	for (int i = 0; i < ndialogs; ++i) {
@@ -135,7 +134,9 @@ void uigtk3_dialog_free(struct uigtk3_dialog *dlg) {
 		}
 	}
 
-	free(dlg);
+	if (dlg) {
+		free(dlg);
+	}
 	if (ndialogs == 0) {
 		free(dialogs);
 		dialogs = NULL;
