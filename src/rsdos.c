@@ -238,8 +238,7 @@ static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8
 			break;
 		}
 	} else {
-		if (!(A & 8))
-			latch_write(d, D);
+		latch_write(d, D);
 	}
 	return D;
 }
