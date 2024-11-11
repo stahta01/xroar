@@ -1143,9 +1143,9 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 			off_t end = fs_read_uint31(fd);
 			if (start < 0 || end < 0)
 				goto read_failed;
-			int size = end - start;
 			elength -= 8;
 			if (end > start) {
+				int size = end - start;
 				cue_add_raw_section(cas, size, start, NULL);
 			}
 		}
