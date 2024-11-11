@@ -2,7 +2,7 @@
  *
  *  \brief Cassette tape support.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -531,7 +531,6 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	switch (type) {
 	case FILETYPE_CAS:
 		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open CAS: '%s'\n", filename);
 			return -1;
 		}
 		if (tip->tape_pad_auto) {
@@ -544,20 +543,17 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 
 	case FILETYPE_K7:
 		if ((ti->tape_input = tape_k7_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open K7: '%s'\n", filename);
 			return -1;
 		}
 		break;
 
 	case FILETYPE_ASC:
 		if ((ti->tape_input = tape_asc_open(ti, filename, "rb")) == NULL) {
-			LOG_WARN("Failed to open ASCII: '%s'\n", filename);
 			return -1;
 		}
 		break;
 	default:
 		if ((ti->tape_input = tape_sndfile_open(ti, filename, "rb", -1)) == NULL) {
-			LOG_WARN("Failed to open audio: '%s'\n", filename);
 			return -1;
 		}
 		break;
@@ -570,7 +566,7 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	tape_desync(tip, xroar.cfg.tape.rewrite_leader);
 	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 	if (logging.level >= 1) {
-		LOG_PRINT("Tape: Attached '%s' for reading", filename);
+		LOG_MOD_PRINT("tape", "reading: %s", filename);
 		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
 		LOG_PRINT("\n");
 	}
@@ -592,13 +588,11 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	case FILETYPE_CAS:
 	case FILETYPE_ASC:
 		if ((ti->tape_output = tape_cas_open(ti, filename, "wb")) == NULL) {
-			LOG_WARN("Failed to open %s for writing: '%s'\n", type == FILETYPE_ASC ? "ASCII" : "CAS", filename);
 			return -1;
 		}
 		break;
 	default:
 		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
-			LOG_WARN("Failed to open audio for writing: '%s'\n", filename);
 			return -1;
 		}
 		break;
@@ -608,7 +602,7 @@ int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	tip->rewrite.bit_count = 0;
 	tip->rewrite.silence = 1;
 	if (logging.level >= 1) {
-		LOG_PRINT("Tape: Attached '%s' for writing", filename);
+		LOG_MOD_PRINT("tape", "writing: %s", filename);
 		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
 		LOG_PRINT("\n");
 	}
@@ -702,7 +696,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(autorun_special); i++) {
 		if (autorun_special[i].size == f->fnblock_size
 		    && autorun_special[i].crc == f->fnblock_crc) {
-			LOG_DEBUG(1, "Using special load instructions for '%s'\n", autorun_special[i].name);
+			LOG_MOD_DEBUG(1, "tape", "using special load instructions for '%s'\n", autorun_special[i].name);
 			ak_parse_type_string(xroar.auto_kbd, autorun_special[i].run);
 			done = 1;
 		}
@@ -760,7 +754,7 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 		if (!motor && xroar.cfg.debug.snap_motoroff) {
 			write_snapshot(xroar.cfg.debug.snap_motoroff);
 		}
-		LOG_DEBUG(2, "Tape: motor %s\n", motor ? "ON" : "OFF");
+		LOG_MOD_DEBUG(2, "tape", "MOTOR %s\n", motor ? "ON" : "OFF");
 	}
 	ui_update_state(tip->msgr_client_id, ui_tag_tape_motor, tip->motor, NULL);
 }
@@ -773,17 +767,15 @@ static void tape_ui_set_playing(void *sptr, int tag, void *smsg) {
 	assert(tag == ui_tag_tape_playing);
 	_Bool play = ui_msg_adjust_value_range(uimsg, tip->playing, 0, 0, 1,
 					       UI_ADJUST_FLAG_CYCLE);
+	if (logging.level >= 2) {
+		if (play != tip->playing) {
+			LOG_MOD_PRINT("tape", "[%s] -> [%s]\n",
+				      tip->playing ? "PLAYING" : "PAUSED",
+				      play ? "PLAYING" : "PAUSED");
+		}
+	}
 	tip->playing = play;
 	update_motor(tip);
-	// Might be confusing if user presses play but EOF immediately stops it
-	// again, so make sure there is some debugging for that available:
-	if (logging.level >= 2) {
-		LOG_PRINT("Tape: [%s]", play ? "PLAYING" : "PAUSED");
-		if (play != tip->playing) {
-			LOG_PRINT(" -> [%s]", tip->playing ? "PLAYING" : "PAUSED");
-		}
-		LOG_PRINT("\n");
-	}
 }
 
 // Called when machine's tape output level changes.

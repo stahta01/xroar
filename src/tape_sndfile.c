@@ -2,7 +2,7 @@
  *
  *  \brief Audio files as tape images.
  *
- *  \copyright Copyright 2006-2017 Ciaran Anscomb
+ *  \copyright Copyright 2006-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -82,12 +82,12 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 	if (!sfd) {
 		sf_info.samplerate = 0;
 		sf_info.channels = 0;
-		LOG_WARN("libsndfile error: %s\n", sf_strerror(NULL));
+		LOG_MOD_WARN("tape/sndfile", "libsndfile error: %s\n", sf_strerror(NULL));
 		return NULL;
 	}
 	if (sf_info.samplerate == 0 || sf_info.channels < 1) {
 		sf_close(sfd);
-		LOG_WARN("Bad samplerate or channel count in audio file.\n");
+		LOG_MOD_WARN("tape/sndfile", "bad samplerate or channel count in audio file.\n");
 		return NULL;
 	}
 

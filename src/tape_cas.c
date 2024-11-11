@@ -217,6 +217,8 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 	struct tape_cas *cas;
 	FILE *fd;
 
+	const char *mod = is_ascii ? "tape/asc" : (is_k7 ? "tape/k7" : "tape/cas");
+
 	_Bool writing = mode[0] == 'w';
 	_Bool new_file = 0;
 	// if writing, open in read/write mode so that existing cue data can be
@@ -224,21 +226,21 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 	if (writing) {
 		if (!(fd = fopen(filename, "r+b"))) {
 			if (!(fd = fopen(filename, "wb"))) {
-				LOG_WARN("TAPE/CAS: cannot open '%s': %s\n", filename, strerror(errno));
+				LOG_MOD_WARN(mod, "%s: %s\n", filename, strerror(errno));
 				return NULL;
 			}
 			new_file = 1;
 		}
 	} else {
 		if (!(fd = fopen(filename, "rb"))) {
-			LOG_WARN("TAPE/CAS: cannot open '%s': %s\n", filename, strerror(errno));
+			LOG_MOD_WARN(mod, "%s: %s\n", filename, strerror(errno));
 			return NULL;
 		}
 	}
 
 	off_t filesize = fs_file_size(fd);
 	if (filesize == -1) {
-		LOG_WARN("TAPE/CAS: cannot stat '%s': %s\n", filename, strerror(errno));
+		LOG_MOD_WARN(mod, "%s: %s\n", filename, strerror(errno));
 		fclose(fd);
 		return NULL;
 	}
@@ -294,6 +296,7 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 		// we won't know what to do with this tape, so bail
 		if (!writing && !cas->cue.list) {
 			cas_close(t);
+			LOG_MOD_WARN(mod, "%s: failed to read CUE data\n", filename);
 			return NULL;
 		}
 	}
@@ -419,11 +422,11 @@ static void cue_read_k7(struct tape_cas *cas) {
 	goto last_block;
 
 malformed:
-	LOG_WARN("TAPE/CAS: malformed K7 file\n");
+	LOG_MOD_WARN("tape/k7", "malformed K7 file\n");
 	goto last_block;
 
 short_read:
-	LOG_WARN("TAPE/CAS: short read processing K7 file\n");
+	LOG_MOD_WARN("tape/k7", "short read processing K7 file\n");
 	goto last_block;
 
 last_block:
@@ -723,7 +726,7 @@ static void rewind_tape(struct tape *t) {
 
 	cas->rewind = 0;
 	if (fs_truncate(cas->fd, 0) < 0) {
-		LOG_WARN("TAPE/CAS: rewind failed: %s\n", strerror(errno));
+		LOG_MOD_WARN("tape/cas", "rewind failed: %s\n", strerror(errno));
 		return;
 	}
 	cas->cue.builder->bit_av_pw = 0;
@@ -1152,7 +1155,7 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 			break;
 
 		default:
-			LOG_WARN("TAPE/CAS/read_cue_data(): unexpected entry type: %d (%d bytes)\n", type, elength);
+			LOG_MOD_WARN("tape/cas", "read_cue_data(): unexpected entry type: %d (%d bytes)\n", type, elength);
 			if (fseeko(fd, elength, SEEK_CUR) < 0) {
 				cue_list_free(cas);
 				return 0;
@@ -1161,10 +1164,11 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 		}
 
 		if (elength != 0) {
-			if (elength > 0)
-				LOG_WARN("TAPE/CAS/read_cue_data(): read underrun: %d bytes\n", elength);
-			else
-				LOG_WARN("TAPE/CAS/read_cue_data(): read overrun: %d bytes\n", -elength);
+			if (elength > 0) {
+				LOG_MOD_WARN("tape/cas", "read_cue_data(): read underrun: %d bytes\n", elength);
+			} else {
+				LOG_MOD_WARN("tape/cas", "read_cue_data(): read overrun: %d bytes\n", -elength);
+			}
 			cue_list_free(cas);
 			return 0;
 		}
@@ -1173,15 +1177,15 @@ static _Bool read_cue_data(struct tape_cas *cas) {
 
 read_failed:
 	if (feof(fd)) {
-		LOG_WARN("TAPE/CAS/read_cue_data(): EOF reading CUE data\n");
+		LOG_MOD_WARN("tape/cas", "read_cue_data(): EOF reading CUE data\n");
 	} else if (ferror(fd)) {
-		LOG_WARN("TAPE/CAS/read_cue_data(): error reading CUE data\n");
+		LOG_MOD_WARN("tape/cas", "read_cue_data(): error reading CUE data\n");
 	}
 	cue_list_free(cas);
 	return 0;
 
 seek_failed:
-	LOG_WARN("TAPE/CAS/read_cue_data(): seek failed: %s\n", strerror(errno));
+	LOG_MOD_WARN("tape/cas", "read_cue_data(): seek failed: %s\n", strerror(errno));
 	cue_list_free(cas);
 	return 0;
 }
@@ -1264,7 +1268,7 @@ static void write_cue_data(struct tape_cas *cas) {
 			break;
 
 		default:
-			LOG_ERROR("TAPE/CAS/write_cue_data(): unexpected entry type: %d\n", entry->type);
+			LOG_MOD_ERROR("tape/cas", "write_cue_data(): unexpected entry type: %d\n", entry->type);
 			break;
 		}
 	}
