@@ -215,6 +215,9 @@ Type \fIfile\fR into BASIC.
 .SS Joysticks:
 
 .TP
+\fB\-joy\-db\-file\fR \fIfile\fR
+Load gamepad mappings from file.
+.TP
 \fB\-joy\-right\fR \fIname\fR
 Map right joystick.
 .TP
