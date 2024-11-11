@@ -114,6 +114,8 @@ static inline size_t sdslen(const sds s) {
     return 0;
 }
 
+// MODIFIED: header pointers declared const
+
 static inline size_t sdsavail(const sds s) {
     unsigned char flags = s[-1];
     switch(flags&SDS_TYPE_MASK) {
@@ -121,19 +123,19 @@ static inline size_t sdsavail(const sds s) {
             return 0;
         }
         case SDS_TYPE_8: {
-            SDS_HDR_VAR(8,s);
+            const SDS_HDR_VAR(8,s);
             return sh->alloc - sh->len;
         }
         case SDS_TYPE_16: {
-            SDS_HDR_VAR(16,s);
+            const SDS_HDR_VAR(16,s);
             return sh->alloc - sh->len;
         }
         case SDS_TYPE_32: {
-            SDS_HDR_VAR(32,s);
+            const SDS_HDR_VAR(32,s);
             return sh->alloc - sh->len;
         }
         case SDS_TYPE_64: {
-            SDS_HDR_VAR(64,s);
+            const SDS_HDR_VAR(64,s);
             return sh->alloc - sh->len;
         }
     }
