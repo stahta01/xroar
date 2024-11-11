@@ -99,7 +99,6 @@ struct blkdev_private {
 
 	struct {
 		_Bool valid;  // 0 until something sets these parameters
-		unsigned ncylinders;
 		unsigned nheads;
 		unsigned nsectors;
 		unsigned sector_base;  // generally 0 or (more usual) 1
