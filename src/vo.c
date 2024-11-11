@@ -195,7 +195,7 @@ void vo_set_viewport(struct vo_interface *vo, int picture) {
 
 void vo_set_draw_area(struct vo_interface *vo, int x, int y, int w, int h) {
 	vo->draw_area.x = x;
-	vo->draw_area.x = y;
+	vo->draw_area.y = y;
 	vo->draw_area.w = w;
 	vo->draw_area.h = h;
 
