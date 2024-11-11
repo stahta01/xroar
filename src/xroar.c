@@ -1569,8 +1569,6 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 		write_enable = !disk->write_protect;  // note inverted
 		write_back = disk->write_back;
 		vdisk_unref(disk);
-	} else {
-		filename = NULL;
 	}
 	ui_update_state(-1, ui_tag_disk_data, drive, disk);
 	ui_update_state(-1, ui_tag_disk_write_enable, write_enable, (void *)(intptr_t)drive);
@@ -1658,13 +1656,6 @@ void xroar_set_pause(_Bool notify, int action) {
 		(void)state;
 		(void)notify;
 	}
-}
-
-/** Quit the emulator.
- */
-
-void xroar_quit(void) {
-	exit(EXIT_SUCCESS);
 }
 
 void xroar_load_file(void) {

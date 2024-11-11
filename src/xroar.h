@@ -219,7 +219,7 @@ void xroar_insert_hd_file(int drive, const char *filename);
 void xroar_set_ratelimit(int action);
 void xroar_set_ratelimit_latch(_Bool notify, int action);
 void xroar_set_pause(_Bool notify, int action);
-FUNC_ATTR_NORETURN void xroar_quit(void);
+#define xroar_quit() exit(EXIT_SUCCESS)
 void xroar_load_file(void);
 void xroar_run_file(void);
 void xroar_flush_printer(void);
