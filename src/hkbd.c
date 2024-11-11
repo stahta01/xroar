@@ -1222,7 +1222,7 @@ void hk_update_keymap(void) {
 			hkbd.code_to_dkey[code] = bind->dk_key;
 			hkbd.code_preempt[code] = bind->preempt;
 		} else {
-			LOG_WARN("Key named '%s' not found\n", bind->hostkey);
+			LOG_WARN("[hkbd] key named '%s' not found\n", bind->hostkey);
 		}
 	}
 }
