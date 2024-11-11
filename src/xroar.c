@@ -1926,28 +1926,34 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 	// Remove the old cart
 	m->remove_cart(m);
 
-	// Attempt to create the cart
-	struct cart *c = cart_create_from_config(cc);
+	if (cc) {
+		// Attempt to create the cart
+		struct cart *c = cart_create_from_config(cc);
 
-	// Update machine config; this change becomes permanent for this
-	// machine for this session.  TODO: would this be desirable if we were
-	// storing the config between sessions?
-	if (!c) {
+		// Update machine config; this change becomes permanent for this
+		// machine for this session.  TODO: would this be desirable if we were
+		// storing the config between sessions?
+		if (c) {
+			mc->cart_enabled = 1;
+			if (mc->default_cart) {
+				free(mc->default_cart);
+			}
+			mc->default_cart = xstrdup(cc->name);
+
+			// Create and attach the cart
+			m->insert_cart(m, c);
+			connect_interfaces();
+			if (c->reset) {
+				c->reset(c, 1);
+			}
+		} else {
+			cc = NULL;
+		}
+	}
+
+	if (!cc) {
 		mc->cart_enabled = 0;
 		uimsg->value = 0;
-	} else {
-		mc->cart_enabled = 1;
-		if (mc->default_cart) {
-			free(mc->default_cart);
-		}
-		mc->default_cart = xstrdup(cc->name);
-
-		// Create and attach the cart
-		m->insert_cart(m, c);
-		connect_interfaces();
-		if (c->reset) {
-			c->reset(c, 1);
-		}
 	}
 }
 
