@@ -1261,9 +1261,9 @@ Dragon and CoCo 1/2/3, though some CoCo joysticks use a 6-pin DIN connector
 instead of 5-pin DIN, and these will not plug into the Dragon.  On the CoCo 3,
 this extra pin can carry the signal for an extra firebutton.
 
-XRoar can use physical joysticks, or simulate them using mouse or keyboard.
-Here are the built-in joystick profiles, including several different keyboard
-layouts for convenience:
+XRoar can use physical gamepads and joysticks, or simulate them using mouse or
+keyboard.  Here are the built-in joystick profiles, including several different
+keyboard layouts for convenience:
 
 @multitable {kjoy0xxx} {First two axes and first two buttons of second physical joystickxxx}
 @headitem Name @tab Description
@@ -1274,24 +1274,26 @@ layouts for convenience:
 @item @samp{qaop} @tab Keyboard based virtual joystick using @key{Q}, @key{A}, @key{O}, @key{P}, with @key{Space} and @key{Left Bracket} as firebuttons.
 @end multitable
 
-In addition, XRoar should automatically detect attached joysticks and add them
-as named profiles called @samp{joy0}, @samp{joy1}, etc.  If the joystick is
-able to provide its own description, that will be included in the menu text.
+In addition, XRoar should automatically detect attached gamepads or joysticks
+and add them as named profiles called @samp{joy0}, @samp{joy1}, etc.  If the
+device is able to provide its own description, that will be included in the
+menu text.  If a gamepad has two sticks, two more automatic profiles will be
+created, e.g.  @samp{joy0/l} and @samp{joy0/r} so you can choose between them.
 
-If present, @samp{joy0} maps to the Dragon's right joystick port, and
-@samp{joy1} to the left joystick port.  You can specify different profiles to
-with @option{-joy-right @var{name}} or @option{-joy-left @var{name}}.  Select
-which joystick is mapped to each port at any time with the
-@clicksequence{Hardware @click{} Right joystick} or @clicksequence{Hardware
-@click{} Left joystick} menus.  You can also swap the left and right joystick
-mappings by just pressing @kbd{@key{CTRL}+@key{SHIFT}+J}.
+By default, XRoar will map the first physical joystick found (@samp{joy0}) to
+the right hand port, and the second (@samp{joy1}) to the left hand port.  If
+only one device is present, but has two sticks, the @emph{left} stick
+(@samp{joy0/l}) is mapped to the @emph{right} hand port and vice-versa.
+Slightly confusing, but this is because people usually assume the left stick to
+be active, while the right hand port on a Dragon is the first in hardware, thus
+usually the ``primary'' control assumed by software.
 
 A preselected virtual joystick can be quickly cycled through the ports by
 pressing @kbd{@key{CTRL}+J}.  The first press will map it to the right
-joystick, the second to the left joystick instead, and pressing a third time
-unmaps it.  You can change which virtual joystick is cycled in this way with
-the @option{-joy-virtual @var{name}} option, defaulting to @samp{kjoy0} from
-the table above.
+joystick, the second to the left joystick, and pressing a third time unmaps it.
+You can change which virtual joystick is cycled in this way with the
+@option{-joy-virtual @var{name}} option, defaulting to @samp{kjoy0} from the
+table above.
 
 The MC-10 has no built-in joystick ports, but an expansion (that can not be
 used at the same time as the 16K RAM expansion!) allows the connection of
@@ -1864,6 +1866,8 @@ Special values for @var{ekey} are: @samp{colon}, @samp{semicolon},
 @section Joysticks
 
 @multitable @columnfractions .37 .59
+@item @option{-joy-db-file @var{file}}
+@tab Load gamepad mappings from file.
 @item @option{-joy @var{name}}
 @tab Create or modify named joystick profile.  @option{-joy help} lists currently defined profiles.
 @item @ @ @ @option{-joy-desc @var{text}}
@@ -1923,6 +1927,11 @@ joy mixed
 
 joy-virtual mixed
 @end example
+
+@node Gamepad mapping
+@subsection Gamepad mapping
+
+@c XXX type some stuff in here
 
 @c
 
