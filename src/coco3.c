@@ -262,9 +262,8 @@ static void coco3_config_complete(struct machine_config *mc) {
 static _Bool coco3_is_working_config(struct machine_config *mc) {
 	if (!mc)
 		return 0;
-	sds tmp;
 	if (mc->extbas_rom) {
-		tmp = romlist_find(mc->extbas_rom);
+		sds tmp = romlist_find(mc->extbas_rom);
 		if (!tmp)
 			return 0;
 		sdsfree(tmp);
