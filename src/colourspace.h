@@ -2,7 +2,7 @@
  *
  *  \brief RGB colourspace conversions.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -70,8 +70,10 @@ struct cs_profile *cs_profile_by_name(const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void cs_matrix_mul_3x3_ijk(float matrix[][3], float i, float j, float k,
+void cs_matrix_mul_3x3_ijk(const float matrix[][3], float i, float j, float k,
 			   float *iout, float *jout, float *kout);
+
+void cs_matrix_mul_3x3(const float a[][3], const float b[][3], float out[][3]);
 
 void cs_clamp(float *x, float *y, float *z);
 
@@ -82,22 +84,22 @@ void cs_clamp(float *x, float *y, float *z);
 //
 
 // Monitor gamma (R'G'B' to RGB)
-void cs_mlaw(struct cs_profile *csin, float r, float g, float b,
+void cs_mlaw(const struct cs_profile *csin, float r, float g, float b,
 	     float *Rout, float *Gout, float *Bout);
 
 // Monitor gamma (single component)
-float cs_mlaw_1(struct cs_profile *cs, float v);
+float cs_mlaw_1(const struct cs_profile *cs, float v);
 
 // Invert monitor gamma (RGB to R'G'B')
-void cs_inverse_mlaw(struct cs_profile *csin, float R, float G, float B,
+void cs_inverse_mlaw(const struct cs_profile *csin, float R, float G, float B,
 		     float *rout, float *gout, float *bout);
 
 // Camera gamma (RGB to R'G'B') - may differ from inverse monitor gamma
-void cs_claw(struct cs_profile *csin, float R, float G, float B,
+void cs_claw(const struct cs_profile *csin, float R, float G, float B,
 	     float *rout, float *gout, float *bout);
 
 // Camera gamma (single component)
-float cs_claw_1(struct cs_profile *cs, float V);
+float cs_claw_1(const struct cs_profile *cs, float V);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

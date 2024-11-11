@@ -2,7 +2,7 @@
  *
  *  \brief RGB colourspace conversions.
  *
- *  \copyright Copyright 2011-2023 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -206,7 +206,7 @@ below.
 // XXX why have i left this url here?
 // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 
-static void matrix_invert_3x3(float in[][3], float out[][3]);
+static void matrix_invert_3x3(const float in[][3], float out[][3]);
 
 static void create_xyz_rgb_matrix(struct cs_profile *p) {
 	float xr = p->xr, yr = p->yr;
@@ -261,7 +261,7 @@ static void create_xyz_rgb_matrix(struct cs_profile *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void cs_matrix_mul_3x3_ijk(float matrix[][3], float i, float j, float k,
+void cs_matrix_mul_3x3_ijk(const float matrix[][3], float i, float j, float k,
 			   float *iout, float *jout, float *kout) {
 	*iout = i * matrix[0][0] + j * matrix[0][1] + k * matrix[0][2];
 	*jout = i * matrix[1][0] + j * matrix[1][1] + k * matrix[1][2];
@@ -270,7 +270,7 @@ void cs_matrix_mul_3x3_ijk(float matrix[][3], float i, float j, float k,
 
 // remember to reverse the order if you're combining matrices...
 
-void cs_matrix_mul_3x3(float a[][3], float b[][3], float out[][3]) {
+void cs_matrix_mul_3x3(const float a[][3], const float b[][3], float out[][3]) {
 	out[0][0] = a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0];
 	out[0][1] = a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1];
 	out[0][2] = a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2];
@@ -290,7 +290,7 @@ void cs_clamp(float *x, float *y, float *z) {
 	*z = (*z < 0.0) ? 0.0 : ((*z > 1.0) ? 1.0 : *z);
 }
 
-static void matrix_invert_3x3(float in[][3], float out[][3]) {
+static void matrix_invert_3x3(const float in[][3], float out[][3]) {
 	float d = in[0][0]*(in[1][1]*in[2][2] - in[2][1]*in[1][2])
 	        - in[0][1]*(in[1][0]*in[2][2] - in[1][2]*in[2][0])
 	        + in[0][2]*(in[1][0]*in[2][1] - in[1][1]*in[2][0]);
@@ -317,14 +317,14 @@ static void matrix_invert_3x3(float in[][3], float out[][3]) {
 // Gamma
 //
 
-void cs_mlaw(struct cs_profile *cs, float r, float g, float b,
+void cs_mlaw(const struct cs_profile *cs, float r, float g, float b,
 	     float *Rout, float *Gout, float *Bout) {
 	*Rout = cs_mlaw_1(cs, r);
 	*Gout = cs_mlaw_1(cs, g);
 	*Bout = cs_mlaw_1(cs, b);
 }
 
-float cs_mlaw_1(struct cs_profile *cs, float v) {
+float cs_mlaw_1(const struct cs_profile *cs, float v) {
 	if (v < (cs->clim * cs->slope)) {
 		return v / cs->slope;
 	} else {
@@ -333,7 +333,7 @@ float cs_mlaw_1(struct cs_profile *cs, float v) {
 }
 
 // Apply inverse of monitor gamma
-void cs_inverse_mlaw(struct cs_profile *cs, float R, float G, float B,
+void cs_inverse_mlaw(const struct cs_profile *cs, float R, float G, float B,
 		     float *rout, float *gout, float *bout) {
 	if (R < cs->clim) {
 		*rout = R * cs->slope;
@@ -353,14 +353,14 @@ void cs_inverse_mlaw(struct cs_profile *cs, float R, float G, float B,
 }
 
 // Apply camera gamma (may be different to inverse of monitor gamma)
-void cs_claw(struct cs_profile *cs, float R, float G, float B,
+void cs_claw(const struct cs_profile *cs, float R, float G, float B,
 	     float *rout, float *gout, float *bout) {
 	*rout = cs_claw_1(cs, R);
 	*gout = cs_claw_1(cs, G);
 	*bout = cs_claw_1(cs, B);
 }
 
-float cs_claw_1(struct cs_profile *cs, float V) {
+float cs_claw_1(const struct cs_profile *cs, float V) {
 	if (V < cs->clim) {
 		return V * cs->slope;
 	} else {
