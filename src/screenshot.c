@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <errno.h>
 #include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +31,7 @@
 
 #include "xalloc.h"
 
+#include "logging.h"
 #include "screenshot.h"
 #include "vo.h"
 #include "vo_render.h"
@@ -40,6 +42,7 @@ static jmp_buf jmpbuf;
 
 int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 	if (!vo || !vo->renderer) {
+		LOG_MOD_ERROR("screenshot/png", "no video initialised");
 		return -1;
 	}
 
@@ -48,6 +51,7 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 
 	FILE *f = fopen(filename, "wb");
 	if (!f) {
+		LOG_MOD_WARN("screenshot/png", "%s: %s\n", filename, strerror(errno));
 		return -1;
 	}
 
@@ -55,12 +59,14 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png_ptr) {
+		LOG_MOD_ERROR("screenshot/png", "png_create_write_struct() failed");
 		fclose(f);
 		return -2;
 	}
 
 	png_infop info_ptr = png_create_info_struct(png_ptr);
 	if (!info_ptr) {
+		LOG_MOD_ERROR("screenshot/png", "png_create_info_struct() failed");
 		png_destroy_write_struct(&png_ptr, NULL);
 		fclose(f);
 		return -2;
@@ -70,6 +76,7 @@ int screenshot_write_png(const char *filename, struct vo_interface *vo) {
 
 	// libpng error handling
 	if (setjmp(jmpbuf)) {
+		LOG_MOD_ERROR("screenshot/png", "error writing PNG");
 		png_destroy_write_struct(&png_ptr, &info_ptr);
 		free(line);
 		fclose(f);
