@@ -19,6 +19,7 @@
 #include "top-config.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,7 +100,7 @@ int read_snapshot(const char *filename) {
 #ifndef HAVE_WASM
 	if (read_v2_snapshot(filename) < 0 &&
 	    read_v1_snapshot(filename) < 0) {
-		LOG_WARN("Snapshot: read failed\n");
+		LOG_MOD_WARN("snapshot", "%s: read failed\n", filename);
 		return -1;
 	}
 #else
@@ -124,20 +125,24 @@ int write_snapshot(const char *filename) {
 	if (xroar_filetype_by_ext(filename) == FILETYPE_RAM) {
 		// simple ram dump
 		if (!xroar.machine->dump_ram) {
-			LOG_WARN("Running machine does not support RAM dump.\n");
+			LOG_MOD_WARN("snapshot/ram", "machine does not support RAM dump\n");
 			return -1;
 		}
 		FILE *fd = fopen(filename, "wb");
-		if (!fd)
+		if (!fd) {
+			LOG_MOD_WARN("snapshot/ram", "%s: %s\n", filename, strerror(errno));
 			return -1;
+		}
 		xroar.machine->dump_ram(xroar.machine, fd);
 		fclose(fd);
 		return 0;
 	}
 
 	struct ser_handle *sh = ser_open(filename, ser_mode_write);
-	if (!sh)
+	if (!sh) {
+		LOG_MOD_WARN("snapshot/v2", "%s: %s\n", filename, strerror(errno));
 		return -1;
+	}
 
 	ser_write_tag(sh, 0x23, strlen(snapv2_header));
 	ser_write_untagged(sh, snapv2_header, strlen(snapv2_header));
@@ -156,8 +161,9 @@ int write_snapshot(const char *filename) {
 
 static int read_v2_snapshot(const char *filename) {
 	struct ser_handle *sh = ser_open(filename, ser_mode_read);
-	if (!sh)
+	if (!sh) {
 		return -1;
+	}
 
 	int tag = ser_read_tag(sh);
 	if (tag != 0x23) {
@@ -180,7 +186,7 @@ static int read_v2_snapshot(const char *filename) {
 			// Deserialises new machine.
 			m = (struct machine *)part_deserialise(sh);
 			if (m && !part_is_a((struct part *)m, "machine")) {
-				LOG_WARN("Snapshot v2 read: not a machine\n");
+				LOG_MOD_WARN("snapshot/v2", "read: not a machine\n");
 				part_free((struct part *)m);
 				m = NULL;
 				ser_set_error(sh, ser_error_format);
@@ -200,7 +206,7 @@ static int read_v2_snapshot(const char *filename) {
 			break;
 
 		default:
-			LOG_WARN("Snapshot v2 read: unknown tag '%d'\n", tag);
+			LOG_MOD_WARN("snapshot/v2", "read: unknown tag '%d'\n", tag);
 			break;
 		}
 		if (ser_error(sh))
@@ -208,7 +214,7 @@ static int read_v2_snapshot(const char *filename) {
 	}
 
 	if (ser_error(sh)) {
-		LOG_WARN("Snapshot v2 read: %s\n", ser_errstr(sh));
+		LOG_MOD_WARN("snapshot/v2", "read: %s\n", ser_errstr(sh));
 	}
 
 	ser_close(sh);
@@ -372,7 +378,7 @@ static int read_v1_snapshot(const char *filename) {
 	while ((section = fs_read_uint8(fd)) >= 0) {
 		unsigned size = fs_read_uint16(fd);
 		if (size == 0) size = 0x10000;
-		LOG_DEBUG(3, "Snapshot v1 read: chunk type %d, size %u\n", section, size);
+		LOG_MOD_DEBUG(3, "snapshot/v1", "read: chunk type %d, size %u\n", section, size);
 		switch (section) {
 			case ID_ARCHITECTURE:
 				// Deprecated: Machine architecture
@@ -404,12 +410,12 @@ static int read_v1_snapshot(const char *filename) {
 					// MC6809 state
 					if (size < 20) break;
 					if (mc->cpu != CPU_MC6809) {
-						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping MC6809 chunk\n");
+						LOG_MOD_WARN("snapshot/v1", "read: CPU mismatch - skipping MC6809 chunk\n");
 						break;
 					}
 					struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&xroar.machine->part, "CPU", "MC6809");
 					if (!cpu) {
-						LOG_WARN("Snapshot v1 read: CPU not found - skipping MC6809 chunk\n");
+						LOG_MOD_WARN("snapshot/v1", "read: CPU not found - skipping MC6809 chunk\n");
 						break;
 					}
 					cpu->reg_cc = fs_read_uint8(fd);
@@ -468,12 +474,12 @@ static int read_v1_snapshot(const char *filename) {
 					// HD6309 state
 					if (size < 27) break;
 					if (mc->cpu != CPU_HD6309) {
-						LOG_WARN("Snapshot v1 read: CPU mismatch - skipping HD6309 chunk\n");
+						LOG_MOD_WARN("snapshot/v1", "read: CPU mismatch - skipping HD6309 chunk\n");
 						break;
 					}
 					struct HD6309 *hcpu = (struct HD6309 *)part_component_by_id_is_a(&xroar.machine->part, "CPU", "HD6309");
 					if (!hcpu) {
-						LOG_WARN("Snapshot v1 read: CPU not found - skipping HD6309 chunk\n");
+						LOG_MOD_WARN("snapshot/v1", "read: CPU not found - skipping HD6309 chunk\n");
 						break;
 					}
 					struct MC6809 *cpu = &hcpu->mc6809;
@@ -564,7 +570,7 @@ static int read_v1_snapshot(const char *filename) {
 					snprintf(id, sizeof(id), "PIA%d", i);
 					struct MC6821 *pia = (struct MC6821 *)part_component_by_id_is_a(&xroar.machine->part, id, "MC6821");
 					if (!pia) {
-						LOG_WARN("Snapshot v1 read: %s not found - skipping PIA\n", id);
+						LOG_MOD_WARN("snapshot/v1", "read: %s not found - skipping PIA\n", id);
 						break;
 					}
 					if (size < 3) break;
@@ -614,7 +620,7 @@ static int read_v1_snapshot(const char *filename) {
 				{
 					struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&xroar.machine->part, "SAM", "SN74LS783");
 					if (!sam) {
-						LOG_WARN("Snapshot v1 read: SAM not found - skipping SAM registers chunk\n");
+						LOG_MOD_WARN("snapshot/v1", "read: SAM not found - skipping SAM registers chunk\n");
 						break;
 					}
 					mc6883_set_register(sam, tmp);
@@ -630,7 +636,7 @@ static int read_v1_snapshot(const char *filename) {
 				size -= 3;
 				if (version_major != SNAPSHOT_VERSION_MAJOR
 				    || version_minor > SNAPSHOT_VERSION_MINOR) {
-					LOG_WARN("Snapshot v1 read: version %d.%d not supported.\n", version_major, version_minor);
+					LOG_MOD_WARN("snapshot/v1", "read: version %d.%d not supported.\n", version_major, version_minor);
 					fclose(fd);
 					return -1;
 				}
@@ -696,11 +702,11 @@ static int read_v1_snapshot(const char *filename) {
 
 			default:
 				// Unknown chunk
-				LOG_WARN("Snapshot v1 read: unknown chunk type %d in snaphot.\n", section);
+				LOG_MOD_WARN("snapshot/v1", "read: unknown chunk type %d in snaphot.\n", section);
 				break;
 		}
 		if (size > 0) {
-			LOG_WARN("Snapshot v1 read: skipping extra bytes in snapshot chunk type %d\n", (int)section);
+			LOG_MOD_WARN("snapshot/v1", "read: skipping extra bytes in snapshot chunk type %d\n", (int)section);
 			for (; size; size--)
 				(void)fs_read_uint8(fd);
 		}
