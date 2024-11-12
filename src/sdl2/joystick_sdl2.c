@@ -206,7 +206,7 @@ void sdl_js_device_added(int index) {
 			sdsfree(tmp);
 		}
 		//
-		LOG_DEBUG(1, "[sdl/joystick] added: %s ", jc->description);
+		LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "added: %s ", jc->description);
 		if (d->is_gamecontroller) {
 			LOG_DEBUG(1, "(gamepad)\n");
 		} else {
@@ -272,7 +272,7 @@ void sdl_js_device_added(int index) {
 		jc0->button_specs[1] = xstrdup(tmp);
 		sdsfree(tmp);
 		//
-		LOG_DEBUG(1, "[sdl/joystick] added: %s\n", jc0->description);
+		LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "added: %s\n", jc0->description);
 
 		struct joystick_config *jc1 = joystick_config_new();
 		tmp = sdscatprintf(sdsempty(), "%s/r", guid_str);
@@ -302,7 +302,7 @@ void sdl_js_device_added(int index) {
 		jc1->button_specs[1] = xstrdup(tmp);
 		sdsfree(tmp);
 		//
-		LOG_DEBUG(1, "[sdl/joystick] added: %s\n", jc1->description);
+		LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "added: %s\n", jc1->description);
 	}
 
 	// Close device - it will be opened when actually configured for use.
@@ -343,7 +343,7 @@ void sdl_js_device_removed(int index) {
 	for (int i = 0; i < 3; ++i) {
 		if (d->jc_names[i]) {
 			struct joystick_config *jc = joystick_config_by_name(d->jc_names[i]);
-			LOG_DEBUG(1, "[sdl/joystick] removing: %s\n", jc->description);
+			LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "removing: %s\n", jc->description);
 			joystick_config_remove(jc);
 			free(d->jc_names[i]);
 			d->jc_names[i] = NULL;
@@ -372,7 +372,7 @@ static void sdl_js_physical_init(void) {
 	num_devices = SDL_NumJoysticks();
 
 	if (SDL_NumJoysticks() < 1) {
-		LOG_DEBUG(1, "[sdl/joystick] no devices found\n");
+		LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "no devices found\n");
 		return;
 	}
 

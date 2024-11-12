@@ -214,14 +214,14 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 			break;
 	}
 	if (!vosdl->sdl_renderer) {
-		LOG_ERROR("Failed to create renderer\n");
+		LOG_MOD_SUB_ERROR("sdl", "vo", "failed to create renderer\n");
 		return 0;
 	}
 
 	if (logging.level >= 3) {
 		SDL_RendererInfo renderer_info;
 		if (SDL_GetRendererInfo(vosdl->sdl_renderer, &renderer_info) == 0) {
-			LOG_PRINT("SDL_GetRendererInfo()\n");
+			LOG_MOD_SUB_PRINT("sdl", "vo", "SDL_GetRendererInfo()\n");
 			LOG_PRINT("\tname = %s\n", renderer_info.name);
 			LOG_PRINT("\tflags = 0x%x\n", renderer_info.flags);
 			if (renderer_info.flags & SDL_RENDERER_SOFTWARE)
@@ -296,7 +296,7 @@ static void recreate_texture(struct ui_sdl2_interface *uisdl2) {
 	// Create new
 	vosdl->texture.texture = SDL_CreateTexture(vosdl->sdl_renderer, vosdl->texture.format, SDL_TEXTUREACCESS_STREAMING, vp_w, vp_h);
 	if (!vosdl->texture.texture) {
-		LOG_ERROR("Failed to create texture\n");
+		LOG_MOD_SUB_ERROR("sdl", "vo", "failed to create texture\n");
 		abort();
 	}
 
