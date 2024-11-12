@@ -2,7 +2,7 @@
  *
  *  \brief Multi-Pak Interface (MPI) support.
  *
- *  \copyright Copyright 2014-2022 Ciaran Anscomb
+ *  \copyright Copyright 2014-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -105,7 +105,7 @@ static void mpi_reset(struct cart *c, _Bool hard);
 static _Bool mpi_has_interface(struct cart *c, const char *ifname);
 static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
 
-static void select_slot(struct cart *c, unsigned D);
+static void select_slot(struct mpi *, unsigned D);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -181,7 +181,7 @@ static void mpi_initialise(struct part *p, void *options) {
 	if (initial_slot < 0 || initial_slot > 3 || mpi->is_race)
 		initial_slot = 0;
 
-	select_slot(c, (initial_slot << 4) | initial_slot);
+	select_slot(mpi, (initial_slot << 4) | initial_slot);
 }
 
 static _Bool mpi_finish(struct part *p) {
@@ -230,7 +230,7 @@ static void mpi_reset(struct cart *c, _Bool hard) {
 	if (initial_slot < 0 || initial_slot > 3 || mpi->is_race)
 		initial_slot = 0;
 
-	select_slot(c, (initial_slot << 4) | initial_slot);
+	select_slot(mpi, (initial_slot << 4) | initial_slot);
 }
 
 static void mpi_attach(struct cart *c) {
@@ -276,7 +276,7 @@ static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf)
 	}
 }
 
-static void debug_cart_name(struct cart *c) {
+static void debug_cart_name(const struct cart *c) {
 	if (!c) {
 		LOG_PRINT("<empty>");
 	} else if (!c->config) {
@@ -288,12 +288,11 @@ static void debug_cart_name(struct cart *c) {
 	}
 }
 
-static void select_slot(struct cart *c, unsigned D) {
-	struct mpi *mpi = (struct mpi *)c;
+static void select_slot(struct mpi *mpi, unsigned D) {
 	mpi->cts_route = (D >> 4) & 3;
 	mpi->p2_route = D & 3;
 	if (logging.level >= 2) {
-		LOG_PRINT("MPI selected: %02x: ROM=", D & 0x33);
+		LOG_MOD_PRINT("mpi", "selected: %02x: ROM=", D & 0x33);
 		debug_cart_name(mpi->slot[mpi->cts_route].cart);
 		LOG_PRINT(", IO=");
 		debug_cart_name(mpi->slot[mpi->p2_route].cart);
@@ -308,7 +307,7 @@ void mpi_switch_slot(struct cart *c, unsigned slot) {
 		return;
 	if (slot > 3)
 		return;
-	select_slot(c, (slot << 4) | slot);
+	select_slot(mpi, (slot << 4) | slot);
 }
 
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
@@ -322,7 +321,7 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 		if (A == 0xfeff) {
 			// Same as writing!  Uses whatever happened to be on
 			// the data bus.
-			select_slot(c, ((D & 3) << 4) | (D & 3));
+			select_slot(mpi, ((D & 3) << 4) | (D & 3));
 			return D;
 		}
 	}
@@ -355,13 +354,13 @@ static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	if (!mpi->is_race) {
 		if (A == 0xff7f) {
 			mpi->switch_enable = 0;
-			select_slot(c, D);
+			select_slot(mpi, D);
 			return D;
 		}
 	} else {
 		if (A == 0xfeff) {
 			mpi->switch_enable = 0;
-			select_slot(c, ((D & 3) << 4) | (D & 3));
+			select_slot(mpi, ((D & 3) << 4) | (D & 3));
 			return D;
 		}
 	}
