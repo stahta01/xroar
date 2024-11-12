@@ -300,7 +300,7 @@ static void evdev_js_physical_init(void) {
 	globfree(&globbuf);
 
 	if (ctx->ndevices == 0) {
-		LOG_DEBUG(1, "[evdev/joystick] no devices found\n");
+		LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "no devices found\n");
 	}
 }
 
@@ -768,7 +768,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 	d->key_code_base = is_gamepad ? BTN_GAMEPAD : BTN_JOYSTICK;
 
 	if (logging.level >= 2) {
-		LOG_PRINT("[evdev/joystick] adding new device at index %d:\n", index);
+		LOG_MOD_SUB_PRINT("evdev", "joystick", "adding new device at index %d:\n", index);
 		LOG_PRINT("\tGUID: %s\n", guid_str);
 		if (vendor) {
 			LOG_PRINT("\tVendor ID: 0x%04x\n", vendor);
@@ -779,8 +779,8 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		if (version) {
 			LOG_PRINT("\tProduct version: 0x%04x\n", version);
 		}
-		LOG_PRINT("[evdev/joystick] processing mapping for '%s'\n", map->name);
-		LOG_PRINT("[evdev/joystick] finding axes (EV_ABS from code 0x%03x):\n", ABS_X);
+		LOG_MOD_SUB_PRINT("evdev", "joystick", "processing mapping for '%s'\n", map->name);
+		LOG_MOD_SUB_PRINT("evdev", "joystick", "finding axes (EV_ABS from code 0x%03x):\n", ABS_X);
 	}
 	process_map(&dmctx, EV_ABS, ABS_X, ABS_MAX - 1);
 
@@ -817,7 +817,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		}
 	}
 
-	LOG_DEBUG(2, "[evdev/joystick] finding buttons (EV_KEY from code 0x%03x):\n", d->key_code_base);
+	LOG_MOD_SUB_DEBUG(2, "evdev", "joystick", "finding buttons (EV_KEY from code 0x%03x):\n", d->key_code_base);
 	process_map(&dmctx, EV_KEY, d->key_code_base, KEY_MAX - 1);
 
 	// Add extra buttons, filling in any gaps in the mapping
@@ -895,7 +895,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 			sdsfree(tmp);
 		}
 		//
-		LOG_DEBUG(1, "[evdev/joystick] added: %s ", jc->description);
+		LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "added: %s ", jc->description);
 		LOG_DEBUG(1, "(%d %s, ", actual_naxes, (actual_naxes == 1) ? "axis" : "axes");
 		LOG_DEBUG(1, "%d button%s)\n", actual_nbuttons, (actual_nbuttons == 1) ? "" : "s");
 	}
@@ -933,7 +933,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		jc0->button_specs[1] = xstrdup(tmp);
 		sdsfree(tmp);
 		//
-		LOG_DEBUG(1, "[evdev/joystick] added: %s\n", jc0->description);
+		LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "added: %s\n", jc0->description);
 
 		struct joystick_config *jc1 = joystick_config_new();
 		tmp = sdscatprintf(sdsempty(), "%s/r", guid_str);
@@ -963,7 +963,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		jc1->button_specs[1] = xstrdup(tmp);
 		sdsfree(tmp);
 		//
-		LOG_DEBUG(1, "[evdev/joystick] added: %s\n", jc1->description);
+		LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "added: %s\n", jc1->description);
 	}
 
 	if (xroar.ui_interface) {
@@ -992,7 +992,7 @@ static void evdev_js_device_remove(struct evdev_js_context *ctx, int evid) {
 	for (int i = 0; i < 3; ++i) {
 		if (d->jc_names[i]) {
 			struct joystick_config *jc = joystick_config_by_name(d->jc_names[i]);
-			LOG_DEBUG(1, "[evdev/joystick] removing: %s\n", jc->description);
+			LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "removing: %s\n", jc->description);
 			joystick_config_remove(jc);
 			free(d->jc_names[i]);
 			d->jc_names[i] = NULL;
