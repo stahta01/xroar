@@ -4,7 +4,7 @@
  *
  *  The "becker port" is an IP version of the usually-serial DriveWire protocol.
  *
- *  \copyright Copyright 2012-2021 Ciaran Anscomb
+ *  \copyright Copyright 2012-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -88,24 +88,24 @@ struct becker *becker_open(void) {
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
 	if (getaddrinfo(hostname, portname, &hints, &info) < 0) {
-		LOG_WARN("becker: getaddrinfo %s:%s failed\n", hostname, portname);
+		LOG_MOD_WARN("becker", "getaddrinfo %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
 	if (!info) {
-		LOG_WARN("becker: failed lookup %s:%s\n", hostname, portname);
+		LOG_MOD_WARN("becker", "failed lookup %s:%s\n", hostname, portname);
 		goto failed;
 	}
 
 	// Create a socket...
 	sockfd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
 	if (sockfd < 0) {
-		LOG_WARN("becker: socket not created\n");
+		LOG_MOD_WARN("becker", "socket not created\n");
 		goto failed;
 	}
 
 	// ... and connect it to the requested server
 	if (connect(sockfd, info->ai_addr, info->ai_addrlen) < 0) {
-		LOG_WARN("becker: connect %s:%s failed\n", hostname, portname);
+		LOG_MOD_WARN("becker", "connect %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
 
@@ -118,7 +118,7 @@ struct becker *becker_open(void) {
 #else
 	u_long iMode = 1;
 	if (ioctlsocket(sockfd, FIONBIO, &iMode) != NO_ERROR) {
-		LOG_WARN("becker: couldn't set non-blocking mode on socket\n");
+		LOG_MOD_WARN("becker", "couldn't set non-blocking mode on socket\n");
 		goto failed;
 	}
 #endif
@@ -128,6 +128,8 @@ struct becker *becker_open(void) {
 
 	b->sockfd = sockfd;
 	becker_reset(b);
+
+	LOG_MOD_DEBUG(2, "becker", "connected to %s:%s\n", hostname, portname);
 
 	return b;
 
