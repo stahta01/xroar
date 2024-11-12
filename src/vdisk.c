@@ -2,7 +2,7 @@
  *
  *  \brief Virtual floppy disks.
  *
- *  \copyright Copyright 2003-2020 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,6 +26,7 @@
 #include "top-config.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,7 +176,7 @@ struct vdisk *vdisk_load(const char *filename) {
 			return d;
 		}
 	}
-	LOG_WARN("No reader for virtual disk file type.\n");
+	LOG_MOD_WARN("vdisk", "%s: no virtual disk reader for file type\n", filename);
 	return NULL;
 }
 
@@ -185,24 +186,29 @@ struct vdisk *vdisk_load(const char *filename) {
 // state of the image.
 
 int vdisk_save(struct vdisk *disk) {
-	if (!disk)
+	if (!disk) {
 		return -1;
+	}
+	if (!disk->filename) {
+		LOG_MOD_WARN("vdisk", "attempting to save with no filename\n");
+		return -1;
+	}
 	if (!disk->dirty) {
-		LOG_DEBUG(3, "Not saving disk file: not modified.\n");
+		LOG_MOD_DEBUG(3, "vdisk", "%s: unmodified; not saving\n", disk->filename);
 		// Disk not modified, so success:
 		return 0;
 	}
 	if (!disk->write_back) {
-		LOG_DEBUG(1, "Not saving disk file: write-back is disabled.\n");
+		LOG_MOD_DEBUG(1, "vdisk", "%s: write-back disabled; not saving\n", disk->filename);
 		// This is the requested behaviour, so success:
 		return 0;
 	}
-	// This should never happen:
-	assert(disk->filename != NULL);
+
 	int i;
-	for (i = 0; dispatch[i].filetype >= 0 && dispatch[i].filetype != disk->filetype; i++);
+	for (i = 0; dispatch[i].filetype >= 0 && dispatch[i].filetype != disk->filetype; ++i)
+		;
 	if (dispatch[i].save_func == NULL) {
-		LOG_WARN("No writer for virtual disk file type.\n");
+		LOG_MOD_WARN("vdisk", "%s: no virtual disk writer for file type\n", disk->filename);
 		return -1;
 	}
 	if (!disk->new_disk) {
@@ -259,33 +265,33 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	struct stat statbuf;
 
 	if (stat(filename, &statbuf) != 0) {
-		LOG_WARN("Failed to stat '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: %s\n", filename, strerror(errno));
 		return NULL;
 	}
 	file_size = statbuf.st_size;
 	if (!(fd = fopen(filename, "rb"))) {
-		LOG_WARN("Failed to open '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: %s\n", filename, strerror(errno));
 		return NULL;
 	}
 	if (fread(buf, 12, 1, fd) < 1) {
-		LOG_WARN("Failed to read VDK header in '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: failed to read header\n", filename);
 		fclose(fd);
 		return NULL;
 	}
 	file_size -= 12;
 	(void)file_size;  // TODO: check this matches what's going to be read
 	if (buf[0] != 'd' || buf[1] != 'k') {
-		LOG_WARN("Bad VDK header in '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: bad header\n", filename);
 		fclose(fd);
 		return NULL;
 	}
 	if (buf[5] > 0x10) {
-		LOG_WARN("VDK backwards compatibility version 0x%02x not supported.\n", buf[5]);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: VDK version 0x%02x not supported\n", filename, buf[5]);
 		fclose(fd);
 		return NULL;
 	}
 	if ((buf[11] & 7) != 0) {
-		LOG_WARN("Compressed VDK not supported: '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: compressed VDK not supported\n", filename);
 		fclose(fd);
 		return NULL;
 	}
@@ -298,7 +304,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	if (header_size > 0) {
 		vdk_extra = xmalloc(header_size);
 		if (fread(vdk_extra, header_size, 1, fd) < 1) {
-			LOG_WARN("Failed to read VDK header in '%s'\n", filename);
+			LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: read failed (header)\n", filename);
 			free(vdk_extra);
 			fclose(fd);
 			return NULL;
@@ -321,7 +327,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 		vdisk_unref(disk);
 		return NULL;
 	}
-	LOG_DEBUG(1, "Loading VDK virtual disk: %uC %uH %uS (%u-byte)\n", ncyls, nheads, nsectors, ssize);
+	LOG_MOD_SUB_DEBUG(1, "vdisk", "vdk", "%s: reading: %uC %uH %uS (%u-byte)\n", filename, ncyls, nheads, nsectors, ssize);
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < nheads; head++) {
 			for (unsigned sector = 0; sector < nsectors; sector++) {
@@ -329,7 +335,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 					memset(buf, 0, ssize);
 				}
 				if (!vdisk_write_sector(ctx, cyl, head, sector + 1, ssize, buf)) {
-					LOG_WARN("Failed writing C%u H%u S%u: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: vdisk error: C%u H%u S%u: %s\n", filename, cyl, head, sector+1, vdisk_strerror(vdisk_errno));
 					fclose(fd);
 					vdisk_ctx_free(ctx);
 					vdisk_unref(disk);
@@ -366,8 +372,9 @@ static unsigned standard_disk_size(unsigned ncyls) {
 static int vdisk_save_vdk(struct vdisk *disk) {
 	uint8_t buf[256];
 	FILE *fd;
-	if (disk == NULL)
+	if (disk == NULL) {
 		return -1;
+	}
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
 	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
@@ -375,25 +382,25 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 	// scan disk geometry
 	struct vdisk_info vinfo;
 	if (!vdisk_get_info(ctx, &vinfo)) {
-		LOG_WARN("VDISK/VDK/WRITE: failed reading disk geometry: %s\n", vdisk_strerror(vdisk_errno));
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: internal geometry error: %s\n", disk->filename, vdisk_strerror(vdisk_errno));
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
 	}
 	if (vinfo.density == vdisk_density_mixed) {
-		LOG_WARN("VDISK/VDK/WRITE: not writing: mixed density not supported\n");
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: not writing: mixed density unsupported\n", disk->filename);
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
 	}
 	if (vinfo.ssize_code != 1) {
-		LOG_WARN("VDISK/VDK/WRITE: not writing: only 256 byte sectors supported\n");
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: not writing: %u byte sectors unsupported\n", disk->filename, 128U << vinfo.ssize_code);
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
 	}
 	if (vinfo.num_sectors != 18) {
-		LOG_WARN("VDISK/VDK/WRITE: not writing: only 18 sectors per track supported\n");
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: not writing: %u sector tracks unsupported\n", disk->filename, vinfo.num_sectors);
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
@@ -401,9 +408,9 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 
 	unsigned ssize = 128 << vinfo.ssize_code;
 
-	LOG_DEBUG(1, "Writing VDK virtual disk: %uC %uH (%u x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
+	LOG_MOD_SUB_DEBUG(1, "vdisk", "vdk", "%s: writing: %uC %uH %uS (%u-byte)\n", disk->filename, vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
 	if (vinfo.first_sector_id != 1) {
-		LOG_WARN("VDISK/VDK/WRITE: first sector id of %u may render image unreadable\n", vinfo.first_sector_id);
+		LOG_MOD_SUB_WARN("vdisk", "vdk", "%s: first sector id of %u may render image unreadable\n", disk->filename, vinfo.first_sector_id);
 	}
 
 	uint16_t header_length = 12;
@@ -503,7 +510,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 
 	if (header_size > 0) {
 		if (fread(buf, header_size, 1, fd) < 1) {
-			LOG_WARN("Failed to read JVC header in '%s'\n", filename);
+			LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: failed to read header\n", filename);
 			fclose(fd);
 			return NULL;
 		}
@@ -519,7 +526,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	} else if (auto_os9) {
 		/* read first sector & check it makes sense */
 		if (fread(buf + 256, 256, 1, fd) < 1) {
-			LOG_WARN("Failed to read from JVC '%s'\n", filename);
+			LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: read failed (sector)\n", filename);
 			fclose(fd);
 			return NULL;
 		}
@@ -542,7 +549,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 	unsigned bytes_per_sector = ssize + sector_attr_flag;
 	unsigned bytes_per_cyl = nsectors * bytes_per_sector * nheads;
 	if (bytes_per_cyl == 0) {
-		LOG_WARN("Bad JVC header in '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: bad header\n", filename);
 		fclose(fd);
 		return NULL;
 	}
@@ -573,9 +580,9 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 		return NULL;
 	}
 	if (headerless_os9) {
-		LOG_DEBUG(1, "Loading headerless OS-9 virtual disk: %uC %uH %uS (%u-byte)\n", ncyls, nheads, nsectors, ssize);
+		LOG_MOD_SUB_DEBUG(1, "vdisk", "jvc", "%s: reading headerless OS-9 image: %uC %uH %uS (%u-byte)\n", filename, ncyls, nheads, nsectors, ssize);
 	} else {
-		LOG_DEBUG(1, "Loading JVC virtual disk: %uC %uH %uS (%u-byte)\n", ncyls, nheads, nsectors, ssize);
+		LOG_MOD_SUB_DEBUG(1, "vdisk", "jvc", "%s: reading: %uC %uH %uS (%u-byte)\n", filename, ncyls, nheads, nsectors, ssize);
 	}
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < nheads; head++) {
@@ -589,7 +596,7 @@ static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
 					memset(buf, 0, ssize);
 				}
 				if (!vdisk_write_sector(ctx, cyl, head, sector + first_sector, ssize, buf)) {
-					LOG_WARN("Failed writing C%u H%u S%u: %s\n", cyl, head, sector+1, vdisk_strerror(vdisk_errno));
+					LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: vdisk error: C%u H%u S%u: %s\n", filename, cyl, head, sector+1, vdisk_strerror(vdisk_errno));
 					fclose(fd);
 					vdisk_ctx_free(ctx);
 					vdisk_unref(disk);
@@ -615,8 +622,9 @@ static struct vdisk *vdisk_load_os9(const char *filename) {
 static int vdisk_save_jvc(struct vdisk *disk) {
 	uint8_t buf[1024];
 	FILE *fd;
-	if (!disk)
+	if (!disk) {
 		return -1;
+	}
 	if (!(fd = fopen(disk->filename, "wb")))
 		return -1;
 	struct vdisk_ctx *ctx = vdisk_ctx_new(disk);
@@ -624,19 +632,19 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	// scan disk geometry
 	struct vdisk_info vinfo;
 	if (!vdisk_get_info(ctx, &vinfo)) {
-		LOG_WARN("VDISK/JVC/WRITE: failed reading disk geometry: %s\n", vdisk_strerror(vdisk_errno));
+		LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: internal geometry error: %s\n", disk->filename, vdisk_strerror(vdisk_errno));
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
 	}
 	if (vinfo.density == vdisk_density_mixed) {
-		LOG_WARN("VDISK/JVC/WRITE: not writing: mixed density not supported\n");
+		LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: not writing: mixed density unsupported\n", disk->filename);
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
 	}
 	if (vinfo.ssize_code == -1) {
-		LOG_WARN("VDISK/JVC/WRITE: not writing: mixed sector size not supported\n");
+		LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: not writing: mixed sector size unsupported\n", disk->filename);
 		fclose(fd);
 		vdisk_ctx_free(ctx);
 		return -1;
@@ -650,7 +658,7 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 	buf[4] = 0;  // sector attribute flag currently unused
 	unsigned ssize = 128 << vinfo.ssize_code;
 
-	LOG_DEBUG(1, "Writing JVC virtual disk: %uC %uH (%u x %u-byte sectors)\n", vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
+	LOG_MOD_SUB_DEBUG(1, "vdisk", "jvc", "%s: writing: %uC %uH %uS (%u-byte)\n", disk->filename, vinfo.num_cylinders, vinfo.num_heads, vinfo.num_sectors, ssize);
 
 	// don't write a header if OS-9 detection didn't find one
 	unsigned header_size = 0;
@@ -733,26 +741,29 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 		return NULL;
 
 	if (fread(header, 16, 1, fd) < 1) {
-		LOG_WARN("Failed to read DMK header in '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "dmk", "%s: failed to read header\n", filename);
 		fclose(fd);
 		return NULL;
 	}
 	ncyls = header[1];
 	track_length = (header[3] << 8) | header[2];  // yes, little-endian!
 	if (track_length < 0x0cc0 || track_length > 0x2940) {
-		LOG_WARN("Invalid DMK track length in '%s'\n", filename);
+		LOG_MOD_SUB_WARN("vdisk", "dmk", "%s: invalid track length %u\n", filename, track_length);
 		fclose(fd);
 		return NULL;
 	}
 	nheads = (header[4] & 0x10) ? 1 : 2;
-	if (header[4] & 0x40)
-		LOG_WARN("DMK is flagged single-density only\n");
-	if (header[4] & 0x80)
-		LOG_WARN("DMK is flagged density-agnostic\n");
+	const char *density_message = "";
+	if (header[4] & 0x40) {
+		density_message = " (single-density)";
+	}
+	if (header[4] & 0x80) {
+		density_message = " (mixed-density)";
+	}
 	file_size -= 16;
 	(void)file_size;  // TODO: check this matches what's going to be read
 	disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
-	LOG_DEBUG(1, "Loading DMK virtual disk: %uC %uH (%u-byte)\n", ncyls, nheads, track_length);
+	LOG_MOD_SUB_DEBUG(1, "vdisk", "dmk", "%s: reading: %uC %uH (%u-byte)%s\n", filename, ncyls, nheads, track_length, density_message);
 	disk->filetype = FILETYPE_DMK;
 	disk->filename = xstrdup(filename);
 	disk->write_back = header[0] ? 0 : 1;
@@ -786,19 +797,23 @@ static struct vdisk *vdisk_load_dmk(const char *filename) {
 static int vdisk_save_dmk(struct vdisk *disk) {
 	uint8_t header[16];
 	FILE *fd;
-	if (!disk)
+	if (!disk) {
 		return -1;
-	if (!(fd = fopen(disk->filename, "wb")))
+	}
+	if (!(fd = fopen(disk->filename, "wb"))) {
 		return -1;
-	LOG_DEBUG(1, "Writing DMK virtual disk: %uC %uH (%u-byte)\n", disk->num_cylinders, disk->num_heads, disk->track_length);
+	}
+	LOG_MOD_SUB_DEBUG(1, "vdisk", "dmk", "%s: writing: %uC %uH (%u-byte)\n", disk->filename, disk->num_cylinders, disk->num_heads, disk->track_length);
 	memset(header, 0, sizeof(header));
-	if (!disk->write_back)
+	if (!disk->write_back) {
 		header[0] = 0xff;
+	}
 	header[1] = disk->num_cylinders;
 	header[2] = disk->track_length & 0xff;
 	header[3] = (disk->track_length >> 8) & 0xff;
-	if (disk->num_heads == 1)
+	if (disk->num_heads == 1) {
 		header[4] |= 0x10;
+	}
 	header[11] = disk->write_protect ? 0xff : 0;
 	fwrite(header, 16, 1, fd);
 	for (unsigned cyl = 0; cyl < disk->num_cylinders; cyl++) {
@@ -1100,7 +1115,7 @@ _Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
 	for (unsigned cyl = 0; cyl < ncyls; cyl++) {
 		for (unsigned head = 0; head < nheads; head++) {
 			if (!vdisk_format_track(ctx, dden, cyl, head, nsectors, first_sector, ssize_code)) {
-				LOG_WARN("Track format failed: %s\n", vdisk_strerror(vdisk_errno));
+				LOG_MOD_WARN("vdisk", "track format failed: %s\n", vdisk_strerror(vdisk_errno));
 				return 0;
 			}
 		}
