@@ -2,7 +2,7 @@
  *
  *  \brief General logging framework.
  *
- *  \copyright Copyright 2013-2021 Ciaran Anscomb
+ *  \copyright Copyright 2013-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -100,7 +100,7 @@ void log_hexdump_line(struct log_handle *l) {
 	assert(l->type == LOG_HEXDUMP);
 	if (l->ctx.hexdump.nbytes == 0)
 		return;
-	LOG_PRINT("%s: %04x  ", l->prefix, l->ctx.hexdump.address);
+	LOG_PRINT("%s %04x  ", l->prefix, l->ctx.hexdump.address);
 	unsigned i;
 	for (i = 0; i < l->ctx.hexdump.nbytes; i++) {
 		int f = ((i + 1) == l->ctx.hexdump.flag) ? '*' : ' ';
@@ -110,7 +110,7 @@ void log_hexdump_line(struct log_handle *l) {
 	}
 	for (; i < 16; i++) {
 		LOG_PRINT("   ");
-		if (i == 8)
+		if (i == 7)
 			LOG_PRINT(" ");
 	}
 	LOG_PRINT(" |");
