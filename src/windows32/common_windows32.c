@@ -51,7 +51,7 @@ int windows32_init(_Bool alloc_console) {
 	WSADATA wsaData;
 	wVersionRequested = MAKEWORD(2, 2);
 	if (WSAStartup(wVersionRequested, &wsaData) != 0) {
-		LOG_WARN("windows32: WSAStartup failed\n");
+		LOG_MOD_WARN("windows32", "WSAStartup failed\n");
 		return -1;
 	}
 	return 0;
