@@ -41,6 +41,9 @@
 
 #ifndef SF_DEBUG
 #define SF_DEBUG(...) LOG_PRINT(__VA_ARGS__)
+#define SF_MOD_DEBUG(...) LOG_MOD_PRINT("sndfile_compat", __VA_ARGS__)
+#else
+#define SF_MOD_DEBUG(l,...)
 #endif
 
 #ifndef HAVE_SNDFILE
@@ -112,23 +115,26 @@ static _Bool wav_scan(SNDFILE *sf) {
 	assert(sf != NULL);
 
 	off_t old_position = ftello(sf->fd);
-	if (fseeko(sf->fd, 0, SEEK_SET) != 0)
+	if (fseeko(sf->fd, 0, SEEK_SET) != 0) {
+		set_error(sf, SF_ERR_SYSTEM);
 		return 0;
+	}
 
 	// RIFF or RIFX fourcc
 	uint32_t riff = 0;
 	_Bool error = !read_cc4(sf, &riff);
-	if (riff == 0x52494646) {
+	if (!error && riff == 0x52494646) {
 		// "RIFF" - little-endian
 		sf->fmt = SF_FORMAT_WAV | SF_ENDIAN_LITTLE;
 		sf->wrong_endian = 1;
 
-	} else if (riff == 0x52494658) {
+	} else if (!error && riff == 0x52494658) {
 		// "RIFX" - big-endian
 		sf->fmt = SF_FORMAT_WAV | SF_ENDIAN_BIG;
 		sf->wrong_endian = 0;
-	} else {
+	} else if (!error) {
 		error = 1;
+		set_error(sf, SF_ERR_UNRECOGNISED_FORMAT);
 	}
 
 	// 32-bit RIFF length
@@ -188,7 +194,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 				uint32_t dwSamplesPerSec = 0;
 				uint32_t tmp32;
 				uint16_t wBitsPerSample = 0;
-				SF_DEBUG("SF/WAV: 'fmt ' chunk\n");
+				SF_MOD_DEBUG("'fmt ' chunk\n");
 
 				// common-fields
 				if (chunk_length < 16) {
@@ -237,7 +243,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 					// supposedly invalid, but we'll just
 					// warn:
 					if (chunk_length < 2) {
-						LOG_WARN("sndfile_compat: WAVE_FORMAT_IEEE_FLOAT should have 'fmt' extension.\n                Data may be invalid.\n");
+						LOG_MOD_WARN("sndfile_compat", "WAVE_FORMAT_IEEE_FLOAT should have 'fmt' extension\n");
 					}
 					if (wBitsPerSample == 32) {
 						sf->bytes_per_sample = 4;
@@ -257,7 +263,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 					}
 #endif  /* SUPPORT_FLOAT */
 				} else {
-					SF_DEBUG("SF/WAV: unknown wFormatTag\n");
+					SF_MOD_DEBUG("unknown wFormatTag\n");
 					set_error(sf, SF_ERR_UNSUPPORTED_ENCODING);
 					error = 1;
 					break;
@@ -273,7 +279,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 		case 0x66616374:
 			// "fact"
 			{
-				SF_DEBUG("SF/WAV: 'fact' chunk\n");
+				SF_MOD_DEBUG("'fact' chunk\n");
 				error = error || !read_uint32(sf, &dwFileSize);
 				if (error) {
 					SF_DEBUG("\terror reading chunk data\n");
@@ -333,6 +339,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 	} else {
 		// If there was an error, seek to the position we got on entry.
 		fseeko(sf->fd, old_position, SEEK_SET);
+		set_error(sf, SF_ERR_MALFORMED_FILE);
 	}
 
 	return error;
@@ -469,8 +476,10 @@ SNDFILE *sf_open(const char *path, int mode, SF_INFO *sf_info) {
 	FILE *fd = fopen(path, fmode);
 	if (!fd && mode == SFM_RDWR)
 		fd = fopen(path, "w+b");
-	if (!fd)
+	if (!fd) {
+		sndfile_compat_error = SF_ERR_SYSTEM;
 		return NULL;
+	}
 
 	SNDFILE *sf = xmalloc(sizeof(*sf));
 	*sf = (SNDFILE){0};
@@ -548,6 +557,7 @@ SNDFILE *sf_open(const char *path, int mode, SF_INFO *sf_info) {
 	}
 
 	if (error) {
+		sndfile_compat_error = sf->error;
 		free(sf);
 		fclose(fd);
 		return NULL;
@@ -807,10 +817,12 @@ static const char *sf_error_string[] = {
 
 const char *sf_strerror(SNDFILE *sf) {
 	int err = sndfile_compat_error;
-	if (sf)
+	if (sf) {
 		err = sf->error;
-	if (err == SF_ERR_SYSTEM)
+	}
+	if (err == SF_ERR_SYSTEM) {
 		return strerror(errno);
+	}
 	if (err >= 0 && err < (int)ARRAY_N_ELEMENTS(sf_error_string)) {
 		return sf_error_string[err];
 	}
@@ -838,6 +850,7 @@ static _Bool read_cc4(SNDFILE *sf, uint32_t *dst) {
 	int lsb = fs_read_uint16(sf->fd);
 	if (msb < 0 || lsb < 0) {
 		set_error(sf, SF_ERR_SYSTEM);
+		errno = ferror(sf->fd);
 		return 0;
 	}
 	*dst = (msb << 16) | lsb;
@@ -849,6 +862,7 @@ static _Bool read_uint8(SNDFILE *sf, uint8_t *dst) {
 	int v = fs_read_uint8(sf->fd);
 	if (v < 0) {
 		set_error(sf, SF_ERR_SYSTEM);
+		errno = ferror(sf->fd);
 		return 0;
 	}
 	*dst = v;
@@ -860,6 +874,7 @@ static _Bool read_uint16(SNDFILE *sf, uint16_t *dst) {
 	int v = sf->wrong_endian ? fs_read_uint16_le(sf->fd) : fs_read_uint16(sf->fd);
 	if (v < 0) {
 		set_error(sf, SF_ERR_SYSTEM);
+		errno = ferror(sf->fd);
 		return 0;
 	}
 	*dst = v;
@@ -929,6 +944,7 @@ static _Bool write_cc4(SNDFILE *sf, uint32_t v) {
 static _Bool write_uint8(SNDFILE *sf, uint8_t v) {
 	if (fs_write_uint8(sf->fd, v) != 1) {
 		set_error(sf, SF_ERR_SYSTEM);
+		errno = ferror(sf->fd);
 		return 0;
 	}
 	return 1;
@@ -938,6 +954,7 @@ static _Bool write_uint16(SNDFILE *sf, uint16_t v) {
 	int r = sf->wrong_endian ? fs_write_uint16_le(sf->fd, v) : fs_write_uint16(sf->fd, v);
 	if (r != 2) {
 		set_error(sf, SF_ERR_SYSTEM);
+		errno = ferror(sf->fd);
 		return 0;
 	}
 	return 1;
