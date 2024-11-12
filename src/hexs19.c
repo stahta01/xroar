@@ -2,7 +2,7 @@
  *
  *  \brief Support for various binary representations.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,9 +26,11 @@
 
 #include "top-config.h"
 
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "delegate.h"
 
@@ -39,8 +41,8 @@
 #include "machine.h"
 #include "xroar.h"
 
-static int dragon_bin_load(FILE *fd, int autorun);
-static int coco_bin_load(FILE *fd, int autorun);
+static int dragon_bin_load(const char *filename, int autorun);
+static int coco_bin_load(const char *filename, int autorun);
 
 static uint8_t read_nibble(FILE *fd) {
 	int in;
@@ -76,13 +78,16 @@ int intel_hex_read(const char *filename, int autorun) {
 	int data;
 	uint16_t exec = 0;
 	struct log_handle *log_hex = NULL;
-	if (filename == NULL)
+	if (filename == NULL) {
 		return -1;
-	if (!(fd = fopen(filename, "rb")))
+	}
+	if (!(fd = fopen(filename, "rb"))) {
+		LOG_MOD_SUB_WARN("binary", "hex", "%s: %s\n", filename, strerror(errno));
 		return -1;
-	LOG_DEBUG(1, "Reading Intel HEX record file\n");
+	}
+	LOG_MOD_SUB_DEBUG(1, "binary", "hex", "%s: reading Intel HEX record\n", filename);
 	if (logging.debug_file & LOG_FILE_BIN_DATA)
-		log_open_hexdump(&log_hex, "Intel HEX read: ");
+		log_open_hexdump(&log_hex, "[binary/hex]");
 	while ((data = fs_read_uint8(fd)) >= 0) {
 		if (data != ':') {
 			fclose(fd);
@@ -130,10 +135,10 @@ int intel_hex_read(const char *filename, int autorun) {
 			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 		}
 		if (autorun && dcpu) {
-			LOG_DEBUG_FILE(LOG_FILE_BIN, "Intel HEX: EXEC $%04x - autorunning\n", exec);
+			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - autorunning\n", exec);
 			DELEGATE_CALL(dcpu->set_pc, exec);
 		} else {
-			LOG_DEBUG_FILE(LOG_FILE_BIN, "Intel HEX: EXEC $%04x - not autorunning\n", exec);
+			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - not autorunning\n", exec);
 		}
 	}
 
@@ -142,40 +147,52 @@ int intel_hex_read(const char *filename, int autorun) {
 }
 
 int bin_load(const char *filename, int autorun) {
-	FILE *fd;
-	int type;
-	if (filename == NULL)
+	if (filename == NULL) {
 		return -1;
-	if (!(fd = fopen(filename, "rb")))
+	}
+	FILE *fd = fopen(filename, "rb");
+	if (!fd) {
+		LOG_MOD_WARN("binary", "%s: %s\n", filename, strerror(errno));
 		return -1;
-	type = fs_read_uint8(fd);
+	}
+	int type = fs_read_uint8(fd);
+	fclose(fd);
+
 	switch (type) {
 	case 0x55:
-		return dragon_bin_load(fd, autorun);
+		return dragon_bin_load(filename, autorun);
 	case 0x00:
-		return coco_bin_load(fd, autorun);
+		return coco_bin_load(filename, autorun);
 	default:
 		break;
 	}
-	LOG_DEBUG(1, "Unknown binary file type.\n");
-	fclose(fd);
+	LOG_MOD_DEBUG(1, "binary", "unknown file type\n");
 	return -1;
 }
 
-static int dragon_bin_load(FILE *fd, int autorun) {
+static int dragon_bin_load(const char *filename, int autorun) {
+	if (!filename) {
+		return -1;
+	}
+	FILE *fd = fopen(filename, "rb");
+	if (!fd) {
+		LOG_MOD_SUB_WARN("binary", "ddos", "%s: %s\n", filename, strerror(errno));
+		return -1;
+	}
+
 	int filetype, load, exec;
 	size_t length;
-	LOG_DEBUG(1, "Reading Dragon BIN file\n");
+	LOG_MOD_SUB_DEBUG(1, "binary", "ddos", "%s: reading DragonDOS BIN\n", filename);
 	filetype = fs_read_uint8(fd);
 	(void)filetype;  // XXX verify this makes sense
 	load = fs_read_uint16(fd);
 	length = fs_read_uint16(fd);
 	exec = fs_read_uint16(fd);
 	(void)fs_read_uint8(fd);
-	LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: LOAD $%04zx bytes to $%04x, EXEC $%04x\n", length, load, exec);
+	LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "LOAD $%04zx bytes to $%04x, EXEC $%04x\n", length, load, exec);
 	struct log_handle *log_bin = NULL;
 	if (logging.debug_file & LOG_FILE_BIN_DATA) {
-		log_open_hexdump(&log_bin, "Dragon BIN read: ");
+		log_open_hexdump(&log_bin, "[binary/ddos]");
 		log_hexdump_set_addr(log_bin, load);
 	}
 	for (size_t i = 0; i < length; i++) {
@@ -183,7 +200,7 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 		if (data < 0) {
 			log_hexdump_flag(log_bin);
 			log_close(&log_bin);
-			LOG_WARN("Dragon BIN: short read\n");
+			LOG_MOD_SUB_WARN("binary", "ddos", "short read\n");
 			break;
 		}
 		xroar.machine->write_byte(xroar.machine, (load + i) & 0xffff, data);
@@ -195,37 +212,49 @@ static int dragon_bin_load(FILE *fd, int autorun) {
 		dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 	}
 	if (autorun && dcpu) {
-		LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: EXEC $%04x - autorunning\n", exec);
+		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - autorunning\n", exec);
 		DELEGATE_CALL(dcpu->set_pc, exec);
 	} else {
-		LOG_DEBUG_FILE(LOG_FILE_BIN, "Dragon BIN: EXEC $%04x - not autorunning\n", exec);
+		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - not autorunning\n", exec);
 	}
 	fclose(fd);
 	return 0;
 }
 
-static int coco_bin_load(FILE *fd, int autorun) {
-	size_t length;
+static int coco_bin_load(const char *filename, int autorun) {
+	if (!filename) {
+		return -1;
+	}
+	FILE *fd = fopen(filename, "rb");
+	if (!fd) {
+		LOG_MOD_SUB_WARN("binary", "rsdos", "%s: %s\n", filename, strerror(errno));
+		return -1;
+	}
+
+	int length;
 	int chunk, load, exec;
-	LOG_DEBUG(1, "Reading CoCo BIN file\n");
+	LOG_MOD_SUB_DEBUG(1, "binary", "rsdos", "%s: reading RS-DOS BIN\n", filename);
 	fseek(fd, 0, SEEK_SET);
 	while ((chunk = fs_read_uint8(fd)) >= 0) {
 		if (chunk == 0) {
 			length = fs_read_uint16(fd);
 			load = fs_read_uint16(fd);
-			LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: LOAD $%04zx bytes to $%04x\n", length, load);
+			if (length < 0 || load < 0) {
+				LOG_MOD_SUB_WARN("binary", "rsdos", "%s: error reading chunk header\n", filename);
+			}
+			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "LOAD $%04x bytes to $%04x\n", length, load);
 			// Generate a hex dump per chunk
 			struct log_handle *log_bin = NULL;
 			if (logging.debug_file & LOG_FILE_BIN_DATA) {
-				log_open_hexdump(&log_bin, "CoCo BIN: read: ");
+				log_open_hexdump(&log_bin, "[binary/rsdos]");
 				log_hexdump_set_addr(log_bin, load);
 			}
-			for (size_t i = 0; i < length; i++) {
+			for (int i = 0; i < length; ++i) {
 				int data = fs_read_uint8(fd);
 				if (data < 0) {
 					log_hexdump_flag(log_bin);
 					log_close(&log_bin);
-					LOG_WARN("CoCo BIN: short read in data chunk\n");
+					LOG_MOD_SUB_WARN("binary", "rsdos", "%s: short read in data chunk\n", filename);
 					break;
 				}
 				xroar.machine->write_byte(xroar.machine, (load + i) & 0xffff, data);
@@ -237,7 +266,7 @@ static int coco_bin_load(FILE *fd, int autorun) {
 			(void)fs_read_uint16(fd);  // skip 0
 			exec = fs_read_uint16(fd);
 			if (exec < 0) {
-				LOG_WARN("CoCo BIN: short read in exec chunk\n");
+				LOG_MOD_SUB_WARN("binary", "rsdos", "%s: short read in exec chunk\n", filename);
 				break;
 			}
 			struct debug_cpu *dcpu = NULL;
@@ -245,14 +274,14 @@ static int coco_bin_load(FILE *fd, int autorun) {
 				dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
 			}
 			if (autorun && dcpu) {
-				LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: EXEC $%04x - autorunning\n", exec);
+				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - autorunning\n", exec);
 				DELEGATE_CALL(dcpu->set_pc, exec);
 			} else {
-				LOG_DEBUG_FILE(LOG_FILE_BIN, "CoCo BIN: EXEC $%04x - not autorunning\n", exec);
+				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - not autorunning\n", exec);
 			}
 			break;
 		} else {
-			LOG_WARN("CoCo BIN: unknown chunk type 0x%02x\n", chunk);
+			LOG_MOD_SUB_WARN("binary", "rsdos", "%s: unknown chunk type 0x%02x\n", filename, chunk);
 			break;
 		}
 	}
