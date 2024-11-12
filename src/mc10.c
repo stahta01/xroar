@@ -404,19 +404,10 @@ static _Bool mc10_finish(struct part *p) {
 
 	// RAM configuration
 	{
-		unsigned ram0_nbanks = mp->RAM0 ? mp->RAM0->nbanks : 0;
-		unsigned ram0_bank_k = mp->RAM0 ? (mp->RAM0->bank_nelems / 1024) : 0;
-		unsigned ram0_k = ram0_nbanks * ram0_bank_k;
-		LOG_DEBUG(1, "[ram] %u banks * %uK = %uK internal RAM\n", ram0_nbanks, ram0_bank_k, ram0_k);
-
-		unsigned ram1_nbanks = mp->RAM1 ? mp->RAM1->nbanks : 0;
-		unsigned ram1_bank_k = mp->RAM1 ? (mp->RAM1->bank_nelems / 1024) : 0;
-		unsigned ram1_k = ram1_nbanks * ram1_bank_k;
-		if (ram1_k > 0) {
-			LOG_DEBUG(1, "[ram] %u banks * %uK = %uK external RAM\n", ram1_nbanks, ram1_bank_k, ram1_k);
-			unsigned total_k = ram0_k + ram1_k;
-			LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
-		}
+		unsigned ram0_k = ram_report(mp->RAM0, "internal RAM");
+		unsigned ram1_k = ram_report(mp->RAM1, "external RAM");
+		unsigned total_k = ram0_k + ram1_k;
+		LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
 	}
 
 	mp->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
@@ -556,7 +547,7 @@ static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 				return 0;
 			}
 			if (length != ((unsigned)mp->machine.config->ram * 1024)) {
-				LOG_WARN("MC10/DESERIALISE: RAM size mismatch\n");
+				LOG_MOD_WARN("mc10", "deserialise: RAM size mismatch\n");
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM0", "ram"));

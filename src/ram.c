@@ -26,6 +26,7 @@
 #include "array.h"
 #include "xalloc.h"
 
+#include "logging.h"
 #include "part.h"
 #include "ram.h"
 #include "serialise.h"
@@ -84,7 +85,7 @@ static struct part *ram_allocate(void) {
 
 static void ram_initialise(struct part *p, void *options) {
 	struct ram *ram = (struct ram *)p;
-	struct ram_config *config = options;
+	const struct ram_config *config = options;
 	assert(ram != NULL);
 	assert(config != NULL);
 	ram->d_width = config->d_width;
@@ -241,12 +242,14 @@ static void recalculate_bank_size(struct ram *ram) {
 	ram->bank_nelems = (1 << addr_bits);
 }
 
-static size_t ram_bank_nbytes(struct ram *ram) {
-	if (!ram)
+static size_t ram_bank_nbytes(const struct ram *ram) {
+	if (!ram) {
 		return 0;
+	}
 	size_t nbytes = ram->bank_nelems;
-	if (ram->d_width == 16)
+	if (ram->d_width == 16) {
 		nbytes *= 2;
+	}
 	return nbytes;
 }
 
@@ -352,3 +355,14 @@ extern inline void ram_d8(struct ram *ram, _Bool RnW, unsigned bank,
 			  unsigned row, unsigned col, uint8_t *d);
 extern inline void ram_d16(struct ram *ram, _Bool RnW, unsigned bank,
 			   unsigned row, unsigned col, uint16_t *d);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+unsigned ram_report(struct ram *ram, const char *name) {
+	unsigned nbanks = ram ? ram->nbanks : 0;
+	unsigned bank_k = ram ? ram->bank_nelems / 1024 : 0;
+	unsigned k = nbanks * bank_k;
+	LOG_MOD_DEBUG(1, "ram", "%u bank%s * %uK = %uK %s\n", nbanks,
+		      (nbanks == 1) ? "" : "s", bank_k, k, name);
+	return k;
+}

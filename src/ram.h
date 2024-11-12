@@ -148,4 +148,8 @@ inline void ram_d16(struct ram *ram, _Bool RnW, unsigned bank,
 	}
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+unsigned ram_report(struct ram *ram, const char *name);
+
 #endif
