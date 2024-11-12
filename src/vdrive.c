@@ -2,7 +2,7 @@
  *
  *  \brief Virtual floppy drives.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -252,7 +252,7 @@ static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct vdrive_interface_private *vip = sptr;
+	const struct vdrive_interface_private *vip = sptr;
 	switch (tag) {
 	case VDRIVE_SER_DRIVE:
 		for (unsigned i = 0; i < MAX_DRIVES; i++) {
@@ -524,11 +524,11 @@ void vdrive_write_idam(void *sptr) {
 }
 
 unsigned vdrive_time_to_next_byte(void *sptr) {
-	struct vdrive_interface_private *vip = sptr;
+	const struct vdrive_interface_private *vip = sptr;
 	event_ticks next_cycle = vip->track_start_cycle + (vip->head_pos - 128) * BYTE_TIME;
 	int to_time = event_tick_delta(next_cycle, event_current_tick);
 	if (to_time < 0) {
-		LOG_DEBUG(3, "Negative time to next byte!\n");
+		LOG_MOD_DEBUG(3, "vdrive", "negative time to next byte!\n");
 		return 1;
 	}
 	return (unsigned)to_time;
@@ -560,7 +560,7 @@ unsigned vdrive_time_to_next_idam(void *sptr) {
 	next_cycle = vip->track_start_cycle + (next_head_pos - 128) * BYTE_TIME;
 	int to_time = event_tick_delta(next_cycle, event_current_tick);
 	if (to_time < 0) {
-		LOG_DEBUG(3, "Negative time to next IDAM!\n");
+		LOG_MOD_DEBUG(3, "vdrive", "negative time to next IDAM!\n");
 		return 1;
 	}
 	return to_time;
