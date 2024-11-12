@@ -244,7 +244,7 @@ void joystick_config_remove(struct joystick_config *jc) {
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		if (joystick_port_config[i] == jc) {
 			joystick_unmap(i);
-			LOG_DEBUG(1, "[joystick] port %u unplugged\n", i);
+			LOG_MOD_DEBUG(1, "joystick", "port %u unplugged\n", i);
 		}
 	}
 
@@ -534,7 +534,7 @@ void js_read_db_file(const char *filename) {
 		sdsfree(trimline);
 	}
 	fclose(fd);
-	LOG_DEBUG(1, "[joystick] loaded %d mapping%s from %s\n", count, (count == 1) ? "" : "s", filename);
+	LOG_MOD_DEBUG(1, "joystick", "loaded %d mapping%s from %s\n", count, (count == 1) ? "" : "s", filename);
 }
 
 struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback) {
@@ -604,7 +604,7 @@ static void joystick_ui_set_joystick_port(void *sptr, int tag, void *smsg) {
 	int port = uimsg->value;
 	int jsid = (intptr_t)uimsg->data;
 	if (port < 0 || (unsigned)port >= JOYSTICK_NUM_PORTS) {
-		LOG_WARN("Joystick port %d out of range\n", port);
+		LOG_MOD_WARN("joystick", "port %d out of range\n", port);
 		uimsg->value = -1;
 		return;
 	}
@@ -671,11 +671,11 @@ static void joystick_map(const struct joystick_config *jc, unsigned port) {
 	}
 	if (j) {
 		const char *description = jc->description ? jc->description : jc->name;
-		LOG_DEBUG(1, "[joystick] port %u = %s\n", port, description);
+		LOG_MOD_DEBUG(1, "joystick", "port %u = %s\n", port, description);
 		joystick_port[port] = j;
 		joystick_port_config[port] = jc;
 	} else {
-		LOG_DEBUG(1, "[joystick] port %u unplugged\n", port);
+		LOG_MOD_DEBUG(1, "joystick", "port %u unplugged\n", port);
 	}
 }
 
@@ -701,9 +701,9 @@ void joystick_set_virtual(struct joystick_config const *jc) {
 	virtual_joystick_config = jc;
 	if (jc) {
 		const char *description = jc->description ? jc->description : jc->name;
-		LOG_DEBUG(1, "[joystick] virtual joystick = %s\n", description);
+		LOG_MOD_DEBUG(1, "joystick", "virtual joystick = %s\n", description);
 	} else {
-		LOG_DEBUG(1, "[joystick] virtual joystick = None\n");
+		LOG_MOD_DEBUG(1, "joystick", "virtual joystick = None\n");
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		if (remap_virtual & (1 << i)) {
