@@ -234,7 +234,7 @@ struct part *part_create(const char *name, void *options) {
 		return NULL;
 	// If there's a description, print it (log level >= 1)
 	if (pe->description) {
-		LOG_DEBUG(1, "[%s] %s\n", pe->name, pe->description);
+		LOG_MOD_ALT_DEBUG(1, "part", pe->name, "%s\n", pe->description);
 	}
 
 	// Initialise, populating useful stuff from partdb
@@ -369,7 +369,7 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				if (name) {
 					pe = partdb_find_entry(name);
 					if (!pe) {
-						LOG_WARN("PART: can't deserialise '%s'\n", name);
+						LOG_MOD_WARN("part", "can't deserialise '%s'\n", name);
 						free(name);
 						ser_set_error(sh, ser_error_format);
 						return NULL;
@@ -381,7 +381,7 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					assert(p != NULL);
 					// If there's a description, print it (log level >= 1)
 					if (pe->description) {
-						LOG_DEBUG(1, "[%s] %s\n", pe->name, pe->description);
+						LOG_MOD_DEBUG(1, "part", "%s: %s\n", pe->name, pe->description);
 					}
 					p->partdb = pe;
 					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
@@ -393,7 +393,7 @@ struct part *part_deserialise(struct ser_handle *sh) {
 			// Once for each sub-part
 			{
 				if (!p) {
-					LOG_DEBUG(3, "part_deserialise(): DATA must come before sub-PARTs\n");
+					LOG_MOD_DEBUG(3, "part", "part_deserialise(): DATA must come before sub-PARTs\n");
 					ser_set_error(sh, ser_error_format);
 					part_free(p);
 					return NULL;
@@ -401,14 +401,14 @@ struct part *part_deserialise(struct ser_handle *sh) {
 				assert(pe != NULL);
 				char *id = ser_read_string(sh);
 				if (!id) {
-					LOG_DEBUG(3, "part_deserialise(): bad subpart for '%s'\n", pe->name);
+					LOG_MOD_DEBUG(3, "part", "part_deserialise(): bad subpart for '%s'\n", pe->name);
 					ser_set_error(sh, ser_error_format);
 					part_free(p);
 					return NULL;
 				}
 				struct part *c = part_deserialise(sh);
 				if (!c) {
-					LOG_DEBUG(3, "part_deserialise(): failed to deserialise '%s' for '%s'\n", id, pe->name);
+					LOG_MOD_DEBUG(3, "part", "part_deserialise(): failed to deserialise '%s' for '%s'\n", id, pe->name);
 					free(id);
 					part_free(p);
 					return NULL;
@@ -424,13 +424,13 @@ struct part *part_deserialise(struct ser_handle *sh) {
 	}
 
 	if (!p) {
-		LOG_DEBUG(3, "part_deserialise(): failed to deserialise part\n");
+		LOG_MOD_DEBUG(3, "part", "part_deserialise(): failed to deserialise part\n");
 		return NULL;
 	}
 	assert(pe != NULL);
 
 	if (pe->funcs->finish && !pe->funcs->finish(p)) {
-		LOG_DEBUG(3, "part_deserialise(): failed to finalise '%s'\n", pe->name);
+		LOG_MOD_DEBUG(3, "part", "part_deserialise(): failed to finalise '%s'\n", pe->name);
 		part_free(p);
 		return 0;
 	}
