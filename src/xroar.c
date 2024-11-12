@@ -880,7 +880,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Otherwise, not much we can do, so exit.
 	if (xroar.machine_config == NULL) {
-		LOG_ERROR("Failed to start any machine.\n");
+		LOG_MOD_ERROR("xroar", "failed to start any machine\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -937,9 +937,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			ui_module = ui_module_list[0];
 		}
 		if (ui_module) {
-			LOG_WARN("UI module `%s' not found: trying '%s'\n", private_cfg.ui_module, ui_module->common.name);
+			LOG_MOD_WARN("xroar", "UI module `%s' not found: trying '%s'\n", private_cfg.ui_module, ui_module->common.name);
 		} else {
-			LOG_ERROR("UI module `%s' not found\n", private_cfg.ui_module);
+			LOG_MOD_ERROR("xroar", "UI module `%s' not found\n", private_cfg.ui_module);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1043,7 +1043,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// UI module
 	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
 	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
-		LOG_ERROR("No UI module initialised.\n");
+		LOG_MOD_ERROR("xroar", "no UI module initialised\n");
 		return NULL;
 	}
 	xroar.vo_interface = xroar.ui_interface->vo_interface;
@@ -1079,7 +1079,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Audio module
 
 	if (!(xroar.ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
-		LOG_ERROR("No audio module initialised.\n");
+		LOG_MOD_ERROR("xroar", "no audio module initialised\n");
 		return NULL;
 	}
 	if (private_cfg.ao.volume >= 0) {
@@ -1532,10 +1532,6 @@ void xroar_new_disk(int drive) {
 	xroar_eject_disk(drive);
 
 	struct vdisk *new_disk = vdisk_new(VDISK_TRACK_LENGTH_DD300);
-	if (new_disk == NULL) {
-		LOG_WARN("Failed to create new disk\n");
-		return;
-	}
 	switch (filetype) {
 		case FILETYPE_VDK:
 		case FILETYPE_JVC:
@@ -1556,7 +1552,7 @@ void xroar_new_disk(int drive) {
 	ui_update_state(-1, ui_tag_disk_data, drive, new_disk);
 	ui_update_state(-1, ui_tag_disk_write_enable, 1, (void *)(intptr_t)drive);
 	ui_update_state(-1, ui_tag_disk_write_back, 1, (void *)(intptr_t)drive);
-	LOG_DEBUG(1, "New unformatted disk in drive %d: %s\n", 1+drive, filename);
+	LOG_MOD_DEBUG(1, "xroar", "new unformatted disk in drive %d: %s\n", 1+drive, filename);
 }
 
 void xroar_insert_disk_file(int drive, const char *filename) {
@@ -2015,14 +2011,7 @@ void xroar_screenshot(void) {
 	if (!filename)
 		return;
 
-	int r = screenshot_write_png(filename, xroar.vo_interface);
-	if (r != 0) {
-		if (r == -1) {
-			perror("screenshot");
-		} else {
-			LOG_WARN("screenshot: error writing file\n");
-		}
-	}
+	(void)screenshot_write_png(filename, xroar.vo_interface);
 #endif
 }
 #endif
@@ -2290,7 +2279,7 @@ static enum media_slot add_load_file(const char *filename) {
 				break;
 			}
 			if (i == 3) {
-				LOG_WARN("No empty floppy drive for '%s': ignoring\n", filename);
+				LOG_MOD_WARN("xroar", "no empty floppy drive for '%s': ignoring\n", filename);
 			}
 		}
 		break;
@@ -2333,7 +2322,7 @@ static enum media_slot add_load_file(const char *filename) {
 				break;
 			}
 			if (i == 1) {
-				LOG_WARN("No unused hard drive slot for '%s': ignoring\n", filename);
+				LOG_MOD_WARN("xroar", "no unused hard drive slot for '%s': ignoring\n", filename);
 			}
 		}
 		break;
@@ -2386,7 +2375,7 @@ static void cfg_mpi_load_cart(const char *arg) {
 		tmp = carg;
 	}
 	if (slot < 0 || slot > 3) {
-		LOG_WARN("MPI: Invalid slot '%d'\n", slot);
+		LOG_MOD_WARN("xroar", "MPI: invalid slot '%d'\n", slot);
 	} else {
 		if (private_cfg.cart.mpi.slot_cart_name[slot]) {
 			free(private_cfg.cart.mpi.slot_cart_name[slot]);
@@ -2484,7 +2473,7 @@ static void set_joystick_axis(const char *spec) {
 			axis = strtol(tmp, NULL, 0);
 		}
 		if (axis > JOYSTICK_NUM_AXES) {
-			LOG_WARN("Invalid axis number '%u'\n", axis);
+			LOG_MOD_WARN("xroar", "invalid axis number '%u'\n", axis);
 			axis = 0;
 		}
 		tmp = cspec;
@@ -2501,7 +2490,7 @@ static void set_joystick_button(const char *spec) {
 	if (cspec) {
 		button = strtol(tmp, NULL, 0);
 		if (button > JOYSTICK_NUM_AXES) {
-			LOG_WARN("Invalid button number '%u'\n", button);
+			LOG_MOD_WARN("xroar", "invalid button number '%u'\n", button);
 			button = 0;
 		}
 		tmp = cspec;
