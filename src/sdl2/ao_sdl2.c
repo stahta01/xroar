@@ -77,12 +77,12 @@ static void *new(void *cfg) {
 	SDL_AudioSpec desired;
 
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
-		LOG_ERROR("Failed to initialise SDL audio\n");
+		LOG_MOD_ERROR("sdl/audio", "failed to initialise\n");
 		return NULL;
 	}
 
 	const char *driver_name = SDL_GetCurrentAudioDriver();
-	LOG_DEBUG(3, "SDL_GetCurrentAudioDriver(): %s\n", driver_name);
+	LOG_MOD_DEBUG(3, "sdl/audio", "using audio driver '%s'\n", driver_name);
 
 	struct ao_sdl2_interface *aosdl = xmalloc(sizeof(*aosdl));
 	*aosdl = (struct ao_sdl2_interface){0};
@@ -175,7 +175,7 @@ static void *new(void *cfg) {
 
 	// Check the format is supported
 	if (aosdl->device == 0) {
-		LOG_DEBUG(3, "First open audio failed: %s\n", SDL_GetError());
+		LOG_MOD_DEBUG(3, "sdl/audio", "first open audio failed: %s\n", SDL_GetError());
 	} else {
 		switch (aosdl->audiospec.format) {
 		case AUDIO_U8: case AUDIO_S8:
@@ -183,7 +183,7 @@ static void *new(void *cfg) {
 		case AUDIO_F32SYS:
 			break;
 		default:
-			LOG_DEBUG(3, "First open audio returned unknown format: retrying\n");
+			LOG_MOD_DEBUG(3, "sdl/audio", "first open audio returned unknown format: retrying\n");
 			SDL_CloseAudioDevice(aosdl->device);
 			aosdl->device = 0;
 			break;
@@ -194,7 +194,7 @@ static void *new(void *cfg) {
 	if (aosdl->device == 0) {
 		aosdl->device = SDL_OpenAudioDevice(xroar.cfg.ao.device, 0, &desired, &aosdl->audiospec, SDL_AUDIO_ALLOW_ANY_CHANGE);
 		if (aosdl->device == 0) {
-			LOG_ERROR("Couldn't open audio: %s\n", SDL_GetError());
+			LOG_MOD_ERROR("sdl/audio", "failed to open audio: %s\n", SDL_GetError());
 			SDL_QuitSubSystem(SDL_INIT_AUDIO);
 			free(aosdl);
 			return NULL;
@@ -212,7 +212,7 @@ static void *new(void *cfg) {
 		case AUDIO_S16MSB: sample_fmt = SOUND_FMT_S16_BE; sample_nbytes = 2; break;
 		case AUDIO_F32SYS: sample_fmt = SOUND_FMT_FLOAT; sample_nbytes = 4; break;
 		default:
-			LOG_WARN("Unhandled audio format 0x%x.\n", aosdl->audiospec.format);
+			LOG_MOD_WARN("sdl/audio", "unhandled audio format 0x%x\n", aosdl->audiospec.format);
 			goto failed;
 	}
 
@@ -234,7 +234,7 @@ static void *new(void *cfg) {
 
 	ao->sound_interface = sound_interface_new(NULL, sample_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
-		LOG_ERROR("Failed to initialise SDL audio: XRoar internal error\n");
+		LOG_MOD_ERROR("sdl/audio", "failed to initialise: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_sdl2_write_buffer, ao);

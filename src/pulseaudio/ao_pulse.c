@@ -37,7 +37,7 @@
 static void *new(void *cfg);
 
 struct module ao_pulse_module = {
-	.name = "pulse", .description = "Pulse audio",
+	.name = "pulse", .description = "PulseAudio",
 	.new = new,
 };
 
@@ -90,7 +90,7 @@ static void *new(void *cfg) {
 		request_fmt = SOUND_FMT_S16_BE;
 		sample_nbytes = 2;
 	} else {
-		LOG_WARN("Unhandled audio format.");
+		LOG_MOD_WARN("pulse", "unhandled audio format");
 		goto failed;
 	}
 	unsigned frame_nbytes = sample_nbytes * nchannels;
@@ -120,7 +120,7 @@ static void *new(void *cfg) {
 	aopulse->pa = pa_simple_new(NULL, "XRoar", PA_STREAM_PLAYBACK, device,
 	                   "output", &ss, NULL, &ba, &error);
 	if (!aopulse->pa) {
-		LOG_ERROR("Failed to initialise PulseAudio: %s\n", pa_strerror(error));
+		LOG_MOD_ERROR("pulse", "failed to initialise: %s\n", pa_strerror(error));
 		goto failed;
 	}
 
@@ -128,7 +128,7 @@ static void *new(void *cfg) {
 	aopulse->audio_buffer = xmalloc(aopulse->fragment_nbytes);
 	ao->sound_interface = sound_interface_new(aopulse->audio_buffer, request_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
-		LOG_ERROR("Failed to initialise PulseAudio: XRoar internal error\n");
+		LOG_MOD_ERROR("pulse", "failed to initialise: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_pulse_write_buffer, ao);

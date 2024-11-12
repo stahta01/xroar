@@ -2,7 +2,7 @@
  *
  *  \brief OSS sound module.
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -72,6 +72,7 @@ static void *new(void *cfg) {
 	const char *device = xroar.cfg.ao.device;
 	if (device) {
 		aooss->sound_fd = open(xroar.cfg.ao.device, O_WRONLY);
+		LOG_MOD_WARN("oss", "%s: failed to open device\n", xroar.cfg.ao.device);
 	} else for (unsigned i = 0; i < NUM_DEFAULT_DEVICES; i++) {
 		device = default_devices[i];
 		aooss->sound_fd = open(device, O_WRONLY);
@@ -79,7 +80,7 @@ static void *new(void *cfg) {
 			break;
 	}
 	if (aooss->sound_fd == -1) {
-		LOG_ERROR("AO/OSS: failed to open device\n");
+		LOG_MOD_ERROR("oss", "failed to open any device\n");
 		goto failed;
 	}
 
@@ -117,11 +118,11 @@ static void *new(void *cfg) {
 	int format;
 	int bytes_per_sample;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_GETFMTS, &format) == -1) {
-		LOG_ERROR("AO/OSS: SNDCTL_DSP_GETFMTS failed\n");
+		LOG_MOD_ERROR("oss", "SNDCTL_DSP_GETFMTS failed\n");
 		goto failed;
 	}
 	if ((format & (AFMT_U8 | AFMT_S8 | AFMT_S16_LE | AFMT_S16_BE)) == 0) {
-		LOG_ERROR("No desired audio formats supported by device\n");
+		LOG_MOD_ERROR("oss", "no desired audio formats supported by device\n");
 		goto failed;
 	}
 	// if desired_format is one of those returned, use it:
@@ -146,7 +147,7 @@ static void *new(void *cfg) {
 		bytes_per_sample = 1;
 	}
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SETFMT, &format) == -1) {
-		LOG_ERROR("AO/OSS: SNDCTL_DSP_SETFMT failed\n");
+		LOG_MOD_ERROR("oss", "SNDCTL_DSP_SETFMT failed\n");
 		goto failed;
 	}
 
@@ -155,7 +156,7 @@ static void *new(void *cfg) {
 	if (nchannels < 0 || nchannels > 1)
 		nchannels = 1;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_STEREO, &nchannels) == -1) {
-		LOG_ERROR("AO/OSS: SNDCTL_DSP_STEREO failed\n");
+		LOG_MOD_ERROR("oss", "SNDCTL_DSP_STEREO failed\n");
 		goto failed;
 	}
 	nchannels++;
@@ -165,7 +166,7 @@ static void *new(void *cfg) {
 	if (xroar.cfg.ao.rate > 0)
 		rate = xroar.cfg.ao.rate;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SPEED, &rate) == -1) {
-		LOG_ERROR("AO/OSS: SNDCTL_DSP_SPEED failed\n");
+		LOG_MOD_ERROR("oss", "SNDCTL_DSP_SPEED failed\n");
 		goto failed;
 	}
 
@@ -207,14 +208,14 @@ static void *new(void *cfg) {
 	// now piece together the ioctl:
 	int frag = (nfragments << 16) | frag_size_sel;
 	if (ioctl(aooss->sound_fd, SNDCTL_DSP_SETFRAGMENT, &frag) == -1) {
-		LOG_ERROR("AO/OSS: SNDCTL_DSP_SETFRAGMENT failed\n");
+		LOG_MOD_ERROR("oss", "SNDCTL_DSP_SETFRAGMENT failed\n");
 		goto failed;
 	}
 	// ioctl may have modified frag, so extract new values:
 	nfragments = (frag >> 16) & 0x7fff;
 	frag_size_sel = frag & 0xffff;
 	if (frag_size_sel > 30) {
-		LOG_ERROR("AO/OSS: returned fragment size too large\n");
+		LOG_MOD_ERROR("oss", "returned fragment size too large\n");
 		goto failed;
 	}
 	aooss->fragment_nbytes = 1 << frag_size_sel;
@@ -225,7 +226,7 @@ static void *new(void *cfg) {
 	LOG_DEBUG(2, "\tOSS audio device: %s\n", device);
 	ao->sound_interface = sound_interface_new(aooss->audio_buffer, buffer_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
-		LOG_ERROR("AO/OSS: failed to initialise: XRoar internal error\n");
+		LOG_MOD_ERROR("oss", "failed to initialise: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_oss_write_buffer, ao);

@@ -2,7 +2,7 @@
  *
  *  \brief JACK sound module.
  *
- *  \copyright Copyright 2003-2016 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -87,7 +87,7 @@ static void *new(void *cfg) {
 	const char **ports;
 
 	if ((aojack->client = jack_client_open("XRoar", 0, NULL)) == 0) {
-		LOG_ERROR("Initialisation failed: JACK server not running?\n");
+		LOG_MOD_ERROR("jack", "initialisation failed: server not running?\n");
 		goto failed;
 	}
 
@@ -97,19 +97,19 @@ static void *new(void *cfg) {
 	jack_set_process_callback(aojack->client, callback_1, aojack);
 	aojack->output_port = jack_port_register(aojack->client, "output0", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
 	if (jack_activate(aojack->client)) {
-		LOG_ERROR("Initialisation failed: Cannot activate client\n");
+		LOG_MOD_ERROR("jack", "initialisation failed: cannot activate client\n");
 		jack_client_close(aojack->client);
 		goto failed;
 	}
 	if ((ports = jack_get_ports(aojack->client, NULL, NULL, JackPortIsPhysical|JackPortIsInput)) == NULL) {
-		LOG_ERROR("Cannot find any physical playback ports\n");
+		LOG_MOD_ERROR("jack", "cannot find any physical playback ports\n");
 		jack_client_close(aojack->client);
 		goto failed;
 	}
 	/* connect up to 2 ports (stereo output) */
 	for (int i = 0; i < 2 && ports[i]; i++) {
 		if (jack_connect(aojack->client, jack_port_name(aojack->output_port), ports[i])) {
-			LOG_ERROR("Cannot connect output ports\n");
+			LOG_MOD_ERROR("jack", "cannot connect output ports\n");
 			free(ports);
 			jack_client_close(aojack->client);
 			goto failed;
@@ -139,7 +139,7 @@ static void *new(void *cfg) {
 
 	ao->sound_interface = sound_interface_new(aojack->fragment_buffer, sample_fmt, rate, 1, fragment_nframes);
 	if (!ao->sound_interface) {
-		LOG_ERROR("Failed to initialise JACK: XRoar internal error\n");
+		LOG_MOD_ERROR("jack", "failed to initialise: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_jack_write_buffer, ao);

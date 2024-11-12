@@ -2,7 +2,7 @@
  *
  *  \brief ALSA sound module.
  *
- *  \copyright Copyright 2009-2023 Ciaran Anscomb
+ *  \copyright Copyright 2009-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -146,7 +146,7 @@ static void *new(void *cfg) {
 	}
 	if (aoalsa->fragment_nframes > 0) {
 		if ((err = snd_pcm_hw_params_set_period_size_near(aoalsa->pcm_handle, hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_set_period_size_near() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_set_period_size_near() failed\n");
 			goto failed;
 		}
 	}
@@ -158,7 +158,7 @@ static void *new(void *cfg) {
 	}
 	if (nfragments > 0) {
 		if ((err = snd_pcm_hw_params_set_periods_near(aoalsa->pcm_handle, hw_params, &nfragments, NULL)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_set_periods_near() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_set_periods_near() failed\n");
 			goto failed;
 		}
 	}
@@ -174,33 +174,33 @@ static void *new(void *cfg) {
 		buffer_nframes = (rate * 20) / 1000;
 	if (buffer_nframes > 0) {
 		if ((err = snd_pcm_hw_params_set_buffer_size_near(aoalsa->pcm_handle, hw_params, &buffer_nframes)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_set_buffer_size_near() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_set_buffer_size_near() failed\n");
 			goto failed;
 		}
 	}
 
 	if ((err = snd_pcm_hw_params(aoalsa->pcm_handle, hw_params)) < 0) {
-		LOG_ERROR("ALSA: snd_pcm_hw_params() failed\n");
+		LOG_MOD_ERROR("alsa", "snd_pcm_hw_params() failed\n");
 		goto failed;
 	}
 
 	if (nfragments == 0) {
 		if ((err = snd_pcm_hw_params_get_periods(hw_params, &nfragments, &nfragments_dir)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_get_periods() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_get_periods() failed\n");
 			goto failed;
 		}
 	}
 
 	if (aoalsa->fragment_nframes == 0) {
 		if ((err = snd_pcm_hw_params_get_period_size(hw_params, &aoalsa->fragment_nframes, NULL)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_get_period_size() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_get_period_size() failed\n");
 			goto failed;
 		}
 	}
 
 	if (buffer_nframes == 0) {
 		if ((err = snd_pcm_hw_params_get_buffer_size(hw_params, &buffer_nframes)) < 0) {
-			LOG_ERROR("ALSA: snd_pcm_hw_params_get_buffer_size() failed\n");
+			LOG_MOD_ERROR("alsa", "snd_pcm_hw_params_get_buffer_size() failed\n");
 			goto failed;
 		}
 	}
@@ -208,7 +208,7 @@ static void *new(void *cfg) {
 	snd_pcm_hw_params_free(hw_params);
 
 	if ((err = snd_pcm_prepare(aoalsa->pcm_handle)) < 0) {
-		LOG_ERROR("ALSA: snd_pcm_prepare() failed\n");
+		LOG_MOD_ERROR("alsa", "snd_pcm_prepare() failed\n");
 		goto failed;
 	}
 
@@ -236,7 +236,7 @@ static void *new(void *cfg) {
 			sample_nbytes = sizeof(float);
 			break;
 		default:
-			errstr = "Unhandled audio format";
+			errstr = "unhandled audio format";
 			goto failed;
 	}
 
@@ -257,7 +257,7 @@ static void *new(void *cfg) {
 failed:
 	if (!errstr)
 		errstr = snd_strerror(err);
-	LOG_ERROR("Failed to initialise ALSA: %s\n", errstr);
+	LOG_MOD_ERROR("alsa", "failed to initialise: %s\n", errstr);
 	if (aoalsa) {
 		if (aoalsa->audio_buffer)
 			free(aoalsa->audio_buffer);

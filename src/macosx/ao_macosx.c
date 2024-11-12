@@ -2,7 +2,7 @@
  *
  *  \brief CoreAudio sound module for Mac OS X.
  *
- *  \copyright Copyright 2005-2016 Ciaran Anscomb
+ *  \copyright Copyright 2005-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -94,20 +94,28 @@ static void *new(void *cfg) {
 	propertyAddress.mElement = kAudioObjectPropertyElementMaster;
 
 	propertySize = sizeof(aomacosx->device);
-	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &aomacosx->device) != noErr)
+	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &aomacosx->device) != noErr) {
+		LOG_MOD_ERROR("[macosx/audio]", "AudioObjectGetPropertyData() failed: kAudioHardwarePropertyDefaultOutputDevice\n");
 		goto failed;
+	}
 
 	propertySize = sizeof(deviceFormat);
 	propertyAddress.mSelector = kAudioDevicePropertyStreamFormat;
 	propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
 	propertyAddress.mElement = 0;
-	if (AudioObjectGetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, &propertySize, &deviceFormat) != noErr)
+	if (AudioObjectGetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, &propertySize, &deviceFormat) != noErr) {
+		LOG_MOD_ERROR("[macosx/audio]", "AudioObjectGetPropertyData() failed: kAudioDevicePropertyStreamFormat\n");
 		goto failed;
+	}
 
-	if (deviceFormat.mFormatID != kAudioFormatLinearPCM)
+	if (deviceFormat.mFormatID != kAudioFormatLinearPCM) {
+		LOG_MOD_ERROR("[macosx/audio]", "audio format not kAudioFormatLinearPCM\n");
 		goto failed;
-	if (!(deviceFormat.mFormatFlags & kLinearPCMFormatFlagIsFloat))
+	}
+	if (!(deviceFormat.mFormatFlags & kLinearPCMFormatFlagIsFloat)) {
+		LOG_MOD_ERROR("[macosx/audio]", "audio format not float\n");
 		goto failed;
+	}
 
 	aomacosx->nfragments = 2;
 	if (xroar.cfg.ao.fragments > 0 && xroar.cfg.ao.fragments <= 64)
@@ -139,8 +147,10 @@ static void *new(void *cfg) {
 	UInt32 prop_buf_size = fragment_nframes * frame_nbytes;
 	propertySize = sizeof(prop_buf_size);
 	propertyAddress.mSelector = kAudioDevicePropertyBufferSize;
-	if (AudioObjectSetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, propertySize, &prop_buf_size) != kAudioHardwareNoError)
+	if (AudioObjectSetPropertyData(aomacosx->device, &propertyAddress, 0, NULL, propertySize, &prop_buf_size) != kAudioHardwareNoError) {
+		LOG_MOD_ERROR("[macosx/audio]", "AudioObjectSetPropertyData() failed: kAudioDevicePropertyBufferSize -> %u\n", prop_buf_size);
 		goto failed;
+	}
 	fragment_nframes = prop_buf_size / frame_nbytes;
 
 #ifdef MAC_OS_X_VERSION_10_5
@@ -183,7 +193,7 @@ static void *new(void *cfg) {
 
 	ao->sound_interface = sound_interface_new(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
 	if (!ao->sound_interface) {
-		LOG_ERROR("Failed to initialise Mac OS X audio: XRoar internal error\n");
+		LOG_MOD_ERROR("[macosx/audio]", "failed to initialise: XRoar internal error\n");
 		goto failed;
 	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_macosx_write_buffer, ao);

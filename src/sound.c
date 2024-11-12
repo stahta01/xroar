@@ -172,7 +172,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	_Bool fmt_big_endian = 1;
 
 	if (nchannels < 1 || nchannels > 2) {
-		LOG_WARN("Invalid number of audio channels: disabling sound.");
+		LOG_MOD_WARN("sound", "invalid number of audio channels");
 		free(snd);
 		return NULL;
 	}
@@ -211,7 +211,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 		LOG_DEBUG(1, "16-bit signed %s-endian, ", fmt_big_endian ? "big" : "little" );
 		break;
 	case SOUND_FMT_FLOAT:
-		LOG_DEBUG(1, "Floating point, ");
+		LOG_DEBUG(1, "floating point, ");
 		break;
 	case SOUND_FMT_NULL:
 	default:
