@@ -22,6 +22,7 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,7 +101,7 @@ void rombank_report(struct rombank *rb, const char *name) {
 	if (logging.level < 1)
 		return;
 	unsigned slot_k = rb->slot_size / 1024;
-	LOG_PRINT("[rom] %s (%u x %uK)\n", name, rb->nslots, slot_k);
+	LOG_MOD_PRINT("rom", "%s (%u x %uK)\n", name, rb->nslots, slot_k);
 	unsigned npopulated = 0;
 	for (unsigned i = 0; i < rb->nslots; i++) {
 		const char *filename = rb->slot[i].filename;
@@ -183,13 +184,13 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 
 	FILE *fd = fopen(filename, "rb");
 	if (!fd) {
-		LOG_DEBUG(2, "[rom] failed to open: %s\n", filename);
+		LOG_MOD_DEBUG(2, "rom", "%s: %s\n", filename, strerror(errno));
 		return -1;
 	}
 
 	off_t file_size = fs_file_size(fd);
 
-	LOG_DEBUG(2, "[rom] opened: %s (%lld bytes)\n", filename, (long long)file_size);
+	LOG_MOD_DEBUG(2, "rom", "opened: %s (%lld bytes)\n", filename, (long long)file_size);
 
 	if (file_size > 256 && (file_size % 256) != 0) {
 		offset += (file_size % 256);
