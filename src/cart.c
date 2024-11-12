@@ -593,7 +593,7 @@ static void cart_config_update_romcart(void) {
 			}
 			// Hide this away in debug logging for now
 			if (logging.level >= 3) {
-				LOG_PRINT("Cartridge: %s\n", rom_cart_config->rom);
+				LOG_MOD_PRINT("cart", "%s\n", rom_cart_config->rom);
 				LOG_PRINT("\tsize 0x%lx\n", (long)fsize);
 				LOG_PRINT("\tcrc32 0x%x\n", crc32);
 			}
@@ -601,7 +601,7 @@ static void cart_config_update_romcart(void) {
 		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(cart_special); i++) {
 			if (cart_special[i].size == fsize &&
 			    cart_special[i].crc32 == crc32) {
-				LOG_DEBUG(1, "Cartridge: using cart-type '%s' for '%s'\n", cart_special[i].type, cart_special[i].name);
+				LOG_MOD_DEBUG(1, "cart", "'%s': automatic cart type '%s'\n", cart_special[i].name, cart_special[i].type);
 				cc->type = xstrdup(cart_special[i].type);
 				// We ONLY recognise headerless files here,
 				// so flag that there's no need to try being
@@ -614,7 +614,7 @@ static void cart_config_update_romcart(void) {
 		// If not found, and cart size exceeds 16K, assume a
 		// banked ROM (so use GMC cart to handle it).
 		if (!cc->type && fsize > 0x4000) {
-			LOG_DEBUG(1, "Cartridge: assuming cart-type 'gmc' for '%s'\n", rom_cart_config->rom);
+			LOG_MOD_DEBUG(1, "cart", "'%s': automatic cart type 'gmc'\n", rom_cart_config->rom);
 			cc->type = xstrdup("gmc");
 			cc->autorun = 1;
 		}
@@ -740,7 +740,7 @@ struct cart *cart_create_from_config(struct cart_config *cc) {
 		c = NULL;
 	}
 	if (!c) {
-		LOG_WARN("Cartridge create FAILED: [%s]\n", cc->type);
+		LOG_MOD_WARN("cart", "create failed: [%s]\n", cc->type);
 		return NULL;
 	}
 	if (c->attach) {
