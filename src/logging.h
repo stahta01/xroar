@@ -2,7 +2,7 @@
  *
  *  \brief General logging framework.
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -28,6 +28,21 @@
 #define LOG_WARN(...) do {} while (0)
 #define LOG_ERROR(...) do {} while (0)
 
+#define LOG_MOD_DEBUG(l,m,...) do {} while (0)
+#define LOG_MOD_PRINT(m,...) do {} while (0)
+#define LOG_MOD_WARN(m,...) do {} while (0)
+#define LOG_MOD_ERROR(m,...) do {} while (0)
+
+#define LOG_MOD_SUB_DEBUG(l,m,s,...) do {} while (0)
+#define LOG_MOD_SUB_PRINT(m,s,...) do {} while (0)
+#define LOG_MOD_SUB_WARN(m,s,...) do {} while (0)
+#define LOG_MOD_SUB_ERROR(m,s,...) do {} while (0)
+
+#define LOG_MOD_ALT_DEBUG(l,m,a,...) do {} while (0)
+#define LOG_MOD_ALT_PRINT(m,a,...) do {} while (0)
+#define LOG_MOD_ALT_WARN(m,a,...) do {} while (0)
+#define LOG_MOD_ALT_ERROR(m,a,...) do {} while (0)
+
 #else
 
 #include <stdio.h>
@@ -39,6 +54,21 @@
 #define LOG_PRINT(...) printf(__VA_ARGS__)
 #define LOG_WARN(...) fprintf(stderr, "WARNING: " __VA_ARGS__)
 #define LOG_ERROR(...) fprintf(stderr, "ERROR: " __VA_ARGS__)
+
+#define LOG_MOD_DEBUG(l,m,...) do { if (logging.level >= l) { printf("[%s] ", (m)); printf(__VA_ARGS__); } } while (0)
+#define LOG_MOD_PRINT(m,...) do { printf("[%s] ", (m)); printf(__VA_ARGS__); } while (0)
+#define LOG_MOD_WARN(m,...) do { fprintf(stderr, "[%s] WARNING: ", (m)); fprintf(stderr, __VA_ARGS__); } while (0)
+#define LOG_MOD_ERROR(m,...) do { fprintf(stderr, "[%s] ERROR: ", (m)); fprintf(stderr, __VA_ARGS__); } while (0)
+
+#define LOG_MOD_SUB_DEBUG(l,m,s,...) do { if (logging.level >= l) { printf("[%s/%s] ", (m), (s)); printf(__VA_ARGS__); } } while (0)
+#define LOG_MOD_SUB_PRINT(m,s,...) do { printf("[%s/%s] ", (m), (s)); printf(__VA_ARGS__); } while (0)
+#define LOG_MOD_SUB_WARN(m,s,...) do { fprintf(stderr, "[%s/%s] WARNING: ", (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
+#define LOG_MOD_SUB_ERROR(m,s,...) do { fprintf(stderr, "[%s/%s] ERROR: ", (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
+
+#define LOG_MOD_ALT_DEBUG(l,m,a,...) do { if (logging.level >= l) { printf("[%s:%s] ", (m), (a)); printf(__VA_ARGS__); } } while (0)
+#define LOG_MOD_ALT_PRINT(m,a,...) do { printf("[%s:%s] ", (m), (a)); printf(__VA_ARGS__); } while (0)
+#define LOG_MOD_ALT_WARN(m,a,...) do { fprintf(stderr, "[%s:%s] WARNING: ", (m), (a)); fprintf(stderr, __VA_ARGS__); } while (0)
+#define LOG_MOD_ALT_ERROR(m,a,...) do { fprintf(stderr, "[%s:%s] ERROR: ", (m), (a)); fprintf(stderr, __VA_ARGS__); } while (0)
 
 #endif
 
@@ -74,10 +104,20 @@
 // UI: joystick motion debugging
 #define LOG_UI_JS_MOTION (1 << 1)
 
-#define LOG_DEBUG_FDC(b,...) do { if (logging.debug_fdc & (b)) { printf(__VA_ARGS__); } } while (0)
-#define LOG_DEBUG_FILE(b,...) do { if (logging.debug_file & (b)) { printf(__VA_ARGS__); } } while (0)
-#define LOG_DEBUG_GDB(b,...) do { if (logging.debug_gdb & (b)) { printf(__VA_ARGS__); } } while (0)
-#define LOG_DEBUG_UI(b,...) do { if (logging.debug_ui & (b)) { printf(__VA_ARGS__); } } while (0)
+#define LOG_DEBUG_FDC(b,...) do { if (logging.debug_fdc & (b)) { LOG_PRINT(__VA_ARGS__); } } while (0)
+#define LOG_DEBUG_FILE(b,...) do { if (logging.debug_file & (b)) { LOG_PRINT(__VA_ARGS__); } } while (0)
+#define LOG_DEBUG_GDB(b,...) do { if (logging.debug_gdb & (b)) { LOG_PRINT(__VA_ARGS__); } } while (0)
+#define LOG_DEBUG_UI(b,...) do { if (logging.debug_ui & (b)) { LOG_PRINT(__VA_ARGS__); } } while (0)
+
+#define LOG_MOD_DEBUG_FDC(b,m,...) do { if (logging.debug_fdc & (b)) { LOG_MOD_PRINT((m), __VA_ARGS__); } } while (0)
+#define LOG_MOD_DEBUG_FILE(b,m,...) do { if (logging.debug_file & (b)) { LOG_MOD_PRINT((m), __VA_ARGS__); } } while (0)
+#define LOG_MOD_DEBUG_GDB(b,m,...) do { if (logging.debug_gdb & (b)) { LOG_MOD_PRINT((m), __VA_ARGS__); } } while (0)
+#define LOG_MOD_DEBUG_UI(b,m,...) do { if (logging.debug_ui & (b)) { LOG_MOD_PRINT((m), __VA_ARGS__); } } while (0)
+
+#define LOG_MOD_SUB_DEBUG_FDC(b,m,s,...) do { if (logging.debug_fdc & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
+#define LOG_MOD_SUB_DEBUG_FILE(b,m,s,...) do { if (logging.debug_file & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
+#define LOG_MOD_SUB_DEBUG_GDB(b,m,s,...) do { if (logging.debug_gdb & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
+#define LOG_MOD_SUB_DEBUG_UI(b,m,s,...) do { if (logging.debug_ui & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
