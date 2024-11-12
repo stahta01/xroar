@@ -69,13 +69,9 @@ void *module_init(struct module *module, void *cfg) {
 		return NULL;
 	}
 	const char *description = module->description ? module->description : "unknown";
-	LOG_DEBUG(1, "[%s] %s\n", module->name, description);
+	LOG_MOD_ALT_DEBUG(1, "module", module->name, "%s\n", description);
 	assert(module->new != NULL);
-	void *m = module->new(cfg);
-	if (!m) {
-		LOG_DEBUG(1, "%s: init failed: %s\n", module->name, description);
-	}
-	return m;
+	return module->new(cfg);
 }
 
 void *module_init_from_list(struct module * const *list, struct module *module, void *cfg) {
