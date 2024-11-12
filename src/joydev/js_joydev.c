@@ -142,9 +142,9 @@ static void joydev_js_physical_init(void) {
 	}
 
 	if (!globbuf.gl_pathc) {
-		LOG_DEBUG(1, "[joydev] No joystick devices found.\n");
+		LOG_MOD_DEBUG(1, "joydev", "no joystick devices found\n");
 	} else {
-		LOG_DEBUG(1, "[joydev] Joystick devices found:\n");
+		LOG_MOD_DEBUG(1, "joydev", "Joystick devices found:\n");
 		LOG_DEBUG(1, "\t%-3s %-31s %-7s %-7s\n", "Idx", "Description", "Axes", "Buttons");
 	}
 	// Sort the list so we can spot removed devices
@@ -266,7 +266,7 @@ static struct joydev_js_device *open_device(int joystick_index) {
 	}
 	char namebuf[128];
 	ioctl(fd, JSIOCGNAME(sizeof(namebuf)), namebuf);
-	LOG_DEBUG(1, "Opened joystick %d: %s\n", joystick_index, namebuf);
+	LOG_MOD_DEBUG(1, "joydev", "opened joystick %d: %s\n", joystick_index, namebuf);
 	LOG_DEBUG(1, "\t%u axes, %u buttons\n", d->num_axes, d->num_buttons);
 	d->open_count = 1;
 	ctx->device_list = slist_prepend(ctx->device_list, d);
