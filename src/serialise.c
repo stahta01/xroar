@@ -36,6 +36,7 @@
 #define SER_DEBUG(...)
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,6 +88,7 @@ static void *s_read_new(struct ser_handle *sh, size_t size);
 
 struct ser_handle *ser_open(const char *filename, enum ser_mode mode) {
 	if (!filename) {
+		errno = EINVAL;
 		return NULL;
 	}
 	FILE *fd = NULL;
