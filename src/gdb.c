@@ -184,7 +184,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 
 	struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&m->part, "CPU", "MC6809");
 	if (!cpu) {
-		LOG_WARN("GDB: MC6809 CPU not found - not enabling GDB support\n");
+		LOG_MOD_WARN("gdb", "MC6809 CPU not found - not enabling GDB support\n");
 		return NULL;
 	}
 
@@ -212,30 +212,30 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
 	if (getaddrinfo(hostname, portname, &hints, &gip->info) < 0) {
-		LOG_WARN("gdb: getaddrinfo %s:%s failed\n", hostname, portname);
+		LOG_MOD_WARN("gdb", "getaddrinfo %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
 	if (!gip->info) {
-		LOG_WARN("gdb: failed lookup %s:%s\n", hostname, portname);
+		LOG_MOD_WARN("gdb", "failed lookup %s:%s\n", hostname, portname);
 		goto failed;
 	}
 
 	// Create a socket...
 	gip->listenfd = socket(gip->info->ai_family, gip->info->ai_socktype, gip->info->ai_protocol);
 	if (gip->listenfd < 0) {
-		LOG_WARN("gdb: socket not created\n");
+		LOG_MOD_WARN("gdb", "socket not created\n");
 		goto failed;
 	}
 
 	// bind
 	if (bind(gip->listenfd, gip->info->ai_addr, gip->info->ai_addrlen) < 0) {
-		LOG_WARN("gdb: bind %s:%s failed\n", hostname, portname);
+		LOG_MOD_WARN("gdb", "bind %s:%s failed\n", hostname, portname);
 		goto failed;
 	}
 
 	// ... and listen
 	if (listen(gip->listenfd, 1) < 0) {
-		LOG_WARN("gdb: failed to listen to socket\n");
+		LOG_MOD_WARN("gdb", "failed to listen to socket\n");
 		goto failed;
 	}
 
@@ -243,7 +243,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	pthread_cond_init(&gip->run_state_cv, NULL);
 	pthread_create(&gip->sock_thread, NULL, handle_tcp_sock, gip);
 
-	LOG_DEBUG(1, "gdb: target listening on %s:%s\n", hostname, portname);
+	LOG_MOD_DEBUG(1, "gdb", "target listening on %s:%s\n", hostname, portname);
 
 	return (struct gdb_interface *)gip;
 
@@ -375,21 +375,21 @@ static void *handle_tcp_sock(void *sptr) {
 		}
 
 		if (gip->sockfd < 0) {
-			LOG_WARN("gdb: accept() failed\n");
+			LOG_MOD_WARN("gdb", "accept() failed\n");
 			continue;
 		}
 		{
 			int flag = 1;
 			setsockopt(gip->sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
 		}
-		LOG_DEBUG_GDB(LOG_GDB_CONNECT, "gdb: connection accepted\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection accepted\n");
 
 		gdb_machine_signal(gip, MACHINE_SIGINT, 0);
 		_Bool attached = 1;
 		while (attached) {
 			int l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
-				LOG_DEBUG_GDB(LOG_GDB_PACKET, "gdb: BREAK\n");
+				LOG_MOD_DEBUG_GDB(LOG_GDB_PACKET, "gdb", "BREAK\n");
 				gdb_machine_signal(gip, MACHINE_SIGINT, 1);
 				continue;
 			} else if (l == -GDBE_BAD_CHECKSUM) {
@@ -403,9 +403,9 @@ static void *handle_tcp_sock(void *sptr) {
 			}
 			if (logging.debug_gdb & LOG_GDB_PACKET) {
 				if (gip->run_state == gdb_run_state_stopped) {
-					LOG_PRINT("gdb: packet received: ");
+					LOG_MOD_PRINT("gdb", "packet received: ");
 				} else {
-					LOG_PRINT("gdb: packet ignored (send ^C first): ");
+					LOG_MOD_PRINT("gdb", "packet ignored (send ^C first): ");
 				}
 				for (unsigned i = 0; i < (unsigned)l; i++) {
 					if (isprint(in_packet[i])) {
@@ -492,7 +492,7 @@ static void *handle_tcp_sock(void *sptr) {
 		}
 		close(gip->sockfd);
 		gdb_continue(gip);
-		LOG_DEBUG_GDB(LOG_GDB_CONNECT, "gdb: connection closed\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection closed\n");
 	}
 	return NULL;
 }
@@ -574,7 +574,7 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 			csum |= tmp;
 			if (csum != packet_sum) {
 				if (logging.debug_gdb & LOG_GDB_CHECKSUM) {
-					LOG_PRINT("gdb: bad checksum in '");
+					LOG_MOD_PRINT("gdb", "bad checksum in '");
 					if (isprint(buffer[0]))
 						LOG_PRINT("%c", buffer[0]);
 					else
@@ -623,7 +623,7 @@ static int send_packet(struct gdb_interface_private *gip, const char *buffer, un
 	// the reply ("+" or "-") will be discarded by the next read_packet
 
 	if (logging.debug_gdb & LOG_GDB_PACKET) {
-		LOG_PRINT("gdb: packet sent: ");
+		LOG_MOD_PRINT("gdb", "packet sent: ");
 		for (unsigned i = 0; i < (unsigned)count; i++) {
 			if (isprint(buffer[i])) {
 				LOG_PRINT("%c", buffer[i]);
@@ -749,7 +749,7 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	if (send(gip->sockfd, packet, 3, 0) < 0)
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
-	LOG_DEBUG_GDB(LOG_GDB_PACKET, "gdb: packet sent (binary): %u bytes\n", length);
+	LOG_MOD_DEBUG_GDB(LOG_GDB_PACKET, "gdb", "packet sent (binary): %u bytes\n", length);
 	return;
 error:
 	send_packet(gip, NULL, 0);
@@ -917,21 +917,21 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		query += 6;
 #ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(query, "sam") && gip->sam) {
-			LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: xroar.sam\n");
+			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.sam\n");
 			sprintf(packet, "%04x", mc6883_get_register(gip->sam));
 			send_packet(gip, packet, 4);
 		}
 		return;
 #endif
-		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown xroar vendor query\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown xroar vendor query\n");
 	} else if (0 == strcmp(query, "Supported")) {
-		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: Supported\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Supported\n");
 		send_supported(gip, args);
 	} else if (0 == strcmp(query, "Attached")) {
-		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: Attached\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Attached\n");
 		send_packet_string(gip, "1");
 	} else {
-		LOG_DEBUG_GDB(LOG_GDB_QUERY, "gdb: query: unknown query\n");
+		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown query\n");
 		send_packet(gip, NULL, 0);
 	}
 }
