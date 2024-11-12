@@ -2,7 +2,7 @@
  *
  *  \brief Breakpoint tracking for debugging.
  *
- *  \copyright Copyright 2011-2022 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -114,7 +114,7 @@ static void trap_add(struct bp_session_private *bpsp,
 		     struct slist **bp_list, unsigned addr, unsigned addr_end,
 		     unsigned cond_mask, unsigned cond) {
 	if (!bpsp->bps.trap_handler.func) {
-		LOG_WARN("Machine has not set trap handler: not setting breakpoint\n");
+		LOG_MOD_WARN("breakpoint", "no trap handler; not setting breakpoint\n");
 		return;
 	}
 	if (trap_find(bpsp, *bp_list, addr, addr_end, cond_mask, cond))
