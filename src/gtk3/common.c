@@ -362,7 +362,7 @@ void *uigtk3_cbt_value_get_value(struct uigtk3_cbt_value *cbtv) {
 	}
 	gint active = gtk_combo_box_get_active(GTK_COMBO_BOX(cbtv->cbt));
 	if (active < 0 || (unsigned)active >= cbtv->nvalues) {
-		LOG_WARN("GTK+ 3 combo box index '%d' out of bounds for '%s'\n", active, cbtv->name);
+		LOG_MOD_ERROR("gtk3", "combo box index '%d' out of bounds for '%s'\n", active, cbtv->name);
 		return 0;
 	}
 	return cbtv->values[active];

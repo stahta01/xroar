@@ -132,12 +132,12 @@ _Bool gtk3_vo_init(struct ui_gtk3_interface *uigtk3) {
 	/*
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
-		LOG_ERROR("Failed to create OpenGL config\n");
+		LOG_MOD_ERROR("gtk3/vo", "failed to create OpenGL config\n");
 		vo_gtk3_free(uigtk3);
 		return NULL;
 	}
 	if (!gtk_widget_set_gl_capability(uigtk3->drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
-		LOG_ERROR("Failed to add OpenGL support to GTK widget\n");
+		LOG_MOD_ERROR("gtk3/vo", "failed to add OpenGL support to GTK widget\n");
 		g_object_unref(glconfig);
 		vo_gtk3_free(uigtk3);
 		return NULL;
@@ -425,7 +425,7 @@ static _Bool opengl_has_extension(Display *display, const char *extension) {
 	if (!extensions)
 		return 0;
 
-	LOG_DEBUG(3, "gtk3: extensions: %s\n", extensions);
+	LOG_MOD_DEBUG(3, "gtk3/vo", "extensions: %s\n", extensions);
 
 	const char *start;
 	const char *where, *terminator;
@@ -474,7 +474,7 @@ static void vo_gtk3_set_vsync(struct ui_gtk3_interface *uigtk3, int val) {
 			val = abs(val);
 		}
 		if (dpy && win) {
-			LOG_DEBUG(3, "vo_gtk3: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
+			LOG_MOD_DEBUG(3, "gtk3/vo", "glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			return;
 		}
@@ -485,19 +485,19 @@ static void vo_gtk3_set_vsync(struct ui_gtk3_interface *uigtk3, int val) {
 
 	PFNGLXSWAPINTERVALMESAPROC glXSwapIntervalMESA = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalMESA");
 	if (glXSwapIntervalMESA) {
-		LOG_DEBUG(3, "vo_gtk3: glXSwapIntervalMESA(%d)\n", val);
+		LOG_MOD_DEBUG(3, "gtk3/vo", "glXSwapIntervalMESA(%d)\n", val);
 		glXSwapIntervalMESA(val);
 		return;
 	}
 
 	PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
 	if (glXSwapIntervalSGI) {
-		LOG_DEBUG(3, "vo_gtk3: glXSwapIntervalSGI(%d)\n", val);
+		LOG_MOD_DEBUG(3, "gtk3/vo", "glXSwapIntervalSGI(%d)\n", val);
 		glXSwapIntervalSGI(val);
 		return;
 	}
 
 #endif
 
-	LOG_DEBUG(3, "vo_gtk3: Found no way to set swap interval\n");
+	LOG_MOD_DEBUG(3, "gtk3/vo", "no way to set swap interval\n");
 }
