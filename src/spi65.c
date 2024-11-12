@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2022 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -148,7 +148,7 @@ uint8_t spi65_read(struct spi65 *spi65, uint8_t reg) {
 	switch (reg) {
 	case SPIDATA:
 		value = spi65p->reg_data_in;
-		LOG_DEBUG(3, "Reading SPI DATA");
+		LOG_MOD_DEBUG(3, "spi65", "Reading SPI DATA");
 		spi65p->status &= ~SPICTRL_TC; /* clear TC on read */
 		/* reading triggers SPI transfer in FRX mode */
 		if (spi65p->status & SPICTRL_FRX) {
@@ -164,16 +164,16 @@ uint8_t spi65_read(struct spi65 *spi65, uint8_t reg) {
 		}
 		break;
 	case SPISTATUS:
-		LOG_DEBUG(3, "Reading SPI STATUS");
+		LOG_MOD_DEBUG(3, "spi65", "Reading SPI STATUS");
 		value = spi65p->status;
 		spi65p->status |= SPICTRL_TC; // complete next time
 		break;
 	case SPICLK:
-		LOG_DEBUG(3, "Reading SPI CLK");
+		LOG_MOD_DEBUG(3, "spi65", "Reading SPI CLK");
 		value = spi65p->clkdiv;
 		break;
 	case SPISIE:
-		LOG_DEBUG(3, "Reading SPI SIE");
+		LOG_MOD_DEBUG(3, "spi65", "Reading SPI SIE");
 		value = spi65p->ss_ie;
 		break;
 	default: /* only for compiler happiness */
@@ -187,7 +187,7 @@ void spi65_write(struct spi65 *spi65, uint8_t reg, uint8_t value) {
 	struct spi65_private *spi65p = (struct spi65_private *)spi65;
 	switch (reg) {
 	case SPIDATA:
-		LOG_DEBUG(3, "Writing SPI DATA");
+		LOG_MOD_DEBUG(3, "spi65", "Writing SPI DATA");
 		spi65p->reg_data_out = value;
 		/* writing triggers SPI transfer */
 		for (int i = 0; i < 4; i++) {
@@ -202,15 +202,15 @@ void spi65_write(struct spi65 *spi65, uint8_t reg, uint8_t value) {
 		spi65p->status &= ~SPICTRL_TC;
 		break;
 	case SPICTRL:
-		LOG_DEBUG(3, "Writing SPI CONTROL");
+		LOG_MOD_DEBUG(3, "spi65", "Writing SPI CONTROL");
 		spi65p->status = (value & ~0xa0) | (spi65p->status & 0xa0);
 		break;
 	case SPICLK:
-		LOG_DEBUG(3, "Writing SPI CLK");
+		LOG_MOD_DEBUG(3, "spi65", "Writing SPI CLK");
 		spi65p->clkdiv = value;
 		break;
 	case SPISIE:
-		LOG_DEBUG(3, "Writing SPI SIE");
+		LOG_MOD_DEBUG(3, "spi65", "Writing SPI SIE");
 		spi65p->ss_ie = value;
 		break;
 	default: /* only for compiler happiness */

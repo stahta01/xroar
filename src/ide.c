@@ -32,6 +32,7 @@
 
 #include "blockdev.h"
 #include "ide.h"
+#include "logging.h"
 #include "serialise.h"
 
 #define IDE_IDLE        0
@@ -133,8 +134,8 @@ static void ide_xlate_errno(struct ide_taskfile *t)
 
 static void ide_fault(struct ide_drive *d, const char *p)
 {
-  fprintf(stderr, "ide: %s: %d: %s\n", d->controller->name,
-			(int)(d - d->controller->drive), p);
+  LOG_MOD_WARN("idedisk", "%s: %d: %s\n", d->controller->name,
+               (int)(d - d->controller->drive), p);
 }
 
 /* Disk translation */
@@ -154,7 +155,7 @@ static off_t xlate_block(struct ide_taskfile *t)
   /* Some well known software asks for 0/0/0 when it means 0/0/1. Drives appear
      to interpret sector 0 as sector 1 */
   if (t->lba1 == 0) {
-    fprintf(stderr, "[Bug: request for sector offset 0].\n");
+    LOG_MOD_DEBUG(2, "idedisk", "[Bug: request for sector offset 0].\n");
     t->lba1 = 1;
   }
   cyl = (t->lba3 << 8) | t->lba2;

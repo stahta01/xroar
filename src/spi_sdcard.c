@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2022 Ciaran Anscomb
+ *  \copyright Copyright 2018-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -209,13 +209,13 @@ static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
 
 static void read_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
 	if (!bd_read_lsn(sdcard->bd, lba, buffer, 512)) {
-		LOG_WARN("SPI/SDCARD/READ: Read failed from SD card image %s\n", sdcard->imagefile);
+		LOG_MOD_WARN("spi/sdcard", "%s: read failed\n", sdcard->imagefile);
 	}
 }
 
 static void write_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba) {
 	if (!bd_write_lsn(sdcard->bd, lba, buffer, 512)) {
-		LOG_WARN("SPI/SDCARD/WRITE: Write failed to SD card image %s\n", sdcard->imagefile);
+		LOG_MOD_WARN("spi/sdcard", "%s: write failed\n", sdcard->imagefile);
 	}
 }
 
@@ -224,7 +224,7 @@ static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active
 	enum sd_states next = sdcard->state_sd;
 	uint8_t data_in = 0xff;
 
-	LOG_DEBUG(3, "[%s]\t -> %02x ", state_dbg_desc[sdcard->state_sd], data_out);
+	LOG_MOD_DEBUG(3, "spi/sdcard", "[%s]\t -> %02x ", state_dbg_desc[sdcard->state_sd], data_out);
 
 	if (!ss_active) {
 		next = STBY;

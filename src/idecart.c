@@ -21,6 +21,7 @@
 #include "top-config.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -155,11 +156,11 @@ static _Bool idecart_finish(struct part *p) {
 			if (!bd) {
 				int fd = open(xroar.cfg.file.hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0600);
 				if (fd == -1) {
-					perror(xroar.cfg.file.hd[i]);
+					LOG_MOD_WARN("ide", "%s: unable to create: %s\n", xroar.cfg.file.hd[i], strerror(errno));
 					continue;
 				}
 				if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
-					fprintf(stderr, "IDE: unable to create %s.\n", xroar.cfg.file.hd[i]);
+					LOG_MOD_WARN("ide", "%s: unable to create\n", xroar.cfg.file.hd[i]);
 					close(fd);
 					continue;
 				}

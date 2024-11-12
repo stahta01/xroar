@@ -22,6 +22,7 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,7 @@
 
 #include "blockdev.h"
 #include "fs.h"
+#include "logging.h"
 #include "xroar.h"
 
 // Magic found at start of first 512 bytes of an IDE image with a header.  If
@@ -126,8 +128,10 @@ struct blkdev *bd_open(const char *name) {
 	int filetype = xroar_filetype_by_ext(name);
 
 	FILE *fd = fopen(name, "r+b");
-	if (!fd)
+	if (!fd) {
+		LOG_MOD_WARN("blockdev", "%s: %s\n", name, strerror(errno));
 		return NULL;
+	}
 	struct blkdev_private *bdp = xmalloc(sizeof(*bdp));
 	struct blkdev *bd = &bdp->blkdev;
 	*bdp = (struct blkdev_private){0};
@@ -137,9 +141,11 @@ struct blkdev *bd_open(const char *name) {
 
 	switch (filetype) {
 	case FILETYPE_IDE:
-		if (bd_ide_verify(bdp))
+		if (bd_ide_verify(bdp)) {
 			return bd;
+		}
 		// Lack of IDE headers is a fail for .ide files
+		LOG_MOD_WARN("blockdev", "%s: IDE header not found\n", name);
 		bd_close(bd);
 		return NULL;
 
@@ -164,8 +170,9 @@ struct blkdev *bd_open(const char *name) {
 
 void bd_close(struct blkdev *bd) {
 	fclose(bd->fd);
-	if (!slist_find(bd_profile_list, bd->profile))
+	if (!slist_find(bd_profile_list, bd->profile)) {
 		bd_profile_free(bd->profile);
+	}
 	free(bd);
 }
 
@@ -325,7 +332,7 @@ static _Bool bd_ide_verify(struct blkdev_private *bdp) {
 	// - check data is internally consistent
 	// - including: check ascii strings *are* all ascii
 	// - report those strings to the user (or store them in struct
-	//   blkdev so something else can
+	//   blkdev so something else can)
 	// - check sector counts sum to filesize
 
 	// Ok, looks like IDE - update fields and return
