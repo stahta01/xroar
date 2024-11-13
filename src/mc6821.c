@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -159,10 +159,10 @@ static void mc6821_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#define IRQ1_ENABLED(p) ((p).control_register & 0x01)
-#define IRQ2_ENABLED(p) (((p).control_register & 0x28) == 0x08)
-#define DDR_SELECTED(p) (!((p).control_register & 0x04))
-#define PR_SELECTED(p) ((p).control_register & 0x04)
+#define IRQ1_ENABLED(s) ((s)->control_register & 0x01)
+#define IRQ2_ENABLED(s) (((s)->control_register & 0x28) == 0x08)
+#define DDR_SELECTED(s) (!((s).control_register & 0x04))
+#define PR_SELECTED(s) ((s).control_register & 0x04)
 
 void mc6821_reset(struct MC6821 *pia) {
 	pia->a.control_register = 0;
@@ -279,19 +279,19 @@ uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 	}
 }
 
-#define WRITE_CR(side,v) do { \
-		(side).control_register = v & 0x3f; \
-		if (v & 0x20) { \
-			(side).irq2_received = 0; \
-		} \
-		if (IRQ1_ENABLED(side)) { \
-			(side).irq |= (side).irq1_received; \
-		} else if (IRQ2_ENABLED(side)) { \
-			(side).irq |= (side).irq2_received; \
-		} else { \
-			(side).irq = 0; \
-		} \
-	} while (0)
+static void write_cr(struct MC6821_side *side, uint8_t D) {
+	side->control_register = D & 0x3f;
+	if (D & 0x20) {
+		side->irq2_received = 0;
+	}
+	if (IRQ1_ENABLED(side)) {
+		side->irq |= side->irq1_received;
+	} else if (IRQ2_ENABLED(side)) {
+		side->irq |= side->irq2_received;
+	} else {
+		side->irq = 0;
+	}
+}
 
 void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 	switch (A & 3) {
@@ -310,7 +310,7 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 			break;
 
 		case 1:
-			WRITE_CR(pia->a, D);
+			write_cr(&pia->a, D);
 			if (D & 0x20) {
 				// CA2 as output
 				if (D & 0x10) {
@@ -355,7 +355,7 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 			break;
 
 		case 3:
-			WRITE_CR(pia->b, D);
+			write_cr(&pia->b, D);
 			if (D & 0x20) {
 				// CB2 as output
 				if (D & 0x10) {
