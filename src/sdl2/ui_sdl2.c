@@ -49,13 +49,6 @@ struct ui_sdl2_interface *ui_sdl_allocate(size_t usize) {
 	// Be sure we've not made more than one of these
 	assert(global_uisdl2 == NULL);
 
-	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
-		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
-			LOG_ERROR("Failed to initialise SDL: %s\n", SDL_GetError());
-			return NULL;
-		}
-	}
-
 	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
 		LOG_ERROR("Failed to initialise SDL video: %s\n", SDL_GetError());
 		return NULL;

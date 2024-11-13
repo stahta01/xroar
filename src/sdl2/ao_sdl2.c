@@ -76,13 +76,6 @@ static void *new(void *cfg) {
 	(void)cfg;
 	SDL_AudioSpec desired;
 
-	if (!SDL_WasInit(SDL_INIT_NOPARACHUTE)) {
-		if (SDL_Init(SDL_INIT_NOPARACHUTE) < 0) {
-			LOG_ERROR("Failed to initialise SDL\n");
-			return NULL;
-		}
-	}
-
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
 		LOG_ERROR("Failed to initialise SDL audio\n");
 		return NULL;
