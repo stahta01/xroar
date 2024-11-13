@@ -83,7 +83,7 @@ struct tape_interface_private {
 	int in_pulse;
 	int in_pulse_width;
 	// When accelerating operations, accumulated number of simulated CPU cycles
-	int cpuskip;
+	int skip_ncycles;
 
 	int ao_rate;
 
@@ -129,7 +129,7 @@ static void tape_ui_set_playing(void *, int tag, void *smsg);
 static void tape_ui_set_tape_flag(void *, int tag, void *smsg);
 static void update_motor(struct tape_interface_private *tip);
 
-static void tape_desync(struct tape_interface_private *tip, int leader);
+static void rewrite_tape_desync(struct tape_interface_private *tip, int leader);
 static void rewrite_sync(void *sptr);
 static void rewrite_bitin(void *sptr);
 static void rewrite_tape_on(void *sptr);
@@ -137,7 +137,7 @@ static void rewrite_end_of_block(void *sptr);
 
 static void set_breakpoints(struct tape_interface_private *tip);
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Special case autorun instructions based on filename block size and CRC16.
 
@@ -201,7 +201,7 @@ static struct tape_file_autorun autorun_special[] = {
 	},
 };
 
-/**************************************************************************/
+// ---------------------------------------------------------------------------
 
 struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 	struct tape_interface_private *tip = xmalloc(sizeof(*tip));
@@ -297,12 +297,14 @@ void tape_interface_disconnect_machine(struct tape_interface *ti) {
 int tape_seek(struct tape *t, long offset, int whence) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+
 	int r = t->module->seek(t, offset, whence);
 	update_motor(tip);
-	// If seeking to beginning of tape, ensure any fake leader etc.
-	// is set up properly.
-	if (r >= 0 && t->offset == 0) {
-		tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+
+	// XXX review this.  If seeking to the beginning of either tape,
+	// desyncs rewriting.
+	if (tip->tape_rewrite && r >= 0 && t->offset == 0) {
+		rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
 	}
 	return r;
 }
@@ -373,7 +375,7 @@ static void write_silence(struct tape *t, int duration) {
 static void write_pulse(struct tape *t, int pulse_width, double scale) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	for (int i = 0; i < 64; i++) {
+	for (int i = 0; i < 64; ++i) {
 		unsigned sr = tip->rewrite.sremain + pulse_width;
 		unsigned nticks = sr / 64;
 		tip->rewrite.sremain = sr - (nticks * 64);
@@ -409,7 +411,7 @@ static void tape_byte_out(struct tape *t, int byte) {
 	}
 }
 
-/**************************************************************************/
+// ---------------------------------------------------------------------------
 
 static int block_sync(struct tape *tape) {
 	int byte = 0;
@@ -437,7 +439,7 @@ static int block_in(struct tape *t, uint8_t *sum, long *offset, uint8_t *block) 
 	if ((size = tape_byte_in(t)) == -1) return -1;
 	if (block) block[1] = size;
 	if (sum) *sum = type + size;
-	for (int i = 0; i < size; i++) {
+	for (int i = 0; i < size; ++i) {
 		int data;
 		if ((data = tape_byte_in(t)) == -1) return -1;
 		if (block) block[2+i] = data;
@@ -492,7 +494,7 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f) {
 	tape_seek(t, f->offset, SEEK_SET);
 }
 
-/**************************************************************************/
+// ---------------------------------------------------------------------------
 
 struct tape *tape_new(struct tape_interface *ti) {
 	struct tape *new = xmalloc(sizeof(*new));
@@ -505,7 +507,7 @@ void tape_free(struct tape *t) {
 	free(t);
 }
 
-/**************************************************************************/
+// ---------------------------------------------------------------------------
 
 void tape_reset(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
@@ -525,7 +527,9 @@ void tape_set_ao_rate(struct tape_interface *ti, int rate) {
 
 int tape_open_reading(struct tape_interface *ti, const char *filename) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+
 	tape_close_reading(ti);
+
 	int type = xroar_filetype_by_ext(filename);
 	tip->short_leader = 0;
 	switch (type) {
@@ -534,8 +538,9 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 			return -1;
 		}
 		if (tip->tape_pad_auto) {
-			if (ti->tape_input->leader_count < tip->short_leader_threshold)
+			if (ti->tape_input->leader_count < tip->short_leader_threshold) {
 				tip->short_leader = 1;
+			}
 			// leader padding needs breakpoints set
 			set_breakpoints(tip);
 		}
@@ -558,13 +563,18 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		}
 		break;
 	}
-	if (ti->tape_input->module->set_panning)
-		ti->tape_input->module->set_panning(ti->tape_input, xroar.cfg.tape.pan);
-	if (ti->tape_input->module->set_hysteresis)
-		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar.cfg.tape.hysteresis);
 
-	tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+	if (ti->tape_input->module->set_panning) {
+		ti->tape_input->module->set_panning(ti->tape_input, xroar.cfg.tape.pan);
+	}
+	if (ti->tape_input->module->set_hysteresis) {
+		ti->tape_input->module->set_hysteresis(ti->tape_input, xroar.cfg.tape.hysteresis);
+	}
+	if (tip->tape_rewrite) {
+		rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+	}
 	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
+
 	if (logging.level >= 1) {
 		LOG_MOD_PRINT("tape", "reading: %s", filename);
 		LOG_DEBUG(2, " [%s]", tip->playing ? "PLAYING" : "PAUSED");
@@ -574,8 +584,9 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 }
 
 void tape_close_reading(struct tape_interface *ti) {
-	if (!ti->tape_input)
+	if (!ti->tape_input) {
 		return;
+	}
 	tape_close(ti->tape_input);
 	ti->tape_input = NULL;
 }
@@ -615,7 +626,7 @@ void tape_close_writing(struct tape_interface *ti) {
 		return;
 	if (tip->tape_rewrite) {
 		// Writes a trailing byte where appropriate
-		tape_desync(tip, 1);
+		rewrite_tape_desync(tip, 1);
 		// Ensure the tape ends with a short duration of silence
 		if (!tip->rewrite.silence) {
 			write_silence(ti->tape_output, EVENT_MS(200));
@@ -693,7 +704,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	}
 
 	// Check list of known programs:
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(autorun_special); i++) {
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(autorun_special); ++i) {
 		if (autorun_special[i].size == f->fnblock_size
 		    && autorun_special[i].crc == f->fnblock_crc) {
 			LOG_MOD_DEBUG(1, "tape", "using special load instructions for '%s'\n", autorun_special[i].name);
@@ -729,6 +740,8 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 	return type;
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Automatic motor control.  Simulates cassette relay.
 
@@ -813,8 +826,6 @@ static void tape_ui_set_tape_flag(void *sptr, int tag, void *smsg) {
 	set_breakpoints(tip);
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 // Update events & breakpoints based on current motor state.
 
 static void update_motor(struct tape_interface_private *tip) {
@@ -840,7 +851,7 @@ static void update_motor(struct tape_interface_private *tip) {
 			ti->tape_output->module->motor_off(ti->tape_output);
 		}
 		if (tip->tape_rewrite) {
-			tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+			rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
 		}
 	}
 	set_breakpoints(tip);
@@ -891,62 +902,54 @@ static void flush_output(void *sptr) {
 	}
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Fast tape reading
- *
- * A set of breakpoint handlers that replace ROM routines, avoiding the need to
- * emulate the CPU.
- *
- * The MC-10 ROM performs pretty much the same operations - at least, they're
- * similar enough that just subbing in MC-10 addresses makes this work for that
- * machine too.
- */
-
-// When we accelerate tape read operations, the system clock won't have
-// changed, but we need to pretend it did.  This reads pulses from the tape to
-// simulate the elapsed time and reschedules tape events accordingly.  It has
-// no effect on the output tape, as we may be rewriting to that.
-
-static void advance_read_time(struct tape_interface_private *tip, int skip) {
-	struct tape_interface *ti = &tip->public;
-	while (skip >= tip->in_pulse_width) {
-		skip -= tip->in_pulse_width;
-		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
-		if (tip->in_pulse < 0) {
-			event_dequeue(&tip->waggle_event);
-			if (!motoroff_timeout && xroar.cfg.debug.timeout_motoroff) {
-				motoroff_timeout = xroar_set_timeout(xroar.cfg.debug.timeout_motoroff);
-			}
-			return;
-		}
-	}
-	tip->in_pulse_width -= skip;
-	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
-	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
-	DELEGATE_CALL(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
-}
-
-// Apply accumulated time skip to read state
-
-static void do_skip_read_time(struct tape_interface_private *tip) {
-	advance_read_time(tip, tip->cpuskip * EVENT_TICKS_14M31818(16));
-	tip->cpuskip = 0;
-}
-
-// Update read time based on how far into current pulse we are
-
-static void update_read_time(struct tape_interface_private *tip) {
-	event_ticks skip = tip->waggle_event.at_tick - event_current_tick;
-	int s = event_tick_delta(tip->in_pulse_width, skip);
-	if (s >= 0) {
-		advance_read_time(tip, s);
-	}
-}
+// Fake CPU helpers.  For fast loading, we set up ROM intercepts and then run
+// equivalent code outside emulation.  These functions let us get the
+// appropriate behaviour by dummying CPU operations without actually running
+// the CPU.
 
 // CPU operation equivalents
 
-static inline uint8_t CC(struct tape_interface_private *tip) {
+#define CC_H (0x20)
+#define CC_N (0x08)
+#define CC_Z (0x04)
+#define CC_V (0x02)
+#define CC_C (0x01)
+
+// AND with...
+
+#define M_HNZVC ( ~(CC_H | CC_N | CC_Z | CC_V | CC_C) )
+#define M_NZ    ( ~(CC_N | CC_Z) )
+#define M_NZV   ( ~(CC_N | CC_Z | CC_V) )
+#define M_NZVC  ( ~(CC_N | CC_Z | CC_V | CC_C) )
+#define M_Z     ( ~(CC_Z) )
+#define M_NZC   ( ~(CC_N | CC_Z | CC_C) )
+#define M_NVC   ( ~(CC_N | CC_V | CC_C) )
+#define M_ZC    ( ~(CC_Z | CC_C) )
+
+// Then OR with...
+
+#define T_Z8(r)         ( (0 == ((r) & 0xff))   ? CC_Z : 0 )
+#define T_Z16(r)        ( (0 == ((r) & 0xffff)) ? CC_Z : 0 )
+#define T_N8(r)         ( (((r) >> 4)  & CC_N) )
+#define T_N16(r)        ( (((r) >> 12) & CC_N) )
+#define T_H(a,b,r)      ( ((((a) ^ (b) ^ (r)) << 1) & CC_H) )
+#define T_C8(r)         ( (((r) >> 8)  & CC_C) )
+#define T_C16(r)        ( (((r) >> 16) & CC_C) )
+#define T_V8(a,b,r)     ( ((((a) ^ (b) ^ (r) ^ ((r) >> 1)) >> 6)  & CC_V) )
+#define T_V16(a,b,r)    ( ((((a) ^ (b) ^ (r) ^ ((r) >> 1)) >> 14) & CC_V) )
+#define T_NZ8(r)        ( T_N8(r)  | T_Z8( (r) & 0xff) )
+#define T_NZ16(r)       ( T_N16(r) | T_Z16((r) & 0xffff) )
+#define T_NZC8(r)       ( T_N8(r)  | T_Z8( (r) & 0xff)   | T_C8(r) )
+#define T_NZC16(r)      ( T_N16(r) | T_Z16((r) & 0xffff) | T_C16(r) )
+#define T_NZV8(a,b,r)   ( T_N8(r)  | T_Z8( (r) & 0xff)   | T_V8(a,b,r) )
+#define T_NZVC8(a,b,r)  ( T_N8(r)  | T_Z8( (r) & 0xff)   | T_V8(a,b,r)  | T_C8(r) )
+#define T_NZVC16(a,b,r) ( T_N16(r) | T_Z16((r) & 0xffff) | T_V16(a,b,r) | T_C16(r) )
+
+// Register access
+
+static inline uint8_t GET_CC(struct tape_interface_private *tip) {
 	if (tip->is_6809) {
 		return ((struct MC6809 *)tip->debug_cpu)->reg_cc;
 	}
@@ -976,114 +979,203 @@ static inline uint8_t SET_A(struct tape_interface_private *tip, uint8_t v) {
 	return 0;
 }
 
+// Operations affecting flags
+
 static uint8_t op_add(struct tape_interface_private *tip, uint8_t v1, uint8_t v2) {
-	uint8_t cc = CC(tip);
+	uint8_t cc = GET_CC(tip);
 	unsigned int v = v1 + v2;
-	cc &= ~0x2f;  /* clear HNZVC */
-	if (v & 0x80) cc |= 0x08;  /* set N */
-	if ((v & 0xff) == 0) cc |= 0x04;  /* set Z */
-	if ((v1^v2^v^(v>>1)) & 0x80) cc |= 0x02;  /* set V */
-	if (v & 0x100) cc |= 0x01;  /* set C */
-	if ((v1^v2^v) & 0x10) cc |= 0x20;  /* set H */
+	cc = (cc & M_HNZVC) | T_NZVC8(v1, v2, v) | T_H(v1, v2, v);
 	SET_CC(tip, cc);
 	return v;
 }
 
 static uint8_t op_sub(struct tape_interface_private *tip, uint8_t v1, uint8_t v2) {
-	uint8_t cc = CC(tip);
+	uint8_t cc = GET_CC(tip);
 	unsigned int v = v1 - v2;
-	cc &= ~0x0f;  /* clear NZVC */
-	if (v & 0x80) cc |= 0x08;  /* set N */
-	if ((v & 0xff) == 0) cc |= 0x04;  /* set Z */
-	if ((v1^v2^v^(v>>1)) & 0x80) cc |= 0x02;  /* set V */
-	if (v & 0x100) cc |= 0x01;  /* set C */
+	cc = (cc & M_NZVC) | T_NZVC8(v1, v2, v);
 	SET_CC(tip, cc);
 	return v;
 }
 
 static uint8_t op_clr(struct tape_interface_private *tip) {
-	uint8_t cc = CC(tip);
-	cc &= ~0x0b;  // clear NVC
-	cc |= 0x04;  // set Z
+	uint8_t cc = GET_CC(tip);
+	cc = (cc & M_NVC) | CC_Z;
 	SET_CC(tip, cc);
 	return 0;
 }
 
-#define CPUSKIP(tip,n) (tip->cpuskip += (n))
+#define SKIP_CPU_CYCLES(tip,n) (tip->skip_ncycles += (n))
 
-#define BHI(tip) (CPUSKIP(tip, 3), !(CC(tip) & 0x05))
-#define BLS(tip) (!BHI(tip))
-#define BCC(tip) (CPUSKIP(tip, 3), !(CC(tip) & 0x01))
-#define BHS(tip) (BCC(tip))
-#define BCS(tip) (!BCC(tip))
-#define BLO(tip) (BCS(tip))
-#define BNE(tip) (CPUSKIP(tip, 3), !(CC(tip) & 0x04))
-#define BRA(tip) (CPUSKIP(tip, 3))
+#define FAKE_BHI(tip) (SKIP_CPU_CYCLES(tip, 3), !(GET_CC(tip) & (CC_Z | CC_C)))
+#define FAKE_BLS(tip) (!FAKE_BHI(tip))
+#define FAKE_BCC(tip) (SKIP_CPU_CYCLES(tip, 3), !(GET_CC(tip) & CC_C))
+#define FAKE_BHS(tip) (FAKE_BCC(tip))
+#define FAKE_BCS(tip) (!FAKE_BCC(tip))
+#define FAKE_BLO(tip) (FAKE_BCS(tip))
+#define FAKE_BNE(tip) (SKIP_CPU_CYCLES(tip, 3), !(GET_CC(tip) & CC_Z))
+#define FAKE_BRA(tip) (SKIP_CPU_CYCLES(tip, 3))
 
-static void BSR(struct tape_interface_private *tip, void (*f)(struct tape_interface_private *)) {
-	CPUSKIP(tip, tip->is_6809 ? 7 : 6);
+static void FAKE_BSR(struct tape_interface_private *tip,
+		void (*f)(struct tape_interface_private *)) {
+	SKIP_CPU_CYCLES(tip, tip->is_6809 ? 7 : 6);
 	f(tip);
 }
 
-#define RTS(tip)  do { CPUSKIP(tip, 5); } while (0)
-#define CLR(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), 0); } while (0)
-#define DEC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a, 0) - 1); } while (0)
-#define INC(tip,a) do { CPUSKIP(tip, 6); tip->machine->write_byte(tip->machine, (a), tip->machine->read_byte(tip->machine, a, 0) + 1); } while (0)
+// Memory accesses
+
+static uint8_t mem_read8(struct tape_interface_private *tip, uint16_t A) {
+	return tip->machine->read_byte(tip->machine, A, 0);
+}
+
+static uint16_t mem_read16(struct tape_interface_private *tip, uint16_t A) {
+	uint16_t r = mem_read8(tip, A) << 8;
+	r |= mem_read8(tip, A + 1);
+	return r;
+}
+
+static void mem_write8(struct tape_interface_private *tip, uint16_t A, uint8_t D) {
+	tip->machine->write_byte(tip->machine, A, D);
+}
+
+// Timing-only instruction equivalents
+
+#define FAKE_RTS(tip) do { \
+		SKIP_CPU_CYCLES(tip, 5); \
+	} while (0)
+
+#define FAKE_CLR_DIRECT(tip,a) do { \
+		SKIP_CPU_CYCLES(tip, 6); \
+		mem_write8((tip), (a), 0); \
+	} while (0)
+
+#define FAKE_DEC_DIRECT(tip,a) do { \
+		SKIP_CPU_CYCLES(tip, 6); \
+		uint8_t D = mem_read8((tip), (a)) - 1; \
+		mem_write8((tip), (a), D); \
+	} while (0)
+
+#define FAKE_INC_DIRECT(tip,a) do { \
+		SKIP_CPU_CYCLES(tip, 6); \
+		uint8_t D = mem_read8((tip), (a)) + 1; \
+		mem_write8((tip), (a), D); \
+	} while (0)
+
+// ---------------------------------------------------------------------------
+
+// Fast tape reading
+
+// A set of breakpoint handlers that replace ROM routines, avoiding the need to
+// emulate the CPU.
+//
+// The MC-10 ROM performs pretty much the same operations - at least, they're
+// similar enough that just subbing in MC-10 addresses makes this work for that
+// machine too.
+
+// Helpers used by ROM intercepts.
+
+// When we accelerate tape read operations, the system clock won't have
+// changed, but we need to pretend it did.  This reads pulses from the tape to
+// simulate the elapsed time and reschedules tape events accordingly.  It has
+// no effect on the output tape, as we may be rewriting to that.
+
+static void advance_read_time(struct tape_interface_private *tip, int skip) {
+	struct tape_interface *ti = &tip->public;
+	while (skip >= tip->in_pulse_width) {
+		skip -= tip->in_pulse_width;
+		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
+		if (tip->in_pulse < 0) {
+			event_dequeue(&tip->waggle_event);
+			if (!motoroff_timeout && xroar.cfg.debug.timeout_motoroff) {
+				motoroff_timeout = xroar_set_timeout(xroar.cfg.debug.timeout_motoroff);
+			}
+			return;
+		}
+	}
+	tip->in_pulse_width -= skip;
+	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
+	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
+	DELEGATE_CALL(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
+}
+
+// Apply accumulated time skip to read state
+
+static void do_skip_read_time(struct tape_interface_private *tip) {
+	advance_read_time(tip, tip->skip_ncycles * EVENT_TICKS_14M31818(16));
+	tip->skip_ncycles = 0;
+}
+
+// Update read time based on how far into current pulse we are
+
+static void update_read_time(struct tape_interface_private *tip) {
+	event_ticks skip = tip->waggle_event.at_tick - event_current_tick;
+	int s = event_tick_delta(tip->in_pulse_width, skip);
+	if (s >= 0) {
+		advance_read_time(tip, s);
+	}
+}
+
+// Called by fast_motor_on().  Skipped if a short leader is detected.
 
 static void motor_on_delay(struct tape_interface_private *tip) {
 	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
-	CPUSKIP(tip, 5);  /* LDX <$95 */
-	int i = (tip->machine->read_byte(tip->machine, tip->addr.motor_delay, 0) << 8) | tip->machine->read_byte(tip->machine, tip->addr.motor_delay+1, 0);
-	CPUSKIP(tip, tip->initial_motor_delay);  /* LBRA delay_X */
-	for (; i; i--) {
-		CPUSKIP(tip, 5);  /* LEAX -1,X */
-		CPUSKIP(tip, 3);  /* BNE delay_X */
+	SKIP_CPU_CYCLES(tip, 5);  /* LDX <$95 */
+	uint16_t X = mem_read16(tip, tip->addr.motor_delay);
+	SKIP_CPU_CYCLES(tip, tip->initial_motor_delay);  /* LBRA delay_X */
+	for (; X; --X) {
+		SKIP_CPU_CYCLES(tip, 5);  /* LEAX -1,X */
+		SKIP_CPU_CYCLES(tip, 3);  /* BNE delay_X */
 		/* periodically sync up tape position */
-		if ((i & 63) == 0)
+		if ((X & 63) == 0)
 			do_skip_read_time(tip);
 	}
 	cpu09->reg_x = 0;
-	cpu09->reg_cc |= 0x04;
-	RTS(tip);
+	cpu09->reg_cc |= CC_Z;
+	FAKE_RTS(tip);
 }
 
 // Sample the cassette port input.  The input is inverted so a positive signal
 // results in CC.C clear, or set if negative.
 
 static void sample_cas(struct tape_interface_private *tip) {
-	INC(tip, tip->addr.pwcount);
-	CPUSKIP(tip, 5);  /* LDB >$FF20 */
+	FAKE_INC_DIRECT(tip, tip->addr.pwcount);
+	SKIP_CPU_CYCLES(tip, 5);  /* LDB >$FF20 */
 	do_skip_read_time(tip);
-	CPUSKIP(tip, 2);  /* RORB */
-	RTS(tip);
+	SKIP_CPU_CYCLES(tip, 2);  /* RORB */
+	FAKE_RTS(tip);
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// ROM intercepts.  Generally running the same algorithms outside emulation.
+// We maintain a counter of skipped CPU cycles to sync the tape to the right
+// position without actually running the CPU.
 
 static void tape_wait_p0(struct tape_interface_private *tip) {
 	do {
-		BSR(tip, sample_cas);
+		FAKE_BSR(tip, sample_cas);
 		if (tip->in_pulse < 0) return;
-		CPUSKIP(tip, 3);  /* BCS tape_wait_p0 */
+		SKIP_CPU_CYCLES(tip, 3);  /* BCS tape_wait_p0 */
 	} while (!tip->in_pulse);
-	RTS(tip);
+	FAKE_RTS(tip);
 }
 
 static void tape_wait_p1(struct tape_interface_private *tip) {
 	do {
-		BSR(tip, sample_cas);
+		FAKE_BSR(tip, sample_cas);
 		if (tip->in_pulse < 0) return;
-		CPUSKIP(tip, 3);  /* BCC tape_wait_p1 */
+		SKIP_CPU_CYCLES(tip, 3);  /* BCC tape_wait_p1 */
 	} while (tip->in_pulse);
-	RTS(tip);
+	FAKE_RTS(tip);
 }
 
 static void tape_wait_p0_p1(struct tape_interface_private *tip) {
-	BSR(tip, tape_wait_p0);
+	FAKE_BSR(tip, tape_wait_p0);
 	if (tip->in_pulse < 0) return;
 	tape_wait_p1(tip);
 }
 
 static void tape_wait_p1_p0(struct tape_interface_private *tip) {
-	BSR(tip, tape_wait_p1);
+	FAKE_BSR(tip, tape_wait_p1);
 	if (tip->in_pulse < 0) return;
 	tape_wait_p0(tip);
 }
@@ -1093,31 +1185,32 @@ static void tape_wait_p1_p0(struct tape_interface_private *tip) {
 // against minpw1200.
 
 static void L_BDC3(struct tape_interface_private *tip) {
-	CPUSKIP(tip, 4);  /* LDB <$82 */
-	CPUSKIP(tip, 4);  /* CMPB <$94 */
-	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0), tip->machine->read_byte(tip->machine, tip->addr.maxpw1200, 0));
-	if (BHI(tip)) {  // BHI L_BDCC
-		CLR(tip, tip->addr.bcount);
+	SKIP_CPU_CYCLES(tip, 4);  /* LDB <$82 */
+	uint8_t B = mem_read8(tip, tip->addr.pwcount);
+	SKIP_CPU_CYCLES(tip, 4);  /* CMPB <$94 */
+	op_sub(tip, B, mem_read8(tip, tip->addr.maxpw1200));
+	if (FAKE_BHI(tip)) {  // BHI L_BDCC
+		FAKE_CLR_DIRECT(tip, tip->addr.bcount);
 		op_clr(tip);
-		RTS(tip);
+		FAKE_RTS(tip);
 		return;
 	}
-	CPUSKIP(tip, 4);  /* CMPB <$93 */
-	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0), tip->machine->read_byte(tip->machine, tip->addr.minpw1200, 0));
-	RTS(tip);
+	SKIP_CPU_CYCLES(tip, 4);  /* CMPB <$93 */
+	op_sub(tip, B, mem_read8(tip, tip->addr.minpw1200));
+	FAKE_RTS(tip);
 }
 
 static void tape_cmp_p1_1200(struct tape_interface_private *tip) {
-	CLR(tip, tip->addr.pwcount);
-	BSR(tip, tape_wait_p0);
+	FAKE_CLR_DIRECT(tip, tip->addr.pwcount);
+	FAKE_BSR(tip, tape_wait_p0);
 	if (tip->in_pulse < 0) return;
-	BRA(tip);  /* BRA L_BDC3 */
+	FAKE_BRA(tip);  /* BRA L_BDC3 */
 	L_BDC3(tip);
 }
 
 static void tape_cmp_p0_1200(struct tape_interface_private *tip) {
-	CLR(tip, tip->addr.pwcount);
-	BSR(tip, tape_wait_p1);
+	FAKE_CLR_DIRECT(tip, tip->addr.pwcount);
+	FAKE_BSR(tip, tape_wait_p1);
 	if (tip->in_pulse < 0) return;
 	// fall through to L_BDC3
 	L_BDC3(tip);
@@ -1143,13 +1236,13 @@ static void sync_leader(struct tape_interface_private *tip) {
 	while (!done && tip->in_pulse >= 0) {
 		switch (state) {
 		case L_BDED:
-			BSR(tip, tape_wait_p0_p1);
+			FAKE_BSR(tip, tape_wait_p0_p1);
 			state = L_BDEF;  // fall through to L_BDEF
 			break;
 
 		case L_BDEF:
-			BSR(tip, tape_cmp_p1_1200);
-			if (BHI(tip)) {
+			FAKE_BSR(tip, tape_cmp_p1_1200);
+			if (FAKE_BHI(tip)) {
 				state = L_BDFF;  // BHI L_BDFF
 				break;
 			}
@@ -1157,23 +1250,23 @@ static void sync_leader(struct tape_interface_private *tip) {
 			break;
 
 		case L_BDF3:
-			BSR(tip, tape_cmp_p0_1200);
-			if (BLO(tip)) {
+			FAKE_BSR(tip, tape_cmp_p0_1200);
+			if (FAKE_BLO(tip)) {
 				state = L_BE03;  // BLO L_BE03
 				break;
 			}
-			INC(tip, tip->addr.bcount);
-			CPUSKIP(tip, 4);  // LDA <$83
-			CPUSKIP(tip, 2);  // CMPA #$60
-			phase = tip->machine->read_byte(tip->machine, tip->addr.bcount, 0);
+			FAKE_INC_DIRECT(tip, tip->addr.bcount);
+			SKIP_CPU_CYCLES(tip, 4);  // LDA <$83
+			SKIP_CPU_CYCLES(tip, 2);  // CMPA #$60
+			phase = mem_read8(tip, tip->addr.bcount);
 			op_sub(tip, phase, 0x60);
-			BRA(tip);
+			FAKE_BRA(tip);
 			state = L_BE0D;  // BRA L_BE0D
 			break;
 
 		case L_BDFF:
-			BSR(tip, tape_cmp_p0_1200);
-			if (BHI(tip)) {
+			FAKE_BSR(tip, tape_cmp_p0_1200);
+			if (FAKE_BHI(tip)) {
 				state = L_BDEF;  // BHI L_BDEF
 				break;
 			}
@@ -1181,26 +1274,26 @@ static void sync_leader(struct tape_interface_private *tip) {
 			break;
 
 		case L_BE03:
-			BSR(tip, tape_cmp_p1_1200);
-			if (BCS(tip)) {
+			FAKE_BSR(tip, tape_cmp_p1_1200);
+			if (FAKE_BCS(tip)) {
 				state = L_BDF3;  // BCS L_BDF3
 				break;
 			}
-			DEC(tip, tip->addr.bcount);
-			CPUSKIP(tip, 4);  // LDA <$83
-			CPUSKIP(tip, 2);  // ADDA #$60
-			phase = op_add(tip, tip->machine->read_byte(tip->machine, tip->addr.bcount, 0), 0x60);
+			FAKE_DEC_DIRECT(tip, tip->addr.bcount);
+			SKIP_CPU_CYCLES(tip, 4);  // LDA <$83
+			SKIP_CPU_CYCLES(tip, 2);  // ADDA #$60
+			phase = op_add(tip, mem_read8(tip, tip->addr.bcount), 0x60);
 			state = L_BE0D;
 			break;
 
 		case L_BE0D:
-			if (BNE(tip)) {
+			if (FAKE_BNE(tip)) {
 				state = L_BDED;  // BNE L_BDED
 				break;
 			}
-			CPUSKIP(tip, 4);  // STA <$84
-			tip->machine->write_byte(tip->machine, tip->addr.bphase, phase);
-			RTS(tip);
+			SKIP_CPU_CYCLES(tip, 4);  // STA <$84
+			mem_write8(tip, tip->addr.bphase, phase);
+			FAKE_RTS(tip);
 			done = 1;
 			break;
 		}
@@ -1208,10 +1301,10 @@ static void sync_leader(struct tape_interface_private *tip) {
 }
 
 static void tape_wait_2p(struct tape_interface_private *tip) {
-	CLR(tip, tip->addr.pwcount);
-	CPUSKIP(tip, 6);  /* TST <$84 */
-	CPUSKIP(tip, 3);  /* BNE tape_wait_p1_p0 */
-	if (tip->machine->read_byte(tip->machine, tip->addr.bphase, 0)) {
+	FAKE_CLR_DIRECT(tip, tip->addr.pwcount);
+	SKIP_CPU_CYCLES(tip, 6);  /* TST <$84 */
+	SKIP_CPU_CYCLES(tip, 3);  /* BNE tape_wait_p1_p0 */
+	if (mem_read8(tip, tip->addr.bphase)) {
 		tape_wait_p1_p0(tip);
 	} else {
 		tape_wait_p0_p1(tip);
@@ -1219,43 +1312,47 @@ static void tape_wait_2p(struct tape_interface_private *tip) {
 }
 
 static void bitin(struct tape_interface_private *tip) {
-	BSR(tip, tape_wait_2p);
-	CPUSKIP(tip, 4);  /* LDB <$82 */
-	CPUSKIP(tip, 2);  /* DECB */
-	CPUSKIP(tip, 4);  /* CMPB <$92 */
-	op_sub(tip, tip->machine->read_byte(tip->machine, tip->addr.pwcount, 0) - 1, tip->machine->read_byte(tip->machine, tip->addr.mincw1200, 0));
-	RTS(tip);
+	FAKE_BSR(tip, tape_wait_2p);
+	SKIP_CPU_CYCLES(tip, 4);  /* LDB <$82 */
+	uint8_t B = mem_read8(tip, tip->addr.pwcount);
+	SKIP_CPU_CYCLES(tip, 2);  /* DECB */
+	--B;
+	SKIP_CPU_CYCLES(tip, 4);  /* CMPB <$92 */
+	op_sub(tip, B, mem_read8(tip, tip->addr.mincw1200));
+	FAKE_RTS(tip);
 }
 
 static void cbin(struct tape_interface_private *tip) {
 	int bin = 0;
-	CPUSKIP(tip, 2);  /* LDA #$08 */
-	CPUSKIP(tip, 4);  /* STA <$83 */
+	SKIP_CPU_CYCLES(tip, 2);  /* LDA #$08 */
+	SKIP_CPU_CYCLES(tip, 4);  /* STA <$83 */
 	for (int i = 8; i; i--) {
-		BSR(tip, bitin);
-		CPUSKIP(tip, 2);  // RORA
+		FAKE_BSR(tip, bitin);
+		SKIP_CPU_CYCLES(tip, 2);  // RORA
 		bin >>= 1;
-		bin |= (CC(tip) & 0x01) ? 0x80 : 0;
-		CPUSKIP(tip, 6);  // DEC <$83
-		CPUSKIP(tip, 3);  // BNE $BDB1
+		bin |= (GET_CC(tip) & 0x01) ? 0x80 : 0;
+		SKIP_CPU_CYCLES(tip, 6);  // DEC <$83
+		SKIP_CPU_CYCLES(tip, 3);  // BNE $BDB1
 	}
-	RTS(tip);
+	FAKE_RTS(tip);
 	SET_A(tip, bin);
-	tip->machine->write_byte(tip->machine, tip->addr.bcount, 0);
+	mem_write8(tip, tip->addr.bcount, 0);
 }
 
 // fast_motor_on() skips the standard delay if a short leader was detected
 // (usually old CAS files).
 
 static void fast_motor_on(void *sptr) {
+	// Breakpoint: CASON, after switching on, before delay
 	struct tape_interface_private *tip = sptr;
 	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
+
 	update_read_time(tip);
 	if (!tip->short_leader) {
 		motor_on_delay(tip);
 	} else {
 		cpu09->reg_x = 0;
-		cpu09->reg_cc |= 0x04;
+		cpu09->reg_cc |= CC_Z;
 	}
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
@@ -1264,7 +1361,9 @@ static void fast_motor_on(void *sptr) {
 // Similarly, fast_sync_leader() just assumes leader has been sensed
 
 static void fast_sync_leader(void *sptr) {
+	// Breakpoint: CSRDON, after calling CASON
 	struct tape_interface_private *tip = sptr;
+
 	update_read_time(tip);
 	if (!tip->short_leader) {
 		sync_leader(tip);
@@ -1277,7 +1376,9 @@ static void fast_sync_leader(void *sptr) {
 // code can be reached during initial silence.
 
 static void fast_tape_p0_wait_p1(void *sptr) {
+	// Breakpoint: waiting for high pulse
 	struct tape_interface_private *tip = sptr;
+
 	update_read_time(tip);
 	tape_wait_p1(tip);
 	tip->machine->op_rts(tip->machine);
@@ -1285,48 +1386,65 @@ static void fast_tape_p0_wait_p1(void *sptr) {
 }
 
 static void fast_bitin(void *sptr) {
+	// Breakpoint: BITIN
 	struct tape_interface_private *tip = sptr;
+
 	update_read_time(tip);
 	bitin(tip);
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
-	if (tip->tape_rewrite) rewrite_bitin(tip);
+	if (tip->tape_rewrite) {
+		rewrite_bitin(tip);
+	}
 }
 
 static void fast_cbin(void *sptr) {
+	// Breakpoint: CBIN
 	struct tape_interface_private *tip = sptr;
-	if (tip->tape_rewrite)
-		return;  // incompatible
+
+	if (tip->tape_rewrite) {
+		// If rewriting, we allow the ROM to keep calling BITIN and
+		// rely on fast_bitin() to do the work
+		return;
+	}
+
 	update_read_time(tip);
 	cbin(tip);
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
 }
 
-/* Leader padding & tape rewriting */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Tape rewriting
+
+// These functions are only ever called after checking that rewrite is enabled,
+// or from a breakpoint only set for rewrite.
 
 // Flags tape rewrite stream as desynced.  At this point, some amount of leader
 // bytes are expected followed by a sync byte, at which point rewriting will
 // continue.  Long leader follows motor off/on, short leader follows normal
 // data block.
 
-static void tape_desync(struct tape_interface_private *tip, int leader) {
+static void rewrite_tape_desync(struct tape_interface_private *tip, int leader) {
 	struct tape_interface *ti = &tip->public;
-	if (tip->tape_rewrite) {
-		// pad last byte with trailer pattern
-		while (tip->rewrite.bit_count) {
-			tape_bit_out(ti->tape_output, ~tip->rewrite.bit_count & 1);
-		}
-		// one byte of trailer before any silence (but not following silence)
-		if (leader > 0 && !tip->rewrite.silence) {
-			tape_byte_out(ti->tape_output, 0x55);
-			leader--;
-		}
-		// desync tape rewrite - will continue once a sync byte is read
-		tip->rewrite.have_sync = 0;
-		tip->rewrite.leader_count = leader;
-		if (leader > 2)
-			tip->rewrite.have_pulse_widths = 0;
+
+	// pad last byte with trailer pattern
+	while (tip->rewrite.bit_count) {
+		tape_bit_out(ti->tape_output, ~tip->rewrite.bit_count & 1);
+	}
+
+	// one byte of trailer before any silence (but not following silence)
+	if (leader > 0 && !tip->rewrite.silence) {
+		tape_byte_out(ti->tape_output, 0x55);
+		leader--;
+	}
+
+	// desync tape rewrite - will continue once a sync byte is read
+	tip->rewrite.have_sync = 0;
+	tip->rewrite.leader_count = leader;
+	if (leader > 2) {
+		tip->rewrite.have_pulse_widths = 0;
 	}
 }
 
@@ -1335,12 +1453,14 @@ static void tape_desync(struct tape_interface_private *tip, int leader) {
 // rewritten verbatim.
 
 static void rewrite_sync(void *sptr) {
-	/* BLKIN, having read sync byte $3C */
+	// Breakpoint: BLKIN, having read sync byte $3C
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
-	if (tip->rewrite.have_sync) return;
 
-	if (!tip->tape_rewrite) return;
+	// Already synced?  Nothing to do.
+	if (tip->rewrite.have_sync) {
+		return;
+	}
 
 	// Scan pulse buffer to determine average pulse widths.
 	if (!tip->rewrite.have_pulse_widths) {
@@ -1360,8 +1480,9 @@ static void rewrite_sync(void *sptr) {
 		tip->rewrite.have_pulse_widths = 1;
 	}
 
-	for (int i = 0; i < tip->rewrite.leader_count; i++)
+	for (int i = 0; i < tip->rewrite.leader_count; ++i) {
 		tape_byte_out(ti->tape_output, 0x55);
+	}
 	tape_byte_out(ti->tape_output, 0x3c);
 	tip->rewrite.have_sync = 1;
 }
@@ -1370,24 +1491,30 @@ static void rewrite_sync(void *sptr) {
 // synced.
 
 static void rewrite_bitin(void *sptr) {
-	/* RTS from BITIN */
+	// Breakpoint: RTS from BITIN
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
-	if (tip->tape_rewrite && tip->rewrite.have_sync) {
-		tape_bit_out(ti->tape_output, CC(tip) & 0x01);
+
+	// Must by synced
+	if (!tip->rewrite.have_sync) {
+		return;
 	}
+
+	tape_bit_out(ti->tape_output, GET_CC(tip) & 0x01);
 }
 
 // When tape motor turned on, rewrite a standard duration of silence and flag
 // the stream as desynced, expecting a long leader before the next block.
 
 static void rewrite_tape_on(void *sptr) {
-	/* CSRDON */
+	// Breakpoint: CSRDON
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
-	/* desync with long leader */
-	tape_desync(tip, xroar.cfg.tape.rewrite_leader);
-	if (tip->tape_rewrite && ti->tape_output) {
+
+	// Desync with long leader
+	rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+
+	if (ti->tape_output) {
 		tape_sample_out(ti->tape_output, 0x80, EVENT_MS(xroar.cfg.tape.rewrite_gap_ms));
 		tip->rewrite.silence = 1;
 	}
@@ -1397,13 +1524,16 @@ static void rewrite_tape_on(void *sptr) {
 // intra-block leader before the next.
 
 static void rewrite_end_of_block(void *sptr) {
-	/* BLKIN, having confirmed checksum */
+	// Breakpoint: BLKIN, having confirmed checksum
 	struct tape_interface_private *tip = sptr;
-	/* desync with short inter-block leader */
-	tape_desync(tip, 2);
+
+	// desync with short inter-block leader
+	rewrite_tape_desync(tip, 2);
 }
 
-/* Configuring tape options */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Update applied breakpoints
 
 // These fast loading intercepts are needed for "short leader" padding.
 
