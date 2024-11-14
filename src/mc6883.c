@@ -45,9 +45,9 @@
 // SAM Data Sheet,
 //   Figure 6 - Signal routing for address multiplexer
 
-static uint8_t const ram_row_masks[4] = { 0x7f, 0x7f, 0xff, 0xff };
-static unsigned const ram_col_shifts[4] = { 6, 7, 8, 8 };
-static uint8_t const ram_col_masks[4] = { 0x3f, 0x7f, 0xff, 0xff };
+static uint16_t const ram_row_masks[4] = { 0x7f, 0x7f, 0xff, 0xff };
+static uint8_t const ram_col_shifts[4] = { 6, 7, 8, 8 };
+static uint16_t const ram_col_masks[4] = { 0x3f, 0x7f, 0xff, 0xff };
 static uint16_t const ram_ras1_bits[4] = { 0x1000, 0x4000, 0, 0 };
 
 // VDG X & Y divider configurations and HSync clear mode.
@@ -161,7 +161,7 @@ struct MC6883_private {
 
 	// Address multiplexer
 	uint16_t ram_row_mask;
-	unsigned ram_col_shift;
+	uint8_t ram_col_shift;
 	uint16_t ram_col_mask;
 	uint16_t ram_ras1_bit;
 	uint16_t ram_ras1;
@@ -207,7 +207,7 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_RAS1),
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_OLD_P),
 
-	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct MC6883, S),
+	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MC6883, S),
 	SER_ID_STRUCT_ELEM(32, ser_type_unsigned, struct MC6883, Zrow),
 	SER_ID_STRUCT_ELEM(33, ser_type_unsigned, struct MC6883, Zcol),
 	SER_ID_STRUCT_ELEM(34, ser_type_unsigned, struct MC6883, Vrow),
@@ -390,8 +390,8 @@ void mc6883_reset(struct MC6883 *samp) {
 // register will update the internal configuration.  The CPU delegate is called
 // with the number of (SAM) cycles elapsed, RnW flag and translated address.
 
-static unsigned const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
-static unsigned const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
+static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
+static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
 void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
@@ -486,7 +486,7 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 // breakpoint refers to ROM.
 
 unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
-	struct MC6883_private *sam = (struct MC6883_private *)samp;
+	const struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if ((A >> 8) == 0xff) {
 		// I/O area
 		return io_S[(A >> 5) & 7];

@@ -28,7 +28,7 @@
 struct MC6883 {
 	struct part part;
 
-	unsigned S;
+	uint8_t S;
 	unsigned Zrow;
 	unsigned Zcol;
 	unsigned Vrow;
