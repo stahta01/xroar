@@ -95,11 +95,11 @@ static const struct ser_struct ser_struct_dragonpro[] = {
 	SER_ID_STRUCT_NEST(1,  &dragon_ser_struct_data),
 
 	// Floppy disk data
-	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct machine_dragonpro, dos.device_select),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool,     struct machine_dragonpro, dos.motor_enable),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool,     struct machine_dragonpro, dos.single_density),
-	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct machine_dragonpro, dos.precomp_enable),
-	SER_ID_STRUCT_ELEM(6, ser_type_bool,     struct machine_dragonpro, dos.nmi_enable),
+	SER_ID_STRUCT_ELEM(2, struct machine_dragonpro, dos.device_select),
+	SER_ID_STRUCT_ELEM(3, struct machine_dragonpro, dos.motor_enable),
+	SER_ID_STRUCT_ELEM(4, struct machine_dragonpro, dos.single_density),
+	SER_ID_STRUCT_ELEM(5, struct machine_dragonpro, dos.precomp_enable),
+	SER_ID_STRUCT_ELEM(6, struct machine_dragonpro, dos.nmi_enable),
 };
 
 static const struct ser_struct_data dragonpro_ser_struct_data = {

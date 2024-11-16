@@ -53,7 +53,7 @@ struct gmc {
 
 static const struct ser_struct ser_struct_gmc[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint32, struct gmc, rom_bank),
+	SER_ID_STRUCT_ELEM(2, struct gmc, rom_bank),
 };
 
 static const struct ser_struct_data gmc_ser_struct_data = {

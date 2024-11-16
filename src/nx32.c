@@ -50,9 +50,9 @@ struct nx32 {
 static const struct ser_struct ser_struct_nx32[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
 	SER_ID_STRUCT_UNHANDLED(NX32_SER_EXTMEM),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct nx32, extmem_map),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct nx32, extmem_ty),
-	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct nx32, extmem_bank),
+	SER_ID_STRUCT_ELEM(3, struct nx32, extmem_map),
+	SER_ID_STRUCT_ELEM(4, struct nx32, extmem_ty),
+	SER_ID_STRUCT_ELEM(5, struct nx32, extmem_bank),
 };
 
 static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);

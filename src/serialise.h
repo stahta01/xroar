@@ -108,6 +108,23 @@ enum ser_type {
 	ser_type_nest,  // recurse using data.ser_struct_data
 };
 
+// Because both int and unsigned will usually tend to be one of these (could be
+// 64-bit, but likely not), we need to split our _Generic match up.  This is
+// safe as they'll be accessed and read/written in the same way.
+
+#define ser_type_for(m) _Generic((m), \
+		int: ser_type_int, \
+		unsigned: ser_type_unsigned, \
+		default: _Generic((m), \
+			_Bool: ser_type_bool, \
+			int8_t: ser_type_int8, \
+			uint8_t: ser_type_uint8, \
+			int16_t: ser_type_int16, \
+			uint16_t: ser_type_uint16, \
+			int32_t: ser_type_int32, \
+			uint32_t: ser_type_uint32, \
+			char *: ser_type_string ) )
+
 /** \brief Describes a struct member. */
 struct ser_struct {
 	// While transitioning old code, a tag ID of 0 implies that ID is equal
@@ -127,7 +144,8 @@ struct ser_struct {
 	} data;
 };
 
-#define SER_ID_STRUCT_ELEM(i,t,s,e) { .tag = (i), .type = t, .offset = offsetof(s,e) }
+#define SER_ID_STRUCT_TYPE(i,t,s,e) { .tag = (i), .type = t, .offset = offsetof(s,e) }
+#define SER_ID_STRUCT_ELEM(i,s,e) { .tag = (i), .type = ser_type_for(((s *)0)->e), .offset = offsetof(s,e) }
 #define SER_ID_STRUCT_UNHANDLED(i) { .tag = (i), .type = ser_type_unhandled }
 #define SER_ID_STRUCT_SUBSTRUCT(i,s,e,d) { .tag = (i), .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
 #define SER_ID_STRUCT_NEST(i,d) { .tag = (i), .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }

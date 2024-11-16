@@ -70,12 +70,12 @@ struct machine_deluxecoco {
 
 static const struct ser_struct ser_struct_deluxecoco[] = {
         SER_ID_STRUCT_NEST(1, &dragon_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct machine_deluxecoco, page),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct machine_deluxecoco, page_enable),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct machine_deluxecoco, burst),
-	SER_ID_STRUCT_ELEM(5, ser_type_bool, struct machine_deluxecoco, irq_60hz_enable),
-	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct machine_deluxecoco, irq_60hz),
-	SER_ID_STRUCT_ELEM(7, ser_type_bool, struct machine_deluxecoco, cart_inhibit),
+	SER_ID_STRUCT_ELEM(2, struct machine_deluxecoco, page),
+	SER_ID_STRUCT_ELEM(3, struct machine_deluxecoco, page_enable),
+	SER_ID_STRUCT_ELEM(4, struct machine_deluxecoco, burst),
+	SER_ID_STRUCT_ELEM(5, struct machine_deluxecoco, irq_60hz_enable),
+	SER_ID_STRUCT_ELEM(6, struct machine_deluxecoco, irq_60hz),
+	SER_ID_STRUCT_ELEM(7, struct machine_deluxecoco, cart_inhibit),
 };
 
 static const struct ser_struct_data deluxecoco_ser_struct_data = {

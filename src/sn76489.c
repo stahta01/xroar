@@ -92,20 +92,20 @@ struct SN76489_private {
 #define SN76489_SER_STATE (8)
 
 static struct ser_struct ser_struct_sn76489[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct SN76489_private, public.ready),
+	SER_ID_STRUCT_ELEM(1, struct SN76489_private, public.ready),
 
-	SER_ID_STRUCT_ELEM(2, ser_type_int, struct SN76489_private, refrate),
+	SER_ID_STRUCT_ELEM(2, struct SN76489_private, refrate),
 	// ID 3 used to be 'framerate', but this is a local parameter
-	SER_ID_STRUCT_ELEM(4, ser_type_int, struct SN76489_private, tickrate),
+	SER_ID_STRUCT_ELEM(4, struct SN76489_private, tickrate),
 
-	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct SN76489_private, reg_sel),
+	SER_ID_STRUCT_ELEM(5, struct SN76489_private, reg_sel),
 	SER_ID_STRUCT_UNHANDLED(SN76489_SER_REG_VAL),
 
 	SER_ID_STRUCT_UNHANDLED(SN76489_SER_COUNTER),
 	SER_ID_STRUCT_UNHANDLED(SN76489_SER_STATE),
-	SER_ID_STRUCT_ELEM(9, ser_type_bool, struct SN76489_private, nstate),
+	SER_ID_STRUCT_ELEM(9, struct SN76489_private, nstate),
 
-	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct SN76489_private, noise_lfsr),
+	SER_ID_STRUCT_ELEM(10, struct SN76489_private, noise_lfsr),
 };
 
 static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);

@@ -40,8 +40,8 @@ struct orch90 {
 
 static const struct ser_struct ser_struct_orch90[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct orch90, left),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct orch90, right),
+	SER_ID_STRUCT_ELEM(2, struct orch90, left),
+	SER_ID_STRUCT_ELEM(3, struct orch90, right),
 };
 
 static const struct ser_struct_data orch90_ser_struct_data = {

@@ -108,9 +108,9 @@ static const struct ser_struct ser_struct_mc10[] = {
 	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
 	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM),
 	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM_SIZE),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct machine_mc10, inverted_text),
-	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct machine_mc10, video_mode),
-	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct machine_mc10, video_attr),
+	SER_ID_STRUCT_ELEM(4, struct machine_mc10, inverted_text),
+	SER_ID_STRUCT_ELEM(5, struct machine_mc10, video_mode),
+	SER_ID_STRUCT_ELEM(6, struct machine_mc10, video_attr),
 };
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);

@@ -63,11 +63,11 @@ struct spi65_private {
 };
 
 static const struct ser_struct ser_struct_spi65[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct spi65_private, reg_data_in),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct spi65_private, reg_data_out),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct spi65_private, status),
-	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct spi65_private, clkdiv),
-	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct spi65_private, ss_ie),
+	SER_ID_STRUCT_ELEM(1, struct spi65_private, reg_data_in),
+	SER_ID_STRUCT_ELEM(2, struct spi65_private, reg_data_out),
+	SER_ID_STRUCT_ELEM(3, struct spi65_private, status),
+	SER_ID_STRUCT_ELEM(4, struct spi65_private, clkdiv),
+	SER_ID_STRUCT_ELEM(5, struct spi65_private, ss_ie),
 };
 
 static const struct ser_struct_data spi65_ser_struct_data = {

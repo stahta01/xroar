@@ -32,29 +32,29 @@
 #include "xroar.h"
 
 static const struct ser_struct ser_struct_mc6821_side[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MC6821_side, control_register),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct MC6821_side, direction_register),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct MC6821_side, output_register),
+	SER_ID_STRUCT_ELEM(1, struct MC6821_side, control_register),
+	SER_ID_STRUCT_ELEM(2, struct MC6821_side, direction_register),
+	SER_ID_STRUCT_ELEM(3, struct MC6821_side, output_register),
 
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6821_side, cx1),
-	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct MC6821_side, cx2),
-	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct MC6821_side, irq1_received),
-	SER_ID_STRUCT_ELEM(13, ser_type_uint8, struct MC6821_side, irq2_received),
-	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6821_side, irq),
+	SER_ID_STRUCT_ELEM(4, struct MC6821_side, cx1),
+	SER_ID_STRUCT_ELEM(12, struct MC6821_side, cx2),
+	SER_ID_STRUCT_ELEM(5, struct MC6821_side, irq1_received),
+	SER_ID_STRUCT_ELEM(13, struct MC6821_side, irq2_received),
+	SER_ID_STRUCT_ELEM(6, struct MC6821_side, irq),
 
-	SER_ID_STRUCT_ELEM(7, ser_type_event, struct MC6821_side, irq_event),
-	SER_ID_STRUCT_ELEM(14, ser_type_event, struct MC6821_side, strobe_event),
-	SER_ID_STRUCT_ELEM(15, ser_type_event, struct MC6821_side, restore_event),
+	SER_ID_STRUCT_TYPE(7, ser_type_event, struct MC6821_side, irq_event),
+	SER_ID_STRUCT_TYPE(14, ser_type_event, struct MC6821_side, strobe_event),
+	SER_ID_STRUCT_TYPE(15, ser_type_event, struct MC6821_side, restore_event),
 
-	SER_ID_STRUCT_ELEM(8, ser_type_uint8, struct MC6821_side, out_source),
-	SER_ID_STRUCT_ELEM(9, ser_type_uint8, struct MC6821_side, out_sink),
-	SER_ID_STRUCT_ELEM(10, ser_type_uint8, struct MC6821_side, in_source),
-	SER_ID_STRUCT_ELEM(11, ser_type_uint8, struct MC6821_side, in_sink),
+	SER_ID_STRUCT_ELEM(8, struct MC6821_side, out_source),
+	SER_ID_STRUCT_ELEM(9, struct MC6821_side, out_sink),
+	SER_ID_STRUCT_ELEM(10, struct MC6821_side, in_source),
+	SER_ID_STRUCT_ELEM(11, struct MC6821_side, in_sink),
 
-	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6821_side, cx2_out_source),
-	SER_ID_STRUCT_ELEM(17, ser_type_bool, struct MC6821_side, cx2_out_sink),
-	SER_ID_STRUCT_ELEM(18, ser_type_bool, struct MC6821_side, cx2_in_source),
-	SER_ID_STRUCT_ELEM(19, ser_type_bool, struct MC6821_side, cx2_in_sink),
+	SER_ID_STRUCT_ELEM(16, struct MC6821_side, cx2_out_source),
+	SER_ID_STRUCT_ELEM(17, struct MC6821_side, cx2_out_sink),
+	SER_ID_STRUCT_ELEM(18, struct MC6821_side, cx2_in_source),
+	SER_ID_STRUCT_ELEM(19, struct MC6821_side, cx2_in_sink),
 };
 
 static const struct ser_struct_data mc6821_side_ser_struct_data = {

@@ -72,12 +72,12 @@ struct mpi {
 
 static const struct ser_struct ser_struct_mpi[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, ser_type_bool, struct mpi, switch_enable),
-	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct mpi, cts_route),
-	SER_ID_STRUCT_ELEM(4, ser_type_unsigned, struct mpi, p2_route),
-	SER_ID_STRUCT_ELEM(5, ser_type_unsigned, struct mpi, firq_state),
-	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct mpi, nmi_state),
-	SER_ID_STRUCT_ELEM(7, ser_type_unsigned, struct mpi, halt_state),
+	SER_ID_STRUCT_ELEM(2, struct mpi, switch_enable),
+	SER_ID_STRUCT_ELEM(3, struct mpi, cts_route),
+	SER_ID_STRUCT_ELEM(4, struct mpi, p2_route),
+	SER_ID_STRUCT_ELEM(5, struct mpi, firq_state),
+	SER_ID_STRUCT_ELEM(6, struct mpi, nmi_state),
+	SER_ID_STRUCT_ELEM(7, struct mpi, halt_state),
 };
 
 static const struct ser_struct_data mpi_ser_struct_data = {

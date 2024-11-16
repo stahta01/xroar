@@ -82,9 +82,9 @@ struct vcounter {
 };
 
 static struct ser_struct ser_struct_vcounter[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct vcounter, input),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint16, struct vcounter, value),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct vcounter, output),
+	SER_ID_STRUCT_ELEM(1, struct vcounter, input),
+	SER_ID_STRUCT_ELEM(2, struct vcounter, value),
+	SER_ID_STRUCT_ELEM(3, struct vcounter, output),
 };
 
 static const struct ser_struct_data vcounter_ser_struct_data = {
@@ -207,29 +207,29 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_RAM_RAS1),
 	SER_ID_STRUCT_UNHANDLED(MC6883_SER_OLD_P),
 
-	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MC6883, S),
-	SER_ID_STRUCT_ELEM(32, ser_type_unsigned, struct MC6883, Zrow),
-	SER_ID_STRUCT_ELEM(33, ser_type_unsigned, struct MC6883, Zcol),
-	SER_ID_STRUCT_ELEM(34, ser_type_unsigned, struct MC6883, Vrow),
-	SER_ID_STRUCT_ELEM(35, ser_type_unsigned, struct MC6883, Vcol),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct MC6883, RAS0),
-	SER_ID_STRUCT_ELEM(31, ser_type_bool, struct MC6883, RAS1),
+	SER_ID_STRUCT_ELEM(1, struct MC6883, S),
+	SER_ID_STRUCT_ELEM(32, struct MC6883, Zrow),
+	SER_ID_STRUCT_ELEM(33, struct MC6883, Zcol),
+	SER_ID_STRUCT_ELEM(34, struct MC6883, Vrow),
+	SER_ID_STRUCT_ELEM(35, struct MC6883, Vcol),
+	SER_ID_STRUCT_ELEM(4, struct MC6883, RAS0),
+	SER_ID_STRUCT_ELEM(31, struct MC6883, RAS1),
 
-	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct MC6883_private, mpu_rate_fast),
-	SER_ID_STRUCT_ELEM(14, ser_type_bool, struct MC6883_private, mpu_rate_ad),
-	SER_ID_STRUCT_ELEM(15, ser_type_bool, struct MC6883_private, running_fast),
-	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6883_private, extend_slow_cycle),
+	SER_ID_STRUCT_ELEM(13, struct MC6883_private, mpu_rate_fast),
+	SER_ID_STRUCT_ELEM(14, struct MC6883_private, mpu_rate_ad),
+	SER_ID_STRUCT_ELEM(15, struct MC6883_private, running_fast),
+	SER_ID_STRUCT_ELEM(16, struct MC6883_private, extend_slow_cycle),
 
-	SER_ID_STRUCT_ELEM(17, ser_type_unsigned, struct MC6883_private, V),
-	SER_ID_STRUCT_ELEM(18, ser_type_uint16, struct MC6883_private, F),
-	SER_ID_STRUCT_ELEM(28, ser_type_bool, struct MC6883_private, P),
-	SER_ID_STRUCT_ELEM(29, ser_type_unsigned, struct MC6883_private, R),
-	SER_ID_STRUCT_ELEM(30, ser_type_unsigned, struct MC6883_private, M),
-	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct MC6883_private, TY),
+	SER_ID_STRUCT_ELEM(17, struct MC6883_private, V),
+	SER_ID_STRUCT_ELEM(18, struct MC6883_private, F),
+	SER_ID_STRUCT_ELEM(28, struct MC6883_private, P),
+	SER_ID_STRUCT_ELEM(29, struct MC6883_private, R),
+	SER_ID_STRUCT_ELEM(30, struct MC6883_private, M),
+	SER_ID_STRUCT_ELEM(6, struct MC6883_private, TY),
 
-	SER_ID_STRUCT_ELEM(36, ser_type_unsigned, struct MC6883_private, Vprev),
+	SER_ID_STRUCT_ELEM(36, struct MC6883_private, Vprev),
 
-	SER_ID_STRUCT_ELEM(19, ser_type_int, struct MC6883_private, clr_mode),
+	SER_ID_STRUCT_ELEM(19, struct MC6883_private, clr_mode),
 
 	SER_ID_STRUCT_SUBSTRUCT(20, struct MC6883_private, vcounter[VC_B15_5], &vcounter_ser_struct_data),
 	SER_ID_STRUCT_SUBSTRUCT(21, struct MC6883_private, vcounter[VC_B4], &vcounter_ser_struct_data),

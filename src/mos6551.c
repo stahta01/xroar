@@ -32,9 +32,9 @@
 #include "serialise.h"
 
 static const struct ser_struct ser_struct_mos6551[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MOS6551, status_reg),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct MOS6551, command_reg),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct MOS6551, control_reg),
+	SER_ID_STRUCT_ELEM(1, struct MOS6551, status_reg),
+	SER_ID_STRUCT_ELEM(2, struct MOS6551, command_reg),
+	SER_ID_STRUCT_ELEM(3, struct MOS6551, control_reg),
 };
 
 static const struct ser_struct_data mos6551_ser_struct_data = {

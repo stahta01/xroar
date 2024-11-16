@@ -94,19 +94,19 @@ struct AY891X_ {
 #define AY891X_SER_STATE (4)
 
 static struct ser_struct ser_struct_ay891x[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct AY891X_, address),
+	SER_ID_STRUCT_ELEM(1, struct AY891X_, address),
 	SER_ID_STRUCT_UNHANDLED(AY891X_SER_REG_VAL),
 
 	SER_ID_STRUCT_UNHANDLED(AY891X_SER_COUNTER),
 	SER_ID_STRUCT_UNHANDLED(AY891X_SER_STATE),
 
-	SER_ID_STRUCT_ELEM(5, ser_type_int, struct AY891X_, envelope_counter),
-	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct AY891X_, envelope_level),
+	SER_ID_STRUCT_ELEM(5, struct AY891X_, envelope_counter),
+	SER_ID_STRUCT_ELEM(6, struct AY891X_, envelope_level),
 
-	SER_ID_STRUCT_ELEM(7, ser_type_int, struct AY891X_, noise_counter),
-	SER_ID_STRUCT_ELEM(8, ser_type_bool, struct AY891X_, noise_state),
+	SER_ID_STRUCT_ELEM(7, struct AY891X_, noise_counter),
+	SER_ID_STRUCT_ELEM(8, struct AY891X_, noise_state),
 
-	SER_ID_STRUCT_ELEM(9, ser_type_unsigned, struct AY891X_, noise_lfsr),
+	SER_ID_STRUCT_ELEM(9, struct AY891X_, noise_lfsr),
 };
 
 static _Bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag);

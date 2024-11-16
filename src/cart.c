@@ -47,14 +47,14 @@
 #define CART_CONFIG_SER_MPI_LOAD_SLOT (9)
 
 static const struct ser_struct ser_struct_cart_config[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_string,   struct cart_config, description),
-	SER_ID_STRUCT_ELEM(2, ser_type_string,   struct cart_config, type),
-	SER_ID_STRUCT_ELEM(3, ser_type_string,   struct cart_config, rom),
-	SER_ID_STRUCT_ELEM(4, ser_type_string,   struct cart_config, rom2),
-	SER_ID_STRUCT_ELEM(5, ser_type_bool,     struct cart_config, becker_port),
-	SER_ID_STRUCT_ELEM(6, ser_type_int,      struct cart_config, autorun),
-	SER_ID_STRUCT_ELEM(7, ser_type_sds_list, struct cart_config, opts),
-	SER_ID_STRUCT_ELEM(8, ser_type_int,      struct cart_config, mpi.initial_slot),
+	SER_ID_STRUCT_ELEM(1, struct cart_config, description),
+	SER_ID_STRUCT_ELEM(2, struct cart_config, type),
+	SER_ID_STRUCT_ELEM(3, struct cart_config, rom),
+	SER_ID_STRUCT_ELEM(4, struct cart_config, rom2),
+	SER_ID_STRUCT_ELEM(5, struct cart_config, becker_port),
+	SER_ID_STRUCT_ELEM(6, struct cart_config, autorun),
+	SER_ID_STRUCT_TYPE(7, ser_type_sds_list, struct cart_config, opts),
+	SER_ID_STRUCT_ELEM(8, struct cart_config, mpi.initial_slot),
 	SER_ID_STRUCT_UNHANDLED(CART_CONFIG_SER_MPI_LOAD_SLOT),
 };
 
@@ -75,9 +75,9 @@ static const struct ser_struct_data cart_config_ser_struct_data = {
 
 static const struct ser_struct ser_struct_cart[] = {
 	SER_ID_STRUCT_UNHANDLED(CART_SER_CART_CONFIG),
-	SER_ID_STRUCT_ELEM(2, ser_type_bool,   struct cart, EXTMEM),
+	SER_ID_STRUCT_ELEM(2, struct cart, EXTMEM),
 	SER_ID_STRUCT_UNHANDLED(CART_SER_ROM_BANK_OLD),
-	SER_ID_STRUCT_ELEM(4, ser_type_event,  struct cart, firq_event),
+	SER_ID_STRUCT_TYPE(4, ser_type_event,  struct cart, firq_event),
 };
 
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);

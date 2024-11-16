@@ -137,7 +137,7 @@ static const struct ser_struct ser_struct_dragon[] = {
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM),
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_SIZE),
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_MASK),
-        SER_ID_STRUCT_ELEM(5, ser_type_bool, struct machine_dragon_common, inverted_text),
+        SER_ID_STRUCT_ELEM(5, struct machine_dragon_common, inverted_text),
 };
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);

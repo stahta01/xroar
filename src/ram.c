@@ -37,9 +37,9 @@ static void recalculate_bank_size(struct ram *ram);
 #define RAM_SER_D (7)
 
 static struct ser_struct ser_struct_ram[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct ram, d_width),
+	SER_ID_STRUCT_ELEM(1, struct ram, d_width),
 	SER_ID_STRUCT_UNHANDLED(RAM_SER_NBANKS),
-	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct ram, organisation),
+	SER_ID_STRUCT_ELEM(3, struct ram, organisation),
 	// Bank data must come after all the bank size setup above
 	SER_ID_STRUCT_UNHANDLED(RAM_SER_D),
 };

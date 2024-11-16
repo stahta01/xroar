@@ -76,24 +76,24 @@ struct vdrive_interface_private {
 #define VDRIVE_SER_DRIVE (5)
 
 static const struct ser_struct ser_struct_vdrive[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_bool,      struct vdrive_interface_private, ready_state),
-	SER_ID_STRUCT_ELEM(2, ser_type_bool,      struct vdrive_interface_private, tr00_state),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool,      struct vdrive_interface_private, index_state),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool,      struct vdrive_interface_private, write_protect_state),
+	SER_ID_STRUCT_ELEM(1, struct vdrive_interface_private, ready_state),
+	SER_ID_STRUCT_ELEM(2, struct vdrive_interface_private, tr00_state),
+	SER_ID_STRUCT_ELEM(3, struct vdrive_interface_private, index_state),
+	SER_ID_STRUCT_ELEM(4, struct vdrive_interface_private, write_protect_state),
 
 	SER_ID_STRUCT_UNHANDLED(VDRIVE_SER_DRIVE),
-	SER_ID_STRUCT_ELEM(5, ser_type_unhandled, struct vdrive_interface_private, drives),
-	SER_ID_STRUCT_ELEM(6, ser_type_int,       struct vdrive_interface_private, cur_direction),
-	SER_ID_STRUCT_ELEM(7, ser_type_unsigned,  struct vdrive_interface_private, cur_drive_number),
-	SER_ID_STRUCT_ELEM(8, ser_type_unsigned,  struct vdrive_interface_private, cur_head),
-	SER_ID_STRUCT_ELEM(9, ser_type_unsigned,  struct vdrive_interface_private, cur_density),
-	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct vdrive_interface_private, head_incr),
-	SER_ID_STRUCT_ELEM(11, ser_type_unsigned, struct vdrive_interface_private, head_pos),
+	SER_ID_STRUCT_TYPE(5, ser_type_unhandled, struct vdrive_interface_private, drives),
+	SER_ID_STRUCT_ELEM(6, struct vdrive_interface_private, cur_direction),
+	SER_ID_STRUCT_ELEM(7, struct vdrive_interface_private, cur_drive_number),
+	SER_ID_STRUCT_ELEM(8, struct vdrive_interface_private, cur_head),
+	SER_ID_STRUCT_ELEM(9, struct vdrive_interface_private, cur_density),
+	SER_ID_STRUCT_ELEM(10, struct vdrive_interface_private, head_incr),
+	SER_ID_STRUCT_ELEM(11, struct vdrive_interface_private, head_pos),
 
-	SER_ID_STRUCT_ELEM(12, ser_type_tick,     struct vdrive_interface_private, last_update_cycle),
-	SER_ID_STRUCT_ELEM(13, ser_type_tick,     struct vdrive_interface_private, track_start_cycle),
-	SER_ID_STRUCT_ELEM(14, ser_type_event,    struct vdrive_interface_private, index_pulse_event),
-	SER_ID_STRUCT_ELEM(15, ser_type_event,    struct vdrive_interface_private, reset_index_pulse_event),
+	SER_ID_STRUCT_TYPE(12, ser_type_tick,     struct vdrive_interface_private, last_update_cycle),
+	SER_ID_STRUCT_TYPE(13, ser_type_tick,     struct vdrive_interface_private, track_start_cycle),
+	SER_ID_STRUCT_TYPE(14, ser_type_event,    struct vdrive_interface_private, index_pulse_event),
+	SER_ID_STRUCT_TYPE(15, ser_type_event,    struct vdrive_interface_private, reset_index_pulse_event),
 
 };
 

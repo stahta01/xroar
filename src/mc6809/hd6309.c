@@ -69,16 +69,16 @@
 static const struct ser_struct ser_struct_hd6309[] = {
 	SER_ID_STRUCT_NEST(1,  &mc6809_ser_struct_data), // 1
 
-	SER_ID_STRUCT_ELEM(2,  ser_type_unsigned, struct HD6309, state),
-	SER_ID_STRUCT_ELEM(3,  ser_type_uint16,   struct HD6309, reg_w),
-	SER_ID_STRUCT_ELEM(4,  ser_type_uint8,    struct HD6309, reg_md),
-	SER_ID_STRUCT_ELEM(5,  ser_type_uint16,   struct HD6309, reg_v),
-	SER_ID_STRUCT_ELEM(8,  ser_type_uint8,    struct HD6309, reg_m),  // replaces tfm_data
+	SER_ID_STRUCT_ELEM(2,  struct HD6309, state),
+	SER_ID_STRUCT_ELEM(3,  struct HD6309, reg_w),
+	SER_ID_STRUCT_ELEM(4,  struct HD6309, reg_md),
+	SER_ID_STRUCT_ELEM(5,  struct HD6309, reg_v),
+	SER_ID_STRUCT_ELEM(8,  struct HD6309, reg_m),  // replaces tfm_data
 
 	SER_ID_STRUCT_UNHANDLED(HD6309_SER_TFM_SRC),
 	SER_ID_STRUCT_UNHANDLED(HD6309_SER_TFM_DEST),
-	SER_ID_STRUCT_ELEM(9,  ser_type_uint16,   struct HD6309, tfm_src_mod),
-	SER_ID_STRUCT_ELEM(10, ser_type_uint16,   struct HD6309, tfm_dest_mod),
+	SER_ID_STRUCT_ELEM(9,  struct HD6309, tfm_src_mod),
+	SER_ID_STRUCT_ELEM(10, struct HD6309, tfm_dest_mod),
 };
 
 static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);

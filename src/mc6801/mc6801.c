@@ -63,10 +63,10 @@
 #endif
 
 static const struct ser_struct ser_struct_mc6801_port[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_uint8, struct MC6801_port, out_source),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct MC6801_port, out_sink),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct MC6801_port, in_source),
-	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct MC6801_port, in_sink),
+	SER_ID_STRUCT_ELEM(1, struct MC6801_port, out_source),
+	SER_ID_STRUCT_ELEM(2, struct MC6801_port, out_sink),
+	SER_ID_STRUCT_ELEM(3, struct MC6801_port, in_source),
+	SER_ID_STRUCT_ELEM(4, struct MC6801_port, in_sink),
 };
 
 static const struct ser_struct_data mc6801_port_ser_struct_data = {
@@ -78,46 +78,46 @@ static const struct ser_struct_data mc6801_port_ser_struct_data = {
 #define MC6801_SER_RAM (14)
 
 static const struct ser_struct ser_struct_mc6801[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_bool, struct MC6801, nmi),
-	SER_ID_STRUCT_ELEM(2, ser_type_bool, struct MC6801, irq1),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct MC6801, D),
+	SER_ID_STRUCT_ELEM(1, struct MC6801, nmi),
+	SER_ID_STRUCT_ELEM(2, struct MC6801, irq1),
+	SER_ID_STRUCT_ELEM(3, struct MC6801, D),
 
 	SER_ID_STRUCT_SUBSTRUCT(4, struct MC6801, port1, &mc6801_port_ser_struct_data),
 	SER_ID_STRUCT_SUBSTRUCT(5, struct MC6801, port2, &mc6801_port_ser_struct_data),
 
-	SER_ID_STRUCT_ELEM(6, ser_type_unsigned, struct MC6801, state),
-	SER_ID_STRUCT_ELEM(7, ser_type_bool, struct MC6801, running),
+	SER_ID_STRUCT_ELEM(6, struct MC6801, state),
+	SER_ID_STRUCT_ELEM(7, struct MC6801, running),
 
-	SER_ID_STRUCT_ELEM(8, ser_type_uint8, struct MC6801, reg_cc),
-	SER_ID_STRUCT_ELEM(9, ser_type_uint16, struct MC6801, reg_d),
-	SER_ID_STRUCT_ELEM(10, ser_type_uint16, struct MC6801, reg_x),
-	SER_ID_STRUCT_ELEM(11, ser_type_uint16, struct MC6801, reg_sp),
-	SER_ID_STRUCT_ELEM(12, ser_type_uint16, struct MC6801, reg_pc),
+	SER_ID_STRUCT_ELEM(8, struct MC6801, reg_cc),
+	SER_ID_STRUCT_ELEM(9, struct MC6801, reg_d),
+	SER_ID_STRUCT_ELEM(10, struct MC6801, reg_x),
+	SER_ID_STRUCT_ELEM(11, struct MC6801, reg_sp),
+	SER_ID_STRUCT_ELEM(12, struct MC6801, reg_pc),
 
 	SER_ID_STRUCT_UNHANDLED(MC6801_SER_REG),
 	SER_ID_STRUCT_UNHANDLED(MC6801_SER_RAM),
 
-	SER_ID_STRUCT_ELEM(15, ser_type_uint8, struct MC6801, itmp),
-	SER_ID_STRUCT_ELEM(16, ser_type_bool, struct MC6801, nmi_latch),
-	SER_ID_STRUCT_ELEM(17, ser_type_bool, struct MC6801, nmi_active),
-	SER_ID_STRUCT_ELEM(18, ser_type_bool, struct MC6801, irq1_latch),
-	SER_ID_STRUCT_ELEM(19, ser_type_bool, struct MC6801, irq1_active),
-	SER_ID_STRUCT_ELEM(20, ser_type_bool, struct MC6801, irq2_latch),
-	SER_ID_STRUCT_ELEM(21, ser_type_bool, struct MC6801, irq2_active),
-	SER_ID_STRUCT_ELEM(22, ser_type_uint8, struct MC6801, ICF),
-	SER_ID_STRUCT_ELEM(23, ser_type_uint8, struct MC6801, OCF),
-	SER_ID_STRUCT_ELEM(24, ser_type_uint8, struct MC6801, TOF),
+	SER_ID_STRUCT_ELEM(15, struct MC6801, itmp),
+	SER_ID_STRUCT_ELEM(16, struct MC6801, nmi_latch),
+	SER_ID_STRUCT_ELEM(17, struct MC6801, nmi_active),
+	SER_ID_STRUCT_ELEM(18, struct MC6801, irq1_latch),
+	SER_ID_STRUCT_ELEM(19, struct MC6801, irq1_active),
+	SER_ID_STRUCT_ELEM(20, struct MC6801, irq2_latch),
+	SER_ID_STRUCT_ELEM(21, struct MC6801, irq2_active),
+	SER_ID_STRUCT_ELEM(22, struct MC6801, ICF),
+	SER_ID_STRUCT_ELEM(23, struct MC6801, OCF),
+	SER_ID_STRUCT_ELEM(24, struct MC6801, TOF),
 
-	SER_ID_STRUCT_ELEM(25, ser_type_uint16, struct MC6801, counter),
-	SER_ID_STRUCT_ELEM(26, ser_type_uint16, struct MC6801, output_compare),
-	SER_ID_STRUCT_ELEM(27, ser_type_bool, struct MC6801, output_compare_inhibit),
+	SER_ID_STRUCT_ELEM(25, struct MC6801, counter),
+	SER_ID_STRUCT_ELEM(26, struct MC6801, output_compare),
+	SER_ID_STRUCT_ELEM(27, struct MC6801, output_compare_inhibit),
 
-	SER_ID_STRUCT_ELEM(28, ser_type_uint8, struct MC6801, ICF_read),
-	SER_ID_STRUCT_ELEM(29, ser_type_uint8, struct MC6801, OCF_read),
-	SER_ID_STRUCT_ELEM(30, ser_type_uint8, struct MC6801, TOF_read),
-	SER_ID_STRUCT_ELEM(31, ser_type_uint8, struct MC6801, counter_lsb_buf),
+	SER_ID_STRUCT_ELEM(28, struct MC6801, ICF_read),
+	SER_ID_STRUCT_ELEM(29, struct MC6801, OCF_read),
+	SER_ID_STRUCT_ELEM(30, struct MC6801, TOF_read),
+	SER_ID_STRUCT_ELEM(31, struct MC6801, counter_lsb_buf),
 
-	SER_ID_STRUCT_ELEM(32, ser_type_bool, struct MC6801, is_6801),
+	SER_ID_STRUCT_ELEM(32, struct MC6801, is_6801),
 };
 
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);

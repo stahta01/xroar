@@ -302,60 +302,60 @@ struct TCC1014_private {
 #define TCC1014_SER_PALETTE_REG (26)
 
 static struct ser_struct ser_struct_tcc1014[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_unsigned, struct TCC1014, S),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint32, struct TCC1014, Z),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool, struct TCC1014, RAS),
+	SER_ID_STRUCT_ELEM(1, struct TCC1014, S),
+	SER_ID_STRUCT_ELEM(2, struct TCC1014, Z),
+	SER_ID_STRUCT_ELEM(3, struct TCC1014, RAS),
 
-	SER_ID_STRUCT_ELEM(4, ser_type_bool, struct TCC1014, FIRQ),
-	SER_ID_STRUCT_ELEM(5, ser_type_bool, struct TCC1014, IRQ),
+	SER_ID_STRUCT_ELEM(4, struct TCC1014, FIRQ),
+	SER_ID_STRUCT_ELEM(5, struct TCC1014, IRQ),
 
-	SER_ID_STRUCT_ELEM(6, ser_type_bool, struct TCC1014, IL0),
-	SER_ID_STRUCT_ELEM(7, ser_type_bool, struct TCC1014, IL1),
-	SER_ID_STRUCT_ELEM(8, ser_type_bool, struct TCC1014, IL2),
+	SER_ID_STRUCT_ELEM(6, struct TCC1014, IL0),
+	SER_ID_STRUCT_ELEM(7, struct TCC1014, IL1),
+	SER_ID_STRUCT_ELEM(8, struct TCC1014, IL2),
 
-	SER_ID_STRUCT_ELEM(9, ser_type_event, struct TCC1014_private, hs_fall_event),
-	SER_ID_STRUCT_ELEM(10, ser_type_event, struct TCC1014_private, hs_rise_event),
-	SER_ID_STRUCT_ELEM(11, ser_type_event, struct TCC1014_private, hb_irq_event),
-	SER_ID_STRUCT_ELEM(12, ser_type_event, struct TCC1014_private, vb_irq_event),
+	SER_ID_STRUCT_TYPE(9, ser_type_event, struct TCC1014_private, hs_fall_event),
+	SER_ID_STRUCT_TYPE(10, ser_type_event, struct TCC1014_private, hs_rise_event),
+	SER_ID_STRUCT_TYPE(11, ser_type_event, struct TCC1014_private, hb_irq_event),
+	SER_ID_STRUCT_TYPE(12, ser_type_event, struct TCC1014_private, vb_irq_event),
 	// 13 was fs_rise_event, now handled int vb_irq_event
-	SER_ID_STRUCT_ELEM(14, ser_type_tick, struct TCC1014_private, scanline_start),
-	SER_ID_STRUCT_ELEM(15, ser_type_unsigned, struct TCC1014_private, horizontal.npixels),
-	SER_ID_STRUCT_ELEM(16, ser_type_unsigned, struct TCC1014_private, scanline),
+	SER_ID_STRUCT_TYPE(14, ser_type_tick, struct TCC1014_private, scanline_start),
+	SER_ID_STRUCT_ELEM(15, struct TCC1014_private, horizontal.npixels),
+	SER_ID_STRUCT_ELEM(16, struct TCC1014_private, scanline),
 
-	SER_ID_STRUCT_ELEM(17, ser_type_event, struct TCC1014_private, timer.update_event),
-	SER_ID_STRUCT_ELEM(18, ser_type_tick, struct TCC1014_private, timer.last_update),
-	SER_ID_STRUCT_ELEM(19, ser_type_int, struct TCC1014_private, timer.counter),
+	SER_ID_STRUCT_TYPE(17, ser_type_event, struct TCC1014_private, timer.update_event),
+	SER_ID_STRUCT_TYPE(18, ser_type_tick, struct TCC1014_private, timer.last_update),
+	SER_ID_STRUCT_ELEM(19, struct TCC1014_private, timer.counter),
 
 	// 20 was vram_g_data, now local to render_scanline()
 	// 21 was vram_sg_data, now local to render_scanline()
 
-	SER_ID_STRUCT_ELEM(22, ser_type_bool, struct TCC1014_private, PIA1B_shadow.ddr),
-	SER_ID_STRUCT_ELEM(23, ser_type_unsigned, struct TCC1014_private, PIA1B_shadow.pdr),
+	SER_ID_STRUCT_ELEM(22, struct TCC1014_private, PIA1B_shadow.ddr),
+	SER_ID_STRUCT_ELEM(23, struct TCC1014_private, PIA1B_shadow.pdr),
 
 	SER_ID_STRUCT_UNHANDLED(TCC1014_SER_REGISTERS),
 	SER_ID_STRUCT_UNHANDLED(TCC1014_SER_MMU_BANKS),
 	SER_ID_STRUCT_UNHANDLED(TCC1014_SER_PALETTE_REG),
-	SER_ID_STRUCT_ELEM(27, ser_type_uint16, struct TCC1014_private, SAM_register),
+	SER_ID_STRUCT_ELEM(27, struct TCC1014_private, SAM_register),
 
-	SER_ID_STRUCT_ELEM(28, ser_type_unsigned, struct TCC1014_private, irq_state),
-	SER_ID_STRUCT_ELEM(29, ser_type_unsigned, struct TCC1014_private, firq_state),
+	SER_ID_STRUCT_ELEM(28, struct TCC1014_private, irq_state),
+	SER_ID_STRUCT_ELEM(29, struct TCC1014_private, firq_state),
 
-	SER_ID_STRUCT_ELEM(30, ser_type_bool, struct TCC1014_private, inverted_text),
+	SER_ID_STRUCT_ELEM(30, struct TCC1014_private, inverted_text),
 
-	SER_ID_STRUCT_ELEM(31, ser_type_uint32, struct TCC1014_private, B),
-	SER_ID_STRUCT_ELEM(32, ser_type_unsigned, struct TCC1014_private, row),
-	SER_ID_STRUCT_ELEM(33, ser_type_unsigned, struct TCC1014_private, Xoff),
+	SER_ID_STRUCT_ELEM(31, struct TCC1014_private, B),
+	SER_ID_STRUCT_ELEM(32, struct TCC1014_private, row),
+	SER_ID_STRUCT_ELEM(33, struct TCC1014_private, Xoff),
 
-	SER_ID_STRUCT_ELEM(34, ser_type_unsigned, struct TCC1014_private, vertical.lF),
-	SER_ID_STRUCT_ELEM(35, ser_type_unsigned, struct TCC1014_private, vertical.lTB),
-	SER_ID_STRUCT_ELEM(36, ser_type_unsigned, struct TCC1014_private, vertical.lAA),
+	SER_ID_STRUCT_ELEM(34, struct TCC1014_private, vertical.lF),
+	SER_ID_STRUCT_ELEM(35, struct TCC1014_private, vertical.lTB),
+	SER_ID_STRUCT_ELEM(36, struct TCC1014_private, vertical.lAA),
 	// 37 was pVSYNC, now a variant constant
 	// 38 was pLB, now a variant constant
 	// 39 was pRB, now a variant constant
 
 	// 40 was vstate, now distributed across vertical state flags
 	// 41 was post_vblank_vstate, now implicit in state transitions
-	SER_ID_STRUCT_ELEM(42, ser_type_unsigned, struct TCC1014_private, vertical.lcount),
+	SER_ID_STRUCT_ELEM(42, struct TCC1014_private, vertical.lcount),
 	// 43 was attr_fgnd, now local to render_scanline()
 	// 44 was attr_bgnd, now local to render_scanline()
 
@@ -363,7 +363,7 @@ static struct ser_struct ser_struct_tcc1014[] = {
 	// 46 was s_fg_colour, now local to render_scanline()
 	// 47 was s_bg_colour, now local to render_scanline()
 	// 48 was vram_bit, now local to render_scanline()
-	SER_ID_STRUCT_ELEM(49, ser_type_bool, struct TCC1014_private, blink),
+	SER_ID_STRUCT_ELEM(49, struct TCC1014_private, blink),
 
 	// 50 was lborder_remaining, now handled differently
 	// 51 was vram_remaining, now handled differently

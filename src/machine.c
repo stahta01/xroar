@@ -42,29 +42,29 @@
 #define MACHINE_CONFIG_SER_ARCHITECTURE_OLD (2)
 
 static const struct ser_struct ser_struct_machine_config[] = {
-	SER_ID_STRUCT_ELEM(1,  ser_type_string,   struct machine_config, description),
+	SER_ID_STRUCT_ELEM(1,  struct machine_config, description),
 	SER_ID_STRUCT_UNHANDLED(MACHINE_CONFIG_SER_ARCHITECTURE_OLD),  // old 'architecture'
-	SER_ID_STRUCT_ELEM(3,  ser_type_int,      struct machine_config, cpu),
-	SER_ID_STRUCT_ELEM(4,  ser_type_string,   struct machine_config, vdg_palette),
-	SER_ID_STRUCT_ELEM(5,  ser_type_int,      struct machine_config, keymap),
-	SER_ID_STRUCT_ELEM(6,  ser_type_int,      struct machine_config, tv_standard),
-	SER_ID_STRUCT_ELEM(7,  ser_type_int,      struct machine_config, tv_input),
-	SER_ID_STRUCT_ELEM(8,  ser_type_int,      struct machine_config, vdg_type),
-	SER_ID_STRUCT_ELEM(22, ser_type_int,      struct machine_config, ram_org),
-	SER_ID_STRUCT_ELEM(9,  ser_type_int,      struct machine_config, ram),
-	SER_ID_STRUCT_ELEM(23, ser_type_int,      struct machine_config, ram_init),
-	SER_ID_STRUCT_ELEM(10, ser_type_bool,     struct machine_config, bas_dfn),
-	SER_ID_STRUCT_ELEM(11, ser_type_string,   struct machine_config, bas_rom),
-	SER_ID_STRUCT_ELEM(12, ser_type_bool,     struct machine_config, extbas_dfn),
-	SER_ID_STRUCT_ELEM(13, ser_type_string,   struct machine_config, extbas_rom),
-	SER_ID_STRUCT_ELEM(14, ser_type_bool,     struct machine_config, altbas_dfn),
-	SER_ID_STRUCT_ELEM(15, ser_type_string,   struct machine_config, altbas_rom),
-	SER_ID_STRUCT_ELEM(16, ser_type_string,   struct machine_config, ext_charset_rom),
-	SER_ID_STRUCT_ELEM(17, ser_type_bool,     struct machine_config, default_cart_dfn),
-	SER_ID_STRUCT_ELEM(18, ser_type_string,   struct machine_config, default_cart),
-	SER_ID_STRUCT_ELEM(19, ser_type_bool,     struct machine_config, cart_enabled),
-	SER_ID_STRUCT_ELEM(20, ser_type_string,   struct machine_config, architecture),
-	SER_ID_STRUCT_ELEM(21, ser_type_sds_list, struct machine_config, opts),
+	SER_ID_STRUCT_ELEM(3,  struct machine_config, cpu),
+	SER_ID_STRUCT_ELEM(4,  struct machine_config, vdg_palette),
+	SER_ID_STRUCT_ELEM(5,  struct machine_config, keymap),
+	SER_ID_STRUCT_ELEM(6,  struct machine_config, tv_standard),
+	SER_ID_STRUCT_ELEM(7,  struct machine_config, tv_input),
+	SER_ID_STRUCT_ELEM(8,  struct machine_config, vdg_type),
+	SER_ID_STRUCT_ELEM(22, struct machine_config, ram_org),
+	SER_ID_STRUCT_ELEM(9,  struct machine_config, ram),
+	SER_ID_STRUCT_ELEM(23, struct machine_config, ram_init),
+	SER_ID_STRUCT_ELEM(10, struct machine_config, bas_dfn),
+	SER_ID_STRUCT_ELEM(11, struct machine_config, bas_rom),
+	SER_ID_STRUCT_ELEM(12, struct machine_config, extbas_dfn),
+	SER_ID_STRUCT_ELEM(13, struct machine_config, extbas_rom),
+	SER_ID_STRUCT_ELEM(14, struct machine_config, altbas_dfn),
+	SER_ID_STRUCT_ELEM(15, struct machine_config, altbas_rom),
+	SER_ID_STRUCT_ELEM(16, struct machine_config, ext_charset_rom),
+	SER_ID_STRUCT_ELEM(17, struct machine_config, default_cart_dfn),
+	SER_ID_STRUCT_ELEM(18, struct machine_config, default_cart),
+	SER_ID_STRUCT_ELEM(19, struct machine_config, cart_enabled),
+	SER_ID_STRUCT_ELEM(20, struct machine_config, architecture),
+	SER_ID_STRUCT_TYPE(21, ser_type_sds_list, struct machine_config, opts),
 };
 
 static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -81,7 +81,7 @@ static const struct ser_struct_data machine_config_ser_struct_data = {
 
 static const struct ser_struct ser_struct_machine[] = {
 	SER_ID_STRUCT_UNHANDLED(MACHINE_SER_MACHINE_CONFIG),
-	SER_ID_STRUCT_ELEM(2, ser_type_int, struct machine, keyboard.type),
+	SER_ID_STRUCT_ELEM(2, struct machine, keyboard.type),
 };
 
 static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);

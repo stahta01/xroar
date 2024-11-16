@@ -71,18 +71,18 @@ struct spi_sdcard {
 #define SPI_SDCARD_SER_BLKBUF (6)
 
 static const struct ser_struct ser_struct_spi_sdcard[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_string, struct spi_sdcard, imagefile),
-	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct spi_sdcard, state_sd),
-	SER_ID_STRUCT_ELEM(3, ser_type_unsigned, struct spi_sdcard, current_cmd),
-	SER_ID_STRUCT_ELEM(4, ser_type_unsigned, struct spi_sdcard, cmdcount),
+	SER_ID_STRUCT_ELEM(1, struct spi_sdcard, imagefile),
+	SER_ID_STRUCT_ELEM(2, struct spi_sdcard, state_sd),
+	SER_ID_STRUCT_ELEM(3, struct spi_sdcard, current_cmd),
+	SER_ID_STRUCT_ELEM(4, struct spi_sdcard, cmdcount),
 	SER_ID_STRUCT_UNHANDLED(SPI_SDCARD_SER_CMDARG),
 	SER_ID_STRUCT_UNHANDLED(SPI_SDCARD_SER_BLKBUF),
-	SER_ID_STRUCT_ELEM(7, ser_type_uint32, struct spi_sdcard, address),
-	SER_ID_STRUCT_ELEM(8, ser_type_unsigned, struct spi_sdcard, blkcount),
-	SER_ID_STRUCT_ELEM(9, ser_type_unsigned, struct spi_sdcard, respcount),
-	SER_ID_STRUCT_ELEM(10, ser_type_unsigned, struct spi_sdcard, csdcount),
-	SER_ID_STRUCT_ELEM(11, ser_type_bool, struct spi_sdcard, idle_state),
-	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct spi_sdcard, acmd),
+	SER_ID_STRUCT_ELEM(7, struct spi_sdcard, address),
+	SER_ID_STRUCT_ELEM(8, struct spi_sdcard, blkcount),
+	SER_ID_STRUCT_ELEM(9, struct spi_sdcard, respcount),
+	SER_ID_STRUCT_ELEM(10, struct spi_sdcard, csdcount),
+	SER_ID_STRUCT_ELEM(11, struct spi_sdcard, idle_state),
+	SER_ID_STRUCT_ELEM(12, struct spi_sdcard, acmd),
 };
 
 static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag);

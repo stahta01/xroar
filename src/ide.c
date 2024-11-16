@@ -940,25 +940,25 @@ int ide_make_drive(uint8_t type, int fd)
 #define IDE_DRIVE_SER_OFFSET (18)
 
 static const struct ser_struct ser_struct_ide_drive[] = {
-	SER_ID_STRUCT_ELEM(1, ser_type_uint16, struct ide_drive, taskfile.data),
-	SER_ID_STRUCT_ELEM(2, ser_type_uint8, struct ide_drive, taskfile.error),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint8, struct ide_drive, taskfile.feature),
-	SER_ID_STRUCT_ELEM(4, ser_type_uint8, struct ide_drive, taskfile.count),
-	SER_ID_STRUCT_ELEM(5, ser_type_uint8, struct ide_drive, taskfile.lba1),
-	SER_ID_STRUCT_ELEM(6, ser_type_uint8, struct ide_drive, taskfile.lba2),
-	SER_ID_STRUCT_ELEM(7, ser_type_uint8, struct ide_drive, taskfile.lba3),
-	SER_ID_STRUCT_ELEM(8, ser_type_uint8, struct ide_drive, taskfile.lba4),
-	SER_ID_STRUCT_ELEM(9, ser_type_uint8, struct ide_drive, taskfile.status),
-	SER_ID_STRUCT_ELEM(10, ser_type_uint8, struct ide_drive, taskfile.command),
-	SER_ID_STRUCT_ELEM(11, ser_type_uint8, struct ide_drive, taskfile.devctrl),
-	SER_ID_STRUCT_ELEM(12, ser_type_bool, struct ide_drive, intrq),
-	SER_ID_STRUCT_ELEM(13, ser_type_bool, struct ide_drive, failed),
-	SER_ID_STRUCT_ELEM(14, ser_type_bool, struct ide_drive, eightbit),
+	SER_ID_STRUCT_ELEM(1, struct ide_drive, taskfile.data),
+	SER_ID_STRUCT_ELEM(2, struct ide_drive, taskfile.error),
+	SER_ID_STRUCT_ELEM(3, struct ide_drive, taskfile.feature),
+	SER_ID_STRUCT_ELEM(4, struct ide_drive, taskfile.count),
+	SER_ID_STRUCT_ELEM(5, struct ide_drive, taskfile.lba1),
+	SER_ID_STRUCT_ELEM(6, struct ide_drive, taskfile.lba2),
+	SER_ID_STRUCT_ELEM(7, struct ide_drive, taskfile.lba3),
+	SER_ID_STRUCT_ELEM(8, struct ide_drive, taskfile.lba4),
+	SER_ID_STRUCT_ELEM(9, struct ide_drive, taskfile.status),
+	SER_ID_STRUCT_ELEM(10, struct ide_drive, taskfile.command),
+	SER_ID_STRUCT_ELEM(11, struct ide_drive, taskfile.devctrl),
+	SER_ID_STRUCT_ELEM(12, struct ide_drive, intrq),
+	SER_ID_STRUCT_ELEM(13, struct ide_drive, failed),
+	SER_ID_STRUCT_ELEM(14, struct ide_drive, eightbit),
 	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_DATA),
 	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_DPTR),
-	SER_ID_STRUCT_ELEM(17, ser_type_int, struct ide_drive, state),
+	SER_ID_STRUCT_ELEM(17, struct ide_drive, state),
 	SER_ID_STRUCT_UNHANDLED(IDE_DRIVE_SER_OFFSET),
-	SER_ID_STRUCT_ELEM(19, ser_type_int, struct ide_drive, length),
+	SER_ID_STRUCT_ELEM(19, struct ide_drive, length),
 };
 
 static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -975,8 +975,8 @@ static const struct ser_struct_data ide_drive_ser_struct_data = {
 
 static const struct ser_struct ser_struct_ide_controller[] = {
 	SER_ID_STRUCT_UNHANDLED(IDE_CONTROLLER_SER_DRIVE),
-	SER_ID_STRUCT_ELEM(2, ser_type_int, struct ide_controller, selected),
-	SER_ID_STRUCT_ELEM(3, ser_type_uint16, struct ide_controller, data_latch),
+	SER_ID_STRUCT_ELEM(2, struct ide_controller, selected),
+	SER_ID_STRUCT_ELEM(3, struct ide_controller, data_latch),
 };
 
 static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag);

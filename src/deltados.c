@@ -54,9 +54,9 @@ struct deltados {
 
 static const struct ser_struct ser_struct_deltados[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, ser_type_unsigned, struct deltados, latch_drive_select),
-	SER_ID_STRUCT_ELEM(3, ser_type_bool,     struct deltados, latch_side_select),
-	SER_ID_STRUCT_ELEM(4, ser_type_bool,     struct deltados, latch_density),
+	SER_ID_STRUCT_ELEM(2, struct deltados, latch_drive_select),
+	SER_ID_STRUCT_ELEM(3, struct deltados, latch_side_select),
+	SER_ID_STRUCT_ELEM(4, struct deltados, latch_density),
 };
 
 static const struct ser_struct_data deltados_ser_struct_data = {
