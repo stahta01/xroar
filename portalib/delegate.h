@@ -43,7 +43,7 @@
 #define DELEGATE_T3(N,N0,N1,N2) delegate_##N##_##N0##_##N1##_##N2
 #define DELEGATE_T4(N,N0,N1,N2,N3) delegate_##N##_##N0##_##N1##_##N2##_##N3
 #define DELEGATE_T5(N,N0,N1,N2,N3,N4) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4
-#define DELEGATE_T6(N,N0,N1,N2,N3,N5) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4##_##N5
+#define DELEGATE_T6(N,N0,N1,N2,N3,N4,N5) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4##_##N5
 
 /* Define a set of delegate types. */
 
@@ -119,6 +119,8 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_DEF_PROTO2(T,N,T0,N0,T1,N1) T DELEGATE_DEFAULT_F2(N,N0,N1)(void *, T0, T1)
 #define DELEGATE_DEF_PROTO3(T,N,T0,N0,T1,N1,T2,N2) T DELEGATE_DEFAULT_F3(N,N0,N1,N2)(void *, T0, T1, T2)
 #define DELEGATE_DEF_PROTO4(T,N,T0,N0,T1,N1,T2,N2,T3,N3) T DELEGATE_DEFAULT_F4(N,N0,N1,N2,N3)(void *, T0, T1, T2, T3)
+#define DELEGATE_DEF_PROTO5(T,N,T0,N0,T1,N1,T2,N2,T3,N3,T4,N4) T DELEGATE_DEFAULT_F5(N,N0,N1,N2,N3,N4)(void *, T0, T1, T2, T3, T4)
+#define DELEGATE_DEF_PROTO6(T,N,T0,N0,T1,N1,T2,N2,T3,N3,T4,N4,T5,N5) T DELEGATE_DEFAULT_F6(N,N0,N1,N2,N3,N4,N5)(void *, T0, T1, T2, T3, T4, T5)
 
 #define DELEGATE_DEF_FUNC0(T,N,R) T DELEGATE_DEFAULT_F0(N)(void *sptr) { (void)sptr; return R; }
 #define DELEGATE_DEF_FUNC1(T,N,T0,N0,R) T DELEGATE_DEFAULT_F1(N,N0)(void *sptr, T0 v0) { (void)sptr; (void)v0; return R; }
