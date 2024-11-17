@@ -528,14 +528,24 @@ static _Bool js_add_db_entry(const char *db_string) {
 		return 0;
 	}
 
+	_Bool count = 0;
+	(void)count;  // avoid warning
+
 #ifdef HAVE_SDL2
-	// It's apparently safe to do this without SDL being initialised, so by
+	// It's apparently safe to call this before SDL is initialised, so by
 	// doing it here, we get a (more) consistent experience using the
 	// command line option, rather than having to tell the user to set
 	// environment variables.
 	SDL_GameControllerAddMapping(db_string);
+	count = 1;
 #endif
 
+#if !defined(HAVE_EVDEV) && !defined(HAVE_JOYDEV)
+	// No point maintaining the list of mappings in memory if no module is
+	// going to use it.
+	js_db_map_free(map);
+	return count;
+#else
 	// If this exactly matches an existing entry, overwrite it
 	for (int i = 0; i < nmappings; ++i) {
 		if (0 == memcmp(mappings[i]->guid, map->guid, 16) &&
@@ -552,6 +562,7 @@ static _Bool js_add_db_entry(const char *db_string) {
 	mappings = xrealloc(mappings, nmappings * sizeof(*mappings));
 	mappings[next] = map;
 	return 1;
+#endif
 }
 
 static void ensure_fallbacks_exist(void) {
