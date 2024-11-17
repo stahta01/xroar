@@ -1,5 +1,12 @@
  * Avoid calling xroar_screenshot() when not supported [with Paul Ripke]
  * Avoid X11 keyboard init when SDL not build with X11 support [Paul Ripke]
+ * SDL joystick module supports hotplug where possible
+ * SDL joystick module creates Left & Right stick profiles if found
+ * Support reading a SDL gamepad DB file for non-SDL joystick modules
+ * New -joy-db-file option specifies SDL-compatible gamepad DB file
+ * New Linux evdev joystick module (hotplug, internal SDL DB, L/R profiles)
+ * Large changes to underlying UI mechanisms
+ * New features backported to GTK+ 2 UI
 
 Version 1.6.6, Tue 15 Oct 2024
 
