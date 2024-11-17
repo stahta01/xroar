@@ -1,4 +1,5 @@
  * Avoid calling xroar_screenshot() when not supported [with Paul Ripke]
+ * Avoid X11 keyboard init when SDL not build with X11 support [Paul Ripke]
 
 Version 1.6.6, Tue 15 Oct 2024
 

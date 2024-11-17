@@ -247,7 +247,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 #endif
 
 	// Per-OS keyboard initialisation
-#ifdef HAVE_X11
+#if defined(HAVE_X11) && defined(SDL_VIDEO_DRIVER_X11)
 	{
 		SDL_SysWMinfo sdlinfo;
 		SDL_VERSION(&sdlinfo.version);
