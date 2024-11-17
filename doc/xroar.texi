@@ -1931,7 +1931,41 @@ joy-virtual mixed
 @node Gamepad mapping
 @subsection Gamepad mapping
 
-@c XXX type some stuff in here
+Although there is an approximation of consensus on what sort of controls go
+where on modern gamepads, they still tend to report their inputs in different
+orders.  SDL supports user-provided mappings of reported axes, buttons and hat
+inputs to a set of named controls, and XRoar can process a file containing
+these mappings one per line, even when not built using SDL (e.g. when using
+evdev under Linux).  Point XRoar to such a file with the @option{-joy-db-file}
+option.  At time of writing,
+@myuref{https://github.com/mdqinc/SDL_GameControllerDB, SDL_GameControllerDB}
+contains a comprehensive list of mappings.
+
+This diagram shows the controls that can be mapped:
+
+@image{gamepad, 4.75in,, Gamepad controls, png}
+
+The short codes in this diagram correspond to these control names, used in SDL
+mapping database lines:
+
+@multitable @columnfractions .15 .11 .22 .15 .11 .22
+@headitem Input @tab Short @tab SDL @tab Input @tab Short @tab SDL
+@item Axis 0 @tab LX @tab leftx @tab Button 0 @tab A @tab a
+@item Axis 1 @tab LY @tab lefty @tab Button 1 @tab B @tab b
+@item Axis 2 @tab RX @tab rightx @tab Button 2 @tab X @tab x
+@item Axis 3 @tab RY @tab righty @tab Button 3 @tab Y @tab y
+@item Axis 4 @tab LT @tab lefttrigger @tab Button 4 @tab BACK @tab back
+@item Axis 5 @tab RT @tab righttrigger @tab Button 5 @tab GUIDE @tab guide
+@item @tab @tab @tab Button 6 @tab START @tab start
+@item D-pad Left @tab DL @tab dpleft @tab Button 7 @tab LB @tab leftstick
+@item D-pad Right @tab DR @tab dpright @tab Button 8 @tab RB @tab rightstick
+@item D-pad Up @tab DU @tab dpup @tab Button 9 @tab LS @tab leftshoulder
+@item D-pad Down @tab DD @tab dpdown @tab Button 10 @tab RS @tab rightshoulder
+@end multitable
+
+Using the evdev support under Linux, for gamepads, whatever is mapped to the
+D-pad acts as an alternative to axes 0 & 1.  For joysticks, it provides an
+extra pair of axis controls.
 
 @c
 
@@ -1947,6 +1981,7 @@ joy-virtual mixed
 
 @c
 
+@need 1000
 @node File options
 @section Files
 
