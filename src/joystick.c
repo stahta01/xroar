@@ -44,6 +44,14 @@
 #include "vo.h"
 #include "xroar.h"
 
+#if defined(WINDOWS32)
+#define JS_PLATFORM "Windows"
+#elif defined(HAVE_COCOA)
+#define JS_PLATFORM "Mac OS X"
+#else
+#define JS_PLATFORM "Linux"
+#endif
+
 extern struct joystick_module evdev_js_mod;
 extern struct joystick_module joydev_js_mod;
 extern struct joystick_module sdl_js_mod_exported;
@@ -313,7 +321,7 @@ static struct {
 };
 
 static int nmappings = 0;
-static struct js_db_entry *mappings = NULL;
+static struct js_db_entry **mappings = NULL;
 static struct js_db_entry *fallback_gamepad_mapping = NULL;
 static struct js_db_entry *fallback_joystick_mapping = NULL;
 
@@ -370,21 +378,24 @@ static struct js_db_control *control_by_index(struct slist **list, int index) {
 	return control;
 }
 
-static void js_db_entry_clear(struct js_db_entry *map);
+static void js_db_map_free(struct js_db_entry *map);
 
-static void js_parse_db_entry(const char *db_string, struct js_db_entry *map) {
+static struct js_db_entry *js_parse_db_entry(const char *db_string) {
 	char *dbcopy = xstrdup(db_string);
 	char *dbnext = dbcopy;
 	const char *guid_str = strsep(&dbnext, ",");
 	const char *map_name = strsep(&dbnext, ",");
 
-	js_db_entry_clear(map);
+	struct js_db_entry *map = xmalloc(sizeof(*map));
+	*map = (struct js_db_entry){0};
 
 	if (!string_to_guid(guid_str, map->guid)) {
 		memset(map->guid, 0, sizeof(map->guid));
 		guid_str = "*";
 	}
 	map->crc = (map->guid[3] << 8) | map->guid[2];
+	map->version = (map->guid[13] << 8) | map->guid[12];
+	map->guid[2] = map->guid[3] = map->guid[12] = map->guid[13] = 0;
 	map->name = xstrdup(map_name);
 
 	char *dbctrl;
@@ -393,6 +404,15 @@ static void js_parse_db_entry(const char *db_string, struct js_db_entry *map) {
 		char *ctl_name = strsep(&input, ":");
 		if (!ctl_name || !*ctl_name || !input || !*input) {
 			continue;
+		}
+		// Special cases
+		if (0 == c_strcasecmp(ctl_name, "platform")) {
+			if (0 != c_strcasecmp(input, JS_PLATFORM)) {
+				free(map);
+				return NULL;
+			}
+		} else if (0 == c_strcasecmp(ctl_name, "crc")) {
+			map->crc = strtol(input, NULL, 16);
 		}
 		// Is this mapping direct, or to set a control low/high?
 		int caction = JS_CONTROL_ACTION_DIRECT;
@@ -468,48 +488,66 @@ static void js_parse_db_entry(const char *db_string, struct js_db_entry *map) {
 	map->axes = slist_sort(map->axes, cmp_control);
 	map->buttons = slist_sort(map->buttons, cmp_control);
 	map->hats = slist_sort(map->hats, cmp_control);
+	return map;
 }
 
-static struct js_db_entry *js_find_db_entry_by_guid(const uint8_t guid[16], _Bool match_crc) {
-	uint16_t crc = (guid[3] << 8) | guid[2];
+static struct js_db_entry *js_find_db_entry_by_guid(const uint8_t guid[16]) {
+	uint8_t match_guid[16];
+	memcpy(match_guid, guid, 16);
+	uint16_t crc = (match_guid[3] << 8) | match_guid[2];
+	uint16_t version = (match_guid[13] << 8) | match_guid[12];
+	match_guid[2] = match_guid[3] = match_guid[12] = match_guid[13] = 0;
+
+	int best_match_score = -1;
+	struct js_db_entry *best_match = NULL;
+
 	for (int i = 0; i < nmappings; ++i) {
-		struct js_db_entry *map = &mappings[i];
-		if (map->guid[0] == guid[0] && map->guid[1] == guid[1] &&
-		    0 == memcmp(map->guid + 4, guid + 4, 12)) {
-			if (!match_crc || map->crc == crc) {
-				return map;
+		struct js_db_entry *map = mappings[i];
+		if (0 == memcmp(map->guid, match_guid, 16)) {
+			int match_score = (map->crc == crc) + (map->version == version);
+			if (match_score > best_match_score) {
+				best_match = map;
+				best_match_score = match_score;
+				if (match_score == 2) {
+					// can't beat this
+					break;
+				}
 			}
 		}
 	}
-	return NULL;
+	return best_match;
 }
 
 static _Bool js_add_db_entry(const char *db_string) {
-	uint8_t guid[16];
-	if (!string_to_guid(db_string, guid)) {
+	struct js_db_entry *map = js_parse_db_entry(db_string);
+	if (!map) {
 		return 0;
 	}
-	struct js_db_entry *map = js_find_db_entry_by_guid(guid, 1);
-	if (!map) {
-		int next = nmappings++;
-		mappings = xrealloc(mappings, nmappings * sizeof(*mappings));
-		map = &mappings[next];
-		*map = (struct js_db_entry){0};
+
+	// If this exactly matches an existing entry, overwrite it
+	for (int i = 0; i < nmappings; ++i) {
+		if (0 == memcmp(mappings[i]->guid, map->guid, 16) &&
+		    mappings[i]->crc == map->crc &&
+		    mappings[i]->version == map->version) {
+			js_db_map_free(mappings[i]);
+			mappings[i] = map;
+			return 1;
+		}
 	}
-	js_parse_db_entry(db_string, map);
+
+	// Otherwise add to the end
+	int next = nmappings++;
+	mappings = xrealloc(mappings, nmappings * sizeof(*mappings));
+	mappings[next] = map;
 	return 1;
 }
 
 static void ensure_fallbacks_exist(void) {
 	if (!fallback_gamepad_mapping) {
-		fallback_gamepad_mapping = xmalloc(sizeof(*fallback_gamepad_mapping));
-		*fallback_gamepad_mapping = (struct js_db_entry){0};
-		js_parse_db_entry("*,Fallback gamepad,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpleft:h0.8,dpright:h0.2,dpup:h0.1,dpdown:h0.4,", fallback_gamepad_mapping);
+		fallback_gamepad_mapping = js_parse_db_entry("*,Fallback gamepad,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,back:b6,start:b7,guide:b8,leftstick:b9,rightstick:b10,leftx:a0,lefty:a1,lefttrigger:a2,rightx:a3,righty:a4,righttrigger:a5,dpleft:h0.8,dpright:h0.2,dpup:h0.1,dpdown:h0.4,");
 	}
 	if (!fallback_joystick_mapping) {
-		fallback_joystick_mapping = xmalloc(sizeof(*fallback_joystick_mapping));
-		*fallback_joystick_mapping = (struct js_db_entry){0};
-		js_parse_db_entry("*,Fallback joystick,", fallback_joystick_mapping);
+		fallback_joystick_mapping = js_parse_db_entry("*,Fallback joystick,");
 	}
 }
 
@@ -541,10 +579,7 @@ struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback) {
 	struct js_db_entry *ent = NULL;
 	uint8_t guid[16];
 	if (string_to_guid(guid_str, guid)) {
-		ent = js_find_db_entry_by_guid(guid, 1);
-		if (!ent) {
-			ent = js_find_db_entry_by_guid(guid, 0);
-		}
+		ent = js_find_db_entry_by_guid(guid);
 	}
 	if (ent) {
 		return ent;
@@ -563,32 +598,29 @@ struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback) {
 	return NULL;
 }
 
-static void js_db_entry_clear(struct js_db_entry *map) {
+static void js_db_map_free(struct js_db_entry *map) {
 	if (map->name) {
 		free(map->name);
 	}
 	slist_free_full(map->axes, free);
 	slist_free_full(map->buttons, free);
 	slist_free_full(map->hats, free);
-	*map = (struct js_db_entry){0};
+	free(map);
 }
 
 static void js_db_free(void) {
 	for (int i = 0; i < nmappings; ++i) {
-		struct js_db_entry *map = &mappings[i];
-		js_db_entry_clear(map);
+		js_db_map_free(mappings[i]);
 	}
 	free(mappings);
 	mappings = NULL;
 	nmappings = 0;
 	if (fallback_gamepad_mapping) {
-		js_db_entry_clear(fallback_gamepad_mapping);
-		free(fallback_gamepad_mapping);
+		js_db_map_free(fallback_gamepad_mapping);
 		fallback_gamepad_mapping = NULL;
 	}
 	if (fallback_joystick_mapping) {
-		js_db_entry_clear(fallback_joystick_mapping);
-		free(fallback_joystick_mapping);
+		js_db_map_free(fallback_joystick_mapping);
 		fallback_joystick_mapping = NULL;
 	}
 }

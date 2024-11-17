@@ -191,10 +191,12 @@ struct js_db_control {
 };
 
 struct js_db_entry {
-	// GUID is stored with CRC portion zeroed, but that CRC is still held
-	// separately.  This lets us choose to do a strict or loose match.
+	// GUID is stored with CRC and version portions zeroed, but we maintain
+	// that data separately.  This lets us choose to do a strict or loose
+	// match.
 	uint8_t guid[16];
 	uint16_t crc;
+	uint16_t version;
 
 	// For display purposes, the name stored in the mapping DB.
 	char *name;
