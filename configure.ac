@@ -635,7 +635,9 @@ int main(int argc, char **argv) { (void)argc; (void)argv; struct libevdev *d = l
 	])
 
 AM_CONDITIONAL([EVDEV], [test -n "$have_evdev"])
-AM_COND_IF([EVDEV], [AC_DEFINE([HAVE_EVDEV], 1, [Use libevdev])])
+AM_COND_IF([EVDEV], [
+		test "x$with_joydev" != "xyes" && with_joydev=no
+		AC_DEFINE([HAVE_EVDEV], 1, [Use libevdev]) ])
 
 ### Linux joydev interface
 
