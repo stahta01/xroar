@@ -28,6 +28,10 @@
 #include <string.h>
 #include <math.h>
 
+#ifdef HAVE_SDL2
+#include <SDL.h>
+#endif
+
 #include "array.h"
 #include "c-strcase.h"
 #include "pl-string.h"
@@ -523,6 +527,14 @@ static _Bool js_add_db_entry(const char *db_string) {
 	if (!map) {
 		return 0;
 	}
+
+#ifdef HAVE_SDL2
+	// It's apparently safe to do this without SDL being initialised, so by
+	// doing it here, we get a (more) consistent experience using the
+	// command line option, rather than having to tell the user to set
+	// environment variables.
+	SDL_GameControllerAddMapping(db_string);
+#endif
 
 	// If this exactly matches an existing entry, overwrite it
 	for (int i = 0; i < nmappings; ++i) {
