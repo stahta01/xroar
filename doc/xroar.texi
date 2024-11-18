@@ -352,7 +352,8 @@ XRoar depends on external libraries for most aspects of its user interface:
 
 @item @myuref{https://www.gtk.org/, GTK+ 3} is recommended, and provides video,
 menus, and dialogs.  It may be possible to use GTK+ under Mac OS X+, but this
-is untested.
+is untested.  GTK+ 2 is deprecated, but still usable if you also have GtkGLExt
+installed.
 
 @item @myuref{https://libsdl.org/, SDL 2} provides a simpler interface, but
 extra code for Mac OS X+ adds some basic menus and file requester dialogs.  For
@@ -893,7 +894,7 @@ languages using @clicksequence{Tool @click{} Keyboard language}.
 Select @clicksequence{File @click{} Printer control} or press
 @kbd{@key{CTRL}+P} to open the printer control dialog.
 
-You can select between no printer, printing to file, or (only in the GTK+ 3
+You can select between no printer, printing to file, or (only in the GTK+
 interface under Linux/Unix), printing through a pipe to an external filter
 command.
 
