@@ -112,20 +112,13 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
-Changes in version 1.6 include:
+Changes in version 1.7 include:
 
 @itemize
 
-@item New @option{-ram-org} option to specify RAM addressing.
-@item New @option{-ram-init} option to specify initial RAM state.
-@item 6309 DIVD behaviour fixed against Tim Lindner's fuzzing tool.
-@item 6309 DIVD timing fixed according to David Banks's behaviour notes.
-@item 6309 DIVQ behaviour & timing adjusted similarly, though untested.
-@item More accurate observed NTSC CoCo 3 GIME composite video behaviour.
-@item New GTK+ 3 UI.
-@item New printer control dialog (GTK+ 3, Windows) or menu options (Mac OS X+).
-@item More keyboard virtual joystick profiles included by default.
-@item All physical joysticks selectable from menus by default.
+@item SDL gamepad database reading with @option{-joy-db-file}.
+@item New evdev-based Linux joystick/gamepad support.
+@item Large changes to underlying UI mechanisms.
 
 @end itemize
 
@@ -135,6 +128,9 @@ Previous changes in 1.x include:
 Writes to images held in memory will overwrite the on-disk file when ejected
 (or quitting XRoar).  You can get the old file-preserving default behaviour
 back with @option{-no-disk-write-back}.
+
+RAM organisation selection with @option{-ram-org}, and initialisation pattern
+selection with @option{-ram-init}.
 
 The @option{-ccr simulated} renderer is replaced with more CPU-intensive code
 that also handles PAL.  The old NTSC-only renderer is still available using
