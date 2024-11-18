@@ -56,19 +56,11 @@ home page (https://www.6809.org.uk/xroar/).
 Recent changes
 ==============
 
-Changes in version 1.6 include:
+Changes in version 1.7 include:
 
-   * New '-ram-org' option to specify RAM addressing.
-   * New '-ram-init' option to specify initial RAM state.
-   * 6309 DIVD behaviour fixed against Tim Lindner's fuzzing tool.
-   * 6309 DIVD timing fixed according to David Banks's behaviour notes.
-   * 6309 DIVQ behaviour & timing adjusted similarly, though untested.
-   * More accurate observed NTSC CoCo 3 GIME composite video behaviour.
-   * New GTK+ 3 UI.
-   * New printer control dialog (GTK+ 3, Windows) or menu options (Mac
-     OS X+).
-   * More keyboard virtual joystick profiles included by default.
-   * All physical joysticks selectable from menus by default.
+   * SDL gamepad database reading with '-joy-db-file'.
+   * New evdev-based Linux joystick/gamepad support.
+   * Large changes to underlying UI mechanisms.
 
    Previous changes in 1.x include:
 
@@ -76,6 +68,9 @@ Changes in version 1.6 include:
 Writes to images held in memory will overwrite the on-disk file when
 ejected (or quitting XRoar).  You can get the old file-preserving
 default behaviour back with '-no-disk-write-back'.
+
+   RAM organisation selection with '-ram-org', and initialisation
+pattern selection with '-ram-init'.
 
    The '-ccr simulated' renderer is replaced with more CPU-intensive
 code that also handles PAL. The old NTSC-only renderer is still
@@ -307,8 +302,8 @@ process should be very familiar.  The following process compiles XRoar
 and installs it into '/usr/local', like most other software built this
 way:
 
-     $ gzip -dc xroar-1.6.5.tar.gz | tar xvf -
-     $ cd xroar-1.6.5
+     $ gzip -dc xroar-1.7.tar.gz | tar xvf -
+     $ cd xroar-1.7
      $ ./configure
      $ make
      $ sudo make install

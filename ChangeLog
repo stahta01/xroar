@@ -1,3 +1,5 @@
+Version 1.7, Thu 21 Nov 2024
+
  * Avoid calling xroar_screenshot() when not supported [with Paul Ripke]
  * Avoid X11 keyboard init when SDL not build with X11 support [Paul Ripke]
  * SDL joystick module supports hotplug where possible
