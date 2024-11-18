@@ -22,68 +22,153 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <glib.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include <gtk/gtk.h>
-#pragma GCC diagnostic pop
 
+#include <gtk/gtk.h>
+
+#include "messenger.h"
+#include "ui.h"
 #include "vdisk.h"
 #include "vdrive.h"
 #include "xroar.h"
 
 #include "gtk2/common.h"
+#include "gtk2/dialog.h"
 #include "gtk2/drivecontrol.h"
+#include "gtk2/event_handlers.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-const char *label_filename_drive[4] = {
+// Structure holding convenient pointers to ui struct and drive number.  Needed
+// to pass to UI callbacks where we want both pieces of information.
+
+static struct drive_info {
+	struct ui_gtk2_interface *uigtk2;
+	int drive;
+} drive_info[4];
+
+// Convenient arrays of per-drive UI object names.  Could do this by
+// snprintf()ing each in turn.
+
+static const char *label_filename_drive[4] = {
 	"filename_drive1", "filename_drive2", "filename_drive3", "filename_drive4"
 };
 
-const char *tb_we_drive[4] = {
+static const char *tb_we_drive[4] = {
 	"we_drive1", "we_drive2", "we_drive3", "we_drive4"
 };
 
-const char *tb_wb_drive[4] = {
+static const char *tb_wb_drive[4] = {
 	"wb_drive1", "wb_drive2", "wb_drive3", "wb_drive4"
 };
 
-// UI updates
-static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head);
+static const char *b_insert_drive[4] = {
+	"insert_drive1", "insert_drive2", "insert_drive3", "insert_drive4"
+};
+
+static const char *b_new_drive[4] = {
+	"new_drive1", "new_drive2", "new_drive3", "new_drive4"
+};
+
+static const char *b_eject_drive[4] = {
+	"eject_drive1", "eject_drive2", "eject_drive3", "eject_drive4"
+};
 
 // Callbacks
-static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data);
-static void dc_insert(GtkButton *button, gpointer user_data);
-static void dc_eject(GtkButton *button, gpointer user_data);
-static void dc_toggled_we(GtkToggleButton *togglebutton, gpointer user_data);
-static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data);
+
+static void dc_insert(GtkButton *, gpointer user_data);
+static void dc_new(GtkButton *, gpointer user_data);
+static void dc_eject(GtkButton *, gpointer user_data);
+static void dc_toggled_we(GtkToggleButton *, gpointer user_data);
+static void dc_toggled_wb(GtkToggleButton *, gpointer user_data);
+
+// UI message reception
+
+static void dc_ui_state_notify(void *sptr, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Floppy dialog - create window
+// Create dialog window
 
-void gtk2_create_dc_window(struct ui_gtk2_interface *uigtk2) {
-	uigtk2_add_from_resource(uigtk2, "/uk/org/6809/xroar/gtk2/drivecontrol.ui");
+struct uigtk2_dialog *gtk2_dc_dialog_new(struct ui_gtk2_interface *uigtk2) {
+	struct uigtk2_dialog *dlg = uigtk2_dialog_new(uigtk2, "/uk/org/6809/xroar/gtk2/drivecontrol.ui", "dc_window", ui_tag_disk_dialog);
+
+	// Join each UI group we're interested in
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
 
 	// Connect signals
-	uigtk2_signal_connect(uigtk2, "dc_window", "delete-event", hide_dc_window, uigtk2);
-	uigtk2_signal_connect(uigtk2, "dc_window", "key-press-event", gtk2_dummy_keypress, uigtk2);
-	for (int i = 0; i < 4; i++) {
-		uigtk2_signal_connect(uigtk2, tb_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), (gpointer)(intptr_t)i);
-		uigtk2_signal_connect(uigtk2, tb_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), (gpointer)(intptr_t)i);
-	}
-	uigtk2_signal_connect(uigtk2, "eject_drive1", "clicked", dc_eject, (gpointer)(intptr_t)0);
-	uigtk2_signal_connect(uigtk2, "eject_drive2", "clicked", dc_eject, (gpointer)(intptr_t)1);
-	uigtk2_signal_connect(uigtk2, "eject_drive3", "clicked", dc_eject, (gpointer)(intptr_t)2);
-	uigtk2_signal_connect(uigtk2, "eject_drive4", "clicked", dc_eject, (gpointer)(intptr_t)3);
-	uigtk2_signal_connect(uigtk2, "insert_drive1", "clicked", dc_insert, (gpointer)(intptr_t)0);
-	uigtk2_signal_connect(uigtk2, "insert_drive2", "clicked", dc_insert, (gpointer)(intptr_t)1);
-	uigtk2_signal_connect(uigtk2, "insert_drive3", "clicked", dc_insert, (gpointer)(intptr_t)2);
-	uigtk2_signal_connect(uigtk2, "insert_drive4", "clicked", dc_insert, (gpointer)(intptr_t)3);
 
-	xroar.vdrive_interface->update_drive_cyl_head = DELEGATE_AS3(void, unsigned, unsigned, unsigned, update_drive_cyl_head, uigtk2);
+	// Per-drive signals
+	for (int i = 0; i < 4; i++) {
+		drive_info[i].uigtk2 = uigtk2;
+		drive_info[i].drive = i;
+		uigtk2_signal_connect(uigtk2, tb_we_drive[i], "toggled", G_CALLBACK(dc_toggled_we), &drive_info[i]);
+		uigtk2_signal_connect(uigtk2, tb_wb_drive[i], "toggled", G_CALLBACK(dc_toggled_wb), &drive_info[i]);
+		uigtk2_signal_connect(uigtk2, b_insert_drive[i], "clicked", dc_insert, &drive_info[i]);
+		uigtk2_signal_connect(uigtk2, b_new_drive[i], "clicked", dc_new, &drive_info[i]);
+		uigtk2_signal_connect(uigtk2, b_eject_drive[i], "clicked", dc_eject, &drive_info[i]);
+	}
+
+	return dlg;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// UI message reception
+
+static void dc_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct ui_gtk2_interface *uigtk2 = sptr;
+	struct ui_state_message *uimsg = smsg;
+	int value = uimsg->value;
+	const void *data = uimsg->data;
+
+	switch (tag) {
+
+	case ui_tag_disk_data:
+		if (value >= 0 && value <= 3) {
+			int drive = value;
+			const struct vdisk *disk = data;
+			const char *filename = disk ? disk->filename : NULL;
+			uigtk2_label_set_text(uigtk2, label_filename_drive[drive], filename);
+		}
+		break;
+
+	case ui_tag_disk_write_enable:
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uigtk2_toggle_button_set_active(uigtk2, tb_we_drive[drive], value);
+			}
+		}
+		break;
+
+	case ui_tag_disk_write_back:
+		{
+			int drive = (intptr_t)data;
+			if (drive >= 0 && drive <= 3) {
+				uigtk2_toggle_button_set_active(uigtk2, tb_wb_drive[drive], value);
+			}
+		}
+		break;
+
+	case ui_tag_disk_drive_info:
+		{
+			const struct vdrive_info *vi = data;
+			unsigned d = vi->drive + 1;
+			unsigned c = vi->cylinder;
+			unsigned h = vi->head;
+			char string[16];
+			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
+			uigtk2_label_set_text(uigtk2, "drive_cyl_head", string);
+		}
+		break;
+
+	default:
+		break;
+	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,8 +182,8 @@ void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive) {
 		file_dialog = GTK_FILE_CHOOSER(
 		    gtk_file_chooser_dialog_new("Insert Disk",
 			GTK_WINDOW(uigtk2->top_window),
-			GTK_FILE_CHOOSER_ACTION_OPEN, GTK_STOCK_CANCEL,
-			GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN,
+			GTK_FILE_CHOOSER_ACTION_OPEN, "_Cancel",
+			GTK_RESPONSE_CANCEL, "_Open",
 			GTK_RESPONSE_ACCEPT, NULL));
 	}
 	if (!drive_combo) {
@@ -128,85 +213,44 @@ void gtk2_insert_disk(struct ui_gtk2_interface *uigtk2, int drive) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Floppy dialog - UI callbacks
-
-void gtk2_update_drive_write_enable(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_enable) {
-	if (drive >= 0 && drive <= 3) {
-		uigtk2_toggle_button_set_active(uigtk2, tb_we_drive[drive], write_enable ? TRUE : FALSE);
-	}
-}
-
-void gtk2_update_drive_write_back(struct ui_gtk2_interface *uigtk2, int drive, _Bool write_back) {
-	if (drive >= 0 && drive <= 3) {
-		uigtk2_toggle_button_set_active(uigtk2, tb_wb_drive[drive], write_back ? TRUE : FALSE);
-	}
-}
-
-void gtk2_update_drive_disk(struct ui_gtk2_interface *uigtk2, int drive, const struct vdisk *disk) {
-	if (drive < 0 || drive > 3)
-		return;
-	char *filename = NULL;
-	_Bool we = 0, wb = 0;
-	if (disk) {
-		filename = disk->filename;
-		we = !disk->write_protect;
-		wb = disk->write_back;
-	}
-
-	uigtk2_label_set_text(uigtk2, label_filename_drive[drive], filename);
-	gtk2_update_drive_write_enable(uigtk2, drive, we);
-	gtk2_update_drive_write_back(uigtk2, drive, wb);
-}
-
-static void update_drive_cyl_head(void *sptr, unsigned drive, unsigned cyl, unsigned head) {
-	struct ui_gtk2_interface *uigtk2 = sptr;
-	char string[16];
-	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", drive + 1, cyl, head);
-	uigtk2_label_set_text(uigtk2, "drive_cyl_head", string);
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 // Floppy dialog - signal handlers
 
-void gtk2_toggle_dc_window(GtkToggleAction *current, gpointer user_data) {
-	struct ui_gtk2_interface *uigtk2 = user_data;
-	if (gtk_toggle_action_get_active(current)) {
-		uigtk2_widget_show(uigtk2, "dc_window");
-	} else {
-		uigtk2_widget_hide(uigtk2, "dc_window");
-	}
-}
-
-static gboolean hide_dc_window(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
-	(void)widget;
-	(void)event;
-	struct ui_gtk2_interface *uigtk2 = user_data;
-	uigtk2_toggle_action_set_active(uigtk2, "/MainMenu/FileMenu/DriveControl", 0);
-	uigtk2_widget_hide(uigtk2, "dc_window");
-	return TRUE;
-}
+// Disk insert, create, eject use top level functions that prompt the user and
+// then shuffle disks around intelligently.
 
 static void dc_insert(GtkButton *button, gpointer user_data) {
-	int drive = (intptr_t)user_data;
+	struct drive_info *di = user_data;
+	int drive = di->drive;
 	(void)button;
 	xroar_insert_disk(drive);
 }
 
+static void dc_new(GtkButton *button, gpointer user_data) {
+	struct drive_info *di = user_data;
+	int drive = di->drive;
+	(void)button;
+	xroar_new_disk(drive);
+}
+
 static void dc_eject(GtkButton *button, gpointer user_data) {
-	int drive = (intptr_t)user_data;
+	struct drive_info *di = user_data;
+	int drive = di->drive;
 	(void)button;
 	xroar_eject_disk(drive);
 }
 
+// Checkbox toggles for write enable and write back.
+
 static void dc_toggled_we(GtkToggleButton *togglebutton, gpointer user_data) {
-	int set = gtk_toggle_button_get_active(togglebutton) ? 1 : 0;
-	int drive = (intptr_t)user_data;
-	xroar_set_write_enable(0, drive, set);
+	struct drive_info *di = user_data;
+	int drive = di->drive;
+	int value = gtk_toggle_button_get_active(togglebutton);
+	ui_update_state(-1, ui_tag_disk_write_enable, value, (void *)(intptr_t)drive);
 }
 
 static void dc_toggled_wb(GtkToggleButton *togglebutton, gpointer user_data) {
-	int set = gtk_toggle_button_get_active(togglebutton) ? 1 : 0;
-	int drive = (intptr_t)user_data;
-	xroar_set_write_back(0, drive, set);
+	struct drive_info *di = user_data;
+	int drive = di->drive;
+	int value = gtk_toggle_button_get_active(togglebutton);
+	ui_update_state(-1, ui_tag_disk_write_back, value, (void *)(intptr_t)drive);
 }

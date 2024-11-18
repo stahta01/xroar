@@ -12,6 +12,8 @@
       <separator/>
       <menuitem name='DriveControl' action='DriveControlAction'/>
       <separator/>
+      <menuitem name='PrinterControl' action='PrinterControlAction'/>
+      <separator/>
       <menuitem name='SaveSnapshot' action='SaveSnapshotAction'/>
       <separator/>
       <menuitem name='Screenshot' action='ScreenshotAction'/>

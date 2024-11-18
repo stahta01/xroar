@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
-  <!-- interface-naming-policy project-wide -->
+  <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkWindow" id="dc_window">
+    <property name="can_focus">False</property>
     <property name="title" translatable="yes">XRoar · Floppy disks</property>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
+        <property name="can_focus">False</property>
         <child>
           <object class="GtkHBox" id="hbox1">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">12</property>
             <child>
               <object class="GtkLabel" id="label1">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Drive 1</property>
                 <attributes>
                   <attribute name="weight" value="bold"/>
@@ -21,31 +25,38 @@
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="filename_drive1">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="xalign">0</property>
                 <property name="ellipsize">start</property>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox2">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
-              <object class="GtkHButtonBox" id="hbuttonbox2">
+              <object class="GtkHButtonBox" id="hbuttonbox1">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <property name="layout_style">start</property>
                 <child>
@@ -78,15 +89,18 @@
                 </child>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkHButtonBox" id="hbuttonbox1">
+              <object class="GtkHButtonBox" id="hbuttonbox2">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton" id="eject_drive1">
-                    <property name="label" translatable="yes">Eject</property>
+                  <object class="GtkButton" id="insert_drive1">
+                    <property name="label" translatable="yes">Insert…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -98,8 +112,8 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="insert_drive1">
-                    <property name="label" translatable="yes">Insert…</property>
+                  <object class="GtkButton" id="new_drive1">
+                    <property name="label" translatable="yes">New…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -110,34 +124,53 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkButton" id="eject_drive1">
+                    <property name="label" translatable="yes">Eject</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">1</property>
           </packing>
         </child>
         <child>
           <object class="GtkHSeparator" id="hseparator1">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">2</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox3">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">12</property>
             <child>
               <object class="GtkLabel" id="label2">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Drive 2</property>
                 <attributes>
                   <attribute name="weight" value="bold"/>
@@ -145,31 +178,38 @@
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="filename_drive2">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="xalign">0</property>
                 <property name="ellipsize">start</property>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">3</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox4">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox3">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <property name="layout_style">start</property>
                 <child>
@@ -202,15 +242,18 @@
                 </child>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox4">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton" id="eject_drive2">
-                    <property name="label" translatable="yes">Eject</property>
+                  <object class="GtkButton" id="insert_drive2">
+                    <property name="label" translatable="yes">Insert…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -222,8 +265,8 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="insert_drive2">
-                    <property name="label" translatable="yes">Insert…</property>
+                  <object class="GtkButton" id="new_drive2">
+                    <property name="label" translatable="yes">New…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -234,33 +277,52 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkButton" id="eject_drive2">
+                    <property name="label" translatable="yes">Eject</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">4</property>
           </packing>
         </child>
         <child>
           <object class="GtkHSeparator" id="hseparator2">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">5</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox5">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
               <object class="GtkLabel" id="label3">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Drive 3</property>
                 <attributes>
                   <attribute name="weight" value="bold"/>
@@ -268,31 +330,38 @@
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="filename_drive3">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="xalign">0</property>
                 <property name="ellipsize">start</property>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">6</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox6">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox5">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <property name="layout_style">start</property>
                 <child>
@@ -325,15 +394,18 @@
                 </child>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox6">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton" id="eject_drive3">
-                    <property name="label" translatable="yes">Eject</property>
+                  <object class="GtkButton" id="insert_drive3">
+                    <property name="label" translatable="yes">Insert…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -345,8 +417,8 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="insert_drive3">
-                    <property name="label" translatable="yes">Insert…</property>
+                  <object class="GtkButton" id="new_drive3">
+                    <property name="label" translatable="yes">New…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -357,34 +429,53 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkButton" id="eject_drive3">
+                    <property name="label" translatable="yes">Eject</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">7</property>
           </packing>
         </child>
         <child>
           <object class="GtkHSeparator" id="hseparator3">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">8</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox7">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">12</property>
             <child>
               <object class="GtkLabel" id="label4">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Drive 4</property>
                 <attributes>
                   <attribute name="weight" value="bold"/>
@@ -392,31 +483,38 @@
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkLabel" id="filename_drive4">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="xalign">0</property>
                 <property name="ellipsize">start</property>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">9</property>
           </packing>
         </child>
         <child>
           <object class="GtkHBox" id="hbox8">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox7">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <property name="layout_style">start</property>
                 <child>
@@ -449,15 +547,18 @@
                 </child>
               </object>
               <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
               <object class="GtkHButtonBox" id="hbuttonbox8">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton" id="eject_drive4">
-                    <property name="label" translatable="yes">Eject</property>
+                  <object class="GtkButton" id="insert_drive4">
+                    <property name="label" translatable="yes">Insert…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -469,8 +570,8 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="insert_drive4">
-                    <property name="label" translatable="yes">Insert…</property>
+                  <object class="GtkButton" id="new_drive4">
+                    <property name="label" translatable="yes">New…</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -481,34 +582,53 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkButton" id="eject_drive4">
+                    <property name="label" translatable="yes">Eject</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="fill">True</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">10</property>
           </packing>
         </child>
         <child>
           <object class="GtkHSeparator" id="hseparator4">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">11</property>
           </packing>
         </child>
         <child>
           <object class="GtkLabel" id="drive_cyl_head">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="label" translatable="yes">Dr ? Tr ?? He ?</property>
           </object>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">True</property>
             <property name="position">12</property>
           </packing>
         </child>

@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief GTK+ 2 tape control window.
+ *  \brief GTK+ 2 printer control window.
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -16,12 +16,12 @@
  *  \endlicenseblock
  */
 
-#ifndef XROAR_GTK2_TAPECONTROL_H_
-#define XROAR_GTK2_TAPECONTROL_H_
+#ifndef XROAR_GTK2_PRINTERCONTROL_H_
+#define XROAR_GTK2_PRINTERCONTROL_H_
 
 struct ui_gtk2_interface;
 struct uigtk2_dialog;
 
-struct uigtk2_dialog *gtk2_tc_dialog_new(struct ui_gtk2_interface *);
+struct uigtk2_dialog *gtk2_pc_dialog_new(struct ui_gtk2_interface *);
 
 #endif

@@ -20,24 +20,8 @@
 #define XROAR_GTK2_VIDEO_OPTIONS_H_
 
 struct ui_gtk2_interface;
+struct uigtk2_dialog;
 
-void gtk2_vo_create_window(struct ui_gtk2_interface *uigtk2);
-void gtk2_vo_toggle_window(GtkToggleAction *current, gpointer user_data);
-
-void gtk2_vo_update_gain(struct ui_gtk2_interface *uigtk2, float value);
-
-void gtk2_vo_update_brightness(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_contrast(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_saturation(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_hue(struct ui_gtk2_interface *uigtk2, int value);
-
-void gtk2_vo_update_picture(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_ntsc_scaling(struct ui_gtk2_interface *uigtk2, int value);
-
-void gtk2_vo_update_cmp_renderer(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_cmp_fs(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_cmp_fsc(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_cmp_system(struct ui_gtk2_interface *uigtk2, int value);
-void gtk2_vo_update_cmp_colour_killer(struct ui_gtk2_interface *uigtk2, int value);
+struct uigtk2_dialog *gtk2_tv_dialog_new(struct ui_gtk2_interface *);
 
 #endif

@@ -303,12 +303,15 @@ if GTK2
 xroar_CFLAGS += $(GTK2_CFLAGS)
 xroar_LDADD += $(GTK2_LIBS)
 xroar_SOURCES += \
+	gtk2/about.c \
 	gtk2/common.c gtk2/common.h \
+	gtk2/dialog.c gtk2/dialog.h \
 	gtk2/drivecontrol.c gtk2/drivecontrol.h \
+	gtk2/event_handlers.c gtk2/event_handlers.h \
 	gtk2/filereq_gtk2.c \
 	gtk2/gtk2.gresource.c \
 	gtk2/joystick_gtk2.c \
-	gtk2/keyboard_gtk2.c \
+	gtk2/printercontrol.c gtk2/printercontrol.h \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
 	gtk2/ui_gtk2.c \
 	gtk2/video_options.c gtk2/video_options.h
@@ -328,6 +331,7 @@ GTK2_RESOURCES = \
 	gtk2/application.ui \
 	gtk2/menu.ui \
 	gtk2/drivecontrol.ui \
+	gtk2/printercontrol.ui \
 	gtk2/tapecontrol.ui \
 	gtk2/video_options.ui
 

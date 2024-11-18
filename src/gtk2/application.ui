@@ -6,7 +6,7 @@
     <property name="title" translatable="yes">XRoar</property>
     <signal name="destroy" handler="gtk_main_quit" after="yes"/>
     <child>
-      <object class="GtkVBox" id="vbox1">
+      <object class="GtkVBox" id="box">
         <property name="visible">True</property>
         <child>
           <object class="GtkDrawingArea" id="drawing_area">

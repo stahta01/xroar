@@ -36,6 +36,7 @@
 
 #include "logging.h"
 #include "machine.h"
+#include "messenger.h"
 #include "module.h"
 #include "vo.h"
 #include "vo_opengl.h"
@@ -50,17 +51,11 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void *new(void *cfg);
-
-struct module vo_gtkgl_module = {
-	.name = "gtkgl", .description = "GtkGLExt video",
-	.new = new,
-};
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 struct vo_gtkgl_interface {
 	struct vo_opengl_interface vogl;
+
+	// Messenger client id
+	int msgr_client_id;
 
 	// Menus affect the size of the draw area, so we need to track how much
 	// to add to the window size to get the draw area we want.
@@ -78,24 +73,25 @@ struct vo_gtkgl_interface {
 
 static void vo_gtkgl_free(void *);
 static void resize(void *, unsigned int w, unsigned int h);
-static int set_fullscreen(void *, _Bool fullscreen);
-static void set_menubar(void *, _Bool show_menubar);
 static void draw(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
+static void vogtkgl_ui_set_fullscreen(void *, int tag, void *smsg);
+static void vogtkgl_ui_set_menubar(void *, int tag, void *smsg);
+
 static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 static void vo_gtkgl_set_vsync(struct ui_gtk2_interface *, int val);
 
-static void *new(void *sptr) {
-	struct ui_gtk2_interface *uigtk2 = sptr;
+_Bool gtkgl_vo_init(struct ui_gtk2_interface *uigtk2) {
+	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
 
 	gtk_gl_init(NULL, NULL);
 
 	if (gdk_gl_query_extension() != TRUE) {
-		LOG_ERROR("OpenGL not available\n");
+		LOG_MOD_SUB_ERROR("gtk2", "vo_gtkgl", "OpenGL not available\n");
 		return NULL;
 	}
 
@@ -105,7 +101,8 @@ static void *new(void *sptr) {
 	struct vo_interface *vo = &vogl->vo;
 	uigtk2->public.vo_interface = vo;
 
-	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
+	vo_interface_init(vo);
+
 	if (!vo_opengl_configure(vogl, vo_cfg)) {
 		free(vogtkgl);
 		return NULL;
@@ -116,11 +113,13 @@ static void *new(void *sptr) {
 
 	struct vo_render *vr = vo->renderer;
 
+	vogtkgl->msgr_client_id = messenger_client_register();
+	ui_messenger_join_group(vogtkgl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vogtkgl_ui_set_fullscreen, uigtk2));
+	ui_messenger_join_group(vogtkgl->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vogtkgl_ui_set_menubar, uigtk2));
+
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uigtk2);
 	vo->resize = DELEGATE_AS2(void, unsigned, unsigned, resize, uigtk2);
-	vo->set_fullscreen = DELEGATE_AS1(int, bool, set_fullscreen, uigtk2);
-	vo->set_menubar = DELEGATE_AS1(void, bool, set_menubar, uigtk2);
 
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vogtkgl);
 
@@ -136,12 +135,12 @@ static void *new(void *sptr) {
 	gtk_widget_set_size_request(uigtk2->drawing_area, vogtkgl->window_area.w, vogtkgl->window_area.h);
 	GdkGLConfig *glconfig = gdk_gl_config_new_by_mode(GDK_GL_MODE_RGB | GDK_GL_MODE_DOUBLE);
 	if (!glconfig) {
-		LOG_ERROR("Failed to create OpenGL config\n");
+		LOG_MOD_SUB_ERROR("gtk2", "vo_gtkgl", "Failed to create OpenGL config\n");
 		vo_gtkgl_free(uigtk2);
 		return NULL;
 	}
 	if (!gtk_widget_set_gl_capability(uigtk2->drawing_area, glconfig, NULL, TRUE, GDK_GL_RGBA_TYPE)) {
-		LOG_ERROR("Failed to add OpenGL support to GTK widget\n");
+		LOG_MOD_SUB_ERROR("gtk2", "vo_gtkgl", "Failed to add OpenGL support to GTK widget\n");
 		g_object_unref(glconfig);
 		vo_gtkgl_free(uigtk2);
 		return NULL;
@@ -155,8 +154,6 @@ static void *new(void *sptr) {
 	 * right size even if we then fullscreen.  */
 	vo->show_menubar = 1;
 	gtk_widget_show(uigtk2->top_window);
-	/* Set fullscreen. */
-	set_fullscreen(uigtk2, vo_cfg->fullscreen);
 
 	return vo;
 }
@@ -168,7 +165,8 @@ static void vo_gtkgl_free(void *sptr) {
 	struct vo_gtkgl_interface *vogtkgl = (struct vo_gtkgl_interface *)vo;
 	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
 
-	set_fullscreen(uigtk2, 0);
+	messenger_client_unregister(vogtkgl->msgr_client_id);
+	gtk_window_unfullscreen(GTK_WINDOW(uigtk2->top_window));
 	vo_opengl_free(vogl);
 }
 
@@ -278,26 +276,33 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	gtk_window_resize(GTK_WINDOW(uigtk2->top_window), w + woff, h + hoff);
 }
 
-static int set_fullscreen(void *sptr, _Bool fullscreen) {
+static void vogtkgl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_gtk2_interface *uigtk2 = sptr;
 
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uigtk2->public.vo_interface;
 
-	vo->is_fullscreen = fullscreen;
-	vo->show_menubar = !fullscreen;
-	if (fullscreen) {
+	_Bool want_fullscreen = uimsg->value;
+
+	if (want_fullscreen) {
+		vo->show_menubar = 0;
 		gtk_window_fullscreen(GTK_WINDOW(uigtk2->top_window));
 	} else {
+		vo->show_menubar = 1;
 		gtk_window_unfullscreen(GTK_WINDOW(uigtk2->top_window));
 	}
-	return 0;
 }
 
-static void set_menubar(void *sptr, _Bool show_menubar) {
+static void vogtkgl_ui_set_menubar(void *sptr, int tag, void *smsg) {
+	(void)tag;
 	struct ui_gtk2_interface *uigtk2 = sptr;
 
+	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uigtk2->public.vo_interface;
 	struct vo_gtkgl_interface *vogtkgl = (struct vo_gtkgl_interface *)vo;
+
+	_Bool want_menubar = uimsg->value;
 
 	GtkAllocation allocation;
 	if (vo->is_fullscreen) {
@@ -308,13 +313,13 @@ static void set_menubar(void *sptr, _Bool show_menubar) {
 	int w = allocation.width;
 	int h = allocation.height;
 
-	if (show_menubar && !vo->is_fullscreen) {
+	if (want_menubar && !vo->is_fullscreen) {
 		w += vogtkgl->woff;
 		h += vogtkgl->hoff;
 	}
 
-	vo->show_menubar = show_menubar;
-	if (show_menubar) {
+	vo->show_menubar = want_menubar;
+	if (want_menubar) {
 		gtk_widget_show(uigtk2->menubar);
 	} else {
 		gtk_widget_hide(uigtk2->menubar);
@@ -327,6 +332,7 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 	struct ui_gtk2_interface *uigtk2 = data;
 
 	struct vo_interface *vo = uigtk2->public.vo_interface;
+	struct vo_gtkgl_interface *vogtkgl = (struct vo_gtkgl_interface *)vo;
 
 	if ((event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED) && !vo->is_fullscreen) {
 		gtk_widget_hide(uigtk2->menubar);
@@ -338,6 +344,7 @@ static gboolean window_state(GtkWidget *tw, GdkEventWindowState *event, gpointer
 		vo->is_fullscreen = 0;
 		vo->show_menubar = 1;
 	}
+	ui_update_state(vogtkgl->msgr_client_id, ui_tag_fullscreen, vo->is_fullscreen, NULL);
 	return 0;
 }
 
@@ -375,12 +382,6 @@ static gboolean configure(GtkWidget *da, GdkEventConfigure *event, gpointer data
 	// and Y to 0.
 	vo_set_draw_area(vo, 0, 0, draw_allocation.width, draw_allocation.height);
 	vo_opengl_setup_context(vogl);
-
-	// Copy picture dimensions back out (for mouse calculations)
-	uigtk2->picture_area.x = vo->picture_area.x;
-	uigtk2->picture_area.y = vo->picture_area.y;
-	uigtk2->picture_area.w = vo->picture_area.w;
-	uigtk2->picture_area.h = vo->picture_area.h;
 
 	vo_gtkgl_set_vsync(uigtk2, -1);
 
@@ -424,7 +425,7 @@ static _Bool opengl_has_extension(Display *display, const char *extension) {
 	if (!extensions)
 		return 0;
 
-	LOG_DEBUG(3, "gtkgl: extensions: %s\n", extensions);
+	LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "extensions: %s\n", extensions);
 
 	const char *start;
 	const char *where, *terminator;
@@ -470,7 +471,7 @@ static void vo_gtkgl_set_vsync(struct ui_gtk2_interface *uigtk2, int val) {
 			val = abs(val);
 		}
 		if (dpy && win) {
-			LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
+			LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			return;
 		}
@@ -480,19 +481,19 @@ static void vo_gtkgl_set_vsync(struct ui_gtk2_interface *uigtk2, int val) {
 
 	PFNGLXSWAPINTERVALMESAPROC glXSwapIntervalMESA = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalMESA");
 	if (glXSwapIntervalMESA) {
-		LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalMESA(%d)\n", val);
+		LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "glXSwapIntervalMESA(%d)\n", val);
 		glXSwapIntervalMESA(val);
 		return;
 	}
 
 	PFNGLXSWAPINTERVALSGIPROC glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
 	if (glXSwapIntervalSGI) {
-		LOG_DEBUG(3, "vo_gtkgl: glXSwapIntervalSGI(%d)\n", val);
+		LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "glXSwapIntervalSGI(%d)\n", val);
 		glXSwapIntervalSGI(val);
 		return;
 	}
 
 #endif
 
-	LOG_DEBUG(3, "vo_gtkgl: Found no way to set swap interval\n");
+	LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "Found no way to set swap interval\n");
 }
