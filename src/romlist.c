@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "array.h"
+#include "c-strcase.h"
 #include "sds.h"
 #include "sdsx.h"
 #include "slist.h"
@@ -150,7 +151,8 @@ sds romlist_find(const char *name) {
 		sds filename = sdsnew(name);
 		size_t filename_length = sdslen(filename);
 		if (filename_length >= 4 &&
-		    0 == strcmp(".rom", filename + filename_length - 4)) {
+		    (0 == c_strcasecmp(".ccc", filename + filename_length - 4) ||
+		     0 == c_strcasecmp(".rom", filename + filename_length - 4))) {
 			return filename;
 		}
 		filename = sdscat(filename, ".rom");
