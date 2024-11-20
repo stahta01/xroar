@@ -4,6 +4,8 @@
 	'_wasm_new_disk',
 	'_wasm_queue_basic',
 	'_wasm_resize',
+	'_wasm_scan_press',
+	'_wasm_scan_release',
 	'_wasm_set_brightness',
 	'_wasm_set_cartridge',
 	'_wasm_set_ccr',

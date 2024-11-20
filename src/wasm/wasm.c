@@ -38,6 +38,7 @@
 #include "cart.h"
 #include "events.h"
 #include "fs.h"
+#include "hkbd.h"
 #include "joystick.h"
 #include "logging.h"
 #include "machine.h"
@@ -913,6 +914,16 @@ void wasm_queue_basic(const char *string) {
 	char *text = xstrdup(string);
 	WASM_DEBUG("wasm_queue_basic(%s): queueing do_wasm_queue_basic()\n", string);
 	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_queue_basic, text), 1);
+}
+
+// Keyboard interface
+
+void wasm_scan_press(int code) {
+	hk_scan_press(code);
+}
+
+void wasm_scan_release(int code) {
+	hk_scan_release(code);
 }
 
 // Update window size.  Browser handles knowing what size things should be,

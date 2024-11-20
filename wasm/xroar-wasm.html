@@ -441,6 +441,16 @@ be a better way to make this usable...
 		Module.ccall('xroar_soft_reset', null, [], []);
 	}
 
+	// Press a key
+	function wasm_scan_press(scancode) {
+		Module.ccall('wasm_scan_press', null, [ 'number' ], [ scancode ]);
+	}
+
+	// Release a key
+	function wasm_scan_release(scancode) {
+		Module.ccall('wasm_scan_release', null, [ 'number' ], [ scancode ]);
+	}
+
 	// Map a supported input device to emulated joystick port
 	function wasm_set_joystick(joy, value) {
 		resumeAudio();
