@@ -900,13 +900,6 @@ void wasm_load_file(const char *filename, int type, int drive) {
 	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_load_file, ev), 1);
 }
 
-// Configure joystick ports
-
-struct wasm_event_set_joystick {
-	int port;
-	char *value;
-};
-
 // Submit BASIC commands
 
 static void do_wasm_queue_basic(void *sptr) {
