@@ -269,6 +269,10 @@ static _Bool dragonpro_finish(struct part *p) {
 	mdp->PIA2->b.data_postwrite = DELEGATE_AS0(void, dragonpro_pia2b_data_postwrite, mdp);
 	mdp->PIA2->b.control_postwrite = DELEGATE_AS0(void, dragonpro_pia2b_control_postwrite, mdp);
 
+	// Default all PIA connections to unconnected (no source, no sink)
+	mdp->PIA2->b.in_source = 0;
+	mdp->PIA2->a.in_sink = mdp->PIA2->b.in_sink = 0xff;
+
 	// ROM selection from PIA
 	mdp->rom = (PIA_VALUE_A(mdp->PIA2) & 0x04) ? mdp->BOOT : mdp->ROM0;
 
@@ -278,10 +282,6 @@ static _Bool dragonpro_finish(struct part *p) {
 	// a normal Dragon 64.  At the moment, it's kludged by having the boot
 	// ROM loaded as "extbas" and the BASIC ROM loaded as "altbas", but we
 	// could do with a more general named ROM bank config scheme.
-
-	// Default all PIA connections to unconnected (no source, no sink)
-	mdp->PIA2->b.in_source = 0;
-	mdp->PIA2->a.in_sink = mdp->PIA2->b.in_sink = 0xff;
 
 	// VDG
 	// TODO: this needs verifying.  I'm assuming the same circuit as the

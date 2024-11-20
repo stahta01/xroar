@@ -167,12 +167,12 @@ static _Bool dragon64_finish(struct part *p) {
 	md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
 	md->has_altbas = rombank_verify_crc(mdp->ROM1, "64K BASIC", -1, "@d64_2", xroar.cfg.force_crc_match, &md->crc_altbas);
 
-	// ROM selection from PIA
-	mdp->rom = (PIA_VALUE_B(md->PIA1) & 0x04) ? mdp->ROM0 : mdp->ROM1;
-
 	// Override PIA1 PB2 as ROMSEL
 	md->PIA1->b.in_source |= (1<<2);  // pull-up
 	md->PIA1->b.data_postwrite = DELEGATE_AS0(void, dragon64_pia1b_data_postwrite, mdp);
+
+	// ROM selection from PIA
+	mdp->rom = (PIA_VALUE_B(md->PIA1) & 0x04) ? mdp->ROM0 : mdp->ROM1;
 
 	// VDG
 	md->VDG->is_dragon64 = 1;
