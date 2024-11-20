@@ -203,11 +203,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Create renderer
 
-#ifdef WINDOWS32
-	// from https://github.com/libsdl-org/SDL/issues/5099
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
-#endif
-
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
 		vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
 		if (vosdl->sdl_renderer)
