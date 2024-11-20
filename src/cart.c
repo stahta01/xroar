@@ -875,7 +875,6 @@ _Bool cart_rom_finish(struct part *p) {
 			rombank_load_image(c->ROM, 0, tmp, 0);
 		}
 		sdsfree(tmp);
-		rombank_report(c->ROM, "Cartridge ROM");
 	}
 
 	if (cc->rom2 && c->ROM->nslots > 1) {
@@ -884,8 +883,9 @@ _Bool cart_rom_finish(struct part *p) {
 			rombank_load_image(c->ROM, 1, tmp, 0);
 		}
 		sdsfree(tmp);
-		rombank_report(c->ROM, "Cartridge second ROM");
 	}
+
+	rombank_report(c->ROM, "Cartridge ROM");
 
 	return cart_finish(p);
 }
