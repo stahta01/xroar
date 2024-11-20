@@ -100,7 +100,6 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 			switch(event.window.event) {
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 				sdl_vo_notify_size_changed(uisdl2, event.window.data1, event.window.data2);
-				vo_set_draw_area(vo, 0, 0, event.window.data1, event.window.data2);
 				break;
 			}
 			break;

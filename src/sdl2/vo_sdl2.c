@@ -383,6 +383,8 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	vosdl->window_area.w = w;
 	vosdl->window_area.h = h;
 	update_viewport(uisdl2);
+
+	vo_set_draw_area(vo, 0, 0, w, h);
 }
 
 #ifndef HAVE_WASM
