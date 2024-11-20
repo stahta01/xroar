@@ -74,6 +74,7 @@ void sdl_js_device_added(int index);
 void sdl_js_device_removed(int index);
 void sdl_js_physical_shutdown(void);
 
+void sdl_vo_notify_render_device_reset(struct ui_sdl2_interface *uisdl2);
 void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h);
 
 /* Platform-specific support */

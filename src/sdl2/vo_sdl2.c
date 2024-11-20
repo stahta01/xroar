@@ -91,6 +91,8 @@ static void vosdl_ui_set_menubar(void *, int tag, void *smsg);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
+static void recreate_renderer(struct ui_sdl2_interface *);
+
 _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
 
@@ -203,11 +205,8 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Create renderer
 
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); i++) {
-		vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
-		if (vosdl->sdl_renderer)
-			break;
-	}
+	recreate_renderer(uisdl2);
+
 	if (!vosdl->sdl_renderer) {
 		LOG_MOD_SUB_ERROR("sdl", "vo", "failed to create renderer\n");
 		return 0;
@@ -258,6 +257,24 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	hk_init();
 
 	return 1;
+}
+
+static void recreate_renderer(struct ui_sdl2_interface *uisdl2) {
+	struct ui_interface *ui = &uisdl2->ui_interface;
+
+	struct vo_interface *vo = ui->vo_interface;
+	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
+
+	if (vosdl->sdl_renderer) {
+		SDL_DestroyRenderer(vosdl->sdl_renderer);
+		vosdl->sdl_renderer = NULL;
+	}
+
+	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); ++i) {
+		vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
+		if (vosdl->sdl_renderer)
+			break;
+	}
 }
 
 // We need to recreate the texture whenever the viewport changes (it needs to
@@ -385,6 +402,16 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 	update_viewport(uisdl2);
 
 	vo_set_draw_area(vo, 0, 0, w, h);
+}
+
+// https://github.com/libsdl-org/SDL/issues/9861
+//
+// "[...] when you get SDL_EVENT_RENDER_DEVICE_RESET, you should destroy the
+// renderer [...] and then reinitialize everything."
+
+void sdl_vo_notify_render_device_reset(struct ui_sdl2_interface *uisdl2) {
+	recreate_renderer(uisdl2);
+	update_viewport(uisdl2);
 }
 
 #ifndef HAVE_WASM

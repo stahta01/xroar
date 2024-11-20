@@ -103,6 +103,9 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 				break;
 			}
 			break;
+		case SDL_RENDER_DEVICE_RESET:
+			sdl_vo_notify_render_device_reset(uisdl2);
+			break;
 		case SDL_QUIT:
 			xroar_quit();
 			break;
