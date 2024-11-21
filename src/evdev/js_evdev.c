@@ -966,9 +966,7 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		LOG_MOD_SUB_DEBUG(1, "evdev", "joystick", "added: %s\n", jc1->description);
 	}
 
-	if (xroar.ui_interface) {
-		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
-	}
+	joystick_config_update_menus();
 
 	close(fd);
 	libevdev_free(levd);
@@ -998,9 +996,7 @@ static void evdev_js_device_remove(struct evdev_js_context *ctx, int evid) {
 			d->jc_names[i] = NULL;
 		}
 	}
-	if (xroar.ui_interface) {
-		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
-	}
+	joystick_config_update_menus();
 	if (d->axis_controls) {
 		free(d->axis_controls);
 		d->axis_controls = NULL;
