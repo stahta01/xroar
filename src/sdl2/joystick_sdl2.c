@@ -305,6 +305,8 @@ void sdl_js_device_added(int index) {
 		LOG_MOD_SUB_DEBUG(1, "sdl", "joystick", "added: %s\n", jc1->description);
 	}
 
+	joystick_config_update_menus();
+
 	// Close device - it will be opened when actually configured for use.
 	if (gamecontroller) {
 		SDL_GameControllerClose(gamecontroller);
@@ -349,9 +351,7 @@ void sdl_js_device_removed(int index) {
 			d->jc_names[i] = NULL;
 		}
 	}
-	if (xroar.ui_interface) {
-		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
-	}
+	joystick_config_update_menus();
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
