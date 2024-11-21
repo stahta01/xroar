@@ -45,12 +45,12 @@ int main(int argc, char **argv) {
 
 	srand(getpid() ^ time(NULL));
 
+#ifndef HAVE_WASM
 	struct ui_interface *ui = xroar_init(argc, argv);
 	if (!ui) {
 		exit(EXIT_FAILURE);
 	}
 
-#ifndef HAVE_WASM
 	// In normal builds, just finish up initialisation.
 	xroar_init_finish();
 
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 	// The WebAssembly build has its own approach to completing
 	// initialisation in order to allow initial required file transfers to
 	// complete.
-	wasm_finish_init(ui);
+	wasm_init(argc, argv);
 #endif
 	return 0;
 }

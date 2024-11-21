@@ -38,9 +38,9 @@ struct ui_wasm_interface {
 	double tickerr;
 };
 
-// Finish the initialisation started in main().
+// Initialisation - called by main().
 
-void wasm_finish_init(struct ui_interface *ui);
+void wasm_init(int argc, char **argv);
 
 // Fetch a file.  Locks the file to prevent simultaneous fetch attempts.  Won't
 // re-fetch the same file (whether or not it succeeded).

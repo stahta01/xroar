@@ -149,9 +149,27 @@ static void *ui_wasm_new(void *cfg) {
 // temporary handler that waits for file transfers to complete before finishing
 // initialisation.  This then transfers control to wasm_ui_run().
 
+static struct {
+	int argc;
+	char **argv;
+} init_info;
+
+static void start_init(void *);
 static void finish_init(void *);
 
-void wasm_finish_init(struct ui_interface *ui) {
+void wasm_init(int argc, char **argv) {
+	init_info.argc = argc;
+	init_info.argv = argv;
+	emscripten_set_main_loop_arg(start_init, NULL, 0, 0);
+}
+
+static void start_init(void *sptr) {
+	(void)sptr;
+	struct ui_interface *ui = xroar_init(init_info.argc, init_info.argv);
+	emscripten_cancel_main_loop();
+	if (!ui) {
+		exit(EXIT_FAILURE);
+	}
 	emscripten_set_main_loop_arg(finish_init, ui, 0, 0);
 }
 
