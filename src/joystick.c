@@ -423,7 +423,8 @@ static struct js_db_entry *js_parse_db_entry(const char *db_string) {
 		// Special cases
 		if (0 == c_strcasecmp(ctl_name, "platform")) {
 			if (0 != c_strcasecmp(input, JS_PLATFORM)) {
-				free(map);
+				js_db_map_free(map);
+				free(dbcopy);
 				return NULL;
 			}
 		} else if (0 == c_strcasecmp(ctl_name, "crc")) {
