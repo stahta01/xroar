@@ -60,11 +60,6 @@
 #include "windows32/tapecontrol.h"
 #include "windows32/video_options.h"
 
-#define TAG(t) (((t) & 0x7f) << 8)
-#define TAGV(t,v) (TAG(t) | ((v) & 0xff))
-#define TAG_TYPE(t) (((t) >> 8) & 0x7f)
-#define TAG_VALUE(t) ((int8_t)((t) & 0xff))
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -175,26 +170,26 @@ static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 
 	file_menu = CreatePopupMenu();
 
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_run), "&Run...");
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_load), "&Load...");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_file_run), "&Run...");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_file_load), "&Load...");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_tape_dialog), "Cassette &tapes");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAG(ui_tag_tape_dialog), "Cassette &tapes");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_disk_dialog), "Floppy &disks");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAG(ui_tag_disk_dialog), "Floppy &disks");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAG(ui_tag_print_dialog), "&Printer control");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAG(ui_tag_print_dialog), "&Printer control");
 
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_file_save_snapshot), "&Save snapshot...");
 #ifdef SCREENSHOT
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
 #endif
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(file_menu, MF_STRING, TAGV(ui_tag_action, ui_action_quit), "&Quit");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)file_menu, "&File");
 }
@@ -213,21 +208,21 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Composite &rendering");
 	uiw32_update_radio_menu_from_enum(submenu, vo_cmp_ccr_list, ui_tag_ccr);
 
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_tv_dialog), "TV &controls");
+	AppendMenu(view_menu, MF_STRING, UIW32_TAG(ui_tag_tv_dialog), "TV &controls");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_vdg_inverse), "&Inverse text");
+	AppendMenu(view_menu, MF_STRING, UIW32_TAG(ui_tag_vdg_inverse), "&Inverse text");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
 	AppendMenu(view_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Zoom");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, UI_NEXT), "Zoom In");
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, UI_PREV), "Zoom Out");
+	AppendMenu(submenu, MF_STRING, UIW32_TAGV(ui_tag_zoom, UI_NEXT), "Zoom In");
+	AppendMenu(submenu, MF_STRING, UIW32_TAGV(ui_tag_zoom, UI_PREV), "Zoom Out");
 	AppendMenu(submenu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(submenu, MF_STRING, TAGV(ui_tag_zoom, 0), "Reset");
+	AppendMenu(submenu, MF_STRING, UIW32_TAGV(ui_tag_zoom, 0), "Reset");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(view_menu, MF_STRING, TAG(ui_tag_fullscreen), "&Full screen");
+	AppendMenu(view_menu, MF_STRING, UIW32_TAG(ui_tag_fullscreen), "&Full screen");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)view_menu, "&View");
 }
@@ -255,11 +250,11 @@ static void setup_hardware_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Right joystick");
 	uiw32->left_joystick_menu = submenu = CreatePopupMenu();
 	AppendMenu(hardware_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Left joystick");
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_joystick_swap), "Swap joysticks");
+	AppendMenu(hardware_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_joystick_swap), "Swap joysticks");
 
 	AppendMenu(hardware_menu, MF_SEPARATOR, 0, NULL);
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_soft), "Soft reset");
-	AppendMenu(hardware_menu, MF_STRING, TAGV(ui_tag_action, ui_action_reset_hard), "Hard reset");
+	AppendMenu(hardware_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_reset_soft), "Soft reset");
+	AppendMenu(hardware_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_reset_hard), "Hard reset");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)hardware_menu, "&Hardware");
 }
@@ -278,8 +273,8 @@ static void setup_tool_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(tool_menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, "Keyboard lan&guage");
 	uiw32_update_radio_menu_from_enum(submenu, hkbd_lang_list, ui_tag_hkbd_lang);
 
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_kbd_translate), "&Keyboard translation");
-	AppendMenu(tool_menu, MF_STRING, TAG(ui_tag_ratelimit_latch), "&Rate limit");
+	AppendMenu(tool_menu, MF_STRING, UIW32_TAG(ui_tag_kbd_translate), "&Keyboard translation");
+	AppendMenu(tool_menu, MF_STRING, UIW32_TAG(ui_tag_ratelimit_latch), "&Rate limit");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)tool_menu, "&Tool");
 }
@@ -288,7 +283,7 @@ static void setup_help_menu(struct ui_windows32_interface *uiw32) {
 	HMENU help_menu;
 
 	help_menu = CreatePopupMenu();
-	AppendMenu(help_menu, MF_STRING, TAG(ui_tag_about), "About");
+	AppendMenu(help_menu, MF_STRING, UIW32_TAG(ui_tag_about), "About");
 
 	AppendMenu(uiw32->top_menu, MF_STRING | MF_POPUP, (UINT_PTR)help_menu, "&Help");
 }
@@ -314,7 +309,7 @@ static void windows32_update_machine_menu(void *sptr) {
 		if (mc->id > uiw32->max_machine_id) {
 			uiw32->max_machine_id = mc->id;
 		}
-		AppendMenu(uiw32->machine_menu, MF_STRING, TAGV(ui_tag_machine, mc->id), mc->description);
+		AppendMenu(uiw32->machine_menu, MF_STRING, UIW32_TAGV(ui_tag_machine, mc->id), mc->description);
 		mcl = mcl->next;
 	}
 }
@@ -336,14 +331,14 @@ static void windows32_update_cartridge_menu(void *sptr) {
 		;
 
 	// Add new entries
-	AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, 0), "None");
+	AppendMenu(uiw32->cartridge_menu, MF_STRING, UIW32_TAGV(ui_tag_cartridge, 0), "None");
 	uiw32->max_cartridge_id = 0;
 	for (struct slist *iter = ccl; iter; iter = iter->next) {
 		struct cart_config *cc = iter->data;
 		if (cc->id > uiw32->max_cartridge_id) {
 			uiw32->max_cartridge_id = cc->id;
 		}
-		AppendMenu(uiw32->cartridge_menu, MF_STRING, TAGV(ui_tag_cartridge, cc->id), cc->description);
+		AppendMenu(uiw32->cartridge_menu, MF_STRING, UIW32_TAGV(ui_tag_cartridge, cc->id), cc->description);
 	}
 	slist_free(ccl);
 }
@@ -360,16 +355,16 @@ static void windows32_update_joystick_menus(void *sptr) {
 	while (DeleteMenu(uiw32->left_joystick_menu, 0, MF_BYPOSITION))
 		;
 
-	AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_right, 0), "None");
-	AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_left, 0), "None");
+	AppendMenu(uiw32->right_joystick_menu, MF_STRING, UIW32_TAGV(uiw32_tag_joystick_right, 0), "None");
+	AppendMenu(uiw32->left_joystick_menu, MF_STRING, UIW32_TAGV(uiw32_tag_joystick_left, 0), "None");
 	uiw32->max_joystick_id = 0;
 	for (struct slist *iter = jl; iter; iter = iter->next) {
 		struct joystick_config *jc = iter->data;
 		if (jc->id > uiw32->max_joystick_id) {
 			uiw32->max_joystick_id = jc->id;
 		}
-		AppendMenu(uiw32->right_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_right, jc->id), jc->description);
-		AppendMenu(uiw32->left_joystick_menu, MF_STRING, TAGV(uiw32_tag_joystick_left, jc->id), jc->description);
+		AppendMenu(uiw32->right_joystick_menu, MF_STRING, UIW32_TAGV(uiw32_tag_joystick_right, jc->id), jc->description);
+		AppendMenu(uiw32->left_joystick_menu, MF_STRING, UIW32_TAGV(uiw32_tag_joystick_left, jc->id), jc->description);
 	}
 }
 
@@ -392,8 +387,8 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		return;
 
 	int tag = LOWORD(wParam);
-	int tag_type = TAG_TYPE(tag);
-	int tag_value = TAG_VALUE(tag);
+	int tag_type = UIW32_TAG_TYPE(tag);
+	int tag_value = UIW32_TAG_VALUE(tag);
 
 	switch (tag_type) {
 
@@ -538,65 +533,65 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	// Simple toggles
 
 	case ui_tag_fullscreen:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Hardware
 
 	case ui_tag_machine:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, uiw32->max_machine_id), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, uiw32->max_machine_id), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_cartridge:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, uiw32->max_cartridge_id), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, uiw32->max_cartridge_id), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	// Cassettes
 
 	case ui_tag_tape_dialog:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Floppy disks
 
 	case ui_tag_disk_dialog:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Video
 
 	case ui_tag_tv_dialog:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	case ui_tag_ccr:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 4), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, 4), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_tv_input:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 3), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, 3), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_vdg_inverse:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Keyboard
 
 	case ui_tag_keymap:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, (dkbd_num_layouts - 1)), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, (dkbd_num_layouts - 1)), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_hkbd_layout:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 0xff), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, 0xff), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_hkbd_lang:
-		CheckMenuRadioItem(uiw32->top_menu, TAGV(tag, 0), TAGV(tag, 0xff), TAGV(tag, value), MF_BYCOMMAND);
+		CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(tag, 0), UIW32_TAGV(tag, 0xff), UIW32_TAGV(tag, value), MF_BYCOMMAND);
 		break;
 
 	case ui_tag_kbd_translate:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Joysticks
@@ -604,20 +599,20 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	case ui_tag_joystick_port:
 		{
 			int xtag = uiw32_tag_joystick_right + value;
-			CheckMenuRadioItem(uiw32->top_menu, TAGV(xtag, 0), TAGV(xtag, uiw32->max_joystick_id), TAGV(xtag, (intptr_t)data), MF_BYCOMMAND);
+			CheckMenuRadioItem(uiw32->top_menu, UIW32_TAGV(xtag, 0), UIW32_TAGV(xtag, 0xff), UIW32_TAGV(xtag, (intptr_t)data), MF_BYCOMMAND);
 		}
 		break;
 
 	// Printers
 
 	case ui_tag_print_dialog:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	// Debugging
 
 	case ui_tag_ratelimit_latch:
-		CheckMenuItem(uiw32->top_menu, TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
 	default:
