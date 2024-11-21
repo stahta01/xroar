@@ -273,6 +273,17 @@ void joystick_config_remove_by_name(const char *name) {
 	joystick_config_remove(joystick_config_by_name(name));
 }
 
+void joystick_config_update_menus(void) {
+	if (xroar.ui_interface) {
+		DELEGATE_SAFE_CALL(xroar.ui_interface->update_joystick_menus);
+	}
+	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
+		const struct joystick_config *jc = joystick_port_config[i];
+		int id = jc ? jc->id : 0;
+		ui_update_state(msgr_client_id, ui_tag_joystick_port, i, (void *)(intptr_t)id);
+	}
+}
+
 struct slist *joystick_config_list(void) {
 	return config_list;
 }
