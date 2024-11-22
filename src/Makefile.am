@@ -384,7 +384,7 @@ xroar_LDADD += $(COCOA_LIBS)
 xroar_SOURCES += \
 	macosx/filereq_cocoa.m \
 	macosx/hkbd_darwin.c macosx/hkbd_darwin.h \
-	macosx/ui_macosx.m
+	macosx/ui_macosx.m macosx/ui_macosx.h
 endif
 endif
 
