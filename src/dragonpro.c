@@ -507,7 +507,7 @@ static void dragonpro_pia2a_control_postwrite(void *sptr) {
 	struct machine_dragonpro *mdp = sptr;
 	_Bool nmi_enable = PIA_VALUE_CA2(mdp->PIA2);
 	if (nmi_enable != mdp->dos.nmi_enable) {
-		LOG_DEBUG(2, "Dragon Pro DOS: NMI %s\n", nmi_enable?"ENABLED":"DISABLED");
+		LOG_MOD_DEBUG(2, "dragonpro", "disk NMI %s\n", nmi_enable?"ENABLED":"DISABLED");
 	}
 	mdp->dos.nmi_enable = nmi_enable;
 }
@@ -552,7 +552,7 @@ static void dragonpro_ay891x_data_postwrite(void *sptr) {
 
 	if (changed && logging.level >= 2) {
 		char *comma = "";
-		LOG_PRINT("Dragon Pro DOS: %02x: ", D);
+		LOG_MOD_PRINT("dragonpro", "disk config reg: ");
 		if (changed & 0x0f) {
 			if (D & 0x0f) {
 				LOG_PRINT("DEVICE %u", mdp->dos.device_select);

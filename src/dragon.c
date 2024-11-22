@@ -869,7 +869,7 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 			}
 			dragon_verify_ram_size(md->public.config);
 			if (length != ((unsigned)md->public.config->ram * 1024)) {
-				LOG_WARN("DRAGON/DESERIALISE: RAM size mismatch\n");
+				LOG_MOD_WARN("dragon", "deserialise: RAM size mismatch\n");
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM", "ram"));

@@ -710,7 +710,7 @@ static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 				return 0;
 			}
 			if (length != ((unsigned)mcc3->public.config->ram * 1024)) {
-				LOG_WARN("COCO3/DESERIALISE: RAM size mismatch %zu != %d\n", length, mcc3->public.config->ram * 1024);
+				LOG_MOD_WARN("coco3", "deserialise: RAM size mismatch %zu != %d\n", length, mcc3->public.config->ram * 1024);
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM", "ram"));

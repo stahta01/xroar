@@ -52,7 +52,10 @@
 #include "serialise.h"
 
 #ifndef SER_DEBUG
-#define SER_DEBUG(...) LOG_PRINT(__VA_ARGS__)
+#define SER_DEBUG(...) LOG_DEBUG(__VA_ARGS__)
+#define SER_MOD_DEBUG(l,...) LOG_MOD_DEBUG(l, "serialise", __VA_ARGS__)
+#else
+#define SER_MOD_DEBUG(l,...)
 #endif
 
 struct ser_handle {
@@ -123,7 +126,7 @@ void ser_write_tag(struct ser_handle *sh, int tag, size_t length) {
 		ser_set_error(sh, ser_error_bad_tag);
 		return;
 	}
-	SER_DEBUG("ser_write_tag(%d, %zd)\n", tag, length);
+	SER_MOD_DEBUG(2, "ser_write_tag(%d, %zd)\n", tag, length);
 	s_write_vuint32(sh, tag);
 	s_write_vuint32(sh, length);
 	sh->length = length;
@@ -134,7 +137,7 @@ void ser_write_close_tag(struct ser_handle *sh) {
 		return;
 	// XXX handle this case more gracefully (e.g. write padding bytes)
 	assert(sh->length == 0);
-	SER_DEBUG("ser_write_close_tag()\n");
+	SER_MOD_DEBUG(2, "ser_write_close_tag()\n");
 	s_write_vint32(sh, 0);
 }
 
@@ -144,7 +147,7 @@ int ser_read_tag(struct ser_handle *sh) {
 
 	// Skip any data remaining from previous read
 	if (sh->length) {
-		SER_DEBUG("ser_read_tag(): skipping %zd bytes\n", sh->length);
+		SER_MOD_DEBUG(2, "ser_read_tag(): skipping %zd bytes\n", sh->length);
 		if (fseek(sh->fd, sh->length, SEEK_CUR) < 0) {
 			ser_set_error(sh, ser_error_file_io);
 			return -1;
@@ -153,7 +156,7 @@ int ser_read_tag(struct ser_handle *sh) {
 	}
 
 	int tag = s_read_vuint32(sh);
-	SER_DEBUG("ser_read_tag(): %d\n", tag);
+	SER_MOD_DEBUG(2, "ser_read_tag(): %d\n", tag);
 
 	if (tag == 0) {
 		// Closing tag (special value zero).
@@ -615,7 +618,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 	for (int i = 0; i < ssd->num_elems && !sh->error; i++) {
 		int tag = ss[i].tag;
 		enum ser_type type = ss[i].type;
-		SER_DEBUG("ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
+		SER_MOD_DEBUG(2, "ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 		void *ptr = (char *)s + ss[i].offset;
 
 		if (ss[i].alength > 0) {
@@ -644,7 +647,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 				break;
 			}
 			if (ser_error(sh)) {
-				SER_DEBUG("serialisation ERROR!\n");
+				SER_MOD_DEBUG(2, "serialisation ERROR!\n");
 			}
 			continue;
 		}
@@ -741,7 +744,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 			assert(ssd->write_elem != NULL);
 			if (!ssd->write_elem(s, sh, tag)) {
 				ser_set_error(sh, ser_error_bad_tag);
-				SER_DEBUG("ser_write_struct_data(%p) FAILED\n", ss);
+				SER_MOD_DEBUG(2, "ser_write_struct_data(%p) FAILED\n", ss);
 			}
 			break;
 
@@ -750,11 +753,11 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 			break;
 		}
 		if (ser_error(sh)) {
-			SER_DEBUG("serialisation ERROR!\n");
+			SER_MOD_DEBUG(2, "serialisation ERROR!\n");
 		}
 	}
 	ser_write_close_tag(sh);
-	SER_DEBUG("ser_write_struct_data(%p) finished\n", ss);
+	SER_MOD_DEBUG(2, "ser_write_struct_data(%p) finished\n", ss);
 }
 
 void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *ssd, void *s) {
@@ -772,7 +775,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 
 		enum ser_type type = ss[i].type;
 		void *ptr = (char *)s + ss[i].offset;
-		SER_DEBUG("ser_read_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
+		SER_MOD_DEBUG(2, "ser_read_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
 
 		if (ss[i].alength > 0) {
 			// read array
@@ -882,7 +885,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 		case ser_type_unhandled:
 			if (!ssd->read_elem || !ssd->read_elem(s, sh, tag)) {
 				ser_set_error(sh, ser_error_bad_tag);
-				SER_DEBUG("ser_read_struct_data(%p) FAILED\n", ss);
+				SER_MOD_DEBUG(2, "ser_read_struct_data(%p) FAILED\n", ss);
 			}
 			break;
 

@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -186,7 +187,7 @@ void ak_parse_type_string(struct auto_kbd *ak, const char *str) {
 void ak_type_file(struct auto_kbd *ak, const char *filename) {
 	FILE *fd = fopen(filename, "rb");
 	if (!fd) {
-		LOG_WARN("Auto-type: failed to open '%s'\n", filename);
+		LOG_MOD_WARN("type/file", "%s: %s\n", filename, strerror(errno));
 		return;
 	}
 	refresh_translation_type(ak);
