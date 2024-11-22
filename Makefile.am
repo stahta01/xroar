@@ -6,7 +6,11 @@ EXTRA_DIST = \
 	README.SDS \
 	COPYING.GPL \
 	COPYING.LGPL \
-	top-config.h
+	top-config.h \
+	wasm/index.shtml \
+	wasm/software.js \
+	wasm/xroar-wasm.css \
+	wasm/xroar-wasm.html
 
 SUBDIRS = portalib src doc
 DIST_SUBDIRS = tools portalib src doc

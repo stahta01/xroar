@@ -7,6 +7,7 @@ man_MANS = xroar.1
 info_TEXINFOS = xroar.texi
 
 EXTRA_DIST += \
+	building-for-windows.md \
 	xroar.conf.example \
 	xroar.pdf \
 	file-run.png \
