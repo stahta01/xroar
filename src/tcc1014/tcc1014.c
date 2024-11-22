@@ -854,10 +854,31 @@ void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool value) {
 	gime->inverted_text = value;
 }
 
+// Called from coco3.c during finish(), after all the appropriate delegates
+// have been configured.
+
 void tcc1014_notify_mode(struct TCC1014 *gimep) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
+
+	unsigned HR2 = gime->COCO ? 0 : (gime->HRES >> 2) & 1;  // 0=low res, 1=high res
 	unsigned HR0 = gime->COCO ? 0 : (gime->HRES & 1);  // 0=512px, 1=640px mode
+	unsigned BP = gime->BP;  // 0=txt, 1=gfx
+
+	unsigned tHS = gime->variant->tHS;
+	unsigned tBP = gime->variant->tBP[HR2][BP];
+	unsigned tLB = gime->variant->tLB[HR2][HR0][BP];
 	unsigned tAA = gime->variant->tAA[HR0];
+	unsigned tFP = gime->variant->tFP[HR2][BP];
+	unsigned tRB = TCC1014_tSL - tHS - tBP - tLB - tAA - tFP;
+
+	unsigned tHS_LB = tHS + tBP;
+
+	gime->horizontal.tHS_LB = tHS_LB;
+	gime->horizontal.tHS_AA = gime->horizontal.tHS_LB + tLB;
+	gime->horizontal.tHS_RB = gime->horizontal.tHS_AA + tAA;
+	gime->horizontal.tHS_FP = gime->horizontal.tHS_RB + tRB;
+	gime->horizontal.npixels = gime->horizontal.tHS_LB;
+
 	DELEGATE_SAFE_CALL(gime->public.set_active_area, gime->horizontal.tHS_AA, gime->vertical.lTB + 3, tAA, gime->vertical.lAA);
 }
 
