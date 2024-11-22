@@ -1,3 +1,8 @@
+Version 1.7.1, Fri 22 Nov 2024
+
+ * Reduce memory use when reading gamepad mappings file
+ * Include missing files in tarball distribution [Rui Chen]
+
 Version 1.7, Thu 21 Nov 2024
 
  * Avoid calling xroar_screenshot() when not supported [with Paul Ripke]
