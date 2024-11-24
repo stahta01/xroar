@@ -799,11 +799,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++)
-		private_cfg.joy.axis[i] = NULL;
-	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++)
-		private_cfg.joy.button[i] = NULL;
-
 	// Parse default configuration.
 
 	if (!no_builtin) {
@@ -916,11 +911,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		exit(EXIT_SUCCESS);
 	}
 #endif
-
-	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-	// Always create a vdrive interface (XXX but why here?)
-	xroar.vdrive_interface = vdrive_interface_new();
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1130,6 +1120,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Create tape interface
 	xroar.tape_interface = tape_interface_new(xroar.ui_interface);
+
+	// Create vdrive interface
+	xroar.vdrive_interface = vdrive_interface_new();
 
 	// Notify UI of starting options:
 
