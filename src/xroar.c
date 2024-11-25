@@ -1134,6 +1134,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
 
 	ui_update_state(-1, ui_tag_cmp_colour_killer, private_cfg.vo.colour_killer, NULL);
+	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
 	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
 	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
 	ui_update_state(-1, ui_tag_ntsc_scaling, private_cfg.vo.ntsc_scaling, NULL);
@@ -1176,12 +1177,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 }
 
 void xroar_init_finish(void) {
-	// We set this here so that configuring the machine can update the
-	// picture (viewport) first.  Otherwise, this call will set a picture
-	// first (probably 0), then the request to change it will resize the
-	// window.  TODO: add a separate code path for updating gl_filter.
-	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
-
 	// These options apply to the first running machine:
 
 	ui_update_state(-1, ui_tag_vdg_inverse, private_cfg.vo.vdg_inverted_text, NULL);

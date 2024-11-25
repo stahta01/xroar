@@ -89,6 +89,7 @@ void vo_opengl_setup_context(struct vo_opengl_interface *);
 
 // Change viewport.
 
+void vo_opengl_update_gl_filter(struct vo_opengl_interface *vogl);
 void vo_opengl_set_viewport(struct vo_opengl_interface *, int w, int h);
 void vo_opengl_set_frame_rate(struct vo_opengl_interface *, _Bool is_60hz);
 

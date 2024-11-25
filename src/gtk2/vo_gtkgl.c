@@ -78,6 +78,7 @@ static void set_viewport(void *, int vp_w, int vp_h);
 
 static void notify_frame_rate(void *, _Bool is_60hz);
 
+static void vogtkgl_ui_set_gl_filter(void *, int tag, void *smsg);
 static void vogtkgl_ui_set_fullscreen(void *, int tag, void *smsg);
 static void vogtkgl_ui_set_menubar(void *, int tag, void *smsg);
 
@@ -114,6 +115,7 @@ _Bool gtkgl_vo_init(struct ui_gtk2_interface *uigtk2) {
 	struct vo_render *vr = vo->renderer;
 
 	vogtkgl->msgr_client_id = messenger_client_register();
+	ui_messenger_join_group(vogtkgl->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vogtkgl_ui_set_gl_filter, uigtk2));
 	ui_messenger_join_group(vogtkgl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vogtkgl_ui_set_fullscreen, uigtk2));
 	ui_messenger_join_group(vogtkgl->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vogtkgl_ui_set_menubar, uigtk2));
 
@@ -274,6 +276,17 @@ static void resize(void *sptr, unsigned int w, unsigned int h) {
 	vogtkgl->woff = woff;
 	vogtkgl->hoff = hoff;
 	gtk_window_resize(GTK_WINDOW(uigtk2->top_window), w + woff, h + hoff);
+}
+
+static void vogtkgl_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	(void)smsg;
+	struct ui_gtk2_interface *uigtk2 = sptr;
+	struct vo_interface *vo = uigtk2->public.vo_interface;
+	struct vo_gtkgl_interface *vogtkgl = (struct vo_gtkgl_interface *)vo;
+	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
+
+	vo_opengl_update_gl_filter(vogl);
 }
 
 static void vogtkgl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {

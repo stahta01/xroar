@@ -84,6 +84,7 @@ static void vo_sdl_free(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
 static void resize(void *, unsigned int w, unsigned int h);
+static void vosdl_ui_set_gl_filter(void *, int tag, void *smsg);
 #ifndef HAVE_WASM
 static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
 #endif
@@ -153,6 +154,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
+	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_gl_filter, uisdl2));
 #ifndef HAVE_WASM
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_fullscreen, uisdl2));
 #endif
@@ -411,6 +413,14 @@ void sdl_vo_notify_size_changed(struct ui_sdl2_interface *uisdl2, int w, int h) 
 
 void sdl_vo_notify_render_device_reset(struct ui_sdl2_interface *uisdl2) {
 	recreate_renderer(uisdl2);
+	update_viewport(uisdl2);
+}
+
+static void vosdl_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	(void)smsg;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
 	update_viewport(uisdl2);
 }
 

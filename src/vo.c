@@ -288,7 +288,6 @@ static void vo_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
 	vo->gl_filter = ui_msg_adjust_value_range(uimsg, vo->gl_filter, VO_GL_FILTER_AUTO,
 						  VO_GL_FILTER_AUTO, VO_GL_FILTER_LINEAR,
 						  UI_ADJUST_FLAG_CYCLE);
-	vo_set_viewport(vo, vo->picture);
 }
 
 static void vo_ui_set_fullscreen(void *sptr, int tag, void *smsg) {

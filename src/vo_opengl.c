@@ -230,6 +230,10 @@ static void update_viewport(struct vo_opengl_interface *vogl) {
 	vr->buffer_pitch = vp_w;
 }
 
+void vo_opengl_update_gl_filter(struct vo_opengl_interface *vogl) {
+	update_viewport(vogl);
+}
+
 void vo_opengl_set_viewport(struct vo_opengl_interface *vogl, int vp_w, int vp_h) {
 	vogl->viewport.w = vp_w;
 	vogl->viewport.h = vp_h;
