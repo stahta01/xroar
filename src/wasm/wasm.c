@@ -407,9 +407,6 @@ static void wasm_update_machine_menu(void *sptr) {
 	// Remove old entries
 	EM_ASM_({ ui_menu_clear($0); }, "machine");
 
-	// Note: this list isn't even currently updated, so not removing old
-	// entries.
-
 	// Add new entries
 	for (struct slist *iter = mcl; iter; iter = iter->next) {
 		struct machine_config *mc = iter->data;
