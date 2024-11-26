@@ -132,6 +132,8 @@ void joystick_init(void) {
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		joystick_port_config[i] = NULL;
 	}
+	joystick_port_config_name[0] = xstrdup("joy0");
+	joystick_port_config_name[1] = xstrdup("joy1");
 	init_submod("physical");
 	init_submod("mouse");
 	init_submod("keyboard");
