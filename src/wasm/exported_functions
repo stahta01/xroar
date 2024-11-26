@@ -1,5 +1,7 @@
 [
 	'_main',
+	'_wasm_gamepad_connected',
+	'_wasm_gamepad_disconnected',
 	'_wasm_load_file',
 	'_wasm_new_disk',
 	'_wasm_queue_basic',

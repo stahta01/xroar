@@ -724,6 +724,14 @@ be a better way to make this usable...
 		if (Object.entries(program).length !== 0) {
 			start_program(program);
 		}
+
+		window.addEventListener("gamepadconnected", (e) => {
+				Module.ccall('wasm_gamepad_connected', null, [ 'number' ], [ e.gamepad.index ]);
+				});
+
+		window.addEventListener("gamepaddisconnected", (e) => {
+				Module.ccall('wasm_gamepad_disconnected', null, [ 'number' ], [ e.gamepad.index ]);
+				});
 	}
 
 </script>

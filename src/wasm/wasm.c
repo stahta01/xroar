@@ -834,6 +834,20 @@ void wasm_set_joystick_by_name(int port, const char *name) {
 	wasm_set_joystick_port(port, jc ? jc->id : 0);
 }
 
+void wasm_gamepad_connected(int index) {
+	SDL_Event event;
+	event.cdevice.type = SDL_CONTROLLERDEVICEADDED;
+	event.cdevice.which = index;
+	SDL_PushEvent(&event);
+}
+
+void wasm_gamepad_disconnected(int index) {
+	SDL_Event event;
+	event.cdevice.type = SDL_CONTROLLERDEVICEREMOVED;
+	event.cdevice.which = index;
+	SDL_PushEvent(&event);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Helper while loading software from the browser - prepare a specific machine
