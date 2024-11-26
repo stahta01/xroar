@@ -1,3 +1,6 @@
+ * Fix GIME issue when loading from snapshot
+ * Fix becker port status polling [Pierre Sarrazin]
+
 Version 1.7.1, Fri 22 Nov 2024
 
  * Reduce memory use when reading gamepad mappings file
