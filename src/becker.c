@@ -142,13 +142,16 @@ failed:
 }
 
 void becker_close(struct becker *b) {
-	if (!b)
+	if (!b) {
 		return;
+	}
 	close(b->sockfd);
-	if (b->log_data_in_hex)
+	if (b->log_data_in_hex) {
 		log_close(&b->log_data_in_hex);
-	if (b->log_data_out_hex)
+	}
+	if (b->log_data_out_hex) {
 		log_close(&b->log_data_out_hex);
+	}
 	free(b);
 }
 
@@ -160,15 +163,16 @@ void becker_reset(struct becker *b) {
 }
 
 static void fetch_input(struct becker *b) {
-	if (b->input_buf_ptr == 0) {
+	if (b->input_buf_ptr == b->input_buf_length) {
 		ssize_t new = recv(b->sockfd, b->input_buf, INPUT_BUFFER_SIZE, 0);
 		if (new > 0) {
 			b->input_buf_length = new;
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen output hexdump
 				log_open_hexdump(&b->log_data_out_hex, "BECKER OUT");
-				for (unsigned i = 0; i < (unsigned)new; i++)
+				for (unsigned i = 0; i < (unsigned)new; ++i) {
 					log_hexdump_byte(b->log_data_in_hex, b->input_buf[i]);
+				}
 			}
 		}
 	}
@@ -181,8 +185,9 @@ static void write_output(struct becker *b) {
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen input hexdump
 				log_open_hexdump(&b->log_data_in_hex, "BECKER IN ");
-				for (unsigned i = 0; i < (unsigned)sent; i++)
+				for (unsigned i = 0; i < (unsigned)sent; ++i) {
 					log_hexdump_byte(b->log_data_out_hex, b->output_buf[b->output_buf_ptr + i]);
+				}
 			}
 			b->output_buf_ptr += sent;
 			if (b->output_buf_ptr >= b->output_buf_length) {
@@ -199,8 +204,9 @@ uint8_t becker_read_status(struct becker *b) {
 		log_hexdump_line(b->log_data_out_hex);
 	}
 	fetch_input(b);
-	if (b->input_buf_length > 0)
+	if (b->input_buf_length > 0) {
 		return 0x02;
+	}
 	return 0x00;
 }
 
