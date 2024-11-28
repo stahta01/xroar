@@ -1,3 +1,5 @@
+ * Fix built-in configs with non-default CPUs
+
 Version 1.7.2, Tue 26 Nov 2024
 
  * Fix GIME issue when loading from snapshot

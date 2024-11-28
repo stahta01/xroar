@@ -162,6 +162,9 @@ static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
 }
 
 static void dragon_config_complete_common(struct machine_config *mc) {
+	if (mc->cpu != CPU_MC6809 && mc->cpu != CPU_HD6309) {
+		mc->cpu = CPU_MC6809;
+	}
 	if (mc->tv_standard == ANY_AUTO)
 		mc->tv_standard = TV_PAL;
 	if (mc->tv_input == ANY_AUTO) {

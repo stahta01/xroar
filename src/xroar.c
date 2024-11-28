@@ -227,7 +227,7 @@ struct private_cfg {
 
 static struct private_cfg private_cfg = {
 	.machine.keymap = ANY_AUTO,
-	.machine.cpu = CPU_MC6809,
+	.machine.cpu = ANY_AUTO,
 	.machine.tv_type = ANY_AUTO,
 	.machine.tv_input = ANY_AUTO,
 	.machine.vdg_type = -1,
@@ -2044,8 +2044,10 @@ static void set_machine(const char *name) {
 			xroar.machine_config->keymap = private_cfg.machine.keymap;
 			private_cfg.machine.keymap = ANY_AUTO;
 		}
-		xroar.machine_config->cpu = private_cfg.machine.cpu;
-		private_cfg.machine.cpu = CPU_MC6809;
+		if (private_cfg.machine.cpu != ANY_AUTO) {
+			xroar.machine_config->cpu = private_cfg.machine.cpu;
+			private_cfg.machine.cpu = ANY_AUTO;
+		}
 		if (private_cfg.machine.description) {
 			if (xroar.machine_config->description) {
 				free(xroar.machine_config->description);
