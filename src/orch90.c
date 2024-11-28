@@ -69,6 +69,7 @@ static const struct partdb_entry_funcs orch90_funcs = {
 	.allocate = orch90_allocate,
 	.initialise = cart_rom_initialise,
 	.finish = orch90_finish,
+	.free = cart_rom_free,
 
 	.ser_struct_data = &orch90_ser_struct_data,
 
