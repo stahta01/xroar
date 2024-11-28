@@ -151,7 +151,7 @@ static const struct partdb_entry_funcs ay891x_funcs = {
 	.ser_struct_data = &ay891x_ser_struct_data,
 };
 
-const struct partdb_entry ay891x_part = { .name = "AY891X", .funcs = &ay891x_funcs };
+const struct partdb_entry ay891x_part = { .name = "AY891X", .description = "General Instrument | AY-3-891x PSG", .funcs = &ay891x_funcs };
 
 static struct part *ay891x_allocate(void) {
 	struct AY891X_ *psg_ = part_new(sizeof(*psg_));

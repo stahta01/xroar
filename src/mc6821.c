@@ -95,7 +95,7 @@ static const struct partdb_entry_funcs mc6821_funcs = {
 	.ser_struct_data = &mc6821_ser_struct_data,
 };
 
-const struct partdb_entry mc6821_part = { .name = "MC6821", .funcs = &mc6821_funcs };
+const struct partdb_entry mc6821_part = { .name = "MC6821", .description = "Motorola | MC6821 PIA", .funcs = &mc6821_funcs };
 
 static struct part *mc6821_allocate(void) {
 	struct MC6821 *pia = part_new(sizeof(*pia));

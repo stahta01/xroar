@@ -239,7 +239,7 @@ const struct machine_partdb_extra mc10_machine_extra = {
 	.cart_arch = "mc10-cart",
 };
 
-const struct partdb_entry mc10_part = { .name = "mc10", .description = "Tandy MC-10", .funcs = &mc10_funcs, .extra = { &mc10_machine_extra } };
+const struct partdb_entry mc10_part = { .name = "mc10", .description = "Tandy | Micro Colour Computer MC-10", .funcs = &mc10_funcs, .extra = { &mc10_machine_extra } };
 
 static struct part *mc10_allocate(void) {
         struct machine_mc10 *mp = part_new(sizeof(*mp));

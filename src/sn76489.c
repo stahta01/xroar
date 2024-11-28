@@ -147,7 +147,7 @@ static const struct partdb_entry_funcs sn76489_funcs = {
 	.ser_struct_data = &sn76489_ser_struct_data,
 };
 
-const struct partdb_entry sn76489_part = { .name = "SN76489", .funcs = &sn76489_funcs };
+const struct partdb_entry sn76489_part = { .name = "SN76489", .description = "Texas Instruments | SN76489 DCSG", .funcs = &sn76489_funcs };
 
 static struct part *sn76489_allocate(void) {
 	struct SN76489_private *csg_ = part_new(sizeof(*csg_));

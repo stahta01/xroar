@@ -99,7 +99,7 @@ static const struct partdb_entry_funcs deltados_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry deltados_part = { .name = "delta", .description = "Delta System", .funcs = &deltados_funcs };
+const struct partdb_entry deltados_part = { .name = "delta", .description = "Premier Microsystems | Delta System", .funcs = &deltados_funcs };
 
 static struct part *deltados_allocate(void) {
 	struct deltados *d = part_new(sizeof(*d));

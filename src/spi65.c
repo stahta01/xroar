@@ -89,7 +89,7 @@ static const struct partdb_entry_funcs spi65_funcs = {
 	.ser_struct_data = &spi65_ser_struct_data,
 };
 
-const struct partdb_entry spi65_part = { .name = "65SPI-B", .funcs = &spi65_funcs };
+const struct partdb_entry spi65_part = { .name = "65SPI-B", .description = "Rictor, Fachat | 65SPI-B interface", .funcs = &spi65_funcs };
 
 static struct part *spi65_allocate(void) {
 	struct spi65_private *spi65p = part_new(sizeof(*spi65p));

@@ -108,7 +108,7 @@ static const struct partdb_entry_funcs rsdos_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry rsdos_part = { .name = "rsdos", .description = "RS-DOS", .funcs = &rsdos_funcs };
+const struct partdb_entry rsdos_part = { .name = "rsdos", .description = "Tandy | RS-DOS", .funcs = &rsdos_funcs };
 
 static struct part *rsdos_allocate(void) {
 	struct rsdos *d = part_new(sizeof(*d));

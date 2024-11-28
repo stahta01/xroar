@@ -371,7 +371,7 @@ const struct machine_partdb_extra coco3_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry coco3_part = { .name = "coco3", .description = "Tandy CoCo 3", .funcs = &coco3_funcs, .extra = { &coco3_machine_extra } };
+const struct partdb_entry coco3_part = { .name = "coco3", .description = "Tandy | Colour Computer 3", .funcs = &coco3_funcs, .extra = { &coco3_machine_extra } };
 
 static struct part *coco3_allocate(void) {
         struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));

@@ -76,7 +76,7 @@ static const struct partdb_entry_funcs orch90_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry orch90_part = { .name = "orch90", .description = "Orchestra 90-CC", .funcs = &orch90_funcs };
+const struct partdb_entry orch90_part = { .name = "orch90", .description = "Tandy | Orchestra 90-CC", .funcs = &orch90_funcs };
 
 static struct part *orch90_allocate(void) {
 	struct orch90 *o = part_new(sizeof(*o));

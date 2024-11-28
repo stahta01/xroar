@@ -544,8 +544,8 @@ static const struct partdb_entry_funcs tcc1014_funcs = {
 	.is_a = tcc1014_is_a,
 };
 
-const struct partdb_entry tcc1014_1986_part = { .name = "TCC1014-1986", .funcs = &tcc1014_funcs };
-const struct partdb_entry tcc1014_1987_part = { .name = "TCC1014-1987", .funcs = &tcc1014_funcs };
+const struct partdb_entry tcc1014_1986_part = { .name = "TCC1014-1986", .description = "Tandy, VLSI | TCC1014 ACVC (GIME) (1986)", .funcs = &tcc1014_funcs };
+const struct partdb_entry tcc1014_1987_part = { .name = "TCC1014-1987", .description = "Tandy, VLSI | TCC1014 ACVC (GIME) (1987)", .funcs = &tcc1014_funcs };
 
 static struct part *tcc1014_allocate(void) {
 	struct TCC1014_private *gime = part_new(sizeof(*gime));

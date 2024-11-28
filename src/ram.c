@@ -74,7 +74,7 @@ static const struct partdb_entry_funcs ram_funcs = {
 	.ser_struct_data = &ram_ser_struct_data,
 };
 
-const struct partdb_entry ram_part = { .name = "ram", .funcs = &ram_funcs };
+const struct partdb_entry ram_part = { .name = "ram", .description = "RAM", .funcs = &ram_funcs };
 
 static struct part *ram_allocate(void) {
 	struct ram *ram = part_new(sizeof(*ram));

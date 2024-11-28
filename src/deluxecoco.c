@@ -123,7 +123,7 @@ const struct machine_partdb_extra deluxecoco_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry deluxecoco_part = { .name = "deluxecoco", .description = "Tandy Deluxe Colour Computer", .funcs = &deluxecoco_funcs, .extra = { &deluxecoco_machine_extra } };
+const struct partdb_entry deluxecoco_part = { .name = "deluxecoco", .description = "Tandy | Deluxe Colour Computer", .funcs = &deluxecoco_funcs, .extra = { &deluxecoco_machine_extra } };
 
 static struct part *deluxecoco_allocate(void) {
 	struct machine_deluxecoco *mdp = part_new(sizeof(*mdp));

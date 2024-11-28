@@ -86,7 +86,7 @@ static const struct partdb_entry_funcs ikon_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry ikon_part = { .name = "ikon", .description = "Ikon Ultra Drive", .funcs = &ikon_funcs };
+const struct partdb_entry ikon_part = { .name = "ikon", .description = "Ikon | Ultra Drive", .funcs = &ikon_funcs };
 
 static struct part *ikon_allocate(void) {
 	struct ikon *d = part_new(sizeof(*d));

@@ -219,8 +219,8 @@ static const struct partdb_entry_funcs mc6847_funcs = {
 	.ser_struct_data = &mc6847_ser_struct_data,
 };
 
-const struct partdb_entry mc6847_part = { .name = "MC6847", .funcs = &mc6847_funcs };
-const struct partdb_entry mc6847t1_part = { .name = "MC6847T1", .funcs = &mc6847_funcs };
+const struct partdb_entry mc6847_part = { .name = "MC6847", .description = "Motorola | MC6847 VDG", .funcs = &mc6847_funcs };
+const struct partdb_entry mc6847t1_part = { .name = "MC6847T1", .description = "Motorola | MC6847T1 VDG", .funcs = &mc6847_funcs };
 
 static struct part *mc6847_allocate(void) {
 	struct MC6847_private *vdg = part_new(sizeof(*vdg));

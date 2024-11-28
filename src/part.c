@@ -234,7 +234,12 @@ struct part *part_create(const char *name, void *options) {
 		return NULL;
 	// If there's a description, print it (log level >= 1)
 	if (pe->description) {
-		LOG_MOD_ALT_DEBUG(1, "part", pe->name, "%s\n", pe->description);
+		// Special-case the logging level
+		if (partdb_ent_is_a(pe, "machine") || partdb_ent_is_a(pe, "cart")) {
+			LOG_MOD_ALT_DEBUG(1, "part", pe->name, "%s\n", pe->description);
+		} else {
+			LOG_MOD_ALT_DEBUG(2, "part", pe->name, "%s\n", pe->description);
+		}
 	}
 
 	// Initialise, populating useful stuff from partdb

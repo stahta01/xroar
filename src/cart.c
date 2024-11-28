@@ -822,7 +822,7 @@ static const struct partdb_entry_funcs cart_rom_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry cart_rom_part = { .name = "rom", .description = "ROM cartridge", .funcs = &cart_rom_funcs };
+const struct partdb_entry cart_rom_part = { .name = "rom", .description = "Dragon / Tandy CoCo ROM cartridge", .funcs = &cart_rom_funcs };
 
 static struct part *cart_rom_allocate(void) {
 	struct cart *c = part_new(sizeof(*c));

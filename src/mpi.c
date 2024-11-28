@@ -127,8 +127,8 @@ static const struct partdb_entry_funcs mpi_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry mpi_part = { .name = "mpi", .description = "Multi-Pak Interface", .funcs = &mpi_funcs };
-const struct partdb_entry race_part = { .name = "mpi-race", .description = "RACE Computer Expansion Cage", .funcs = &mpi_funcs };
+const struct partdb_entry mpi_part = { .name = "mpi", .description = "Tandy | Multi-Pak Interface", .funcs = &mpi_funcs };
+const struct partdb_entry race_part = { .name = "mpi-race", .description = "RACE | Computer Expansion Cage", .funcs = &mpi_funcs };
 
 static struct part *mpi_allocate(void) {
 	struct mpi *mpi = part_new(sizeof(*mpi));

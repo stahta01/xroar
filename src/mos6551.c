@@ -56,7 +56,7 @@ static const struct partdb_entry_funcs mos6551_funcs = {
 	.ser_struct_data = &mos6551_ser_struct_data,
 };
 
-const struct partdb_entry mos6551_part = { .name = "MOS6551", .funcs = &mos6551_funcs };
+const struct partdb_entry mos6551_part = { .name = "MOS6551", .description = "MOS Technology | 6551 ACIA", .funcs = &mos6551_funcs };
 
 static struct part *mos6551_allocate(void) {
 	struct MOS6551 *acia = part_new(sizeof(*acia));

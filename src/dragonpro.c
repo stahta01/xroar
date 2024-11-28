@@ -157,7 +157,7 @@ const struct machine_partdb_extra dragonpro_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry dragonpro_part = { .name = "dragonpro", .description = "Dragon Professional (Alpha)", .funcs = &dragonpro_funcs, .extra = { &dragonpro_machine_extra } };
+const struct partdb_entry dragonpro_part = { .name = "dragonpro", .description = "Dragon Data | Dragon Professional (Alpha)", .funcs = &dragonpro_funcs, .extra = { &dragonpro_machine_extra } };
 
 static struct part *dragonpro_allocate(void) {
 	struct machine_dragonpro *mdp = part_new(sizeof(*mdp));

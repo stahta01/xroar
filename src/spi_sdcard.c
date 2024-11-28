@@ -131,7 +131,7 @@ static const struct partdb_entry_funcs spi_sdcard_funcs = {
 	.is_a = spi_sdcard_is_a,
 };
 
-const struct partdb_entry spi_sdcard_part = { .name = "SPI-SDCARD", .funcs = &spi_sdcard_funcs };
+const struct partdb_entry spi_sdcard_part = { .name = "SPI-SDCARD", .description = "SPI SD card interface", .funcs = &spi_sdcard_funcs };
 
 static struct part *spi_sdcard_allocate(void) {
 	struct spi_sdcard *sdcard = part_new(sizeof(*sdcard));

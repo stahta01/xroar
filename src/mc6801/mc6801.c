@@ -232,8 +232,8 @@ static const struct partdb_entry_funcs mc6801_funcs = {
 	.is_a = mc6801_is_a,
 };
 
-const struct partdb_entry mc6801_part = { .name = "MC6801", .funcs = &mc6801_funcs };
-const struct partdb_entry mc6803_part = { .name = "MC6803", .funcs = &mc6801_funcs };
+const struct partdb_entry mc6801_part = { .name = "MC6801", .description = "Motorola | MC6801 CPU", .funcs = &mc6801_funcs };
+const struct partdb_entry mc6803_part = { .name = "MC6803", .description = "Motorola | MC6803 CPU", .funcs = &mc6801_funcs };
 
 static struct part *mc6801_allocate(void) {
 	struct MC6801 *cpu = part_new(sizeof(*cpu));

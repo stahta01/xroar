@@ -105,7 +105,7 @@ static const struct partdb_entry_funcs dragondos_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry dragondos_part = { .name = "dragondos", .description = "DragonDOS", .funcs = &dragondos_funcs };
+const struct partdb_entry dragondos_part = { .name = "dragondos", .description = "Dragon Data | DragonDOS", .funcs = &dragondos_funcs };
 
 static struct part *dragondos_allocate(void) {
 	struct dragondos *d = part_new(sizeof(*d));

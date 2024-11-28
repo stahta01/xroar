@@ -236,7 +236,7 @@ static const struct partdb_entry_funcs hd6309_funcs = {
         .is_a = hd6309_is_a,
 };
 
-const struct partdb_entry hd6309_part = { .name = "HD6309", .funcs = &hd6309_funcs };
+const struct partdb_entry hd6309_part = { .name = "HD6309", .description = "Hitachi | HD6309E CPU", .funcs = &hd6309_funcs };
 
 static struct part *hd6309_allocate(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));

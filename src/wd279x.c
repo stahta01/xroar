@@ -189,10 +189,10 @@ static const struct partdb_entry_funcs wd279x_funcs = {
 	.is_a = wd279x_is_a,
 };
 
-const struct partdb_entry wd2791_part = { .name = "WD2791", .funcs = &wd279x_funcs };
-const struct partdb_entry wd2793_part = { .name = "WD2793", .funcs = &wd279x_funcs };
-const struct partdb_entry wd2795_part = { .name = "WD2795", .funcs = &wd279x_funcs };
-const struct partdb_entry wd2797_part = { .name = "WD2797", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2791_part = { .name = "WD2791", .description = "Western Digital | WD2791 FDC", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2793_part = { .name = "WD2793", .description = "Western Digital | WD2793 FDC", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2795_part = { .name = "WD2795", .description = "Western Digital | WD2795 FDC", .funcs = &wd279x_funcs };
+const struct partdb_entry wd2797_part = { .name = "WD2797", .description = "Western Digital | WD2797 FDC", .funcs = &wd279x_funcs };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

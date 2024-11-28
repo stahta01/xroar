@@ -79,7 +79,7 @@ const struct machine_partdb_extra dragon64_machine_extra = {
 	.cart_arch = "dragon-cart",
 };
 
-const struct partdb_entry dragon64_part = { .name = "dragon64", .description = "Dragon 64", .funcs = &dragon64_funcs, .extra = { &dragon64_machine_extra } };
+const struct partdb_entry dragon64_part = { .name = "dragon64", .description = "Dragon Data | Dragon 64", .funcs = &dragon64_funcs, .extra = { &dragon64_machine_extra } };
 
 static struct part *dragon64_allocate(void) {
 	struct machine_dragon64 *mdp = part_new(sizeof(*mdp));

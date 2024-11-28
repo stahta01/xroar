@@ -104,7 +104,7 @@ static const struct partdb_entry_funcs idecart_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry idecart_part = { .name = "ide", .description = "Glenside IDE", .funcs = &idecart_funcs };
+const struct partdb_entry idecart_part = { .name = "ide", .description = "Glenside | IDE interface", .funcs = &idecart_funcs };
 
 static struct part *idecart_allocate(void) {
 	struct idecart *ide = part_new(sizeof(*ide));
