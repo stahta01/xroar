@@ -180,6 +180,8 @@ static int dragon_bin_load(const char *filename, int autorun) {
 		return -1;
 	}
 
+	(void)fs_read_uint8(fd);
+
 	int filetype, load, exec;
 	size_t length;
 	LOG_MOD_SUB_DEBUG(1, "binary", "ddos", "%s: reading DragonDOS BIN\n", filename);
@@ -234,7 +236,6 @@ static int coco_bin_load(const char *filename, int autorun) {
 	int length;
 	int chunk, load, exec;
 	LOG_MOD_SUB_DEBUG(1, "binary", "rsdos", "%s: reading RS-DOS BIN\n", filename);
-	fseek(fd, 0, SEEK_SET);
 	while ((chunk = fs_read_uint8(fd)) >= 0) {
 		if (chunk == 0) {
 			length = fs_read_uint16(fd);
