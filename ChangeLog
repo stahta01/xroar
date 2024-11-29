@@ -1,3 +1,5 @@
+Version 1.7.3, Fri 29 Nov 2024
+
  * Fix built-in configs with non-default CPUs
  * Fix direct loading of DragonDOS binaries
 
