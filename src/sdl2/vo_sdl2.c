@@ -334,10 +334,6 @@ static void update_viewport(struct ui_sdl2_interface *uisdl2) {
 	vo_render_set_viewport(vr, vp_w, vp_h);
 
 	recreate_texture(uisdl2);
-
-	int mw = uisdl2->viewport.w;
-	int mh = uisdl2->viewport.h * 2;
-	SDL_RenderSetLogicalSize(vosdl->sdl_renderer, mw, mh);
 }
 
 static void set_viewport(void *sptr, int vp_w, int vp_h) {
@@ -523,7 +519,11 @@ static void draw(void *sptr) {
 
 	SDL_UpdateTexture(vosdl->texture.texture, NULL, vosdl->texture.pixels, vr->viewport.w * vosdl->texture.pixel_size);
 	SDL_RenderClear(vosdl->sdl_renderer);
-	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture.texture, NULL, NULL);
+	SDL_Rect dstrect = {
+		.x = vo->picture_area.x, .y = vo->picture_area.y,
+		.w = vo->picture_area.w, .h = vo->picture_area.h
+	};
+	SDL_RenderCopy(vosdl->sdl_renderer, vosdl->texture.texture, NULL, &dstrect);
 	SDL_RenderPresent(vosdl->sdl_renderer);
 }
 
