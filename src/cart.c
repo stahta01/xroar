@@ -49,7 +49,9 @@
 static const struct ser_struct ser_struct_cart_config[] = {
 	SER_ID_STRUCT_ELEM(1, struct cart_config, description),
 	SER_ID_STRUCT_ELEM(2, struct cart_config, type),
+	SER_ID_STRUCT_ELEM(10, struct cart_config, rom_dfn),
 	SER_ID_STRUCT_ELEM(3, struct cart_config, rom),
+	SER_ID_STRUCT_ELEM(11, struct cart_config, rom2_dfn),
 	SER_ID_STRUCT_ELEM(4, struct cart_config, rom2),
 	SER_ID_STRUCT_ELEM(5, struct cart_config, becker_port),
 	SER_ID_STRUCT_ELEM(6, struct cart_config, autorun),

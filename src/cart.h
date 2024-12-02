@@ -39,7 +39,9 @@ struct cart_config {
 	char *description;
 	char *type;
 	int id;
+	_Bool rom_dfn;
 	char *rom;
+	_Bool rom2_dfn;
 	char *rom2;
 	_Bool no_header;  // don't try and skip header if filesize % 256 != 0
 	_Bool becker_port;

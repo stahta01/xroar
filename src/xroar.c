@@ -128,7 +128,9 @@ struct private_cfg {
 	struct {
 		char *description;
 		char *type;
+		_Bool rom_dfn;
 		char *rom;
+		_Bool rom2_dfn;
 		char *rom2;
 		int becker;
 		int autorun;
@@ -2195,14 +2197,18 @@ static void set_cart(const char *name) {
 			cc->type = private_cfg.cart.type;
 			private_cfg.cart.type = NULL;
 		}
-		if (private_cfg.cart.rom) {
+		if (private_cfg.cart.rom_dfn) {
+			private_cfg.cart.rom_dfn = 0;
+			cc->rom_dfn = 1;
 			if (cc->rom) {
 				free(cc->rom);
 			}
 			cc->rom = private_cfg.cart.rom;
 			private_cfg.cart.rom = NULL;
 		}
-		if (private_cfg.cart.rom2) {
+		if (private_cfg.cart.rom2_dfn) {
+			private_cfg.cart.rom2_dfn = 0;
+			cc->rom2_dfn = 1;
 			if (cc->rom2) {
 				free(cc->rom2);
 			}
@@ -2547,8 +2553,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("cart", &set_cart) },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart.description) },
 	{ XC_SET_PART("cart-type", &private_cfg.cart.type, "cart") },
-	{ XC_SET_STRING_NE("cart-rom", &private_cfg.cart.rom) },
-	{ XC_SET_STRING_NE("cart-rom2", &private_cfg.cart.rom2) },
+	{ XC_SET_STRING_NE("cart-rom", &private_cfg.cart.rom), .defined = &private_cfg.cart.rom_dfn },
+	{ XC_SET_STRING_NE("cart-rom2", &private_cfg.cart.rom2), .defined = &private_cfg.cart.rom2_dfn },
 	{ XC_SET_INT1("cart-autorun", &private_cfg.cart.autorun) },
 	{ XC_SET_INT1("cart-becker", &private_cfg.cart.becker) },
 	{ XC_SET_STRING_LIST_NE("cart-opt", &private_cfg.cart.opts) },
