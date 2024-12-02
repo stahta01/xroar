@@ -461,17 +461,14 @@ static char const * const default_config[] = {
 	"cart dragondos",
 	"cart-desc DragonDOS",
 	"cart-type dragondos",
-	"cart-rom @dragondos_compat",
 	// RSDOS
 	"cart rsdos",
 	"cart-desc RS-DOS",
 	"cart-type rsdos",
-	"cart-rom @rsdos",
 	// Delta
 	"cart delta",
 	"cart-desc 'Delta System'",
 	"cart-type delta",
-	"cart-rom @delta",
 #ifndef HAVE_WASM
 	// RSDOS w/ Becker port
 	"cart becker",
@@ -488,7 +485,6 @@ static char const * const default_config[] = {
 	"cart orch90",
 	"cart-desc 'Orchestra-90 CC'",
 	"cart-type orch90",
-	"cart-rom orch90",
 	"cart-autorun",
 #ifndef HAVE_WASM
 	// Multi-Pak Interface
@@ -504,7 +500,6 @@ static char const * const default_config[] = {
 	"cart ide",
 	"cart-desc 'IDE Interface'",
 	"cart-type ide",
-	"cart-rom @glenside_ide",
 	"cart-becker",
 #ifndef HAVE_WASM
 #ifdef WANT_EXPERIMENTAL
@@ -512,7 +507,6 @@ static char const * const default_config[] = {
 	"cart ikon",
 	"cart-desc 'Ikon Ultra Drive cartridge'",
 	"cart-type ikon",
-	"cart-rom @ikon",
 #endif
 	// NX32 memory cartridge
 	"cart nx32",

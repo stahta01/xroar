@@ -108,6 +108,14 @@ static struct part *ikon_allocate(void) {
 }
 
 static void ikon_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@ikon");
+	}
+
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("MC6821", "MC6821"), "PIA");
 }

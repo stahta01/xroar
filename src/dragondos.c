@@ -127,6 +127,14 @@ static struct part *dragondos_allocate(void) {
 }
 
 static void dragondos_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@dragondos_compat");
+	}
+
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }

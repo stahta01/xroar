@@ -63,11 +63,12 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 // Orchestra 90-CC part creation
 
 static struct part *orch90_allocate(void);
+static void orch90_initialise(struct part *p, void *options);
 static _Bool orch90_finish(struct part *p);
 
 static const struct partdb_entry_funcs orch90_funcs = {
 	.allocate = orch90_allocate,
-	.initialise = cart_rom_initialise,
+	.initialise = orch90_initialise,
 	.finish = orch90_finish,
 	.free = cart_rom_free,
 
@@ -95,6 +96,18 @@ static struct part *orch90_allocate(void) {
 	c->attach_interface = orch90_attach_interface;
 
 	return p;
+}
+
+static void orch90_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("orch90");
+	}
+
+	cart_rom_initialise(p, options);
 }
 
 static _Bool orch90_finish(struct part *p) {

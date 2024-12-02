@@ -121,6 +121,14 @@ static struct part *deltados_allocate(void) {
 }
 
 static void deltados_initialise(struct part *p, void *options) {
+	struct cart_config *cc = options;
+	assert(cc != NULL);
+
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@delta");
+	}
+
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2791", "WD2791"), "FDC");
 }

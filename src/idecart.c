@@ -139,6 +139,11 @@ static void idecart_initialise(struct part *p, void *options) {
 
 	struct idecart *ide = (struct idecart *)p;
 
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@glenside_ide");
+	}
+
 	cart_rom_initialise(p, options);
 
 	xconfig_parse_list_struct(idecart_options, cc->opts, ide);
