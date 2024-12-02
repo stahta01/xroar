@@ -170,7 +170,7 @@ static void fetch_input(struct becker *b) {
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen output hexdump
 				log_open_hexdump(&b->log_data_out_hex, "BECKER OUT");
-				for (unsigned i = 0; i < (unsigned)new; ++i) {
+				for (ssize_t i = 0; i < new; ++i) {
 					log_hexdump_byte(b->log_data_in_hex, b->input_buf[i]);
 				}
 			}
@@ -185,7 +185,7 @@ static void write_output(struct becker *b) {
 			if (logging.debug_fdc & LOG_FDC_BECKER) {
 				// flush & reopen input hexdump
 				log_open_hexdump(&b->log_data_in_hex, "BECKER IN ");
-				for (unsigned i = 0; i < (unsigned)sent; ++i) {
+				for (ssize_t i = 0; i < sent; ++i) {
 					log_hexdump_byte(b->log_data_out_hex, b->output_buf[b->output_buf_ptr + i]);
 				}
 			}
