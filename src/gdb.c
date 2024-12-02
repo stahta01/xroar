@@ -71,6 +71,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -151,9 +152,9 @@ enum gdb_error {
 static char in_packet[1025];
 static char packet[1025];
 
-static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned count);
-static int send_packet(struct gdb_interface_private *gip, const char *buffer, unsigned count);
-static int send_packet_string(struct gdb_interface_private *gip, const char *string);
+static ssize_t read_packet(struct gdb_interface_private *gip, void *buf, size_t count);
+static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, size_t count);
+static ssize_t send_packet_string(struct gdb_interface_private *gip, const char *string);
 static int send_char(struct gdb_interface_private *gip, char c);
 
 static void send_last_signal(struct gdb_interface_private *gip);  // ?
@@ -387,7 +388,7 @@ static void *handle_tcp_sock(void *sptr) {
 		gdb_machine_signal(gip, MACHINE_SIGINT, 0);
 		_Bool attached = 1;
 		while (attached) {
-			int l = read_packet(gip, in_packet, sizeof(in_packet));
+			ssize_t l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
 				LOG_MOD_DEBUG_GDB(LOG_GDB_PACKET, "gdb", "BREAK\n");
 				gdb_machine_signal(gip, MACHINE_SIGINT, 1);
@@ -407,7 +408,7 @@ static void *handle_tcp_sock(void *sptr) {
 				} else {
 					LOG_MOD_PRINT("gdb", "packet ignored (send ^C first): ");
 				}
-				for (unsigned i = 0; i < (unsigned)l; i++) {
+				for (ssize_t i = 0; i < l; ++i) {
 					if (isprint(in_packet[i])) {
 						LOG_PRINT("%c", in_packet[i]);
 					} else {
@@ -506,13 +507,17 @@ enum packet_state {
 	packet_csum1,
 };
 
-static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned count) {
+static ssize_t read_packet(struct gdb_interface_private *gip, void *buf, size_t count) {
+	char *cbuf = buf;
 	enum packet_state state = packet_wait;
-	unsigned length = 0;
+	size_t length = 0;
 	uint8_t packet_sum = 0;
 	uint8_t csum = 0;
-	char in_byte;
-	int tmp;
+
+	// Apply Linux read() limit
+	if (count > 0x7ffff000) {
+		count = 0x7ffff000;
+	}
 
 	while (1) {
 
@@ -531,11 +536,14 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 			}
 		}
 
-		int r = recv(gip->sockfd, &in_byte, 1, 0);
-		if (r < 0)
+		char in_byte;
+		ssize_t r = recv(gip->sockfd, &in_byte, 1, 0);
+		if (r < 0) {
 			return -GDBE_READ_ERROR;
-		if (r == 0)
+		}
+		if (r == 0) {
 			continue;
+		}
 
 		switch (state) {
 		case packet_wait:
@@ -551,40 +559,44 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 				state = packet_csum0;
 			} else {
 				if (length < (count - 1)) {
-					buffer[length++] = in_byte;
+					cbuf[length++] = in_byte;
 					packet_sum += (uint8_t)in_byte;
 				}
 			}
 			break;
 		case packet_csum0:
-			tmp = hexdigit(in_byte);
-			if (tmp < 0) {
-				state = packet_wait;
-			} else {
-				csum = tmp << 4;
-				state = packet_csum1;
+			{
+				int tmp = hexdigit(in_byte);
+				if (tmp < 0) {
+					state = packet_wait;
+				} else {
+					csum = tmp << 4;
+					state = packet_csum1;
+				}
 			}
 			break;
 		case packet_csum1:
-			tmp = hexdigit(in_byte);
-			if (tmp < 0) {
-				state = packet_wait;
-				break;
+			{
+				int tmp = hexdigit(in_byte);
+				if (tmp < 0) {
+					state = packet_wait;
+					break;
+				}
+				csum |= tmp;
 			}
-			csum |= tmp;
 			if (csum != packet_sum) {
 				if (logging.debug_gdb & LOG_GDB_CHECKSUM) {
 					LOG_MOD_PRINT("gdb", "bad checksum in '");
-					if (isprint(buffer[0]))
-						LOG_PRINT("%c", buffer[0]);
+					if (isprint(cbuf[0]))
+						LOG_PRINT("%c", cbuf[0]);
 					else
-						LOG_PRINT("0x%02x", buffer[0]);
+						LOG_PRINT("0x%02x", cbuf[0]);
 					LOG_PRINT("' packet.  Expected 0x%02x, got 0x%02x.\n",
 						  packet_sum, csum);
 				}
 				return -GDBE_BAD_CHECKSUM;
 			}
-			buffer[length] = 0;
+			cbuf[length] = 0;
 			return length;
 		}
 
@@ -593,42 +605,54 @@ static int read_packet(struct gdb_interface_private *gip, char *buffer, unsigned
 	return -GDBE_READ_ERROR;
 }
 
-static int send_packet(struct gdb_interface_private *gip, const char *buffer, unsigned count) {
+static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, size_t count) {
+	const char *cbuf = buf;
 	char tmpbuf[4];
 	uint8_t csum = 0;
+
+	// Apply Linux write() limit
+	if (count > 0x7ffff000) {
+		count = 0x7ffff000;
+	}
+
 	tmpbuf[0] = '$';
-	if (send(gip->sockfd, tmpbuf, 1, 0) < 0)
+	if (send(gip->sockfd, tmpbuf, 1, 0) < 0) {
 		return -GDBE_WRITE_ERROR;
-	for (unsigned i = 0; i < count; i++) {
-		csum += buffer[i];
-		switch (buffer[i]) {
+	}
+
+	for (size_t i = 0; i < count; ++i) {
+		csum += cbuf[i];
+		switch (cbuf[i]) {
 		case '#':
 		case '$':
 		case 0x7d:
 		case '*':
 			tmpbuf[0] = 0x7d;
-			tmpbuf[1] = buffer[i] ^ 0x20;
-			if (send(gip->sockfd, tmpbuf, 2, 0) < 0)
+			tmpbuf[1] = cbuf[i] ^ 0x20;
+			if (send(gip->sockfd, tmpbuf, 2, 0) < 0) {
 				return -GDBE_WRITE_ERROR;
+			}
 			break;
 		default:
-			if (send(gip->sockfd, &buffer[i], 1, 0) < 0)
+			if (send(gip->sockfd, &cbuf[i], 1, 0) < 0) {
 				return -GDBE_WRITE_ERROR;
+			}
 			break;
 		}
 	}
 	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", (unsigned)csum);
-	if (send(gip->sockfd, tmpbuf, 3, 0) < 0)
+	if (send(gip->sockfd, tmpbuf, 3, 0) < 0) {
 		return -GDBE_WRITE_ERROR;
+	}
 	// the reply ("+" or "-") will be discarded by the next read_packet
 
 	if (logging.debug_gdb & LOG_GDB_PACKET) {
 		LOG_MOD_PRINT("gdb", "packet sent: ");
-		for (unsigned i = 0; i < (unsigned)count; i++) {
-			if (isprint(buffer[i])) {
-				LOG_PRINT("%c", buffer[i]);
+		for (size_t i = 0; i < count; ++i) {
+			if (isprint(cbuf[i])) {
+				LOG_PRINT("%c", cbuf[i]);
 			} else {
-				LOG_PRINT("\\%o", buffer[i] & 0xff);
+				LOG_PRINT("\\%o", cbuf[i] & 0xff);
 			}
 		}
 		LOG_PRINT("\n");
@@ -637,25 +661,32 @@ static int send_packet(struct gdb_interface_private *gip, const char *buffer, un
 	return count;
 }
 
-static int send_packet_string(struct gdb_interface_private *gip, const char *string) {
-	unsigned count = strlen(string);
-	return send_packet(gip, string, count);
+static ssize_t send_packet_string(struct gdb_interface_private *gip, const char *string) {
+	return send_packet(gip, string, strlen(string));
 }
 
-static int send_packet_hexstring(struct gdb_interface_private *gip, const char *string) {
-	unsigned count = strlen(string);
+static ssize_t send_packet_hexstring(struct gdb_interface_private *gip, const char *string) {
+	size_t count = strlen(string);
+
+	// Apply Linux write() limit
+	if (count > 0X3ffff800) {
+		count = 0X3ffff800;
+	}
+
 	char *hs = xmalloc(count * 2);
 	char *hsp = hs;
-	for (unsigned i = 0; i < count; i++)
+	for (size_t i = 0; i < count; ++i) {
 		hsp += sprintf(hsp, "%02x", string[i]);
-	int ret = send_packet(gip, hs, count * 2);
+	}
+	ssize_t ret = send_packet(gip, hs, count * 2);
 	free(hs);
 	return ret;
 }
 
 static int send_char(struct gdb_interface_private *gip, char c) {
-	if (send(gip->sockfd, &c, 1, 0) < 0)
+	if (send(gip->sockfd, &c, 1, 0) < 0) {
 		return -GDBE_WRITE_ERROR;
+	}
 	return GDBE_OK;
 }
 
