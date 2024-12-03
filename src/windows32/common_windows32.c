@@ -140,7 +140,7 @@ void uiw32_combo_box_select_by_data(HWND hDlg, int nIDDlgItem, int value) {
 	if (nitems == CB_ERR || nitems < 1) {
 		return;
 	}
-	for (unsigned i = 0; i < (unsigned)nitems; ++i) {
+	for (size_t i = 0; i < (size_t)nitems; ++i) {
 		LRESULT data = SendMessage(cb_hWnd, CB_GETITEMDATA, i, 0);
 		if (data == value) {
 			SendMessage(cb_hWnd, CB_SETCURSEL, i, 0);
