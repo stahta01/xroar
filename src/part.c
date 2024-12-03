@@ -236,9 +236,9 @@ struct part *part_create(const char *name, void *options) {
 	if (pe->description) {
 		// Special-case the logging level
 		if (partdb_ent_is_a(pe, "machine") || partdb_ent_is_a(pe, "cart")) {
-			LOG_MOD_ALT_DEBUG(1, "part", pe->name, "%s\n", pe->description);
+			LOG_PAR_MOD_DEBUG(1, "part", pe->name, "%s\n", pe->description);
 		} else {
-			LOG_MOD_ALT_DEBUG(2, "part", pe->name, "%s\n", pe->description);
+			LOG_PAR_MOD_DEBUG(2, "part", pe->name, "%s\n", pe->description);
 		}
 	}
 

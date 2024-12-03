@@ -441,9 +441,9 @@ static void *ui_gtk3_new(void *cfg) {
 	// File requester
 	struct module *fr_module = module_select_by_arg(gtk3_filereq_module_list, ui_cfg->filereq);
 	if (fr_module == &filereq_gtk3_module) {
-		ui->filereq_interface = module_init(fr_module, uigtk3);
+		ui->filereq_interface = module_init(fr_module, "filereq", uigtk3);
 	} else {
-		ui->filereq_interface = module_init(fr_module, NULL);
+		ui->filereq_interface = module_init(fr_module, "filereq", NULL);
 	}
 
 	hk_init();

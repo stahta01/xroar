@@ -31,7 +31,8 @@ struct module {
 
 struct module *module_select(struct module * const *list, const char *name);
 struct module *module_select_by_arg(struct module * const *list, const char *name);
-void *module_init(struct module *module, void *cfg);
-void *module_init_from_list(struct module * const *list, struct module *module, void *cfg);
+void *module_init(struct module *module, const char *type, void *cfg);
+void *module_init_from_list(struct module * const *list, const char *type,
+			    struct module *module, void *cfg);
 
 #endif

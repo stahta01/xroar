@@ -64,19 +64,20 @@ struct module *module_select_by_arg(struct module * const *list, const char *nam
 	return module_select(list, name);
 }
 
-void *module_init(struct module *module, void *cfg) {
+void *module_init(struct module *module, const char *type, void *cfg) {
 	if (!module) {
 		return NULL;
 	}
 	const char *description = module->description ? module->description : "unknown";
-	LOG_MOD_ALT_DEBUG(1, "module", module->name, "%s\n", description);
+	LOG_PAR_MOD_SUB_DEBUG(1, "module", module->name, type, "%s\n", description);
 	assert(module->new != NULL);
 	return module->new(cfg);
 }
 
-void *module_init_from_list(struct module * const *list, struct module *module, void *cfg) {
+void *module_init_from_list(struct module * const *list, const char *type,
+			    struct module *module, void *cfg) {
 	/* First attempt to initialise selected module (if given) */
-	void *m = module_init(module, cfg);
+	void *m = module_init(module, type, cfg);
 	if (m) {
 		return m;
 	}
@@ -85,7 +86,7 @@ void *module_init_from_list(struct module * const *list, struct module *module, 
 	}
 	/* If that fails, try every *other* module in the list */
 	for (int i = 0; list[i]; i++) {
-		if (list[i] != module && (m = module_init(list[i], cfg))) {
+		if (list[i] != module && (m = module_init(list[i], type, cfg))) {
 			return m;
 		}
 	}

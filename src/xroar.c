@@ -1027,7 +1027,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	// UI module
-	xroar.ui_interface = module_init((struct module *)ui_module, &xroar_ui_cfg);
+	xroar.ui_interface = module_init((struct module *)ui_module, "ui", &xroar_ui_cfg);
 	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
 		LOG_MOD_ERROR("xroar", "no UI module initialised\n");
 		return NULL;
@@ -1064,7 +1064,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Audio module
 
-	if (!(xroar.ao_interface = module_init_from_list(ao_module_list, ao_module, NULL))) {
+	if (!(xroar.ao_interface = module_init_from_list(ao_module_list, "ao", ao_module, NULL))) {
 		LOG_MOD_ERROR("xroar", "no audio module initialised\n");
 		return NULL;
 	}

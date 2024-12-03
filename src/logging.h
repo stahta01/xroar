@@ -16,6 +16,9 @@
  *  \endlicenseblock
  */
 
+/* Log levels:
+ * 0 - Quiet, 1 - Info, 2 - Events, 3 - Debug */
+
 #ifndef XROAR_LOGGING_H_
 #define XROAR_LOGGING_H_
 
@@ -38,37 +41,54 @@
 #define LOG_MOD_SUB_WARN(m,s,...) do {} while (0)
 #define LOG_MOD_SUB_ERROR(m,s,...) do {} while (0)
 
-#define LOG_MOD_ALT_DEBUG(l,m,a,...) do {} while (0)
-#define LOG_MOD_ALT_PRINT(m,a,...) do {} while (0)
-#define LOG_MOD_ALT_WARN(m,a,...) do {} while (0)
-#define LOG_MOD_ALT_ERROR(m,a,...) do {} while (0)
+#define LOG_PAR_MOD_DEBUG(l,p,m,...) do {} while (0)
+#define LOG_PAR_MOD_PRINT(p,m,...) do {} while (0)
+#define LOG_PAR_MOD_WARN(p,m,...) do {} while (0)
+#define LOG_PAR_MOD_ERROR(p,m,...) do {} while (0)
+
+#define LOG_PAR_MOD_SUB_DEBUG(l,p,m,s,...) do {} while (0)
+#define LOG_PAR_MOD_SUB_PRINT(p,m,s,...) do {} while (0)
+#define LOG_PAR_MOD_SUB_WARN(p,m,s,...) do {} while (0)
+#define LOG_PAR_MOD_SUB_ERROR(p,m,s,...) do {} while (0)
 
 #else
 
 #include <stdio.h>
 
-/* Log levels:
- * 0 - Quiet, 1 - Info, 2 - Events, 3 - Debug */
+// General log macros
 
 #define LOG_DEBUG(l,...) do { if (logging.level >= l) { printf(__VA_ARGS__); } } while (0)
 #define LOG_PRINT(...) printf(__VA_ARGS__)
 #define LOG_WARN(...) fprintf(stderr, "WARNING: " __VA_ARGS__)
 #define LOG_ERROR(...) fprintf(stderr, "ERROR: " __VA_ARGS__)
 
+// Log with module name
+
 #define LOG_MOD_DEBUG(l,m,...) do { if (logging.level >= l) { printf("[%s] ", (m)); printf(__VA_ARGS__); } } while (0)
 #define LOG_MOD_PRINT(m,...) do { printf("[%s] ", (m)); printf(__VA_ARGS__); } while (0)
 #define LOG_MOD_WARN(m,...) do { fprintf(stderr, "[%s] WARNING: ", (m)); fprintf(stderr, __VA_ARGS__); } while (0)
 #define LOG_MOD_ERROR(m,...) do { fprintf(stderr, "[%s] ERROR: ", (m)); fprintf(stderr, __VA_ARGS__); } while (0)
+
+// Log with module name, submodule name
 
 #define LOG_MOD_SUB_DEBUG(l,m,s,...) do { if (logging.level >= l) { printf("[%s/%s] ", (m), (s)); printf(__VA_ARGS__); } } while (0)
 #define LOG_MOD_SUB_PRINT(m,s,...) do { printf("[%s/%s] ", (m), (s)); printf(__VA_ARGS__); } while (0)
 #define LOG_MOD_SUB_WARN(m,s,...) do { fprintf(stderr, "[%s/%s] WARNING: ", (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
 #define LOG_MOD_SUB_ERROR(m,s,...) do { fprintf(stderr, "[%s/%s] ERROR: ", (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
 
-#define LOG_MOD_ALT_DEBUG(l,m,a,...) do { if (logging.level >= l) { printf("[%s:%s] ", (m), (a)); printf(__VA_ARGS__); } } while (0)
-#define LOG_MOD_ALT_PRINT(m,a,...) do { printf("[%s:%s] ", (m), (a)); printf(__VA_ARGS__); } while (0)
-#define LOG_MOD_ALT_WARN(m,a,...) do { fprintf(stderr, "[%s:%s] WARNING: ", (m), (a)); fprintf(stderr, __VA_ARGS__); } while (0)
-#define LOG_MOD_ALT_ERROR(m,a,...) do { fprintf(stderr, "[%s:%s] ERROR: ", (m), (a)); fprintf(stderr, __VA_ARGS__); } while (0)
+// Log with parent, module name
+
+#define LOG_PAR_MOD_DEBUG(l,p,m,...) do { if (logging.level >= l) { printf("[%s:%s] ", (p), (m)); printf(__VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_PRINT(p,m,...) do { printf("[%s:%s] ", (p), (m)); printf(__VA_ARGS__); } while (0)
+#define LOG_PAR_MOD_WARN(p,m,...) do { fprintf(stderr, "[%s:%s] WARNING: ", (p), (m)); fprintf(stderr, __VA_ARGS__); } while (0)
+#define LOG_PAR_MOD_ERROR(p,m,...) do { fprintf(stderr, "[%s:%s] ERROR: ", (p), (m)); fprintf(stderr, __VA_ARGS__); } while (0)
+
+// Log with parent, module name, submodule name
+
+#define LOG_PAR_MOD_SUB_DEBUG(l,p,m,s,...) do { if (logging.level >= l) { printf("[%s:%s/%s] ", (p), (m), (s)); printf(__VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_SUB_PRINT(p,m,s,...) do { printf("[%s:%s/%s] ", (p), (m), (s)); printf(__VA_ARGS__); } while (0)
+#define LOG_PAR_MOD_SUB_WARN(p,m,s,...) do { fprintf(stderr, "[%s:%s/%s] WARNING: ", (p), (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
+#define LOG_PAR_MOD_SUB_ERROR(p,m,s,...) do { fprintf(stderr, "[%s:%s/%s] ERROR: ", (p), (m), (s)); fprintf(stderr, __VA_ARGS__); } while (0)
 
 #endif
 
@@ -118,6 +138,16 @@
 #define LOG_MOD_SUB_DEBUG_FILE(b,m,s,...) do { if (logging.debug_file & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
 #define LOG_MOD_SUB_DEBUG_GDB(b,m,s,...) do { if (logging.debug_gdb & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
 #define LOG_MOD_SUB_DEBUG_UI(b,m,s,...) do { if (logging.debug_ui & (b)) { LOG_MOD_SUB_PRINT((m), (s), __VA_ARGS__); } } while (0)
+
+#define LOG_PAR_MOD_DEBUG_FDC(b,p,m,...) do { if (logging.debug_fdc & (b)) { LOG_PAR_MOD_PRINT((p), (m), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_DEBUG_FILE(b,p,m,...) do { if (logging.debug_file & (b)) { LOG_PAR_MOD_PRINT((p), (m), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_DEBUG_GDB(b,p,m,...) do { if (logging.debug_gdb & (b)) { LOG_PAR_MOD_PRINT((p), (m), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_DEBUG_UI(b,p,m,...) do { if (logging.debug_ui & (b)) { LOG_PAR_MOD_PRINT((p), (m), __VA_ARGS__); } } while (0)
+
+#define LOG_PAR_MOD_SUB_DEBUG_FDC(b,p,m,s,...) do { if (logging.debug_fdc & (b)) { LOG_PAR_MOD_SUB_PRINT((p), (m), (s), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_SUB_DEBUG_FILE(b,p,m,s,...) do { if (logging.debug_file & (b)) { LOG_PAR_MOD_SUB_PRINT((p), (m), (s), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_SUB_DEBUG_GDB(b,p,m,s,...) do { if (logging.debug_gdb & (b)) { LOG_PAR_MOD_SUB_PRINT((p), (m), (s), __VA_ARGS__); } } while (0)
+#define LOG_PAR_MOD_SUB_DEBUG_UI(b,p,m,s,...) do { if (logging.debug_ui & (b)) { LOG_PAR_MOD_SUB_PRINT((p), (m), (s), __VA_ARGS__); } } while (0)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
