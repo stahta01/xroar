@@ -445,7 +445,7 @@ static struct js_db_entry *js_parse_db_entry(const char *db_string) {
 				break;
 			}
 		}
-		for (int i = 0; i < (int)ARRAY_N_ELEMENTS(named_controls); ++i) {
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(named_controls); ++i) {
 			if (0 == c_strcasecmp(ctl_name, named_controls[i].name)) {
 				int ctl = named_controls[i].control;
 				int istate = JS_INPUT_STATE_DIRECT;
