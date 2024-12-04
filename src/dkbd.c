@@ -41,7 +41,7 @@ struct dkey_chord_mapping {
 
 struct dkbd_layout_variant {
 	enum dkbd_layout base_layout;
-	int num_chord_mappings;
+	size_t num_chord_mappings;
 	struct dkey_chord_mapping *chord_mappings;
 };
 
@@ -136,18 +136,20 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	/* Populate the matrix crosspoint map */
 
 	// Clear table
-	for (int i = 0; i < DKBD_POINT_TABLE_SIZE; i++)
+	for (unsigned i = 0; i < DKBD_POINT_TABLE_SIZE; ++i) {
 		map->point[i] = (struct dkbd_matrix_point){8, 8, 0};
+	}
 
 	// Map the easy stuff
-	for (int i = 0; i < 56; i++) {
+	for (unsigned i = 0; i < 56; ++i) {
 		unsigned col = i & 7;
 		unsigned row = (i >> 3) & 7;
 		if (variant->base_layout == dkbd_layout_coco ||
 		    variant->base_layout == dkbd_layout_mc10 ||
 		    variant->base_layout == dkbd_layout_alice) {
-			if (row != 6)
+			if (row != 6) {
 				row = (row + 4) % 6;
+			}
 		}
 		map->point[i] = (struct dkbd_matrix_point){row, col, 0};
 	}
@@ -155,8 +157,9 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	// CoCo 3 specials
 	if (layout != dkbd_layout_coco3) {
 		// Unmap CoCo 3 extended keys
-		for (int i = DSCAN_ALT; i <= DSCAN_F2; i++)
+		for (unsigned i = DSCAN_ALT; i <= DSCAN_F2; ++i) {
 			map->point[i] = (struct dkbd_matrix_point){8, 8, 0};
+		}
 	}
 
 	// For most machines, this is true.  Overridden later for MC-10:
@@ -181,21 +184,21 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	/* Populate the unicode_to_dkey map */
 
 	// Clear table
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(map->unicode_to_dkey); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(map->unicode_to_dkey); ++i) {
 		map->unicode_to_dkey[i] = (struct dkey_chord){DSCAN_INVALID, 0};
 	}
 	// "1!" - "9)", ":*", ";+"
-	for (int i = 0; i <= 10; i++) {
+	for (unsigned i = 0; i <= 10; ++i) {
 		map->unicode_to_dkey['1'+i] = (struct dkey_chord){DSCAN_1+i, DK_MOD_UNSHIFT};
 		map->unicode_to_dkey['!'+i] = (struct dkey_chord){DSCAN_1+i, DK_MOD_SHIFT};
 	}
 	// ",<", "-=", ".>", "/?"
-	for (int i = 0; i <= 3; i++) {
+	for (unsigned i = 0; i <= 3; ++i) {
 		map->unicode_to_dkey[','+i] = (struct dkey_chord){DSCAN_COMMA+i, DK_MOD_UNSHIFT};
 		map->unicode_to_dkey['<'+i] = (struct dkey_chord){DSCAN_COMMA+i, DK_MOD_SHIFT};
 	}
 	// "aA" - "zZ"
-	for (int i = 0; i <= 25; i++) {
+	for (unsigned i = 0; i <= 25; ++i) {
 		map->unicode_to_dkey['a'+i] = (struct dkey_chord){DSCAN_A+i, DK_MOD_UNSHIFT};
 		map->unicode_to_dkey['A'+i] = (struct dkey_chord){DSCAN_A+i, DK_MOD_SHIFT};
 	}
@@ -218,7 +221,7 @@ void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout layout) {
 	map->unicode_to_dkey[0xba] = (struct dkey_chord){DSCAN_CLEAR, DK_MOD_UNSHIFT};  // 'º'
 	map->unicode_to_dkey[0xaa] = (struct dkey_chord){DSCAN_CLEAR, DK_MOD_SHIFT};  // 'ª'
 	// Variant mappings
-	for (int i = 0; i < variant->num_chord_mappings; i++) {
+	for (size_t i = 0; i < variant->num_chord_mappings; ++i) {
 		unsigned unicode = variant->chord_mappings[i].unicode;
 		map->unicode_to_dkey[unicode] = variant->chord_mappings[i].chord;
 	}
@@ -284,7 +287,7 @@ int8_t dk_key_by_name(const char *name) {
 			   break;
 		}
 	}
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(key_names); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(key_names); ++i) {
 		if (c_strcasecmp(key_names[i].name, name) == 0) {
 			return key_names[i].dk_key;
 		}
