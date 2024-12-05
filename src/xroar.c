@@ -275,7 +275,7 @@ enum media_slot {
 	media_slot_snapshot,
 };
 
-static int autorun_media_slot = media_slot_none;
+static unsigned autorun_media_slot = media_slot_none;
 
 /* Helper functions used by configuration */
 static void set_default_machine(const char *name);
@@ -958,7 +958,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	}
 
 	// Although any disk loaded means we _do_ want a DOS
-	for (int i = 0; i < 4; i++) {
+	for (unsigned i = 0; i < 4; i++) {
 		if (private_cfg.file.fd[i]) {
 			auto_dos = 1;
 		}
@@ -1191,7 +1191,7 @@ void xroar_init_finish(void) {
 		// Otherwise, attach any other media images.
 
 		// Floppy disks
-		for (int i = 0; i < 4; i++) {
+		for (unsigned i = 0; i < 4; i++) {
 			if (private_cfg.file.fd[i]) {
 				_Bool autorun = (autorun_media_slot == (media_slot_fd0 + i));
 				xroar_load_disk(private_cfg.file.fd[i], i, autorun);
@@ -2221,7 +2221,7 @@ static void set_cart(const char *name) {
 			cc->mpi.initial_slot = private_cfg.cart.mpi.initial_slot;
 			private_cfg.cart.mpi.initial_slot = ANY_AUTO;
 		}
-		for (int i = 0; i < 4; i++) {
+		for (unsigned i = 0; i < 4; i++) {
 			if (private_cfg.cart.mpi.slot_cart_name[i]) {
 				if (cc->mpi.slot_cart_name[i]) {
 					free(cc->mpi.slot_cart_name[i]);
@@ -2262,7 +2262,7 @@ static enum media_slot add_load_file(const char *filename) {
 	case FILETYPE_JVC:
 	case FILETYPE_OS9:
 	case FILETYPE_DMK:
-		for (int i = 0; i < 4; i++) {
+		for (unsigned i = 0; i < 4; i++) {
 			if (!private_cfg.file.fd[i]) {
 				private_cfg.file.fd[i] = xstrdup(filename);
 				slot = media_slot_fd0 + i;
@@ -2306,7 +2306,7 @@ static enum media_slot add_load_file(const char *filename) {
 	case FILETYPE_IDE:
 	case FILETYPE_IMG:
 		// TODO: recognise media type and select cartridge accordingly
-		for (int i = 0; i < 2; i++) {
+		for (unsigned i = 0; i < 2; i++) {
 			if (!xroar.cfg.file.hd[i]) {
 				xroar.cfg.file.hd[i] = xstrdup(filename);
 				break;
@@ -3064,7 +3064,7 @@ static void config_print_all(FILE *f, _Bool all) {
 
 /* Helper functions for config printing */
 
-static int cfg_print_indent_level = 0;
+static unsigned cfg_print_indent_level = 0;
 
 void xroar_cfg_print_inc_indent(void) {
 	cfg_print_indent_level++;
@@ -3076,8 +3076,9 @@ void xroar_cfg_print_dec_indent(void) {
 }
 
 void xroar_cfg_print_indent(FILE *f) {
-	for (int i = 0; i < cfg_print_indent_level; i++)
+	for (unsigned i = 0; i < cfg_print_indent_level; ++i) {
 		fprintf(f, "  ");
+	}
 }
 
 void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int normal) {
@@ -3143,7 +3144,7 @@ void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int no
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent(f);
-	for (int i = 0; e[i].name; i++) {
+	for (size_t i = 0; e[i].name; i++) {
 		if (value == e[i].value) {
 			fprintf(f, "%s %s\n", opt, e[i].name);
 			return;
