@@ -58,6 +58,8 @@ static const struct ser_struct_data ikon_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void ikon_config_complete(struct cart_config *);
+
 /* Cart interface */
 static uint8_t ikon_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t ikon_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -86,7 +88,7 @@ static const struct partdb_entry_funcs ikon_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry ikon_part = { .name = "ikon", .description = "Ikon | Ultra Drive", .funcs = &ikon_funcs };
+const struct cart_partdb_entry ikon_part = { .partdb_entry = { .name = "ikon", .description = "Ikon | Ultra Drive", .funcs = &ikon_funcs }, .config_complete = ikon_config_complete };
 
 static struct part *ikon_allocate(void) {
 	struct ikon *d = part_new(sizeof(*d));
@@ -110,11 +112,6 @@ static struct part *ikon_allocate(void) {
 static void ikon_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
-
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("@ikon");
-	}
 
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("MC6821", "MC6821"), "PIA");
@@ -147,6 +144,13 @@ static void ikon_free(struct part *p) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void ikon_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@ikon");
+	}
+}
 
 static void ikon_reset(struct cart *c, _Bool hard) {
 	struct ikon *d = (struct ikon *)c;

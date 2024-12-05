@@ -70,6 +70,8 @@ static const struct ser_struct_data dragondos_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void dragondos_config_complete(struct cart_config *);
+
 /* Cart interface */
 static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -105,7 +107,7 @@ static const struct partdb_entry_funcs dragondos_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry dragondos_part = { .name = "dragondos", .description = "Dragon Data | DragonDOS", .funcs = &dragondos_funcs };
+const struct cart_partdb_entry dragondos_part = { .partdb_entry = { .name = "dragondos", .description = "Dragon Data | DragonDOS", .funcs = &dragondos_funcs }, .config_complete = dragondos_config_complete };
 
 static struct part *dragondos_allocate(void) {
 	struct dragondos *d = part_new(sizeof(*d));
@@ -129,11 +131,6 @@ static struct part *dragondos_allocate(void) {
 static void dragondos_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
-
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("@dragondos_compat");
-	}
 
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
@@ -169,6 +166,13 @@ static void dragondos_free(struct part *p) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void dragondos_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@dragondos_compat");
+	}
+}
 
 static void dragondos_reset(struct cart *c, _Bool hard) {
 	struct dragondos *d = (struct dragondos *)c;

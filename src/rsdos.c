@@ -70,6 +70,8 @@ static const struct ser_struct_data rsdos_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void rsdos_config_complete(struct cart_config *);
+
 /* Cart interface */
 
 static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -108,7 +110,7 @@ static const struct partdb_entry_funcs rsdos_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry rsdos_part = { .name = "rsdos", .description = "Tandy | RS-DOS", .funcs = &rsdos_funcs };
+const struct cart_partdb_entry rsdos_part = { .partdb_entry = { .name = "rsdos", .description = "Tandy | RS-DOS", .funcs = &rsdos_funcs }, .config_complete = rsdos_config_complete };
 
 static struct part *rsdos_allocate(void) {
 	struct rsdos *d = part_new(sizeof(*d));
@@ -132,11 +134,6 @@ static struct part *rsdos_allocate(void) {
 static void rsdos_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
-
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("@rsdos");
-	}
 
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2793", "WD2793"), "FDC");
@@ -172,6 +169,13 @@ static void rsdos_free(struct part *p) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void rsdos_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@rsdos");
+	}
+}
 
 static void rsdos_reset(struct cart *c, _Bool hard) {
 	struct rsdos *d = (struct rsdos *)c;

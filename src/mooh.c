@@ -101,7 +101,7 @@ static const struct partdb_entry_funcs mooh_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry mooh_part = { .name = "mooh", .description = "Tormod Volden | MOOH memory cartridge", .funcs = &mooh_funcs };
+const struct cart_partdb_entry mooh_part = { .partdb_entry = { .name = "mooh", .description = "Tormod Volden | MOOH memory cartridge", .funcs = &mooh_funcs } };
 
 static struct part *mooh_allocate(void) {
 	struct mooh *n = part_new(sizeof(*n));

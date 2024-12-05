@@ -92,7 +92,7 @@ static const struct partdb_entry_funcs nx32_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry nx32_part = { .name = "nx32", .description = "Tormod Volden | NX32 memory cartridge", .funcs = &nx32_funcs };
+const struct cart_partdb_entry nx32_part = { .partdb_entry = { .name = "nx32", .description = "Tormod Volden | NX32 memory cartridge", .funcs = &nx32_funcs } };
 
 static struct part *nx32_allocate(void) {
 	struct nx32 *n = part_new(sizeof(*n));

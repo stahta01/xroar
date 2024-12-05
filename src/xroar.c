@@ -1811,6 +1811,7 @@ static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	_Bool waiting = !wasm_ui_prepare_machine(mc);
 	if (mc->cart_enabled && mc->default_cart) {
 		struct cart_config *cc = cart_config_by_name(mc->default_cart);
+		cart_config_complete(cc);
 		waiting |= !wasm_ui_prepare_cartridge(cc);
 	}
 	if (waiting) {
@@ -1876,6 +1877,8 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 		// Else if not 0 (none), try to find something automatically
 		cc = cart_find_working_dos(m->config);
 	}
+
+	cart_config_complete(cc);
 
 #ifdef HAVE_WASM
 	// Verify ROMs required by this cartridge are available in the

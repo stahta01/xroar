@@ -51,6 +51,8 @@ static const struct ser_struct_data orch90_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void orch90_config_complete(struct cart_config *);
+
 static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void orch90_reset(struct cart *c, _Bool hard);
 static void orch90_attach(struct cart *c);
@@ -77,7 +79,7 @@ static const struct partdb_entry_funcs orch90_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry orch90_part = { .name = "orch90", .description = "Tandy | Orchestra 90-CC", .funcs = &orch90_funcs };
+const struct cart_partdb_entry orch90_part = { .partdb_entry = { .name = "orch90", .description = "Tandy | Orchestra 90-CC", .funcs = &orch90_funcs }, .config_complete = orch90_config_complete };
 
 static struct part *orch90_allocate(void) {
 	struct orch90 *o = part_new(sizeof(*o));
@@ -102,11 +104,6 @@ static void orch90_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
 
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("orch90");
-	}
-
 	cart_rom_initialise(p, options);
 }
 
@@ -118,6 +115,13 @@ static _Bool orch90_finish(struct part *p) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void orch90_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("orch90");
+	}
+}
 
 static void orch90_reset(struct cart *c, _Bool hard) {
 	cart_rom_reset(c, hard);

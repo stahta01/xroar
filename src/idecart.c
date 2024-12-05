@@ -79,6 +79,8 @@ static struct xconfig_option const idecart_options[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void idecart_config_complete(struct cart_config *);
+
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void idecart_reset(struct cart *c, _Bool hard);
@@ -104,7 +106,7 @@ static const struct partdb_entry_funcs idecart_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry idecart_part = { .name = "ide", .description = "Glenside | IDE interface", .funcs = &idecart_funcs };
+const struct cart_partdb_entry idecart_part = { .partdb_entry = { .name = "ide", .description = "Glenside | IDE interface", .funcs = &idecart_funcs } , .config_complete = idecart_config_complete };
 
 static struct part *idecart_allocate(void) {
 	struct idecart *ide = part_new(sizeof(*ide));
@@ -138,11 +140,6 @@ static void idecart_initialise(struct part *p, void *options) {
 	assert(cc != NULL);
 
 	struct idecart *ide = (struct idecart *)p;
-
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("@glenside_ide");
-	}
 
 	cart_rom_initialise(p, options);
 
@@ -222,6 +219,13 @@ static _Bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void idecart_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@glenside_ide");
+	}
+}
 
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
 	struct idecart *ide = (struct idecart *)c;

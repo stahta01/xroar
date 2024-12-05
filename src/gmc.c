@@ -91,7 +91,7 @@ static const struct partdb_entry_funcs gmc_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry gmc_part = { .name = "gmc", .description = "John Linville | Games Master Cartridge", .funcs = &gmc_funcs };
+const struct cart_partdb_entry gmc_part = { .partdb_entry = { .name = "gmc", .description = "John Linville | Games Master Cartridge", .funcs = &gmc_funcs } };
 
 static struct part *gmc_allocate(void) {
 	struct gmc *gmc = part_new(sizeof(*gmc));

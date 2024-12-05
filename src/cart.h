@@ -123,6 +123,18 @@ void cart_config_remove_all(void);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Extend struct partdb_entry to contain cart-specific helpers.  It's important
+// that carts contain an "extra" entry, even if it's NULL.
+
+struct cart_partdb_entry {
+	struct partdb_entry partdb_entry;
+
+	// resolve any undefined config
+	void (*config_complete)(struct cart_config *cc);
+};
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 extern const struct ser_struct_data cart_ser_struct_data;
 
 struct cart *cart_create_from_config(struct cart_config *cc);

@@ -191,8 +191,6 @@ void machine_config_remove_all(void);
 struct slist *machine_config_list(void);
 /* Find a working machine by searching available ROMs: */
 struct machine_config *machine_config_first_working(void);
-/* Complete a config replacing ANY_AUTO entries: */
-void machine_config_complete(struct machine_config *mc);
 void machine_config_print_all(FILE *f, _Bool all);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

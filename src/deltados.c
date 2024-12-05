@@ -66,6 +66,8 @@ static const struct ser_struct_data deltados_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void deltados_config_complete(struct cart_config *);
+
 /* Cart interface */
 
 static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -99,7 +101,7 @@ static const struct partdb_entry_funcs deltados_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct partdb_entry deltados_part = { .name = "delta", .description = "Premier Microsystems | Delta System", .funcs = &deltados_funcs };
+const struct cart_partdb_entry deltados_part = { .partdb_entry = { .name = "delta", .description = "Premier Microsystems | Delta System", .funcs = &deltados_funcs }, .config_complete = deltados_config_complete };
 
 static struct part *deltados_allocate(void) {
 	struct deltados *d = part_new(sizeof(*d));
@@ -123,11 +125,6 @@ static struct part *deltados_allocate(void) {
 static void deltados_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
-
-	// Default ROM
-	if (!cc->rom_dfn && !cc->rom) {
-		cc->rom = xstrdup("@delta");
-	}
 
 	cart_rom_initialise(p, options);
 	part_add_component(p, part_create("WD2791", "WD2791"), "FDC");
@@ -156,6 +153,13 @@ static void deltados_free(struct part *p) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void deltados_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("@delta");
+	}
+}
 
 static void deltados_reset(struct cart *c, _Bool hard) {
 	struct deltados *d = (struct deltados *)c;
