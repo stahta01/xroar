@@ -208,10 +208,13 @@ static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag
 	switch (tag) {
 	case MACHINE_CONFIG_SER_ARCHITECTURE_OLD: {
 		int old_arch = ser_read_vint32(sh);
-		if (mc->architecture)
+		if (old_arch < 0 || (unsigned)old_arch >= ARRAY_N_ELEMENTS(int_arch_to_string)) {
+			ser_set_error(sh, ser_error_format);
+			return 0;
+		}
+		if (mc->architecture) {
 			free(mc->architecture);
-		if (old_arch < 0 || old_arch >= (int)ARRAY_N_ELEMENTS(int_arch_to_string))
-			old_arch = 0;
+		}
 		mc->architecture = xstrdup(int_arch_to_string[old_arch]);
 	} break;
 
