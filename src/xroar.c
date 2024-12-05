@@ -309,7 +309,8 @@ static void xroar_ui_set_print_pipe(void *, int tag, void *smsg);
 static void xroar_ui_set_ratelimit(void *, int tag, void *smsg);
 static void xroar_ui_set_ratelimit_latch(void *, int tag, void *smsg);
 
-static int load_disk_to_drive = 0;
+static unsigned load_disk_to_drive = 0;
+static unsigned load_hd_to_drive = 0;
 
 static struct joystick_config *cur_joy_config = NULL;
 
@@ -1362,6 +1363,12 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 		xroar_load_disk(filename, load_disk_to_drive, autorun);
 		return;
 
+	case FILETYPE_VHD:
+	case FILETYPE_IDE:
+	case FILETYPE_IMG:
+		xroar_insert_hd_file(load_hd_to_drive, filename);
+		return;
+
 	case FILETYPE_BIN:
 		bin_load(filename, autorun);
 		return;
@@ -1442,6 +1449,11 @@ void xroar_load_disk(const char *filename, int drive, _Bool autorun) {
 			ak_parse_type_string(xroar.auto_kbd, "\\025DOS\\r");
 		} else {
 			ak_parse_type_string(xroar.auto_kbd, "\\025BOOT\\r");
+		}
+	}
+	for (unsigned i = 0; i < 4; ++i) {
+		if (!vdrive_disk_in_drive(xroar.vdrive_interface, i)) {
+			load_disk_to_drive = i;
 		}
 	}
 }
@@ -1586,8 +1598,13 @@ void xroar_insert_hd_file(int drive, const char *filename) {
 		return;
 	if (xroar.cfg.file.hd[drive])
 		free(xroar.cfg.file.hd[drive]);
-	fprintf(stderr, "xroar.cfg.file.hd[%d] = '%s'\n", drive, filename);
 	xroar.cfg.file.hd[drive] = xstrdup(filename);
+	for (unsigned i = 0; i < 2; ++i) {
+		if (!xroar.cfg.file.hd[drive]) {
+			load_hd_to_drive = i;
+			break;
+		}
+	}
 }
 
 // Receive notifications when the picture (viewport) is changed by user so we

@@ -2,7 +2,7 @@
  *
  * \brief Block device abstraction.
  *
- * \copyright Copyright 2022 Ciaran Anscomb
+ * \copyright Copyright 2022-2024 Ciaran Anscomb
  *
  * \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,44 +21,16 @@
 
 #include <stdio.h>
 
-/** Once a device has been accessed in LBA mode, it will usually then not be
- * possible to change its structure with accesses in CHS mode.
+/** Built-in HD types.  Taken from Alan Cox's IDE code.
  */
-
-enum bd_type {
-	bd_type_floppy,
-	bd_type_hd
+enum {
+	BD_ACME_ROADRUNNER = 1, // 504MB classic IDE drive
+	BD_ACME_COYOTE,         // 20MB early IDE drive
+	BD_ACME_NEMESIS,        // 20MB LBA capable drive
+	BD_ACME_ULTRASONICUS,   // 40MB LBA capable drive
+	BD_ACME_ACCELLERATTI,   // 128MB LBA capable drive
+	BD_ACME_ZIPPIBUS        // 256MB LBA capable drive
 };
-
-/** \brief Block device profile.
- */
-
-struct blkdev_profile {
-	char *name;      /// profile name
-	char *filename;  /// backing filename
-
-	unsigned type;
-};
-
-/** \brief Fetch profile by name.
- *
- * Creates a new profile if not found, with filename equal to name.  Unless
- * added to the internal list with bd_profile_register(), this will not be
- * permanently configured, and you'll have to free it manually, either with
- * bd_profile_free(), or indirectly by closing the device that created it.
- */
-
-struct blkdev_profile *bd_profile_by_name(const char *name);
-
-/** \brief Add profile to internal list.
- */
-
-void bd_profile_register(struct blkdev_profile *profile);
-
-/** \brief Free profile.
- */
-
-void bd_profile_free(struct blkdev_profile *profile);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -66,25 +38,29 @@ void bd_profile_free(struct blkdev_profile *profile);
  */
 
 struct blkdev {
-	struct blkdev_profile *profile;
 	FILE *fd;
 };
 
 /** \brief Open block device.
  *
- * \param name      Profile name of device to open.
+ * \param name      Filename of device to open.
  *
  * \return New block device handle or NULL on error.
- *
- * If the profile is not found, an ephemeral profile will be created with
- * filename = name.
  */
 
 struct blkdev *bd_open(const char *name);
 
-/** \brief Close block device.
+/** \brief Create block device.
  *
- * If the device's profile is ephemeral, it will be freed.
+ * \param name      Filename of device to open.
+ * \param hd_type   One of BD_ACME_*.
+ *
+ * \return 1 on success, else 0.
+ */
+
+_Bool bd_create(const char *name, int hd_type);
+
+/** \brief Close block device.
  */
 
 void bd_close(struct blkdev *bd);

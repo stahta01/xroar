@@ -855,7 +855,7 @@ int ide_make_drive(uint8_t type, int fd)
   ident[53] = le16(1);          /* Geometry words are valid */
 
   switch(type) {
-    case ACME_ROADRUNNER:
+    case BD_ACME_ROADRUNNER:
       /* 504MB drive with LBA support */
       c = 1024;
       h = 16;
@@ -864,7 +864,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 27, "ACME ROADRUNNER v0.1", 40);
       ident[49] = le16(1 << 9); /* LBA */
       break;
-    case ACME_ULTRASONICUS:
+    case BD_ACME_ULTRASONICUS:
       /* 40MB drive with LBA support */
       c = 977;
       h = 5;
@@ -873,7 +873,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME ULTRASONICUS AD INFINITUM v0.1", 40);
       break;
-    case ACME_NEMESIS:
+    case BD_ACME_NEMESIS:
       /* 20MB drive with LBA support */
       c = 615;
       h = 4;
@@ -882,7 +882,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME NEMESIS RIDICULII v0.1", 40);
       break;
-    case ACME_COYOTE:
+    case BD_ACME_COYOTE:
       /* 20MB drive without LBA support */
       c = 615;
       h = 4;
@@ -890,7 +890,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME COYOTE v0.1", 40);
       break;
-    case ACME_ACCELLERATTI:
+    case BD_ACME_ACCELLERATTI:
       c = 1024;
       h = 16;
       s = 16;
@@ -898,7 +898,7 @@ int ide_make_drive(uint8_t type, int fd)
       make_ascii(ident + 23, "A001.001", 8);
       make_ascii(ident + 27, "ACME ACCELLERATTI INCREDIBILUS v0.1", 40);
       break;
-    case ACME_ZIPPIBUS:
+    case BD_ACME_ZIPPIBUS:
       c = 1024;
       h = 16;
       s = 32;

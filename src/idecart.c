@@ -25,8 +25,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
 
 #include "array.h"
 
@@ -40,10 +38,6 @@
 #include "serialise.h"
 #include "xconfig.h"
 #include "xroar.h"
-
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
 
 struct idecart {
 	struct cart cart;
@@ -152,21 +146,16 @@ static _Bool idecart_finish(struct part *p) {
 	struct cart *c = &ide->cart;
 
 	// Controller code depends on a valid filehandle being attached.
-	for (int i = 0; i < 2; i++) {
+	for (unsigned i = 0; i < 2; ++i) {
+		if (ide->controller->drive[i].present) {
+			ide_detach(&ide->controller->drive[i]);
+		}
 		if (xroar.cfg.file.hd[i]) {
 			struct blkdev *bd = bd_open(xroar.cfg.file.hd[i]);
 			if (!bd) {
-				int fd = open(xroar.cfg.file.hd[i], O_RDWR|O_CREAT|O_TRUNC|O_EXCL|O_BINARY, 0600);
-				if (fd == -1) {
-					LOG_MOD_WARN("ide", "%s: unable to create: %s\n", xroar.cfg.file.hd[i], strerror(errno));
+				if (!bd_create(xroar.cfg.file.hd[i], BD_ACME_ZIPPIBUS)) {
 					continue;
 				}
-				if (ide_make_drive(ACME_ZIPPIBUS, fd)) {
-					LOG_MOD_WARN("ide", "%s: unable to create\n", xroar.cfg.file.hd[i]);
-					close(fd);
-					continue;
-				}
-				close(fd);
 				bd = bd_open(xroar.cfg.file.hd[i]);
 			}
 			if (bd) {
@@ -179,6 +168,8 @@ static _Bool idecart_finish(struct part *p) {
 	if (!cart_rom_finish(p)) {
 		return 0;
 	}
+
+	idecart_reset(c, 1);
 
 	if (c->config->becker_port) {
 		ide->becker = becker_open();
@@ -302,6 +293,7 @@ static void idecart_reset(struct cart *c, _Bool hard) {
 	cart_rom_reset(c, hard);
 	if (ide->becker)
 		becker_reset(ide->becker);
+
 	ide_reset_begin(ide->controller);
 }
 

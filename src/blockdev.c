@@ -23,66 +23,25 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "slist.h"
 #include "xalloc.h"
 
 #include "blockdev.h"
 #include "fs.h"
+#include "ide.h"
 #include "logging.h"
 #include "xroar.h"
 
-// Magic found at start of first 512 bytes of an IDE image with a header.  If
-// this is found, the second 512 bytes contains IDENTIFY information.
-
-static const uint8_t ide_magic[8] = {
-	'1','D','E','D','1','5','C','0'
-};
-
-static struct slist *bd_profile_list = NULL;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-struct blkdev_profile *bd_profile_by_name(const char *name) {
-	struct blkdev_profile *profile;
-	for (struct slist *iter = bd_profile_list; iter; iter = iter->next) {
-		profile = iter->data;
-		if (strcmp(profile->name, name) == 0) {
-			return profile;
-		}
-	}
-	profile = xmalloc(sizeof(*profile));
-	*profile = (struct blkdev_profile){0};
-	profile->name = xstrdup(name);
-	profile->filename = xstrdup(name);
-	return profile;
-}
-
-/** \brief Add profile to internal list.
- */
-
-void bd_profile_register(struct blkdev_profile *profile) {
-	if (slist_find(bd_profile_list, profile))
-		return;
-	bd_profile_list = slist_prepend(bd_profile_list, profile);
-}
-
-/** \brief Free profile.
- */
-
-void bd_profile_free(struct blkdev_profile *profile) {
-	if (!profile)
-		return;
-	if (profile->name)
-		free(profile->name);
-	if (profile->filename)
-		free(profile->filename);
-	free(profile);
-}
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -166,13 +125,93 @@ struct blkdev *bd_open(const char *name) {
 	return bd;
 }
 
+// Create new block device.
+
+_Bool bd_create(const char *name, int hd_type) {
+	int filetype = xroar_filetype_by_ext(name);
+
+	int fd = open(name, O_RDWR|O_CREAT|O_TRUNC|O_BINARY, 0600);
+	if (fd < 0) {
+		LOG_MOD_WARN("blockdev", "unable to create: %s: %s\n", name, strerror(errno));
+		return 0;
+	}
+
+	unsigned c, h, s;
+	switch (hd_type) {
+	default:
+		hd_type = BD_ACME_NEMESIS;  // force default
+		// fall through
+	case BD_ACME_NEMESIS:
+	case BD_ACME_COYOTE:
+		c = 615;
+		h = 4;
+		s = 16;
+		break;
+
+	case BD_ACME_ACCELLERATTI:
+		c = 1024;
+		h = 16;
+		s = 16;
+		break;
+
+	case BD_ACME_ZIPPIBUS:
+		c = 1024;
+		h = 16;
+		s = 32;
+		break;
+
+	case BD_ACME_ULTRASONICUS:
+		c = 977;
+		h = 5;
+		s = 16;
+		break;
+	}
+
+	// Defer to IDE code to create images with the IDE magic header
+	if (filetype == FILETYPE_IDE) {
+		int r = ide_make_drive(hd_type, fd);
+		if (r != 0) {
+			LOG_MOD_SUB_WARN("blockdev", "ide", "unable to create: %s", name);
+			if (r == -1) {
+				LOG_PRINT(": %s", strerror(errno));
+			}
+			LOG_PRINT("\n");
+			close(fd);
+			return 0;
+		}
+		close(fd);
+		return 1;
+	}
+
+	// Otherwise, create a raw sector image with no header
+	size_t lsn = c * h * s;
+	int ssize = 512;
+	const char *sub = "img";
+
+	// VHD images are 256 byte per sector; adjust accordingly:
+	if (filetype == FILETYPE_VHD) {
+		lsn *= 2;
+		ssize = 256;
+		sub = "vhd";
+	}
+
+	uint8_t sector[512];
+	memset(sector, 0xe5, sizeof(sector));
+	for (size_t i = 0; i < lsn; ++i) {
+		if (write(fd, sector, ssize) != ssize) {
+			LOG_MOD_SUB_WARN("blockdev", sub, "unable to create: %s: %s\n", name, strerror(errno));
+			close(fd);
+			return 0;
+		}
+	}
+	close(fd);
+	return 1;
+}
+
 // Close block device.
 
 void bd_close(struct blkdev *bd) {
 	fclose(bd->fd);
-	if (!slist_find(bd_profile_list, bd->profile)) {
-		bd_profile_free(bd->profile);
-	}
 	free(bd);
 }
 

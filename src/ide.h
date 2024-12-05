@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2021-2022 Ciaran Anscomb
+ *  \copyright Copyright 2021-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -27,12 +27,14 @@
 struct blkdev;
 struct ser_handle;
 
-#define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
-#define ACME_COYOTE             2       /* 20MB early IDE drive */
-#define ACME_NEMESIS            3       /* 20MB LBA capable drive */
-#define ACME_ULTRASONICUS       4       /* 40MB LBA capable drive */
-#define ACME_ACCELLERATTI	5       /* 128MB LBA capable drive */
-#define ACME_ZIPPIBUS		6       /* 256MB LBA capable drive */
+// These are now defined as BD_ACME_* in blockdev.h:
+//
+//#define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
+//#define ACME_COYOTE             2       /* 20MB early IDE drive */
+//#define ACME_NEMESIS            3       /* 20MB LBA capable drive */
+//#define ACME_ULTRASONICUS       4       /* 40MB LBA capable drive */
+//#define ACME_ACCELLERATTI	5       /* 128MB LBA capable drive */
+//#define ACME_ZIPPIBUS		6       /* 256MB LBA capable drive */
 
 #define MAX_DRIVE_TYPE          6
 
