@@ -641,7 +641,7 @@ _Bool hk_windows_update_keymap(void) {
 	}
 #endif
 
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(windows_to_hk_scancode); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(windows_to_hk_scancode); i++) {
 		UINT vsc = windows_to_hk_scancode[i].vsc;
 		UINT vk = MapVirtualKey(vsc, MAPVK_VSC_TO_VK_EX);
 		int c = windows_to_hk_scancode[i].hk_scancode;
@@ -649,7 +649,7 @@ _Bool hk_windows_update_keymap(void) {
 			c = hk_scan_numbersign_nonUS;
 		}
 
-		for (int l = 0; l < HK_NUM_LEVELS; l++) {
+		for (unsigned l = 0; l < HK_NUM_LEVELS; l++) {
 			state[VK_SHIFT] = (l & 1) ? 0x80 : 0;
 			state[VK_LSHIFT] = (l & 1) ? 0x80 : 0;
 			state[VK_MENU] = (l & 2) ? 0x80 : 0;

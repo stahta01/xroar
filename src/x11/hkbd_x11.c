@@ -98,16 +98,16 @@ _Bool hk_x11_update_keymap(void) {
 	}
 
 	// Take fingerprint
-	for (int i = 0; i < (int)ARRAY_N_ELEMENTS(fingerprint); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(fingerprint); ++i) {
 		fingerprint[i].keycode = XKeysymToKeycode(display, fingerprint[i].keysym);
 	}
 
 	// Find best match
 	int max_matched = 1;  // require at least two matches
 	int table = -1;
-	for (int i = 0; i < (int)ARRAY_N_ELEMENTS(fingerprint_to_map); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(fingerprint_to_map); ++i) {
 		int matched = 0;
-		for (int j = 0; j < (int)ARRAY_N_ELEMENTS(fingerprint); j++) {
+		for (size_t j = 0; j < ARRAY_N_ELEMENTS(fingerprint); ++j) {
 			if (fingerprint_to_map[i].keycode_fingerprint[j] == fingerprint[j].keycode)
 				matched++;
 		}
@@ -133,15 +133,16 @@ _Bool hk_x11_update_keymap(void) {
 	memcpy(os_scancode_to_hk_scancode, fingerprint_to_map[table].keycode_table, 256 * sizeof(*os_scancode_to_hk_scancode));
 
 	XModifierKeymap *modmap = XGetModifierMapping(display);
-	int max_keypermod = modmap->max_keypermod;
+	unsigned max_keypermod = modmap->max_keypermod >= 0 ? modmap->max_keypermod : 0;
 
 	// Build the scancode to symbol mapping table
-	for (unsigned x11_keycode = 8; x11_keycode < 256; x11_keycode++) {
+	for (unsigned x11_keycode = 8; x11_keycode < 256; ++x11_keycode) {
 		int code = os_scancode_to_hk_scancode[x11_keycode];
-		if (!code)
+		if (!code) {
 			continue;
+		}
 
-		for (int m = 0; m < max_keypermod; m++) {
+		for (unsigned m = 0; m < max_keypermod; ++m) {
 			if (modmap->modifiermap[ShiftMapIndex * max_keypermod + m] == x11_keycode) {
 				hkbd.scancode_mod[code] |= HK_MASK_SHIFT;
 			}
@@ -153,17 +154,20 @@ _Bool hk_x11_update_keymap(void) {
 			}
 		}
 
-		int nlevels;
-		KeySym *syms = XGetKeyboardMapping(display, (KeyCode)x11_keycode, 1, &nlevels);
-		for (int l = 0; l < HK_NUM_LEVELS && l < nlevels; l++) {
+		int tmp_nlev;
+		KeySym *syms = XGetKeyboardMapping(display, (KeyCode)x11_keycode, 1, &tmp_nlev);
+		unsigned nlevels = tmp_nlev >= 0 ? tmp_nlev : 0;
+		for (unsigned l = 0; l < HK_NUM_LEVELS && l < nlevels; ++l) {
 			if (hkbd.code_to_sym[l][code] != hk_sym_None)
 				continue;
 
-			int syml = l;
-			if (syml >= 2)
+			unsigned syml = l;
+			if (syml >= 2) {
 				syml += 2;
-			if (syml >= nlevels)
+			}
+			if (syml >= nlevels) {
 				continue;
+			}
 			KeySym x11_sym = syms[syml];
 
 			if (l == 0) {
@@ -493,13 +497,15 @@ void hk_x11_handle_mapping_event(XMappingEvent *xmapping) {
 void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap) {
 	hkbd.state = 0;
 	// Start from 1 - skip the first 8 (invalid) keycodes
-	for (int i = 1; i < 32; i++) {
-		if (xkeymap->key_vector[i] == 0)
+	for (unsigned i = 1; i < 32; ++i) {
+		if (xkeymap->key_vector[i] == 0) {
 			continue;
-		for (int j = 0; j < 8; j++) {
-			if ((xkeymap->key_vector[i] & (1 << j)) == 0)
+		}
+		for (unsigned j = 0; j < 8; ++j) {
+			if ((xkeymap->key_vector[i] & (1 << j)) == 0) {
 				continue;
-			int x11_keycode = i * 8 + j;
+			}
+			unsigned x11_keycode = i * 8 + j;
 			uint8_t code = os_scancode_to_hk_scancode[x11_keycode];
 			hkbd.state |= hkbd.scancode_mod[code];
 		}
@@ -512,15 +518,17 @@ void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap) {
 // dialog window is closed and we happen to get focus next.
 
 _Bool hk_x11_focus_in(void) {
-	if (!display || !os_scancode_to_hk_scancode)
+	if (!display || !os_scancode_to_hk_scancode) {
 		return 0;
+	}
 
 	char keys[HK_NUM_SCANCODES/8];
 	(void)XQueryKeymap(display, keys);
-	for (unsigned i = 8; i < 256; i++) {
+	for (unsigned i = 8; i < 256; ++i) {
 		uint8_t code = os_scancode_to_hk_scancode[i];
-		if (code == hk_scan_None)
+		if (code == hk_scan_None) {
 			continue;
+		}
 		if (!(keys[i >> 3] & (1 << (i & 7)))) {
 			if (hkbd.scancode_pressed_sym[code] != hk_sym_None) {
 				hk_scan_release(code);

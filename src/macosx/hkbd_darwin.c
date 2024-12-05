@@ -201,10 +201,10 @@ static int8_t hk_scancode_to_darwin[HK_NUM_SCANCODES];
 
 _Bool hk_darwin_update_keymap(void) {
 	// Invert the table above
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(hk_scancode_to_darwin); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(hk_scancode_to_darwin); ++i) {
 		hk_scancode_to_darwin[i] = -1;
 	}
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(darwin_to_hk_scancode); i++) {
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(darwin_to_hk_scancode); ++i) {
 		int scan = darwin_to_hk_scancode[i];
 		if (scan != hk_scan_None) {
 			hk_scancode_to_darwin[scan] = i;
@@ -243,7 +243,7 @@ _Bool hk_darwin_update_keymap(void) {
 
 	UniChar buf[8];
 
-	for (int c = 0; c < HK_NUM_SCANCODES; c++) {
+	for (unsigned c = 0; c < HK_NUM_SCANCODES; c++) {
 		int darwin_vkc = hk_scancode_to_darwin[c];
 		if (hkbd.layout == hk_layout_iso) {
 			if (darwin_vkc == 0x0a) {
@@ -256,7 +256,7 @@ _Bool hk_darwin_update_keymap(void) {
 		}
 
 		UInt16 virtualKeyCode = darwin_vkc;
-		for (int l = 0; l < HK_NUM_LEVELS; l++) {
+		for (unsigned l = 0; l < HK_NUM_LEVELS; l++) {
 			UInt32 modifierKeyState = 0;
 			if (l & 1)
 				modifierKeyState |= ((1 << shiftKeyBit) >> 8);
@@ -333,7 +333,7 @@ _Bool hk_darwin_update_keymap(void) {
 	}
 
 	// Fixed mappings
-	for (int l = 0; l < HK_NUM_LEVELS; l++) {
+	for (unsigned l = 0; l < HK_NUM_LEVELS; l++) {
 		hkbd.code_to_sym[l][hk_scan_Shift_L] = hk_sym_Shift_L;
 		hkbd.code_to_sym[l][hk_scan_Shift_R] = hk_sym_Shift_R;
 		hkbd.code_to_sym[l][hk_scan_Control_L] = hk_sym_Control_L;
