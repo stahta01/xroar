@@ -117,13 +117,7 @@ static const struct partdb_entry_funcs deluxecoco_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct machine_partdb_extra deluxecoco_machine_extra = {
-	.config_complete = deluxecoco_config_complete,
-	.is_working_config = dragon_is_working_config,
-	.cart_arch = "dragon-cart",
-};
-
-const struct partdb_entry deluxecoco_part = { .name = "deluxecoco", .description = "Tandy | Deluxe Colour Computer", .funcs = &deluxecoco_funcs, .extra = { &deluxecoco_machine_extra } };
+const struct machine_partdb_entry deluxecoco_part = { .partdb_entry = { .name = "deluxecoco", .description = "Tandy | Deluxe Colour Computer", .funcs = &deluxecoco_funcs }, .config_complete = deluxecoco_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *deluxecoco_allocate(void) {
 	struct machine_deluxecoco *mdp = part_new(sizeof(*mdp));

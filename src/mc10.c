@@ -233,13 +233,7 @@ static const struct partdb_entry_funcs mc10_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct machine_partdb_extra mc10_machine_extra = {
-	.config_complete = mc10_config_complete,
-	.is_working_config = mc10_is_working_config,
-	.cart_arch = "mc10-cart",
-};
-
-const struct partdb_entry mc10_part = { .name = "mc10", .description = "Tandy | Micro Colour Computer MC-10", .funcs = &mc10_funcs, .extra = { &mc10_machine_extra } };
+const struct machine_partdb_entry mc10_part = { .partdb_entry = { .name = "mc10", .description = "Tandy | Micro Colour Computer MC-10", .funcs = &mc10_funcs }, .config_complete = mc10_config_complete, .is_working_config = mc10_is_working_config, .cart_arch = "mc10-cart" };
 
 static struct part *mc10_allocate(void) {
         struct machine_mc10 *mp = part_new(sizeof(*mp));

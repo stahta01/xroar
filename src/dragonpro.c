@@ -151,13 +151,7 @@ static const struct partdb_entry_funcs dragonpro_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct machine_partdb_extra dragonpro_machine_extra = {
-	.config_complete = dragonpro_config_complete,
-	.is_working_config = dragon_is_working_config,
-	.cart_arch = "dragon-cart",
-};
-
-const struct partdb_entry dragonpro_part = { .name = "dragonpro", .description = "Dragon Data | Dragon Professional (Alpha)", .funcs = &dragonpro_funcs, .extra = { &dragonpro_machine_extra } };
+const struct machine_partdb_entry dragonpro_part = { .partdb_entry = { .name = "dragonpro", .description = "Dragon Data | Dragon Professional (Alpha)", .funcs = &dragonpro_funcs }, .config_complete = dragonpro_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *dragonpro_allocate(void) {
 	struct machine_dragonpro *mdp = part_new(sizeof(*mdp));

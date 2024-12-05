@@ -365,13 +365,7 @@ static const struct partdb_entry_funcs coco3_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct machine_partdb_extra coco3_machine_extra = {
-	.config_complete = coco3_config_complete,
-	.is_working_config = coco3_is_working_config,
-	.cart_arch = "dragon-cart",
-};
-
-const struct partdb_entry coco3_part = { .name = "coco3", .description = "Tandy | Colour Computer 3", .funcs = &coco3_funcs, .extra = { &coco3_machine_extra } };
+const struct machine_partdb_entry coco3_part = { .partdb_entry = { .name = "coco3", .description = "Tandy | Colour Computer 3", .funcs = &coco3_funcs }, .config_complete = coco3_config_complete, .is_working_config = coco3_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *coco3_allocate(void) {
         struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));

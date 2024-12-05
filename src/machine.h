@@ -199,7 +199,9 @@ void machine_config_print_all(FILE *f, _Bool all);
 
 // Extend struct partdb_entry to contain machine-specific helpers
 
-struct machine_partdb_extra {
+struct machine_partdb_entry {
+	struct partdb_entry partdb_entry;
+
 	// resolve any undefined config
 	void (*config_complete)(struct machine_config *mc);
 

@@ -276,8 +276,7 @@ static _Bool machine_is_working_config(struct machine_config *mc) {
 	const struct partdb_entry *pe = partdb_find_entry(mc->architecture);
 	if (!partdb_ent_is_a(pe, "machine"))
 		return 0;
-	const struct machine_partdb_extra *mpe = pe->extra[0];
-	assert(mpe != NULL);
+	const struct machine_partdb_entry *mpe = (const struct machine_partdb_entry *)pe;
 	if (mpe->is_working_config && mpe->is_working_config(mc)) {
 		return 1;
 	}
@@ -314,9 +313,10 @@ void machine_config_complete(struct machine_config *mc) {
 	const struct partdb_entry *pe = partdb_find_entry(mc->architecture);
 	if (!partdb_ent_is_a(pe, "machine"))
 		return;
-	const struct machine_partdb_extra *mpe = pe->extra[0];
-	assert(mpe != NULL);
-	mpe->config_complete(mc);
+	const struct machine_partdb_entry *mpe = (const struct machine_partdb_entry *)pe;
+	if (mpe->config_complete) {
+		mpe->config_complete(mc);
+	}
 }
 
 static void machine_config_free(struct machine_config *mc) {

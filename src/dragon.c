@@ -385,14 +385,9 @@ static const struct partdb_entry_funcs dragon_funcs = {
 	.is_a = machine_is_a,
 };
 
-const struct machine_partdb_extra dragon_machine_extra = {
-	.config_complete = dragon_config_complete,
-	.is_working_config = dragon_is_working_config,
-	.cart_arch = "dragon-cart",
-};
+const struct machine_partdb_entry dragon32_part = { .partdb_entry = { .name = "dragon32", .description = "Dragon Data | Dragon 32", .funcs = &dragon_funcs }, .config_complete = dragon_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
-const struct partdb_entry dragon32_part = { .name = "dragon32", .description = "Dragon Data | Dragon 32", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
-const struct partdb_entry coco_part = { .name = "coco", .description = "Tandy | Colour Computer", .funcs = &dragon_funcs, .extra = { &dragon_machine_extra } };
+const struct machine_partdb_entry coco_part = { .partdb_entry = { .name = "coco", .description = "Tandy | Colour Computer", .funcs = &dragon_funcs }, .config_complete = dragon_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static void dragon_allocate_common(struct machine_dragon_common *md) {
 	struct machine *m = &md->public;

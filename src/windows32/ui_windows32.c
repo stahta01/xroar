@@ -321,7 +321,7 @@ static void windows32_update_cartridge_menu(void *sptr) {
 	// Get list of cart configs
 	struct slist *ccl = NULL;
 	if (xroar.machine) {
-		const struct machine_partdb_extra *mpe = xroar.machine->part.partdb->extra[0];
+		const struct machine_partdb_entry *mpe = (const struct machine_partdb_entry *)xroar.machine->part.partdb;
 		const char *cart_arch = mpe->cart_arch;
 		ccl = cart_config_list_is_a(cart_arch);
 	}
