@@ -36,7 +36,7 @@
 
 static struct xconfig_option const *find_option(struct xconfig_option const *options,
 		const char *opt) {
-	for (int i = 0; options[i].type != XCONFIG_END; i++) {
+	for (size_t i = 0; options[i].type != XCONFIG_END; ++i) {
 		if (options[i].type == XCONFIG_LINK) {
 			// recurse
 			struct xconfig_option const *r = find_option(options[i].dest.object, opt);
@@ -532,7 +532,7 @@ enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *option
 			// parse individual elements separately, as parsing in
 			// sdsx_split() would also have processed quoting.
 			if (!(option->flags & XCONFIG_FLAG_CLI_NOESC)) {
-				for (unsigned i = 0; i < values->len; i++) {
+				for (unsigned i = 0; i < values->len; ++i) {
 					sds new = sdsx_parse(values->elem[i]);
 					sdsfree(values->elem[i]);
 					values->elem[i] = new;
@@ -609,15 +609,16 @@ const char *xconfig_enum_value_description(struct xconfig_enum *list, int value)
 }
 
 int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl) {
-	for (int i = 0; list[i].name; i++) {
-		if (list[i].value == val)
+	for (size_t i = 0; list[i].name; ++i) {
+		if (list[i].value == val) {
 			return val;
+		}
 	}
 	return dfl;
 }
 
 void xconfig_shutdown(struct xconfig_option const *options) {
-	for (int i = 0; options[i].type != XCONFIG_END; i++) {
+	for (size_t i = 0; options[i].type != XCONFIG_END; ++i) {
 		if (options[i].type == XCONFIG_STRING) {
 			if (!(options[i].flags & XCONFIG_FLAG_CALL) && *(char **)options[i].dest.object) {
 				free(*(char **)options[i].dest.object);
