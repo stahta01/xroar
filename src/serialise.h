@@ -222,6 +222,11 @@ void ser_set_error(struct ser_handle *sh, int error);
 
 const char *ser_errstr(struct ser_handle *sh);
 
+/** \brief Get file position when error occurred.
+ */
+
+ssize_t ser_errpos(struct ser_handle *sh);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Write helpers.

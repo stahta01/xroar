@@ -35,6 +35,8 @@
 // Comment this out for debugging
 #define SER_DEBUG(...)
 
+#define _POSIX_C_SOURCE 200112L
+
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
@@ -61,6 +63,7 @@
 struct ser_handle {
 	FILE *fd;
 	int error;
+	off_t error_pos;
 
 	// After reading a (TAG,LENGTH), this will contain LENGTH.  Attempts to
 	// read more than this many bytes as data will cause an error.  Any
@@ -202,9 +205,11 @@ int ser_error(struct ser_handle *sh) {
 void ser_set_error(struct ser_handle *sh, int error) {
 	assert(sh != NULL);
 	// Don't hide earlier errors:
-	if (sh->error)
+	if (sh->error) {
 		return;
+	}
 	sh->error = error;
+	sh->error_pos = ftello(sh->fd);
 }
 
 const char *ser_errstr(struct ser_handle *sh) {
@@ -221,6 +226,12 @@ const char *ser_errstr(struct ser_handle *sh) {
 	}
 }
 
+ssize_t ser_errpos(struct ser_handle *sh) {
+	if (!sh) {
+		return -1;
+	}
+	return sh->error_pos;
+}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -214,7 +214,7 @@ static int read_v2_snapshot(const char *filename) {
 	}
 
 	if (ser_error(sh)) {
-		LOG_MOD_WARN("snapshot/v2", "read: %s\n", ser_errstr(sh));
+		LOG_MOD_WARN("snapshot/v2", "read: %s at byte %zd\n", ser_errstr(sh), ser_errpos(sh));
 	}
 
 	ser_close(sh);
