@@ -132,9 +132,6 @@ struct ser_struct {
 	uint16_t tag;
 	// Type is one of enum ser_type.
 	uint8_t type;
-	// If alength is non-zero, it implies an array of fixed length integers
-	// (usually, integers are all written as vint32/vuint32).
-	uint8_t alength;
 	// Offset within the struct of member.
 	size_t offset;
 	// Extra data - currently only used when nesting ser_struct_data
@@ -149,14 +146,13 @@ struct ser_struct {
 #define SER_ID_STRUCT_UNHANDLED(i) { .tag = (i), .type = ser_type_unhandled }
 #define SER_ID_STRUCT_SUBSTRUCT(i,s,e,d) { .tag = (i), .type = ser_type_nest, .offset = offsetof(s,e), .data.ser_struct_data = d }
 #define SER_ID_STRUCT_NEST(i,d) { .tag = (i), .type = ser_type_nest, .offset = 0, .data.ser_struct_data = d }
-#define SER_ID_STRUCT_ARRAY(i,t,n,s,e) { .tag = (i), .type = t, .alength = (n), .offset = offsetof(s,e) }
 
 // Collects a list of ser_struct member metadata with the size of the list,
 // and external handlers to deal with members of type ser_type_unhandled.
 
 struct ser_struct_data {
 	const struct ser_struct *elems;
-	const int num_elems;
+	const unsigned num_elems;
 	_Bool (* const read_elem)(void *sptr, struct ser_handle *sh, int tag);
 	_Bool (* const write_elem)(void *sptr, struct ser_handle *sh, int tag);
 };

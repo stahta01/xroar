@@ -79,13 +79,11 @@ struct ser_handle {
 
 static void s_write_uint8(struct ser_handle *sh, int v);
 static void s_write_uint16(struct ser_handle *sh, int v);
-static void s_write_uint32(struct ser_handle *sh, uint32_t v);
 static void s_write_vuint32(struct ser_handle *sh, uint32_t v);
 static void s_write_vint32(struct ser_handle *sh, int32_t v);
 static void s_write(struct ser_handle *sh, const void *ptr, size_t size);
 static int s_read_uint8(struct ser_handle *sh);
 static int s_read_uint16(struct ser_handle *sh);
-static uint32_t s_read_uint32(struct ser_handle *sh);
 static uint32_t s_read_vuint32(struct ser_handle *sh);
 static void s_read(struct ser_handle *sh, void *ptr, size_t size);
 static void *s_read_new(struct ser_handle *sh, size_t size);
@@ -252,11 +250,6 @@ static void s_write_uint16(struct ser_handle *sh, int v) {
 		ser_set_error(sh, ser_error_file_io);
 }
 
-static void s_write_uint32(struct ser_handle *sh, uint32_t v) {
-	s_write_uint16(sh, v >> 16);
-	s_write_uint16(sh, v & 0xffff);
-}
-
 static void s_write_vuint32(struct ser_handle *sh, uint32_t v) {
 	if (sh->error)
 		return;
@@ -294,11 +287,6 @@ static int s_read_uint16(struct ser_handle *sh) {
 	if (r < 0)
 		ser_set_error(sh, ser_error_file_io);
 	return r;
-}
-
-static uint32_t s_read_uint32(struct ser_handle *sh) {
-	uint32_t r = s_read_uint16(sh) << 16;
-	return r | s_read_uint16(sh);
 }
 
 static uint32_t s_read_vuint32(struct ser_handle *sh) {
@@ -626,42 +614,11 @@ void *ser_read_new(struct ser_handle *sh, size_t size) {
 
 void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *ssd, void *s) {
 	const struct ser_struct *ss = ssd->elems;
-	for (int i = 0; i < ssd->num_elems && !sh->error; i++) {
+	for (unsigned i = 0; i < ssd->num_elems && !sh->error; ++i) {
 		int tag = ss[i].tag;
 		enum ser_type type = ss[i].type;
-		SER_MOD_DEBUG(2, "ser_write_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
+		SER_MOD_DEBUG(2, "ser_write_struct(): tag=%d type=%d\n", tag, type);
 		void *ptr = (char *)s + ss[i].offset;
-
-		if (ss[i].alength > 0) {
-			// write array
-			switch (type) {
-			case ser_type_uint8:
-				ser_write_tag(sh, tag, ss[i].alength);
-				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
-					s_write_uint8(sh, ((uint8_t *)ptr)[j]);
-				}
-				break;
-			case ser_type_uint16:
-				ser_write_tag(sh, tag, ss[i].alength * 2);
-				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
-					s_write_uint16(sh, ((uint16_t *)ptr)[j]);
-				}
-				break;
-			case ser_type_uint32:
-				ser_write_tag(sh, tag, ss[i].alength * 4);
-				for (int j = 0; !sh->error && j < ss[i].alength; j++) {
-					s_write_uint32(sh, ((uint32_t *)ptr)[j]);
-				}
-				break;
-			default:
-				ser_set_error(sh, ser_error_type);
-				break;
-			}
-			if (ser_error(sh)) {
-				SER_MOD_DEBUG(2, "serialisation ERROR!\n");
-			}
-			continue;
-		}
 
 		switch (type) {
 
@@ -775,10 +732,11 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 	const struct ser_struct *ss = ssd->elems;
 	int tag;
 	while (!sh->error && (tag = ser_read_tag(sh)) > 0) {
-		int i;
-		for (i = 0; i < ssd->num_elems; i++) {
-			if (ss[i].tag == tag)
+		unsigned i;
+		for (i = 0; i < ssd->num_elems; ++i) {
+			if (ss[i].tag == tag) {
 				break;
+			}
 		}
 		if (i >= ssd->num_elems) {
 			continue;
@@ -786,28 +744,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 
 		enum ser_type type = ss[i].type;
 		void *ptr = (char *)s + ss[i].offset;
-		SER_MOD_DEBUG(2, "ser_read_struct(): tag=%d type=%d alength=%d\n", tag, type, ss[i].alength);
-
-		if (ss[i].alength > 0) {
-			// read array
-			for (int j = 0; !sh->error && j < ss[j].alength; j++) {
-				switch (type) {
-				case ser_type_uint8:
-					((uint8_t *)ptr)[j] = s_read_uint8(sh);
-					break;
-				case ser_type_uint16:
-					((uint16_t *)ptr)[j] = s_read_uint16(sh);
-					break;
-				case ser_type_uint32:
-					((uint32_t *)ptr)[j] = s_read_uint32(sh);
-					break;
-				default:
-					ser_set_error(sh, ser_error_type);
-					break;
-				}
-			}
-			continue;
-		}
+		SER_MOD_DEBUG(2, "ser_read_struct(): tag=%d type=%d\n", tag, type);
 
 		switch (type) {
 
