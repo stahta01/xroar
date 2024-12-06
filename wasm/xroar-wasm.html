@@ -297,6 +297,7 @@ be a better way to make this usable...
 			tr.appendChild(th);
 			var td = document.createElement('td');
 			var select = document.createElement('select');
+			select.setAttribute('id', 'software:'+i);
 			select.setAttribute('style', 'width: 90%');
 			select.setAttribute('onchange', 'start_selected_software(this, this.options[this.selectedIndex].value)');
 			var option = document.createElement('option');
@@ -717,6 +718,21 @@ be a better way to make this usable...
 				Module.ccall('wasm_set_machine_cart', null, [ 'string', 'string', 'string', 'string' ], [ 'dragon32', null, null, null ]);
 			} else if (arg === 'fs') {
 				wasm_set_value("fullscreen", 1, 1);
+			} else {
+				// Search software list
+				var table = document.getElementById('software');
+				search_software: for (var i = 0; i < software.length; i++) {
+					var select = document.getElementById('software:'+i);
+					const section = software[i];
+					for (var j = 0; j < section.entries.length; j++) {
+						const entry = section.entries[j];
+						const name = encodeURIComponent(entry.name);
+						if (arg === name) {
+							start_selected_software(select, i+","+j);
+							break search_software;
+						}
+					}
+				}
 			}
 		}
 
