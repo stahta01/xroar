@@ -37,8 +37,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_axis(char *, unsigned);
-static struct joystick_button *configure_button(char *, unsigned);
+static struct joystick_control *configure_axis(char *, unsigned);
+static struct joystick_control *configure_button(char *, unsigned);
 
 struct joystick_submodule hkbd_js_keyboard = {
 	.name = "keyboard",
@@ -143,7 +143,7 @@ static int hkbd_js_button_read(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+static struct joystick_control *configure_axis(char *spec, unsigned jaxis) {
 	uint8_t key0_code, key1_code;
 
 	// sensible defaults
@@ -183,10 +183,10 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 			break;
 		}
 	}
-	return (struct joystick_axis *)axis;
+	return control;
 }
 
-static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
+static struct joystick_control *configure_button(char *spec, unsigned jbutton) {
 	// sensible defaults
 	uint8_t key_code = (jbutton == 0) ? hk_scan_Alt_L : hk_scan_Super_L;
 
@@ -209,7 +209,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 			break;
 		}
 	}
-	return (struct joystick_button *)button;
+	return control;
 }
 
 static int hkbd_js_axis_read(void *sptr) {

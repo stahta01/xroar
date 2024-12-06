@@ -78,8 +78,8 @@ struct joystick_module * const *ui_joystick_module_list = NULL;
 
 struct joystick {
 	const struct joystick_config *config;
-	struct joystick_axis *axes[JOYSTICK_NUM_AXES];
-	struct joystick_button *buttons[JOYSTICK_NUM_BUTTONS];
+	struct joystick_control *axes[JOYSTICK_NUM_AXES];
+	struct joystick_control *buttons[JOYSTICK_NUM_BUTTONS];
 };
 
 // Messenger client ID
@@ -819,12 +819,9 @@ static struct joystick *joystick_new_from_config(const struct joystick_config *j
 			free(j);
 			return NULL;
 		}
-		struct joystick_axis *axis = submod->configure_axis(spec, i);
+		struct joystick_control *axis = submod->configure_axis(spec, i);
 		j->axes[i] = axis;
 		if (axis) {
-			if (!DELEGATE_DEFINED(axis->as_control.read)) {
-				axis->submod = submod;
-			}
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -840,12 +837,9 @@ static struct joystick *joystick_new_from_config(const struct joystick_config *j
 			free(j);
 			return NULL;
 		}
-		struct joystick_button *button = submod->configure_button(spec, i);
+		struct joystick_control *button = submod->configure_button(spec, i);
 		j->buttons[i] = button;
 		if (button) {
-			if (!DELEGATE_DEFINED(button->as_control.read)) {
-				button->submod = submod;
-			}
 			valid_joystick = 1;
 		}
 		free(spec_copy);
@@ -863,37 +857,15 @@ static void joystick_free(struct joystick *j) {
 		return;
 	}
 	for (unsigned a = 0; a < JOYSTICK_NUM_AXES; ++a) {
-		struct joystick_axis *axis = j->axes[a];
-		struct joystick_control *control = &axis->as_control;
+		struct joystick_control *axis = j->axes[a];
 		if (axis) {
-			if (DELEGATE_DEFINED(control->read)) {
-				DELEGATE_SAFE_CALL(control->free);
-			} else {
-				struct joystick_submodule *submod = axis->submod;
-				if (submod->unmap_axis) {
-					submod->unmap_axis(axis);
-				} else {
-					free(j->axes[a]);
-					j->axes[a] = NULL;
-				}
-			}
+			DELEGATE_SAFE_CALL(axis->free);
 		}
 	}
 	for (unsigned b = 0; b < JOYSTICK_NUM_BUTTONS; ++b) {
-		struct joystick_button *button = j->buttons[b];
-		struct joystick_control *control = &button->as_control;
+		struct joystick_control *button = j->buttons[b];
 		if (button) {
-			if (DELEGATE_DEFINED(control->read)) {
-				DELEGATE_SAFE_CALL(control->free);
-			} else {
-				struct joystick_submodule *submod = button->submod;
-				if (submod->unmap_button) {
-					submod->unmap_button(button);
-				} else {
-					free(j->buttons[b]);
-					j->buttons[b] = NULL;
-				}
-			}
+			DELEGATE_SAFE_CALL(button->free);
 		}
 	}
 	free(j);
@@ -954,13 +926,8 @@ static struct joystick_submodule *select_submod(struct joystick_submodule *submo
 int joystick_read_axis(int port, int axis_index) {
 	struct joystick *j = joystick_port[port];
 	if (j && j->axes[axis_index]) {
-		struct joystick_axis *axis = j->axes[axis_index];
-		struct joystick_control *control = &axis->as_control;
-		if (DELEGATE_DEFINED(control->read)) {
-			return DELEGATE_CALL(control->read);
-		} else {
-			return axis->read(axis->data);
-		}
+		struct joystick_control *axis = j->axes[axis_index];
+		return DELEGATE_CALL(axis->read);
 	}
 	return 32767;
 }
@@ -968,13 +935,8 @@ int joystick_read_axis(int port, int axis_index) {
 static inline int read_button(int port, int button_index) {
 	struct joystick *j = joystick_port[port];
 	if (j && j->buttons[button_index]) {
-		struct joystick_button *button = j->buttons[button_index];
-		struct joystick_control *control = &button->as_control;
-		if (DELEGATE_DEFINED(control->read)) {
-			return DELEGATE_CALL(control->read);
-		} else {
-			return button->read(button->data);
-		}
+		struct joystick_control *button = j->buttons[button_index];
+		return DELEGATE_CALL(button->read);
 	}
 	return 0;
 }
@@ -1018,8 +980,8 @@ struct joystick_mouse_button {
 static int joystick_read_mouse_axis(void *);
 static int joystick_read_mouse_button(void *);
 
-struct joystick_axis *joystick_configure_mouse_axis(struct ui_interface *ui,
-						    char *spec, unsigned jaxis) {
+struct joystick_control *joystick_configure_mouse_axis(struct ui_interface *ui,
+						       char *spec, unsigned jaxis) {
 	if (jaxis >= 2)
 		return NULL;
 
@@ -1063,11 +1025,11 @@ struct joystick_axis *joystick_configure_mouse_axis(struct ui_interface *ui,
 	axis->joystick_control.read = DELEGATE_AS0(int, joystick_read_mouse_axis, axis);
 	axis->joystick_control.free = DELEGATE_AS0(void, free, axis);
 
-	return (struct joystick_axis *)&axis->joystick_control;
+	return &axis->joystick_control;
 }
 
-struct joystick_button *joystick_configure_mouse_button(struct ui_interface *ui,
-							char *spec, unsigned jbutton) {
+struct joystick_control *joystick_configure_mouse_button(struct ui_interface *ui,
+							 char *spec, unsigned jbutton) {
 	if (spec && *spec)
 		jbutton = strtol(spec, NULL, 0) - 1;
 
@@ -1083,7 +1045,7 @@ struct joystick_button *joystick_configure_mouse_button(struct ui_interface *ui,
 	button->joystick_control.read = DELEGATE_AS0(int, joystick_read_mouse_button, button);
 	button->joystick_control.free = DELEGATE_AS0(void, free, button);
 
-	return (struct joystick_button *)&button->joystick_control;
+	return &button->joystick_control;
 }
 
 static int joystick_read_mouse_axis(void *sptr) {

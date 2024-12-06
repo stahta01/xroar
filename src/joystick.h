@@ -80,41 +80,16 @@ extern struct joystick_module * const *ui_joystick_module_list;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Interfaces will define one of these for reading each control, plus
-// associated context data:
-typedef unsigned (*js_read_axis_func)(void *);
-typedef _Bool (*js_read_button_func)(void *);
-
 struct joystick_control {
 	DELEGATE_T0(int) read;
 	DELEGATE_T0(void) free;
 };
 
-struct joystick_axis {
-	struct joystick_control as_control;
-
-	// Transition period!  Old approach:
-	js_read_axis_func read;
-	void *data;
-	struct joystick_submodule *submod;
-};
-
-struct joystick_button {
-	struct joystick_control as_control;
-
-	// Transition period!  Old approach:
-	js_read_button_func read;
-	void *data;
-	struct joystick_submodule *submod;
-};
-
 struct joystick_submodule {
 	const char *name;
 	void (* const init)(void);
-	struct joystick_axis *(* const configure_axis)(char *spec, unsigned jaxis);
-	struct joystick_button *(* const configure_button)(char *spec, unsigned jbutton);
-	void (* const unmap_axis)(struct joystick_axis *);
-	void (* const unmap_button)(struct joystick_button *);
+	struct joystick_control *(* const configure_axis)(char *spec, unsigned jaxis);
+	struct joystick_control *(* const configure_button)(char *spec, unsigned jbutton);
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -254,9 +229,9 @@ int joystick_read_buttons(void);
 
 // Mouse based virtual joystick
 
-struct joystick_axis *joystick_configure_mouse_axis(struct ui_interface *,
-						    char *spec, unsigned jaxis);
-struct joystick_button *joystick_configure_mouse_button(struct ui_interface *,
-							char *spec, unsigned jbutton);
+struct joystick_control *joystick_configure_mouse_axis(struct ui_interface *,
+						       char *spec, unsigned jaxis);
+struct joystick_control *joystick_configure_mouse_button(struct ui_interface *,
+							 char *spec, unsigned jbutton);
 
 #endif

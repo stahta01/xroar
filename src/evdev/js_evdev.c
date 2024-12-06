@@ -55,8 +55,8 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void evdev_js_physical_init(void);
-static struct joystick_axis *configure_axis(char *, unsigned);
-static struct joystick_button *configure_button(char *, unsigned);
+static struct joystick_control *configure_axis(char *, unsigned);
+static struct joystick_control *configure_button(char *, unsigned);
 
 static struct joystick_submodule evdev_js_submod_physical = {
 	.name = "physical",
@@ -1281,7 +1281,7 @@ static struct evdev_js_control *configure_control(char *spec, unsigned control, 
 	return c;
 }
 
-static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+static struct joystick_control *configure_axis(char *spec, unsigned jaxis) {
 	struct evdev_js_control *c = configure_control(spec, jaxis, 0);
 	if (!c) {
 		return NULL;
@@ -1296,10 +1296,10 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	axis->read = DELEGATE_AS0(int, evdev_js_axis_read, c);
 	axis->free = DELEGATE_AS0(void, evdev_js_control_free, c);
 
-	return (struct joystick_axis *)axis;
+	return axis;
 }
 
-static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
+static struct joystick_control *configure_button(char *spec, unsigned jbutton) {
 	struct evdev_js_control *c = configure_control(spec, jbutton, 1);
 	if (!c) {
 		return NULL;
@@ -1313,7 +1313,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	button->read = DELEGATE_AS0(int, evdev_js_button_read, c);
 	button->free = DELEGATE_AS0(void, evdev_js_control_free, c);
 
-	return (struct joystick_button *)button;
+	return button;
 }
 
 static int evdev_js_axis_read(void *sptr) {

@@ -47,8 +47,8 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void joydev_js_physical_init(void);
-static struct joystick_axis *configure_axis(char *, unsigned);
-static struct joystick_button *configure_button(char *, unsigned);
+static struct joystick_control *configure_axis(char *, unsigned);
+static struct joystick_control *configure_button(char *, unsigned);
 
 static struct joystick_submodule joydev_js_submod_physical = {
 	.name = "physical",
@@ -352,7 +352,7 @@ static struct joydev_js_control *configure_control(char *spec, unsigned control)
 	return c;
 }
 
-static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
+static struct joystick_control *configure_axis(char *spec, unsigned jaxis) {
 	struct joydev_js_control *c = configure_control(spec, jaxis);
 	if (!c)
 		return NULL;
@@ -366,10 +366,10 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	axis->read = DELEGATE_AS0(int, joydev_js_axis_read, c);
 	axis->free = DELEGATE_AS0(void, joydev_js_control_free, c);
 
-	return (struct joystick_axis *)axis;
+	return axis;
 }
 
-static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
+static struct joystick_control *configure_button(char *spec, unsigned jbutton) {
 	struct joydev_js_control *c = configure_control(spec, jbutton);
 	if (!c)
 		return NULL;
@@ -382,7 +382,7 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	button->read = DELEGATE_AS0(int, joydev_js_button_read, c);
 	button->free = DELEGATE_AS0(void, joydev_js_control_free, c);
 
-	return (struct joystick_button *)button;
+	return button;
 }
 
 static int joydev_js_axis_read(void *sptr) {

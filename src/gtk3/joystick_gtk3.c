@@ -29,8 +29,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_mouse_axis(char *, unsigned);
-static struct joystick_button *configure_mouse_button(char *, unsigned);
+static struct joystick_control *configure_mouse_axis(char *, unsigned);
+static struct joystick_control *configure_mouse_button(char *, unsigned);
 
 static struct joystick_submodule gtk3_js_mouse = {
 	.name = "mouse",
@@ -60,10 +60,10 @@ struct joystick_module *gtk3_js_modlist[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_mouse_axis(char *spec, unsigned jaxis) {
+static struct joystick_control *configure_mouse_axis(char *spec, unsigned jaxis) {
 	return joystick_configure_mouse_axis(&global_uigtk3->public, spec, jaxis);
 }
 
-static struct joystick_button *configure_mouse_button(char *spec, unsigned jbutton) {
+static struct joystick_control *configure_mouse_button(char *spec, unsigned jbutton) {
 	return joystick_configure_mouse_button(&global_uigtk3->public, spec, jbutton);
 }

@@ -41,8 +41,8 @@ extern inline void sdl_os_handle_syswmevent(struct ui_sdl2_interface *, SDL_SysW
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_mouse_axis(char *, unsigned);
-static struct joystick_button *configure_mouse_button(char *, unsigned);
+static struct joystick_control *configure_mouse_axis(char *, unsigned);
+static struct joystick_control *configure_mouse_button(char *, unsigned);
 
 static struct joystick_submodule sdl_js_mouse = {
 	.name = "mouse",
@@ -176,10 +176,10 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct joystick_axis *configure_mouse_axis(char *spec, unsigned jaxis) {
+static struct joystick_control *configure_mouse_axis(char *spec, unsigned jaxis) {
 	return joystick_configure_mouse_axis(&global_uisdl2->ui_interface, spec, jaxis);
 }
 
-static struct joystick_button *configure_mouse_button(char *spec, unsigned jbutton) {
+static struct joystick_control *configure_mouse_button(char *spec, unsigned jbutton) {
 	return joystick_configure_mouse_button(&global_uisdl2->ui_interface, spec, jbutton);
 }
