@@ -39,34 +39,36 @@
 
 static struct joystick_axis *configure_axis(char *, unsigned);
 static struct joystick_button *configure_button(char *, unsigned);
-static void unmap_axis(struct joystick_axis *axis);
-static void unmap_button(struct joystick_button *button);
 
 struct joystick_submodule hkbd_js_keyboard = {
 	.name = "keyboard",
 	.configure_axis = configure_axis,
 	.configure_button = configure_button,
-	.unmap_axis = unmap_axis,
-	.unmap_button = unmap_button,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct axis {
-	uint8_t key0_code, key1_code;
-	unsigned value;
-};
-
-struct button {
-	uint8_t key_code;
-	_Bool value;
+struct hkbd_js_control {
+	struct joystick_control control;
+	union {
+		struct {
+			uint8_t key0_code, key1_code;
+			unsigned value;
+		} axis;
+		struct {
+			uint8_t key_code;
+			_Bool value;
+		} button;
+	};
 };
 
 #define MAX_AXES (4)
 #define MAX_BUTTONS (4)
 
-static struct axis *enabled_axis[MAX_AXES];
-static struct button *enabled_button[MAX_BUTTONS];
+static struct hkbd_js_control *enabled_axis[MAX_AXES];
+static struct hkbd_js_control *enabled_button[MAX_BUTTONS];
+static void free_axis(void *);
+static void free_button(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -86,20 +88,20 @@ _Bool hkbd_js_keypress(uint8_t code) {
 	_Bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
-			if (code == enabled_axis[i]->key0_code) {
-				enabled_axis[i]->value = 0;
+			if (code == enabled_axis[i]->axis.key0_code) {
+				enabled_axis[i]->axis.value = 0;
 				handled = 1;
 			}
-			if (code == enabled_axis[i]->key1_code) {
-				enabled_axis[i]->value = 65535;
+			if (code == enabled_axis[i]->axis.key1_code) {
+				enabled_axis[i]->axis.value = 65535;
 				handled = 1;
 			}
 		}
 	}
 	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
 		if (enabled_button[i]) {
-			if (code == enabled_button[i]->key_code) {
-				enabled_button[i]->value = 1;
+			if (code == enabled_button[i]->button.key_code) {
+				enabled_button[i]->button.value = 1;
 				handled = 1;
 			}
 		}
@@ -111,22 +113,22 @@ _Bool hkbd_js_keyrelease(uint8_t code) {
 	_Bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
-			if (code == enabled_axis[i]->key0_code) {
-				if (enabled_axis[i]->value < 32768)
-					enabled_axis[i]->value = 32256;
+			if (code == enabled_axis[i]->axis.key0_code) {
+				if (enabled_axis[i]->axis.value < 32768)
+					enabled_axis[i]->axis.value = 32256;
 				handled = 1;
 			}
-			if (code == enabled_axis[i]->key1_code) {
-				if (enabled_axis[i]->value >= 32768)
-					enabled_axis[i]->value = 33280;
+			if (code == enabled_axis[i]->axis.key1_code) {
+				if (enabled_axis[i]->axis.value >= 32768)
+					enabled_axis[i]->axis.value = 33280;
 				handled = 1;
 			}
 		}
 	}
 	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
 		if (enabled_button[i]) {
-			if (code == enabled_button[i]->key_code) {
-				enabled_button[i]->value = 0;
+			if (code == enabled_button[i]->button.key_code) {
+				enabled_button[i]->button.value = 0;
 				handled = 1;
 			}
 		}
@@ -136,13 +138,8 @@ _Bool hkbd_js_keyrelease(uint8_t code) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned read_axis(struct axis *a) {
-	return a->value;
-}
-
-static _Bool read_button(struct button *b) {
-	return b->value;
-}
+static int hkbd_js_axis_read(void *);
+static int hkbd_js_button_read(void *);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -169,22 +166,24 @@ static struct joystick_axis *configure_axis(char *spec, unsigned jaxis) {
 	if (a1 && *a1)
 		key1_code = hk_scancode_from_name(a1);
 
-	struct axis *axis_data = xmalloc(sizeof(*axis_data));
-	axis_data->key0_code = key0_code;
-	axis_data->key1_code = key1_code;
-	axis_data->value = 32256;
+	struct hkbd_js_control *axis = xmalloc(sizeof(*axis));
+	*axis = (struct hkbd_js_control){0};
+	struct joystick_control *control = &axis->control;
 
-	struct joystick_axis *axis = xmalloc(sizeof(*axis));
-	*axis = (struct joystick_axis){0};
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = axis_data;
+	control->read = DELEGATE_AS0(int, hkbd_js_axis_read, axis);
+	control->free = DELEGATE_AS0(void, free_axis, axis);
+
+	axis->axis.key0_code = key0_code;
+	axis->axis.key1_code = key1_code;
+	axis->axis.value = 32256;
+
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (!enabled_axis[i]) {
-			enabled_axis[i] = axis_data;
+			enabled_axis[i] = axis;
 			break;
 		}
 	}
-	return axis;
+	return (struct joystick_axis *)axis;
 }
 
 static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
@@ -194,43 +193,55 @@ static struct joystick_button *configure_button(char *spec, unsigned jbutton) {
 	if (spec && *spec)
 		key_code = hk_scancode_from_name(spec);
 
-	struct button *button_data = xmalloc(sizeof(*button_data));
-	button_data->key_code = key_code;
-	button_data->value = 0;
+	struct hkbd_js_control *button = xmalloc(sizeof(*button));
+	*button = (struct hkbd_js_control){0};
+	struct joystick_control *control = &button->control;
 
-	struct joystick_button *button = xmalloc(sizeof(*button));
-	*button = (struct joystick_button){0};
-	button->read = (js_read_button_func)read_button;
-	button->data = button_data;
+	control->read = DELEGATE_AS0(int, hkbd_js_button_read, button);
+	control->free = DELEGATE_AS0(void, free_button, button);
+
+	button->button.key_code = key_code;
+	button->button.value = 0;
+
 	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
 		if (!enabled_button[i]) {
-			enabled_button[i] = button_data;
+			enabled_button[i] = button;
 			break;
 		}
 	}
-	return button;
+	return (struct joystick_button *)button;
 }
 
-static void unmap_axis(struct joystick_axis *axis) {
+static int hkbd_js_axis_read(void *sptr) {
+	struct hkbd_js_control *a = sptr;
+	return a->axis.value;
+}
+
+static int hkbd_js_button_read(void *sptr) {
+	struct hkbd_js_control *b = sptr;
+	return b->button.value;
+}
+
+static void free_axis(void *sptr) {
+	struct hkbd_js_control *axis = sptr;
 	if (!axis)
 		return;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
-		if (axis->data == enabled_axis[i]) {
+		if (axis == enabled_axis[i]) {
 			enabled_axis[i] = NULL;
 		}
 	}
-	free(axis->data);
 	free(axis);
 }
 
-static void unmap_button(struct joystick_button *button) {
+static void free_button(void *sptr) {
+	struct hkbd_js_control *button = sptr;
 	if (!button)
 		return;
 	for (unsigned i = 0; i < MAX_BUTTONS; i++) {
-		if (button->data == enabled_button[i]) {
+		if (button == enabled_button[i]) {
 			enabled_button[i] = NULL;
 		}
 	}
-	free(button->data);
 	free(button);
 }
