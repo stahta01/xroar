@@ -46,16 +46,12 @@
 static void sdl_js_physical_init(void);
 static struct joystick_axis *configure_physical_axis(char *, unsigned);
 static struct joystick_button *configure_physical_button(char *, unsigned);
-static void unmap_axis(struct joystick_axis *axis);
-static void unmap_button(struct joystick_button *button);
 
 struct joystick_submodule sdl_js_physical = {
 	.name = "physical",
 	.init = sdl_js_physical_init,
 	.configure_axis = configure_physical_axis,
 	.configure_button = configure_physical_button,
-	.unmap_axis = unmap_axis,
-	.unmap_button = unmap_button,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -72,12 +68,12 @@ struct joystick_module sdl_js_mod_exported = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Wrap SDL_Joystick up in struct device.  close_device() will only close the
+// Wrap SDL_Joystick up in struct sdl_js_device.  close_device() will only close the
 // underlying joystick once open_count reaches 0.  Also preserves a link to the
 // created joystick config so that it can be deactivated on removal by setting
 // its description to NULL.
 
-struct device {
+struct sdl_js_device {
 	_Bool valid;
 
 	_Bool is_gamecontroller;
@@ -100,10 +96,12 @@ struct device {
 
 static int num_devices = 0;
 static _Bool events_enabled = 0;
-static struct device *devices = NULL;
+static struct sdl_js_device *devices = NULL;
 
-struct control {
-	struct device *device;
+struct sdl_js_control {
+	struct joystick_control joystick_control;
+
+	struct sdl_js_device *device;
 	union {
 		int axis;
 		unsigned button_mask;
@@ -144,12 +142,12 @@ void sdl_js_device_added(int index) {
 		// Reallocate the devices array and initialise new additions
 		devices = xrealloc(devices, new_num_devices * sizeof(*devices));
 		for (int i = num_devices ; i < new_num_devices; ++i) {
-			devices[num_devices] = (struct device){0};
+			devices[num_devices] = (struct sdl_js_device){0};
 		}
 		num_devices = new_num_devices;
 	}
 
-	struct device *d = &devices[index];
+	struct sdl_js_device *d = &devices[index];
 	if (d->valid) {
 		return;
 	}
@@ -327,7 +325,7 @@ void sdl_js_device_removed(int index) {
 	if (index < 0 || index >= num_devices) {
 		return;
 	}
-	struct device *d = &devices[index];
+	struct sdl_js_device *d = &devices[index];
 	if (!d->valid) {
 		return;
 	}
@@ -379,7 +377,7 @@ static void sdl_js_physical_init(void) {
 	// Preallocate the device pointer array
 	devices = xrealloc(devices, num_devices * sizeof(*devices));
 	for (int i = 0; i < num_devices; ++i) {
-		devices[i] = (struct device){0};
+		devices[i] = (struct sdl_js_device){0};
 	}
 
 	// Add all current devices
@@ -396,12 +394,12 @@ void sdl_js_enable_events(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct device *open_device(int joystick_index) {
+static struct sdl_js_device *open_device(int joystick_index) {
 	if (joystick_index >= num_devices) {
 		return NULL;
 	}
 
-	struct device *d = &devices[joystick_index];
+	struct sdl_js_device *d = &devices[joystick_index];
 
 	// If the device is already open, just up its count and return it
 	if (d->open_count) {
@@ -433,7 +431,7 @@ static struct device *open_device(int joystick_index) {
 	return d;
 }
 
-static void close_device(struct device *d) {
+static void close_device(struct sdl_js_device *d) {
 	if (d->open_count == 0)
 		return;
 	d->open_count--;
@@ -448,7 +446,7 @@ static void close_device(struct device *d) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void debug_controls(struct device *d) {
+static void debug_controls(struct sdl_js_device *d) {
 	if (!d->debug_axes) {
 		d->debug_axes = xmalloc(d->num_axes * sizeof(*d->debug_axes));
 		for (int i = 0; i < d->num_axes; ++i) {
@@ -497,7 +495,105 @@ static void debug_controls(struct device *d) {
 	}
 }
 
-static unsigned read_axis(struct control *c) {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static int sdl_js_axis_read(void *);
+static int sdl_js_button_read(void *);
+static void sdl_js_control_free(void *);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Axis & button specs are basically the same, just track a different control
+// index.  Buttons can be specified as a bitmask of available buttons with '%'
+// - not very user-friendly; I'm only using that for auto-configured joystick
+// profiles at the moment.
+static struct sdl_js_control *configure_control(char *spec, unsigned control, _Bool buttons) {
+	unsigned joystick = 0;
+	_Bool inverted = 0;
+	_Bool is_mask = 0;
+	char *tmp = NULL;
+	if (spec) {
+		tmp = strsep(&spec, ",");
+	}
+	if (tmp && *tmp) {
+		control = strtol(tmp, NULL, 0);
+	}
+	if (spec && *spec) {
+		joystick = control;
+		while (*spec == '-' || *spec == '%') {
+			if (*spec == '-') {
+				inverted = 1;
+				++spec;
+			}
+			if (*spec == '%') {
+				is_mask = 1;
+				++spec;
+			}
+		}
+		if (*spec) {
+			control = strtol(spec, NULL, 0);
+		}
+	}
+
+	struct sdl_js_device *d = open_device(joystick);
+	if (!d) {
+		return NULL;
+	}
+
+	struct sdl_js_control *c = xmalloc(sizeof(*c));
+	*c = (struct sdl_js_control){0};
+	c->device = d;
+	c->inverted = inverted;
+	if (buttons) {
+		if (is_mask) {
+			c->control.button_mask = control;
+		} else {
+			c->control.button_mask = (1 << control);
+		}
+	} else {
+		c->control.axis = control;
+	}
+	return c;
+}
+
+static struct joystick_axis *configure_physical_axis(char *spec, unsigned jaxis) {
+	struct sdl_js_control *c = configure_control(spec, jaxis, 0);
+	if (!c) {
+		return NULL;
+	}
+	if (c->control.axis >= c->device->num_axes) {
+		close_device(c->device);
+		free(c);
+		return NULL;
+	}
+
+	struct joystick_control *axis = &c->joystick_control;
+	axis->read = DELEGATE_AS0(int, sdl_js_axis_read, axis);
+	axis->free = DELEGATE_AS0(void, sdl_js_control_free, axis);
+
+	return (struct joystick_axis *)axis;
+}
+
+static struct joystick_button *configure_physical_button(char *spec, unsigned jbutton) {
+	struct sdl_js_control *c = configure_control(spec, jbutton, 1);
+	if (!c) {
+		return NULL;
+	}
+	if (c->control.button_mask == 0) {
+		close_device(c->device);
+		free(c);
+		return NULL;
+	}
+
+	struct joystick_control *button = &c->joystick_control;
+	button->read = DELEGATE_AS0(int, sdl_js_button_read, button);
+	button->free = DELEGATE_AS0(void, sdl_js_control_free, button);
+
+	return (struct joystick_button *)button;
+}
+
+static int sdl_js_axis_read(void *sptr) {
+	struct sdl_js_control *c = sptr;
 	if (!c->device->valid) {
 		return 32768;
 	}
@@ -523,7 +619,8 @@ static unsigned read_axis(struct control *c) {
 	return ret;
 }
 
-static _Bool read_button(struct control *c) {
+static int sdl_js_button_read(void *sptr) {
+	struct sdl_js_control *c = sptr;
 	if (!c->device->valid) {
 		return 0;
 	}
@@ -553,105 +650,8 @@ static _Bool read_button(struct control *c) {
 	return v & c->control.button_mask;
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// Axis & button specs are basically the same, just track a different control
-// index.  Buttons can be specified as a bitmask of available buttons with '%'
-// - not very user-friendly; I'm only using that for auto-configured joystick
-// profiles at the moment.
-static struct control *configure_control(char *spec, unsigned control, _Bool buttons) {
-	unsigned joystick = 0;
-	_Bool inverted = 0;
-	_Bool is_mask = 0;
-	char *tmp = NULL;
-	if (spec)
-		tmp = strsep(&spec, ",");
-	if (tmp && *tmp) {
-		control = strtol(tmp, NULL, 0);
-	}
-	if (spec && *spec) {
-		joystick = control;
-		while (*spec == '-' || *spec == '%') {
-			if (*spec == '-') {
-				inverted = 1;
-				++spec;
-			}
-			if (*spec == '%') {
-				is_mask = 1;
-				++spec;
-			}
-		}
-		if (*spec) {
-			control = strtol(spec, NULL, 0);
-		}
-	}
-	struct device *d = open_device(joystick);
-	if (!d) {
-		return NULL;
-	}
-	struct control *c = xmalloc(sizeof(*c));
-	c->device = d;
-	c->inverted = inverted;
-	if (buttons) {
-		if (is_mask) {
-			c->control.button_mask = control;
-		} else {
-			c->control.button_mask = (1 << control);
-		}
-	} else {
-		c->control.axis = control;
-	}
-	return c;
-}
-
-static struct joystick_axis *configure_physical_axis(char *spec, unsigned jaxis) {
-	struct control *c = configure_control(spec, jaxis, 0);
-	if (!c) {
-		return NULL;
-	}
-	if (c->control.axis >= c->device->num_axes) {
-		close_device(c->device);
-		free(c);
-		return NULL;
-	}
-	struct joystick_axis *axis = xmalloc(sizeof(*axis));
-	*axis = (struct joystick_axis){0};
-	axis->read = (js_read_axis_func)read_axis;
-	axis->data = c;
-	return axis;
-}
-
-static struct joystick_button *configure_physical_button(char *spec, unsigned jbutton) {
-	struct control *c = configure_control(spec, jbutton, 1);
-	if (!c) {
-		return NULL;
-	}
-	if (c->control.button_mask == 0) {
-		close_device(c->device);
-		free(c);
-		return NULL;
-	}
-	struct joystick_button *button = xmalloc(sizeof(*button));
-	*button = (struct joystick_button){0};
-	button->read = (js_read_button_func)read_button;
-	button->data = c;
-	return button;
-}
-
-static void unmap_axis(struct joystick_axis *axis) {
-	if (!axis)
-		return;
-	struct control *c = axis->data;
+static void sdl_js_control_free(void *sptr) {
+	struct sdl_js_control *c = sptr;
 	close_device(c->device);
 	free(c);
-	free(axis);
-}
-
-static void unmap_button(struct joystick_button *button) {
-	if (!button)
-		return;
-	struct control *c = button->data;
-	close_device(c->device);
-	free(c);
-	free(button);
 }
