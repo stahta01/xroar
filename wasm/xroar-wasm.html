@@ -507,6 +507,14 @@ be a better way to make this usable...
 		Module.ccall('wasm_resize', null, [ 'number', 'number' ], [ Module.canvas.width, Module.canvas.height ]);
 	}
 
+	// Update virtual joystick values
+	function wasm_js_set_axis(axis, value) {
+		Module.ccall('wasm_js_set_axis', null, [ 'number', 'number' ], [ axis, value ]);
+	}
+	function wasm_js_set_button(button, value) {
+		Module.ccall('wasm_js_set_button', null, [ 'number', 'number' ], [ button, value ]);
+	}
+
 	// Call write_snapshot(), then offer the resultant file for download
 	function download_snapshot() {
 		Module.ccall('write_snapshot', null, [ 'string' ], [ 'xroar.sna' ]);

@@ -195,6 +195,9 @@ struct private_cfg {
 
 	// Joysticks
 	struct {
+#ifdef HAVE_WASM
+		_Bool wasm_virtual;
+#endif
 		char *db_file;
 		char *description;
 		char *axis[JOYSTICK_NUM_AXES];
@@ -1041,6 +1044,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		sdsfree(filename);
 	}
 	joystick_init();
+#ifdef HAVE_WASM
+	if (private_cfg.joy.wasm_virtual) {
+		wasm_js_init();
+	}
+#endif
 
 #ifdef LOGGING
 #ifndef HAVE_WASM
@@ -2655,6 +2663,9 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("kbd-bind", &set_kbd_bind) },
 
 	/* Joysticks: */
+#ifdef HAVE_WASM
+	{ XC_SET_BOOL("joy-wasm-virtual", &private_cfg.joy.wasm_virtual) },
+#endif
 	{ XC_SET_STRING_NE("joy-db-file", &private_cfg.joy.db_file) },
 	{ XC_CALL_STRING("joy", &set_joystick) },
 	{ XC_SET_STRING("joy-desc", &private_cfg.joy.description) },

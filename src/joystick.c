@@ -59,6 +59,7 @@
 extern struct joystick_module evdev_js_mod;
 extern struct joystick_module joydev_js_mod;
 extern struct joystick_module sdl_js_mod_exported;
+extern struct joystick_module wasm_js_mod;
 static struct joystick_module * const joystick_module_list[] = {
 #ifdef HAVE_EVDEV
 	&evdev_js_mod,
@@ -68,6 +69,9 @@ static struct joystick_module * const joystick_module_list[] = {
 #endif
 #ifdef HAVE_SDL2
 	&sdl_js_mod_exported,
+#endif
+#ifdef HAVE_WASM
+	&wasm_js_mod,
 #endif
 	NULL
 };

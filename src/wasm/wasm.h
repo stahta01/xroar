@@ -42,6 +42,10 @@ struct ui_wasm_interface {
 
 void wasm_init(int argc, char **argv);
 
+// Create virtual joystick.
+
+void wasm_js_init(void);
+
 // Fetch a file.  Locks the file to prevent simultaneous fetch attempts.  Won't
 // re-fetch the same file (whether or not it succeeded).
 

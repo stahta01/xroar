@@ -232,7 +232,8 @@ if WASM
 xroar_CFLAGS += $(WASM_CFLAGS)
 xroar_LDADD += $(WASM_LIBS)
 xroar_SOURCES += \
-	wasm/wasm.c wasm/wasm.h
+	wasm/wasm.c wasm/wasm.h \
+	wasm/js_wasm.c
 EXTRA_xroar_DEPENDENCIES = \
 	wasm/exported_functions
 endif
