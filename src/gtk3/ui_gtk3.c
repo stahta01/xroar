@@ -245,7 +245,7 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "TapeControlAction", .label = "Cassette _tapes",
 	  .accelerator = "<control>T",
 	  .callback = G_CALLBACK(toggle_tc_window) },
-	{ .name = "DriveControlAction", .label = "Floppy _disks",
+	{ .name = "DriveControlAction", .label = "Floppy/hard _disks",
 	  .accelerator = "<control>D",
 	  .callback = G_CALLBACK(toggle_dc_window) },
 	{ .name = "PrinterControlAction", .label = "_Printer control",
