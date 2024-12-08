@@ -49,6 +49,7 @@ struct mooh {
 	uint8_t rom_conf;
 	struct becker *becker;
 	uint8_t crt9128_reg_addr;
+	int msgr_client_id;  // messenger client id
 };
 
 static const struct ser_struct ser_struct_mooh[] = {
@@ -75,6 +76,8 @@ static const struct ser_struct_data mooh_ser_struct_data = {
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void mooh_ui_set_hd_filename(void *, int tag, void *smsg);
 
 static void mooh_reset(struct cart *c, _Bool hard);
 static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -132,10 +135,6 @@ static void mooh_initialise(struct part *p, void *options) {
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
-
-	// Attach an SD card (SPI mode) to 65SPI/B
-	struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", xroar.cfg.file.hd[0]);
-	spi65_add_device(spi65, sdcard, 0);
 }
 
 static _Bool mooh_finish(struct part *p) {
@@ -146,13 +145,17 @@ static _Bool mooh_finish(struct part *p) {
 	n->spi65 = (struct spi65 *)part_component_by_id_is_a(p, "SPI65", "65SPI-B");
 
 	// Check all required parts are attached
-	if (n->spi65 == NULL) {
+	if (!n->spi65) {
 		return 0;
 	}
 
 	if (!cart_rom_finish(p)) {
 		return 0;
 	}
+
+	// Join the ui messenger groups we're interested in
+	n->msgr_client_id = messenger_client_register();
+	ui_messenger_join_group(n->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(mooh_ui_set_hd_filename, n));
 
 	if (c->config->becker_port) {
 		n->becker = becker_open();
@@ -164,6 +167,7 @@ static _Bool mooh_finish(struct part *p) {
 static void mooh_free(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
 	becker_close(n->becker);
+	messenger_client_unregister(n->msgr_client_id);
 	cart_rom_free(p);
 }
 
@@ -198,6 +202,28 @@ static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void mooh_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
+        struct mooh *n = sptr;
+        struct ui_state_message *uimsg = smsg;
+        assert(tag == ui_tag_hd_filename);
+
+	int drive = uimsg->value;
+
+	if (drive != 0) {
+		return;
+	}
+
+	spi65_remove_device(n->spi65, 0);
+
+	if (uimsg->data) {
+		// XXX can i make the options passed to part_create const?
+		char *filename = xstrdup((const char *)uimsg->data);
+		struct spi65_device *sdcard = (struct spi65_device *)part_create("SPI-SDCARD", filename);
+		spi65_add_device(n->spi65, sdcard, 0);
+		free(filename);
+	}
+}
 
 static void mooh_reset(struct cart *c, _Bool hard) {
 	struct mooh *n = (struct mooh *)c;
