@@ -96,6 +96,7 @@ struct ide_controller {
 extern const uint8_t ide_magic[8];
 
 void ide_reset_begin(struct ide_controller *c);
+void ide_reset_drive(struct ide_drive *d);
 uint8_t ide_read8(struct ide_controller *c, uint8_t r);
 void ide_write8(struct ide_controller *c, uint8_t r, uint8_t v);
 uint16_t ide_read16(struct ide_controller *c, uint8_t r);

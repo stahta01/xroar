@@ -45,6 +45,7 @@ struct idecart {
 	struct becker *becker;
 	uint16_t io_region;
 	uint8_t data_latch;  // upper 8-bits of 16-bit IDE data
+	int msgr_client_id;  // messenger client id
 };
 
 static const struct ser_struct ser_struct_idecart[] = {
@@ -74,6 +75,7 @@ static struct xconfig_option const idecart_options[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void idecart_config_complete(struct cart_config *);
+static void idecart_ui_set_hd_filename(void *, int tag, void *smsg);
 
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
@@ -145,31 +147,15 @@ static _Bool idecart_finish(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
 	struct cart *c = &ide->cart;
 
-	// Controller code depends on a valid filehandle being attached.
-	for (unsigned i = 0; i < 2; ++i) {
-		if (ide->controller->drive[i].present) {
-			ide_detach(&ide->controller->drive[i]);
-		}
-		if (xroar.cfg.file.hd[i]) {
-			struct blkdev *bd = bd_open(xroar.cfg.file.hd[i]);
-			if (!bd) {
-				if (!bd_create(xroar.cfg.file.hd[i], BD_ACME_ZIPPIBUS)) {
-					continue;
-				}
-				bd = bd_open(xroar.cfg.file.hd[i]);
-			}
-			if (bd) {
-				ide_attach(ide->controller, i, bd);
-			}
-		}
-	}
 	ide_reset_begin(ide->controller);
 
 	if (!cart_rom_finish(p)) {
 		return 0;
 	}
 
-	idecart_reset(c, 1);
+	// Join the ui messenger groups we're interested in
+	ide->msgr_client_id = messenger_client_register();
+	ui_messenger_join_group(ide->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(idecart_ui_set_hd_filename, ide));
 
 	if (c->config->becker_port) {
 		ide->becker = becker_open();
@@ -181,6 +167,7 @@ static _Bool idecart_finish(struct part *p) {
 static void idecart_free(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
 	becker_close(ide->becker);
+	messenger_client_unregister(ide->msgr_client_id);
 	cart_rom_free(p);
 	ide_free(ide->controller);
 }
@@ -216,6 +203,30 @@ static void idecart_config_complete(struct cart_config *cc) {
 	if (!cc->rom_dfn && !cc->rom) {
 		cc->rom = xstrdup("@glenside_ide");
 	}
+}
+
+static void idecart_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
+	struct idecart *ide = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_hd_filename);
+
+	int drive = uimsg->value;
+	const char *filename = uimsg->data;
+
+	if (drive < 0 || drive > 1) {
+		return;
+	}
+
+	if (ide->controller->drive[drive].present) {
+		ide_detach(&ide->controller->drive[drive]);
+	}
+	if (filename) {
+		struct blkdev *bd = bd_open(filename);
+		if (bd) {
+			ide_attach(ide->controller, drive, bd);
+		}
+	}
+	ide_reset_drive(&ide->controller->drive[drive]);
 }
 
 static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {

@@ -224,20 +224,21 @@ static void edd_setup(struct ide_taskfile *tf)
   ready(tf);
 }
 
-static void ide_reset(struct ide_controller *c)
+void ide_reset_drive(struct ide_drive *d)
 {
-  if (c->drive[0].present) {
-    edd_setup(&c->drive[0].taskfile);
+  if (d->present) {
+    edd_setup(&d->taskfile);
     /* A drive could clear busy then set DRDY up to 2 minutes later if its
        mindnumbingly slow to start up ! We don't emulate any of that */
-    c->drive[0].taskfile.status = ST_DRDY;
-    c->drive[0].eightbit = 0;
+    d->taskfile.status = ST_DRDY;
+    d->eightbit = 0;
   }
-  if (c->drive[1].present) {
-    edd_setup(&c->drive[1].taskfile);
-    c->drive[1].taskfile.status = ST_DRDY;
-    c->drive[1].eightbit = 0;
-  }
+}
+
+static void ide_reset(struct ide_controller *c)
+{
+  ide_reset_drive(&c->drive[0]);
+  ide_reset_drive(&c->drive[1]);
   c->selected = 0;
 }
 
