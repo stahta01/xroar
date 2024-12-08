@@ -136,7 +136,8 @@ void spi65_remove_device(struct spi65 *spi65, unsigned slot) {
 	if (slot >= SPI_NDEVICES)
 		return;
 	if (spi65p->device[slot]) {
-		part_remove_component(&spi65->part, &spi65p->device[slot]->part);
+		part_free(&spi65p->device[slot]->part);
+		// spi65_finish() called below will clear that slot
 	}
 	spi65_finish(&spi65p->public.part);
 }
