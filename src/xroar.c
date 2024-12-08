@@ -160,6 +160,7 @@ struct private_cfg {
 	// Files; to attach on startup
 	struct {
 		char *fd[4];  // floppy disks, one per drive
+		char *hd[2];  // block devices, one per slot
 		struct slist *binaries;  // loaded in order
 		char *tape;  // input tape
 		char *tape_write;  // output tape
@@ -1592,15 +1593,19 @@ void xroar_eject_disk(int drive) {
 }
 
 void xroar_insert_hd_file(int drive, const char *filename) {
-	if (!filename)
+	if (drive < 0 || drive > 1) {
 		return;
-	if (drive < 0 || drive > 1)
-		return;
-	if (xroar.cfg.file.hd[drive])
-		free(xroar.cfg.file.hd[drive]);
-	xroar.cfg.file.hd[drive] = xstrdup(filename);
+	}
+	if (private_cfg.file.hd[drive]) {
+		free(private_cfg.file.hd[drive]);
+		private_cfg.file.hd[drive] = NULL;
+	}
+	if (filename) {
+		private_cfg.file.hd[drive] = xstrdup(filename);
+	}
+	ui_update_state(-1, ui_tag_hd_filename, drive, private_cfg.file.hd[drive]);
 	for (unsigned i = 0; i < 2; ++i) {
-		if (!xroar.cfg.file.hd[drive]) {
+		if (!private_cfg.file.hd[drive]) {
 			load_hd_to_drive = i;
 			break;
 		}
@@ -1953,6 +1958,9 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 			connect_interfaces();
 			if (c->reset) {
 				c->reset(c, 1);
+			}
+			for (unsigned i = 0; i < 2; ++i) {
+				ui_update_state(-1, ui_tag_hd_filename, i, private_cfg.file.hd[i]);
 			}
 		} else {
 			cc = NULL;
@@ -2335,8 +2343,8 @@ static enum media_slot add_load_file(const char *filename) {
 	case FILETYPE_IMG:
 		// TODO: recognise media type and select cartridge accordingly
 		for (unsigned i = 0; i < 2; i++) {
-			if (!xroar.cfg.file.hd[i]) {
-				xroar.cfg.file.hd[i] = xstrdup(filename);
+			if (!private_cfg.file.hd[i]) {
+				private_cfg.file.hd[i] = xstrdup(filename);
 				break;
 			}
 			if (i == 1) {
@@ -2597,8 +2605,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_NE("load-fd1", &private_cfg.file.fd[1]) },
 	{ XC_SET_STRING_NE("load-fd2", &private_cfg.file.fd[2]) },
 	{ XC_SET_STRING_NE("load-fd3", &private_cfg.file.fd[3]) },
-	{ XC_SET_STRING_NE("load-hd0", &xroar.cfg.file.hd[0]) },
-	{ XC_SET_STRING_NE("load-hd1", &xroar.cfg.file.hd[1]) },
+	{ XC_SET_STRING_NE("load-hd0", &private_cfg.file.hd[0]) },
+	{ XC_SET_STRING_NE("load-hd1", &private_cfg.file.hd[1]) },
 	{ XC_ALIAS_UARG("load-sd", "load-hd0"), .deprecated = 1 },
 	{ XC_SET_STRING_NE("load-tape", &private_cfg.file.tape) },
 	{ XC_SET_STRING_NE("load-text", &private_cfg.file.text) },
@@ -2985,8 +2993,8 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "load-fd1", private_cfg.file.fd[1], NULL);
 	xroar_cfg_print_string(f, all, "load-fd2", private_cfg.file.fd[2], NULL);
 	xroar_cfg_print_string(f, all, "load-fd3", private_cfg.file.fd[3], NULL);
-	xroar_cfg_print_string(f, all, "load-hd0", xroar.cfg.file.hd[0], NULL);
-	xroar_cfg_print_string(f, all, "load-hd1", xroar.cfg.file.hd[1], NULL);
+	xroar_cfg_print_string(f, all, "load-hd0", private_cfg.file.hd[0], NULL);
+	xroar_cfg_print_string(f, all, "load-hd1", private_cfg.file.hd[1], NULL);
 	xroar_cfg_print_string(f, all, "load-tape", private_cfg.file.tape, NULL);
 	xroar_cfg_print_string(f, all, "tape-write", private_cfg.file.tape_write, NULL);
 	xroar_cfg_print_string(f, all, "load-text", private_cfg.file.text, NULL);

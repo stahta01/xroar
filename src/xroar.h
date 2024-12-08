@@ -110,7 +110,6 @@ struct xroar_cfg {
 	// Files
 	struct {
 		char *rompath;
-		char *hd[2];
 	} file;
 
 	// Cassettes

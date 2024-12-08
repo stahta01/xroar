@@ -175,7 +175,7 @@ enum ui_tag {
 	// Disk
 
 	ui_tag_disk_dialog,
-	// Simple toggle for "Floppy disks" dialog.
+	// Simple toggle for "Floppy/hard disks" dialog.
 
 	ui_tag_disk_new,
 	ui_tag_disk_insert,
@@ -200,6 +200,10 @@ enum ui_tag {
 	// current drive, head and cylinder.
 	//
 	// Originated in vdrive.c, not a request.
+
+	ui_tag_hd_filename,
+	// value = drive number
+	// data = (const char *) new filename
 
 	// Video
 
