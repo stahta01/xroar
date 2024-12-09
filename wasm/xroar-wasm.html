@@ -109,6 +109,22 @@ be a better way to make this usable...
     <td><span id='disk3' class='filename'></span></td>
 </tr>
 
+<tr><th>HD 0:</th>
+    <td></td>
+    <td></td>
+    <td><span title="Save HD 0" class='button' onclick='download_hd(0)'>Save...</span></td>
+    <td><label title="Use local HD image file as HD 0" class='button'><input type='file' onchange='file_input_onload(this,load_type.hd,0)'>Attach...</label></td>
+    <td><span id='hd0' class='filename'></span></td>
+</tr>
+
+<tr><th>HD 1:</th>
+    <td></td>
+    <td></td>
+    <td><span title="Save HD 1" class='button' onclick='download_hd(1)'>Save...</span></td>
+    <td><label title="Use local HD image file as HD 1" class='button'><input type='file' onchange='file_input_onload(this,load_type.hd,1)'>Attach...</label></td>
+    <td><span id='hd1' class='filename'></span></td>
+</tr>
+
 <tr><th>Tape:</th>
     <td><span id='tape_play' title="Play (unpause)" class='button' onclick='wasm_set_value("tape_playing", 1, 1)'>&#x23f5;</span><span id='tape_pause' title="Pause" class='button' onclick='wasm_set_value("tape_playing", 0, 1)' style='display:none'>&#x23f8;</span></td>
     <td><span title="Eject tape" class='button' onclick='wasm_eject_tape()'>&#x23cf;</span></td>
@@ -245,6 +261,7 @@ be a better way to make this usable...
 	};
 
 	var drive_filename = [ null, null, null, null ];
+	var hd_filename = [ null, null ];
 
 	// Initialisation that depends on the emscripten runtime being fully
 	// initialised.
@@ -552,6 +569,24 @@ be a better way to make this usable...
 		}
 	}
 
+	// Offer specified HD image for download
+	function download_hd(drive) {
+		if (hd_filename[drive]) {
+			let content = Module.FS.readFile(hd_filename[drive]);
+			var a = document.createElement('a');
+			a.download = hd_filename[drive];
+			a.href = URL.createObjectURL(new Blob([content], {type: 'application/octet-stream'}));
+			a.style.display = 'none';
+
+			document.body.appendChild(a);
+			a.click();
+			setTimeout(() => {
+					document.body.removeChild(a);
+					URL.revokeObjectURL(a.href);
+					}, 2000);
+		}
+	}
+
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	// Anything under here is a function provided as callback from the main
@@ -670,6 +705,18 @@ be a better way to make this usable...
 				drive_filename[drive] = filename;
 				el.innerHTML += ' | ' + filename;
 			}
+		}
+	}
+
+	// Called when HD filename changes
+	function ui_update_hd_filename(drive, fnp) {
+		var el = document.getElementById('hd' + drive);
+		hd_filename[drive] = null;
+		el.innerHTML = '';
+		if (fnp != 0) {
+			var filename = UTF8ToString(fnp);
+			hd_filename[drive] = filename;
+			el.innerHTML = filename;
 		}
 	}
 

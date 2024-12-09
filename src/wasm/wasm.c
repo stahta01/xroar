@@ -108,6 +108,7 @@ static void *ui_wasm_new(void *cfg) {
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
@@ -315,6 +316,14 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 			char string[16];
 			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
 			EM_ASM_({ ui_set_html($0, $1); }, "drive_info", string);
+		}
+		break;
+
+	case ui_tag_hd_filename:
+		{
+			int hd = value;
+			const char *filename = data;
+			EM_ASM_({ ui_update_hd_filename($0, $1); }, hd, filename);
 		}
 		break;
 
