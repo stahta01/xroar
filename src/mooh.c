@@ -78,6 +78,7 @@ static const struct ser_struct_data mooh_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void mooh_config_complete(struct cart_config *);
 static void mooh_ui_set_hd_filename(void *, int tag, void *smsg);
 
 static void mooh_reset(struct cart *c, _Bool hard);
@@ -105,7 +106,7 @@ static const struct partdb_entry_funcs mooh_funcs = {
 	.is_a = dragon_cart_is_a,
 };
 
-const struct cart_partdb_entry mooh_part = { .partdb_entry = { .name = "mooh", .description = "Tormod Volden | MOOH memory cartridge", .funcs = &mooh_funcs } };
+const struct cart_partdb_entry mooh_part = { .partdb_entry = { .name = "mooh", .description = "Tormod Volden | MOOH memory cartridge", .funcs = &mooh_funcs }, .config_complete = mooh_config_complete };
 
 static struct part *mooh_allocate(void) {
 	struct mooh *n = part_new(sizeof(*n));
@@ -207,6 +208,13 @@ static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static void mooh_config_complete(struct cart_config *cc) {
+	// Default ROM
+	if (!cc->rom_dfn && !cc->rom) {
+		cc->rom = xstrdup("sdbdos");
+	}
+}
 
 static void mooh_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
         struct mooh *n = sptr;
