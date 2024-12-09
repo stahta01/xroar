@@ -86,7 +86,7 @@ be a better way to make this usable...
 </tr>
 
 <tr><th>Drive 2:</th>
-    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(1)'>&#x2795;</span></td>
+    <td><span title="New disk in drive 2" class='button' onclick='wasm_new_disk(1)'>&#x2795;</span></td>
     <td><span title="Eject disk in drive 2" class='button' onclick='wasm_eject_disk(1)'>&#x23cf;</span></td>
     <td><span title="Save disk in drive 2" class='button' onclick='download_disk(1)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 2" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,1)'>Insert...</label></td>
@@ -94,7 +94,7 @@ be a better way to make this usable...
 </tr>
 
 <tr><th>Drive 3:</th>
-    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(2)'>&#x2795;</span></td>
+    <td><span title="New disk in drive 3" class='button' onclick='wasm_new_disk(2)'>&#x2795;</span></td>
     <td><span title="Eject disk in drive 3" class='button' onclick='wasm_eject_disk(2)'>&#x23cf;</span></td>
     <td><span title="Save disk in drive 3" class='button' onclick='download_disk(2)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 3" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,2)'>Insert...</label></td>
@@ -102,7 +102,7 @@ be a better way to make this usable...
 </tr>
 
 <tr><th>Drive 4:</th>
-    <td><span title="New disk in drive 1" class='button' onclick='wasm_new_disk(3)'>&#x2795;</span></td>
+    <td><span title="New disk in drive 4" class='button' onclick='wasm_new_disk(3)'>&#x2795;</span></td>
     <td><span title="Eject disk in drive 4" class='button' onclick='wasm_eject_disk(3)'>&#x23cf;</span></td>
     <td><span title="Save disk in drive 4" class='button' onclick='download_disk(3)'>Save...</span></td>
     <td><label title="Use local disk image file in drive 4" class='button'><input type='file' onchange='file_input_onload(this,load_type.disk,3)'>Insert...</label></td>
@@ -366,20 +366,20 @@ be a better way to make this usable...
 	function start_program(program) {
 
 		if ('tape' in program) {
-			wasm_load_file(program.tape, 2, 0);
+			wasm_load_file(program.tape, load_type.tape, 0);
 		}
 
 		for (let i = 0; i < 4; i++) {
 			let disk = 'disk'+i;
 			if (disk in program) {
-				wasm_load_file(program[disk], 3, i);
+				wasm_load_file(program[disk], load_type.disk, i);
 			}
 		}
 
 		for (let i = 0; i < 2; i++) {
 			let hd = 'hd'+i;
 			if (hd in program) {
-				wasm_load_file(program[hd], 5, i);
+				wasm_load_file(program[hd], load_type.hd, i);
 			}
 		}
 
@@ -412,14 +412,14 @@ be a better way to make this usable...
 
 		if ('autorun' in program) {
 			if (program.autorun.split('.').pop().localeCompare('bin')) {
-				setTimeout(wasm_load_file, 2000, program.autorun, 1, 0);
+				setTimeout(wasm_load_file, 2000, program.autorun, load_type.run, 0);
 			} else {
-				wasm_load_file(program.autorun, 1, 0);
+				wasm_load_file(program.autorun, load_type.run, 0);
 			}
 		}
 
 		if ('type' in program) {
-			wasm_load_file(program.text, 4, 0);
+			wasm_load_file(program.text, load_type.text, 0);
 		}
 
 		if ('basic' in program) {
