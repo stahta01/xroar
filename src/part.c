@@ -114,7 +114,9 @@ const struct partdb_entry *partdb[] = {
 #ifdef WANT_EXPERIMENTAL
 	&ikon_part,
 #endif
+#endif
 	&mooh_part,
+#ifndef HAVE_WASM
 	&mpi_part,
 	&nx32_part,
 	&race_part,
@@ -158,10 +160,8 @@ const struct partdb_entry *partdb[] = {
 	&wd2793_part,
 	&wd2795_part,
 	&wd2797_part,
-#ifndef HAVE_WASM
 	&spi65_part,
 	&spi_sdcard_part,
-#endif
 #endif
 
 };

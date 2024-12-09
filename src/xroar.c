@@ -517,11 +517,11 @@ static char const * const default_config[] = {
 	"cart nx32",
 	"cart-desc 'NX32 memory cartridge'",
 	"cart-type nx32",
+#endif
 	// MOOH memory cartridge
 	"cart mooh",
 	"cart-desc 'MOOH memory cartridge'",
 	"cart-type mooh",
-#endif
 #endif
 
 	// ROM lists
