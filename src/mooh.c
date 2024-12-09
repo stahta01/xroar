@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "array.h"
 
@@ -41,7 +42,7 @@
 struct mooh {
 	struct cart cart;
 	struct spi65 *spi65;
-	uint8_t extmem[0x2000 * MEMPAGES];
+	uint8_t *extmem;
 	_Bool mmu_enable;
 	_Bool crm_enable;
 	uint8_t taskreg[8][2];
@@ -153,6 +154,9 @@ static _Bool mooh_finish(struct part *p) {
 		return 0;
 	}
 
+	n->extmem = xmalloc(0x2000 * MEMPAGES);
+	memset(n->extmem, 0, 0x2000 * MEMPAGES);
+
 	// Join the ui messenger groups we're interested in
 	n->msgr_client_id = messenger_client_register();
 	ui_messenger_join_group(n->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(mooh_ui_set_hd_filename, n));
@@ -168,6 +172,7 @@ static void mooh_free(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
 	becker_close(n->becker);
 	messenger_client_unregister(n->msgr_client_id);
+	free(n->extmem);
 	cart_rom_free(p);
 }
 
