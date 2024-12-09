@@ -334,8 +334,10 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	/* poor man's CRT9128 Wordpak emulation */
 	if (A == 0xFF7D)
 		n->crt9128_reg_addr = D;
+#ifndef HAVE_WASM
 	if (A == 0xFF7C && n->crt9128_reg_addr == 0x0d)
 		fprintf(stderr, "%c", D);
+#endif
 
 	if ((A & 0xFFF0) == 0xFFA0) {
 		n->taskreg[A & 7][(A & 8) >> 3] = D & TASK_MASK;
