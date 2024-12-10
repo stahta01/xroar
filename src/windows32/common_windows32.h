@@ -32,7 +32,8 @@
 
 enum {
 	uiw32_tag_joystick_right = ui_num_tags,
-	uiw32_tag_joystick_left
+	uiw32_tag_joystick_left,
+	uiw32_tag_config_save,
 };
 
 struct xconfig_enum;

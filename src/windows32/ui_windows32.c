@@ -119,6 +119,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_print_dialog, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_config_autosave, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 
 	windows32_create_menus(uiw32);
 
@@ -188,6 +189,9 @@ static void setup_file_menu(struct ui_windows32_interface *uiw32) {
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_file_screenshot), "Screenshot to PNG...");
 #endif
+	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
+	AppendMenu(file_menu, MF_STRING, UIW32_TAG(uiw32_tag_config_save), "Save &configuration");
+	AppendMenu(file_menu, MF_STRING, UIW32_TAG(ui_tag_config_autosave), "&Autosave configuration");
 	AppendMenu(file_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(file_menu, MF_STRING, UIW32_TAGV(ui_tag_action, ui_action_quit), "&Quit");
 
@@ -431,6 +435,14 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		}
 		break;
 
+	// Configuration:
+	case uiw32_tag_config_save:
+		xroar_save_config_file();
+		break;
+	case ui_tag_config_autosave:
+		ui_update_state(-1, ui_tag_config_autosave, UI_NEXT, NULL);
+		break;
+
 	// Machines:
 	case ui_tag_machine:
 		ui_update_state(-1, ui_tag_machine, tag_value, NULL);
@@ -533,6 +545,12 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 	// Simple toggles
 
 	case ui_tag_fullscreen:
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	// Configuration
+
+	case ui_tag_config_autosave:
 		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 
