@@ -106,6 +106,8 @@ static void toggle_tc_window(GtkToggleAction *current, gpointer user_data);
 static void toggle_tv_window(GtkToggleAction *current, gpointer user_data);
 static void save_snapshot(GtkEntry *entry, gpointer user_data);
 static void save_screenshot(GtkEntry *entry, gpointer user_data);
+static void config_save(GtkEntry *entry, gpointer user_data);
+static void toggle_config_autosave(GtkToggleAction *current, gpointer user_data);
 static void do_quit(GtkEntry *entry, gpointer user_data);
 
 // View menu callbacks
@@ -188,6 +190,8 @@ static GtkActionEntry const ui_entries[] = {
 	{ .name = "ScreenshotAction", .label = "Screenshot to PNG…",
 	  .accelerator = "<control><shift>S",
 	  .callback = G_CALLBACK(save_screenshot) },
+	{ .name = "ConfigSaveAction", .label = "Save _configuration",
+	  .callback = G_CALLBACK(config_save) },
 	{ .name = "QuitAction", .label = "_Quit",
 	  .accelerator = "<control>Q",
 	  .tooltip = "Quit",
@@ -247,6 +251,8 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "PrinterControlAction", .label = "_Printer control",
 	  .accelerator = "<control>P",
 	  .callback = G_CALLBACK(toggle_pc_window) },
+	{ .name = "ConfigAutosaveAction", .label = "_Autosave configuration",
+	  .callback = G_CALLBACK(toggle_config_autosave) },
 
 	// View
 	{ .name = "VideoOptionsAction", .label = "TV _controls",
@@ -332,6 +338,7 @@ static void *ui_gtk3_new(void *cfg) {
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
+	ui_messenger_join_group(uigtk3->msgr_client_id, ui_tag_config_autosave, MESSENGER_NOTIFY_DELEGATE(uigtk3_ui_state_notify, uigtk3));
 
 	// Fetch top level window
 	uigtk3->top_window = GTK_WIDGET(gtk_builder_get_object(uigtk3->builder, "top_window"));
@@ -514,6 +521,10 @@ static void uigtk3_ui_state_notify(void *sptr, int tag, void *smsg) {
 	const void *data = msg->data;
 
 	switch (tag) {
+
+	case ui_tag_config_autosave:
+		uigtk3_toggle_action_set_active(uigtk3, "/MainMenu/FileMenu/ConfigAutosave", value ? TRUE : FALSE);
+		break;
 
 	// Hardware
 
@@ -820,6 +831,18 @@ static void save_screenshot(GtkEntry *entry, gpointer user_data) {
 	xroar_screenshot();
 #endif
 	g_idle_add(run_cpu, uigtk3->top_window);
+}
+
+static void config_save(GtkEntry *entry, gpointer user_data) {
+	(void)entry;
+	(void)user_data;
+	xroar_save_config_file();
+}
+
+static void toggle_config_autosave(GtkToggleAction *current, gpointer user_data) {
+	(void)user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(-1, ui_tag_config_autosave, val, NULL);
 }
 
 static void do_quit(GtkEntry *entry, gpointer user_data) {

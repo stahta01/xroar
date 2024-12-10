@@ -18,6 +18,9 @@
       <separator/>
       <menuitem name='Screenshot' action='ScreenshotAction'/>
       <separator/>
+      <menuitem name='ConfigSave' action='ConfigSaveAction'/>
+      <menuitem name='ConfigAutosave' action='ConfigAutosaveAction'/>
+      <separator/>
       <menuitem name='Quit' action='QuitAction'/>
     </menu>
     <menu name='ViewMenu' action='ViewMenuAction'>
