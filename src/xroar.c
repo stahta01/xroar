@@ -2607,6 +2607,9 @@ static void set_joystick(const char *name) {
 	// Apply any config to the current joystick config.
 	if (cur_joy_config) {
 		if (private_cfg.joy.description) {
+			if (cur_joy_config->description) {
+				free(cur_joy_config->description);
+			}
 			cur_joy_config->description = private_cfg.joy.description;
 			private_cfg.joy.description = NULL;
 		}
