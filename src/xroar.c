@@ -311,6 +311,7 @@ static void versiontext(void);
 static void config_print_all(FILE *f, _Bool all);
 #endif
 
+static void xroar_ui_state_notify(void *, int tag, void *smsg);
 static void xroar_ui_set_machine(void *, int tag, void *smsg);
 static void xroar_ui_set_cartridge(void *, int tag, void *smsg);
 static void xroar_ui_set_frameskip(void *, int tag, void *smsg);
@@ -1060,6 +1061,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+
 	// UI module
 	xroar.ui_interface = module_init((struct module *)ui_module, "ui", &xroar_ui_cfg);
 	if (!xroar.ui_interface || !xroar.ui_interface->vo_interface) {
@@ -1178,9 +1183,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_saturation, private_cfg.vo.saturation, NULL);
 	ui_update_state(-1, ui_tag_hue, private_cfg.vo.hue, NULL);
 
-	ui_update_state(-1, ui_tag_hkbd_layout, private_cfg.kbd.layout, NULL);
-	ui_update_state(-1, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
-	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
+	ui_update_state(xroar.msgr_client_id, ui_tag_hkbd_layout, private_cfg.kbd.layout, NULL);
+	ui_update_state(xroar.msgr_client_id, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
+	ui_update_state(xroar.msgr_client_id, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
 	ui_update_state(-1, ui_tag_ratelimit_latch, private_cfg.debug.ratelimit, NULL);
 #ifdef AUTOSAVE_PREFIX
 	ui_update_state(-1, ui_tag_config_autosave, private_cfg.help.config_autosave, NULL);
@@ -1768,6 +1773,34 @@ void xroar_insert_hd_file(int drive, const char *filename) {
 			load_hd_to_drive = i;
 			break;
 		}
+	}
+}
+
+// Simple UI notifications where we just track the state
+
+static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
+	struct xroar *emu = sptr;
+	(void)emu;
+	struct ui_state_message *uimsg = smsg;
+	int value = uimsg->value;
+	//const void *data = uimsg->data;
+
+	switch (tag) {
+
+	case ui_tag_hkbd_layout:
+		private_cfg.kbd.layout = value;
+		break;
+
+	case ui_tag_hkbd_lang:
+		private_cfg.kbd.lang = value;
+		break;
+
+	case ui_tag_kbd_translate:
+		private_cfg.kbd.translate = value;
+		break;
+
+	default:
+		break;
 	}
 }
 
