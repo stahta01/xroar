@@ -23,11 +23,21 @@
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
+#ifdef WINDOWS32
+#include <windows.h>
+#include <shlobj.h>
+#include <direct.h>
+#endif
+
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #ifdef WANT_GDB_TARGET
 #include <pthread.h>
@@ -227,6 +237,7 @@ struct private_cfg {
 		_Bool joystick_print_list;
 		_Bool config_print;
 		_Bool config_print_all;
+		_Bool config_autosave;
 	} help;
 #endif
 };
@@ -309,6 +320,7 @@ static void xroar_ui_set_print_file(void *, int tag, void *smsg);
 static void xroar_ui_set_print_pipe(void *, int tag, void *smsg);
 static void xroar_ui_set_ratelimit(void *, int tag, void *smsg);
 static void xroar_ui_set_ratelimit_latch(void *, int tag, void *smsg);
+static void xroar_ui_set_config_autosave(void *, int tag, void *smsg);
 
 static unsigned load_disk_to_drive = 0;
 static unsigned load_hd_to_drive = 0;
@@ -316,6 +328,13 @@ static unsigned load_hd_to_drive = 0;
 static struct joystick_config *cur_joy_config = NULL;
 
 static struct xconfig_option const xroar_options[];
+
+// Config autosave functions
+#ifdef AUTOSAVE_PREFIX
+static _Bool have_autosave_flag_file(void);
+static _Bool create_autosave_flag_file(void);
+static void remove_autosave_flag_file(void);
+#endif
 
 /**************************************************************************/
 /* Global flags */
@@ -824,6 +843,15 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+	// Check for autosave flag file here so that command line options can
+	// override it.
+
+#ifdef AUTOSAVE_PREFIX
+	private_cfg.help.config_autosave = have_autosave_flag_file();
+#endif
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	// Parse config file, if found (and not disabled).
 
 	if (!no_conffile) {
@@ -1025,6 +1053,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_frameskip, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit_latch, &xroar));
+	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_config_autosave, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_config_autosave, &xroar));
 
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_destination, NULL));
@@ -1153,6 +1182,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_hkbd_lang, private_cfg.kbd.lang, NULL);
 	ui_update_state(-1, ui_tag_kbd_translate, private_cfg.kbd.translate, NULL);
 	ui_update_state(-1, ui_tag_ratelimit_latch, private_cfg.debug.ratelimit, NULL);
+#ifdef AUTOSAVE_PREFIX
+	ui_update_state(-1, ui_tag_config_autosave, private_cfg.help.config_autosave, NULL);
+#endif
 
 	// Configure machine.  Note some options that persist across machine
 	// changes are set in xroar_ui_set_machine(), the handler for this
@@ -1265,6 +1297,33 @@ void xroar_init_finish(void) {
 	}
 }
 
+static void xroar_ui_set_config_autosave(void *sptr, int tag, void *smsg) {
+	(void)sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_config_autosave);
+
+#ifndef AUTOSAVE_PREFIX
+	uimsg->value = 0;
+#else
+	_Bool autosave = private_cfg.help.config_autosave;
+	autosave = ui_msg_adjust_value_range(uimsg, autosave, 0, 0, 1, UI_ADJUST_FLAG_CYCLE);
+	private_cfg.help.config_autosave = autosave;
+	uimsg->value = autosave;
+#endif
+}
+
+static void save_config(void) {
+#ifdef AUTOSAVE_PREFIX
+	if (private_cfg.help.config_autosave) {
+		if (create_autosave_flag_file()) {
+			xroar_save_config_file();
+		}
+	} else {
+		remove_autosave_flag_file();
+	}
+#endif
+}
+
 /** Generally set as an atexit() handler by main(), this function flushes any
  * output, shuts down the emulated machine and frees any other allocated
  * resources.
@@ -1275,6 +1334,7 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
+	save_config();
 	messenger_shutdown();
 	if (xroar.auto_kbd) {
 		auto_kbd_free(xroar.auto_kbd);
@@ -1315,6 +1375,105 @@ void xroar_shutdown(void) {
 	windows32_shutdown();
 #endif
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Config autosave functions
+
+#ifdef AUTOSAVE_PREFIX
+
+#ifdef WINDOWS32
+#define PSEP "\\"
+#else
+#define PSEP "/"
+#endif
+
+static _Bool have_autosave_flag_file(void) {
+	_Bool have_flag_file = 0;
+	sds flag_file = path_interp(AUTOSAVE_PREFIX""PSEP"autosave");
+	struct stat statbuf;
+	have_flag_file = (stat(flag_file, &statbuf) == 0);
+	sdsfree(flag_file);
+	return have_flag_file;
+}
+
+static _Bool create_autosave_flag_file(void) {
+	// If flag file already exists, do nothing
+	if (have_autosave_flag_file()) {
+		return 1;
+	}
+
+	// Create prefix directory if not present
+	sds prefix = path_interp(AUTOSAVE_PREFIX);
+	struct stat statbuf;
+	if (stat(prefix, &statbuf) == 0) {
+		if ((statbuf.st_mode & S_IFMT) != S_IFDIR) {
+			LOG_MOD_WARN("config", "%s: not a directory\n", prefix);
+			sdsfree(prefix);
+			return 0;
+		}
+	} else {
+#ifdef WINDOWS32
+		_Bool err = (_mkdir(prefix) != 0);
+#else
+		_Bool err = (mkdir(prefix, 0755) != 0);
+#endif
+		if (err) {
+			LOG_MOD_WARN("config", "%s: %s\n", prefix, strerror(errno));
+			sdsfree(prefix);
+			return 0;
+		}
+	}
+	sdsfree(prefix);
+
+	sds flag_file = path_interp(AUTOSAVE_PREFIX""PSEP"autosave");
+	FILE *fd = fopen(flag_file, "wb");
+	if (!fd) {
+		LOG_MOD_WARN("config", "%s: %s\n", flag_file, strerror(errno));
+		sdsfree(flag_file);
+		return 0;
+	}
+	fclose(fd);
+	sdsfree(flag_file);
+	return 1;
+}
+
+static void remove_autosave_flag_file(void) {
+	if (have_autosave_flag_file()) {
+		sds flag_file = path_interp(AUTOSAVE_PREFIX""PSEP"autosave");
+		if (unlink(flag_file) != 0) {
+			LOG_MOD_WARN("config", "%s: %s\n", flag_file, strerror(errno));
+		}
+		sdsfree(flag_file);
+	}
+}
+
+void xroar_save_config_file(void) {
+	sds filename = path_interp(AUTOSAVE_PREFIX""PSEP"xroar.conf");
+
+	// If config exists and backup doesn't, move config to backup
+	sds backup_filename = sdsdup(filename);
+	backup_filename = sdscat(backup_filename, ".bak");
+	struct stat statbuf;
+	if (stat(filename, &statbuf) == 0 && stat(backup_filename, &statbuf) != 0) {
+		rename(filename, backup_filename);
+	}
+	sdsfree(backup_filename);
+
+	// Write config file
+	FILE *fd = fopen(filename, "w");
+	if (!fd) {
+		LOG_MOD_WARN("config", "%s: %s\n", filename, strerror(errno));
+		sdsfree(filename);
+		return;
+	}
+	config_print_all(fd, 0);
+	fclose(fd);
+	LOG_MOD_DEBUG(1, "config", "%s: config saved\n", filename);
+	sdsfree(filename);
+}
+
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -2726,6 +2885,7 @@ static struct xconfig_option const xroar_options[] = {
 #ifndef HAVE_WASM
 	{ XC_SET_BOOL("config-print", &private_cfg.help.config_print) },
 	{ XC_SET_BOOL("config-print-all", &private_cfg.help.config_print_all) },
+	{ XC_SET_BOOL("config-auto-save", &private_cfg.help.config_autosave) },
 #endif
 	{ XC_SET_INT0("quiet", &logging.level) },
 	{ XC_SET_INT0("q", &logging.level) },
@@ -2924,6 +3084,9 @@ static void helptext(void) {
 "\n Other options:\n"
 "  -config-print       print configuration to standard out\n"
 "  -config-print-all   print configuration to standard out, including defaults\n"
+#ifdef AUTOSAVE_PREFIX
+"  -config-auto-save   write configuration to "AUTOSAVE_PREFIX""PSEP"xroar.conf on exit\n"
+#endif
 "  -h, --help          display this help and exit\n"
 "  -V, --version       output version information and exit\n"
 
@@ -3098,6 +3261,9 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar.cfg.debug.timeout_motoroff, NULL);
 	xroar_cfg_print_string(f, all, "snap-motoroff", xroar.cfg.debug.snap_motoroff, NULL);
 	fputs("\n", f);
+
+	// Note: we use a flag file to indicate the state of "config-auto-save"
+	// rather than write it out here.
 }
 #endif
 

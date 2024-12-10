@@ -363,6 +363,9 @@ enum ui_tag {
 	// Simple toggle for "About" dialog.  Actually, this dialog tends to be
 	// treated specially, which is something that might need revisiting.
 
+	ui_tag_config_autosave,
+	// Whether configuration is automatically saved on exit.
+
 	ui_num_tags
 };
 

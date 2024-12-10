@@ -203,13 +203,16 @@ xroar_CFLAGS += -DROMPATH=\".\"
 xroar_CFLAGS += -DCONFPATH=\".\"
 else
 if MINGW
+xroar_CFLAGS += -DAUTOSAVE_PREFIX=\"%LOCALAPPDATA%\\\\XRoar\"
 xroar_CFLAGS += -DROMPATH=\":%LOCALAPPDATA%\\\\XRoar\\\\roms:%USERPROFILE%\\\\Documents\\\\XRoar\\\\roms:%USERPROFILE%\\\\AppData\\\\Roaming\\\\XRoar\\\\roms\"
 xroar_CFLAGS += -DCONFPATH=\":%LOCALAPPDATA%\\\\Local\\\\XRoar:%USERPROFILE%\\\\Documents\\\\XRoar:%USERPROFILE%\\\\AppData\\\\Roaming\\\\XRoar\"
 else
 if UI_COCOA
+xroar_CFLAGS += -DAUTOSAVE_PREFIX=\"~/Library/XRoar\"
 xroar_CFLAGS += -DROMPATH=\"~/Library/XRoar/roms:~/.xroar/roms:$(datadir)/xroar/roms:\"
 xroar_CFLAGS += -DCONFPATH=\"~/Library/XRoar:~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 else
+xroar_CFLAGS += -DAUTOSAVE_PREFIX=\"~/.xroar\"
 xroar_CFLAGS += -DROMPATH=\"~/.xroar/roms:$(datadir)/xroar/roms:\"
 xroar_CFLAGS += -DCONFPATH=\"~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 endif

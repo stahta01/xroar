@@ -197,6 +197,11 @@ void xroar_init_finish(void);
 /// Cleanly shut down before program exit.
 void xroar_shutdown(void);
 
+#ifdef AUTOSAVE_PREFIX
+/// Save configuration to known location.
+void xroar_save_config_file(void);
+#endif
+
 /// Process UI event queue and run emulated machine.
 void xroar_run(int ncycles);
 
