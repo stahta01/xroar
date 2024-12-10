@@ -1947,6 +1947,7 @@ static void connect_interfaces(void) {
 void xroar_connect_machine(void) {
 	assert(xroar.machine_config != NULL);
 	assert(xroar.machine != NULL);
+	set_default_machine(xroar.machine_config->name);
 	tape_interface_connect_machine(xroar.tape_interface, xroar.machine);
 	xroar.auto_kbd = auto_kbd_new(xroar.machine);
 	xroar.keyboard_interface = xroar.machine->get_interface(xroar.machine, "keyboard");
@@ -2233,11 +2234,10 @@ void xroar_screenshot(void) {
 /* Helper functions used by configuration */
 
 static void set_default_machine(const char *name) {
-	private_cfg.default_machine = xstrdup(name);
-	// If no machine specified on command line, get default.
-	if (!xroar.machine_config && private_cfg.default_machine) {
-		xroar.machine_config = machine_config_by_name(private_cfg.default_machine);
+	if (private_cfg.default_machine) {
+		free(private_cfg.default_machine);
 	}
+	private_cfg.default_machine = xstrdup(name);
 }
 
 /* Called when a "-machine" option is encountered.  If an existing machine
