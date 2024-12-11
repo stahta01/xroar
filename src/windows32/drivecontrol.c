@@ -26,6 +26,7 @@
 
 #include "xalloc.h"
 
+#include "blockdev.h"
 #include "messenger.h"
 #include "ui.h"
 #include "vdisk.h"
@@ -48,6 +49,8 @@ static void dc_ui_state_notify(void *sptr, int tag, void *smsg);
 
 static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *, UINT msg, WPARAM wParam, LPARAM lParam);
 
+static void dc_new_hd(struct uiw32_dialog *dlg, int hd);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Create floppy disks dialog window
@@ -60,6 +63,7 @@ struct uiw32_dialog *uiw32_dc_dialog_new(struct ui_windows32_interface *uiw32) {
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, dlg));
 
 	return dlg;
 }
@@ -116,6 +120,14 @@ static void dc_ui_state_notify(void *sptr, int tag, void *smsg) {
 		}
 		break;
 
+	case ui_tag_hd_filename:
+		if (value >= 0 && value <= 1) {
+			int hd = value;
+			const char *filename = data;
+			uiw32_send_message(dlg->hWnd, IDC_STM_HD0_FILENAME + hd, WM_SETTEXT, 0, (LPARAM)filename);
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -147,6 +159,11 @@ static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 			if (id >= IDC_STM_DRIVE1_FILENAME && id <= IDC_STM_DRIVE4_FILENAME) {
 				uiw32_drawtext_path(dlg->hWnd, id, (LPDRAWITEMSTRUCT)lParam);
 				return TRUE;
+
+			} else if (id >= IDC_STM_HD0_FILENAME && id <= IDC_STM_HD1_FILENAME) {
+				uiw32_drawtext_path(dlg->hWnd, id, (LPDRAWITEMSTRUCT)lParam);
+				return TRUE;
+
 			}
 		}
 		return FALSE;
@@ -184,6 +201,24 @@ static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 				int drive = id - IDC_BN_DRIVE1_EJECT;
 				xroar_eject_disk(drive);
 
+			} else if (id >= IDC_BN_HD0_ATTACH && id <= IDC_BN_HD1_ATTACH) {
+				// HD attach button
+				int hd = id - IDC_BN_HD0_ATTACH;
+				char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
+				if (filename) {
+					xroar_insert_hd_file(hd, filename);
+				}
+
+			} else if (id >= IDC_BN_HD0_NEW && id <= IDC_BN_HD1_NEW) {
+				// HD detach button
+				int hd = id - IDC_BN_HD0_NEW;
+				dc_new_hd(dlg, hd);
+
+			} else if (id >= IDC_BN_HD0_DETACH && id <= IDC_BN_HD1_DETACH) {
+				// HD detach button
+				int hd = id - IDC_BN_HD0_DETACH;
+				xroar_insert_hd_file(hd, NULL);
+
 			} else switch (id) {
 
 			default:
@@ -196,4 +231,64 @@ static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 		break;
 	}
 	return FALSE;
+}
+
+// TODO: adapt dialog abstraction to allow running standalone modal dialogs
+
+static int hd_type = -1;
+static const int hd_type_map[4] = {
+	BD_ACME_NEMESIS,
+	BD_ACME_ULTRASONICUS,
+	BD_ACME_ACCELLERATTI,
+	BD_ACME_ZIPPIBUS
+};
+
+static INT_PTR CALLBACK dc_new_hd_proc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	(void)lParam;
+	switch (msg) {
+
+	case WM_INITDIALOG:
+		CheckRadioButton(hWnd, IDC_RB_HD_SIZE_0, IDC_RB_HD_SIZE_3, IDC_RB_HD_SIZE_0);
+		hd_type = 0;
+		return TRUE;
+
+	case WM_COMMAND:
+		if (HIWORD(wParam) == BN_CLICKED) {
+			int id = LOWORD(wParam);
+
+			if (id >= IDC_RB_HD_SIZE_0 && id <= IDC_RB_HD_SIZE_3) {
+				hd_type = id - IDC_RB_HD_SIZE_0;
+				CheckRadioButton(hWnd, IDC_RB_HD_SIZE_0, IDC_RB_HD_SIZE_3, id);
+				return TRUE;
+
+			} else switch (id) {
+			case IDOK:
+			case IDCANCEL:
+				EndDialog(hWnd, wParam);
+				return TRUE;
+
+			default:
+				break;
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return FALSE;
+}
+
+static void dc_new_hd(struct uiw32_dialog *dlg, int hd) {
+	int r = DialogBox(NULL, MAKEINTRESOURCE(IDD_DLG_HD_SIZE), dlg->hWnd, (DLGPROC)dc_new_hd_proc);
+	if (r != IDOK || hd_type < 0 || hd_type > 3) {
+		return;
+	}
+	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Create hard disk image");
+	if (filename) {
+		if (bd_create(filename, hd_type_map[hd_type])) {
+			xroar_insert_hd_file(hd, filename);
+		}
+	}
 }

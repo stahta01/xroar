@@ -177,6 +177,15 @@ id=DRIVE2_EJECT id button
 id=DRIVE3_EJECT id button
 id=DRIVE4_EJECT id button
 
+id=HD0_ATTACH id button
+id=HD1_ATTACH id button
+
+id=HD0_NEW id button
+id=HD1_NEW id button
+
+id=HD0_DETACH id button
+id=HD1_DETACH id button
+
 pad=5 id=DRIVE_CONTROLS dialog XRoar · Floppy disks
 
 hexpand=1 table
@@ -241,7 +250,59 @@ pad=2 nop
 
 id=DRIVE_CYL_HEAD align=centre text Dr ? Tr ?? He ?
 
+pad=2 nop
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text HD 0
+   hexpand=1 td id=HD0_FILENAME style=ownerdraw hexpand=1 text
+end table
+
+hexpand=1 table
+hexpand=1 tr hexpand=1 td
+   td id=HD0_ATTACH button Attach…
+   td id=HD0_NEW width=24 button New…
+   td id=HD0_DETACH button Detach
+end table
+
+pad=2 nop
+
+hexpand=1 table
+hexpand=1 tr td hexpand=0 text HD 1
+   hexpand=1 td id=HD1_FILENAME style=ownerdraw hexpand=1 text
+end table
+
+hexpand=1 table
+hexpand=1 tr hexpand=1 td
+   td id=HD1_ATTACH button Attach…
+   td id=HD1_NEW width=24 button New…
+   td id=HD1_DETACH button Detach
+end table
+
 xalign=right id=IDOK button &Close
+
+# - - -
+
+# New HD interstitial dialog
+
+id=HD_SIZE_0 id radio
+id=HD_SIZE_1 id radio
+id=HD_SIZE_2 id radio
+id=HD_SIZE_3 id radio
+
+pad=5 id=HD_SIZE dialog XRoar · New HD size
+
+text Select new HD size:
+
+id=HD_SIZE_0 radio 20MiB
+id=HD_SIZE_1 radio 40MiB
+id=HD_SIZE_2 radio 128MiB
+id=HD_SIZE_3 radio 256MiB
+
+pad_top=5 hexpand=1 table
+hexpand=1 tr hexpand=1 td
+  td id=IDCANCEL button &Cancel
+  td id=IDOK button &Create…
+end table
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
