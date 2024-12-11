@@ -36,11 +36,12 @@
 #include "slist.h"
 #include "xalloc.h"
 
-#include "logging.h"
+#include "blockdev.h"
 #include "cart.h"
 #include "hkbd.h"
 #include "joystick.h"
 #include "keyboard.h"
+#include "logging.h"
 #include "machine.h"
 #include "messenger.h"
 #include "module.h"
@@ -59,7 +60,17 @@
 
 enum {
 	uimac_tag_joystick_right = ui_num_tags,
-	uimac_tag_joystick_left
+	uimac_tag_joystick_left,
+	uimac_tag_hd_new,
+	uimac_tag_hd_detach,
+};
+
+static const char *hd_type_name[4] = { "20MiB", "40MiB", "128MiB", "256MiB" };
+static const int hd_type_map[4] = {
+        BD_ACME_NEMESIS,
+        BD_ACME_ULTRASONICUS,
+        BD_ACME_ACCELLERATTI,
+        BD_ACME_ZIPPIBUS
 };
 
 @interface SDLMain : NSObject <NSApplicationDelegate>
@@ -238,6 +249,36 @@ int cocoa_super_all_keys = 0;
 		break;
 	case ui_tag_disk_eject:
 		xroar_eject_disk(value);
+		break;
+	case ui_tag_hd_filename:
+		if (value >= 0 && value <= 1) {
+			int hd = value;
+			const char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
+			if (filename) {
+				xroar_insert_hd_file(hd, filename);
+			}
+		}
+		break;
+	case uimac_tag_hd_new:
+		{
+			int hd = value >> 4;
+			int hd_type_index = value & 15;
+			if (hd >= 0 && hd <= 1 && hd_type_index >= 0 && hd_type_index <= 3) {
+				int hd_type = hd_type_map[hd_type_index];
+				char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Create hard disk image");
+				if (filename) {
+					if (bd_create(filename, hd_type)) {
+						xroar_insert_hd_file(hd, filename);
+					}
+				}
+			}
+		}
+		break;
+	case uimac_tag_hd_detach:
+		if (value >= 0 && value <= 1) {
+			int hd = value;
+			xroar_insert_hd_file(hd, NULL);
+		}
 		break;
 
 	// Printers:
@@ -560,8 +601,7 @@ static void setup_file_menu(void) {
 
 	[file_menu addItem:[NSMenuItem separatorItem]];
 
-	int drive;
-	for (drive = 0; drive < 4; drive++) {
+	for (int drive = 0; drive < 4; ++drive) {
 		NSString *title = [NSString stringWithFormat:@"Drive %d", drive+1];
 		NSString *key1 = [NSString stringWithFormat:@"%d", drive+1];
 		NSString *key2 = [NSString stringWithFormat:@"%d", drive+5];
@@ -613,6 +653,53 @@ static void setup_file_menu(void) {
 
 		[key2 release];
 		[key1 release];
+		[title release];
+	}
+
+	for (int hd = 0; hd < 2; ++hd) {
+		NSString *title = [NSString stringWithFormat:@"HD %d", hd];
+		NSString *tmp;
+
+		submenu = [[NSMenu alloc] initWithTitle:title];
+
+		tmp = [NSString stringWithFormat:@"Attach%C", 0x2026];
+		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:UIMAC_TAGV(ui_tag_hd_filename, hd)];
+		[submenu addItem:item];
+		[item release];
+		[tmp release];
+
+		NSString *subtitle = [NSString stringWithFormat:@"New"];
+		NSMenu *subsubmenu = [[NSMenu alloc] initWithTitle:subtitle];
+		for (int hs = 0; hs < 4; ++hs) {
+
+			tmp = [NSString stringWithFormat:@"%s%C", hd_type_name[hs], 0x2026];
+			item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+			[item setTag:UIMAC_TAGV(uimac_tag_hd_new, (hd << 4) | hs)];
+			[subsubmenu addItem:item];
+			[item release];
+			[tmp release];
+		}
+
+		item = [[NSMenuItem alloc] initWithTitle:subtitle action:nil keyEquivalent:@""];
+		[item setSubmenu:subsubmenu];
+		[submenu addItem:item];
+		[item release];
+
+		[subtitle release];
+
+		tmp = [NSString stringWithFormat:@"Detach"];
+		item = [[NSMenuItem alloc] initWithTitle:tmp action:@selector(do_set_state:) keyEquivalent:@""];
+		[item setTag:UIMAC_TAGV(uimac_tag_hd_detach, hd)];
+		[submenu addItem:item];
+		[item release];
+		[tmp release];
+
+		item = [[NSMenuItem alloc] initWithTitle:title action:nil keyEquivalent:@""];
+		[item setSubmenu:submenu];
+		[file_menu addItem:item];
+		[item release];
+
 		[title release];
 	}
 
