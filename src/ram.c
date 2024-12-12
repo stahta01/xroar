@@ -150,8 +150,8 @@ static _Bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case RAM_SER_NBANKS:
 		{
 			unsigned nbanks = ser_read_vuint32(sh);
-			// XXX arbitrary hard limit of 8 banks here
-			if (nbanks > 8 || ram->d)
+			// XXX arbitrary hard limit of 64 banks here
+			if (nbanks > 64 || ram->d)
 				ser_set_error(sh, ser_error_format);
 			if (ser_error(sh))
 				return 0;
