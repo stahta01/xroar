@@ -33,6 +33,7 @@
 #include "part.h"
 #include "serialise.h"
 #include "spi65.h"
+#include "ui.h"
 
 /* Our own defined states, not per specification */
 enum sd_states { STBY, CMDFRAME, RESP, RESP_R7, SENDCSD,
@@ -156,8 +157,11 @@ static _Bool spi_sdcard_finish(struct part *p) {
 	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
 	if (!sdcard->imagefile)
 		return 0;
-	if (!(sdcard->bd = bd_open(sdcard->imagefile)))
+	sdcard->bd = bd_open(sdcard->imagefile);
+	ui_update_state(-1, ui_tag_hd_filename, 0, sdcard->bd ? sdcard->imagefile : NULL);
+	if (!sdcard->bd) {
 		return 0;
+	}
 	return 1;
 }
 
