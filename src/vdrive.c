@@ -284,6 +284,13 @@ void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle
 
 	ser_read_struct_data(sh, &vdrive_ser_struct_data, vip);
 
+	for (unsigned i = 0; i < MAX_DRIVES; ++i) {
+		struct vdisk *disk = vip->drives[i].disk;
+		ui_update_state(-1, ui_tag_disk_data, i, disk);
+		ui_update_state(-1, ui_tag_disk_write_enable, disk ? !disk->write_protect : 0, (void *)(intptr_t)i);
+		ui_update_state(-1, ui_tag_disk_write_back, disk ? disk->write_back : 0, (void *)(intptr_t)i);
+	}
+
 	vip->current_drive = &vip->drives[vip->cur_drive_number];
 	if (vip->current_drive->disk) {
 		vip->idamptr = vdisk_extend_disk(vip->current_drive->disk, vip->current_drive->current_cyl, vip->cur_head);
