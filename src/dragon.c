@@ -530,7 +530,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 	}
 
 	// RAM configuration
-	ram_report(md->RAM, "total RAM");
+	ram_report(md->RAM, "dragon", "total RAM");
 
 	// Connect any cartridge part
 	dragon_connect_cart(p);

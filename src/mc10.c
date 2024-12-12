@@ -398,8 +398,8 @@ static _Bool mc10_finish(struct part *p) {
 
 	// RAM configuration
 	{
-		unsigned ram0_k = ram_report(mp->RAM0, "internal RAM");
-		unsigned ram1_k = ram_report(mp->RAM1, "external RAM");
+		unsigned ram0_k = ram_report(mp->RAM0, "mc10", "internal RAM");
+		unsigned ram1_k = ram_report(mp->RAM1, "mc10", "external RAM");
 		unsigned total_k = ram0_k + ram1_k;
 		LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
 	}

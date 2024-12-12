@@ -358,11 +358,11 @@ extern inline void ram_d16(struct ram *ram, _Bool RnW, unsigned bank,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-unsigned ram_report(struct ram *ram, const char *name) {
+unsigned ram_report(struct ram *ram, const char *par, const char *name) {
 	unsigned nbanks = ram ? ram->nbanks : 0;
 	unsigned bank_k = ram ? ram->bank_nelems / 1024 : 0;
 	unsigned k = nbanks * bank_k;
-	LOG_MOD_DEBUG(1, "ram", "%u bank%s * %uK = %uK %s\n", nbanks,
-		      (nbanks == 1) ? "" : "s", bank_k, k, name);
+	LOG_PAR_MOD_DEBUG(1, par, "ram", "%u bank%s * %uK = %uK %s\n", nbanks,
+			  (nbanks == 1) ? "" : "s", bank_k, k, name);
 	return k;
 }
