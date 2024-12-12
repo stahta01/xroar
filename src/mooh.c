@@ -29,7 +29,9 @@
 
 #include "becker.h"
 #include "cart.h"
+#include "logging.h"
 #include "part.h"
+#include "ram.h"
 #include "rombank.h"
 #include "serialise.h"
 #include "spi65.h"
@@ -42,7 +44,7 @@
 struct mooh {
 	struct cart cart;
 	struct spi65 *spi65;
-	uint8_t *extmem;
+	struct ram *extmem;
 	_Bool mmu_enable;
 	_Bool crm_enable;
 	uint8_t taskreg[8][2];
@@ -53,18 +55,18 @@ struct mooh {
 	int msgr_client_id;  // messenger client id
 };
 
+#define MOOH_SER_EXTMEM  (2)
+#define MOOH_SER_TASKREG (5)
+
 static const struct ser_struct ser_struct_mooh[] = {
 	SER_ID_STRUCT_NEST(1, &cart_ser_struct_data),
-	SER_ID_STRUCT_TYPE(2, ser_type_unhandled, struct mooh, extmem),
+	SER_ID_STRUCT_UNHANDLED(MOOH_SER_EXTMEM),
 	SER_ID_STRUCT_ELEM(3, struct mooh, mmu_enable),
 	SER_ID_STRUCT_ELEM(4, struct mooh, crm_enable),
-	SER_ID_STRUCT_TYPE(5, ser_type_unhandled, struct mooh, taskreg),
+	SER_ID_STRUCT_UNHANDLED(MOOH_SER_TASKREG),
 	SER_ID_STRUCT_ELEM(6, struct mooh, task),
 	SER_ID_STRUCT_ELEM(7, struct mooh, rom_conf),
 };
-
-#define MOOH_SER_EXTMEM  (2)
-#define MOOH_SER_TASKREG (5)
 
 static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -125,6 +127,18 @@ static struct part *mooh_allocate(void) {
 	return p;
 }
 
+static struct ram *mooh_create_ram(void) {
+	struct ram_config ram_config = {
+		.d_width = 8,
+		.organisation = RAM_ORG(13, 13, 0),
+	};
+	struct ram *ram = (struct ram *)part_create("ram", &ram_config);
+	for (unsigned i = 0; i < MEMPAGES; ++i) {
+		ram_add_bank(ram, i);
+	}
+	return ram;
+}
+
 static void mooh_initialise(struct part *p, void *options) {
 	struct cart_config *cc = options;
 	assert(cc != NULL);
@@ -133,6 +147,10 @@ static void mooh_initialise(struct part *p, void *options) {
 	struct cart *c = &n->cart;
 
 	cart_rom_initialise(p, options);
+
+	// RAM
+	struct ram *ram = mooh_create_ram();
+	part_add_component(p, (struct part *)ram, "EXTMEM");
 
 	// 65SPI/B for interfacing to SD card
 	struct spi65 *spi65 = (struct spi65 *)part_create("65SPI-B", NULL);
@@ -145,9 +163,10 @@ static _Bool mooh_finish(struct part *p) {
 
 	// Find attached parts
 	n->spi65 = (struct spi65 *)part_component_by_id_is_a(p, "SPI65", "65SPI-B");
+	n->extmem = (struct ram *)part_component_by_id_is_a(p, "EXTMEM", "ram");
 
 	// Check all required parts are attached
-	if (!n->spi65) {
+	if (!n->spi65 || !n->extmem) {
 		return 0;
 	}
 
@@ -155,12 +174,12 @@ static _Bool mooh_finish(struct part *p) {
 		return 0;
 	}
 
-	n->extmem = xmalloc(0x2000 * MEMPAGES);
-	memset(n->extmem, 0, 0x2000 * MEMPAGES);
-
 	// Join the ui messenger groups we're interested in
 	n->msgr_client_id = messenger_client_register();
 	ui_messenger_join_group(n->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(mooh_ui_set_hd_filename, n));
+
+	// RAM
+	ram_report(n->extmem, "mooh", "extended RAM");
 
 	if (c->config->becker_port) {
 		n->becker = becker_open();
@@ -173,15 +192,25 @@ static void mooh_free(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
 	becker_close(n->becker);
 	messenger_client_unregister(n->msgr_client_id);
-	free(n->extmem);
 	cart_rom_free(p);
 }
 
 static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mooh *n = sptr;
+	struct part *p = &n->cart.part;
+	size_t length = ser_data_length(sh);
 	switch (tag) {
 	case MOOH_SER_EXTMEM:
-		ser_read(sh, n->extmem, sizeof(n->extmem));
+		if (length != (MEMPAGES * 0x2000)) {
+			LOG_MOD_WARN("mooh", "deserialise: RAM size mismatch\n");
+			return 0;
+		}
+		{
+			part_free(part_component_by_id_is_a(p, "EXTMEM", "ram"));
+			struct ram *ram = mooh_create_ram();
+			part_add_component(p, (struct part *)ram, "EXTMEM");
+			ram_ser_read(ram, sh);
+		}
 		break;
 	case MOOH_SER_TASKREG:
 		ser_read(sh, n->taskreg, sizeof(n->taskreg));
@@ -196,7 +225,7 @@ static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mooh *n = sptr;
 	switch (tag) {
 	case MOOH_SER_EXTMEM:
-		ser_write(sh, tag, n->extmem, sizeof(n->extmem));
+		// no-op: RAM is now a sub-component
 		break;
 	case MOOH_SER_TASKREG:
 		ser_write(sh, tag, n->taskreg, sizeof(n->taskreg));
@@ -243,6 +272,11 @@ static void mooh_reset(struct cart *c, _Bool hard) {
 	int i;
 
 	cart_rom_reset(c, hard);
+
+	if (hard) {
+		// SRAM, so assume a random pattern on startup
+		ram_clear(n->extmem, ram_init_random);
+	}
 
 	n->mmu_enable = 0;
 	n->crm_enable = 0;
@@ -309,7 +343,8 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 		if (bank != 0x3F || crm || (A & 0xE000) == 0xE000 ) {
 			c->EXTMEM = 1;
-			return n->extmem[bank * 0x2000 + offset];
+			ram_d8(n->extmem, 1, bank, offset, 0, &D);
+			return D;
 		}
 	}
 	if (P2 && n->becker) {
@@ -377,7 +412,7 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 		}
 
 		if (bank != 0x3F || crm || (A & 0xE000) == 0xE000) {
-			n->extmem[bank * 0x2000 + offset] = D;
+			ram_d8(n->extmem, 0, bank, offset, 0, &D);
 			c->EXTMEM = 1;
 		}
 	}
