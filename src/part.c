@@ -384,9 +384,13 @@ struct part *part_deserialise(struct ser_handle *sh) {
 					assert(pe->funcs->ser_struct_data != NULL);
 					p = pe->funcs->allocate();
 					assert(p != NULL);
-					// If there's a description, print it (log level >= 1)
+					// If there's a description, print it
 					if (pe->description) {
-						LOG_MOD_DEBUG(1, "part", "%s: %s\n", pe->name, pe->description);
+						if (partdb_ent_is_a(pe, "machine") || partdb_ent_is_a(pe, "cart")) {
+							LOG_PAR_MOD_DEBUG(1, "part", pe->name, "%s\n", pe->description);
+						} else {
+							LOG_PAR_MOD_DEBUG(2, "part", pe->name, "%s\n", pe->description);
+						}
 					}
 					p->partdb = pe;
 					ser_read_struct_data(sh, pe->funcs->ser_struct_data, p);
