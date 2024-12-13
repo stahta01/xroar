@@ -63,6 +63,7 @@ enum {
 	uimac_tag_joystick_left,
 	uimac_tag_hd_new,
 	uimac_tag_hd_detach,
+	uimac_tag_config_save,
 };
 
 static const char *hd_type_name[4] = { "20MiB", "40MiB", "128MiB", "256MiB" };
@@ -208,6 +209,14 @@ int cocoa_super_all_keys = 0;
 		default:
 			break;
 		}
+		break;
+
+	/* Configuration: */
+	case uimac_tag_config_save:
+		xroar_save_config_file();
+		break;
+	case ui_tag_config_autosave:
+		ui_update_state(-1, ui_tag_config_autosave, UI_NEXT, NULL);
 		break;
 
 	/* Machines: */
@@ -367,6 +376,10 @@ int cocoa_super_all_keys = 0;
 	int value = UIMAC_TAG_VALUE(item_tag);
 
 	switch (tag) {
+
+	case ui_tag_config_autosave:
+		[item setState:(uimac->config.autosave ? NSOnState : NSOffState)];
+		break;
 
 	case ui_tag_machine:
 		[item setState:((value == uimac->machine.id) ? NSOnState : NSOffState)];
@@ -755,6 +768,18 @@ static void setup_file_menu(void) {
 	[item release];
 	[tmp release];
 #endif
+
+	[file_menu addItem:[NSMenuItem separatorItem]];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Save configuration" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:UIMAC_TAG(uimac_tag_config_save)];
+	[file_menu addItem:item];
+	[item release];
+
+	item = [[NSMenuItem alloc] initWithTitle:@"Autosave configuration" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:UIMAC_TAG(ui_tag_config_autosave)];
+	[file_menu addItem:item];
+	[item release];
 
 	file_menu_item = [[NSMenuItem alloc] initWithTitle:@"File" action:nil keyEquivalent:@""];
 	[file_menu_item setSubmenu:file_menu];
@@ -1222,6 +1247,7 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_joystick_port, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_config_autosave, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 
 	cocoa_update_machine_menu(uisdl2);
 	cocoa_update_cartridge_menu(uisdl2);
@@ -1359,6 +1385,12 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 	const void *data = uimsg->data;
 
 	switch (tag) {
+
+	// Configuration
+
+	case ui_tag_config_autosave:
+		uimac->config.autosave = value;
+		break;
 
 	// Hardware
 

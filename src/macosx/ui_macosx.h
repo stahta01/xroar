@@ -87,6 +87,10 @@ struct ui_macosx_interface {
 	struct {
 		int ratelimit_latch;
 	} misc;
+
+	struct {
+		int autosave;
+	} config;
 };
 
 #endif
