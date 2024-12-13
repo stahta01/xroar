@@ -152,12 +152,18 @@ int cocoa_super_all_keys = 0;
 			}
 			break;
 		case ui_action_reset_soft:
+			hk_scan_release(hk_scan_Shift_L);
+			hk_scan_release(hk_scan_Shift_R);
 			xroar_soft_reset();
 			break;
 		case ui_action_reset_hard:
+			hk_scan_release(hk_scan_Shift_L);
+			hk_scan_release(hk_scan_Shift_R);
 			xroar_hard_reset();
 			break;
 		case ui_action_file_run:
+			hk_scan_release(hk_scan_Shift_L);
+			hk_scan_release(hk_scan_Shift_R);
 			xroar_run_file();
 			break;
 		case ui_action_file_load:
