@@ -170,8 +170,8 @@ static void mpi_initialise(struct part *p, void *options) {
 	mpi->switch_enable = mpi->is_race ? 0 : 1;
 
 	char id[6];
-	for (int i = 0; i < 4; i++) {
-		snprintf(id, sizeof(id), "slot%d", i);
+	for (unsigned i = 0; i < 4; ++i) {
+		snprintf(id, sizeof(id), "slot%u", i);
 		if (cc->mpi.slot_cart_name[i]) {
 			part_add_component(&c->part, (struct part *)cart_create(cc->mpi.slot_cart_name[i]), id);
 		}
@@ -189,8 +189,8 @@ static _Bool mpi_finish(struct part *p) {
 
 	// Find attached cartridges
 	char id[6];
-	for (int i = 0; i < 4; i++) {
-		snprintf(id, sizeof(id), "slot%d", i);
+	for (unsigned i = 0; i < 4; ++i) {
+		snprintf(id, sizeof(id), "slot%u", i);
 		struct cart *c2 = (struct cart *)part_component_by_id_is_a(p, id, "dragon-cart");
 		if (c2) {
 			c2->signal_firq = DELEGATE_AS1(void, bool, mpi_set_firq, &mpi->slot[i]);

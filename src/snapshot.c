@@ -565,9 +565,9 @@ static int read_v1_snapshot(const char *filename) {
 				break;
 
 			case ID_PIA_REGISTERS:
-				for (int i = 0; i < 2; i++) {
+				for (unsigned i = 0; i < 2; ++i) {
 					char id[5];
-					snprintf(id, sizeof(id), "PIA%d", i);
+					snprintf(id, sizeof(id), "PIA%u", i);
 					struct MC6821 *pia = (struct MC6821 *)part_component_by_id_is_a(&xroar.machine->part, id, "MC6821");
 					if (!pia) {
 						LOG_MOD_WARN("snapshot/v1", "read: %s not found - skipping PIA\n", id);

@@ -105,8 +105,8 @@ static _Bool spi65_finish(struct part *p) {
 
 	// Find attached devices
 	char id[6];
-	for (int i = 0; i < SPI_NDEVICES; i++) {
-		snprintf(id, sizeof(id), "slot%d", i);
+	for (unsigned i = 0; i < SPI_NDEVICES; ++i) {
+		snprintf(id, sizeof(id), "slot%u", i);
 		struct spi65_device *device = (struct spi65_device *)part_component_by_id_is_a(p, id, "spi-device");
 		if (device) {
 			spi65p->device[i] = device;
