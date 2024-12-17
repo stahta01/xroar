@@ -712,6 +712,10 @@ void cart_config_print_all(FILE *f, _Bool all) {
 	}
 }
 
+static void sdsfree_void(void *sptr) {
+	sdsfree((sds)sptr);
+}
+
 static void cart_config_free(struct cart_config *cc) {
 	if (cc->name)
 		free(cc->name);
@@ -728,7 +732,7 @@ static void cart_config_free(struct cart_config *cc) {
 			free(cc->mpi.slot_cart_name[i]);
 		}
 	}
-	slist_free_full(cc->opts, (slist_free_func)sdsfree);
+	slist_free_full(cc->opts, (slist_free_func)sdsfree_void);
 	free(cc);
 }
 
@@ -741,8 +745,12 @@ _Bool cart_config_remove(const char *name) {
 	return 1;
 }
 
+static void cart_config_free_void(void *sptr) {
+	cart_config_free((struct cart_config *)sptr);
+}
+
 void cart_config_remove_all(void) {
-	slist_free_full(config_list, (slist_free_func)cart_config_free);
+	slist_free_full(config_list, (slist_free_func)cart_config_free_void);
 	config_list = NULL;
 	rom_cart_config = NULL;
 }

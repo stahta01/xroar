@@ -146,12 +146,16 @@ void joystick_init(void) {
 	ui_messenger_preempt_group(msgr_client_id, ui_tag_joystick_cycle, MESSENGER_NOTIFY_DELEGATE(joystick_ui_set_joystick_cycle, NULL));
 }
 
+static void joystick_config_free_void(void *sptr) {
+	joystick_config_free((struct joystick_config *)sptr);
+}
+
 void joystick_shutdown(void) {
 	for (unsigned i = 0; i < JOYSTICK_NUM_PORTS; ++i) {
 		joystick_unmap(i);
 	}
 	messenger_client_unregister(msgr_client_id);
-	slist_free_full(config_list, (slist_free_func)joystick_config_free);
+	slist_free_full(config_list, (slist_free_func)joystick_config_free_void);
 	config_list = NULL;
 	js_db_free();
 }

@@ -755,6 +755,10 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void sdsfree_void(void *sptr) {
+	sdsfree((sds)sptr);
+}
+
 // Split a source string separated by a supplied POSIX Extended Regular
 // Expression into a list of SDS strings.  Returns NULL on parsing error, else
 // the list will contain at least one (potentially empty) element.
@@ -762,7 +766,7 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse) {
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *ere,
 				     _Bool parse) {
 
-	struct sdsx_list *sl = sdsx_list_new((sdsx_list_free_func)sdsfree);
+	struct sdsx_list *sl = sdsx_list_new((sdsx_list_free_func)sdsfree_void);
 
 	do {
 		sds t = sdsx_tok_str_len(&str, &len, ere, parse);

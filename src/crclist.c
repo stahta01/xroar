@@ -41,8 +41,10 @@ struct crclist {
 /* List containing all defined CRC lists */
 static struct slist *crclist_list = NULL;
 
-static int compare_entry(struct crclist *a, char *b) {
-	return strcmp(a->name, b);
+static int compare_entry(const void *a, const void *b) {
+	const struct crclist *aa = a;
+	const char *bb = b;
+	return strcmp(aa->name, bb);
 }
 
 /**************************************************************************/
@@ -181,7 +183,8 @@ void crclist_print(void) {
 	exit(EXIT_SUCCESS);
 }
 
-static void crclist_free(struct crclist *list) {
+static void crclist_free(void *sptr) {
+	struct crclist *list = sptr;
 	if (list->name)
 		free(list->name);
 	if (list->list)

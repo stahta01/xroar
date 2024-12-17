@@ -49,8 +49,10 @@ static char const * const rom_extensions[] = {
 };
 #endif
 
-static int compare_entry(struct romlist *a, char *b) {
-	return strcmp(a->name, b);
+static int compare_entry(const void *a, const void *b) {
+	const struct romlist *aa = a;
+	const char *bb = b;
+	return strcmp(aa->name, bb);
 }
 
 /**************************************************************************/
@@ -231,7 +233,8 @@ void romlist_print(void) {
 	exit(EXIT_SUCCESS);
 }
 
-static void romlist_free(struct romlist *list) {
+static void romlist_free(void *sptr) {
+	struct romlist *list = sptr;
 	if (list->name)
 		free(list->name);
 	if (list->list)

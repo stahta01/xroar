@@ -199,6 +199,10 @@ struct uigtk2_radio_menu *uigtk2_radio_menu_new(struct ui_gtk2_interface *uigtk2
 	return rm;
 }
 
+void uigtk2_radio_menu_free_void(void *sptr) {
+	uigtk2_radio_menu_free((struct uigtk2_radio_menu *)sptr);
+}
+
 void uigtk2_radio_menu_free(struct uigtk2_radio_menu *rm) {
 	struct ui_gtk2_interface *uigtk2 = rm->uigtk2;
 	gtk_ui_manager_remove_action_group(uigtk2->menu_manager, rm->action_group);
@@ -299,6 +303,10 @@ struct uigtk2_cbt_value *uigtk2_cbt_value_new(struct ui_gtk2_interface *uigtk2,
 	cbtv->nvalues = 0;
 	uigtk2->cbtv_list = slist_prepend(uigtk2->cbtv_list, cbtv);
 	return cbtv;
+}
+
+void uigtk2_cbt_value_free_void(void *sptr) {
+	uigtk2_cbt_value_free((struct uigtk2_cbt_value *)sptr);
 }
 
 void uigtk2_cbt_value_free(struct uigtk2_cbt_value *cbtv) {

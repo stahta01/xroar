@@ -206,6 +206,7 @@ _Bool uigtk2_update_adjustment(struct ui_gtk2_interface *uigtk2, const gchar *a_
 struct uigtk2_radio_menu *uigtk2_radio_menu_new(struct ui_gtk2_interface *uigtk2,
 						const char *path, GCallback callback);
 
+void uigtk2_radio_menu_free_void(void *);
 void uigtk2_radio_menu_free(struct uigtk2_radio_menu *);
 
 void uigtk2_radio_menu_set_current_value(struct uigtk2_radio_menu *rm, gint v);
@@ -233,6 +234,7 @@ struct uigtk2_cbt_value *uigtk2_cbt_value_by_name(struct ui_gtk2_interface *uigt
 // Free ComboBoxText with Value.  Doesn't remove it from the UI list, that's
 // done all in one go within ui_gtk2_free().
 
+void uigtk2_cbt_value_free_void(void *);
 void uigtk2_cbt_value_free(struct uigtk2_cbt_value *);
 
 void *uigtk2_cbt_value_get_value(struct uigtk2_cbt_value *);

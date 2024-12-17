@@ -96,6 +96,7 @@ struct auto_kbd {
 	unsigned command_index;  // when typing a basic command
 };
 
+static void auto_event_free_void(void *);
 static void auto_event_free(struct auto_event *ae);
 static sds parse_string(struct auto_kbd *ak, sds s);
 static void queue_auto_event(struct auto_kbd *ak, struct auto_event *ae);
@@ -137,9 +138,10 @@ struct auto_kbd *auto_kbd_new(struct machine *m) {
 }
 
 void auto_kbd_free(struct auto_kbd *ak) {
-	if (ak->debug_cpu)
+	if (ak->debug_cpu) {
 		machine_bp_remove_list(ak->machine, basic_command_breakpoint);
-	slist_free_full(ak->auto_event_list, (slist_free_func)auto_event_free);
+	}
+	slist_free_full(ak->auto_event_list, (slist_free_func)auto_event_free_void);
 	free(ak);
 }
 
@@ -200,9 +202,14 @@ void ak_type_file(struct auto_kbd *ak, const char *filename) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void auto_event_free_void(void *sptr) {
+	auto_event_free((struct auto_event *)sptr);
+}
+
 static void auto_event_free(struct auto_event *ae) {
-	if (!ae)
+	if (!ae) {
 		return;
+	}
 	switch (ae->type) {
 	case auto_type_basic_command:
 		sdsfree(ae->data.string);

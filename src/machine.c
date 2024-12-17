@@ -351,8 +351,12 @@ _Bool machine_config_remove(const char *name) {
 	return 1;
 }
 
+static void machine_config_free_void(void *sptr) {
+	machine_config_free((struct machine_config *)sptr);
+}
+
 void machine_config_remove_all(void) {
-	slist_free_full(config_list, (slist_free_func)machine_config_free);
+	slist_free_full(config_list, (slist_free_func)machine_config_free_void);
 	config_list = NULL;
 }
 

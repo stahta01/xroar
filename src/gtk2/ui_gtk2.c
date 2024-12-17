@@ -474,8 +474,8 @@ static void ui_gtk2_free(void *sptr) {
 	struct ui_gtk2_interface *uigtk2 = sptr;
 	DELEGATE_SAFE_CALL(uigtk2->public.filereq_interface->free);
 	uigtk2_dialog_shutdown();
-	slist_free_full(uigtk2->rm_list, (slist_free_func)uigtk2_radio_menu_free);
-	slist_free_full(uigtk2->cbtv_list, (slist_free_func)uigtk2_cbt_value_free);
+	slist_free_full(uigtk2->rm_list, (slist_free_func)uigtk2_radio_menu_free_void);
+	slist_free_full(uigtk2->cbtv_list, (slist_free_func)uigtk2_cbt_value_free_void);
 	g_object_unref(uigtk2->builder);
 	gtk_widget_destroy(uigtk2->drawing_area);
 	gtk_widget_destroy(uigtk2->top_window);

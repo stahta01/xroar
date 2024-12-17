@@ -166,7 +166,6 @@ static void commit_data(struct tape *t);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct cue_entry *cue_entry_new(int type);
-static void cue_entry_free(struct cue_entry *entry);
 
 static void cue_set_timing(struct tape_cas *cas, int bit0_cw, int bit1_cw);
 static void cue_add_silence(struct tape_cas *cas, int ms);
@@ -962,7 +961,8 @@ static struct cue_entry *cue_entry_new(int type) {
 	return new;
 }
 
-static void cue_entry_free(struct cue_entry *entry) {
+static void cue_entry_free(void *sptr) {
+	struct cue_entry *entry = sptr;
 	if (entry->section.data)
 		free(entry->section.data);
 	free(entry);
