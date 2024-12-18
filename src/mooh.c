@@ -51,6 +51,7 @@ struct mooh {
 	uint8_t task;
 	uint8_t rom_conf;
 	struct becker *becker;
+	_Bool crt9128_to_stderr;  // console output to stderr if set
 	uint8_t crt9128_reg_addr;
 	int msgr_client_id;  // messenger client id
 };
@@ -66,6 +67,7 @@ static const struct ser_struct ser_struct_mooh[] = {
 	SER_ID_STRUCT_UNHANDLED(MOOH_SER_TASKREG),
 	SER_ID_STRUCT_ELEM(6, struct mooh, task),
 	SER_ID_STRUCT_ELEM(7, struct mooh, rom_conf),
+	SER_ID_STRUCT_ELEM(8, struct mooh, crt9128_to_stderr),
 };
 
 static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -76,6 +78,11 @@ static const struct ser_struct_data mooh_ser_struct_data = {
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_mooh),
 	.read_elem = mooh_read_elem,
 	.write_elem = mooh_write_elem,
+};
+
+static struct xconfig_option const mooh_options[] = {
+	{ XCO_SET_BOOL("mooh-crt9128-stderr", struct mooh, crt9128_to_stderr) },
+	{ XC_OPT_END() }
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -147,6 +154,9 @@ static void mooh_initialise(struct part *p, void *options) {
 	struct cart *c = &n->cart;
 
 	cart_rom_initialise(p, options);
+
+	// MOOH-specific options
+	xconfig_parse_list_struct(mooh_options, cc->opts, n);
 
 	// RAM
 	struct ram *ram = mooh_create_ram();
@@ -380,11 +390,13 @@ static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 		spi65_write(n->spi65, A & 3, D);
 
 	/* poor man's CRT9128 Wordpak emulation */
-	if (A == 0xFF7D)
+	if (A == 0xFF7D) {
 		n->crt9128_reg_addr = D;
+	}
 #ifndef HAVE_WASM
-	if (A == 0xFF7C && n->crt9128_reg_addr == 0x0d)
+	if (n->crt9128_to_stderr && A == 0xFF7C && n->crt9128_reg_addr == 0x0d) {
 		fprintf(stderr, "%c", D);
+	}
 #endif
 
 	if ((A & 0xFFF0) == 0xFFA0) {
