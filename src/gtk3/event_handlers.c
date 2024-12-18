@@ -23,8 +23,6 @@
 
 #include <ctype.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include <gtk/gtk.h>
 
 #include "xalloc.h"

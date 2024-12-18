@@ -18,8 +18,6 @@
 
 #include "top-config.h"
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include <gtk/gtk.h>
 
 #include <assert.h>

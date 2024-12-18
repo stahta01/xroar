@@ -22,8 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include <gtk/gtk.h>
 
 #include "ao.h"

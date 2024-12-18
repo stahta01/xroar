@@ -20,8 +20,6 @@
 
 #include <stdlib.h>
 
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 #include <gtk/gtk.h>
 
 #include "gtk3/common.h"
@@ -47,7 +45,7 @@ void gtk3_create_about_window(struct ui_gtk3_interface *uigtk3) {
 	GtkAboutDialog *dialog = (GtkAboutDialog *)gtk_about_dialog_new();
 	if (logo_pixbuf) {
 		gtk_about_dialog_set_logo(dialog, logo_pixbuf);
-		gdk_pixbuf_unref(logo_pixbuf);
+		g_object_unref(logo_pixbuf);
 	}
 	gtk_about_dialog_set_version(dialog, VERSION);
 	gtk_about_dialog_set_copyright(dialog, "Copyright © " PACKAGE_YEAR " Ciaran Anscomb <xroar@6809.org.uk>");
