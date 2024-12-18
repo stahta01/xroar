@@ -1,4 +1,7 @@
  * Fix mouse virtual joystick on resize in SDL builds [Richard Kelly]
+ * New manual and automatic configuration saving from GUI
+ * Manage HD mounting from drive control dialog
+ * New MCX128 cartridge support for MC-10
 
 Version 1.7.3, Fri 29 Nov 2024
 
