@@ -31,11 +31,13 @@
 
 #include "ao.h"
 #include "breakpoint.h"
+#include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
+#include "mc10_cart.h"
 #include "mc6801/mc6801.h"
 #include "mc6847/mc6847.h"
 #include "messenger.h"
@@ -71,6 +73,7 @@ struct machine_mc10 {
 	unsigned ram0_inhibit_bit;
 
 	_Bool inverted_text;
+	struct mc10_cart *cart;
 	unsigned configured_frameskip;
 	unsigned frameskip;
 	unsigned video_mode;
@@ -176,6 +179,10 @@ static _Bool mc10_is_working_config(struct machine_config *mc) {
 static _Bool mc10_has_interface(struct part *p, const char *ifname);
 static void mc10_attach_interface(struct part *p, const char *ifname, void *intf);
 
+static void mc10_connect_cart(struct part *p);
+static void mc10_insert_cart(struct machine *m, struct cart *c);
+static void mc10_remove_cart(struct machine *m);
+
 static void mc10_reset(struct machine *m, _Bool hard);
 static enum machine_run_state mc10_run(struct machine *m, int ncycles);
 static void mc10_single_step(struct machine *m);
@@ -208,6 +215,8 @@ static void mc10_print_byte(void *);
 static void mc10_keyboard_update(void *sptr);
 static void mc10_update_tape_input(void *sptr, float value);
 static void mc10_mc6803_port2_postwrite(void *sptr);
+
+static void cart_nmi(void *sptr, _Bool level);
 
 static struct machine_bp mc10_print_breakpoint[] = {
 	BP_MC10_ROM(.address = 0xf9d0, .handler = DELEGATE_INIT(mc10_print_byte, NULL) ),
@@ -245,6 +254,8 @@ static struct part *mc10_allocate(void) {
 	m->has_interface = mc10_has_interface;
 	m->attach_interface = mc10_attach_interface;
 
+	m->insert_cart = mc10_insert_cart;
+	m->remove_cart = mc10_remove_cart;
 	m->reset = mc10_reset;
 	m->run = mc10_run;
 	m->single_step = mc10_single_step;
@@ -403,6 +414,9 @@ static _Bool mc10_finish(struct part *p) {
 		unsigned total_k = ram0_k + ram1_k;
 		LOG_DEBUG(1, "\t%uK total RAM\n", total_k);
 	}
+
+	// Connect any cartridge part
+	mc10_connect_cart(p);
 
 	mp->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc10_mem_cycle, mp);
 	mp->CPU->port2.preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
@@ -604,17 +618,44 @@ static void mc10_attach_interface(struct part *p, const char *ifname, void *intf
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void mc10_connect_cart(struct part *p) {
+	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10_cart *cm = (struct mc10_cart *)part_component_by_id_is_a(p, "cart", "mc10-cart");
+	mp->cart = cm;
+	if (!cm) {
+		return;
+	}
+	assert(cm->read != NULL);
+	assert(cm->write != NULL);
+	cm->signal_nmi = DELEGATE_AS1(void, bool, cart_nmi, mp);
+}
+
+static void mc10_insert_cart(struct machine *m, struct cart *c) {
+	mc10_remove_cart(m);
+	part_add_component(&m->part, &c->part, "cart");
+	mc10_connect_cart(&m->part);
+}
+
+static void mc10_remove_cart(struct machine *m) {
+	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	if (mp->cart) {
+		part_free(&mp->cart->cart.part);
+		mp->cart = NULL;
+	}
+}
+
 static void mc10_reset(struct machine *m, _Bool hard) {
 	struct machine_mc10 *mp = (struct machine_mc10 *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
 		ram_clear(mp->RAM0, mc->ram_init);
-		if (mp->RAM1)
+		if (mp->RAM1) {
 			ram_clear(mp->RAM1, mc->ram_init);
+		}
 	}
-	/* if (mp->cart && mp->cart->reset) {
-		mp->cart->reset(mp->cart, hard);
-	} */
+	if (mp->cart && mp->cart->cart.reset) {
+		mp->cart->cart.reset(&mp->cart->cart, hard);
+	}
 	mp->CPU->reset(mp->CPU);
 	mc6847_reset(mp->VDG);
 	tape_reset(mp->tape_interface);
@@ -972,14 +1013,28 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct machine_mc10 *mp = sptr;
 	struct machine *m = &mp->machine;
 
+	_Bool SEL = 0;
+	if (mp->cart) {
+		if (RnW) {
+			mp->CPU->D = mp->cart->read(mp->cart, A, mp->CPU->D);
+		} else {
+			mp->CPU->D = mp->cart->write(mp->cart, A, mp->CPU->D);
+		}
+		SEL = mp->cart->SEL;
+	}
+
 	if (RnW) {
-		mp->CPU->D = mc10_read_byte(m, A, mp->CPU->D);
+		if (!SEL) {
+			mp->CPU->D = mc10_read_byte(m, A, mp->CPU->D);
+		}
 #ifdef WANT_GDB_TARGET
 		if (mp->bp_session->wp_read_list)
 			bp_wp_read_hook(mp->bp_session, A);
 #endif
 	} else {
-		mc10_write_byte(m, A, mp->CPU->D);
+		if (!SEL) {
+			mc10_write_byte(m, A, mp->CPU->D);
+		}
 #ifdef WANT_GDB_TARGET
 		if (mp->bp_session->wp_write_list)
 			bp_wp_write_hook(mp->bp_session, A);
@@ -1068,4 +1123,11 @@ static void mc10_mc6803_port2_postwrite(void *sptr) {
 	struct machine_mc10 *mp = sptr;
 	uint8_t port2 = MC6801_PORT_VALUE(&mp->CPU->port2);
 	tape_update_output(mp->tape_interface, (port2 & 1) ? 0xfc : 0);
+}
+
+/* Catridge signalling */
+
+static void cart_nmi(void *sptr, _Bool level) {
+	struct machine_mc10 *mp = sptr;
+	MC6801_NMI_SET(mp->CPU, level);
 }

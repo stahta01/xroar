@@ -140,8 +140,8 @@ extern const struct ser_struct_data cart_ser_struct_data;
 struct cart *cart_create_from_config(struct cart_config *cc);
 struct cart *cart_create(const char *cc_name);
 _Bool cart_finish(struct part *p);
+_Bool cart_is_a(struct part *p, const char *name);
 _Bool dragon_cart_is_a(struct part *p, const char *name);
-_Bool mc10_cart_is_a(struct part *p, const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

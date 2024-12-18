@@ -39,6 +39,7 @@ xroar_SOURCES = \
 	keyboard.c keyboard.h \
 	logging.c logging.h \
 	machine.c machine.h \
+	mc10_cart.c mc10_cart.h \
 	messenger.c messenger.h \
 	module.c module.h \
 	mos6551.c mos6551.h \
@@ -133,6 +134,11 @@ xroar_SOURCES += \
 	spi65.c spi65.h \
 	spi_sdcard.c \
 	wd279x.c wd279x.h
+endif
+
+if CART_ARCH_MC10
+xroar_SOURCES += \
+	mcx128.c
 endif
 
 BUILT_SOURCES += \

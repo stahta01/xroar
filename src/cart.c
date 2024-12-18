@@ -85,7 +85,7 @@ static const struct ser_struct ser_struct_cart[] = {
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-// External; struct data nested by machines:
+// External; struct data nested by Dragon/CoCo carts:
 const struct ser_struct_data cart_ser_struct_data = {
 	.elems = ser_struct_cart,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_cart),
@@ -793,7 +793,7 @@ _Bool cart_finish(struct part *p) {
 	return 1;
 }
 
-static _Bool cart_is_a(struct part *p, const char *name) {
+_Bool cart_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "cart") == 0;
 }
@@ -801,11 +801,6 @@ static _Bool cart_is_a(struct part *p, const char *name) {
 _Bool dragon_cart_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "dragon-cart") == 0 || cart_is_a(p, name);
-}
-
-_Bool mc10_cart_is_a(struct part *p, const char *name) {
-	(void)p;
-	return strcmp(name, "mc10-cart") == 0 || cart_is_a(p, name);
 }
 
 static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
