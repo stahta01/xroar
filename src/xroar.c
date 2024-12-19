@@ -544,6 +544,19 @@ static char const * const default_config[] = {
 	"cart-type mooh",
 #endif
 
+#ifdef WANT_CART_ARCH_MC10
+	// MCX128 memory expansion
+	"cart mcx128",
+	"cart-desc 'MCX128 memory expansion (MC-10)'",
+	"cart-type mcx128",
+	"cart-rom @mcx128",
+	// MCX128 memory expansion (MCX BASIC AZERTY)
+	"cart mcx128a",
+	"cart-desc 'MCX128 memory expansion (Alice)'",
+	"cart-type mcx128",
+	"cart-rom @mcx128_azerty",
+#endif
+
 	// ROM lists
 
 #ifdef WANT_MACHINE_ARCH_DRAGON
@@ -624,6 +637,12 @@ static char const * const default_config[] = {
 	// RSDOS with becker port
 	"romlist rsdos_becker=hdbdw3bck",
 #endif
+#endif
+
+#ifdef WANT_CART_ARCH_MC10
+	// MCX128 BASIC
+	"romlist mcx128=mcx128,MCX_Basic_21",
+	"romlist mcx128_azerty=mcx128a,MCX_Basic_21_AZERTY",
 #endif
 
 	// CRC lists

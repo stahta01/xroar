@@ -85,6 +85,8 @@ extern const struct partdb_entry wd2797_part;
 
 extern const struct partdb_entry spi_sdcard_part;
 
+extern const struct partdb_entry mcx128_part;
+
 const struct partdb_entry *partdb[] = {
 #ifdef WANT_MACHINE_ARCH_DRAGON
 	&dragon32_part,
@@ -162,6 +164,10 @@ const struct partdb_entry *partdb[] = {
 	&wd2797_part,
 	&spi65_part,
 	&spi_sdcard_part,
+#endif
+
+#ifdef WANT_CART_ARCH_MC10
+	&mcx128_part,
 #endif
 
 };
