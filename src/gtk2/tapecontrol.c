@@ -393,6 +393,7 @@ static void update_program_list(struct uigtk2_dialog *dlg) {
 				   TC_POSITION, timestr,
 				   TC_FILE_POINTER, file,
 				   -1);
+		free(file);
 	}
 	tape_seek(xroar.tape_interface->tape_input, old_offset, SEEK_SET);
 }
