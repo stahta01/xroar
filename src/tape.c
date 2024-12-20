@@ -537,13 +537,11 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
 			return -1;
 		}
-		if (tip->tape_pad_auto) {
-			if (ti->tape_input->leader_count < tip->short_leader_threshold) {
-				tip->short_leader = 1;
-			}
-			// leader padding needs breakpoints set
-			set_breakpoints(tip);
+		if (ti->tape_input->leader_count < tip->short_leader_threshold) {
+			tip->short_leader = 1;
 		}
+		// leader padding needs breakpoints set
+		set_breakpoints(tip);
 		break;
 
 	case FILETYPE_K7:
@@ -1604,7 +1602,7 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 		return;
 	}
 	// Add required breakpoints
-	if (tip->short_leader || tip->tape_fast) {
+	if ((tip->short_leader && tip->tape_pad_auto) || tip->tape_fast) {
 		machine_bp_add_list(tip->machine, bp_list_pad, tip);
 		if (tip->tape_fast) {
 			machine_bp_add_list(tip->machine, bp_list_fast, tip);
