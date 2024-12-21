@@ -70,16 +70,6 @@ struct vo_interface;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Breakpoint flags for Dragon & compatibles. */
-
-#define BP_SAM_TY (1 << 15)
-#define BP_SAM_P1 (1 << 10)
-
-/* Useful breakpoint mask and condition combinations. */
-
-#define BP_MASK_ROM (BP_SAM_TY)
-#define BP_COND_ROM (0)
-
 /* Local flags determining whether breakpoints are added with
  * machine_add_bp_list(). */
 
@@ -107,29 +97,29 @@ struct machine_bp {
 /* Convenience macros for standard types of breakpoint. */
 
 #define BP_DRAGON64_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d64_1" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d64_1" }
 #define BP_DRAGON32_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d32" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d32" }
 #define BP_DRAGON_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@dragon" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@dragon" }
 
 #define BP_COCO_BAS10_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas10" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas10" }
 #define BP_COCO_BAS11_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas11" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas11" }
 #define BP_COCO_BAS12_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas12" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas12" }
 #define BP_COCO_BAS13_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas13" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas13" }
 #define BP_COCO3_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_EXT, .cond_crc_extbas = "@coco3" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_EXT, .cond_crc_extbas = "@coco3" }
 #define BP_MX1600_BAS_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
 #define BP_COCO_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@coco" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@coco" }
 
 #define BP_MC10_ROM(...) \
-	{ .bp = { .cond_mask = BP_MASK_ROM, .cond = BP_COND_ROM, __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mc10_compat" }
+	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mc10_compat" }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

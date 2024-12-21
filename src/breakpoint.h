@@ -2,7 +2,7 @@
  *
  *  \brief Breakpoint tracking for debugging.
  *
- *  \copyright Copyright 2011-2021 Ciaran Anscomb
+ *  \copyright Copyright 2011-2024 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,7 +38,6 @@ struct machine;
 // Breakpoint session
 
 struct bp_session {
-	unsigned cond;  // matched against breakpoint's cond ANDed with cond_mask
 	DELEGATE_T0(void) trap_handler;
 
 	struct slist *wp_read_list;
@@ -50,8 +49,6 @@ void bp_session_free(struct bp_session *);
 
 struct breakpoint {
 	// Breakpoint conditions
-	unsigned cond_mask;
-	unsigned cond;
 	unsigned address;
 	unsigned address_end;
 	// Handler
@@ -68,21 +65,15 @@ void bp_remove(struct bp_session *bps, struct breakpoint *bp);
 
 // Manipulate simple traps.
 
-void bp_hbreak_add(struct bp_session *bps,
-		   unsigned addr,
-		   unsigned match_mask, unsigned match_cond);
-void bp_hbreak_remove(struct bp_session *bps,
-		      unsigned addr,
-		      unsigned match_mask, unsigned match_cond);
+void bp_hbreak_add(struct bp_session *bps, unsigned addr);
+void bp_hbreak_remove(struct bp_session *bps, unsigned addr);
 
 void bp_wp_add(struct bp_session *bps,
 	       unsigned type,
-	       unsigned addr, unsigned nbytes,
-	       unsigned match_mask, unsigned match_cond);
+	       unsigned addr, unsigned nbytes);
 void bp_wp_remove(struct bp_session *bps,
 		  unsigned type,
-		  unsigned addr, unsigned nbytes,
-		  unsigned match_mask, unsigned match_cond);
+		  unsigned addr, unsigned nbytes);
 
 void bp_wp_read_hook(struct bp_session *bps, unsigned address);
 void bp_wp_write_hook(struct bp_session *bps, unsigned address);

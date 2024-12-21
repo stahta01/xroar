@@ -97,13 +97,10 @@ void bp_remove(struct bp_session *bps, struct breakpoint *bp) {
 }
 
 static struct breakpoint *trap_find(struct bp_session_private *bpsp,
-				    struct slist *bp_list, unsigned addr, unsigned addr_end,
-				    unsigned cond_mask, unsigned cond) {
+				    struct slist *bp_list, unsigned addr, unsigned addr_end) {
 	for (struct slist *iter = bp_list; iter; iter = iter->next) {
 		struct breakpoint *bp = iter->data;
 		if (bp->address == addr && bp->address_end == addr_end
-		    && bp->cond_mask == cond_mask
-		    && bp->cond == cond
 		    && bp->handler.func == bpsp->bps.trap_handler.func)
 			return bp;
 	}
@@ -111,17 +108,14 @@ static struct breakpoint *trap_find(struct bp_session_private *bpsp,
 }
 
 static void trap_add(struct bp_session_private *bpsp,
-		     struct slist **bp_list, unsigned addr, unsigned addr_end,
-		     unsigned cond_mask, unsigned cond) {
+		     struct slist **bp_list, unsigned addr, unsigned addr_end) {
 	if (!bpsp->bps.trap_handler.func) {
 		LOG_MOD_WARN("breakpoint", "no trap handler; not setting breakpoint\n");
 		return;
 	}
-	if (trap_find(bpsp, *bp_list, addr, addr_end, cond_mask, cond))
+	if (trap_find(bpsp, *bp_list, addr, addr_end))
 		return;
 	struct breakpoint *new = xmalloc(sizeof(*new));
-	new->cond_mask = cond_mask;
-	new->cond = cond;
 	new->address = addr;
 	new->address_end = addr_end;
 	new->handler = bpsp->bps.trap_handler;
@@ -129,9 +123,8 @@ static void trap_add(struct bp_session_private *bpsp,
 }
 
 static void trap_remove(struct bp_session_private *bpsp,
-			struct slist **bp_list, unsigned addr, unsigned addr_end,
-			unsigned cond_mask, unsigned cond) {
-	struct breakpoint *bp = trap_find(bpsp, *bp_list, addr, addr_end, cond_mask, cond);
+			struct slist **bp_list, unsigned addr, unsigned addr_end) {
+	struct breakpoint *bp = trap_find(bpsp, *bp_list, addr, addr_end);
 	if (bp) {
 		if (bpsp->iter_next && bpsp->iter_next->data == bp)
 			bpsp->iter_next = bpsp->iter_next->next;
@@ -140,17 +133,17 @@ static void trap_remove(struct bp_session_private *bpsp,
 	}
 }
 
-void bp_hbreak_add(struct bp_session *bps, unsigned addr, unsigned cond_mask, unsigned cond) {
+void bp_hbreak_add(struct bp_session *bps, unsigned addr) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_add(bpsp, &bpsp->instruction_list, addr, addr, cond_mask, cond);
+	trap_add(bpsp, &bpsp->instruction_list, addr, addr);
 	if (bpsp->instruction_list) {
 		bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
 	}
 }
 
-void bp_hbreak_remove(struct bp_session *bps, unsigned addr, unsigned cond_mask, unsigned cond) {
+void bp_hbreak_remove(struct bp_session *bps, unsigned addr) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_remove(bpsp, &bpsp->instruction_list, addr, addr, cond_mask, cond);
+	trap_remove(bpsp, &bpsp->instruction_list, addr, addr);
 	if (!bpsp->instruction_list) {
 		bpsp->debug_cpu->instruction_hook.func = NULL;
 	}
@@ -158,38 +151,36 @@ void bp_hbreak_remove(struct bp_session *bps, unsigned addr, unsigned cond_mask,
 
 #ifdef WANT_GDB_TARGET
 
-void bp_wp_add(struct bp_session *bps, unsigned type,
-	       unsigned addr, unsigned nbytes, unsigned cond_mask, unsigned cond) {
+void bp_wp_add(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
 		break;
 	case 3:
-		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
 		break;
 	case 4:
-		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
+		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
 		break;
 	default:
 		break;
 	}
 }
 
-void bp_wp_remove(struct bp_session *bps, unsigned type,
-		  unsigned addr, unsigned nbytes, unsigned cond_mask, unsigned cond) {
+void bp_wp_remove(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
 	switch (type) {
 	case 2:
-		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
 		break;
 	case 3:
-		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
 		break;
 	case 4:
-		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1, cond_mask, cond);
-		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1, cond_mask, cond);
+		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
+		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
 		break;
 	default:
 		break;
@@ -205,12 +196,9 @@ void bp_wp_remove(struct bp_session *bps, unsigned type,
  * alter the original list. */
 
 static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsigned address) {
-	struct bp_session *bps = &bpsp->bps;
 	for (struct slist *iter = bp_list; iter; iter = bpsp->iter_next) {
 		bpsp->iter_next = iter->next;
 		struct breakpoint *bp = iter->data;
-		if ((bps->cond & bp->cond_mask) != bp->cond)
-			continue;
 		if (address < bp->address)
 			continue;
 		if (address > bp->address_end)
