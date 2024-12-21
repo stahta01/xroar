@@ -222,11 +222,13 @@ static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsi
 
 static void bp_instruction_hook(void *sptr) {
 	struct bp_session_private *bpsp = sptr;
+	uint16_t cur_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
 	uint16_t old_pc;
 	do {
-		old_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
-		bp_hook(bpsp, bpsp->instruction_list, old_pc);
-	} while (old_pc != DELEGATE_CALL(bpsp->debug_cpu->get_pc));
+		bp_hook(bpsp, bpsp->instruction_list, cur_pc);
+		old_pc = cur_pc;
+		cur_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
+	} while (old_pc != cur_pc);
 }
 
 #ifdef WANT_GDB_TARGET
