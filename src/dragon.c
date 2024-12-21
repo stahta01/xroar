@@ -523,14 +523,14 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 			rombank_free(md->ext_charset);
 			md->ext_charset = NULL;
 		} else {
-			rombank_report(md->ext_charset, "dragon", "External character set");
+			rombank_report(md->ext_charset, p->partdb->name, "External character set");
 			md->crc_ext_charset = md->ext_charset->combined_crc32;
 			md->has_ext_charset = 1;
 		}
 	}
 
 	// RAM configuration
-	ram_report(md->RAM, "dragon", "total RAM");
+	ram_report(md->RAM, p->partdb->name, "total RAM");
 
 	// Connect any cartridge part
 	dragon_connect_cart(p);
@@ -802,7 +802,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	// Report BASIC
-	rombank_report(md->ROM0, "dragon", "BASIC");
+	rombank_report(md->ROM0, p->partdb->name, "BASIC");
 
 	// Check CRCs
 	if (is_dragon32) {
@@ -867,7 +867,7 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 			}
 			dragon_verify_ram_size(md->public.config);
 			if (length != ((unsigned)md->public.config->ram * 1024)) {
-				LOG_MOD_WARN("dragon", "deserialise: RAM size mismatch\n");
+				LOG_MOD_WARN(p->partdb->name, "deserialise: RAM size mismatch\n");
 				return 0;
 			}
 			part_free(part_component_by_id_is_a(p, "RAM", "ram"));
