@@ -523,7 +523,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 			rombank_free(md->ext_charset);
 			md->ext_charset = NULL;
 		} else {
-			rombank_report(md->ext_charset, "External character set");
+			rombank_report(md->ext_charset, "dragon", "External character set");
 			md->crc_ext_charset = md->ext_charset->combined_crc32;
 			md->has_ext_charset = 1;
 		}
@@ -802,7 +802,7 @@ static _Bool dragon_finish(struct part *p) {
 	}
 
 	// Report BASIC
-	rombank_report(md->ROM0, "BASIC");
+	rombank_report(md->ROM0, "dragon", "BASIC");
 
 	// Check CRCs
 	if (is_dragon32) {

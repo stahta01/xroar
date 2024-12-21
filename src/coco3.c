@@ -521,7 +521,7 @@ static _Bool coco3_finish(struct part *p) {
 	}
 
 	// Report and check CRC (Super Extended Colour BASIC)
-	rombank_report(mcc3->ROM0, "Super Extended Colour BASIC");
+	rombank_report(mcc3->ROM0, "coco3", "Super Extended Colour BASIC");
 	mcc3->crc_secb = 0xb4c88d6c;  // Super Extended Colour BASIC (NTSC)
 	mcc3->has_secb = rombank_verify_crc(mcc3->ROM0, "Super Extended Colour BASIC", -1, "@coco3", xroar.cfg.force_crc_match, &mcc3->crc_secb);
 

@@ -152,12 +152,12 @@ static _Bool dragon64_finish(struct part *p) {
 	}
 
 	// Report and check CRC (32K BASIC)
-	rombank_report(mdp->ROM0, "32K BASIC");
+	rombank_report(mdp->ROM0, "dragon64", "32K BASIC");
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
 	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	// Report and check CRC (64K BASIC)
-	rombank_report(mdp->ROM1, "64K BASIC");
+	rombank_report(mdp->ROM1, "dragon64", "64K BASIC");
 	md->crc_altbas = 0x17893a42;  // Dragon 64 64K mode BASIC
 	md->has_altbas = rombank_verify_crc(mdp->ROM1, "64K BASIC", -1, "@d64_2", xroar.cfg.force_crc_match, &md->crc_altbas);
 

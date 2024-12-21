@@ -187,7 +187,7 @@ static _Bool mcx128_finish(struct part *p) {
 		sdsfree(tmp);
 	}
 
-	rombank_report(n->rom, "MCX128 ROM");
+	rombank_report(n->rom, "mcx128", "MCX128 ROM");
 
 	// RAM
 	ram_report(n->ram, "mcx128", "extended RAM");

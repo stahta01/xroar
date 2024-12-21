@@ -403,7 +403,7 @@ static _Bool mc10_finish(struct part *p) {
 	}
 
 	// Report and check CRC (Microcolour BASIC)
-	rombank_report(mp->ROM0, "MicroColour BASIC");
+	rombank_report(mp->ROM0, "mc10", "MicroColour BASIC");
 	mp->crc_bas = 0x11fda97e;  // MicroColour BASIC 1.0 (MC-10)
 	mp->has_bas = rombank_verify_crc(mp->ROM0, "MicroColour BASIC", -1, "@mc10_compat", xroar.cfg.force_crc_match, &mp->crc_bas);
 

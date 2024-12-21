@@ -911,7 +911,7 @@ _Bool cart_rom_finish(struct part *p) {
 		sdsfree(tmp);
 	}
 
-	rombank_report(c->ROM, "Cartridge ROM");
+	rombank_report(c->ROM, "cart", "Cartridge ROM");
 
 	return cart_finish(p);
 }

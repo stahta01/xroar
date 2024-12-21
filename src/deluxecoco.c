@@ -220,7 +220,7 @@ static _Bool deluxecoco_finish(struct part *p) {
 	}
 
 	// Report and check CRC (Advanced Colour BASIC)
-	rombank_report(mdp->ROM0, "Advanced Colour BASIC");
+	rombank_report(mdp->ROM0, "deluxecoco", "Advanced Colour BASIC");
 	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
 	md->has_combined = rombank_verify_crc(mdp->ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
 

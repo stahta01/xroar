@@ -97,11 +97,11 @@ void rombank_free(struct rombank *rb) {
 
 // Report ROM bank contents
 
-void rombank_report(struct rombank *rb, const char *name) {
+void rombank_report(struct rombank *rb, const char *par, const char *name) {
 	if (logging.level < 1)
 		return;
 	unsigned slot_k = rb->slot_size / 1024;
-	LOG_MOD_PRINT("rom", "%s (%u x %uK)\n", name, rb->nslots, slot_k);
+	LOG_PAR_MOD_PRINT(par, "rom", "%s (%u x %uK)\n", name, rb->nslots, slot_k);
 	unsigned npopulated = 0;
 	for (unsigned i = 0; i < rb->nslots; i++) {
 		const char *filename = rb->slot[i].filename;

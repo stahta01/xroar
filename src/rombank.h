@@ -58,7 +58,7 @@ void rombank_free(struct rombank *);
 
 // Report ROM bank contents
 
-void rombank_report(struct rombank *, const char *name);
+void rombank_report(struct rombank *, const char *par, const char *name);
 
 // Verify ROM bank CRC.  Pass negative slot id to check combined CRC.  If force
 // is set to true, the value pointed to by crc32 is not overwritten if the CRC
