@@ -418,7 +418,7 @@ static const unsigned VRES_HRES_BPR_TEXT[8] = { 32, 40, 32, 40, 64, 80, 64, 80 }
 // as a 4-bit counter and having selected bits ANDed together to flag reset.
 // Special cases: 0 always resets, 16 never resets.
 static const unsigned LPR_rowmask[8] = { 0, 1, 2, 8, 9, 10, 11, 16 };
-static const unsigned SAM_V_rowmask[8] = { 12, 1, 3, 2, 2, 1, 1, 1 };
+static const unsigned SAM_V_rowmask[8] = { 12, 3, 3, 2, 2, 1, 1, 1 };
 static const unsigned VSC_rowmask[16] = { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 4, 3, 2, 1, 12 };
 
 // GIME variant constants
