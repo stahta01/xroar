@@ -510,10 +510,10 @@ endif
 WIN2RC = $(top_builddir)/tools/win2rc
 
 windows32/resources.h: windows32/resources.win
-	$(WIN2RC) -h -m XROAR_WINDOWS_RESOURCES_H_ $< > $@
+	$(WIN2RC) -o $@ -h -m XROAR_WINDOWS_RESOURCES_H_ $<
 
 windows32/resources.rc: windows32/resources.win
-	$(WIN2RC) -r $< > $@
+	$(WIN2RC) -o $@ -r $<
 
 BUILT_SOURCES += \
 	windows32/resources.h windows32/resources.rc

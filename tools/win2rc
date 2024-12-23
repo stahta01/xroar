@@ -2,7 +2,7 @@
 
 # win2rc - convert noddy markup to windows resource file format
 
-# Copyright 2023 Ciaran Anscomb
+# Copyright 2023-2024 Ciaran Anscomb
 #
 # License: GNU GPL version 3 or later <http://www.gnu.org/licenses/gpl-3.0.html>.
 #
@@ -25,6 +25,7 @@ if ($ENV{'PATH'} =~ /^(.*)$/) {
         $ENV{'PATH'} = $1;
 }
 
+my $output_filename;
 my $line_height = 12;
 my $macro;
 my $want_htmlish = 0;
@@ -34,6 +35,7 @@ my $debug = 0;
 my $verbose = 0;
 
 GetOptions(
+		"output|o=s" => \$output_filename,
 		"macro|m=s" => \$macro,
 		"htmlish!" => \$want_htmlish,
 		"headers|h!" => \$want_headers,
@@ -150,6 +152,12 @@ my $control_idnumber = 100;
 
 my $in;
 open($in, "<", $filename) or die "Failed to open $filename: $!\n";
+
+if (defined $output_filename && $output_filename =~ /^(.*)$/) {
+	my $o;
+	open ($o, ">", $1) or die $!;
+	STDOUT->fdopen(\*$o, 'w') or die $!;
+}
 
 WORD: while (my $tag = word($in)) {
 	if ($tag =~ /^(\w+)=(.*)$/) {
