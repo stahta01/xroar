@@ -65,9 +65,6 @@ struct cart {
 	void (*attach)(struct cart *c);
 	void (*detach)(struct cart *c);
 
-	// Destroy cartridge.
-	void (*free)(struct cart *c);
-
 	// Read & write cycles.  Called every cycle before decode.  If EXTMEM
 	// is not asserted, called again when cartridge IO (P2) or ROM (R2)
 	// areas are accessed.
