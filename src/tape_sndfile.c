@@ -65,7 +65,7 @@ struct tape_module tape_sndfile_module = {
 	.set_hysteresis = sndfile_set_hysteresis,
 };
 
-struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate) {
+struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate) {
 	SF_INFO sf_info;
 	SNDFILE *sfd = NULL;
 	_Bool writing = (mode[0] == 'w');
@@ -91,7 +91,7 @@ struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, 
 		return NULL;
 	}
 
-	struct tape *t = tape_new(ti);
+	struct tape *t = tape_new();
 	t->module = &tape_sndfile_module;
 	struct tape_sndfile *sndfile = xmalloc(sizeof(*sndfile));
 	*sndfile = (struct tape_sndfile){0};

@@ -210,7 +210,7 @@ static void init_filename_block(uint8_t *block, const char *filename, int type, 
 static void cue_read_ascii(struct tape_cas *cas, const char *filename);
 static void cue_read_k7(struct tape_cas *cas);
 
-static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *filename,
+static struct tape *do_tape_cas_open(const char *filename,
 				     const char *mode, _Bool is_ascii, _Bool is_k7) {
 	struct tape *t;
 	struct tape_cas *cas;
@@ -250,7 +250,7 @@ static struct tape *do_tape_cas_open(struct tape_interface *ti, const char *file
 		is_k7 = 0;
 	}
 
-	t = tape_new(ti);
+	t = tape_new();
 	t->module = &tape_cas_module;
 	cas = xmalloc(sizeof(*cas));
 	*cas = (struct tape_cas){0};
@@ -458,16 +458,16 @@ static void cue_read_ascii(struct tape_cas *cas, const char *filename) {
 	cue_add_block(cas, 0xff, 0, 0, offset, NULL);
 }
 
-struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode) {
-	return do_tape_cas_open(ti, filename, mode, 0, 0);
+struct tape *tape_cas_open(const char *filename, const char *mode) {
+	return do_tape_cas_open(filename, mode, 0, 0);
 }
 
-struct tape *tape_k7_open(struct tape_interface *ti, const char *filename, const char *mode) {
-	return do_tape_cas_open(ti, filename, mode, 0, 1);
+struct tape *tape_k7_open(const char *filename, const char *mode) {
+	return do_tape_cas_open(filename, mode, 0, 1);
 }
 
-struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode) {
-	return do_tape_cas_open(ti, filename, mode, 1, 0);
+struct tape *tape_asc_open(const char *filename, const char *mode) {
+	return do_tape_cas_open(filename, mode, 1, 0);
 }
 
 static void cas_close(struct tape *t) {

@@ -118,6 +118,7 @@ struct xroar_cfg {
 		double hysteresis;
 		int rewrite_gap_ms;
 		int rewrite_leader;
+		int ao_rate;
 	} tape;
 
 	// Disks

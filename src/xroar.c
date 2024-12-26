@@ -156,7 +156,6 @@ struct private_cfg {
 		int fast;
 		int pad_auto;
 		int rewrite;
-		int ao_rate;
 	} tape;
 
 	// Keyboard
@@ -1185,9 +1184,6 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Notify UI of starting options:
 
-	if (private_cfg.tape.ao_rate > 0) {
-		tape_set_ao_rate(xroar.tape_interface, private_cfg.tape.ao_rate);
-	}
 	ui_update_state(-1, ui_tag_tape_flag_fast, private_cfg.tape.fast, NULL);
 	ui_update_state(-1, ui_tag_tape_flag_pad_auto, private_cfg.tape.pad_auto, NULL);
 	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
@@ -2834,7 +2830,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT1("tape-rewrite", &private_cfg.tape.rewrite) },
 	{ XC_SET_INT("tape-rewrite-gap-ms", &xroar.cfg.tape.rewrite_gap_ms) },
 	{ XC_SET_INT("tape-rewrite-leader", &xroar.cfg.tape.rewrite_leader) },
-	{ XC_SET_INT("tape-ao-rate", &private_cfg.tape.ao_rate) },
+	{ XC_SET_INT("tape-ao-rate", &xroar.cfg.tape.ao_rate) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT1("tape-pad", &dummy_value.v_int), .deprecated = 1 },
 
@@ -3225,7 +3221,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_bool(f, all, "tape-fast", private_cfg.tape.fast, 1);
 	xroar_cfg_print_bool(f, all, "tape-pad-auto", private_cfg.tape.pad_auto, 1);
 	xroar_cfg_print_bool(f, all, "tape-rewrite", private_cfg.tape.rewrite, 0);
-	xroar_cfg_print_int_nz(f, all, "tape-ao-rate", private_cfg.tape.ao_rate);
+	xroar_cfg_print_int_nz(f, all, "tape-ao-rate", xroar.cfg.tape.ao_rate);
 	fputs("\n", f);
 
 	fputs("# Disks\n", f);

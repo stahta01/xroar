@@ -85,8 +85,6 @@ struct tape_interface_private {
 	// When accelerating operations, accumulated number of simulated CPU cycles
 	int skip_ncycles;
 
-	int ao_rate;
-
 	uint8_t last_tape_output;
 	_Bool playing;  // manual motor control
 	_Bool motor;  // automatic motor control
@@ -218,7 +216,6 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 
 	tip->ui = ui;
 	tip->in_pulse = -1;
-	tip->ao_rate = 9600;
 	tip->rewrite.leader_count = xroar.cfg.tape.rewrite_leader;
 	tip->rewrite.silence = 1;
 	tip->rewrite.bit0_pwt = 6403;
@@ -299,12 +296,15 @@ int tape_seek(struct tape *t, long offset, int whence) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 
 	int r = t->module->seek(t, offset, whence);
-	update_motor(tip);
 
-	// XXX review this.  If seeking to the beginning of either tape,
-	// desyncs rewriting.
-	if (tip->tape_rewrite && r >= 0 && t->offset == 0) {
-		rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+	if (tip) {
+		update_motor(tip);
+
+		// XXX review this.  If seeking to the beginning of either tape,
+		// desyncs rewriting.
+		if (tip->tape_rewrite && r >= 0 && t->offset == 0) {
+			rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
+		}
 	}
 	return r;
 }
@@ -314,7 +314,7 @@ static int tape_pulse_in(struct tape *t, int *pulse_width) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	int r = t->module->pulse_in(t, pulse_width);
-	if (tip->tape_rewrite) {
+	if (tip && tip->tape_rewrite) {
 		tip->rewrite.pulse_buffer[tip->rewrite.pulse_buffer_index] = *pulse_width;
 		tip->rewrite.pulse_buffer_index = (tip->rewrite.pulse_buffer_index + 1) % PULSE_BUFFER_SIZE;
 	}
@@ -375,6 +375,7 @@ static void write_silence(struct tape *t, int duration) {
 static void write_pulse(struct tape *t, int pulse_width, double scale) {
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	assert(tip != NULL);
 	for (int i = 0; i < 64; ++i) {
 		unsigned sr = tip->rewrite.sremain + pulse_width;
 		unsigned nticks = sr / 64;
@@ -388,6 +389,7 @@ static void tape_bit_out(struct tape *t, int bit) {
 	if (!t) return;
 	struct tape_interface *ti = t->tape_interface;
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
+	assert(tip != NULL);
 	// Magic numbers?  These are the pulse widths (in SAM cycles) that fall
 	// in the middle of what is recognised by the ROM read routines, and as
 	// such should prove to be the most robust.
@@ -496,10 +498,9 @@ void tape_seek_to_file(struct tape *t, struct tape_file const *f) {
 
 // ---------------------------------------------------------------------------
 
-struct tape *tape_new(struct tape_interface *ti) {
+struct tape *tape_new(void) {
 	struct tape *new = xmalloc(sizeof(*new));
 	*new = (struct tape){0};
-	new->tape_interface = ti;
 	return new;
 }
 
@@ -517,12 +518,37 @@ void tape_reset(struct tape_interface *ti) {
 	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 }
 
-void tape_set_ao_rate(struct tape_interface *ti, int rate) {
-	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	if (rate > 0)
-		tip->ao_rate = rate;
-	else
-		tip->ao_rate = 9600;
+struct tape *tape_open(const char *filename, const char *mode) {
+	if (!filename || !*filename || !mode) {
+		return NULL;
+	}
+	int ao_rate = xroar.cfg.tape.ao_rate > 0 ? xroar.cfg.tape.ao_rate : 9600;
+	int type = xroar_filetype_by_ext(filename);
+	// Read-only filetypes
+	if (type == FILETYPE_K7 || type == FILETYPE_ASC) {
+		if (*mode != 'r') {
+			return NULL;
+		}
+	}
+	struct tape *t = NULL;
+	switch (type) {
+	case FILETYPE_CAS:
+		t = tape_cas_open(filename, mode);
+		break;
+	case FILETYPE_K7:
+		t = tape_k7_open(filename, mode);
+		break;
+	case FILETYPE_ASC:
+		t = tape_asc_open(filename, mode);
+		break;
+	default:
+		t = tape_sndfile_open(filename, mode, ao_rate);
+		break;
+	}
+	if (t) {
+		t->type = type;
+	}
+	return t;
 }
 
 int tape_open_reading(struct tape_interface *ti, const char *filename) {
@@ -530,37 +556,18 @@ int tape_open_reading(struct tape_interface *ti, const char *filename) {
 
 	tape_close_reading(ti);
 
-	int type = xroar_filetype_by_ext(filename);
 	tip->short_leader = 0;
-	switch (type) {
-	case FILETYPE_CAS:
-		if ((ti->tape_input = tape_cas_open(ti, filename, "rb")) == NULL) {
-			return -1;
-		}
+	if ((ti->tape_input = tape_open(filename, "rb")) == NULL) {
+		return -1;
+	}
+	if (ti->tape_input->type == FILETYPE_CAS) {
 		if (ti->tape_input->leader_count < tip->short_leader_threshold) {
 			tip->short_leader = 1;
 		}
 		// leader padding needs breakpoints set
 		set_breakpoints(tip);
-		break;
-
-	case FILETYPE_K7:
-		if ((ti->tape_input = tape_k7_open(ti, filename, "rb")) == NULL) {
-			return -1;
-		}
-		break;
-
-	case FILETYPE_ASC:
-		if ((ti->tape_input = tape_asc_open(ti, filename, "rb")) == NULL) {
-			return -1;
-		}
-		break;
-	default:
-		if ((ti->tape_input = tape_sndfile_open(ti, filename, "rb", -1)) == NULL) {
-			return -1;
-		}
-		break;
 	}
+	ti->tape_input->tape_interface = ti;
 
 	if (ti->tape_input->module->set_panning) {
 		ti->tape_input->module->set_panning(ti->tape_input, xroar.cfg.tape.pan);
@@ -592,20 +599,10 @@ void tape_close_reading(struct tape_interface *ti) {
 int tape_open_writing(struct tape_interface *ti, const char *filename) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tape_close_writing(ti);
-	int type = xroar_filetype_by_ext(filename);
-	switch (type) {
-	case FILETYPE_CAS:
-	case FILETYPE_ASC:
-		if ((ti->tape_output = tape_cas_open(ti, filename, "wb")) == NULL) {
-			return -1;
-		}
-		break;
-	default:
-		if ((ti->tape_output = tape_sndfile_open(ti, filename, "wb", tip->ao_rate)) == NULL) {
-			return -1;
-		}
-		break;
+	if ((ti->tape_output = tape_open(filename, "wb")) == NULL) {
+		return -1;
 	}
+	ti->tape_output->tape_interface = ti;
 
 	ui_update_state(-1, ui_tag_tape_playing, !ti->default_paused, NULL);
 	tip->rewrite.bit_count = 0;

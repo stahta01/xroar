@@ -52,6 +52,7 @@ struct tape_module;
 struct tape {
 	struct tape_module *module;
 	struct tape_interface *tape_interface;
+	int type;  // file type FILETYPE_*
 	void *data;  /* module-specific data */
 	long offset;  /* current tape position */
 	long size;  /* current tape size */
@@ -102,13 +103,13 @@ struct tape_file *tape_file_next(struct tape *t, int skip_bad);
 void tape_seek_to_file(struct tape *t, struct tape_file const *f);
 
 /* Module-specific open() calls */
-struct tape *tape_cas_open(struct tape_interface *ti, const char *filename, const char *mode);
-struct tape *tape_k7_open(struct tape_interface *ti, const char *filename, const char *mode);
-struct tape *tape_asc_open(struct tape_interface *ti, const char *filename, const char *mode);
-struct tape *tape_sndfile_open(struct tape_interface *ti, const char *filename, const char *mode, int rate);
+struct tape *tape_cas_open(const char *filename, const char *mode);
+struct tape *tape_k7_open(const char *filename, const char *mode);
+struct tape *tape_asc_open(const char *filename, const char *mode);
+struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate);
 
 /* Only to be used by tape modules */
-struct tape *tape_new(struct tape_interface *ti);
+struct tape *tape_new(void);
 void tape_free(struct tape *t);
 
 /**************************************************************************/
@@ -119,9 +120,6 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 void tape_interface_disconnect_machine(struct tape_interface *ti);
 
 void tape_reset(struct tape_interface *ti);
-
-/* Only affects libsndfile output */
-void tape_set_ao_rate(struct tape_interface *ti, int);
 
 int tape_open_reading(struct tape_interface *ti, const char *filename);
 void tape_close_reading(struct tape_interface *ti);
