@@ -147,56 +147,116 @@ struct tape_file_autorun {
 };
 
 static struct tape_file_autorun autorun_special[] = {
+
+	// Programs with special load instructions
+
 	{
-	  .name = "Dungeon Raid",
-	  .size = 36, .crc = 0x1822,
-	  .run = "\\025CLEAR0\\rCLOADM\\r",
+		.name = "Dungeon Raid (1984 Microdeal)",
+		.size = 36, .crc = 0x1822,
+		.run = "\\025CLEAR0\\r\\0CLOADM\\r",
 	},
 	{
-	  .name = "Electronic Author",
-	  .size = 15, .crc = 0x8866,
-	  .run = "\\025CLEAR20\\rCLOADM\\r",
+		.name = "Electronic Author (1985 Smithson Computing)",
+		.size = 15, .crc = 0x8866,
+		.run = "\\025CLEAR20\\r\\0CLOADM\\r",
 	},
 	{
-	  .name = "Galacticans",
-	  .size = 15, .crc = 0xd39b,
-	  .run = "\\025PCLEAR1\\rCLEAR200,7777\\rCLOADM\\r",
+		.name = "Galacticans (1983 Softek)",
+		.size = 15, .crc = 0xd39b,
+		.run = "\\025PCLEAR1\\r\\0CLEAR200,7777\\r\\0CLOADM\\r",
 	},
 	{
-	  .name = "Lucifer's Kingdom",
-	  .size = 15, .crc = 0x7f34,
-	  .run = "\\025CLEAR1,32767:CLOADM\\r",
+		.name = "Lucifer's Kingdom (1988 Orange Software)",
+		.size = 15, .crc = 0x7f34,
+		.run = "\\025CLEAR1,32767:CLOADM\\r",
 	},
 	{
-	  .name = "North-Sea Action",
-	  .size = 15, .crc = 0x9c2b,
-	  .run = "\\025CLEAR20\\rCLOADM\\rEXEC\\r",
+		.name = "North-Sea Action (1988 Orange Software)",
+		.size = 15, .crc = 0x9c2b,
+		.run = "\\025CLEAR20\\r\\0CLOADM\\r\\0EXEC\\r",
 	},
 	{
-	  .name = "Speak Up!",
-	  .size = 15, .crc = 0x7bff,
-	  .run = "\\025CLEAR200,25448\\rCLOADM\\rEXEC\\r",
+		.name = "Speak Up! (1983 Classical Computing Inc)",
+		.size = 15, .crc = 0x7bff,
+		.run = "\\025CLEAR200,25448\\r\\0CLOADM\\r\\0EXEC\\r",
 	},
 	{
-	  .name = "Spy Against Spy",
-	  .size = 15, .crc = 0x48a0,
-	  .run = "\\025CLEAR20:CLOADM\\r",
+		.name = "Spy Against Spy (1987 Starship Software)",
+		.size = 15, .crc = 0x48a0,
+		.run = "\\025CLEAR20:CLOADM\\r",
 	},
 	{
-	  .name = "Tanglewood",
-	  .size = 115, .crc = 0x7e5e,
-	  .run = "\\025CLEAR10\\rCLOADM\\r",
+		.name = "Tanglewood (1986 Microdeal)",
+		.size = 115, .crc = 0x7e5e,
+		.run = "\\025CLEAR10\\r\\0CLOADM\\r",
 	},
 	{
-	  .name = "Ultrapede",
-	  .size = 15, .crc = 0x337a,
-	  .run = "\\025CLOADM\\r",
+		.name = "Ultrapede (1983 Softek)",
+		.size = 15, .crc = 0x337a,
+		.run = "\\025CLOADM\\r",
 	},
 	{
-	  .name = "Utopia",
-	  .size = 15, .crc = 0xeb14,
-	  .run = "\\025CLEAR10:CLOADM\\rEXEC\\r",
+		.name = "Utopia (1988 Starship Software)",
+		.size = 15, .crc = 0xeb14,
+		.run = "\\025CLEAR10:CLOADM\\r\\0EXEC\\r",
 	},
+
+	// Just acknowledge some more recent releases.  This isn't exhaustive,
+	// of course, just what I have to hand.
+
+	{
+		.name = "3D Deathchase (2009 James McKay)",
+		.size = 15, .crc = 0xc87c,
+	},
+	{
+		.name = "Ball Dozer (1988 Kouga Software)",
+		.size = 15, .crc = 0xda1e,
+	},
+	{
+		.name = "Blockdown (2020 \"Seismic Brains\"; early release)",
+		.size = 201, .crc = 0xc11f,
+	},
+	{
+		.name = "Blockdown (2021 Teipen Mwnci)",
+		.size = 217, .crc = 0x911b,
+	},
+	{
+		.name = "Dunjunz (2017 Teipen Mwnci; early release)",
+		.size = 137, .crc = 0x367d,
+	},
+	{
+		.name = "Dunjunz (2018 Teipen Mwnci; Anniversary Edition)",
+		.size = 166, .crc = 0x5847,
+	},
+	{
+		.name = "Flagon Bird (2014 Bosco)",
+		.size = 177, .crc = 0xf14d,
+	},
+	{
+		.name = "Glove (2009 James McKay)",
+		.size = 15, .crc = 0x4173,
+	},
+	{
+		.name = "Jumping Joey (2022 Nickolas Marentes)",
+		.size = 154, .crc = 0x1320,
+	},
+	{
+		.name = "Pipes (2020 Nickolas Marentes)",
+		.size = 159, .crc = 0x1443,
+	},
+	{
+		.name = "Rally-SG (2020 Nickolas Marentes)",
+		.size = 15, .crc = 0xc87e,
+	},
+	{
+		.name = "Shanghai (1991 Burgin)",
+		.size = 149, .crc = 0x89cd,
+	},
+	{
+		.name = "ROTABB (1989 Kouga Software)",
+		.size = 15, .crc = 0x400b,
+	},
+
 };
 
 // ---------------------------------------------------------------------------
@@ -702,9 +762,14 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(autorun_special); ++i) {
 		if (autorun_special[i].size == f->fnblock_size
 		    && autorun_special[i].crc == f->fnblock_crc) {
-			LOG_MOD_DEBUG(1, "tape", "using special load instructions for '%s'\n", autorun_special[i].name);
-			ak_parse_type_string(xroar.auto_kbd, autorun_special[i].run);
-			done = 1;
+			if (autorun_special[i].run) {
+				LOG_MOD_DEBUG(1, "tape", "%s: using built-in load instructions\n", autorun_special[i].name);
+				ak_parse_type_string(xroar.auto_kbd, autorun_special[i].run);
+				done = 1;
+			} else {
+				LOG_MOD_DEBUG(1, "tape", "%s\n", autorun_special[i].name);
+				break;
+			}
 		}
 	}
 
