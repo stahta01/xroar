@@ -328,7 +328,9 @@ enum xconfig_result xconfig_set_option_struct(struct xconfig_option const *optio
 		LOG_ERROR("Missing argument to `%s'\n", opt);
 		return XCONFIG_MISSING_ARG;
 	}
-	set_option(options, option, sdsx_parse_str(arg), sptr);
+	sds arg_s = sdsx_parse_str(arg);
+	set_option(options, option, arg_s, sptr);
+	sdsfree(arg_s);
 	return XCONFIG_OK;
 }
 
