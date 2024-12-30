@@ -1224,6 +1224,8 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 		return md->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return update_audio_from_tape;
+	} else if (0 == strcmp(ifname, "bp-session")) {
+		return md->bp_session;
 	}
 	return NULL;
 }

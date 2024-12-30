@@ -1047,6 +1047,8 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 		return mcc3->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return update_audio_from_tape;
+	} else if (0 == strcmp(ifname, "bp-session")) {
+		return mcc3->bp_session;
 	}
 	return NULL;
 }
