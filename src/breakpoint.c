@@ -107,9 +107,12 @@ static struct breakpoint *trap_find(struct bp_session_private *bpsp,
 	return NULL;
 }
 
-static void trap_add(struct bp_session_private *bpsp,
-		     struct slist **bp_list, unsigned addr, unsigned addr_end) {
-	if (!bpsp->bps.trap_handler.func) {
+typedef DELEGATE_S0(void) trap_handler;
+
+static void do_wp_add_range(struct bp_session_private *bpsp,
+		     struct slist **bp_list, unsigned addr, unsigned addr_end,
+		     DELEGATE_T0(void) handler) {
+	if (!handler.func) {
 		LOG_MOD_WARN("breakpoint", "no trap handler; not setting breakpoint\n");
 		return;
 	}
@@ -118,11 +121,30 @@ static void trap_add(struct bp_session_private *bpsp,
 	struct breakpoint *new = xmalloc(sizeof(*new));
 	new->address = addr;
 	new->address_end = addr_end;
-	new->handler = bpsp->bps.trap_handler;
+	new->handler = handler;
 	*bp_list = slist_prepend(*bp_list, new);
 }
 
-static void trap_remove(struct bp_session_private *bpsp,
+void bp_wp_add_range(struct bp_session *bps, unsigned type,
+		     unsigned addr, unsigned addr_end, DELEGATE_T0(void) handler) {
+	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
+	switch (type) {
+	case 2:
+		do_wp_add_range(bpsp, &bpsp->bps.wp_write_list, addr, addr_end, handler);
+		break;
+	case 3:
+		do_wp_add_range(bpsp, &bpsp->bps.wp_read_list, addr, addr_end, handler);
+		break;
+	case 4:
+		do_wp_add_range(bpsp, &bpsp->bps.wp_write_list, addr, addr_end, handler);
+		do_wp_add_range(bpsp, &bpsp->bps.wp_read_list, addr, addr_end, handler);
+		break;
+	default:
+		break;
+	}
+}
+
+static void do_wp_remove_range(struct bp_session_private *bpsp,
 			struct slist **bp_list, unsigned addr, unsigned addr_end) {
 	struct breakpoint *bp = trap_find(bpsp, *bp_list, addr, addr_end);
 	if (bp) {
@@ -133,9 +155,28 @@ static void trap_remove(struct bp_session_private *bpsp,
 	}
 }
 
+void bp_wp_remove_range(struct bp_session *bps, unsigned type,
+			unsigned addr, unsigned addr_end) {
+	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
+	switch (type) {
+	case 2:
+		do_wp_remove_range(bpsp, &bpsp->bps.wp_write_list, addr, addr_end);
+		break;
+	case 3:
+		do_wp_remove_range(bpsp, &bpsp->bps.wp_read_list, addr, addr_end);
+		break;
+	case 4:
+		do_wp_remove_range(bpsp, &bpsp->bps.wp_write_list, addr, addr_end);
+		do_wp_remove_range(bpsp, &bpsp->bps.wp_read_list, addr, addr_end);
+		break;
+	default:
+		break;
+	}
+}
+
 void bp_hbreak_add(struct bp_session *bps, unsigned addr) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_add(bpsp, &bpsp->instruction_list, addr, addr);
+	do_wp_add_range(bpsp, &bpsp->instruction_list, addr, addr, bpsp->bps.trap_handler);
 	if (bpsp->instruction_list) {
 		bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
 	}
@@ -143,7 +184,7 @@ void bp_hbreak_add(struct bp_session *bps, unsigned addr) {
 
 void bp_hbreak_remove(struct bp_session *bps, unsigned addr) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	trap_remove(bpsp, &bpsp->instruction_list, addr, addr);
+	do_wp_remove_range(bpsp, &bpsp->instruction_list, addr, addr);
 	if (!bpsp->instruction_list) {
 		bpsp->debug_cpu->instruction_hook.func = NULL;
 	}
@@ -153,38 +194,11 @@ void bp_hbreak_remove(struct bp_session *bps, unsigned addr) {
 
 void bp_wp_add(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes) {
 	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	switch (type) {
-	case 2:
-		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
-		break;
-	case 3:
-		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
-		break;
-	case 4:
-		trap_add(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
-		trap_add(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
-		break;
-	default:
-		break;
-	}
+	bp_wp_add_range(bps, type, addr, addr + nbytes - 1, bpsp->bps.trap_handler);
 }
 
 void bp_wp_remove(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes) {
-	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	switch (type) {
-	case 2:
-		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
-		break;
-	case 3:
-		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
-		break;
-	case 4:
-		trap_remove(bpsp, &bpsp->bps.wp_write_list, addr, addr + nbytes - 1);
-		trap_remove(bpsp, &bpsp->bps.wp_read_list, addr, addr + nbytes - 1);
-		break;
-	default:
-		break;
-	}
+	bp_wp_remove_range(bps, type, addr, addr + nbytes - 1);
 }
 
 #endif

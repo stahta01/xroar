@@ -68,12 +68,19 @@ void bp_remove(struct bp_session *bps, struct breakpoint *bp);
 void bp_hbreak_add(struct bp_session *bps, unsigned addr);
 void bp_hbreak_remove(struct bp_session *bps, unsigned addr);
 
-void bp_wp_add(struct bp_session *bps,
-	       unsigned type,
-	       unsigned addr, unsigned nbytes);
-void bp_wp_remove(struct bp_session *bps,
-		  unsigned type,
-		  unsigned addr, unsigned nbytes);
+#define BP_WP_WRITE  (2)
+#define BP_WP_READ   (3)
+#define BP_WP_ACCESS (4)
+
+void bp_wp_add_range(struct bp_session *bps, unsigned type,
+		     unsigned addr, unsigned addr_end, DELEGATE_T0(void) handler);
+void bp_wp_remove_range(struct bp_session *bps, unsigned type,
+			unsigned addr, unsigned addr_end);
+
+#ifdef WANT_GDB_TARGET
+void bp_wp_add(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes);
+void bp_wp_remove(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes);
+#endif
 
 void bp_wp_read_hook(struct bp_session *bps, unsigned address);
 void bp_wp_write_hook(struct bp_session *bps, unsigned address);
