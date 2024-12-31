@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2019-2024 Ciaran Anscomb
+ *  \copyright Copyright 2019-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -59,6 +59,7 @@ enum vdg_render_mode {
 	TCC1014_RENDER_SG,
 	TCC1014_RENDER_CG,
 	TCC1014_RENDER_RG,
+	TCC1014_RENDER_RG2,
 };
 
 // GIME variant constants
@@ -418,7 +419,7 @@ static const unsigned VRES_HRES_BPR_TEXT[8] = { 32, 40, 32, 40, 64, 80, 64, 80 }
 // as a 4-bit counter and having selected bits ANDed together to flag reset.
 // Special cases: 0 always resets, 16 never resets.
 static const unsigned LPR_rowmask[8] = { 0, 1, 2, 8, 9, 10, 11, 16 };
-static const unsigned SAM_V_rowmask[8] = { 12, 3, 3, 2, 2, 1, 1, 1 };
+static const unsigned SAM_V_rowmask[8] = { 3, 3, 3, 2, 2, 1, 1, 1 };
 static const unsigned VSC_rowmask[16] = { 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 4, 3, 2, 1, 12 };
 
 // GIME variant constants
@@ -1303,6 +1304,15 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 				bg_colour = gime->VDG.CSS ? TCC1014_RGCSS1_0 : TCC1014_RGCSS0_0;
 				cg_colours = !gime->VDG.CSS ? TCC1014_GREEN : TCC1014_WHITE;
 				render_mode = gime->VDG.GM0 ? TCC1014_RENDER_RG : TCC1014_RENDER_CG;
+				if (gime->VDG.GM0) {
+					if (gime->resolution || (gime->PIA1B_shadow.pdr & 0x70) == 0x70) {
+						render_mode = TCC1014_RENDER_RG;
+					} else {
+						render_mode = TCC1014_RENDER_RG2;
+					}
+				} else {
+					render_mode = TCC1014_RENDER_CG;
+				}
 			} else {
 				if (SnA) {
 					// Semigraphics
@@ -1392,6 +1402,11 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 					c1 = gime->palette_reg[(gdata&0x40) ? fg_colour : bg_colour];
 					c2 = gime->palette_reg[(gdata&0x20) ? fg_colour : bg_colour];
 					c3 = gime->palette_reg[(gdata&0x10) ? fg_colour : bg_colour];
+					gdata <<= 4;
+					break;
+				case TCC1014_RENDER_RG2:
+					c0 = c1 = gime->palette_reg[(gdata&0x40) ? fg_colour : bg_colour];
+					c2 = c3 = gime->palette_reg[(gdata&0x10) ? fg_colour : bg_colour];
 					gdata <<= 4;
 					break;
 				}
@@ -1549,13 +1564,12 @@ static void update_from_gime_registers(struct TCC1014_private *gime) {
 	gime->VDG.GM1 = gime->PIA1B_shadow.pdr & 0x20;
 	gime->VDG.GM0 = gime->PIA1B_shadow.pdr & 0x10;
 	gime->VDG.CSS = gime->PIA1B_shadow.pdr & 0x08;
-	unsigned GM = (gime->PIA1B_shadow.pdr >> 4) & 7;
 
 	if (gime->COCO) {
 		// VDG compatible mode
 
 		// Bytes per row, render resolution
-		if (!gime->VDG.GnA || !(GM == 0 || (gime->VDG.GM0 && GM != 7))) {
+		if (!gime->VDG.GnA || !(gime->SAM_V & 1)) {
 			gime->BPR = 32;
 			gime->resolution = 1;
 		} else {
