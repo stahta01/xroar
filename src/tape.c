@@ -118,9 +118,6 @@ struct tape_interface_private {
 	struct event flush_event;
 };
 
-static struct xroar_timeout *motoroff_timeout = NULL;
-static event_ticks motoron_time = 0;
-
 static void waggle_bit(void *);
 static void flush_output(void *);
 static void tape_ui_set_playing(void *, int tag, void *smsg);
@@ -811,22 +808,6 @@ void tape_set_motor(struct tape_interface *ti, _Bool motor) {
 	tip->motor = motor;
 	update_motor(tip);
 	if (motor != prev_state) {
-		if (motoroff_timeout) {
-			xroar_cancel_timeout(motoroff_timeout);
-			motoroff_timeout = NULL;
-		}
-		if (motor) {
-			motoron_time = event_current_tick;
-		}
-		if (!motor && xroar.cfg.debug.timeout_motoroff) {
-			int delta = event_tick_delta(event_current_tick, motoron_time);
-			if (delta < 0 || delta > 416) {
-				motoroff_timeout = xroar_set_timeout(xroar.cfg.debug.timeout_motoroff);
-			}
-		}
-		if (!motor && xroar.cfg.debug.snap_motoroff) {
-			write_snapshot(xroar.cfg.debug.snap_motoroff);
-		}
 		LOG_MOD_DEBUG(2, "tape", "MOTOR %s\n", motor ? "ON" : "OFF");
 	}
 	ui_update_state(tip->msgr_client_id, ui_tag_tape_motor, tip->motor, NULL);
@@ -928,12 +909,7 @@ static void waggle_bit(void *sptr) {
 	case -1:
 		DELEGATE_CALL(ti->update_audio, 0.5);
 		event_dequeue(&tip->waggle_event);
-		if (!motoroff_timeout && xroar.cfg.debug.timeout_motoroff) {
-			motoroff_timeout = xroar_set_timeout(xroar.cfg.debug.timeout_motoroff);
-		}
-		if (xroar.cfg.debug.snap_motoroff) {
-			write_snapshot(xroar.cfg.debug.snap_motoroff);
-		}
+		ui_update_state(tip->msgr_client_id, ui_tag_tape_motor, -1, NULL);
 		if (ti->default_paused) {
 			ui_update_state(-1, ui_tag_tape_playing, 0, NULL);
 		}
@@ -1145,9 +1121,7 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 		tip->in_pulse = tape_pulse_in(ti->tape_input, &tip->in_pulse_width);
 		if (tip->in_pulse < 0) {
 			event_dequeue(&tip->waggle_event);
-			if (!motoroff_timeout && xroar.cfg.debug.timeout_motoroff) {
-				motoroff_timeout = xroar_set_timeout(xroar.cfg.debug.timeout_motoroff);
-			}
+			ui_update_state(tip->msgr_client_id, ui_tag_tape_motor, -1, NULL);
 			return;
 		}
 	}

@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -103,6 +103,57 @@ struct xroar xroar = {
 		.disk.auto_sd = 1,
 	},
 };
+
+#ifdef WANT_TRAPS
+
+// Traps
+
+struct trap_count_range {
+	unsigned long first;
+	unsigned long last;
+};
+
+struct trap_def {
+	// Trap condition
+	char *cond;
+
+	// Constraints
+	struct slist *count;  // list of struct trap_count_range
+
+	// Actions
+	char *snap;
+	char *timeout;
+	int trace;
+	int no_trace;
+
+	// Internal
+	unsigned long counter;
+	struct breakpoint *bp;
+	struct xroar_timeout *timeout_data;
+};
+
+static unsigned num_trap_defs = 0;
+static struct trap_def *trap_defs = NULL;
+static struct trap_def *cur_trap_def = NULL;
+
+static _Bool tape_motor_state = 0;
+static event_ticks tape_motor_on_time = 0;
+static struct slist *tape_motor_traps = NULL;
+
+static void set_trap(const char *);
+static void set_trap_count(const char *);
+
+static void handle_trap(void *);
+static void enable_all_traps(void);
+static void disable_all_traps(void);
+
+#else
+
+#define set_trap(s)
+#define enable_all_traps()
+#define disable_all_traps()
+
+#endif
 
 // Private
 
@@ -226,8 +277,10 @@ struct private_cfg {
 
 	// Debugging
 	struct {
+#ifdef WANT_TRAPS
+		struct trap_def trap_def;
+#endif
 		_Bool ratelimit;
-		char *timeout;
 	} debug;
 
 #ifndef HAVE_WASM
@@ -263,6 +316,10 @@ static struct private_cfg private_cfg = {
 	// if volume set >=0, use that, else use gain value in dB
 	.ao.gain = -3.0,
 	.ao.volume = -1,
+#ifdef WANT_TRAPS
+	.debug.trap_def.trace = -1,
+	.debug.trap_def.no_trace = -1,
+#endif
 	.debug.ratelimit = 1,
 };
 
@@ -852,6 +909,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		set_machine(NULL);
 		set_cart(NULL);
 		set_joystick(NULL);
+		set_trap(NULL);
 	}
 	// Don't auto-select last machine or cart in defaults.
 	xroar.machine_config = NULL;
@@ -890,6 +948,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			set_machine(NULL);
 			set_cart(NULL);
 			set_joystick(NULL);
+			set_trap(NULL);
 		}
 	}
 	// Don't auto-select last machine or cart in config file.
@@ -931,6 +990,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	set_machine(NULL);
 	set_cart(NULL);
 	set_joystick(NULL);
+	set_trap(NULL);
 
 	// Remaining command line arguments are files, and we want to autorun
 	// the first one if nothing already indicated to autorun.
@@ -1079,6 +1139,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_tape_motor, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1303,11 +1364,6 @@ void xroar_init_finish(void) {
 		}
 	}
 
-	// Timeout (quit after certain amount of time)
-	if (private_cfg.debug.timeout) {
-		(void)xroar_set_timeout(private_cfg.debug.timeout);
-	}
-
 	// Type strings into machine
 	while (private_cfg.kbd.type_list) {
 		sds data = private_cfg.kbd.type_list->data;
@@ -1354,6 +1410,7 @@ void xroar_shutdown(void) {
 	if (shutting_down)
 		return;
 	shutting_down = 1;
+	disable_all_traps();
 	save_config();
 	messenger_shutdown();
 	if (xroar.auto_kbd) {
@@ -1802,6 +1859,60 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	switch (tag) {
 
+	case ui_tag_tape_motor:
+#ifdef WANT_TRAPS
+		// Motor state is 0 (off), 1 (on) or the special value of -1
+		// which implies end of tape.  For timeouts, we'll ignore any
+		// motor off that occurs too soon after a motor on, but we will
+		// not ignore end of tape.  XXX may want some way to report how
+		// many time a BASIC ROM is expected to flip that state, and
+		// ignore the first N?
+		{
+			_Bool new_motor_state = (value > 0);
+			if (new_motor_state == tape_motor_state) {
+				break;
+			}
+			tape_motor_state = new_motor_state;
+			if (tape_motor_state) {
+				tape_motor_on_time = event_current_tick;
+			}
+			_Bool motor_off = !tape_motor_state;
+			_Bool cancel_timeout = tape_motor_state;
+			if (motor_off) {
+				int delta = event_tick_delta(event_current_tick, tape_motor_on_time);
+				if (delta >= 0 && delta <= 416) {
+					cancel_timeout = 1;
+				}
+			}
+			struct slist *iter_next = NULL;
+			for (struct slist *iter = tape_motor_traps; iter; iter = iter_next) {
+				struct trap_def *trap = iter->data;
+				iter_next = iter->next;
+				if (motor_off) {
+					// Temporarily remove timeout if cancelled
+					char *old_timeout = trap->timeout;
+					if (cancel_timeout) {
+						trap->timeout = NULL;
+					}
+					handle_trap(trap);
+					// Restore timeout
+					if (cancel_timeout) {
+						if (!trap->timeout) {
+							trap->timeout = old_timeout;
+						} else if (old_timeout) {
+							free(old_timeout);
+						}
+					}
+				}
+				if (trap->timeout_data && cancel_timeout) {
+					xroar_cancel_timeout(trap->timeout_data);
+					trap->timeout_data = NULL;
+				}
+			}
+		}
+#endif
+		break;
+
 	case ui_tag_hkbd_layout:
 		private_cfg.kbd.layout = value;
 		break;
@@ -2005,6 +2116,8 @@ void xroar_connect_machine(void) {
 	}
 
 	ui_update_state(xroar.msgr_client_id, ui_tag_picture, xroar.state.vo.picture, NULL);
+
+	enable_all_traps();
 }
 
 void xroar_configure_machine(struct machine_config *mc) {
@@ -2737,6 +2850,235 @@ static void set_joystick_button(const char *spec) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Traps
+
+#ifdef WANT_TRAPS
+
+static void parse_range_ul(const char *str, unsigned long *a, unsigned long *b) {
+	char *str_copy = xstrdup(str);
+	char *bstr = str_copy;
+	char *astr = strsep(&bstr, "-");
+	if (a && astr && *astr) {
+		*a = strtoul(astr, NULL, 0);
+	}
+	if (b && bstr && *bstr) {
+		*b = strtoul(bstr, NULL, 0);
+	}
+	free(str_copy);
+}
+
+static void enable_trap(struct trap_def *trap, _Bool enable) {
+	if (0 == c_strcasecmp(trap->cond, "immediate") ||
+	    0 == strcmp(trap->cond, "-")) {
+		if (enable) {
+			handle_trap(trap);
+		}
+		return;
+	}
+	if (0 == c_strcasecmp(trap->cond, "tape-motoroff") ||
+	    0 == c_strcasecmp(trap->cond, "tape-motor-off")) {
+		if (enable && !slist_find(tape_motor_traps, trap)) {
+			tape_motor_traps = slist_append(tape_motor_traps, trap);
+		}
+		return;
+	}
+	assert(xroar.machine != NULL);
+	struct bp_session *bps = xroar.machine->get_interface(xroar.machine, "bp-session");
+	if (!bps) {
+		LOG_WARN("%s: no breakpoint session\n", xroar.machine_config->name);
+		return;
+	}
+	char *cond_copy = xstrdup(trap->cond);
+	char *val = cond_copy;
+	char *key = strsep(&val, "=");
+	if (key && *key && val && *val) {
+		unsigned long a = -1UL, b = -1UL;
+		parse_range_ul(val, &a, &b);
+
+		if (a != -1UL) {
+			if (b == -1UL) {
+				b = a;
+			}
+			if (b > a) {
+				unsigned long c = a;
+				a = b;
+				b = c;
+			}
+			if (0 == c_strcasecmp(key, "pc")) {
+				if (enable) {
+					struct breakpoint *bp = xmalloc(sizeof(*bp));
+					*bp = (struct breakpoint){0};
+					bp->address = a;
+					bp->handler = DELEGATE_AS0(void, handle_trap, trap);
+					bp_add(bps, bp);
+					trap->bp = bp;
+				} else if (trap->bp) {
+					bp_remove(bps, trap->bp);
+					free(trap->bp);
+					trap->bp = NULL;
+				}
+			} else if (0 == c_strcasecmp(key, "read")) {
+				if (enable) {
+					bp_wp_add_range(bps, BP_WP_READ, a, b, DELEGATE_AS0(void, handle_trap, trap));
+				} else {
+					bp_wp_remove_range(bps, BP_WP_READ, a, b);
+				}
+			} else if (0 == c_strcasecmp(key, "write")) {
+				if (enable) {
+					bp_wp_add_range(bps, BP_WP_WRITE, a, b, DELEGATE_AS0(void, handle_trap, trap));
+				} else {
+					bp_wp_remove_range(bps, BP_WP_WRITE, a, b);
+				}
+			} else if (0 == c_strcasecmp(key, "access")) {
+				if (enable) {
+					bp_wp_add_range(bps, BP_WP_ACCESS, a, b, DELEGATE_AS0(void, handle_trap, trap));
+				} else {
+					bp_wp_remove_range(bps, BP_WP_ACCESS, a, b);
+				}
+			}
+		}
+		free(cond_copy);
+	}
+}
+
+static void enable_all_traps(void) {
+	for (unsigned i = 0; i < num_trap_defs; ++i) {
+		enable_trap(&trap_defs[i], 1);
+	}
+}
+
+static void disable_all_traps(void) {
+	for (unsigned i = 0; i < num_trap_defs; ++i) {
+		enable_trap(&trap_defs[i], 0);
+	}
+}
+
+static void handle_trap(void *sptr) {
+	struct trap_def *trap = sptr;
+	struct trap_count_range *range = trap->count ? trap->count->data : NULL;
+	++trap->counter;
+	if (range && trap->counter < range->first) {
+		return;
+	}
+
+	// Break action
+	if (trap->snap) {
+		LOG_MOD_DEBUG(2, "trap", "write snapshot: %s\n", trap->snap);
+		write_snapshot(trap->snap);
+	}
+	if (trap->timeout) {
+		LOG_MOD_DEBUG(2, "trap", "timeout: %s\n", trap->timeout);
+		trap->timeout_data = xroar_set_timeout(trap->timeout);
+	}
+	if (trap->trace > 0) {
+		LOG_MOD_DEBUG(2, "trap", "trace on\n");
+		xroar_set_trace(1);
+	}
+	if (trap->no_trace > 0) {
+		LOG_MOD_DEBUG(2, "trap", "trace off\n");
+		xroar_set_trace(0);
+	}
+
+	if (range) {
+		if (range->last == (unsigned long)-1) {
+			// Unlimited - don't remove breakpoint
+			return;
+		}
+		while (range && trap->counter > range->last) {
+			// Done with range - remove from list
+			trap->count = slist_remove(trap->count, range);
+			free(range);
+			// And fetch the next one
+			range = trap->count ? trap->count->data : NULL;
+		}
+		// If any range remains, don't remove breakpoint
+		if (range) {
+			return;
+		}
+	}
+	// Disable breakpoint
+	enable_trap(trap, 0);
+}
+
+static void set_trap(const char *cond) {
+	if (cur_trap_def) {
+		if (private_cfg.debug.trap_def.count) {
+			if (cur_trap_def->count) {
+				slist_free_full(cur_trap_def->count, free);
+			}
+			cur_trap_def->count = private_cfg.debug.trap_def.count;
+			private_cfg.debug.trap_def.count = NULL;
+		}
+		if (private_cfg.debug.trap_def.snap) {
+			if (cur_trap_def->snap) {
+				free(cur_trap_def->snap);
+			}
+			cur_trap_def->snap = private_cfg.debug.trap_def.snap;
+			private_cfg.debug.trap_def.snap = NULL;
+		}
+		if (private_cfg.debug.trap_def.timeout) {
+			if (cur_trap_def->timeout) {
+				free(cur_trap_def->timeout);
+			}
+			cur_trap_def->timeout = private_cfg.debug.trap_def.timeout;
+			private_cfg.debug.trap_def.timeout = NULL;
+		}
+		if (private_cfg.debug.trap_def.trace >= 0) {
+			cur_trap_def->trace = private_cfg.debug.trap_def.trace;
+			private_cfg.debug.trap_def.trace = -1;
+		}
+		if (private_cfg.debug.trap_def.no_trace >= 0) {
+			cur_trap_def->no_trace = private_cfg.debug.trap_def.no_trace;
+			private_cfg.debug.trap_def.no_trace = -1;
+		}
+	}
+	if (cond) {
+		unsigned i = num_trap_defs++;
+		trap_defs = xrealloc(trap_defs, num_trap_defs * sizeof(*trap_defs));
+		cur_trap_def = &trap_defs[i];
+		*cur_trap_def = (struct trap_def){0};
+		cur_trap_def->cond = xstrdup(cond);
+		cur_trap_def->trace = -1;
+		cur_trap_def->no_trace = -1;
+	}
+}
+
+static void set_trap_count(const char *count) {
+	unsigned long a = -1UL, b = -1UL;
+	parse_range_ul(count, &a, &b);
+	if (a == -1UL) {
+		a = 0;
+	}
+	struct trap_count_range *range = xmalloc(sizeof(*range));
+	*range = (struct trap_count_range){0};
+	range->first = a;
+	range->last = b;
+	private_cfg.debug.trap_def.count = slist_append(private_cfg.debug.trap_def.count, range);
+}
+
+static void set_snap_motoroff(const char *arg) {
+	set_trap("tape-motor-off");
+	xconfig_set_option(xroar_options, "trap-range", "1-");
+	xconfig_set_option(xroar_options, "trap-snap", arg);
+	set_trap(NULL);
+}
+
+static void set_timeout(const char *arg) {
+	set_trap("immediate");
+	xconfig_set_option(xroar_options, "trap-timeout", arg);
+	set_trap(NULL);
+}
+
+static void set_timeout_motoroff(const char *arg) {
+	set_trap("tape-motor-off");
+	xconfig_set_option(xroar_options, "trap-timeout", arg);
+	set_trap(NULL);
+}
+
+#endif
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 /* Enumeration lists used by configuration directives */
 
 static struct xconfig_enum ao_format_list[] = {
@@ -2916,9 +3258,6 @@ static struct xconfig_option const xroar_options[] = {
 
 	/* Emulator actions: */
 	{ XC_SET_BOOL("ratelimit", &private_cfg.debug.ratelimit) },
-	{ XC_SET_STRING("snap-motoroff", &xroar.cfg.debug.snap_motoroff) },
-	{ XC_SET_STRING("timeout", &private_cfg.debug.timeout) },
-	{ XC_SET_STRING("timeout-motoroff", &xroar.cfg.debug.timeout_motoroff) },
 	{ XC_SET_STRING_LIST("type", &private_cfg.kbd.type_list) },
 
 	/* Debugging: */
@@ -2931,6 +3270,18 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING("gdb-port", &xroar.cfg.debug.gdb_port) },
 	{ XC_SET_BOOL("trace", &logging.trace_cpu) },
 	{ XC_SET_BOOL("trace-timing", &logging.trace_cpu_timing) },
+#ifdef WANT_TRAPS
+	{ XC_CALL_STRING("trap", &set_trap) },
+	{ XC_CALL_STRING("trap-range", &set_trap_count) },
+	{ XC_SET_STRING("trap-snap", &private_cfg.debug.trap_def.snap) },
+	{ XC_SET_STRING("trap-timeout", &private_cfg.debug.trap_def.timeout) },
+	{ XC_SET_INT1("trap-trace", &private_cfg.debug.trap_def.trace) },
+	{ XC_SET_INT1("trap-no-trace", &private_cfg.debug.trap_def.no_trace) },
+	// All now handled with traps:
+	{ XC_CALL_STRING("snap-motoroff", &set_snap_motoroff) },
+	{ XC_CALL_STRING("timeout", &set_timeout) },
+	{ XC_CALL_STRING("timeout-motoroff", &set_timeout_motoroff) },
+#endif
 
 	/* Other options: */
 #ifndef HAVE_WASM
@@ -3128,9 +3479,17 @@ static void helptext(void) {
 "  -debug-ui FLAGS       UI debugging (see manual, or -1 for all)\n"
 "  -v, -verbose LEVEL    general debug verbosity (0-3) [1]\n"
 "  -q, -quiet            equivalent to -verbose 0\n"
-"  -timeout S            run for S seconds then quit\n"
-"  -timeout-motoroff S   quit S seconds after tape motor switches off\n"
+#ifdef WANT_TRAPS
+"  -trap CONDITION       configure trap\n"
+"    -trap-range M[-N]   action only on Mth-Nth trigger\n"
+"    -trap-snap FILE     write snapshot at trap\n"
+"    -trap-timeout N     quit emulator N seconds after trap\n"
+"    -trap-trace         start trace mode at trap\n"
+"    -trap-no-trace      stop trace mode at trap\n"
+"  -timeout N            run for N seconds then quit\n"
+"  -timeout-motoroff N   quit N seconds after tape motor switches off\n"
 "  -snap-motoroff FILE   write a snapshot each time tape motor switches off\n"
+#endif
 
 "\n Other options:\n"
 "  -config-print       print configuration to standard out\n"
@@ -3153,7 +3512,17 @@ static void helptext(void) {
 
 "\nFor physical joysticks a '-' before the axis index inverts the axis.  AXIS 0 is\n"
 "the X-axis, and AXIS 1 the Y-axis.  BTN 0 is the only one used so far, but in\n"
-"the future BTN 1 will be the second button on certain CoCo joysticks."
+"the future BTN 1 will be the second button on certain CoCo joysticks.\n"
+
+"\nTrap CONDITIONs can be one of the following:\n"
+
+"\n  immediate (or '-')    trigger immediately\n"
+"  pc=ADDR               trigger at CPU Program Counter value\n"
+"  read=A[-B]            trigger on read from address range\n"
+"  write=A[-B]           trigger on write to address range\n"
+"  access=A[-B]          trigger on either read or write\n"
+"  tape-motor-off        trigger when tape motor switches off"
+
 	);
 #endif
 	exit(EXIT_SUCCESS);
@@ -3308,9 +3677,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
 	xroar_cfg_print_flags(f, all, "debug-gdb", logging.debug_gdb);
 	xroar_cfg_print_flags(f, all, "debug-ui", logging.debug_ui);
-	xroar_cfg_print_string(f, all, "timeout", private_cfg.debug.timeout, NULL);
-	xroar_cfg_print_string(f, all, "timeout-motoroff", xroar.cfg.debug.timeout_motoroff, NULL);
-	xroar_cfg_print_string(f, all, "snap-motoroff", xroar.cfg.debug.snap_motoroff, NULL);
 	fputs("\n", f);
 
 	// Note: we use a flag file to indicate the state of "config-auto-save"

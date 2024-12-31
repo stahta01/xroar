@@ -163,6 +163,9 @@ AC_ARG_WITH([libpng],
 AC_ARG_ENABLE([becker],
 	AS_HELP_STRING([--disable-becker], [don't include Becker port support]) )
 
+AC_ARG_ENABLE([traps],
+	AS_HELP_STRING([--disable-traps], [don't include trap support]) )
+
 AC_ARG_ENABLE([gdb_target],
 	AS_HELP_STRING([--disable-gdb-target], [don't include GDB target (requires pthreads)]) )
 
@@ -255,6 +258,7 @@ AM_COND_IF([WASM], [
 		test -z "$enable_trace" && enable_trace=no
 		test -z "$enable_ao_null" && enable_ao_null=no
 		test -z "$enable_becker" && enable_becker=no
+		test -z "$enable_traps" && enable_traps=no
 		test -z "$enable_gdb_target" && enable_gdb_target=no
 		test -z "$with_x" && with_x=no
 		test -z "$no_x" && no_x=yes
@@ -788,6 +792,11 @@ AM_COND_IF([TRE], [AC_DEFINE([HAVE_TRE], 1, [TRE])])
 
 AM_CONDITIONAL([BECKER], [test "x$enable_becker" != "xno"])
 AM_COND_IF([BECKER], [AC_DEFINE([WANT_BECKER], 1, [Becker port])])
+
+### Traps (user-configurable breakpoints + actions)
+
+AM_CONDITIONAL([TRAPS], [test "x$enable_traps" != "xno"])
+AM_COND_IF([TRAPS], [AC_DEFINE([WANT_TRAPS], 1, [Traps])])
 
 ### GDB target
 
