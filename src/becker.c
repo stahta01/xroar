@@ -4,7 +4,7 @@
  *
  *  The "becker port" is an IP version of the usually-serial DriveWire protocol.
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ *  \copyright Copyright 2012-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,6 +31,7 @@
 #ifndef WINDOWS32
 
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -101,6 +102,11 @@ struct becker *becker_open(void) {
 	if (sockfd < 0) {
 		LOG_MOD_WARN("becker", "socket not created\n");
 		goto failed;
+	}
+
+	{
+		int flag = 1;
+		setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
 	}
 
 	// ... and connect it to the requested server
