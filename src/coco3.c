@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Colour Computer 3 machine.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -631,17 +631,17 @@ static _Bool coco3_finish(struct part *p) {
 	// Tape
 	mcc3->tape_interface->update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mcc3);
 
-	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
-	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
-	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
-	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
-	ui_update_state(-1, ui_tag_vdg_inverse, mcc3->inverted_text, NULL);
-
 	// Default all PIA connections to unconnected (no source, no sink)
 	mcc3->PIA0->b.in_source = 0;
 	mcc3->PIA1->b.in_source = 0;
 	mcc3->PIA0->a.in_sink = mcc3->PIA0->b.in_sink = 0xff;
 	mcc3->PIA1->a.in_sink = mcc3->PIA1->b.in_sink = 0xff;
+
+	mcc3->GIME->signal_hs = DELEGATE_AS1(void, bool, gime_hs, mcc3);
+	mcc3->GIME->signal_fs = DELEGATE_AS1(void, bool, gime_fs, mcc3);
+	mcc3->GIME->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, gime_render_line, mcc3);
+	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
+	ui_update_state(-1, ui_tag_vdg_inverse, mcc3->inverted_text, NULL);
 
 	// Until I implement serial, this appear to pull low by default
 	mcc3->PIA1->b.in_sink &= ~(1<<0);
@@ -985,6 +985,8 @@ static void coco3_ui_set_picture(void *sptr, int tag, void *smsg) {
 	vo_set_viewport(mp->vo, picture);
 }
 
+// TV input selection.  CoCo 3 allows RGB.  RGB monitors pull PIA1 PB3 low.
+
 static void coco3_ui_set_tv_input(void *sptr, int tag, void *smsg) {
 	struct machine_coco3 *mcc3 = sptr;
 	struct machine *m = &mcc3->public;
@@ -1000,23 +1002,27 @@ static void coco3_ui_set_tv_input(void *sptr, int tag, void *smsg) {
 	case TV_INPUT_SVIDEO:
 		vo_set_signal(mcc3->vo, VO_SIGNAL_SVIDEO);
 		tcc1014_set_composite(mcc3->GIME, 1);
+		mcc3->PIA1->b.in_sink |= (1<<3);
 		break;
 
 	case TV_INPUT_CMP_KBRW:
 		vo_set_signal(mcc3->vo, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase, 180);
 		tcc1014_set_composite(mcc3->GIME, 1);
+		mcc3->PIA1->b.in_sink |= (1<<3);
 		break;
 
 	case TV_INPUT_CMP_KRBW:
 		vo_set_signal(mcc3->vo, VO_SIGNAL_CMP);
 		DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase, 0);
 		tcc1014_set_composite(mcc3->GIME, 1);
+		mcc3->PIA1->b.in_sink |= (1<<3);
 		break;
 
 	case TV_INPUT_RGB:
 		vo_set_signal(mcc3->vo, VO_SIGNAL_RGB);
 		tcc1014_set_composite(mcc3->GIME, 0);
+		mcc3->PIA1->b.in_sink &= ~(1<<3);
 		break;
 	}
 }
