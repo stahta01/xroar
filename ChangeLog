@@ -2,6 +2,10 @@
  * New manual and automatic configuration saving from GUI
  * Manage HD mounting from drive control dialog
  * New MCX128 cartridge support for MC-10
+ * Fix some of the compatibility modes in GIME emulation
+ * Assert monitor detect line on CoCo 3 when RGB output selected
+ * Reduce write latency using Becker port [Ron Klein]
+ * Add some more flexible command-line trap options
 
 Version 1.7.3, Fri 29 Nov 2024
 
@@ -11,7 +15,7 @@ Version 1.7.3, Fri 29 Nov 2024
 Version 1.7.2, Tue 26 Nov 2024
 
  * Fix GIME issue when loading from snapshot
- * Fix becker port status polling [Pierre Sarrazin]
+ * Fix Becker port status polling [Pierre Sarrazin]
 
 Version 1.7.1, Fri 22 Nov 2024
 
