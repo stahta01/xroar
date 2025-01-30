@@ -232,7 +232,7 @@ static void coco3_config_complete(struct machine_config *mc) {
 		switch (mc->tv_standard) {
 		default:
 		case TV_PAL:
-			mc->tv_input = TV_INPUT_RGB;
+			mc->tv_input = TV_INPUT_SVIDEO;
 			break;
 		case TV_NTSC:
 		case TV_PAL_M:
@@ -553,39 +553,42 @@ static _Bool coco3_finish(struct part *p) {
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_phase_offset, 0);
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_lead_lag, 0., 100.);
-	// Very slight tweak to the phase
-	double hue_offset = (2. * M_PI * 15.) / 1600.;
-	for (int intensity = 0; intensity < 4; intensity++) {
-		float grey = cmp_intensity[intensity].grey;
-		float clr_low = cmp_intensity[intensity].clr_low;
-		float clr_high = cmp_intensity[intensity].clr_high;
 
-		// Scale signal and add a little brightness.
-		grey     = grey     * (1.00 / CMP_V_PEAK) + 0.20;
-		clr_low  = clr_low  * (1.00 / CMP_V_PEAK) + 0.20;
-		clr_high = clr_high * (1.00 / CMP_V_PEAK) + 0.20;
+	if (mc->tv_standard != TV_PAL) {
+		// Very slight tweak to the phase
+		double hue_offset = (2. * M_PI * 15.) / 1600.;
+		for (int intensity = 0; intensity < 4; intensity++) {
+			float grey = cmp_intensity[intensity].grey;
+			float clr_low = cmp_intensity[intensity].clr_low;
+			float clr_high = cmp_intensity[intensity].clr_high;
 
-		for (int phase = 0; phase < 16; phase++) {
-			int c = (intensity * 16) + phase;
+			// Scale signal and add a little brightness.
+			grey     = grey     * (1.00 / CMP_V_PEAK) + 0.20;
+			clr_low  = clr_low  * (1.00 / CMP_V_PEAK) + 0.20;
+			clr_high = clr_high * (1.00 / CMP_V_PEAK) + 0.20;
 
-			double y, b_y, r_y;
-			if (phase == 0 || c == 63) {
-				y = grey;
-				b_y = 0.0;
-				r_y = 0.0;
-			} else {
-				int ph = ((phase + (phase >= 12)) + 9) % 16;
-				double hue = ((2.0 * M_PI * (double)ph) / 16.0) + hue_offset;
-				b_y = ((clr_high - clr_low) / 2.0) * sin(hue) / 1.414;
-				r_y = ((clr_high - clr_low) / 2.0) * cos(hue) / 1.414;
-				y = (clr_high + clr_low) / 2.0;
+			for (int phase = 0; phase < 16; phase++) {
+				int c = (intensity * 16) + phase;
+
+				double y, b_y, r_y;
+				if (phase == 0 || c == 63) {
+					y = grey;
+					b_y = 0.0;
+					r_y = 0.0;
+				} else {
+					int ph = ((phase + (phase >= 12)) + 9) % 16;
+					double hue = ((2.0 * M_PI * (double)ph) / 16.0) + hue_offset;
+					b_y = ((clr_high - clr_low) / 2.0) * sin(hue) / 1.414;
+					r_y = ((clr_high - clr_low) / 2.0) * cos(hue) / 1.414;
+					y = (clr_high + clr_low) / 2.0;
+				}
+				// These values were measured at the composite port,
+				// already in U/V, so we need to scale to Pb/Pr before
+				// adding them to the palette.
+				b_y /= 0.504;
+				r_y /= 0.711;
+				DELEGATE_SAFE_CALL(mcc3->vo->palette_set_ybr, c, y, b_y, r_y);
 			}
-			// These values were measured at the composite port,
-			// already in U/V, so we need to scale to Pb/Pr before
-			// adding them to the palette.
-			b_y /= 0.504;
-			r_y /= 0.711;
-			DELEGATE_SAFE_CALL(mcc3->vo->palette_set_ybr, c, y, b_y, r_y);
 		}
 	}
 
@@ -594,6 +597,17 @@ static _Bool coco3_finish(struct part *p) {
 		float g = rgb_intensity_map[((j>>3)&2)|((j>>1)&1)];
 		float b = rgb_intensity_map[((j>>2)&2)|((j>>0)&1)];
 		DELEGATE_SAFE_CALL(mcc3->vo->palette_set_rgb, j, r, g, b);
+		if (mc->tv_standard == TV_PAL) {
+			// XXX need to check the actual PAL CoCo 3 RGB to composite
+			// circuit.  For now, bodge composite colours:
+			r *= 1.08;
+			g *= 1.08;
+			b *= 1.08;
+			float y = 0.299 * r + 0.587 * g + 0.114 * b;
+			float b_y = b - y;
+			float r_y = r - y;
+			DELEGATE_SAFE_CALL(mcc3->vo->palette_set_ybr, j, y, b_y, r_y);
+		}
 	}
 
 	DELEGATE_SAFE_CALL(mcc3->vo->set_cmp_burst, 1, 0);    // Normal burst
