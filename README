@@ -1,5 +1,5 @@
 XRoar - a Dragon and Tandy 8-bit computer emulator
-Copyright 2003-2024 Ciaran Anscomb <xroar@6809.org.uk>
+Copyright 2003-2025 Ciaran Anscomb <xroar@6809.org.uk>
 
 
 Introduction
@@ -56,11 +56,14 @@ home page (https://www.6809.org.uk/xroar/).
 Recent changes
 ==============
 
-Changes in version 1.7 include:
+Changes in version 1.8 include:
 
-   * SDL gamepad database reading with '-joy-db-file'.
-   * New evdev-based Linux joystick/gamepad support.
-   * Large changes to underlying UI mechanisms.
+   * HD mounting from drive control dialog.
+   * New MCX128 cartridge support for MC-10.
+   * CoCo 3 GIME behaviour fixes.
+   * CoCo 3 Monitor detect line asserted when RGB TV input selected.
+   * Becker port latency fixes.
+   * More flexible command-line trap options.
 
    Previous changes in 1.x include:
 
@@ -68,6 +71,8 @@ Changes in version 1.7 include:
 Writes to images held in memory will overwrite the on-disk file when
 ejected (or quitting XRoar).  You can get the old file-preserving
 default behaviour back with '-no-disk-write-back'.
+
+   Gamepad mapping files can provide more consistent button layouts.
 
    RAM organisation selection with '-ram-org', and initialisation
 pattern selection with '-ram-init'.
@@ -97,7 +102,6 @@ images with a header should be distinguished from headerless files by
 giving them a '.ide' extension.
 
    MPI slot configuration is now per-cart rather than global.
-
 
 Getting started
 ***************
@@ -190,7 +194,7 @@ the same directory that you start it from, and everything should work.
    However, if you want a more organised installation where you don't
 have to re-copy files around every time you upgrade, read on.
 
-   In your user profile, there should exists a LocalAppData directory.
+   In your user profile, there should exist a LocalAppData directory.
 This is something Windows calls a "Known Folder".  You should be able to
 browse to it by entering '%LOCALAPPDATA%' as a path in an explorer
 window.  (1)
@@ -201,7 +205,6 @@ copy your ROM images into '%LOCALAPPDATA%\XRoar\roms\'.
 
    Start the emulator by double clicking 'xroar.exe' or, if you
 installed the '.msi', by selecting XRoar from the start menu.
-
 
    You can also run XRoar from the command line, and it supports the
 same options as under Linux/Unix.  By default GUI applications under
@@ -277,7 +280,8 @@ interface:
 
    * GTK+ 3 (https://www.gtk.org/) is recommended, and provides video,
      menus, and dialogs.  It may be possible to use GTK+ under Mac OS
-     X+, but this is untested.
+     X+, but this is untested.  GTK+ 2 is deprecated, but still usable
+     if you also have GtkGLExt installed.
 
    * SDL 2 (https://libsdl.org/) provides a simpler interface, but extra
      code for Mac OS X+ adds some basic menus and file requester
@@ -302,8 +306,8 @@ process should be very familiar.  The following process compiles XRoar
 and installs it into '/usr/local', like most other software built this
 way:
 
-     $ gzip -dc xroar-1.7.3.tar.gz | tar xvf -
-     $ cd xroar-1.7.3
+     $ gzip -dc xroar-1.8.tar.gz | tar xvf -
+     $ cd xroar-1.8
      $ ./configure
      $ make
      $ sudo make install

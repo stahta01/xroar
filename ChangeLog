@@ -1,3 +1,5 @@
+Version 1.8, Thu 30 Jan 2025
+
  * Fix mouse virtual joystick on resize in SDL builds [Richard Kelly]
  * New manual and automatic configuration saving from GUI
  * Manage HD mounting from drive control dialog
