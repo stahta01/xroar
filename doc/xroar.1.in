@@ -424,29 +424,55 @@ general debug verbosity (\fB0\fR to \fB3\fR) [1]
 \fB\-q\fR, \fB\-\-quiet\fR
 equivalent to \fB\-\-verbose 0\fR
 .TP
+\fB\-trap\fR \fIcondition\fR
+configure a trap to fire on \fIcondition\fR.
+
+.PP
+The remaining options affect the configured trap:
+
+.TP
+\fB\-trap\-range\fR \fIm\fR-\fIn\fR
+perform trap's action only on \fIm\fRth-\fIn\fRth trigger.
+.TP
+\fB\-trap\-snap\fR \fIfile\fR
+write snapshot at trap.
+.TP
+\fB\-trap\-timeout\fR \fIn\fR
+quit emulator \fIn\fR seconds after trap.
+.TP
+\fB\-trap\-trace\fR
+start trace mode at trap.
+.TP
+\fB\-trap\-no\-trace\fR
+stop trace mode at trap.
+
+.PP
+Older options remain that can be implemented using traps:
+
+.TP
 \fB\-timeout\fR \fIs\fR
-run for \fIs\fR seconds then quit
+run for \fIs\fR seconds then quit.
 .TP
 \fB\-timeout\-motoroff\fR \fIs\fR
-quit \fIs\fR seconds after tape motor switches off
+quit \fIs\fR seconds after tape motor switches off.
 .TP
 \fB\-snap\-motoroff\fR \fIfile\fR
-write a snapshot each time tape motor switches off
+write a snapshot each time tape motor switches off.
 
 .SS Help options:
 
 .TP
 \fB\-config\-print\fR
-print configuration to standard out
+print configuration to standard out.
 .TP
 \fB\-config\-print\-all\fR
-print configuration to standard out, including defaults
+print configuration to standard out, including defaults.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-display help and exit
+display help and exit.
 .TP
 \fB\-V\fR, \fB\-\-version\fR
-output version information and exit
+output version information and exit.
 .SH FILES
 \fI$HOME/.xroar/xroar.conf\fR
 .SH AUTHOR

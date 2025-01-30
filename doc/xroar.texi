@@ -33,7 +33,7 @@
 This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
 computer emulator.
 
-Copyright @copyright{} 2024
+Copyright @copyright{} 2025
 Ciaran Anscomb.
 @end copying
 
@@ -112,13 +112,16 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
-Changes in version 1.7 include:
+Changes in version 1.8 include:
 
 @itemize
 
-@item SDL gamepad database reading with @option{-joy-db-file}.
-@item New evdev-based Linux joystick/gamepad support.
-@item Large changes to underlying UI mechanisms.
+@item HD mounting from drive control dialog.  @xref{Drive control}.
+@item New MCX128 cartridge support for MC-10.
+@item CoCo 3 GIME behaviour fixes.
+@item CoCo 3 Monitor detect line asserted when RGB TV input selected.
+@item Becker port latency fixes.
+@item More flexible command-line trap options.  @xref{Debugging options}.
 
 @end itemize
 
@@ -128,6 +131,9 @@ Previous changes in 1.x include:
 Writes to images held in memory will overwrite the on-disk file when ejected
 (or quitting XRoar).  You can get the old file-preserving default behaviour
 back with @option{-no-disk-write-back}.
+
+Gamepad mapping files can provide more consistent button layouts.
+@xref{Gamepad mapping}.
 
 RAM organisation selection with @option{-ram-org}, and initialisation pattern
 selection with @option{-ram-init}.
@@ -260,7 +266,7 @@ in the same directory that you start it from, and everything should work.
 However, if you want a more organised installation where you don't have to
 re-copy files around every time you upgrade, read on.
 
-In your user profile, there should exists a LocalAppData directory.  This is
+In your user profile, there should exist a LocalAppData directory.  This is
 something Windows calls a ``Known Folder''.  You should be able to browse to it
 by entering @file{%LOCALAPPDATA%} as a path in an explorer window.
 @footnote{The reason for using the @emph{local} version version of the AppData
@@ -491,9 +497,11 @@ hardware configuration; and @clicksequence{Tool} lists various options and
 control dialogs.  @clicksequence{Help} contains a simple @clicksequence{About}
 dialog.
 
-XRoar does not yet write changes made in the user interface to the
-configuration file.  If you want settings to persist across sessions,
-you will need to create or modify this file.  @xref{Configuring XRoar}.
+If you check @clicksequence{File @click{} Autosave configuration}, some options
+will be automatically written back to the config file (in an OS-specific
+location) on exit.  This is work in progress, however, and not all options are
+configurable from the UI.  You have the most control by modifying this file.
+@xref{Configuring XRoar}.
 
 @c
 
@@ -553,7 +561,7 @@ unadorned DragonDOS or RS-DOS binary, just select @clicksequence{File @click{}
 Run} or press @kbd{@key{CTRL}+@key{SHIFT}+L}.  To attach media without trying
 to autorun a program, select @clicksequence{File @click{} Load} or press
 @kbd{@key{CTRL}+L}.  Alternatively, open one of the media control dialogs; see
-@ref{Cassette tape control} or @ref{Floppy disk control}.
+@ref{Cassette tape control} or @ref{Drive control}.
 
 @image{file-run, 3in,, File menu, png}
 
@@ -664,17 +672,17 @@ Under Mac OS X+, most functionality is found in the @clicksequence{File
 
 @c
 
-@node Floppy disk control
-@section Floppy disk control
+@node Drive control
+@section Drive control
 
-@image{floppy-control, 4.625in,, Floppy disks dialog, png}
+@image{drive-control, 4.625in,, Floppy/hard disks dialog, png}
 
-Select @clicksequence{File @click{} Floppy disks} or press @kbd{@key{CTRL}+D}
-to open the floppy disk control dialog.
+Select @clicksequence{File @click{} Floppy/hard disks} or press
+@kbd{@key{CTRL}+D} to open the drive control dialog.
 
 In this dialog you can insert existing, create new, or eject floppy disk images
-from each of four emulated drives.  Note that images are loaded into RAM;
-writes go to the in-RAM copy.  The image is written back to the file when
+from each of four emulated floppy drives.  Note that images are loaded into
+RAM; writes go to the in-RAM copy.  The image is written back to the file when
 ejected (or you quit the emulator).  The currently selected drive, track, and
 head are also displayed.
 
@@ -696,8 +704,11 @@ Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
 instead of one, so when you perform operations on Drive 1, from the CoCo's
 point of view, that will be Drive 0.
 
-Under Mac OS X+, floppy disk options can be found under per-drive submenus of
-the @clicksequence{File} menu.
+You can also attach, create new or detach up to two hard disk images.  How
+these operate will depend on what hardware is using the image.
+
+Under Mac OS X+, floppy and hard disk options can be found under per-drive
+submenus of the @clicksequence{File} menu.
 
 @c
 
@@ -1208,6 +1219,14 @@ cart mpi
 
 @c
 
+@node MC-10 MCX128 memory expansion
+@subsection MC-10 MCX128 memory expansion
+
+Designed by Darren Atkinson, provides 128K of bank-switched RAM for the Tandy
+MC-10.  Can also optionally switch in its own enhanced BASIC ROM.
+
+Type @samp{mcx128}.  Built-in cartridge profile @samp{mcx128}.
+
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 @node Keyboard
@@ -1462,13 +1481,9 @@ containing RSDOS filesystems are usable with YA-DOS or HDBDOS.
 @node Configuring XRoar
 @chapter Configuring XRoar
 
-XRoar can read a configuration file, and as changes made in the user interface
-are not yet written out, creating and modifying this file yourself is the only
-way to make settings persist across sessions.
-
-The file is ASCII text, with one directive per line.  The configuration file
-covers anything from setting individual options to defining specific named
-profiles for hardware.
+XRoar can read a configuration file.  The file is ASCII text, with one
+directive per line.  It covers anything from setting individual options to
+defining specific named profiles for hardware.
 
 To recap, the expected location for this file varies by platform:
 
@@ -1479,14 +1494,19 @@ To recap, the expected location for this file varies by platform:
 @item Mac OS X+ @tab @file{~/Library/XRoar/xroar.conf}
 @end multitable
 
-In addition, the Windows build will check the current working directory, so if
-you have unpacked a @file{.zip} distribution, you can create @file{xroar.conf}
-within the same subdirectory as the executable.
-
 To print the current configuration to standard output (suitable for redirection
 to a config file), run XRoar with the @option{-config-print} option.  This will
 include all the built-in machine and cartridge definitions.  For a complete
-version including default values, use @option{-config-print-all}.
+version including default values, use @option{-config-print-all}.  To enable
+limited configuration auto-save (to the location listed in the table above),
+use @option{-config-auto-save}.
+
+The Windows build will check the current working directory for
+@file{xroar.conf} first.  This is somewhat at odds with configuration
+auto-save, but as far as I can tell, the majority of Windows users prefer to
+unpack a @file{.zip} file and run it from its own directory.  Just be aware
+that under Windows, if you turn on auto-save, the version in the unpacked
+directory will still take precedence.
 
 To bypass the search path and start XRoar using a specific configuration file,
 pass @option{-c @var{file}} as the very first option to XRoar.
@@ -2181,6 +2201,19 @@ give plenty of headroom (at the expense of a quieter overall sound).
 @item @option{-q}@*@option{-quiet}
 @tab Equivalent to @option{-verbose 0}.
 
+@item @option{-trap @var{condition}}
+@tab Configure a trap to fire on @var{condition}.
+@item @ @ @ @option{-trap-range @var{m}[-@var{n}]}
+@tab Perform trap's actions only on @var{m}th-@var{n}th trigger.
+@item @ @ @ @option{-trap-snap @var{file}}
+@tab Write snapshot at trap.
+@item @ @ @ @option{-trap-timeout @var{n}}
+@tab Quit emulator @var{n} seconds after trap.
+@item @ @ @ @option{-trap-trace}
+@tab Start trace mode at trap.
+@item @ @ @ @option{-trap-no-trace}
+@tab Stop trace mode at trap.
+
 @item @option{-timeout @var{n}}
 @tab Exit emulator after running for @var{n} seconds.
 @item @option{-timeout-motoroff @var{n}}
@@ -2238,25 +2271,52 @@ is equivalent to @option{-verbose 0}.  Levels are:
 @tab Miscellaneous internal debugging.
 @end multitable
 
+To see debug output from the pre-built Windows binary, run with @option{-C} as
+the first option to attach to the parent console or create a new console
+window.
+
+Traps are a somewhat flexible way of triggering emulator actions on particular
+events.  Conditions can be:
+
+@multitable @columnfractions .21 .75
+@headitem Condition @tab Description
+@item immediate (or '-')
+@tab Trigger immediately.
+@item pc=@var{addr}
+@tab Trigger at CPU Program Counter value.
+@item read=@var{a}[-@var{b}]
+@tab Trigger on read from address range.
+@item write=@var{a}[-@var{b}]
+@tab Trigger on write to address range.
+@item access=@var{a}[-@var{b}]
+@tab Trigger on either read from or write to address range.
+@item tape-motor-off
+@tab Trigger when tape motor switches off.
+@end multitable
+
+A trap will usually only trigger once.  To make one persistent, specify
+@option{-trap-range 1-}.
+
+Some older options are now implemented in terms of traps:
+
 XRoar can be told to exit after a number of (emulated) seconds with the
-@option{-timeout @var{seconds}} option.
+@option{-timeout @var{seconds}} option.  Equivalent to @option{-trap
+immediate}, @option {-trap-timeout @var{seconds}}.
 
 XRoar can quit a number of seconds after the cassette motor is switched off
 with the @option{-timeout-motoroff @var{seconds}} option.  This is useful in
 the case of automatic tape rewriting.  A value of 1 is usually sufficient to
 account for the brief motor click that occurs after header blocks and during
-gapped loading.
+gapped loading.  Equivalent to @option{-trap tape-motor-off},
+@option{-trap-timeout @var{seconds}}.
 
 Similarly, a snapshot can be automatically written after loading with the
 @option{-snap-motoroff @var{file}} option.   The file is overwritten each time
 the motor transitions to off.  This can be used to help analyse the machine
 state immediately after loading, before any autorun code has taken effect
 (specifying a @file{.ram} snapshot may be particularly useful here for
-analysis).
-
-To see debug output from the pre-built Windows binary, run with @option{-C} as
-the first option to attach to the parent console or create a new console
-window.
+analysis).  Equivalent to @option{-trap tape-motor-off}, @option{-trap-range
+1-}, @option{-trap-snap @var{file}}.
 
 @c
 
@@ -2269,6 +2329,8 @@ window.
 @tab Print configuration to standard out.
 @item @option{-config-print-all}
 @tab Print configuration to standard out, including defaults.
+@item @option{-config-auto-save}
+@tab Write configuration to known location on exit.
 @item @option{-h, --help}
 @tab Print help text and exit.
 @item @option{-V, --version}

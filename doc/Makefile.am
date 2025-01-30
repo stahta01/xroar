@@ -11,7 +11,7 @@ EXTRA_DIST += \
 	xroar.conf.example \
 	xroar.pdf \
 	file-run.png \
-	floppy-control.png \
+	drive-control.png \
 	gamepad.png \
 	hardware-cartridge.png \
 	hardware-machine.png \
