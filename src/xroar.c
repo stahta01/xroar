@@ -2181,6 +2181,10 @@ static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	}
 	ui_update_state(-1, ui_tag_frameskip, emu->state.vo.frameskip, NULL);
 	ui_update_state(-1, ui_tag_ratelimit_latch, emu->state.ratelimit_latch, NULL);
+#ifdef HAVE_WASM
+	// Bodge XXX
+	wasm_reset_tv_input();
+#endif
 	xroar_hard_reset();
 }
 

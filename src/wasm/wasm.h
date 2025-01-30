@@ -2,7 +2,7 @@
  *
  *  \brief WebAssembly (emscripten) support.
  *
- *  \copyright Copyright 2019-2024 Ciaran Anscomb
+ *  \copyright Copyright 2019-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -65,26 +65,12 @@ void wasm_queue_message_value_event(int tag, int value);
 
 // UI message wrappers
 
-void wasm_set_machine(int value);
-void wasm_set_cartridge(int value);
-void wasm_set_tape_playing(int value);
-void wasm_set_fullscreen(int value);
-void wasm_set_cmp_fs(int value);
-void wasm_set_cmp_fsc(int value);
-void wasm_set_cmp_system(int value);
-void wasm_set_cmp_colour_killer(int value);
-void wasm_set_ccr(int value);
-void wasm_set_picture(int value);
-void wasm_set_ntsc_scaling(int value);
-void wasm_set_tv_input(int value);
-void wasm_set_vdg_inverse(int value);
-void wasm_set_brightness(int value);
-void wasm_set_contrast(int value);
-void wasm_set_saturation(int value);
-void wasm_set_hue(int value);
-void wasm_set_gain(float value);
+void wasm_set_int(const char *tag_name, int value);
+void wasm_set_float(const char *tag_name, float value);
 void wasm_set_joystick_port(int port, int value);
 void wasm_set_joystick_by_name(int port, const char *name);
+
+void wasm_reset_tv_input(void);
 
 // Browser interfaces to certain functions
 

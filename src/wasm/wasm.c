@@ -2,7 +2,7 @@
  *
  *  \brief WebAssembly (emscripten) support.
  *
- *  \copyright Copyright 2019-2024 Ciaran Anscomb
+ *  \copyright Copyright 2019-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -30,6 +30,7 @@
 
 #include <emscripten.h>
 
+#include "array.h"
 #include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
@@ -553,6 +554,21 @@ static sds rehomed_path(const char *root, const char *file) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Called from xroar_ui_set_machine() once everything is ready.  This bodges
+// around the fact that switching to RGB while a CoCo 3 is not selected won't
+// "take" (coco3.c overrides the value).
+
+static int want_tv_input = -1;
+
+void wasm_reset_tv_input(void) {
+	if (want_tv_input >= 0) {
+		ui_update_state(-1, ui_tag_tv_input, want_tv_input, NULL);
+		want_tv_input = -1;
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 // File fetching.  Locks files to prevent multiple attempts to fetch the same
 // file.  This half-baked approach to file locking is probably fine for our
 // purposes.  It seems to work :)
@@ -759,76 +775,59 @@ void wasm_queue_message_value_event(int tag, int value) {
 
 // UI message wrappers
 
-void wasm_set_machine(int value) {
-	ui_update_state(-1, ui_tag_machine, value, NULL);
+const struct {
+	const char *tag_name;
+	int tag;
+} name_to_tag[] = {
+	{ "machine", ui_tag_machine },
+	{ "cartridge", ui_tag_cartridge },
+	{ "tape_playing", ui_tag_tape_playing },
+	{ "cmp_fs", ui_tag_cmp_fs },
+	{ "cmp_fsc", ui_tag_cmp_fsc },
+	{ "cmp_system", ui_tag_cmp_system },
+	{ "cmp_colour_killer", ui_tag_cmp_colour_killer },
+	{ "ccr", ui_tag_ccr },
+	{ "picture", ui_tag_picture },
+	{ "ntsc_scaling", ui_tag_ntsc_scaling },
+	{ "tv_input", ui_tag_tv_input },
+	{ "fullscreen", ui_tag_fullscreen },
+	{ "vdg_inverse", ui_tag_vdg_inverse },
+	{ "brightness", ui_tag_brightness },
+	{ "contrast", ui_tag_contrast },
+	{ "saturation", ui_tag_saturation },
+	{ "hue", ui_tag_hue },
+	{ "gain", ui_tag_gain },
+};
+
+static int ui_tag_from_name(const char *tag_name) {
+	if (!tag_name) {
+		return -1;
+	}
+	for (size_t i = 0; i < ARRAY_N_ELEMENTS(name_to_tag); ++i) {
+		if (0 == strcmp(tag_name, name_to_tag[i].tag_name)) {
+			return name_to_tag[i].tag;
+		}
+	}
+	return -1;
 }
 
-void wasm_set_cartridge(int value) {
-	ui_update_state(-1, ui_tag_cartridge, value, NULL);
+void wasm_set_int(const char *tag_name, int value) {
+	int tag = ui_tag_from_name(tag_name);
+	if (tag < 0) {
+		return;
+	}
+	if (tag == ui_tag_tv_input) {
+		want_tv_input = value;
+	}
+	ui_update_state(-1, tag, value, NULL);
 }
 
-void wasm_set_tape_playing(int value) {
-	ui_update_state(-1, ui_tag_tape_playing, value, NULL);
-}
-
-void wasm_set_fullscreen(int value) {
-	ui_update_state(-1, ui_tag_fullscreen, value, NULL);
-}
-
-void wasm_set_cmp_fs(int value) {
-	ui_update_state(-1, ui_tag_cmp_fs, value, NULL);
-}
-
-void wasm_set_cmp_fsc(int value) {
-	ui_update_state(-1, ui_tag_cmp_fsc, value, NULL);
-}
-
-void wasm_set_cmp_system(int value) {
-	ui_update_state(-1, ui_tag_cmp_system, value, NULL);
-}
-
-void wasm_set_cmp_colour_killer(int value) {
-	ui_update_state(-1, ui_tag_cmp_colour_killer, value, NULL);
-}
-
-void wasm_set_ccr(int value) {
-	ui_update_state(-1, ui_tag_ccr, value, NULL);
-}
-
-void wasm_set_picture(int value) {
-	ui_update_state(-1, ui_tag_picture, value, NULL);
-}
-
-void wasm_set_ntsc_scaling(int value) {
-	ui_update_state(-1, ui_tag_ntsc_scaling, value, NULL);
-}
-
-void wasm_set_tv_input(int value) {
-	ui_update_state(-1, ui_tag_tv_input, value, NULL);
-}
-
-void wasm_set_vdg_inverse(int value) {
-	ui_update_state(-1, ui_tag_vdg_inverse, value, NULL);
-}
-
-void wasm_set_brightness(int value) {
-	ui_update_state(-1, ui_tag_brightness, value, NULL);
-}
-
-void wasm_set_contrast(int value) {
-	ui_update_state(-1, ui_tag_contrast, value, NULL);
-}
-
-void wasm_set_saturation(int value) {
-	ui_update_state(-1, ui_tag_saturation, value, NULL);
-}
-
-void wasm_set_hue(int value) {
-	ui_update_state(-1, ui_tag_hue, value, NULL);
-}
-
-void wasm_set_gain(float value) {
-	ui_update_state(-1, ui_tag_gain, 0, &value);
+void wasm_set_float(const char *tag_name, float value) {
+	int tag = ui_tag_from_name(tag_name);
+	if (tag < 0) {
+		return;
+	}
+	ui_update_state(-1, tag, 0, &value);
 }
 
 void wasm_set_joystick_port(int port, int value) {
@@ -863,7 +862,7 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 			   const char *cart_rom, const char *cart_rom2) {
 	WASM_DEBUG("wasm_set_machine_cart(%s, %s, %s, %s)\n", machine, cart ? cart : "[none]", cart_rom ? cart_rom : "[none]", cart_rom2 ? cart_rom2 : "[none]");
 	struct machine_config *mc = machine_config_by_name(machine);
-	wasm_set_machine(mc ? mc->id : 0);
+	ui_update_state(-1, ui_tag_machine, mc ? mc->id : 0, NULL);
 	struct cart_config *cc = cart_config_by_name(cart);
 	if (cc) {
 		if (cart_rom) {
@@ -881,7 +880,7 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 			cc->rom2 = xstrdup(cart_rom2);
 		}
 	}
-	wasm_set_cartridge(cc ? cc->id : 0);
+	ui_update_state(-1, ui_tag_cartridge, cc ? cc->id : 0, NULL);
 	xroar_hard_reset();
 	return;
 }
