@@ -41,26 +41,26 @@
 #define PART_SER_PART (1)
 #define PART_SER_DATA (2)
 
-extern const struct partdb_entry dragon32_part;
-extern const struct partdb_entry dragon64_part;
-extern const struct partdb_entry dragonpro_part;
-extern const struct partdb_entry coco_part;
-extern const struct partdb_entry deluxecoco_part;
-extern const struct partdb_entry coco3_part;
-extern const struct partdb_entry mc10_part;
+extern const struct machine_partdb_entry dragon32_part;
+extern const struct machine_partdb_entry dragon64_part;
+extern const struct machine_partdb_entry dragonpro_part;
+extern const struct machine_partdb_entry coco_part;
+extern const struct machine_partdb_entry deluxecoco_part;
+extern const struct machine_partdb_entry coco3_part;
+extern const struct machine_partdb_entry mc10_part;
 
-extern const struct partdb_entry cart_rom_part;
-extern const struct partdb_entry deltados_part;
-extern const struct partdb_entry dragondos_part;
-extern const struct partdb_entry gmc_part;
-extern const struct partdb_entry idecart_part;
-extern const struct partdb_entry ikon_part;
-extern const struct partdb_entry mooh_part;
-extern const struct partdb_entry mpi_part;
-extern const struct partdb_entry nx32_part;
-extern const struct partdb_entry orch90_part;
-extern const struct partdb_entry race_part;
-extern const struct partdb_entry rsdos_part;
+extern const struct cart_partdb_entry cart_rom_part;
+extern const struct cart_partdb_entry deltados_part;
+extern const struct cart_partdb_entry dragondos_part;
+extern const struct cart_partdb_entry gmc_part;
+extern const struct cart_partdb_entry idecart_part;
+extern const struct cart_partdb_entry ikon_part;
+extern const struct cart_partdb_entry mooh_part;
+extern const struct cart_partdb_entry mpi_part;
+extern const struct cart_partdb_entry nx32_part;
+extern const struct cart_partdb_entry orch90_part;
+extern const struct cart_partdb_entry race_part;
+extern const struct cart_partdb_entry rsdos_part;
 
 extern const struct partdb_entry ram_part;
 
@@ -85,43 +85,43 @@ extern const struct partdb_entry wd2797_part;
 
 extern const struct partdb_entry spi_sdcard_part;
 
-extern const struct partdb_entry mcx128_part;
+extern const struct cart_partdb_entry mcx128_part;
 
 const struct partdb_entry *partdb[] = {
 #ifdef WANT_MACHINE_ARCH_DRAGON
-	&dragon32_part,
-	&dragon64_part,
-	&dragonpro_part,
-	&coco_part,
-	&deluxecoco_part,
+	(const struct partdb_entry *)&dragon32_part,
+	(const struct partdb_entry *)&dragon64_part,
+	(const struct partdb_entry *)&dragonpro_part,
+	(const struct partdb_entry *)&coco_part,
+	(const struct partdb_entry *)&deluxecoco_part,
 #endif
 
 #ifdef WANT_MACHINE_ARCH_COCO3
-	&coco3_part,
+	(const struct partdb_entry *)&coco3_part,
 #endif
 
 #ifdef WANT_MACHINE_ARCH_MC10
-	&mc10_part,
+	(const struct partdb_entry *)&mc10_part,
 #endif
 
 #ifdef WANT_CART_ARCH_DRAGON
-	&cart_rom_part,
-	&deltados_part,
-	&dragondos_part,
-	&gmc_part,
-	&orch90_part,
-	&rsdos_part,
-	&idecart_part,
+	(const struct partdb_entry *)&cart_rom_part,
+	(const struct partdb_entry *)&deltados_part,
+	(const struct partdb_entry *)&dragondos_part,
+	(const struct partdb_entry *)&gmc_part,
+	(const struct partdb_entry *)&orch90_part,
+	(const struct partdb_entry *)&rsdos_part,
+	(const struct partdb_entry *)&idecart_part,
 #ifndef HAVE_WASM
 #ifdef WANT_EXPERIMENTAL
-	&ikon_part,
+	(const struct partdb_entry *)&ikon_part,
 #endif
 #endif
-	&mooh_part,
+	(const struct partdb_entry *)&mooh_part,
 #ifndef HAVE_WASM
-	&mpi_part,
-	&nx32_part,
-	&race_part,
+	(const struct partdb_entry *)&mpi_part,
+	(const struct partdb_entry *)&nx32_part,
+	(const struct partdb_entry *)&race_part,
 #endif
 #endif
 
@@ -167,7 +167,7 @@ const struct partdb_entry *partdb[] = {
 #endif
 
 #ifdef WANT_CART_ARCH_MC10
-	&mcx128_part,
+	(const struct partdb_entry *)&mcx128_part,
 #endif
 
 };
