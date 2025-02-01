@@ -215,6 +215,7 @@ xroar_CFLAGS += -DCONFPATH=\":%LOCALAPPDATA%\\\\XRoar:%USERPROFILE%\\\\Documents
 else
 if UI_COCOA
 xroar_CFLAGS += -DAUTOSAVE_PREFIX=\"~/Library/XRoar\"
+xroar_OBJCFLAGS += -DAUTOSAVE_PREFIX=\"~/Library/XRoar\"
 xroar_CFLAGS += -DROMPATH=\"~/Library/XRoar/roms:~/.xroar/roms:$(datadir)/xroar/roms:\"
 xroar_CFLAGS += -DCONFPATH=\"~/Library/XRoar:~/.xroar:$(sysconfdir):$(datadir)/xroar\"
 else
