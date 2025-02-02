@@ -1,4 +1,5 @@
  * Fix Mac OS X+ build under more modern compilers [Chad Krokosh]
+ * Fix Windows UI zoom in/out [Erico Monteiro]
 
 Version 1.8, Thu 30 Jan 2025
 

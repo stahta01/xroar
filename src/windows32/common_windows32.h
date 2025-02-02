@@ -26,7 +26,7 @@
 #define UIW32_TAG(t) (((t) & 0x7f) << 8)
 #define UIW32_TAGV(t,v) (UIW32_TAG(t) | ((v) & 0xff))
 #define UIW32_TAG_TYPE(t) (((t) >> 8) & 0x7f)
-#define UIW32_TAG_VALUE(t) ((t) & 0xff)
+#define UIW32_TAG_VALUE(t) ((int)((int8_t)((t) & 0xff)))
 
 // Extend the UI tags for our own purposes
 
