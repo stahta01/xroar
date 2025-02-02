@@ -1,3 +1,5 @@
+Version 1.8.1, Sun  2 Feb 2025
+
  * Fix Mac OS X+ build under more modern compilers [Chad Krokosh]
  * Fix Windows UI zoom in/out [Erico Monteiro]
 
