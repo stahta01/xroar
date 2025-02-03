@@ -342,8 +342,8 @@ static struct {
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
 		// 0x1010 - 0x101F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ "*", PAGE2 },
+		{ "*", PAGE2 },
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
@@ -616,8 +616,8 @@ static struct {
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
 		// 0x1110 - 0x111F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ "*", PAGE3 },
+		{ "*", PAGE3 },
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
 		{ "*", ILLEGAL },
@@ -997,7 +997,10 @@ struct hd6309_trace {
 	event_ticks start_tick;
 	int page;
 	uint16_t instr_pc;
+	// Note: nbytes == pc_nbytes for most things, but an illegal run of > 1
+	// page byte will advance pc_nbytes but not nbytes.
 	unsigned nbytes;
+	unsigned pc_nbytes;
 	uint8_t bytes[MAX_NBYTES];
 
 	const char *mnemonic;
@@ -1076,7 +1079,7 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 
 	// Record byte if it follows current PC.  Note: nbytes not
 	// incremented here: individual states will bump it if necessary.
-	if (pc == (tracer->instr_pc + tracer->nbytes)) {
+	if (pc == (tracer->instr_pc + tracer->pc_nbytes)) {
 		if (tracer->nbytes < MAX_NBYTES) {
 			tracer->bytes[tracer->nbytes] = byte;
 		}
@@ -1097,6 +1100,8 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 				case PAGE2: case PAGE3:
 					tracer->state = WANT_INSTRUCTION2;
 					tracer->page = tracer->ins_type;
+					tracer->bytes[0] = (tracer->ins_type == PAGE2) ? 0x10 : 0x11;
+					tracer->nbytes = 0;
 					break;
 				// Otherwise use an appropriate state list:
 				default: case ILLEGAL: case INHERENT:
@@ -1133,7 +1138,8 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 					tracer->state_list = state_list_inmem16;
 					break;
 			}
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		// First byte of an IRQ vector
@@ -1141,14 +1147,16 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			tracer->value = byte;
 			tracer->ins_type = IRQVECTOR;
 			tracer->state_list = state_list_irq;
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		// Building a value byte by byte
 		case WANT_VALUE:
 		case WANT_IRQ_VECTOR2:
 			tracer->value = (tracer->value << 8) | byte;
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		// Indexed postbyte - record relevant details
@@ -1174,7 +1182,8 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 				tracer->idx_mode = IDX_PD2;
 			}
 			tracer->state_list = idx_state_lists[tracer->idx_mode];
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		// Postbyte for "memory with bit" instructions
@@ -1182,13 +1191,15 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 			tracer->membit_reg = membit_regs[(byte>>6) & 3];
 			tracer->membit_sbit = (byte>>3) & 7;
 			tracer->membit_dbit = byte & 7;
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		// Separate immediate value for "in memory" instructions
 		case WANT_IM_VALUE:
 			tracer->im_value = (tracer->im_value << 8) | byte;
-			tracer->nbytes++;
+			++tracer->nbytes;
+			++tracer->pc_nbytes;
 			break;
 
 		default:
@@ -1286,10 +1297,10 @@ void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
 				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, tracer->idx_reg, post);
 				break;
 			case IDX_PCR8:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->nbytes + value8), post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->pc_nbytes + value8), post);
 				break;
 			case IDX_PCR16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->nbytes + tracer->value), post);
+				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->pc_nbytes + tracer->value), post);
 				break;
 			case IDX_EXT16:
 				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, post);
@@ -1354,6 +1365,7 @@ static void reset_state(struct hd6309_trace *tracer) {
 	tracer->page = PAGE0;
 	tracer->instr_pc = 0;
 	tracer->nbytes = 0;
+	tracer->pc_nbytes = 0;
 	tracer->mnemonic = "*";
 	strcpy(tracer->operand_text, "*");
 
