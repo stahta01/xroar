@@ -400,12 +400,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else {
-				HD6309_TRACE_INSTRUCTION(hcpu);
 				hcpu->state = hd6309_state_next_instruction;
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
 				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
+				HD6309_TRACE_INSTRUCTION(hcpu);
 			}
 			continue;
 

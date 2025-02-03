@@ -337,12 +337,12 @@ static void mc6809_run(struct MC6809 *cpu) {
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else {
-				MC6809_TRACE_INSTRUCTION(cpu);
 				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
 				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
+				MC6809_TRACE_INSTRUCTION(cpu);
 			}
 			continue;
 
