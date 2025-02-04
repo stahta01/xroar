@@ -7,6 +7,7 @@ AM_CPPFLAGS = -I$(top_builddir)
 bin_PROGRAMS += xroar
 
 BUILT_SOURCES =
+CLEANFILES =
 
 # Common sources
 
@@ -248,6 +249,7 @@ EXTRA_xroar_DEPENDENCIES = \
 	wasm/exported_functions
 endif
 EXTRA_DIST += wasm/exported_functions
+CLEANFILES += xroar.wasm xroar.js
 
 # Common OpenGL support
 
@@ -555,6 +557,3 @@ if FILEREQ_CLI
 xroar_SOURCES += \
 	filereq_cli.c
 endif
-
-clean-local:
-	rm -f xroar.wasm
