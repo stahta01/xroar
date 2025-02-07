@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ *  \copyright Copyright 2012-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -433,16 +433,16 @@ static void hd6309_run(struct MC6809 *cpu) {
 			continue;
 
 		case hd6309_state_sync:
+			cpu->nmi_active = cpu->nmi_latch;
+			cpu->firq_active = cpu->firq_latch;
+			cpu->irq_active = cpu->irq_latch;
+			NVMA_CYCLE;
 			if (cpu->nmi_active || cpu->firq_active || cpu->irq_active) {
 				NVMA_CYCLE;
 				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_label_b;
 				continue;
 			}
-			cpu->nmi_active = cpu->nmi_latch;
-			cpu->firq_active = cpu->firq_latch;
-			cpu->irq_active = cpu->irq_latch;
-			NVMA_CYCLE;
 			if (cpu->halt) {
 				hcpu->state = hd6309_state_sync_check_halt;
 			}
@@ -659,10 +659,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x13:
 				if (!NATIVE_MODE)
 					peek_byte(cpu, REG_PC);
-				cpu->nmi_active = cpu->nmi_latch;
-				cpu->firq_active = cpu->firq_latch;
-				cpu->irq_active = cpu->irq_latch;
-				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_sync;
 				continue;
 
