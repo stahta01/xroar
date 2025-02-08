@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,6 +31,9 @@ struct ser_struct_data;
 
 #ifdef TRACE
 struct mc6809_trace;
+// Actual maximum (with page chain pruning) is 5 bytes of trace data - but
+// allow a few more just in case:
+#define MC6809_MAX_TRACE_BYTES (8)
 #endif
 
 #define MC6809_INT_VEC_RESET (0xfffe)
@@ -90,6 +93,10 @@ struct MC6809 {
 	uint16_t page;  // 0, 0x200, or 0x300
 #ifdef TRACE
 	struct mc6809_trace *tracer;
+	uint16_t trace_pc;  // base address of instruction
+	uint16_t trace_next_pc;  // next address in instruction
+	unsigned trace_nbytes;
+	uint8_t trace_bytes[MC6809_MAX_TRACE_BYTES];
 #endif
 
 	/* Registers */

@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU tracing.
  *
- *  \copyright Copyright 2005-2024 Ciaran Anscomb
+ *  \copyright Copyright 2005-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,8 +26,9 @@ struct mc6809_trace;
 struct mc6809_trace *mc6809_trace_new(struct MC6809 *cpu);
 void mc6809_trace_free(struct mc6809_trace *);
 
-void mc6809_trace_vector(struct mc6809_trace *);
-void mc6809_trace_instruction(struct mc6809_trace *);
-void mc6809_trace_byte(struct mc6809_trace *, uint8_t byte, uint16_t pc);
+void mc6809_trace_vector(struct mc6809_trace *, uint16_t vec,
+			 unsigned nbytes, uint8_t *bytes);
+void mc6809_trace_instruction(struct mc6809_trace *, uint16_t pc,
+			      unsigned nbytes, uint8_t *bytes);
 
 #endif

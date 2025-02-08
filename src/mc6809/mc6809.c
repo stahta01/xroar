@@ -60,14 +60,7 @@
 #include "serialise.h"
 
 #ifdef TRACE
-// Tracing supported:
 #include "mc6809_trace.h"
-#define MC6809_TRACE_VECTOR(c) if (UNLIKELY(logging.trace_cpu)) { mc6809_trace_vector((c)->tracer); }
-#define MC6809_TRACE_INSTRUCTION(c) if (UNLIKELY(logging.trace_cpu)) { mc6809_trace_instruction((c)->tracer); }
-#else
-// Tracing not supported - no-op macros:
-#define MC6809_TRACE_VECTOR(c)
-#define MC6809_TRACE_INSTRUCTION(c)
 #endif
 
 static const struct ser_struct ser_struct_mc6809[] = {
@@ -296,7 +289,9 @@ static void mc6809_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			cpu->state = mc6809_state_reset_check_halt;
-			MC6809_TRACE_VECTOR(cpu);
+#ifdef TRACE
+			cpu->trace_nbytes = 0;
+#endif
 			// fall through
 
 		case mc6809_state_reset_check_halt:
@@ -319,19 +314,16 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 		case mc6809_state_label_b:
 			if (UNLIKELY(cpu->nmi_active)) {
-				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else if (UNLIKELY(!(REG_CC & CC_F) && cpu->firq_active)) {
-				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_firq_registers(cpu);
 				cpu->state = mc6809_state_dispatch_irq;
 			} else if (UNLIKELY(!(REG_CC & CC_I) && cpu->irq_active)) {
-				MC6809_TRACE_VECTOR(cpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu);
@@ -342,7 +334,10 @@ static void mc6809_run(struct MC6809 *cpu) {
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
 				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
-				MC6809_TRACE_INSTRUCTION(cpu);
+#ifdef TRACE
+				cpu->trace_pc = cpu->trace_next_pc = REG_PC;
+				cpu->trace_nbytes = 0;
+#endif
 			}
 			continue;
 
@@ -548,6 +543,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x0211:
 				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0x200;
+#ifdef TRACE
+				// Page bytes can chain indefinitely, so ensure we
+				// only keep the first in trace buffer:
+				cpu->trace_nbytes = 1;
+#endif
 				continue;
 
 			// 0x11 Page 3
@@ -557,6 +557,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x11:
 				cpu->state = mc6809_state_next_instruction;
 				cpu->page = 0x300;
+#ifdef TRACE
+				// Page bytes can chain indefinitely, so ensure we
+				// only keep the first in trace buffer:
+				cpu->trace_nbytes = 1;
+#endif
 				continue;
 
 			// 0x12 NOP inherent
@@ -1386,8 +1391,11 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 static void mc6809_set_pc(void *sptr, unsigned pc) {
 	struct MC6809 *cpu = sptr;
-	MC6809_TRACE_INSTRUCTION(cpu);
 	REG_PC = pc;
+#ifdef TRACE
+	cpu->trace_pc = cpu->trace_next_pc = pc;
+	cpu->trace_nbytes = 0;
+#endif
 	cpu->state = mc6809_state_next_instruction;
 }
 
@@ -1400,28 +1408,25 @@ static void mc6809_set_pc(void *sptr, unsigned pc) {
 /* Wrap common fetches */
 
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
-	uint8_t v = fetch_byte_notrace(cpu, a);
+	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
+	cpu->firq_latch = cpu->firq;
+	cpu->irq_latch = cpu->irq;
+	DELEGATE_CALL(cpu->mem_cycle, 1, a);
 #ifdef TRACE
-	if (UNLIKELY(logging.trace_cpu)) {
-		mc6809_trace_byte(cpu->tracer, v, a);
+	// Log fetched byte in the trace buffer only if it follows on from the
+	// current trace address.
+	if (a == cpu->trace_next_pc) {
+		cpu->trace_bytes[cpu->trace_nbytes++] = cpu->D;
+		++cpu->trace_next_pc;
 	}
 #endif
-	return v;
+	return cpu->D;
 }
 
 static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
-#ifndef TRACE
-	return fetch_word_notrace(cpu, a);
-#else
-	if (LIKELY(!logging.trace_cpu)) {
-		return fetch_word_notrace(cpu, a);
-	}
-	unsigned v0 = fetch_byte_notrace(cpu, a);
-	mc6809_trace_byte(cpu->tracer, v0, a);
-	unsigned v1 = fetch_byte_notrace(cpu, a+1);
-	mc6809_trace_byte(cpu->tracer, v1, a+1);
+	unsigned v0 = fetch_byte(cpu, a);
+	unsigned v1 = fetch_byte(cpu, a+1);
 	return (v0 << 8) | v1;
-#endif
 }
 
 /* Compute effective address */
@@ -1525,12 +1530,26 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
 	cpu->state = mc6809_state_irq_reset_vector;
+#ifdef TRACE
+	cpu->trace_next_pc = vec;
+	cpu->trace_nbytes = 0;
+#endif
 	REG_PC = fetch_word(cpu, vec);
 	cpu->state = mc6809_state_label_a;
 	NVMA_CYCLE;
+#ifdef TRACE
+	if (UNLIKELY(logging.trace_cpu)) {
+		mc6809_trace_vector(cpu->tracer, vec, cpu->trace_nbytes, cpu->trace_bytes);
+	}
+#endif
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
+#ifdef TRACE
+	if (UNLIKELY(logging.trace_cpu)) {
+		mc6809_trace_instruction(cpu->tracer, cpu->trace_pc, cpu->trace_nbytes, cpu->trace_bytes);
+	}
+#endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }
 
