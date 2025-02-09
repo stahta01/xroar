@@ -41,30 +41,27 @@ struct mc6809_trace;
 #define MC6809_INT_VEC_SWI2 (0xfff4)
 #define MC6809_INT_VEC_SWI3 (0xfff2)
 
-#define MC6809_COMPAT_STATE_NORMAL (0)
-#define MC6809_COMPAT_STATE_SYNC (1)
-#define MC6809_COMPAT_STATE_CWAI (2)
-#define MC6809_COMPAT_STATE_DONE_INSTRUCTION (11)
-#define MC6809_COMPAT_STATE_HCF (12)
+// MPU state.  Represents current position in the high-level flow chart from
+// the data sheet (figure 14).
+//
+// The values here are important, as they appear in snapshots.  We can only
+// remove one if we can prove it will never have ended up in a snapshot!
 
-/* MPU state.  Represents current position in the high-level flow chart from
- * the data sheet (figure 14). */
 enum mc6809_state {
-	mc6809_state_label_a      = MC6809_COMPAT_STATE_NORMAL,
-	mc6809_state_sync         = MC6809_COMPAT_STATE_SYNC,
-	mc6809_state_dispatch_irq = MC6809_COMPAT_STATE_CWAI,
-	mc6809_state_label_b,
-	mc6809_state_reset,
-	mc6809_state_reset_check_halt,
-	mc6809_state_next_instruction,
-	// page states not used in emulation, but kept for use in snapshots:
-	mc6809_state_instruction_page_2,
-	mc6809_state_instruction_page_3,
-	mc6809_state_cwai_check_halt,
-	mc6809_state_sync_check_halt,
-	mc6809_state_done_instruction = MC6809_COMPAT_STATE_DONE_INSTRUCTION,
-	mc6809_state_hcf          = MC6809_COMPAT_STATE_HCF,
-	mc6809_state_irq_reset_vector,  // BA=0, BS=1
+	mc6809_state_label_a            = 0,
+	mc6809_state_sync               = 1,
+	mc6809_state_dispatch_irq       = 2,
+	mc6809_state_label_b            = 3,
+	mc6809_state_reset              = 4,
+	mc6809_state_reset_check_halt   = 5,
+	mc6809_state_next_instruction   = 6,
+	mc6809_state_instruction_page_2 = 7,
+	mc6809_state_instruction_page_3 = 8,
+	mc6809_state_cwai_check_halt    = 9,
+	mc6809_state_sync_check_halt    = 10,
+	mc6809_state_done_instruction   = 11,
+	mc6809_state_hcf                = 12,
+	mc6809_state_irq_reset_vector   = 13,  // BA=0, BS=1
 };
 
 /* Interface shared with all 6809-compatible CPUs */

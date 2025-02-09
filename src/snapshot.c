@@ -315,7 +315,7 @@ static void old_set_registers(struct machine *m, uint8_t *regs) {
 	cpu->nmi = 0;
 	cpu->firq = 0;
 	cpu->irq = 0;
-	cpu->state = MC6809_COMPAT_STATE_NORMAL;
+	cpu->state = mc6809_state_label_a;
 	cpu->nmi_armed = 0;
 }
 
@@ -438,11 +438,11 @@ static int read_v1_snapshot(const char *filename) {
 						wait_for_interrupt = fs_read_uint8(fd);
 						skip_register_push = fs_read_uint8(fd);
 						if (wait_for_interrupt && skip_register_push) {
-							cpu->state = MC6809_COMPAT_STATE_CWAI;
+							cpu->state = mc6809_state_dispatch_irq;
 						} else if (wait_for_interrupt) {
-							cpu->state = MC6809_COMPAT_STATE_SYNC;
+							cpu->state = mc6809_state_sync;
 						} else {
-							cpu->state = MC6809_COMPAT_STATE_NORMAL;
+							cpu->state = mc6809_state_label_a;
 						}
 						size--;
 					} else {

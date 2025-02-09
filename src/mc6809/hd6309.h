@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ *  \copyright Copyright 2012-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,25 +31,30 @@ struct hd6309_trace;
 
 #define HD6309_INT_VEC_ILLEGAL (0xfff0)
 
-/* MPU state.  Represents current position in the high-level flow chart from
- * the data sheet (figure 14). */
+// MPU state.  Represents current position in the high-level flow chart from
+// the data sheet (figure 14).
+//
+// The values here are important, as they appear in snapshots.  We can only
+// remove one if we can prove it will never have ended up in a snapshot!
+//
+// It is not important that they tally with the equivalent MC6809 states.
+
 enum hd6309_state {
-	hd6309_state_label_a,
-	hd6309_state_sync,
-	hd6309_state_dispatch_irq,
-	hd6309_state_label_b,
-	hd6309_state_reset,
-	hd6309_state_reset_check_halt,
-	hd6309_state_next_instruction,
-	// page states not used in emulation, but kept for use in snapshots:
-	hd6309_state_instruction_page_2,
-	hd6309_state_instruction_page_3,
-	hd6309_state_cwai_check_halt,
-	hd6309_state_sync_check_halt,
-	hd6309_state_done_instruction,
-	hd6309_state_tfm,
-	hd6309_state_tfm_write,
-	hd6309_state_irq_reset_vector,  // BA=0, BS=1
+	hd6309_state_label_a            = 0,
+	hd6309_state_sync               = 1,
+	hd6309_state_dispatch_irq       = 2,
+	hd6309_state_label_b            = 3,
+	hd6309_state_reset              = 4,
+	hd6309_state_reset_check_halt   = 5,
+	hd6309_state_next_instruction   = 6,
+	hd6309_state_instruction_page_2 = 7,
+	hd6309_state_instruction_page_3 = 8,
+	hd6309_state_cwai_check_halt    = 9,
+	hd6309_state_sync_check_halt    = 10,
+	hd6309_state_done_instruction   = 11,
+	hd6309_state_tfm                = 12,
+	hd6309_state_tfm_write          = 13,
+	hd6309_state_irq_reset_vector   = 14,  // BA=0, BS=1
 };
 
 struct HD6309 {

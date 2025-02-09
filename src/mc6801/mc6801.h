@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6801/6803 CPUs.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -66,18 +66,21 @@ struct mc6801_trace;
 
 // MPU state.  Represents current position in the high-level flow chart from
 // the data sheet.
+//
+// The values here are important, as they appear in snapshots.  We can only
+// remove one if we can prove it will never have ended up in a snapshot!
 
 enum mc6801_state {
-	mc6801_state_reset = 0,
-	mc6801_state_label_a,
-	mc6801_state_sync,
-	mc6801_state_dispatch_irq,
-	mc6801_state_label_b,
-	mc6801_state_next_instruction,
-	mc6801_state_wai,
-	mc6801_state_sync_check_halt,
-	mc6801_state_done_instruction,
-	mc6801_state_hcf
+	mc6801_state_reset              = 0,
+	mc6801_state_label_a            = 1,
+	mc6801_state_sync               = 2,
+	mc6801_state_dispatch_irq       = 3,
+	mc6801_state_label_b            = 4,
+	mc6801_state_next_instruction   = 5,
+	mc6801_state_wai                = 6,
+	mc6801_state_sync_check_halt    = 7,
+	mc6801_state_done_instruction   = 8,
+	mc6801_state_hcf                = 9,
 };
 
 struct MC6801_port {
