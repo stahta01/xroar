@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU tracing.
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ *  \copyright Copyright 2012-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,8 +26,9 @@ struct hd6309_trace;
 struct hd6309_trace *hd6309_trace_new(struct HD6309 *hcpu);
 void hd6309_trace_free(struct hd6309_trace *);
 
-void hd6309_trace_vector(struct hd6309_trace *);
-void hd6309_trace_instruction(struct hd6309_trace *);
-void hd6309_trace_byte(struct hd6309_trace *, uint8_t byte, uint16_t pc);
+void hd6309_trace_vector(struct hd6309_trace *, uint16_t vec,
+			 unsigned nbytes, uint8_t *bytes);
+void hd6309_trace_instruction(struct hd6309_trace *, uint16_t pc,
+			      unsigned nbytes, uint8_t *bytes);
 
 #endif

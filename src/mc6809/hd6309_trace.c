@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU tracing.
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ *  \copyright Copyright 2012-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -18,11 +18,13 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "pl-string.h"
 #include "xalloc.h"
 
 #include "events.h"
@@ -30,25 +32,22 @@
 #include "hd6309.h"
 #include "hd6309_trace.h"
 
-/* Instruction types.  PAGE0, PAGE2 and PAGE3 switch which page is selected. */
+// Instruction types
 
 enum {
-	PAGE0 = 0, PAGE2 = 1, PAGE3 = 2, ILLEGAL,
-	INHERENT, WORD_IMMEDIATE, IMMEDIATE, EXTENDED,
-	DIRECT, INDEXED, RELATIVE, LONG_RELATIVE,
-	STACKS, STACKU, REGISTER, IRQVECTOR,
-	QUAD_IMMEDIATE, MEMBIT,
-	INMEM_DIRECT, INMEM_INDEXED, INMEM_EXTENDED,
+	ILLEGAL = 0, INHERENT, WORD_IMMEDIATE, IMMEDIATE, EXTENDED, DIRECT,
+	INDEXED, RELATIVE, LONG_RELATIVE, STACKS, STACKU, REGISTER, IRQVECTOR,
+	QUAD_IMMEDIATE, MEMBIT, INMEM_DIRECT, INMEM_INDEXED, INMEM_EXTENDED,
 	TFMPP, TFMMM, TFMP0, TFM0P
 };
 
-/* Three arrays of instructions, one for each of PAGE0, PAGE2 and PAGE3 */
+// Three arrays of instructions, one for each page.  A NULL mnemonic will be
+// replaced with "*".
 
 static struct {
 	const char *mnemonic;
 	int type;
 } const instructions[3][256] = {
-
 	{
 		// 0x00 - 0x0F
 		{ "NEG", DIRECT },
@@ -68,18 +67,18 @@ static struct {
 		{ "JMP", DIRECT },
 		{ "CLR", DIRECT },
 		// 0x10 - 0x1F
-		{ "*", PAGE2 },
-		{ "*", PAGE3 },
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
 		{ "NOP", INHERENT },
 		{ "SYNC", INHERENT },
 		{ "SEXW", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LBRA", LONG_RELATIVE },
 		{ "LBSR", LONG_RELATIVE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "DAA", INHERENT },
 		{ "ORCC", IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ANDCC", IMMEDIATE },
 		{ "SEX", INHERENT },
 		{ "EXG", REGISTER },
@@ -110,47 +109,47 @@ static struct {
 		{ "PULS", STACKS },
 		{ "PSHU", STACKU },
 		{ "PULU", STACKU },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "RTS", INHERENT },
 		{ "ABX", INHERENT },
 		{ "RTI", INHERENT },
 		{ "CWAI", IMMEDIATE },
 		{ "MUL", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "SWI", INHERENT },
 		// 0x40 - 0x4F
 		{ "NEGA", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COMA", INHERENT },
 		{ "LSRA", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "RORA", INHERENT },
 		{ "ASRA", INHERENT },
 		{ "LSLA", INHERENT },
 		{ "ROLA", INHERENT },
 		{ "DECA", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCA", INHERENT },
 		{ "TSTA", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRA", INHERENT },
 		// 0x50 - 0x5F
 		{ "NEGB", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COMB", INHERENT },
 		{ "LSRB", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "RORB", INHERENT },
 		{ "ASRB", INHERENT },
 		{ "LSLB", INHERENT },
 		{ "ROLB", INHERENT },
 		{ "DECB", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCB", INHERENT },
 		{ "TSTB", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRB", INHERENT },
 		// 0x60 - 0x6F
 		{ "NEG", INDEXED },
@@ -194,7 +193,7 @@ static struct {
 		{ "ANDA", IMMEDIATE },
 		{ "BITA", IMMEDIATE },
 		{ "LDA", IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "EORA", IMMEDIATE },
 		{ "ADCA", IMMEDIATE },
 		{ "ORA", IMMEDIATE },
@@ -202,7 +201,7 @@ static struct {
 		{ "CMPX", WORD_IMMEDIATE },
 		{ "BSR", RELATIVE },
 		{ "LDX", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x90 - 0x9F
 		{ "SUBA", DIRECT },
 		{ "CMPA", DIRECT },
@@ -262,7 +261,7 @@ static struct {
 		{ "ANDB", IMMEDIATE },
 		{ "BITB", IMMEDIATE },
 		{ "LDB", IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "EORB", IMMEDIATE },
 		{ "ADCB", IMMEDIATE },
 		{ "ORB", IMMEDIATE },
@@ -270,7 +269,7 @@ static struct {
 		{ "LDD", WORD_IMMEDIATE },
 		{ "LDQ", QUAD_IMMEDIATE },
 		{ "LDU", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0xD0 - 0xDF
 		{ "SUBB", DIRECT },
 		{ "CMPB", DIRECT },
@@ -325,41 +324,41 @@ static struct {
 	}, {
 
 		// 0x1000 - 0x100F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1010 - 0x101F
-		{ "*", PAGE2 },
-		{ "*", PAGE2 },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1020 - 0x102F
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LBRN", LONG_RELATIVE },
 		{ "LBHI", LONG_RELATIVE },
 		{ "LBLS", LONG_RELATIVE },
@@ -388,78 +387,78 @@ static struct {
 		{ "PULSW", INHERENT },
 		{ "PSHUW", INHERENT },
 		{ "PULUW", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "SWI2", INHERENT },
 		// 0x1040 - 0x104F
 		{ "NEGD", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COMD", INHERENT },
 		{ "LSRD", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "RORD", INHERENT },
 		{ "ASRD", INHERENT },
 		{ "LSLD", INHERENT },
 		{ "ROLD", INHERENT },
 		{ "DECD", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCD", INHERENT },
 		{ "TSTD", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRD", INHERENT },
 		// 0x1050 - 0x105F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COMW", ILLEGAL },
 		{ "LSRW", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "RORW", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ROLW", ILLEGAL },
 		{ "DECW", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCW", ILLEGAL },
 		{ "TSTW", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRW", ILLEGAL },
 		// 0x1060 - 0x106F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1070 - 0x107F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1080 - 0x108F
 		{ "SUBW", WORD_IMMEDIATE },
 		{ "CMPW", WORD_IMMEDIATE },
@@ -468,15 +467,15 @@ static struct {
 		{ "ANDD", WORD_IMMEDIATE },
 		{ "BITD", WORD_IMMEDIATE },
 		{ "LDW", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "EORD", WORD_IMMEDIATE },
 		{ "ADCD", WORD_IMMEDIATE },
 		{ "ORD", WORD_IMMEDIATE },
 		{ "ADDW", WORD_IMMEDIATE },
 		{ "CMPY", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDY", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1090 - 0x109F
 		{ "SUBW", DIRECT },
 		{ "CMPW", DIRECT },
@@ -491,7 +490,7 @@ static struct {
 		{ "ORD", DIRECT },
 		{ "ADDW", DIRECT },
 		{ "CMPY", DIRECT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDY", DIRECT },
 		{ "STY", DIRECT },
 		// 0x10A0 - 0x10AF
@@ -508,7 +507,7 @@ static struct {
 		{ "ORD", INDEXED },
 		{ "ADDW", INDEXED },
 		{ "CMPY", INDEXED },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDY", INDEXED },
 		{ "STY", INDEXED },
 		// 0x10B0 - 0x10BF
@@ -525,73 +524,73 @@ static struct {
 		{ "ORD", EXTENDED },
 		{ "ADDW", EXTENDED },
 		{ "CMPY", EXTENDED },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDY", EXTENDED },
 		{ "STY", EXTENDED },
 		// 0x10C0 - 0x10CF
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDS", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x10D0 - 0x10DF
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDQ", DIRECT },
 		{ "STQ", DIRECT },
 		{ "LDS", DIRECT },
 		{ "STS", DIRECT },
 		// 0x10E0 - 0x10EF
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDQ", INDEXED },
 		{ "STQ", INDEXED },
 		{ "LDS", INDEXED },
 		{ "STS", INDEXED },
 		// 0x10F0 - 0x10FF
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDQ", EXTENDED },
 		{ "STQ", EXTENDED },
 		{ "LDS", EXTENDED },
@@ -599,56 +598,56 @@ static struct {
 	}, {
 
 		// 0x1100 - 0x110F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1110 - 0x111F
-		{ "*", PAGE3 },
-		{ "*", PAGE3 },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
+		{ NULL, ILLEGAL },  // Page byte - handled explicitly
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1120 - 0x112F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1130 - 0x113F
 		{ "BAND", MEMBIT },
 		{ "BIAND", MEMBIT },
@@ -664,88 +663,88 @@ static struct {
 		{ "TFM", TFM0P },
 		{ "BITMD", IMMEDIATE },
 		{ "LDMD", IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "SWI3", INHERENT },
 		// 0x1140 - 0x114F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COME", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "DECE", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCE", INHERENT },
 		{ "TSTE", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRE", INHERENT },
 		// 0x1150 - 0x115F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "COMF", INHERENT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "DECF", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "INCF", INHERENT },
 		{ "TSTF", INHERENT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CLRF", INHERENT },
 		// 0x1160 - 0x116F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1170 - 0x117F
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x1180 - 0x118F
 		{ "SUBE", IMMEDIATE },
 		{ "CMPE", IMMEDIATE },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CMPU", WORD_IMMEDIATE },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDE", IMMEDIATE },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDE", IMMEDIATE },
 		{ "CMPS", WORD_IMMEDIATE },
 		{ "DIVD", IMMEDIATE },
@@ -754,15 +753,15 @@ static struct {
 		// 0x1190 - 0x119F
 		{ "SUBE", DIRECT },
 		{ "CMPE", DIRECT },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CMPU", DIRECT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDE", DIRECT },
 		{ "STE", DIRECT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDE", DIRECT },
 		{ "CMPS", DIRECT },
 		{ "DIVD", DIRECT },
@@ -771,15 +770,15 @@ static struct {
 		// 0x11A0 - 0x11AF
 		{ "SUBE", INDEXED },
 		{ "CMPE", INDEXED },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CMPU", INDEXED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDE", INDEXED },
 		{ "STE", INDEXED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDE", INDEXED },
 		{ "CMPS", INDEXED },
 		{ "DIVD", INDEXED },
@@ -788,15 +787,15 @@ static struct {
 		// 0x11B0 - 0x11BF
 		{ "SUBE", EXTENDED },
 		{ "CMPE", EXTENDED },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "CMPU", EXTENDED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDE", EXTENDED },
 		{ "STE", EXTENDED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDE", EXTENDED },
 		{ "CMPS", EXTENDED },
 		{ "DIVD", EXTENDED },
@@ -805,115 +804,86 @@ static struct {
 		// 0x11C0 - 0x11CF
 		{ "SUBF", IMMEDIATE },
 		{ "CMPF", IMMEDIATE },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDF", IMMEDIATE },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDF", IMMEDIATE },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x11D0 - 0x11DF
 		{ "SUBF", DIRECT },
 		{ "CMPF", DIRECT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDF", DIRECT },
 		{ "STF", DIRECT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDF", DIRECT },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x11E0 - 0x11EF
 		{ "SUBF", INDEXED },
 		{ "CMPF", INDEXED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDF", INDEXED },
 		{ "STF", INDEXED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDF", INDEXED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		// 0x11F0 - 0x11FF
 		{ "SUBF", EXTENDED },
 		{ "CMPF", EXTENDED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "LDF", EXTENDED },
 		{ "STF", EXTENDED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 		{ "ADDF", EXTENDED },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
-		{ "*", ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
+		{ NULL, ILLEGAL },
 	}
 };
 
-/* The next byte is expected to be one of these, with the special exception of
- * WANT_PRINT, which indicates a trace line is complete. */
-
-enum {
-	WANT_INSTRUCTION,
-	WANT_INSTRUCTION2,
-	WANT_IRQ_VECTOR,
-	WANT_IRQ_VECTOR2,
-	WANT_IDX_POSTBYTE,
-	WANT_MEMBIT_POSTBYTE,
-	WANT_VALUE,
-	WANT_IM_VALUE,
-	WANT_PRINT,
-};
-
-/* Sequences of expected bytes */
-
-static int const state_list_irq[] = { WANT_IRQ_VECTOR2, WANT_PRINT };
-static int const state_list_inherent[] = { WANT_PRINT };
-static int const state_list_idx[] = { WANT_IDX_POSTBYTE };
-static int const state_list_imm8[] = { WANT_VALUE, WANT_PRINT };
-static int const state_list_imm16[] = { WANT_VALUE, WANT_VALUE, WANT_PRINT };
-static int const state_list_imm32[] = { WANT_VALUE, WANT_VALUE, WANT_VALUE, WANT_VALUE, WANT_PRINT };
-static int const state_list_mb[] = { WANT_MEMBIT_POSTBYTE, WANT_VALUE, WANT_PRINT };
-static int const state_list_inmem_idx[] = { WANT_IM_VALUE, WANT_IDX_POSTBYTE };
-static int const state_list_inmem8[] = { WANT_IM_VALUE, WANT_VALUE, WANT_PRINT };
-static int const state_list_inmem16[] = { WANT_IM_VALUE, WANT_VALUE, WANT_VALUE, WANT_PRINT };
-
-/* Indexed addressing modes */
+// Indexed addressing modes
 
 enum {
 	IDX_PI1, IDX_PI2, IDX_PD1, IDX_PD2,
 	IDX_OFF0, IDX_OFFB, IDX_OFFA, IDX_OFFE,
 	IDX_OFF8, IDX_OFF16, IDX_OFFF, IDX_OFFD,
-	IDX_PCR8, IDX_PCR16, IDX_OFFW, IDX_EXT16,
-	IDX_OFF5
+	IDX_PCR8, IDX_PCR16, IDX_OFFW, IDX_EXT16
 };
 
-/* Indexed mode format strings.  The leading and trailing %s account for the
- * optional brackets in indirect modes.  8-bit offsets include an extra %s to
- * indicate sign.  5-bit offsets are printed in decimal. */
+// Indexed mode format strings (excluding 5-bit offset).  The leading and
+// trailing %s account for the optional brackets in indirect modes.  8-bit
+// offsets include an extra %s to indicate sign.
 
 static char const * const idx_fmts[17] = {
 	"%s,%s+%s",
@@ -931,33 +901,10 @@ static char const * const idx_fmts[17] = {
 	"%s<$%04x,PCR%s",
 	"%s>$%04x,PCR%s",
 	"%sW,%s%s",
-	"%s$%04x%s",
-	"%s%d,%s%s",
+	"%s$%04x%s"
 };
 
-/* Indexed mode may well fetch more data after initial postbyte */
-
-static int const * const idx_state_lists[17] = {
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_imm8,
-	state_list_imm16,
-	state_list_inherent,
-	state_list_inherent,
-	state_list_imm8,
-	state_list_imm16,
-	state_list_inherent,
-	state_list_imm16,
-	state_list_inherent,
-};
-
-/* TFM instruction format strings */
+// TFM instruction format strings
 
 static char const * const tfm_fmts[4] = {
 	"%s+,%s+",
@@ -966,15 +913,13 @@ static char const * const tfm_fmts[4] = {
 	"%s,%s+"
 };
 
-/* Names */
-
 // Inter-register operation postbyte
 static char const * const tfr_regs[16] = {
 	"D", "X", "Y", "U", "S", "PC", "W", "V",
 	"A", "B", "CC", "DP", "0", "0", "E", "F"
 };
 
-// Indexed addressing postbyte
+// Indexed addressing postbyte registers
 static char const * const idx_regs[4] = { "X", "Y", "U", "S" };
 
 // Memory with bit postbyte
@@ -986,47 +931,27 @@ static char const * const irq_names[8] = {
 	"[IRQ]", "[SWI]", "[NMI]", "[RESET]"
 };
 
-/* Current state */
-
-#define MAX_NBYTES 5
+// Current state
 
 struct hd6309_trace {
 	struct HD6309 *hcpu;
-
-	int state;
 	event_ticks start_tick;
-	int page;
-	uint16_t instr_pc;
-	// Note: nbytes == pc_nbytes for most things, but an illegal run of > 1
-	// page byte will advance pc_nbytes but not nbytes.
-	unsigned nbytes;
-	unsigned pc_nbytes;
-	uint8_t bytes[MAX_NBYTES];
-
-	const char *mnemonic;
-	char operand_text[30];  // too large, but avoids gcc8 warnings
-
-	int ins_type;
-	const int *state_list;
-	uint32_t value;
-	int idx_mode;
-	const char *idx_reg;
-	_Bool idx_indirect;
-
-	uint32_t im_value;
-	const char *membit_reg;
-	int membit_sbit;
-	int membit_dbit;
-	const char *tfm_fmt;
 };
 
-static void reset_state(struct hd6309_trace *);
-static void print_record(struct hd6309_trace *);
+// Iterate over supplied data
 
-#define STACK_PRINT(t,r,c) do { \
-		if (c) { strcat((t)->operand_text, r ","); } \
-		else { strcat((t)->operand_text, r); } \
-	} while (0)
+struct byte_iter {
+	unsigned nbytes;
+	unsigned index;
+	uint8_t *bytes;
+};
+
+// Helper functions
+
+static unsigned next_byte(struct byte_iter *iter);
+static unsigned next_word(struct byte_iter *iter);
+
+static char *stack_operand(char *dst, char *dend, unsigned *postbyte, const char *r);
 
 #define sex5(v) ((int)((v) & 0x0f) - (int)((v) & 0x10))
 #define sex8(v) ((int8_t)(v))
@@ -1038,7 +963,6 @@ struct hd6309_trace *hd6309_trace_new(struct HD6309 *hcpu) {
 	*tracer = (struct hd6309_trace){0};
 	tracer->hcpu = hcpu;
 	tracer->start_tick = event_current_tick;
-	reset_state(tracer);
 	return tracer;
 }
 
@@ -1050,369 +974,248 @@ void hd6309_trace_free(struct hd6309_trace *tracer) {
 
 // Called at each timing checkpoint
 
-void hd6309_trace_vector(struct hd6309_trace *tracer) {
-	print_record(tracer);
-	tracer->state = WANT_IRQ_VECTOR;
+static void print_line_end(struct hd6309_trace *tracer);
+
+void hd6309_trace_vector(struct hd6309_trace *tracer, uint16_t vec,
+			 unsigned nbytes, uint8_t *bytes) {
+	if (nbytes == 0)
+		return;
+
+	const char *name = irq_names[(vec & 15) >> 1];
+
+	char bytes_string[(MC6809_MAX_TRACE_BYTES*2)+1];
+	for (unsigned i = 0; i < nbytes; ++i) {
+		snprintf(bytes_string + i*2, 3, "%02x", bytes[i]);
+	}
+
+	printf("%04x| %-12s%-24s", vec, bytes_string, name);
+	print_line_end(tracer);
 }
 
-void hd6309_trace_instruction(struct hd6309_trace *tracer) {
-	print_record(tracer);
-	tracer->state = WANT_INSTRUCTION;
-}
+void hd6309_trace_instruction(struct hd6309_trace *tracer, uint16_t pc,
+			      unsigned nbytes, uint8_t *bytes) {
 
-/* Called for each memory read */
-
-void hd6309_trace_byte(struct hd6309_trace *tracer, uint8_t byte, uint16_t pc) {
-	struct HD6309 *hcpu = tracer->hcpu;
-
-	// New trace record?
-	if (hcpu->state == hd6309_state_next_instruction && tracer->state == WANT_INSTRUCTION) {
-		tracer->instr_pc = pc;
-	} else if (hcpu->state == hd6309_state_irq_reset_vector && tracer->state == WANT_IRQ_VECTOR) {
-		tracer->mnemonic = irq_names[(pc & 15) >> 1];
-		tracer->instr_pc = pc;
-	}
-
-	if (tracer->state == WANT_PRINT) {
+	if (nbytes == 0)
 		return;
+
+	struct byte_iter iter = { .nbytes = nbytes, .bytes = bytes };
+
+	// CPU code will ensure we are only presented with one - the first -
+	// page byte, even though they can be chained indefinitely.
+	int page = 0;
+	if (bytes[0] == 0x10) {
+		page = 1;
+		(void)next_byte(&iter);
+	} else if (bytes[0] == 0x11) {
+		page = 2;
+		(void)next_byte(&iter);
 	}
 
-	// Record byte if it follows current PC.  Note: nbytes not
-	// incremented here: individual states will bump it if necessary.
-	if (pc == (tracer->instr_pc + tracer->pc_nbytes)) {
-		if (tracer->nbytes < MAX_NBYTES) {
-			tracer->bytes[tracer->nbytes] = byte;
-		}
+	unsigned ins = next_byte(&iter);
+	const char *mnemonic = instructions[page][ins].mnemonic;
+	if (!mnemonic) {
+		mnemonic = "*";
+	}
+	int ins_type = instructions[page][ins].type;
+
+	char operand_text[24];
+	operand_text[0] = '\0';
+
+	unsigned im_value = 0;
+	if (ins_type == INMEM_DIRECT ||
+	    ins_type == INMEM_INDEXED ||
+	    ins_type == INMEM_EXTENDED) {
+		im_value = next_byte(&iter);
 	}
 
-	switch (tracer->state) {
+	switch (ins_type) {
+	default:
+	case ILLEGAL: case INHERENT:
+		break;
 
-		// Instruction fetch
-		case WANT_INSTRUCTION:
-		case WANT_INSTRUCTION2:
-			tracer->value = 0;
-			tracer->im_value = 0;
-			tracer->state_list = NULL;
-			tracer->mnemonic = instructions[tracer->page][byte].mnemonic;
-			tracer->ins_type = instructions[tracer->page][byte].type;
-			switch (tracer->ins_type) {
-				// Change page, stay in WANT_INSTRUCTION state
-				case PAGE2: case PAGE3:
-					tracer->state = WANT_INSTRUCTION2;
-					tracer->page = tracer->ins_type;
-					tracer->bytes[0] = (tracer->ins_type == PAGE2) ? 0x10 : 0x11;
-					tracer->nbytes = 0;
-					break;
-				// Otherwise use an appropriate state list:
-				default: case ILLEGAL: case INHERENT:
-					tracer->state_list = state_list_inherent;
-					break;
-				case IMMEDIATE: case DIRECT: case RELATIVE:
-				case STACKS: case STACKU: case REGISTER:
-					tracer->state_list = state_list_imm8;
-					break;
-				case INDEXED:
-					tracer->state_list = state_list_idx;
-					break;
-				case WORD_IMMEDIATE: case EXTENDED:
-				case LONG_RELATIVE:
-					tracer->state_list = state_list_imm16;
-					break;
-				case TFMPP: case TFMMM: case TFMP0: case TFM0P:
-					tracer->tfm_fmt = tfm_fmts[byte & 3];
-					tracer->state_list = state_list_imm8;
-					break;
-				case MEMBIT:
-					tracer->state_list = state_list_mb;
-					break;
-				case QUAD_IMMEDIATE:
-					tracer->state_list = state_list_imm32;
-					break;
-				case INMEM_DIRECT:
-					tracer->state_list = state_list_inmem8;
-					break;
-				case INMEM_INDEXED:
-					tracer->state_list = state_list_inmem_idx;
-					break;
-				case INMEM_EXTENDED:
-					tracer->state_list = state_list_inmem16;
-					break;
+	case IMMEDIATE:
+		snprintf(operand_text, sizeof(operand_text), "#$%02x", next_byte(&iter));
+		break;
+
+	case DIRECT:
+		snprintf(operand_text, sizeof(operand_text), "<$%02x", next_byte(&iter));
+		break;
+
+	case WORD_IMMEDIATE:
+		snprintf(operand_text, sizeof(operand_text), "#$%04x", next_word(&iter));
+		break;
+
+	case EXTENDED:
+		snprintf(operand_text, sizeof(operand_text), "$%04x", next_word(&iter));
+		break;
+
+	case STACKS:
+	case STACKU: {
+		unsigned postbyte = next_byte(&iter);
+		char *buf = operand_text;
+		char *bufend = buf + sizeof(operand_text) - 1;
+		const char *reg6 = (ins_type == STACKS) ? "U" : "S";
+		buf = stack_operand(buf, bufend, &postbyte, "CC");
+		buf = stack_operand(buf, bufend, &postbyte, "A");
+		buf = stack_operand(buf, bufend, &postbyte, "B");
+		buf = stack_operand(buf, bufend, &postbyte, "DP");
+		buf = stack_operand(buf, bufend, &postbyte, "X");
+		buf = stack_operand(buf, bufend, &postbyte, "Y");
+		buf = stack_operand(buf, bufend, &postbyte, reg6);
+		buf = stack_operand(buf, bufend, &postbyte, "PC");
+	} break;
+
+	case REGISTER: {
+		unsigned postbyte = next_byte(&iter);
+		snprintf(operand_text, sizeof(operand_text), "%s,%s",
+			 tfr_regs[(postbyte>>4)&15],
+			 tfr_regs[postbyte&15]);
+	} break;
+
+	case INDEXED:
+	case INMEM_INDEXED: {
+		unsigned postbyte = next_byte(&iter);
+		const char *idx_reg = idx_regs[(postbyte >> 5) & 3];
+		if ((postbyte & 0x80) == 0) {
+			// 5-bit offsets considered separately
+			snprintf(operand_text, sizeof(operand_text), "%d,%s", sex5(postbyte), idx_reg);
+		} else {
+			_Bool idx_indirect = postbyte & 0x10;
+			unsigned idx_mode = postbyte & 0x0f;
+			const char *pre = idx_indirect ? "[" : "";
+			const char *post = idx_indirect ? "]" : "";
+
+			// Overrides for bolted-on 6309 indexed modes:
+			if (postbyte == 0x8f || postbyte == 0x90) {
+				idx_reg = "W";
+				idx_mode = IDX_OFF0;
+			} else if (postbyte == 0xaf || postbyte == 0xb0) {
+				idx_reg = "W";
+				idx_mode = IDX_OFF16;
+			} else if (postbyte == 0xcf || postbyte == 0xd0) {
+				idx_reg = "W";
+				idx_mode = IDX_PI2;
+			} else if (postbyte == 0xef || postbyte == 0xf0) {
+				idx_reg = "W";
+				idx_mode = IDX_PD2;
 			}
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
 
-		// First byte of an IRQ vector
-		case WANT_IRQ_VECTOR:
-			tracer->value = byte;
-			tracer->ins_type = IRQVECTOR;
-			tracer->state_list = state_list_irq;
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
+			const char *fmt = idx_fmts[idx_mode];
+			char tmp_text[16];
+			tmp_text[0] = '\0';
 
-		// Building a value byte by byte
-		case WANT_VALUE:
-		case WANT_IRQ_VECTOR2:
-			tracer->value = (tracer->value << 8) | byte;
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
-
-		// Indexed postbyte - record relevant details
-		case WANT_IDX_POSTBYTE:
-			tracer->idx_reg = idx_regs[(byte>>5)&3];
-			tracer->idx_indirect = byte & 0x10;
-			tracer->idx_mode = byte & 0x0f;
-			if ((byte & 0x80) == 0) {
-				tracer->idx_indirect = 0;
-				tracer->idx_mode = IDX_OFF5;
-				tracer->value = byte & 0x1f;
-			} else if (byte == 0x8f || byte == 0x90) {
-				tracer->idx_reg = "W";
-				tracer->idx_mode = IDX_OFF0;
-			} else if (byte == 0xaf || byte == 0xb0) {
-				tracer->idx_reg = "W";
-				tracer->idx_mode = IDX_OFF16;
-			} else if (byte == 0xcf || byte == 0xd0) {
-				tracer->idx_reg = "W";
-				tracer->idx_mode = IDX_PI2;
-			} else if (byte == 0xef || byte == 0xf0) {
-				tracer->idx_reg = "W";
-				tracer->idx_mode = IDX_PD2;
-			}
-			tracer->state_list = idx_state_lists[tracer->idx_mode];
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
-
-		// Postbyte for "memory with bit" instructions
-		case WANT_MEMBIT_POSTBYTE:
-			tracer->membit_reg = membit_regs[(byte>>6) & 3];
-			tracer->membit_sbit = (byte>>3) & 7;
-			tracer->membit_dbit = byte & 7;
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
-
-		// Separate immediate value for "in memory" instructions
-		case WANT_IM_VALUE:
-			tracer->im_value = (tracer->im_value << 8) | byte;
-			++tracer->nbytes;
-			++tracer->pc_nbytes;
-			break;
-
-		default:
-			break;
-	}
-
-	// Get next state from state list
-	if (tracer->state_list) {
-		tracer->state = *(tracer->state_list++);
-	}
-
-	if (tracer->state != WANT_PRINT) {
-		return;
-	}
-
-	// If the next state is WANT_PRINT, we're done with the instruction, so
-	// prep the operand text for printing.
-
-	tracer->state_list = NULL;
-
-	tracer->operand_text[0] = '\0';
-	switch (tracer->ins_type) {
-		case ILLEGAL: case INHERENT:
-			break;
-
-		case IMMEDIATE:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x", tracer->value);
-			break;
-
-		case DIRECT:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "<$%02x", tracer->value);
-			break;
-
-		case WORD_IMMEDIATE:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%04x", tracer->value);
-			break;
-
-		case EXTENDED:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", tracer->value);
-			break;
-
-		case STACKS: {
-			unsigned postbyte = tracer->value;
-			if (postbyte & 0x01) { STACK_PRINT(tracer, "CC", postbyte & 0xfe); }
-			if (postbyte & 0x02) { STACK_PRINT(tracer, "A",  postbyte & 0xfc); }
-			if (postbyte & 0x04) { STACK_PRINT(tracer, "B",  postbyte & 0xf8); }
-			if (postbyte & 0x08) { STACK_PRINT(tracer, "DP", postbyte & 0xf0); }
-			if (postbyte & 0x10) { STACK_PRINT(tracer, "X",  postbyte & 0xe0); }
-			if (postbyte & 0x20) { STACK_PRINT(tracer, "Y",  postbyte & 0xc0); }
-			if (postbyte & 0x40) { STACK_PRINT(tracer, "U",  postbyte & 0x80); }
-			if (postbyte & 0x80) { STACK_PRINT(tracer, "PC", 0); }
-		} break;
-
-		case STACKU: {
-			unsigned postbyte = tracer->value;
-			if (postbyte & 0x01) { STACK_PRINT(tracer, "CC", postbyte & 0xfe); }
-			if (postbyte & 0x02) { STACK_PRINT(tracer, "A",  postbyte & 0xfc); }
-			if (postbyte & 0x04) { STACK_PRINT(tracer, "B",  postbyte & 0xf8); }
-			if (postbyte & 0x08) { STACK_PRINT(tracer, "DP", postbyte & 0xf0); }
-			if (postbyte & 0x10) { STACK_PRINT(tracer, "X",  postbyte & 0xe0); }
-			if (postbyte & 0x20) { STACK_PRINT(tracer, "Y",  postbyte & 0xc0); }
-			if (postbyte & 0x40) { STACK_PRINT(tracer, "S",  postbyte & 0x80); }
-			if (postbyte & 0x80) { STACK_PRINT(tracer, "PC", 0); }
-		} break;
-
-		case REGISTER:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s,%s",
-					tfr_regs[(tracer->value>>4)&15],
-					tfr_regs[tracer->value&15]);
-			break;
-
-		case INDEXED:
-		case INMEM_INDEXED:
-			{
-			char tmp_text[19];
-			const char *pre = tracer->idx_indirect ? "[" : "";
-			const char *post = tracer->idx_indirect ? "]" : "";
-			int value8 = sex8(tracer->value);
-			int value5 = sex5(tracer->value);
-
-			switch (tracer->idx_mode) {
+			switch (idx_mode) {
 			default:
 			case IDX_PI1: case IDX_PI2: case IDX_PD1: case IDX_PD2:
 			case IDX_OFF0: case IDX_OFFB: case IDX_OFFA: case IDX_OFFE:
 			case IDX_OFFF: case IDX_OFFD: case IDX_OFFW:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->idx_reg, post);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, idx_reg, post);
 				break;
-			case IDX_OFF5:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, value5, tracer->idx_reg, post);
-				break;
-			case IDX_OFF8:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (value8<0)?"-":"", (value8<0)?-value8:value8, tracer->idx_reg, post);
-				break;
-			case IDX_OFF16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, tracer->idx_reg, post);
-				break;
-			case IDX_PCR8:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->pc_nbytes + value8), post);
-				break;
-			case IDX_PCR16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, (uint16_t)(tracer->instr_pc + tracer->pc_nbytes + tracer->value), post);
-				break;
-			case IDX_EXT16:
-				snprintf(tmp_text, sizeof(tmp_text), idx_fmts[tracer->idx_mode], pre, tracer->value, post);
-				break;
-			}
-
-			if (tracer->ins_type == INDEXED) {
-				snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s", tmp_text);
-			} else {
-				snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,%s", tracer->im_value, tmp_text);
-			}
-
+			case IDX_OFF8: {
+				unsigned uv = next_byte(&iter);
+				int v = sex8(uv);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, (v<0)?"-":"", (v<0)?-v:v, idx_reg, post);
 			} break;
+			case IDX_OFF16: {
+				unsigned uv = next_word(&iter);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, uv, idx_reg, post);
+			} break;
+			case IDX_PCR8: {
+				unsigned uv = next_byte(&iter);
+				int v = sex8(uv);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, (uint16_t)(pc + iter.index + v), post);
+			} break;
+			case IDX_PCR16: {
+				unsigned uv = next_word(&iter);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, (uint16_t)(pc + iter.index + uv), post);
+			} break;
+			case IDX_EXT16: {
+				unsigned uv = next_word(&iter);
+				snprintf(tmp_text, sizeof(tmp_text), fmt, pre, uv, post);
+			} break;
+			}
 
-		case RELATIVE:
-			pc = (pc + 1 + sex8(tracer->value)) & 0xffff;
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", pc);
-			break;
+			if (ins_type == INDEXED) {
+				snprintf(operand_text, sizeof(operand_text), "%s", tmp_text);
+			} else {
+				snprintf(operand_text, sizeof(operand_text), "#$%02x,%s", im_value, tmp_text);
+			}
+		}
+	} break;
 
-		case LONG_RELATIVE:
-			pc = (pc + 1 + tracer->value) & 0xffff;
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "$%04x", pc);
-			break;
+	case RELATIVE: {
+		unsigned uv = next_byte(&iter);
+		uv = (pc + iter.index + sex8(uv)) & 0xffff;
+		snprintf(operand_text, sizeof(operand_text), "$%04x", uv);
+	} break;
 
-		case IRQVECTOR:
-			break;
+	case LONG_RELATIVE: {
+		unsigned uv = next_word(&iter);
+		uv = (pc + iter.index + uv) & 0xffff;
+		snprintf(operand_text, sizeof(operand_text), "$%04x", uv);
+	} break;
 
-		case QUAD_IMMEDIATE:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%08x", tracer->value);
-			break;
+	case QUAD_IMMEDIATE: {
+		unsigned uv0 = next_word(&iter);
+		unsigned uv1 = next_word(&iter);
+		snprintf(operand_text, sizeof(operand_text), "#$%04x%04x", uv0, uv1);
+	} break;
 
-		case INMEM_DIRECT:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,<$%02x", tracer->im_value, tracer->value);
-			break;
+	case INMEM_DIRECT: {
+		unsigned uv = next_byte(&iter);
+		snprintf(operand_text, sizeof(operand_text), "#$%02x,<$%02x", im_value, uv);
+	} break;
 
-		case INMEM_EXTENDED:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "#$%02x,$%04x", tracer->im_value, tracer->value);
-			break;
+	case INMEM_EXTENDED: {
+		unsigned uv = next_word(&iter);
+		snprintf(operand_text, sizeof(operand_text), "#$%02x,$%04x", im_value, uv);
+	} break;
 
-		case TFMPP: case TFMMM: case TFMP0: case TFM0P:
-			if ((tracer->value >> 4) > 4 || (tracer->value & 15) > 4)
-				tracer->mnemonic = "TFM*";
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), tracer->tfm_fmt,
-				 tfr_regs[(tracer->value>>4)&15],
-				 tfr_regs[tracer->value&15]);
-			break;
+	case TFMPP: case TFMMM: case TFMP0: case TFM0P: {
+		const char *tfm_fmt = tfm_fmts[ins & 3];
+		unsigned postbyte = next_byte(&iter);
+		if ((postbyte >> 4) > 4 || (postbyte & 15) > 4)
+			mnemonic = "TFM*";
+		snprintf(operand_text, sizeof(operand_text), tfm_fmt,
+			 tfr_regs[(postbyte>>4)&15],
+			 tfr_regs[postbyte&15]);
+	} break;
 
-		case MEMBIT:
-			snprintf(tracer->operand_text, sizeof(tracer->operand_text), "%s,%d,%d,<$%02x",
-					tracer->membit_reg, tracer->membit_sbit, tracer->membit_dbit, tracer->value);
-			break;
+	case MEMBIT: {
+		unsigned postbyte = next_byte(&iter);
+		unsigned uv = next_byte(&iter);
+		const char *membit_reg = membit_regs[(postbyte>>6) & 3];
+		unsigned membit_sbit = (postbyte>>3) & 7;
+		unsigned membit_dbit = postbyte & 7;
+		snprintf(operand_text, sizeof(operand_text), "%s,%u,%u,<$%02x",
+			 membit_reg, membit_sbit, membit_dbit, uv);
+	} break;
 
-		default:
-			break;
 	}
-}
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	char bytes_string[(MC6809_MAX_TRACE_BYTES*2)+1];
+	for (unsigned i = 0; i < iter.index; i++) {
+		snprintf(bytes_string + i*2, 3, "%02x", bytes[i]);
+	}
 
-static void reset_state(struct hd6309_trace *tracer) {
-	tracer->state = WANT_PRINT;
-	tracer->page = PAGE0;
-	tracer->instr_pc = 0;
-	tracer->nbytes = 0;
-	tracer->pc_nbytes = 0;
-	tracer->mnemonic = "*";
-	strcpy(tracer->operand_text, "*");
-
-	tracer->ins_type = PAGE0;
-	tracer->state_list = NULL;
-	tracer->idx_mode = 0;
-	tracer->idx_reg = "";
-	tracer->idx_indirect = 0;
-	tracer->membit_reg = "";
-	tracer->membit_sbit = 0;
-	tracer->membit_dbit = 0;
-	tracer->tfm_fmt = "";
-}
-
-/* Called after each instruction */
-
-static void print_record(struct hd6309_trace *tracer) {
 	struct HD6309 *hcpu = tracer->hcpu;
 	struct MC6809 *cpu = &hcpu->mc6809;
+	printf("%04x| %-12s%-6s%-18s", pc, bytes_string, mnemonic, operand_text);
+	printf("  cc=%02x a=%02x b=%02x e=%02x "
+	       "f=%02x dp=%02x x=%04x y=%04x "
+	       "u=%04x s=%04x v=%04x",
+	       cpu->reg_cc, MC6809_REG_A(cpu), MC6809_REG_B(cpu), HD6309_REG_E(hcpu),
+	       HD6309_REG_F(hcpu), cpu->reg_dp, cpu->reg_x, cpu->reg_y,
+	       cpu->reg_u, cpu->reg_s, hcpu->reg_v);
+	print_line_end(tracer);
+}
 
-	if (tracer->nbytes == 0) {
-		// Nothing to print.
-		return;
-	}
-
+static void print_line_end(struct hd6309_trace *tracer) {
 	// XXX currently no way to reset start_tick when turning trace mode
 	// on/off, so first instruction after switching on will have crazy dt.
 
 	int dt = event_tick_delta(event_current_tick, tracer->start_tick);
 	tracer->start_tick = event_current_tick;
-
-	char bytes_string[(MAX_NBYTES*2)+1];
-	for (unsigned i = 0; i < tracer->nbytes; i++) {
-		snprintf(bytes_string + i*2, 3, "%02x", tracer->bytes[i]);
-	}
-
-	if (tracer->ins_type == IRQVECTOR) {
-		printf("%04x| %-12s%-24s", tracer->instr_pc, bytes_string, tracer->mnemonic);
-	} else {
-		printf("%04x| %-12s%-6s%-18s", tracer->instr_pc, bytes_string, tracer->mnemonic, tracer->operand_text);
-		printf("  cc=%02x a=%02x b=%02x e=%02x "
-		       "f=%02x dp=%02x x=%04x y=%04x "
-		       "u=%04x s=%04x v=%04x",
-		       cpu->reg_cc, MC6809_REG_A(cpu), MC6809_REG_B(cpu), HD6309_REG_E(hcpu),
-		       HD6309_REG_F(hcpu), cpu->reg_dp, cpu->reg_x, cpu->reg_y,
-		       cpu->reg_u, cpu->reg_s, hcpu->reg_v);
-	}
 
 	if (logging.trace_cpu_timing) {
 		printf("  dt=%d", dt);
@@ -1420,5 +1223,34 @@ static void print_record(struct hd6309_trace *tracer) {
 
 	printf("\n");
 	fflush(stdout);
-	reset_state(tracer);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static unsigned next_byte(struct byte_iter *iter) {
+	assert(iter->index < iter->nbytes);
+	return iter->bytes[iter->index++];
+}
+
+static unsigned next_word(struct byte_iter *iter) {
+	unsigned v = next_byte(iter) << 8;
+	v |= next_byte(iter);
+	return v;
+}
+
+// Helper for stack ops.  Uses pl_estrcpy() to append register name r.  Shifts
+// *postbyte one bit to the right and also appends a comma if non-zero bits
+// remain.  As pl_estrcpy(), returns pointer to new nul terminator at end of
+// string or NULL if it ran out of space.
+
+static char *stack_operand(char *dst, char *dend, unsigned *postbyte, const char *r) {
+	_Bool pr = *postbyte & 1;
+	*postbyte >>= 1;
+	if (pr) {
+		dst = pl_estrcpy(dst, dend, r);
+		if (*postbyte) {
+			dst = pl_estrcpy(dst, dend, ",");
+		}
+	}
+	return dst;
 }

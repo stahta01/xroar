@@ -53,14 +53,7 @@
 #include "serialise.h"
 
 #ifdef TRACE
-// Tracing supported:
 #include "hd6309_trace.h"
-#define HD6309_TRACE_VECTOR(c) if (UNLIKELY(logging.trace_cpu)) { hd6309_trace_vector((c)->tracer); }
-#define HD6309_TRACE_INSTRUCTION(c) if (UNLIKELY(logging.trace_cpu)) { hd6309_trace_instruction((c)->tracer); }
-#else
-// Tracing not supported - no-op macros:
-#define HD6309_TRACE_VECTOR(c)
-#define HD6309_TRACE_INSTRUCTION(c)
 #endif
 
 #define HD6309_SER_TFM_SRC  (6)
@@ -359,7 +352,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			cpu->firq_active = 0;
 			cpu->irq_active = 0;
 			hcpu->state = hd6309_state_reset_check_halt;
-			HD6309_TRACE_VECTOR(hcpu);
 			// fall through
 
 		case hd6309_state_reset_check_halt:
@@ -382,19 +374,16 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_label_b:
 			if (UNLIKELY(cpu->nmi_active)) {
-				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else if (UNLIKELY(!(REG_CC & CC_F) && cpu->firq_active)) {
-				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, FIRQ_STACK_ALL);
 				hcpu->state = hd6309_state_dispatch_irq;
 			} else if (UNLIKELY(!(REG_CC & CC_I) && cpu->irq_active)) {
-				HD6309_TRACE_VECTOR(hcpu);
 				peek_byte(cpu, REG_PC);
 				peek_byte(cpu, REG_PC);
 				stack_irq_registers(cpu, 1);
@@ -405,7 +394,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
 				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
-				HD6309_TRACE_INSTRUCTION(hcpu);
+#ifdef TRACE
+				cpu->trace_pc = cpu->trace_next_pc = REG_PC;
+				cpu->trace_nbytes = 0;
+#endif
 			}
 			continue;
 
@@ -474,10 +466,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 		case hd6309_state_tfm_write:
 			if (cpu->nmi_active) {
+				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_label_b;
 			} else if (!(REG_CC & CC_F) && cpu->firq_active) {
+				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_label_b;
 			} else if (!(REG_CC & CC_I) && cpu->irq_active) {
+				instruction_posthook(cpu);
 				hcpu->state = hd6309_state_label_b;
 			} else {
 				NVMA_CYCLE;
@@ -639,6 +634,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x0211:
 				hcpu->state = hd6309_state_next_instruction;
 				cpu->page = 0x200;
+#ifdef TRACE
+				// Page bytes can chain indefinitely, so ensure we
+				// only keep the first in trace buffer:
+				cpu->trace_nbytes = 1;
+#endif
 				continue;
 
 			// 0x11 Page 3
@@ -648,6 +648,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x0311:
 				hcpu->state = hd6309_state_next_instruction;
 				cpu->page = 0x300;
+#ifdef TRACE
+				// Page bytes can chain indefinitely, so ensure we
+				// only keep the first in trace buffer:
+				cpu->trace_nbytes = 1;
+#endif
 				continue;
 
 			// 0x12 NOP inherent
@@ -2035,8 +2040,11 @@ static void hd6309_run(struct MC6809 *cpu) {
 static void hd6309_set_pc(void *sptr, unsigned pc) {
 	struct HD6309 *hcpu = sptr;
 	struct MC6809 *cpu = &hcpu->mc6809;
-	HD6309_TRACE_INSTRUCTION(hcpu);
 	REG_PC = pc;
+#ifdef TRACE
+	cpu->trace_pc = cpu->trace_next_pc = pc;
+	cpu->trace_nbytes = 0;
+#endif
 	hcpu->state = hd6309_state_next_instruction;
 }
 
@@ -2049,30 +2057,25 @@ static void hd6309_set_pc(void *sptr, unsigned pc) {
 /* Wrap common fetches */
 
 static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
-	uint8_t v = fetch_byte_notrace(cpu, a);
+	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
+	cpu->firq_latch = cpu->firq;
+	cpu->irq_latch = cpu->irq;
+	DELEGATE_CALL(cpu->mem_cycle, 1, a);
 #ifdef TRACE
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (UNLIKELY(logging.trace_cpu)) {
-		hd6309_trace_byte(hcpu->tracer, v, a);
+	// Log fetched byte in the trace buffer only if it follows on from the
+	// current trace address.
+	if (a == cpu->trace_next_pc) {
+		cpu->trace_bytes[cpu->trace_nbytes++] = cpu->D;
+		++cpu->trace_next_pc;
 	}
 #endif
-	return v;
+	return cpu->D;
 }
 
 static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
-#ifndef TRACE
-	return fetch_word_notrace(cpu, a);
-#else
-	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	if (LIKELY(!logging.trace_cpu)) {
-		return fetch_word_notrace(cpu, a);
-	}
-	unsigned v0 = fetch_byte_notrace(cpu, a);
-	hd6309_trace_byte(hcpu->tracer, v0, a);
-	unsigned v1 = fetch_byte_notrace(cpu, a+1);
-	hd6309_trace_byte(hcpu->tracer, v1, a+1);
+	unsigned v0 = fetch_byte(cpu, a);
+	unsigned v1 = fetch_byte(cpu, a+1);
 	return (v0 << 8) | v1;
-#endif
 }
 
 /* Compute effective address */
@@ -2209,11 +2212,26 @@ static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec) {
 	REG_CC |= mask;
 	NVMA_CYCLE;
 	hcpu->state = hd6309_state_irq_reset_vector;
+#ifdef TRACE
+	cpu->trace_next_pc = vec;
+	cpu->trace_nbytes = 0;
+#endif
 	REG_PC = fetch_word(cpu, vec);
 	hcpu->state = hd6309_state_label_a;
 	NVMA_CYCLE;
+#ifdef TRACE
+	if (UNLIKELY(logging.trace_cpu)) {
+		hd6309_trace_vector(hcpu->tracer, vec, cpu->trace_nbytes, cpu->trace_bytes);
+	}
+#endif
 }
 
 static void instruction_posthook(struct MC6809 *cpu) {
+#ifdef TRACE
+	struct HD6309 *hcpu = (struct HD6309 *)cpu;
+	if (UNLIKELY(logging.trace_cpu)) {
+		hd6309_trace_instruction(hcpu->tracer, cpu->trace_pc, cpu->trace_nbytes, cpu->trace_bytes);
+	}
+#endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
 }
