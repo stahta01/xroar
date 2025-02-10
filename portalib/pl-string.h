@@ -37,4 +37,10 @@ char *strsep(char **, const char *);
 
 #endif
 
+// Chaining strcpy (non-Schlemiel).  Copies from src to dst..dend inclusive,
+// potentially truncating, always null-terminating.  Returns pointer to new
+// null terminator or NULL if there wasn't enough space for all of src.
+
+char *pl_estrcpy(char *dst, char *dend, const char *src);
+
 #endif

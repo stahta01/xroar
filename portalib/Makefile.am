@@ -13,6 +13,7 @@ libporta_a_SOURCES = \
 	delegate.c delegate.h \
 	intfuncs.c intfuncs.h \
 	pl-endian.h \
+	pl-estrcpy.c \
 	pl-regex.h \
 	pl-string.h \
 	sds.c sds.h sdsalloc.h \
