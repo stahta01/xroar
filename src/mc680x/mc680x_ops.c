@@ -80,39 +80,39 @@ static uint8_t byte_immediate(STRUCT_CPU *cpu) {
 
 static uint8_t byte_direct(STRUCT_CPU *cpu) {
 	unsigned ea = ea_direct(cpu);
-	return fetch_byte(cpu, ea);
+	return fetch_byte_notrace(cpu, ea);
 }
 
 static uint8_t byte_extended(STRUCT_CPU *cpu) {
 	unsigned ea = ea_extended(cpu);
-	return fetch_byte(cpu, ea);
+	return fetch_byte_notrace(cpu, ea);
 }
 
 static uint8_t byte_indexed(STRUCT_CPU *cpu) {
 	unsigned ea = ea_indexed(cpu);
-	return fetch_byte(cpu, ea);
+	return fetch_byte_notrace(cpu, ea);
 }
 
 static uint16_t word_immediate(STRUCT_CPU *cpu) {
-	unsigned v = fetch_byte(cpu, REG_PC++) << 8;
-	return v | fetch_byte(cpu, REG_PC++);
+	unsigned v = fetch_byte(cpu, REG_PC++);
+	return (v << 8) |  fetch_byte(cpu, REG_PC++);
 }
 
 #define long_relative word_immediate
 
 static uint16_t word_direct(STRUCT_CPU *cpu) {
 	unsigned ea = ea_direct(cpu);
-	return fetch_word(cpu, ea);
+	return fetch_word_notrace(cpu, ea);
 }
 
 static uint16_t word_extended(STRUCT_CPU *cpu) {
 	unsigned ea = ea_extended(cpu);
-	return fetch_word(cpu, ea);
+	return fetch_word_notrace(cpu, ea);
 }
 
 static uint16_t word_indexed(STRUCT_CPU *cpu) {
 	unsigned ea = ea_indexed(cpu);
-	return fetch_word(cpu, ea);
+	return fetch_word_notrace(cpu, ea);
 }
 
 static uint16_t short_relative(STRUCT_CPU *cpu) {

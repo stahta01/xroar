@@ -96,22 +96,15 @@ static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 
 /*
- * Data reading & writing
+ * Compute effective address
  */
-
-/* Wrap common fetches */
-
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
-
-/* Compute effective address */
 
 static uint16_t ea_direct(struct MC6809 *cpu);
 static uint16_t ea_extended(struct MC6809 *cpu);
 static uint16_t ea_indexed(struct MC6809 *cpu);
 
 /*
- * Interrupt handling
+ * Interrupt handling, hooks
  */
 
 static void push_irq_registers(struct MC6809 *cpu);
@@ -123,19 +116,9 @@ static void instruction_posthook(struct MC6809 *cpu);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Register handling macros
+ * Additional 6309 register handling macros
  */
 
-#define REG_CC (cpu->reg_cc)
-#define REG_A (MC6809_REG_A(cpu))
-#define REG_B (MC6809_REG_B(cpu))
-#define REG_D (cpu->reg_d)
-#define REG_DP (cpu->reg_dp)
-#define REG_X (cpu->reg_x)
-#define REG_Y (cpu->reg_y)
-#define REG_U (cpu->reg_u)
-#define REG_S (cpu->reg_s)
-#define REG_PC (cpu->reg_pc)
 #define REG_E (HD6309_REG_E(hcpu))
 #define REG_F (HD6309_REG_F(hcpu))
 #define REG_W (hcpu->reg_w)
@@ -152,16 +135,12 @@ static void instruction_posthook(struct MC6809 *cpu);
 // Read Q
 #define RREG_Q ((REG_D << 16) | REG_W)
 
-/* Condition code register macros */
+// Mode register macros
 
-#define CC_E (0x80)
-#define CC_F (0x40)
-#define CC_H (0x20)
-#define CC_I (0x10)
-#define CC_N (0x08)
-#define CC_Z (0x04)
-#define CC_V (0x02)
-#define CC_C (0x01)
+#define MD_D0 (0x80)
+#define MD_IL (0x40)
+#define MD_FM (0x02)
+#define MD_NM (0x01)
 
 // Common operations
 
@@ -170,17 +149,10 @@ static void instruction_posthook(struct MC6809 *cpu);
 #include "mc6809_common.c"
 #include "mc680x/mc680x_ops.c"
 
-/* Mode register macros */
-
-#define MD_D0 (0x80)
-#define MD_IL (0x40)
-#define MD_FM (0x02)
-#define MD_NM (0x01)
-
 #define NATIVE_MODE (REG_MD & MD_NM)
 #define FIRQ_STACK_ALL (REG_MD & MD_FM)
 
-/* ------------------------------------------------------------------------- */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static uint16_t *tfm_reg_to_ptr(struct HD6309 *hcpu, unsigned reg) {
 	struct MC6809 *cpu = &hcpu->mc6809;
@@ -209,7 +181,7 @@ static unsigned tfm_ptr_to_reg(struct HD6309 *hcpu, uint16_t *ptr) {
 	return 15;
 }
 
-/* ------------------------------------------------------------------------- */
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // HD6309 part creation
 
@@ -334,7 +306,7 @@ static void hd6309_reset(struct MC6809 *cpu) {
 	hcpu->state = hd6309_state_reset;
 }
 
-/* Run CPU while cpu->running is true. */
+// Run CPU while cpu->running is true.
 
 static void hd6309_run(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
@@ -2051,38 +2023,12 @@ static void hd6309_set_pc(void *sptr, unsigned pc) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Data reading & writing
+ * Compute effective address
  */
-
-/* Wrap common fetches */
-
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
-	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
-	cpu->firq_latch = cpu->firq;
-	cpu->irq_latch = cpu->irq;
-	DELEGATE_CALL(cpu->mem_cycle, 1, a);
-#ifdef TRACE
-	// Log fetched byte in the trace buffer only if it follows on from the
-	// current trace address.
-	if (a == cpu->trace_next_pc) {
-		cpu->trace_bytes[cpu->trace_nbytes++] = cpu->D;
-		++cpu->trace_next_pc;
-	}
-#endif
-	return cpu->D;
-}
-
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
-	unsigned v0 = fetch_byte(cpu, a);
-	unsigned v1 = fetch_byte(cpu, a+1);
-	return (v0 << 8) | v1;
-}
-
-/* Compute effective address */
 
 static uint16_t ea_direct(struct MC6809 *cpu) {
 	struct HD6309 *hcpu = (struct HD6309 *)cpu;
-	unsigned ea = REG_DP << 8 | fetch_byte(cpu, REG_PC++);
+	unsigned ea = (REG_DP << 8) | fetch_byte(cpu, REG_PC++);
 	if (!NATIVE_MODE)
 		NVMA_CYCLE;
 	return ea;
@@ -2171,7 +2117,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Interrupt handling
+ * Interrupt handling, hooks
  */
 
 static void push_irq_registers(struct MC6809 *cpu) {

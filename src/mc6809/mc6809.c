@@ -115,22 +115,15 @@ static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 
 /*
- * Data reading & writing
+ * Compute effective address
  */
-
-/* Wrap common fetches */
-
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a);
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a);
-
-/* Compute effective address */
 
 static uint16_t ea_direct(struct MC6809 *cpu);
 static uint16_t ea_extended(struct MC6809 *cpu);
 static uint16_t ea_indexed(struct MC6809 *cpu);
 
 /*
- * Interrupt handling
+ * Interrupt handling, hooks
  */
 
 static void push_irq_registers(struct MC6809 *cpu);
@@ -144,39 +137,13 @@ static void instruction_posthook(struct MC6809 *cpu);
  * ALU operations
  */
 
-/* Illegal 6809 8-bit arithmetic operations */
+// Illegal 6809 8-bit arithmetic operations
 
 static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b);
 static uint8_t op_xdec(struct MC6809 *cpu, uint8_t in);
 static uint8_t op_xclr(struct MC6809 *cpu, uint8_t in);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/*
- * Register handling macros
- */
-
-#define REG_CC (cpu->reg_cc)
-#define REG_A (MC6809_REG_A(cpu))
-#define REG_B (MC6809_REG_B(cpu))
-#define REG_D (cpu->reg_d)
-#define REG_DP (cpu->reg_dp)
-#define REG_X (cpu->reg_x)
-#define REG_Y (cpu->reg_y)
-#define REG_U (cpu->reg_u)
-#define REG_S (cpu->reg_s)
-#define REG_PC (cpu->reg_pc)
-
-/* Condition code register macros */
-
-#define CC_E (0x80)
-#define CC_F (0x40)
-#define CC_H (0x20)
-#define CC_I (0x10)
-#define CC_N (0x08)
-#define CC_Z (0x04)
-#define CC_V (0x02)
-#define CC_C (0x01)
 
 // Common operations
 
@@ -272,7 +239,7 @@ static void mc6809_reset(struct MC6809 *cpu) {
 	cpu->state = mc6809_state_reset;
 }
 
-/* Run CPU while cpu->running is true. */
+// Run CPU while cpu->running is true.
 
 static void mc6809_run(struct MC6809 *cpu) {
 
@@ -1402,37 +1369,11 @@ static void mc6809_set_pc(void *sptr, unsigned pc) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Data reading & writing
+ * Compute effective address
  */
 
-/* Wrap common fetches */
-
-static uint8_t fetch_byte(struct MC6809 *cpu, uint16_t a) {
-	cpu->nmi_latch |= (cpu->nmi_armed && cpu->nmi);
-	cpu->firq_latch = cpu->firq;
-	cpu->irq_latch = cpu->irq;
-	DELEGATE_CALL(cpu->mem_cycle, 1, a);
-#ifdef TRACE
-	// Log fetched byte in the trace buffer only if it follows on from the
-	// current trace address.
-	if (a == cpu->trace_next_pc) {
-		cpu->trace_bytes[cpu->trace_nbytes++] = cpu->D;
-		++cpu->trace_next_pc;
-	}
-#endif
-	return cpu->D;
-}
-
-static uint16_t fetch_word(struct MC6809 *cpu, uint16_t a) {
-	unsigned v0 = fetch_byte(cpu, a);
-	unsigned v1 = fetch_byte(cpu, a+1);
-	return (v0 << 8) | v1;
-}
-
-/* Compute effective address */
-
 static uint16_t ea_direct(struct MC6809 *cpu) {
-	unsigned ea = REG_DP << 8 | fetch_byte(cpu, REG_PC++);
+	unsigned ea = (REG_DP << 8) | fetch_byte(cpu, REG_PC++);
 	NVMA_CYCLE;
 	return ea;
 }
@@ -1495,7 +1436,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
- * Interrupt handling
+ * Interrupt handling, hooks
  */
 
 static void push_irq_registers(struct MC6809 *cpu) {
@@ -1559,7 +1500,7 @@ static void instruction_posthook(struct MC6809 *cpu) {
  * ALU operations
  */
 
-/* Illegal 6809 8-bit arithmetic operations */
+// Illegal 6809 8-bit arithmetic operations
 
 static uint8_t op_discard(struct MC6809 *cpu, uint8_t a, uint8_t b) {
 	(void)b;
