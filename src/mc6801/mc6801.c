@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6801/6803 CPUs.
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ *  \copyright Copyright 2021-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -357,14 +357,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 			cpu->counter = 0;
 			cpu->counter_lsb_buf = 0;
 			cpu->output_compare = 0xffff;
-#ifdef TRACE
-			if (UNLIKELY(logging.trace_cpu)) {
-				mc6801_trace_irq(cpu->tracer, MC6801_INT_VEC_RESET);
-			}
-#endif
-			REG_PC = fetch_word(cpu, MC6801_INT_VEC_RESET);
-			NVMA_CYCLE;
-			cpu->state = mc6801_state_label_a;
+			take_interrupt(cpu, MC6801_INT_VEC_RESET);
 			continue;
 
 		case mc6801_state_label_a:
@@ -391,6 +384,10 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// Instruction fetch hook called here so that machine
 			// can be stopped beforehand.
 			DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
+#ifdef TRACE
+			cpu->trace_pc = cpu->trace_next_pc = REG_PC;
+			cpu->trace_nbytes = 0;
+#endif
 			continue;
 
 		case mc6801_state_wai:
@@ -411,27 +408,22 @@ static void mc6801_run(struct MC6801 *cpu) {
 			if (cpu->nmi_active) {
 				cpu->nmi_active = cpu->nmi = cpu->nmi_latch = 0;
 				take_interrupt(cpu, MC6801_INT_VEC_NMI);
-				cpu->state = mc6801_state_label_a;
 				continue;
 			}
 			if (cpu->irq1_active && !(REG_CC & CC_I)) {
 				take_interrupt(cpu, MC6801_INT_VEC_IRQ1);
-				cpu->state = mc6801_state_label_a;
 				continue;
 			}
 			if (cpu->ICF && !(REG_CC & CC_I) && (REG_TCSR & TCSR_EICI)) {
 				take_interrupt(cpu, MC6801_INT_VEC_ICF);
-				cpu->state = mc6801_state_label_a;
 				continue;
 			}
 			if (cpu->OCF && !(REG_CC & CC_I) && (REG_TCSR & TCSR_EOCI)) {
 				take_interrupt(cpu, MC6801_INT_VEC_OCF);
-				cpu->state = mc6801_state_label_a;
 				continue;
 			}
 			if (cpu->TOF && !(REG_CC & CC_I) && (REG_TCSR & TCSR_ETOI)) {
 				take_interrupt(cpu, MC6801_INT_VEC_TOF);
-				cpu->state = mc6801_state_label_a;
 				continue;
 			}
 
@@ -440,7 +432,6 @@ static void mc6801_run(struct MC6801 *cpu) {
 			// interrupt)."
 
 			take_interrupt(cpu, MC6801_INT_VEC_SCI);
-			cpu->state = mc6801_state_label_a;
 			continue;
 
 		case mc6801_state_next_instruction:
@@ -817,7 +808,6 @@ static void mc6801_run(struct MC6801 *cpu) {
 				peek_byte(cpu, REG_SP);
 				instruction_posthook(cpu);
 				take_interrupt(cpu, MC6801_INT_VEC_SWI);
-				cpu->state = mc6801_state_label_a;
 				continue;
 
 			// 0x40 - 0x4f inherent A register ops
@@ -1139,6 +1129,10 @@ static void mc6801_run(struct MC6801 *cpu) {
 static void mc6801_set_pc(void *sptr, unsigned pc) {
 	struct MC6801 *cpu = sptr;
 	REG_PC = pc;
+#ifdef TRACE
+	cpu->trace_pc = cpu->trace_next_pc = pc;
+	cpu->trace_nbytes = 0;
+#endif
 	cpu->state = mc6801_state_next_instruction;
 }
 
@@ -1273,33 +1267,22 @@ static void store_byte(struct MC6801 *cpu, uint16_t a, uint8_t d) {
 }
 
 static uint16_t fetch_word_notrace(struct MC6801 *cpu, uint16_t a) {
-	unsigned v = fetch_byte_notrace(cpu, a) << 8;
-	return v | fetch_byte_notrace(cpu, a+1);
+	unsigned v = fetch_byte_notrace(cpu, a);
+	return (v << 8) | fetch_byte_notrace(cpu, a+1);
 }
 
 static uint8_t fetch_byte(struct MC6801 *cpu, uint16_t a) {
 	uint8_t v = fetch_byte_notrace(cpu, a);
 #ifdef TRACE
-	if (UNLIKELY(logging.trace_cpu)) {
-		mc6801_trace_byte(cpu->tracer, v, a);
-	}
+	cpu->trace_bytes[cpu->trace_nbytes++] = v;
+	++cpu->trace_next_pc;
 #endif
 	return v;
 }
 
 static uint16_t fetch_word(struct MC6801 *cpu, uint16_t a) {
-#ifndef TRACE
-	return fetch_word_notrace(cpu, a);
-#else
-	if (LIKELY(!logging.trace_cpu)) {
-		return fetch_word_notrace(cpu, a);
-	}
-	unsigned v0 = fetch_byte_notrace(cpu, a);
-	mc6801_trace_byte(cpu->tracer, v0, a);
-	unsigned v1 = fetch_byte_notrace(cpu, a+1);
-	mc6801_trace_byte(cpu->tracer, v1, a+1);
-	return (v0 << 8) | v1;
-#endif
+	unsigned v = fetch_byte(cpu, a);
+	return (v << 8) | fetch_byte(cpu, a + 1);
 }
 
 // Compute effective address
@@ -1335,12 +1318,12 @@ static void push_s_word(struct MC6801 *cpu, uint16_t v) {
 }
 
 static uint8_t pull_s_byte(struct MC6801 *cpu) {
-	return fetch_byte(cpu, ++REG_SP);
+	return fetch_byte_notrace(cpu, ++REG_SP);
 }
 
 static uint16_t pull_s_word(struct MC6801 *cpu) {
-	unsigned val = fetch_byte(cpu, ++REG_SP);
-	return (val << 8) | fetch_byte(cpu, ++REG_SP);
+	unsigned v = fetch_byte_notrace(cpu, ++REG_SP);
+	return (v << 8) | fetch_byte_notrace(cpu, ++REG_SP);
 }
 
 static void stack_irq_registers(struct MC6801 *cpu) {
@@ -1352,21 +1335,26 @@ static void stack_irq_registers(struct MC6801 *cpu) {
 }
 
 static void take_interrupt(struct MC6801 *cpu, uint16_t vec) {
-#ifdef TRACE
-	if (UNLIKELY(logging.trace_cpu)) {
-		mc6801_trace_irq(cpu->tracer, vec);
-	}
-#endif
 	REG_CC |= CC_I;
 	cpu->itmp = CC_I;
 	cpu->nmi_latch = cpu->irq1_latch = cpu->irq2_latch = 0;
+#ifdef TRACE
+	cpu->trace_next_pc = vec;
+	cpu->trace_nbytes = 0;
+#endif
 	REG_PC = fetch_word(cpu, vec);
+	cpu->state = mc6801_state_label_a;
+#ifdef TRACE
+	if (UNLIKELY(logging.trace_cpu)) {
+		mc6801_trace_vector(cpu->tracer, vec, cpu->trace_nbytes, cpu->trace_bytes);
+	}
+#endif
 }
 
 static void instruction_posthook(struct MC6801 *cpu) {
 #ifdef TRACE
 	if (UNLIKELY(logging.trace_cpu)) {
-		mc6801_trace_print(cpu->tracer);
+		mc6801_trace_instruction(cpu->tracer, cpu->trace_pc, cpu->trace_nbytes, cpu->trace_bytes);
 	}
 #endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);

@@ -29,6 +29,7 @@
 
 #ifdef TRACE
 struct mc6801_trace;
+#define MC6801_MAX_TRACE_BYTES (8)
 #endif
 
 #define MC6801_INT_VEC_RESET (0xfffe)
@@ -138,6 +139,10 @@ struct MC6801 {
 	_Bool running;
 #ifdef TRACE
 	struct mc6801_trace *tracer;
+	uint16_t trace_pc;  // base address of instruction
+	uint16_t trace_next_pc;  // next address in instruction
+	unsigned trace_nbytes;
+	uint8_t trace_bytes[MC6801_MAX_TRACE_BYTES];
 #endif
 
 	// Registers
