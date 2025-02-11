@@ -24,6 +24,7 @@ xroar_SOURCES = \
 	blockdev.c blockdev.h \
 	breakpoint.c breakpoint.h \
 	cart.c cart.h \
+	clock.c clock.h \
 	colourspace.c colourspace.h \
 	crc16.c crc16.h \
 	crc32.c crc32.h \

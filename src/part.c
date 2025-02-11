@@ -41,6 +41,9 @@
 #define PART_SER_PART (1)
 #define PART_SER_DATA (2)
 
+extern const struct partdb_entry clock_group_part;
+
+extern const struct machine_partdb_entry dragon32_part;
 extern const struct machine_partdb_entry dragon32_part;
 extern const struct machine_partdb_entry dragon64_part;
 extern const struct machine_partdb_entry dragonpro_part;
@@ -88,6 +91,8 @@ extern const struct partdb_entry spi_sdcard_part;
 extern const struct cart_partdb_entry mcx128_part;
 
 const struct partdb_entry *partdb[] = {
+	&clock_group_part,
+
 #ifdef WANT_MACHINE_ARCH_DRAGON
 	(const struct partdb_entry *)&dragon32_part,
 	(const struct partdb_entry *)&dragon64_part,
