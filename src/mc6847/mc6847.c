@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -233,8 +233,8 @@ static struct part *mc6847_allocate(void) {
 	vdg->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
 	vdg->public.fetch_data = DELEGATE_DEFAULT3(void, uint16, int, uint16p);
-	event_init(&vdg->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, vdg));
-	event_init(&vdg->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, vdg));
+	event_init(&vdg->hs_fall_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hs_fall, vdg));
+	event_init(&vdg->hs_rise_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hs_rise, vdg));
 
 	return p;
 }
@@ -248,9 +248,9 @@ static _Bool mc6847_finish(struct part *p) {
 	struct MC6847_private *vdg = (struct MC6847_private *)p;
 
 	if (vdg->hs_fall_event.next == &vdg->hs_fall_event)
-		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+		event_queue(&vdg->hs_fall_event);
 	if (vdg->hs_rise_event.next == &vdg->hs_rise_event)
-		event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
+		event_queue(&vdg->hs_rise_event);
 
 	// 6847T1 doesn't appear to do bright orange:
 	vdg->bright_orange = vdg->is_t1 ? VDG_ORANGE : VDG_BRIGHT_ORANGE;
@@ -366,8 +366,8 @@ static void do_hs_fall(void *data) {
 		}
 	}
 
-	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
-	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+	event_queue(&vdg->hs_rise_event);
+	event_queue(&vdg->hs_fall_event);
 
 	vdg->vram_nbytes = 0;
 	vdg->vram_index = 0;
@@ -417,8 +417,8 @@ static void do_hs_fall_pal(void *data) {
 	if (vdg->pal_padding == 0)
 		vdg->hs_fall_event.delegate.func = do_hs_fall;
 
-	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_rise_event);
-	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+	event_queue(&vdg->hs_rise_event);
+	event_queue(&vdg->hs_fall_event);
 }
 
 // Renders current scanline up to the current time.
@@ -631,7 +631,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->public.row = 0;
 	vdg->scanline_start = event_current_tick;
 	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_TIME(VDG_LINE_DURATION);
-	event_queue(&MACHINE_EVENT_LIST, &vdg->hs_fall_event);
+	event_queue(&vdg->hs_fall_event);
 	mc6847_set_mode(vdgp, 0);
 	vdg->vram_index = 0;
 	vdg->vram_bit = 0;

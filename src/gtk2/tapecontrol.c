@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 tape control window.
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2011-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -123,7 +123,7 @@ struct uigtk2_dialog *gtk2_tc_dialog_new(struct ui_gtk2_interface *uigtk2) {
 	uigtk2_signal_connect(uigtk2, "output_insert", "clicked", tc_output_insert, dlg);
 
 	// While window displayed, an event triggers updating tape counters
-	event_init(&ev_update_tape_counters, DELEGATE_AS0(void, update_tape_counters, dlg));
+	event_init(&ev_update_tape_counters, UI_EVENT_LIST, DELEGATE_AS0(void, update_tape_counters, dlg));
 
 	return dlg;
 }
@@ -148,7 +148,7 @@ static void tc_ui_state_notify(void *sptr, int tag, void *smsg) {
 		update_program_list(dlg);
 		if (value) {
 			ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&UI_EVENT_LIST, &ev_update_tape_counters);
+			event_queue(&ev_update_tape_counters);
 		} else {
 			event_dequeue(&ev_update_tape_counters);
 		}
@@ -340,7 +340,7 @@ static void update_tape_counters(void *sptr) {
 	}
 
 	ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-	event_queue(&UI_EVENT_LIST, &ev_update_tape_counters);
+	event_queue(&ev_update_tape_counters);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

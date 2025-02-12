@@ -560,11 +560,11 @@ static struct part *tcc1014_allocate(void) {
 	gime->public.fetch_vram = DELEGATE_DEFAULT1(uint16, uint32);
 	gime->public.signal_hs = DELEGATE_DEFAULT1(void, bool);
 	gime->public.signal_fs = DELEGATE_DEFAULT1(void, bool);
-	event_init(&gime->hs_fall_event, DELEGATE_AS0(void, do_hs_fall, gime));
-	event_init(&gime->hs_rise_event, DELEGATE_AS0(void, do_hs_rise, gime));
-	event_init(&gime->hb_irq_event, DELEGATE_AS0(void, do_hb_irq, gime));
-	event_init(&gime->vb_irq_event, DELEGATE_AS0(void, do_vb_irq, gime));
-	event_init(&gime->timer.update_event, DELEGATE_AS0(void, do_update_timer, gime));
+	event_init(&gime->hs_fall_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hs_fall, gime));
+	event_init(&gime->hs_rise_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hs_rise, gime));
+	event_init(&gime->hb_irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hb_irq, gime));
+	event_init(&gime->vb_irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_vb_irq, gime));
+	event_init(&gime->timer.update_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_update_timer, gime));
 
 	return p;
 }
@@ -581,15 +581,15 @@ static _Bool tcc1014_finish(struct part *p) {
 	gime->variant = &tcc1014_variant[is_1987];
 
 	if (gime->hs_fall_event.next == &gime->hs_fall_event)
-		event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
+		event_queue(&gime->hs_fall_event);
 	if (gime->hs_rise_event.next == &gime->hs_rise_event)
-		event_queue(&MACHINE_EVENT_LIST, &gime->hs_rise_event);
+		event_queue(&gime->hs_rise_event);
 	if (gime->vb_irq_event.next == &gime->vb_irq_event)
-		event_queue(&MACHINE_EVENT_LIST, &gime->vb_irq_event);
+		event_queue(&gime->vb_irq_event);
 	if (gime->hb_irq_event.next == &gime->hb_irq_event)
-		event_queue(&MACHINE_EVENT_LIST, &gime->hb_irq_event);
+		event_queue(&gime->hb_irq_event);
 	if (gime->timer.update_event.next == &gime->timer.update_event)
-		event_queue(&MACHINE_EVENT_LIST, &gime->timer.update_event);
+		event_queue(&gime->timer.update_event);
 
 	update_from_sam_register(gime);
 
@@ -680,7 +680,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	gime->scanline_start = t;
 	gime->PIA1B_shadow.pdr = 0;
 	gime->hs_fall_event.at_tick = t + TCC1014_tSL;
-	event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
+	event_queue(&gime->hs_fall_event);
 	update_from_gime_registers(gime);
 	//gime->vram_bit = 0;
 	gime->have_vdata_cache = 0;
@@ -1040,9 +1040,9 @@ static void do_hs_fall(void *sptr) {
 	gime->hs_fall_event.at_tick = t + TCC1014_tSL;
 	gime->vb_irq_event.at_tick = t + tHS_VB;
 
-	event_queue(&MACHINE_EVENT_LIST, &gime->hs_rise_event);
-	event_queue(&MACHINE_EVENT_LIST, &gime->hs_fall_event);
-	event_queue(&MACHINE_EVENT_LIST, &gime->vb_irq_event);
+	event_queue(&gime->hs_rise_event);
+	event_queue(&gime->hs_fall_event);
+	event_queue(&gime->vb_irq_event);
 }
 
 static void do_hs_rise(void *sptr) {
@@ -1156,7 +1156,7 @@ static void do_vb_irq(void *sptr) {
 	gime->horizontal.npixels = gime->horizontal.tHS_LB;
 
 	gime->hb_irq_event.at_tick = gime->scanline_start + tHS_RB;
-	event_queue(&MACHINE_EVENT_LIST, &gime->hb_irq_event);
+	event_queue(&gime->hb_irq_event);
 
 	gime->vertical.lcount++;
 
@@ -1525,7 +1525,7 @@ static void schedule_timer(struct TCC1014_private *gime, event_ticks t) {
 		// TINS=1: 3.58MHz
 		gime->timer.last_update = t;
 		gime->timer.update_event.at_tick = t + (gime->timer.counter << 2);
-		event_queue(&MACHINE_EVENT_LIST, &gime->timer.update_event);
+		event_queue(&gime->timer.update_event);
 	} else {
 		event_dequeue(&gime->timer.update_event);
 	}

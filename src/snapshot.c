@@ -113,7 +113,7 @@ int read_snapshot(const char *filename) {
 		}
 	}
 	char *fncopy = xstrdup(filename);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_retry_read_snapshot, fncopy), 1);
+	event_queue_auto(UI_EVENT_LIST, DELEGATE_AS0(void, do_retry_read_snapshot, fncopy), 1);
 	return -1;
 #endif
 	return 0;

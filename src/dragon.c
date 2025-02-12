@@ -2,7 +2,7 @@
  *
  *  \brief Dragon and Tandy Colour Computer machines.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1304,7 +1304,7 @@ static inline void advance_clock(struct machine_dragon_common *md, int ncycles) 
 	md->cycles -= ncycles;
 	if (md->cycles <= 0) md->CPU->running = 0;
 	event_current_tick += ncycles;
-	event_run_queue(&MACHINE_EVENT_LIST);
+	event_run_queue(MACHINE_EVENT_LIST);
 }
 
 // Common routine called by cpu_cycle() (or override) to access RAM and devices

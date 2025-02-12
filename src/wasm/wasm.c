@@ -189,8 +189,8 @@ static void finish_init(void *sptr) {
 	// During initialisation, the UI event list is used to reschedule
 	// things that failed due to needing incomplete file transfers.
 	// Process it without checking against scheduled time.
-	while (UI_EVENT_LIST) {
-		event_dispatch_next(&UI_EVENT_LIST);
+	while (UI_EVENT_LIST->events) {
+		event_dispatch_next(UI_EVENT_LIST);
 	}
 
 	// Running the events could lead to more waiting...
@@ -768,7 +768,7 @@ void wasm_queue_message_value_event(int tag, int value) {
 	struct wasm_message_value *mv = xmalloc(sizeof(*mv));
 	mv->tag = tag;
 	mv->value = value;
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_message_value_event, mv), 1);
+	event_queue_auto(UI_EVENT_LIST, DELEGATE_AS0(void, do_message_value_event, mv), 1);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -935,7 +935,7 @@ void wasm_load_file(const char *filename, int type, int drive) {
 	ev->type = type;
 	ev->drive = drive;
 	wasm_wget(filename);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_load_file, ev), 1);
+	event_queue_auto(UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_load_file, ev), 1);
 }
 
 // Submit BASIC commands
@@ -950,7 +950,7 @@ static void do_wasm_queue_basic(void *sptr) {
 void wasm_queue_basic(const char *string) {
 	char *text = xstrdup(string);
 	WASM_DEBUG("wasm_queue_basic(%s): queueing do_wasm_queue_basic()\n", string);
-	event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_queue_basic, text), 1);
+	event_queue_auto(UI_EVENT_LIST, DELEGATE_AS0(void, do_wasm_queue_basic, text), 1);
 }
 
 // Keyboard interface

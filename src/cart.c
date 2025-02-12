@@ -2,7 +2,7 @@
  *
  *  \brief Dragon/CoCo cartridge support.
  *
- *  \copyright Copyright 2005-2024 Ciaran Anscomb
+ *  \copyright Copyright 2005-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -788,7 +788,7 @@ struct cart *cart_create(const char *cc_name) {
 _Bool cart_finish(struct part *p) {
 	struct cart *c = (struct cart *)p;
 	if (c->firq_event.next == &c->firq_event) {
-		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
+		event_queue(&c->firq_event);
 	}
 	return 1;
 }
@@ -935,7 +935,7 @@ void cart_rom_init(struct cart *c) {
 	c->attach = cart_rom_attach;
 	c->detach = cart_rom_detach;
 
-	event_init(&c->firq_event, DELEGATE_AS0(void, do_firq, c));
+	event_init(&c->firq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_firq, c));
 	c->signal_firq = DELEGATE_DEFAULT1(void, bool);
 	c->signal_nmi = DELEGATE_DEFAULT1(void, bool);
 	c->signal_halt = DELEGATE_DEFAULT1(void, bool);
@@ -975,7 +975,7 @@ void cart_rom_attach(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->autorun) {
 		c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
-		event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
+		event_queue(&c->firq_event);
 	} else {
 		event_dequeue(&c->firq_event);
 	}
@@ -991,7 +991,7 @@ static void do_firq(void *data) {
 	struct cart *c = data;
 	DELEGATE_SAFE_CALL(c->signal_firq, level);
 	c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&MACHINE_EVENT_LIST, &c->firq_event);
+	event_queue(&c->firq_event);
 	level = !level;
 }
 

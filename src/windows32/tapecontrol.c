@@ -2,7 +2,7 @@
  *
  *  \brief Windows tape control window.
  *
- *  \copyright Copyright 2023-2024 Ciaran Anscomb
+ *  \copyright Copyright 2023-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -106,7 +106,7 @@ struct uiw32_dialog *uiw32_tc_dialog_new(struct ui_windows32_interface *uiw32) {
 	SendMessage(tc_lvs_input_programlist, LVM_INSERTCOLUMN, 1, (LPARAM)&col);
 
 	// While window displayed, an event triggers updating tape counters
-	event_init(&ev_update_tape_counters, DELEGATE_AS0(void, update_tape_counters, tc_dlg));
+	event_init(&ev_update_tape_counters, UI_EVENT_LIST, DELEGATE_AS0(void, update_tape_counters, tc_dlg));
 
 	return dlg;
 }
@@ -426,7 +426,7 @@ static void update_tape_counters(void *sptr) {
 	}
 
 	ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-	event_queue(&UI_EVENT_LIST, &ev_update_tape_counters);
+	event_queue(&ev_update_tape_counters);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

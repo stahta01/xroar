@@ -2,7 +2,7 @@
  *
  *  \brief Cassette tape support.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -280,8 +280,8 @@ struct tape_interface *tape_interface_new(struct ui_interface *ui) {
 
 	tape_interface_disconnect_machine(ti);
 
-	event_init(&tip->waggle_event, DELEGATE_AS0(void, waggle_bit, tip));
-	event_init(&tip->flush_event, DELEGATE_AS0(void, flush_output, tip));
+	event_init(&tip->waggle_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, waggle_bit, tip));
+	event_init(&tip->flush_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, flush_output, tip));
 
 	return &tip->public;
 }
@@ -881,7 +881,7 @@ static void update_motor(struct tape_interface_private *tip) {
 		}
 		if (ti->tape_output && !tip->flush_event.queued) {
 			tip->flush_event.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&MACHINE_EVENT_LIST, &tip->flush_event);
+			event_queue(&tip->flush_event);
 			ti->tape_output->last_write_cycle = event_current_tick;
 		}
 	} else {
@@ -922,7 +922,7 @@ static void waggle_bit(void *sptr) {
 		break;
 	}
 	tip->waggle_event.at_tick += tip->in_pulse_width;
-	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
+	event_queue(&tip->waggle_event);
 }
 
 // Ensure any "pulse" over 1/2 second long is flushed to output, so it doesn't
@@ -934,7 +934,7 @@ static void flush_output(void *sptr) {
 	tape_update_output(ti, tip->last_tape_output);
 	if (tip->motor && tip->playing) {
 		tip->flush_event.at_tick += EVENT_MS(500);
-		event_queue(&MACHINE_EVENT_LIST, &tip->flush_event);
+		event_queue(&tip->flush_event);
 	}
 }
 
@@ -1127,7 +1127,7 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 	}
 	tip->in_pulse_width -= skip;
 	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
-	event_queue(&MACHINE_EVENT_LIST, &tip->waggle_event);
+	event_queue(&tip->waggle_event);
 	DELEGATE_CALL(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
 }
 

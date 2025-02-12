@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -107,12 +107,12 @@ static struct part *mc6821_allocate(void) {
 	pia->a.cx2_in_sink = 1;
 	pia->b.in_sink = 0xff;
 	pia->b.cx2_in_sink = 1;
-	event_init(&pia->a.irq_event, DELEGATE_AS0(void, do_irq, &pia->a));
-	event_init(&pia->a.strobe_event, DELEGATE_AS0(void, do_strobe_cx2, &pia->a));
-	event_init(&pia->a.restore_event, DELEGATE_AS0(void, do_restore_cx2, &pia->a));
-	event_init(&pia->b.irq_event, DELEGATE_AS0(void, do_irq, &pia->b));
-	event_init(&pia->b.strobe_event, DELEGATE_AS0(void, do_strobe_cx2, &pia->b));
-	event_init(&pia->b.restore_event, DELEGATE_AS0(void, do_restore_cx2, &pia->b));
+	event_init(&pia->a.irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_irq, &pia->a));
+	event_init(&pia->a.strobe_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_strobe_cx2, &pia->a));
+	event_init(&pia->a.restore_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_restore_cx2, &pia->a));
+	event_init(&pia->b.irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_irq, &pia->b));
+	event_init(&pia->b.strobe_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_strobe_cx2, &pia->b));
+	event_init(&pia->b.restore_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_restore_cx2, &pia->b));
 
 	return p;
 }
@@ -121,22 +121,22 @@ static _Bool mc6821_finish(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
 
 	if (pia->a.irq_event.next == &pia->a.irq_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->a.irq_event);
+		event_queue(&pia->a.irq_event);
 	}
 	if (pia->a.strobe_event.next == &pia->a.strobe_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->a.strobe_event);
+		event_queue(&pia->a.strobe_event);
 	}
 	if (pia->a.restore_event.next == &pia->a.restore_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->a.restore_event);
+		event_queue(&pia->a.restore_event);
 	}
 	if (pia->b.irq_event.next == &pia->b.irq_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->b.irq_event);
+		event_queue(&pia->b.irq_event);
 	}
 	if (pia->b.strobe_event.next == &pia->b.strobe_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->b.strobe_event);
+		event_queue(&pia->b.strobe_event);
 	}
 	if (pia->b.restore_event.next == &pia->b.restore_event) {
-		event_queue(&MACHINE_EVENT_LIST, &pia->b.restore_event);
+		event_queue(&pia->b.restore_event);
 	}
 
 	// Old snapshots:
@@ -201,7 +201,7 @@ void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 			// Figure 13, tRS3 = 1µs
 			if (!event_queued(&side->irq_event)) {
 				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-				event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
+				event_queue(&side->irq_event);
 			}
 		} else {
 			side->irq = side->control_register & 0x40;
@@ -245,14 +245,14 @@ uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 			if ((pia->a.control_register & 0x30) == 0x20) {
 				// Read Strobe
 				pia->a.strobe_event.at_tick = event_current_tick + 8;
-				event_queue(&MACHINE_EVENT_LIST, &pia->a.strobe_event);
+				event_queue(&pia->a.strobe_event);
 				if (!(pia->a.control_register & 0x08)) {
 					// Read Strobe with CA1 Restore
 					event_dequeue(&pia->a.restore_event);
 				} else {
 					// Read Strobe with E Restore
 					pia->a.restore_event.at_tick = event_current_tick + 24;
-					event_queue(&MACHINE_EVENT_LIST, &pia->a.restore_event);
+					event_queue(&pia->a.restore_event);
 				}
 			}
 
@@ -338,14 +338,14 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 				if ((pia->b.control_register & 0x30) == 0x20) {
 					// Write Strobe
 					pia->b.strobe_event.at_tick = event_current_tick + 16;
-					event_queue(&MACHINE_EVENT_LIST, &pia->b.strobe_event);
+					event_queue(&pia->b.strobe_event);
 					if (!(pia->b.control_register & 0x08)) {
 						// Write Strobe with CB1 Restore
 						event_dequeue(&pia->b.restore_event);
 					} else {
 						// Write Strobe with E Restore
 						pia->b.restore_event.at_tick = event_current_tick + 48;
-						event_queue(&MACHINE_EVENT_LIST, &pia->b.restore_event);
+						event_queue(&pia->b.restore_event);
 					}
 				}
 
@@ -411,7 +411,7 @@ static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
 			// Figure 13, tRS3 = 1µs
 			if (!event_queued(&side->irq_event)) {
 				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-				event_queue(&MACHINE_EVENT_LIST, &side->irq_event);
+				event_queue(&side->irq_event);
 			}
 		} else {
 			side->irq = side->control_register & 0x80;

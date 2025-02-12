@@ -2,7 +2,7 @@
  *
  *  \brief WD279x Floppy Drive Controller.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -127,7 +127,7 @@ static const char * const wd279x_type_name[4] = {
 #define NEXT_STATE(fdc,s,t) do { \
 		(fdc)->state = (s); \
 		(fdc)->state_event.at_tick = event_current_tick + (t); \
-		event_queue(&MACHINE_EVENT_LIST, &(fdc)->state_event); \
+		event_queue(&(fdc)->state_event); \
 	} while (0)
 
 #define SET_STATE(fdc,s) (fdc)->state = (s)
@@ -202,7 +202,7 @@ static struct part *wd279x_allocate(void) {
 
 	*fdc = (struct WD279X){0};
 
-	event_init(&fdc->state_event, DELEGATE_AS0(void, wd279x_state_machine, fdc));
+	event_init(&fdc->state_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, wd279x_state_machine, fdc));
 	wd279x_disconnect(fdc);
 
 	return p;
@@ -234,7 +234,7 @@ static _Bool wd279x_finish(struct part *p) {
 	fdc->invert_data = (fdc->type == WD2791 || fdc->type == WD2795) ? 0xff : 0;
 
 	if (fdc->state_event.next == &fdc->state_event) {
-		event_queue(&MACHINE_EVENT_LIST, &fdc->state_event);
+		event_queue(&fdc->state_event);
 	}
 
 	return 1;

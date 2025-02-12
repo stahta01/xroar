@@ -2,7 +2,7 @@
  *
  *  \brief Event scheduling & dispatch.
  *
- *  \copyright Copyright 2005-2022 Ciaran Anscomb
+ *  \copyright Copyright 2005-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -40,28 +40,39 @@ typedef uint32_t event_ticks;
 /* Current "time". */
 extern event_ticks event_current_tick;
 
+struct event;
+
+struct event_list {
+	struct event *events;
+};
+
 struct event {
 	event_ticks at_tick;
 	DELEGATE_T0(void) delegate;
 	_Bool queued;
 	_Bool autofree;
-	struct event **list;
+	struct event_list *list;
 	struct event *next;
 };
 
-struct event *event_new(DELEGATE_T0(void));
-void event_init(struct event *event, DELEGATE_T0(void));
+struct event_list *event_list_new(void);
+void event_list_init(struct event_list *);
+
+// An event is created to exist on a particular list
+
+struct event *event_new(struct event_list *, DELEGATE_T0(void));
+void event_init(struct event *event, struct event_list *, DELEGATE_T0(void));
 
 /* event_queue() guarantees that events scheduled for the same time will run in
  * order of their being added to queue */
 
 void event_free(struct event *event);
-void event_queue(struct event **list, struct event *event);
+void event_queue(struct event *event);
 void event_dequeue(struct event *event);
 
 // Allocate an event and queue it, flagged to autofree.  Event will be
 // scheduled for current time + dt.
-void event_queue_auto(struct event **list, DELEGATE_T0(void), int dt);
+void event_queue_auto(struct event_list *list, DELEGATE_T0(void), int dt);
 
 #define event_queued(e) ((e)->queued)
 
@@ -74,20 +85,20 @@ inline int event_tick_delta(event_ticks t0, event_ticks t1) {
 	return *(int32_t *)&dt;
 }
 
-inline _Bool event_pending(struct event **list) {
-	return *list && event_tick_delta(event_current_tick, (*list)->at_tick) >= 0;
+inline _Bool event_pending(struct event_list *list) {
+	return list->events && event_tick_delta(event_current_tick, list->events->at_tick) >= 0;
 }
 
-inline void event_dispatch_next(struct event **list) {
-	struct event *e = *list;
-	*list = e->next;
+inline void event_dispatch_next(struct event_list *list) {
+	struct event *e = list->events;
+	list->events = e->next;
 	e->queued = 0;
 	DELEGATE_CALL(e->delegate);
 	if (e->autofree)
 		free(e);
 }
 
-inline void event_run_queue(struct event **list) {
+inline void event_run_queue(struct event_list *list) {
 	while (event_pending(list))
 		event_dispatch_next(list);
 }

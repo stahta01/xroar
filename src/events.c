@@ -2,7 +2,7 @@
  *
  *  \brief Event scheduling & dispatch.
  *
- *  \copyright Copyright 2005-2022 Ciaran Anscomb
+ *  \copyright Copyright 2005-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -26,22 +26,33 @@
 #include "logging.h"
 
 extern inline int event_tick_delta(event_ticks t0, event_ticks t1);
-extern inline _Bool event_pending(struct event **list);
-extern inline void event_dispatch_next(struct event **list);
-extern inline void event_run_queue(struct event **list);
+extern inline _Bool event_pending(struct event_list *);
+extern inline void event_dispatch_next(struct event_list *);
+extern inline void event_run_queue(struct event_list *);
 
 
 event_ticks event_current_tick = 0;
 
-struct event *event_new(DELEGATE_T0(void) delegate) {
+struct event_list *event_list_new(void) {
+	struct event_list *list = xmalloc(sizeof(*list));
+	event_list_init(list);
+	return list;
+}
+
+void event_list_init(struct event_list *list) {
+	*list = (struct event_list){0};
+}
+
+struct event *event_new(struct event_list *list, DELEGATE_T0(void) delegate) {
 	struct event *new = xmalloc(sizeof(*new));
-	event_init(new, delegate);
+	event_init(new, list, delegate);
 	return new;
 }
 
-void event_init(struct event *event, DELEGATE_T0(void) delegate) {
+void event_init(struct event *event, struct event_list *list, DELEGATE_T0(void) delegate) {
 	if (event == NULL) return;
 	*event = (struct event){0};
+	event->list = list;
 	event->at_tick = event_current_tick;
 	event->delegate = delegate;
 }
@@ -51,13 +62,12 @@ void event_free(struct event *event) {
 	free(event);
 }
 
-void event_queue(struct event **list, struct event *event) {
+void event_queue(struct event *event) {
 	struct event **entry;
 	if (event->queued)
 		event_dequeue(event);
-	event->list = list;
 	event->queued = 1;
-	for (entry = list; *entry; entry = &((*entry)->next)) {
+	for (entry = &event->list->events; *entry; entry = &((*entry)->next)) {
 		if (event_tick_delta(event->at_tick, (*entry)->at_tick) < 0) {
 			event->next = *entry;
 			*entry = event;
@@ -68,18 +78,18 @@ void event_queue(struct event **list, struct event *event) {
 	event->next = NULL;
 }
 
-void event_queue_auto(struct event **list, DELEGATE_T0(void) delegate, int dt) {
-	struct event *e = event_new(delegate);
+void event_queue_auto(struct event_list *list, DELEGATE_T0(void) delegate, int dt) {
+	struct event *e = event_new(list, delegate);
 	e->at_tick += dt;
 	e->autofree = 1;
-	event_queue(list, e);
+	event_queue(e);
 }
 
 void event_dequeue(struct event *event) {
 	if (!event->queued)
 		return;
 	event->queued = 0;
-	struct event **list = event->list;
+	struct event **list = &event->list->events;
 	if (*list == event) {
 		*list = event->next;
 		return;

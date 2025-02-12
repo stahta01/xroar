@@ -2,7 +2,7 @@
  *
  *  \brief Printing to file or pipe
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2011-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -81,8 +81,8 @@ struct printer_interface *printer_interface_new(void) {
 	pip->filename = NULL;
 	pip->pipe = NULL;
 	pip->stream = NULL;
-	event_init(&pip->ack_clear_event, DELEGATE_AS0(void, do_ack_clear, pip));
-	event_init(&pip->update_chars_printed_event, DELEGATE_AS0(void, do_update_chars_printed, pip));
+	event_init(&pip->ack_clear_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_ack_clear, pip));
+	event_init(&pip->update_chars_printed_event, UI_EVENT_LIST, DELEGATE_AS0(void, do_update_chars_printed, pip));
 	pip->strobe_state = 1;
 	pip->busy = 0;
 	return &pip->public;
@@ -183,7 +183,7 @@ void printer_flush(struct printer_interface *pi) {
 	pip->chars_printed = 0;
 	if (!event_queued(&pip->update_chars_printed_event)) {
 		pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
-		event_queue(&UI_EVENT_LIST, &pip->update_chars_printed_event);
+		event_queue(&pip->update_chars_printed_event);
 	}
 }
 
@@ -205,13 +205,13 @@ void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 		pip->chars_printed++;
 		if (!event_queued(&pip->update_chars_printed_event)) {
 			pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&UI_EVENT_LIST, &pip->update_chars_printed_event);
+			event_queue(&pip->update_chars_printed_event);
 		}
 	}
 	// ACK, and schedule !ACK
 	DELEGATE_SAFE_CALL(pi->signal_ack, 1);
 	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
-	event_queue(&MACHINE_EVENT_LIST, &pip->ack_clear_event);
+	event_queue(&pip->ack_clear_event);
 }
 
 _Bool printer_busy(struct printer_interface *pi) {

@@ -2,7 +2,7 @@
  *
  *  \brief Virtual floppy drives.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -190,8 +190,8 @@ struct vdrive_interface *vdrive_interface_new(void) {
 
 	vdrive_set_dden(vi, 1);
 	vdrive_set_drive(vi, 0);
-	event_init(&vip->index_pulse_event, DELEGATE_AS0(void, do_index_pulse, vip));
-	event_init(&vip->reset_index_pulse_event, DELEGATE_AS0(void, do_reset_index_pulse, vip));
+	event_init(&vip->index_pulse_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_index_pulse, vip));
+	event_init(&vip->reset_index_pulse_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_reset_index_pulse, vip));
 	return vi;
 }
 
@@ -297,9 +297,9 @@ void vdrive_interface_deserialise(struct vdrive_interface *vi, struct ser_handle
 		vip->track_base = (uint8_t *)vip->idamptr;
 		// Queue index pulse events only if disk valid
 		if (vip->index_pulse_event.next == &vip->index_pulse_event)
-			event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
+			event_queue(&vip->index_pulse_event);
 		if (vip->reset_index_pulse_event.next == &vip->reset_index_pulse_event)
-			event_queue(&MACHINE_EVENT_LIST, &vip->reset_index_pulse_event);
+			event_queue(&vip->reset_index_pulse_event);
 	} else {
 		vip->idamptr = NULL;
 		vip->track_base = NULL;
@@ -670,7 +670,7 @@ static void update_signals(struct vdrive_interface_private *vip) {
 		vip->head_pos = 128;
 		vip->track_start_cycle = event_current_tick;
 		vip->index_pulse_event.at_tick = vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME;
-		event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
+		event_queue(&vip->index_pulse_event);
 	}
 }
 
@@ -701,9 +701,9 @@ static void do_index_pulse(void *sptr) {
 	vip->last_update_cycle = vip->index_pulse_event.at_tick;
 	vip->track_start_cycle = vip->index_pulse_event.at_tick;
 	vip->index_pulse_event.at_tick = vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME;
-	event_queue(&MACHINE_EVENT_LIST, &vip->index_pulse_event);
+	event_queue(&vip->index_pulse_event);
 	vip->reset_index_pulse_event.at_tick = vip->track_start_cycle + ((vip->current_drive->disk->track_length - 128)/100) * BYTE_TIME;
-	event_queue(&MACHINE_EVENT_LIST, &vip->reset_index_pulse_event);
+	event_queue(&vip->reset_index_pulse_event);
 }
 
 static void do_reset_index_pulse(void *sptr) {

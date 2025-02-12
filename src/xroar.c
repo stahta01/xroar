@@ -1110,6 +1110,8 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Initialise everything
 
 	event_current_tick = 0;
+	xroar.ui_events = event_list_new();
+	xroar.machine_events = event_list_new();
 
 #ifdef LOGGING
 #ifndef HAVE_WASM
@@ -1360,7 +1362,7 @@ void xroar_init_finish(void) {
 
 		// Binaries - delay loading by 2s
 		if (private_cfg.file.binaries) {
-			event_queue_auto(&UI_EVENT_LIST, DELEGATE_AS0(void, do_load_binaries, NULL), EVENT_MS(2000));
+			event_queue_auto(UI_EVENT_LIST, DELEGATE_AS0(void, do_load_binaries, NULL), EVENT_MS(2000));
 		}
 	}
 
@@ -1560,7 +1562,7 @@ void xroar_save_config_file(void) {
  */
 
 void xroar_run(int ncycles) {
-	event_run_queue(&UI_EVENT_LIST);
+	event_run_queue(UI_EVENT_LIST);
 	if (!xroar.machine)
 		return;
 	switch (xroar.machine->run(xroar.machine, ncycles)) {
@@ -1719,7 +1721,7 @@ static void handle_timeout_event(void *sptr) {
 		}
 		timeout->event.at_tick = event_current_tick + timeout->cycles;
 	}
-	event_queue(&MACHINE_EVENT_LIST, &timeout->event);
+	event_queue(&timeout->event);
 }
 
 /* Configure a timeout (period after which emulator will exit). */
@@ -1731,7 +1733,7 @@ struct xroar_timeout *xroar_set_timeout(char const *timestring) {
 		timeout = xmalloc(sizeof(*timeout));
 		timeout->seconds = (int)t;
 		timeout->cycles = EVENT_S(t - timeout->seconds);
-		event_init(&timeout->event, DELEGATE_AS0(void, handle_timeout_event, timeout));
+		event_init(&timeout->event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, handle_timeout_event, timeout));
 		/* handler can set up the first call for us... */
 		timeout->seconds++;
 		handle_timeout_event(timeout);

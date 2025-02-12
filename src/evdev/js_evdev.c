@@ -2,7 +2,7 @@
  *
  *  \brief Linux evdev joystick module.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -269,9 +269,9 @@ static void evdev_js_physical_init(void) {
 	// is accessed, but in case that doesn't happen for a while, we queue
 	// an event to do so.  Each poll will requeue this event to fire in
 	// 100ms.
-	event_init(&ctx->ev_update, DELEGATE_AS0(void, evdev_js_update, ctx));
+	event_init(&ctx->ev_update, UI_EVENT_LIST, DELEGATE_AS0(void, evdev_js_update, ctx));
 	ctx->ev_update.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&UI_EVENT_LIST, &ctx->ev_update);
+	event_queue(&ctx->ev_update);
 
 	glob_t globbuf;
 	globbuf.gl_offs = 0;
@@ -1159,7 +1159,7 @@ static void evdev_js_update(void *sptr) {
 
 	// Reschedule this to run again soon
 	ctx->ev_update.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&UI_EVENT_LIST, &ctx->ev_update);
+	event_queue(&ctx->ev_update);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -1257,7 +1257,7 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	mcc3->cycles -= ncycles;
 	if (mcc3->cycles <= 0) mcc3->CPU->running = 0;
 	event_current_tick += ncycles;
-	event_run_queue(&MACHINE_EVENT_LIST);
+	event_run_queue(MACHINE_EVENT_LIST);
 	MC6809_IRQ_SET(mcc3->CPU, mcc3->PIA0->a.irq | mcc3->PIA0->b.irq | mcc3->GIME->IRQ);
 	MC6809_FIRQ_SET(mcc3->CPU, mcc3->PIA1->a.irq | mcc3->PIA1->b.irq | mcc3->GIME->FIRQ);
 

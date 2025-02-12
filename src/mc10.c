@@ -2,7 +2,7 @@
  *
  *  \brief Tandy MC-10 machine.
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ *  \copyright Copyright 2021-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -1048,7 +1048,7 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	if (mp->cycles <= 0)
 		mp->CPU->running = 0;
 	event_current_tick += ncycles;
-        event_run_queue(&MACHINE_EVENT_LIST);
+        event_run_queue(MACHINE_EVENT_LIST);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
