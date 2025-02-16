@@ -920,7 +920,7 @@ static void waggle_bit(void *sptr) {
 		DELEGATE_CALL(ti->update_audio, 1.0);
 		break;
 	}
-	event_queue_rel(&tip->waggle_event, tip->in_pulse_width);
+	event_queue_dt(&tip->waggle_event, tip->in_pulse_width);
 }
 
 // Ensure any "pulse" over 1/2 second long is flushed to output, so it doesn't
@@ -931,7 +931,7 @@ static void flush_output(void *sptr) {
 	struct tape_interface *ti = &tip->public;
 	tape_update_output(ti, tip->last_tape_output);
 	if (tip->motor && tip->playing) {
-		event_queue_rel(&tip->flush_event, EVENT_MS(500));
+		event_queue_dt(&tip->flush_event, EVENT_MS(500));
 	}
 }
 

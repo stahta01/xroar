@@ -75,11 +75,6 @@ void event_dequeue(struct event *event);
 		(ev)->at_tick = event_current_tick + (dt); \
 	} while (0)
 
-// Set event scheduling time relative to previous time
-#define event_set_rel(ev,dt) do { \
-		(ev)->at_tick += (dt); \
-	} while (0);
-
 // Set event scheduling time to absolute value
 #define event_set_abs(ev,abst) do { \
 		(ev)->at_tick = (abst); \
@@ -88,12 +83,6 @@ void event_dequeue(struct event *event);
 // Queue event relative to current time
 #define event_queue_dt(ev,dt) do { \
 		event_set_dt((ev), (dt)); \
-		event_queue(ev); \
-	} while (0)
-
-// Queue event relative to previous time
-#define event_queue_rel(ev,dt) do { \
-		event_set_rel((ev), (dt)); \
 		event_queue(ev); \
 	} while (0)
 
