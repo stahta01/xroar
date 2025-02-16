@@ -118,22 +118,26 @@ inline int event_tick_delta(event_ticks t0, event_ticks t1) {
 	return *(int32_t *)&dt;
 }
 
-inline _Bool event_pending(struct event_list *list) {
-	return list->events && event_tick_delta(event_current_tick, list->events->at_tick) >= 0;
+inline _Bool event_pending(struct event_list *list, event_ticks to_time) {
+	return list->events && event_tick_delta(to_time, list->events->at_tick) >= 0;
 }
 
 inline void event_dispatch_next(struct event_list *list) {
 	struct event *e = list->events;
 	list->events = e->next;
 	e->queued = 0;
+	event_current_tick = e->at_tick;
 	DELEGATE_CALL(e->delegate);
 	if (e->autofree)
 		free(e);
 }
 
-inline void event_run_queue(struct event_list *list) {
-	while (event_pending(list))
+inline void event_run_queue(struct event_list *list, event_ticks dt) {
+	event_ticks to_time = event_current_tick + dt;
+	while (event_pending(list, to_time)) {
 		event_dispatch_next(list);
+	}
+	event_current_tick = to_time;
 }
 
 #endif

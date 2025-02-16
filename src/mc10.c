@@ -1047,8 +1047,7 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	mp->cycles -= ncycles;
 	if (mp->cycles <= 0)
 		mp->CPU->running = 0;
-	event_current_tick += ncycles;
-        event_run_queue(MACHINE_EVENT_LIST);
+        event_run_queue(MACHINE_EVENT_LIST, ncycles);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

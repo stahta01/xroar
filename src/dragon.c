@@ -1303,8 +1303,7 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 static inline void advance_clock(struct machine_dragon_common *md, int ncycles) {
 	md->cycles -= ncycles;
 	if (md->cycles <= 0) md->CPU->running = 0;
-	event_current_tick += ncycles;
-	event_run_queue(MACHINE_EVENT_LIST);
+	event_run_queue(MACHINE_EVENT_LIST, ncycles);
 }
 
 // Common routine called by cpu_cycle() (or override) to access RAM and devices

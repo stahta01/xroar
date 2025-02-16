@@ -1562,7 +1562,7 @@ void xroar_save_config_file(void) {
  */
 
 void xroar_run(int ncycles) {
-	event_run_queue(UI_EVENT_LIST);
+	event_run_queue(UI_EVENT_LIST, 0);
 	if (!xroar.machine)
 		return;
 	switch (xroar.machine->run(xroar.machine, ncycles)) {
