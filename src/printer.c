@@ -182,8 +182,7 @@ void printer_flush(struct printer_interface *pi) {
 	pip->stream = NULL;
 	pip->chars_printed = 0;
 	if (!event_queued(&pip->update_chars_printed_event)) {
-		pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
-		event_queue(&pip->update_chars_printed_event);
+		event_queue_dt(&pip->update_chars_printed_event, EVENT_MS(500));
 	}
 }
 
@@ -204,14 +203,12 @@ void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 		// Schedule UI notify
 		pip->chars_printed++;
 		if (!event_queued(&pip->update_chars_printed_event)) {
-			pip->update_chars_printed_event.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&pip->update_chars_printed_event);
+			event_queue_dt(&pip->update_chars_printed_event, EVENT_MS(500));
 		}
 	}
 	// ACK, and schedule !ACK
 	DELEGATE_SAFE_CALL(pi->signal_ack, 1);
-	pip->ack_clear_event.at_tick = event_current_tick + EVENT_US(7);
-	event_queue(&pip->ack_clear_event);
+	event_queue_dt(&pip->ack_clear_event, EVENT_US(7));
 }
 
 _Bool printer_busy(struct printer_interface *pi) {

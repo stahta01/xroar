@@ -147,8 +147,7 @@ static void tc_ui_state_notify(void *sptr, int tag, void *smsg) {
 	case ui_tag_tape_dialog:
 		update_program_list(dlg);
 		if (value) {
-			ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&ev_update_tape_counters);
+			event_queue_dt(&ev_update_tape_counters, EVENT_MS(500));
 		} else {
 			event_dequeue(&ev_update_tape_counters);
 		}
@@ -339,8 +338,7 @@ static void update_tape_counters(void *sptr) {
 		uigtk2_label_set_text(uigtk2, "output_file_time", ms_to_string(opos));
 	}
 
-	ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-	event_queue(&ev_update_tape_counters);
+	event_queue_dt(&ev_update_tape_counters, EVENT_MS(500));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

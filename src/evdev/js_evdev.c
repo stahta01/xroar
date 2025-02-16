@@ -270,8 +270,7 @@ static void evdev_js_physical_init(void) {
 	// an event to do so.  Each poll will requeue this event to fire in
 	// 100ms.
 	event_init(&ctx->ev_update, UI_EVENT_LIST, DELEGATE_AS0(void, evdev_js_update, ctx));
-	ctx->ev_update.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&ctx->ev_update);
+	event_queue_dt(&ctx->ev_update, EVENT_MS(100));
 
 	glob_t globbuf;
 	globbuf.gl_offs = 0;
@@ -1158,8 +1157,7 @@ static void evdev_js_update(void *sptr) {
 	}
 
 	// Reschedule this to run again soon
-	ctx->ev_update.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&ctx->ev_update);
+	event_queue_dt(&ctx->ev_update, EVENT_MS(100));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

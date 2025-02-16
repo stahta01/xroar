@@ -425,8 +425,7 @@ static void update_tape_counters(void *sptr) {
 		SendMessage(tc_stm_output_position, WM_SETTEXT, 0, (LPARAM)ms_to_string(new_opos));
 	}
 
-	ev_update_tape_counters.at_tick = event_current_tick + EVENT_MS(500);
-	event_queue(&ev_update_tape_counters);
+	event_queue_dt(&ev_update_tape_counters, EVENT_MS(500));
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

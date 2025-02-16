@@ -257,7 +257,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	snd->last_cycle = event_current_tick;
 
 	event_init(&snd->flush_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, flush_buffer, snd));
-	snd->flush_event.at_tick = event_current_tick;
+	event_set_dt(&snd->flush_event, 0);
 	// process zero frames, but set up buffer flusher:
 	flush_buffer(snd);
 
@@ -638,6 +638,5 @@ static void flush_buffer(void *sptr) {
 	unsigned nticks = fe / sndp->framerate;
 	fe -= nticks * sndp->framerate;
 	snd->buferror = fe;
-	snd->flush_event.at_tick = snd->last_cycle + nticks;
-	event_queue(&snd->flush_event);
+	event_queue_abs(&snd->flush_event, snd->last_cycle + nticks);
 }

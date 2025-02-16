@@ -200,8 +200,7 @@ void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
 		if (irq1_enabled) {
 			// Figure 13, tRS3 = 1µs
 			if (!event_queued(&side->irq_event)) {
-				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-				event_queue(&side->irq_event);
+				event_queue_dt(&side->irq_event, EVENT_US(1));
 			}
 		} else {
 			side->irq = side->control_register & 0x40;
@@ -244,15 +243,13 @@ uint8_t mc6821_read(struct MC6821 *pia, uint16_t A) {
 
 			if ((pia->a.control_register & 0x30) == 0x20) {
 				// Read Strobe
-				pia->a.strobe_event.at_tick = event_current_tick + 8;
-				event_queue(&pia->a.strobe_event);
+				event_queue_dt(&pia->a.strobe_event, 8);
 				if (!(pia->a.control_register & 0x08)) {
 					// Read Strobe with CA1 Restore
 					event_dequeue(&pia->a.restore_event);
 				} else {
 					// Read Strobe with E Restore
-					pia->a.restore_event.at_tick = event_current_tick + 24;
-					event_queue(&pia->a.restore_event);
+					event_queue_dt(&pia->a.restore_event, 24);
 				}
 			}
 
@@ -337,15 +334,13 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D) {
 
 				if ((pia->b.control_register & 0x30) == 0x20) {
 					// Write Strobe
-					pia->b.strobe_event.at_tick = event_current_tick + 16;
-					event_queue(&pia->b.strobe_event);
+					event_queue_dt(&pia->b.strobe_event, 16);
 					if (!(pia->b.control_register & 0x08)) {
 						// Write Strobe with CB1 Restore
 						event_dequeue(&pia->b.restore_event);
 					} else {
 						// Write Strobe with E Restore
-						pia->b.restore_event.at_tick = event_current_tick + 48;
-						event_queue(&pia->b.restore_event);
+						event_queue_dt(&pia->b.restore_event, 48);
 					}
 				}
 
@@ -410,8 +405,7 @@ static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
 		if (irq2_enabled) {
 			// Figure 13, tRS3 = 1µs
 			if (!event_queued(&side->irq_event)) {
-				side->irq_event.at_tick = event_current_tick + EVENT_US(1);
-				event_queue(&side->irq_event);
+				event_queue_dt(&side->irq_event, EVENT_US(1));
 			}
 		} else {
 			side->irq = side->control_register & 0x80;

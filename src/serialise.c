@@ -2,7 +2,7 @@
  *
  *  \brief Serialisation and deserialisation helpers.
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ *  \copyright Copyright 2015-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -783,7 +783,8 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 		case ser_type_event:
 			{
 				struct event *e = ptr;
-				e->at_tick = event_current_tick + ser_read_vuint32(sh);
+				int dt = ser_read_vuint32(sh);
+				event_set_dt(e, dt);
 				e->next = e;  // flag reader to queue
 			}
 			break;
@@ -792,7 +793,8 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 			{
 				struct event *e = *(struct event **)ptr;
 				if (e) {
-					e->at_tick = event_current_tick + ser_read_vuint32(sh);
+					int dt = ser_read_vuint32(sh);
+					event_set_dt(e, dt);
 					e->next = e;  // flag reader to queue
 				}
 			}

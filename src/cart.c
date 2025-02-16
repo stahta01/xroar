@@ -974,8 +974,7 @@ void cart_rom_reset(struct cart *c, _Bool hard) {
 void cart_rom_attach(struct cart *c) {
 	struct cart_config *cc = c->config;
 	if (cc->autorun) {
-		c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
-		event_queue(&c->firq_event);
+		event_queue_dt(&c->firq_event, EVENT_MS(100));
 	} else {
 		event_dequeue(&c->firq_event);
 	}
@@ -990,8 +989,7 @@ static void do_firq(void *data) {
 	static _Bool level = 0;
 	struct cart *c = data;
 	DELEGATE_SAFE_CALL(c->signal_firq, level);
-	c->firq_event.at_tick = event_current_tick + EVENT_MS(100);
-	event_queue(&c->firq_event);
+	event_queue_dt(&c->firq_event, EVENT_MS(100));
 	level = !level;
 }
 

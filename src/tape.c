@@ -876,12 +876,11 @@ static void update_motor(struct tape_interface_private *tip) {
 		if (ti->tape_input && !tip->waggle_event.queued) {
 			// If motor running and tape file attached, enable the
 			// tape input bit waggler.
-			tip->waggle_event.at_tick = event_current_tick;
+			event_set_dt(&tip->waggle_event, 0);
 			waggle_bit(tip);
 		}
 		if (ti->tape_output && !tip->flush_event.queued) {
-			tip->flush_event.at_tick = event_current_tick + EVENT_MS(500);
-			event_queue(&tip->flush_event);
+			event_queue_dt(&tip->flush_event, EVENT_MS(500));
 			ti->tape_output->last_write_cycle = event_current_tick;
 		}
 	} else {
@@ -921,8 +920,7 @@ static void waggle_bit(void *sptr) {
 		DELEGATE_CALL(ti->update_audio, 1.0);
 		break;
 	}
-	tip->waggle_event.at_tick += tip->in_pulse_width;
-	event_queue(&tip->waggle_event);
+	event_queue_rel(&tip->waggle_event, tip->in_pulse_width);
 }
 
 // Ensure any "pulse" over 1/2 second long is flushed to output, so it doesn't
@@ -933,8 +931,7 @@ static void flush_output(void *sptr) {
 	struct tape_interface *ti = &tip->public;
 	tape_update_output(ti, tip->last_tape_output);
 	if (tip->motor && tip->playing) {
-		tip->flush_event.at_tick += EVENT_MS(500);
-		event_queue(&tip->flush_event);
+		event_queue_rel(&tip->flush_event, EVENT_MS(500));
 	}
 }
 
@@ -1126,8 +1123,7 @@ static void advance_read_time(struct tape_interface_private *tip, int skip) {
 		}
 	}
 	tip->in_pulse_width -= skip;
-	tip->waggle_event.at_tick = event_current_tick + tip->in_pulse_width;
-	event_queue(&tip->waggle_event);
+	event_queue_dt(&tip->waggle_event, tip->in_pulse_width);
 	DELEGATE_CALL(ti->update_audio, tip->in_pulse ? 1.0 : 0.0);
 }
 

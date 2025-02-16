@@ -126,8 +126,7 @@ static const char * const wd279x_type_name[4] = {
 
 #define NEXT_STATE(fdc,s,t) do { \
 		(fdc)->state = (s); \
-		(fdc)->state_event.at_tick = event_current_tick + (t); \
-		event_queue(&(fdc)->state_event); \
+		event_queue_dt(&(fdc)->state_event, (t)); \
 	} while (0)
 
 #define SET_STATE(fdc,s) (fdc)->state = (s)

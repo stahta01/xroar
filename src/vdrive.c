@@ -669,8 +669,7 @@ static void update_signals(struct vdrive_interface_private *vip) {
 	if (!vip->index_pulse_event.queued) {
 		vip->head_pos = 128;
 		vip->track_start_cycle = event_current_tick;
-		vip->index_pulse_event.at_tick = vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME;
-		event_queue(&vip->index_pulse_event);
+		event_queue_abs(&vip->index_pulse_event, vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME);
 	}
 }
 
@@ -700,10 +699,8 @@ static void do_index_pulse(void *sptr) {
 	vip->head_pos = 128;
 	vip->last_update_cycle = vip->index_pulse_event.at_tick;
 	vip->track_start_cycle = vip->index_pulse_event.at_tick;
-	vip->index_pulse_event.at_tick = vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME;
-	event_queue(&vip->index_pulse_event);
-	vip->reset_index_pulse_event.at_tick = vip->track_start_cycle + ((vip->current_drive->disk->track_length - 128)/100) * BYTE_TIME;
-	event_queue(&vip->reset_index_pulse_event);
+	event_queue_abs(&vip->index_pulse_event, vip->track_start_cycle + (vip->current_drive->disk->track_length - 128) * BYTE_TIME);
+	event_queue_abs(&vip->reset_index_pulse_event, vip->track_start_cycle + ((vip->current_drive->disk->track_length - 128)/100) * BYTE_TIME);
 }
 
 static void do_reset_index_pulse(void *sptr) {

@@ -679,8 +679,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	gime->row = 0;
 	gime->scanline_start = t;
 	gime->PIA1B_shadow.pdr = 0;
-	gime->hs_fall_event.at_tick = t + TCC1014_tSL;
-	event_queue(&gime->hs_fall_event);
+	event_queue_abs(&gime->hs_fall_event, t + TCC1014_tSL);
 	update_from_gime_registers(gime);
 	//gime->vram_bit = 0;
 	gime->have_vdata_cache = 0;
@@ -1036,13 +1035,9 @@ static void do_hs_fall(void *sptr) {
 	//gime->vram_bit = 0;
 	gime->have_vdata_cache = 0;
 
-	gime->hs_rise_event.at_tick = t + gime->variant->tHS;
-	gime->hs_fall_event.at_tick = t + TCC1014_tSL;
-	gime->vb_irq_event.at_tick = t + tHS_VB;
-
-	event_queue(&gime->hs_rise_event);
-	event_queue(&gime->hs_fall_event);
-	event_queue(&gime->vb_irq_event);
+	event_queue_abs(&gime->hs_rise_event, t + gime->variant->tHS);
+	event_queue_abs(&gime->hs_fall_event, t + TCC1014_tSL);
+	event_queue_abs(&gime->vb_irq_event, t + tHS_VB);
 }
 
 static void do_hs_rise(void *sptr) {
@@ -1155,8 +1150,7 @@ static void do_vb_irq(void *sptr) {
 	gime->horizontal.tHS_FP = gime->horizontal.tHS_RB + tRB;
 	gime->horizontal.npixels = gime->horizontal.tHS_LB;
 
-	gime->hb_irq_event.at_tick = gime->scanline_start + tHS_RB;
-	event_queue(&gime->hb_irq_event);
+	event_queue_abs(&gime->hb_irq_event, gime->scanline_start + tHS_RB);
 
 	gime->vertical.lcount++;
 
@@ -1524,8 +1518,7 @@ static void schedule_timer(struct TCC1014_private *gime, event_ticks t) {
 	if (gime->TINS && gime->timer.counter > 0) {
 		// TINS=1: 3.58MHz
 		gime->timer.last_update = t;
-		gime->timer.update_event.at_tick = t + (gime->timer.counter << 2);
-		event_queue(&gime->timer.update_event);
+		event_queue_abs(&gime->timer.update_event, t + (gime->timer.counter << 2));
 	} else {
 		event_dequeue(&gime->timer.update_event);
 	}

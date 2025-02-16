@@ -332,8 +332,8 @@ static void do_hs_fall(void *data) {
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION);
+	event_set_abs(&vdg->hs_rise_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE));
+	event_set_abs(&vdg->hs_fall_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION));
 
 	vdg->scanline = SCANLINE(vdg->scanline + 1);
 
@@ -410,8 +410,8 @@ static void do_hs_fall_pal(void *data) {
 
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
-	vdg->hs_rise_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE);
-	vdg->hs_fall_event.at_tick = vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION);
+	event_set_abs(&vdg->hs_rise_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE));
+	event_set_abs(&vdg->hs_fall_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION));
 
 	vdg->pal_padding--;
 	if (vdg->pal_padding == 0)
@@ -630,8 +630,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->scanline = 0;
 	vdg->public.row = 0;
 	vdg->scanline_start = event_current_tick;
-	vdg->hs_fall_event.at_tick = event_current_tick + EVENT_VDG_TIME(VDG_LINE_DURATION);
-	event_queue(&vdg->hs_fall_event);
+	event_queue_dt(&vdg->hs_fall_event, EVENT_VDG_TIME(VDG_LINE_DURATION));
 	mc6847_set_mode(vdgp, 0);
 	vdg->vram_index = 0;
 	vdg->vram_bit = 0;
