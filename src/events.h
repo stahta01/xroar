@@ -70,6 +70,39 @@ void event_free(struct event *event);
 void event_queue(struct event *event);
 void event_dequeue(struct event *event);
 
+// Set event scheduling time relative to current time
+#define event_set_dt(ev,dt) do { \
+		(ev)->at_tick = event_current_tick + (dt); \
+	} while (0)
+
+// Set event scheduling time relative to previous time
+#define event_set_rel(ev,dt) do { \
+		(ev)->at_tick += (dt); \
+	} while (0);
+
+// Set event scheduling time to absolute value
+#define event_set_abs(ev,abst) do { \
+		(ev)->at_tick = (abst); \
+	} while (0)
+
+// Queue event relative to current time
+#define event_queue_dt(ev,dt) do { \
+		event_set_dt((ev), (dt)); \
+		event_queue(ev); \
+	} while (0)
+
+// Queue event relative to previous time
+#define event_queue_rel(ev,dt) do { \
+		event_set_rel((ev), (dt)); \
+		event_queue(ev); \
+	} while (0)
+
+// Queue event using absolute time
+#define event_queue_abs(ev,abst) do { \
+		event_set_abs((ev), (abst)); \
+		event_queue(ev); \
+	} while (0)
+
 // Allocate an event and queue it, flagged to autofree.  Event will be
 // scheduled for current time + dt.
 void event_queue_auto(struct event_list *list, DELEGATE_T0(void), int dt);
