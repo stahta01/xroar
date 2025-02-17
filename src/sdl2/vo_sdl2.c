@@ -192,6 +192,11 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 
 	// Add menubar if the created window is not fullscreen
 	vo->is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+	if (vo->is_fullscreen) {
+		SDL_DisableScreenSaver();
+	} else {
+		SDL_EnableScreenSaver();
+	}
 	vo->show_menubar = !vo->is_fullscreen;
 #ifdef WINDOWS32
 	if (vo->show_menubar) {
@@ -448,6 +453,11 @@ static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 
 	vo->is_fullscreen = want_fullscreen;
 	SDL_SetWindowFullscreen(uisdl2->vo_window, want_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	if (want_fullscreen) {
+		SDL_DisableScreenSaver();
+	} else {
+		SDL_EnableScreenSaver();
+	}
 }
 #endif
 
