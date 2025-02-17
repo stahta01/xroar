@@ -4,6 +4,8 @@
  *
  *  \copyright Copyright 2013-2024 Ciaran Anscomb
  *
+ *  \copyright Copyright 2021 Tormod Volden
+ *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
  *  XRoar is free software; you can redistribute it and/or modify it under the
