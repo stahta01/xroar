@@ -710,5 +710,8 @@ _Bool hk_windows_update_keymap(void) {
 			}
 		}
 	}
+	if (hkbd.code_to_sym[0][hk_scan_Pause] == hk_sym_None) {
+		hkbd.code_to_sym[0][hk_scan_Pause] = hk_sym_Pause;
+	}
 	return 1;
 }
