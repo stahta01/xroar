@@ -1,3 +1,5 @@
+ * Trap-triggered traces now include trap instruction
+
 Version 1.8.2, Fri 14 Feb 2025
 
  * SDL build fix [by Andrea Musuruane]
