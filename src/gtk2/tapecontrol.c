@@ -88,10 +88,17 @@ static gchar *ms_to_string(int ms);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static void gtk2_tc_dialog_free(void *sptr) {
+	struct uigtk2_dialog *dlg = sptr;
+	event_dequeue(&ev_update_tape_counters);
+	clear_program_list(dlg);
+}
+
 // Create cassettes dialog window
 
 struct uigtk2_dialog *gtk2_tc_dialog_new(struct ui_gtk2_interface *uigtk2) {
 	struct uigtk2_dialog *dlg = uigtk2_dialog_new(uigtk2, "/uk/org/6809/xroar/gtk2/tapecontrol.ui", "tc_window", ui_tag_tape_dialog);
+	dlg->free = DELEGATE_AS0(void, gtk2_tc_dialog_free, dlg);
 
 	// Join each UI group we're interested in
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_tape_dialog, MESSENGER_NOTIFY_DELEGATE(tc_ui_state_notify, dlg));
@@ -391,7 +398,6 @@ static void update_program_list(struct uigtk2_dialog *dlg) {
 				   TC_POSITION, timestr,
 				   TC_FILE_POINTER, file,
 				   -1);
-		free(file);
 	}
 	tape_seek(xroar.tape_interface->tape_input, old_offset, SEEK_SET);
 }
