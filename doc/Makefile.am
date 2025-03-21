@@ -8,7 +8,7 @@ info_TEXINFOS = xroar.texi
 
 EXTRA_DIST += \
 	building-for-windows.md \
-	xroar.conf.example \
+	xroar-example.conf \
 	xroar.pdf \
 	file-run.png \
 	drive-control.png \
