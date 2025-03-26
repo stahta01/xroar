@@ -848,9 +848,8 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 			++actual_naxes;
 		}
 	}
-	if (dmctx.axis_flags) {
-		free(dmctx.axis_flags);
-	}
+	free(dmctx.axis_flags);
+	dmctx.axis_flags = NULL;
 
 	// Count the actual number of button controls present (for reporting),
 	// and initialise them.
@@ -862,9 +861,8 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 			++actual_nbuttons;
 		}
 	}
-	if (dmctx.button_flags) {
-		free(dmctx.button_flags);
-	}
+	free(dmctx.button_flags);
+	dmctx.button_flags = NULL;
 
 	// Always add as a standalone joystick.  First two axes and buttons.
 	{
@@ -996,10 +994,8 @@ static void evdev_js_device_remove(struct evdev_js_context *ctx, int evid) {
 		}
 	}
 	joystick_config_update_menus();
-	if (d->axis_controls) {
-		free(d->axis_controls);
-		d->axis_controls = NULL;
-	}
+	free(d->axis_controls);
+	d->axis_controls = NULL;
 	d->naxes = 0;
 
 	d->evid = -1;
