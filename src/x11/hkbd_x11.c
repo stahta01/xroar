@@ -120,10 +120,8 @@ _Bool hk_x11_update_keymap(void) {
 	// Check that a suitable keycode table has been identified
 	if (table < 0) {
 		LOG_DEBUG(2, "[hkbd/x11] no keycode table found\n");
-		if (os_scancode_to_hk_scancode) {
-			free(os_scancode_to_hk_scancode);
-			os_scancode_to_hk_scancode = NULL;
-		}
+		free(os_scancode_to_hk_scancode);
+		os_scancode_to_hk_scancode = NULL;
 		hk_num_os_scancodes = 0;
 		return 0;
 	}
