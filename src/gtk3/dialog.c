@@ -113,9 +113,7 @@ void uigtk3_dialog_free(struct uigtk3_dialog *dlg) {
 		if (dlg->window) {
 			gtk_widget_destroy(GTK_WIDGET(dlg->window));
 		}
-		if (dlg->name) {
-			free(dlg->name);
-		}
+		free(dlg->name);
 	}
 
 	for (int i = 0; i < ndialogs; ++i) {
@@ -132,9 +130,7 @@ void uigtk3_dialog_free(struct uigtk3_dialog *dlg) {
 		}
 	}
 
-	if (dlg) {
-		free(dlg);
-	}
+	free(dlg);
 	if (ndialogs == 0) {
 		free(dialogs);
 		dialogs = NULL;

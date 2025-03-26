@@ -72,10 +72,8 @@ static void *filereq_gtk3_new(void *sptr) {
 
 static void filereq_gtk3_free(void *sptr) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
-	if (frgtk3->filename) {
-		free(frgtk3->filename);
-		frgtk3->filename = NULL;
-	}
+	free(frgtk3->filename);
+	frgtk3->filename = NULL;
 	free(frgtk3);
 }
 

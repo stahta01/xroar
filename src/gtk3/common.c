@@ -310,9 +310,7 @@ void uigtk3_cbt_value_free_void(void *sptr) {
 }
 
 void uigtk3_cbt_value_free(struct uigtk3_cbt_value *cbtv) {
-	if (cbtv->values) {
-		free(cbtv->values);
-	}
+	free(cbtv->values);
 	free(cbtv->name);
 	free(cbtv);
 }

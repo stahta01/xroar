@@ -77,10 +77,8 @@ static void *filereq_gtk2_new(void *sptr) {
 
 static void filereq_gtk2_free(void *sptr) {
 	struct filereq_interface_gtk2 *frgtk2 = sptr;
-	if (frgtk2->filename) {
-		free(frgtk2->filename);
-		frgtk2->filename = NULL;
-	}
+	free(frgtk2->filename);
+	frgtk2->filename = NULL;
 	free(frgtk2);
 }
 

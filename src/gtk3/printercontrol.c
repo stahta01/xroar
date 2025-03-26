@@ -135,8 +135,7 @@ static void pc_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_print_pipe:
 		{
-			if (uigtk3->printer.pipe)
-				free(uigtk3->printer.pipe);
+			free(uigtk3->printer.pipe);
 			uigtk3->printer.pipe = xstrdup(data ? (const char *)data : "");
 			GtkEntry *e_pipe = GTK_ENTRY(gtk_builder_get_object(uigtk3->builder, "pc_e_pipe"));
 			GtkEntryBuffer *eb_pipe = gtk_entry_get_buffer(e_pipe);
