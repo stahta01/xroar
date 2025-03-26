@@ -147,13 +147,10 @@ void vdisk_unref(struct vdisk *disk) {
 	disk->ref_count--;
 	if (disk->ref_count > 0)
 		return;
-	if (disk->filename)
-		free(disk->filename);
-	if (disk->fmt.vdk.extra)
-		free(disk->fmt.vdk.extra);
+	free(disk->filename);
+	free(disk->fmt.vdk.extra);
 	for (unsigned i = 0; i < MAX_HEADS; i++) {
-		if (disk->side_data[i])
-			free(disk->side_data[i]);
+		free(disk->side_data[i]);
 	}
 	free(disk->side_data);
 	free(disk);
