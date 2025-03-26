@@ -236,8 +236,7 @@ static void *new(void *cfg) {
 	return aooss;
 
 failed:
-	if (aooss->audio_buffer)
-		free(aooss->audio_buffer);
+	free(aooss->audio_buffer);
 	if (aooss->sound_fd != -1)
 		close(aooss->sound_fd);
 	free(aooss);
