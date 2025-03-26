@@ -235,24 +235,14 @@ static void joystick_config_free(struct joystick_config *jc) {
 	if (!jc) {
 		return;
 	}
-	if (jc->name) {
-		free(jc->name);
-	}
-	if (jc->alias) {
-		free(jc->alias);
-	}
-	if (jc->description) {
-		free(jc->description);
-	}
+	free(jc->name);
+	free(jc->alias);
+	free(jc->description);
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; ++i) {
-		if (jc->axis_specs[i]) {
-			free(jc->axis_specs[i]);
-		}
+		free(jc->axis_specs[i]);
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; ++i) {
-		if (jc->button_specs[i]) {
-			free(jc->button_specs[i]);
-		}
+		free(jc->button_specs[i]);
 	}
 	free(jc);
 }
@@ -644,9 +634,7 @@ struct js_db_entry *js_find_db_entry(const char *guid_str, int fallback) {
 }
 
 static void js_db_map_free(struct js_db_entry *map) {
-	if (map->name) {
-		free(map->name);
-	}
+	free(map->name);
 	slist_free_full(map->axes, free);
 	slist_free_full(map->buttons, free);
 	slist_free_full(map->hats, free);
@@ -736,10 +724,8 @@ static void joystick_map(const struct joystick_config *jc, unsigned port) {
 		return;
 	if (joystick_port_config[port] == jc)
 		return;
-	if (joystick_port_config_name[port]) {
-		free(joystick_port_config_name[port]);
-		joystick_port_config_name[port] = NULL;
-	}
+	free(joystick_port_config_name[port]);
+	joystick_port_config_name[port] = NULL;
 	joystick_unmap(port);
 	struct joystick *j = NULL;
 	if (jc) {
