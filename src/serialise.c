@@ -802,8 +802,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 
 		case ser_type_string:
 			{
-				if (*(char **)ptr != NULL)
-					free(*(char **)ptr);
+				free(*(char **)ptr);
 				*(char **)ptr = ser_read_string(sh);
 			}
 			break;
