@@ -81,12 +81,8 @@ void rombank_free(struct rombank *rb) {
 	if (!rb)
 		return;
 	for (unsigned i = 0; i < rb->nslots; i++) {
-		if (rb->slot[i].filename) {
-			free(rb->slot[i].filename);
-		}
-		if (rb->d[i]) {
-			free(rb->d[i]);
-		}
+		free(rb->slot[i].filename);
+		free(rb->d[i]);
 	}
 	free(rb->slot);
 	free(rb->d);
@@ -204,9 +200,7 @@ int rombank_load_image(struct rombank *rb, unsigned slot, const char *filename, 
 
 	while (file_size > 0 && slot < rb->nslots) {
 		char *filename_dup = xstrdup(filename);
-		if (rb->slot[slot].filename) {
-			free(rb->slot[slot].filename);
-		}
+		free(rb->slot[slot].filename);
 		rb->slot[slot].filename = filename_dup;
 		rb->slot[slot].offset = offset;
 		if (!rb->d[slot]) {
@@ -240,10 +234,8 @@ void rombank_clear_slot_image(struct rombank *rb, unsigned slot) {
 		return;
 	}
 	rb->slot[slot].crc32 = CRC32_RESET;
-	if (rb->d[slot]) {
-		free(rb->d[slot]);
-		rb->d[slot] = NULL;
-	}
+	free(rb->d[slot]);
+	rb->d[slot] = NULL;
 	recompute_crc32(rb);
 }
 
