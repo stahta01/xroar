@@ -169,8 +169,7 @@ static void spi_sdcard_free(struct part *p) {
 	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
 	if (sdcard->bd)
 		bd_close(sdcard->bd);
-	if (sdcard->imagefile)
-		free(sdcard->imagefile);
+	free(sdcard->imagefile);
 }
 
 static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag) {
