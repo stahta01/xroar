@@ -212,9 +212,7 @@ static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag
 			ser_set_error(sh, ser_error_format);
 			return 0;
 		}
-		if (mc->architecture) {
-			free(mc->architecture);
-		}
+		free(mc->architecture);
 		mc->architecture = xstrdup(int_arch_to_string[old_arch]);
 	} break;
 
@@ -320,24 +318,15 @@ void machine_config_complete(struct machine_config *mc) {
 }
 
 static void machine_config_free(struct machine_config *mc) {
-	if (mc->name)
-		free(mc->name);
-	if (mc->description)
-		free(mc->description);
-	if (mc->architecture)
-		free(mc->architecture);
-	if (mc->vdg_palette)
-		free(mc->vdg_palette);
-	if (mc->bas_rom)
-		free(mc->bas_rom);
-	if (mc->extbas_rom)
-		free(mc->extbas_rom);
-	if (mc->altbas_rom)
-		free(mc->altbas_rom);
-	if (mc->ext_charset_rom)
-		free(mc->ext_charset_rom);
-	if (mc->default_cart)
-		free(mc->default_cart);
+	free(mc->name);
+	free(mc->description);
+	free(mc->architecture);
+	free(mc->vdg_palette);
+	free(mc->bas_rom);
+	free(mc->extbas_rom);
+	free(mc->altbas_rom);
+	free(mc->ext_charset_rom);
+	free(mc->default_cart);
 	slist_free_full(mc->opts, (slist_free_func)sdsfree);
 	free(mc);
 }
