@@ -125,9 +125,7 @@ void uiw32_dialog_free(struct uiw32_dialog *dlg) {
 		}
 	}
 
-	if (dlg) {
-		free(dlg);
-	}
+	free(dlg);
 	if (ndialogs == 0) {
 		free(dialogs);
 		dialogs = NULL;

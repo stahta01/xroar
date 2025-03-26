@@ -99,8 +99,7 @@ static char *load_filename(void *sptr, char const *title) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
 		| OFN_HIDEREADONLY;
 
-	if (frw32->filename)
-		free(frw32->filename);
+	free(frw32->filename);
 	frw32->filename = NULL;
 	if (GetOpenFileName(&ofn) == TRUE) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
@@ -129,8 +128,7 @@ static char *save_filename(void *sptr, char const *title) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY
 		| OFN_OVERWRITEPROMPT;
 
-	if (frw32->filename)
-		free(frw32->filename);
+	free(frw32->filename);
 	frw32->filename = NULL;
 	if (GetSaveFileName(&ofn) == TRUE) {
 		frw32->filename = xstrdup(ofn.lpstrFile);
