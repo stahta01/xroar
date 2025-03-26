@@ -963,8 +963,7 @@ static struct cue_entry *cue_entry_new(int type) {
 
 static void cue_entry_free(void *sptr) {
 	struct cue_entry *entry = sptr;
-	if (entry->section.data)
-		free(entry->section.data);
+	free(entry->section.data);
 	free(entry);
 }
 
