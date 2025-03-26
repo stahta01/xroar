@@ -54,12 +54,8 @@ static struct messenger_group *groups = NULL;
 void messenger_shutdown(void) {
 	if (groups) {
 		for (int i = 0; i < ngroups; ++i) {
-			if (groups[i].name) {
-				free(groups[i].name);
-			}
-			if (groups[i].members) {
-				free(groups[i].members);
-			}
+			free(groups[i].name);
+			free(groups[i].members);
 		}
 		free(groups);
 		groups = NULL;
