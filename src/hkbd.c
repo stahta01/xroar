@@ -1131,10 +1131,8 @@ void hk_init(void) {
 
 void hk_shutdown(void) {
 	messenger_client_unregister(hkbd.msgr_client_id);
-	if (os_scancode_to_hk_scancode) {
-		free(os_scancode_to_hk_scancode);
-		os_scancode_to_hk_scancode = NULL;
-	}
+	free(os_scancode_to_hk_scancode);
+	os_scancode_to_hk_scancode = NULL;
 }
 
 void hk_update_keymap(void) {
@@ -1148,10 +1146,8 @@ void hk_update_keymap(void) {
 
 	hkbd.layout = hkbd.cfg.layout;
 
-	if (os_scancode_to_hk_scancode) {
-		free(os_scancode_to_hk_scancode);
-		os_scancode_to_hk_scancode = NULL;
-	}
+	free(os_scancode_to_hk_scancode);
+	os_scancode_to_hk_scancode = NULL;
 
 	// Any OS-specific defaults
 	_Bool have_keymap = 0;
