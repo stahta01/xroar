@@ -494,10 +494,8 @@ void intf_init0(struct intf *i, struct part *p0, void *p0_idata, const char *nam
 
 void intf_free(struct intf *i) {
 	intf_detach(i);
-	if (i->name) {
-		free(i->name);
-		i->name = NULL;
-	}
+	free(i->name);
+	i->name = NULL;
 	if (i->free) {
 		i->free(i);
 	} else {
