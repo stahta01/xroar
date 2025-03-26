@@ -1099,9 +1099,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// If any cart still configured, make it default for machine.
 	if (selected_cart_config) {
-		if (xroar.machine_config->default_cart) {
-			free(xroar.machine_config->default_cart);
-		}
+		free(xroar.machine_config->default_cart);
 		xroar.machine_config->default_cart = xstrdup(selected_cart_config->name);
 	}
 
@@ -1436,12 +1434,12 @@ void xroar_shutdown(void) {
 	romlist_shutdown();
 	crclist_shutdown();
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
-		if (private_cfg.joy.axis[i])
-			free(private_cfg.joy.axis[i]);
+		free(private_cfg.joy.axis[i]);
+		private_cfg.joy.axis[i] = NULL;
 	}
 	for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
-		if (private_cfg.joy.button[i])
-			free(private_cfg.joy.button[i]);
+		free(private_cfg.joy.button[i]);
+		private_cfg.joy.button[i] = NULL;
 	}
 	vdrive_interface_free(xroar.vdrive_interface);
 	tape_interface_free(xroar.tape_interface);
@@ -1834,10 +1832,8 @@ void xroar_insert_hd_file(int drive, const char *filename) {
 	if (drive < 0 || drive > 1) {
 		return;
 	}
-	if (private_cfg.file.hd[drive]) {
-		free(private_cfg.file.hd[drive]);
-		private_cfg.file.hd[drive] = NULL;
-	}
+	free(private_cfg.file.hd[drive]);
+	private_cfg.file.hd[drive] = NULL;
 	if (filename) {
 		private_cfg.file.hd[drive] = xstrdup(filename);
 	}
@@ -2019,9 +2015,7 @@ static void xroar_ui_set_print_file(void *sptr, int tag, void *smsg) {
 		return;
 	}
 	char *new_file = uimsg->data ? xstrdup((const char *)uimsg->data) : NULL;
-	if (private_cfg.printer.file) {
-		free(private_cfg.printer.file);
-	}
+	free(private_cfg.printer.file);
 	private_cfg.printer.file = new_file;
 	uimsg->data = new_file;
 }
@@ -2034,9 +2028,7 @@ static void xroar_ui_set_print_pipe(void *sptr, int tag, void *smsg) {
 		return;
 	}
 	char *new_pipe = uimsg->data ? xstrdup((const char *)uimsg->data) : NULL;
-	if (private_cfg.printer.pipe) {
-		free(private_cfg.printer.pipe);
-	}
+	free(private_cfg.printer.pipe);
 	private_cfg.printer.pipe = new_pipe;
 	uimsg->data = new_pipe;
 }
@@ -2275,9 +2267,7 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 		// storing the config between sessions?
 		if (c) {
 			mc->cart_enabled = 1;
-			if (mc->default_cart) {
-				free(mc->default_cart);
-			}
+			free(mc->default_cart);
 			mc->default_cart = xstrdup(cc->name);
 
 			// Create and attach the cart
@@ -2368,9 +2358,7 @@ void xroar_screenshot(void) {
 /* Helper functions used by configuration */
 
 static void set_default_machine(const char *name) {
-	if (private_cfg.default_machine) {
-		free(private_cfg.default_machine);
-	}
+	free(private_cfg.default_machine);
 	private_cfg.default_machine = xstrdup(name);
 }
 
@@ -2392,9 +2380,7 @@ static void set_machine(const char *name) {
 
 	if (xroar.machine_config) {
 		if (private_cfg.machine.arch) {
-			if (xroar.machine_config->architecture) {
-				free(xroar.machine_config->architecture);
-			}
+			free(xroar.machine_config->architecture);
 			xroar.machine_config->architecture = private_cfg.machine.arch;
 			private_cfg.machine.arch = NULL;
 		}
@@ -2407,9 +2393,7 @@ static void set_machine(const char *name) {
 			private_cfg.machine.cpu = ANY_AUTO;
 		}
 		if (private_cfg.machine.description) {
-			if (xroar.machine_config->description) {
-				free(xroar.machine_config->description);
-			}
+			free(xroar.machine_config->description);
 			xroar.machine_config->description = private_cfg.machine.description;
 			private_cfg.machine.description = NULL;
 		}
@@ -2425,9 +2409,7 @@ static void set_machine(const char *name) {
 		}
 #endif
 		if (private_cfg.machine.palette) {
-			if (xroar.machine_config->vdg_palette) {
-				free(xroar.machine_config->vdg_palette);
-			}
+			free(xroar.machine_config->vdg_palette);
 			xroar.machine_config->vdg_palette = private_cfg.machine.palette;
 			private_cfg.machine.palette = NULL;
 		}
@@ -2459,44 +2441,34 @@ static void set_machine(const char *name) {
 		if (private_cfg.machine.bas_dfn) {
 			private_cfg.machine.bas_dfn = 0;
 			xroar.machine_config->bas_dfn = 1;
-			if (xroar.machine_config->bas_rom) {
-				free(xroar.machine_config->bas_rom);
-			}
+			free(xroar.machine_config->bas_rom);
 			xroar.machine_config->bas_rom = private_cfg.machine.bas;
 			private_cfg.machine.bas = NULL;
 		}
 		if (private_cfg.machine.extbas_dfn) {
 			private_cfg.machine.extbas_dfn = 0;
 			xroar.machine_config->extbas_dfn = 1;
-			if (xroar.machine_config->extbas_rom) {
-				free(xroar.machine_config->extbas_rom);
-			}
+			free(xroar.machine_config->extbas_rom);
 			xroar.machine_config->extbas_rom = private_cfg.machine.extbas;
 			private_cfg.machine.extbas = NULL;
 		}
 		if (private_cfg.machine.altbas_dfn) {
 			private_cfg.machine.altbas_dfn = 0;
 			xroar.machine_config->altbas_dfn = 1;
-			if (xroar.machine_config->altbas_rom) {
-				free(xroar.machine_config->altbas_rom);
-			}
+			free(xroar.machine_config->altbas_rom);
 			xroar.machine_config->altbas_rom = private_cfg.machine.altbas;
 			private_cfg.machine.altbas = NULL;
 		}
 		if (private_cfg.machine.ext_charset_dfn) {
 			private_cfg.machine.ext_charset_dfn = 0;
-			if (xroar.machine_config->ext_charset_rom) {
-				free(xroar.machine_config->ext_charset_rom);
-			}
+			free(xroar.machine_config->ext_charset_rom);
 			xroar.machine_config->ext_charset_rom = private_cfg.machine.ext_charset;
 			private_cfg.machine.ext_charset = NULL;
 		}
 		if (private_cfg.machine.cart_dfn) {
 			private_cfg.machine.cart_dfn = 0;
 			xroar.machine_config->default_cart_dfn = 1;
-			if (xroar.machine_config->default_cart) {
-				free(xroar.machine_config->default_cart);
-			}
+			free(xroar.machine_config->default_cart);
 			xroar.machine_config->default_cart = private_cfg.machine.cart;
 			private_cfg.machine.cart = NULL;
 		}
@@ -2540,34 +2512,26 @@ static void set_cart(const char *name) {
 	}
 	if (cc) {
 		if (private_cfg.cart.description) {
-			if (cc->description) {
-				free(cc->description);
-			}
+			free(cc->description);
 			cc->description = private_cfg.cart.description;
 			private_cfg.cart.description = NULL;
 		}
 		if (private_cfg.cart.type) {
-			if (cc->type) {
-				free(cc->type);
-			}
+			free(cc->type);
 			cc->type = private_cfg.cart.type;
 			private_cfg.cart.type = NULL;
 		}
 		if (private_cfg.cart.rom_dfn) {
 			private_cfg.cart.rom_dfn = 0;
 			cc->rom_dfn = 1;
-			if (cc->rom) {
-				free(cc->rom);
-			}
+			free(cc->rom);
 			cc->rom = private_cfg.cart.rom;
 			private_cfg.cart.rom = NULL;
 		}
 		if (private_cfg.cart.rom2_dfn) {
 			private_cfg.cart.rom2_dfn = 0;
 			cc->rom2_dfn = 1;
-			if (cc->rom2) {
-				free(cc->rom2);
-			}
+			free(cc->rom2);
 			cc->rom2 = private_cfg.cart.rom2;
 			private_cfg.cart.rom2 = NULL;
 		}
@@ -2585,9 +2549,7 @@ static void set_cart(const char *name) {
 		}
 		for (unsigned i = 0; i < 4; i++) {
 			if (private_cfg.cart.mpi.slot_cart_name[i]) {
-				if (cc->mpi.slot_cart_name[i]) {
-					free(cc->mpi.slot_cart_name[i]);
-				}
+				free(cc->mpi.slot_cart_name[i]);
 				cc->mpi.slot_cart_name[i] = private_cfg.cart.mpi.slot_cart_name[i];
 				private_cfg.cart.mpi.slot_cart_name[i] = NULL;
 			}
@@ -2729,9 +2691,7 @@ static void cfg_mpi_load_cart(const char *arg) {
 	if (slot < 0 || slot > 3) {
 		LOG_MOD_WARN("xroar", "MPI: invalid slot '%d'\n", slot);
 	} else {
-		if (private_cfg.cart.mpi.slot_cart_name[slot]) {
-			free(private_cfg.cart.mpi.slot_cart_name[slot]);
-		}
+		free(private_cfg.cart.mpi.slot_cart_name[slot]);
 		private_cfg.cart.mpi.slot_cart_name[slot] = xstrdup(tmp);
 	}
 	slot++;
@@ -2774,24 +2734,20 @@ static void set_joystick(const char *name) {
 	// Apply any config to the current joystick config.
 	if (cur_joy_config) {
 		if (private_cfg.joy.description) {
-			if (cur_joy_config->description) {
-				free(cur_joy_config->description);
-			}
+			free(cur_joy_config->description);
 			cur_joy_config->description = private_cfg.joy.description;
 			private_cfg.joy.description = NULL;
 		}
 		for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
 			if (private_cfg.joy.axis[i]) {
-				if (cur_joy_config->axis_specs[i])
-					free(cur_joy_config->axis_specs[i]);
+				free(cur_joy_config->axis_specs[i]);
 				cur_joy_config->axis_specs[i] = private_cfg.joy.axis[i];
 				private_cfg.joy.axis[i] = NULL;
 			}
 		}
 		for (unsigned i = 0; i < JOYSTICK_NUM_BUTTONS; i++) {
 			if (private_cfg.joy.button[i]) {
-				if (cur_joy_config->button_specs[i])
-					free(cur_joy_config->button_specs[i]);
+				free(cur_joy_config->button_specs[i]);
 				cur_joy_config->button_specs[i] = private_cfg.joy.button[i];
 				private_cfg.joy.button[i] = NULL;
 			}
@@ -3016,16 +2972,12 @@ static void set_trap(const char *cond) {
 			private_cfg.debug.trap_def.count = NULL;
 		}
 		if (private_cfg.debug.trap_def.snap) {
-			if (cur_trap_def->snap) {
-				free(cur_trap_def->snap);
-			}
+			free(cur_trap_def->snap);
 			cur_trap_def->snap = private_cfg.debug.trap_def.snap;
 			private_cfg.debug.trap_def.snap = NULL;
 		}
 		if (private_cfg.debug.trap_def.timeout) {
-			if (cur_trap_def->timeout) {
-				free(cur_trap_def->timeout);
-			}
+			free(cur_trap_def->timeout);
 			cur_trap_def->timeout = private_cfg.debug.trap_def.timeout;
 			private_cfg.debug.trap_def.timeout = NULL;
 		}
