@@ -385,8 +385,7 @@ static int read_v1_snapshot(const char *filename) {
 				if (size < 1) break;
 				tmp = fs_read_uint8(fd);
 				tmp %= 4;
-				if (mc->architecture)
-					free(mc->architecture);
+				free(mc->architecture);
 				mc->architecture = xstrdup(old_arch_mapping[tmp]);
 				xroar_configure_machine(mc);
 				xroar.machine->reset(xroar.machine, RESET_HARD);
@@ -679,20 +678,15 @@ static int read_v1_snapshot(const char *filename) {
 					if (!cart_config) {
 						cart_config = cart_config_new();
 					}
-					if (cart_config->name)
-						free(cart_config->name);
+					free(cart_config->name);
 					cart_config->name = name;
-					if (cart_config->description)
-						free(cart_config->description);
+					free(cart_config->description);
 					cart_config->description = desc;
-					if (cart_config->type)
-						free(cart_config->type);
+					free(cart_config->type);
 					cart_config->type = type;
-					if (cart_config->rom)
-						free(cart_config->rom);
+					free(cart_config->rom);
 					cart_config->rom = rom;
-					if (cart_config->rom2)
-						free(cart_config->rom2);
+					free(cart_config->rom2);
 					cart_config->rom2 = rom2;
 					cart_config->becker_port = fs_read_uint8(fd);
 					cart_config->autorun = fs_read_uint8(fd);
