@@ -144,8 +144,7 @@ static void mc10_config_complete(struct machine_config *mc) {
 		}
 	}
 	mc->vdg_type = VDG_6847;
-	if (mc->architecture)
-		free(mc->architecture);
+	free(mc->architecture);
 	mc->architecture = xstrdup("mc10");
 
 	if (mc->ram_init == ANY_AUTO) {
