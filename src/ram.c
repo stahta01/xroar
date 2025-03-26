@@ -107,8 +107,7 @@ static void ram_free(struct part *p) {
 
 	if (ram->d) {
 		for (unsigned i = 0; i < ram->nbanks; i++) {
-			if (ram->d[i])
-				free(ram->d[i]);
+			free(ram->d[i]);
 		}
 		free(ram->d);
 	}
