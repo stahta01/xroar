@@ -180,8 +180,7 @@ static void joydev_js_physical_init(void) {
 			joy_name = "Joystick";
 		}
 		sds desc = sdscatprintf(sdsempty(), "%u: %s", i, joy_name);
-		if (jc->description)
-			free(jc->description);
+		free(jc->description);
 		jc->description = strdup(desc);
 		sdsfree(desc);
 		sdsfree(name);
@@ -192,8 +191,7 @@ static void joydev_js_physical_init(void) {
 		LOG_DEBUG(1, "%-7d ", (int)buf[0]);
 		for (unsigned a = 0; a <= 1; a++) {
 			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, a);
-			if (jc->axis_specs[a])
-				free(jc->axis_specs[a]);
+			free(jc->axis_specs[a]);
 			jc->axis_specs[a] = strdup(tmp);
 			sdsfree(tmp);
 		}
@@ -204,8 +202,7 @@ static void joydev_js_physical_init(void) {
 		LOG_DEBUG(1, "%-7d\n", (int)buf[0]);
 		for (unsigned b = 0; b <= 1; b++) {
 			sds tmp = sdscatprintf(sdsempty(), "physical:%u,%u", i, b);
-			if (jc->button_specs[b])
-				free(jc->button_specs[b]);
+			free(jc->button_specs[b]);
 			jc->button_specs[b] = strdup(tmp);
 			sdsfree(tmp);
 		}
