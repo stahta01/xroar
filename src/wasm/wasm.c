@@ -280,9 +280,7 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 			char *fn = data ? xstrdup((const char *)data) : NULL;
 			char *bn = fn ? basename(fn) : NULL;
 			EM_ASM_({ ui_update_tape_input_filename($0); }, bn);
-			if (fn) {
-				free(fn);
-			}
+			free(fn);
 		}
 		break;
 
@@ -299,9 +297,7 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 				char *fn = disk->filename ? xstrdup(disk->filename) : NULL;
 				char *bn = fn ? basename(fn) : NULL;
 				EM_ASM_({ ui_update_disk_info($0, $1, $2, $3, $4, $5); }, value, bn, disk->write_back, disk->write_protect, disk->num_cylinders, disk->num_heads);
-				if (fn) {
-					free(fn);
-				}
+				free(fn);
 			} else {
 				EM_ASM_({ ui_update_disk_info($0, null, 0, 0, -1, 0); }, value);
 			}
@@ -866,16 +862,12 @@ void wasm_set_machine_cart(const char *machine, const char *cart,
 	struct cart_config *cc = cart_config_by_name(cart);
 	if (cc) {
 		if (cart_rom) {
-			if (cc->rom) {
-				free(cc->rom);
-				cc->rom = NULL;
-			}
+			free(cc->rom);
+			cc->rom = NULL;
 			cc->rom = xstrdup(cart_rom);
 		}
-		if (cc->rom2) {
-			free(cc->rom2);
-			cc->rom2 = NULL;
-		}
+		free(cc->rom2);
+		cc->rom2 = NULL;
 		if (cart_rom2) {
 			cc->rom2 = xstrdup(cart_rom2);
 		}
