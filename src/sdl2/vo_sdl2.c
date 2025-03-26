@@ -499,10 +499,8 @@ static void vo_sdl_free(void *sptr) {
 
 	vo_render_free(vr);
 
-	if (vosdl->texture.pixels) {
-		free(vosdl->texture.pixels);
-		vosdl->texture.pixels = NULL;
-	}
+	free(vosdl->texture.pixels);
+	vosdl->texture.pixels = NULL;
 
 	// TODO: I used to have a note here that destroying the renderer caused
 	// a SEGV deep down in the video driver.  This doesn't seem to happen

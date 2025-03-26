@@ -249,9 +249,7 @@ static void *new(void *cfg) {
 failed:
 	if (aosdl) {
 		SDL_CloseAudioDevice(aosdl->device);
-		if (aosdl->fragment_buffer) {
-			free(aosdl->fragment_buffer);
-		}
+		free(aosdl->fragment_buffer);
 		free(aosdl);
 	}
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
