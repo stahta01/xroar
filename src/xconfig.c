@@ -171,8 +171,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			if (option->flags & XCONFIG_FLAG_CALL) {
 				option->dest.func_string(arg);
 			} else {
-				if (*(char **)object)
-					free(*(char **)object);
+				free(*(char **)object);
 				*(char **)object = xstrdup(arg);
 			}
 			break;
@@ -194,8 +193,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			break;
 		case XCONFIG_PART: {
 			const char *pname = lookup_part(arg, (char *)option->ref);
-			if (*(char **)object)
-				free(*(char **)object);
+			free(*(char **)object);
 			*(char **)object = NULL;
 			if (pname) {
 				*(char **)object = xstrdup(pname);
@@ -264,7 +262,7 @@ static _Bool unset_option(struct xconfig_option const *option, void *sptr) {
 	case XCONFIG_STRING:
 		if (option->flags & XCONFIG_FLAG_CALL) {
 			option->dest.func_string(NULL);
-		} else if (*(char **)object) {
+		} else {
 			free(*(char **)object);
 			*(char **)object = NULL;
 		}
@@ -622,7 +620,7 @@ int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl) {
 void xconfig_shutdown(struct xconfig_option const *options) {
 	for (size_t i = 0; options[i].type != XCONFIG_END; ++i) {
 		if (options[i].type == XCONFIG_STRING) {
-			if (!(options[i].flags & XCONFIG_FLAG_CALL) && *(char **)options[i].dest.object) {
+			if (!(options[i].flags & XCONFIG_FLAG_CALL)) {
 				free(*(char **)options[i].dest.object);
 				*(char **)options[i].dest.object = NULL;
 			}
