@@ -136,8 +136,7 @@ static void *new(void *cfg) {
 	return aopulse;
 
 failed:
-	if (aopulse->audio_buffer)
-		free(aopulse->audio_buffer);
+	free(aopulse->audio_buffer);
 	free(aopulse);
 	return NULL;
 }
