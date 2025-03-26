@@ -281,8 +281,7 @@ static void mc6801_free(struct part *p) {
 		mc6801_trace_free(cpu->tracer);
 	}
 #endif
-	if (cpu->rom)
-		free(cpu->rom);
+	free(cpu->rom);
 }
 
 static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
