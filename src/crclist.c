@@ -185,10 +185,8 @@ void crclist_print(void) {
 
 static void crclist_free(void *sptr) {
 	struct crclist *list = sptr;
-	if (list->name)
-		free(list->name);
-	if (list->list)
-		slist_free_full(list->list, (slist_free_func)free);
+	free(list->name);
+	slist_free_full(list->list, (slist_free_func)free);
 	free(list);
 }
 
