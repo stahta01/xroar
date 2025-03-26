@@ -418,10 +418,8 @@ struct cart_config *cart_config_deserialise(struct ser_handle *sh) {
 }
 
 static void deserialise_mpi_slot(struct cart_config *cc, struct ser_handle *sh, unsigned slot) {
-	if (cc->mpi.slot_cart_name[slot]) {
-		free(cc->mpi.slot_cart_name[slot]);
-		cc->mpi.slot_cart_name[slot] = NULL;
-	}
+	free(cc->mpi.slot_cart_name[slot]);
+	cc->mpi.slot_cart_name[slot] = NULL;
 	int tag;
 	while (!ser_error(sh) && (tag = ser_read_tag(sh)) > 0) {
 		switch (tag) {
@@ -495,13 +493,10 @@ struct cart_config *cart_config_by_name(const char *name) {
 			rom_cart_config = cart_config_new();
 			rom_cart_config->name = xstrdup("romcart");
 		}
-		if (rom_cart_config->description) {
-			free(rom_cart_config->description);
-		}
-		if (rom_cart_config->type) {
-			free(rom_cart_config->type);
-			rom_cart_config->type = NULL;
-		}
+		free(rom_cart_config->description);
+		rom_cart_config->description = NULL;
+		free(rom_cart_config->type);
+		rom_cart_config->type = NULL;
 		/* Make up a description from filename */
 		sds tmp_name = sdsnew(name);
 		char *bname = basename(tmp_name);
@@ -522,9 +517,7 @@ struct cart_config *cart_config_by_name(const char *name) {
 			rom_cart_config->description = xstrdup("ROM cartridge");
 		}
 		sdsfree(tmp_name);
-		if (rom_cart_config->rom) {
-			free(rom_cart_config->rom);
-		}
+		free(rom_cart_config->rom);
 		rom_cart_config->rom = xstrdup(name);
 		if (!rom_cart_config->type) {
 			rom_cart_config->type = xstrdup("rom");
@@ -575,10 +568,8 @@ static void cart_config_update_romcart(void) {
 	if (!cc) {
 		return;
 	}
-	if (cc->type) {
-		free(cc->type);
-		cc->type = NULL;
-	}
+	free(cc->type);
+	cc->type = NULL;
 	FILE *fd = fopen(rom_cart_config->rom, "rb");
 	if (fd) {
 		off_t fsize = fs_file_size(fd);
@@ -717,20 +708,13 @@ static void sdsfree_void(void *sptr) {
 }
 
 static void cart_config_free(struct cart_config *cc) {
-	if (cc->name)
-		free(cc->name);
-	if (cc->description)
-		free(cc->description);
-	if (cc->type)
-		free(cc->type);
-	if (cc->rom)
-		free(cc->rom);
-	if (cc->rom2)
-		free(cc->rom2);
+	free(cc->name);
+	free(cc->description);
+	free(cc->type);
+	free(cc->rom);
+	free(cc->rom2);
 	for (int i = 0; i < 4; i++) {
-		if (cc->mpi.slot_cart_name[i]) {
-			free(cc->mpi.slot_cart_name[i]);
-		}
+		free(cc->mpi.slot_cart_name[i]);
 	}
 	slist_free_full(cc->opts, (slist_free_func)sdsfree_void);
 	free(cc);
