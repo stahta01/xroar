@@ -148,9 +148,7 @@ static void *new(void *cfg) {
 	return aojack;
 
 failed:
-	if (aojack) {
-		free(aojack);
-	}
+	free(aojack);
 	return NULL;
 }
 
