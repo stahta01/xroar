@@ -235,10 +235,8 @@ void romlist_print(void) {
 
 static void romlist_free(void *sptr) {
 	struct romlist *list = sptr;
-	if (list->name)
-		free(list->name);
-	if (list->list)
-		slist_free_full(list->list, (slist_free_func)free);
+	free(list->name);
+	slist_free_full(list->list, (slist_free_func)free);
 	free(list);
 }
 
