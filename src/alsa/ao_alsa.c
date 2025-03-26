@@ -259,8 +259,7 @@ failed:
 		errstr = snd_strerror(err);
 	LOG_MOD_ERROR("alsa", "failed to initialise: %s\n", errstr);
 	if (aoalsa) {
-		if (aoalsa->audio_buffer)
-			free(aoalsa->audio_buffer);
+		free(aoalsa->audio_buffer);
 		free(aoalsa);
 	}
 	return NULL;
