@@ -185,7 +185,7 @@ static void dragon_config_complete_common(struct machine_config *mc) {
 		mc->vdg_type = VDG_6847;
 
 	if (mc->ram_init == ANY_AUTO) {
-		mc->ram_init = ram_init_pattern;
+		mc->ram_init = mc->ram < 512 ? ram_init_pattern : ram_init_random;
 	}
 
 	if (mc->keymap == ANY_AUTO) {
@@ -258,7 +258,7 @@ static void dragon_verify_ram_size(struct machine_config *mc) {
 	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
 
 	// Validate requested total RAM
-	if (mc->ram < 4 || mc->ram > 64) {
+	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512) {
 		mc->ram = is_dragon32 ? 32 : 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
@@ -268,8 +268,10 @@ static void dragon_verify_ram_size(struct machine_config *mc) {
 		mc->ram = 16;
 	} else if (mc->ram < 64) {
 		mc->ram = 32;
-	} else {
+	} else if (mc->ram < 512) {
 		mc->ram = 64;
+	} else {
+		mc->ram = 512;
 	}
 
 	// Pick RAM org based on requested total RAM if not specified
@@ -280,8 +282,10 @@ static void dragon_verify_ram_size(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
+		} else if (mc->ram < 512) {
 			mc->ram_org = RAM_ORG_64Kx1;
+		} else {
+			mc->ram_org = RAM_ORG(19, 19, 0);
 		}
 	}
 }
@@ -432,7 +436,11 @@ static void dragon_initialise_common(struct machine_dragon_common *md, struct ma
 	m->config = mc;
 
 	// SAM
-	part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
+	if (mc->ram < 512) {
+		part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
+	} else {
+		part_add_component(&m->part, part_create("SAMx8", NULL), "SAM");
+	}
 
 	// CPU
 	part_add_component(&m->part, part_create((mc->cpu == CPU_HD6309) ? "HD6309" : "MC6809", NULL), "CPU");
@@ -940,8 +948,10 @@ static void dragon_create_ram(struct machine_dragon_common *md) {
 	unsigned nbanks = mc->ram / bank_size;
 	if (nbanks < 1)
 		nbanks = 1;
-	if (nbanks > 2)
+	if (nbanks > 2 && mc->ram < 512)
 		nbanks = 2;
+	if (nbanks > 32)
+		nbanks = 32;
 
 	for (unsigned i = 0; i < nbanks; i++)
 		ram_add_bank(ram, i);

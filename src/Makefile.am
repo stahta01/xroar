@@ -110,7 +110,8 @@ endif
 
 if PART_MC6883
 xroar_SOURCES += \
-	mc6883.c mc6883.h
+	mc6883.c mc6883.h \
+	samx8.c
 endif
 
 if PART_TCC1014

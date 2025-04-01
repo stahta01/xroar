@@ -2,7 +2,7 @@
  *
  *  \brief Dragon 64 support.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -191,14 +191,16 @@ static void dragon64_config_complete(struct machine_config *mc) {
 	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
 
 	// Validate requested total RAM
-	if (mc->ram < 16 || mc->ram > 64) {
+	if ((mc->ram < 16 || mc->ram > 64) && mc->ram != 512) {
 		mc->ram = 64;
 	} else if (mc->ram < 32) {
 		mc->ram = 16;
 	} else if (mc->ram < 64) {
 		mc->ram = 32;
-	} else {
+	} else if (mc->ram < 512) {
 		mc->ram = 64;
+	} else {
+		mc->ram = 512;
 	}
 
 	// Pick RAM org based on requested total RAM if not specified
@@ -207,8 +209,10 @@ static void dragon64_config_complete(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
+		} else if (mc->ram < 512) {
 			mc->ram_org = RAM_ORG_64Kx1;
+		} else {
+			mc->ram_org = RAM_ORG(19, 19, 0);
 		}
 	}
 
