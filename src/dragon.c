@@ -492,6 +492,8 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 		return 0;
 	}
 
+	md->SAM->CPUD = &md->CPU->D;
+
 	// Register as a messenger client
 	md->msgr_client_id = messenger_client_register();
 
@@ -537,7 +539,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
-	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, mc6883_mem_cycle, md->SAM);
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, md->SAM->mem_cycle, md->SAM);
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
@@ -1011,7 +1013,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	if (md->cart && md->cart->reset) {
 		md->cart->reset(md->cart, hard);
 	}
-	mc6883_reset(md->SAM);
+	md->SAM->reset(md->SAM);
 	md->CPU->reset(md->CPU);
 	mc6847_reset(md->VDG);
 	tape_reset(md->tape_interface);
@@ -1266,7 +1268,7 @@ static inline void advance_clock(struct machine_dragon_common *md, int ncycles);
 static void read_byte(struct machine_dragon_common *md, unsigned A);
 static void write_byte(struct machine_dragon_common *md, unsigned A);
 
-// The SAM's mc6883_mem_cycle() is set up to call cpu_cycle(), which does the
+// The SAM's mem_cycle() is set up to call cpu_cycle(), which does the
 // following:
 
 // - calls advance_clock() to indicate time has passed
@@ -1312,7 +1314,7 @@ static inline void advance_clock(struct machine_dragon_common *md, int ncycles) 
 static void dragon_cpu_cycle(struct machine_dragon_common *md, _Bool RnW,
 			     uint16_t A, unsigned Zrow, unsigned Zcol) {
 	md->Dread = 0xff;
-	if (RnW) {
+	if (md->SAM->nWE) {
 		if (md->SAM->RAS0) {
 			ram_d8(md->RAM, 1, 0, Zrow, Zcol, &md->Dread);
 		}
@@ -1351,7 +1353,7 @@ static void dragon_cpu_cycle(struct machine_dragon_common *md, _Bool RnW,
 #endif
 	}
 
-	if (!RnW) {
+	if (!md->SAM->nWE) {
 		if (md->SAM->RAS0) {
 			ram_d8(md->RAM, 0, 0, Zrow, Zcol, &md->CPU->D);
 		}
@@ -1445,7 +1447,7 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 	struct machine_dragon_common *md = sptr;
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
-		int n = mc6883_vdg_bytes(md->SAM, nbytes);
+		int n = md->SAM->vdg_bytes(md->SAM, nbytes);
 		const uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
@@ -1470,7 +1472,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	_Bool EnI = pia_vdg_mode & 0x10;
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
-		int n = mc6883_vdg_bytes(md->SAM, nbytes);
+		int n = md->SAM->vdg_bytes(md->SAM, nbytes);
 		const uint8_t *Vp = ram_a8(md->RAM, 0, md->SAM->Vrow, md->SAM->Vcol);
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
@@ -1502,7 +1504,7 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
 	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
 	md->clock_inhibit = 1;
-	mc6883_mem_cycle(md->SAM, 1, A);
+	md->SAM->mem_cycle(md->SAM, 1, A);
 	md->clock_inhibit = 0;
 	return md->CPU->D;
 }
@@ -1513,7 +1515,7 @@ static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
 	md->CPU->D = D;
 	md->clock_inhibit = 1;
-	mc6883_mem_cycle(md->SAM, 0, A);
+	md->SAM->mem_cycle(md->SAM, 0, A);
 	md->clock_inhibit = 0;
 }
 
@@ -1657,7 +1659,7 @@ static void pia1b_control_postwrite(void *sptr) {
 static void vdg_hs(void *sptr, _Bool level) {
 	struct machine_dragon_common *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level);
-	mc6883_vdg_hsync(md->SAM, level);
+	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
 		_Bool GM0 = p1bval & 0x10;
@@ -1670,7 +1672,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 	struct machine_dragon_common *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, !level);
-	mc6883_vdg_hsync(md->SAM, level);
+	md->SAM->vdg_hsync(md->SAM, level);
 	// PAL uses palletised output so this wouldn't technically matter, but
 	// user is able to cycle to a faux-NTSC colourscheme, so update phase
 	// here as in NTSC code:
@@ -1685,7 +1687,7 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 static void vdg_fs(void *sptr, _Bool level) {
 	struct machine_dragon_common *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
-	mc6883_vdg_fsync(md->SAM, level);
+	md->SAM->vdg_fsync(md->SAM, level);
 	if (level) {
 		sound_update(md->snd);
 		md->frame--;
@@ -1717,7 +1719,7 @@ static void coco_print_byte(void *sptr) {
 		return;
 	}
 	// Not ROM?
-	if (mc6883_decode(md->SAM, 1, md->CPU->reg_pc) != 2) {
+	if (md->SAM->decode(md->SAM, 1, md->CPU->reg_pc) != 2) {
 		return;
 	}
 	int byte = MC6809_REG_A(md->CPU);

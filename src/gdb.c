@@ -951,7 +951,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 #ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(query, "sam") && gip->sam) {
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.sam\n");
-			sprintf(packet, "%04x", mc6883_get_register(gip->sam));
+			sprintf(packet, "%04x", gip->sam->get_register(gip->sam));
 			send_packet(gip, packet, 4);
 		}
 		return;
@@ -975,7 +975,7 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 		set += 6;
 #ifdef WANT_MACHINE_ARCH_DRAGON
 		if (0 == strcmp(set, "sam") && gip->sam) {
-			mc6883_set_register(gip->sam, hex16(args));
+			gip->sam->set_register(gip->sam, hex16(args));
 			send_packet_string(gip, "OK");
 			return;
 		}

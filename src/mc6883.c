@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -212,6 +212,7 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(33, struct MC6883, Zcol),
 	SER_ID_STRUCT_ELEM(34, struct MC6883, Vrow),
 	SER_ID_STRUCT_ELEM(35, struct MC6883, Vcol),
+	SER_ID_STRUCT_ELEM(37, struct MC6883, nWE),
 	SER_ID_STRUCT_ELEM(4, struct MC6883, RAS0),
 	SER_ID_STRUCT_ELEM(31, struct MC6883, RAS1),
 
@@ -261,6 +262,15 @@ static void update_from_register(struct MC6883_private *);
 static struct part *mc6883_allocate(void);
 static _Bool mc6883_finish(struct part *p);
 
+static void mc6883_reset(struct MC6883 *);
+static void mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
+static unsigned mc6883_decode(struct MC6883 *, _Bool RnW, uint16_t A);
+static void mc6883_vdg_hsync(struct MC6883 *, _Bool level);
+static void mc6883_vdg_fsync(struct MC6883 *, _Bool level);
+static int mc6883_vdg_bytes(struct MC6883 *, int nbytes);
+static void mc6883_set_register(struct MC6883 *, unsigned value);
+static unsigned mc6883_get_register(struct MC6883 *);
+
 static const struct partdb_entry_funcs mc6883_funcs = {
 	.allocate = mc6883_allocate,
 	.finish = mc6883_finish,
@@ -279,6 +289,15 @@ static struct part *mc6883_allocate(void) {
 
 	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
+
+	samp->reset = mc6883_reset;
+	samp->mem_cycle = mc6883_mem_cycle;
+	samp->decode = mc6883_decode;
+	samp->vdg_hsync = mc6883_vdg_hsync;
+	samp->vdg_fsync = mc6883_vdg_fsync;
+	samp->vdg_bytes = mc6883_vdg_bytes;
+	samp->set_register = mc6883_set_register;
+	samp->get_register = mc6883_get_register;
 
 	// Set up VDG address divider sources.  Set initial Vprev=7 so that first
 	// call to reset() changes them.
@@ -365,7 +384,7 @@ static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void mc6883_reset(struct MC6883 *samp) {
+static void mc6883_reset(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 
 	mc6883_set_register(samp, 0);
@@ -393,55 +412,76 @@ void mc6883_reset(struct MC6883 *samp) {
 static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
 	_Bool fast_cycle;
 	_Bool want_register_update = 0;
 
-	if ((A >> 8) == 0xff) {
-		// I/O area
-		samp->S = io_S[(A >> 5) & 7];
-		samp->RAS0 = samp->RAS1 = 0;
-		fast_cycle = sam->mpu_rate_fast || (samp->S != 4 && sam->mpu_rate_ad);
-		if (samp->S == 7 && !RnW && A >= 0xffc0) {
-			if (A <= 0xffc5 || (A >= 0xffda && A <= 0xffdd)) {
-				// might affect display, so update VDG
-				DELEGATE_CALL(samp->vdg_update);
-			}
-			switch ((A >> 1) & 0xf) {
-			default:
-			case 0x0: sam->V = (sam->V & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
-			case 0x1: sam->V = (sam->V & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
-			case 0x2: sam->V = (sam->V & ~(1 <<  2)) | ((A & 0x1) <<  2); break;
-			case 0x3: sam->F = (sam->F & ~(1 <<  9)) | ((A & 0x1) <<  9); break;
-			case 0x4: sam->F = (sam->F & ~(1 << 10)) | ((A & 0x1) << 10); break;
-			case 0x5: sam->F = (sam->F & ~(1 << 11)) | ((A & 0x1) << 11); break;
-			case 0x6: sam->F = (sam->F & ~(1 << 12)) | ((A & 0x1) << 12); break;
-			case 0x7: sam->F = (sam->F & ~(1 << 13)) | ((A & 0x1) << 13); break;
-			case 0x8: sam->F = (sam->F & ~(1 << 14)) | ((A & 0x1) << 14); break;
-			case 0x9: sam->F = (sam->F & ~(1 << 15)) | ((A & 0x1) << 15); break;
-			case 0xa: sam->P = A & 0x1; break;
-			case 0xb: sam->R = (sam->R & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
-			case 0xc: sam->R = (sam->R & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
-			case 0xd: sam->M = (sam->M & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
-			case 0xe: sam->M = (sam->M & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
-			case 0xf: sam->TY = A & 0x1; break;
-			}
-			want_register_update = 1;
+	_Bool is_FFxx    = ((A >> 8) & 0xff) == 0xff;
+	_Bool is_IO0     = is_FFxx && ((A >> 5) & 0x7) == 0x0;  // FF0x and FF1x
+	_Bool is_IO1     = is_FFxx && ((A >> 5) & 0x7) == 0x1;  // FF2x and FF3x
+	_Bool is_IO2     = is_FFxx && ((A >> 5) & 0x7) == 0x2;  // FF4x and FF5x
+	_Bool is_SAM_REG = is_FFxx && ((A >> 5) & 0x7) == 0x6;  // FFCx and FFDx
+	_Bool is_IRQ_VEC = is_FFxx && ((A >> 5) & 0x7) == 0x7;  // FFEx and FFFx
+
+	_Bool is_8xxx = ((A >> 13) & 0x7) == 0x4;
+	_Bool is_Axxx = ((A >> 13) & 0x7) == 0x5;
+	_Bool is_Cxxx = ((A >> 14) & 0x3) == 0x3 && !is_FFxx;
+	_Bool is_upper_32K = is_8xxx || is_Axxx || is_Cxxx;
+
+	_Bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
+
+	if (is_IO0) samp->S = 0x4;
+	else if (is_IO1) samp->S = 0x5;
+	else if (is_IO2) samp->S = 0x6;
+	else if (is_IRQ_VEC) samp->S = 0x2;
+	else if (is_FFxx) samp->S = 0x7;
+	else if (is_upper_32K && sam->TY && RnW) samp->S = 0x0;
+	else if (is_8xxx) samp->S = 0x1;
+	else if (is_Axxx) samp->S = 0x2;
+	else if (is_Cxxx) samp->S = 0x3;
+	else if (RnW) samp->S = 0x0;
+	else samp->S = 0x7;
+
+	samp->nWE = is_RAM ? RnW : 1;
+	samp->RAS0 = samp->RAS1 = 0;
+
+	fast_cycle = (sam->R & 0x2) || (sam->R == 0x1 && !(is_RAM || is_IO0));
+
+	if (is_SAM_REG && !RnW) {
+		if (A <= 0xffc5 || (A >= 0xffda && A <= 0xffdd)) {
+			// might affect display, so update VDG
+			DELEGATE_CALL(samp->vdg_update);
 		}
-	} else if ((A & 0x8000) && !sam->TY) {
-		samp->S = data_S[A >> 13];
-		samp->RAS0 = samp->RAS1 = 0;
-		fast_cycle = sam->mpu_rate_fast || sam->mpu_rate_ad;
-	} else {
-		samp->S = RnW ? 0 : data_S[A >> 13];
-		samp->RAS1 = A & sam->ram_ras1_bit;
-		samp->RAS0 = !samp->RAS1;
+		switch ((A >> 1) & 0xf) {
+		default:
+		case 0x0: sam->V = (sam->V & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+		case 0x1: sam->V = (sam->V & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+		case 0x2: sam->V = (sam->V & ~(1 <<  2)) | ((A & 0x1) <<  2); break;
+		case 0x3: sam->F = (sam->F & ~(1 <<  9)) | ((A & 0x1) <<  9); break;
+		case 0x4: sam->F = (sam->F & ~(1 << 10)) | ((A & 0x1) << 10); break;
+		case 0x5: sam->F = (sam->F & ~(1 << 11)) | ((A & 0x1) << 11); break;
+		case 0x6: sam->F = (sam->F & ~(1 << 12)) | ((A & 0x1) << 12); break;
+		case 0x7: sam->F = (sam->F & ~(1 << 13)) | ((A & 0x1) << 13); break;
+		case 0x8: sam->F = (sam->F & ~(1 << 14)) | ((A & 0x1) << 14); break;
+		case 0x9: sam->F = (sam->F & ~(1 << 15)) | ((A & 0x1) << 15); break;
+		case 0xa: sam->P = A & 0x1; break;
+		case 0xb: sam->R = (sam->R & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+		case 0xc: sam->R = (sam->R & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+		case 0xd: sam->M = (sam->M & ~(1 <<  0)) | ((A & 0x1) <<  0); break;
+		case 0xe: sam->M = (sam->M & ~(1 <<  1)) | ((A & 0x1) <<  1); break;
+		case 0xf: sam->TY = A & 0x1; break;
+		}
+		want_register_update = 1;
+	}
+
+	if (is_RAM) {
+		samp->RAS1 = is_RAM && A & sam->ram_ras1_bit;
+		samp->RAS0 = is_RAM && !samp->RAS1;
 		samp->Zrow = RAM_TRANSLATE_ROW(A);
 		samp->Zcol = RAM_TRANSLATE_COL(A);
-		fast_cycle = sam->mpu_rate_fast;
 	}
 
 	if (!sam->running_fast) {
@@ -485,7 +525,7 @@ void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 // Just the address decode from mc6883_mem_cycle().  Used to verify that a
 // breakpoint refers to ROM.
 
-unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
+static unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
 	const struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if ((A >> 8) == 0xff) {
 		// I/O area
@@ -519,7 +559,7 @@ static void vcounter_set(struct MC6883_private *sam, int i, int val) {
 	}
 }
 
-void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
+static void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (level)
 		return;
@@ -562,7 +602,7 @@ static inline void vcounter_reset(struct MC6883_private *sam, int i) {
 	sam->vcounter[i].output = 0;
 }
 
-void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
+static void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (!level) {
 		return;
@@ -588,7 +628,7 @@ void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
 // output, thus advancing bit 4.  This in turn alters the input to the Y
 // divider.
 
-int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
+static int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 
 	// In fast mode, there's no time to latch video RAM, so just point at
@@ -596,7 +636,7 @@ int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	// accurate, as this function is called a lot less frequently than the
 	// CPU address changes.
 	uint16_t b3_0 = sam->vcounter[VC_B3_0].value;
-	uint16_t V = (sam->vcounter[VC_B15_5].value << 5) | (sam->vcounter[VC_B4].value << 4) | b3_0;
+	uint32_t V = (sam->vcounter[VC_B15_5].value << 5) | (sam->vcounter[VC_B4].value << 4) | b3_0;
 	if (sam->mpu_rate_fast) {
 		samp->Vrow = samp->Zrow;
 		samp->Vcol = samp->Zcol;
@@ -625,7 +665,7 @@ int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	return nbytes;
 }
 
-void mc6883_set_register(struct MC6883 *samp, unsigned int value) {
+static void mc6883_set_register(struct MC6883 *samp, unsigned value) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	sam->V = value & 7;
 	sam->F = (value << 6) & 0xfe00;
@@ -636,7 +676,7 @@ void mc6883_set_register(struct MC6883 *samp, unsigned int value) {
 	update_from_register(sam);
 }
 
-unsigned int mc6883_get_register(struct MC6883 *samp) {
+static unsigned mc6883_get_register(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	unsigned value = sam->V & 7;
 	value |= (sam->F & 0xfe00) >> 6;

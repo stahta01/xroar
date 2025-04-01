@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2025 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -34,20 +34,24 @@ struct MC6883 {
 	unsigned Vrow;
 	unsigned Vcol;
 
+	_Bool nWE;
 	_Bool RAS0;
 	_Bool RAS1;
 
 	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 	DELEGATE_T0(void) vdg_update;
-};
 
-void mc6883_reset(struct MC6883 *);
-void mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
-unsigned mc6883_decode(struct MC6883 *, _Bool RnW, uint16_t A);
-void mc6883_vdg_hsync(struct MC6883 *, _Bool level);
-void mc6883_vdg_fsync(struct MC6883 *, _Bool level);
-int mc6883_vdg_bytes(struct MC6883 *, int nbytes);
-void mc6883_set_register(struct MC6883 *, unsigned int value);
-unsigned int mc6883_get_register(struct MC6883 *);
+	void (*reset)(struct MC6883 *);
+	void (*mem_cycle)(void *, _Bool RnW, uint16_t A);
+	unsigned (*decode)(struct MC6883 *, _Bool RnW, uint16_t A);
+	void (*vdg_fsync)(struct MC6883 *, _Bool level);
+	void (*vdg_hsync)(struct MC6883 *, _Bool level);
+	int (*vdg_bytes)(struct MC6883 *, int nbytes);
+	void (*set_register)(struct MC6883 *, unsigned value);
+	unsigned (*get_register)(struct MC6883 *);
+
+	// Not used by real MC6883, may be required by some replacements:
+	uint8_t *CPUD;
+};
 
 #endif

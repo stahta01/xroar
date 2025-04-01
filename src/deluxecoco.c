@@ -435,7 +435,7 @@ static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 	struct machine_deluxecoco *mdp = sptr;
 	struct machine_dragon_common *md = &mdp->machine_dragon;
 	mc6821_set_cx1(&md->PIA0->a, level);
-	mc6883_vdg_hsync(md->SAM, level);
+	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
 		_Bool GM0 = p1bval & 0x10;
@@ -451,7 +451,7 @@ static void deluxecoco_vdg_fs(void *sptr, _Bool level) {
 	struct machine_deluxecoco *mdp = sptr;
 	struct machine_dragon_common *md = &mdp->machine_dragon;
 	mc6821_set_cx1(&md->PIA0->b, level);
-	mc6883_vdg_fsync(md->SAM, level);
+	md->SAM->vdg_fsync(md->SAM, level);
 	if (level) {
 		sound_update(md->snd);
 		md->frame--;
