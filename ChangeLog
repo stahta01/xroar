@@ -1,6 +1,7 @@
  * Trap-triggered traces now include trap instruction
  * SDL: don't disable screensaver in windowed mode [Grégori Harbs]
  * Windows: explicitly map Pause in automatic keyboard lang [Grégori Harbs]
+ * SAMx8 support (specify -ram 512 for a Dragon 64)
 
 Version 1.8.2, Fri 14 Feb 2025
 
