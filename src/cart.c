@@ -276,6 +276,14 @@ static struct cart_fingerprint cart_special[] = {
 		.no_autorun = 1,
 	},
 
+	{
+		.name = "DOS-400 (Prológica)",
+		.size = 0x2000,
+		.crc32 = 0xe9ad60a0,
+		.type = "rsdos",
+		.no_autorun = 1,
+	},
+
 	// IDE cartridges
 
 	{
@@ -546,6 +554,8 @@ struct cart_config *cart_find_working_dos(struct machine_config *mc) {
 	} else {
 		if (xroar.cfg.becker.prefer && (tmp = romlist_find("@rsdos_becker"))) {
 			cc = cart_config_by_name("becker");
+		} else if (strcmp(mc->name, "cp400") == 0 && (tmp = romlist_find("@cp450"))) {
+			cc = cart_config_by_name("cp450");
 		} else if ((tmp = romlist_find("@rsdos"))) {
 			cc = cart_config_by_name("rsdos");
 		} else if (!xroar.cfg.becker.prefer && (tmp = romlist_find("@rsdos_becker"))) {

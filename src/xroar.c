@@ -517,6 +517,14 @@ static char const * const default_config[] = {
 	"extbas @mx1600ext",
 	"tv-type pal-m",
 	"ram 64",
+	// Prológica CP-400
+	"machine cp400",
+	"machine-desc 'Prológica CP-400'",
+	"machine-arch coco",
+	"bas @cp400",
+	"extbas @cp400ext",
+	"tv-type pal-m",
+	"ram 64",
 #endif
 
 #ifdef WANT_MACHINE_ARCH_MC10
@@ -558,6 +566,11 @@ static char const * const default_config[] = {
 	"cart-rom @rsdos_becker",
 	"cart-becker",
 #endif
+	// CP450
+	"cart cp450",
+	"cart-desc 'Prológica CP-450'",
+	"cart-type rsdos",
+	"cart-rom @cp450",
 	// Games Master Cartridge
 	"cart gmc",
 	"cart-desc 'Games Master Cartridge'",
@@ -658,6 +671,9 @@ static char const * const default_config[] = {
 	// MX-1600 and zephyr-patched version
 	"romlist mx1600=mx1600bas,mx1600bas_zephyr",
 	"romlist mx1600ext=mx1600extbas",
+	// CP-400
+	"romlist cp400=cp400bas",
+	"romlist cp400ext=cp400ext",
 #endif
 
 #ifdef WANT_MACHINE_ARCH_COCO3
@@ -683,6 +699,7 @@ static char const * const default_config[] = {
 	"romlist dragondos_compat=@dosplus,@superdos,@dragondos,@cumana",
 	// RSDOS
 	"romlist rsdos=disk11,disk10",
+	"romlist cp450=cp450dsk,@rsdos",
 	// Delta
 	"romlist delta=delta2,delta1a,delta19,delta,deltados,'Premier Micros - DeltaDOS'",
 #ifndef HAVE_WASM
@@ -722,11 +739,13 @@ static char const * const default_config[] = {
 	"crclist bas12=0x54368805",
 	"crclist bas13=0xd8f4d15e",
 	"crclist mx1600=0xd918156e,0xd11b1c96",  // 2nd is zephyr-patched
-	"crclist coco=@bas13,@bas12,@bas11,@bas10,@mx1600",
+	"crclist cp400=0x0b2903d4",
+	"crclist coco=@bas13,@bas12,@bas11,@bas10,@mx1600,@cp400",
 	"crclist extbas10=0xe031d076,0x6111a086",  // 2nd is corrupt dump
 	"crclist extbas11=0xa82a6254",
 	"crclist mx1600ext=0x322a3d58",
-	"crclist cocoext=@extbas11,@extbas10,@mx1600ext",
+	"crclist cp400ext=0x114accbc",
+	"crclist cocoext=@extbas11,@extbas10,@mx1600ext,@cp400ext",
 	"crclist coco_combined=@mx1600",
 	"crclist deluxecoco=0x1cce231e",
 #endif
