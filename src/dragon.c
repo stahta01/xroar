@@ -636,7 +636,8 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 		if (!palette) {
 			palette = vdg_palette_by_name("ideal");
 		}
-		DELEGATE_SAFE_CALL(md->vo->set_cmp_lead_lag, 0., 100.);
+		// Lead/lag 90° (Dragon; LM1889N) or 100° (CoCo; MC1372)
+		DELEGATE_SAFE_CALL(md->vo->set_cmp_lead_lag, 0., md->is_dragon ? 90. : 100.);
 		for (int c = 0; c < NUM_VDG_COLOURS; c++) {
 			float y = palette->palette[c].y;
 			float chb = palette->palette[c].chb;
