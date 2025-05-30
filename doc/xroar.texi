@@ -752,7 +752,7 @@ as picking the ``S-Video'' TV input.
 
 @item Simple (2-bit LUT)@
 
-Gives a very course 4-colour rendition of NTSC artefact colours between black &
+Gives a very coarse 4-colour rendition of NTSC artefact colours between black &
 white pixels only.
 
 @item 5-bit LUT@
