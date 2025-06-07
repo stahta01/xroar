@@ -544,9 +544,6 @@ dragon64 -cart mydos}.  Specifying @option{-no-machine-cart} will prevent the
 usual attempt to automatically find a disk controller cartridge for a machine.
 Specify @option{-cart help} for a list of profiles.
 
-There are no cartridges usable with the MC-10/Alice yet (the 16K expansion is
-technically a cartridge, but XRoar currently emulates that specially).
-
 @c
 
 @node Running programs
