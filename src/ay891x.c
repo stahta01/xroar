@@ -288,21 +288,21 @@ static void update_reg(struct AY891X_ *psg_, unsigned address) {
 	switch (address) {
 
 	case 0x0: // Channel A Tone Period, 8-BIT Fine Tune
-	case 0x1: // Channel A Tone Period, 4-BIT Course Tune
+	case 0x1: // Channel A Tone Period, 4-BIT Coarse Tune
 		psg_->tone_period[0] = ((psg_->regs[1] & 0xf) << 8) | psg_->regs[0];
 		if (psg_->tone_period[0] == 0)
 			psg_->tone_period[0] = 1;
 		break;
 
 	case 0x2: // Channel B Tone Period, 8-BIT Fine Tune
-	case 0x3: // Channel B Tone Period, 4-BIT Course Tune
+	case 0x3: // Channel B Tone Period, 4-BIT Coarse Tune
 		psg_->tone_period[1] = ((psg_->regs[3] & 0xf) << 8) | psg_->regs[2];
 		if (psg_->tone_period[1] == 0)
 			psg_->tone_period[1] = 1;
 		break;
 
 	case 0x4: // Channel C Tone Period, 8-BIT Fine Tune
-	case 0x5: // Channel C Tone Period, 4-BIT Course Tune
+	case 0x5: // Channel C Tone Period, 4-BIT Coarse Tune
 		psg_->tone_period[2] = ((psg_->regs[5] & 0xf) << 8) | psg_->regs[4];
 		if (psg_->tone_period[2] == 0)
 			psg_->tone_period[2] = 1;
@@ -374,7 +374,7 @@ static void update_reg(struct AY891X_ *psg_, unsigned address) {
 		break;
 
 	case 0xb: // Envelope Period, 8-BIT Fine Tune
-	case 0xc: // Envelope Period, 8-BIT Course Tune
+	case 0xc: // Envelope Period, 8-BIT Coarse Tune
 		psg_->envelope_period = (psg_->regs[0xc] << 8) | (psg_->regs[0xb]);
 		psg_->envelope_period <<= 1;
 		break;
