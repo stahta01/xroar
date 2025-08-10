@@ -438,6 +438,12 @@ static char const * const default_config[] = {
 	"ext-charset @dragon200e_charset",
 	"tv-type pal",
 	"ram 64",
+	// Dragon 64 with SAMx8
+	"machine dragonx8",
+	"machine-desc 'Dragon 64 + SAMx8 (512K)'",
+	"machine-arch dragon64",
+	"tv-type pal",
+	"ram 512",
 	// CoCo
 	"machine coco",
 	"machine-desc 'Tandy CoCo (PAL)'",
