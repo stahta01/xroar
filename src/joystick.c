@@ -1024,6 +1024,8 @@ struct joystick_control *joystick_configure_mouse_axis(struct ui_interface *ui,
 
 struct joystick_control *joystick_configure_mouse_button(struct ui_interface *ui,
 							 char *spec, unsigned jbutton) {
+	if (jbutton == 1)
+		jbutton = 2;
 	if (spec && *spec)
 		jbutton = strtol(spec, NULL, 0) - 1;
 
