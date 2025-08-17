@@ -760,13 +760,12 @@ static void wd279x_state_machine(void *sptr) {
 
 
 		case WD279X_state_read_sector_2:
-			if (fdc->status_register & STATUS_DRQ) {
-				fdc->status_register |= STATUS_LOST_DATA;
-				if (logging.debug_fdc & LOG_FDC_DATA)
-					log_hexdump_flag(fdc->log_rsec_hex);
-				//RESET_DRQ(fdc);  // XXX
-			}
 			if (fdc->bytes_left > 0) {
+				if (fdc->status_register & STATUS_DRQ) {
+					fdc->status_register |= STATUS_LOST_DATA;
+					if (logging.debug_fdc & LOG_FDC_DATA)
+						log_hexdump_flag(fdc->log_rsec_hex);
+				}
 				fdc->data_register = wd279x_read_byte(fdc);
 				if (logging.debug_fdc & LOG_FDC_DATA)
 					log_hexdump_byte(fdc->log_rsec_hex, fdc->data_register);
