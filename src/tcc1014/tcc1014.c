@@ -135,7 +135,6 @@ struct TCC1014_private {
 
 	struct {
 		struct event update_event;
-		event_ticks last_update;
 		int counter;
 	} timer;
 
@@ -248,6 +247,9 @@ struct TCC1014_private {
 
 	unsigned irq_state;
 	unsigned firq_state;
+	unsigned IL0_state;
+	unsigned IL1_state;
+	unsigned IL2_state;
 
 	// Flags
 	_Bool inverted_text;
@@ -324,7 +326,7 @@ static struct ser_struct ser_struct_tcc1014[] = {
 	SER_ID_STRUCT_ELEM(16, struct TCC1014_private, scanline),
 
 	SER_ID_STRUCT_TYPE(17, ser_type_event, struct TCC1014_private, timer.update_event),
-	SER_ID_STRUCT_TYPE(18, ser_type_tick, struct TCC1014_private, timer.last_update),
+	// 18 was timer.last_update, no longer required
 	SER_ID_STRUCT_ELEM(19, struct TCC1014_private, timer.counter),
 
 	// 20 was vram_g_data, now local to render_scanline()
@@ -340,6 +342,9 @@ static struct ser_struct ser_struct_tcc1014[] = {
 
 	SER_ID_STRUCT_ELEM(28, struct TCC1014_private, irq_state),
 	SER_ID_STRUCT_ELEM(29, struct TCC1014_private, firq_state),
+	SER_ID_STRUCT_ELEM(54, struct TCC1014_private, IL0_state),
+	SER_ID_STRUCT_ELEM(55, struct TCC1014_private, IL1_state),
+	SER_ID_STRUCT_ELEM(56, struct TCC1014_private, IL2_state),
 
 	SER_ID_STRUCT_ELEM(30, struct TCC1014_private, inverted_text),
 
@@ -689,6 +694,20 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct TCC1014 *gimep = sptr;
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 
+	// Edge detect IL2..0
+	if (gimep->IL2 && !gime->IL2_state) {
+		SET_INTERRUPT(gime, INT_EI2);
+	}
+	gime->IL2_state = gimep->IL2 ? INT_EI2 : 0;
+	if (gimep->IL1 && !gime->IL1_state) {
+		SET_INTERRUPT(gime, INT_EI1);
+	}
+	gime->IL1_state = gimep->IL1 ? INT_EI1 : 0;
+	if (gimep->IL0 && !gime->IL0_state) {
+		SET_INTERRUPT(gime, INT_EI0);
+	}
+	gime->IL0_state = gimep->IL0 ? INT_EI0 : 0;
+
 	gimep->S = 7;
 	gimep->RAS = 0;
 
@@ -752,15 +771,11 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			if (A == 0xff92) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->irq_state;
 				gime->irq_state = 0;
-				if (gime->timer.counter == 0) {
-					SET_INTERRUPT(gime, INT_TMR);
-				}
+				gime->public.IRQ = 0;
 			} else if (A == 0xff93) {
 				*gimep->CPUD = (*gimep->CPUD & ~0x3f) | gime->firq_state;
 				gime->firq_state = 0;
-				if (gime->timer.counter == 0) {
-					SET_INTERRUPT(gime, INT_TMR);
-				}
+				gime->public.FIRQ = 0;
 			}
 		}
 
@@ -795,13 +810,9 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		gimep->S = 0;
 	}
 
-	// Interrupts based on external inputs.  This also updates IRQ/FIRQ
-	// outputs based on enable registers which may have been changed.
-	unsigned set_int = (gimep->IL1 ? INT_EI1 : 0) | (gimep->IL0 ? INT_EI0 : 0);
-	SET_INTERRUPT(gime, set_int);
-
 	int ncycles = gime->R1 ? 8 : 16;
 	DELEGATE_CALL(gimep->cpu_cycle, ncycles, RnW, A);
+
 }
 
 // Just the address decode from tcc1014_mem_cycle().  Used to verify that a
@@ -894,6 +905,7 @@ void tcc1014_set_composite(struct TCC1014 *gimep, _Bool value) {
 static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val) {
 	render_scanline(gime, event_current_tick);
 	reg &= 15;
+	unsigned changed = gime->registers[reg] ^ val;
 	gime->registers[reg] = val;
 	switch (reg) {
 	case 0:
@@ -903,46 +915,52 @@ static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, uns
 		gime->MC2 = val & 0x04;
 		gime->MC1 = val & 0x02;
 		gime->MC0 = val & 0x01;
+		gime->public.IRQ = (val & 0x20) ? gime->irq_state : 0;
+		gime->public.FIRQ = (val & 0x10) ? gime->firq_state : 0;
 		GIME_MOD_DEBUG(2, "INIT0 (%-3u+%-3u): COCO=%d MMUEN=%d IEN=%d FEN=%d MC3=%d MC2=%d MC1/0=%d\n", gime->scanline, l_dt(gime), (val>>7)&1, (val>>6)&1, (val>>5)&1, (val>>4)&1, (val>>3)&1,(val>>2)&1,val&3);
 		update_from_gime_registers(gime);
 		break;
 
 	case 1:
-		update_timer(gime, event_current_tick);
 		gime->TINS = val & 0x20;
 		gime->TR = (val & 0x01) ? 8 : 0;
 		GIME_MOD_DEBUG(2, "INIT1 (%-3u+%-3u): MTYP=%d TINS=%d TR=%d\n", gime->scanline, l_dt(gime), (val>>6)&1, (val>>5)&1, val&1);
-		schedule_timer(gime, event_current_tick);
+		if (changed & 0x20) {
+			schedule_timer(gime, event_current_tick);
+		}
 		break;
 
 	case 2:
 		GIME_MOD_DEBUG(2, "IRQ   (%-3u+%-3u): TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", gime->scanline, l_dt(gime), (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
-		gime->irq_state &= ~val;
-		gime->public.IRQ &= ~val;
+		gime->irq_state &= val;
+		gime->public.IRQ &= val;
+		{
+			unsigned set_int = ((gime->timer.counter == 0) ? INT_TMR : 0) | gime->IL2_state | gime->IL1_state | gime->IL0_state;
+			gime->irq_state |= (set_int & changed & val);
+			gime->public.IRQ = (gime->registers[0] & 0x20) ? (gime->irq_state & 0x3f) : 0;
+		}
 		break;
 
 	case 3:
 		GIME_MOD_DEBUG(2, "FIRQ  (%-3u+%-3u): TMR=%d HBORD=%d VBORD=%d SER=%d KBD=%d CART=%d\n", gime->scanline, l_dt(gime), (val>>5)&1, (val>>4)&1, (val>>3)&1, (val>>2)&1, (val>>1)&1, val&1);
-		gime->firq_state &= ~val;
-		gime->public.FIRQ &= ~val;
+		gime->firq_state &= val;
+		gime->public.FIRQ &= val;
+		{
+			unsigned set_int = ((gime->timer.counter == 0) ? INT_TMR : 0) | gime->IL2_state | gime->IL1_state | gime->IL0_state;
+			gime->firq_state |= (set_int & changed & val);
+			gime->public.FIRQ = (gime->registers[0] & 0x10) ? (gime->firq_state & 0x3f) : 0;
+		}
 		break;
 
 	case 4:
-		{
-			// Timer MSB
-			unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-			gime->timer.counter = timer_reset ? (timer_reset + gime->variant->timer_offset) : 0;
-			if (gime->timer.counter == 0) {
-				SET_INTERRUPT(gime, INT_TMR);
-			}
-			schedule_timer(gime, event_current_tick);
-		}
-		GIME_MOD_DEBUG(2, "TMRH  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt(gime), (val<<8)|gime->registers[5]);
+		// Timer MSB
+		schedule_timer(gime, event_current_tick);
+		GIME_MOD_DEBUG(2, "TMRH  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt(gime), ((val&0xf)<<8)|gime->registers[5]);
 		break;
 
 	case 5:
 		// Timer LSB
-		GIME_MOD_DEBUG(2, "TMRL  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt(gime), (gime->registers[4]<<8)|val);
+		GIME_MOD_DEBUG(2, "TMRL  (%-3u+%-3u): TIMER=%d\n", gime->scanline, l_dt(gime), ((gime->registers[4]&0xf)<<8)|val);
 		break;
 
 	case 8:
@@ -1515,9 +1533,10 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 // Timer handling
 
 static void schedule_timer(struct TCC1014_private *gime, event_ticks t) {
-	if (gime->TINS && gime->timer.counter > 0) {
+	unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
+	gime->timer.counter = timer_reset ? (timer_reset + gime->variant->timer_offset) : 0;
+	if (gime->TINS && timer_reset > 0) {
 		// TINS=1: 3.58MHz
-		gime->timer.last_update = t;
 		event_queue_abs(&gime->timer.update_event, t + (gime->timer.counter << 2));
 	} else {
 		event_dequeue(&gime->timer.update_event);
@@ -1525,18 +1544,9 @@ static void schedule_timer(struct TCC1014_private *gime, event_ticks t) {
 }
 
 static void update_timer(struct TCC1014_private *gime, event_ticks t) {
-	if (gime->TINS && gime->timer.counter > 0) {
-		// TINS=1: 3.58MHz
-		int elapsed = event_tick_delta(t, gime->timer.last_update) >> 2;
-		gime->timer.counter -= elapsed;
-	}
-	if (gime->timer.counter <= 0) {
-		gime->blink = !gime->blink;
-		unsigned timer_reset = ((gime->registers[4] & 0x0f) << 8) | gime->registers[5];
-		gime->timer.counter = timer_reset ? (timer_reset + gime->variant->timer_offset) : 0;
-		schedule_timer(gime, t);
-		SET_INTERRUPT(gime, INT_TMR);
-	}
+	SET_INTERRUPT(gime, INT_TMR);
+	gime->blink = !gime->blink;
+	schedule_timer(gime, t);
 }
 
 static void do_update_timer(void *sptr) {

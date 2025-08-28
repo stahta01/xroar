@@ -1273,6 +1273,7 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 			bp_wp_write_hook(mcc3->bp_session, A);
 #endif
 	}
+	mcc3->GIME->IL1 = (PIA_VALUE_A(mcc3->PIA0) | 0x80) != 0xff;
 }
 
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
