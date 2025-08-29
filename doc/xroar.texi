@@ -116,7 +116,8 @@ Changes in version 1.9 include:
 
 @itemize
 
-@item SAMx8 support (specify @option{-ram 512} for a Dragon 64).
+@item SAMx8 support (as a Dragon 64 specified with @option{-ram 512}).
+@item CoCo 3 GIME fixes for issues highlighted by Tim Lindner's test code.
 
 @end itemize
 
@@ -959,7 +960,8 @@ If you specify 512K RAM, the SAMx8 memory expansion is emulated.
 
 Architecture @samp{dragon64}. Built-in machine profiles: @samp{dragon64},
 @samp{tano} (American NTSC version of Dragon 64 by Tano), @samp{dragon200e}
-(localised Spanish Dragon 64 from Eurohard).
+(localised Spanish Dragon 64 from Eurohard), @samp{dragonx8} (Dragon 64 with
+SAMx8 fitted).
 
 @c
 
