@@ -280,6 +280,7 @@ void ram_clear(struct ram *ram, int method) {
 		tst = 0;
 	}
 	if (method == ram_init_set) {
+		val = 0xff;
 		tst = 0;
 	}
 
