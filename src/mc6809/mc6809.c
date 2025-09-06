@@ -1052,7 +1052,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x03f8: case 0x03f9: case 0x03fa: case 0x03fb: {
 
 				unsigned tmp1, tmp2;
-				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -1060,6 +1059,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 3: tmp2 = byte_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_sub(cpu, tmp1, tmp2); break; // SUBA, SUBB
 				case 0x1: (void)op_sub(cpu, tmp1, tmp2); break; // CMPA, CMPB
@@ -1086,7 +1086,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x83: case 0x93: case 0xa3: case 0xb3:
 			case 0xc3: case 0xd3: case 0xe3: case 0xf3: {
 				unsigned tmp1, tmp2;
-				tmp1 = REG_D;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1094,6 +1093,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				switch (op & 0x40) {
 				default:
 				case 0x00: tmp1 = op_sub16(cpu, tmp1, tmp2); break; // SUBD
@@ -1114,6 +1114,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x0383: case 0x0393: case 0x03a3: case 0x03b3:
 			case 0x038c: case 0x039c: case 0x03ac: case 0x03bc: {
 				unsigned tmp1, tmp2;
+				switch ((op >> 4) & 3) {
+				case 0: tmp2 = word_immediate(cpu); break;
+				case 1: tmp2 = word_direct(cpu); break;
+				case 2: tmp2 = word_indexed(cpu); break;
+				case 3: tmp2 = word_extended(cpu); break;
+				default: tmp2 = 0; break;
+				}
 				switch (op & 0x0308) {
 				default:
 				case 0x0000: tmp1 = REG_X; break;
@@ -1122,21 +1129,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 0x0300: tmp1 = REG_U; break;
 				case 0x0308: tmp1 = REG_S; break;
 				}
-				switch ((op >> 4) & 3) {
-				case 0: tmp2 = word_immediate(cpu); break;
-				case 1: tmp2 = word_direct(cpu); break;
-				case 2: tmp2 = word_indexed(cpu); break;
-				case 3: tmp2 = word_extended(cpu); break;
-				default: tmp2 = 0; break;
-				}
 				(void)op_sub16(cpu, tmp1, tmp2);
 				NVMA_CYCLE;
 			} break;
 
 			// 0x10c3, 0x10d3, 0x10e3, 0x10f3 XADDD, illegal [hoglet67]
 			case 0x02c3: case 0x02d3: case 0x02e3: case 0x02f3: {
-				unsigned tmp1 = REG_D;
-				unsigned tmp2;
+				unsigned tmp1, tmp2;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1144,14 +1143,14 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				(void)op_add16(cpu, tmp1, tmp2);
 				NVMA_CYCLE;
 			} break;
 
 			// 0x11c3, 0x11d3, 0x11e3, 0x11f3 XADDU, illegal [hoglet67]
 			case 0x03c3: case 0x03d3: case 0x03e3: case 0x03f3: {
-				unsigned tmp1 = REG_U | 0xff00;
-				unsigned tmp2;
+				unsigned tmp1, tmp2;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1159,6 +1158,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_U | 0xff00;
 				(void)op_add16(cpu, tmp1, tmp2);
 				NVMA_CYCLE;
 			} break;
@@ -1238,13 +1238,13 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x03d7: case 0x03e7: case 0x03f7: {
 				uint16_t ea;
 				uint8_t tmp1;
-				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
 				case 1: ea = ea_direct(cpu); break;
 				case 2: ea = ea_indexed(cpu); break;
 				case 3: ea = ea_extended(cpu); break;
 				default: ea = 0; break;
 				}
+				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				store_byte(cpu, ea, tmp1);
 				CLR_NZV;
 				SET_NZ8(tmp1);
@@ -1261,6 +1261,12 @@ static void mc6809_run(struct MC6809 *cpu) {
 			case 0x029f: case 0x02af: case 0x02bf:
 			case 0x02df: case 0x02ef: case 0x02ff: {
 				uint16_t ea, tmp1;
+				switch ((op >> 4) & 3) {
+				case 1: ea = ea_direct(cpu); break;
+				case 2: ea = ea_indexed(cpu); break;
+				case 3: ea = ea_extended(cpu); break;
+				default: ea = 0; break;
+				}
 				switch (op & 0x034e) {
 				default:
 				case 0x000e: tmp1 = REG_X; break;
@@ -1268,12 +1274,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 0x004e: tmp1 = REG_U; break;
 				case 0x020e: tmp1 = REG_Y; break;
 				case 0x024e: tmp1 = REG_S; break;
-				}
-				switch ((op >> 4) & 3) {
-				case 1: ea = ea_direct(cpu); break;
-				case 2: ea = ea_indexed(cpu); break;
-				case 3: ea = ea_extended(cpu); break;
-				default: ea = 0; break;
 				}
 				CLR_NZV;
 				SET_NZ16(tmp1);

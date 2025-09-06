@@ -1048,7 +1048,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0xf4: case 0xf5: case 0xf6:
 			case 0xf8: case 0xf9: case 0xfa: case 0xfb: {
 				unsigned tmp1, tmp2;
-				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -1056,6 +1055,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = byte_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = !(op & 0x40) ? REG_A : REG_B;
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_sub(cpu, tmp1, tmp2); break; // SUBA, SUBB
 				case 0x1: (void)op_sub(cpu, tmp1, tmp2); break; // CMPA, CMPB
@@ -1081,7 +1081,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x83: case 0x93: case 0xa3: case 0xb3:
 			case 0xc3: case 0xd3: case 0xe3: case 0xf3: {
 				unsigned tmp1, tmp2;
-				tmp1 = REG_D;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1089,6 +1088,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				switch (op & 0x40) {
 				default:
 				case 0x00: tmp1 = op_sub16(cpu, tmp1, tmp2); break; // SUBD
@@ -1110,6 +1110,13 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x0383: case 0x0393: case 0x03a3: case 0x03b3:
 			case 0x038c: case 0x039c: case 0x03ac: case 0x03bc: {
 				unsigned tmp1, tmp2;
+				switch ((op >> 4) & 3) {
+				case 0: tmp2 = word_immediate(cpu); break;
+				case 1: tmp2 = word_direct(cpu); break;
+				case 2: tmp2 = word_indexed(cpu); break;
+				case 3: tmp2 = word_extended(cpu); break;
+				default: tmp2 = 0; break;
+				}
 				switch (op & 0x0308) {
 				default:
 				case 0x0000: tmp1 = REG_X; break;
@@ -1117,13 +1124,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 0x0208: tmp1 = REG_Y; break;
 				case 0x0300: tmp1 = REG_U; break;
 				case 0x0308: tmp1 = REG_S; break;
-				}
-				switch ((op >> 4) & 3) {
-				case 0: tmp2 = word_immediate(cpu); break;
-				case 1: tmp2 = word_direct(cpu); break;
-				case 2: tmp2 = word_indexed(cpu); break;
-				case 3: tmp2 = word_extended(cpu); break;
-				default: tmp2 = 0; break;
 				}
 				(void)op_sub16(cpu, tmp1, tmp2);
 				if (!NATIVE_MODE)
@@ -1187,18 +1187,18 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x03d7: case 0x03e7: case 0x03f7: {
 				uint16_t ea;
 				uint8_t tmp1;
+				switch ((op >> 4) & 3) {
+				case 1: ea = ea_direct(cpu); break;
+				case 2: ea = ea_indexed(cpu); break;
+				case 3: ea = ea_extended(cpu); break;
+				default: ea = 0; break;
+				}
 				switch (op & 0x0340) {
 				default:
 				case 0x0000: tmp1 = REG_A; break;
 				case 0x0040: tmp1 = REG_B; break;
 				case 0x0300: tmp1 = REG_E; break;
 				case 0x0340: tmp1 = REG_F; break;
-				}
-				switch ((op >> 4) & 3) {
-				case 1: ea = ea_direct(cpu); break;
-				case 2: ea = ea_indexed(cpu); break;
-				case 3: ea = ea_extended(cpu); break;
-				default: ea = 0; break;
 				}
 				store_byte(cpu, ea, tmp1);
 				CLR_NZV;
@@ -1218,6 +1218,12 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x029f: case 0x02af: case 0x02bf:
 			case 0x02df: case 0x02ef: case 0x02ff: {
 				uint16_t ea, tmp1;
+				switch ((op >> 4) & 3) {
+				case 1: ea = ea_direct(cpu); break;
+				case 2: ea = ea_indexed(cpu); break;
+				case 3: ea = ea_extended(cpu); break;
+				default: ea = 0; break;
+				}
 				switch (op & 0x034e) {
 				default:
 				case 0x000e: tmp1 = REG_X; break;
@@ -1226,12 +1232,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 0x0206: tmp1 = REG_W; break;
 				case 0x020e: tmp1 = REG_Y; break;
 				case 0x024e: tmp1 = REG_S; break;
-				}
-				switch ((op >> 4) & 3) {
-				case 1: ea = ea_direct(cpu); break;
-				case 2: ea = ea_indexed(cpu); break;
-				case 3: ea = ea_extended(cpu); break;
-				default: ea = 0; break;
 				}
 				CLR_NZV;
 				SET_NZ16(tmp1);
@@ -1482,7 +1482,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x0281: case 0x0291: case 0x02a1: case 0x02b1:
 			case 0x028b: case 0x029b: case 0x02ab: case 0x02bb: {
 				unsigned tmp1, tmp2;
-				tmp1 = REG_W;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1490,6 +1489,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_W;
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_sub16(cpu, tmp1, tmp2); break;
 				case 0x1: (void)op_sub16(cpu, tmp1, tmp2); break;
@@ -1514,7 +1514,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x0289: case 0x0299: case 0x02a9: case 0x02b9:
 			case 0x028a: case 0x029a: case 0x02aa: case 0x02ba: {
 				unsigned tmp1, tmp2;
-				tmp1 = REG_D;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1522,6 +1521,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				switch (op & 0xf) {
 				case 0x2: tmp1 = op_sbc16(cpu, tmp1, tmp2); break;
 				case 0x4: tmp1 = op_and16(cpu, tmp1, tmp2); break;
@@ -1754,7 +1754,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x03e0: case 0x03e1: case 0x03e6: case 0x03eb:
 			case 0x03f0: case 0x03f1: case 0x03f6: case 0x03fb: {
 				unsigned tmp1, tmp2;
-				tmp1 = !(op & 0x40) ? REG_E : REG_F;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
 				case 1: tmp2 = byte_direct(cpu); break;
@@ -1762,6 +1761,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = byte_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = !(op & 0x40) ? REG_E : REG_F;
 				switch (op & 0xf) {
 				case 0x0: tmp1 = op_sub(cpu, tmp1, tmp2); break; // SUBE, SUBF
 				case 0x1: (void)op_sub(cpu, tmp1, tmp2); break; // CMPE, CMPF
@@ -1778,7 +1778,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x118d, 0x119d, 0x11ad, 0x11bd DIVD
 			case 0x038d: case 0x039d: case 0x03ad: case 0x03bd: {
-				uint16_t tmp1 = REG_D;
+				uint16_t tmp1;
 				uint8_t tmp2;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = byte_immediate(cpu); break;
@@ -1787,6 +1787,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = byte_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -1865,7 +1866,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x118e, 0x119e, 0x11ae, 0x11be DIVQ
 			case 0x038e: case 0x039e: case 0x03ae: case 0x03be: {
-				uint32_t tmp1 = RREG_Q;
+				uint32_t tmp1;
 				uint16_t tmp2;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
@@ -1874,6 +1875,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = RREG_Q;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
 				NVMA_CYCLE;
@@ -1953,7 +1955,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// 0x118f, 0x119f, 0x11af, 0x11bf MULD
 			case 0x038f: case 0x039f: case 0x03af: case 0x03bf: {
 				uint16_t tmp1, tmp2;
-				tmp1 = REG_D;
 				switch ((op >> 4) & 3) {
 				case 0: tmp2 = word_immediate(cpu); break;
 				case 1: tmp2 = word_direct(cpu); break;
@@ -1961,6 +1962,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 3: tmp2 = word_extended(cpu); break;
 				default: tmp2 = 0; break;
 				}
+				tmp1 = REG_D;
 				int16_t stmp1 = *((int16_t *)&tmp1);
 				int16_t stmp2 = *((int16_t *)&tmp2);
 				int32_t result = stmp1 * stmp2;
