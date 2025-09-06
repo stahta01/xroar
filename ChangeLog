@@ -1,3 +1,7 @@
+ * Fixed some 6809/6309 indexed instruction behaviour
+ * Fix some arming of NMI in 6809/6309
+ * Implement some more 6809 undocumented behaviour
+
 Version 1.9, Sat 30 Aug 2025
 
  * Trap-triggered traces now include trap instruction
