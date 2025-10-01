@@ -736,7 +736,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x1: tmp2 = REG_X; REG_X = tmp1; break;
 					case 0x2: tmp2 = REG_Y; REG_Y = tmp1; break;
 					case 0x3: tmp2 = REG_U; REG_U = tmp1; break;
-					case 0x4: tmp2 = REG_S; REG_S = tmp1; break;
+					case 0x4: tmp2 = REG_S; REG_S = tmp1; cpu->nmi_armed = 1; break;
 					case 0x5: tmp2 = REG_PC; REG_PC = tmp1; break;
 					case 0x6: tmp2 = REG_W; REG_W = tmp1; break;
 					case 0x7: tmp2 = REG_V; REG_V = tmp1; break;
@@ -753,7 +753,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x1: REG_X = tmp2; break;
 					case 0x2: REG_Y = tmp2; break;
 					case 0x3: REG_U = tmp2; break;
-					case 0x4: REG_S = tmp2; break;
+					case 0x4: REG_S = tmp2; cpu->nmi_armed = 1; break;
 					case 0x5: REG_PC = tmp2; break;
 					case 0x6: REG_W = tmp2; break;
 					case 0x7: REG_V = tmp2; break;
@@ -802,7 +802,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					case 0x1: REG_X = tmp1; break;
 					case 0x2: REG_Y = tmp1; break;
 					case 0x3: REG_U = tmp1; break;
-					case 0x4: REG_S = tmp1; break;
+					case 0x4: REG_S = tmp1; cpu->nmi_armed = 1; break;
 					case 0x5: REG_PC = tmp1; break;
 					case 0x6: REG_W = tmp1; break;
 					case 0x7: REG_V = tmp1; break;
@@ -853,7 +853,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 			case 0x32:
 				REG_S = ea_indexed(cpu);
 				NVMA_CYCLE;
-				cpu->nmi_armed = 1;  // XXX: Really?
+				cpu->nmi_armed = 1;
 				break;
 
 			// 0x33 LEAU indexed
@@ -878,6 +878,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (postbyte & 0x04) { push_s_byte(cpu, REG_B); }
 					if (postbyte & 0x02) { push_s_byte(cpu, REG_A); }
 					if (postbyte & 0x01) { push_s_byte(cpu, REG_CC); }
+					cpu->nmi_armed = 1;
 				}
 				break;
 
@@ -897,6 +898,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (postbyte & 0x40) { REG_U = pull_s_word(cpu); }
 					if (postbyte & 0x80) { REG_PC = pull_s_word(cpu); }
 					peek_byte(cpu, REG_S);
+					cpu->nmi_armed = 1;
 				}
 				break;
 
@@ -932,7 +934,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 					if (postbyte & 0x08) { REG_DP = pull_u_byte(cpu); }
 					if (postbyte & 0x10) { REG_X = pull_u_word(cpu); }
 					if (postbyte & 0x20) { REG_Y = pull_u_word(cpu); }
-					if (postbyte & 0x40) { REG_S = pull_u_word(cpu); }
+					if (postbyte & 0x40) { REG_S = pull_u_word(cpu); cpu->nmi_armed = 1; }
 					if (postbyte & 0x80) { REG_PC = pull_u_word(cpu); }
 					peek_byte(cpu, REG_U);
 				}
@@ -2111,7 +2113,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 	case 0: REG_X = reg; break;
 	case 1: REG_Y = reg; break;
 	case 2: REG_U = reg; break;
-	case 3: REG_S = reg; break;
+	case 3: cpu->nmi_armed |= (REG_S != reg); REG_S = reg; break;
 	}
 	return ea;
 }
