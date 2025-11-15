@@ -30,7 +30,10 @@
  *  -  Undocumented 6809 Behaviours, David Banks [hoglet67]
  *     https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6809-Behaviours
  *
- *  -  6809 Exchange and Transfer Opcodes
+ *  -  The Comprehensive Document of 6809 Undocumented and Undefined Behavior,
+ *     David Flamand [dfffffff], https://gitlab.com/dfffffff/6809_undoc
+ *
+ *  -  6809 Exchange and Transfer Opcodes,
  *     http://tlindner.macmess.org/?p=945
  */
 
@@ -563,6 +566,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x16 LBRA relative
 			// 0x1016, 0x1116 - page 2/3 fallthrough, illegal
 			// 0x108d, 0x118d - LBRA observed by darrena on discord
+			// TODO: investigate [dfffffff] claim of destination
+			// opcode affecting behaviour
 			case 0x16:
 			case 0x0216: case 0x028d:
 			case 0x0316: case 0x038d: {
@@ -590,6 +595,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 			// 0x18 Shift CC with mask inherent (illegal)
 			// 0x10xx, 0x11xx - page 2/3 fallthrough, illegal
 			// Behaviour as defined in [hoglet67]
+			// TODO: do we inc PC for operand?
+			// TODO: is this actually mirrored in the other pages?
 			case 0x18:
 			case 0x0218:
 			case 0x0318: {
@@ -1388,6 +1395,13 @@ static uint16_t ea_extended(struct MC6809 *cpu) {
 	return ea;
 }
 
+/* Indexed addressing.
+ *
+ * Some illegal behaviour taken from [dfffffff].
+ *
+ * TODO: check which addresses are in play for 1RRI1010 postbyte behaviour
+ * reported by [dfffffff].  Currently only timings are implemented. */
+
 static uint16_t ea_indexed(struct MC6809 *cpu) {
 	unsigned ea;
 	uint16_t reg;
@@ -1405,6 +1419,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		return reg + sex5(postbyte & 0x1f);
 	}
 	switch (postbyte & 0x0f) {
+		default:
 		case 0x00: ea = reg; reg += 1; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x01: ea = reg; reg += 2; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x02: reg -= 1; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; break;
@@ -1415,13 +1430,12 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		case 0x06: ea = reg + sex8(REG_A); peek_byte(cpu, REG_PC); NVMA_CYCLE; break;
 		case 0x08: ea = byte_immediate(cpu); ea = sex8(ea) + reg; NVMA_CYCLE; break;
 		case 0x09: ea = word_immediate(cpu); ea = ea + reg; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x0a: ea = REG_PC | 0xff; break;
+		case 0x0a: ea = REG_PC | 0xff; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;  // TODO: see [dfffffff]
 		case 0x0b: ea = reg + REG_D; peek_byte(cpu, REG_PC); peek_byte(cpu, REG_PC + 1); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x0c: ea = byte_immediate(cpu); ea = sex8(ea) + REG_PC; NVMA_CYCLE; break;
 		case 0x0d: ea = word_immediate(cpu); ea = ea + REG_PC; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break;
-		case 0x0e: ea = 0xffff; break; // illegal
+		case 0x0e: peek_byte(cpu, REG_PC); ea = 0xffff; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; NVMA_CYCLE; break; // illegal
 		case 0x0f: ea = word_immediate(cpu); NVMA_CYCLE; break;
-		default: ea = 0; break;
 	}
 	if (postbyte & 0x10) {
 		ea = fetch_word_notrace(cpu, ea);
