@@ -2087,6 +2087,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		NVMA_CYCLE;
 		NVMA_CYCLE;
 	} else switch (postbyte & 0x0f) {
+		default:
 		case 0x00: ea = reg; reg += 1; peek_byte(cpu, REG_PC); NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
 		case 0x01: ea = reg; reg += 2; peek_byte(cpu, REG_PC); NVMA_CYCLE; NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
 		case 0x02: reg -= 1; ea = reg; peek_byte(cpu, REG_PC); NVMA_CYCLE; if (!NATIVE_MODE) NVMA_CYCLE; break;
@@ -2103,7 +2104,6 @@ static uint16_t ea_indexed(struct MC6809 *cpu) {
 		case 0x0d: ea = word_immediate(cpu); ea = ea + REG_PC; peek_byte(cpu, REG_PC); NVMA_CYCLE; if (!NATIVE_MODE) { NVMA_CYCLE; NVMA_CYCLE; } break;
 		case 0x0e: ea = reg + REG_W; NVMA_CYCLE; NVMA_CYCLE; break;
 		case 0x0f: ea = word_immediate(cpu); if (!NATIVE_MODE) NVMA_CYCLE; break;
-		default: ea = 0; break;
 	}
 	if (postbyte & 0x10) {
 		ea = fetch_word_notrace(cpu, ea);
