@@ -1,6 +1,8 @@
  * Fixed some 6809/6309 indexed instruction behaviour
  * Fix some arming of NMI in 6809/6309
  * Implement some more 6809 undocumented behaviour
+ * Disable vsync by default
+ * New option -vo-vsync to re-enable vsync.
 
 Version 1.9, Sat 30 Aug 2025
 
