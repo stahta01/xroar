@@ -306,8 +306,8 @@ process should be very familiar.  The following process compiles XRoar
 and installs it into '/usr/local', like most other software built this
 way:
 
-     $ gzip -dc xroar-1.9.tar.gz | tar xvf -
-     $ cd xroar-1.9
+     $ gzip -dc xroar-1.10.tar.gz | tar xvf -
+     $ cd xroar-1.10
      $ ./configure
      $ make
      $ sudo make install

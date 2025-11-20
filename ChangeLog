@@ -1,3 +1,5 @@
+Version 1.10, Fri 21 Nov 2025
+
  * Fixed some 6809/6309 indexed instruction behaviour
  * Fix some arming of NMI in 6809/6309
  * Implement some more 6809 undocumented behaviour
