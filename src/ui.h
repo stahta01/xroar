@@ -234,6 +234,10 @@ enum ui_tag {
 	// using linear filtering.  Handled in vo.c, but the result is used by
 	// individual UI toolkits where supported.
 
+	ui_tag_vsync,
+	// Simple toggle of whether video rendering should try and wait for
+	// vsync.  Handled in vo.c but used by individual UI toolkits.
+
 	ui_tag_picture,
 	// Simple radio selection of a viewport area.  One of VO_PICTURE_*.
 	// Handled per-machine, so each can override which makes sense for

@@ -237,6 +237,7 @@ struct private_cfg {
 		int frameskip;
 		int ccr;
 		int gl_filter;
+		int vsync;
 		_Bool vdg_inverted_text;
 		int picture;
 		_Bool ntsc_scaling;
@@ -1276,6 +1277,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	ui_update_state(-1, ui_tag_cmp_colour_killer, private_cfg.vo.colour_killer, NULL);
 	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
+	ui_update_state(-1, ui_tag_vsync, private_cfg.vo.vsync, NULL);
 	ui_update_state(-1, ui_tag_picture, private_cfg.vo.picture, NULL);
 	ui_update_state(-1, ui_tag_fullscreen, private_cfg.vo.fullscreen, NULL);
 	ui_update_state(-1, ui_tag_ntsc_scaling, private_cfg.vo.ntsc_scaling, NULL);
@@ -3182,6 +3184,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("fskip", &private_cfg.vo.frameskip) },
 	{ XC_SET_ENUM("ccr", &private_cfg.vo.ccr, vo_cmp_ccr_list) },
 	{ XC_SET_ENUM("gl-filter", &private_cfg.vo.gl_filter, vo_gl_filter_list) },
+	{ XC_SET_BOOL("vo-vsync", &private_cfg.vo.vsync) },
 	{ XC_SET_ENUM("vo-pixel-fmt", &xroar_ui_cfg.vo_cfg.pixel_fmt, vo_pixel_fmt_list) },
 	{ XC_SET_STRING("geometry", &xroar_ui_cfg.vo_cfg.geometry) },
 	{ XC_SET_STRING("g", &xroar_ui_cfg.vo_cfg.geometry) },
@@ -3418,6 +3421,7 @@ static void helptext(void) {
 "  -fskip FRAMES         frameskip (default: 0)\n"
 "  -ccr RENDERER         cross-colour renderer (-ccr help for list)\n"
 "  -gl-filter FILTER     OpenGL texture filter (-gl-filter help for list)\n"
+"  -vo-vsync             start with vsync enabled\n"
 "  -vo-pixel-fmt FMT     pixel format (-vo-pixel-fmt help for list)\n"
 "  -geometry WxH+X+Y     initial emulator geometry\n"
 "  -vo-picture P         initial picture area (-vo-picture help for list)\n"
@@ -3599,6 +3603,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_int_nz(f, all, "fskip", private_cfg.vo.frameskip);
 	xroar_cfg_print_enum(f, all, "ccr", private_cfg.vo.ccr, VO_CMP_CCR_5BIT, vo_cmp_ccr_list);
 	xroar_cfg_print_enum(f, all, "gl-filter", private_cfg.vo.gl_filter, ANY_AUTO, vo_gl_filter_list);
+	xroar_cfg_print_bool(f, all, "vo-vsync", private_cfg.vo.vsync, 0);
 	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
 	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, 0, vo_viewport_list);

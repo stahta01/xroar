@@ -58,6 +58,7 @@ struct xconfig_enum vo_gl_filter_list[] = {
 
 static void vo_ui_set_ccr(void *, int tag, void *smsg);
 static void vo_ui_set_gl_filter(void *, int tag, void *smsg);
+static void vo_ui_set_vsync(void *, int tag, void *smsg);
 static void vo_ui_set_fullscreen(void *, int tag, void *smsg);
 static void vo_ui_set_menubar(void *, int tag, void *smsg);
 static void vo_ui_set_zoom(void *, int tag, void *smsg);
@@ -80,6 +81,7 @@ void vo_interface_init(struct vo_interface *vo) {
 	vo->msgr_client_id = messenger_client_register();
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_ccr, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_gl_filter, vo));
+	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_vsync, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_vsync, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_fullscreen, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_menubar, vo));
 	ui_messenger_preempt_group(vo->msgr_client_id, ui_tag_zoom, MESSENGER_NOTIFY_DELEGATE(vo_ui_set_zoom, vo));
@@ -288,6 +290,15 @@ static void vo_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
 	vo->gl_filter = ui_msg_adjust_value_range(uimsg, vo->gl_filter, VO_GL_FILTER_AUTO,
 						  VO_GL_FILTER_AUTO, VO_GL_FILTER_LINEAR,
 						  UI_ADJUST_FLAG_CYCLE);
+}
+
+static void vo_ui_set_vsync(void *sptr, int tag, void *smsg) {
+	struct vo_interface *vo = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_vsync);
+
+	vo->vsync = ui_msg_adjust_value_range(uimsg, vo->vsync, 0, 0, 1,
+					      UI_ADJUST_FLAG_CYCLE);
 }
 
 static void vo_ui_set_fullscreen(void *sptr, int tag, void *smsg) {

@@ -73,10 +73,13 @@ struct vo_sdl_interface {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static const Uint32 renderer_flags[] = {
+static const Uint32 renderer_flags_vsync[] = {
 	SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC,
-	SDL_RENDERER_ACCELERATED,
 	SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC,
+};
+
+static const Uint32 renderer_flags[] = {
+	SDL_RENDERER_ACCELERATED,
 	SDL_RENDERER_SOFTWARE
 };
 
@@ -85,6 +88,7 @@ static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
 static void resize(void *, unsigned int w, unsigned int h);
 static void vosdl_ui_set_gl_filter(void *, int tag, void *smsg);
+static void vosdl_ui_set_vsync(void *, int tag, void *smsg);
 #ifndef HAVE_WASM
 static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
 #endif
@@ -155,6 +159,7 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_gl_filter, uisdl2));
+	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_vsync, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_vsync, uisdl2));
 #ifndef HAVE_WASM
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_fullscreen, uisdl2));
 #endif
@@ -277,10 +282,20 @@ static void recreate_renderer(struct ui_sdl2_interface *uisdl2) {
 		vosdl->sdl_renderer = NULL;
 	}
 
-	for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); ++i) {
-		vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
-		if (vosdl->sdl_renderer)
-			break;
+	if (vo->vsync) {
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags_vsync); ++i) {
+			vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags_vsync[i]);
+			if (vosdl->sdl_renderer)
+				break;
+		}
+	}
+
+	if (!vosdl->sdl_renderer) {
+		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(renderer_flags); ++i) {
+			vosdl->sdl_renderer = SDL_CreateRenderer(uisdl2->vo_window, -1, renderer_flags[i]);
+			if (vosdl->sdl_renderer)
+				break;
+		}
 	}
 }
 
@@ -423,6 +438,14 @@ static void vosdl_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 
 	update_viewport(uisdl2);
+}
+
+static void vosdl_ui_set_vsync(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	(void)smsg;
+	struct ui_sdl2_interface *uisdl2 = sptr;
+
+	sdl_vo_notify_render_device_reset(uisdl2);
 }
 
 #ifndef HAVE_WASM

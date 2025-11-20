@@ -73,6 +73,7 @@ static void set_viewport(void *, int vp_w, int vp_h);
 static void notify_frame_rate(void *, _Bool is_60hz);
 
 static void vogtk3_ui_set_gl_filter(void *, int tag, void *smsg);
+static void vogtk3_ui_set_vsync(void *, int tag, void *smsg);
 static void vogtk3_ui_set_fullscreen(void *, int tag, void *smsg);
 static void vogtk3_ui_set_menubar(void *, int tag, void *smsg);
 
@@ -107,6 +108,7 @@ _Bool gtk3_vo_init(struct ui_gtk3_interface *uigtk3) {
 
 	vogtk3->msgr_client_id = messenger_client_register();
 	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_gl_filter, uigtk3));
+	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_vsync, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_vsync, uigtk3));
 	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_fullscreen, uigtk3));
 	ui_messenger_join_group(vogtk3->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vogtk3_ui_set_menubar, uigtk3));
 
@@ -280,6 +282,15 @@ static void vogtk3_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
 	vo_opengl_update_gl_filter(vogl);
 }
 
+static void vogtk3_ui_set_vsync(void *sptr, int tag, void *smsg) {
+	(void)tag;
+	(void)smsg;
+	struct ui_gtk3_interface *uigtk3 = sptr;
+	struct vo_interface *vo = uigtk3->public.vo_interface;
+
+	vo_gtk3_set_vsync(uigtk3, vo->vsync ? -1 : 0);
+}
+
 static void vogtk3_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	(void)tag;
 	struct ui_gtk3_interface *uigtk3 = sptr;
@@ -406,8 +417,6 @@ static void realize(GtkWidget *widget, gpointer user_data) {
 	// and Y to 0.
 	vo_set_draw_area(vo, 0, 0, draw_allocation.width, draw_allocation.height);
 	vo_opengl_setup_context(vogl);
-
-	vo_gtk3_set_vsync(uigtk3, -1);
 }
 
 static void draw(void *sptr) {
@@ -477,6 +486,8 @@ static void vo_gtk3_set_vsync(struct ui_gtk3_interface *uigtk3, int val) {
 	(void)val;
 
 #ifdef HAVE_X11
+
+	gtk_gl_area_make_current(GTK_GL_AREA(uigtk3->drawing_area));
 
 	/*
 	PFNGLXSWAPINTERVALEXTPROC glXSwapIntervalEXT = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte *)"glXSwapIntervalEXT");

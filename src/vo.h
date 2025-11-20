@@ -125,6 +125,7 @@ struct vo_picture_area {
 struct vo_interface {
 	_Bool is_fullscreen;
 	_Bool show_menubar;
+	_Bool vsync;
 
 	// Messenger client id
 	int msgr_client_id;
