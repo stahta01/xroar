@@ -2056,6 +2056,8 @@ here for reference.
 @tab Pixel format to use.  @option{-vo-pixel-fmt help} for a list.
 @item @option{-gl-filter @var{filter}}
 @tab Filtering method to use when scaling the screen.  One of @samp{linear}, @samp{nearest} or @samp{auto} (the default).  OpenGL output modules only.
+@item @option{-vo-vsync}
+@tab Start with vsync enabled.
 @item @option{-vo-picture @var{picture}}
 @tab Initial picture area.  @option{-vo-picture help} for a list.
 @item @option{-no-vo-scale-60hz}
@@ -2128,6 +2130,10 @@ In the GTK+ and Windows interfaces, @clicksequence{View @click{} TV Controls}
 opens a control window allowing you to dynamically modify various display
 options.  Pressing @kbd{@key{CTRL}+@key{SHIFT}+V} will also open this
 window.
+
+By default, XRoar does not synchronise rendering with the host machine's
+vertical sync, as this appears to cause audio glitches on some platforms.  You
+can turn this on (where supported) with @option{-vo-vsync}.
 
 @c
 
