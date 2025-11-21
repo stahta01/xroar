@@ -374,6 +374,8 @@ if UI_SDL3
 
 xroar_CFLAGS += $(SDL3_CFLAGS)
 xroar_LDADD += $(SDL3_LIBS)
+xroar_SOURCES += \
+	sdl3/ao_sdl3.c
 
 endif
 

@@ -51,7 +51,7 @@ static struct module * const default_ao_module_list[] = {
 #ifdef HAVE_PULSE
 	&ao_pulse_module,
 #endif
-#if defined(HAVE_SDL2) || defined(HAVE_SDL)
+#if defined(HAVE_SDL3) || defined(HAVE_SDL2)
 	&ao_sdl_module,
 #endif
 #ifdef HAVE_ALSA_AUDIO

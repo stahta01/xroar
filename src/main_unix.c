@@ -23,6 +23,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef UI_SDL3
+#include <SDL3/SDL_main.h>
+#endif
+
 #include "events.h"
 #include "ui.h"
 #include "xroar.h"
