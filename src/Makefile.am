@@ -368,6 +368,15 @@ gtk2/gtk2.gresource.c: gtk2/gtk2.gresource.tmp
 	cat $< >> $@
 endif
 
+# SDL3 user interface
+
+if UI_SDL3
+
+xroar_CFLAGS += $(SDL3_CFLAGS)
+xroar_LDADD += $(SDL3_LIBS)
+
+endif
+
 # SDL2 user interface
 
 if UI_SDL2
