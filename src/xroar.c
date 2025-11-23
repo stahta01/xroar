@@ -1166,6 +1166,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_tape_motor, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1936,6 +1940,22 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 			}
 		}
 #endif
+		break;
+
+	case ui_tag_brightness:
+		private_cfg.vo.brightness = value;
+		break;
+
+	case ui_tag_contrast:
+		private_cfg.vo.contrast = value;
+		break;
+
+	case ui_tag_saturation:
+		private_cfg.vo.saturation = value;
+		break;
+
+	case ui_tag_hue:
+		private_cfg.vo.hue = value;
 		break;
 
 	case ui_tag_hkbd_layout:
