@@ -365,6 +365,14 @@ static struct cart_fingerprint cart_special[] = {
 	// Others
 
 	{
+		.name = "Alldream (1983)(Dragon Data Ltd)",
+		.size = 0x2000,
+		.crc32 = 0xaf91e6ff,
+		.type = "rom",
+		.no_autorun = 1,
+	},
+
+	{
 		.name = "Blockdown (2021)(Teipen Mwnci)",
 		.size = 0x4000,
 		.crc32 = 0xabe7bb9e,
