@@ -172,7 +172,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 	_Bool fmt_big_endian = 1;
 
 	if (nchannels < 1 || nchannels > 2) {
-		LOG_MOD_WARN("sound", "invalid number of audio channels");
+		LOG_MOD_WARN("sound", "invalid number of audio channels: %u\n", nchannels);
 		free(snd);
 		return NULL;
 	}
