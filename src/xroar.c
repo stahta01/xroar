@@ -389,6 +389,7 @@ static struct xconfig_option const xroar_options[];
 
 // Config autosave functions
 #ifdef AUTOSAVE_PREFIX
+static _Bool inhibit_autosave;
 static _Bool have_autosave_flag_file(void);
 static _Bool create_autosave_flag_file(void);
 static void remove_autosave_flag_file(void);
@@ -879,6 +880,10 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	_Bool alloc_console = 0;
 #endif
 
+#ifdef AUTOSAVE_PREFIX
+	inhibit_autosave = 0;
+#endif
+
 	// Parse early options.  These affect how the rest of the config is
 	// processed.  Also, for Windows, the -C option allocates a console so
 	// that debug information can be seen, which we want to happen early.
@@ -889,6 +894,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			if (conffile)
 				sdsfree(conffile);
 			conffile = sdsnew(argv[argn+1]);
+#ifdef AUTOSAVE_PREFIX
+			inhibit_autosave = 1;
+#endif
 			argn += 2;
 		} else if (argn < argc && 0 == strcmp(argv[argn], "-no-c")) {
 			// -no-c, disable conffile
@@ -1413,7 +1421,8 @@ static void xroar_ui_set_config_autosave(void *sptr, int tag, void *smsg) {
 	uimsg->value = 0;
 #else
 	_Bool autosave = private_cfg.help.config_autosave;
-	autosave = ui_msg_adjust_value_range(uimsg, autosave, 0, 0, 1, UI_ADJUST_FLAG_CYCLE);
+	autosave = ui_msg_adjust_value_range(uimsg, autosave, 0, 0, 1, UI_ADJUST_FLAG_CYCLE)
+	           && !inhibit_autosave;
 	private_cfg.help.config_autosave = autosave;
 	uimsg->value = autosave;
 #endif
