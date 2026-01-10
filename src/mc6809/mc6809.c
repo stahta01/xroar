@@ -1506,6 +1506,11 @@ static void instruction_posthook(struct MC6809 *cpu) {
 #ifdef TRACE
 	if (UNLIKELY(logging.trace_cpu)) {
 		mc6809_trace_instruction(cpu->tracer, cpu->trace_pc, cpu->trace_nbytes, cpu->trace_bytes);
+		if (logging.trace_cpu_counter) {
+			if (--logging.trace_cpu_counter == 0) {
+				logging.trace_cpu = 0;
+			}
+		}
 	}
 #endif
 	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);

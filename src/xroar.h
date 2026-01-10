@@ -213,7 +213,7 @@ struct xroar_timeout *xroar_set_timeout(char const *timestring);
 void xroar_cancel_timeout(struct xroar_timeout *);
 
 /* Helper functions */
-void xroar_set_trace(int mode);
+void xroar_set_trace(int mode, unsigned n);
 void xroar_new_disk(int drive);
 void xroar_insert_disk_file(int drive, const char *filename);
 void xroar_insert_disk(int drive);

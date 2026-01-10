@@ -162,6 +162,7 @@ struct logging {
 	// Specific tracing
 	_Bool trace_cpu;
 	_Bool trace_cpu_timing;
+	unsigned trace_cpu_counter;
 };
 
 extern struct logging logging;  // global log/debug flags

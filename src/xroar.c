@@ -1788,8 +1788,7 @@ void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 
 /* Helper functions */
 
-void xroar_set_trace(int mode) {
-	(void)mode;
+void xroar_set_trace(int mode, unsigned n) {
 #ifdef TRACE
 	switch (mode) {
 	case XROAR_OFF: default:
@@ -1802,6 +1801,10 @@ void xroar_set_trace(int mode) {
 		logging.trace_cpu = !logging.trace_cpu;
 		break;
 	}
+	logging.trace_cpu_counter = n;
+#else
+	(void)mode;
+	(void)n;
 #endif
 }
 
@@ -2990,11 +2993,11 @@ static void handle_trap(void *sptr) {
 	}
 	if (trap->trace > 0) {
 		LOG_MOD_DEBUG(2, "trap", "trace on\n");
-		xroar_set_trace(1);
+		xroar_set_trace(1, 0);
 	}
 	if (trap->no_trace > 0) {
 		LOG_MOD_DEBUG(2, "trap", "trace off\n");
-		xroar_set_trace(0);
+		xroar_set_trace(0, 0);
 	}
 
 	if (range) {

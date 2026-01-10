@@ -1737,7 +1737,7 @@ static void emulator_command(uint16_t sym, _Bool shift) {
 			ui_update_state(-1, ui_tag_tv_dialog, UI_NEXT, NULL);
 		} else {
 #ifdef TRACE
-			xroar_set_trace(XROAR_NEXT);
+			xroar_set_trace(XROAR_NEXT, 0);
 #endif
 		}
 		return;
