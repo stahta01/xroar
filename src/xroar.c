@@ -2920,7 +2920,7 @@ static void enable_trap(struct trap_def *trap, _Bool enable) {
 			if (b == -1UL) {
 				b = a;
 			}
-			if (b > a) {
+			if (a > b) {
 				unsigned long c = a;
 				a = b;
 				b = c;
