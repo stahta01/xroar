@@ -953,10 +953,11 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.sam\n");
 			sprintf(packet, "%04x", gip->sam->get_register(gip->sam));
 			send_packet(gip, packet, 4);
+			return;
 		}
-		return;
 #endif
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown xroar vendor query\n");
+		send_packet(gip, NULL, 0);
 	} else if (0 == strcmp(query, "Supported")) {
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Supported\n");
 		send_supported(gip, args);
