@@ -233,6 +233,13 @@ unsigned mc6809_get_pc(void *sptr) {
 	return cpu->reg_pc;
 }
 
+#ifdef TRACE
+unsigned mc6809_get_trace_pc(void *sptr) {
+	struct MC6809 *cpu = sptr;
+	return cpu->trace_pc;
+}
+#endif
+
 static void mc6809_reset(struct MC6809 *cpu) {
 	cpu->halt = cpu->nmi = 0;
 	cpu->nmi_armed = 0;

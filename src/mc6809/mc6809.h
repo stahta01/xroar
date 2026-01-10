@@ -141,5 +141,8 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
 // Used by MC6809-compatibles:
 _Bool mc6809_is_a(struct part *p, const char *name);
 unsigned mc6809_get_pc(void *sptr);
+#ifdef TRACE
+unsigned mc6809_get_trace_pc(void *sptr);
+#endif
 
 #endif
