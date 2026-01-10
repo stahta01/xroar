@@ -2215,6 +2215,8 @@ give plenty of headroom (at the expense of a quieter overall sound).
 @tab Quit emulator @var{n} seconds after trap.
 @item @ @ @ @option{-trap-trace}
 @tab Start trace mode at trap.
+@item @ @ @ @option{-trap-trace-n @var{n}}
+@tab Start trace mode at trap for @var{n} instructions.
 @item @ @ @ @option{-trap-no-trace}
 @tab Stop trace mode at trap.
 

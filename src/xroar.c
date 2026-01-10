@@ -2991,9 +2991,9 @@ static void handle_trap(void *sptr) {
 		LOG_MOD_DEBUG(2, "trap", "timeout: %s\n", trap->timeout);
 		trap->timeout_data = xroar_set_timeout(trap->timeout);
 	}
-	if (trap->trace > 0) {
+	if (trap->trace >= 0) {
 		LOG_MOD_DEBUG(2, "trap", "trace on\n");
-		xroar_set_trace(1, 0);
+		xroar_set_trace(1, trap->trace);
 	}
 	if (trap->no_trace > 0) {
 		LOG_MOD_DEBUG(2, "trap", "trace off\n");
@@ -3293,7 +3293,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_STRING("trap-range", &set_trap_count) },
 	{ XC_SET_STRING("trap-snap", &private_cfg.debug.trap_def.snap) },
 	{ XC_SET_STRING("trap-timeout", &private_cfg.debug.trap_def.timeout) },
-	{ XC_SET_INT1("trap-trace", &private_cfg.debug.trap_def.trace) },
+	{ XC_SET_INT0("trap-trace", &private_cfg.debug.trap_def.trace) },
+	{ XC_SET_INT("trap-trace-n", &private_cfg.debug.trap_def.trace) },
 	{ XC_SET_INT1("trap-no-trace", &private_cfg.debug.trap_def.no_trace) },
 	// All now handled with traps:
 	{ XC_CALL_STRING("snap-motoroff", &set_snap_motoroff) },
@@ -3504,6 +3505,7 @@ static void helptext(void) {
 "    -trap-snap FILE     write snapshot at trap\n"
 "    -trap-timeout N     quit emulator N seconds after trap\n"
 "    -trap-trace         start trace mode at trap\n"
+"    -trap-trace-n N     start trace mode at trap for N instructions\n"
 "    -trap-no-trace      stop trace mode at trap\n"
 "  -timeout N            run for N seconds then quit\n"
 "  -timeout-motoroff N   quit N seconds after tape motor switches off\n"
