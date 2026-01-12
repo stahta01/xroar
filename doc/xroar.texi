@@ -1847,6 +1847,8 @@ extensions with @option{-no-disk-auto-os9}.
 @tab Start up in translated keyboard mode.
 @item @option{-type @var{string}}
 @tab Intercept ROM calls to type @var{string} into BASIC on startup.
+@item @option{-load-text @var{file}}
+@tab Type the contents of @var{file} into BASIC on startup.
 @end multitable
 
 Specifying a keyboard layout (@option{-kbd-layout}) doesn't achieve much yet.
@@ -2012,6 +2014,8 @@ here for reference.
 @tab Attach @var{file} as tape image for reading.  @xref{Cassettes}.
 @item @option{-tape-write @var{file}}
 @tab Open @var{file} for tape writing.  @xref{Cassettes}.
+@item @option{-load-text @var{file}}
+@tab Type the contents of @var{file} into BASIC on startup.
 @item @option{-load-fd@var{X} @var{file}}
 @tab Load disk image file @var{file} into drive @var{X} (0--3).  @xref{Floppy disks}.
 @item @option{-load-hd@var{X} @var{file}}
