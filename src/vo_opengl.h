@@ -27,12 +27,12 @@
 #if defined(__APPLE_CC__)
 # include <OpenGL/gl.h>
 #else
+# include <epoxy/gl.h>
 # include <GL/gl.h>
 #endif
 
-#ifdef WINDOWS32
-#include <GL/glext.h>
-#endif
+#define GL_GLEXT_PROTOTYPES
+#include <SDL2/SDL_opengl_glext.h>
 
 #include "vo.h"
 
