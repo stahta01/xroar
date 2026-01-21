@@ -56,6 +56,7 @@
 #if defined(__APPLE_CC__)
 # include <OpenGL/gl.h>
 #else
+# include <epoxy/gl.h>
 # include <GL/gl.h>
 #endif
 
