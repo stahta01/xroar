@@ -877,7 +877,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	_Bool no_conffile = 0;
 	_Bool no_builtin = 0;
 #ifdef WINDOWS32
-	_Bool alloc_console = 0;
+	int alloc_console = -1;
 #endif
 
 #ifdef AUTOSAVE_PREFIX

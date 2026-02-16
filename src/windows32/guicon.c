@@ -25,23 +25,32 @@
 #include <fcntl.h>
 #include <io.h>
 
-void redirect_io_to_console(int max_lines) {
-	int hConHandle;
-	HANDLE lStdHandle;
-	CONSOLE_SCREEN_BUFFER_INFO coninfo;
-	FILE *fp;
+static _Bool have_console = 0;
 
-	// Allocate a console for this app if attaching to the parent fails.
-	// Thanks to Mysoft for the heads up that we _can_ actually output to a
-	// parent console window.
-	if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
-		AllocConsole();
-	}
+void windows32_attach_to_parent_console(void) {
+	have_console = AttachConsole(ATTACH_PARENT_PROCESS);
+}
+
+void windows32_ensure_console(void) {
+	CONSOLE_SCREEN_BUFFER_INFO coninfo;
+
+	have_console = have_console || AllocConsole();
+	if (!have_console)
+		return;
 
 	// set the screen buffer to be big enough to let us scroll text
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &coninfo);
-	coninfo.dwSize.Y = max_lines;
+	coninfo.dwSize.Y = 1024;  // max lines
 	SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), coninfo.dwSize);
+}
+
+void windows32_redirect_io_to_console(void) {
+	int hConHandle;
+	HANDLE lStdHandle;
+	FILE *fp;
+
+	if (!have_console)
+		return;
 
 	// redirect unbuffered STDOUT to the console
 	lStdHandle = GetStdHandle(STD_OUTPUT_HANDLE);

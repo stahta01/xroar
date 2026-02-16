@@ -63,7 +63,7 @@ struct ui_windows32_interface {
 extern HWND windows32_main_hwnd;
 
 /// Various initialisation required for Windows32.
-int windows32_init(_Bool alloc_console);
+int windows32_init(int alloc_console);
 
 /// Cleanup before exit.
 void windows32_shutdown(void);

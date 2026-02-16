@@ -21,6 +21,13 @@
 #ifndef __GUICON_H__
 #define __GUICON_H__
 
-void redirect_io_to_console(int max_lines);
+// Attach to parent console if possible
+void windows32_attach_to_parent_console(void);
+
+// Allocate a new console _if_ attaching to parent failed
+void windows32_ensure_console(void);
+
+// Redirect IO _if_ either approach to a console is available
+void windows32_redirect_io_to_console(void);
 
 #endif

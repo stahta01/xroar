@@ -42,9 +42,18 @@ HWND windows32_main_hwnd = NULL;
  * code work.
  */
 
-int windows32_init(_Bool alloc_console) {
-	if (alloc_console) {
-		redirect_io_to_console(1024);
+int windows32_init(int alloc_console) {
+	if (alloc_console != 0) {
+		// If not explicitly turned off with -no-C, try and attach to
+		// parent's console.
+		windows32_attach_to_parent_console();
+		if (alloc_console > 0) {
+			// If -C specified, this will allocate a console if the
+			// above failed.
+			windows32_ensure_console();
+		}
+		// Redirect IO to console if one was acquired.
+		windows32_redirect_io_to_console();
 	}
 	// Windows needs this to do networking
 	WORD wVersionRequested;
