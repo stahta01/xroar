@@ -1,4 +1,8 @@
  * New option -trap-trace-n N turns on trace mode for N instruction
+ * Fix trap address range check
+ * Windows: try to use consoles more intelligently
+ * Mac OS X+: fail gracefully when system audio channels > 2 [Steve Clamage]
+ * Option -no-cart disables cartridge for first running machine
 
 Version 1.10, Fri 21 Nov 2025
 
@@ -6,7 +10,7 @@ Version 1.10, Fri 21 Nov 2025
  * Fix some arming of NMI in 6809/6309
  * Implement some more 6809 undocumented behaviour
  * Disable vsync by default
- * New option -vo-vsync to re-enable vsync.
+ * New option -vo-vsync to re-enable vsync
 
 Version 1.9, Sat 30 Aug 2025
 
