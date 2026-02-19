@@ -153,14 +153,28 @@ static void *new(void *cfg) {
 	}
 	fragment_nframes = prop_buf_size / frame_nbytes;
 
+	buffer_nframes = fragment_nframes * aomacosx->nfragments;
+	aomacosx->fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
+
+	// allocate fragment buffers
+	aomacosx->fragment_buffer = xmalloc(aomacosx->nfragments * sizeof(void *));
+	if (aomacosx->nfragments > 1) {
+		for (unsigned i = 0; i < aomacosx->nfragments; i++) {
+			aomacosx->fragment_buffer[i] = xmalloc(aomacosx->fragment_nbytes);
+		}
+	}
+
+	ao->sound_interface = sound_interface_new(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
+	if (!ao->sound_interface) {
+		LOG_MOD_ERROR("[macosx/audio]", "failed to initialise: XRoar internal error\n");
+		goto failed;
+	}
+
 #ifdef MAC_OS_X_VERSION_10_5
 	AudioDeviceCreateIOProcID(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback, aomacosx, &aomacosx->aprocid);
 #else
 	AudioDeviceAddIOProc(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback, aomacosx);
 #endif
-
-	buffer_nframes = fragment_nframes * aomacosx->nfragments;
-	aomacosx->fragment_nbytes = fragment_nframes * nchannels * sample_nbytes;
 
 	pthread_mutex_init(&aomacosx->fragment_mutex, NULL);
 	pthread_cond_init(&aomacosx->fragment_cv, NULL);
@@ -170,14 +184,6 @@ static void *new(void *cfg) {
 	aomacosx->write_fragment = 0;
 	aomacosx->play_fragment = 0;
 	aomacosx->callback_buffer = NULL;
-
-	// allocate fragment buffers
-	aomacosx->fragment_buffer = xmalloc(aomacosx->nfragments * sizeof(void *));
-	if (aomacosx->nfragments > 1) {
-		for (unsigned i = 0; i < aomacosx->nfragments; i++) {
-			aomacosx->fragment_buffer[i] = xmalloc(aomacosx->fragment_nbytes);
-		}
-	}
 
 	AudioDeviceStart(aomacosx->device, (aomacosx->nfragments == 1) ? callback_1 : callback);
 
@@ -191,11 +197,6 @@ static void *new(void *cfg) {
 		pthread_mutex_unlock(&aomacosx->fragment_mutex);
 	}
 
-	ao->sound_interface = sound_interface_new(aomacosx->fragment_buffer[0], sample_fmt, rate, nchannels, fragment_nframes);
-	if (!ao->sound_interface) {
-		LOG_MOD_ERROR("[macosx/audio]", "failed to initialise: XRoar internal error\n");
-		goto failed;
-	}
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_macosx_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %u frames/frag = %u frames buffer (%.1fms)\n", aomacosx->nfragments, fragment_nframes, buffer_nframes, (float)(buffer_nframes * 1000) / rate);
 
