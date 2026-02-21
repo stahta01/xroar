@@ -420,7 +420,8 @@ As a special case, the last machine selected on the command line is used as the
 default machine, and the last cartridge specified is attached to that machine.
 This means you can just use @option{-m @var{name}} instead of
 @option{-default-machine @var{name}}, and @option{-cart @var{name}} instead of
-@option{-machine-cart @var{name}}.
+@option{-machine-cart @var{name}}.  Similarly @option{-no-cart} is equivalent
+to specifying @option{-no-machine-cart} for the default machine.
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
