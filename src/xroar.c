@@ -374,7 +374,6 @@ static void xroar_ui_state_notify(void *, int tag, void *smsg);
 static void xroar_ui_set_machine(void *, int tag, void *smsg);
 static void xroar_ui_set_cartridge(void *, int tag, void *smsg);
 static void xroar_ui_set_frameskip(void *, int tag, void *smsg);
-static void xroar_ui_set_picture(void *, int tag, void *smsg);
 static void xroar_ui_set_print_destination(void *, int tag, void *smsg);
 static void xroar_ui_set_print_file(void *, int tag, void *smsg);
 static void xroar_ui_set_print_pipe(void *, int tag, void *smsg);
@@ -1174,12 +1173,13 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_ratelimit_latch, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_ratelimit_latch, &xroar));
 	ui_messenger_preempt_group(xroar.msgr_client_id, ui_tag_config_autosave, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_config_autosave, &xroar));
 
-	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_picture, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_destination, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_destination, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_file, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_file, NULL));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_tape_motor, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1960,6 +1960,15 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 #endif
 		break;
 
+	case ui_tag_picture:
+		emu->state.vo.picture = uimsg->value;
+		private_cfg.vo.picture = value;
+		break;
+
+	case ui_tag_ntsc_scaling:
+		private_cfg.vo.ntsc_scaling = value;
+		break;
+
 	case ui_tag_brightness:
 		private_cfg.vo.brightness = value;
 		break;
@@ -1991,16 +2000,6 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 	default:
 		break;
 	}
-}
-
-// Receive notifications when the picture (viewport) is changed by user so we
-// know to stop trying to set it automatically.
-
-static void xroar_ui_set_picture(void *sptr, int tag, void *smsg) {
-	(void)tag;
-	struct xroar *emu = sptr;
-	struct ui_state_message *uimsg = smsg;
-	emu->state.vo.picture = uimsg->value;
 }
 
 // If ratelimit_latch is 0 (no rate limit), it overrides ephemeral ratelimit
@@ -3658,7 +3657,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_bool(f, all, "vo-vsync", private_cfg.vo.vsync, 0);
 	xroar_cfg_print_enum(f, all, "vo-pixel-fmt", xroar_ui_cfg.vo_cfg.pixel_fmt, ANY_AUTO, vo_pixel_fmt_list);
 	xroar_cfg_print_string(f, all, "geometry", xroar_ui_cfg.vo_cfg.geometry, NULL);
-	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, 0, vo_viewport_list);
+	xroar_cfg_print_enum(f, all, "vo-picture", private_cfg.vo.picture, UI_AUTO, vo_viewport_list);
 	xroar_cfg_print_bool(f, all, "vo-scale-60hz", private_cfg.vo.ntsc_scaling, 1);
 	xroar_cfg_print_bool(f, all, "invert-text", private_cfg.vo.vdg_inverted_text, 0);
 	xroar_cfg_print_int(f, all, "vo-brightness", private_cfg.vo.brightness, 50);
