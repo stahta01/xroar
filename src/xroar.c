@@ -201,6 +201,7 @@ struct private_cfg {
 		} mpi;
 		struct slist *opts;
 	} cart;
+	_Bool cart_dfn;
 
 	// Cassettes
 	struct {
@@ -352,6 +353,7 @@ static unsigned autorun_media_slot = media_slot_none;
 /* Helper functions used by configuration */
 static void set_default_machine(const char *name);
 static void set_machine(const char *name);
+static void apply_cart_options(void);
 static void set_cart(const char *name);
 static void add_load(const char *arg);
 static void add_run(const char *arg);
@@ -948,6 +950,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Don't auto-select last machine or cart in defaults.
 	xroar.machine_config = NULL;
 	selected_cart_config = NULL;
+	private_cfg.cart_dfn = 0;
 	cur_joy_config = NULL;
 
 	// Finished processing default configuration.
@@ -988,6 +991,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// Don't auto-select last machine or cart in config file.
 	xroar.machine_config = NULL;
 	selected_cart_config = NULL;
+	private_cfg.cart_dfn = 0;
 	cur_joy_config = NULL;
 
 	// Finished processing config file.
@@ -1020,9 +1024,11 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	_Bool no_cart = (private_cfg.cart_dfn && selected_cart_config == NULL);
+
 	// Finish any machine or cart config on command line.
 	set_machine(NULL);
-	set_cart(NULL);
+	apply_cart_options();
 	set_joystick(NULL);
 	set_trap(NULL);
 
@@ -1115,7 +1121,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// But wait, if there's a cartridge selected already, can't have a DOS.
 	// Also if we're going to load a snapshot, it's all irrelevant.
-	if (selected_cart_config || private_cfg.file.snapshot) {
+	if (no_cart || selected_cart_config || private_cfg.file.snapshot) {
 		auto_dos = 0;
 	}
 
@@ -2546,9 +2552,76 @@ static void set_machine(const char *name) {
 	}
 }
 
+/* Applies defined cart-related command-line options into either the current
+ * cart config or the current machine's default cart config. */
+
+static void apply_cart_options(void) {
+	// Apply any unassigned config to either the current cart config or the
+	// current machine's default cart config.
+	struct cart_config *cc = NULL;
+	if (selected_cart_config) {
+		cc = selected_cart_config;
+	} else if (xroar.machine_config) {
+		cc = cart_config_by_name(xroar.machine_config->default_cart);
+	}
+
+	if (!cc)
+		return;
+
+	if (private_cfg.cart.description) {
+		free(cc->description);
+		cc->description = private_cfg.cart.description;
+		private_cfg.cart.description = NULL;
+	}
+	if (private_cfg.cart.type) {
+		free(cc->type);
+		cc->type = private_cfg.cart.type;
+		private_cfg.cart.type = NULL;
+	}
+	if (private_cfg.cart.rom_dfn) {
+		private_cfg.cart.rom_dfn = 0;
+		cc->rom_dfn = 1;
+		free(cc->rom);
+		cc->rom = private_cfg.cart.rom;
+		private_cfg.cart.rom = NULL;
+	}
+	if (private_cfg.cart.rom2_dfn) {
+		private_cfg.cart.rom2_dfn = 0;
+		cc->rom2_dfn = 1;
+		free(cc->rom2);
+		cc->rom2 = private_cfg.cart.rom2;
+		private_cfg.cart.rom2 = NULL;
+	}
+	if (private_cfg.cart.becker != ANY_AUTO) {
+		cc->becker_port = private_cfg.cart.becker;
+		private_cfg.cart.becker = ANY_AUTO;
+	}
+	if (private_cfg.cart.autorun != ANY_AUTO) {
+		cc->autorun = private_cfg.cart.autorun;
+		private_cfg.cart.autorun = ANY_AUTO;
+	}
+	if (private_cfg.cart.mpi.initial_slot != ANY_AUTO) {
+		cc->mpi.initial_slot = private_cfg.cart.mpi.initial_slot;
+		private_cfg.cart.mpi.initial_slot = ANY_AUTO;
+	}
+	for (unsigned i = 0; i < 4; i++) {
+		if (private_cfg.cart.mpi.slot_cart_name[i]) {
+			free(cc->mpi.slot_cart_name[i]);
+			cc->mpi.slot_cart_name[i] = private_cfg.cart.mpi.slot_cart_name[i];
+			private_cfg.cart.mpi.slot_cart_name[i] = NULL;
+		}
+	}
+	if (private_cfg.cart.opts) {
+		cc->opts = slist_concat(cc->opts, private_cfg.cart.opts);
+		private_cfg.cart.opts = NULL;
+	}
+	cart_config_complete(cc);
+}
+
 /* Called when a "-cart" option is encountered.  If an existing cart config was
-* in progress, copies any cart-related options into it and clears those
-* options.  Starts a new config.  */
+ * in progress, copies any cart-related options into it and clears those
+ * options.  Starts a new config.  */
+
 static void set_cart(const char *name) {
 #ifdef LOGGING
 	if (name && 0 == c_strcasecmp(name, "help")) {
@@ -2561,70 +2634,15 @@ static void set_cart(const char *name) {
 		exit(EXIT_SUCCESS);
 	}
 #endif
-	// Apply any unassigned config to either the current cart config or the
-	// current machine's default cart config.
-	struct cart_config *cc = NULL;
-	if (selected_cart_config) {
-		cc = selected_cart_config;
-	} else if (xroar.machine_config) {
-		cc = cart_config_by_name(xroar.machine_config->default_cart);
-	}
-	if (cc) {
-		if (private_cfg.cart.description) {
-			free(cc->description);
-			cc->description = private_cfg.cart.description;
-			private_cfg.cart.description = NULL;
-		}
-		if (private_cfg.cart.type) {
-			free(cc->type);
-			cc->type = private_cfg.cart.type;
-			private_cfg.cart.type = NULL;
-		}
-		if (private_cfg.cart.rom_dfn) {
-			private_cfg.cart.rom_dfn = 0;
-			cc->rom_dfn = 1;
-			free(cc->rom);
-			cc->rom = private_cfg.cart.rom;
-			private_cfg.cart.rom = NULL;
-		}
-		if (private_cfg.cart.rom2_dfn) {
-			private_cfg.cart.rom2_dfn = 0;
-			cc->rom2_dfn = 1;
-			free(cc->rom2);
-			cc->rom2 = private_cfg.cart.rom2;
-			private_cfg.cart.rom2 = NULL;
-		}
-		if (private_cfg.cart.becker != ANY_AUTO) {
-			cc->becker_port = private_cfg.cart.becker;
-			private_cfg.cart.becker = ANY_AUTO;
-		}
-		if (private_cfg.cart.autorun != ANY_AUTO) {
-			cc->autorun = private_cfg.cart.autorun;
-			private_cfg.cart.autorun = ANY_AUTO;
-		}
-		if (private_cfg.cart.mpi.initial_slot != ANY_AUTO) {
-			cc->mpi.initial_slot = private_cfg.cart.mpi.initial_slot;
-			private_cfg.cart.mpi.initial_slot = ANY_AUTO;
-		}
-		for (unsigned i = 0; i < 4; i++) {
-			if (private_cfg.cart.mpi.slot_cart_name[i]) {
-				free(cc->mpi.slot_cart_name[i]);
-				cc->mpi.slot_cart_name[i] = private_cfg.cart.mpi.slot_cart_name[i];
-				private_cfg.cart.mpi.slot_cart_name[i] = NULL;
-			}
-		}
-		if (private_cfg.cart.opts) {
-			cc->opts = slist_concat(cc->opts, private_cfg.cart.opts);
-			private_cfg.cart.opts = NULL;
-		}
-		cart_config_complete(cc);
-	}
+	apply_cart_options();
 	if (name) {
 		selected_cart_config = cart_config_by_name(name);
 		if (!selected_cart_config) {
 			selected_cart_config = cart_config_new();
 			selected_cart_config->name = xstrdup(name);
 		}
+	} else {
+		selected_cart_config = NULL;
 	}
 }
 
@@ -3149,7 +3167,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_ALIAS_NOARG("noaltbas", "no-altbas"), .deprecated = 1 },
 
 	/* Cartridges: */
-	{ XC_CALL_STRING("cart", &set_cart) },
+	{ XC_CALL_STRING("cart", &set_cart), .defined = &private_cfg.cart_dfn },
 	{ XC_SET_STRING("cart-desc", &private_cfg.cart.description) },
 	{ XC_SET_PART("cart-type", &private_cfg.cart.type, "cart") },
 	{ XC_SET_STRING_NE("cart-rom", &private_cfg.cart.rom), .defined = &private_cfg.cart.rom_dfn },
