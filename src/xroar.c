@@ -1178,6 +1178,9 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_tape_motor, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1958,6 +1961,18 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 			}
 		}
 #endif
+		break;
+
+	case ui_tag_cmp_colour_killer:
+		private_cfg.vo.colour_killer = value;
+		break;
+
+	case ui_tag_ccr:
+		private_cfg.vo.ccr = value;
+		break;
+
+	case ui_tag_gl_filter:
+		private_cfg.vo.gl_filter = value;
 		break;
 
 	case ui_tag_picture:
