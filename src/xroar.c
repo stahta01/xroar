@@ -1187,6 +1187,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_contrast, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_saturation, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hue, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_gain, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_kbd_translate, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1998,6 +1999,14 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_hue:
 		private_cfg.vo.hue = value;
+		break;
+
+	case ui_tag_gain:
+		if (uimsg->data) {
+			float db = *(float *)uimsg->data;
+			private_cfg.ao.volume = -1;
+			private_cfg.ao.gain = db;
+		}
 		break;
 
 	case ui_tag_hkbd_layout:
