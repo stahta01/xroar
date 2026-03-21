@@ -2704,6 +2704,8 @@ static enum media_slot add_load_file(const char *filename) {
 		break;
 
 	case FILETYPE_BIN:
+	case FILETYPE_HEX:
+	case FILETYPE_S19:
 		private_cfg.file.binaries = slist_append(private_cfg.file.binaries, xstrdup(filename));
 		slot = media_slot_binary;
 		break;
