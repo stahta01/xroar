@@ -3,6 +3,8 @@
  * Windows: try to use consoles more intelligently
  * Mac OS X+: fail gracefully when system audio channels > 2 [Steve Clamage]
  * Option -no-cart disables cartridge for first running machine
+ * Support loading Motorola S19 records
+ * Fix command-line loading of HEX and S19
 
 Version 1.10, Fri 21 Nov 2025
 
