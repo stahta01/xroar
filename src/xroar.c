@@ -836,6 +836,7 @@ static struct {
 	{ "DGN", FILETYPE_BIN },
 	{ "CCO", FILETYPE_BIN },
 	{ "HEX", FILETYPE_HEX },
+	{ "S19", FILETYPE_S19 },
 	{ "CAS", FILETYPE_CAS },
 	{ "C10", FILETYPE_CAS },
 	{ "K7",  FILETYPE_K7  },
@@ -1662,6 +1663,10 @@ void xroar_load_file_by_type(const char *filename, int autorun) {
 
 	case FILETYPE_HEX:
 		intel_hex_read(filename, autorun);
+		return;
+
+	case FILETYPE_S19:
+		motorola_s19_read(filename, autorun);
 		return;
 
 	case FILETYPE_SNA:

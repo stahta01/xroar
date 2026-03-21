@@ -28,6 +28,7 @@
 #define XROAR_HEXS19_H_
 
 int intel_hex_read(const char *filename, int autorun);
+int motorola_s19_read(const char *filename, int autorun);
 int bin_load(const char *filename, int autorun);
 
 #endif

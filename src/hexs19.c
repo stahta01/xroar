@@ -146,6 +146,81 @@ int intel_hex_read(const char *filename, int autorun) {
 	return 0;
 }
 
+int motorola_s19_read(const char *filename, int autorun) {
+	FILE *fd;
+	int data;
+	uint16_t exec = 0;
+	struct log_handle *log_s19 = NULL;
+	if (filename == NULL) {
+		return -1;
+	}
+	if (!(fd = fopen(filename, "rb"))) {
+		LOG_MOD_SUB_WARN("binary", "s19", "%s: %s\n", filename, strerror(errno));
+		return -1;
+	}
+	LOG_MOD_SUB_DEBUG(1, "binary", "s19", "%s: reading Motorola S19 record\n", filename);
+	if (logging.debug_file & LOG_FILE_BIN_DATA)
+		log_open_hexdump(&log_s19, "[binary/s19]");
+	while ((data = fs_read_uint8(fd)) >= 0) {
+		if (data != 'S') {
+			fclose(fd);
+			if (logging.debug_file & LOG_FILE_BIN_DATA) {
+				log_hexdump_flag(log_s19);
+				log_close(&log_s19);
+			}
+			return -1;
+		}
+		int type = read_nibble(fd);
+		int length = read_byte(fd);
+		int addr = read_word(fd);
+		if (type == 1 && (logging.debug_file & LOG_FILE_BIN_DATA))
+			log_hexdump_set_addr(log_s19, addr);
+		uint8_t rsum = length + addr + (addr >> 8);
+		length -= 3;  // don't include address or sum in byte count
+		for (int i = 0; i < length; i++) {
+			data = read_byte(fd);
+			rsum += data;
+			if (type == 1) {
+				if (logging.debug_file & LOG_FILE_BIN_DATA)
+					log_hexdump_byte(log_s19, data);
+				xroar.machine->write_byte(xroar.machine, addr & 0xffff, data);
+				addr++;
+			}
+		}
+		int sum = read_byte(fd);
+		rsum = ~rsum;
+		if (sum != rsum) {
+			fprintf(stderr, "%02x != %02x\n", sum, rsum);
+			if (logging.debug_file & LOG_FILE_BIN_DATA)
+				log_hexdump_flag(log_s19);
+		}
+		if (skip_eol(fd) == 0)
+			break;
+		if (type == 9) {
+			exec = addr;
+			break;
+		}
+	}
+
+	if (logging.debug_file & LOG_FILE_BIN_DATA)
+		log_close(&log_s19);
+	if (exec != 0) {
+		struct debug_cpu *dcpu = NULL;
+		if (autorun) {
+			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
+		}
+		if (autorun && dcpu) {
+			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - autorunning\n", exec);
+			DELEGATE_CALL(dcpu->set_pc, exec);
+		} else {
+			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - not autorunning\n", exec);
+		}
+	}
+
+	fclose(fd);
+	return 0;
+}
+
 int bin_load(const char *filename, int autorun) {
 	if (filename == NULL) {
 		return -1;

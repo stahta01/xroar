@@ -56,6 +56,7 @@ enum xroar_filetype {
 	// Binary types
 	FILETYPE_BIN,  // Generic ".bin", needs analysing for subtype
 	FILETYPE_HEX,  // Intel HEX format
+	FILETYPE_S19,  // Motorola S19 format
 
 	// Cassette types
 	FILETYPE_CAS,  // Simple bit format with optional CUE data
