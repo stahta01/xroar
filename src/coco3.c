@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Colour Computer 3 machine.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -131,7 +131,7 @@ static struct {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_coco3 {
+struct coco3 {
 	struct machine public;
 
 	struct MC6809 *CPU;
@@ -197,12 +197,12 @@ static const struct ser_struct ser_struct_coco3[] = {
 	SER_ID_STRUCT_UNHANDLED(COCO3_SER_RAM),
 	SER_ID_STRUCT_UNHANDLED(COCO3_SER_RAM_SIZE),
 	SER_ID_STRUCT_UNHANDLED(COCO3_SER_RAM_MASK),
-	SER_ID_STRUCT_ELEM(5,  struct machine_coco3, inverted_text),
-	SER_ID_STRUCT_ELEM(6,  struct machine_coco3, dat.enabled),
-	SER_ID_STRUCT_ELEM(7,  struct machine_coco3, dat.readable),
-	SER_ID_STRUCT_ELEM(8,  struct machine_coco3, dat.MMUEN),
-	SER_ID_STRUCT_ELEM(9,  struct machine_coco3, dat.MC3),
-	SER_ID_STRUCT_ELEM(10, struct machine_coco3, dat.task),
+	SER_ID_STRUCT_ELEM(5,  struct coco3, inverted_text),
+	SER_ID_STRUCT_ELEM(6,  struct coco3, dat.enabled),
+	SER_ID_STRUCT_ELEM(7,  struct coco3, dat.readable),
+	SER_ID_STRUCT_ELEM(8,  struct coco3, dat.MMUEN),
+	SER_ID_STRUCT_ELEM(9,  struct coco3, dat.MC3),
+	SER_ID_STRUCT_ELEM(10, struct coco3, dat.task),
 	SER_ID_STRUCT_UNHANDLED(COCO3_SER_DAT_MMU_BANK),
 	SER_ID_STRUCT_UNHANDLED(COCO3_SER_DAT_VRAM_BANK),
 };
@@ -368,11 +368,11 @@ static const struct partdb_entry_funcs coco3_funcs = {
 const struct machine_partdb_entry coco3_part = { .partdb_entry = { .name = "coco3", .description = "Tandy | Colour Computer 3", .funcs = &coco3_funcs }, .config_complete = coco3_config_complete, .is_working_config = coco3_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *coco3_allocate(void) {
-        struct machine_coco3 *mcc3 = part_new(sizeof(*mcc3));
+        struct coco3 *mcc3 = part_new(sizeof(*mcc3));
         struct machine *m = &mcc3->public;
         struct part *p = &m->part;
 
-	*mcc3 = (struct machine_coco3){0};
+	*mcc3 = (struct coco3){0};
 
 	m->has_interface = coco3_has_interface;
 	m->attach_interface = coco3_attach_interface;
@@ -399,7 +399,7 @@ static struct part *coco3_allocate(void) {
 	return p;
 }
 
-static void create_ram(struct machine_coco3 *mcc3) {
+static void create_ram(struct coco3 *mcc3) {
 	struct machine *m = &mcc3->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -448,7 +448,7 @@ static void coco3_initialise(struct part *p, void *options) {
         struct machine_config *mc = options;
         assert(mc != NULL);
 
-        struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+        struct coco3 *mcc3 = (struct coco3 *)p;
         struct machine *m = &mcc3->public;
 
         coco3_config_complete(mc);
@@ -472,7 +472,7 @@ static void coco3_initialise(struct part *p, void *options) {
 }
 
 static _Bool coco3_finish(struct part *p) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	struct coco3 *mcc3 = (struct coco3 *)p;
 	struct machine *m = &mcc3->public;
 	struct machine_config *mc = m->config;
 
@@ -688,7 +688,7 @@ static _Bool coco3_finish(struct part *p) {
 }
 
 static void coco3_free(struct part *p) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	struct coco3 *mcc3 = (struct coco3 *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mcc3->msgr_client_id);
 #ifdef WANT_GDB_TARGET
@@ -710,7 +710,7 @@ static void coco3_free(struct part *p) {
 }
 
 static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	struct machine *m = &mcc3->public;
 	struct part *p = &m->part;
 	size_t length = ser_data_length(sh);
@@ -756,7 +756,7 @@ static _Bool coco3_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	switch (tag) {
 	case COCO3_SER_RAM:
 	case COCO3_SER_RAM_SIZE:
@@ -786,7 +786,7 @@ static _Bool coco3_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static _Bool coco3_has_interface(struct part *p, const char *ifname) {
-	struct machine_coco3 *mp = (struct machine_coco3 *)p;
+	struct coco3 *mp = (struct coco3 *)p;
 
 	struct cart *c = mp->cart;
 	if (c) {
@@ -799,7 +799,7 @@ static _Bool coco3_has_interface(struct part *p, const char *ifname) {
 }
 
 static void coco3_attach_interface(struct part *p, const char *ifname, void *intf) {
-	struct machine_coco3 *mp = (struct machine_coco3 *)p;
+	struct coco3 *mp = (struct coco3 *)p;
 
 	struct cart *c = mp->cart;
 	if (c) {
@@ -812,7 +812,7 @@ static void coco3_attach_interface(struct part *p, const char *ifname, void *int
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void coco3_connect_cart(struct part *p) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)p;
+	struct coco3 *mcc3 = (struct coco3 *)p;
 	struct cart *c = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 	mcc3->cart = c;
 	if (!c)
@@ -831,13 +831,13 @@ static void coco3_insert_cart(struct machine *m, struct cart *c) {
 }
 
 static void coco3_remove_cart(struct machine *m) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	part_free((struct part *)mcc3->cart);
 	mcc3->cart = NULL;
 }
 
 static void coco3_reset(struct machine *m, _Bool hard) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
 		ram_clear(mcc3->RAM, mc->ram_init);
@@ -856,7 +856,7 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 }
 
 static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
@@ -891,7 +891,7 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
 }
 
 static void coco3_single_step(struct machine *m) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	mcc3->single_step = 1;
 	mcc3->CPU->running = 0;
 	mcc3->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
@@ -906,7 +906,7 @@ static void coco3_single_step(struct machine *m) {
  */
 
 static void coco3_signal(struct machine *m, int sig) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	mcc3->stop_signal = sig;
 	mcc3->CPU->running = 0;
 }
@@ -917,7 +917,7 @@ static void coco3_trap(void *sptr) {
 }
 
 static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	for (int i = 0; i < n; i++) {
 		if (list[i].add_cond & BP_CRC_COMBINED)
 			continue;
@@ -931,7 +931,7 @@ static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, vo
 }
 
 static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	for (int i = 0; i < n; i++) {
 		bp_remove(mcc3->bp_session, &list[i].bp);
 	}
@@ -940,7 +940,7 @@ static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void coco3_ui_set_keymap(void *sptr, int tag, void *smsg) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	struct machine *m = &mcc3->public;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_keymap);
@@ -975,7 +975,7 @@ static void coco3_ui_set_keymap(void *sptr, int tag, void *smsg) {
 }
 
 static _Bool coco3_set_pause(struct machine *m, int state) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	switch (state) {
 	case 0: case 1:
 		mcc3->CPU->halt = state;
@@ -990,7 +990,7 @@ static _Bool coco3_set_pause(struct machine *m, int state) {
 }
 
 static void coco3_ui_set_picture(void *sptr, int tag, void *smsg) {
-	struct machine_coco3 *mp = sptr;
+	struct coco3 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_picture);
 	int picture = ui_msg_adjust_value_range(uimsg, mp->vo->picture, VO_PICTURE_ACTION,
@@ -1002,7 +1002,7 @@ static void coco3_ui_set_picture(void *sptr, int tag, void *smsg) {
 // TV input selection.  CoCo 3 allows RGB.  RGB monitors pull PIA1 PB3 low.
 
 static void coco3_ui_set_tv_input(void *sptr, int tag, void *smsg) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	struct machine *m = &mcc3->public;
 	struct machine_config *mc = m->config;
 	struct ui_state_message *uimsg = smsg;
@@ -1042,7 +1042,7 @@ static void coco3_ui_set_tv_input(void *sptr, int tag, void *smsg) {
 }
 
 static void coco3_ui_set_text_invert(void *sptr, int tag, void *smsg) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_vdg_inverse);
 
@@ -1058,7 +1058,7 @@ static void coco3_ui_set_text_invert(void *sptr, int tag, void *smsg) {
 /* Similarly SLOW.  Used to populate UI. */
 
 static void *coco3_get_interface(struct machine *m, const char *ifname) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	if (0 == strcmp(ifname, "cart")) {
 		return mcc3->cart;
 	} else if (0 == strcmp(ifname, "keyboard")) {
@@ -1075,14 +1075,14 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 
 static void coco3_ui_set_frameskip(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_coco3 *mp = sptr;
+	struct coco3 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	mp->configured_frameskip = mp->frameskip = uimsg->value;
 }
 
 static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_coco3 *mp = sptr;
+	struct coco3 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	sound_set_ratelimit(mp->snd, uimsg->value);
 	if (uimsg->value) {
@@ -1097,11 +1097,11 @@ static void coco3_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 // Used when single-stepping.
 
 static void coco3_instruction_posthook(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mcc3->single_step = 0;
 }
 
-static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
+static void read_byte(struct coco3 *mcc3, unsigned A) {
 	if (mcc3->cart) {
 		mcc3->CPU->D = mcc3->cart->read(mcc3->cart, A, 0, 0, mcc3->CPU->D);
 		if (mcc3->cart->EXTMEM) {
@@ -1167,7 +1167,7 @@ static void read_byte(struct machine_coco3 *mcc3, unsigned A) {
 	}
 }
 
-static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
+static void write_byte(struct coco3 *mcc3, unsigned A) {
 	if (mcc3->cart) {
 		mcc3->cart->write(mcc3->cart, A, 0, 0, mcc3->CPU->D);
 	}
@@ -1253,7 +1253,7 @@ static void write_byte(struct machine_coco3 *mcc3, unsigned A) {
  */
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mcc3->cycles -= ncycles;
 	if (mcc3->cycles <= 0) mcc3->CPU->running = 0;
 	event_run_queue(MACHINE_EVENT_LIST, ncycles);
@@ -1277,7 +1277,7 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 }
 
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	(void)ncycles;
 	if (RnW) {
 		read_byte(mcc3, A);
@@ -1290,7 +1290,7 @@ static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
 	tcc1014_mem_cycle(mcc3->GIME, 1, A);
 	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, mcc3);
@@ -1300,7 +1300,7 @@ static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D) {
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	mcc3->CPU->D = D;
 	mcc3->GIME->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle_noclock, mcc3);
 	tcc1014_mem_cycle(mcc3->GIME, 0, A);
@@ -1309,7 +1309,7 @@ static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D) {
 
 /* simulate an RTS without otherwise affecting machine state */
 static void coco3_op_rts(struct machine *m) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	unsigned int new_pc = m->read_byte(m, mcc3->CPU->reg_s, 0) << 8;
 	new_pc |= m->read_byte(m, mcc3->CPU->reg_s + 1, 0);
 	mcc3->CPU->reg_s += 2;
@@ -1317,7 +1317,7 @@ static void coco3_op_rts(struct machine *m) {
 }
 
 static void coco3_dump_ram(struct machine *m, FILE *fd) {
-	struct machine_coco3 *mcc3 = (struct machine_coco3 *)m;
+	struct coco3 *mcc3 = (struct coco3 *)m;
 	struct ram *ram = mcc3->RAM;
 	for (unsigned bank = 0; bank < ram->nbanks; bank++) {
 		if (ram->d && ram->d[bank]) {
@@ -1327,7 +1327,7 @@ static void coco3_dump_ram(struct machine *m, FILE *fd) {
 }
 
 static uint16_t fetch_vram(void *sptr, uint32_t A) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	unsigned bank = mcc3->dat.vram_bank >> 6;
 	unsigned Zrow = A & ~1;
 	unsigned Zcol = A >> 9;
@@ -1342,7 +1342,7 @@ static uint16_t fetch_vram(void *sptr, uint32_t A) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void keyboard_update(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	unsigned buttons = ~(joystick_read_buttons() & 15);
 	struct keyboard_state state = {
 		.row_source = mcc3->PIA0->a.out_sink,
@@ -1360,7 +1360,7 @@ static void keyboard_update(void *sptr) {
 }
 
 static void joystick_update(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	int port = PIA_VALUE_CB2(mcc3->PIA0);
 	int axis = PIA_VALUE_CA2(mcc3->PIA0);
 	int dac_value = ((mcc3->PIA1->a.out_sink & 0xfc) | 2) << 8;
@@ -1372,7 +1372,7 @@ static void joystick_update(void *sptr) {
 }
 
 static void update_sound_mux_source(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	unsigned source = (PIA_VALUE_CB2(mcc3->PIA0) << 1)
 	                  | PIA_VALUE_CA2(mcc3->PIA0);
 	sound_set_mux_source(mcc3->snd, source);
@@ -1386,18 +1386,18 @@ static void pia0a_data_preread(void *sptr) {
 }
 
 static void pia1a_data_postwrite(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	sound_set_dac_level(mcc3->snd, (float)(PIA_VALUE_A(mcc3->PIA1) & 0xfc) / 252.);
 	tape_update_output(mcc3->tape_interface, mcc3->PIA1->a.out_sink & 0xfc);
 }
 
 static void pia1a_control_postwrite(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	tape_set_motor(mcc3->tape_interface, PIA_VALUE_CA2(mcc3->PIA1));
 }
 
 static void pia1b_data_postwrite(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	// Single-bit sound
 	_Bool sbs_enabled = !((mcc3->PIA1->b.out_source ^ mcc3->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = mcc3->PIA1->b.out_source & mcc3->PIA1->b.out_sink & (1<<1);
@@ -1405,7 +1405,7 @@ static void pia1b_data_postwrite(void *sptr) {
 }
 
 static void pia1b_control_postwrite(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	sound_set_mux_enabled(mcc3->snd, PIA_VALUE_CB2(mcc3->PIA1));
 }
 
@@ -1414,20 +1414,20 @@ static void pia1b_control_postwrite(void *sptr) {
 /* VDG edge delegates */
 
 static void gime_hs(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA0->a, level);
 }
 
 /*
 // PAL CoCos 1&2 invert HS - is this true for coco3?  Probably not...
 static void gime_hs_pal_coco(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA0->a, !level);
 }
 */
 
 static void gime_fs(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA0->b, level);
 	if (level) {
 		sound_update(mcc3->snd);
@@ -1439,14 +1439,14 @@ static void gime_fs(void *sptr, _Bool level) {
 }
 
 static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	DELEGATE_CALL(mcc3->vo->render_line, burst, npixels, data);
 }
 
 // CoCo serial printing ROM hook.
 
 static void coco3_print_byte(void *sptr) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	if (!mcc3->printer_interface) {
 		return;
 	}
@@ -1464,7 +1464,7 @@ static void coco3_print_byte(void *sptr) {
  * configured as an input. */
 
 static void single_bit_feedback(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	if (level) {
 		mcc3->PIA1->b.in_source &= ~(1<<1);
 		mcc3->PIA1->b.in_sink &= ~(1<<1);
@@ -1477,7 +1477,7 @@ static void single_bit_feedback(void *sptr, _Bool level) {
 /* Tape audio delegate */
 
 static void update_audio_from_tape(void *sptr, float value) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	sound_set_tape_level(mcc3->snd, value);
 	if (value >= 0.5)
 		mcc3->PIA1->a.in_sink &= ~(1<<0);
@@ -1488,17 +1488,17 @@ static void update_audio_from_tape(void *sptr, float value) {
 /* Catridge signalling */
 
 static void cart_firq(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	mc6821_set_cx1(&mcc3->PIA1->b, level);
 	mcc3->GIME->IL0 = level;
 }
 
 static void cart_nmi(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	MC6809_NMI_SET(mcc3->CPU, level);
 }
 
 static void cart_halt(void *sptr, _Bool level) {
-	struct machine_coco3 *mcc3 = sptr;
+	struct coco3 *mcc3 = sptr;
 	MC6809_HALT_SET(mcc3->CPU, level);
 }

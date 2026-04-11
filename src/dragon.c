@@ -2,7 +2,7 @@
  *
  *  \brief Dragon and Tandy Colour Computer machines.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -61,7 +61,7 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_dragon_common {
+struct dragon {
 	struct machine public;  // first element in turn is part
 
 	struct MC6809 *CPU;
@@ -78,8 +78,8 @@ struct machine_dragon_common {
 
 	// Derived machines can use these to redirect address decoding.  If
 	// they return true, the address was handled, no need to continue.
-	_Bool (*read_byte)(struct machine_dragon_common *, unsigned A);
-	_Bool (*write_byte)(struct machine_dragon_common *, unsigned A);
+	_Bool (*read_byte)(struct dragon *, unsigned A);
+	_Bool (*write_byte)(struct dragon *, unsigned A);
 
 	_Bool inverted_text;
 	struct cart *cart;
@@ -137,7 +137,7 @@ static const struct ser_struct ser_struct_dragon[] = {
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM),
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_SIZE),
 	SER_ID_STRUCT_UNHANDLED(DRAGON_SER_RAM_MASK),
-        SER_ID_STRUCT_ELEM(5, struct machine_dragon_common, inverted_text),
+        SER_ID_STRUCT_ELEM(5, struct dragon, inverted_text),
 };
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -292,7 +292,7 @@ static void dragon_verify_ram_size(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon_create_ram(struct machine_dragon_common *);
+static void dragon_create_ram(struct dragon *);
 
 static _Bool dragon_has_interface(struct part *p, const char *ifname);
 static void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
@@ -326,7 +326,7 @@ static void dragon_dump_ram(struct machine *m, FILE *fd);
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
 static void update_sound_mux_source(void *sptr);
-static void update_vdg_mode(struct machine_dragon_common *md);
+static void update_vdg_mode(struct dragon *md);
 
 static void single_bit_feedback(void *sptr, _Bool level);
 static void update_audio_from_tape(void *sptr, float value);
@@ -344,8 +344,8 @@ static struct machine_bp coco_print_breakpoint[] = {
 	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
 };
 
-static inline void advance_clock(struct machine_dragon_common *md, int ncycles);
-static void dragon_cpu_cycle(struct machine_dragon_common *md, _Bool RnW,
+static inline void advance_clock(struct dragon *md, int ncycles);
+static void dragon_cpu_cycle(struct dragon *md, _Bool RnW,
 			     uint16_t A, unsigned Zrow, unsigned Zcol);
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
@@ -393,7 +393,7 @@ const struct machine_partdb_entry dragon32_part = { .partdb_entry = { .name = "d
 
 const struct machine_partdb_entry coco_part = { .partdb_entry = { .name = "coco", .description = "Tandy | Colour Computer", .funcs = &dragon_funcs }, .config_complete = dragon_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
-static void dragon_allocate_common(struct machine_dragon_common *md) {
+static void dragon_allocate_common(struct dragon *md) {
 	struct machine *m = &md->public;
 
 	m->has_interface = dragon_has_interface;
@@ -420,17 +420,17 @@ static void dragon_allocate_common(struct machine_dragon_common *md) {
 }
 
 static struct part *dragon_allocate(void) {
-	struct machine_dragon_common *md = part_new(sizeof(*md));
+	struct dragon *md = part_new(sizeof(*md));
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
-	*md = (struct machine_dragon_common){0};
+	*md = (struct dragon){0};
 	dragon_allocate_common(md);
 
 	return p;
 }
 
-static void dragon_initialise_common(struct machine_dragon_common *md, struct machine_config *mc) {
+static void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	struct machine *m = &md->public;
 
 	m->config = mc;
@@ -462,7 +462,7 @@ static void dragon_initialise_common(struct machine_dragon_common *md, struct ma
 static void dragon_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 	struct machine_config *mc = options;
 
 	dragon_config_complete(mc);
@@ -474,7 +474,7 @@ static void dragon_initialise(struct part *p, void *options) {
 	dragon_initialise_common(md, mc);
 }
 
-static _Bool dragon_finish_common(struct machine_dragon_common *md) {
+static _Bool dragon_finish_common(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -771,7 +771,7 @@ static _Bool dragon_finish_common(struct machine_dragon_common *md) {
 }
 
 static _Bool dragon_finish(struct part *p) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 
@@ -838,7 +838,7 @@ static _Bool dragon_finish(struct part *p) {
 
 // Called from part_free(), which handles freeing the struct itself
 static void dragon_free_common(struct part *p) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(md->msgr_client_id);
 #ifdef WANT_GDB_TARGET
@@ -860,13 +860,13 @@ static void dragon_free_common(struct part *p) {
 }
 
 static void dragon_free(struct part *p) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 	dragon_free_common(p);
 	rombank_free(md->ROM0);
 }
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	size_t length = ser_data_length(sh);
@@ -901,7 +901,7 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	(void)md;
 	(void)sh;
 	switch (tag) {
@@ -932,7 +932,7 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon_create_ram(struct machine_dragon_common *md) {
+static void dragon_create_ram(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -963,7 +963,7 @@ static void dragon_create_ram(struct machine_dragon_common *md) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static _Bool dragon_has_interface(struct part *p, const char *ifname) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 
 	struct cart *c = md->cart;
 	if (c) {
@@ -976,7 +976,7 @@ static _Bool dragon_has_interface(struct part *p, const char *ifname) {
 }
 
 static void dragon_attach_interface(struct part *p, const char *ifname, void *intf) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 
 	struct cart *c = md->cart;
 	if (c) {
@@ -989,7 +989,7 @@ static void dragon_attach_interface(struct part *p, const char *ifname, void *in
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon_connect_cart(struct part *p) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)p;
+	struct dragon *md = (struct dragon *)p;
 	struct cart *c = (struct cart *)part_component_by_id_is_a(p, "cart", "dragon-cart");
 	md->cart = c;
 	if (!c)
@@ -1008,13 +1008,13 @@ static void dragon_insert_cart(struct machine *m, struct cart *c) {
 }
 
 static void dragon_remove_cart(struct machine *m) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	part_free((struct part *)md->cart);
 	md->cart = NULL;
 }
 
 static void dragon_reset(struct machine *m, _Bool hard) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
 		ram_clear(md->RAM, mc->ram_init);
@@ -1034,7 +1034,7 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 }
 
 static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
@@ -1071,7 +1071,7 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
 }
 
 static void dragon_single_step(struct machine *m) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	md->single_step = 1;
 	md->CPU->running = 0;
 	md->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
@@ -1087,7 +1087,7 @@ static void dragon_single_step(struct machine *m) {
  */
 
 static void dragon_signal(struct machine *m, int sig) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	update_vdg_mode(md);
 	md->stop_signal = sig;
 	md->CPU->running = 0;
@@ -1099,7 +1099,7 @@ static void dragon_trap(void *sptr) {
 }
 
 static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	for (int i = 0; i < n; i++) {
 		if ((list[i].add_cond & BP_CRC_COMBINED) && (!md->has_combined || !crclist_match(list[i].cond_crc_combined, md->crc_combined)))
 			continue;
@@ -1113,7 +1113,7 @@ static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, v
 }
 
 static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	for (int i = 0; i < n; i++) {
 		bp_remove(md->bp_session, &list[i].bp);
 	}
@@ -1122,7 +1122,7 @@ static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon_ui_set_keymap(void *sptr, int tag, void *smsg) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct machine *m = &md->public;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_keymap);
@@ -1157,7 +1157,7 @@ static void dragon_ui_set_keymap(void *sptr, int tag, void *smsg) {
 }
 
 static _Bool dragon_set_pause(struct machine *m, int state) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	switch (state) {
 	case 0: case 1:
 		md->CPU->halt = state;
@@ -1172,7 +1172,7 @@ static _Bool dragon_set_pause(struct machine *m, int state) {
 }
 
 static void dragon_ui_set_picture(void *sptr, int tag, void *smsg) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_picture);
 	int picture = ui_msg_adjust_value_range(uimsg, md->vo->picture, VO_PICTURE_TITLE,
@@ -1182,7 +1182,7 @@ static void dragon_ui_set_picture(void *sptr, int tag, void *smsg) {
 }
 
 static void dragon_ui_set_tv_input(void *sptr, int tag, void *smsg) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	struct ui_state_message *uimsg = smsg;
@@ -1210,7 +1210,7 @@ static void dragon_ui_set_tv_input(void *sptr, int tag, void *smsg) {
 }
 
 static void dragon_ui_set_text_invert(void *sptr, int tag, void *smsg) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_vdg_inverse);
 
@@ -1228,7 +1228,7 @@ static void dragon_ui_set_text_invert(void *sptr, int tag, void *smsg) {
  * now. */
 
 static void *dragon_get_interface(struct machine *m, const char *ifname) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	if (0 == strcmp(ifname, "cart")) {
 		return md->cart;
 	} else if (0 == strcmp(ifname, "keyboard")) {
@@ -1245,14 +1245,14 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 
 static void dragon_ui_set_frameskip(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct ui_state_message *uimsg = smsg;
 	md->configured_frameskip = md->frameskip = uimsg->value;
 }
 
 static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	struct ui_state_message *uimsg = smsg;
 	sound_set_ratelimit(md->snd, uimsg->value);
 	if (uimsg->value) {
@@ -1267,7 +1267,7 @@ static void dragon_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 // Used when single-stepping.
 
 static void dragon_instruction_posthook(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	md->single_step = 0;
 }
 
@@ -1275,9 +1275,9 @@ static void dragon_instruction_posthook(void *sptr) {
 
 // CPU cycles
 
-static inline void advance_clock(struct machine_dragon_common *md, int ncycles);
-static void read_byte(struct machine_dragon_common *md, unsigned A);
-static void write_byte(struct machine_dragon_common *md, unsigned A);
+static inline void advance_clock(struct dragon *md, int ncycles);
+static void read_byte(struct dragon *md, unsigned A);
+static void write_byte(struct dragon *md, unsigned A);
 
 // The SAM's mem_cycle() is set up to call cpu_cycle(), which does the
 // following:
@@ -1297,7 +1297,7 @@ static void write_byte(struct machine_dragon_common *md, unsigned A);
 // calling to do the same thing without advancing the clock.
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 
 	if (ncycles && !md->clock_inhibit) {
 		advance_clock(md, ncycles);
@@ -1313,7 +1313,7 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 // Advance clock and run scheduled events
 
-static inline void advance_clock(struct machine_dragon_common *md, int ncycles) {
+static inline void advance_clock(struct dragon *md, int ncycles) {
 	md->cycles -= ncycles;
 	if (md->cycles <= 0) md->CPU->running = 0;
 	event_run_queue(MACHINE_EVENT_LIST, ncycles);
@@ -1322,7 +1322,7 @@ static inline void advance_clock(struct machine_dragon_common *md, int ncycles) 
 // Common routine called by cpu_cycle() (or override) to access RAM and devices
 // for a CPU cycle.
 
-static void dragon_cpu_cycle(struct machine_dragon_common *md, _Bool RnW,
+static void dragon_cpu_cycle(struct dragon *md, _Bool RnW,
 			     uint16_t A, unsigned Zrow, unsigned Zcol) {
 	md->Dread = 0xff;
 	if (md->SAM->nWE) {
@@ -1374,7 +1374,7 @@ static void dragon_cpu_cycle(struct machine_dragon_common *md, _Bool RnW,
 	}
 }
 
-static void read_byte(struct machine_dragon_common *md, unsigned A) {
+static void read_byte(struct dragon *md, unsigned A) {
 	switch (md->SAM->S) {
 	case 0:
 		md->CPU->D = md->Dread;
@@ -1412,7 +1412,7 @@ static void read_byte(struct machine_dragon_common *md, unsigned A) {
 	}
 }
 
-static void write_byte(struct machine_dragon_common *md, unsigned A) {
+static void write_byte(struct dragon *md, unsigned A) {
 	if ((md->SAM->S & 4) || md->unexpanded_dragon32) {
 		switch (md->SAM->S) {
 		case 1:
@@ -1455,7 +1455,7 @@ static void write_byte(struct machine_dragon_common *md, unsigned A) {
 
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
 	(void)A;
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	uint16_t attr = (PIA_VALUE_B(md->PIA1) & 0x10) << 6;  // GM0 -> ¬INT/EXT
 	while (nbytes > 0) {
 		int n = md->SAM->vdg_bytes(md->SAM, nbytes);
@@ -1477,7 +1477,7 @@ static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest
 
 static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
 	(void)A;
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	unsigned pia_vdg_mode = PIA_VALUE_B(md->PIA1);
 	_Bool GnA = pia_vdg_mode & 0x80;
 	_Bool EnI = pia_vdg_mode & 0x10;
@@ -1513,7 +1513,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 
 static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 	(void)D;
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	md->clock_inhibit = 1;
 	md->SAM->mem_cycle(md->SAM, 1, A);
 	md->clock_inhibit = 0;
@@ -1523,7 +1523,7 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
 /* Write a byte without advancing clock.  Used for debugging & breakpoints. */
 
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	md->CPU->D = D;
 	md->clock_inhibit = 1;
 	md->SAM->mem_cycle(md->SAM, 0, A);
@@ -1532,7 +1532,7 @@ static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
 
 /* simulate an RTS without otherwise affecting machine state */
 static void dragon_op_rts(struct machine *m) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	unsigned int new_pc = m->read_byte(m, md->CPU->reg_s, 0) << 8;
 	new_pc |= m->read_byte(m, md->CPU->reg_s + 1, 0);
 	md->CPU->reg_s += 2;
@@ -1540,7 +1540,7 @@ static void dragon_op_rts(struct machine *m) {
 }
 
 static void dragon_dump_ram(struct machine *m, FILE *fd) {
-	struct machine_dragon_common *md = (struct machine_dragon_common *)m;
+	struct dragon *md = (struct dragon *)m;
 	struct ram *ram = md->RAM;
 	for (unsigned bank = 0; bank < ram->nbanks; bank++) {
 		if (ram->d && ram->d[bank]) {
@@ -1552,7 +1552,7 @@ static void dragon_dump_ram(struct machine *m, FILE *fd) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void keyboard_update(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	unsigned buttons = ~(joystick_read_buttons() & 3);
 	struct keyboard_state state = {
 		.row_source = md->PIA0->a.out_sink,
@@ -1567,7 +1567,7 @@ static void keyboard_update(void *sptr) {
 }
 
 static void joystick_update(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	int port = PIA_VALUE_CB2(md->PIA0);
 	int axis = PIA_VALUE_CA2(md->PIA0);
 	int dac_value = ((md->PIA1->a.out_sink & 0xfc) | 2) << 8;
@@ -1579,13 +1579,13 @@ static void joystick_update(void *sptr) {
 }
 
 static void update_sound_mux_source(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	unsigned source = (PIA_VALUE_CB2(md->PIA0) << 1)
 	                  | PIA_VALUE_CA2(md->PIA0);
 	sound_set_mux_source(md->snd, source);
 }
 
-static void update_vdg_mode(struct machine_dragon_common *md) {
+static void update_vdg_mode(struct dragon *md) {
 	unsigned vmode = (md->PIA1->b.out_source & md->PIA1->b.out_sink) & 0xf8;
 	// ¬INT/EXT = GM0
 	vmode |= (vmode & 0x10) << 4;
@@ -1600,7 +1600,7 @@ static void pia0a_data_preread(void *sptr) {
 }
 
 static void pia0b_data_preread_coco64k(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	keyboard_update(md);
 	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
 	if ((md->PIA1->b.out_source & md->PIA1->b.out_sink) & (1<<2)) {
@@ -1613,7 +1613,7 @@ static void pia0b_data_preread_coco64k(void *sptr) {
 }
 
 static void pia1a_data_postwrite(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	sound_set_dac_level(md->snd, (float)(PIA_VALUE_A(md->PIA1) & 0xfc) / 252.);
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 	if (md->is_dragon) {
@@ -1623,13 +1623,13 @@ static void pia1a_data_postwrite(void *sptr) {
 }
 
 static void pia1a_control_postwrite(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	tape_set_motor(md->tape_interface, PIA_VALUE_CA2(md->PIA1));
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 }
 
 static void pia1b_data_preread_dragon(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	if (printer_busy(md->printer_interface))
 		md->PIA1->b.in_sink |= 0x01;
 	else
@@ -1637,7 +1637,7 @@ static void pia1b_data_preread_dragon(void *sptr) {
 }
 
 static void pia1b_data_preread_coco64k(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
 	if ((md->PIA0->b.out_source & md->PIA0->b.out_sink) & (1<<6)) {
 		md->PIA1->b.in_source |= (1<<2);
@@ -1649,7 +1649,7 @@ static void pia1b_data_preread_coco64k(void *sptr) {
 }
 
 static void pia1b_data_postwrite(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	// Single-bit sound
 	_Bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);
@@ -1659,7 +1659,7 @@ static void pia1b_data_postwrite(void *sptr) {
 }
 
 static void pia1b_control_postwrite(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	sound_set_mux_enabled(md->snd, PIA_VALUE_CB2(md->PIA1));
 }
 
@@ -1668,7 +1668,7 @@ static void pia1b_control_postwrite(void *sptr) {
 /* VDG edge delegates */
 
 static void vdg_hs(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level);
 	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
@@ -1681,7 +1681,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 
 // PAL CoCos invert HS
 static void vdg_hs_pal_coco(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, !level);
 	md->SAM->vdg_hsync(md->SAM, level);
 	// PAL uses palletised output so this wouldn't technically matter, but
@@ -1696,7 +1696,7 @@ static void vdg_hs_pal_coco(void *sptr, _Bool level) {
 }
 
 static void vdg_fs(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
 	md->SAM->vdg_fsync(md->SAM, level);
 	if (level) {
@@ -1709,7 +1709,7 @@ static void vdg_fs(void *sptr, _Bool level) {
 }
 
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	burst = (burst | md->ntsc_burst_mod) & 3;
 	DELEGATE_CALL(md->vo->render_line, burst, npixels, data);
 }
@@ -1718,14 +1718,14 @@ static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_
 
 // ACK is active low
 static void printer_ack(void *sptr, _Bool ack) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->a, !ack);
 }
 
 // CoCo serial printing ROM hook.
 
 static void coco_print_byte(void *sptr) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	if (!md->printer_interface) {
 		return;
 	}
@@ -1743,7 +1743,7 @@ static void coco_print_byte(void *sptr) {
  * configured as an input. */
 
 static void single_bit_feedback(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	if (level) {
 		md->PIA1->b.in_source &= ~(1<<1);
 		md->PIA1->b.in_sink &= ~(1<<1);
@@ -1756,7 +1756,7 @@ static void single_bit_feedback(void *sptr, _Bool level) {
 /* Tape audio delegate */
 
 static void update_audio_from_tape(void *sptr, float value) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	sound_set_tape_level(md->snd, value);
 	if (value >= 0.5)
 		md->PIA1->a.in_sink &= ~(1<<0);
@@ -1767,16 +1767,16 @@ static void update_audio_from_tape(void *sptr, float value) {
 /* Catridge signalling */
 
 static void cart_firq(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->b, level);
 }
 
 static void cart_nmi(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	MC6809_NMI_SET(md->CPU, level);
 }
 
 static void cart_halt(void *sptr, _Bool level) {
-	struct machine_dragon_common *md = sptr;
+	struct dragon *md = sptr;
 	MC6809_HALT_SET(md->CPU, level);
 }

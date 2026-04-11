@@ -2,7 +2,7 @@
  *
  *  \brief Dragon Professional (Alpha) support.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -66,8 +66,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_dragonpro {
-	struct machine_dragon_common machine_dragon;
+struct dragonpro {
+	struct dragon dragon;
 
 	struct rombank *BOOT;
 	struct rombank *ROM0;
@@ -95,11 +95,11 @@ static const struct ser_struct ser_struct_dragonpro[] = {
 	SER_ID_STRUCT_NEST(1,  &dragon_ser_struct_data),
 
 	// Floppy disk data
-	SER_ID_STRUCT_ELEM(2, struct machine_dragonpro, dos.device_select),
-	SER_ID_STRUCT_ELEM(3, struct machine_dragonpro, dos.motor_enable),
-	SER_ID_STRUCT_ELEM(4, struct machine_dragonpro, dos.single_density),
-	SER_ID_STRUCT_ELEM(5, struct machine_dragonpro, dos.precomp_enable),
-	SER_ID_STRUCT_ELEM(6, struct machine_dragonpro, dos.nmi_enable),
+	SER_ID_STRUCT_ELEM(2, struct dragonpro, dos.device_select),
+	SER_ID_STRUCT_ELEM(3, struct dragonpro, dos.motor_enable),
+	SER_ID_STRUCT_ELEM(4, struct dragonpro, dos.single_density),
+	SER_ID_STRUCT_ELEM(5, struct dragonpro, dos.precomp_enable),
+	SER_ID_STRUCT_ELEM(6, struct dragonpro, dos.nmi_enable),
 };
 
 static const struct ser_struct_data dragonpro_ser_struct_data = {
@@ -116,8 +116,8 @@ static void dragonpro_attach_interface(struct part *, const char *ifname, void *
 
 static void dragonpro_reset(struct machine *m, _Bool hard);
 
-static _Bool dragonpro_read_byte(struct machine_dragon_common *, unsigned A);
-static _Bool dragonpro_write_byte(struct machine_dragon_common *, unsigned A);
+static _Bool dragonpro_read_byte(struct dragon *, unsigned A);
+static _Bool dragonpro_write_byte(struct dragon *, unsigned A);
 static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 
 #define dragonpro_pia2a_data_preread NULL
@@ -154,12 +154,12 @@ static const struct partdb_entry_funcs dragonpro_funcs = {
 const struct machine_partdb_entry dragonpro_part = { .partdb_entry = { .name = "dragonpro", .description = "Dragon Data | Dragon Professional (Alpha)", .funcs = &dragonpro_funcs }, .config_complete = dragonpro_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *dragonpro_allocate(void) {
-	struct machine_dragonpro *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = part_new(sizeof(*mdp));
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
-	*mdp = (struct machine_dragonpro){0};
+	*mdp = (struct dragonpro){0};
 
 	dragon_allocate_common(md);
 
@@ -177,8 +177,8 @@ static struct part *dragonpro_allocate(void) {
 static void dragonpro_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = (struct dragonpro *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine_config *mc = options;
 
 	dragonpro_config_complete(mc);
@@ -201,8 +201,8 @@ static void dragonpro_initialise(struct part *p, void *options) {
 
 static _Bool dragonpro_finish(struct part *p) {
 	assert(p != NULL);
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = (struct dragonpro *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
@@ -288,8 +288,8 @@ static _Bool dragonpro_finish(struct part *p) {
 }
 
 static void dragonpro_free(struct part *p) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = (struct dragonpro *)p;
+	struct dragon *md = &mdp->dragon;
 	md->snd->get_ay_audio.func = NULL;
 	dragon_free_common(p);
 	rombank_free(mdp->ROM0);
@@ -338,7 +338,7 @@ static void dragonpro_attach_interface(struct part *p, const char *ifname, void 
 	if (!p)
 		return;
 
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)p;
+	struct dragonpro *mdp = (struct dragonpro *)p;
 
 	if (0 == strcmp(ifname, "sound")) {
 		struct sound_interface *snd = intf;
@@ -382,7 +382,7 @@ static void dragonpro_attach_interface(struct part *p, const char *ifname, void 
 }
 
 static void dragonpro_reset(struct machine *m, _Bool hard) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)m;
+	struct dragonpro *mdp = (struct dragonpro *)m;
 	dragon_reset(m, hard);
 	mos6551_reset(mdp->ACIA);
 	mc6821_reset(mdp->PIA2);
@@ -392,11 +392,11 @@ static void dragonpro_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static uint8_t dragonpro_dos_read(struct machine_dragon_common *, uint16_t A, uint8_t D);
-static uint8_t dragonpro_dos_write(struct machine_dragon_common *, uint16_t A, uint8_t D);
+static uint8_t dragonpro_dos_read(struct dragon *, uint16_t A, uint8_t D);
+static uint8_t dragonpro_dos_write(struct dragon *, uint16_t A, uint8_t D);
 
-static _Bool dragonpro_read_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
+static _Bool dragonpro_read_byte(struct dragon *md, unsigned A) {
+	struct dragonpro *mdp = (struct dragonpro *)md;
 
 	switch (md->SAM->S) {
 	case 1:
@@ -428,8 +428,8 @@ static _Bool dragonpro_read_byte(struct machine_dragon_common *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragonpro_write_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
+static _Bool dragonpro_write_byte(struct dragon *md, unsigned A) {
+	struct dragonpro *mdp = (struct dragonpro *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
@@ -462,8 +462,8 @@ static _Bool dragonpro_write_byte(struct machine_dragon_common *md, unsigned A) 
 }
 
 static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 
 	if (ncycles && !md->clock_inhibit) {
 		advance_clock(md, ncycles);
@@ -481,8 +481,8 @@ static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragonpro_pia2a_data_postwrite(void *sptr) {
-	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 	mdp->PIA2->b.in_sink = 0xff;
 	mdp->PIA2->b.in_source = 0xff;
 	uint8_t out = PIA_VALUE_A(mdp->PIA2);
@@ -498,7 +498,7 @@ static void dragonpro_pia2a_data_postwrite(void *sptr) {
 }
 
 static void dragonpro_pia2a_control_postwrite(void *sptr) {
-	struct machine_dragonpro *mdp = sptr;
+	struct dragonpro *mdp = sptr;
 	_Bool nmi_enable = PIA_VALUE_CA2(mdp->PIA2);
 	if (nmi_enable != mdp->dos.nmi_enable) {
 		LOG_MOD_DEBUG(2, "dragonpro", "disk NMI %s\n", nmi_enable?"ENABLED":"DISABLED");
@@ -507,12 +507,12 @@ static void dragonpro_pia2a_control_postwrite(void *sptr) {
 }
 
 static void dragonpro_pia2b_data_postwrite(void *sptr) {
-	struct machine_dragonpro *mdp = sptr;
+	struct dragonpro *mdp = sptr;
 	(void)mdp;
 }
 
 static void dragonpro_pia2b_control_postwrite(void *sptr) {
-	struct machine_dragonpro *mdp = sptr;
+	struct dragonpro *mdp = sptr;
 	(void)mdp;
 }
 
@@ -521,7 +521,7 @@ static void dragonpro_pia2b_control_postwrite(void *sptr) {
 // PSG I/O (only port A available on AY-3-8912)
 
 static void dragonpro_ay891x_data_postwrite(void *sptr) {
-	struct machine_dragonpro *mdp = sptr;
+	struct dragonpro *mdp = sptr;
 	struct AY891X *psg = mdp->PSG;
 	uint8_t D = AY891X_VALUE_A(psg);
 
@@ -589,26 +589,26 @@ static void dragonpro_ay891x_data_postwrite(void *sptr) {
 
 // TODO: optional "becker port" might make sense at $FF29/$FF2A?
 
-static uint8_t dragonpro_dos_read(struct machine_dragon_common *md, uint16_t A, uint8_t D) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
+static uint8_t dragonpro_dos_read(struct dragon *md, uint16_t A, uint8_t D) {
+	struct dragonpro *mdp = (struct dragonpro *)md;
 	(void)D;
 	return wd279x_read(mdp->dos.fdc, A);
 }
 
-static uint8_t dragonpro_dos_write(struct machine_dragon_common *md, uint16_t A, uint8_t D) {
-	struct machine_dragonpro *mdp = (struct machine_dragonpro *)md;
+static uint8_t dragonpro_dos_write(struct dragon *md, uint16_t A, uint8_t D) {
+	struct dragonpro *mdp = (struct dragonpro *)md;
 	wd279x_write(mdp->dos.fdc, A, D);
 	return D;
 }
 
 static void set_drq(void *sptr, _Bool value) {
-	struct machine_dragonpro *mdp = sptr;
+	struct dragonpro *mdp = sptr;
 	mc6821_set_cx1(&mdp->PIA2->b, value);
 }
 
 static void set_intrq(void *sptr, _Bool value) {
-	struct machine_dragonpro *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragonpro *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 
 	// XXX NMI may need to be merged with line from the cartridge.  There
 	// may even be a way of selecting between them in the dragonpro...

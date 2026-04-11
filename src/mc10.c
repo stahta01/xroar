@@ -57,7 +57,7 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_mc10 {
+struct mc10 {
 	struct machine machine;
 
 	struct MC6801 *CPU;
@@ -111,9 +111,9 @@ static const struct ser_struct ser_struct_mc10[] = {
 	SER_ID_STRUCT_NEST(1, &machine_ser_struct_data),
 	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM),
 	SER_ID_STRUCT_UNHANDLED(MC10_SER_RAM_SIZE),
-	SER_ID_STRUCT_ELEM(4, struct machine_mc10, inverted_text),
-	SER_ID_STRUCT_ELEM(5, struct machine_mc10, video_mode),
-	SER_ID_STRUCT_ELEM(6, struct machine_mc10, video_attr),
+	SER_ID_STRUCT_ELEM(4, struct mc10, inverted_text),
+	SER_ID_STRUCT_ELEM(5, struct mc10, video_mode),
+	SER_ID_STRUCT_ELEM(6, struct mc10, video_attr),
 };
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -244,11 +244,11 @@ static const struct partdb_entry_funcs mc10_funcs = {
 const struct machine_partdb_entry mc10_part = { .partdb_entry = { .name = "mc10", .description = "Tandy | Micro Colour Computer MC-10", .funcs = &mc10_funcs }, .config_complete = mc10_config_complete, .is_working_config = mc10_is_working_config, .cart_arch = "mc10-cart" };
 
 static struct part *mc10_allocate(void) {
-        struct machine_mc10 *mp = part_new(sizeof(*mp));
+        struct mc10 *mp = part_new(sizeof(*mp));
         struct machine *m = &mp->machine;
         struct part *p = &m->part;
 
-        *mp = (struct machine_mc10){0};
+        *mp = (struct mc10){0};
 
 	m->has_interface = mc10_has_interface;
 	m->attach_interface = mc10_attach_interface;
@@ -273,7 +273,7 @@ static struct part *mc10_allocate(void) {
 	return p;
 }
 
-static void create_ram(struct machine_mc10 *mp) {
+static void create_ram(struct mc10 *mp) {
 	struct machine *m = &mp->machine;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -335,7 +335,7 @@ static void mc10_initialise(struct part *p, void *options) {
         struct machine_config *mc = options;
         assert(mc != NULL);
 
-        struct machine_mc10 *mp = (struct machine_mc10 *)p;
+        struct mc10 *mp = (struct mc10 *)p;
         struct machine *m = &mp->machine;
 
         mc10_config_complete(mc);
@@ -355,7 +355,7 @@ static void mc10_initialise(struct part *p, void *options) {
 }
 
 static _Bool mc10_finish(struct part *p) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10 *mp = (struct mc10 *)p;
 	struct machine *m = &mp->machine;
 	struct machine_config *mc = m->config;
 
@@ -522,7 +522,7 @@ static _Bool mc10_finish(struct part *p) {
 
 // Called from part_free(), which handles freeing the struct itself
 static void mc10_free(struct part *p) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10 *mp = (struct mc10 *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mp->msgr_client_id);
 #ifdef WANT_GDB_TARGET
@@ -544,7 +544,7 @@ static void mc10_free(struct part *p) {
 }
 
 static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
         struct part *p = &mp->machine.part;
 	size_t length = ser_data_length(sh);
 	switch (tag) {
@@ -584,7 +584,7 @@ static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 }
 
 static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	(void)mp;
 	(void)sh;
 	switch (tag) {
@@ -602,14 +602,14 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static _Bool mc10_has_interface(struct part *p, const char *ifname) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10 *mp = (struct mc10 *)p;
 	(void)mp;
 	(void)ifname;
 	return 0;
 }
 
 static void mc10_attach_interface(struct part *p, const char *ifname, void *intf) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10 *mp = (struct mc10 *)p;
 	(void)mp;
 	(void)ifname;
 	(void)intf;
@@ -618,7 +618,7 @@ static void mc10_attach_interface(struct part *p, const char *ifname, void *intf
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_connect_cart(struct part *p) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)p;
+	struct mc10 *mp = (struct mc10 *)p;
 	struct mc10_cart *cm = (struct mc10_cart *)part_component_by_id_is_a(p, "cart", "mc10-cart");
 	mp->cart = cm;
 	if (!cm) {
@@ -636,7 +636,7 @@ static void mc10_insert_cart(struct machine *m, struct cart *c) {
 }
 
 static void mc10_remove_cart(struct machine *m) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	if (mp->cart) {
 		part_free(&mp->cart->cart.part);
 		mp->cart = NULL;
@@ -644,7 +644,7 @@ static void mc10_remove_cart(struct machine *m) {
 }
 
 static void mc10_reset(struct machine *m, _Bool hard) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
 		ram_clear(mp->RAM0, mc->ram_init);
@@ -668,7 +668,7 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 #undef WANT_GDB_TARGET
 
 static enum machine_run_state mc10_run(struct machine *m, int ncycles) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 
 #ifdef WANT_GDB_TARGET
 	if (mp->gdb_interface) {
@@ -705,12 +705,12 @@ static enum machine_run_state mc10_run(struct machine *m, int ncycles) {
 }
 
 static void mc10_instruction_posthook(void *sptr) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	mp->single_step = 0;
 }
 
 static void mc10_single_step(struct machine *m) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	mp->single_step = 1;
 	mp->CPU->running = 0;
 	mp->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, mc10_instruction_posthook, mp);
@@ -722,7 +722,7 @@ static void mc10_single_step(struct machine *m) {
 }
 
 static void mc10_signal(struct machine *m, int sig) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	mc10_vdg_update_mode(mp);
 	mp->stop_signal = sig;
 	mp->CPU->running = 0;
@@ -734,7 +734,7 @@ static void mc10_trap(void *sptr) {
 }
 
 static void mc10_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	for (int i = 0; i < n; i++) {
 		if ((list[i].add_cond & BP_CRC_BAS) && (!mp->has_bas || !crclist_match(list[i].cond_crc_bas, mp->crc_bas)))
 			continue;
@@ -744,7 +744,7 @@ static void mc10_bp_add_n(struct machine *m, struct machine_bp *list, int n, voi
 }
 
 static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	for (int i = 0; i < n; i++) {
 		bp_remove(mp->bp_session, &list[i].bp);
 	}
@@ -760,7 +760,7 @@ static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n) 
 // implement MC-10 carts, this is how it's going to be though.
 
 static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 
 	switch ((A >> 14) & 3) {
 	case 1:
@@ -801,7 +801,7 @@ static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D) {
 }
 
 static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 
 	switch ((A >> 14) & 3) {
 	case 1:
@@ -844,7 +844,7 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D) {
 }
 
 static void mc10_op_rts(struct machine *m) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	unsigned int new_pc = m->read_byte(m, mp->CPU->reg_sp + 1, 0) << 8;
 	new_pc |= m->read_byte(m, mp->CPU->reg_sp + 2, 0);
 	mp->CPU->reg_sp += 2;
@@ -852,7 +852,7 @@ static void mc10_op_rts(struct machine *m) {
 }
 
 static void mc10_dump_ram(struct machine *m, FILE *fd) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	struct ram *ram0 = mp->RAM0;
 	for (unsigned bank = 0; bank < ram0->nbanks; bank++) {
 		if (ram0->d && ram0->d[bank]) {
@@ -873,7 +873,7 @@ static void mc10_dump_ram(struct machine *m, FILE *fd) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct machine *m = &mp->machine;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_keymap);
@@ -896,7 +896,7 @@ static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
 }
 
 static void mc10_ui_set_picture(void *sptr, int tag, void *smsg) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_picture);
 	int picture = ui_msg_adjust_value_range(uimsg, mp->vo->picture, VO_PICTURE_TITLE,
@@ -906,7 +906,7 @@ static void mc10_ui_set_picture(void *sptr, int tag, void *smsg) {
 }
 
 static void mc10_ui_set_tv_input(void *sptr, int tag, void *smsg) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct machine *m = &mp->machine;
 	struct machine_config *mc = m->config;
 	struct ui_state_message *uimsg = smsg;
@@ -934,7 +934,7 @@ static void mc10_ui_set_tv_input(void *sptr, int tag, void *smsg) {
 }
 
 static void mc10_ui_set_text_invert(void *sptr, int tag, void *smsg) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_vdg_inverse);
 
@@ -944,7 +944,7 @@ static void mc10_ui_set_text_invert(void *sptr, int tag, void *smsg) {
 }
 
 static void *mc10_get_interface(struct machine *m, const char *ifname) {
-	struct machine_mc10 *mp = (struct machine_mc10 *)m;
+	struct mc10 *mp = (struct mc10 *)m;
 	if (0 == strcmp(ifname, "keyboard")) {
 		return mp->keyboard.interface;
 	} else if (0 == strcmp(ifname, "printer")) {
@@ -965,7 +965,7 @@ static void mc10_vdg_hs(void *sptr, _Bool level) {
 }
 
 static void mc10_vdg_fs(void *sptr, _Bool level) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	if (level) {
 		sound_update(mp->snd);
 		mp->frame--;
@@ -976,12 +976,12 @@ static void mc10_vdg_fs(void *sptr, _Bool level) {
 }
 
 static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	DELEGATE_CALL(mp->vo->render_line, burst, npixels, data);
 }
 
 static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	if (!dest)
 		return;
 	while (nbytes > 0) {
@@ -1004,14 +1004,14 @@ static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t 
 }
 
 static void mc10_vdg_update_mode(void *sptr) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	mc6847_set_mode(mp->VDG, mp->video_mode);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct machine *m = &mp->machine;
 
 	_Bool SEL = 0;
@@ -1053,14 +1053,14 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 static void mc10_ui_set_frameskip(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	mp->configured_frameskip = mp->frameskip = uimsg->value;
 }
 
 static void mc10_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 	(void)tag;
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	struct ui_state_message *uimsg = smsg;
 	sound_set_ratelimit(mp->snd, uimsg->value);
 	if (uimsg->value) {
@@ -1075,7 +1075,7 @@ static void mc10_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 // MC-10 serial printing ROM hook
 
 static void mc10_print_byte(void *sptr) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	if (!mp->printer_interface)
 		return;
 	int byte = MC6801_REG_A(mp->CPU);
@@ -1085,7 +1085,7 @@ static void mc10_print_byte(void *sptr) {
 }
 
 static void mc10_keyboard_update(void *sptr) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	uint8_t shift_sink = (mp->CPU->port2.out_sink & (1<<1)) ? (1<<6) : 0;
 	struct keyboard_state state = {
 		.row_source = ~(1<<6) | shift_sink,
@@ -1108,7 +1108,7 @@ static void mc10_keyboard_update(void *sptr) {
 }
 
 static void mc10_update_tape_input(void *sptr, float value) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	sound_set_tape_level(mp->snd, value);
 	if (value >= 0.5) {
 		mp->CPU->port2.in_source &= ~(1<<4);
@@ -1120,7 +1120,7 @@ static void mc10_update_tape_input(void *sptr, float value) {
 }
 
 static void mc10_mc6803_port2_postwrite(void *sptr) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	uint8_t port2 = MC6801_PORT_VALUE(&mp->CPU->port2);
 	tape_update_output(mp->tape_interface, (port2 & 1) ? 0xfc : 0);
 }
@@ -1128,6 +1128,6 @@ static void mc10_mc6803_port2_postwrite(void *sptr) {
 /* Catridge signalling */
 
 static void cart_nmi(void *sptr, _Bool level) {
-	struct machine_mc10 *mp = sptr;
+	struct mc10 *mp = sptr;
 	MC6801_NMI_SET(mp->CPU, level);
 }

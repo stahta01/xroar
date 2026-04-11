@@ -2,7 +2,7 @@
  *
  *  \brief Dragon 64 support.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,8 +29,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_dragon64 {
-	struct machine_dragon_common machine_dragon;
+struct dragon64 {
+	struct dragon dragon;
 
 	struct rombank *ROM0;
 	struct rombank *ROM1;
@@ -47,8 +47,8 @@ static void dragon64_config_complete(struct machine_config *);
 
 static void dragon64_reset(struct machine *, _Bool hard);
 
-static _Bool dragon64_read_byte(struct machine_dragon_common *, unsigned A);
-static _Bool dragon64_write_byte(struct machine_dragon_common *, unsigned A);
+static _Bool dragon64_read_byte(struct dragon *, unsigned A);
+static _Bool dragon64_write_byte(struct dragon *, unsigned A);
 
 static void dragon64_pia1b_data_postwrite(void *);
 
@@ -76,12 +76,12 @@ static const struct partdb_entry_funcs dragon64_funcs = {
 const struct machine_partdb_entry dragon64_part = { .partdb_entry = { .name = "dragon64", .description = "Dragon Data | Dragon 64", .funcs = &dragon64_funcs }, .config_complete = dragon64_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *dragon64_allocate(void) {
-	struct machine_dragon64 *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragon64 *mdp = part_new(sizeof(*mdp));
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
-	*mdp = (struct machine_dragon64){0};
+	*mdp = (struct dragon64){0};
 
 	dragon_allocate_common(md);
 
@@ -96,8 +96,8 @@ static struct part *dragon64_allocate(void) {
 static void dragon64_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragon64 *mdp = (struct dragon64 *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine_config *mc = options;
 
 	dragon64_config_complete(mc);
@@ -111,8 +111,8 @@ static void dragon64_initialise(struct part *p, void *options) {
 
 static _Bool dragon64_finish(struct part *p) {
 	assert(p != NULL);
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragon64 *mdp = (struct dragon64 *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
@@ -177,7 +177,7 @@ static _Bool dragon64_finish(struct part *p) {
 }
 
 static void dragon64_free(struct part *p) {
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)p;
+	struct dragon64 *mdp = (struct dragon64 *)p;
 	dragon_free_common(p);
 	rombank_free(mdp->ROM1);
 	rombank_free(mdp->ROM0);
@@ -222,15 +222,15 @@ static void dragon64_config_complete(struct machine_config *mc) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon64_reset(struct machine *m, _Bool hard) {
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)m;
+	struct dragon64 *mdp = (struct dragon64 *)m;
 	dragon_reset(m, hard);
 	mos6551_reset(mdp->ACIA);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool dragon64_read_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)md;
+static _Bool dragon64_read_byte(struct dragon *md, unsigned A) {
+	struct dragon64 *mdp = (struct dragon64 *)md;
 
 	switch (md->SAM->S) {
 	case 1:
@@ -251,8 +251,8 @@ static _Bool dragon64_read_byte(struct machine_dragon_common *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragon64_write_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_dragon64 *mdp = (struct machine_dragon64 *)md;
+static _Bool dragon64_write_byte(struct dragon *md, unsigned A) {
+	struct dragon64 *mdp = (struct dragon64 *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
@@ -276,8 +276,8 @@ static _Bool dragon64_write_byte(struct machine_dragon_common *md, unsigned A) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon64_pia1b_data_postwrite(void *sptr) {
-	struct machine_dragon64 *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct dragon64 *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 
 	_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
 	if (is_32k) {

@@ -2,7 +2,7 @@
  *
  *  \brief Tandy Deluxe Color Computer support.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -52,8 +52,8 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct machine_deluxecoco {
-	struct machine_dragon_common machine_dragon;
+struct deluxecoco {
+	struct dragon dragon;
 
 	struct rombank *ROM0;
 	struct MOS6551 *ACIA;
@@ -70,12 +70,12 @@ struct machine_deluxecoco {
 
 static const struct ser_struct ser_struct_deluxecoco[] = {
         SER_ID_STRUCT_NEST(1, &dragon_ser_struct_data),
-	SER_ID_STRUCT_ELEM(2, struct machine_deluxecoco, page),
-	SER_ID_STRUCT_ELEM(3, struct machine_deluxecoco, page_enable),
-	SER_ID_STRUCT_ELEM(4, struct machine_deluxecoco, burst),
-	SER_ID_STRUCT_ELEM(5, struct machine_deluxecoco, irq_60hz_enable),
-	SER_ID_STRUCT_ELEM(6, struct machine_deluxecoco, irq_60hz),
-	SER_ID_STRUCT_ELEM(7, struct machine_deluxecoco, cart_inhibit),
+	SER_ID_STRUCT_ELEM(2, struct deluxecoco, page),
+	SER_ID_STRUCT_ELEM(3, struct deluxecoco, page_enable),
+	SER_ID_STRUCT_ELEM(4, struct deluxecoco, burst),
+	SER_ID_STRUCT_ELEM(5, struct deluxecoco, irq_60hz_enable),
+	SER_ID_STRUCT_ELEM(6, struct deluxecoco, irq_60hz),
+	SER_ID_STRUCT_ELEM(7, struct deluxecoco, cart_inhibit),
 };
 
 static const struct ser_struct_data deluxecoco_ser_struct_data = {
@@ -92,8 +92,8 @@ static void deluxecoco_attach_interface(struct part *, const char *ifname, void 
 
 static void deluxecoco_reset(struct machine *, _Bool hard);
 
-static _Bool deluxecoco_read_byte(struct machine_dragon_common *, unsigned A);
-static _Bool deluxecoco_write_byte(struct machine_dragon_common *, unsigned A);
+static _Bool deluxecoco_read_byte(struct dragon *, unsigned A);
+static _Bool deluxecoco_write_byte(struct dragon *, unsigned A);
 static void deluxecoco_cpu_cycle(void *, int ncycles, _Bool RnW, uint16_t A);
 
 static void deluxecoco_vdg_hs(void *, _Bool level);
@@ -120,12 +120,12 @@ static const struct partdb_entry_funcs deluxecoco_funcs = {
 const struct machine_partdb_entry deluxecoco_part = { .partdb_entry = { .name = "deluxecoco", .description = "Tandy | Deluxe Colour Computer", .funcs = &deluxecoco_funcs }, .config_complete = deluxecoco_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
 
 static struct part *deluxecoco_allocate(void) {
-	struct machine_deluxecoco *mdp = part_new(sizeof(*mdp));
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = part_new(sizeof(*mdp));
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 
-	*mdp = (struct machine_deluxecoco){0};
+	*mdp = (struct deluxecoco){0};
 
 	dragon_allocate_common(md);
 
@@ -143,8 +143,8 @@ static struct part *deluxecoco_allocate(void) {
 static void deluxecoco_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	assert(options != NULL);
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = (struct deluxecoco *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine_config *mc = options;
 
 	deluxecoco_config_complete(mc);
@@ -164,8 +164,8 @@ static void deluxecoco_initialise(struct part *p, void *options) {
 
 static _Bool deluxecoco_finish(struct part *p) {
 	assert(p != NULL);
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = (struct deluxecoco *)p;
+	struct dragon *md = &mdp->dragon;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
 	assert(mc != NULL);
@@ -241,8 +241,8 @@ static _Bool deluxecoco_finish(struct part *p) {
 }
 
 static void deluxecoco_free(struct part *p) {
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = (struct deluxecoco *)p;
+	struct dragon *md = &mdp->dragon;
 	md->snd->get_non_muxed_audio.func = NULL;
         dragon_free_common(p);
 	rombank_free(mdp->ROM0);
@@ -298,7 +298,7 @@ static void deluxecoco_attach_interface(struct part *p, const char *ifname, void
 	if (!p)
 		return;
 
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)p;
+	struct deluxecoco *mdp = (struct deluxecoco *)p;
 
 	if (0 == strcmp(ifname, "sound")) {
 		struct sound_interface *snd = intf;
@@ -312,7 +312,7 @@ static void deluxecoco_attach_interface(struct part *p, const char *ifname, void
 }
 
 static void deluxecoco_reset(struct machine *m, _Bool hard) {
-        struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)m;
+        struct deluxecoco *mdp = (struct deluxecoco *)m;
 	(void)mdp;
 	dragon_reset(m, hard);
 	mos6551_reset(mdp->ACIA);
@@ -321,8 +321,8 @@ static void deluxecoco_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool deluxecoco_read_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)md;
+static _Bool deluxecoco_read_byte(struct dragon *md, unsigned A) {
+	struct deluxecoco *mdp = (struct deluxecoco *)md;
 
 	switch (md->SAM->S) {
 	case 1:
@@ -361,8 +361,8 @@ static _Bool deluxecoco_read_byte(struct machine_dragon_common *md, unsigned A) 
 	return 0;
 }
 
-static _Bool deluxecoco_write_byte(struct machine_dragon_common *md, unsigned A) {
-	struct machine_deluxecoco *mdp = (struct machine_deluxecoco *)md;
+static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
+	struct deluxecoco *mdp = (struct deluxecoco *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
@@ -408,8 +408,8 @@ static _Bool deluxecoco_write_byte(struct machine_dragon_common *md, unsigned A)
 }
 
 static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
-	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 
 	if (ncycles && !md->clock_inhibit) {
 		advance_clock(md, ncycles);
@@ -432,8 +432,8 @@ static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A)
 // VDG edge delegates
 
 static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
-	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 	mc6821_set_cx1(&md->PIA0->a, level);
 	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
@@ -448,8 +448,8 @@ static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 }
 
 static void deluxecoco_vdg_fs(void *sptr, _Bool level) {
-	struct machine_deluxecoco *mdp = sptr;
-	struct machine_dragon_common *md = &mdp->machine_dragon;
+	struct deluxecoco *mdp = sptr;
+	struct dragon *md = &mdp->dragon;
 	mc6821_set_cx1(&md->PIA0->b, level);
 	md->SAM->vdg_fsync(md->SAM, level);
 	if (level) {
