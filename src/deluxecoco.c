@@ -55,7 +55,6 @@
 struct deluxecoco {
 	struct dragon dragon;
 
-	struct rombank *ROM0;
 	struct MOS6551 *ACIA;
 	struct AY891X *PSG;
 
@@ -184,45 +183,45 @@ static _Bool deluxecoco_finish(struct part *p) {
 		return 0;
 
 	// ROM
-	mdp->ROM0 = rombank_new(8, 8192, 4);
+	mdp->dragon.ROM0 = rombank_new(8, 8192, 4);
 
 	// Advanced Colour BASIC
 	if (mc->extbas_rom) {
 		sds tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 0, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
 
 	// Bodge loading the ROM in four parts.  XXX need support for sets of
 	// ROMs.
-	if (!mdp->ROM0->d[1]) {
+	if (!mdp->dragon.ROM0->d[1]) {
 		sds tmp = romlist_find("@deluxecoco1");
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 1, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 1, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
-	if (!mdp->ROM0->d[2]) {
+	if (!mdp->dragon.ROM0->d[2]) {
 		sds tmp = romlist_find("@deluxecoco2");
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 2, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 2, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
-	if (!mdp->ROM0->d[3]) {
+	if (!mdp->dragon.ROM0->d[3]) {
 		sds tmp = romlist_find("@deluxecoco3");
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 3, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 3, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
 
 	// Report and check CRC (Advanced Colour BASIC)
-	rombank_report(mdp->ROM0, "deluxecoco", "Advanced Colour BASIC");
+	rombank_report(mdp->dragon.ROM0, "deluxecoco", "Advanced Colour BASIC");
 	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
-	md->has_combined = rombank_verify_crc(mdp->ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
+	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, deluxecoco_cpu_cycle, mdp);
 
@@ -245,7 +244,7 @@ static void deluxecoco_free(struct part *p) {
 	struct dragon *md = &mdp->dragon;
 	md->snd->get_non_muxed_audio.func = NULL;
         dragon_free_common(p);
-	rombank_free(mdp->ROM0);
+	rombank_free(mdp->dragon.ROM0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -327,12 +326,12 @@ static _Bool deluxecoco_read_byte(struct dragon *md, unsigned A) {
 	switch (md->SAM->S) {
 	case 1:
 	case 2:
-		rombank_d8(mdp->ROM0, A, &md->CPU->D);
+		rombank_d8(mdp->dragon.ROM0, A, &md->CPU->D);
 		return 1;
 
 	case 3:
 		if (mdp->cart_inhibit) {
-			rombank_d8(mdp->ROM0, A, &md->CPU->D);
+			rombank_d8(mdp->dragon.ROM0, A, &md->CPU->D);
 			return 1;
 		}
 		break;
@@ -367,12 +366,12 @@ static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
 	if (md->SAM->S & 4) switch (md->SAM->S) {
 	case 1:
 	case 2:
-		rombank_d8(mdp->ROM0, A, &md->CPU->D);
+		rombank_d8(mdp->dragon.ROM0, A, &md->CPU->D);
 		return 1;
 
 	case 3:
 		if (mdp->cart_inhibit) {
-			rombank_d8(mdp->ROM0, A, &md->CPU->D);
+			rombank_d8(mdp->dragon.ROM0, A, &md->CPU->D);
 			return 1;
 		}
 		break;

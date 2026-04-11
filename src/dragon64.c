@@ -32,10 +32,9 @@
 struct dragon64 {
 	struct dragon dragon;
 
-	struct rombank *ROM0;
 	struct rombank *ROM1;
 
-	// Points to either ROM0 (32K BASIC) or ROM1 (64K BASIC)
+	// Points to either dragon.ROM0 (32K BASIC) or ROM1 (64K BASIC)
 	struct rombank *rom;
 
 	struct MOS6551 *ACIA;
@@ -130,14 +129,14 @@ static _Bool dragon64_finish(struct part *p) {
 		return 0;
 
 	// ROMs
-	mdp->ROM0 = rombank_new(8, 16384, 1);
+	mdp->dragon.ROM0 = rombank_new(8, 16384, 1);
 	mdp->ROM1 = rombank_new(8, 16384, 1);
 
 	// 32K mode Extended BASIC
 	if (mc->extbas_rom) {
 		sds tmp = romlist_find(mc->extbas_rom);
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 0, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
@@ -152,9 +151,9 @@ static _Bool dragon64_finish(struct part *p) {
 	}
 
 	// Report and check CRC (32K BASIC)
-	rombank_report(mdp->ROM0, "dragon64", "32K BASIC");
+	rombank_report(mdp->dragon.ROM0, "dragon64", "32K BASIC");
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
+	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "32K BASIC", -1, "@d64_1", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	// Report and check CRC (64K BASIC)
 	rombank_report(mdp->ROM1, "dragon64", "64K BASIC");
@@ -166,7 +165,7 @@ static _Bool dragon64_finish(struct part *p) {
 	md->PIA1->b.data_postwrite = DELEGATE_AS0(void, dragon64_pia1b_data_postwrite, mdp);
 
 	// ROM selection from PIA
-	mdp->rom = (PIA_VALUE_B(md->PIA1) & 0x04) ? mdp->ROM0 : mdp->ROM1;
+	mdp->rom = (PIA_VALUE_B(md->PIA1) & 0x04) ? mdp->dragon.ROM0 : mdp->ROM1;
 
 	// VDG
 	md->VDG->is_dragon64 = 1;
@@ -180,7 +179,7 @@ static void dragon64_free(struct part *p) {
 	struct dragon64 *mdp = (struct dragon64 *)p;
 	dragon_free_common(p);
 	rombank_free(mdp->ROM1);
-	rombank_free(mdp->ROM0);
+	rombank_free(mdp->dragon.ROM0);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -281,7 +280,7 @@ static void dragon64_pia1b_data_postwrite(void *sptr) {
 
 	_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
 	if (is_32k) {
-		mdp->rom = mdp->ROM0;
+		mdp->rom = mdp->dragon.ROM0;
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);
 	} else {
 		mdp->rom = mdp->ROM1;

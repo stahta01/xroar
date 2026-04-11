@@ -70,12 +70,11 @@ struct dragonpro {
 	struct dragon dragon;
 
 	struct rombank *BOOT;
-	struct rombank *ROM0;
 	struct MOS6551 *ACIA;
 	struct MC6821 *PIA2;
 	struct AY891X *PSG;
 
-	// Points to either BOOT or ROM0 (BASIC)
+	// Points to either BOOT or dragon.ROM0 (BASIC)
 	struct rombank *rom;
 
 	uint8_t old_ay_io;  // to test if AY I/O output has changed
@@ -224,7 +223,7 @@ static _Bool dragonpro_finish(struct part *p) {
 
 	// ROMs
 	mdp->BOOT = rombank_new(8, 8192, 1);
-	mdp->ROM0 = rombank_new(8, 16384, 1);
+	mdp->dragon.ROM0 = rombank_new(8, 16384, 1);
 
 	// BOOT
 	if (mc->extbas_rom) {
@@ -239,7 +238,7 @@ static _Bool dragonpro_finish(struct part *p) {
 	if (mc->altbas_rom) {
 		sds tmp = romlist_find(mc->altbas_rom);
 		if (tmp) {
-			rombank_load_image(mdp->ROM0, 0, tmp, 0);
+			rombank_load_image(mdp->dragon.ROM0, 0, tmp, 0);
 			sdsfree(tmp);
 		}
 	}
@@ -250,9 +249,9 @@ static _Bool dragonpro_finish(struct part *p) {
 	(void)rombank_verify_crc(mdp->BOOT, "BOOT", -1, "@dragonpro_boot", xroar.cfg.force_crc_match, &boot_crc32);
 
 	// Report and check CRC (32K BASIC)
-	rombank_report(mdp->ROM0, "dragonpro", "32K BASIC");
+	rombank_report(mdp->dragon.ROM0, "dragonpro", "32K BASIC");
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-	md->has_combined = rombank_verify_crc(mdp->ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
+	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, dragonpro_cpu_cycle, mdp);
 
@@ -268,7 +267,7 @@ static _Bool dragonpro_finish(struct part *p) {
 	mdp->PIA2->a.in_sink = mdp->PIA2->b.in_sink = 0xff;
 
 	// ROM selection from PIA
-	mdp->rom = (PIA_VALUE_A(mdp->PIA2) & 0x04) ? mdp->BOOT : mdp->ROM0;
+	mdp->rom = (PIA_VALUE_A(mdp->PIA2) & 0x04) ? mdp->BOOT : mdp->dragon.ROM0;
 
 	mdp->PSG->a.data_postwrite = DELEGATE_AS0(void, dragonpro_ay891x_data_postwrite, mdp);
 
@@ -292,7 +291,7 @@ static void dragonpro_free(struct part *p) {
 	struct dragon *md = &mdp->dragon;
 	md->snd->get_ay_audio.func = NULL;
 	dragon_free_common(p);
-	rombank_free(mdp->ROM0);
+	rombank_free(mdp->dragon.ROM0);
 	rombank_free(mdp->BOOT);
 }
 
@@ -488,7 +487,7 @@ static void dragonpro_pia2a_data_postwrite(void *sptr) {
 	uint8_t out = PIA_VALUE_A(mdp->PIA2);
 	_Bool BDIR = out & 0x01;
 	_Bool BC1 = out & 0x02;
-	mdp->rom = (out & 0x04) ? mdp->BOOT : mdp->ROM0;
+	mdp->rom = (out & 0x04) ? mdp->BOOT : mdp->dragon.ROM0;
 	sound_update(md->snd);
 	uint8_t D = PIA_VALUE_B(mdp->PIA2);
 	ay891x_cycle(mdp->PSG, BDIR, BC1, &D);
