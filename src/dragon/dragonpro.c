@@ -59,10 +59,31 @@
  *  $FF2F       Command / status register
  */
 
+#include "top-config.h"
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "array.h"
+
 #include "ay891x.h"
+#include "dragon/dragon.h"
+#include "events.h"
+#include "logging.h"
+#include "mc6809/mc6809.h"
+#include "mc6821.h"
+#include "mc6847/mc6847.h"
+#include "mc6883.h"
 #include "mos6551.h"
+#include "ram.h"
+#include "rombank.h"
+#include "romlist.h"
+#include "serialise.h"
+#include "sound.h"
 #include "vdrive.h"
 #include "wd279x.h"
+#include "xroar.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -299,8 +320,8 @@ static void dragonpro_free(struct part *p) {
 
 static void dragonpro_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragonpro_boot");
-	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragonpro_basic");
+	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragonpro_boot");
+	dragon_set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragonpro_basic");
 
 	// Validate requested total RAM
 	if (mc->ram < 64) {
@@ -318,7 +339,7 @@ static void dragonpro_config_complete(struct machine_config *mc) {
 		}
 	}
 
-	dragon_config_complete_common(mc);
+	dragon_config_complete(mc);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -458,6 +479,13 @@ static _Bool dragonpro_write_byte(struct dragon *md, unsigned A) {
 		break;
 	}
 	return 0;
+}
+
+// Advance clock and run scheduled events
+static inline void advance_clock(struct dragon *md, int ncycles) {
+	md->cycles -= ncycles;
+	if (md->cycles <= 0) md->CPU->running = 0;
+	event_run_queue(MACHINE_EVENT_LIST, ncycles);
 }
 
 static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {

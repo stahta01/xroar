@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief Dragon and Tandy Colour Computer machines.
+ *  \brief Common code for Dragon and Tandy Colour Computer machines.
  *
  *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
@@ -34,6 +34,7 @@
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
+#include "dragon/dragon.h"
 #include "gdb.h"
 #include "joystick.h"
 #include "keyboard.h"
@@ -61,73 +62,6 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct dragon {
-	struct machine public;  // first element in turn is part
-
-	struct MC6809 *CPU;
-	struct MC6883 *SAM;
-	struct MC6821 *PIA0, *PIA1;
-	struct MC6847 *VDG;
-	struct rombank *ROM0;
-	struct rombank *ext_charset;
-	struct ram *RAM;
-
-	struct vo_interface *vo;
-	int frame;  // track frameskip
-	struct sound_interface *snd;
-
-	// Derived machines can use these to redirect address decoding.  If
-	// they return true, the address was handled, no need to continue.
-	_Bool (*read_byte)(struct dragon *, unsigned A);
-	_Bool (*write_byte)(struct dragon *, unsigned A);
-
-	_Bool inverted_text;
-	struct cart *cart;
-	unsigned configured_frameskip;
-	unsigned frameskip;
-
-	int cycles;
-
-	// Clock inhibit - for when "speed up" code wants to access memory
-	// without advancing the clock.
-	_Bool clock_inhibit;
-
-	// RAM read buffer.  Driven to data bus only when SAM S == 0.
-	uint8_t Dread;
-
-	// Debug
-	struct bp_session *bp_session;
-	_Bool single_step;
-	int stop_signal;
-#ifdef WANT_GDB_TARGET
-	struct gdb_interface *gdb_interface;
-#endif
-
-	struct tape_interface *tape_interface;
-	struct printer_interface *printer_interface;
-
-	struct {
-		struct keyboard_interface *interface;
-	} keyboard;
-
-	// NTSC colour bursts
-	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
-	unsigned ntsc_burst_mod;
-
-	// UI message receipt
-	int msgr_client_id;
-
-	// Useful configuration side-effect tracking
-	_Bool has_bas, has_extbas, has_altbas, has_combined;
-	_Bool has_ext_charset;
-	uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
-	uint32_t crc_ext_charset;
-	_Bool is_dragon;
-	_Bool unexpanded_dragon32;
-	_Bool relaxed_pia0_decode;
-	_Bool relaxed_pia1_decode;
-};
-
 #define DRAGON_SER_RAM      (2)
 #define DRAGON_SER_RAM_SIZE (3)
 #define DRAGON_SER_RAM_MASK (4)
@@ -143,7 +77,7 @@ static const struct ser_struct ser_struct_dragon[] = {
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
 static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-static const struct ser_struct_data dragon_ser_struct_data = {
+const struct ser_struct_data dragon_ser_struct_data = {
 	.elems = ser_struct_dragon,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_dragon),
 	.read_elem = dragon_read_elem,
@@ -152,16 +86,14 @@ static const struct ser_struct_data dragon_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon_verify_ram_size(struct machine_config *);
-
 // Set a ROM configuration to a default value if not "defined"
-static void set_default_rom(_Bool dfn, char **romp, const char *dfl) {
+void dragon_set_default_rom(_Bool dfn, char **romp, const char *dfl) {
 	if (!dfn && romp && !*romp && dfl) {
 		*romp = xstrdup(dfl);
 	}
 }
 
-static void dragon_config_complete_common(struct machine_config *mc) {
+void dragon_config_complete(struct machine_config *mc) {
 	if (mc->cpu != CPU_MC6809 && mc->cpu != CPU_HD6309) {
 		mc->cpu = CPU_MC6809;
 	}
@@ -200,36 +132,7 @@ static void dragon_config_complete_common(struct machine_config *mc) {
 	}
 }
 
-static void dragon_config_complete(struct machine_config *mc) {
-	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
-	_Bool is_coco = strcmp(mc->architecture, "coco") == 0;
-
-	assert(is_dragon32 || is_coco);
-
-	// Default ROMs
-
-	if (is_dragon32) {
-		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
-	}
-	if (is_coco) {
-		set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
-		set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
-	}
-
-	// RAM
-
-	dragon_verify_ram_size(mc);
-
-	// Keyboard map
-
-	if (mc->keymap == ANY_AUTO && is_coco) {
-		mc->keymap = dkbd_layout_coco;
-	}
-
-	dragon_config_complete_common(mc);
-}
-
-static _Bool dragon_is_working_config(struct machine_config *mc) {
+_Bool dragon_is_working_config(struct machine_config *mc) {
 	if (!mc)
 		return 0;
 	sds tmp;
@@ -252,14 +155,10 @@ static _Bool dragon_is_working_config(struct machine_config *mc) {
 	return 1;
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static void dragon_verify_ram_size(struct machine_config *mc) {
-	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
-
+void dragon_verify_ram_size(struct machine_config *mc) {
 	// Validate requested total RAM
 	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512) {
-		mc->ram = is_dragon32 ? 32 : 64;
+		mc->ram = 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
 	} else if (mc->ram < 16) {
@@ -294,14 +193,10 @@ static void dragon_verify_ram_size(struct machine_config *mc) {
 
 static void dragon_create_ram(struct dragon *);
 
-static _Bool dragon_has_interface(struct part *p, const char *ifname);
-static void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
-
 static void dragon_connect_cart(struct part *p);
 static void dragon_insert_cart(struct machine *m, struct cart *c);
 static void dragon_remove_cart(struct machine *m);
 
-static void dragon_reset(struct machine *m, _Bool hard);
 static enum machine_run_state dragon_run(struct machine *m, int ncycles);
 static void dragon_single_step(struct machine *m);
 static void dragon_signal(struct machine *m, int sig);
@@ -323,30 +218,17 @@ static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_op_rts(struct machine *m);
 static void dragon_dump_ram(struct machine *m, FILE *fd);
 
-static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
 static void update_sound_mux_source(void *sptr);
-static void update_vdg_mode(struct dragon *md);
 
 static void single_bit_feedback(void *sptr, _Bool level);
 static void update_audio_from_tape(void *sptr, float value);
 static void cart_firq(void *sptr, _Bool level);
 static void cart_nmi(void *sptr, _Bool level);
 static void cart_halt(void *sptr, _Bool level);
-static void vdg_hs(void *sptr, _Bool level);
-static void vdg_hs_pal_coco(void *sptr, _Bool level);
-static void vdg_fs(void *sptr, _Bool level);
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void printer_ack(void *sptr, _Bool ack);
-static void coco_print_byte(void *);
 
-static struct machine_bp coco_print_breakpoint[] = {
-	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
-};
-
-static inline void advance_clock(struct dragon *md, int ncycles);
-static void dragon_cpu_cycle(struct dragon *md, _Bool RnW,
-			     uint16_t A, unsigned Zrow, unsigned Zcol);
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
@@ -355,45 +237,21 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 static void pia0a_data_preread(void *sptr);
 #define pia0a_data_postwrite NULL
 #define pia0a_control_postwrite update_sound_mux_source
-#define pia0b_data_preread keyboard_update
+#define pia0b_data_preread dragon_keyboard_update
 #define pia0b_data_postwrite NULL
 #define pia0b_control_postwrite update_sound_mux_source
-static void pia0b_data_preread_coco64k(void *sptr);
 
 #define pia1a_data_preread NULL
 static void pia1a_data_postwrite(void *sptr);
 static void pia1a_control_postwrite(void *sptr);
-#define pia1b_data_preread NULL
-static void pia1b_data_preread_dragon(void *sptr);
-static void pia1b_data_preread_coco64k(void *sptr);
-static void pia1b_data_postwrite(void *sptr);
+static void pia1b_data_preread(void *sptr);
 static void pia1b_control_postwrite(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Dragon part creation
 
-static struct part *dragon_allocate(void);
-static void dragon_initialise(struct part *p, void *options);
-static _Bool dragon_finish(struct part *p);
-static void dragon_free(struct part *p);
-
-static const struct partdb_entry_funcs dragon_funcs = {
-	.allocate = dragon_allocate,
-	.initialise = dragon_initialise,
-	.finish = dragon_finish,
-	.free = dragon_free,
-
-	.ser_struct_data = &dragon_ser_struct_data,
-
-	.is_a = machine_is_a,
-};
-
-const struct machine_partdb_entry dragon32_part = { .partdb_entry = { .name = "dragon32", .description = "Dragon Data | Dragon 32", .funcs = &dragon_funcs }, .config_complete = dragon_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
-
-const struct machine_partdb_entry coco_part = { .partdb_entry = { .name = "coco", .description = "Tandy | Colour Computer", .funcs = &dragon_funcs }, .config_complete = dragon_config_complete, .is_working_config = dragon_is_working_config, .cart_arch = "dragon-cart" };
-
-static void dragon_allocate_common(struct dragon *md) {
+void dragon_allocate_common(struct dragon *md) {
 	struct machine *m = &md->public;
 
 	m->has_interface = dragon_has_interface;
@@ -419,18 +277,7 @@ static void dragon_allocate_common(struct dragon *md) {
 	m->keyboard.type = dkbd_layout_dragon;
 }
 
-static struct part *dragon_allocate(void) {
-	struct dragon *md = part_new(sizeof(*md));
-	struct machine *m = &md->public;
-	struct part *p = &m->part;
-
-	*md = (struct dragon){0};
-	dragon_allocate_common(md);
-
-	return p;
-}
-
-static void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
+void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	struct machine *m = &md->public;
 
 	m->config = mc;
@@ -459,22 +306,7 @@ static void dragon_initialise_common(struct dragon *md, struct machine_config *m
 	m->keyboard.type = mc->keymap;
 }
 
-static void dragon_initialise(struct part *p, void *options) {
-	assert(p != NULL);
-	assert(options != NULL);
-	struct dragon *md = (struct dragon *)p;
-	struct machine_config *mc = options;
-
-	dragon_config_complete(mc);
-
-	dragon_verify_ram_size(mc);
-
-	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
-	md->is_dragon = is_dragon32;
-	dragon_initialise_common(md, mc);
-}
-
-static _Bool dragon_finish_common(struct dragon *md) {
+_Bool dragon_finish_common(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -566,7 +398,7 @@ static _Bool dragon_finish_common(struct dragon *md) {
 	md->PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite, md);
 	md->PIA1->a.control_postwrite = DELEGATE_AS0(void, pia1a_control_postwrite, md);
 	md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread, md);
-	md->PIA1->b.data_postwrite = DELEGATE_AS0(void, pia1b_data_postwrite, md);
+	md->PIA1->b.data_postwrite = DELEGATE_AS0(void, dragon_pia1b_data_postwrite, md);
 	md->PIA1->b.control_postwrite = DELEGATE_AS0(void, pia1b_control_postwrite, md);
 
 	// Single-bit sound feedback
@@ -577,12 +409,8 @@ static _Bool dragon_finish_common(struct dragon *md) {
 	md->VDG->is_pal = is_pal;
 	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL);
 
-	if (!md->is_dragon && is_pal) {
-		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs_pal_coco, md);
-	} else {
-		md->VDG->signal_hs = DELEGATE_AS1(void, bool, vdg_hs, md);
-	}
-	md->VDG->signal_fs = DELEGATE_AS1(void, bool, vdg_fs, md);
+	md->VDG->signal_hs = DELEGATE_AS1(void, bool, dragon_vdg_hs, md);
+	md->VDG->signal_fs = DELEGATE_AS1(void, bool, dragon_vdg_fs, md);
 	md->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, vdg_render_line, md);
 	md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler, md);
 	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
@@ -693,37 +521,7 @@ static _Bool dragon_finish_common(struct dragon *md) {
 		md->PIA1->b.in_source |= (1<<0);
 	}
 
-	if (is_dragon32) {
-		switch (mc->ram_org) {
-		case RAM_ORG_4Kx1:
-		case RAM_ORG_16Kx1:
-			md->PIA1->b.in_source |= (1<<2);
-			break;
-		default:
-			md->PIA1->b.in_sink &= ~(1<<2);
-		}
-	}
-
-	if (!md->is_dragon) {
-		if (RAM_ORG_A(mc->ram_org) == 12) {
-			// 4K CoCo ties PIA1 PB2 low
-			md->PIA1->b.in_sink &= ~(1<<2);
-		} else if (RAM_ORG_A(mc->ram_org) == 14) {
-			// 16K CoCo pulls PIA1 PB2 high
-			md->PIA1->b.in_source |= (1<<2);
-		} else {
-			// 64K CoCo connects PIA0 PB6 to PIA1 PB2:
-			// Deal with this through a postwrite.
-			md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread_coco64k, md);
-			md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_coco64k, md);
-		}
-	}
-
 	md->PIA0->b.data_preread = DELEGATE_AS0(void, pia0b_data_preread, md);
-	if (md->is_dragon) {
-		/* Dragons need to poll printer BUSY state */
-		md->PIA1->b.data_preread = DELEGATE_AS0(void, pia1b_data_preread_dragon, md);
-	}
 
 	// Defaults: Dragon 64 with 64K
 	md->unexpanded_dragon32 = 0;
@@ -770,74 +568,8 @@ static _Bool dragon_finish_common(struct dragon *md) {
 	return 1;
 }
 
-static _Bool dragon_finish(struct part *p) {
-	struct dragon *md = (struct dragon *)p;
-	struct machine *m = &md->public;
-	struct machine_config *mc = m->config;
-
-	_Bool is_dragon32 = (strcmp(mc->architecture, "dragon32") == 0);
-	md->is_dragon = is_dragon32;
-	if (!dragon_finish_common(md))
-		return 0;
-
-	// Dragon ROMs are always Extended BASIC only, and even though (some?)
-	// Dragon 32s split this across two pieces of hardware, it doesn't make
-	// sense to consider the two regions separately.
-	//
-	// CoCo ROMs are always considered to be in two parts: Colour BASIC and
-	// Extended Colour BASIC.
-
-	// ROM
-	if (md->is_dragon) {
-		md->ROM0 = rombank_new(8, 16384, 1);
-	} else {
-		md->ROM0 = rombank_new(8, 8192, 2);
-	}
-
-	// Extended Colour BASIC
-	if (md->ROM0 && mc->extbas_rom) {
-		sds tmp = romlist_find(mc->extbas_rom);
-		if (tmp) {
-			rombank_load_image(md->ROM0, 0, tmp, 0);
-			sdsfree(tmp);
-		}
-	}
-
-	// Colour BASIC
-	if (md->ROM0 && md->ROM0->nslots > 1 && mc->bas_rom) {
-		sds tmp = romlist_find(mc->bas_rom);
-		if (tmp) {
-			rombank_load_image(md->ROM0, 1, tmp, 0);
-			sdsfree(tmp);
-		}
-	}
-
-	// Report BASIC
-	rombank_report(md->ROM0, p->partdb->name, "BASIC");
-
-	// Check CRCs
-	if (is_dragon32) {
-		md->crc_combined = 0xe3879310;  // Dragon 32 BASIC
-		md->has_combined = rombank_verify_crc(md->ROM0, "BASIC", -1, "@d32", xroar.cfg.force_crc_match, &md->crc_combined);
-
-	} else {
-		md->crc_bas = (mc->ram > 4) ? 0xd8f4d15e : 0x00b50aaa;  // CB 1.3/1.0
-		const char *crclist = (mc->ram > 4) ? "@coco" : "@bas10";
-		md->has_bas = rombank_verify_crc(md->ROM0, "Colour BASIC", 1, crclist, xroar.cfg.force_crc_match, &md->crc_bas);
-
-		md->crc_extbas = 0xa82a6254;  // ECB 1.1
-		md->has_extbas = rombank_verify_crc(md->ROM0, "Extended Colour BASIC", 0, "@cocoext", xroar.cfg.force_crc_match, &md->crc_extbas);
-	}
-
-	// VDG
-	md->VDG->is_dragon32 = is_dragon32;
-	md->VDG->is_coco = !is_dragon32;
-
-	return 1;
-}
-
 // Called from part_free(), which handles freeing the struct itself
-static void dragon_free_common(struct part *p) {
+void dragon_free_common(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(md->msgr_client_id);
@@ -849,7 +581,6 @@ static void dragon_free_common(struct part *p) {
 	if (md->keyboard.interface) {
 		keyboard_interface_free(md->keyboard.interface);
 	}
-	machine_bp_remove_list(&md->public, coco_print_breakpoint);
 	if (md->printer_interface) {
 		printer_interface_free(md->printer_interface);
 	}
@@ -857,12 +588,6 @@ static void dragon_free_common(struct part *p) {
 		bp_session_free(md->bp_session);
 	}
 	rombank_free(md->ext_charset);
-}
-
-static void dragon_free(struct part *p) {
-	struct dragon *md = (struct dragon *)p;
-	dragon_free_common(p);
-	rombank_free(md->ROM0);
 }
 
 static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -919,19 +644,6 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// Arch-specific code
-
-// Dragon 64
-#include "dragon64.c"
-
-// Dragon Professional (Alpha)
-#include "dragonpro.c"
-
-// Tandy Deluxe CoCo
-#include "deluxecoco.c"
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static void dragon_create_ram(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
@@ -962,7 +674,7 @@ static void dragon_create_ram(struct dragon *md) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool dragon_has_interface(struct part *p, const char *ifname) {
+_Bool dragon_has_interface(struct part *p, const char *ifname) {
 	struct dragon *md = (struct dragon *)p;
 
 	struct cart *c = md->cart;
@@ -975,7 +687,7 @@ static _Bool dragon_has_interface(struct part *p, const char *ifname) {
 	return 0;
 }
 
-static void dragon_attach_interface(struct part *p, const char *ifname, void *intf) {
+void dragon_attach_interface(struct part *p, const char *ifname, void *intf) {
 	struct dragon *md = (struct dragon *)p;
 
 	struct cart *c = md->cart;
@@ -1013,7 +725,7 @@ static void dragon_remove_cart(struct machine *m) {
 	md->cart = NULL;
 }
 
-static void dragon_reset(struct machine *m, _Bool hard) {
+void dragon_reset(struct machine *m, _Bool hard) {
 	struct dragon *md = (struct dragon *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
@@ -1029,8 +741,6 @@ static void dragon_reset(struct machine *m, _Bool hard) {
 	mc6847_reset(md->VDG);
 	tape_reset(md->tape_interface);
 	printer_reset(md->printer_interface);
-	machine_bp_remove_list(m, coco_print_breakpoint);
-	machine_bp_add_list(m, coco_print_breakpoint, md);
 }
 
 static enum machine_run_state dragon_run(struct machine *m, int ncycles) {
@@ -1079,7 +789,7 @@ static void dragon_single_step(struct machine *m) {
 		md->CPU->run(md->CPU);
 	} while (md->single_step);
 	md->CPU->debug_cpu.instruction_posthook.func = NULL;
-	update_vdg_mode(md);
+	dragon_update_vdg_mode(md);
 }
 
 /*
@@ -1088,7 +798,7 @@ static void dragon_single_step(struct machine *m) {
 
 static void dragon_signal(struct machine *m, int sig) {
 	struct dragon *md = (struct dragon *)m;
-	update_vdg_mode(md);
+	dragon_update_vdg_mode(md);
 	md->stop_signal = sig;
 	md->CPU->running = 0;
 }
@@ -1275,7 +985,6 @@ static void dragon_instruction_posthook(void *sptr) {
 
 // CPU cycles
 
-static inline void advance_clock(struct dragon *md, int ncycles);
 static void read_byte(struct dragon *md, unsigned A);
 static void write_byte(struct dragon *md, unsigned A);
 
@@ -1296,6 +1005,13 @@ static void write_byte(struct dragon *md, unsigned A);
 // dragon_read_byte() and dragon_write_byte() assert clock_inhibit before
 // calling to do the same thing without advancing the clock.
 
+// Advance clock and run scheduled events
+static inline void advance_clock(struct dragon *md, int ncycles) {
+	md->cycles -= ncycles;
+	if (md->cycles <= 0) md->CPU->running = 0;
+	event_run_queue(MACHINE_EVENT_LIST, ncycles);
+}
+
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct dragon *md = sptr;
 
@@ -1311,19 +1027,10 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	dragon_cpu_cycle(md, RnW, A, Zrow, Zcol);
 }
 
-// Advance clock and run scheduled events
-
-static inline void advance_clock(struct dragon *md, int ncycles) {
-	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU->running = 0;
-	event_run_queue(MACHINE_EVENT_LIST, ncycles);
-}
-
 // Common routine called by cpu_cycle() (or override) to access RAM and devices
 // for a CPU cycle.
 
-static void dragon_cpu_cycle(struct dragon *md, _Bool RnW,
-			     uint16_t A, unsigned Zrow, unsigned Zcol) {
+void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol) {
 	md->Dread = 0xff;
 	if (md->SAM->nWE) {
 		if (md->SAM->RAS0) {
@@ -1551,7 +1258,7 @@ static void dragon_dump_ram(struct machine *m, FILE *fd) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void keyboard_update(void *sptr) {
+void dragon_keyboard_update(void *sptr) {
 	struct dragon *md = sptr;
 	unsigned buttons = ~(joystick_read_buttons() & 3);
 	struct keyboard_state state = {
@@ -1585,7 +1292,7 @@ static void update_sound_mux_source(void *sptr) {
 	sound_set_mux_source(md->snd, source);
 }
 
-static void update_vdg_mode(struct dragon *md) {
+void dragon_update_vdg_mode(struct dragon *md) {
 	unsigned vmode = (md->PIA1->b.out_source & md->PIA1->b.out_sink) & 0xf8;
 	// ¬INT/EXT = GM0
 	vmode |= (vmode & 0x10) << 4;
@@ -1595,31 +1302,18 @@ static void update_vdg_mode(struct dragon *md) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void pia0a_data_preread(void *sptr) {
-	keyboard_update(sptr);
+	dragon_keyboard_update(sptr);
 	joystick_update(sptr);
 }
 
-static void pia0b_data_preread_coco64k(void *sptr) {
-	struct dragon *md = sptr;
-	keyboard_update(md);
-	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
-	if ((md->PIA1->b.out_source & md->PIA1->b.out_sink) & (1<<2)) {
-		md->PIA0->b.in_source |= (1<<6);
-		md->PIA0->b.in_sink |= (1<<6);
-	} else {
-		md->PIA0->b.in_source &= ~(1<<6);
-		md->PIA0->b.in_sink &= ~(1<<6);
-	}
-}
+/* Overridden in coco.c */
 
 static void pia1a_data_postwrite(void *sptr) {
 	struct dragon *md = sptr;
 	sound_set_dac_level(md->snd, (float)(PIA_VALUE_A(md->PIA1) & 0xfc) / 252.);
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
-	if (md->is_dragon) {
-		keyboard_update(md);
-		printer_strobe(md->printer_interface, PIA_VALUE_A(md->PIA1) & 0x02, PIA_VALUE_B(md->PIA0));
-	}
+	dragon_keyboard_update(md);
+	printer_strobe(md->printer_interface, PIA_VALUE_A(md->PIA1) & 0x02, PIA_VALUE_B(md->PIA0));
 }
 
 static void pia1a_control_postwrite(void *sptr) {
@@ -1628,7 +1322,8 @@ static void pia1a_control_postwrite(void *sptr) {
 	tape_update_output(md->tape_interface, md->PIA1->a.out_sink & 0xfc);
 }
 
-static void pia1b_data_preread_dragon(void *sptr) {
+static void pia1b_data_preread(void *sptr) {
+	/* Dragons need to poll printer BUSY state */
 	struct dragon *md = sptr;
 	if (printer_busy(md->printer_interface))
 		md->PIA1->b.in_sink |= 0x01;
@@ -1636,26 +1331,14 @@ static void pia1b_data_preread_dragon(void *sptr) {
 		md->PIA1->b.in_sink &= ~0x01;
 }
 
-static void pia1b_data_preread_coco64k(void *sptr) {
-	struct dragon *md = sptr;
-	// PIA0 PB6 is linked to PIA1 PB2 on 64K CoCos
-	if ((md->PIA0->b.out_source & md->PIA0->b.out_sink) & (1<<6)) {
-		md->PIA1->b.in_source |= (1<<2);
-		md->PIA1->b.in_sink |= (1<<2);
-	} else {
-		md->PIA1->b.in_source &= ~(1<<2);
-		md->PIA1->b.in_sink &= ~(1<<2);
-	}
-}
-
-static void pia1b_data_postwrite(void *sptr) {
+void dragon_pia1b_data_postwrite(void *sptr) {
 	struct dragon *md = sptr;
 	// Single-bit sound
 	_Bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
 	_Bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);
 	sound_set_sbs(md->snd, sbs_enabled, sbs_level);
 	// VDG mode
-	update_vdg_mode(md);
+	dragon_update_vdg_mode(md);
 }
 
 static void pia1b_control_postwrite(void *sptr) {
@@ -1667,9 +1350,9 @@ static void pia1b_control_postwrite(void *sptr) {
 
 /* VDG edge delegates */
 
-static void vdg_hs(void *sptr, _Bool level) {
+void dragon_vdg_hs(void *sptr, _Bool level) {
 	struct dragon *md = sptr;
-	mc6821_set_cx1(&md->PIA0->a, level);
+	mc6821_set_cx1(&md->PIA0->a, level ^ md->hs_invert);
 	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
@@ -1679,23 +1362,7 @@ static void vdg_hs(void *sptr, _Bool level) {
 	}
 }
 
-// PAL CoCos invert HS
-static void vdg_hs_pal_coco(void *sptr, _Bool level) {
-	struct dragon *md = sptr;
-	mc6821_set_cx1(&md->PIA0->a, !level);
-	md->SAM->vdg_hsync(md->SAM, level);
-	// PAL uses palletised output so this wouldn't technically matter, but
-	// user is able to cycle to a faux-NTSC colourscheme, so update phase
-	// here as in NTSC code:
-	if (level) {
-		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
-		_Bool GM0 = p1bval & 0x10;
-		_Bool CSS = p1bval & 0x08;
-		md->ntsc_burst_mod = (md->use_ntsc_burst_mod && GM0 && CSS) ? 2 : 0;
-	}
-}
-
-static void vdg_fs(void *sptr, _Bool level) {
+void dragon_vdg_fs(void *sptr, _Bool level) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
 	md->SAM->vdg_fsync(md->SAM, level);
@@ -1720,23 +1387,6 @@ static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_
 static void printer_ack(void *sptr, _Bool ack) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->a, !ack);
-}
-
-// CoCo serial printing ROM hook.
-
-static void coco_print_byte(void *sptr) {
-	struct dragon *md = sptr;
-	if (!md->printer_interface) {
-		return;
-	}
-	// Not ROM?
-	if (md->SAM->decode(md->SAM, 1, md->CPU->reg_pc) != 2) {
-		return;
-	}
-	int byte = MC6809_REG_A(md->CPU);
-	printer_strobe(md->printer_interface, 0, byte);
-	printer_strobe(md->printer_interface, 1, byte);
-	md->CPU->reg_pc = 0xa2df;
 }
 
 /* Sound output can feed back into the single bit sound pin when it's

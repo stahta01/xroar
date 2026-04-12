@@ -72,7 +72,12 @@ xroar_SOURCES = \
 
 if MACHINE_ARCH_DRAGON
 xroar_SOURCES += \
-	dragon.c
+	dragon/coco.c dragon/coco.h \
+	dragon/deluxecoco.c \
+	dragon/dragon.c dragon/dragon.h \
+	dragon/dragon32.c \
+	dragon/dragon64.c \
+	dragon/dragonpro.c
 endif
 
 if MACHINE_ARCH_COCO3
@@ -153,9 +158,6 @@ xroar_SOURCES += \
 	main_unix.c
 
 EXTRA_DIST += \
-	deluxecoco.c \
-	dragon64.c \
-	dragonpro.c \
 	hkbd_lang_tables.c \
 	mc6847/font-6847.c mc6847/font-6847.h \
 	mc6847/font-6847t1.c mc6847/font-6847t1.h \

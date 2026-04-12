@@ -25,7 +25,22 @@
  *  into thinking it is present.
  */
 
+#include "top-config.h"
+
+#include <assert.h>
+#include <stdlib.h>
+
+#include "dragon/dragon.h"
+#include "keyboard.h"
+#include "mc6809/mc6809.h"
+#include "mc6821.h"
+#include "mc6847/mc6847.h"
+#include "mc6883.h"
 #include "mos6551.h"
+#include "ram.h"
+#include "rombank.h"
+#include "romlist.h"
+#include "xroar.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -186,8 +201,8 @@ static void dragon64_free(struct part *p) {
 
 static void dragon64_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon64");
-	set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
+	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon64");
+	dragon_set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragon64_alt");
 
 	// Validate requested total RAM
 	if ((mc->ram < 16 || mc->ram > 64) && mc->ram != 512) {
@@ -215,7 +230,7 @@ static void dragon64_config_complete(struct machine_config *mc) {
 		}
 	}
 
-	dragon_config_complete_common(mc);
+	dragon_config_complete(mc);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -286,5 +301,5 @@ static void dragon64_pia1b_data_postwrite(void *sptr) {
 		mdp->rom = mdp->ROM1;
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_64k_basic);
 	}
-	pia1b_data_postwrite(sptr);
+	dragon_pia1b_data_postwrite(sptr);
 }

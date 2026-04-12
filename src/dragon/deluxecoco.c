@@ -47,8 +47,31 @@
  *  $FF3F       Control register
  */
 
+#include "top-config.h"
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "array.h"
+
 #include "ay891x.h"
+#include "dkbd.h"
+#include "dragon/coco.h"
+#include "dragon/dragon.h"
+#include "events.h"
+#include "mc6809/mc6809.h"
+#include "mc6821.h"
+#include "mc6847/mc6847.h"
+#include "mc6883.h"
 #include "mos6551.h"
+#include "ram.h"
+#include "rombank.h"
+#include "romlist.h"
+#include "serialise.h"
+#include "sound.h"
+#include "vo.h"
+#include "xroar.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -223,6 +246,8 @@ static _Bool deluxecoco_finish(struct part *p) {
 	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
 	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
 
+	coco_pia_configuration(md);
+
 	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, deluxecoco_cpu_cycle, mdp);
 
 	md->VDG->is_dragon64 = 0;
@@ -235,6 +260,13 @@ static _Bool deluxecoco_finish(struct part *p) {
 	md->relaxed_pia0_decode = 1;
 	// But $FF20-$FF3F is shared with other devices
 	md->relaxed_pia1_decode = 0;
+
+	// PAL overrides
+	// Note: there probably never was a PAL Deluxe CoCo prototype, so
+	// settings are borrowed from the CoCo 1/2 approach.
+	if (mc->tv_standard == TV_PAL) {
+		md->hs_invert = 1;
+	}
 
 	return 1;
 }
@@ -251,7 +283,7 @@ static void deluxecoco_free(struct part *p) {
 
 static void deluxecoco_config_complete(struct machine_config *mc) {
 	// Default ROMs
-	set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@deluxecoco");
+	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@deluxecoco");
 
 	// Validate requested total RAM
 	if (mc->ram < 32) {
@@ -278,7 +310,7 @@ static void deluxecoco_config_complete(struct machine_config *mc) {
 		mc->keymap = dkbd_layout_coco3;
 	}
 
-	dragon_config_complete_common(mc);
+	dragon_config_complete(mc);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -406,6 +438,13 @@ static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
+// Advance clock and run scheduled events
+static inline void advance_clock(struct dragon *md, int ncycles) {
+	md->cycles -= ncycles;
+	if (md->cycles <= 0) md->CPU->running = 0;
+	event_run_queue(MACHINE_EVENT_LIST, ncycles);
+}
+
 static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
@@ -433,33 +472,17 @@ static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A)
 static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
-	mc6821_set_cx1(&md->PIA0->a, level);
-	md->SAM->vdg_hsync(md->SAM, level);
-	if (!level) {
-		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
-		_Bool GM0 = p1bval & 0x10;
-		_Bool CSS = p1bval & 0x08;
-		md->ntsc_burst_mod = (md->use_ntsc_burst_mod && GM0 && CSS) ? 2 : 0;
-		if (mdp->burst) {
-			md->ntsc_burst_mod = 3;
-		}
+	dragon_vdg_hs(md, level);
+	if (!level && mdp->burst) {
+		md->ntsc_burst_mod = 3;
 	}
 }
 
 static void deluxecoco_vdg_fs(void *sptr, _Bool level) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
-	mc6821_set_cx1(&md->PIA0->b, level);
-	md->SAM->vdg_fsync(md->SAM, level);
-	if (level) {
-		sound_update(md->snd);
-		md->frame--;
-		if (md->frame < 0)
-			md->frame = md->frameskip;
-		vo_vsync(md->vo, md->frame == 0);
-	} else {
-		if (mdp->irq_60hz_enable) {
-			mdp->irq_60hz = 1;
-		}
+	dragon_vdg_fs(md, level);
+	if (!level && mdp->irq_60hz_enable) {
+		mdp->irq_60hz = 1;
 	}
 }
