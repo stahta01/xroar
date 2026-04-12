@@ -60,6 +60,8 @@
 #include "vo.h"
 #include "xroar.h"
 
+void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #define DRAGON_SER_RAM      (2)
@@ -117,7 +119,7 @@ void dragon_config_complete(struct machine_config *mc) {
 		mc->vdg_type = VDG_6847;
 
 	if (mc->ram_init == ANY_AUTO) {
-		mc->ram_init = mc->ram < 512 ? ram_init_pattern : ram_init_random;
+		mc->ram_init = (mc->ram < 512 || mc->ram == 2048) ? ram_init_pattern : ram_init_random;
 	}
 
 	if (mc->keymap == ANY_AUTO) {
@@ -157,7 +159,7 @@ _Bool dragon_is_working_config(struct machine_config *mc) {
 
 void dragon_verify_ram_size(struct machine_config *mc) {
 	// Validate requested total RAM
-	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512) {
+	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512 && mc->ram != 2048) {
 		mc->ram = 64;
 	} else if (mc->ram < 8) {
 		mc->ram = 4;
@@ -169,8 +171,10 @@ void dragon_verify_ram_size(struct machine_config *mc) {
 		mc->ram = 32;
 	} else if (mc->ram < 512) {
 		mc->ram = 64;
-	} else {
+	} else if (mc->ram < 2048) {
 		mc->ram = 512;
+	} else {
+		mc->ram = 2048;
 	}
 
 	// Pick RAM org based on requested total RAM if not specified
@@ -181,7 +185,7 @@ void dragon_verify_ram_size(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else if (mc->ram < 512) {
+		} else if (mc->ram < 512 || mc->ram == 2048) {
 			mc->ram_org = RAM_ORG_64Kx1;
 		} else {
 			mc->ram_org = RAM_ORG(19, 19, 0);
@@ -283,7 +287,7 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	m->config = mc;
 
 	// SAM
-	if (mc->ram < 512) {
+	if (mc->ram < 512 || mc->ram == 2048) {
 		part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
 	} else {
 		part_add_component(&m->part, part_create("SAMx8", NULL), "SAM");
@@ -378,7 +382,11 @@ _Bool dragon_finish_common(struct dragon *md) {
 	dragon_connect_cart(p);
 
 	// CPU cycle handling
-	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cpu_cycle, md);
+	if (mc->ram == 2048) {
+		md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cocomem_jr_cpu_cycle, md);
+	} else {
+		md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cpu_cycle, md);
+	}
 
 	// SAM VDG update handler
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
@@ -660,10 +668,11 @@ static void dragon_create_ram(struct dragon *md) {
 	unsigned bank_size = ram->bank_nelems / 1024;
 	if (bank_size == 0)
 		bank_size = 1;
-	unsigned nbanks = mc->ram / bank_size;
+	unsigned ram_k = (mc->ram == 2048) ? 64 : mc->ram;
+	unsigned nbanks = ram_k / bank_size;
 	if (nbanks < 1)
 		nbanks = 1;
-	if (nbanks > 2 && mc->ram < 512)
+	if (nbanks > 2 && ram_k < 512)
 		nbanks = 2;
 	if (nbanks > 32)
 		nbanks = 32;
