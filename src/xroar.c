@@ -3741,7 +3741,6 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_string(f, all, "gdb-ip", xroar.cfg.debug.gdb_ip, GDB_IP_DEFAULT);
 	xroar_cfg_print_string(f, all, "gdb-port", xroar.cfg.debug.gdb_port, GDB_PORT_DEFAULT);
 	xroar_cfg_print_bool(f, all, "ratelimit", private_cfg.debug.ratelimit, 1);
-	xroar_cfg_print_bool(f, all, "trace", logging.trace_cpu, 0);
 	xroar_cfg_print_bool(f, all, "trace-timing", logging.trace_cpu_timing, 0);
 	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
 	xroar_cfg_print_flags(f, all, "debug-file", logging.debug_file);
