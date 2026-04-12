@@ -3,8 +3,13 @@
  * Windows: try to use consoles more intelligently
  * Mac OS X+: fail gracefully when system audio channels > 2 [Steve Clamage]
  * Option -no-cart disables cartridge for first running machine
- * Support loading Motorola S19 records
+ * Support loading Motorola S19 records [Ken Willmott]
  * Fix command-line loading of HEX and S19
+ * Initial iMMUnity support [by Jim Brain]
+ * New option for dragon/coco1/2: -machine-opt immunity
+ * Update CoCo3 keyboard IRQ state more often [craig]
+ * 74LS785 SAM support
+ * New option for dragon/coco1/2: -machine-opt sam=74ls783|74ls785|samx8
 
 Version 1.10, Fri 21 Nov 2025
 
