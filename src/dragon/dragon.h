@@ -21,13 +21,15 @@
 
 #include <stdint.h>
 
+#include "breakpoint.h"
+#include "events.h"
 #include "machine.h"
+#include "mc6809/mc6809.h"
+#include "xroar.h"
 
-struct MC6809;
 struct MC6821;
 struct MC6847;
 struct MC6883;
-struct bp_session;
 struct cart;
 struct gdb_interface;
 struct printer_interface;
@@ -109,7 +111,59 @@ struct dragon {
 
 extern const struct ser_struct_data dragon_ser_struct_data;
 
-//Set a ROM configuration to a default value if not "defined"
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// CPU cycle code construction kit.
+//
+// Derived machines can override cpu_cycle() to simulate interposing the CPU or
+// the SAM.  They may modify the address seen by the SAM (e.g. CocoMEM Jr.), or
+// the addresses presented to RAM (e.g. Deluxe CoCo).  These are some common
+// functions that such delegates may still need to call.
+//
+// The general order of operation for the cpy_cycle() delegate is as follows:
+//
+// Calls dragon_check_traps() to fire memory access traps using the original
+// address accessed by the CPU.
+//
+// Possibly modify address seen by SAM.
+//
+// Calls SAM's mem_cycle() to perform address decode and fetch timing
+// information.
+//
+// Collects together interrupt sources and presents them to the CPU.
+//
+// Possibly modify address presented to RAM.
+//
+// Calls dragon_cpu_cycle() to access RAM and devices common to the arch.
+
+// Check memory access traps.
+#ifdef WANT_GDB_TARGET
+inline void dragon_check_traps(struct dragon *md, _Bool RnW, uint16_t A) {
+	if (RnW) {
+		if (md->bp_session->wp_read_list)
+			bp_wp_read_hook(md->bp_session, A);
+	} else {
+		if (md->bp_session->wp_write_list)
+			bp_wp_write_hook(md->bp_session, A);
+	}
+}
+#else
+#define dragon_check_traps(...)
+#endif
+
+// Advance clock and run scheduled events.
+inline void dragon_advance_clock(struct dragon *md, int ncycles) {
+	md->cycles -= ncycles;
+	if (md->cycles <= 0) md->CPU->running = 0;
+	event_run_queue(MACHINE_EVENT_LIST, ncycles);
+}
+
+// Common cycle-handling code.
+void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Set a ROM configuration to a default value if not "defined"
 void dragon_set_default_rom(_Bool dfn, char **romp, const char *dfl);
 
 void dragon_config_complete(struct machine_config *mc);
@@ -123,8 +177,6 @@ void dragon_free_common(struct part *p);
 
 _Bool dragon_has_interface(struct part *p, const char *ifname);
 void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
-
-void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol);
 
 void dragon_reset(struct machine *m, _Bool hard);
 

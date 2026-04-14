@@ -116,7 +116,7 @@ static void deluxecoco_reset(struct machine *, _Bool hard);
 
 static _Bool deluxecoco_read_byte(struct dragon *, unsigned A);
 static _Bool deluxecoco_write_byte(struct dragon *, unsigned A);
-static void deluxecoco_cpu_cycle(void *, int ncycles, _Bool RnW, uint16_t A);
+static void deluxecoco_cpu_cycle(void *, _Bool RnW, uint16_t A);
 
 static void deluxecoco_vdg_hs(void *, _Bool level);
 static void deluxecoco_vdg_fs(void *, _Bool level);
@@ -248,7 +248,7 @@ static _Bool deluxecoco_finish(struct part *p) {
 
 	coco_pia_configuration(md);
 
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, deluxecoco_cpu_cycle, mdp);
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, deluxecoco_cpu_cycle, mdp);
 
 	md->VDG->is_dragon64 = 0;
 	md->VDG->is_dragon32 = 0;
@@ -438,30 +438,32 @@ static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-// Advance clock and run scheduled events
-static inline void advance_clock(struct dragon *md, int ncycles) {
-	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU->running = 0;
-	event_run_queue(MACHINE_EVENT_LIST, ncycles);
-}
-
-static void deluxecoco_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+static void deluxecoco_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
-	if (ncycles && !md->clock_inhibit) {
-		advance_clock(md, ncycles);
+	// Check traps
+	dragon_check_traps(md, RnW, A);
+
+	// SAM decode / timing
+	int ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);
+
+	// Advance clock, collect IRQs
+	if (!md->clock_inhibit) {
+		dragon_advance_clock(md, ncycles);
 		_Bool supp_irq = mdp->irq_60hz;
 		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq || supp_irq);
 		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
 	}
 
+	// Transform DRAM addressing accoding to GAL settings
 	unsigned Zrow = md->SAM->Zrow;
 	unsigned Zcol = md->SAM->Zcol;
 	if (mdp->page_enable && (A & 0xc000) == 0x4000) {
 		Zcol = (Zcol & 0x3f) | (mdp->page << 6);
 	}
 
+	// Common cycle handling
 	dragon_cpu_cycle(md, RnW, A, Zrow, Zcol);
 }
 

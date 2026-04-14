@@ -138,7 +138,7 @@ static void dragonpro_reset(struct machine *m, _Bool hard);
 
 static _Bool dragonpro_read_byte(struct dragon *, unsigned A);
 static _Bool dragonpro_write_byte(struct dragon *, unsigned A);
-static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
+static void dragonpro_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
 
 #define dragonpro_pia2a_data_preread NULL
 static void dragonpro_pia2a_data_postwrite(void *sptr);
@@ -274,7 +274,7 @@ static _Bool dragonpro_finish(struct part *p) {
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
 	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
 
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, dragonpro_cpu_cycle, mdp);
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, dragonpro_cpu_cycle, mdp);
 
 	mdp->PIA2->a.data_preread = DELEGATE_AS0(void, dragonpro_pia2a_data_preread, mdp);
 	mdp->PIA2->a.data_postwrite = DELEGATE_AS0(void, dragonpro_pia2a_data_postwrite, mdp);
@@ -481,28 +481,26 @@ static _Bool dragonpro_write_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-// Advance clock and run scheduled events
-static inline void advance_clock(struct dragon *md, int ncycles) {
-	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU->running = 0;
-	event_run_queue(MACHINE_EVENT_LIST, ncycles);
-}
-
-static void dragonpro_cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+static void dragonpro_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct dragonpro *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
-	if (ncycles && !md->clock_inhibit) {
-		advance_clock(md, ncycles);
+	// Check traps
+	dragon_check_traps(md, RnW, A);
+
+	// SAM decode / timing
+	int ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);
+
+	// Advance clock, collect IRQs
+	if (!md->clock_inhibit) {
+		dragon_advance_clock(md, ncycles);
 		_Bool supp_firq = mdp->PIA2->a.irq || mdp->PIA2->b.irq;
 		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
 		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq || supp_firq);
 	}
 
-	unsigned Zrow = md->SAM->Zrow;
-	unsigned Zcol = md->SAM->Zcol;
-
-	dragon_cpu_cycle(md, RnW, A, Zrow, Zcol);
+	// Common cycle handling
+	dragon_cpu_cycle(md, RnW, A, md->SAM->Zrow, md->SAM->Zcol);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

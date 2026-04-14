@@ -38,11 +38,11 @@ struct MC6883 {
 	_Bool RAS0;
 	_Bool RAS1;
 
-	DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
+	//DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 	DELEGATE_T0(void) vdg_update;
 
 	void (*reset)(struct MC6883 *);
-	void (*mem_cycle)(void *, _Bool RnW, uint16_t A);
+	int (*mem_cycle)(void *, _Bool RnW, uint16_t A);
 	unsigned (*decode)(struct MC6883 *, _Bool RnW, uint16_t A);
 	void (*vdg_fsync)(struct MC6883 *, _Bool level);
 	void (*vdg_hsync)(struct MC6883 *, _Bool level);

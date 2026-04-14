@@ -205,7 +205,7 @@ static _Bool samx8_finish(struct part *p);
 static _Bool samx8_is_a(struct part *p, const char *name);
 
 static void samx8_reset(struct MC6883 *);
-static void samx8_mem_cycle(void *, _Bool RnW, uint16_t A);
+static int samx8_mem_cycle(void *, _Bool RnW, uint16_t A);
 static unsigned samx8_decode(struct MC6883 *, _Bool RnW, uint16_t A);
 static void samx8_vdg_hsync(struct MC6883 *, _Bool level);
 static void samx8_vdg_fsync(struct MC6883 *, _Bool level);
@@ -231,7 +231,7 @@ static struct part *samx8_allocate(void) {
 
 	*sam = (struct SAMx8_private){0};
 
-	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
+	//sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
 
 	samp->reset = samx8_reset;
@@ -300,7 +300,7 @@ void samx8_reset(struct MC6883 *samp) {
 static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-void samx8_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static int samx8_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct SAMx8_private *sam = (struct SAMx8_private *)samp;
 	int ncycles;
@@ -432,12 +432,12 @@ void samx8_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		}
 	}
 
-	DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
-
 	if (want_register_update) {
 		update_from_register(sam);
 	}
 
+	return ncycles;
+	//DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
 }
 
 // Just the address decode from samx8_mem_cycle().  Used to verify that a

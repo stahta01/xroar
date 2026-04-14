@@ -229,7 +229,7 @@ static void cart_halt(void *sptr, _Bool level);
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void printer_ack(void *sptr, _Bool ack);
 
-static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
+static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
@@ -377,9 +377,11 @@ _Bool dragon_finish_common(struct dragon *md) {
 	// Connect any cartridge part
 	dragon_connect_cart(p);
 
-	md->SAM->cpu_cycle = DELEGATE_AS3(void, int, bool, uint16, cpu_cycle, md);
+	// CPU cycle handling
+	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cpu_cycle, md);
+
+	// SAM VDG update handler
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
-	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, md->SAM->mem_cycle, md->SAM);
 
 	// Breakpoint session
 	md->bp_session = bp_session_new(m);
@@ -988,47 +990,45 @@ static void dragon_instruction_posthook(void *sptr) {
 static void read_byte(struct dragon *md, unsigned A);
 static void write_byte(struct dragon *md, unsigned A);
 
-// The SAM's mem_cycle() is set up to call cpu_cycle(), which does the
-// following:
-
-// - calls advance_clock() to indicate time has passed
-// - collects together interrupt sources and presents them to the CPU
-// - calls dragon_cpu_cycle() to access RAM and devices common to the arch
-
-// Derived machines can override cpu_cycle() to implement local customisations.
-//
-// dragon_cpu_cycle() in turn calls read_byte() and write_byte() as
-// appropriate.  At the moment these have variations hard coded for derived
-// machines.  It would be nice to abstract those somehow, but the call graph is
-// already somewhat convoluted...
-
-// dragon_read_byte() and dragon_write_byte() assert clock_inhibit before
-// calling to do the same thing without advancing the clock.
-
+// Check memory access traps
+#ifdef WANT_GDB_TARGET
+extern inline void dragon_check_traps(struct dragon *md, _Bool RnW, uint16_t A);
+#endif
 // Advance clock and run scheduled events
-static inline void advance_clock(struct dragon *md, int ncycles) {
-	md->cycles -= ncycles;
-	if (md->cycles <= 0) md->CPU->running = 0;
-	event_run_queue(MACHINE_EVENT_LIST, ncycles);
-}
+extern inline void dragon_advance_clock(struct dragon *md, int ncycles);
 
-static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
+// The standard CPU cycle handling delegate.  May be overridden.
+//
+// See dragon/dragon.h for information on what CPU->cpu_cycle() is expected to
+// do.
+
+static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct dragon *md = sptr;
 
+	// Check traps
+	dragon_check_traps(md, RnW, A);
+
+	// SAM decode / timing
+	int ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);
+
+	// Advance clock, collect IRQs
 	if (ncycles && !md->clock_inhibit) {
-		advance_clock(md, ncycles);
+		dragon_advance_clock(md, ncycles);
 		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
 		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
 	}
 
-	unsigned Zrow = md->SAM->Zrow;
-	unsigned Zcol = md->SAM->Zcol;
-
-	dragon_cpu_cycle(md, RnW, A, Zrow, Zcol);
+	// Common cycle handling
+	dragon_cpu_cycle(md, RnW, A, md->SAM->Zrow, md->SAM->Zcol);
 }
 
 // Common routine called by cpu_cycle() (or override) to access RAM and devices
 // for a CPU cycle.
+//
+// This in turn calls read_byte() and write_byte() as appropriate.  At the
+// moment these have variations hard coded for derived machines.  It would be
+// nice to abstract those somehow, but the call graph is already somewhat
+// convoluted...
 
 void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol) {
 	md->Dread = 0xff;
@@ -1051,24 +1051,14 @@ void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, u
 		EXTMEM = md->cart->EXTMEM;
 	}
 
-	if (RnW) {
-		if (!EXTMEM) {
+	if (!EXTMEM) {
+		if (RnW) {
 			if (!md->read_byte || !md->read_byte(md, A))
 				read_byte(md, A);
-		}
-#ifdef WANT_GDB_TARGET
-		if (md->bp_session->wp_read_list)
-			bp_wp_read_hook(md->bp_session, A);
-#endif
-	} else {
-		if (!EXTMEM) {
+		} else {
 			if (!md->write_byte || !md->write_byte(md, A))
 				write_byte(md, A);
 		}
-#ifdef WANT_GDB_TARGET
-		if (md->bp_session->wp_write_list)
-			bp_wp_write_hook(md->bp_session, A);
-#endif
 	}
 
 	if (!md->SAM->nWE) {
@@ -1156,6 +1146,27 @@ static void write_byte(struct dragon *md, unsigned A) {
 	}
 }
 
+// dragon_read_byte() and dragon_write_byte() assert clock_inhibit before
+// calling the above to do the same thing without advancing the clock.  Used
+// for debugging & breakpoints.
+
+static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
+	(void)D;
+	struct dragon *md = (struct dragon *)m;
+	md->clock_inhibit = 1;
+	DELEGATE_CALL(md->CPU->mem_cycle, 1, A);
+	md->clock_inhibit = 0;
+	return md->CPU->D;
+}
+
+static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
+	struct dragon *md = (struct dragon *)m;
+	md->CPU->D = D;
+	md->clock_inhibit = 1;
+	DELEGATE_CALL(md->CPU->mem_cycle, 0, A);
+	md->clock_inhibit = 0;
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // VDG cycles
@@ -1215,27 +1226,6 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-/* Read a byte without advancing clock.  Used for debugging & breakpoints. */
-
-static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D) {
-	(void)D;
-	struct dragon *md = (struct dragon *)m;
-	md->clock_inhibit = 1;
-	md->SAM->mem_cycle(md->SAM, 1, A);
-	md->clock_inhibit = 0;
-	return md->CPU->D;
-}
-
-/* Write a byte without advancing clock.  Used for debugging & breakpoints. */
-
-static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D) {
-	struct dragon *md = (struct dragon *)m;
-	md->CPU->D = D;
-	md->clock_inhibit = 1;
-	md->SAM->mem_cycle(md->SAM, 0, A);
-	md->clock_inhibit = 0;
-}
 
 /* simulate an RTS without otherwise affecting machine state */
 static void dragon_op_rts(struct machine *m) {

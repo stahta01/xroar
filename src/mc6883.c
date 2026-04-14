@@ -263,7 +263,7 @@ static struct part *mc6883_allocate(void);
 static _Bool mc6883_finish(struct part *p);
 
 static void mc6883_reset(struct MC6883 *);
-static void mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
+static int mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
 static unsigned mc6883_decode(struct MC6883 *, _Bool RnW, uint16_t A);
 static void mc6883_vdg_hsync(struct MC6883 *, _Bool level);
 static void mc6883_vdg_fsync(struct MC6883 *, _Bool level);
@@ -287,7 +287,7 @@ static struct part *mc6883_allocate(void) {
 
 	*sam = (struct MC6883_private){0};
 
-	sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
+	//sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
 
 	samp->reset = mc6883_reset;
@@ -412,7 +412,7 @@ static void mc6883_reset(struct MC6883 *samp) {
 static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-static void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
@@ -514,12 +514,12 @@ static void mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		}
 	}
 
-	DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
-
 	if (want_register_update) {
 		update_from_register(sam);
 	}
 
+	return ncycles;
+	//DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
 }
 
 // Just the address decode from mc6883_mem_cycle().  Used to verify that a
