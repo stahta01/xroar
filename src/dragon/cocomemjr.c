@@ -25,6 +25,8 @@
 #include "mc6809/mc6809.h"
 #include "xroar.h"
 
+#define JIM_DEBUG 1
+
 /* TODO: consider wrapping this up as a "part", that way data can be allocated
  * and freed as part of machine creation */
 
@@ -68,31 +70,33 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			init1 = md->CPU->D;
 		ignore_sam = 1;
 	} else if (init0 & 0x40) { // MMU enabled
-		//if (A == 0xfff2) {
-		//  for (uint8_t i=0; i<8; i++) {
-		//    printf("%2.2x, ",dat[0][i]);
-		//  }
-		//  printf("\n");
-		//}
+#ifdef JIM_DEBUG
+		if (A >= 0xfff2) {
+			for (uint8_t i=0; i<8; i++) {
+				printf("%2.2x, ",dat[init1 & 1][i]);
+			}
+			printf("\n");
+		}
+#endif
 		uint16_t a = A & 0x1ff;
 		uint8_t bank;
 		uint8_t b2;
-		if (((A & 0xff00) == 0xfe00) && ((init0 & 0x08) == 0x08)) { // pin CRM page
-			bank = 0x07;
-			b2 = 0x3f;
-		} else {
-			bank = dat[init1 & 1][A >> 13];
-			b2 = bank;
-			// invert bits 3,4,5 so $38 -> 00, $3f->07
-			bank = (bank & 0xc7)
-			| (bank & 0x20 ? 0 : 0x20)
-			| (bank & 0x10 ? 0 : 0x10)
-			| (bank & 0x08 ? 0 : 0x08);
-		}
-		_Bool cocoram = ((bank & 0xf8) == 0);
 		_Bool ffxx = (A & 0xff00) == 0xff00;
 		_Bool altvec = ((A & 0xffe0) == 0xffe0) && !(init0 & 0x80);
 		_Bool io = ffxx && !altvec;
+		if (((A & 0xff00) == 0xfe00) && ((init0 & 0x08) == 0x08)
+		    || ffxx) { // pin CRM page and io, including vectors
+			bank = 0x3f;
+		} else {
+			bank = dat[init1 & 1][A >> 13];
+		}
+		b2 = bank;
+		// invert bits 3,4,5 so $38 -> 00, $3f->07
+		bank = (bank & 0xc7)
+			| (bank & 0x20 ? 0 : 0x20)
+			| (bank & 0x10 ? 0 : 0x10)
+			| (bank & 0x08 ? 0 : 0x08);
+		_Bool cocoram = ((bank & 0xf8) == 0);
 		_Bool int_mem = (!cocoram
 				 || (cocoram
 				     && ((bank & 0x07) == 0x07)
@@ -100,10 +104,15 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 				     && !io
 				    )
 				);
-		//if ((A >= 0xfeee) && (A <= 0xfeff))
-		//  printf("FEEX RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d\n",cocoram,ffxx,altvec,io, bank, b2);
+#ifdef JIM_DEBUG
+		if ((A >= 0xfeee) && (A <= 0xfeff) || (A >= 0xfff2) && (A <= 0xffff))
+			printf("SPEC RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d\n",cocoram,ffxx,altvec,io, bank, b2);
+#endif
 		if (int_mem) {
-			//printf("int mem %4.4X, RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d,addy=%4.4X,D=%2.2X\n",A,cocoram,ffxx,altvec,io, bank, b2, (uint32_t)bank << 13 | a,mem[(uint32_t)bank << 13 | a] );
+#ifdef JIM_DEBUG
+			if(A != 0xffff)
+				printf("int mem %4.4X, RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d,addy=%4.4X,D=%2.2X\n",A,cocoram,ffxx,altvec,io, bank, b2, (uint32_t)bank << 13 | a,mem[(uint32_t)bank << 13 | a] );
+#endif
 			if (RnW)
 				data = mem[(uint32_t)bank << 13 | a];
 			else
