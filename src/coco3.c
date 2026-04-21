@@ -332,9 +332,9 @@ static void coco3_instruction_posthook(void *sptr);
 static uint16_t fetch_vram(void *sptr, uint32_t A);
 
 static void pia0a_data_preread(void *sptr);
-#define pia0a_data_postwrite NULL
+#define pia0a_data_postwrite keyboard_update
 #define pia0a_control_postwrite update_sound_mux_source
-#define pia0b_data_postwrite NULL
+#define pia0b_data_postwrite keyboard_update
 #define pia0b_control_postwrite update_sound_mux_source
 #define pia0b_data_preread keyboard_update
 
