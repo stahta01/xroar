@@ -107,13 +107,6 @@ struct MC6847 {
 	// that if required (eg for NTSC modified artefacting).
 
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
-
-	// Flags to affect behaviour.  Really, these should be handled by
-	// machine-specific code.
-	_Bool is_dragon64;
-	_Bool is_dragon32;
-	_Bool is_coco;
-	_Bool is_pal;
 };
 
 /* Fetched data is a buffer of uint16_t, with bits:

@@ -96,11 +96,8 @@ struct MC6847_private {
 	uint8_t bright_orange;
 	int vram_bit;
 	unsigned render_mode;
-	unsigned pal_padding;
 
-	// Set when pixel_data[] contains only the current border colour - PAL
-	// padding lines (which occur during vertical border) will invalidate
-	// this.
+	// Set when pixel_data[] contains only the current border colour
 	_Bool have_border_only;
 
 	/* Unsafe warning: pixel_data[] needs to be 8 elements longer than a
@@ -127,14 +124,19 @@ struct MC6847_private {
 	uint8_t text_border_colour;
 };
 
+#define MC6847_SER_IS_DRAGON64 (2)
+#define MC6847_SER_IS_DRAGON32 (3)
+#define MC6847_SER_IS_COCO (4)
+#define MC6847_SER_IS_PAL (5)
+#define MC6847_SER_PAL_PADDING (32)
 #define MC6847_SER_VRAM (34)
 
 static struct ser_struct ser_struct_mc6847[] = {
 	SER_ID_STRUCT_ELEM(1, struct MC6847, row),
-	SER_ID_STRUCT_ELEM(2, struct MC6847, is_dragon64),
-	SER_ID_STRUCT_ELEM(3, struct MC6847, is_dragon32),
-	SER_ID_STRUCT_ELEM(4, struct MC6847, is_coco),
-	SER_ID_STRUCT_ELEM(5, struct MC6847, is_pal),
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_IS_DRAGON64),
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_IS_DRAGON32),
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_IS_COCO),
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_IS_PAL),
 
 	SER_ID_STRUCT_ELEM(6, struct MC6847_private, GM),
 	SER_ID_STRUCT_ELEM(7, struct MC6847_private, nA_S),
@@ -165,7 +167,7 @@ static struct ser_struct ser_struct_mc6847[] = {
 	SER_ID_STRUCT_ELEM(29, struct MC6847_private, bright_orange),
 	SER_ID_STRUCT_ELEM(30, struct MC6847_private, vram_bit),
 	SER_ID_STRUCT_ELEM(31, struct MC6847_private, render_mode),
-	SER_ID_STRUCT_ELEM(32, struct MC6847_private, pal_padding),
+	SER_ID_STRUCT_UNHANDLED(MC6847_SER_PAL_PADDING),
 
 	SER_ID_STRUCT_ELEM(33, struct MC6847_private, burst),
 
@@ -271,6 +273,14 @@ static void mc6847_free(struct part *p) {
 static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6847_private *vdg = sptr;
 	switch (tag) {
+
+	case MC6847_SER_IS_DRAGON64:
+	case MC6847_SER_IS_DRAGON32:
+	case MC6847_SER_IS_COCO:
+	case MC6847_SER_IS_PAL:
+	case MC6847_SER_PAL_PADDING:
+		break;
+
 	case MC6847_SER_VRAM:
 		for (int i = 0; i < 42; i++) {
 			vdg->vram[i] = ser_read_uint16(sh);
@@ -286,6 +296,14 @@ static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6847_private *vdg = sptr;
 	switch (tag) {
+
+	case MC6847_SER_IS_DRAGON64:
+	case MC6847_SER_IS_DRAGON32:
+	case MC6847_SER_IS_COCO:
+	case MC6847_SER_IS_PAL:
+	case MC6847_SER_PAL_PADDING:
+		break;
+
 	case MC6847_SER_VRAM:
 		ser_write_tag(sh, tag, 42*2);
 		for (int i = 0; i < 42; i++) {
