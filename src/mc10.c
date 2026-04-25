@@ -2,7 +2,7 @@
  *
  *  \brief Tandy MC-10 machine.
  *
- *  \copyright Copyright 2021-2025 Ciaran Anscomb
+ *  \copyright Copyright 2021-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -51,6 +51,7 @@
 #include "sound.h"
 #include "tape.h"
 #include "ui.h"
+#include "vdg_pal.h"
 #include "vdg_palette.h"
 #include "vo.h"
 #include "xroar.h"
@@ -95,6 +96,9 @@ struct mc10 {
 		// CPU on appropriate port write.
 		unsigned rows;
 	} keyboard;
+
+	// Optional PAL logic interposing VDG
+	struct vdg_pal vdg_pal;
 
 	// UI message receipt
 	int msgr_client_id;
@@ -433,12 +437,6 @@ static _Bool mc10_finish(struct part *p) {
 
 	// VDG
 
-	// This only affects how PAL signal padding works, and for now I'm
-	// going to assume it's like the CoCo.
-	mp->VDG->is_coco = 1;
-	_Bool is_pal = (mc->tv_standard == TV_PAL);
-	mp->VDG->is_pal = is_pal;
-
 	mp->VDG->signal_hs = DELEGATE_AS1(void, bool, mc10_vdg_hs, mp);
         mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
         mp->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, mc10_vdg_render_line, mp);
@@ -446,11 +444,18 @@ static _Bool mc10_finish(struct part *p) {
 	ui_update_state(-1, ui_tag_tv_input, mc->tv_input, NULL);
 	ui_update_state(-1, ui_tag_vdg_inverse, mp->inverted_text, NULL);
 
-	// Active area is constant
-	{
-		int x = VDG_tWHS + VDG_tBP + VDG_tLB;
-		int y = VDG_ACTIVE_AREA_START + (is_pal ? 24 : 0);
-		DELEGATE_SAFE_CALL(mp->vo->set_active_area, x, y, 512, 192);
+	// PAL overrides
+	// For now I'm going to assume that PAL padding works like the CoCo.
+	if (mc->tv_standard == TV_PAL) {
+		vdg_pal_init(&mp->vdg_pal, mp->VDG);
+		mp->vdg_pal.pal_stop_0 = 16;
+		mp->vdg_pal.pal_delay_0 = 24;
+		mp->vdg_pal.pal_stop_1 = 256;
+		mp->vdg_pal.pal_delay_1 = 26;
+		// mp->hs_invert = 1;
+		DELEGATE_SAFE_CALL(mp->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START + 24, 512, 192);
+	} else {
+		DELEGATE_SAFE_CALL(mp->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START, 512, 192);
 	}
 
 	// Configure composite video
@@ -516,6 +521,9 @@ static _Bool mc10_finish(struct part *p) {
 		mp->gdb_interface = gdb_interface_new(xroar.cfg.gdb_ip, xroar.cfg.gdb_port, m, mmp>bp_session);
 	} */
 #endif
+
+	// Until we serialise vdg_pal events:
+	mc6847_unpause(mp->VDG);
 
 	return 1;
 }
@@ -960,8 +968,8 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_vdg_hs(void *sptr, _Bool level) {
-	(void)sptr;
-	(void)level;
+	struct mc10 *mp = sptr;
+	(void)mp;
 }
 
 static void mc10_vdg_fs(void *sptr, _Bool level) {
