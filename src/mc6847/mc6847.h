@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2023 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -65,7 +65,6 @@
 #define VDG_RIGHT_BORDER_START (VDG_ACTIVE_LINE_START + VDG_tAV)
 #define VDG_RIGHT_BORDER_END   (VDG_RIGHT_BORDER_START + VDG_tRB)
 #define VDG_LINE_DURATION      (VDG_tHBNK + VDG_tAVB)
-#define VDG_PAL_PADDING_LINE   VDG_LINE_DURATION
 
 #define VDG_VBLANK_START       (0)
 #define VDG_TOP_BORDER_START   (VDG_VBLANK_START + 13)
@@ -141,5 +140,8 @@ void mc6847_update(void *sptr);
  */
 
 void mc6847_set_mode(struct MC6847 *, unsigned mode);
+
+void mc6847_pause(struct MC6847 *vdgp);
+void mc6847_unpause(struct MC6847 *vdgp);
 
 #endif

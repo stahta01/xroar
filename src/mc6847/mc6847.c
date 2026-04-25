@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6847 Video Display Generator (VDG).
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -71,6 +71,7 @@ struct MC6847_private {
 	event_ticks scanline_start;
 	unsigned beam_pos;
 	unsigned scanline;
+	_Bool paused;
 
 	// Address
 	uint16_t A;
@@ -194,7 +195,6 @@ const struct ser_struct_data mc6847_ser_struct_data = {
 
 static void do_hs_fall(void *);
 static void do_hs_rise(void *);
-static void do_hs_fall_pal(void *);
 
 static void render_scanline(struct MC6847_private *vdg);
 
@@ -298,6 +298,25 @@ static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
+void mc6847_pause(struct MC6847 *vdgp) {
+	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
+
+	event_dequeue(&vdg->hs_fall_event);
+	event_dequeue(&vdg->hs_rise_event);
+	vdg->paused = 1;
+}
+
+void mc6847_unpause(struct MC6847 *vdgp) {
+	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
+
+	vdg->scanline_start = event_current_tick;
+	event_set_abs(&vdg->hs_rise_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE));
+	event_set_abs(&vdg->hs_fall_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION));
+	event_queue(&vdg->hs_fall_event);
+	event_queue(&vdg->hs_rise_event);
+	vdg->paused = 0;
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void do_hs_fall(void *data) {
@@ -327,9 +346,6 @@ static void do_hs_fall(void *data) {
 	}
 	DELEGATE_CALL(vdg->public.render_line, vdg->burst, VDG_LINE_DURATION, vdg->pixel_data);
 
-	// HS falling edge.
-	DELEGATE_CALL(vdg->public.signal_hs, 0);
-
 	vdg->scanline_start = vdg->hs_fall_event.at_tick;
 	// Next HS rise and fall
 	event_set_abs(&vdg->hs_rise_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE));
@@ -337,37 +353,8 @@ static void do_hs_fall(void *data) {
 
 	vdg->scanline = SCANLINE(vdg->scanline + 1);
 
-	// On PAL machines, external circuitry suspends the clock to the VDG at
-	// two points each frame to insert extra scanlines (differently on
-	// Dragon and CoCo).  Ideally outside code would represent this, but
-	// it's handled here for speed.
-
-	if (vdg->public.is_pal) {
-		if (!vdg->public.is_coco) {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 24)
-			    || vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 32)) {
-				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
-				vdg->have_border_only = 0;
-				vdg->pal_padding = 25;
-				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
-			}
-		} else {
-			if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 26)) {
-				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
-				vdg->have_border_only = 0;
-				vdg->pal_padding = 26;
-				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
-			} else if (vdg->scanline == SCANLINE(VDG_ACTIVE_AREA_END + 48)) {
-				memset(vdg->pixel_data + VDG_LEFT_BORDER_START, VDG_BLACK, VDG_tAVB);
-				vdg->have_border_only = 0;
-				vdg->pal_padding = 24;
-				vdg->hs_fall_event.delegate.func = do_hs_fall_pal;
-			}
-		}
-	}
-
-	event_queue(&vdg->hs_rise_event);
-	event_queue(&vdg->hs_fall_event);
+	// HS falling edge.
+	DELEGATE_CALL(vdg->public.signal_hs, 0);
 
 	vdg->vram_nbytes = 0;
 	vdg->vram_index = 0;
@@ -392,33 +379,17 @@ static void do_hs_fall(void *data) {
 		DELEGATE_CALL(vdg->public.signal_fs, 1);
 	}
 
+	if (vdg->paused)
+		return;
+
+	event_queue(&vdg->hs_rise_event);
+	event_queue(&vdg->hs_fall_event);
 }
 
 static void do_hs_rise(void *data) {
 	struct MC6847_private *vdg = data;
 	// HS rising edge.
 	DELEGATE_CALL(vdg->public.signal_hs, 1);
-}
-
-static void do_hs_fall_pal(void *data) {
-	struct MC6847_private *vdg = data;
-	// HS falling edge
-	DELEGATE_CALL(vdg->public.render_line, vdg->burst, VDG_LINE_DURATION, vdg->pixel_data);
-	if (!vdg->public.is_dragon64) {
-		DELEGATE_CALL(vdg->public.signal_hs, 0);
-	}
-
-	vdg->scanline_start = vdg->hs_fall_event.at_tick;
-	// Next HS rise and fall
-	event_set_abs(&vdg->hs_rise_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_HS_RISING_EDGE));
-	event_set_abs(&vdg->hs_fall_event, vdg->scanline_start + EVENT_VDG_TIME(VDG_LINE_DURATION));
-
-	vdg->pal_padding--;
-	if (vdg->pal_padding == 0)
-		vdg->hs_fall_event.delegate.func = do_hs_fall;
-
-	event_queue(&vdg->hs_rise_event);
-	event_queue(&vdg->hs_fall_event);
 }
 
 // Renders current scanline up to the current time.
