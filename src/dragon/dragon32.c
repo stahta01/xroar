@@ -140,10 +140,6 @@ static _Bool dragon32_finish(struct part *p) {
 	md->crc_combined = 0xe3879310;  // Dragon 32 BASIC
 	md->has_combined = rombank_verify_crc(md->ROM0, "BASIC", -1, "@d32", xroar.cfg.force_crc_match, &md->crc_combined);
 
-	// VDG
-	md->VDG->is_dragon32 = 1;
-	md->VDG->is_coco = 0;
-
 	// Machine-specific PIA connections
 	switch (mc->ram_org) {
 	case RAM_ORG_4Kx1:
@@ -152,6 +148,17 @@ static _Bool dragon32_finish(struct part *p) {
 		break;
 	default:
 		md->PIA1->b.in_sink &= ~(1<<2);
+	}
+
+	// PAL overrides
+	if (mc->tv_standard == TV_PAL) {
+		vdg_pal_init(&md->vdg_pal, md->VDG);
+		md->vdg_pal.pal_stop_0 = 262;
+		md->vdg_pal.pal_delay_0 = 25;
+		md->vdg_pal.pal_stop_1 = 254;
+		md->vdg_pal.pal_delay_1 = 25;
+		DELEGATE_SAFE_CALL(md->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START + 25, 512, 192);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_218, NULL);
 	}
 
 	return 1;

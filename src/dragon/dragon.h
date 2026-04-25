@@ -25,6 +25,7 @@
 #include "events.h"
 #include "machine.h"
 #include "mc6809/mc6809.h"
+#include "vdg_pal.h"
 #include "xroar.h"
 
 struct MC6821;
@@ -53,6 +54,9 @@ struct dragon {
 	struct vo_interface *vo;
 	int frame;  // track frameskip
 	struct sound_interface *snd;
+
+	// Optional PAL logic interposing VDG
+	struct vdg_pal vdg_pal;
 
 	// Derived machines can use these to redirect address decoding.  If
 	// they return true, the address was handled, no need to continue.

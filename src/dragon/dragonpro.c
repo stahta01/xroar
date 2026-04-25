@@ -297,12 +297,18 @@ static _Bool dragonpro_finish(struct part *p) {
 	// ROM loaded as "extbas" and the BASIC ROM loaded as "altbas", but we
 	// could do with a more general named ROM bank config scheme.
 
-	// VDG
-	// TODO: this needs verifying.  I'm assuming the same circuit as the
-	// Dragon 64, but it may well have been corrected for the Professional.
-	md->VDG->is_dragon64 = 1;
-	md->VDG->is_dragon32 = 0;
-	md->VDG->is_coco = 0;
+	// PAL overrides
+	// Note: it's assumed the behaviour is the same as the Dragon 64.
+	if (mc->tv_standard == TV_PAL) {
+		vdg_pal_init(&md->vdg_pal, md->VDG);
+		md->vdg_pal.pal_stop_0 = 262;
+		md->vdg_pal.pal_delay_0 = 25;
+		md->vdg_pal.pal_stop_1 = 254;
+		md->vdg_pal.pal_delay_1 = 25;
+		md->vdg_pal.pal_hs_inhibit = 1;
+		DELEGATE_SAFE_CALL(md->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START + 25, 512, 192);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_218, NULL);
+	}
 
 	return 1;
 }

@@ -250,9 +250,6 @@ static _Bool deluxecoco_finish(struct part *p) {
 
 	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, deluxecoco_cpu_cycle, mdp);
 
-	md->VDG->is_dragon64 = 0;
-	md->VDG->is_dragon32 = 0;
-	md->VDG->is_coco = 1;
 	md->VDG->signal_hs = DELEGATE_AS1(void, bool, deluxecoco_vdg_hs, mdp);
 	md->VDG->signal_fs = DELEGATE_AS1(void, bool, deluxecoco_vdg_fs, mdp);
 
@@ -265,7 +262,14 @@ static _Bool deluxecoco_finish(struct part *p) {
 	// Note: there probably never was a PAL Deluxe CoCo prototype, so
 	// settings are borrowed from the CoCo 1/2 approach.
 	if (mc->tv_standard == TV_PAL) {
+		vdg_pal_init(&md->vdg_pal, md->VDG);
+		md->vdg_pal.pal_stop_0 = 16;
+		md->vdg_pal.pal_delay_0 = 24;
+		md->vdg_pal.pal_stop_1 = 256;
+		md->vdg_pal.pal_delay_1 = 26;
 		md->hs_invert = 1;
+		DELEGATE_SAFE_CALL(md->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START + 24, 512, 192);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_23753, NULL);
 	}
 
 	return 1;

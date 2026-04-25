@@ -415,8 +415,6 @@ _Bool dragon_finish_common(struct dragon *md) {
 	md->snd->sbs_feedback = DELEGATE_AS1(void, bool, single_bit_feedback, md);
 
 	// VDG
-	_Bool is_pal = (mc->tv_standard == TV_PAL);
-	md->VDG->is_pal = is_pal;
 	md->use_ntsc_burst_mod = (mc->tv_standard != TV_PAL);
 
 	md->VDG->signal_hs = DELEGATE_AS1(void, bool, dragon_vdg_hs, md);
@@ -427,25 +425,10 @@ _Bool dragon_finish_common(struct dragon *md) {
 	ui_update_state(-1, ui_tag_vdg_inverse, md->inverted_text, NULL);
 
 	// Active area is constant
-	{
-		int x = VDG_tWHS + VDG_tBP + VDG_tLB;
-		int y = VDG_ACTIVE_AREA_START;
-		if (is_pal) {
-			y += md->is_dragon ? 25 : 24;
-		}
-		DELEGATE_SAFE_CALL(md->vo->set_active_area, x, y, 512, 192);
-	}
+	DELEGATE_SAFE_CALL(md->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START, 512, 192);
 
-	// Configure composite video
-	if (!is_pal || is_dragon32) {
-		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
-	} else {
-		if (md->is_dragon) {
-			ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_218, NULL);
-		} else {
-			ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_23753, NULL);
-		}
-	}
+	// Default composite sample frequency
+	ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_31818, NULL);
 
 	switch (mc->tv_standard) {
 	case TV_PAL:
@@ -574,6 +557,9 @@ _Bool dragon_finish_common(struct dragon *md) {
 	// XXX until we serialise sound information
 	update_sound_mux_source(md);
 	sound_set_mux_enabled(md->snd, PIA_VALUE_CB2(md->PIA1));
+
+	// Until we serialise vdg_pal events:
+	mc6847_unpause(md->VDG);
 
 	return 1;
 }

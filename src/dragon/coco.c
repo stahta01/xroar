@@ -172,10 +172,15 @@ static _Bool coco_finish(struct part *p) {
 
 	// PAL overrides
 	if (mc->tv_standard == TV_PAL) {
+		vdg_pal_init(&md->vdg_pal, md->VDG);
+		md->vdg_pal.pal_stop_0 = 16;
+		md->vdg_pal.pal_delay_0 = 24;
+		md->vdg_pal.pal_stop_1 = 256;
+		md->vdg_pal.pal_delay_1 = 26;
 		md->hs_invert = 1;
+		DELEGATE_SAFE_CALL(md->vo->set_active_area, VDG_tWHS + VDG_tBP + VDG_tLB, VDG_ACTIVE_AREA_START + 24, 512, 192);
+		ui_update_state(-1, ui_tag_cmp_fs, VO_RENDER_FS_14_23753, NULL);
 	}
-	md->VDG->is_dragon32 = 0;
-	md->VDG->is_coco = 1;
 
 	return 1;
 }
