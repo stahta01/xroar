@@ -185,17 +185,21 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 #endif
 		uint16_t a = A & 0x1ff;
 		uint8_t bank;
+#ifdef JIM_DEBUG
 		uint8_t b2;
+#endif
 		_Bool ffxx = (A & 0xff00) == 0xff00;
 		_Bool altvec = ((A & 0xffe0) == 0xffe0) && !(cj->init0 & 0x80);
 		_Bool io = ffxx && !altvec;
-		if (((A & 0xff00) == 0xfe00) && ((cj->init0 & 0x08) == 0x08)
+		if ((((A & 0xff00) == 0xfe00) && ((cj->init0 & 0x08) == 0x08))
 		    || ffxx) { // pin CRM page and io, including vectors
 			bank = 0x3f;
 		} else {
 			bank = cj->dat[cj->init1 & 1][A >> 13];
 		}
+#ifdef JIM_DEBUG
 		b2 = bank;
+#endif
 		// invert bits 3,4,5 so $38 -> 00, $3f->07
 		bank = (bank & 0xc7)
 			| (bank & 0x20 ? 0 : 0x20)
@@ -224,7 +228,9 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			ram_d8(cj->mem, RnW, 0, (uint32_t)bank << 13 | a, 0, &data);
 			ignore_sam = 1;
 		} else {
+#ifdef JIM_DEBUG
 			//printf("ext mem %4.4X, RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d\n",A,cocoram,ffxx,altvec,io, bank, b2);
+#endif
 		}
 	}
 
