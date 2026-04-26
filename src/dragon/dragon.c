@@ -34,6 +34,7 @@
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
+#include "dragon/cocomemjr.h"
 #include "dragon/dragon.h"
 #include "gdb.h"
 #include "joystick.h"
@@ -59,8 +60,6 @@
 #include "vdg_palette.h"
 #include "vo.h"
 #include "xroar.h"
-
-void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -306,6 +305,10 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	// RAM
 	dragon_create_ram(md);
 
+	if (mc->ram == 2048) {
+		part_add_component(&m->part, part_create("cocomem_jr", NULL), "COCOMEMJR");
+	}
+
 	// Keyboard
 	m->keyboard.type = mc->keymap;
 }
@@ -329,11 +332,16 @@ _Bool dragon_finish_common(struct dragon *md) {
 	md->PIA1 = (struct MC6821 *)part_component_by_id_is_a(p, "PIA1", "MC6821");
 	md->VDG = (struct MC6847 *)part_component_by_id_is_a(p, "VDG", "MC6847");
 	md->RAM = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
+	md->cocomem_jr = (struct cocomem_jr *)part_component_by_id_is_a(p, "COCOMEMJR", "cocomem_jr");
 
 	// Check all required parts are attached
 	if (!md->SAM || !md->CPU || !md->PIA0 || !md->PIA1 || !md->VDG ||
 	    !md->RAM || !md->vo || !md->snd || !md->tape_interface) {
 		return 0;
+	}
+
+	if (md->cocomem_jr) {
+		md->cocomem_jr->dragon = md;
 	}
 
 	md->SAM->CPUD = &md->CPU->D;
@@ -382,8 +390,8 @@ _Bool dragon_finish_common(struct dragon *md) {
 	dragon_connect_cart(p);
 
 	// CPU cycle handling
-	if (mc->ram == 2048) {
-		md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cocomem_jr_cpu_cycle, md);
+	if (md->cocomem_jr) {
+		md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cocomem_jr_cpu_cycle, md->cocomem_jr);
 	} else {
 		md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, cpu_cycle, md);
 	}
@@ -725,6 +733,9 @@ static void dragon_remove_cart(struct machine *m) {
 void dragon_reset(struct machine *m, _Bool hard) {
 	struct dragon *md = (struct dragon *)m;
 	struct machine_config *mc = m->config;
+	if (md->cocomem_jr) {
+		cocomem_jr_reset(md->cocomem_jr, hard);
+	}
 	if (hard) {
 		ram_clear(md->RAM, mc->ram_init);
 	}

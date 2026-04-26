@@ -55,6 +55,9 @@ struct dragon {
 	int frame;  // track frameskip
 	struct sound_interface *snd;
 
+	// Optional CoCoMEM Jr. memory expansion
+	struct cocomem_jr *cocomem_jr;
+
 	// Optional PAL logic interposing VDG
 	struct vdg_pal vdg_pal;
 
