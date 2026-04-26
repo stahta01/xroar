@@ -198,7 +198,6 @@ static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_op_rts(struct machine *m);
 static void mc10_dump_ram(struct machine *m, FILE *fd);
 
-static void mc10_vdg_hs(void *sptr, _Bool level);
 static void mc10_vdg_fs(void *sptr, _Bool level);
 static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
@@ -437,7 +436,6 @@ static _Bool mc10_finish(struct part *p) {
 
 	// VDG
 
-	mp->VDG->signal_hs = DELEGATE_AS1(void, bool, mc10_vdg_hs, mp);
         mp->VDG->signal_fs = DELEGATE_AS1(void, bool, mc10_vdg_fs, mp);
         mp->VDG->render_line = DELEGATE_AS3(void, unsigned, unsigned, uint8cp, mc10_vdg_render_line, mp);
         mp->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, mc10_vdg_fetch_handler, mp);
@@ -966,11 +964,6 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static void mc10_vdg_hs(void *sptr, _Bool level) {
-	struct mc10 *mp = sptr;
-	(void)mp;
-}
 
 static void mc10_vdg_fs(void *sptr, _Bool level) {
 	struct mc10 *mp = sptr;
