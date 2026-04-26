@@ -32,7 +32,7 @@
 #include "serialise.h"
 #include "xroar.h"
 
-#define JIM_DEBUG 1
+//#define JIM_DEBUG 1
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
