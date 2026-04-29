@@ -2,7 +2,7 @@
  *
  *  \brief ALSA sound module.
  *
- *  \copyright Copyright 2009-2024 Ciaran Anscomb
+ *  \copyright Copyright 2009-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,6 +31,7 @@
 
 #include <alsa/asoundlib.h>
 
+#include "intfuncs.h"
 #include "xalloc.h"
 
 #include "ao.h"
@@ -134,14 +135,7 @@ static void *new(void *cfg) {
 	} else {
 		// For a sensible default, try for 20ms per fragment and round
 		// up to the next power of 2
-		unsigned v = (rate * 20) / 1000;
-		v--;
-		v |= v >> 1;
-		v |= v >> 2;
-		v |= v >> 4;
-		v |= v >> 8;
-		v |= v >> 16;
-		v++;
+		unsigned v = u32_nextpow2((rate * 20) / 1000);
 		aoalsa->fragment_nframes = v;
 	}
 	if (aoalsa->fragment_nframes > 0) {
