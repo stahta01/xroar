@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ *  \copyright Copyright 2021-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -82,4 +82,17 @@ void int_split(const int *buffer, int nelems, int *lowmean, int *highmean) {
 	memcpy(bufcopy, buffer, nelems * sizeof(int));
 	int_split_inplace(bufcopy, nelems, lowmean, highmean);
 	free(bufcopy);
+}
+
+// Next power-of-two
+
+uint32_t u32_nextpow2(uint32_t v) {
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+	return v;
 }

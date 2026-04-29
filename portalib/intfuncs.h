@@ -2,7 +2,7 @@
  *
  *  \brief Integer manipulations.
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ *  \copyright Copyright 2021-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -67,5 +67,9 @@ inline _Bool u32_parity(uint32_t val) {
 	return (0x6996 >> (val & 15)) & 1;
 #endif
 }
+
+// Next power-of-two
+
+uint32_t u32_nextpow2(uint32_t v);
 
 #endif
