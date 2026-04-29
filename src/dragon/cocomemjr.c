@@ -152,6 +152,7 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct dragon *md = cj->dragon;
 	uint8_t data = md->CPU->D;
 	_Bool ignore_sam = 0;
+  uint32_t addr = (uint32_t)A;
 
 	// Check traps based on untransformed address
 	dragon_check_traps(md, RnW, A);
@@ -162,13 +163,13 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		else
 			cj->dat[(A & 0x08) >> 3][A & 0x07] = data;
 		ignore_sam = 1;
-	} else if (A == 0xff90) {
+	} else if (A == 0xff90) {         // init0
 		if (RnW)
 			data = cj->init0;
 		else
 			cj->init0 = data;
 		ignore_sam = 1;
-	} else if (A == 0xff91) {
+	} else if (A == 0xff91) {         // init1
 		if (RnW)
 			data = cj->init1;
 		else
@@ -176,14 +177,14 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		ignore_sam = 1;
 	} else if (cj->init0 & 0x40) { // MMU enabled
 #ifdef JIM_DEBUG
-		if (A >= 0xfff2) {
+    // print out current task mapping
+		if (A >= 0xfff2 && A < 0xffff) {
 			for (uint8_t i=0; i<8; i++) {
 				printf("%2.2x, ",cj->dat[cj->init1 & 1][i]);
 			}
 			printf("\n");
 		}
 #endif
-		uint16_t a = A & 0x1ff;
 		uint8_t bank;
 #ifdef JIM_DEBUG
 		uint8_t b2;
@@ -205,7 +206,7 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			| (bank & 0x20 ? 0 : 0x20)
 			| (bank & 0x10 ? 0 : 0x10)
 			| (bank & 0x08 ? 0 : 0x08);
-		_Bool cocoram = ((bank & 0xf8) == 0);
+		_Bool cocoram = (bank < 8);
 		_Bool int_mem = (!cocoram
 				 || (cocoram
 				     && ((bank & 0x07) == 0x07)
@@ -213,19 +214,21 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 				     && !io
 				    )
 				);
+    // compose full 21 bit address
+    addr = (uint32_t)bank << 13 | (A & 0x1fff);
 #ifdef JIM_DEBUG
 		if ((A >= 0xfeee) && (A <= 0xfeff) || (A >= 0xfff2) && (A <= 0xffff))
-			printf("SPEC RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d\n",cocoram,ffxx,altvec,io, bank, b2);
+			printf("spc ram=%d,ffxx=%d,altvec=%d,io=%d,bank=%2.2X,b2=%2.2X\n",cocoram, ffxx, altvec, io, bank, b2);
 #endif
 		if (int_mem) {
 #ifdef JIM_DEBUG
 			if(A != 0xffff) {
 				uint8_t tmp_D = 0;
-				ram_d8(cj->mem, 1, 0, (uint32_t)bank << 13 | a, 0, &tmp_D);
-				printf("int mem %4.4X, RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%d,b2=%d,addy=%4.4X,D=%2.2X\n", A, cocoram, ffxx, altvec, io, bank, b2, (uint32_t)bank << 13 | a, tmp_D);
+				ram_d8(cj->mem, 1, 0, addr, 0, &tmp_D);
+				printf("int ram %4.4X, RAM=%d,ffxx=%d,altvec=%d,io=%d,bank=%2.2X,b2=%2.2X,addy=%4.4X,D=%2.2X\n", A, cocoram, ffxx, altvec, io, bank, b2, addr, tmp_D);
 			}
 #endif
-			ram_d8(cj->mem, RnW, 0, (uint32_t)bank << 13 | a, 0, &data);
+			ram_d8(cj->mem, RnW, 0, addr, 0, &data);
 			ignore_sam = 1;
 		} else {
 #ifdef JIM_DEBUG
@@ -241,7 +244,7 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		ncycles = md->SAM->mem_cycle(md->SAM, 1 , 0xffff);
 	} else {
 		// use SAM functionality
-		ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);
+		ncycles = md->SAM->mem_cycle(md->SAM, RnW, addr);
 	}
 
 	// Advance clock, collect IRQs
