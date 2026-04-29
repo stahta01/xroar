@@ -72,4 +72,10 @@ inline _Bool u32_parity(uint32_t val) {
 
 uint32_t u32_nextpow2(uint32_t v);
 
+// Quantise positive integer against sorted list of options.
+// Terminate list with a negative number.
+// dfl is default if v not greater than any option.
+
+int int_floor_list(int v, int dfl, ...);
+
 #endif

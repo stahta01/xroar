@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,4 +96,24 @@ uint32_t u32_nextpow2(uint32_t v) {
 	v |= v >> 16;
 	v++;
 	return v;
+}
+
+// Quantise positive integer against sorted list of options.
+// Terminate list with a negative number.
+// dfl is default if v not greater than any option.
+
+int int_floor_list(int v, int dfl, ...) {
+	va_list ap;
+	int r = dfl;
+	int val;
+	va_start(ap, dfl);
+	for (;;) {
+		val = va_arg(ap, int);
+		if (val < 0)
+			break;
+		if (v >= val)
+			r = val;
+	}
+	va_end(ap);
+	return r;
 }
