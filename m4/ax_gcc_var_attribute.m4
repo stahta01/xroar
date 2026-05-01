@@ -29,6 +29,7 @@
 #    nocommon
 #    deprecated
 #    mode
+#    nonstring (LOCAL MODIFICATION)
 #    packed
 #    tls_model
 #    unused
@@ -77,6 +78,9 @@ AC_DEFUN([AX_GCC_VAR_ATTRIBUTE], [
                 ],
                 [mode], [
                     long foo __attribute__(($1(word)));
+                ],
+                [nonstring], [
+                    char foo@<:@4@:>@ __attribute__(($1)) = "test";
                 ],
                 [packed], [
                     struct bar {

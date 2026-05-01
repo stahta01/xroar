@@ -64,6 +64,12 @@
 #define FUNC_ATTR_PURE
 #endif
 
+#ifdef HAVE_VAR_ATTRIBUTE_NONSTRING
+#define VAR_ATTR_NONSTRING __attribute__ ((nonstring))
+#else
+#define VAR_ATTR_NONSTRING
+#endif
+
 #ifdef HAVE_VAR_ATTRIBUTE_PACKED
 #define VAR_ATTR_PACKED __attribute__ ((packed))
 #else
