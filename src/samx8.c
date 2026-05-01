@@ -2,7 +2,7 @@
  *
  *  \brief SAMx8 512K SRAM expansion.
  *
- *  \copyright Copyright 2025 Ciaran Anscomb
+ *  \copyright Copyright 2025-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -153,6 +153,8 @@ struct SAMx8_private {
 
 };
 
+#define SAMX8_SER_PAGE_MAP (39)
+
 static struct ser_struct ser_struct_samx8[] = {
 	SER_ID_STRUCT_ELEM(1, struct MC6883, S),
 	SER_ID_STRUCT_ELEM(32, struct MC6883, Zrow),
@@ -173,6 +175,7 @@ static struct ser_struct ser_struct_samx8[] = {
 	SER_ID_STRUCT_ELEM(6, struct SAMx8_private, TY),
 
 	SER_ID_STRUCT_ELEM(38, struct SAMx8_private, COMMON),
+	SER_ID_STRUCT_UNHANDLED(SAMX8_SER_PAGE_MAP),
 
 	SER_ID_STRUCT_ELEM(36, struct SAMx8_private, Vprev),
 
@@ -188,9 +191,14 @@ static struct ser_struct ser_struct_samx8[] = {
 	SER_ID_STRUCT_SUBSTRUCT(27, struct SAMx8_private, vcounter[VC_XDIV2], &vcounter_ser_struct_data),
 };
 
+static _Bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag);
+
 static const struct ser_struct_data samx8_ser_struct_data = {
 	.elems = ser_struct_samx8,
 	.num_elems = ARRAY_N_ELEMENTS(ser_struct_samx8),
+	.read_elem = samx8_read_elem,
+	.write_elem = samx8_write_elem,
 };
 
 static void update_vcounter_inputs(struct SAMx8_private *sam);
@@ -267,6 +275,40 @@ static _Bool samx8_finish(struct part *p) {
 static _Bool samx8_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "SN74LS783") == 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static _Bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct SAMx8_private *sam = sptr;
+	switch (tag) {
+	case SAMX8_SER_PAGE_MAP:
+		for (int i = 0; i < 8; ++i) {
+			sam->page_map[i] = ser_read_uint8(sh);
+		}
+		break;
+
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static _Bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct SAMx8_private *sam = sptr;
+	switch (tag) {
+	case SAMX8_SER_PAGE_MAP:
+		ser_write_tag(sh, tag, 8);
+		for (int i = 0; i < 8; ++i) {
+			ser_write_uint8_untagged(sh, sam->page_map[i]);
+		}
+		ser_write_close_tag(sh);
+		break;
+
+	default:
+		return 0;
+	}
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
