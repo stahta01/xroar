@@ -2,7 +2,7 @@
  *
  *  \brief Linux evdev joystick module.
  *
- *  \copyright Copyright 2024-2025 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -200,7 +200,7 @@ struct device_map_context {
 	struct slist *extra_buttons;
 };
 
-static const char hexdigit[16] = "0123456789abcdef";
+static const char hexdigit[16] VAR_ATTR_NONSTRING = "0123456789abcdef";
 
 static struct evdev_js_context *global_evdev_js_context = NULL;
 
