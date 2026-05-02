@@ -123,6 +123,7 @@ struct dragon {
 
 	struct {
 		int sam_variant;
+		_Bool cocomem_jr;
 	} option;
 };
 

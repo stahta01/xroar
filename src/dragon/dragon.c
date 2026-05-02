@@ -98,6 +98,7 @@ static struct xconfig_enum dragon_sam_list[] = {
 
 struct xconfig_option const dragon_options[] = {
 	{ XCO_SET_ENUM("sam", struct dragon, option.sam_variant, dragon_sam_list) },
+	{ XCO_SET_BOOL("cocomem-jr", struct dragon, option.cocomem_jr) },
 	{ XC_OPT_END() }
 };
 
@@ -335,12 +336,17 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	// VDG
 	part_add_component(&m->part, part_create("MC6847", (mc->vdg_type == VDG_6847T1 ? "6847T1" : "6847")), "VDG");
 
-	// RAM
-	dragon_create_ram(md);
-
+	// CoCoMEM Jr.
 	if (mc->ram == 2048) {
+		mc->ram = 64;
+		md->option.cocomem_jr = 1;
+	}
+	if (md->option.cocomem_jr) {
 		part_add_component(&m->part, part_create("cocomem_jr", NULL), "COCOMEMJR");
 	}
+
+	// RAM
+	dragon_create_ram(md);
 
 	// Keyboard
 	m->keyboard.type = mc->keymap;
