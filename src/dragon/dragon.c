@@ -85,6 +85,22 @@ const struct ser_struct_data dragon_ser_struct_data = {
 	.write_elem = dragon_write_elem,
 };
 
+static struct xconfig_enum dragon_sam_list[] = {
+	{ XC_ENUM_INT("74ls783", DRAGON_SAM_74LS783, "74LS783") },
+	{ XC_ENUM_INT("783", DRAGON_SAM_74LS783, NULL) },
+	{ XC_ENUM_INT("sn74ls783", DRAGON_SAM_74LS783, NULL) },
+	{ XC_ENUM_INT("mc6883", DRAGON_SAM_74LS783, NULL) },
+	{ XC_ENUM_INT("74ls785", DRAGON_SAM_74LS785, "74LS785") },
+	{ XC_ENUM_INT("785", DRAGON_SAM_74LS785, NULL) },
+	{ XC_ENUM_INT("sn74ls785", DRAGON_SAM_74LS785, NULL) },
+	{ XC_ENUM_INT("samx8", DRAGON_SAM_SAMX8, "SAMx8") },
+};
+
+struct xconfig_option const dragon_options[] = {
+	{ XCO_SET_ENUM("sam", struct dragon, option.sam_variant, dragon_sam_list) },
+	{ XC_OPT_END() }
+};
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Set a ROM configuration to a default value if not "defined"
@@ -276,6 +292,8 @@ void dragon_allocate_common(struct dragon *md) {
 	m->dump_ram = dragon_dump_ram;
 
 	m->keyboard.type = dkbd_layout_dragon;
+
+	md->option.sam_variant = ANY_AUTO;
 }
 
 void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
@@ -283,11 +301,28 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 
 	m->config = mc;
 
+	// Dragon-specific options
+	xconfig_parse_list_struct(dragon_options, mc->opts, md);
+
 	// SAM
-	if (mc->ram < 512 || mc->ram == 2048) {
+	if (md->option.sam_variant == ANY_AUTO) {
+		if (mc->ram == 512) {
+			md->option.sam_variant = DRAGON_SAM_SAMX8;
+		} else {
+			md->option.sam_variant = DRAGON_SAM_74LS783;
+		}
+	}
+	switch (md->option.sam_variant) {
+	case DRAGON_SAM_74LS783:
+	default:
 		part_add_component(&m->part, part_create("SN74LS783", NULL), "SAM");
-	} else {
+		break;
+	case DRAGON_SAM_74LS785:
+		part_add_component(&m->part, part_create("SN74LS785", NULL), "SAM");
+		break;
+	case DRAGON_SAM_SAMX8:
 		part_add_component(&m->part, part_create("SAMx8", NULL), "SAM");
+		break;
 	}
 
 	// CPU

@@ -40,6 +40,12 @@ struct sound_interface;
 struct tape_interface;
 struct vo_interface;
 
+enum dragon_sam_variant {
+	DRAGON_SAM_74LS783,
+	DRAGON_SAM_74LS785,
+	DRAGON_SAM_SAMX8,
+};
+
 struct dragon {
 	struct machine public;  // first element in turn is part
 
@@ -114,9 +120,14 @@ struct dragon {
 	_Bool unexpanded_dragon32;
 	_Bool relaxed_pia0_decode;
 	_Bool relaxed_pia1_decode;
+
+	struct {
+		int sam_variant;
+	} option;
 };
 
 extern const struct ser_struct_data dragon_ser_struct_data;
+extern struct xconfig_option const dragon_options[];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

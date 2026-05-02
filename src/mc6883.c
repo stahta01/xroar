@@ -327,6 +327,7 @@ static struct part *mc6883_allocate(void) {
 
 static _Bool mc6883_finish(struct part *p) {
 	struct MC6883_private *sam = (struct MC6883_private *)p;
+	sam->want_785 = part_is_a(p, "SN74LS785");
 	sam->Vprev = sam->V;
 	update_vcounter_inputs(sam);
 	update_from_register(sam);
