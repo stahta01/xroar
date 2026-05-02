@@ -28,6 +28,7 @@
 #include "events.h"
 #include "mc6883.h"
 #include "part.h"
+#include "ram.h"
 #include "serialise.h"
 
 // VDG X & Y divider configurations and HSync clear mode.
@@ -209,6 +210,7 @@ static void update_from_register(struct SAMx8_private *);
 // SAM part creation
 
 static struct part *samx8_allocate(void);
+static void samx8_initialise(struct part *p, void *options);
 static _Bool samx8_finish(struct part *p);
 static _Bool samx8_is_a(struct part *p, const char *name);
 
@@ -223,6 +225,7 @@ static unsigned samx8_get_register(struct MC6883 *);
 
 static const struct partdb_entry_funcs samx8_funcs = {
 	.allocate = samx8_allocate,
+	.initialise = samx8_initialise,
 	.finish = samx8_finish,
 
 	.ser_struct_data = &samx8_ser_struct_data,
@@ -264,8 +267,31 @@ static struct part *samx8_allocate(void) {
 	return p;
 }
 
+static void samx8_initialise(struct part *p, void *options) {
+	(void)options;
+
+	struct ram_config ram_config = {
+		.d_width = 8,
+		.organisation = RAM_ORG(19, 19, 0),
+	};
+	struct ram *ram = (struct ram *)part_create("ram", &ram_config);
+	ram_add_bank(ram, 0);
+	part_add_component(p, (struct part *)ram, "RAM");
+}
+
 static _Bool samx8_finish(struct part *p) {
 	struct SAMx8_private *sam = (struct SAMx8_private *)p;
+
+	// Find attached parts
+	sam->public.RAM = (struct ram *)part_component_by_id_is_a(p, "RAM", "ram");
+
+	if (sam->public.RAM == NULL) {
+		return 0;
+	}
+
+	// RAM
+	ram_report(sam->public.RAM, "samx8", "SRAM");
+
 	sam->Vprev = sam->V;
 	update_vcounter_inputs(sam);
 	update_from_register(sam);

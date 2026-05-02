@@ -2,7 +2,7 @@
  *
  *  \brief Motorola SN74LS783/MC6883 Synchronous Address Multiplexer.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

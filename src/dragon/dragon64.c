@@ -232,10 +232,8 @@ static void dragon64_config_complete(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else if (mc->ram < 512 || mc->ram == 2048) {
-			mc->ram_org = RAM_ORG_64Kx1;
 		} else {
-			mc->ram_org = RAM_ORG(19, 19, 0);
+			mc->ram_org = RAM_ORG_64Kx1;
 		}
 	}
 

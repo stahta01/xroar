@@ -184,10 +184,8 @@ void dragon_verify_ram_size(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else if (mc->ram < 512 || mc->ram == 2048) {
-			mc->ram_org = RAM_ORG_64Kx1;
 		} else {
-			mc->ram_org = RAM_ORG(19, 19, 0);
+			mc->ram_org = RAM_ORG_64Kx1;
 		}
 	}
 }
@@ -385,6 +383,12 @@ _Bool dragon_finish_common(struct dragon *md) {
 
 	// RAM configuration
 	ram_report(md->RAM, p->partdb->name, "total RAM");
+
+	// But if the SAM implementation provides RAM, we assume it completely
+	// overrides the on-board RAM, so from now on that's what we use.
+	if (md->SAM->RAM) {
+		md->RAM = md->SAM->RAM;
+	}
 
 	// Connect any cartridge part
 	dragon_connect_cart(p);
@@ -662,7 +666,7 @@ static void dragon_create_ram(struct dragon *md) {
 	unsigned bank_size = ram->bank_nelems / 1024;
 	if (bank_size == 0)
 		bank_size = 1;
-	unsigned ram_k = (mc->ram == 2048) ? 64 : mc->ram;
+	unsigned ram_k = (mc->ram >= 512) ? 64 : mc->ram;
 	unsigned nbanks = ram_k / bank_size;
 	if (nbanks < 1)
 		nbanks = 1;
