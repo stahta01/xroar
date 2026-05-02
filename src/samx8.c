@@ -20,7 +20,6 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "array.h"
 #include "delegate.h"
@@ -212,7 +211,6 @@ static void update_from_register(struct SAMx8_private *);
 static struct part *samx8_allocate(void);
 static void samx8_initialise(struct part *p, void *options);
 static _Bool samx8_finish(struct part *p);
-static _Bool samx8_is_a(struct part *p, const char *name);
 
 static void samx8_reset(struct MC6883 *);
 static int samx8_mem_cycle(void *, _Bool RnW, uint16_t A);
@@ -230,7 +228,7 @@ static const struct partdb_entry_funcs samx8_funcs = {
 
 	.ser_struct_data = &samx8_ser_struct_data,
 
-	.is_a = samx8_is_a,
+	.is_a = mc6883_is_a,
 };
 
 const struct partdb_entry samx8_part = { .name = "SAMx8", .description = "Teipen Mwnci | SAMx8", .funcs = &samx8_funcs };
@@ -296,11 +294,6 @@ static _Bool samx8_finish(struct part *p) {
 	update_vcounter_inputs(sam);
 	update_from_register(sam);
 	return 1;
-}
-
-static _Bool samx8_is_a(struct part *p, const char *name) {
-	(void)p;
-	return strcmp(name, "SN74LS783") == 0;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

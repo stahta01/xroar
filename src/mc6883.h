@@ -57,4 +57,6 @@ struct MC6883 {
 	struct ram *RAM;  // provided by SAMx8
 };
 
+_Bool mc6883_is_a(struct part *p, const char *name);
+
 #endif

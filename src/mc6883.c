@@ -32,6 +32,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "array.h"
 #include "delegate.h"
@@ -44,11 +45,12 @@
 // Constants for address multiplexer
 // SAM Data Sheet,
 //   Figure 6 - Signal routing for address multiplexer
+// Index 4 is used to represent 16Kx4 configuration for the '785.
 
-static uint16_t const ram_row_masks[4] = { 0x7f, 0x7f, 0xff, 0xff };
-static uint8_t const ram_col_shifts[4] = { 6, 7, 8, 8 };
-static uint16_t const ram_col_masks[4] = { 0x3f, 0x7f, 0xff, 0xff };
-static uint16_t const ram_ras1_bits[4] = { 0x1000, 0x4000, 0, 0 };
+static uint16_t const ram_row_masks[5] = { 0x7f, 0x7f, 0xff, 0xff, 0xff };
+static uint8_t const ram_col_shifts[5] = { 6, 7, 8, 8, 7 };
+static uint16_t const ram_col_masks[5] = { 0x3f, 0x7f, 0xff, 0xff, 0x7f };
+static uint16_t const ram_ras1_bits[5] = { 0x1000, 0x4000, 0, 0, 0x4000 };
 
 // VDG X & Y divider configurations and HSync clear mode.
 
@@ -181,6 +183,11 @@ struct MC6883_private {
 	int clr_mode;  // end of line clear mode: CLR4, CLR3 or CLRN
 	struct vcounter vcounter[NUM_VCOUNTERS];
 
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+	// -- Variant
+
+	_Bool want_785;
+
 };
 
 #define MC6883_SER_Z             (2)
@@ -240,6 +247,8 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_SUBSTRUCT(25, struct MC6883_private, vcounter[VC_YDIV2], &vcounter_ser_struct_data),
 	SER_ID_STRUCT_SUBSTRUCT(26, struct MC6883_private, vcounter[VC_XDIV3], &vcounter_ser_struct_data),
 	SER_ID_STRUCT_SUBSTRUCT(27, struct MC6883_private, vcounter[VC_XDIV2], &vcounter_ser_struct_data),
+
+	SER_ID_STRUCT_ELEM(38, struct MC6883_private, want_785),
 };
 
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
@@ -276,9 +285,13 @@ static const struct partdb_entry_funcs mc6883_funcs = {
 	.finish = mc6883_finish,
 
 	.ser_struct_data = &mc6883_ser_struct_data,
+
+	.is_a = mc6883_is_a,
 };
 
 const struct partdb_entry mc6883_part = { .name = "SN74LS783", .description = "Motorola | SN74LS783/MC6883 SAM", .funcs = &mc6883_funcs };
+
+const struct partdb_entry sn74ls785_part = { .name = "SN74LS785", .description = "Motorola | SN74LS785 SAM", .funcs = &mc6883_funcs };
 
 static struct part *mc6883_allocate(void) {
 	struct MC6883_private *sam = part_new(sizeof(*sam));
@@ -318,6 +331,11 @@ static _Bool mc6883_finish(struct part *p) {
 	update_vcounter_inputs(sam);
 	update_from_register(sam);
 	return 1;
+}
+
+_Bool mc6883_is_a(struct part *p, const char *name) {
+	(void)p;
+	return strcmp(name, "SN74LS783") == 0;
 }
 
 static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
@@ -433,17 +451,35 @@ static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 	_Bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
 
-	if (is_IO0) samp->S = 0x4;
-	else if (is_IO1) samp->S = 0x5;
-	else if (is_IO2) samp->S = 0x6;
-	else if (is_IRQ_VEC) samp->S = 0x2;
-	else if (is_FFxx) samp->S = 0x7;
-	else if (is_upper_32K && sam->TY && RnW) samp->S = 0x0;
-	else if (is_8xxx) samp->S = 0x1;
-	else if (is_Axxx) samp->S = 0x2;
-	else if (is_Cxxx) samp->S = 0x3;
-	else if (RnW) samp->S = 0x0;
-	else samp->S = 0x7;
+	if (!sam->want_785) {
+		// Regular '783 behaviour
+		if (is_IO0) samp->S = 0x4;
+		else if (is_IO1) samp->S = 0x5;
+		else if (is_IO2) samp->S = 0x6;
+		else if (is_IRQ_VEC) samp->S = 0x2;
+		else if (is_FFxx) samp->S = 0x7;
+		else if (is_upper_32K && sam->TY && RnW) samp->S = 0x0;
+		else if (is_8xxx) samp->S = 0x1;
+		else if (is_Axxx) samp->S = 0x2;
+		else if (is_Cxxx) samp->S = 0x3;
+		else if (RnW) samp->S = 0x0;
+		else samp->S = 0x7;
+	} else {
+		// Variant '785 behaviour
+		if (is_IO0) samp->S = 0x4;
+		else if (is_IO1) samp->S = 0x5;
+		else if (is_IO2) samp->S = 0x6;
+		else if (is_IRQ_VEC && !RnW) samp->S = 0x7;
+		else if (is_IRQ_VEC) samp->S = 0x2;
+		else if (is_FFxx) samp->S = 0x7;
+		else if (is_upper_32K && sam->TY && RnW) samp->S = 0x0;
+		else if (is_upper_32K && sam->TY) samp->S = 0x7;
+		else if (is_8xxx) samp->S = 0x1;
+		else if (is_Axxx) samp->S = 0x2;
+		else if (is_Cxxx) samp->S = 0x3;
+		else if (RnW) samp->S = 0x0;
+		else samp->S = 0x7;
+	}
 
 	samp->nWE = is_RAM ? RnW : 1;
 	samp->RAS0 = samp->RAS1 = 0;
@@ -478,8 +514,8 @@ static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	}
 
 	if (is_RAM) {
-		samp->RAS1 = is_RAM && A & sam->ram_ras1_bit;
-		samp->RAS0 = is_RAM && !samp->RAS1;
+		samp->RAS1 = sam->ram_ras1 && is_RAM && (A & sam->ram_ras1_bit);
+		samp->RAS0 = is_RAM && !(A & sam->ram_ras1_bit);
 		samp->Zrow = RAM_TRANSLATE_ROW(A);
 		samp->Zcol = RAM_TRANSLATE_COL(A);
 	}
@@ -792,19 +828,25 @@ static void update_from_register(struct MC6883_private *sam) {
 		vcounter_update(sam, VC_B4);
 	}
 
-	sam->ram_row_mask = ram_row_masks[sam->M];
-	sam->ram_col_shift = ram_col_shifts[sam->M];
-	sam->ram_col_mask = ram_col_masks[sam->M];
-	sam->ram_ras1_bit = ram_ras1_bits[sam->M];
-	switch (sam->M) {
+	int msize = sam->M;
+	if (sam->want_785 && msize == 1 && sam->P) {
+		// Special-case 16Kx4 selection on '785
+		msize = 4;
+	}
+	sam->ram_row_mask = ram_row_masks[msize];
+	sam->ram_col_shift = ram_col_shifts[msize];
+	sam->ram_col_mask = ram_col_masks[msize];
+	sam->ram_ras1_bit = ram_ras1_bits[msize];
+	switch (msize) {
 	case 0: // 4K
-	case 1: // 16K
+	case 1: // 16K x 1
 		sam->ram_page_bit = 0;
 		sam->ram_ras1 = 0x80;
 		break;
 	default:
 	case 2:
 	case 3: // 64K
+	case 4: // 16K x 4
 		sam->ram_page_bit = sam->P ? 0x80 : 0;
 		sam->ram_ras1 = 0;
 		break;
