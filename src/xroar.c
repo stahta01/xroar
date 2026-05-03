@@ -447,7 +447,8 @@ static char const * const default_config[] = {
 	"machine-desc 'Dragon 64 + SAMx8 (512K)'",
 	"machine-arch dragon64",
 	"tv-type pal",
-	"ram 512",
+	"ram 0",
+	"machine-opt sam=samx8",
 	// CoCo
 	"machine coco",
 	"machine-desc 'Tandy CoCo (PAL)'",
