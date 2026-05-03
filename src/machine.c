@@ -147,7 +147,7 @@ struct xconfig_enum machine_ram_org_list[] = {
 	{ XC_ENUM_INT("16kx4", RAM_ORG_16Kx4, "16K x 4 (e.g. 4416)") },
 	{ XC_ENUM_INT("32kx1", RAM_ORG_32Kx1, "32K x 1 (e.g. 4532)") },
 	{ XC_ENUM_INT("64kx1", RAM_ORG_64Kx1, "64K x 1 (e.g. 4164)") },
-	//{ XC_ENUM_INT("256kx1", RAM_ORG_256Kx1, "256K x 1 (e.g. 41256)") },
+	{ XC_ENUM_INT("256kx1", RAM_ORG_256Kx1, "256K x 1 (e.g. 41256)") },
 	{ XC_ENUM_END() }
 };
 
