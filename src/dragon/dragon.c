@@ -188,8 +188,10 @@ void dragon_verify_ram_size(struct machine_config *mc) {
 			mc->ram_org = RAM_ORG_16Kx1;
 		} else if (mc->ram < 64) {
 			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
+		} else if (mc->ram < 256) {
 			mc->ram_org = RAM_ORG_64Kx1;
+		} else {
+			mc->ram_org = RAM_ORG_256Kx1;
 		}
 	}
 }
