@@ -2,7 +2,7 @@
  *
  *  \brief XRoar initialisation and top-level emulator functions.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -302,6 +302,7 @@ static struct private_cfg private_cfg = {
 	.machine.tv_type = ANY_AUTO,
 	.machine.tv_input = ANY_AUTO,
 	.machine.vdg_type = -1,
+	.machine.ram = ANY_AUTO,
 	.machine.ram_org = ANY_AUTO,
 	.machine.ram_init = ANY_AUTO,
 	.cart.becker = ANY_AUTO,
@@ -2518,10 +2519,9 @@ static void set_machine(const char *name) {
 			xroar.machine_config->vdg_type = private_cfg.machine.vdg_type;
 			private_cfg.machine.vdg_type = -1;
 		}
-		if (private_cfg.machine.ram > 0) {
+		if (private_cfg.machine.ram != ANY_AUTO) {
 			xroar.machine_config->ram = private_cfg.machine.ram;
-			xroar.machine_config->ram_org = ANY_AUTO;
-			private_cfg.machine.ram = 0;
+			private_cfg.machine.ram = ANY_AUTO;
 		}
 		if (private_cfg.machine.ram_org != ANY_AUTO) {
 			xroar.machine_config->ram_org = private_cfg.machine.ram_org;

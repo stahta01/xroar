@@ -330,20 +330,7 @@ static void dragonpro_config_complete(struct machine_config *mc) {
 	dragon_set_default_rom(mc->altbas_dfn, &mc->altbas_rom, "@dragonpro_basic");
 
 	// Validate requested total RAM
-	if (mc->ram < 64) {
-		mc->ram = 32;
-	} else {
-		mc->ram = 64;
-	}
-
-	// Pick RAM org based on requested total RAM if not specified
-	if (mc->ram_org == ANY_AUTO) {
-		if (mc->ram == 32) {
-			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
-			mc->ram_org = RAM_ORG_64Kx1;
-		}
-	}
+	mc->ram = int_floor_list(mc->ram, 64, 0, 32, 64, 512, 2048, -1);
 
 	dragon_config_complete(mc);
 }

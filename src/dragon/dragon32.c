@@ -35,19 +35,12 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon32_verify_ram_size(struct machine_config *mc) {
-	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512 && mc->ram != 2048) {
-		mc->ram = 32;
-	}
-	dragon_verify_ram_size(mc);
-}
-
 static void dragon32_config_complete(struct machine_config *mc) {
 	// Default ROMs
 	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@dragon32");
 
 	// RAM
-	dragon32_verify_ram_size(mc);
+	mc->ram = int_floor_list(mc->ram, 32, 0, 4, 8, 16, 32, 64, 512, 2048, -1);
 
 	dragon_config_complete(mc);
 }
@@ -92,8 +85,6 @@ static void dragon32_initialise(struct part *p, void *options) {
 	struct machine_config *mc = options;
 
 	dragon32_config_complete(mc);
-
-	dragon32_verify_ram_size(mc);
 
 	md->is_dragon = 1;
 	dragon_initialise_common(md, mc);

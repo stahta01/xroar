@@ -290,24 +290,7 @@ static void deluxecoco_config_complete(struct machine_config *mc) {
 	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@deluxecoco");
 
 	// Validate requested total RAM
-	if (mc->ram < 32) {
-		mc->ram = 16;
-	} else if (mc->ram < 64) {
-		mc->ram = 32;
-	} else {
-		mc->ram = 64;
-	}
-
-	// Pick RAM org based on requested total RAM if not specified
-	if (mc->ram_org == ANY_AUTO) {
-		if (mc->ram == 16) {
-			mc->ram_org = RAM_ORG_16Kx1;
-		} else if (mc->ram == 32) {
-			mc->ram_org = RAM_ORG_32Kx1;
-		} else {
-			mc->ram_org = RAM_ORG_64Kx1;
-		}
-	}
+	mc->ram = int_floor_list(mc->ram, 64, 0, 16, 32, 64, 512, 2048, -1);
 
 	// Keyboard map
 	if (mc->keymap == ANY_AUTO) {

@@ -98,7 +98,9 @@ static void coco_initialise(struct part *p, void *options) {
 
 	coco_config_complete(mc);
 
-	dragon_verify_ram_size(mc);
+	if (mc->ram_org == RAM_ORG_16Kx4 && md->option.sam_variant == ANY_AUTO) {
+		md->option.sam_variant = DRAGON_SAM_74LS785;
+	}
 
 	md->is_dragon = 0;
 	dragon_initialise_common(md, mc);
@@ -199,8 +201,8 @@ static void coco_config_complete(struct machine_config *mc) {
 	dragon_set_default_rom(mc->bas_dfn, &mc->bas_rom, "@coco");
 	dragon_set_default_rom(mc->extbas_dfn, &mc->extbas_rom, "@coco_ext");
 
-	// RAM
-	dragon_verify_ram_size(mc);
+	// Validate requested total RAM
+	mc->ram = int_floor_list(mc->ram, 64, 0, 4, 8, 16, 32, 64, 512, 2048, -1);
 
 	// Keyboard map
 	if (mc->keymap == ANY_AUTO) {

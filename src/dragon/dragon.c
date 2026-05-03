@@ -135,7 +135,7 @@ void dragon_config_complete(struct machine_config *mc) {
 		mc->vdg_type = VDG_6847;
 
 	if (mc->ram_init == ANY_AUTO) {
-		mc->ram_init = (mc->ram < 512 || mc->ram == 2048) ? ram_init_pattern : ram_init_random;
+		mc->ram_init = ram_init_pattern;
 	}
 
 	if (mc->keymap == ANY_AUTO) {
@@ -173,25 +173,12 @@ _Bool dragon_is_working_config(struct machine_config *mc) {
 	return 1;
 }
 
+// Although most callers will check RAM size themselves, we still do so here,
+// as it's called during deserialisation.
+
 void dragon_verify_ram_size(struct machine_config *mc) {
 	// Validate requested total RAM
-	if ((mc->ram < 4 || mc->ram > 64) && mc->ram != 512 && mc->ram != 2048) {
-		mc->ram = 64;
-	} else if (mc->ram < 8) {
-		mc->ram = 4;
-	} else if (mc->ram < 16) {
-		mc->ram = 8;
-	} else if (mc->ram < 32) {
-		mc->ram = 16;
-	} else if (mc->ram < 64) {
-		mc->ram = 32;
-	} else if (mc->ram < 512) {
-		mc->ram = 64;
-	} else if (mc->ram < 2048) {
-		mc->ram = 512;
-	} else {
-		mc->ram = 2048;
-	}
+	mc->ram = int_floor_list(mc->ram, 64, 0, 4, 8, 16, 32, 64, 512, 2048, -1);
 
 	// Pick RAM org based on requested total RAM if not specified
 	if (mc->ram_org == ANY_AUTO) {
@@ -305,10 +292,13 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	// Dragon-specific options
 	xconfig_parse_list_struct(dragon_options, mc->opts, md);
 
+	dragon_verify_ram_size(mc);
+
 	// SAM
 	if (md->option.sam_variant == ANY_AUTO) {
 		if (mc->ram == 512) {
 			md->option.sam_variant = DRAGON_SAM_SAMX8;
+			mc->ram = 0;
 		} else {
 			md->option.sam_variant = DRAGON_SAM_74LS783;
 		}
@@ -338,7 +328,9 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 
 	// CoCoMEM Jr.
 	if (mc->ram == 2048) {
-		mc->ram = 64;
+		if (md->option.sam_variant != DRAGON_SAM_SAMX8) {
+			mc->ram = 64;
+		}
 		md->option.cocomem_jr = 1;
 	}
 	if (md->option.cocomem_jr) {
@@ -693,10 +685,20 @@ static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Memory expansions create their own RAM.  This may mean we're called on to
+// create 0K of on-board RAM and that's fine.
+
 static void dragon_create_ram(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
+
+	if (mc->ram == 0) {
+		// This actually specifies 1-byte DRAMs, but that's small
+		// enough for rounding to report it as 0K in the report, and we
+		// won't actually end up adding any banks of it.
+		mc->ram_org = RAM_ORG(1, 1, 0);
+	}
 
 	struct ram_config ram_config = {
 		.d_width = 8,
@@ -707,14 +709,10 @@ static void dragon_create_ram(struct dragon *md) {
 	unsigned bank_size = ram->bank_nelems / 1024;
 	if (bank_size == 0)
 		bank_size = 1;
-	unsigned ram_k = (mc->ram >= 512) ? 64 : mc->ram;
+	unsigned ram_k = mc->ram >= 512 ? 512 : mc->ram;
 	unsigned nbanks = ram_k / bank_size;
-	if (nbanks < 1)
-		nbanks = 1;
-	if (nbanks > 2 && ram_k < 512)
+	if (nbanks > 2)
 		nbanks = 2;
-	if (nbanks > 32)
-		nbanks = 32;
 
 	for (unsigned i = 0; i < nbanks; i++)
 		ram_add_bank(ram, i);
