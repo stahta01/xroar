@@ -526,7 +526,7 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->has_secb = rombank_verify_crc(mcc3->ROM0, "Super Extended Colour BASIC", -1, "@coco3", xroar.cfg.force_crc_match, &mcc3->crc_secb);
 
 	// RAM configuration
-	ram_report(mcc3->RAM, "coco3", "total RAM");
+	ram_report(mcc3->RAM, "coco3", "motherboard RAM");
 
 	// Connect any cartridge part
 	coco3_connect_cart(p);

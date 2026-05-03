@@ -417,7 +417,7 @@ _Bool dragon_finish_common(struct dragon *md) {
 	}
 
 	// RAM configuration
-	ram_report(md->RAM, p->partdb->name, "total RAM");
+	ram_report(md->RAM, p->partdb->name, "motherboard RAM");
 
 	// But if the SAM implementation provides RAM, we assume it completely
 	// overrides the on-board RAM, so from now on that's what we use.
