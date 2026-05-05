@@ -719,7 +719,7 @@ static void send_general_registers(struct gdb_interface_private *gip) {
 			 HD6309_REG_F(((struct HD6309 *)gip->cpu)),
 			 ((struct HD6309 *)gip->cpu)->reg_v);
 	} else {
-		strcpy(packet + 28, "xxxxxxxxxx");
+		strcpy(packet + 28, "ffffffffff");
 	}
 	send_packet_string(gip, packet);
 }
