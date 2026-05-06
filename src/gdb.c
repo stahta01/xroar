@@ -967,7 +967,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 #endif
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown xroar vendor query\n");
 		send_packet(gip, NULL, 0);
-	} else if (0 == strcmp(query, "Supported")) {
+	} else if (0 == strncmp(query, "Supported", 9) && (query[9] == 0 || query[9] == ':')) {
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Supported\n");
 		send_supported(gip, args);
 	} else if (0 == strcmp(query, "Attached")) {
