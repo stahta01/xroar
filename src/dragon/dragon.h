@@ -61,8 +61,8 @@ struct dragon {
 	int frame;  // track frameskip
 	struct sound_interface *snd;
 
-	// Optional CoCoMEM Jr. memory expansion
-	struct cocomem_jr *cocomem_jr;
+	// Optional iMMUnity memory expansion
+	struct immunity *immunity;
 
 	// Optional PAL logic interposing VDG
 	struct vdg_pal vdg_pal;
@@ -123,7 +123,7 @@ struct dragon {
 
 	struct {
 		int sam_variant;
-		_Bool cocomem_jr;
+		_Bool immunity;
 	} option;
 };
 
@@ -135,7 +135,7 @@ extern struct xconfig_option const dragon_options[];
 // CPU cycle code construction kit.
 //
 // Derived machines can override cpu_cycle() to simulate interposing the CPU or
-// the SAM.  They may modify the address seen by the SAM (e.g. CocoMEM Jr.), or
+// the SAM.  They may modify the address seen by the SAM (e.g. iMMUnity), or
 // the addresses presented to RAM (e.g. Deluxe CoCo).  These are some common
 // functions that such delegates may still need to call.
 //

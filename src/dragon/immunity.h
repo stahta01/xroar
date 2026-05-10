@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief CocoMEM Jr. support.
+ *  \brief iMMUnity support.
  *
  *  \copyright Copyright 2026 Jim Brain
  *
@@ -16,8 +16,8 @@
  *  \endlicenseblock
  */
 
-#ifndef XROAR_DRAGON_COCOMEMJR_H_
-#define XROAR_DRAGON_COCOMEMJR_H_
+#ifndef XROAR_DRAGON_IMMUNITY_H_
+#define XROAR_DRAGON_IMMUNITY_H_
 
 #include <stdint.h>
 
@@ -26,7 +26,7 @@
 struct dragon;
 struct ram;
 
-struct cocomem_jr {
+struct immunity {
 	struct part part;
 
 	struct dragon *dragon;
@@ -37,10 +37,10 @@ struct cocomem_jr {
 	struct ram *mem;
 };
 
-// CoCoMEM Jr. interposes the CPU when used.
+// iMMUnity interposes the CPU when used.
 
-void cocomem_jr_reset(struct cocomem_jr *cj, _Bool hard);
+void immunity_reset(struct immunity *cj, _Bool hard);
 
-void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
+void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
 
 #endif

@@ -74,7 +74,7 @@ xroar_SOURCES = \
 if MACHINE_ARCH_DRAGON
 xroar_SOURCES += \
 	dragon/coco.c dragon/coco.h \
-	dragon/cocomemjr.c dragon/cocomemjr.h \
+	dragon/immunity.c dragon/immunity.h \
 	dragon/deluxecoco.c \
 	dragon/dragon.c dragon/dragon.h \
 	dragon/dragon32.c \

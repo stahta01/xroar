@@ -1,6 +1,6 @@
 /** \file
  *
- *  \brief CocoMEM Jr. support.
+ *  \brief iMMUnity support.
  *
  *  \copyright Copyright 2026 Jim Brain
  *
@@ -22,8 +22,8 @@
 
 #include "array.h"
 
-#include "dragon/cocomemjr.h"
 #include "dragon/dragon.h"
+#include "dragon/immunity.h"
 #include "mc6809/mc6809.h"
 #include "mc6821.h"
 #include "mc6883.h"
@@ -36,51 +36,51 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#define COCOMEM_JR_SER_DAT (1)
+#define IMMUNITY_SER_DAT (1)
 
-static const struct ser_struct ser_struct_cocomem_jr[] = {
-	SER_ID_STRUCT_UNHANDLED(COCOMEM_JR_SER_DAT),
-	SER_ID_STRUCT_ELEM(2, struct cocomem_jr, init0),
-	SER_ID_STRUCT_ELEM(3, struct cocomem_jr, init1),
+static const struct ser_struct ser_struct_immunity[] = {
+	SER_ID_STRUCT_UNHANDLED(IMMUNITY_SER_DAT),
+	SER_ID_STRUCT_ELEM(2, struct immunity, init0),
+	SER_ID_STRUCT_ELEM(3, struct immunity, init1),
 };
 
-static _Bool cocomem_jr_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool cocomem_jr_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static _Bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
-static const struct ser_struct_data cocomem_jr_ser_struct_data = {
-        .elems = ser_struct_cocomem_jr,
-        .num_elems = ARRAY_N_ELEMENTS(ser_struct_cocomem_jr),
-	.read_elem = cocomem_jr_read_elem,
-	.write_elem = cocomem_jr_write_elem,
+static const struct ser_struct_data immunity_ser_struct_data = {
+        .elems = ser_struct_immunity,
+        .num_elems = ARRAY_N_ELEMENTS(ser_struct_immunity),
+	.read_elem = immunity_read_elem,
+	.write_elem = immunity_write_elem,
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static struct part *cocomem_jr_allocate(void);
-static void cocomem_jr_initialise(struct part *p, void *options);
-static _Bool cocomem_jr_finish(struct part *p);
+static struct part *immunity_allocate(void);
+static void immunity_initialise(struct part *p, void *options);
+static _Bool immunity_finish(struct part *p);
 
-static const struct partdb_entry_funcs cocomem_jr_funcs = {
-	.allocate = cocomem_jr_allocate,
-	.initialise = cocomem_jr_initialise,
-	.finish = cocomem_jr_finish,
+static const struct partdb_entry_funcs immunity_funcs = {
+	.allocate = immunity_allocate,
+	.initialise = immunity_initialise,
+	.finish = immunity_finish,
 
-	.ser_struct_data = &cocomem_jr_ser_struct_data,
+	.ser_struct_data = &immunity_ser_struct_data,
 };
 
-const struct partdb_entry cocomem_jr_part = { .name = "cocomem_jr", .description = "Jim Brain | CoCoMEM Jr.", .funcs = &cocomem_jr_funcs };
+const struct partdb_entry immunity_part = { .name = "immunity", .description = "Jim Brain | iMMUnity", .funcs = &immunity_funcs };
 
-static struct part *cocomem_jr_allocate(void) {
-	struct cocomem_jr *cj = part_new(sizeof(*cj));
+static struct part *immunity_allocate(void) {
+	struct immunity *cj = part_new(sizeof(*cj));
 	struct part *p = &cj->part;
-	*cj = (struct cocomem_jr){0};
+	*cj = (struct immunity){0};
 
 	cj->init0 = 0x80;
 
 	return p;
 }
 
-static void cocomem_jr_initialise(struct part *p, void *options) {
+static void immunity_initialise(struct part *p, void *options) {
 	assert(p != NULL);
 	(void)options;
 
@@ -93,19 +93,19 @@ static void cocomem_jr_initialise(struct part *p, void *options) {
 	part_add_component(p, (struct part *)mem, "EXTMEM");
 }
 
-static _Bool cocomem_jr_finish(struct part *p) {
-	struct cocomem_jr *cj = (struct cocomem_jr *)p;
+static _Bool immunity_finish(struct part *p) {
+	struct immunity *cj = (struct immunity *)p;
 	cj->mem = (struct ram *)part_component_by_id_is_a(p, "EXTMEM", "ram");
-	ram_report(cj->mem, "cocomem_jr", "extended RAM");
+	ram_report(cj->mem, "immunity", "extended RAM");
 	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool cocomem_jr_read_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct cocomem_jr *cj = sptr;
+static _Bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct immunity *cj = sptr;
 	switch (tag) {
-	case COCOMEM_JR_SER_DAT:
+	case IMMUNITY_SER_DAT:
 		for (int j = 0; j < 2; ++j) {
 			for (int i = 0; i < 8; ++i) {
 				cj->dat[j][i] = ser_read_uint8(sh);
@@ -119,10 +119,10 @@ static _Bool cocomem_jr_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool cocomem_jr_write_elem(void *sptr, struct ser_handle *sh, int tag) {
-	struct cocomem_jr *cj = sptr;
+static _Bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+	struct immunity *cj = sptr;
 	switch (tag) {
-	case COCOMEM_JR_SER_DAT:
+	case IMMUNITY_SER_DAT:
 		ser_write_tag(sh, tag, 16);
 		for (int j = 0; j < 2; ++j) {
 			for (int i = 0; i < 8; ++i) {
@@ -140,15 +140,15 @@ static _Bool cocomem_jr_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void cocomem_jr_reset(struct cocomem_jr *cj, _Bool hard) {
+void immunity_reset(struct immunity *cj, _Bool hard) {
 	if (hard) {
 		ram_clear(cj->mem, ram_init_random);
 	}
 	cj->init0 = 0x80;
 }
 
-void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
-	struct cocomem_jr *cj = sptr;
+void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
+	struct immunity *cj = sptr;
 	struct dragon *md = cj->dragon;
 	uint8_t data = md->CPU->D;
 	_Bool ignore_sam = 0;
@@ -257,7 +257,7 @@ void cocomem_jr_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	// Common cycle handling
 	dragon_cpu_cycle(md, RnW, A, md->SAM->Zrow, md->SAM->Zcol);
 
-	// Ensure CocoMEM RAM is used for reads where appropriate
+	// Ensure iMMUnity RAM is used for reads where appropriate
 	if (ignore_sam && RnW) {
 		md->CPU->D = data;
 	}

@@ -68,7 +68,7 @@ extern const struct cart_partdb_entry rsdos_part;
 extern const struct partdb_entry ram_part;
 
 extern const struct partdb_entry ay891x_part;
-extern const struct partdb_entry cocomem_jr_part;
+extern const struct partdb_entry immunity_part;
 extern const struct partdb_entry hd6309_part;
 extern const struct partdb_entry mc6801_part;
 extern const struct partdb_entry mc6803_part;
@@ -167,7 +167,7 @@ const struct partdb_entry *partdb[] = {
 	&ay891x_part,
 
 #ifdef WANT_MACHINE_ARCH_DRAGON
-	&cocomem_jr_part,
+	&immunity_part,
 #endif
 
 #ifdef WANT_CART_ARCH_DRAGON
