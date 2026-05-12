@@ -1,3 +1,5 @@
+Version 1.11, Tue 12 May 2026
+
  * New option -trap-trace-n N turns on trace mode for N instruction
  * Fix trap address range check
  * Windows: try to use consoles more intelligently

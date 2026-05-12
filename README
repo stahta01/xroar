@@ -1,5 +1,5 @@
 XRoar - a Dragon and Tandy 8-bit computer emulator
-Copyright 2003-2025 Ciaran Anscomb <xroar@6809.org.uk>
+Copyright 2003-2026 Ciaran Anscomb <xroar@6809.org.uk>
 
 
 Introduction
@@ -16,14 +16,13 @@ wide variety of platforms.  Emulated hardware includes:
    * DragonDOS, Delta and RS-DOS floppy disk controller cartridges.
    * Orchestra 90-CC stereo sound cartridge.
    * Games Master Cartridge, including the SN76489 sound chip.
-   * Glenside IDE cartridge, with IDE hard disk image support.
-   * NX32 and MOOH RAM expansions, with SPI and SD card image support.
+   * Glenside IDE cartridge.
+   * RAM expansions: NX32, MOOH, SAMx8 and iMMUnity.
 
    Other features include:
 
    * Raw and translated keyboard modes.
-   * Read and write cassette tape images.
-   * Read and write floppy disk images.
+   * Read and write cassette tape, floppy disk and block device images.
    * Becker port for communication with remote servers.
    * Save and load machine snapshots.
    * GDB target for remote debugging.
@@ -49,21 +48,19 @@ more details.
    You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-   This README contains extracts from the manual.  Binary packages
-contain the full manual as a PDF, which is also available from the XRoar
-home page (https://www.6809.org.uk/xroar/).
-
 Recent changes
 ==============
 
-Changes in version 1.8 include:
+Changes in version 1.11 include:
 
-   * HD mounting from drive control dialog.
-   * New MCX128 cartridge support for MC-10.
-   * CoCo 3 GIME behaviour fixes.
-   * CoCo 3 Monitor detect line asserted when RGB TV input selected.
-   * Becker port latency fixes.
-   * More flexible command-line trap options.
+   * New option '-trap-trace-n N' turns on trace mode for specified
+     number of instructions when a trap is matched.
+   * Windows builds will try to use the parent console if available, so
+     there is no need to specify '-C' if running from a shell window.
+   * S19 records supported, recognised by the '.s19' file extension.
+   * 74LS785 SAM support, and new '-machine-opt sam=TYPE' option.
+   * Initial iMMUnity support has been contributed by Jim Brain.
+     Specify '-machine-opt immunity' for a Dragon or CoCo 1/2 to use.
 
    Previous changes in 1.x include:
 
@@ -72,20 +69,22 @@ Writes to images held in memory will overwrite the on-disk file when
 ejected (or quitting XRoar).  You can get the old file-preserving
 default behaviour back with '-no-disk-write-back'.
 
+   The SAMx8 (https://www.6809.org.uk/dragon/samx8/) is supported by
+specifying a Dragon 64 with '-machine-opt sam=samx8'.
+
+   Traps can trigger actions when certain user-specified conditions are
+met.  *Note Debugging options::.
+
    Gamepad mapping files can provide more consistent button layouts.
+*Note Gamepad mapping::.
 
    RAM organisation selection with '-ram-org', and initialisation
 pattern selection with '-ram-init'.
 
-   The '-ccr simulated' renderer is replaced with more CPU-intensive
-code that also handles PAL. The old NTSC-only renderer is still
-available using '-ccr partial'.
+   MCX128 cartridge support for MC-10.
 
-   Larger or smaller picture area can be selected, and XRoar can stretch
-60Hz output to reproduce the apparent aspect ratio seen on CRTs in those
-countries.
-
-   Many video options can be changed on the fly in a new TV Controls
+   The '-ccr simulated' renderer is more accurate, and there are many
+new video options.  These can be changed on the fly in a new TV Controls
 dialog.
 
    Screenshots in PNG format can be saved if XRoar is built with libpng.
@@ -93,9 +92,6 @@ dialog.
    More machines are emulated than in 0.x.  A new snapshot format that
 preserves more state was required to support these.  Old snapshots
 should still load for now, though this will likely be removed in time.
-
-   Tape emulation now supports manual pause control, required for using
-the MC-10 & Alice, as they have no remote tape motor control.
 
    HD/SD images are now specified with '-load-hd0' and '-load-hd1'.  IDE
 images with a header should be distinguished from headerless files by
@@ -306,8 +302,8 @@ process should be very familiar.  The following process compiles XRoar
 and installs it into '/usr/local', like most other software built this
 way:
 
-     $ gzip -dc xroar-1.10.tar.gz | tar xvf -
-     $ cd xroar-1.10
+     $ gzip -dc xroar-1.11.tar.gz | tar xvf -
+     $ cd xroar-1.11
      $ ./configure
      $ make
      $ sudo make install
