@@ -1067,6 +1067,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         break;
                     default:
                         current = sdscatlen(current,p,1);
+			if (current == NULL) goto err;
                         break;
                     }
                 }
@@ -1124,6 +1125,7 @@ sds sdsjoin(char **argv, int argc, char *sep) {
 
     for (j = 0; j < argc; j++) {
         join = sdscat(join, argv[j]);
+	if (join == NULL) return NULL;
         if (j != argc-1) join = sdscat(join,sep);
     }
     return join;
@@ -1136,6 +1138,7 @@ sds sdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen) {
 
     for (j = 0; j < argc; j++) {
         join = sdscatsds(join, argv[j]);
+	if (join == NULL) return NULL;
         if (j != argc-1) join = sdscatlen(join,sep,seplen);
     }
     return join;
