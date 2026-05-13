@@ -3718,11 +3718,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_enum(f, all, "kbd-layout", private_cfg.kbd.layout, hk_layout_auto, hkbd_layout_list);
 	xroar_cfg_print_enum(f, all, "kbd-lang", private_cfg.kbd.lang, hk_lang_auto, hkbd_lang_list);
 	xroar_cfg_print_bool(f, all, "kbd-translate", private_cfg.kbd.translate, 0);
-	for (struct slist *l = private_cfg.kbd.type_list; l; l = l->next) {
-		sds s = sdsx_quote(l->data);
-		fprintf(f, "type %s\n", s);
-		sdsfree(s);
-	}
+	// Not emitting "type" (startup-only, assumed command-line only)
 	fputs("\n", f);
 
 	fputs("# Joysticks\n", f);
@@ -3741,6 +3737,7 @@ static void config_print_all(FILE *f, _Bool all) {
 	xroar_cfg_print_bool(f, all, "gdb", xroar.cfg.debug.gdb, 0);
 	xroar_cfg_print_string(f, all, "gdb-ip", xroar.cfg.debug.gdb_ip, GDB_IP_DEFAULT);
 	xroar_cfg_print_string(f, all, "gdb-port", xroar.cfg.debug.gdb_port, GDB_PORT_DEFAULT);
+	// Not emitting "trace" (startup-only, assumed command-line only)
 	xroar_cfg_print_bool(f, all, "ratelimit", private_cfg.debug.ratelimit, 1);
 	xroar_cfg_print_bool(f, all, "trace-timing", logging.trace_cpu_timing, 0);
 	xroar_cfg_print_flags(f, all, "debug-fdc", logging.debug_fdc);
