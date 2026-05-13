@@ -242,7 +242,7 @@ sds sdscatsds(sds s, const sds t);
 sds sdscpylen(sds s, const char *t, size_t len);
 sds sdscpy(sds s, const char *t);
 
-sds sdscatvprintf(sds s, const char *fmt, va_list ap);
+sds sdscatvprintf(sds s, const char *fmt, va_list ap) FUNC_ATTR_NONNULL_V(2);
 sds sdscatprintf(sds s, const char *fmt, ...) FUNC_ATTR_FORMAT_V(printf, 2, 3);
 
 sds sdscatfmt(sds s, char const *fmt, ...);
