@@ -676,10 +676,10 @@ static ssize_t send_packet_hexstring(struct gdb_interface_private *gip, const ch
 		count = 0X3ffff800;
 	}
 
-	char *hs = xmalloc(count * 2);
+	char *hs = xmalloc((count * 2) + 1);
 	char *hsp = hs;
 	for (size_t i = 0; i < count; ++i) {
-		hsp += sprintf(hsp, "%02x", string[i]);
+		hsp += snprintf(hsp, 3, "%02x", (uint8_t)string[i]);
 	}
 	ssize_t ret = send_packet(gip, hs, count * 2);
 	free(hs);
