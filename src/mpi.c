@@ -89,8 +89,6 @@ static const struct ser_struct_data mpi_ser_struct_data = {
 
 /* Protect against chained MPI initialisation */
 
-static _Bool mpi_active = 0;
-
 /* Handle signals from cartridges */
 static void mpi_set_firq(void *, _Bool);
 static void mpi_set_nmi(void *, _Bool);
@@ -98,7 +96,6 @@ static void mpi_set_halt(void *, _Bool);
 
 static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
-static void mpi_free(struct part *p);
 static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
 static void mpi_reset(struct cart *c, _Bool hard);
@@ -114,13 +111,11 @@ static void select_slot(struct mpi *, unsigned D);
 static struct part *mpi_allocate(void);
 static void mpi_initialise(struct part *p, void *options);
 static _Bool mpi_finish(struct part *p);
-static void mpi_free(struct part *p);
 
 static const struct partdb_entry_funcs mpi_funcs = {
 	.allocate = mpi_allocate,
 	.initialise = mpi_initialise,
 	.finish = mpi_finish,
-	.free = mpi_free,
 
 	.ser_struct_data = &mpi_ser_struct_data,
 
@@ -203,11 +198,6 @@ static _Bool mpi_finish(struct part *p) {
 	}
 
 	return 1;
-}
-
-static void mpi_free(struct part *p) {
-	(void)p;
-	mpi_active = 0;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
