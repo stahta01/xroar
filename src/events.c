@@ -2,7 +2,7 @@
  *
  *  \brief Event scheduling & dispatch.
  *
- *  \copyright Copyright 2005-2025 Ciaran Anscomb
+ *  \copyright Copyright 2005-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -89,15 +89,14 @@ void event_dequeue(struct event *event) {
 	if (!event->queued)
 		return;
 	event->queued = 0;
-	struct event **list = &event->list->events;
-	if (*list == event) {
-		*list = event->next;
-		return;
+	struct event **entp;
+	for (entp = &event->list->events; *entp; entp = &(*entp)->next) {
+		if (*entp == event)
+			break;
 	}
-	for (struct event **entry = list; *entry; entry = &((*entry)->next)) {
-		if ((*entry)->next == event) {
-			(*entry)->next = event->next;
-			return;
-		}
+	if (*entp) {
+		*entp = event->next;
+	} else {
+		LOG_MOD_ERROR("events", "internal error: queued event not found in list\n");
 	}
 }
