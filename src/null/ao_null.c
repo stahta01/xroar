@@ -2,7 +2,7 @@
  *
  *  \brief Null sound module.
  *
- *  \copyright Copyright 2003-2016 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -111,6 +111,7 @@ static void sleep_ms(unsigned int ms) {
 
 static void ao_null_free(void *sptr) {
 	struct ao_null_interface *aonull = sptr;
+	sound_interface_free(aonull->public.sound_interface);
 	free(aonull);
 }
 
