@@ -2,7 +2,7 @@
  *
  *  \brief Multi-Pak Interface (MPI) support.
  *
- *  \copyright Copyright 2014-2024 Ciaran Anscomb
+ *  \copyright Copyright 2014-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *

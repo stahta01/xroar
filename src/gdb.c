@@ -2,7 +2,7 @@
  *
  *  \brief GDB protocol support.
  *
- *  \copyright Copyright 2013-2024 Ciaran Anscomb
+ *  \copyright Copyright 2013-2026 Ciaran Anscomb
  *
  *  \copyright Copyright 2021 Tormod Volden
  *
