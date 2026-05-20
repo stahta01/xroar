@@ -2,7 +2,7 @@
  *
  *  \brief Printing to file or pipe
  *
- *  \copyright Copyright 2011-2025 Ciaran Anscomb
+ *  \copyright Copyright 2011-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -97,6 +97,7 @@ void printer_interface_free(struct printer_interface *pi) {
 	if (pip->pipe)
 		sdsfree(pip->pipe);
 	event_dequeue(&pip->ack_clear_event);
+	event_dequeue(&pip->update_chars_printed_event);
 	free(pip);
 }
 
