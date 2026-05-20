@@ -199,9 +199,11 @@ static _Bool dragon64_finish(struct part *p) {
 
 static void dragon64_free(struct part *p) {
 	struct dragon64 *mdp = (struct dragon64 *)p;
-	dragon_free_common(p);
+	struct dragon *md = &mdp->dragon;
 	rombank_free(mdp->ROM1);
 	rombank_free(mdp->dragon.ROM0);
+	vdg_pal_deinit(&md->vdg_pal);
+	dragon_free_common(p);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

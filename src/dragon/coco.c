@@ -189,9 +189,10 @@ static _Bool coco_finish(struct part *p) {
 
 static void coco_free(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
-	dragon_free_common(p);
 	machine_bp_remove_list(&md->public, coco_print_breakpoint);
 	rombank_free(md->ROM0);
+	vdg_pal_deinit(&md->vdg_pal);
+	dragon_free_common(p);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

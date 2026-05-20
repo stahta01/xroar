@@ -157,6 +157,7 @@ static _Bool dragon32_finish(struct part *p) {
 
 static void dragon32_free(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
-	dragon_free_common(p);
 	rombank_free(md->ROM0);
+	vdg_pal_deinit(&md->vdg_pal);
+	dragon_free_common(p);
 }

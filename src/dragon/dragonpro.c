@@ -317,9 +317,10 @@ static void dragonpro_free(struct part *p) {
 	struct dragonpro *mdp = (struct dragonpro *)p;
 	struct dragon *md = &mdp->dragon;
 	md->snd->get_ay_audio.func = NULL;
-	dragon_free_common(p);
 	rombank_free(mdp->dragon.ROM0);
 	rombank_free(mdp->BOOT);
+	vdg_pal_deinit(&md->vdg_pal);
+	dragon_free_common(p);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

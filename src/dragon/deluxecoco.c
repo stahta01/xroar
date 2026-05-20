@@ -279,8 +279,9 @@ static void deluxecoco_free(struct part *p) {
 	struct deluxecoco *mdp = (struct deluxecoco *)p;
 	struct dragon *md = &mdp->dragon;
 	md->snd->get_non_muxed_audio.func = NULL;
-        dragon_free_common(p);
 	rombank_free(mdp->dragon.ROM0);
+	vdg_pal_deinit(&md->vdg_pal);
+        dragon_free_common(p);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

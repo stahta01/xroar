@@ -50,6 +50,8 @@ void vdg_pal_init(struct vdg_pal *v, struct MC6847 *VDG) {
 }
 
 void vdg_pal_deinit(struct vdg_pal *v) {
+	if (!v || !v->VDG)
+		return;
 	event_dequeue(&v->pal_hs_fall_event);
 	event_dequeue(&v->pal_hs_rise_event);
 	v->VDG->signal_hs = v->signal_hs;
