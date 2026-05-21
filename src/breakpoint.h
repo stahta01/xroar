@@ -2,7 +2,7 @@
  *
  *  \brief Breakpoint tracking for debugging.
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2011-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -19,9 +19,47 @@
 #ifndef XROAR_BREAKPOINT_H_
 #define XROAR_BREAKPOINT_H_
 
+#include <stdlib.h>
+
 #include "delegate.h"
 
 struct machine;
+struct slist;
+
+#define BP_HANDLERS_PER_ADDRESS (3)
+
+/*
+ * Breakpoints.  Trap on execution from address.
+ */
+
+struct bp_breakpoint {
+	uint32_t A;
+	DELEGATE_T2(void, bool, uint32) handler[BP_HANDLERS_PER_ADDRESS];
+};
+
+struct bp_breakpoint_set {
+	size_t nbreakpoints;
+	size_t nallocated;
+	struct bp_breakpoint *list;
+	_Bool modified;  // an add or delete has occurred during list run
+};
+
+// Add a breakpoint.  Returns 1 if successful, else 0 (e.g. identical
+// breakpoint already exists)
+_Bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
+			DELEGATE_T2(void, bool, uint32) handler);
+
+// Remove specific breakpoint.
+void bp_breakpoint_remove(struct bp_breakpoint_set *bbs, int32_t A,
+			  DELEGATE_T2(void, bool, uint32) handler);
+
+// Remove all breakpoints in a list matching supplied delegate data pointer.
+void bp_breakpoint_remove_all(struct bp_breakpoint_set *bbs, void *sptr);
+
+// Dispatch all breakpoint handlers for a given address.
+void bp_instruction_hook_new(void *sptr, uint32_t A);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
  * Breakpoint support both for internal hooks and user-added traps (e.g. via
@@ -84,5 +122,7 @@ void bp_wp_remove(struct bp_session *bps, unsigned type, unsigned addr, unsigned
 
 void bp_wp_read_hook(struct bp_session *bps, unsigned address);
 void bp_wp_write_hook(struct bp_session *bps, unsigned address);
+
+void bp_instruction_hook_new(void *sptr, uint32_t A);
 
 #endif
