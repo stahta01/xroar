@@ -999,6 +999,7 @@ sds *sdssplitargs(const char *line, int *argc) {
             int done=0;
 
             if (current == NULL) current = sdsempty();
+            if (current == NULL) goto err;
             while(!done) {
                 if (inq) {
                     if (*p == '\\' && *(p+1) == 'x' &&
@@ -1010,6 +1011,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         byte = (hex_digit_to_int(*(p+2))*16)+
                                 hex_digit_to_int(*(p+3));
                         current = sdscatlen(current,(char*)&byte,1);
+			if (current == NULL) goto err;
                         p += 3;
                     } else if (*p == '\\' && *(p+1)) {
                         char c;
@@ -1024,6 +1026,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         default: c = *p; break;
                         }
                         current = sdscatlen(current,&c,1);
+			if (current == NULL) goto err;
                     } else if (*p == '"') {
                         /* closing quote must be followed by a space or
                          * nothing at all. */
@@ -1034,11 +1037,13 @@ sds *sdssplitargs(const char *line, int *argc) {
                         goto err;
                     } else {
                         current = sdscatlen(current,p,1);
+			if (current == NULL) goto err;
                     }
                 } else if (insq) {
                     if (*p == '\\' && *(p+1) == '\'') {
                         p++;
                         current = sdscatlen(current,"'",1);
+			if (current == NULL) goto err;
                     } else if (*p == '\'') {
                         /* closing quote must be followed by a space or
                          * nothing at all. */
@@ -1049,6 +1054,7 @@ sds *sdssplitargs(const char *line, int *argc) {
                         goto err;
                     } else {
                         current = sdscatlen(current,p,1);
+			if (current == NULL) goto err;
                     }
                 } else {
                     switch(*p) {
@@ -1121,6 +1127,7 @@ sds sdsmapchars(sds s, const char *from, const char *to, size_t setlen) {
  * Returns the result as an sds string. */
 sds sdsjoin(char **argv, int argc, char *sep) {
     sds join = sdsempty();
+    if (join == NULL) return NULL;
     int j;
 
     for (j = 0; j < argc; j++) {
@@ -1134,6 +1141,7 @@ sds sdsjoin(char **argv, int argc, char *sep) {
 /* Like sdsjoin, but joins an array of SDS strings. */
 sds sdsjoinsds(sds *argv, int argc, const char *sep, size_t seplen) {
     sds join = sdsempty();
+    if (join == NULL) return NULL;
     int j;
 
     for (j = 0; j < argc; j++) {
