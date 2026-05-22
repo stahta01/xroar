@@ -2,7 +2,7 @@
  *
  *  \brief Delegates in C.
  *
- *  \copyright Copyright 2014-2023 Ciaran Anscomb
+ *  \copyright Copyright 2014-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of Portalib.
  *
@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #define DELEGATE_DEFINED(d) ((d).func != NULL)
+#define DELEGATE_EQ(d0,d1) (((d0).func == (d1).func) && ((d0).sptr == (d1).sptr))
 
 /* Underlying struct def for delegates. */
 
