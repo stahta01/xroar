@@ -65,9 +65,6 @@ static void vdg_pal_signal_hs(void *sptr, _Bool level) {
 	if (level)
 		return;
 
-	if (!v->pal_delay_0)
-		return;
-
 	v->pal_scanline++;
 
 	if (v->pal_scanline == v->pal_stop_0) {
