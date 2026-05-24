@@ -1,8 +1,8 @@
 /** \file
  *
- *  \brief ROM.
+ *  \brief ROM bank support.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,6 +35,7 @@
 #include "crclist.h"
 #include "fs.h"
 #include "logging.h"
+#include "rom.h"
 #include "rombank.h"
 
 #ifdef HAVE_WASM
@@ -115,9 +116,13 @@ void rombank_report(struct rombank *rb, const char *par, const char *name) {
 		if (rb->d[i]) {
 			LOG_PRINT("CRC32 0x%08x FILE %s", rb->slot[i].crc32, basename);
 			if (rb->slot[i].offset > 0) {
-				LOG_PRINT(" +0x%06lx ", (unsigned long)rb->slot[i].offset);
+				LOG_PRINT(" +0x%06lx", (unsigned long)rb->slot[i].offset);
 			}
 			LOG_PRINT("\n");
+			struct rom_meta *rm = rom_meta_by_crc32(rb->slot[i].crc32, rb->slot_size);
+			if (rm) {
+				LOG_PRINT("\tSlot %3u: %s\n", i, rm->description);
+			}
 			++npopulated;
 		} else {
 			LOG_PRINT("(unpopulated)\n");
@@ -125,6 +130,10 @@ void rombank_report(struct rombank *rb, const char *par, const char *name) {
 	}
 	if (npopulated > 1) {
 		LOG_PRINT("\tCombined: CRC32 0x%08x\n", rb->combined_crc32);
+		struct rom_meta *rm = rom_meta_by_crc32(rb->combined_crc32, npopulated * rb->slot_size);
+		if (rm) {
+			LOG_PRINT("\tCombined: %s\n", rm->description);
+		}
 	}
 }
 
