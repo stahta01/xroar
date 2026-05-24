@@ -70,6 +70,7 @@
 #include "part.h"
 #include "path.h"
 #include "printer.h"
+#include "rom.h"
 #include "romlist.h"
 #include "screenshot.h"
 #include "snapshot.h"
@@ -1477,6 +1478,7 @@ void xroar_shutdown(void) {
 	joystick_shutdown();
 	cart_config_remove_all();
 	machine_config_remove_all();
+	rom_meta_remove_all();
 	xroar.machine_config = NULL;
 	if (xroar.ao_interface) {
 		DELEGATE_SAFE_CALL(xroar.ao_interface->free);
