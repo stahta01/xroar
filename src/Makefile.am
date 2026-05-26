@@ -59,6 +59,7 @@ xroar_SOURCES = \
 	snapshot.c snapshot.h \
 	sndfile_compat.c sndfile_compat.h \
 	sound.c sound.h \
+	symtab.c symtab.h \
 	tape.c tape.h \
 	tape_cas.c \
 	tape_sndfile.c \

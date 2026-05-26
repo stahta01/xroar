@@ -37,6 +37,7 @@
 #include "logging.h"
 #include "rom.h"
 #include "rombank.h"
+#include "symtab.h"
 
 #ifdef HAVE_WASM
 #include "wasm/wasm.h"
@@ -75,12 +76,15 @@ struct rombank *rombank_new(unsigned d_width, unsigned slot_size, unsigned nslot
 	}
 	rb->combined_crc32 = CRC32_RESET;
 
+	symtab_init(&rb->symtab);
+
 	return rb;
 }
 
 void rombank_free(struct rombank *rb) {
 	if (!rb)
 		return;
+	symtab_clear(&rb->symtab);
 	for (unsigned i = 0; i < rb->nslots; i++) {
 		free(rb->slot[i].filename);
 		free(rb->d[i]);
@@ -270,10 +274,15 @@ static void recompute_crc32(struct rombank *rb) {
 	assert(rb != NULL);
 	assert(rb->d != NULL);
 	rb->combined_crc32 = CRC32_RESET;
+	symtab_clear(&rb->symtab);
 	for (unsigned i = 0; i < rb->nslots; i++) {
 		rb->slot[i].crc32 = CRC32_RESET;
 		if (rb->d[i]) {
 			rb->slot[i].crc32 = crc32_block(CRC32_RESET, rb->d[i], rb->slot_size);
+			struct rom_meta *rm = rom_meta_by_crc32(rb->slot[i].crc32, rb->slot_size);
+			if (rm && rm->symtab) {
+				symtab_include(&rb->symtab, rm->symtab);
+			}
 			rb->combined_crc32 = crc32_block(rb->combined_crc32, rb->d[i], rb->slot_size);
 		}
 	}

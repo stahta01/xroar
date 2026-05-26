@@ -33,6 +33,8 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "symtab.h"
+
 struct rombank_slot_file {
 	char *filename;  // absolute path
 	off_t offset;    // into file for this slot
@@ -46,6 +48,7 @@ struct rombank {
 
 	struct rombank_slot_file *slot;
 	uint32_t combined_crc32;
+	struct symtab symtab;
 
 	unsigned sshift;
 	unsigned smask;
