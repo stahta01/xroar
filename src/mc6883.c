@@ -300,7 +300,6 @@ static struct part *mc6883_allocate(void) {
 
 	*sam = (struct MC6883_private){0};
 
-	//sam->public.cpu_cycle = DELEGATE_DEFAULT3(void, int, bool, uint16);
 	sam->public.vdg_update = DELEGATE_DEFAULT0(void);
 
 	samp->reset = mc6883_reset;
@@ -556,7 +555,6 @@ static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	}
 
 	return ncycles;
-	//DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
 }
 
 // Just the address decode from mc6883_mem_cycle().  Used to verify that a

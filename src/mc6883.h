@@ -40,7 +40,6 @@ struct MC6883 {
 	_Bool RAS0;
 	_Bool RAS1;
 
-	//DELEGATE_T3(void, int, bool, uint16) cpu_cycle;
 	DELEGATE_T0(void) vdg_update;
 
 	void (*reset)(struct MC6883 *);
