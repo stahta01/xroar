@@ -431,3 +431,40 @@ static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	}
 	return 1;
 }
+
+// Resolve symbol and add breakpoint using debug.add_breakpoint()
+void machine_add_breakpoint_sym(struct machine *m, const char *label,
+                                DELEGATE_T2(void, bool, uint32) handler) {
+	int32_t A = m->debug.get_symbol(m, label);
+	if (A < 0)
+		return;
+	m->debug.add_breakpoint(m, A, handler);
+}
+
+// Resolve symbol and remove breakpoint using debug.remove_breakpoint().
+// Specifying label == NULL acts as a wildcard in the same way as specifying
+// A < 0 for the by-address function.
+void machine_remove_breakpoint_sym(struct machine *m, const char *label,
+				   DELEGATE_T2(void, bool, uint32) handler) {
+	int32_t A = -1;
+	if (label) {
+		A = m->debug.get_symbol(m, label);
+		if (A < 0)
+			return;
+	}
+	m->debug.remove_breakpoint(m, A, handler);
+}
+
+void machine_add_breakpoint_list_n(struct machine *m, struct machine_bp_entry *list,
+				   size_t nentries, void *sptr) {
+	for (size_t i = 0; i < nentries; ++i) {
+		machine_add_breakpoint_sym(m, list[i].label, DELEGATE_AS2(void, bool, uint32, list[i].handler_func, sptr));
+	}
+}
+
+void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry *list,
+				      size_t nentries, void *sptr) {
+	for (size_t i = 0; i < nentries; ++i) {
+		machine_remove_breakpoint_sym(m, list[i].label, DELEGATE_AS2(void, bool, uint32, list[i].handler_func, sptr));
+	}
+}

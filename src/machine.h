@@ -2,7 +2,7 @@
  *
  *  \brief Machine configuration.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
+
+#include "delegate.h"
 
 #include "breakpoint.h"
 #include "part.h"
@@ -69,6 +71,11 @@ struct vo_interface;
 #define VDG_GIME_1987 (3)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+struct machine_bp_entry {
+	const char *label;
+	void (*handler_func)(void *, _Bool, uint32_t);
+};
 
 /* Local flags determining whether breakpoints are added with
  * machine_add_bp_list(). */
@@ -247,6 +254,21 @@ struct machine {
 	struct {
 		int type;
 	} keyboard;
+
+	struct {
+		// Resolve symbol to address (returns -1 if not found)
+		int32_t (*get_symbol)(struct machine *, const char *label);
+
+		// Add breakpoint
+		void (*add_breakpoint)(struct machine *, uint32_t A,
+				       DELEGATE_T2(void, bool, uint32) handler);
+
+		// Remove breakpoint(s) by address and handler.  A < 0,
+		// handler.func == NULL or handler.sptr == NULL specify
+		// a wildcard for that field.
+		void (*remove_breakpoint)(struct machine *, int32_t A,
+					  DELEGATE_T2(void, bool, uint32) handler);
+	} debug;
 };
 
 extern const struct ser_struct_data machine_ser_struct_data;
@@ -254,9 +276,34 @@ extern const struct ser_struct_data machine_ser_struct_data;
 struct machine *machine_new(struct machine_config *mc);
 _Bool machine_is_a(struct part *p, const char *name);
 
-/* Helper function to populate breakpoints from a list. */
+/* OLD Helper function to populate breakpoints from a list. */
 #define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
 #define machine_bp_remove_list(m, list) (m)->bp_remove_n(m, list, sizeof(list) / sizeof(struct machine_bp))
+
+#define machine_add_breakpoint(m,a,h) (m)->debug.add_breakpoint((m), (a), (h))
+#define machine_remove_breakpoint(m,a,h) (m)->debug.remove_breakpoint((m), (a), (h))
+
+// Resolve symbol and add breakpoint using debug.add_breakpoint()
+void machine_add_breakpoint_sym(struct machine *m, const char *label,
+				DELEGATE_T2(void, bool, uint32) handler);
+
+// Resolve symbol and remove breakpoint using debug.remove_breakpoint().
+// Specifying label == NULL acts as a wildcard in the same way as specifying
+// A < 0 for the by-address function.
+void machine_remove_breakpoint_sym(struct machine *m, const char *label,
+				   DELEGATE_T2(void, bool, uint32) handler);
+
+#define machine_remove_breakpoint_all(m,s) machine_remove_breakpoint_sym((m), NULL, DELEGATE_AS2(void, bool, uint32, NULL, (s)))
+
+void machine_add_breakpoint_list_n(struct machine *m, struct machine_bp_entry *list,
+				   size_t nentries, void *sptr);
+
+#define machine_add_breakpoint_list(m,l,s) machine_add_breakpoint_list_n((m), (l), sizeof(l) / sizeof(struct machine_bp_entry), (s))
+
+void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry *list,
+				      size_t nentries, void *sptr);
+
+#define machine_remove_breakpoint_list(m,l,s) machine_remove_breakpoint_list_n((m), (l), sizeof(l) / sizeof(struct machine_bp_entry), (s))
 
 struct machine_module {
 	const char *name;
