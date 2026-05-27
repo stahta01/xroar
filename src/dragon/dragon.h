@@ -93,6 +93,7 @@ struct dragon {
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
+	struct bp_breakpoint_set breakpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;

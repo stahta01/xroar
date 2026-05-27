@@ -55,6 +55,7 @@
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
+#include "symtab.h"
 #include "tape.h"
 #include "ui.h"
 #include "vdg_palette.h"
@@ -224,6 +225,11 @@ static uint8_t dragon_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void dragon_op_rts(struct machine *m);
 static void dragon_dump_ram(struct machine *m, FILE *fd);
+static int32_t dragon_get_symbol(struct machine *m, const char *label);
+static void dragon_add_breakpoint(struct machine *m, uint32_t A,
+				  DELEGATE_T2(void, bool, uint32) handler);
+static void dragon_remove_breakpoint(struct machine *m, int32_t A,
+				     DELEGATE_T2(void, bool, uint32) handler);
 
 static void joystick_update(void *sptr);
 static void update_sound_mux_source(void *sptr);
@@ -280,6 +286,9 @@ void dragon_allocate_common(struct dragon *md) {
 	m->write_byte = dragon_write_byte;
 	m->op_rts = dragon_op_rts;
 	m->dump_ram = dragon_dump_ram;
+	m->debug.get_symbol = dragon_get_symbol;
+	m->debug.add_breakpoint = dragon_add_breakpoint;
+	m->debug.remove_breakpoint = dragon_remove_breakpoint;
 
 	m->keyboard.type = dkbd_layout_dragon;
 
@@ -616,6 +625,7 @@ void dragon_free_common(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(md->msgr_client_id);
+	bp_breakpoint_remove(&md->breakpoint_set, -1, DELEGATE_AS2(void, bool, uint32, NULL, NULL));  // remove all breakpoints
 #ifdef WANT_GDB_TARGET
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);
@@ -1294,6 +1304,36 @@ static void dragon_dump_ram(struct machine *m, FILE *fd) {
 		if (ram->d && ram->d[bank]) {
 			fwrite(ram->d[bank], ram->bank_nelems, 1, fd);
 		}
+	}
+}
+
+static int32_t dragon_get_symbol(struct machine *m, const char *label) {
+	struct dragon *md = (struct dragon *)m;
+	int32_t A;
+	if ((A = sym_find(&md->ROM0->symtab, label)) >= 0)
+		return A;
+	// XXX: search cartridge ROM too
+	return A;
+}
+
+static void dragon_add_breakpoint(struct machine *m, uint32_t A,
+				  DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct dragon *md = (struct dragon *)m;
+	if (!bp_breakpoint_add(&md->breakpoint_set, A, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
+	}
+	if (md->breakpoint_set.nbreakpoints) {
+		md->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &md->breakpoint_set);
+	}
+}
+
+static void dragon_remove_breakpoint(struct machine *m, int32_t A,
+				     DELEGATE_T2(void, bool, uint32) handler) {
+	struct dragon *md = (struct dragon *)m;
+	bp_breakpoint_remove(&md->breakpoint_set, A, handler);
+	if (!md->breakpoint_set.nbreakpoints) {
+		md->CPU->instruction_hook.func = NULL;
 	}
 }
 
