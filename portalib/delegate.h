@@ -51,6 +51,7 @@
 typedef DELEGATE_S0(void) DELEGATE_T0(void);
 typedef DELEGATE_S1(void, _Bool) DELEGATE_T1(void, bool);
 typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
+typedef DELEGATE_S2(void, _Bool, uint32_t) DELEGATE_T2(void, bool, uint32);
 typedef DELEGATE_S1(void, int) DELEGATE_T1(void, int);
 typedef DELEGATE_S2(void, int, _Bool) DELEGATE_T2(void, int, bool);
 typedef DELEGATE_S2(void, int, int) DELEGATE_T2(void, int, int);
@@ -74,6 +75,7 @@ typedef DELEGATE_S3(void, uint8_t const *, unsigned, unsigned)
 	DELEGATE_T3(void, uint8cp, unsigned, unsigned);
 typedef DELEGATE_S3(void, uint16_t, int, uint16_t *) DELEGATE_T3(void, uint16, int, uint16p);
 typedef DELEGATE_S2(void, uint16_t, uint8_t) DELEGATE_T2(void, uint16, uint8);
+typedef DELEGATE_S1(void, uint32_t) DELEGATE_T1(void, uint32);
 typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
 typedef DELEGATE_S2(void, float, float) DELEGATE_T2(void, float, float);
 typedef DELEGATE_S1(void *, void *) DELEGATE_T1(voidp, voidp);
@@ -134,6 +136,7 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 DELEGATE_DEF_PROTO0(void, void);
 DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
 DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
+DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint32_t, uint32);
 DELEGATE_DEF_PROTO1(void, void, int, int);
 DELEGATE_DEF_PROTO2(void, void, int, int, _Bool, bool);
 DELEGATE_DEF_PROTO2(void, void, int, int, int, int);
@@ -155,6 +158,7 @@ DELEGATE_DEF_PROTO2(void, void, uint8_t *, uint8p, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, uint8_t const *, uint8cp, unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO3(void, void, uint16_t, uint16, int, int, uint16_t *, uint16p);
 DELEGATE_DEF_PROTO2(void, void, uint16_t, uint16, uint8_t, uint8);
+DELEGATE_DEF_PROTO1(void, void, uint32_t, uint32);
 DELEGATE_DEF_PROTO1(void, void, float, float);
 DELEGATE_DEF_PROTO2(void, void, float, float, float, float);
 DELEGATE_DEF_PROTO1(void *, voidp, void *, voidp);
