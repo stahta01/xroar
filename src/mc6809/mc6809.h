@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -98,6 +98,8 @@ struct MC6809 {
 	unsigned trace_nbytes;
 	uint8_t trace_bytes[MC6809_MAX_TRACE_BYTES];
 #endif
+
+	DELEGATE_T1(void, uint32) instruction_hook;
 
 	/* Registers */
 	uint8_t reg_cc, reg_dp;

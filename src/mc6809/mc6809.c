@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6809 CPU.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -310,7 +310,8 @@ static void mc6809_run(struct MC6809 *cpu) {
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
-				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);
+				DELEGATE_SAFE_CALL(cpu->instruction_hook, REG_PC);  // new
+				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);  // old
 #ifdef TRACE
 				cpu->trace_pc = cpu->trace_next_pc = REG_PC;
 				cpu->trace_nbytes = 0;
