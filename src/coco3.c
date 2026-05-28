@@ -56,6 +56,7 @@
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
+#include "symtab.h"
 #include "tape.h"
 #include "tcc1014/tcc1014.h"
 #include "ui.h"
@@ -158,6 +159,7 @@ struct coco3 {
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
+	struct bp_breakpoint_set breakpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -306,6 +308,11 @@ static uint8_t coco3_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void coco3_op_rts(struct machine *m);
 static void coco3_dump_ram(struct machine *m, FILE *fd);
+static int32_t coco3_get_symbol(struct machine *m, const char *label);
+static void coco3_add_breakpoint(struct machine *m, uint32_t A,
+				 DELEGATE_T2(void, bool, uint32) handler);
+static void coco3_remove_breakpoint(struct machine *m, int32_t A,
+				    DELEGATE_T2(void, bool, uint32) handler);
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -320,11 +327,7 @@ static void gime_hs(void *sptr, _Bool level);
 // static void gime_hs_pal_coco(void *sptr, _Bool level);
 static void gime_fs(void *sptr, _Bool level);
 static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
-static void coco3_print_byte(void *);
-
-static struct machine_bp coco3_print_breakpoint[] = {
-	BP_COCO3_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco3_print_byte, NULL) ),
-};
+static void coco3_print_byte(void *, _Bool RnW, uint32_t A);
 
 static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A);
 static void cpu_cycle_noclock(void *sptr, int ncycles, _Bool RnW, uint16_t A);
@@ -393,6 +396,9 @@ static struct part *coco3_allocate(void) {
 	m->write_byte = coco3_write_byte;
 	m->op_rts = coco3_op_rts;
 	m->dump_ram = coco3_dump_ram;
+	m->debug.get_symbol = coco3_get_symbol;
+	m->debug.add_breakpoint = coco3_add_breakpoint;
+	m->debug.remove_breakpoint = coco3_remove_breakpoint;
 
 	m->keyboard.type = dkbd_layout_coco3;
 
@@ -691,6 +697,7 @@ static void coco3_free(struct part *p) {
 	struct coco3 *mcc3 = (struct coco3 *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mcc3->msgr_client_id);
+	machine_remove_breakpoint_all(&mcc3->public, NULL);
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
 		gdb_interface_free(mcc3->gdb_interface);
@@ -699,7 +706,7 @@ static void coco3_free(struct part *p) {
 	if (mcc3->keyboard.interface) {
 		keyboard_interface_free(mcc3->keyboard.interface);
 	}
-	machine_bp_remove_list(&mcc3->public, coco3_print_breakpoint);
+	machine_remove_breakpoint_all(&mcc3->public, mcc3);
 	if (mcc3->printer_interface) {
 		printer_interface_free(mcc3->printer_interface);
 	}
@@ -851,8 +858,8 @@ static void coco3_reset(struct machine *m, _Bool hard) {
 	mcc3->CPU->reset(mcc3->CPU);
 	tape_reset(mcc3->tape_interface);
 	printer_reset(mcc3->printer_interface);
-	machine_bp_remove_list(m, coco3_print_breakpoint);
-	machine_bp_add_list(m, coco3_print_breakpoint, mcc3);
+	machine_remove_breakpoint_all(m, mcc3);
+	machine_add_breakpoint_sym(m, "serial.printchr", DELEGATE_AS2(void, bool, uint32, coco3_print_byte, mcc3));
 }
 
 static enum machine_run_state coco3_run(struct machine *m, int ncycles) {
@@ -1326,6 +1333,36 @@ static void coco3_dump_ram(struct machine *m, FILE *fd) {
 	}
 }
 
+static int32_t coco3_get_symbol(struct machine *m, const char *label) {
+	struct coco3 *mcc3 = (struct coco3 *)m;
+	int32_t A;
+	if ((A = sym_find(&mcc3->ROM0->symtab, label)) >= 0)
+		return A;
+	// XXX: search cartridge ROM too
+	return A;
+}
+
+static void coco3_add_breakpoint(struct machine *m, uint32_t A,
+				 DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct coco3 *mcc3 = (struct coco3 *)m;
+	if (!bp_breakpoint_add(&mcc3->breakpoint_set, A, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
+	}
+	if (mcc3->breakpoint_set.nbreakpoints) {
+		mcc3->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &mcc3->breakpoint_set);
+	}
+}
+
+static void coco3_remove_breakpoint(struct machine *m, int32_t A,
+				    DELEGATE_T2(void, bool, uint32) handler) {
+	struct coco3 *mcc3 = (struct coco3 *)m;
+	bp_breakpoint_remove(&mcc3->breakpoint_set, A, handler);
+	if (!mcc3->breakpoint_set.nbreakpoints) {
+		mcc3->CPU->instruction_hook.func = NULL;
+	}
+}
+
 static uint16_t fetch_vram(void *sptr, uint32_t A) {
 	struct coco3 *mcc3 = sptr;
 	unsigned bank = mcc3->dat.vram_bank >> 6;
@@ -1444,9 +1481,15 @@ static void gime_render_line(void *sptr, unsigned burst, unsigned npixels, uint8
 }
 
 // CoCo serial printing ROM hook.
+//
+// XXX this will generally not work, as it requires a ROM hook and SECB usually
+// runs in RAM.  We need a way of tracking that we have a valid image in RAM
+// without incurring a massive performance penalty.
 
-static void coco3_print_byte(void *sptr) {
+static void coco3_print_byte(void *sptr, _Bool RnW, uint32_t A) {
 	struct coco3 *mcc3 = sptr;
+	(void)RnW;
+	(void)A;
 	if (!mcc3->printer_interface) {
 		return;
 	}
