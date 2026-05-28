@@ -247,6 +247,12 @@ void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry
 
 #define machine_remove_breakpoint_list(m,l,s) machine_remove_breakpoint_list_n((m), (l), sizeof(l) / sizeof(struct machine_bp_entry), (s))
 
+#ifdef WANT_GDB_TARGET
+void machine_add_hbreak(struct machine *m, uint32_t A);
+void machine_remove_hbreak(struct machine *m, int32_t A);
+#define machine_remove_hbreak_all(m) machine_remove_hbreak((m), -1)
+#endif
+
 struct machine_module {
 	const char *name;
 	const char *description;

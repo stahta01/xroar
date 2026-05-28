@@ -468,3 +468,22 @@ void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry
 		machine_remove_breakpoint_sym(m, list[i].label, DELEGATE_AS2(void, bool, uint32, list[i].handler_func, sptr));
 	}
 }
+
+// Hardware breakpoints send SIGRAP to machine
+
+#ifdef WANT_GDB_TARGET
+static void machine_trap_handler(void *sptr, _Bool RnW, uint32_t A) {
+	struct machine *m = sptr;
+	(void)RnW;
+	(void)A;
+	m->signal(m, MACHINE_SIGTRAP);
+}
+
+void machine_add_hbreak(struct machine *m, uint32_t A) {
+	machine_add_breakpoint(m, A, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
+}
+
+void machine_remove_hbreak(struct machine *m, int32_t A) {
+	machine_remove_breakpoint(m, A, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
+}
+#endif
