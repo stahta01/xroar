@@ -3057,7 +3057,7 @@ static void handle_trap(void *sptr) {
 			// Unlimited - don't remove breakpoint
 			return;
 		}
-		while (range && trap->counter > range->last) {
+		while (range && trap->counter >= range->last) {
 			// Done with range - remove from list
 			trap->count = slist_remove(trap->count, range);
 			free(range);
