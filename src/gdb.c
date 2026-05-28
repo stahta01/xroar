@@ -1014,7 +1014,7 @@ static void add_breakpoint(struct gdb_interface_private *gip, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_add(gip->bp_session, addr);
+		machine_add_hbreak(gip->machine, addr);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
 		bp_wp_add(gip->bp_session, type, addr, nbytes);
@@ -1040,7 +1040,7 @@ static void remove_breakpoint(struct gdb_interface_private *gip, char *args) {
 		goto error;
 	unsigned addr = strtoul(addr_str, NULL, 16);
 	if (type <= 1) {
-		bp_hbreak_remove(gip->bp_session, addr);
+		machine_remove_hbreak(gip->machine, addr);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
 		bp_wp_remove(gip->bp_session, type, addr, nbytes);
