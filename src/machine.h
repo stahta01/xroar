@@ -77,57 +77,6 @@ struct machine_bp_entry {
 	void (*handler_func)(void *, _Bool, uint32_t);
 };
 
-/* Local flags determining whether breakpoints are added with
- * machine_add_bp_list(). */
-
-#define BP_CRC_BAS (1 << 0)
-#define BP_CRC_EXT (1 << 1)
-#define BP_CRC_ALT (1 << 2)
-#define BP_CRC_COMBINED (1 << 3)
-
-struct machine_bp {
-	struct breakpoint bp;
-
-	// Each bit of add_cond represents a local condition that must match
-	// before machine_add_bp_list() will add a breakpoint.
-	unsigned add_cond;
-
-	// Local conditions to be matched.
-	int cond_machine_arch;
-	// CRC conditions listed by crclist name.
-	const char *cond_crc_combined;
-	const char *cond_crc_bas;
-	const char *cond_crc_extbas;
-	const char *cond_crc_altbas;
-};
-
-/* Convenience macros for standard types of breakpoint. */
-
-#define BP_DRAGON64_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d64_1" }
-#define BP_DRAGON32_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@d32" }
-#define BP_DRAGON_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_COMBINED, .cond_crc_combined = "@dragon" }
-
-#define BP_COCO_BAS10_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas10" }
-#define BP_COCO_BAS11_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas11" }
-#define BP_COCO_BAS12_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas12" }
-#define BP_COCO_BAS13_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@bas13" }
-#define BP_COCO3_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_EXT, .cond_crc_extbas = "@coco3" }
-#define BP_MX1600_BAS_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mx1600" }
-#define BP_COCO_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@coco" }
-
-#define BP_MC10_ROM(...) \
-	{ .bp = { __VA_ARGS__ }, .add_cond = BP_CRC_BAS, .cond_crc_bas = "@mc10_compat" }
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct machine_config {
@@ -232,9 +181,6 @@ struct machine {
 	void (*single_step)(struct machine *m);
 	void (*signal)(struct machine *m, int sig);
 
-	void (*bp_add_n)(struct machine *m, struct machine_bp *list, int n, void *sptr);
-	void (*bp_remove_n)(struct machine *m, struct machine_bp *list, int n);
-
 	_Bool (*set_pause)(struct machine *m, int action);
 	void *(*get_interface)(struct machine *m, const char *ifname);
 
@@ -275,10 +221,6 @@ extern const struct ser_struct_data machine_ser_struct_data;
 
 struct machine *machine_new(struct machine_config *mc);
 _Bool machine_is_a(struct part *p, const char *name);
-
-/* OLD Helper function to populate breakpoints from a list. */
-#define machine_bp_add_list(m, list, sptr) (m)->bp_add_n(m, list, sizeof(list) / sizeof(struct machine_bp), sptr)
-#define machine_bp_remove_list(m, list) (m)->bp_remove_n(m, list, sizeof(list) / sizeof(struct machine_bp))
 
 #define machine_add_breakpoint(m,a,h) (m)->debug.add_breakpoint((m), (a), (h))
 #define machine_remove_breakpoint(m,a,h) (m)->debug.remove_breakpoint((m), (a), (h))

@@ -292,8 +292,6 @@ static enum machine_run_state coco3_run(struct machine *m, int ncycles);
 static void coco3_single_step(struct machine *m);
 static void coco3_signal(struct machine *m, int sig);
 static void coco3_trap(void *sptr);
-static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
-static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
 static void coco3_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool coco3_set_pause(struct machine *m, int state);
@@ -386,8 +384,6 @@ static struct part *coco3_allocate(void) {
 	m->run = coco3_run;
 	m->single_step = coco3_single_step;
 	m->signal = coco3_signal;
-	m->bp_add_n = coco3_bp_add_n;
-	m->bp_remove_n = coco3_bp_remove_n;
 
 	m->set_pause = coco3_set_pause;
 	m->get_interface = coco3_get_interface;
@@ -921,27 +917,6 @@ static void coco3_signal(struct machine *m, int sig) {
 static void coco3_trap(void *sptr) {
 	struct machine *m = sptr;
 	coco3_signal(m, MACHINE_SIGTRAP);
-}
-
-static void coco3_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct coco3 *mcc3 = (struct coco3 *)m;
-	for (int i = 0; i < n; i++) {
-		if (list[i].add_cond & BP_CRC_COMBINED)
-			continue;
-		if ((list[i].add_cond & BP_CRC_EXT) && (!mcc3->has_secb || !crclist_match(list[i].cond_crc_extbas, mcc3->crc_secb)))
-			continue;
-		if (list[i].add_cond & BP_CRC_BAS)
-			continue;
-		list[i].bp.handler.sptr = sptr;
-		bp_add(mcc3->bp_session, &list[i].bp);
-	}
-}
-
-static void coco3_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct coco3 *mcc3 = (struct coco3 *)m;
-	for (int i = 0; i < n; i++) {
-		bp_remove(mcc3->bp_session, &list[i].bp);
-	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -209,8 +209,6 @@ static enum machine_run_state dragon_run(struct machine *m, int ncycles);
 static void dragon_single_step(struct machine *m);
 static void dragon_signal(struct machine *m, int sig);
 static void dragon_trap(void *sptr);
-static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
-static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 
 static void dragon_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool dragon_set_pause(struct machine *m, int state);
@@ -276,8 +274,6 @@ void dragon_allocate_common(struct dragon *md) {
 	m->run = dragon_run;
 	m->single_step = dragon_single_step;
 	m->signal = dragon_signal;
-	m->bp_add_n = dragon_bp_add_n;
-	m->bp_remove_n = dragon_bp_remove_n;
 
 	m->set_pause = dragon_set_pause;
 	m->get_interface = dragon_get_interface;
@@ -869,27 +865,6 @@ static void dragon_signal(struct machine *m, int sig) {
 static void dragon_trap(void *sptr) {
 	struct machine *m = sptr;
 	dragon_signal(m, MACHINE_SIGTRAP);
-}
-
-static void dragon_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct dragon *md = (struct dragon *)m;
-	for (int i = 0; i < n; i++) {
-		if ((list[i].add_cond & BP_CRC_COMBINED) && (!md->has_combined || !crclist_match(list[i].cond_crc_combined, md->crc_combined)))
-			continue;
-		if ((list[i].add_cond & BP_CRC_EXT) && (!md->has_extbas || !crclist_match(list[i].cond_crc_extbas, md->crc_extbas)))
-			continue;
-		if ((list[i].add_cond & BP_CRC_BAS) && (!md->has_bas || !crclist_match(list[i].cond_crc_bas, md->crc_bas)))
-			continue;
-		list[i].bp.handler.sptr = sptr;
-		bp_add(md->bp_session, &list[i].bp);
-	}
-}
-
-static void dragon_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct dragon *md = (struct dragon *)m;
-	for (int i = 0; i < n; i++) {
-		bp_remove(md->bp_session, &list[i].bp);
-	}
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

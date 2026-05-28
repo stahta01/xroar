@@ -193,8 +193,6 @@ static enum machine_run_state mc10_run(struct machine *m, int ncycles);
 static void mc10_single_step(struct machine *m);
 static void mc10_signal(struct machine *m, int sig);
 static void mc10_trap(void *sptr);
-static void mc10_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr);
-static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n);
 static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_op_rts(struct machine *m);
@@ -265,8 +263,6 @@ static struct part *mc10_allocate(void) {
 	m->run = mc10_run;
 	m->single_step = mc10_single_step;
 	m->signal = mc10_signal;
-	m->bp_add_n = mc10_bp_add_n;
-	m->bp_remove_n = mc10_bp_remove_n;
 	m->read_byte = mc10_read_byte;
 	m->write_byte = mc10_write_byte;
 	m->op_rts = mc10_op_rts;
@@ -743,23 +739,6 @@ static void mc10_signal(struct machine *m, int sig) {
 static void mc10_trap(void *sptr) {
         struct machine *m = sptr;
         mc10_signal(m, MACHINE_SIGTRAP);
-}
-
-static void mc10_bp_add_n(struct machine *m, struct machine_bp *list, int n, void *sptr) {
-	struct mc10 *mp = (struct mc10 *)m;
-	for (int i = 0; i < n; i++) {
-		if ((list[i].add_cond & BP_CRC_BAS) && (!mp->has_bas || !crclist_match(list[i].cond_crc_bas, mp->crc_bas)))
-			continue;
-		list[i].bp.handler.sptr = sptr;
-		bp_add(mp->bp_session, &list[i].bp);
-	}
-}
-
-static void mc10_bp_remove_n(struct machine *m, struct machine_bp *list, int n) {
-	struct mc10 *mp = (struct mc10 *)m;
-	for (int i = 0; i < n; i++) {
-		bp_remove(mp->bp_session, &list[i].bp);
-	}
 }
 
 // Notes:
