@@ -2,7 +2,7 @@
  *
  *  \brief Cassette tape support.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -125,10 +125,10 @@ static void tape_ui_set_tape_flag(void *, int tag, void *smsg);
 static void update_motor(struct tape_interface_private *tip);
 
 static void rewrite_tape_desync(struct tape_interface_private *tip, int leader);
-static void rewrite_sync(void *sptr);
-static void rewrite_bitin(void *sptr);
-static void rewrite_tape_on(void *sptr);
-static void rewrite_end_of_block(void *sptr);
+static void rewrite_sync(void *sptr, _Bool RnW, uint32_t A);
+static void rewrite_bitin(void *sptr, _Bool RnW, uint32_t A);
+static void rewrite_tape_on(void *sptr, _Bool RnW, uint32_t A);
+static void rewrite_end_of_block(void *sptr, _Bool RnW, uint32_t A);
 
 static void set_breakpoints(struct tape_interface_private *tip);
 
@@ -700,16 +700,18 @@ void tape_close_writing(struct tape_interface *ti) {
 // MC-10 has no remote control, so for autorun, support a rom hook to press
 // play at an appropriate time.
 
-static void press_play(void *sptr);
+static void press_play(void *sptr, _Bool RnW, uint32_t A);
 
-static struct machine_bp bp_list_press_play[] = {
-	BP_MC10_ROM(.address = 0xff4e, .handler = DELEGATE_INIT(press_play, NULL) ),
+static struct machine_bp_entry bp_list_press_play[] = {
+	{ "CSRDON", press_play },
 };
 
-static void press_play(void *sptr) {
+static void press_play(void *sptr, _Bool RnW, uint32_t A) {
 	struct tape_interface_private *tip = sptr;
+	(void)RnW;
+	(void)A;
 	ui_update_state(-1, ui_tag_tape_playing, 1, NULL);
-	machine_bp_remove_list(tip->machine, bp_list_press_play);
+	machine_remove_breakpoint_list(tip->machine, bp_list_press_play, tip);
 }
 
 int tape_autorun(struct tape_interface *ti, const char *filename) {
@@ -791,7 +793,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 		}
 	}
 
-	machine_bp_add_list(tip->machine, bp_list_press_play, tip);
+	machine_add_breakpoint_list(tip->machine, bp_list_press_play, tip);
 
 	free(f);
 
@@ -1372,10 +1374,12 @@ static void cbin(struct tape_interface_private *tip) {
 // fast_motor_on() skips the standard delay if a short leader was detected
 // (usually old CAS files).
 
-static void fast_motor_on(void *sptr) {
+static void fast_motor_on(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: CASON, after switching on, before delay
 	struct tape_interface_private *tip = sptr;
 	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
+	(void)RnW;
+	(void)A;
 
 	update_read_time(tip);
 	if (!tip->short_leader) {
@@ -1390,9 +1394,11 @@ static void fast_motor_on(void *sptr) {
 
 // Similarly, fast_sync_leader() just assumes leader has been sensed
 
-static void fast_sync_leader(void *sptr) {
+static void fast_sync_leader(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: CSRDON, after calling CASON
 	struct tape_interface_private *tip = sptr;
+	(void)RnW;
+	(void)A;
 
 	update_read_time(tip);
 	if (!tip->short_leader) {
@@ -1405,9 +1411,11 @@ static void fast_sync_leader(void *sptr) {
 // If tape was paused, breakpoints would not have been in place, meaning this
 // code can be reached during initial silence.
 
-static void fast_tape_p0_wait_p1(void *sptr) {
+static void fast_tape_p0_wait_p1(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: waiting for high pulse
 	struct tape_interface_private *tip = sptr;
+	(void)RnW;
+	(void)A;
 
 	update_read_time(tip);
 	tape_wait_p1(tip);
@@ -1415,7 +1423,7 @@ static void fast_tape_p0_wait_p1(void *sptr) {
 	do_skip_read_time(tip);
 }
 
-static void fast_bitin(void *sptr) {
+static void fast_bitin(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: BITIN
 	struct tape_interface_private *tip = sptr;
 
@@ -1424,13 +1432,15 @@ static void fast_bitin(void *sptr) {
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
 	if (tip->tape_rewrite) {
-		rewrite_bitin(tip);
+		rewrite_bitin(tip, RnW, A);
 	}
 }
 
-static void fast_cbin(void *sptr) {
+static void fast_cbin(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: CBIN
 	struct tape_interface_private *tip = sptr;
+	(void)RnW;
+	(void)A;
 
 	if (tip->tape_rewrite) {
 		// If rewriting, we allow the ROM to keep calling BITIN and
@@ -1482,10 +1492,12 @@ static void rewrite_tape_desync(struct tape_interface_private *tip, int leader) 
 // followed by the sync byte.  Flag stream as in sync - subsequent bits will be
 // rewritten verbatim.
 
-static void rewrite_sync(void *sptr) {
+static void rewrite_sync(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: BLKIN, having read sync byte $3C
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
+	(void)RnW;
+	(void)A;
 
 	// Already synced?  Nothing to do.
 	if (tip->rewrite.have_sync) {
@@ -1520,10 +1532,12 @@ static void rewrite_sync(void *sptr) {
 // Rewrites bits returned by the BITIN routine, but only while flagged as
 // synced.
 
-static void rewrite_bitin(void *sptr) {
+static void rewrite_bitin(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: RTS from BITIN
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
+	(void)RnW;
+	(void)A;
 
 	// Must by synced
 	if (!tip->rewrite.have_sync) {
@@ -1536,10 +1550,12 @@ static void rewrite_bitin(void *sptr) {
 // When tape motor turned on, rewrite a standard duration of silence and flag
 // the stream as desynced, expecting a long leader before the next block.
 
-static void rewrite_tape_on(void *sptr) {
+static void rewrite_tape_on(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: CSRDON
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
+	(void)RnW;
+	(void)A;
 
 	// Desync with long leader
 	rewrite_tape_desync(tip, xroar.cfg.tape.rewrite_leader);
@@ -1553,9 +1569,11 @@ static void rewrite_tape_on(void *sptr) {
 // When finished reading a block, flag the stream as desynced expecting a short
 // intra-block leader before the next.
 
-static void rewrite_end_of_block(void *sptr) {
+static void rewrite_end_of_block(void *sptr, _Bool RnW, uint32_t A) {
 	// Breakpoint: BLKIN, having confirmed checksum
 	struct tape_interface_private *tip = sptr;
+	(void)RnW;
+	(void)A;
 
 	// desync with short inter-block leader
 	rewrite_tape_desync(tip, 2);
@@ -1567,63 +1585,35 @@ static void rewrite_end_of_block(void *sptr) {
 
 // These fast loading intercepts are needed for "short leader" padding.
 
-static struct machine_bp bp_list_pad[] = {
-	BP_DRAGON_ROM(.address = 0xbdd7, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_COCO_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_COCO3_ROM(.address = 0xa7d1, .handler = DELEGATE_INIT(fast_motor_on, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbded, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_COCO_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_COCO3_ROM(.address = 0xa782, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
-	BP_MC10_ROM(.address = 0xff53, .handler = DELEGATE_INIT(fast_sync_leader, NULL) ),
+static struct machine_bp_entry bp_list_pad[] = {
+	{ "tape.motor_on_delay", fast_motor_on },
+	{ "tape.sync_leader", fast_sync_leader },
 };
 
 // Fast tape loading intercepts various ROM calls and uses equivalents provided
 // here to bypass the need for CPU emulation.
 
-static struct machine_bp bp_list_fast[] = {
-	BP_DRAGON_ROM(.address = 0xbd99, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_COCO_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_COCO3_ROM(.address = 0xa769, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_MC10_ROM(.address = 0xff38, .handler = DELEGATE_INIT(fast_tape_p0_wait_p1, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbda5, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_COCO_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_COCO3_ROM(.address = 0xa755, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_MC10_ROM(.address = 0xff22, .handler = DELEGATE_INIT(fast_bitin, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbdad, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
-	BP_COCO_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
-	BP_COCO3_ROM(.address = 0xa749, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
-	BP_MC10_ROM(.address = 0xff14, .handler = DELEGATE_INIT(fast_cbin, NULL) ),
+static struct machine_bp_entry bp_list_fast[] = {
+	{ "tape.p0_wait_p1", fast_tape_p0_wait_p1 },
+	{ "BITIN", fast_bitin },
+	{ "CBIN", fast_cbin },
 };
 
 // Tape rewriting intercepts the returns from various ROM calls to interpret
 // the loading state - whether a leader is expected, etc.
 
-static struct machine_bp bp_list_rewrite[] = {
-	BP_DRAGON_ROM(.address = 0xb94d, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
-	BP_COCO_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
-	BP_COCO3_ROM(.address = 0xa719, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
-	BP_MC10_ROM(.address = 0xfecc, .handler = DELEGATE_INIT(rewrite_sync, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbdac, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
-	BP_COCO_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
-	BP_COCO3_ROM(.address = 0xa75c, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
-	BP_MC10_ROM(.address = 0xff2b, .handler = DELEGATE_INIT(rewrite_bitin, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbdeb, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
-	BP_COCO_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
-	BP_COCO3_ROM(.address = 0xa780, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
-	BP_MC10_ROM(.address = 0xff50, .handler = DELEGATE_INIT(rewrite_tape_on, NULL) ),
-	BP_DRAGON_ROM(.address = 0xb97e, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
-	BP_COCO_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
-	BP_COCO3_ROM(.address = 0xa746, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
-	BP_MC10_ROM(.address = 0xff10, .handler = DELEGATE_INIT(rewrite_end_of_block, NULL) ),
+static struct machine_bp_entry bp_list_rewrite[] = {
+	{ "tape.post_sync", rewrite_sync },
+	{ "tape.post_bitin", rewrite_bitin },
+	{ "tape.tape_on", rewrite_tape_on },
+	{ "tape.post_blkin", rewrite_end_of_block },
 };
 
 static void set_breakpoints(struct tape_interface_private *tip) {
 	if (!tip->debug_cpu)
 		return;
 	// clear any old breakpoints
-	machine_bp_remove_list(tip->machine, bp_list_pad);
-	machine_bp_remove_list(tip->machine, bp_list_fast);
-	machine_bp_remove_list(tip->machine, bp_list_rewrite);
+	machine_remove_breakpoint_all(tip->machine, tip);
 	if (!tip->motor || !tip->playing) {
 		return;
 	}
@@ -1635,12 +1625,12 @@ static void set_breakpoints(struct tape_interface_private *tip) {
 	}
 	// Add required breakpoints
 	if ((tip->short_leader && tip->tape_pad_auto) || tip->tape_fast) {
-		machine_bp_add_list(tip->machine, bp_list_pad, tip);
+		machine_add_breakpoint_list(tip->machine, bp_list_pad, tip);
 		if (tip->tape_fast) {
-			machine_bp_add_list(tip->machine, bp_list_fast, tip);
+			machine_add_breakpoint_list(tip->machine, bp_list_fast, tip);
 		}
 	}
 	if (tip->tape_rewrite) {
-		machine_bp_add_list(tip->machine, bp_list_rewrite, tip);
+		machine_add_breakpoint_list(tip->machine, bp_list_rewrite, tip);
 	}
 }
