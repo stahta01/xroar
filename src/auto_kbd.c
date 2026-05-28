@@ -2,7 +2,7 @@
  *
  *  \brief Automatic keyboard entry.
  *
- *  \copyright Copyright 2023-2024 Ciaran Anscomb
+ *  \copyright Copyright 2023-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -101,23 +101,14 @@ static void auto_event_free(struct auto_event *ae);
 static sds parse_string(struct auto_kbd *ak, sds s);
 static void queue_auto_event(struct auto_kbd *ak, struct auto_event *ae);
 
-static void do_rts(void *);
-static void do_auto_event(void *);
+static void do_rts(void *, _Bool RnW, uint32_t A);
+static void do_auto_event(void *, _Bool RnW, uint32_t A);
 static int parse_char(struct auto_kbd *ak, uint8_t c);
 
-static struct machine_bp basic_command_breakpoint[] = {
-	BP_DRAGON_ROM(.address = 0x851b, .handler = DELEGATE_INIT(do_rts, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbbe5, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_COCO_BAS10_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_COCO_BAS11_ROM(.address = 0xa1c1, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_COCO_BAS12_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_COCO_BAS13_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_COCO3_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_MC10_ROM(.address = 0xf883, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_MX1600_BAS_ROM(.address = 0xa1cb, .handler = DELEGATE_INIT(do_auto_event, NULL) ),
-	BP_DRAGON_ROM(.address = 0xbbc5, .handler = DELEGATE_INIT(do_rts, NULL) ),
-	BP_COCO_ROM(.address = 0xa7d3, .handler = DELEGATE_INIT(do_rts, NULL) ),
-	BP_MC10_ROM(.address = 0xf83f, .handler = DELEGATE_INIT(do_rts, NULL) ),
+static struct machine_bp_entry basic_command_breakpoint[] = {
+	{ "kbd.scan_key", do_rts },
+	{ "POLCAT", do_auto_event },
+	{ "delay_1ms", do_rts },
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -138,9 +129,7 @@ struct auto_kbd *auto_kbd_new(struct machine *m) {
 }
 
 void auto_kbd_free(struct auto_kbd *ak) {
-	if (ak->debug_cpu) {
-		machine_bp_remove_list(ak->machine, basic_command_breakpoint);
-	}
+	machine_remove_breakpoint_all(ak->machine, ak);
 	slist_free_full(ak->auto_event_list, (slist_free_func)auto_event_free_void);
 	free(ak);
 }
@@ -223,15 +212,19 @@ static void auto_event_free(struct auto_event *ae) {
 	free(ae);
 }
 
-static void do_rts(void *sptr) {
+static void do_rts(void *sptr, _Bool RnW, uint32_t A) {
 	struct auto_kbd *ak = sptr;
+	(void)RnW;
+	(void)A;
 	ak->machine->op_rts(ak->machine);
 }
 
-static void do_auto_event(void *sptr) {
+static void do_auto_event(void *sptr, _Bool RnW, uint32_t A) {
 	struct auto_kbd *ak = sptr;
 	struct MC6801 *cpu01 = (struct MC6801 *)ak->debug_cpu;
 	struct MC6809 *cpu09 = (struct MC6809 *)ak->debug_cpu;
+	(void)RnW;
+	(void)A;
 
 	if (!ak->auto_event_list)
 		return;
@@ -304,7 +297,7 @@ static void do_auto_event(void *sptr) {
 	ak->machine->op_rts(ak->machine);
 
 	if (!ak->auto_event_list) {
-		machine_bp_remove_list(ak->machine, basic_command_breakpoint);
+		machine_remove_breakpoint_all(ak->machine, ak);
 	}
 }
 
@@ -640,9 +633,9 @@ static sds parse_string(struct auto_kbd *ak, sds s) {
 }
 
 static void queue_auto_event(struct auto_kbd *ak, struct auto_event *ae) {
-	machine_bp_remove_list(ak->machine, basic_command_breakpoint);
+	machine_remove_breakpoint_all(ak->machine, ak);
 	ak->auto_event_list = slist_append(ak->auto_event_list, ae);
 	if (ak->auto_event_list) {
-		machine_bp_add_list(ak->machine, basic_command_breakpoint, ak);
+		machine_add_breakpoint_list(ak->machine, basic_command_breakpoint, ak);
 	}
 }
