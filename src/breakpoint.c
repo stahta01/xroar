@@ -133,8 +133,6 @@ struct bp_session_private {
 	struct debug_cpu *debug_cpu;
 };
 
-static void bp_instruction_hook(void *);
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct bp_session *bp_session_new(struct machine *m) {
@@ -237,22 +235,6 @@ void bp_wp_remove_range(struct bp_session *bps, unsigned type,
 	}
 }
 
-void bp_hbreak_add(struct bp_session *bps, unsigned addr) {
-	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	do_wp_add_range(bpsp, &bpsp->instruction_list, addr, addr, bpsp->bps.trap_handler);
-	if (bpsp->instruction_list) {
-		bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
-	}
-}
-
-void bp_hbreak_remove(struct bp_session *bps, unsigned addr) {
-	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	do_wp_remove_range(bpsp, &bpsp->instruction_list, addr, addr);
-	if (!bpsp->instruction_list) {
-		bpsp->debug_cpu->instruction_hook.func = NULL;
-	}
-}
-
 #ifdef WANT_GDB_TARGET
 
 void bp_wp_add(struct bp_session *bps, unsigned type, unsigned addr, unsigned nbytes) {
@@ -283,17 +265,6 @@ static void bp_hook(struct bp_session_private *bpsp, struct slist *bp_list, unsi
 		DELEGATE_CALL(bp->handler);
 	}
 	bpsp->iter_next = NULL;
-}
-
-static void bp_instruction_hook(void *sptr) {
-	struct bp_session_private *bpsp = sptr;
-	uint16_t cur_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
-	uint16_t old_pc;
-	do {
-		bp_hook(bpsp, bpsp->instruction_list, cur_pc);
-		old_pc = cur_pc;
-		cur_pc = DELEGATE_CALL(bpsp->debug_cpu->get_pc);
-	} while (old_pc != cur_pc);
 }
 
 static int compar_breakpoint_a(const void *aa, const void *bb) {

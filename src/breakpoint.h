@@ -98,11 +98,6 @@ struct breakpoint {
 #define WP_READ  (2)
 #define WP_BOTH  (3)
 
-// Manipulate simple traps.
-
-void bp_hbreak_add(struct bp_session *bps, unsigned addr);
-void bp_hbreak_remove(struct bp_session *bps, unsigned addr);
-
 #define BP_WP_WRITE  (2)
 #define BP_WP_READ   (3)
 #define BP_WP_ACCESS (4)
