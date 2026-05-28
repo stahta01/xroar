@@ -1952,6 +1952,7 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 					// Temporarily remove timeout if cancelled
 					char *old_timeout = trap->timeout;
 					if (cancel_timeout) {
+						--trap->counter;
 						trap->timeout = NULL;
 					}
 					handle_trap(trap);
