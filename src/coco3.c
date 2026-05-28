@@ -1325,7 +1325,7 @@ static void coco3_add_breakpoint(struct machine *m, uint32_t A,
 		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
 	}
 	if (mcc3->breakpoint_set.nbreakpoints) {
-		mcc3->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &mcc3->breakpoint_set);
+		mcc3->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook, &mcc3->breakpoint_set);
 	}
 }
 

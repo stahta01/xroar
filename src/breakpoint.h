@@ -57,7 +57,7 @@ void bp_breakpoint_remove(struct bp_breakpoint_set *bbs, int32_t A,
 void bp_breakpoint_remove_all(struct bp_breakpoint_set *bbs, void *sptr);
 
 // Dispatch all breakpoint handlers for a given address.
-void bp_instruction_hook_new(void *sptr, uint32_t A);
+void bp_instruction_hook(void *sptr, uint32_t A);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

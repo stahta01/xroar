@@ -878,7 +878,7 @@ static void mc10_add_breakpoint(struct machine *m, uint32_t A,
 		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
 	}
 	if (mp->breakpoint_set.nbreakpoints) {
-		mp->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &mp->breakpoint_set);
+		mp->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook, &mp->breakpoint_set);
 	}
 }
 

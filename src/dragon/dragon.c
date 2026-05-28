@@ -1299,7 +1299,7 @@ static void dragon_add_breakpoint(struct machine *m, uint32_t A,
 		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
 	}
 	if (md->breakpoint_set.nbreakpoints) {
-		md->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &md->breakpoint_set);
+		md->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook, &md->breakpoint_set);
 	}
 }
 

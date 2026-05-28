@@ -279,7 +279,7 @@ static int compar_breakpoint_a(const void *aa, const void *bb) {
 
 // Instruction hook
 
-void bp_instruction_hook_new(void *sptr, uint32_t A) {
+void bp_instruction_hook(void *sptr, uint32_t A) {
 	struct bp_breakpoint_set *bbs = sptr;
 	struct bp_breakpoint key = { .A = A };
 	struct bp_breakpoint *ent = NULL;
