@@ -3095,6 +3095,11 @@ static void set_trap(const char *cond) {
 		if (private_cfg.debug.trap_def.trace >= 0) {
 			cur_trap_def->trace = private_cfg.debug.trap_def.trace;
 			private_cfg.debug.trap_def.trace = -1;
+			if (!cur_trap_def->count) {
+				struct trap_count_range *range = xmalloc(sizeof(*range));
+				*range = (struct trap_count_range){ .first = 1, .last = -1UL };
+				cur_trap_def->count = slist_append(cur_trap_def->count, range);
+			}
 		}
 		if (private_cfg.debug.trap_def.no_trace >= 0) {
 			cur_trap_def->no_trace = private_cfg.debug.trap_def.no_trace;
