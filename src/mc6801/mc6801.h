@@ -141,6 +141,8 @@ struct MC6801 {
 	uint8_t trace_bytes[MC6801_MAX_TRACE_BYTES];
 #endif
 
+	DELEGATE_T1(void, uint32) instruction_hook;
+
 	// Registers
 	uint8_t reg_cc;
 	uint16_t reg_d;
