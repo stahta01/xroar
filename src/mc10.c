@@ -49,6 +49,7 @@
 #include "romlist.h"
 #include "serialise.h"
 #include "sound.h"
+#include "symtab.h"
 #include "tape.h"
 #include "ui.h"
 #include "vdg_pal.h"
@@ -86,6 +87,7 @@ struct mc10 {
 	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
+	struct bp_breakpoint_set breakpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -197,6 +199,11 @@ static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_op_rts(struct machine *m);
 static void mc10_dump_ram(struct machine *m, FILE *fd);
+static int32_t mc10_get_symbol(struct machine *m, const char *label);
+static void mc10_add_breakpoint(struct machine *m, uint32_t A,
+				DELEGATE_T2(void, bool, uint32) handler);
+static void mc10_remove_breakpoint(struct machine *m, int32_t A,
+				   DELEGATE_T2(void, bool, uint32) handler);
 
 static void mc10_vdg_fs(void *sptr, _Bool level);
 static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
@@ -213,16 +220,12 @@ static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_ui_set_frameskip(void *, int tag, void *smsg);
 static void mc10_ui_set_ratelimit(void *, int tag, void *smsg);
 
-static void mc10_print_byte(void *);
+static void mc10_print_byte(void *, _Bool RnW, uint32_t A);
 static void mc10_keyboard_update(void *sptr);
 static void mc10_update_tape_input(void *sptr, float value);
 static void mc10_mc6803_port2_postwrite(void *sptr);
 
 static void cart_nmi(void *sptr, _Bool level);
-
-static struct machine_bp mc10_print_breakpoint[] = {
-	BP_MC10_ROM(.address = 0xf9d0, .handler = DELEGATE_INIT(mc10_print_byte, NULL) ),
-};
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -268,6 +271,9 @@ static struct part *mc10_allocate(void) {
 	m->write_byte = mc10_write_byte;
 	m->op_rts = mc10_op_rts;
 	m->dump_ram = mc10_dump_ram;
+	m->debug.get_symbol = mc10_get_symbol;
+	m->debug.add_breakpoint = mc10_add_breakpoint;
+	m->debug.remove_breakpoint = mc10_remove_breakpoint;
 
 	m->get_interface = mc10_get_interface;
 
@@ -539,7 +545,7 @@ static void mc10_free(struct part *p) {
 	if (mp->keyboard.interface) {
 		keyboard_interface_free(mp->keyboard.interface);
 	}
-	machine_bp_remove_list(&mp->machine, mc10_print_breakpoint);
+	machine_remove_breakpoint_all(&mp->machine, NULL);
 	if (mp->printer_interface) {
 		printer_interface_free(mp->printer_interface);
 	}
@@ -666,8 +672,8 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 	tape_reset(mp->tape_interface);
 	tape_set_motor(mp->tape_interface, 1);  // no motor control!
 	printer_reset(mp->printer_interface);
-	machine_bp_remove_list(m, mc10_print_breakpoint);
-	machine_bp_add_list(m, mc10_print_breakpoint, mp);
+	machine_remove_breakpoint_all(m, mp);
+	machine_add_breakpoint_sym(m, "serial.printchr", DELEGATE_AS2(void, bool, uint32, mc10_print_byte, mp));
 	mp->video_attr = 0;
 }
 
@@ -876,6 +882,36 @@ static void mc10_dump_ram(struct machine *m, FILE *fd) {
 	}
 }
 
+static int32_t mc10_get_symbol(struct machine *m, const char *label) {
+	struct mc10 *mp = (struct mc10 *)m;
+	int32_t A;
+	if ((A = sym_find(&mp->ROM0->symtab, label)) >= 0)
+		return A;
+	// XXX: search cartridge ROM too
+	return A;
+}
+
+static void mc10_add_breakpoint(struct machine *m, uint32_t A,
+				 DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct mc10 *mp = (struct mc10 *)m;
+	if (!bp_breakpoint_add(&mp->breakpoint_set, A, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add breakpoint @ 0x%04x\n", A);
+	}
+	if (mp->breakpoint_set.nbreakpoints) {
+		mp->CPU->instruction_hook = DELEGATE_AS1(void, uint32, bp_instruction_hook_new, &mp->breakpoint_set);
+	}
+}
+
+static void mc10_remove_breakpoint(struct machine *m, int32_t A,
+				    DELEGATE_T2(void, bool, uint32) handler) {
+	struct mc10 *mp = (struct mc10 *)m;
+	bp_breakpoint_remove(&mp->breakpoint_set, A, handler);
+	if (!mp->breakpoint_set.nbreakpoints) {
+		mp->CPU->instruction_hook.func = NULL;
+	}
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
@@ -1075,8 +1111,10 @@ static void mc10_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 
 // MC-10 serial printing ROM hook
 
-static void mc10_print_byte(void *sptr) {
+static void mc10_print_byte(void *sptr, _Bool RnW, uint32_t A) {
 	struct mc10 *mp = sptr;
+	(void)RnW;
+	(void)A;
 	if (!mp->printer_interface)
 		return;
 	int byte = MC6801_REG_A(mp->CPU);
