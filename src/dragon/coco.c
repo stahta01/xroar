@@ -71,10 +71,10 @@ const struct machine_partdb_entry coco_part = { .partdb_entry = { .name = "coco"
 static void pia0b_data_preread_coco64k(void *sptr);
 static void pia1a_data_postwrite_coco(void *sptr);
 static void pia1b_data_preread_coco64k(void *sptr);
-static void coco_print_byte(void *);
+static void coco_print_byte(void *, _Bool RnW, uint32_t A);
 
-static struct machine_bp coco_print_breakpoint[] = {
-	BP_COCO_ROM(.address = 0xa2c1, .handler = DELEGATE_INIT(coco_print_byte, NULL) ),
+static struct machine_bp_entry coco_print_breakpoint[] = {
+	{ "serial.printchr", coco_print_byte },
 };
 
 static struct part *coco_allocate(void) {
@@ -189,7 +189,7 @@ static _Bool coco_finish(struct part *p) {
 
 static void coco_free(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
-	machine_bp_remove_list(&md->public, coco_print_breakpoint);
+	machine_remove_breakpoint_all(&md->public, md);
 	rombank_free(md->ROM0);
 	vdg_pal_deinit(&md->vdg_pal);
 	dragon_free_common(p);
@@ -216,8 +216,8 @@ static void coco_config_complete(struct machine_config *mc) {
 static void coco_reset(struct machine *m, _Bool hard) {
         struct dragon *md = (struct dragon *)m;
         dragon_reset(m, hard);
-	machine_bp_remove_list(m, coco_print_breakpoint);
-	machine_bp_add_list(m, coco_print_breakpoint, md);
+	machine_remove_breakpoint_all(m, md);
+	machine_add_breakpoint_list(m, coco_print_breakpoint, md);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -255,8 +255,10 @@ static void pia1b_data_preread_coco64k(void *sptr) {
 
 // CoCo serial printing ROM hook.
 
-static void coco_print_byte(void *sptr) {
+static void coco_print_byte(void *sptr, _Bool RnW, uint32_t A) {
 	struct dragon *md = sptr;
+	(void)RnW;
+	(void)A;
 	if (!md->printer_interface) {
 		return;
 	}
