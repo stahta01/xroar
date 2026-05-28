@@ -159,37 +159,6 @@ void bp_session_free(struct bp_session *bps) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool is_in_list(struct slist *bp_list, struct breakpoint *bp) {
-	for (struct slist *iter = bp_list; iter; iter = iter->next) {
-		if (bp == iter->data)
-			return 1;
-	}
-	return 0;
-}
-
-void bp_add(struct bp_session *bps, struct breakpoint *bp) {
-	if (!bps)
-		return;
-	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (is_in_list(bpsp->instruction_list, bp))
-		return;
-	bp->address_end = bp->address;
-	bpsp->instruction_list = slist_prepend(bpsp->instruction_list, bp);
-	bpsp->debug_cpu->instruction_hook = DELEGATE_AS0(void, bp_instruction_hook, bps);
-}
-
-void bp_remove(struct bp_session *bps, struct breakpoint *bp) {
-	if (!bps)
-		return;
-	struct bp_session_private *bpsp = (struct bp_session_private *)bps;
-	if (bpsp->iter_next && bpsp->iter_next->data == bp)
-		bpsp->iter_next = bpsp->iter_next->next;
-	bpsp->instruction_list = slist_remove(bpsp->instruction_list, bp);
-	if (!bpsp->instruction_list) {
-		bpsp->debug_cpu->instruction_hook.func = NULL;
-	}
-}
-
 static struct breakpoint *trap_find(struct bp_session_private *bpsp,
 				    struct slist *bp_list, unsigned addr, unsigned addr_end) {
 	for (struct slist *iter = bp_list; iter; iter = iter->next) {
