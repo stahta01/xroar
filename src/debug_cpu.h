@@ -29,9 +29,6 @@ struct debug_cpu {
 	// Part metadata
 	struct part part;
 
-	// Called just before instruction fetch if non-NULL
-	DELEGATE_T0(void) instruction_hook;
-
 	// Called after instruction is executed
 	DELEGATE_T0(void) instruction_posthook;
 

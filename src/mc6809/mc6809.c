@@ -310,8 +310,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				cpu->page = 0;
 				// Instruction fetch hook called here so that machine
 				// can be stopped beforehand.
-				DELEGATE_SAFE_CALL(cpu->instruction_hook, REG_PC);  // new
-				DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_hook);  // old
+				DELEGATE_SAFE_CALL(cpu->instruction_hook, REG_PC);
 #ifdef TRACE
 				cpu->trace_pc = cpu->trace_next_pc = REG_PC;
 				cpu->trace_nbytes = 0;
