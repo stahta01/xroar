@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6801/6803 CPUs.
  *
- *  \copyright Copyright 2021-2025 Ciaran Anscomb
+ *  \copyright Copyright 2021-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -128,10 +128,6 @@ struct MC6801 {
 
 	// Memory access cycle
 	DELEGATE_T2(void, bool, uint16) mem_cycle;
-	// Called just before instruction fetch if non-NULL
-	DELEGATE_T0(void) instruction_hook;
-	// Called after instruction is executed
-	DELEGATE_T0(void) instruction_posthook;
 
 	// Internal state
 
