@@ -129,7 +129,6 @@ struct trap_def {
 
 	// Internal
 	unsigned long counter;
-	struct breakpoint *bp;
 	struct xroar_timeout *timeout_data;
 };
 
@@ -145,6 +144,7 @@ static void set_trap(const char *);
 static void set_trap_count(const char *);
 
 static void handle_trap(void *);
+static void handle_trap_new(void *, _Bool RnW, uint32_t A);
 static void enable_all_traps(void);
 static void disable_all_traps(void);
 
@@ -2979,16 +2979,9 @@ static void enable_trap(struct trap_def *trap, _Bool enable) {
 			}
 			if (0 == c_strcasecmp(key, "pc")) {
 				if (enable) {
-					struct breakpoint *bp = xmalloc(sizeof(*bp));
-					*bp = (struct breakpoint){0};
-					bp->address = a;
-					bp->handler = DELEGATE_AS0(void, handle_trap, trap);
-					bp_add(bps, bp);
-					trap->bp = bp;
-				} else if (trap->bp) {
-					bp_remove(bps, trap->bp);
-					free(trap->bp);
-					trap->bp = NULL;
+					machine_add_breakpoint(xroar.machine, a, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
+				} else {
+					machine_remove_breakpoint(xroar.machine, a, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				}
 			} else if (0 == c_strcasecmp(key, "read")) {
 				if (enable) {
@@ -3024,6 +3017,13 @@ static void disable_all_traps(void) {
 	for (unsigned i = 0; i < num_trap_defs; ++i) {
 		enable_trap(&trap_defs[i], 0);
 	}
+}
+
+// Temporarily wrap handle_trap() until we modernise watchpoints too
+static void handle_trap_new(void *sptr, _Bool RnW, uint32_t A) {
+	(void)RnW;
+	(void)A;
+	handle_trap(sptr);
 }
 
 static void handle_trap(void *sptr) {
