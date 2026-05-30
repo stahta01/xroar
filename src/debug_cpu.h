@@ -29,9 +29,6 @@ struct debug_cpu {
 	// Part metadata
 	struct part part;
 
-	// Called after instruction is executed
-	DELEGATE_T0(void) instruction_posthook;
-
 	// Get program counter value.  Used by breakpoint hooks.
 	DELEGATE_T0(unsigned) get_pc;
 

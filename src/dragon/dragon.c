@@ -842,11 +842,11 @@ static void dragon_single_step(struct machine *m) {
 	struct dragon *md = (struct dragon *)m;
 	md->single_step = 1;
 	md->CPU->running = 0;
-	md->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
+	md->CPU->instruction_posthook = DELEGATE_AS0(void, dragon_instruction_posthook, md);
 	do {
 		md->CPU->run(md->CPU);
 	} while (md->single_step);
-	md->CPU->debug_cpu.instruction_posthook.func = NULL;
+	md->CPU->instruction_posthook.func = NULL;
 	dragon_update_vdg_mode(md);
 }
 

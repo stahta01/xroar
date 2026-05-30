@@ -896,11 +896,11 @@ static void coco3_single_step(struct machine *m) {
 	struct coco3 *mcc3 = (struct coco3 *)m;
 	mcc3->single_step = 1;
 	mcc3->CPU->running = 0;
-	mcc3->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
+	mcc3->CPU->instruction_posthook = DELEGATE_AS0(void, coco3_instruction_posthook, mcc3);
 	do {
 		mcc3->CPU->run(mcc3->CPU);
 	} while (mcc3->single_step);
-	mcc3->CPU->debug_cpu.instruction_posthook.func = NULL;
+	mcc3->CPU->instruction_posthook.func = NULL;
 }
 
 /*

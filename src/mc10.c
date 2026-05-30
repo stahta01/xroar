@@ -720,11 +720,11 @@ static void mc10_single_step(struct machine *m) {
 	struct mc10 *mp = (struct mc10 *)m;
 	mp->single_step = 1;
 	mp->CPU->running = 0;
-	mp->CPU->debug_cpu.instruction_posthook = DELEGATE_AS0(void, mc10_instruction_posthook, mp);
+	mp->CPU->instruction_posthook = DELEGATE_AS0(void, mc10_instruction_posthook, mp);
 	do {
 		mp->CPU->run(mp->CPU);
 	} while (mp->single_step);
-	mp->CPU->debug_cpu.instruction_posthook.func = NULL;
+	mp->CPU->instruction_posthook.func = NULL;
 	mc10_vdg_update_mode(mp);
 }
 

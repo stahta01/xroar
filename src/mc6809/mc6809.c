@@ -1520,7 +1520,7 @@ static void instruction_posthook(struct MC6809 *cpu) {
 		}
 	}
 #endif
-	DELEGATE_SAFE_CALL(cpu->debug_cpu.instruction_posthook);
+	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

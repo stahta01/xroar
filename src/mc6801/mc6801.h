@@ -141,7 +141,10 @@ struct MC6801 {
 	uint8_t trace_bytes[MC6801_MAX_TRACE_BYTES];
 #endif
 
+	// Called before instruction is fetched
 	DELEGATE_T1(void, uint32) instruction_hook;
+	// Called after instruction is executed
+	DELEGATE_T0(void) instruction_posthook;
 
 	// Registers
 	uint8_t reg_cc;
