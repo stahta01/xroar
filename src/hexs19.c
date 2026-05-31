@@ -136,7 +136,7 @@ int intel_hex_read(const char *filename, int autorun) {
 		}
 		if (autorun && dcpu) {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - autorunning\n", exec);
-			DELEGATE_CALL(dcpu->set_pc, exec);
+			DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
 		} else {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - not autorunning\n", exec);
 		}
@@ -211,7 +211,7 @@ int motorola_s19_read(const char *filename, int autorun) {
 		}
 		if (autorun && dcpu) {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - autorunning\n", exec);
-			DELEGATE_CALL(dcpu->set_pc, exec);
+			DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
 		} else {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - not autorunning\n", exec);
 		}
@@ -290,7 +290,7 @@ static int dragon_bin_load(const char *filename, int autorun) {
 	}
 	if (autorun && dcpu) {
 		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - autorunning\n", exec);
-		DELEGATE_CALL(dcpu->set_pc, exec);
+		DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
 	} else {
 		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - not autorunning\n", exec);
 	}
@@ -351,7 +351,7 @@ static int coco_bin_load(const char *filename, int autorun) {
 			}
 			if (autorun && dcpu) {
 				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - autorunning\n", exec);
-				DELEGATE_CALL(dcpu->set_pc, exec);
+				DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
 			} else {
 				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - not autorunning\n", exec);
 			}
