@@ -94,8 +94,6 @@ static void hd6309_set_register(void *sptr, int n, uint32_t v);
  * External interface
  */
 
-static void hd6309_set_pc(void *sptr, unsigned pc);
-
 static void hd6309_reset(struct MC6809 *cpu);
 static void hd6309_run(struct MC6809 *cpu);
 
@@ -221,9 +219,6 @@ static struct part *hd6309_allocate(void) {
 	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, hd6309_register_size, cpu);
 	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, hd6309_get_register, cpu);
 	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, hd6309_set_register, cpu);
-
-	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
-	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, hd6309_set_pc, cpu);
 
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
@@ -2023,17 +2018,6 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 	} while (cpu->running);
 
-}
-
-static void hd6309_set_pc(void *sptr, unsigned pc) {
-	struct HD6309 *hcpu = sptr;
-	struct MC6809 *cpu = &hcpu->mc6809;
-	REG_PC = pc;
-#ifdef TRACE
-	cpu->trace_pc = cpu->trace_next_pc = pc;
-	cpu->trace_nbytes = 0;
-#endif
-	hcpu->state = hd6309_state_next_instruction;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

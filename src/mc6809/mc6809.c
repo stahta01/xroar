@@ -116,8 +116,6 @@ extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
  * External interface
  */
 
-static void mc6809_set_pc(void *sptr, unsigned pc);
-
 static void mc6809_reset(struct MC6809 *cpu);
 static void mc6809_run(struct MC6809 *cpu);
 
@@ -197,9 +195,6 @@ static struct part *mc6809_allocate(void) {
 	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6809_get_register, cpu);
 	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6809_set_register, cpu);
 
-	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
-	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, mc6809_set_pc, cpu);
-
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;
 	cpu->mem_cycle = DELEGATE_DEFAULT2(void, bool, uint16);
@@ -239,11 +234,6 @@ _Bool mc6809_is_a(struct part *p, const char *name) {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-unsigned mc6809_get_pc(void *sptr) {
-	struct MC6809 *cpu = sptr;
-	return cpu->reg_pc;
-}
 
 #ifdef TRACE
 unsigned mc6809_get_trace_pc(void *sptr) {
@@ -1383,16 +1373,6 @@ static void mc6809_run(struct MC6809 *cpu) {
 
 	} while (cpu->running);
 
-}
-
-static void mc6809_set_pc(void *sptr, unsigned pc) {
-	struct MC6809 *cpu = sptr;
-	REG_PC = pc;
-#ifdef TRACE
-	cpu->trace_pc = cpu->trace_next_pc = pc;
-	cpu->trace_nbytes = 0;
-#endif
-	cpu->state = mc6809_state_next_instruction;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
