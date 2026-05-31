@@ -86,6 +86,10 @@ static const struct ser_struct_data hd6309_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static unsigned hd6309_register_size(void *sptr, int n);
+static uint32_t hd6309_get_register(void *sptr, int n);
+static void hd6309_set_register(void *sptr, int n, uint32_t v);
+
 /*
  * External interface
  */
@@ -209,6 +213,14 @@ static struct part *hd6309_allocate(void) {
 	struct part *p = &cpu->debug_cpu.part;
 
 	*hcpu = (struct HD6309){0};
+
+	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
+	cpu->debug_cpu.num_registers = 13;
+	cpu->debug_cpu.register_sp = 7;
+	cpu->debug_cpu.register_pc = 8;
+	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, hd6309_register_size, cpu);
+	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, hd6309_get_register, cpu);
+	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, hd6309_set_register, cpu);
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
 	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, hd6309_set_pc, cpu);
@@ -2189,4 +2201,58 @@ static void instruction_posthook(struct MC6809 *cpu) {
 	}
 #endif
 	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static const unsigned register_size[13] = { 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 2 };
+
+static unsigned hd6309_register_size(void *sptr, int n) {
+	(void)sptr;
+        if (n < 0 || (size_t)n > ARRAY_N_ELEMENTS(register_size))
+                return 0;
+        return register_size[n];
+}
+
+static uint32_t hd6309_get_register(void *sptr, int n) {
+	struct HD6309 *hcpu = sptr;
+	struct MC6809 *cpu = &hcpu->mc6809;
+	switch (n) {
+	case 0: return REG_CC;
+	case 1: return REG_A;
+	case 2: return REG_B;
+	case 3: return REG_DP;
+	case 4: return REG_X;
+	case 5: return REG_Y;
+	case 6: return REG_U;
+	case 7: return REG_S;
+	case 8: return REG_PC;
+	case 9: return REG_MD;
+	case 10: return REG_E;
+	case 11: return REG_F;
+	case 12: return REG_V;
+	default: break;
+	}
+	return (uint32_t)-1;
+}
+
+static void hd6309_set_register(void *sptr, int n, uint32_t v) {
+	struct HD6309 *hcpu = sptr;
+	struct MC6809 *cpu = &hcpu->mc6809;
+	switch (n) {
+	case 0: REG_CC = v; break;
+	case 1: REG_A = v; break;
+	case 2: REG_B = v; break;
+	case 3: REG_DP = v; break;
+	case 4: REG_X = v; break;
+	case 5: REG_Y = v; break;
+	case 6: REG_U = v; break;
+	case 7: REG_S = v; break;
+	case 8: REG_PC = v; break;
+	case 9: REG_MD = v; break;
+	case 10: REG_E = v; break;
+	case 11: REG_F = v; break;
+	case 12: REG_V = v; break;
+	default: break;
+	}
 }

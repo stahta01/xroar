@@ -103,6 +103,10 @@ const struct ser_struct_data mc6809_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static unsigned mc6809_register_size(void *sptr, int n);
+static uint32_t mc6809_get_register(void *sptr, int n);
+static void mc6809_set_register(void *sptr, int n, uint32_t v);
+
 extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
 extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val);
@@ -184,6 +188,14 @@ static struct part *mc6809_allocate(void) {
 	struct part *p = &cpu->debug_cpu.part;
 
 	*cpu = (struct MC6809){0};
+
+	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
+	cpu->debug_cpu.num_registers = 9;
+	cpu->debug_cpu.register_sp = 7;
+	cpu->debug_cpu.register_pc = 8;
+	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, mc6809_register_size, cpu);
+	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6809_get_register, cpu);
+	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6809_set_register, cpu);
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6809_get_pc, cpu);
 	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, mc6809_set_pc, cpu);
@@ -1556,4 +1568,50 @@ static uint8_t op_xclr(struct MC6809 *cpu, uint8_t in) {
 	CLR_NZV;
 	REG_CC |= CC_Z;
 	return 0;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Debug interface
+
+static const unsigned register_size[9] = { 1, 1, 1, 1, 2, 2, 2, 2, 2 };
+
+static unsigned mc6809_register_size(void *sptr, int n) {
+	(void)sptr;
+	if (n < 0 || (size_t)n > ARRAY_N_ELEMENTS(register_size))
+		return 0;
+	return register_size[n];
+}
+
+static uint32_t mc6809_get_register(void *sptr, int n) {
+	struct MC6809 *cpu = sptr;
+	switch (n) {
+	case 0: return REG_CC;
+	case 1: return REG_A;
+	case 2: return REG_B;
+	case 3: return REG_DP;
+	case 4: return REG_X;
+	case 5: return REG_Y;
+	case 6: return REG_U;
+	case 7: return REG_S;
+	case 8: return REG_PC;
+	default: break;
+	}
+	return (uint32_t)-1;
+}
+
+static void mc6809_set_register(void *sptr, int n, uint32_t v) {
+	struct MC6809 *cpu = sptr;
+	switch (n) {
+	case 0: REG_CC = v; break;
+	case 1: REG_A = v; break;
+	case 2: REG_B = v; break;
+	case 3: REG_DP = v; break;
+	case 4: REG_X = v; break;
+	case 5: REG_Y = v; break;
+	case 6: REG_U = v; break;
+	case 7: REG_S = v; break;
+	case 8: REG_PC = v; break;
+	default: break;
+	}
 }

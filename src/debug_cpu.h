@@ -2,7 +2,7 @@
  *
  *  \brief Generic CPU debug interface.
  *
- *  \copyright Copyright 2021 Ciaran Anscomb
+ *  \copyright Copyright 2021-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -25,9 +25,34 @@
 
 #include "part.h"
 
+enum {
+	DCPU_ENDIAN_BIG,
+	DCPU_ENDIAN_LITTLE,
+};
+
 struct debug_cpu {
 	// Part metadata
 	struct part part;
+
+	// Target byte order (for GDB to send registers)
+	int endian;
+
+	// Number of registers we can query through this interface
+	unsigned num_registers;
+
+	// Indices of registers with common special meaning
+	int register_sp;
+	int register_pc;
+
+	// Query register size in bytes.  Returns 0 for non-existant registers.
+	DELEGATE_T1(unsigned, int) register_size;
+
+	// Get/set register values
+	DELEGATE_T1(uint32, int) get_register;
+	DELEGATE_T2(void, int, uint32) set_register;
+
+	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	// Old interface
 
 	// Get program counter value.  Used by breakpoint hooks.
 	DELEGATE_T0(unsigned) get_pc;

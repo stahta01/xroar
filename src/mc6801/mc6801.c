@@ -132,6 +132,10 @@ static const struct ser_struct_data mc6801_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static unsigned mc6801_register_size(void *sptr, int n);
+static uint32_t mc6801_get_register(void *sptr, int n);
+static void mc6801_set_register(void *sptr, int n, uint32_t v);
+
 extern inline void MC6801_NMI_SET(struct MC6801 *cpu, _Bool val);
 extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val);
 
@@ -240,6 +244,14 @@ static struct part *mc6801_allocate(void) {
 	struct part *p = &cpu->debug_cpu.part;
 
 	*cpu = (struct MC6801){0};
+
+	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
+	cpu->debug_cpu.num_registers = 6;
+	cpu->debug_cpu.register_sp = 4;
+	cpu->debug_cpu.register_pc = 5;
+	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, mc6801_register_size, cpu);
+	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6801_get_register, cpu);
+	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6801_set_register, cpu);
 
 	cpu->debug_cpu.get_pc = DELEGATE_AS0(unsigned, mc6801_get_pc, cpu);
 	cpu->debug_cpu.set_pc = DELEGATE_AS1(void, unsigned, mc6801_set_pc, cpu);
@@ -1362,4 +1374,42 @@ static void instruction_posthook(struct MC6801 *cpu) {
 	}
 #endif
 	DELEGATE_SAFE_CALL(cpu->instruction_posthook);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static const unsigned register_size[6] = { 1, 1, 1, 2, 2, 2 };
+
+static unsigned mc6801_register_size(void *sptr, int n) {
+	(void)sptr;
+	if (n < 0 || (size_t)n > ARRAY_N_ELEMENTS(register_size))
+		return 0;
+	return register_size[n];
+}
+
+static uint32_t mc6801_get_register(void *sptr, int n) {
+	struct MC6801 *cpu = sptr;
+	switch (n) {
+	case 0: return REG_CC;
+	case 1: return REG_A;
+	case 2: return REG_B;
+	case 3: return REG_X;
+	case 4: return REG_SP;
+	case 5: return REG_PC;
+	default: break;
+	}
+	return (uint32_t)-1;
+}
+
+static void mc6801_set_register(void *sptr, int n, uint32_t v) {
+	struct MC6801 *cpu = sptr;
+	switch (n) {
+	case 0: REG_CC = v; break;
+	case 1: REG_A = v; break;
+	case 2: REG_B = v; break;
+	case 3: REG_X = v; break;
+	case 4: REG_SP = v; break;
+	case 5: REG_PC = v; break;
+	default: break;
+	}
 }
