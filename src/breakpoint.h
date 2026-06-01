@@ -62,6 +62,48 @@ void bp_instruction_hook(void *sptr, uint32_t A);
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /*
+ * Watchpoints.  Trap on memory range reads and writes.  These are simple
+ * linked lists, so less efficient than breakpoints, but we need to match on
+ * ranges.
+ */
+
+struct bp_watchpoint {
+	struct bp_watchpoint *next;
+	uint32_t Astart;
+	uint32_t Aend;
+	DELEGATE_T2(void, bool, uint32) handler;
+};
+
+struct bp_watchpoint_set {
+	struct bp_watchpoint *list[2];
+};
+
+// Add a watchpoint.  Returns 1 if successful, else 0 (e.g. identical
+// watchpoint already exists)
+_Bool bp_watchpoint_add(struct bp_watchpoint_set *wps, _Bool Rnw,
+			uint32_t Astart, uint32_t Aend,
+			DELEGATE_T2(void, bool, uint32) handler);
+
+// Remove specific watchpoint.
+void bp_watchpoint_remove(struct bp_watchpoint_set *wps, int Rnw,
+			  int32_t Astart, uint32_t Aend,
+			  DELEGATE_T2(void, bool, uint32) handler);
+
+// Inlined watchpoint match & dispatch
+inline void bp_check_watchpoints(struct bp_watchpoint_set *set, _Bool RnW, uint32_t A) {
+	struct bp_watchpoint *list = set->list[RnW];
+	struct bp_watchpoint *next;
+	for (struct bp_watchpoint *iter = list; iter; iter = next) {
+		next = iter->next;
+		if (A >= iter->Astart && A <= iter->Aend) {
+			DELEGATE_CALL(iter->handler, RnW, A);
+		}
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/*
  * Breakpoint support both for internal hooks and user-added traps (e.g. via
  * the GDB target).
  *

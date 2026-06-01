@@ -125,6 +125,59 @@ void bp_breakpoint_remove(struct bp_breakpoint_set *bbs, int32_t A,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+_Bool bp_watchpoint_add(struct bp_watchpoint_set *set, _Bool RnW, uint32_t Astart,
+			uint32_t Aend, DELEGATE_T2(void, bool, uint32) handler) {
+	struct bp_watchpoint **list = &set->list[RnW];
+	// Does this watchpoint with this handler already exist?
+	for (struct bp_watchpoint *iter = *list; iter; iter = iter->next) {
+		if (iter->Astart == Astart && iter->Aend == Aend &&
+		    DELEGATE_EQ(iter->handler, handler)) {
+			BP_MOD_DEBUG(2, "watchpoint already exists with handler @ 0x%04x..0x%04x\n", Astart, Aend);
+			return 0;
+		}
+	}
+	struct bp_watchpoint *wp = xmalloc(sizeof(*wp));
+	*wp = (struct bp_watchpoint){0};
+	wp->next = *list;
+	wp->Astart = Astart;
+	wp->Aend = Aend;
+	wp->handler = handler;
+	*list = wp;
+	BP_MOD_DEBUG(2, "added %s watchpoint @ 0x%04x..0x%04x\n", RnW ? "read" : "write", Astart, Aend);
+	return 1;
+}
+
+void bp_watchpoint_remove(struct bp_watchpoint_set *set, int RnW, int32_t Astart,
+			  uint32_t Aend, DELEGATE_T2(void, bool, uint32) handler) {
+	if (RnW < 0) {
+		bp_watchpoint_remove(set, 0, Astart, Aend, handler);
+		bp_watchpoint_remove(set, 1, Astart, Aend, handler);
+		return;
+	}
+	RnW = !!RnW;  // sanitise
+
+	struct bp_watchpoint **list = &set->list[RnW];
+	struct bp_watchpoint **nextp;
+	for (struct bp_watchpoint **iterp = list; *iterp; iterp = nextp) {
+		struct bp_watchpoint *wp = *iterp;
+		nextp = &wp->next;
+		if ((Astart < 0 || (wp->Astart == (uint32_t)Astart && wp->Aend == Aend)) &&
+		    (handler.func == NULL || DELEGATE_EQ(wp->handler, handler))) {
+			BP_MOD_DEBUG(2, "removed %s watchpoint @ 0x%04x..0x%04x\n", RnW ? "read" : "write", wp->Astart, wp->Aend);
+			*iterp = wp->next;
+			nextp = iterp;
+			free(wp);
+		}
+	}
+	if (*list == NULL) {
+		BP_MOD_DEBUG(2, "%s watchpoint list empty\n", RnW ? "read" : "write");
+	}
+}
+
+extern inline void bp_check_watchpoints(struct bp_watchpoint_set *set, _Bool RnW, uint32_t A);
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 struct bp_session_private {
 	struct bp_session bps;
 	struct slist *instruction_list;
