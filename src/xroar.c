@@ -2956,11 +2956,6 @@ static void enable_trap(struct trap_def *trap, _Bool enable) {
 		return;
 	}
 	assert(xroar.machine != NULL);
-	struct bp_session *bps = xroar.machine->get_interface(xroar.machine, "bp-session");
-	if (!bps) {
-		LOG_WARN("%s: no breakpoint session\n", xroar.machine_config->name);
-		return;
-	}
 	char *cond_copy = xstrdup(trap->cond);
 	char *val = cond_copy;
 	char *key = strsep(&val, "=");
@@ -2985,21 +2980,23 @@ static void enable_trap(struct trap_def *trap, _Bool enable) {
 				}
 			} else if (0 == c_strcasecmp(key, "read")) {
 				if (enable) {
-					bp_wp_add_range(bps, BP_WP_READ, a, b, DELEGATE_AS0(void, handle_trap, trap));
+					machine_add_watchpoint(xroar.machine, 1, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				} else {
-					bp_wp_remove_range(bps, BP_WP_READ, a, b);
+					machine_remove_watchpoint(xroar.machine, 1, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				}
 			} else if (0 == c_strcasecmp(key, "write")) {
 				if (enable) {
-					bp_wp_add_range(bps, BP_WP_WRITE, a, b, DELEGATE_AS0(void, handle_trap, trap));
+					machine_add_watchpoint(xroar.machine, 0, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				} else {
-					bp_wp_remove_range(bps, BP_WP_WRITE, a, b);
+					machine_remove_watchpoint(xroar.machine, 0, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				}
 			} else if (0 == c_strcasecmp(key, "access")) {
 				if (enable) {
-					bp_wp_add_range(bps, BP_WP_ACCESS, a, b, DELEGATE_AS0(void, handle_trap, trap));
+					machine_add_watchpoint(xroar.machine, 1, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
+					machine_add_watchpoint(xroar.machine, 0, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				} else {
-					bp_wp_remove_range(bps, BP_WP_ACCESS, a, b);
+					machine_remove_watchpoint(xroar.machine, 1, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
+					machine_remove_watchpoint(xroar.machine, 0, a, b, DELEGATE_AS2(void, bool, uint32, handle_trap_new, trap));
 				}
 			}
 		}
