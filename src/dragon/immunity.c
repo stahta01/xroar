@@ -152,10 +152,10 @@ void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct dragon *md = cj->dragon;
 	uint8_t data = md->CPU->D;
 	_Bool ignore_sam = 0;
-  uint32_t addr = (uint32_t)A;
+	uint32_t addr = (uint32_t)A;
 
-	// Check traps based on untransformed address
-	dragon_check_traps(md, RnW, A);
+	// Check watchpoints based on untransformed address
+	bp_check_watchpoints(&md->watchpoint_set, RnW, A);
 
 	if (A >= 0xffa0 && A <= 0xffaf) { // MMU registers
 		if (RnW)

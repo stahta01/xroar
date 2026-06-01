@@ -430,8 +430,8 @@ static void deluxecoco_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
-	// Check traps
-	dragon_check_traps(md, RnW, A);
+	// Check watchpoints
+	bp_check_watchpoints(&md->watchpoint_set, RnW, A);
 
 	// SAM decode / timing
 	int ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);

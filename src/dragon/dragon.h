@@ -87,13 +87,13 @@ struct dragon {
 	uint8_t Dread;
 
 	// Debug
-	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
 	struct bp_breakpoint_set breakpoint_set;
+	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -142,8 +142,8 @@ extern struct xconfig_option const dragon_options[];
 //
 // The general order of operation for the cpy_cycle() delegate is as follows:
 //
-// Calls dragon_check_traps() to fire memory access traps using the original
-// address accessed by the CPU.
+// Calls bp_check_watchpoints() (which may be inlined) to check the memory
+// access traps.
 //
 // Possibly modify address seen by SAM.
 //
@@ -155,21 +155,6 @@ extern struct xconfig_option const dragon_options[];
 // Possibly modify address presented to RAM.
 //
 // Calls dragon_cpu_cycle() to access RAM and devices common to the arch.
-
-// Check memory access traps.
-#ifdef WANT_GDB_TARGET
-inline void dragon_check_traps(struct dragon *md, _Bool RnW, uint16_t A) {
-	if (RnW) {
-		if (md->bp_session->wp_read_list)
-			bp_wp_read_hook(md->bp_session, A);
-	} else {
-		if (md->bp_session->wp_write_list)
-			bp_wp_write_hook(md->bp_session, A);
-	}
-}
-#else
-#define dragon_check_traps(...)
-#endif
 
 // Advance clock and run scheduled events.
 inline void dragon_advance_clock(struct dragon *md, int ncycles) {

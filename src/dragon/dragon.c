@@ -208,7 +208,6 @@ static void dragon_remove_cart(struct machine *m);
 static enum machine_run_state dragon_run(struct machine *m, int ncycles);
 static void dragon_single_step(struct machine *m);
 static void dragon_signal(struct machine *m, int sig);
-static void dragon_trap(void *sptr);
 
 static void dragon_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool dragon_set_pause(struct machine *m, int state);
@@ -227,6 +226,12 @@ static int32_t dragon_get_symbol(struct machine *m, const char *label);
 static void dragon_add_breakpoint(struct machine *m, uint32_t A,
 				  DELEGATE_T2(void, bool, uint32) handler);
 static void dragon_remove_breakpoint(struct machine *m, int32_t A,
+				     DELEGATE_T2(void, bool, uint32) handler);
+static void dragon_add_watchpoint(struct machine *m, _Bool RnW,
+				  uint32_t Astart, uint32_t Aend,
+				  DELEGATE_T2(void, bool, uint32) handler);
+static void dragon_remove_watchpoint(struct machine *m, int RnW,
+				     int32_t Astart, uint32_t Aend,
 				     DELEGATE_T2(void, bool, uint32) handler);
 
 static void joystick_update(void *sptr);
@@ -285,6 +290,8 @@ void dragon_allocate_common(struct dragon *md) {
 	m->debug.get_symbol = dragon_get_symbol;
 	m->debug.add_breakpoint = dragon_add_breakpoint;
 	m->debug.remove_breakpoint = dragon_remove_breakpoint;
+	m->debug.add_watchpoint = dragon_add_watchpoint;
+	m->debug.remove_watchpoint = dragon_remove_watchpoint;
 
 	m->keyboard.type = dkbd_layout_dragon;
 
@@ -443,11 +450,6 @@ _Bool dragon_finish_common(struct dragon *md) {
 	// SAM VDG update handler
 	md->SAM->vdg_update = DELEGATE_AS0(void, mc6847_update, md->VDG);
 
-	// Breakpoint session
-	md->bp_session = bp_session_new(m);
-	assert(md->bp_session != NULL);  // this shouldn't fail
-	md->bp_session->trap_handler = DELEGATE_AS0(void, dragon_trap, m);
-
 	// PIAs
 	md->PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, md);
 	md->PIA0->a.data_postwrite = DELEGATE_AS0(void, pia0a_data_postwrite, md);
@@ -602,7 +604,7 @@ _Bool dragon_finish_common(struct dragon *md) {
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar.cfg.debug.gdb) {
-		md->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m, md->bp_session);
+		md->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m);
 	}
 #endif
 
@@ -632,9 +634,6 @@ void dragon_free_common(struct part *p) {
 	}
 	if (md->printer_interface) {
 		printer_interface_free(md->printer_interface);
-	}
-	if (md->bp_session) {
-		bp_session_free(md->bp_session);
 	}
 	rombank_free(md->ext_charset);
 }
@@ -862,11 +861,6 @@ static void dragon_signal(struct machine *m, int sig) {
 	md->CPU->running = 0;
 }
 
-static void dragon_trap(void *sptr) {
-	struct machine *m = sptr;
-	dragon_signal(m, MACHINE_SIGTRAP);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void dragon_ui_set_keymap(void *sptr, int tag, void *smsg) {
@@ -985,8 +979,6 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 		return md->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return update_audio_from_tape;
-	} else if (0 == strcmp(ifname, "bp-session")) {
-		return md->bp_session;
 	}
 	return NULL;
 }
@@ -1026,10 +1018,6 @@ static void dragon_instruction_posthook(void *sptr) {
 static void read_byte(struct dragon *md, unsigned A);
 static void write_byte(struct dragon *md, unsigned A);
 
-// Check memory access traps
-#ifdef WANT_GDB_TARGET
-extern inline void dragon_check_traps(struct dragon *md, _Bool RnW, uint16_t A);
-#endif
 // Advance clock and run scheduled events
 extern inline void dragon_advance_clock(struct dragon *md, int ncycles);
 
@@ -1041,8 +1029,8 @@ extern inline void dragon_advance_clock(struct dragon *md, int ncycles);
 static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	struct dragon *md = sptr;
 
-	// Check traps
-	dragon_check_traps(md, RnW, A);
+	// Check watchpoints
+	bp_check_watchpoints(&md->watchpoint_set, RnW, A);
 
 	// SAM decode / timing
 	int ncycles = md->SAM->mem_cycle(md->SAM, RnW, A);
@@ -1310,6 +1298,23 @@ static void dragon_remove_breakpoint(struct machine *m, int32_t A,
 	if (!md->breakpoint_set.nbreakpoints) {
 		md->CPU->instruction_hook.func = NULL;
 	}
+}
+
+static void dragon_add_watchpoint(struct machine *m, _Bool RnW,
+				  uint32_t Astart, uint32_t Aend,
+				  DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct dragon *md = (struct dragon *)m;
+	if (!bp_watchpoint_add(&md->watchpoint_set, RnW, Astart, Aend, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add watchpoint @ 0x%04x-0x%04x\n", Astart, Aend);
+	}
+}
+
+static void dragon_remove_watchpoint(struct machine *m, int RnW,
+				     int32_t Astart, uint32_t Aend,
+				     DELEGATE_T2(void, bool, uint32) handler) {
+	struct dragon *md = (struct dragon *)m;
+	bp_watchpoint_remove(&md->watchpoint_set, RnW, Astart, Aend, handler);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
