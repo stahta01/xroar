@@ -214,6 +214,17 @@ struct machine {
 		// a wildcard for that field.
 		void (*remove_breakpoint)(struct machine *, int32_t A,
 					  DELEGATE_T2(void, bool, uint32) handler);
+
+		// Add a watchpoint
+		void (*add_watchpoint)(struct machine *, _Bool RnW,
+				       uint32_t Astart, uint32_t Aend,
+				       DELEGATE_T2(void, bool, uint32) handler);
+
+		// Remove a watchpoint, wildcard matching similar to breakpoints,
+		// though only Astart < 0 is checked.
+		void (*remove_watchpoint)(struct machine *, int RnW,
+					  int32_t Astart, uint32_t Aend,
+					  DELEGATE_T2(void, bool, uint32) handler);
 	} debug;
 };
 
@@ -251,6 +262,17 @@ void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry
 void machine_add_hbreak(struct machine *m, uint32_t A);
 void machine_remove_hbreak(struct machine *m, int32_t A);
 #define machine_remove_hbreak_all(m) machine_remove_hbreak((m), -1)
+#endif
+
+#define machine_add_watchpoint(m,rnw,as,ae,h) (m)->debug.add_watchpoint((m), (rnw), (as), (ae), (h))
+#define machine_remove_watchpoint(m,rnw,as,ae,h) (m)->debug.remove_watchpoint((m), (rnw), (as), (ae), (h))
+
+#define machine_remove_watchpoint_all(m,s) machine_remove_watchpoint((m), -1, 0, DELEGATE_AS2(void, bool, uint32, NULL, (s)))
+
+#ifdef WANT_GDB_TARGET
+void machine_add_hwatch(struct machine *m, _Bool RnW, uint32_t Astart, uint32_t Aend);
+void machine_remove_hwatch(struct machine *m, int RnW, int32_t Astart, uint32_t Aend);
+#define machine_remove_hwatch_all(m) machine_remove_hwatch((m), -1, -1, 0)
 #endif
 
 struct machine_module {

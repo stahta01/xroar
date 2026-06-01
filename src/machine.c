@@ -486,4 +486,12 @@ void machine_add_hbreak(struct machine *m, uint32_t A) {
 void machine_remove_hbreak(struct machine *m, int32_t A) {
 	machine_remove_breakpoint(m, A, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
 }
+
+void machine_add_hwatch(struct machine *m, _Bool RnW, uint32_t Astart, uint32_t Aend) {
+	machine_add_watchpoint(m, RnW, Astart, Aend, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
+}
+
+void machine_remove_hwatch(struct machine *m, int RnW, int32_t Astart, uint32_t Aend) {
+	machine_remove_watchpoint(m, RnW, Astart, Aend, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
+}
 #endif
