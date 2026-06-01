@@ -153,13 +153,13 @@ struct coco3 {
 	int cycles;
 
 	// Debug
-	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
 #endif
 	struct bp_breakpoint_set breakpoint_set;
+	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -291,7 +291,6 @@ static void coco3_reset(struct machine *m, _Bool hard);
 static enum machine_run_state coco3_run(struct machine *m, int ncycles);
 static void coco3_single_step(struct machine *m);
 static void coco3_signal(struct machine *m, int sig);
-static void coco3_trap(void *sptr);
 
 static void coco3_ui_set_keymap(void *, int tag, void *smsg);
 static _Bool coco3_set_pause(struct machine *m, int state);
@@ -310,6 +309,12 @@ static int32_t coco3_get_symbol(struct machine *m, const char *label);
 static void coco3_add_breakpoint(struct machine *m, uint32_t A,
 				 DELEGATE_T2(void, bool, uint32) handler);
 static void coco3_remove_breakpoint(struct machine *m, int32_t A,
+				    DELEGATE_T2(void, bool, uint32) handler);
+static void coco3_add_watchpoint(struct machine *m, _Bool RnW,
+				 uint32_t Astart, uint32_t Aend,
+				 DELEGATE_T2(void, bool, uint32) handler);
+static void coco3_remove_watchpoint(struct machine *m, int RnW,
+				    int32_t Astart, uint32_t Aend,
 				    DELEGATE_T2(void, bool, uint32) handler);
 
 static void keyboard_update(void *sptr);
@@ -395,6 +400,8 @@ static struct part *coco3_allocate(void) {
 	m->debug.get_symbol = coco3_get_symbol;
 	m->debug.add_breakpoint = coco3_add_breakpoint;
 	m->debug.remove_breakpoint = coco3_remove_breakpoint;
+	m->debug.add_watchpoint = coco3_add_watchpoint;
+	m->debug.remove_watchpoint = coco3_remove_watchpoint;
 
 	m->keyboard.type = dkbd_layout_coco3;
 
@@ -620,11 +627,6 @@ static _Bool coco3_finish(struct part *p) {
 	mcc3->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, tcc1014_mem_cycle, mcc3->GIME);
 	mcc3->GIME->CPUD = &mcc3->CPU->D;
 
-	// Breakpoint session
-	mcc3->bp_session = bp_session_new(m);
-	assert(mcc3->bp_session != NULL);  // this shouldn't fail
-	mcc3->bp_session->trap_handler = DELEGATE_AS0(void, coco3_trap, m);
-
 	// PIAs
 
 	mcc3->PIA0->a.data_preread = DELEGATE_AS0(void, pia0a_data_preread, mcc3);
@@ -674,7 +676,7 @@ static _Bool coco3_finish(struct part *p) {
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar.cfg.debug.gdb) {
-		mcc3->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m, mcc3->bp_session);
+		mcc3->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m);
 	}
 #endif
 
@@ -705,9 +707,6 @@ static void coco3_free(struct part *p) {
 	machine_remove_breakpoint_all(&mcc3->public, mcc3);
 	if (mcc3->printer_interface) {
 		printer_interface_free(mcc3->printer_interface);
-	}
-	if (mcc3->bp_session) {
-		bp_session_free(mcc3->bp_session);
 	}
 	rombank_free(mcc3->ROM0);
 }
@@ -914,11 +913,6 @@ static void coco3_signal(struct machine *m, int sig) {
 	mcc3->CPU->running = 0;
 }
 
-static void coco3_trap(void *sptr) {
-	struct machine *m = sptr;
-	coco3_signal(m, MACHINE_SIGTRAP);
-}
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void coco3_ui_set_keymap(void *sptr, int tag, void *smsg) {
@@ -1049,8 +1043,6 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 		return mcc3->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return update_audio_from_tape;
-	} else if (0 == strcmp(ifname, "bp-session")) {
-		return mcc3->bp_session;
 	}
 	return NULL;
 }
@@ -1244,17 +1236,12 @@ static void cpu_cycle(void *sptr, int ncycles, _Bool RnW, uint16_t A) {
 
 	if (RnW) {
 		read_byte(mcc3, A);
-#ifdef WANT_GDB_TARGET
-		if (mcc3->bp_session->wp_read_list)
-			bp_wp_read_hook(mcc3->bp_session, A);
-#endif
 	} else {
 		write_byte(mcc3, A);
-#ifdef WANT_GDB_TARGET
-		if (mcc3->bp_session->wp_write_list)
-			bp_wp_write_hook(mcc3->bp_session, A);
-#endif
 	}
+#ifdef WANT_GDB_TARGET
+	bp_check_watchpoints(&mcc3->watchpoint_set, RnW, A);
+#endif
 	mcc3->GIME->IL1 = (PIA_VALUE_A(mcc3->PIA0) | 0x80) != 0xff;
 }
 
@@ -1336,6 +1323,23 @@ static void coco3_remove_breakpoint(struct machine *m, int32_t A,
 	if (!mcc3->breakpoint_set.nbreakpoints) {
 		mcc3->CPU->instruction_hook.func = NULL;
 	}
+}
+
+static void coco3_add_watchpoint(struct machine *m, _Bool RnW,
+				 uint32_t Astart, uint32_t Aend,
+				 DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct coco3 *mcc3 = (struct coco3 *)m;
+	if (!bp_watchpoint_add(&mcc3->watchpoint_set, RnW, Astart, Aend, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add watchpoint @ 0x%04x-0x%04x\n", Astart, Aend);
+	}
+}
+
+static void coco3_remove_watchpoint(struct machine *m, int RnW,
+				    int32_t Astart, uint32_t Aend,
+				    DELEGATE_T2(void, bool, uint32) handler) {
+	struct coco3 *mcc3 = (struct coco3 *)m;
+	bp_watchpoint_remove(&mcc3->watchpoint_set, RnW, Astart, Aend, handler);
 }
 
 static uint16_t fetch_vram(void *sptr, uint32_t A) {
