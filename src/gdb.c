@@ -169,6 +169,7 @@ static void general_set(struct gdb_interface_private *gip, char *args);  // Q
 static void add_breakpoint(struct gdb_interface_private *gip, char *args);  // Z
 static void remove_breakpoint(struct gdb_interface_private *gip, char *args);  // z
 
+static int qRcmd(struct gdb_interface_private *gip, char *args);
 static void send_supported(struct gdb_interface_private *gip, char *args);  // qSupported
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -604,6 +605,9 @@ static ssize_t read_packet(struct gdb_interface_private *gip, void *buf, size_t 
 	return -GDBE_READ_ERROR;
 }
 
+// Send a standard response packet.  Format is '$' followed by escaped data,
+// followed by '#' and a 2-byte hex checksum.
+
 static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, size_t count) {
 	const char *cbuf = buf;
 	char tmpbuf[4];
@@ -660,9 +664,14 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 	return count;
 }
 
+// Wrapper sends a NUL-terminated string as a response packet.
+
 static ssize_t send_packet_string(struct gdb_interface_private *gip, const char *string) {
 	return send_packet(gip, string, strlen(string));
 }
+
+// Generates a hex-encoded response packet and sends it.  This is only
+// currently used for the weird format of qRcmd responses.
 
 static ssize_t send_packet_hexstring(struct gdb_interface_private *gip, const char *string) {
 	size_t count = strlen(string);
@@ -757,10 +766,14 @@ static void set_general_registers(struct gdb_interface_private *gip, char *args)
 	send_packet_string(gip, "OK");
 }
 
+// Response handler for 'm' (read memory)
+
 static void send_memory(struct gdb_interface_private *gip, char *args) {
 	char *addr = strsep(&args, ",");
-	if (!args || !addr)
-		goto error;
+	if (!args || !addr) {
+		send_packet(gip, NULL, 0);
+		return;
+	}
 	uint16_t A = strtoul(addr, NULL, 16);
 	unsigned length = strtoul(args, NULL, 16);
 	uint8_t csum = 0;
@@ -780,9 +793,6 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
 	LOG_MOD_DEBUG_GDB(LOG_GDB_PACKET, "gdb", "packet sent (binary): %u bytes\n", length);
-	return;
-error:
-	send_packet(gip, NULL, 0);
 }
 
 static void set_memory(struct gdb_interface_private *gip, char *args) {
@@ -884,51 +894,7 @@ error:
 	send_packet_string(gip, "E00");
 }
 
-static int qRcmd(struct gdb_interface_private *gip, char *args) {
-	if (!*args) {
-		/* no words received, print usage */
-		send_packet_hexstring(gip, "monitor cycles [STRING]\n"
-					   "monitor trace VALUE\n");
-		return 0;
-	}
-
-	/* decode hex string in place */
-	char *p;
-	char *np;
-	for (p = np = args; *p; p += 2) {
-		if (!p[1])
-			return 1; /* odd number of hex digits */
-		int v = hex8(p);
-		if (v < 0)
-			return 1;
-		*np++ = v;
-	}
-	*np = '\0';
-
-	// Parse our own gdb "monitor" command.  If no args found, use an empty
-	// string for printing later.  Note: The temporary assignment to argptr
-	// here works around the GCC -fanalyzer false positive
-	// -Wanalyzer-deref-before-check.
-	char *argptr = args;
-	char *cmd = strsep(&argptr, " ");
-	args = argptr ? argptr : "";
-
-	char reply[255];
-	*reply = '\0';
-	if (0 == strcmp(cmd, "cycles")) {
-		sprintf(reply, "%u cycles %s\n", (uint32_t) event_current_tick / 16, args);
-	} else if (0 == strcmp(cmd, "trace")) {
-		logging.trace_cpu = atoi(args);
-	} else {
-		sprintf(reply, "unknown monitor command\n");
-	}
-
-	if (*reply)
-		send_packet_hexstring(gip, reply);
-	else
-		send_packet_string(gip, "OK");
-	return 0;
-}
+// General query handler ('q' packets)
 
 static void general_query(struct gdb_interface_private *gip, char *args) {
 	if (0 == strncmp(args, "Rcmd", 4)) {
@@ -975,6 +941,8 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 	}
 }
 
+// General set handler ('Q' packets)
+
 static void general_set(struct gdb_interface_private *gip, char *args) {
 	char *set = strsep(&args, ":");
 	if (0 == strncmp(set, "xroar.", 6)) {
@@ -994,6 +962,8 @@ static void general_set(struct gdb_interface_private *gip, char *args) {
 	send_packet(gip, NULL, 0);
 	return;
 }
+
+// Add breakpoint ('Z' packet)
 
 static void add_breakpoint(struct gdb_interface_private *gip, char *args) {
 	char *type_str = strsep(&args, ",");
@@ -1025,6 +995,8 @@ static void add_breakpoint(struct gdb_interface_private *gip, char *args) {
 error:
 	send_packet_string(gip, "E00");
 }
+
+// Remove breakpoint ('z' packet)
 
 static void remove_breakpoint(struct gdb_interface_private *gip, char *args) {
 	char *type_str = strsep(&args, ",");
@@ -1059,12 +1031,67 @@ error:
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// General query response handlers
+
 // qSupported
 
 static void send_supported(struct gdb_interface_private *gip, char *args) {
 	(void)args;  // args ignored at the moment
 	snprintf(packet, sizeof(packet), "PacketSize=%zx", sizeof(packet)-1);
 	send_packet_string(gip, packet);
+}
+
+// Response handler for 'qRcmd' (execute command).
+//
+// We support the following commands:
+//
+// monitor cycles       - report number of elapsed cycles
+// monitor trace n      - turn trace mode on (non-zero) or off (zero)
+
+static int qRcmd(struct gdb_interface_private *gip, char *args) {
+	if (!*args) {
+		/* no words received, print usage */
+		send_packet_hexstring(gip, "monitor cycles [STRING]\n"
+					   "monitor trace VALUE\n");
+		return 0;
+	}
+
+	/* decode hex string in place */
+	char *p;
+	char *np;
+	for (p = np = args; *p; p += 2) {
+		if (!p[1])
+			return 1; /* odd number of hex digits */
+		int v = hex8(p);
+		if (v < 0)
+			return 1;
+		*np++ = v;
+	}
+	*np = '\0';
+
+	// Parse our own gdb "monitor" command.  If no args found, use an empty
+	// string for printing later.  Note: The temporary assignment to argptr
+	// here works around the GCC -fanalyzer false positive
+	// -Wanalyzer-deref-before-check.
+	char *argptr = args;
+	char *cmd = strsep(&argptr, " ");
+	args = argptr ? argptr : "";
+
+	char reply[255];
+	*reply = '\0';
+	if (0 == strcmp(cmd, "cycles")) {
+		sprintf(reply, "%zu cycles %s\n", (size_t) event_current_tick, args);
+	} else if (0 == strcmp(cmd, "trace")) {
+		logging.trace_cpu = atoi(args);
+	} else {
+		sprintf(reply, "unknown monitor command\n");
+	}
+
+	if (*reply)
+		send_packet_hexstring(gip, reply);
+	else
+		send_packet_string(gip, "OK");
+	return 0;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
