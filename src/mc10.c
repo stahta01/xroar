@@ -84,10 +84,10 @@ struct mc10 {
 	int cycles;
 
 	// Debug
-	struct bp_session *bp_session;
 	_Bool single_step;
 	int stop_signal;
 	struct bp_breakpoint_set breakpoint_set;
+	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
 	struct printer_interface *printer_interface;
@@ -192,7 +192,6 @@ static void mc10_reset(struct machine *m, _Bool hard);
 static enum machine_run_state mc10_run(struct machine *m, int ncycles);
 static void mc10_single_step(struct machine *m);
 static void mc10_signal(struct machine *m, int sig);
-static void mc10_trap(void *sptr);
 static uint8_t mc10_read_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_write_byte(struct machine *m, unsigned A, uint8_t D);
 static void mc10_op_rts(struct machine *m);
@@ -201,6 +200,12 @@ static int32_t mc10_get_symbol(struct machine *m, const char *label);
 static void mc10_add_breakpoint(struct machine *m, uint32_t A,
 				DELEGATE_T2(void, bool, uint32) handler);
 static void mc10_remove_breakpoint(struct machine *m, int32_t A,
+				   DELEGATE_T2(void, bool, uint32) handler);
+static void mc10_add_watchpoint(struct machine *m, _Bool RnW,
+				uint32_t Astart, uint32_t Aend,
+				DELEGATE_T2(void, bool, uint32) handler);
+static void mc10_remove_watchpoint(struct machine *m, int RnW,
+				   int32_t Astart, uint32_t Aend,
 				   DELEGATE_T2(void, bool, uint32) handler);
 
 static void mc10_vdg_fs(void *sptr, _Bool level);
@@ -270,6 +275,8 @@ static struct part *mc10_allocate(void) {
 	m->debug.get_symbol = mc10_get_symbol;
 	m->debug.add_breakpoint = mc10_add_breakpoint;
 	m->debug.remove_breakpoint = mc10_remove_breakpoint;
+	m->debug.add_watchpoint = mc10_add_watchpoint;
+	m->debug.remove_watchpoint = mc10_remove_watchpoint;
 
 	m->get_interface = mc10_get_interface;
 
@@ -426,11 +433,6 @@ static _Bool mc10_finish(struct part *p) {
 	mp->CPU->port2.preread = DELEGATE_AS0(void, mc10_keyboard_update, mp);
 	mp->CPU->port2.postwrite = DELEGATE_AS0(void, mc10_mc6803_port2_postwrite, mp);
 
-	// Breakpoint session
-	mp->bp_session = bp_session_new(m);
-	assert(mp->bp_session != NULL);  // this shouldn't fail
-	mp->bp_session->trap_handler = DELEGATE_AS0(void, mc10_trap, m);
-
 	// XXX probably need a more generic sound interface reset call, but for
 	// now bodge this - other machines will have left this pointing to
 	// something that no longer works if we switched to MC-10 afterwards
@@ -518,7 +520,7 @@ static _Bool mc10_finish(struct part *p) {
 #ifdef WANT_GDB_TARGET
 	// GDB
 	/* if (xroar.cfg.gdb) {
-		mp->gdb_interface = gdb_interface_new(xroar.cfg.gdb_ip, xroar.cfg.gdb_port, m, mmp>bp_session);
+		mp->gdb_interface = gdb_interface_new(xroar.cfg.gdb_ip, xroar.cfg.gdb_port, m);
 	} */
 #endif
 
@@ -544,9 +546,6 @@ static void mc10_free(struct part *p) {
 	machine_remove_breakpoint_all(&mp->machine, NULL);
 	if (mp->printer_interface) {
 		printer_interface_free(mp->printer_interface);
-	}
-	if (mp->bp_session) {
-		bp_session_free(mp->bp_session);
 	}
 	rombank_free(mp->ROM0);
 }
@@ -736,11 +735,6 @@ static void mc10_signal(struct machine *m, int sig) {
 	mp->CPU->running = 0;
 }
 
-static void mc10_trap(void *sptr) {
-        struct machine *m = sptr;
-        mc10_signal(m, MACHINE_SIGTRAP);
-}
-
 // Notes:
 //
 // MC-10 address decoding appears to consist mostly of the top two address
@@ -891,6 +885,23 @@ static void mc10_remove_breakpoint(struct machine *m, int32_t A,
 	}
 }
 
+static void mc10_add_watchpoint(struct machine *m, _Bool RnW,
+				  uint32_t Astart, uint32_t Aend,
+				  DELEGATE_T2(void, bool, uint32) handler) {
+	struct part *p = &m->part;
+	struct mc10 *mp = (struct mc10 *)m;
+	if (!bp_watchpoint_add(&mp->watchpoint_set, RnW, Astart, Aend, handler)) {
+		LOG_MOD_WARN(p->partdb->name, "failed to add watchpoint @ 0x%04x-0x%04x\n", Astart, Aend);
+	}
+}
+
+static void mc10_remove_watchpoint(struct machine *m, int RnW,
+				     int32_t Astart, uint32_t Aend,
+				     DELEGATE_T2(void, bool, uint32) handler) {
+	struct mc10 *mp = (struct mc10 *)m;
+	bp_watchpoint_remove(&mp->watchpoint_set, RnW, Astart, Aend, handler);
+}
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static void mc10_ui_set_keymap(void *sptr, int tag, void *smsg) {
@@ -972,8 +983,6 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 		return mp->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
 		return mc10_update_tape_input;
-	} else if (0 == strcmp(ifname, "bp-session")) {
-		return mp->bp_session;
 	}
 	return NULL;
 }
@@ -1044,19 +1053,14 @@ static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 		if (!SEL) {
 			mp->CPU->D = mc10_read_byte(m, A, mp->CPU->D);
 		}
-#ifdef WANT_GDB_TARGET
-		if (mp->bp_session->wp_read_list)
-			bp_wp_read_hook(mp->bp_session, A);
-#endif
 	} else {
 		if (!SEL) {
 			mc10_write_byte(m, A, mp->CPU->D);
 		}
-#ifdef WANT_GDB_TARGET
-		if (mp->bp_session->wp_write_list)
-			bp_wp_write_hook(mp->bp_session, A);
-#endif
 	}
+#ifdef WANT_GDB_TARGET
+	bp_check_watchpoints(&mp->watchpoint_set, RnW, A);
+#endif
 
 	int ncycles = 16;
 	mp->cycles -= ncycles;
