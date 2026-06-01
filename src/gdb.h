@@ -22,7 +22,6 @@
 #define GDB_IP_DEFAULT "127.0.0.1"
 #define GDB_PORT_DEFAULT "65520"
 
-struct bp_session;
 struct machine;
 
 enum gdb_run_state {
@@ -33,7 +32,7 @@ enum gdb_run_state {
 
 struct gdb_interface;
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m, struct bp_session *bp_session);
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m);
 void gdb_interface_free(struct gdb_interface *gi);
 
 int gdb_run_lock(struct gdb_interface *gi);

@@ -121,9 +121,6 @@ struct gdb_interface_private {
 	struct MC6883 *sam;
 	_Bool is_6309;
 
-	// Breakpoint session
-	struct bp_session *bp_session;
-
 	// Thread info
 	int listenfd;
 	struct addrinfo *info;
@@ -182,7 +179,7 @@ static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m, struct bp_session *bp_session) {
+struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m) {
 	if (!m)
 		return NULL;
 
@@ -200,7 +197,6 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	gip->machine = m;
 	gip->cpu = cpu;
 	gip->sam = sam;
-	gip->bp_session = bp_session;
 	gip->run_state = gdb_run_state_running;
 
 	gip->is_6309 = (strcmp(((struct part *)cpu)->partdb->name, "HD6309") == 0);
@@ -1017,7 +1013,12 @@ static void add_breakpoint(struct gdb_interface_private *gip, char *args) {
 		machine_add_hbreak(gip->machine, addr);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_add(gip->bp_session, type, addr, nbytes);
+		if (type == 2 || type == 4) {
+			machine_add_hwatch(gip->machine, 0, addr, addr+nbytes-1);
+		}
+		if (type == 3 || type == 4) {
+			machine_add_hwatch(gip->machine, 1, addr, addr+nbytes-1);
+		}
 	}
 	send_packet_string(gip, "OK");
 	return;
@@ -1043,7 +1044,12 @@ static void remove_breakpoint(struct gdb_interface_private *gip, char *args) {
 		machine_remove_hbreak(gip->machine, addr);
 	} else {
 		unsigned nbytes = strtoul(kind_str, NULL, 16);
-		bp_wp_remove(gip->bp_session, type, addr, nbytes);
+		if (type == 2 || type == 4) {
+			machine_remove_hwatch(gip->machine, 0, addr, addr+nbytes-1);
+		}
+		if (type == 3 || type == 4) {
+			machine_remove_hwatch(gip->machine, 1, addr, addr+nbytes-1);
+		}
 	}
 	send_packet_string(gip, "OK");
 	return;
