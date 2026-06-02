@@ -516,7 +516,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
 				case 0x6: tmp1 = op_ror(cpu, tmp1); break; // ROR, RORA, RORB
 				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
-				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
+				case 0x8: tmp1 = op_lsl(cpu, tmp1); break; // LSL, LSLA, LSLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xc: tmp1 = op_inc(cpu, tmp1); break; // INC, INCA, INCB
@@ -1439,7 +1439,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				take_interrupt(cpu, 0, MC6809_INT_VEC_SWI2);
 				continue;
 
-			// XXX to test: is there really no NEGW, ASRW or ASLW?
+			// XXX to test: is there really no NEGW, ASRW or LSLW?
 
 			// 0x1040 - 0x104f D register inherent ops
 			// 0x1050 - 0x105f W register inherent ops
@@ -1459,7 +1459,7 @@ static void hd6309_run(struct MC6809 *cpu) {
 				case 0x4: tmp1 = op_lsr16(cpu, tmp1); break; // LSRD, LSRW
 				case 0x6: tmp1 = op_ror16(cpu, tmp1); break; // RORD, RORW
 				case 0x7: tmp1 = op_asr16(cpu, tmp1); break; // ASRD
-				case 0x8: tmp1 = op_asl16(cpu, tmp1); break; // ASLD
+				case 0x8: tmp1 = op_lsl16(cpu, tmp1); break; // LSLD
 				case 0x9: tmp1 = op_rol16(cpu, tmp1); break; // ROLD, ROLW
 				case 0xa: tmp1 = op_dec16(cpu, tmp1); break; // DECD, DECW
 				case 0xc: tmp1 = op_inc16(cpu, tmp1); break; // INCD, INCW

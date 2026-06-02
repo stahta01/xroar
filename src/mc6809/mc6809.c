@@ -462,7 +462,7 @@ static void mc6809_run(struct MC6809 *cpu) {
 				case 0x4: tmp1 = op_lsr(cpu, tmp1); break; // LSR, LSRA, LSRB
 				case 0x6: tmp1 = op_ror(cpu, tmp1); break; // ROR, RORA, RORB
 				case 0x7: tmp1 = op_asr(cpu, tmp1); break; // ASR, ASRA, ASRB
-				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
+				case 0x8: tmp1 = op_lsl(cpu, tmp1); break; // LSL, LSLA, LSLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xb: // DEC illegal [hoglet67]

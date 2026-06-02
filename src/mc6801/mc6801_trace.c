@@ -51,7 +51,7 @@ static struct {
 	{ "SEXA*", INHERENT },
 	{ "SETA*", INHERENT },
 	{ "LSRD", INHERENT },
-	{ "ASLD", INHERENT },
+	{ "LSLD", INHERENT },
 	{ "TAP", INHERENT },
 	{ "TPA", INHERENT },
 	{ "INX", INHERENT },

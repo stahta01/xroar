@@ -204,7 +204,7 @@ static uint8_t op_asr_v(STRUCT_CPU *cpu, uint8_t in) {
 	return out;
 }
 
-static uint8_t op_asl(STRUCT_CPU *cpu, uint8_t in) {
+static uint8_t op_lsl(STRUCT_CPU *cpu, uint8_t in) {
 	unsigned out = in << 1;
 	CLR_NZVC;
 	SET_NZVC8(in, in, out);
@@ -413,7 +413,7 @@ static uint16_t op_asr16(STRUCT_CPU *cpu, uint16_t in) {
 	return out;
 }
 
-static uint16_t op_asl16(STRUCT_CPU *cpu, uint16_t in) {
+static uint16_t op_lsl16(STRUCT_CPU *cpu, uint16_t in) {
 	unsigned out = in << 1;
 	CLR_NZVC;
 	SET_NZVC16(in, in, out);

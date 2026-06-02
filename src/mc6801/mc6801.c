@@ -472,9 +472,9 @@ static void mc6801_run(struct MC6801 *cpu) {
 				NVMA_CYCLE;
 				break;
 
-			// 0x05 ASLD inherent
+			// 0x05 LSLD inherent
 			case 0x05:
-				REG_D = op_asl16(cpu, REG_D);
+				REG_D = op_lsl16(cpu, REG_D);
 				peek_byte(cpu, REG_PC);
 				NVMA_CYCLE;
 				break;
@@ -850,7 +850,7 @@ static void mc6801_run(struct MC6801 *cpu) {
 				case 0x4: tmp1 = op_lsr_v(cpu, tmp1); break; // LSR, LSRA, LSRB
 				case 0x6: tmp1 = op_ror_v(cpu, tmp1); break; // ROR, RORA, RORB
 				case 0x7: tmp1 = op_asr_v(cpu, tmp1); break; // ASR, ASRA, ASRB
-				case 0x8: tmp1 = op_asl(cpu, tmp1); break; // ASL, ASLA, ASLB
+				case 0x8: tmp1 = op_lsl(cpu, tmp1); break; // LSL, LSLA, LSLB
 				case 0x9: tmp1 = op_rol(cpu, tmp1); break; // ROL, ROLA, ROLB
 				case 0xa: tmp1 = op_dec(cpu, tmp1); break; // DEC, DECA, DECB
 				case 0xb: tmp1 = op_dec_nc(cpu, tmp1); break; // DC*, DCA*, DCB*
