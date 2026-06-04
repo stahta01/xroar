@@ -100,6 +100,7 @@ struct gdb_interface_private {
 	struct machine *machine;
 
 	struct MC6809 *cpu;
+	struct debug_cpu *dcpu;
 	struct MC6883 *sam;
 	_Bool is_6309;
 
@@ -217,6 +218,10 @@ const char m6809_h6309_xml[] =
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static int snprint_value_endian(char *dst, size_t dsize, int endian,
+				uint32_t value, unsigned vsize);
+static int scan_value_endian(char *src, size_t ssize, int endian,
+			     uint32_t *value, unsigned vsize);
 static int hexdigit(char c);
 static int hex8(char *s);
 static int hex16(char *s);
@@ -232,6 +237,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 		LOG_MOD_WARN("gdb", "MC6809 CPU not found - not enabling GDB support\n");
 		return NULL;
 	}
+	struct debug_cpu *dcpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
 
 	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
 
@@ -240,6 +246,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 
 	gip->machine = m;
 	gip->cpu = cpu;
+	gip->dcpu = dcpu;
 	gip->sam = sam;
 	gip->run_state = gdb_run_state_running;
 
@@ -752,59 +759,29 @@ static void send_last_signal(struct gdb_interface_private *gip) {
 }
 
 static void send_general_registers(struct gdb_interface_private *gip) {
-	sprintf(packet, "%02x%02x%02x%02x%04x%04x%04x%04x%04x",
-		 gip->cpu->reg_cc,
-		 MC6809_REG_A(gip->cpu),
-		 MC6809_REG_B(gip->cpu),
-		 gip->cpu->reg_dp,
-		 gip->cpu->reg_x,
-		 gip->cpu->reg_y,
-		 gip->cpu->reg_u,
-		 gip->cpu->reg_s,
-		 gip->cpu->reg_pc);
-	if (gip->is_6309) {
-		sprintf(packet + 28, "%02x%02x%02x%04x",
-			 ((struct HD6309 *)gip->cpu)->reg_md,
-			 HD6309_REG_E(((struct HD6309 *)gip->cpu)),
-			 HD6309_REG_F(((struct HD6309 *)gip->cpu)),
-			 ((struct HD6309 *)gip->cpu)->reg_v);
+	char *dst = packet;
+	size_t dsize = sizeof(packet);
+	for (unsigned i = 0; i < gip->dcpu->num_registers; ++i) {
+		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, i);
+		uint32_t rval = DELEGATE_CALL(gip->dcpu->get_register, i);
+		int n = snprint_value_endian(dst, dsize, gip->dcpu->endian, rval, rsize);
+		dst += n;
+		dsize -= n;
 	}
 	send_packet_string(gip, packet);
 }
 
 static void set_general_registers(struct gdb_interface_private *gip, char *args) {
-	if (strlen(args) != 38) {
-		send_packet_string(gip, "E00");
-		return;
-	}
-	int tmp;
-	if ((tmp = hex8(args)) >= 0)
-		gip->cpu->reg_cc = tmp;
-	if ((tmp = hex8(args+2)) >= 0)
-		MC6809_REG_A(gip->cpu) = tmp;
-	if ((tmp = hex8(args+4)) >= 0)
-		MC6809_REG_B(gip->cpu) = tmp;
-	if ((tmp = hex8(args+6)) >= 0)
-		gip->cpu->reg_dp = tmp;
-	if ((tmp = hex16(args+8)) >= 0)
-		gip->cpu->reg_x = tmp;
-	if ((tmp = hex16(args+12)) >= 0)
-		gip->cpu->reg_y = tmp;
-	if ((tmp = hex16(args+16)) >= 0)
-		gip->cpu->reg_u = tmp;
-	if ((tmp = hex16(args+20)) >= 0)
-		gip->cpu->reg_s = tmp;
-	if ((tmp = hex16(args+24)) >= 0)
-		gip->cpu->reg_pc = tmp;
-	if (gip->is_6309) {
-		if ((tmp = hex8(args+28)) >= 0)
-			((struct HD6309 *)gip->cpu)->reg_md = tmp;
-		if ((tmp = hex8(args+30)) >= 0)
-			HD6309_REG_E(((struct HD6309 *)gip->cpu)) = tmp;
-		if ((tmp = hex8(args+32)) >= 0)
-			HD6309_REG_F(((struct HD6309 *)gip->cpu)) = tmp;
-		if ((tmp = hex16(args+34)) >= 0)
-			((struct HD6309 *)gip->cpu)->reg_v = tmp;
+	size_t asize = strlen(args);
+	for (unsigned i = 0; i < gip->dcpu->num_registers; ++i) {
+		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, i);
+		uint32_t rval = 0;
+		int n = scan_value_endian(args, asize, gip->dcpu->endian, &rval, rsize);
+		if (n == 0)
+			break;
+		args += n;
+		asize -= n;
+		DELEGATE_CALL(gip->dcpu->set_register, i, rval);
 	}
 	send_packet_string(gip, "OK");
 }
@@ -866,42 +843,14 @@ error:
 
 static void send_register(struct gdb_interface_private *gip, char *args) {
 	unsigned regnum = strtoul(args, NULL, 16);
-	unsigned value = 0;
-	int size = 0;
-	switch (regnum) {
-	case 0: value = gip->cpu->reg_cc; size = 1; break;
-	case 1: value = MC6809_REG_A(gip->cpu); size = 1; break;
-	case 2: value = MC6809_REG_B(gip->cpu); size = 1; break;
-	case 3: value = gip->cpu->reg_dp; size = 1; break;
-	case 4: value = gip->cpu->reg_x; size = 2; break;
-	case 5: value = gip->cpu->reg_y; size = 2; break;
-	case 6: value = gip->cpu->reg_u; size = 2; break;
-	case 7: value = gip->cpu->reg_s; size = 2; break;
-	case 8: value = gip->cpu->reg_pc; size = 2; break;
-	case 9: size = -1; break;
-	case 10: size = -1; break;
-	case 11: size = -1; break;
-	case 12: size = -2; break;
-	default: break;
+	if (regnum >= gip->dcpu->num_registers) {
+		send_packet_string(gip, "E00");
+	} else {
+		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, regnum);
+		uint32_t rval = DELEGATE_CALL(gip->dcpu->get_register, regnum);
+		snprint_value_endian(packet, sizeof(packet), gip->dcpu->endian, rval, rsize);
+		send_packet_string(gip, packet);
 	}
-	if (gip->is_6309) {
-		struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
-		switch (regnum) {
-		case 9: value = hcpu->reg_md; size = 1; break;
-		case 10: value = HD6309_REG_E(hcpu); size = 1; break;
-		case 11: value = HD6309_REG_F(hcpu); size = 1; break;
-		case 12: value = hcpu->reg_v; size = 2; break;
-		default: break;
-		}
-	}
-	switch (size) {
-	case -2: sprintf(packet, "xxxx"); break;
-	case -1: sprintf(packet, "xx"); break;
-	case 2: sprintf(packet, "%04x", value); break;
-	case 1: sprintf(packet, "%02x", value); break;
-	default: sprintf(packet, "E00"); break;
-	}
-	send_packet_string(gip, packet);
 }
 
 static void set_register(struct gdb_interface_private *gip, char *args) {
@@ -909,28 +858,14 @@ static void set_register(struct gdb_interface_private *gip, char *args) {
 	if (!regnum_str || !args)
 		goto error;
 	unsigned regnum = strtoul(regnum_str, NULL, 16);
-	unsigned value = strtoul(args, NULL, 16);
-	struct HD6309 *hcpu = (struct HD6309 *)gip->cpu;
-	if (regnum > 12)
+	if (regnum >= gip->dcpu->num_registers)
 		goto error;
-	if (regnum > 8 && !gip->is_6309)
+	unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, regnum);
+	uint32_t rval = 0;
+	int n = scan_value_endian(args, strlen(args), gip->dcpu->endian, &rval, rsize);
+	if (n == 0)
 		goto error;
-	switch (regnum) {
-	case 0: gip->cpu->reg_cc = value; break;
-	case 1: MC6809_REG_A(gip->cpu) = value; break;
-	case 2: MC6809_REG_B(gip->cpu) = value; break;
-	case 3: gip->cpu->reg_dp = value; break;
-	case 4: gip->cpu->reg_x = value; break;
-	case 5: gip->cpu->reg_y = value; break;
-	case 6: gip->cpu->reg_u = value; break;
-	case 7: gip->cpu->reg_s = value; break;
-	case 8: gip->cpu->reg_pc = value; break;
-	case 9: hcpu->reg_md = value; break;
-	case 10: HD6309_REG_E(hcpu) = value; break;
-	case 11: HD6309_REG_F(hcpu) = value; break;
-	case 12: hcpu->reg_v = value; break;
-	default: break;
-	}
+	DELEGATE_CALL(gip->dcpu->set_register, regnum, rval);
 	send_packet_string(gip, "OK");
 	return;
 error:
@@ -1189,6 +1124,58 @@ static void qXfer(struct gdb_interface_private *gip,
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static int snprint_value_endian(char *dst, size_t dsize, int endian,
+				uint32_t value, unsigned vsize) {
+	if (vsize > 4)
+		return 0;
+	int nbytes = 0;
+	for (unsigned i = 0; i < vsize; ++i) {
+		if (dsize < 3)
+			return nbytes;
+		int shift;
+		switch (endian) {
+		case DCPU_ENDIAN_BIG: default: shift = (vsize - i - 1) * 8; break;
+		case DCPU_ENDIAN_LITTLE: shift = i * 8;
+		}
+		int v = (value >> shift) & 0xff;
+		int n = snprintf(dst, dsize, "%02x", v);
+		dst += n;
+		dsize -= n;
+		nbytes += n;
+	}
+	return nbytes;
+}
+
+static int scan_value_endian(char *src, size_t ssize, int endian,
+			     uint32_t *value, unsigned vsize) {
+	if (vsize > 4)
+		return 0;
+	int nbytes = vsize * 2;
+	if (ssize < (size_t)nbytes)
+		return 0;
+	_Bool valid = 1;
+	uint32_t rval = 0;
+	for (unsigned i = 0; i < vsize; ++i) {
+		int tmp = hex8(src);
+		if (tmp < 0) {
+			valid = 0;
+		} else {
+			int shift;
+			switch (endian) {
+			case DCPU_ENDIAN_BIG: default: shift = (vsize - i - 1) * 8; break;
+			case DCPU_ENDIAN_LITTLE: shift = i * 8;
+			}
+			rval |= (uint32_t)(tmp & 0xff) << shift;
+		}
+		src += 2;
+		ssize -= 2;
+	}
+	if (valid && value) {
+		*value = rval;
+	}
+	return nbytes;
+}
 
 static int hexdigit(char c) {
 	if (c >= '0' && c <= '9')
