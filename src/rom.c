@@ -16,6 +16,8 @@
  *  \endlicenseblock
  */
 
+#include "top-config.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 

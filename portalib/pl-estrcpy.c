@@ -2,6 +2,8 @@
  * https://creativecommons.org/publicdomain/zero/1.0/
  */
 
+#include "top-config.h"
+
 #include <stdlib.h>
 
 /* Chaining strcpy (non-Schlemiel).  Copies from src to dst..dend inclusive,

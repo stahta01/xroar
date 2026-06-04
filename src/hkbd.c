@@ -22,6 +22,8 @@
  * User can then configure consistently whichever toolkit is in use.
  */
 
+#include "top-config.h"
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>

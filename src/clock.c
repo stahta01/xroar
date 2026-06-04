@@ -19,6 +19,8 @@
  *  same group are incremented proportionally, tracking integer error.
  */
 
+#include "top-config.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 
