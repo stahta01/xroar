@@ -34,6 +34,7 @@
 #include "cart.h"
 #include "crc32.h"
 #include "crclist.h"
+#include "gdb.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
@@ -86,6 +87,9 @@ struct mc10 {
 	// Debug
 	_Bool single_step;
 	int stop_signal;
+#ifdef WANT_GDB_TARGET
+	struct gdb_interface *gdb_interface;
+#endif
 	struct bp_breakpoint_set breakpoint_set;
 	struct bp_watchpoint_set watchpoint_set;
 
@@ -519,9 +523,9 @@ static _Bool mc10_finish(struct part *p) {
 
 #ifdef WANT_GDB_TARGET
 	// GDB
-	/* if (xroar.cfg.gdb) {
-		mp->gdb_interface = gdb_interface_new(xroar.cfg.gdb_ip, xroar.cfg.gdb_port, m);
-	} */
+	if (xroar.cfg.debug.gdb) {
+		mp->gdb_interface = gdb_interface_new(xroar.cfg.debug.gdb_ip, xroar.cfg.debug.gdb_port, m);
+	}
 #endif
 
 	// Until we serialise vdg_pal events:
@@ -536,9 +540,9 @@ static void mc10_free(struct part *p) {
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mp->msgr_client_id);
 #ifdef WANT_GDB_TARGET
-	/* if (mp->gdb_interface) {
-	   gdb_interface_free(mp->gdb_interface);
-	   } */
+	if (mp->gdb_interface) {
+		gdb_interface_free(mp->gdb_interface);
+	}
 #endif
 	if (mp->keyboard.interface) {
 		keyboard_interface_free(mp->keyboard.interface);
@@ -671,8 +675,6 @@ static void mc10_reset(struct machine *m, _Bool hard) {
 	machine_add_breakpoint_sym(m, "serial.printchr", DELEGATE_AS2(void, bool, uint32, mc10_print_byte, mp));
 	mp->video_attr = 0;
 }
-
-#undef WANT_GDB_TARGET
 
 static enum machine_run_state mc10_run(struct machine *m, int ncycles) {
 	struct mc10 *mp = (struct mc10 *)m;
