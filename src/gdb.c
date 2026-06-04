@@ -99,10 +99,8 @@
 struct gdb_interface_private {
 	struct machine *machine;
 
-	struct MC6809 *cpu;
 	struct debug_cpu *dcpu;
 	struct MC6883 *sam;
-	_Bool is_6309;
 
 	// Thread info
 	int listenfd;
@@ -232,11 +230,6 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	if (!m)
 		return NULL;
 
-	struct MC6809 *cpu = (struct MC6809 *)part_component_by_id_is_a(&m->part, "CPU", "MC6809");
-	if (!cpu) {
-		LOG_MOD_WARN("gdb", "MC6809 CPU not found - not enabling GDB support\n");
-		return NULL;
-	}
 	struct debug_cpu *dcpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
 
 	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
@@ -245,12 +238,9 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	*gip = (struct gdb_interface_private){0};
 
 	gip->machine = m;
-	gip->cpu = cpu;
 	gip->dcpu = dcpu;
 	gip->sam = sam;
 	gip->run_state = gdb_run_state_running;
-
-	gip->is_6309 = (strcmp(((struct part *)cpu)->partdb->name, "HD6309") == 0);
 
 	struct addrinfo hints;
 	if (!hostname)
@@ -907,12 +897,13 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		send_packet_string(gip, "1");
 	} else if (0 == strcmp(query, "Xfer")) {
 		if (0 == strncmp(args, "features:read:", 14)) {
+			_Bool is_6309 = part_is_a(&gip->dcpu->part, "HD6309");
 			args += 14;
 			const char *src = NULL;
 			size_t src_length = 0;
 			if (0 == strncmp(args, "target.xml:", 11)) {
 				args += 11;
-				if (gip->is_6309) {
+				if (is_6309) {
 					src = target_6309_xml;
 					src_length = sizeof(target_6309_xml) - 1;  // omit NUL
 				} else {
