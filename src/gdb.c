@@ -89,6 +89,7 @@
 #include "breakpoint.h"
 #include "events.h"
 #include "gdb.h"
+#include "gdb_annex.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6809/hd6309.h"
@@ -155,64 +156,6 @@ static void qXfer(struct gdb_interface_private *gip,
 		  const char *src, size_t src_length,
 		  size_t offset, size_t length);
 static void send_supported(struct gdb_interface_private *gip, char *args);  // qSupported
-
-const char target_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>m6809</architecture>"
-  "<xi:include href=\"m6809-core.xml\"/>"
-"</target>";
-
-const char target_6309_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>h6309</architecture>"
-  "<xi:include href=\"m6809-core.xml\"/>"
-  "<xi:include href=\"m6809-h6309.xml\"/>"
-"</target>";
-
-const char m6809_core_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
-"<feature name=\"org.gnu.gdb.m6809.core\">"
-  "<flags id=\"cc_flags\" size=\"1\">"
-    "<field name=\"C\" start=\"0\" end=\"0\"/>"
-    "<field name=\"V\" start=\"1\" end=\"1\"/>"
-    "<field name=\"Z\" start=\"2\" end=\"2\"/>"
-    "<field name=\"N\" start=\"3\" end=\"3\"/>"
-    "<field name=\"I\" start=\"4\" end=\"4\"/>"
-    "<field name=\"H\" start=\"5\" end=\"5\"/>"
-    "<field name=\"F\" start=\"6\" end=\"6\"/>"
-    "<field name=\"E\" start=\"7\" end=\"7\"/>"
-  "</flags>"
-  "<reg name=\"cc\" bitsize=\"8\" type=\"cc_flags\" regnum=\"0\"/>"
-  "<reg name=\"a\" bitsize=\"8\" type=\"uint8\"/>"
-  "<reg name=\"b\" bitsize=\"8\" type=\"uint8\"/>"
-  "<reg name=\"dp\" bitsize=\"8\" type=\"uint8\"/>"
-  "<reg name=\"x\" bitsize=\"16\" type=\"uint16\"/>"
-  "<reg name=\"y\" bitsize=\"16\" type=\"uint16\"/>"
-  "<reg name=\"u\" bitsize=\"16\" type=\"uint16\"/>"
-  "<reg name=\"s\" bitsize=\"16\" type=\"uint16\"/>"
-  "<reg name=\"pc\" bitsize=\"16\" type=\"code_ptr\"/>"
-"</feature>";
-
-const char m6809_h6309_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
-"<feature name=\"org.gnu.gdb.m6809.h6309\">"
-  "<flags id=\"md_flags\" size=\"1\">"
-    "<field name=\"NM\" start=\"0\" end=\"0\"/>"
-    "<field name=\"FM\" start=\"1\" end=\"1\"/>"
-    "<field name=\"IL\" start=\"6\" end=\"6\"/>"
-    "<field name=\"D0\" start=\"7\" end=\"7\"/>"
-  "</flags>"
-  "<reg name=\"md\" bitsize=\"8\" type=\"md_flags\" regnum=\"9\"/>"
-  "<reg name=\"e\" bitsize=\"8\" type=\"uint8\"/>"
-  "<reg name=\"f\" bitsize=\"8\" type=\"uint8\"/>"
-  "<reg name=\"v\" bitsize=\"16\" type=\"uint16\"/>"
-"</feature>";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -897,37 +840,27 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		send_packet_string(gip, "1");
 	} else if (0 == strcmp(query, "Xfer")) {
 		if (0 == strncmp(args, "features:read:", 14)) {
-			_Bool is_6309 = part_is_a(&gip->dcpu->part, "HD6309");
 			args += 14;
-			const char *src = NULL;
-			size_t src_length = 0;
+			char *annex = args;
 			if (0 == strncmp(args, "target.xml:", 11)) {
 				args += 11;
-				if (is_6309) {
-					src = target_6309_xml;
-					src_length = sizeof(target_6309_xml) - 1;  // omit NUL
-				} else {
-					src = target_xml;
-					src_length = sizeof(target_xml) - 1;  // omit NUL
-				}
-			} else if (0 == strncmp(args, "m6809-core.xml:", 15)) {
-				args += 15;
-				src = m6809_core_xml;
-				src_length = sizeof(m6809_core_xml) - 1;  // omit NUL
-			} else if (0 == strncmp(args, "m6809-h6309.xml:", 16)) {
-				args += 16;
-				src = m6809_h6309_xml;
-				src_length = sizeof(m6809_h6309_xml) - 1;  // omit NUL
+				annex = (char *)gip->dcpu->target_xml;
 			} else {
-				LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer features read: %s\n", args);
-				send_packet(gip, NULL, 0);
-				return;
+				annex = strsep(&args, ":");
 			}
 			size_t offset = strtol(args, &args, 16);
 			if (*args == ',')
 				++args;
 			size_t length = strtol(args, &args, 16);
-			qXfer(gip, src, src_length, offset, length);
+			for (size_t i = 0; i < num_gdb_annex; ++i) {
+				struct gdb_annex *ga = &gdb_annex_list[i];
+				if (0 == strcmp(ga->name, annex)) {
+					qXfer(gip, ga->data, ga->data_size, offset, length);
+					return;
+				}
+			}
+			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer features read: %s\n", args);
+			send_packet(gip, NULL, 0);
 		} else {
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer: %s\n", args);
 			send_packet(gip, NULL, 0);
