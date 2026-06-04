@@ -50,7 +50,6 @@
  * Some standard, and some vendor-specific general queries are supported:
 
  *      qxroar.sam      | XXXX  | get SAM register, reply is 4 hex digits
- *      qxroar.trace-pc | XXXX  | get PC of current instruction -> 4 hex digits
  *      qSupported      | XX... | report PacketSize
  *      qAttached       | 1     | always report attached
 
@@ -976,14 +975,6 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		if (0 == strcmp(query, "sam") && gip->sam) {
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.sam\n");
 			sprintf(packet, "%04x", gip->sam->get_register(gip->sam));
-			send_packet(gip, packet, 4);
-			return;
-		}
-#endif
-#ifdef TRACE
-		if (0 == strcmp(query, "trace-pc")) {
-			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.trace-pc\n");
-			sprintf(packet, "%04x", mc6809_get_trace_pc(gip->cpu));
 			send_packet(gip, packet, 4);
 			return;
 		}
