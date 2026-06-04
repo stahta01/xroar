@@ -34,6 +34,9 @@ struct debug_cpu {
 	// Part metadata
 	struct part part;
 
+	// Alias for "target.xml" to GDB annex filename
+	const char *target_xml;
+
 	// Target byte order (for GDB to send registers)
 	int endian;
 

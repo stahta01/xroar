@@ -187,6 +187,7 @@ static struct part *mc6809_allocate(void) {
 
 	*cpu = (struct MC6809){0};
 
+	cpu->debug_cpu.target_xml = "m6809.xml";
 	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
 	cpu->debug_cpu.num_registers = 9;
 	cpu->debug_cpu.register_sp = 7;

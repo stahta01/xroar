@@ -273,9 +273,14 @@ static void mc6801_initialise(struct part *p, void *options) {
 
 static _Bool mc6801_finish(struct part *p) {
 	struct MC6801 *cpu = (struct MC6801 *)p;
-	if (cpu->is_6801 && !cpu->rom) {
-		cpu->rom = xzalloc(2048);
-		cpu->rom_size = 2048;
+	if (cpu->is_6801) {
+		cpu->debug_cpu.target_xml = "m6801.xml";
+		if (!cpu->rom) {
+			cpu->rom = xzalloc(2048);
+			cpu->rom_size = 2048;
+		}
+	} else {
+		cpu->debug_cpu.target_xml = "m6803.xml";
 	}
 	return 1;
 }
