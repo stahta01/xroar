@@ -20,27 +20,10 @@
  * Support a subset of the gdb protocol over a socket.  See
  * http://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
  *
- * The following registers are accessible:
+ * Accessible registers are now defined in the debug_cpu interface.
 
- *    | Index | Name  | Bits
- *    | :---- | :---- | :----
- *    | 0     | CC    | 8
- *    | 1     | A     | 8
- *    | 2     | B     | 8
- *    | 3     | DP    | 8
- *    | 4     | X     | 16
- *    | 5     | Y     | 16
- *    | 6     | U     | 16
- *    | 7     | S     | 16
- *    | 8     | PC    | 16
- *    | 9     | MD    | 8       (HD6309)
- *    | 10    | E     | 8       (HD6309)
- *    | 11    | F     | 8       (HD6309)
- *    | 12    | V     | 16      (HD6309)
-
- * 'g' packet responses will contain 14 hex pairs comprising the 6809 register,
- * and either a further 5 hex pairs for the 6309 registers, or 'xx'.  'G'
- * packets must supply 19 values, either hex pairs or 'xx'.
+ * 'g' packet responses will contain hex pairs comprising all registers the
+ * debug_cpu interface exposes.
  *
  * 'm' and 'M' packets will read or write translated memory addresses (as seen
  * by the CPU).
