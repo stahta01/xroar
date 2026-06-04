@@ -1,3 +1,11 @@
+ * Internal rework of breakpoints and watchpoints
+ * Target description sent to GDB
+ * Enable GDB for MC-10
+ * GDB: support NoAckMode
+ * New option -gdb-pseudo-regs exposes more state as faux registers to GDB
+ * SDL3 support
+ * Windows UI migrated to use SDL3
+
 Version 1.11, Tue 12 May 2026
 
  * New option -trap-trace-n N turns on trace mode for N instruction
