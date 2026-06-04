@@ -563,7 +563,8 @@ xroar_LDADD += $(PTHREADS_LIBS)
 
 if GDB
 xroar_SOURCES += \
-	gdb.c gdb.h
+	gdb.c gdb.h \
+	gdb_annex.c gdb_annex.h
 endif
 
 endif
