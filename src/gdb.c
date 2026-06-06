@@ -967,7 +967,7 @@ error:
 
 static void send_supported(struct gdb_interface_private *gip, char *args) {
 	(void)args;  // args ignored at the moment
-	snprintf(packet, sizeof(packet), "PacketSize=%zx;qXfer:features:read+", sizeof(packet)-1);
+	snprintf(packet, sizeof(packet), "PacketSize=%zx;QStartNoAckMode+;qXfer:features:read+", sizeof(packet)-1);
 	send_packet_string(gip, packet);
 }
 
