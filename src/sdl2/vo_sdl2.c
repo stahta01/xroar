@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 video output module.
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ *  \copyright Copyright 2015-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -88,8 +88,8 @@ static void set_viewport(void *, int vp_w, int vp_h);
 static void draw(void *);
 static void resize(void *, unsigned int w, unsigned int h);
 static void vosdl_ui_set_gl_filter(void *, int tag, void *smsg);
-static void vosdl_ui_set_vsync(void *, int tag, void *smsg);
 #ifndef HAVE_WASM
+static void vosdl_ui_set_vsync(void *, int tag, void *smsg);
 static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
 #endif
 static void vosdl_ui_set_menubar(void *, int tag, void *smsg);
@@ -159,8 +159,8 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	// Used by UI to adjust viewing parameters
 	vo->set_viewport = DELEGATE_AS2(void, int, int, set_viewport, uisdl2);
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_gl_filter, uisdl2));
-	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_vsync, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_vsync, uisdl2));
 #ifndef HAVE_WASM
+	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_vsync, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_vsync, uisdl2));
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_fullscreen, uisdl2));
 #endif
 	ui_messenger_join_group(vosdl->msgr_client_id, ui_tag_menubar, MESSENGER_NOTIFY_DELEGATE(vosdl_ui_set_menubar, uisdl2));
@@ -440,6 +440,7 @@ static void vosdl_ui_set_gl_filter(void *sptr, int tag, void *smsg) {
 	update_viewport(uisdl2);
 }
 
+#ifndef HAVE_WASM
 static void vosdl_ui_set_vsync(void *sptr, int tag, void *smsg) {
 	(void)tag;
 	(void)smsg;
@@ -448,7 +449,6 @@ static void vosdl_ui_set_vsync(void *sptr, int tag, void *smsg) {
 	sdl_vo_notify_render_device_reset(uisdl2);
 }
 
-#ifndef HAVE_WASM
 static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	(void)tag;
 	struct ui_sdl2_interface *uisdl2 = sptr;
