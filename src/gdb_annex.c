@@ -18,9 +18,11 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <stdlib.h>
 
 #include "array.h"
+#include "sds.h"
 
 #include "gdb_annex.h"
 
@@ -134,3 +136,20 @@ struct gdb_annex gdb_annex_list[] = {
 };
 
 size_t num_gdb_annex = ARRAY_N_ELEMENTS(gdb_annex_list);
+
+static const char close_target[] = "</target>";
+
+sds gdb_annex_target_new(const char *architecture) {
+	return sdscatprintf(sdsempty(),
+			    "<?xml version=\"1.0\"?>"
+			    "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
+			    "<target><architecture>%s</architecture>%s",
+			    architecture, close_target);
+}
+
+sds gdb_annex_target_include(sds target, const char *name) {
+	const size_t close_size = sizeof(close_target) - 1;
+	assert(sdslen(target) >= close_size);
+	sdssetlen(target, sdslen(target) - close_size);
+	return sdscatprintf(target, "<xi:include href=\"%s\"/>%s", name, close_target);
+}

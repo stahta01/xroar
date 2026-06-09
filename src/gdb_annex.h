@@ -19,7 +19,11 @@
 #ifndef XROAR_GDB_ANNEX_H_
 #define XROAR_GDB_ANNEX_H_
 
+#ifdef WANT_GDB_TARGET
+
 #include <stdlib.h>
+
+#include "sds.h"
 
 struct gdb_annex {
 	const char *name;
@@ -30,5 +34,13 @@ struct gdb_annex {
 extern struct gdb_annex gdb_annex_list[];
 
 extern size_t num_gdb_annex;
+
+// Create a base "target.xml" string with specified architecture
+sds gdb_annex_target_new(const char *architecture);
+
+// Add an "include" directive to target.xml
+sds gdb_annex_target_include(sds target, const char *name);
+
+#endif
 
 #endif
