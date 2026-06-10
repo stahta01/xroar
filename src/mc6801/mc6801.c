@@ -246,7 +246,6 @@ static struct part *mc6801_allocate(void) {
 
 	*cpu = (struct MC6801){0};
 
-	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
 	cpu->debug_cpu.num_registers = 6;
 	cpu->debug_cpu.register_sp = 4;
 	cpu->debug_cpu.register_pc = 5;
@@ -284,7 +283,6 @@ static _Bool mc6801_finish(struct part *p) {
 #ifdef WANT_GDB_TARGET
 		cpu->gdb_architecture = "m6801";
 #endif
-		cpu->debug_cpu.target_xml = "m6801.xml";
 		if (!cpu->rom) {
 			cpu->rom = xzalloc(2048);
 			cpu->rom_size = 2048;
@@ -293,7 +291,6 @@ static _Bool mc6801_finish(struct part *p) {
 #ifdef WANT_GDB_TARGET
 		cpu->gdb_architecture = "m6803";
 #endif
-		cpu->debug_cpu.target_xml = "m6803.xml";
 	}
 	return 1;
 }

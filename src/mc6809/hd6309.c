@@ -217,8 +217,6 @@ static struct part *hd6309_allocate(void) {
 
 	*hcpu = (struct HD6309){0};
 
-	cpu->debug_cpu.target_xml = "h6309.xml";
-	cpu->debug_cpu.endian = DCPU_ENDIAN_BIG;
 	cpu->debug_cpu.num_registers = 13;
 	cpu->debug_cpu.register_sp = 7;
 	cpu->debug_cpu.register_pc = 8;
