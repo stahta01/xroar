@@ -418,7 +418,7 @@ _Bool dragon_finish_common(struct dragon *md) {
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
 #ifdef WANT_GDB_TARGET
-	m->debug.num_registers = md->CPU->debug_cpu.num_registers;
+	m->debug.num_registers = md->CPU->debug_cpu.num_registers + 13;
 
 	if (md->CPU->gdb_architecture) {
 		m->debug.target_xml = gdb_annex_target_new(md->CPU->gdb_architecture);
@@ -427,6 +427,8 @@ _Bool dragon_finish_common(struct dragon *md) {
 				m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, *f);
 			}
 		}
+		m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-sam.xml");
+		m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-pia.xml");
 	}
 #endif
 
@@ -1350,6 +1352,23 @@ static unsigned dragon_register_size(void *sptr, int regno) {
 	struct dragon *md = sptr;
 	if ((unsigned)regno < md->CPU->debug_cpu.num_registers)
 		return DELEGATE_CALL(md->CPU->debug_cpu.register_size, regno);
+	regno -= md->CPU->debug_cpu.num_registers;
+	switch (regno) {
+	case 0: return 2;  // SAM register
+	case 1: return 1;  // P0AD
+	case 2: return 1;  // P0AP
+	case 3: return 1;  // P0AC
+	case 4: return 1;  // P0BD
+	case 5: return 1;  // P0BP
+	case 6: return 1;  // P0BC
+	case 7: return 1;  // P1AD
+	case 8: return 1;  // P1AP
+	case 9: return 1;  // P1AC
+	case 10: return 1;  // P1BD
+	case 11: return 1;  // P1BP
+	case 12: return 1;  // P1BC
+	default: break;
+	}
 	return 0;
 }
 
@@ -1357,6 +1376,23 @@ static uint32_t dragon_get_register(void *sptr, int regno) {
 	struct dragon *md = sptr;
 	if ((unsigned)regno < md->CPU->debug_cpu.num_registers)
 		return DELEGATE_CALL(md->CPU->debug_cpu.get_register, regno);
+	regno -= md->CPU->debug_cpu.num_registers;
+	switch (regno) {
+	case 0: return md->SAM->get_register(md->SAM);
+	case 1: return md->PIA0->a.direction_register;
+	case 2: return PIA_VALUE_A(md->PIA0);
+	case 3: return md->PIA0->a.control_register;
+	case 4: return md->PIA0->b.direction_register;
+	case 5: return PIA_VALUE_B(md->PIA0);
+	case 6: return md->PIA0->b.control_register;
+	case 7: return md->PIA1->a.direction_register;
+	case 8: return PIA_VALUE_A(md->PIA1);
+	case 9: return md->PIA1->a.control_register;
+	case 10: return md->PIA1->b.direction_register;
+	case 11: return PIA_VALUE_B(md->PIA1);
+	case 12: return md->PIA1->b.control_register;
+	default: break;
+	}
 	return 0;
 }
 
@@ -1365,6 +1401,24 @@ static void dragon_set_register(void *sptr, int regno, uint32_t value) {
 	if ((unsigned)regno < md->CPU->debug_cpu.num_registers) {
 		DELEGATE_CALL(md->CPU->debug_cpu.set_register, regno, value);
 		return;
+	}
+	regno -= md->CPU->debug_cpu.num_registers;
+	switch (regno) {
+	case 0: md->SAM->set_register(md->SAM, value); break;
+	case 1: md->PIA0->a.direction_register = value; mc6821_update_a_state(md->PIA0); break;
+	case 2: md->PIA0->a.output_register = value; mc6821_update_a_state(md->PIA0); break;
+	case 3: mc6821_write(md->PIA0, 1, value); break;
+	case 4: md->PIA0->b.direction_register = value; mc6821_update_b_state(md->PIA0); break;
+	case 5: md->PIA0->b.output_register = value; mc6821_update_b_state(md->PIA0); break;
+	case 6: mc6821_write(md->PIA0, 3, value); break;
+	case 7: md->PIA1->a.direction_register = value; mc6821_update_a_state(md->PIA1); break;
+	case 8: md->PIA1->a.output_register = value; mc6821_update_a_state(md->PIA1); break;
+	case 9: mc6821_write(md->PIA1, 1, value); break;
+	case 10: md->PIA1->b.direction_register = value; mc6821_update_b_state(md->PIA1); break;
+	case 11: md->PIA1->b.output_register = value; mc6821_update_b_state(md->PIA1); break;
+	case 12: mc6821_write(md->PIA1, 3, value); break;
+	default:
+		break;
 	}
 }
 

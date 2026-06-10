@@ -89,6 +89,39 @@ static const char m6809_h6309_xml[] =
   "<reg name=\"v\" bitsize=\"16\" type=\"uint16\"/>"
 "</feature>";
 
+static const char dragon_sam_xml[] =
+"<?xml version=\"1.0\"?>"
+"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
+"<feature name=\"uk.org.6809.gdb.dragon.sam\">"
+  "<flags id=\"sam_flags\" size=\"2\">"
+    "<field name=\"V\" start=\"0\" end=\"2\"/>"
+    "<field name=\"F\" start=\"3\" end=\"9\"/>"
+    "<field name=\"P1\" start=\"10\" end=\"10\"/>"
+    "<field name=\"R\" start=\"11\" end=\"12\"/>"
+    "<field name=\"M\" start=\"13\" end=\"14\"/>"
+    "<field name=\"TY\" start=\"15\" end=\"15\"/>"
+  "</flags>"
+  "<reg name=\"sam\" bitsize=\"16\" type=\"sam_flags\" group=\"sam\"/>"
+"</feature>";
+
+static const char dragon_pia_xml[] =
+"<?xml version=\"1.0\"?>"
+"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
+"<feature name=\"uk.org.6809.gdb.dragon.pia\">"
+  "<reg name=\"p0ad\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p0ap\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p0ac\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p0bd\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p0bp\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p0bc\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1ad\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1ap\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1ac\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1bd\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1bp\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+  "<reg name=\"p1bc\" bitsize=\"8\" type=\"uint8\" group=\"pia\"/>"
+"</feature>";
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct gdb_annex gdb_annex_list[] = {
@@ -96,6 +129,9 @@ struct gdb_annex gdb_annex_list[] = {
 
 	{ "m6809-core.xml", m6809_core_xml, sizeof(m6809_core_xml) - 1 },
 	{ "m6809-h6309.xml", m6809_h6309_xml, sizeof(m6809_h6309_xml) - 1 },
+
+	{ "dragon-sam.xml", dragon_sam_xml, sizeof(dragon_sam_xml) - 1 },
+	{ "dragon-pia.xml", dragon_pia_xml, sizeof(dragon_pia_xml) - 1 },
 };
 
 size_t num_gdb_annex = ARRAY_N_ELEMENTS(gdb_annex_list);
