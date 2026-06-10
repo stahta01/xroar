@@ -205,6 +205,11 @@ static const struct partdb_entry_funcs hd6309_funcs = {
 
 const struct partdb_entry hd6309_part = { .name = "HD6309", .description = "Hitachi | HD6309E CPU", .funcs = &hd6309_funcs };
 
+#ifdef WANT_GDB_TARGET
+static const char *gdb_architecture = "h6309";
+static const char *gdb_features[] = { "m6809-core.xml", "m6809-h6309.xml", NULL };
+#endif
+
 static struct part *hd6309_allocate(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
 	struct MC6809 *cpu = &hcpu->mc6809;
@@ -220,6 +225,10 @@ static struct part *hd6309_allocate(void) {
 	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, hd6309_register_size, cpu);
 	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, hd6309_get_register, cpu);
 	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, hd6309_set_register, cpu);
+#ifdef WANT_GDB_TARGET
+	cpu->gdb_architecture = gdb_architecture;
+	cpu->gdb_features = gdb_features;
+#endif
 
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;

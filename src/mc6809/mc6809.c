@@ -181,6 +181,11 @@ static const struct partdb_entry_funcs mc6809_funcs = {
 
 const struct partdb_entry mc6809_part = { .name = "MC6809", .description = "Motorola | MC6809E CPU", .funcs = &mc6809_funcs };
 
+#ifdef WANT_GDB_TARGET
+static const char *gdb_architecture = "m6809";
+static const char *gdb_features[] = { "m6809-core.xml", NULL };
+#endif
+
 static struct part *mc6809_allocate(void) {
 	struct MC6809 *cpu = part_new(sizeof(*cpu));
 	struct part *p = &cpu->debug_cpu.part;
@@ -195,6 +200,10 @@ static struct part *mc6809_allocate(void) {
 	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, mc6809_register_size, cpu);
 	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6809_get_register, cpu);
 	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6809_set_register, cpu);
+#ifdef WANT_GDB_TARGET
+	cpu->gdb_architecture = gdb_architecture;
+	cpu->gdb_features = gdb_features;
+#endif
 
 	cpu->reset = mc6809_reset;
 	cpu->run = mc6809_run;

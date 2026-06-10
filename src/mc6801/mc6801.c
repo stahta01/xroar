@@ -236,6 +236,10 @@ static const struct partdb_entry_funcs mc6801_funcs = {
 const struct partdb_entry mc6801_part = { .name = "MC6801", .description = "Motorola | MC6801 CPU", .funcs = &mc6801_funcs };
 const struct partdb_entry mc6803_part = { .name = "MC6803", .description = "Motorola | MC6803 CPU", .funcs = &mc6801_funcs };
 
+#ifdef WANT_GDB_TARGET
+static const char *gdb_features[] = { "m6801-core.xml", NULL };
+#endif
+
 static struct part *mc6801_allocate(void) {
 	struct MC6801 *cpu = part_new(sizeof(*cpu));
 	struct part *p = &cpu->debug_cpu.part;
@@ -249,6 +253,9 @@ static struct part *mc6801_allocate(void) {
 	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, mc6801_register_size, cpu);
 	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6801_get_register, cpu);
 	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6801_set_register, cpu);
+#ifdef WANT_GDB_TARGET
+	cpu->gdb_features = gdb_features;
+#endif
 
 	cpu->reset = mc6801_reset;
 	cpu->run = mc6801_run;
@@ -274,12 +281,18 @@ static void mc6801_initialise(struct part *p, void *options) {
 static _Bool mc6801_finish(struct part *p) {
 	struct MC6801 *cpu = (struct MC6801 *)p;
 	if (cpu->is_6801) {
+#ifdef WANT_GDB_TARGET
+		cpu->gdb_architecture = "m6801";
+#endif
 		cpu->debug_cpu.target_xml = "m6801.xml";
 		if (!cpu->rom) {
 			cpu->rom = xzalloc(2048);
 			cpu->rom_size = 2048;
 		}
 	} else {
+#ifdef WANT_GDB_TARGET
+		cpu->gdb_architecture = "m6803";
+#endif
 		cpu->debug_cpu.target_xml = "m6803.xml";
 	}
 	return 1;

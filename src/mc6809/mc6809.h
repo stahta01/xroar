@@ -112,6 +112,11 @@ struct MC6809 {
 	_Bool nmi_armed;
 	_Bool nmi_latch, firq_latch, irq_latch;
 	_Bool nmi_active, firq_active, irq_active;
+
+#ifdef WANT_GDB_TARGET
+	const char *gdb_architecture;
+	const char **gdb_features;
+#endif
 };
 
 #if __BYTE_ORDER == __BIG_ENDIAN
