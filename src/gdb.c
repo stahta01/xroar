@@ -20,10 +20,10 @@
  * Support a subset of the gdb protocol over a socket.  See
  * http://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
  *
- * Accessible registers are now defined in the debug_cpu interface.
+ * Accessible registers are defined per-machine.
 
  * 'g' packet responses will contain hex pairs comprising all registers the
- * debug_cpu interface exposes.
+ * machine interface exposes.
  *
  * 'm' and 'M' packets will read or write translated memory addresses (as seen
  * by the CPU).
@@ -39,9 +39,6 @@
  * Only these vendor-specific general sets are supported:
 
  *      Qxroar.sam:XXXX       | set SAM register (4 hex digits)
-
- * TODO: machine-specific handling like SAM registers needs to be devolved to a
- * machine interface, then we can add GIME register querying too.
 
  */
 
@@ -100,7 +97,6 @@
 struct gdb_interface_private {
 	struct machine *machine;
 
-	struct debug_cpu *dcpu;
 	struct MC6883 *sam;
 
 	// Thread info
@@ -173,7 +169,6 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	if (!m)
 		return NULL;
 
-	struct debug_cpu *dcpu = (struct debug_cpu *)part_component_by_id_is_a(&m->part, "CPU", "DEBUG-CPU");
 
 	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
 
@@ -181,7 +176,6 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	*gip = (struct gdb_interface_private){0};
 
 	gip->machine = m;
-	gip->dcpu = dcpu;
 	gip->sam = sam;
 	gip->run_state = gdb_run_state_running;
 
@@ -694,10 +688,10 @@ static void send_last_signal(struct gdb_interface_private *gip) {
 static void send_general_registers(struct gdb_interface_private *gip) {
 	char *dst = packet;
 	size_t dsize = sizeof(packet);
-	for (unsigned i = 0; i < gip->dcpu->num_registers; ++i) {
-		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, i);
-		uint32_t rval = DELEGATE_CALL(gip->dcpu->get_register, i);
-		int n = snprint_value_endian(dst, dsize, gip->dcpu->endian, rval, rsize);
+	for (unsigned i = 0; i < gip->machine->debug.num_registers; ++i) {
+		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, i);
+		uint32_t rval = DELEGATE_CALL(gip->machine->debug.get_register, i);
+		int n = snprint_value_endian(dst, dsize, gip->machine->debug.endian, rval, rsize);
 		dst += n;
 		dsize -= n;
 	}
@@ -706,15 +700,15 @@ static void send_general_registers(struct gdb_interface_private *gip) {
 
 static void set_general_registers(struct gdb_interface_private *gip, char *args) {
 	size_t asize = strlen(args);
-	for (unsigned i = 0; i < gip->dcpu->num_registers; ++i) {
-		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, i);
+	for (unsigned i = 0; i < gip->machine->debug.num_registers; ++i) {
+		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, i);
 		uint32_t rval = 0;
-		int n = scan_value_endian(args, asize, gip->dcpu->endian, &rval, rsize);
+		int n = scan_value_endian(args, asize, gip->machine->debug.endian, &rval, rsize);
 		if (n == 0)
 			break;
 		args += n;
 		asize -= n;
-		DELEGATE_CALL(gip->dcpu->set_register, i, rval);
+		DELEGATE_CALL(gip->machine->debug.set_register, i, rval);
 	}
 	send_packet_string(gip, "OK");
 }
@@ -776,12 +770,12 @@ error:
 
 static void send_register(struct gdb_interface_private *gip, char *args) {
 	unsigned regnum = strtoul(args, NULL, 16);
-	if (regnum >= gip->dcpu->num_registers) {
+	if (regnum >= gip->machine->debug.num_registers) {
 		send_packet_string(gip, "E00");
 	} else {
-		unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, regnum);
-		uint32_t rval = DELEGATE_CALL(gip->dcpu->get_register, regnum);
-		snprint_value_endian(packet, sizeof(packet), gip->dcpu->endian, rval, rsize);
+		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, regnum);
+		uint32_t rval = DELEGATE_CALL(gip->machine->debug.get_register, regnum);
+		snprint_value_endian(packet, sizeof(packet), gip->machine->debug.endian, rval, rsize);
 		send_packet_string(gip, packet);
 	}
 }
@@ -791,14 +785,14 @@ static void set_register(struct gdb_interface_private *gip, char *args) {
 	if (!regnum_str || !args)
 		goto error;
 	unsigned regnum = strtoul(regnum_str, NULL, 16);
-	if (regnum >= gip->dcpu->num_registers)
+	if (regnum >= gip->machine->debug.num_registers)
 		goto error;
-	unsigned rsize = DELEGATE_CALL(gip->dcpu->register_size, regnum);
+	unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, regnum);
 	uint32_t rval = 0;
-	int n = scan_value_endian(args, strlen(args), gip->dcpu->endian, &rval, rsize);
+	int n = scan_value_endian(args, strlen(args), gip->machine->debug.endian, &rval, rsize);
 	if (n == 0)
 		goto error;
-	DELEGATE_CALL(gip->dcpu->set_register, regnum, rval);
+	DELEGATE_CALL(gip->machine->debug.set_register, regnum, rval);
 	send_packet_string(gip, "OK");
 	return;
 error:
@@ -841,10 +835,13 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 	} else if (0 == strcmp(query, "Xfer")) {
 		if (0 == strncmp(args, "features:read:", 14)) {
 			args += 14;
-			char *annex = args;
+			char *annex = NULL;
+			const char *data = NULL;
+			size_t data_size = 0;
 			if (0 == strncmp(args, "target.xml:", 11)) {
 				args += 11;
-				annex = (char *)gip->dcpu->target_xml;
+				data = gip->machine->debug.target_xml;
+				data_size = sdslen(gip->machine->debug.target_xml);
 			} else {
 				annex = strsep(&args, ":");
 			}
@@ -852,12 +849,19 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 			if (*args == ',')
 				++args;
 			size_t length = strtol(args, &args, 16);
-			for (size_t i = 0; i < num_gdb_annex; ++i) {
-				struct gdb_annex *ga = &gdb_annex_list[i];
-				if (0 == strcmp(ga->name, annex)) {
-					qXfer(gip, ga->data, ga->data_size, offset, length);
-					return;
+			if (annex) {
+				for (size_t i = 0; i < num_gdb_annex; ++i) {
+					struct gdb_annex *ga = &gdb_annex_list[i];
+					if (0 == strcmp(ga->name, annex)) {
+						data = ga->data;
+						data_size = ga->data_size;
+						break;
+					}
 				}
+			}
+			if (data) {
+				qXfer(gip, data, data_size, offset, length);
+				return;
 			}
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer features read: %s\n", args);
 			send_packet(gip, NULL, 0);
@@ -1059,8 +1063,8 @@ static int snprint_value_endian(char *dst, size_t dsize, int endian,
 			return nbytes;
 		int shift;
 		switch (endian) {
-		case DCPU_ENDIAN_BIG: default: shift = (vsize - i - 1) * 8; break;
-		case DCPU_ENDIAN_LITTLE: shift = i * 8;
+		case machine_endian_big: default: shift = (vsize - i - 1) * 8; break;
+		case machine_endian_little: shift = i * 8;
 		}
 		int v = (value >> shift) & 0xff;
 		int n = snprintf(dst, dsize, "%02x", v);
@@ -1087,8 +1091,8 @@ static int scan_value_endian(char *src, size_t ssize, int endian,
 		} else {
 			int shift;
 			switch (endian) {
-			case DCPU_ENDIAN_BIG: default: shift = (vsize - i - 1) * 8; break;
-			case DCPU_ENDIAN_LITTLE: shift = i * 8;
+			case machine_endian_big: default: shift = (vsize - i - 1) * 8; break;
+			case machine_endian_little: shift = i * 8;
 			}
 			rval |= (uint32_t)(tmp & 0xff) << shift;
 		}
