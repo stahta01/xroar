@@ -154,7 +154,6 @@ static int scan_value_endian(char *src, size_t ssize, int endian,
 			     uint32_t *value, unsigned vsize);
 static int hexdigit(char c);
 static int hex8(char *s);
-static int hex16(char *s);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1089,12 +1088,4 @@ static int hex8(char *s) {
 	if (n0 < 0 || n1 < 0)
 		return -1;
 	return (n1 << 4) | n0;
-}
-
-static int hex16(char *s) {
-	int b1 = hex8(s);
-	int b0 = hex8(s+2);
-	if (b0 < 0 || b1 < 0)
-		return -1;
-	return (b1 << 8) | b0;
 }
