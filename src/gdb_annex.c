@@ -26,22 +26,6 @@
 
 #include "gdb_annex.h"
 
-static const char m6801_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>m6801</architecture>"
-  "<xi:include href=\"m6801-core.xml\"/>"
-"</target>";
-
-static const char m6803_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>m6803</architecture>"
-  "<xi:include href=\"m6801-core.xml\"/>"
-"</target>";
-
 static const char m6801_core_xml[] =
 "<?xml version=\"1.0\"?>"
 "<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
@@ -63,23 +47,6 @@ static const char m6801_core_xml[] =
 "</feature>";
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static const char m6809_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>m6809</architecture>"
-  "<xi:include href=\"m6809-core.xml\"/>"
-"</target>";
-
-static const char h6309_xml[] =
-"<?xml version=\"1.0\"?>"
-"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
-"<target>"
-  "<architecture>h6309</architecture>"
-  "<xi:include href=\"m6809-core.xml\"/>"
-  "<xi:include href=\"m6809-h6309.xml\"/>"
-"</target>";
 
 static const char m6809_core_xml[] =
 "<?xml version=\"1.0\"?>"
@@ -125,12 +92,8 @@ static const char m6809_h6309_xml[] =
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct gdb_annex gdb_annex_list[] = {
-	{ "m6801.xml", m6801_xml, sizeof(m6801_xml) - 1 },
-	{ "m6803.xml", m6803_xml, sizeof(m6803_xml) - 1 },
 	{ "m6801-core.xml", m6801_core_xml, sizeof(m6801_core_xml) - 1 },
 
-	{ "m6809.xml", m6809_xml, sizeof(m6809_xml) - 1 },
-	{ "h6309.xml", h6309_xml, sizeof(h6309_xml) - 1 },
 	{ "m6809-core.xml", m6809_core_xml, sizeof(m6809_core_xml) - 1 },
 	{ "m6809-h6309.xml", m6809_h6309_xml, sizeof(m6809_h6309_xml) - 1 },
 };
