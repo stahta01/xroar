@@ -24,6 +24,7 @@
 #include <sys/types.h>
 
 #include "delegate.h"
+#include "sds.h"
 
 #include "breakpoint.h"
 #include "part.h"
@@ -168,6 +169,11 @@ enum machine_run_state {
 	machine_run_state_stopped,
 };
 
+enum machine_endian {
+	machine_endian_big = 0,
+	machine_endian_little,
+};
+
 struct machine {
 	struct part part;
 
@@ -225,6 +231,25 @@ struct machine {
 		void (*remove_watchpoint)(struct machine *, int RnW,
 					  int32_t Astart, uint32_t Aend,
 					  DELEGATE_T2(void, bool, uint32) handler);
+
+#ifdef WANT_GDB_TARGET
+		// Target description (to send to GDB)
+		sds target_xml;
+
+		// Target byte order (for communicating with GDB)
+		enum machine_endian endian;
+
+		// Number of registers.  Includes CPU registers and optionally
+		// pseudo-registers representing other aspects of the machine.
+		unsigned num_registers;
+
+		// Report register size (mainly for reporting to GDB)
+		DELEGATE_T1(unsigned, int) register_size;
+
+		// Get & set registers
+		DELEGATE_T1(uint32, int) get_register;
+		DELEGATE_T2(void, int, uint32) set_register;
+#endif
 	} debug;
 };
 
