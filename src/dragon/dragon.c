@@ -37,6 +37,7 @@
 #include "dragon/dragon.h"
 #include "dragon/immunity.h"
 #include "gdb.h"
+#include "gdb_annex.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -233,6 +234,11 @@ static void dragon_add_watchpoint(struct machine *m, _Bool RnW,
 static void dragon_remove_watchpoint(struct machine *m, int RnW,
 				     int32_t Astart, uint32_t Aend,
 				     DELEGATE_T2(void, bool, uint32) handler);
+#ifdef WANT_GDB_TARGET
+static unsigned dragon_register_size(void *sptr, int regno);
+static uint32_t dragon_get_register(void *sptr, int regno);
+static void dragon_set_register(void *sptr, int regno, uint32_t value);
+#endif
 
 static void joystick_update(void *sptr);
 static void update_sound_mux_source(void *sptr);
@@ -292,6 +298,13 @@ void dragon_allocate_common(struct dragon *md) {
 	m->debug.remove_breakpoint = dragon_remove_breakpoint;
 	m->debug.add_watchpoint = dragon_add_watchpoint;
 	m->debug.remove_watchpoint = dragon_remove_watchpoint;
+
+#ifdef WANT_GDB_TARGET
+	m->debug.endian = machine_endian_big;
+	m->debug.register_size = DELEGATE_AS1(unsigned, int, dragon_register_size, md);
+	m->debug.get_register = DELEGATE_AS1(uint32, int, dragon_get_register, md);
+	m->debug.set_register = DELEGATE_AS2(void, int, uint32, dragon_set_register, md);
+#endif
 
 	m->keyboard.type = dkbd_layout_dragon;
 
@@ -403,6 +416,19 @@ _Bool dragon_finish_common(struct dragon *md) {
 	ui_messenger_join_group(md->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_ratelimit, md));
 
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
+
+#ifdef WANT_GDB_TARGET
+	m->debug.num_registers = md->CPU->debug_cpu.num_registers;
+
+	if (md->CPU->gdb_architecture) {
+		m->debug.target_xml = gdb_annex_target_new(md->CPU->gdb_architecture);
+		if (md->CPU->gdb_features) {
+			for (const char **f = md->CPU->gdb_features; *f; ++f) {
+				m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, *f);
+			}
+		}
+	}
+#endif
 
 	md->has_combined = md->has_extbas = md->has_bas = md->has_altbas = 0;
 	md->crc_combined = md->crc_extbas = md->crc_bas = md->crc_altbas = 0;
@@ -628,6 +654,7 @@ void dragon_free_common(struct part *p) {
 	if (md->gdb_interface) {
 		gdb_interface_free(md->gdb_interface);
 	}
+	sdsfree(md->public.debug.target_xml);
 #endif
 	if (md->keyboard.interface) {
 		keyboard_interface_free(md->keyboard.interface);
@@ -1316,6 +1343,32 @@ static void dragon_remove_watchpoint(struct machine *m, int RnW,
 	struct dragon *md = (struct dragon *)m;
 	bp_watchpoint_remove(&md->watchpoint_set, RnW, Astart, Aend, handler);
 }
+
+#ifdef WANT_GDB_TARGET
+
+static unsigned dragon_register_size(void *sptr, int regno) {
+	struct dragon *md = sptr;
+	if ((unsigned)regno < md->CPU->debug_cpu.num_registers)
+		return DELEGATE_CALL(md->CPU->debug_cpu.register_size, regno);
+	return 0;
+}
+
+static uint32_t dragon_get_register(void *sptr, int regno) {
+	struct dragon *md = sptr;
+	if ((unsigned)regno < md->CPU->debug_cpu.num_registers)
+		return DELEGATE_CALL(md->CPU->debug_cpu.get_register, regno);
+	return 0;
+}
+
+static void dragon_set_register(void *sptr, int regno, uint32_t value) {
+	struct dragon *md = sptr;
+	if ((unsigned)regno < md->CPU->debug_cpu.num_registers) {
+		DELEGATE_CALL(md->CPU->debug_cpu.set_register, regno, value);
+		return;
+	}
+}
+
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
