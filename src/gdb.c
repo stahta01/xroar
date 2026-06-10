@@ -32,13 +32,8 @@
  *
  * Some standard, and some vendor-specific general queries are supported:
 
- *      qxroar.sam      | XXXX  | get SAM register, reply is 4 hex digits
  *      qSupported      | XX... | report PacketSize
  *      qAttached       | 1     | always report attached
-
- * Only these vendor-specific general sets are supported:
-
- *      Qxroar.sam:XXXX       | set SAM register (4 hex digits)
 
  */
 
@@ -96,8 +91,6 @@
 
 struct gdb_interface_private {
 	struct machine *machine;
-
-	struct MC6883 *sam;
 
 	// Thread info
 	int listenfd;
@@ -169,14 +162,10 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	if (!m)
 		return NULL;
 
-
-	struct MC6883 *sam = (struct MC6883 *)part_component_by_id_is_a(&m->part, "SAM", "SN74LS783");
-
 	struct gdb_interface_private *gip = xmalloc(sizeof(*gip));
 	*gip = (struct gdb_interface_private){0};
 
 	gip->machine = m;
-	gip->sam = sam;
 	gip->run_state = gdb_run_state_running;
 
 	struct addrinfo hints;
@@ -814,19 +803,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		return;
 	}
 	char *query = strsep(&args, ":");
-	if (0 == strncmp(query, "xroar.", 6)) {
-		query += 6;
-#ifdef WANT_MACHINE_ARCH_DRAGON
-		if (0 == strcmp(query, "sam") && gip->sam) {
-			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: xroar.sam\n");
-			sprintf(packet, "%04x", gip->sam->get_register(gip->sam));
-			send_packet(gip, packet, 4);
-			return;
-		}
-#endif
-		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown xroar vendor query\n");
-		send_packet(gip, NULL, 0);
-	} else if (0 == strncmp(query, "Supported", 9) && (query[9] == 0 || query[9] == ':')) {
+	if (0 == strncmp(query, "Supported", 9) && (query[9] == 0 || query[9] == ':')) {
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Supported\n");
 		send_supported(gip, args);
 	} else if (0 == strcmp(query, "Attached")) {
@@ -879,16 +856,7 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 
 static void general_set(struct gdb_interface_private *gip, char *args) {
 	char *set = strsep(&args, ":");
-	if (0 == strncmp(set, "xroar.", 6)) {
-		set += 6;
-#ifdef WANT_MACHINE_ARCH_DRAGON
-		if (0 == strcmp(set, "sam") && gip->sam) {
-			gip->sam->set_register(gip->sam, hex16(args));
-			send_packet_string(gip, "OK");
-			return;
-		}
-#endif
-	} else if (0 == strcmp(set, "StartNoAckMode")) {
+	if (0 == strcmp(set, "StartNoAckMode")) {
 		gip->no_ack_mode = 1;
 		send_packet_string(gip, "OK");
 		return;
