@@ -3340,6 +3340,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_BOOL("gdb", &xroar.cfg.debug.gdb) },
 	{ XC_SET_STRING("gdb-ip", &xroar.cfg.debug.gdb_ip) },
 	{ XC_SET_STRING("gdb-port", &xroar.cfg.debug.gdb_port) },
+	{ XC_SET_BOOL("gdb-pseudo-regs", &xroar.cfg.debug.gdb_pseudo_regs) },
 	{ XC_SET_BOOL("trace", &logging.trace_cpu) },
 	{ XC_SET_BOOL("trace-timing", &logging.trace_cpu_timing) },
 #ifdef WANT_TRAPS
@@ -3539,6 +3540,7 @@ static void helptext(void) {
 "  -gdb                  enable GDB target\n"
 "  -gdb-ip ADDRESS       address of interface for GDB target [" GDB_IP_DEFAULT "]\n"
 "  -gdb-port PORT        port for GDB target to listen on [" GDB_PORT_DEFAULT "]\n"
+"  -gdb-pseudo-regs      enable pseudo-registers (e.g. SAM, PIA) for GDB\n"
 #endif
 "  -no-ratelimit         run cpu as fast as possible\n"
 #ifdef TRACE

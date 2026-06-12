@@ -418,7 +418,10 @@ _Bool dragon_finish_common(struct dragon *md) {
 	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
 #ifdef WANT_GDB_TARGET
-	m->debug.num_registers = md->CPU->debug_cpu.num_registers + 13;
+	m->debug.num_registers = md->CPU->debug_cpu.num_registers;
+	if (xroar.cfg.debug.gdb_pseudo_regs) {
+		m->debug.num_registers += 13;
+	}
 
 	if (md->CPU->gdb_architecture) {
 		m->debug.target_xml = gdb_annex_target_new(md->CPU->gdb_architecture);
@@ -427,8 +430,10 @@ _Bool dragon_finish_common(struct dragon *md) {
 				m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, *f);
 			}
 		}
-		m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-sam.xml");
-		m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-pia.xml");
+		if (xroar.cfg.debug.gdb_pseudo_regs) {
+			m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-sam.xml");
+			m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, "dragon-pia.xml");
+		}
 	}
 #endif
 
