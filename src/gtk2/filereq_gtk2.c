@@ -40,7 +40,8 @@
 struct filereq_interface_gtk2 {
 	struct filereq_interface public;
 
-	GtkWidget *top_window;
+	struct ui_gtk2_interface *ui_gtk2;
+
 	GtkWidget *load_dialog;
 	GtkWidget *save_dialog;
 };
@@ -64,11 +65,11 @@ static void *filereq_gtk2_new(void *sptr) {
 	frgtk2->public.load_filename = DELEGATE_AS1(charp, charcp, load_filename, frgtk2);
 	frgtk2->public.save_filename = DELEGATE_AS1(charp, charcp, save_filename, frgtk2);
 
+	frgtk2->ui_gtk2 = ui_gtk2;
+
 	// If running as part of the general GTK+ UI, fetch its top window
 	// widget.  Otherwise, we need to initialise GTK+ here.
-	if (ui_gtk2) {
-		frgtk2->top_window = ui_gtk2->top_window;
-	} else {
+	if (!ui_gtk2) {
 		gtk_init(NULL, NULL);
 	}
 	return frgtk2;
@@ -76,15 +77,24 @@ static void *filereq_gtk2_new(void *sptr) {
 
 static void filereq_gtk2_free(void *sptr) {
 	struct filereq_interface_gtk2 *frgtk2 = sptr;
+	if (!frgtk2->ui_gtk2) {
+		if (frgtk2->load_dialog)
+			gtk_widget_destroy(frgtk2->load_dialog);
+		if (frgtk2->save_dialog)
+			gtk_widget_destroy(frgtk2->save_dialog);
+	}
 	free(frgtk2);
 }
 
 static char *load_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk2 *frgtk2 = sptr;
 	char *filename = NULL;
+
+	GtkWidget *top_window = frgtk2->ui_gtk2 ? frgtk2->ui_gtk2->top_window : NULL;
+
 	if (!frgtk2->load_dialog) {
 		frgtk2->load_dialog = gtk_file_chooser_dialog_new(title,
-		    GTK_WINDOW(frgtk2->top_window), GTK_FILE_CHOOSER_ACTION_OPEN,
+		    GTK_WINDOW(top_window), GTK_FILE_CHOOSER_ACTION_OPEN,
 		    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 		    GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT, NULL);
 	} else {
@@ -101,7 +111,7 @@ static char *load_filename(void *sptr, char const *title) {
 		}
 	}
 	gtk_widget_hide(frgtk2->load_dialog);
-	if (!frgtk2->top_window) {
+	if (!top_window) {
 		while (gtk_events_pending()) {
 			gtk_main_iteration();
 		}
@@ -112,9 +122,12 @@ static char *load_filename(void *sptr, char const *title) {
 static char *save_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk2 *frgtk2 = sptr;
 	char *filename = NULL;
+
+	GtkWidget *top_window = frgtk2->ui_gtk2 ? frgtk2->ui_gtk2->top_window : NULL;
+
 	if (!frgtk2->save_dialog) {
 		frgtk2->save_dialog = gtk_file_chooser_dialog_new(title,
-		    GTK_WINDOW(frgtk2->top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
+		    GTK_WINDOW(top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
 		    GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 		    GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT, NULL);
 		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(frgtk2->save_dialog), TRUE);
@@ -132,7 +145,7 @@ static char *save_filename(void *sptr, char const *title) {
 		}
 	}
 	gtk_widget_hide(frgtk2->save_dialog);
-	if (!frgtk2->top_window) {
+	if (!top_window) {
 		while (gtk_events_pending()) {
 			gtk_main_iteration();
 		}

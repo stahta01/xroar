@@ -35,7 +35,8 @@
 struct filereq_interface_gtk3 {
 	struct filereq_interface public;
 
-	GtkWidget *top_window;
+	struct ui_gtk3_interface *ui_gtk3;
+
 	GtkWidget *load_dialog;
 	GtkWidget *save_dialog;
 };
@@ -59,11 +60,11 @@ static void *filereq_gtk3_new(void *sptr) {
 	frgtk3->public.load_filename = DELEGATE_AS1(charp, charcp, load_filename, frgtk3);
 	frgtk3->public.save_filename = DELEGATE_AS1(charp, charcp, save_filename, frgtk3);
 
-	// If running as part of the general GTK+ UI, fetch its top window
-	// widget.  Otherwise, we need to initialise GTK+ here.
-	if (ui_gtk3) {
-		frgtk3->top_window = ui_gtk3->top_window;
-	} else {
+	frgtk3->ui_gtk3 = ui_gtk3;
+
+	// If not running as part of the general GTK+ UI, we need to initialise
+	// GTK+ here.
+	if (!ui_gtk3) {
 		gtk_init(NULL, NULL);
 	}
 	return frgtk3;
@@ -71,15 +72,24 @@ static void *filereq_gtk3_new(void *sptr) {
 
 static void filereq_gtk3_free(void *sptr) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
+	if (!frgtk3->ui_gtk3) {
+		if (frgtk3->load_dialog)
+			gtk_widget_destroy(frgtk3->load_dialog);
+		if (frgtk3->save_dialog)
+			gtk_widget_destroy(frgtk3->save_dialog);
+	}
 	free(frgtk3);
 }
 
 static char *load_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
 	char *filename = NULL;
+
+	GtkWidget *top_window = frgtk3->ui_gtk3 ? frgtk3->ui_gtk3->top_window : NULL;
+
 	if (!frgtk3->load_dialog) {
 		frgtk3->load_dialog = gtk_file_chooser_dialog_new(title,
-		    GTK_WINDOW(frgtk3->top_window), GTK_FILE_CHOOSER_ACTION_OPEN,
+		    GTK_WINDOW(top_window), GTK_FILE_CHOOSER_ACTION_OPEN,
 		    "_Cancel", GTK_RESPONSE_CANCEL,
 		    "_Open", GTK_RESPONSE_ACCEPT, NULL);
 	} else {
@@ -96,7 +106,7 @@ static char *load_filename(void *sptr, char const *title) {
 		}
 	}
 	gtk_widget_hide(frgtk3->load_dialog);
-	if (!frgtk3->top_window) {
+	if (!top_window) {
 		while (gtk_events_pending()) {
 			gtk_main_iteration();
 		}
@@ -107,9 +117,12 @@ static char *load_filename(void *sptr, char const *title) {
 static char *save_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
 	char *filename = NULL;
+
+	GtkWidget *top_window = frgtk3->ui_gtk3 ? frgtk3->ui_gtk3->top_window : NULL;
+
 	if (!frgtk3->save_dialog) {
 		frgtk3->save_dialog = gtk_file_chooser_dialog_new(title,
-		    GTK_WINDOW(frgtk3->top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
+		    GTK_WINDOW(top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
 		    "_Cancel", GTK_RESPONSE_CANCEL,
 		    "_Save", GTK_RESPONSE_ACCEPT, NULL);
 		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(frgtk3->save_dialog), TRUE);
@@ -127,7 +140,7 @@ static char *save_filename(void *sptr, char const *title) {
 		}
 	}
 	gtk_widget_hide(frgtk3->save_dialog);
-	if (!frgtk3->top_window) {
+	if (!top_window) {
 		while (gtk_events_pending()) {
 			gtk_main_iteration();
 		}
