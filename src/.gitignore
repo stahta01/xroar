@@ -18,6 +18,7 @@
 /pulseaudio/*.o
 /sdl/*.o
 /sdl2/*.o
+/sdl3/*.o
 /tcc1014/*.o
 /wasm/*.o
 /windows32/*.o

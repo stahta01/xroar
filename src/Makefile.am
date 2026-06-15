@@ -381,7 +381,17 @@ if UI_SDL3
 xroar_CFLAGS += $(SDL3_CFLAGS)
 xroar_LDADD += $(SDL3_LIBS)
 xroar_SOURCES += \
-	sdl3/ao_sdl3.c
+	sdl3/ao_sdl3.c \
+	sdl3/common.c sdl3/common.h \
+	sdl3/joystick_sdl3.c \
+	sdl3/keyboard_sdl3.c \
+	sdl3/ui_sdl3.c \
+	sdl3/vo_sdl3.c
+
+if X11
+xroar_SOURCES += \
+	sdl3/sdl_x11.c
+endif
 
 endif
 

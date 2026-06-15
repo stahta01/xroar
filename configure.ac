@@ -848,6 +848,7 @@ AM_COND_IF([GDB], [AC_DEFINE([WANT_GDB_TARGET], 1, [GDB target])])
 ### Misc tests & features
 
 AM_COND_IF([UI_SDL2], [ test "x$enable_ui_sdl" != "xno" && enable_ui_sdl=yes ])
+AM_COND_IF([UI_SDL3], [ test "x$enable_ui_sdl" != "xno" && enable_ui_sdl=yes ])
 AM_CONDITIONAL([WANT_UI_SDL], [test "x$enable_ui_sdl" = "xyes"])
 AM_COND_IF([WANT_UI_SDL], [
 		AC_DEFINE([WANT_UI_SDL], 1, [Enable basic SDL UI]) ])
