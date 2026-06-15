@@ -90,7 +90,7 @@ bool SDLCALL sdl_x11_event_hook(void *sptr, XEvent *xevent);
 
 /* These functions will be in the windows32-specific code. */
 
-void sdl_windows32_set_events_window(SDL_Window *);
+void sdl_windows32_set_events_window(struct ui_sdl3_interface *uisdl3);
 void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *, _Bool visible);
 
 #endif

@@ -2,7 +2,7 @@
  *
  *  \brief Windows dialog window abstraction.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -58,7 +58,7 @@ void *uiw32_dialog_new_sized(size_t size, struct ui_windows32_interface *uiw32,
 			     INT_PTR CALLBACK (*proc)(struct uiw32_dialog *,
 						      UINT, WPARAM, LPARAM)) {
 	// Create dialog from resource
-	HWND hWnd = CreateDialog(NULL, MAKEINTRESOURCE(resource_id), windows32_main_hwnd, (DLGPROC)dlg_proc);
+	HWND hWnd = CreateDialog(NULL, MAKEINTRESOURCE(resource_id), uiw32->main_window, (DLGPROC)dlg_proc);
 	assert(hWnd != NULL);
 
 	if (size < sizeof(struct uiw32_dialog)) {

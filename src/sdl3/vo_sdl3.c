@@ -242,7 +242,7 @@ _Bool sdl_vo_init(struct ui_sdl3_interface *uisdl3) {
 #ifdef WINDOWS32
 	// Need an event handler to prevent events backing up while menus are
 	// being used.
-	sdl_windows32_set_events_window(uisdl3->vo_window);
+	sdl_windows32_set_events_window(uisdl3);
 #endif
 
 	// Per-OS keyboard initialisation

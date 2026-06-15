@@ -64,6 +64,19 @@
 static void *ui_windows32_new(void *cfg);
 static void ui_windows32_free(void *);
 
+extern struct module filereq_windows32_module;
+extern struct module filereq_cli_module;
+extern struct module filereq_null_module;
+
+static struct module * const windows32_filereq_module_list[] = {
+	&filereq_windows32_module,
+#ifdef HAVE_CLI
+	&filereq_cli_module,
+#endif
+	&filereq_null_module,
+	NULL
+};
+
 struct ui_module ui_windows32_module = {
 	.common = { .name = "windows32", .description = "Windows32 SDL3 UI",
 		.new = ui_windows32_new,
@@ -126,6 +139,14 @@ static void *ui_windows32_new(void *cfg) {
 	windows32_update_machine_menu(uiw32);
 	windows32_update_cartridge_menu(uiw32);
 	windows32_update_joystick_menus(uiw32);
+
+	// File requester
+	struct module *fr_module = module_select_by_arg(windows32_filereq_module_list, ui_cfg->filereq);
+	if (fr_module == &filereq_windows32_module) {
+		ui->filereq_interface = module_init(fr_module, "filereq", uiw32);
+	} else {
+		ui->filereq_interface = module_init(fr_module, "filereq", NULL);
+	}
 
 	SDL_SetWindowsMessageHook(sdl_windows_message_hook, uiw32);
 
@@ -683,9 +704,9 @@ static HWND get_hwnd(SDL_Window *w) {
 
 // Record the top-level window handle
 
-void sdl_windows32_set_events_window(SDL_Window *sw) {
-	HWND hwnd = get_hwnd(sw);
-	windows32_main_hwnd = hwnd;
+void sdl_windows32_set_events_window(struct ui_sdl3_interface *uisdl3) {
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl3;
+	uiw32->main_window = get_hwnd(uisdl3->vo_window);
 }
 
 // Change menubar visibility.  This will change the size of the client area

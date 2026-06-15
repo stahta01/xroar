@@ -36,7 +36,7 @@ static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 void uiw32_create_about_window(struct ui_windows32_interface *uiw32) {
 	(void)uiw32;
 	if (!IsWindow(uiw32->about.window)) {
-		uiw32->about.window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_ABOUT), windows32_main_hwnd, (DLGPROC)about_proc);
+		uiw32->about.window = CreateDialog(NULL, MAKEINTRESOURCE(IDD_DLG_ABOUT), uiw32->main_window, (DLGPROC)about_proc);
 		if (uiw32->about.window) {
 			ShowWindow(uiw32->about.window, SW_SHOW);
 		}

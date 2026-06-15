@@ -46,19 +46,25 @@ struct module filereq_windows32_module = {
 
 struct windows32_filereq_interface {
 	struct filereq_interface public;
+
+	struct ui_windows32_interface *uiw32;
 };
 
 static void filereq_windows32_free(void *sptr);
 static char *load_filename(void *sptr, char const *title);
 static char *save_filename(void *sptr, char const *title);
 
-static void *filereq_windows32_new(void *cfg) {
-	(void)cfg;
+static void *filereq_windows32_new(void *sptr) {
+	struct ui_windows32_interface *uiw32 = sptr;
+
 	struct windows32_filereq_interface *frw32 = xmalloc(sizeof(*frw32));
 	*frw32 = (struct windows32_filereq_interface){0};
 	frw32->public.free = DELEGATE_AS0(void, filereq_windows32_free, frw32);
 	frw32->public.load_filename = DELEGATE_AS1(charp, charcp, load_filename, frw32);
 	frw32->public.save_filename = DELEGATE_AS1(charp, charcp, save_filename, frw32);
+
+	frw32->uiw32 = uiw32;
+
 	return frw32;
 }
 
@@ -83,7 +89,7 @@ static char *load_filename(void *sptr, char const *title) {
 	char fn_buf[260];
 
 	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = windows32_main_hwnd;
+	ofn.hwndOwner = frw32->uiw32->main_window;
 	ofn.lpstrFile = fn_buf;
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = sizeof(fn_buf);
@@ -111,7 +117,7 @@ static char *save_filename(void *sptr, char const *title) {
 	char fn_buf[260];
 
 	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = windows32_main_hwnd;
+	ofn.hwndOwner = frw32->uiw32->main_window;
 	ofn.lpstrFile = fn_buf;
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = sizeof(fn_buf);

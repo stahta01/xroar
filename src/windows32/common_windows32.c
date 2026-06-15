@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface common functions.
  *
- *  \copyright Copyright 2006-2024 Ciaran Anscomb
+ *  \copyright Copyright 2006-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -31,8 +31,6 @@
 
 #include "windows32/common_windows32.h"
 #include "windows32/guicon.h"
-
-HWND windows32_main_hwnd = NULL;
 
 /** A console window is created if requested, thus this should be called _after_
  * processing options that may call for a console, but _before_ generating any

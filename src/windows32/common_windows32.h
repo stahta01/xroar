@@ -44,6 +44,8 @@ struct ui_windows32_interface {
 	// Messenger client ID
 	int msgr_client_id;
 
+	HWND main_window;
+
 	HMENU top_menu;
 	HMENU machine_menu;
 	HMENU cartridge_menu;
@@ -59,8 +61,6 @@ struct ui_windows32_interface {
 		HWND window;
 	} about;
 };
-
-extern HWND windows32_main_hwnd;
 
 /// Various initialisation required for Windows32.
 int windows32_init(int alloc_console);
