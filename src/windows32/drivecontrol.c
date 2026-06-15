@@ -206,6 +206,7 @@ static INT_PTR CALLBACK dc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 				char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
 				if (filename) {
 					xroar_insert_hd_file(hd, filename);
+					free(filename);
 				}
 
 			} else if (id >= IDC_BN_HD0_NEW && id <= IDC_BN_HD1_NEW) {
@@ -289,5 +290,6 @@ static void dc_new_hd(struct uiw32_dialog *dlg, int hd) {
 		if (bd_create(filename, hd_type_map[hd_type])) {
 			xroar_insert_hd_file(hd, filename);
 		}
+		free(filename);
 	}
 }

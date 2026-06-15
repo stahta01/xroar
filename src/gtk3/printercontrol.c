@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 3 printer control window.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -199,6 +199,7 @@ static void pc_file_attach(GtkButton *button, gpointer user_data) {
 	char *filename = DELEGATE_CALL(ui->filereq_interface->save_filename, "Print to file");
 	if (filename) {
 		ui_update_state(-1, ui_tag_print_file, 0, filename);
+		free(filename);
 	}
 }
 

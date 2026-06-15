@@ -2,7 +2,7 @@
  *
  *  \brief Windows file requester module.
  *
- *  \copyright Copyright 2005-2024 Ciaran Anscomb
+ *  \copyright Copyright 2005-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -46,8 +46,6 @@ struct module filereq_windows32_module = {
 
 struct windows32_filereq_interface {
 	struct filereq_interface public;
-
-	char *filename;
 };
 
 static void filereq_windows32_free(void *sptr);
@@ -66,7 +64,6 @@ static void *filereq_windows32_new(void *cfg) {
 
 static void filereq_windows32_free(void *sptr) {
 	struct windows32_filereq_interface *frw32 = sptr;
-	free(frw32->filename);
 	free(frw32);
 }
 
@@ -99,13 +96,12 @@ static char *load_filename(void *sptr, char const *title) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
 		| OFN_HIDEREADONLY;
 
-	free(frw32->filename);
-	frw32->filename = NULL;
+	char *filename = NULL;
 	if (GetOpenFileName(&ofn) == TRUE) {
-		frw32->filename = xstrdup(ofn.lpstrFile);
+		filename = xstrdup(ofn.lpstrFile);
 	}
 
-	return frw32->filename;
+	return filename;
 }
 
 static char *save_filename(void *sptr, char const *title) {
@@ -128,11 +124,10 @@ static char *save_filename(void *sptr, char const *title) {
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_HIDEREADONLY
 		| OFN_OVERWRITEPROMPT;
 
-	free(frw32->filename);
-	frw32->filename = NULL;
+	char *filename = NULL;
 	if (GetSaveFileName(&ofn) == TRUE) {
-		frw32->filename = xstrdup(ofn.lpstrFile);
+		filename = xstrdup(ofn.lpstrFile);
 	}
 
-	return frw32->filename;
+	return filename;
 }

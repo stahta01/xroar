@@ -1856,6 +1856,7 @@ void xroar_new_disk(int drive) {
 	ui_update_state(-1, ui_tag_disk_write_enable, 1, (void *)(intptr_t)drive);
 	ui_update_state(-1, ui_tag_disk_write_back, 1, (void *)(intptr_t)drive);
 	LOG_MOD_DEBUG(1, "xroar", "new unformatted disk in drive %d: %s\n", 1+drive, filename);
+	free(filename);
 }
 
 void xroar_insert_disk_file(int drive, const char *filename) {
@@ -1881,6 +1882,7 @@ void xroar_insert_disk(int drive) {
 	}
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Load floppy image");
 	xroar_insert_disk_file(drive, filename);
+	free(filename);
 }
 
 void xroar_eject_disk(int drive) {
@@ -2085,11 +2087,13 @@ void xroar_set_pause(_Bool notify, int action) {
 void xroar_load_file(void) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Load file");
 	xroar_load_file_by_type(filename, 0);
+	free(filename);
 }
 
 void xroar_run_file(void) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Run file");
 	xroar_load_file_by_type(filename, 1);
+	free(filename);
 }
 
 // Printer interface
@@ -2392,6 +2396,7 @@ void xroar_save_snapshot(void) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Save snapshot");
 	if (filename) {
 		write_snapshot(filename);
+		free(filename);
 	}
 }
 
@@ -2404,6 +2409,7 @@ void xroar_insert_input_tape_file(const char *filename) {
 void xroar_insert_input_tape(void) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Select input tape");
 	xroar_insert_input_tape_file(filename);
+	free(filename);
 }
 
 void xroar_eject_input_tape(void) {
@@ -2420,6 +2426,7 @@ void xroar_insert_output_tape_file(const char *filename) {
 void xroar_insert_output_tape(void) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->save_filename, "Select output tape");
 	xroar_insert_output_tape_file(filename);
+	free(filename);
 }
 
 void xroar_eject_output_tape(void) {
@@ -2447,6 +2454,7 @@ void xroar_screenshot(void) {
 		return;
 
 	(void)screenshot_write_png(filename, xroar.vo_interface);
+	free(filename);
 #endif
 }
 #endif

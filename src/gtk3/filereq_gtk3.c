@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 3 file requester module.
  *
- *  \copyright Copyright 2014 Ciaran Anscomb
+ *  \copyright Copyright 2014-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -38,7 +38,6 @@ struct filereq_interface_gtk3 {
 	GtkWidget *top_window;
 	GtkWidget *load_dialog;
 	GtkWidget *save_dialog;
-	gchar *filename;
 };
 
 static void *filereq_gtk3_new(void *cfg);
@@ -72,17 +71,12 @@ static void *filereq_gtk3_new(void *sptr) {
 
 static void filereq_gtk3_free(void *sptr) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
-	free(frgtk3->filename);
-	frgtk3->filename = NULL;
 	free(frgtk3);
 }
 
 static char *load_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
-	if (frgtk3->filename) {
-		g_free(frgtk3->filename);
-		frgtk3->filename = NULL;
-	}
+	char *filename = NULL;
 	if (!frgtk3->load_dialog) {
 		frgtk3->load_dialog = gtk_file_chooser_dialog_new(title,
 		    GTK_WINDOW(frgtk3->top_window), GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -95,7 +89,11 @@ static char *load_filename(void *sptr, char const *title) {
 		}
 	}
 	if (gtk_dialog_run(GTK_DIALOG(frgtk3->load_dialog)) == GTK_RESPONSE_ACCEPT) {
-		frgtk3->filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(frgtk3->load_dialog));
+		gchar *gfilename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(frgtk3->load_dialog));
+		if (gfilename) {
+			filename = xstrdup(gfilename);
+			g_free(gfilename);
+		}
 	}
 	gtk_widget_hide(frgtk3->load_dialog);
 	if (!frgtk3->top_window) {
@@ -103,15 +101,12 @@ static char *load_filename(void *sptr, char const *title) {
 			gtk_main_iteration();
 		}
 	}
-	return frgtk3->filename;
+	return filename;
 }
 
 static char *save_filename(void *sptr, char const *title) {
 	struct filereq_interface_gtk3 *frgtk3 = sptr;
-	if (frgtk3->filename) {
-		g_free(frgtk3->filename);
-		frgtk3->filename = NULL;
-	}
+	char *filename = NULL;
 	if (!frgtk3->save_dialog) {
 		frgtk3->save_dialog = gtk_file_chooser_dialog_new(title,
 		    GTK_WINDOW(frgtk3->top_window), GTK_FILE_CHOOSER_ACTION_SAVE,
@@ -125,7 +120,11 @@ static char *save_filename(void *sptr, char const *title) {
 		}
 	}
 	if (gtk_dialog_run(GTK_DIALOG(frgtk3->save_dialog)) == GTK_RESPONSE_ACCEPT) {
-		frgtk3->filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(frgtk3->save_dialog));
+		gchar *gfilename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(frgtk3->save_dialog));
+		if (gfilename) {
+			filename = xstrdup(gfilename);
+			g_free(gfilename);
+		}
 	}
 	gtk_widget_hide(frgtk3->save_dialog);
 	if (!frgtk3->top_window) {
@@ -133,5 +132,5 @@ static char *save_filename(void *sptr, char const *title) {
 			gtk_main_iteration();
 		}
 	}
-	return frgtk3->filename;
+	return filename;
 }

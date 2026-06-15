@@ -2,7 +2,7 @@
  *
  *  \brief Cocoa file requester module for Mac OS X.
  *
- *  \copyright Copyright 2011-2019 Ciaran Anscomb
+ *  \copyright Copyright 2011-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -37,8 +37,6 @@ extern int cocoa_super_all_keys;
 
 struct cocoa_filereq_interface {
 	struct filereq_interface public;
-
-	char *filename;
 };
 
 static void filereq_cocoa_free(void *sptr);
@@ -57,9 +55,6 @@ static void *filereq_cocoa_new(void *cfg) {
 
 static void filereq_cocoa_free(void *sptr) {
 	struct cocoa_filereq_interface *frcocoa = sptr;
-	if (frcocoa->filename) {
-		free(frcocoa->filename);
-	}
 	free(frcocoa);
 }
 
@@ -72,17 +67,14 @@ static char *load_filename(void *sptr, char const *title) {
 	NSString *ntitle = [[NSString alloc] initWithUTF8String:title];
 	[dialog setTitle:ntitle];
 	cocoa_super_all_keys = 1;
-	if (frcocoa->filename) {
-		free(frcocoa->filename);
-		frcocoa->filename = NULL;
-	}
+	char *filename = NULL;
 	if ([dialog runModal] == NSModalResponseOK) {
-		frcocoa->filename = xstrdup([[[[dialog URLs] objectAtIndex:0] path] UTF8String]);
+		filename = xstrdup([[[[dialog URLs] objectAtIndex:0] path] UTF8String]);
 	}
 	cocoa_super_all_keys = 0;
 	[ntitle release];
 	[keyWindow makeKeyAndOrderFront:nil];
-	return frcocoa->filename;
+	return filename;
 }
 
 static char *save_filename(void *sptr, char const *title) {
@@ -92,15 +84,12 @@ static char *save_filename(void *sptr, char const *title) {
 	NSString *ntitle = [[NSString alloc] initWithUTF8String:title];
 	[dialog setTitle:ntitle];
 	cocoa_super_all_keys = 1;
-	if (frcocoa->filename) {
-		free(frcocoa->filename);
-		frcocoa->filename = NULL;
-	}
+	char *filename = NULL;
 	if ([dialog runModal] == NSModalResponseOK) {
-		frcocoa->filename = xstrdup([[[dialog URL] path] UTF8String]);
+		filename = xstrdup([[[dialog URL] path] UTF8String]);
 	}
 	cocoa_super_all_keys = 0;
 	[ntitle release];
 	[keyWindow makeKeyAndOrderFront:nil];
-	return frcocoa->filename;
+	return filename;
 }

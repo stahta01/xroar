@@ -2,7 +2,7 @@
  *
  *  \brief GTK+ 2 drive control window.
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2011-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -354,6 +354,7 @@ static void dc_hd_attach(GtkButton *button, gpointer user_data) {
 	char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
 	if (filename) {
 		xroar_insert_hd_file(hd, filename);
+		free(filename);
 	}
 }
 

@@ -2,7 +2,7 @@
  *
  *  \brief Mac OS X+ user-interface module.
  *
- *  \copyright Copyright 2011-2024 Ciaran Anscomb
+ *  \copyright Copyright 2011-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -262,9 +262,10 @@ int cocoa_super_all_keys = 0;
 	case ui_tag_hd_filename:
 		if (value >= 0 && value <= 1) {
 			int hd = value;
-			const char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
+			char *filename = DELEGATE_CALL(xroar.ui_interface->filereq_interface->load_filename, "Attach hard disk image");
 			if (filename) {
 				xroar_insert_hd_file(hd, filename);
+				free(filename);
 			}
 		}
 		break;
@@ -279,6 +280,7 @@ int cocoa_super_all_keys = 0;
 					if (bd_create(filename, hd_type)) {
 						xroar_insert_hd_file(hd, filename);
 					}
+					free(filename);
 				}
 			}
 		}
@@ -296,6 +298,7 @@ int cocoa_super_all_keys = 0;
 			char *filename = DELEGATE_CALL(global_uisdl2->ui_interface.filereq_interface->save_filename, "Print to file");
 			if (filename) {
 				ui_update_state(-1, ui_tag_print_file, 0, filename);
+				free(filename);
 			}
 		}
 		ui_update_state(-1, ui_tag_print_destination, value, NULL);

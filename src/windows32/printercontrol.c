@@ -178,6 +178,7 @@ static INT_PTR CALLBACK pc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 					char *filename = DELEGATE_CALL(ui->filereq_interface->save_filename, "Print to file");
 					if (filename) {
 						ui_update_state(-1, ui_tag_print_file, 0, filename);
+						free(filename);
 					}
 				}
 				break;
