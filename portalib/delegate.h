@@ -38,13 +38,21 @@
 
 /* Type name for delegates. */
 
-#define DELEGATE_T0(N) delegate_##N
-#define DELEGATE_T1(N,N0) delegate_##N##_##N0
-#define DELEGATE_T2(N,N0,N1) delegate_##N##_##N0##_##N1
-#define DELEGATE_T3(N,N0,N1,N2) delegate_##N##_##N0##_##N1##_##N2
-#define DELEGATE_T4(N,N0,N1,N2,N3) delegate_##N##_##N0##_##N1##_##N2##_##N3
-#define DELEGATE_T5(N,N0,N1,N2,N3,N4) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4
-#define DELEGATE_T6(N,N0,N1,N2,N3,N4,N5) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4##_##N5
+#define DELEGATE_T0_(N) delegate_##N
+#define DELEGATE_T1_(N,N0) delegate_##N##_##N0
+#define DELEGATE_T2_(N,N0,N1) delegate_##N##_##N0##_##N1
+#define DELEGATE_T3_(N,N0,N1,N2) delegate_##N##_##N0##_##N1##_##N2
+#define DELEGATE_T4_(N,N0,N1,N2,N3) delegate_##N##_##N0##_##N1##_##N2##_##N3
+#define DELEGATE_T5_(N,N0,N1,N2,N3,N4) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4
+#define DELEGATE_T6_(N,N0,N1,N2,N3,N4,N5) delegate_##N##_##N0##_##N1##_##N2##_##N3##_##N4##_##N5
+
+#define DELEGATE_T0(N) DELEGATE_T0_(N)
+#define DELEGATE_T1(N,N0) DELEGATE_T1_(N,N0)
+#define DELEGATE_T2(N,N0,N1) DELEGATE_T2_(N,N0,N1)
+#define DELEGATE_T3(N,N0,N1,N2) DELEGATE_T3_(N,N0,N1,N2)
+#define DELEGATE_T4(N,N0,N1,N2,N3) DELEGATE_T4_(N,N0,N1,N2,N3)
+#define DELEGATE_T5(N,N0,N1,N2,N3,N4) DELEGATE_T5_(N,N0,N1,N2,N3,N4)
+#define DELEGATE_T6(N,N0,N1,N2,N3,N4,N5) DELEGATE_T6_(N,N0,N1,N2,N3,N4,N5)
 
 /* Define a set of delegate types. */
 
