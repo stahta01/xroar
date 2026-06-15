@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 user-interface common functions.
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ *  \copyright Copyright 2015-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -87,16 +87,6 @@ void sdl_x11_handle_syswmevent(SDL_SysWMmsg *);
 
 #endif
 
-#ifdef WINDOWS32
-
-/* These functions will be in the windows32-specific code. */
-
-void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *, SDL_SysWMmsg *);
-void sdl_windows32_set_events_window(SDL_Window *);
-void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *, _Bool visible);
-
-#endif
-
 /* Now wrap all of the above in inline functions so that common code doesn't
  * need to be littered with these conditionals. */
 
@@ -105,8 +95,6 @@ inline void sdl_os_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 	(void)wmmsg;
 #if defined(HAVE_X11)
 	sdl_x11_handle_syswmevent(wmmsg);
-#elif defined(WINDOWS32)
-	sdl_windows32_handle_syswmevent(uisdl2, wmmsg);
 #endif
 }
 

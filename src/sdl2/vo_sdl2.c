@@ -203,12 +203,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 		SDL_EnableScreenSaver();
 	}
 	vo->show_menubar = !vo->is_fullscreen;
-#ifdef WINDOWS32
-	if (vo->show_menubar) {
-		sdl_windows32_set_menu_visible(uisdl2, 1);
-		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
-	}
-#endif
 	{
 		int w, h;
 		SDL_GetWindowSize(uisdl2->vo_window, &w, &h);
@@ -245,12 +239,6 @@ _Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 			LOG_PRINT("\tmax_texture_height = %d\n", renderer_info.max_texture_height);
 		}
 	}
-
-#ifdef WINDOWS32
-	// Need an event handler to prevent events backing up while menus are
-	// being used.
-	sdl_windows32_set_events_window(uisdl2->vo_window);
-#endif
 
 	// Per-OS keyboard initialisation
 #if defined(HAVE_X11) && defined(SDL_VIDEO_DRIVER_X11)
@@ -463,14 +451,8 @@ static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	}
 
 	if (want_fullscreen && vo->show_menubar) {
-#ifdef WINDOWS32
-		sdl_windows32_set_menu_visible(uisdl2, 0);
-#endif
 		vo->show_menubar = 0;
 	} else if (!want_fullscreen && !vo->show_menubar) {
-#ifdef WINDOWS32
-		sdl_windows32_set_menu_visible(uisdl2, 1);
-#endif
 		vo->show_menubar = 1;
 	}
 
@@ -494,20 +476,6 @@ static void vosdl_ui_set_menubar(void *sptr, int tag, void *smsg) {
 
 	_Bool want_menubar = uimsg->value;
 
-#ifdef WINDOWS32
-	if (want_menubar && !vo->show_menubar) {
-		sdl_windows32_set_menu_visible(uisdl2, 1);
-	} else if (!want_menubar && vo->show_menubar) {
-		sdl_windows32_set_menu_visible(uisdl2, 0);
-	}
-	if (!vo->is_fullscreen) {
-		SDL_SetWindowSize(uisdl2->vo_window, vosdl->window_area.w, vosdl->window_area.h);
-	} else {
-		int w, h;
-		SDL_GetWindowSize(uisdl2->vo_window, &w, &h);
-		sdl_vo_notify_size_changed(uisdl2, w, h);
-	}
-#endif
 	vo->show_menubar = want_menubar;
 }
 

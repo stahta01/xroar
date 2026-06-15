@@ -2,7 +2,7 @@
  *
  *  \brief SDL2 keyboard module.
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ *  \copyright Copyright 2015-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -29,19 +29,6 @@
 
 void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 
-#ifdef WINDOWS32
-	// In Windows, AltGr generates two events: Left Control then Right Alt.
-	// Filter out the Control key here.
-	if (keysym->scancode == SDL_SCANCODE_LCTRL) {
-		SDL_Event event;
-		if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_KEYDOWN, SDL_KEYDOWN) == 1) {
-			if (event.key.keysym.scancode == SDL_SCANCODE_RALT) {
-				return;
-			}
-		}
-	}
-#endif
-
 	if (hkbd.layout == hk_layout_iso) {
 		if (keysym->scancode == SDL_SCANCODE_BACKSLASH) {
 			keysym->scancode = SDL_SCANCODE_NONUSHASH;
@@ -61,19 +48,6 @@ void sdl_keypress(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 
 void sdl_keyrelease(struct ui_sdl2_interface *uisdl2, SDL_Keysym *keysym) {
 	(void)uisdl2;
-
-#ifdef WINDOWS32
-	// In Windows, AltGr generates two events: Left Control then Right Alt.
-	// Filter out the Control key here.
-	if (keysym->scancode == SDL_SCANCODE_LCTRL) {
-		SDL_Event event;
-		if (SDL_PeepEvents(&event, 1, SDL_PEEKEVENT, SDL_KEYUP, SDL_KEYUP) == 1) {
-			if (event.key.keysym.scancode == SDL_SCANCODE_RALT) {
-				return;
-			}
-		}
-	}
-#endif
 
 	if (hkbd.layout == hk_layout_iso) {
 		if (keysym->scancode == SDL_SCANCODE_BACKSLASH) {
