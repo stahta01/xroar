@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface module.
  *
- *  \copyright Copyright 2014-2024 Ciaran Anscomb
+ *  \copyright Copyright 2014-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -27,8 +27,7 @@
 
 #include <commctrl.h>
 
-#include <SDL.h>
-#include <SDL_syswm.h>
+#include <SDL3/SDL.h>
 
 #include "array.h"
 #include "slist.h"
@@ -51,7 +50,7 @@
 #include "vo.h"
 #include "xroar.h"
 
-#include "sdl2/common.h"
+#include "sdl3/common.h"
 #include "windows32/common_windows32.h"
 #include "windows32/dialog.h"
 #include "windows32/drivecontrol.h"
@@ -62,16 +61,11 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-static WNDPROC sdl_window_proc = NULL;
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 static void *ui_windows32_new(void *cfg);
 static void ui_windows32_free(void *);
 
 struct ui_module ui_windows32_module = {
-	.common = { .name = "windows32", .description = "Windows32 SDL2 UI",
+	.common = { .name = "windows32", .description = "Windows32 SDL3 UI",
 		.new = ui_windows32_new,
 	},
 	.joystick_module_list = sdl_js_modlist,
@@ -83,6 +77,7 @@ static void windows32_update_cartridge_menu(void *);
 static void windows32_update_joystick_menus(void *);
 
 static void uiw32_ui_state_notify(void *, int tag, void *smsg);
+static bool SDLCALL sdl_windows_message_hook(void *sptr, MSG *msg);
 
 static void *ui_windows32_new(void *cfg) {
 	struct ui_cfg *ui_cfg = cfg;
@@ -92,9 +87,9 @@ static void *ui_windows32_new(void *cfg) {
 		return NULL;
 	}
 	*uiw32 = (struct ui_windows32_interface){0};
-	struct ui_sdl2_interface *uisdl2 = &uiw32->ui_sdl2_interface;
-	ui_sdl_init(uisdl2, ui_cfg);
-	struct ui_interface *ui = &uisdl2->ui_interface;
+	struct ui_sdl3_interface *uisdl3 = &uiw32->ui_sdl3_interface;
+	ui_sdl_init(uisdl3, ui_cfg);
+	struct ui_interface *ui = &uisdl3->ui_interface;
 	ui->free = DELEGATE_AS0(void, ui_windows32_free, uiw32);
 	ui->update_machine_menu = DELEGATE_AS0(void, windows32_update_machine_menu, uiw32);
 	ui->update_cartridge_menu = DELEGATE_AS0(void, windows32_update_cartridge_menu, uiw32);
@@ -123,7 +118,7 @@ static void *ui_windows32_new(void *cfg) {
 
 	windows32_create_menus(uiw32);
 
-	if (!sdl_vo_init(uisdl2)) {
+	if (!sdl_vo_init(uisdl3)) {
 		ui_windows32_free(uiw32);
 		return NULL;
 	}
@@ -131,6 +126,8 @@ static void *ui_windows32_new(void *cfg) {
 	windows32_update_machine_menu(uiw32);
 	windows32_update_cartridge_menu(uiw32);
 	windows32_update_joystick_menus(uiw32);
+
+	SDL_SetWindowsMessageHook(sdl_windows_message_hook, uiw32);
 
 	return uiw32;
 }
@@ -381,14 +378,39 @@ static void windows32_update_joystick_menus(void *sptr) {
 // ui_update_state() should use -1 as the sender, and calls to older mechanisms
 // should set notify to true.
 
-void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWMmsg *wmmsg) {
-	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl2;
+static bool SDLCALL sdl_windows_message_hook(void *sptr, MSG *msg) {
+	struct ui_windows32_interface *uiw32 = sptr;
 
-	UINT msg = wmmsg->msg.win.msg;
-	WPARAM wParam = wmmsg->msg.win.wParam;
+	UINT message = msg->message;
+	WPARAM wParam = msg->wParam;
 
-	if (msg != WM_COMMAND)
-		return;
+	// Handle any non-WM_COMMAND in this switch statement
+
+	switch (message) {
+
+	case WM_COMMAND:
+		break;
+
+	case WM_UNINITMENUPOPUP:
+		DELEGATE_SAFE_CALL(xroar.vo_interface->draw);
+		return 1;
+
+	case WM_TIMER:
+		// In Wine, this event only seems to fire when menus are being
+		// browsed, which is exactly the time we need to keep the audio
+		// buffer full with silence:
+		sound_send_silence(xroar.ao_interface->sound_interface);
+		return 1;
+
+	default:
+		// Fall back to original SDL handler for anything else -
+		// SysWMEvent handling is not enabled, so this should not flood
+		// the queue.
+		return 1;
+
+	}
+
+	// The rest of this function handles WM_COMMAND
 
 	int tag = LOWORD(wParam);
 	int tag_type = UIW32_TAG_TYPE(tag);
@@ -396,13 +418,14 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 
 	switch (tag_type) {
 
-	// Simple actions:
+	// Simple actions
+
 	case ui_tag_action:
 		switch (tag_value) {
 		case ui_action_quit:
 			{
 				SDL_Event event;
-				event.type = SDL_QUIT;
+				event.type = SDL_EVENT_QUIT;
 				SDL_PushEvent(&event);
 			}
 			break;
@@ -435,7 +458,8 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		}
 		break;
 
-	// Configuration:
+	// Configuration
+
 	case uiw32_tag_config_save:
 		xroar_save_config_file();
 		break;
@@ -443,29 +467,32 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_config_autosave, UI_NEXT, NULL);
 		break;
 
-	// Machines:
+	// Machines
+
 	case ui_tag_machine:
 		ui_update_state(-1, ui_tag_machine, tag_value, NULL);
 		break;
 
-	// Cartridges:
+	// Cartridges
+
 	case ui_tag_cartridge:
 		ui_update_state(-1, ui_tag_cartridge, tag_value, NULL);
 		break;
 
-	// Cassettes:
+	// Cassettes
+
 	case ui_tag_tape_dialog:
 		ui_update_state(-1, ui_tag_tape_dialog, UI_NEXT, NULL);
 		break;
 
-	// Floppy disks:
+	// Floppy disks
+
 	case ui_tag_disk_dialog:
 		ui_update_state(-1, ui_tag_disk_dialog, UI_NEXT, NULL);
 		break;
 
-	// Video:
+	// Video
 
-	// TV controls:
 	case ui_tag_tv_dialog:
 		ui_update_state(-1, ui_tag_tv_dialog, UI_NEXT, NULL);
 		break;
@@ -487,7 +514,8 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, tag_type, tag_value, NULL);
 		break;
 
-	// Keyboard:
+	// Keyboard
+
 	case ui_tag_hkbd_layout:
 		ui_update_state(-1, ui_tag_hkbd_layout, tag_value, NULL);
 		break;
@@ -522,7 +550,8 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 		ui_update_state(-1, ui_tag_ratelimit_latch, UI_NEXT, NULL);
 		break;
 
-	// Help:
+	// Help
+
 	case ui_tag_about:
 		uiw32_create_about_window(uiw32);
 		break;
@@ -530,6 +559,8 @@ void sdl_windows32_handle_syswmevent(struct ui_sdl2_interface *uisdl2, SDL_SysWM
 	default:
 		break;
 	}
+
+	return 1;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -640,79 +671,20 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// SDL integration.  The SDL2 video modules call out to these when
+// SDL integration.  The SDL3 video modules call out to these when
 // WINDOWS32 is defined to add and remove the menu bar.
 
 /* Get underlying window handle from SDL. */
 
 static HWND get_hwnd(SDL_Window *w) {
-	SDL_version sdlver;
-	SDL_SysWMinfo sdlinfo;
-	SDL_VERSION(&sdlver);
-	sdlinfo.version = sdlver;
-	SDL_GetWindowWMInfo(w, &sdlinfo);
-	return sdlinfo.info.win.window;
+	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(w), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	return hwnd;
 }
 
-/* Custom window event handler to intercept menu selections. */
-
-static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	SDL_Event event;
-	SDL_SysWMmsg wmmsg;
-
-	switch (msg) {
-
-	case WM_COMMAND:
-		// Selectively push WM events onto the SDL queue.
-		wmmsg.msg.win.hwnd = hwnd;
-		wmmsg.msg.win.msg = msg;
-		wmmsg.msg.win.wParam = wParam;
-		wmmsg.msg.win.lParam = lParam;
-		event.type = SDL_SYSWMEVENT;
-		event.syswm.msg = &wmmsg;
-		SDL_PushEvent(&event);
-		break;
-
-	case WM_UNINITMENUPOPUP:
-		DELEGATE_SAFE_CALL(xroar.vo_interface->draw);
-		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
-
-	case WM_TIMER:
-		// In Wine, this event only seems to fire when menus are being
-		// browsed, which is exactly the time we need to keep the audio
-		// buffer full with silence:
-		sound_send_silence(xroar.ao_interface->sound_interface);
-		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
-
-	default:
-		// Fall back to original SDL handler for anything else -
-		// SysWMEvent handling is not enabled, so this should not flood
-		// the queue.
-		return CallWindowProc(sdl_window_proc, hwnd, msg, wParam, lParam);
-
-	}
-	return 0;
-}
-
-/* While the menu is being navigated, the main application is blocked. If event
- * processing is enabled for SysWMEvent, SDL quickly runs out of space in its
- * event queue, leading to the ultimate menu option often being missed.  This
- * sets up a custom Windows event handler that pushes a SDL_SysWMEvent only for
- * WM_COMMAND messages. */
+// Record the top-level window handle
 
 void sdl_windows32_set_events_window(SDL_Window *sw) {
 	HWND hwnd = get_hwnd(sw);
-	WNDPROC old_window_proc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-	if (old_window_proc != window_proc) {
-		// Preserve SDL's "windowproc"
-		sdl_window_proc = old_window_proc;
-		// Set my own to process wm events.  Without this, the windows menu
-		// blocks and the internal SDL event queue overflows, causing missed
-		// selections.
-		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)window_proc);
-		// Explicitly disable SDL processing of these events
-		SDL_EventState(SDL_SYSWMEVENT, SDL_DISABLE);
-	}
 	windows32_main_hwnd = hwnd;
 }
 
@@ -720,14 +692,14 @@ void sdl_windows32_set_events_window(SDL_Window *sw) {
 // while leaving the window size the same, so the video module should then
 // resize itself to account for this.
 
-void sdl_windows32_set_menu_visible(struct ui_sdl2_interface *uisdl2, _Bool visible) {
-	if (!uisdl2) {
+void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *uisdl3, _Bool visible) {
+	if (!uisdl3) {
 		return;
 	}
 
-	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl2;
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl3;
 
-	HWND hwnd = get_hwnd(uisdl2->vo_window);
+	HWND hwnd = get_hwnd(uisdl3->vo_window);
 	_Bool is_visible = (GetMenu(hwnd) != NULL);
 
 	if (!is_visible && visible) {

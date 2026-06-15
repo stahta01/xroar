@@ -2,7 +2,7 @@
  *
  *  \brief Windows video options window.
  *
- *  \copyright Copyright 2023-2024 Ciaran Anscomb
+ *  \copyright Copyright 2023-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,8 +21,7 @@
 #include <windows.h>
 #include <commctrl.h>
 
-#include <SDL.h>
-#include <SDL_syswm.h>
+#include <SDL3/SDL.h>
 
 #include "ao.h"
 #include "machine.h"
@@ -31,7 +30,7 @@
 #include "ui.h"
 #include "xroar.h"
 
-#include "sdl2/common.h"
+#include "sdl3/common.h"
 #include "windows32/common_windows32.h"
 #include "windows32/dialog.h"
 #include "windows32/resources.h"

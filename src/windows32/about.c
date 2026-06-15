@@ -2,7 +2,7 @@
  *
  *  \brief Windows "About" dialog.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -49,7 +49,7 @@ void uiw32_create_about_window(struct ui_windows32_interface *uiw32) {
 
 static INT_PTR CALLBACK about_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	(void)lParam;
-	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl2;
+	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)global_uisdl3;
 
 	switch (msg) {
 

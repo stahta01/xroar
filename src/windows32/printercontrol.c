@@ -2,7 +2,7 @@
  *
  *  \brief Windows printer control window.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -139,7 +139,7 @@ static void pc_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 static INT_PTR CALLBACK pc_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	struct ui_windows32_interface *uiw32 = dlg->uiw32;
-	struct ui_interface *ui = &uiw32->ui_sdl2_interface.ui_interface;
+	struct ui_interface *ui = &uiw32->ui_sdl3_interface.ui_interface;
 
 	switch (msg) {
 

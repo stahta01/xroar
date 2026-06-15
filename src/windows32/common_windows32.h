@@ -2,7 +2,7 @@
  *
  *  \brief Windows user-interface common functions.
  *
- *  \copyright Copyright 2006-2024 Ciaran Anscomb
+ *  \copyright Copyright 2006-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,7 +21,7 @@
 
 #include <windows.h>
 
-#include "sdl2/common.h"
+#include "sdl3/common.h"
 
 #define UIW32_TAG(t) (((t) & 0x7f) << 8)
 #define UIW32_TAGV(t,v) (UIW32_TAG(t) | ((v) & 0xff))
@@ -39,7 +39,7 @@ enum {
 struct xconfig_enum;
 
 struct ui_windows32_interface {
-	struct ui_sdl2_interface ui_sdl2_interface;
+	struct ui_sdl3_interface ui_sdl3_interface;
 
 	// Messenger client ID
 	int msgr_client_id;
