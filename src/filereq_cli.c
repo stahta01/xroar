@@ -2,7 +2,7 @@
  *
  *  \brief Command-line file requester.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <ctype.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,9 +91,20 @@ static _Bool issep(char c) {
 }
 
 static void printent(void *sptr, void *data) {
-	(void)data;
-	char *s = sptr;
-	printf("%s\n", s);
+	char *file = sptr;
+	const char *dir = data;
+	sds path = sdsnew(dir);
+	path = sdscat(path, SEPSTR);
+	path = sdscat(path, file);
+	struct stat statbuf;
+	if (stat(path, &statbuf) == 0) {
+		printf("%c", S_ISDIR(statbuf.st_mode) ? 'd' : '-');
+		printf("%c", access(path, R_OK) ? '-' : 'r');
+		printf("%c", access(path, W_OK) ? '-' : 'w');
+		printf("%c", access(path, X_OK) ? '-' : 'x');
+		printf("  %s\n", file);
+	}
+	sdsfree(path);
 }
 
 static char *get_filename(struct cli_filereq_interface *frcli, const char *prompt) {
@@ -143,17 +155,34 @@ static char *get_filename(struct cli_filereq_interface *frcli, const char *promp
 			if (*in) {
 				frcli->path = sdscat(frcli->path, in);
 			}
+#ifdef WINDOWS32
+		} else if ((isupper(*in) || islower(*in)) && *(in+1) == ':') {
+			// [letter]: - absolute path
+			frcli->path = sdsnew(in);
+#endif
 		} else if (issep(*in)) {
 			// begins with / - absolute path
 			frcli->path = sdsnew(in);
 		} else {
 			// relative to cwd
 			frcli->path = sdsdup(frcli->cwd);
+			frcli->path = sdsx_rtrim(frcli->path, SEPSET);
 			frcli->path = sdscat(frcli->path, SEPSTR);
 			frcli->path = sdscat(frcli->path, in);
 		}
 		// remove any trailing dir separator
 		frcli->path = sdsx_rtrim(frcli->path, SEPSET);
+#ifdef WINDOWS32
+		// re-add if this is just a drive letter
+		if ((isupper(*in) || islower(*in)) && *(in+1) == ':' && !*(in+2)) {
+			frcli->path = sdscat(frcli->path, SEPSTR);
+		}
+#else
+		// re-add if this is just "/"
+		if (issep(*in) && !*(in+1)) {
+			frcli->path = sdscat(frcli->path, SEPSTR);
+		}
+#endif
 
 		struct stat statbuf;
 		if (stat(frcli->path, &statbuf) == 0) {
@@ -170,7 +199,7 @@ static char *get_filename(struct cli_filereq_interface *frcli, const char *promp
 					}
 					closedir(d);
 					l = slist_sort(l, (slist_cmp_func)strcmp);
-					slist_foreach(l, (slist_iter_func)printent, NULL);
+					slist_foreach(l, (slist_iter_func)printent, frcli->path);
 					slist_free_full(l, (slist_free_func)sdsfree);
 				}
 				continue;
@@ -189,7 +218,7 @@ static char *load_filename(void *sptr, char const *title) {
 	prompt = sdscat(prompt, "? ");
 	char *filename = get_filename(frcli, prompt);
 	sdsfree(prompt);
-	return filename;
+	return filename ? xstrdup(filename) : NULL;
 }
 
 static char *save_filename(void *sptr, char const *title) {
@@ -209,6 +238,6 @@ static char *save_filename(void *sptr, char const *title) {
 			return NULL;
 		}
 	}
-	return filename;
+	return filename ? xstrdup(filename) : NULL;
 }
 
