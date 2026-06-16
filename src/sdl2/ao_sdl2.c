@@ -184,9 +184,7 @@ static void *new(void *cfg) {
 			break;
 		default:
 			LOG_MOD_SUB_DEBUG(3, "sdl", "audio", "first open audio returned unknown format: retrying\n");
-			SDL_CloseAudioDevice(aosdl->device);
-			aosdl->device = 0;
-			break;
+			goto failed;
 		}
 	}
 
@@ -247,11 +245,11 @@ static void *new(void *cfg) {
 	return aosdl;
 
 failed:
-	if (aosdl) {
+	if (aosdl->device != 0)
 		SDL_CloseAudioDevice(aosdl->device);
+	if (aosdl->fragment_buffer)
 		free(aosdl->fragment_buffer);
-		free(aosdl);
-	}
+	free(aosdl);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	return NULL;
 }
