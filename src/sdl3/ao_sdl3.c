@@ -182,9 +182,7 @@ static void *new(void *cfg) {
 
 	if (!aosdl->device) {
 		LOG_MOD_SUB_ERROR("sdl", "audio", "failed to open audio: %s\n", SDL_GetError());
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		free(aosdl);
-		return NULL;
+		goto failed;
 	}
 
 	switch (aosdl->audiospec.format) {
@@ -229,11 +227,11 @@ static void *new(void *cfg) {
 	return aosdl;
 
 failed:
-	if (aosdl) {
+	if (aosdl->device)
 		SDL_DestroyAudioStream(aosdl->device);
+	if (aosdl->fragment_buffer)
 		free(aosdl->fragment_buffer);
-		free(aosdl);
-	}
+	free(aosdl);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	return NULL;
 }
