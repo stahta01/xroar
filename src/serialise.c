@@ -381,7 +381,7 @@ void ser_write_sds(struct ser_handle *sh, int tag, const sds s) {
 }
 
 void ser_write_array_uint8(struct ser_handle *sh, int tag, uint8_t *src, size_t nelems) {
-	return ser_write(sh, tag, src, nelems);
+	ser_write(sh, tag, src, nelems);
 }
 
 void ser_write_array_uint16(struct ser_handle *sh, int tag, uint16_t *src, size_t nelems) {
