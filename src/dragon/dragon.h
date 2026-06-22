@@ -96,6 +96,8 @@ struct dragon {
 	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
+	DELEGATE_T1(void, float) tape_update_audio;
+
 	struct printer_interface *printer_interface;
 
 	struct {

@@ -163,6 +163,8 @@ struct coco3 {
 	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
+	DELEGATE_T1(void, float) tape_update_audio;
+
 	struct printer_interface *printer_interface;
 
 	struct {
@@ -699,6 +701,8 @@ static _Bool coco3_finish(struct part *p) {
 	// Printer interface
 	mcc3->printer_interface = printer_interface_new();
 
+	mcc3->tape_update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, mcc3);
+
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar.cfg.debug.gdb) {
@@ -1069,7 +1073,7 @@ static void *coco3_get_interface(struct machine *m, const char *ifname) {
 	} else if (0 == strcmp(ifname, "printer")) {
 		return mcc3->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
-		return update_audio_from_tape;
+		return &mcc3->tape_update_audio;
 	}
 	return NULL;
 }

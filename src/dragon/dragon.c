@@ -634,6 +634,8 @@ _Bool dragon_finish_common(struct dragon *md) {
 		md->printer_interface->signal_ack = DELEGATE_AS1(void, bool, printer_ack, md);
 	}
 
+	md->tape_update_audio = DELEGATE_AS1(void, float, update_audio_from_tape, md);
+
 #ifdef WANT_GDB_TARGET
 	// GDB
 	if (xroar.cfg.debug.gdb) {
@@ -1012,7 +1014,7 @@ static void *dragon_get_interface(struct machine *m, const char *ifname) {
 	} else if (0 == strcmp(ifname, "printer")) {
 		return md->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
-		return update_audio_from_tape;
+		return &md->tape_update_audio;
 	}
 	return NULL;
 }

@@ -95,6 +95,8 @@ struct mc10 {
 	struct bp_watchpoint_set watchpoint_set;
 
 	struct tape_interface *tape_interface;
+	DELEGATE_T1(void, float) tape_update_audio;
+
 	struct printer_interface *printer_interface;
 
 	struct {
@@ -546,6 +548,8 @@ static _Bool mc10_finish(struct part *p) {
 
 	// Printer interface
 	mp->printer_interface = printer_interface_new();
+
+	mp->tape_update_audio = DELEGATE_AS1(void, float, mc10_update_tape_input, mp);
 
 #ifdef WANT_GDB_TARGET
 	// GDB
@@ -1037,7 +1041,7 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 	} else if (0 == strcmp(ifname, "printer")) {
 		return mp->printer_interface;
 	} else if (0 == strcmp(ifname, "tape-update-audio")) {
-		return mc10_update_tape_input;
+		return &mp->tape_update_audio;
 	}
 	return NULL;
 }

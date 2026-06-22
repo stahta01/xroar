@@ -337,7 +337,7 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 		tip->addr.mincw1200 = 0x422c;
 	}
 
-	ti->update_audio = DELEGATE_AS1(void, float, m->get_interface(m, "tape-update-audio"), m);
+	ti->update_audio = *(DELEGATE_T1(void, float) *)m->get_interface(m, "tape-update-audio");
 	DELEGATE_CALL(ti->update_audio, 0.5);
 }
 
