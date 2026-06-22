@@ -70,10 +70,10 @@ struct cs_profile *cs_profile_by_name(const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void cs_matrix_mul_3x3_ijk(const float matrix[][3], float i, float j, float k,
+void cs_matrix_mul_3x3_ijk(float matrix[][3], float i, float j, float k,
 			   float *iout, float *jout, float *kout);
 
-void cs_matrix_mul_3x3(const float a[][3], const float b[][3], float out[][3]);
+void cs_matrix_mul_3x3(float a[][3], float b[][3], float out[][3]);
 
 void cs_clamp(float *x, float *y, float *z);
 

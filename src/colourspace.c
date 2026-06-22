@@ -206,7 +206,7 @@ below.
 // XXX why have i left this url here?
 // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
 
-static void matrix_invert_3x3(const float in[][3], float out[][3]);
+static void matrix_invert_3x3(float in[][3], float out[][3]);
 
 static void create_xyz_rgb_matrix(struct cs_profile *p) {
 	float xr = p->xr, yr = p->yr;
@@ -261,7 +261,7 @@ static void create_xyz_rgb_matrix(struct cs_profile *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void cs_matrix_mul_3x3_ijk(const float matrix[][3], float i, float j, float k,
+void cs_matrix_mul_3x3_ijk(float matrix[][3], float i, float j, float k,
 			   float *iout, float *jout, float *kout) {
 	*iout = i * matrix[0][0] + j * matrix[0][1] + k * matrix[0][2];
 	*jout = i * matrix[1][0] + j * matrix[1][1] + k * matrix[1][2];
@@ -270,7 +270,7 @@ void cs_matrix_mul_3x3_ijk(const float matrix[][3], float i, float j, float k,
 
 // remember to reverse the order if you're combining matrices...
 
-void cs_matrix_mul_3x3(const float a[][3], const float b[][3], float out[][3]) {
+void cs_matrix_mul_3x3(float a[][3], float b[][3], float out[][3]) {
 	out[0][0] = a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0];
 	out[0][1] = a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1];
 	out[0][2] = a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2];
@@ -290,7 +290,7 @@ void cs_clamp(float *x, float *y, float *z) {
 	*z = (*z < 0.0) ? 0.0 : ((*z > 1.0) ? 1.0 : *z);
 }
 
-static void matrix_invert_3x3(const float in[][3], float out[][3]) {
+static void matrix_invert_3x3(float in[][3], float out[][3]) {
 	float d = in[0][0]*(in[1][1]*in[2][2] - in[2][1]*in[1][2])
 	        - in[0][1]*(in[1][0]*in[2][2] - in[1][2]*in[2][0])
 	        + in[0][2]*(in[1][0]*in[2][1] - in[1][1]*in[2][0]);
