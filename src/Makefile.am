@@ -136,7 +136,6 @@ xroar_SOURCES += \
 	gmc.c \
 	ide.c ide.h \
 	idecart.c idecart.h \
-	ikon.c \
 	mooh.c \
 	mpi.c \
 	nx32.c \
@@ -146,6 +145,11 @@ xroar_SOURCES += \
 	spi65.c spi65.h \
 	spi_sdcard.c \
 	wd279x.c wd279x.h
+
+if EXPERIMENTAL
+xroar_SOURCES += \
+	ikon.c
+endif
 endif
 
 if CART_ARCH_MC10
