@@ -833,7 +833,7 @@ static void coco3_attach_interface(struct part *p, const char *ifname, void *int
 	struct cart *c = mp->cart;
 	if (c) {
 		if (c->attach_interface) {
-			return c->attach_interface(c, ifname, intf);
+			c->attach_interface(c, ifname, intf);
 		}
 	}
 }

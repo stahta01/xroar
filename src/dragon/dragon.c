@@ -782,7 +782,7 @@ void dragon_attach_interface(struct part *p, const char *ifname, void *intf) {
 	struct cart *c = md->cart;
 	if (c) {
 		if (c->attach_interface) {
-			return c->attach_interface(c, ifname, intf);
+			c->attach_interface(c, ifname, intf);
 		}
 	}
 }
