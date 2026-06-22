@@ -1298,7 +1298,7 @@ const char *hk_name_from_symbol(uint16_t sym) {
 	static char buf[7];
 	snprintf(buf, sizeof(buf), "0x%04x", sym);
 	return buf;
-};
+}
 
 uint16_t hk_symbol_from_name(const char *name) {
 	if (!name) {
