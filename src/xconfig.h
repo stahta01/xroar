@@ -85,6 +85,7 @@ struct slist;
 #define XC_SET_STRING_LIST(n,d) XC_OPT(STRING_LIST,n,d)
 #define XC_SET_STRING_NE(n,d) XC_OPT_NE(STRING,n,d)
 #define XC_SET_STRING_LIST_NE(n,d) XC_OPT_NE(STRING_LIST,n,d)
+#define XC_SET_NONE(n) XC_OPT(NONE,n,NULL)
 #define XC_SET_ENUM(n,d,r) XC_OPT_REF(ENUM,n,d,r)
 #define XC_SET_PART(n,d,r) XC_OPT_REF(PART,n,d,r)
 #define XC_ALIAS_NOARG(n,d) XC_OPT(ALIAS,n,d)

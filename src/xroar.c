@@ -3173,11 +3173,6 @@ static struct xconfig_enum ao_format_list[] = {
 
 /* Configuration directives */
 
-static union {
-	_Bool v_bool;
-	int v_int;
-} dummy_value;
-
 static struct xconfig_option const xroar_options[] = {
 	/* Machines: */
 	{ XC_CALL_STRING("default-machine", &set_default_machine) },
@@ -3253,7 +3248,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("tape-rewrite-leader", &xroar.cfg.tape.rewrite_leader) },
 	{ XC_SET_INT("tape-ao-rate", &xroar.cfg.tape.ao_rate) },
 	/* Backwards-compatibility: */
-	{ XC_SET_INT1("tape-pad", &dummy_value.v_int), .deprecated = 1 },
+	{ XC_SET_NONE("tape-pad"), .deprecated = 1 },
 
 	/* Floppy disks: */
 	{ XC_SET_BOOL("disk-write-back", &xroar.cfg.disk.write_back) },
@@ -3310,7 +3305,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("volume", &private_cfg.ao.volume) },
 	/* Backwards-compatibility: */
 	{ XC_SET_INT("ao-buffer-samples", &xroar.cfg.ao.buffer_nframes), .deprecated = 1 },
-	{ XC_SET_BOOL("fast-sound", &dummy_value.v_bool), .deprecated = 1 },
+	{ XC_SET_NONE("fast-sound"), .deprecated = 1 },
 
 	/* Keyboard: */
 	{ XC_SET_ENUM("kbd-layout", &private_cfg.kbd.layout, hkbd_layout_list) },
