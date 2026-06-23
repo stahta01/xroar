@@ -3391,14 +3391,16 @@ static void helptext(void) {
 "Usage: xroar [STARTUP-OPTION]... [OPTION]...\n"
 "XRoar emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3;\n"
 "the Tandy MC-10; and some other similar machines or clones.\n"
+"\n"
 
-"\n Startup options:\n"
+" Startup options:\n"
 #ifdef WINDOWS32
 "  -C              allocate a console window\n"
 #endif
 "  -c CONFFILE     specify a configuration file\n"
+"\n"
 
-"\n Machines:\n"
+" Machines:\n"
 "  -default-machine NAME   default machine on startup\n"
 "  -machine NAME           create or modify named machine profile\n"
 "                          (-machine help for list)\n"
@@ -3421,8 +3423,9 @@ static void helptext(void) {
 "    -ram KBYTES             amount of RAM in K\n"
 "    -ram-init METHOD        RAM start pattern (-ram-init help for list)\n"
 "    -machine-cart NAME      default cartridge for selected machine\n"
+"\n"
 
-"\n Cartridges:\n"
+" Cartridges:\n"
 "  -cart NAME              create or modify named cartridge profile\n"
 "                          (-cart help for list)\n"
 "    -cart-desc TEXT         cartridge description\n"
@@ -3434,13 +3437,15 @@ static void helptext(void) {
 "    -mpi-slot N             (MPI) initially select slot (0-3)\n"
 "    -mpi-load-cart [N=]NAME\n"
 "                            (MPI) insert cartridge into next or numbered slot\n"
+"\n"
 
-"\n Becker port:\n"
+" Becker port:\n"
 "  -becker               prefer becker-enabled DOS (when picked automatically)\n"
 "  -becker-ip ADDRESS    address or hostname of DriveWire server [" BECKER_IP_DEFAULT "]\n"
 "  -becker-port PORT     port of DriveWire server [" BECKER_PORT_DEFAULT "]\n"
+"\n"
 
-"\n Cassettes:\n"
+" Cassettes:\n"
 "  -load-tape FILE           attach FILE as tape image for reading\n"
 "  -tape-write FILE          open FILE for tape writing\n"
 "  -tape-pan PANNING         pan stereo input (0.0 = left, 1.0 = right) [0.5]\n"
@@ -3451,26 +3456,30 @@ static void helptext(void) {
 "  -tape-rewrite-gap-ms MS   gap length during tape rewriting (1-5000ms) [500]\n"
 "  -tape-rewrite-leader B    rewrite leader length in bytes (1-2048) [256]\n"
 "  -tape-ao-rate HZ          set tape writing frame rate\n"
+"\n"
 
-"\n Floppy disks:\n"
+" Floppy disks:\n"
 "  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
 "  -no-disk-write-back   don't default to enabling write-back for disk images\n"
 "  -no-disk-auto-os9     don't try to detect headerless OS-9 JVC disk images\n"
 "  -no-disk-auto-sd      don't assume single density for 10 sec/track disks\n"
+"\n"
 
-"\n Hard disks:\n"
+" Hard disks:\n"
 "  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
 "  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+"\n"
 
-"\n Keyboard:\n"
+" Keyboard:\n"
 "  -kbd-layout LAYOUT      host keyboard layout (-kbd-layout help for list)\n"
 "  -kbd-lang LANG          host keyboard language (-kbd-lang help for list)\n"
 "  -kbd-bind HK=[pre:]DK   map host key to emulated key (pre = no translate)\n"
 "  -kbd-translate          enable keyboard translation\n"
 "  -type STRING            intercept ROM calls to type STRING into BASIC\n"
 "  -load-text FILE         type FILE into BASIC\n"
+"\n"
 
-"\n Joysticks:\n"
+" Joysticks:\n"
 "  -joy-db-file FILE     load gamepad mappings from file\n"
 "  -joy NAME             configure named joystick profile (-joy help for list)\n"
 "    -joy-desc TEXT        joystick description\n"
@@ -3479,14 +3488,16 @@ static void helptext(void) {
 "  -joy-right NAME       map right joystick\n"
 "  -joy-left NAME        map left joystick\n"
 "  -joy-virtual NAME     specify the 'virtual' joystick to cycle [kjoy0]\n"
+"\n"
 
-"\n Printers:\n"
+" Printers:\n"
 "  -lp-file FILE         append Dragon printer output to FILE\n"
 #ifdef HAVE_POPEN
 "  -lp-pipe COMMAND      pipe Dragon printer output to COMMAND\n"
 #endif
+"\n"
 
-"\n Files:\n"
+" Files:\n"
 "  -load FILE            load or attach FILE\n"
 "  -run FILE             load or attach FILE and attempt autorun\n"
 "  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
@@ -3495,19 +3506,22 @@ static void helptext(void) {
 "  -load-tape FILE       attach FILE as tape image for reading\n"
 "  -tape-write FILE      open FILE for tape writing\n"
 "  -load-text FILE       type FILE into BASIC\n"
+"\n"
 
-"\n Firmware ROM images:\n"
+" Firmware ROM images:\n"
 "  -rompath PATH         ROM search path (colon-separated list)\n"
 "  -romlist NAME=LIST    define a ROM list\n"
 "  -romlist-print        print defined ROM lists\n"
 "  -crclist NAME=LIST    define a ROM CRC list\n"
 "  -crclist-print        print defined ROM CRC lists\n"
 "  -force-crc-match      force per-architecture CRC matches\n"
+"\n"
 
-"\n User interface:\n"
+" User interface:\n"
 "  -ui MODULE            user-interface module (-ui help for list)\n"
+"\n"
 
-"\n Video:\n"
+" Video:\n"
 "  -fs                   start emulator full-screen if possible\n"
 "  -fskip FRAMES         frameskip (default: 0)\n"
 "  -ccr RENDERER         cross-colour renderer (-ccr help for list)\n"
@@ -3523,8 +3537,9 @@ static void helptext(void) {
 "  -vo-colour N          set TV colour saturation (0-100) [50]\n"
 "  -vo-hue N             set TV hue control (-179 to +180) [0]\n"
 "  -vo-colour-killer     enable colour killer (disabled by default)\n"
+"\n"
 
-"\n Audio:\n"
+" Audio:\n"
 "  -ao MODULE            audio module (-ao help for list)\n"
 "  -ao-device STRING     device to use for audio module\n"
 "  -ao-format FMT        set audio sample format (-ao-format help for list)\n"
@@ -3537,8 +3552,9 @@ static void helptext(void) {
 "  -ao-buffer-frames N   set total audio buffer size in samples (if supported)\n"
 "  -ao-gain DB           audio gain in dB relative to 0 dBFS [-3.0]\n"
 "  -ao-volume VOLUME     older way to specify audio volume, linear (0-100)\n"
+"\n"
 
-"\n Debugging:\n"
+" Debugging:\n"
 #ifdef WANT_GDB_TARGET
 "  -gdb                  enable GDB target\n"
 "  -gdb-ip ADDRESS       address of interface for GDB target [" GDB_IP_DEFAULT "]\n"
@@ -3570,8 +3586,9 @@ static void helptext(void) {
 "  -timeout-motoroff N   quit N seconds after tape motor switches off\n"
 "  -snap-motoroff FILE   write a snapshot each time tape motor switches off\n"
 #endif
+"\n"
 
-"\n Other options:\n"
+" Other options:\n"
 "  -config-print       print configuration to standard out\n"
 "  -config-print-all   print configuration to standard out, including defaults\n"
 #ifdef AUTOSAVE_PREFIX
@@ -3579,24 +3596,30 @@ static void helptext(void) {
 #endif
 "  -h, --help          display this help and exit\n"
 "  -V, --version       output version information and exit\n"
+"\n"
 
-"\nWhen configuring a Multi-Pak Interface (MPI), only the last configured DOS\n"
+"When configuring a Multi-Pak Interface (MPI), only the last configured DOS\n"
 "cartridge will end up connected to the virtual drives.\n"
+"\n"
 
-"\nJoystick SPECs are of the form [MODULE:][ARG[,ARG]...], from:\n"
+"Joystick SPECs are of the form [MODULE:][ARG[,ARG]...], from:\n"
+"\n"
 
-"\nMODULE          Axis ARGs                       Button ARGs\n"
+"MODULE          Axis ARGs                       Button ARGs\n"
 "physical        joystick-index,[-]axis-index    joystick-index,button-index\n"
 "keyboard        key-name0,key-name1             key-name\n"
 "mouse           screen-offset0,screen-offset1   button-number\n"
+"\n"
 
-"\nFor physical joysticks a '-' before the axis index inverts the axis.  AXIS 0 is\n"
+"For physical joysticks a '-' before the axis index inverts the axis.  AXIS 0 is\n"
 "the X-axis, and AXIS 1 the Y-axis.  BTN 0 is the only one used so far, but in\n"
 "the future BTN 1 will be the second button on certain CoCo joysticks.\n"
+"\n"
 
-"\nTrap CONDITIONs can be one of the following:\n"
+"Trap CONDITIONs can be one of the following:\n"
+"\n"
 
-"\n  immediate (or '-')    trigger immediately\n"
+"  immediate (or '-')    trigger immediately\n"
 "  pc=ADDR               trigger at CPU Program Counter value\n"
 "  read=A[-B]            trigger on read from address range\n"
 "  write=A[-B]           trigger on write to address range\n"
@@ -3610,9 +3633,9 @@ static void helptext(void) {
 
 static void versiontext(void) {
 #ifdef LOGGING
-	printf("%s", PACKAGE_TEXT);
+	printf("%s\n", PACKAGE_TEXT);
 	puts(
-"\nCopyright (C) " PACKAGE_YEAR " Ciaran Anscomb\n"
+"Copyright (C) " PACKAGE_YEAR " Ciaran Anscomb\n"
 "License: GNU GPL version 3 or later <https://www.gnu.org/licenses/gpl-3.0.html>.\n"
 "This is free software: you are free to change and redistribute it.\n"
 "There is NO WARRANTY, to the extent permitted by law."
