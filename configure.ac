@@ -108,8 +108,8 @@ AC_ARG_WITH([sdl3],
 AC_ARG_WITH([sdl2],
 	AS_HELP_STRING([--without-sdl2], [don't test for SDL2]) )
 
-test "x$with_sdl2" = "xyes" && with_sdl3="no"
 test "x$with_sdl3" = "xyes" && with_sdl2="no"
+test "x$with_sdl2" = "xyes" && with_sdl3="no"
 
 AC_ARG_ENABLE([ui_sdl],
 	AS_HELP_STRING([--enable-ui-sdl], [force inclusion of basic SDL UI]) )
@@ -660,6 +660,34 @@ AS_IF([test "x$with_joydev" != "xno"], [
 AM_CONDITIONAL([JOYDEV], [test -n "$have_joydev"])
 AM_COND_IF([JOYDEV], [AC_DEFINE([HAVE_JOYDEV], 1, [Have linux/joystick.h])])
 
+### SDL3
+
+AS_IF([test "x$with_sdl3" != "xno"], [
+		PKG_CHECK_MODULES([SDL3], [sdl3], :, :)], :)
+
+unset have_sdl3
+AS_IF([test -n "$SDL3_LIBS"], [
+		OLD_CFLAGS="$CFLAGS"
+		OLD_LIBS="$LIBS"
+		CFLAGS="$CFLAGS $SDL3_CFLAGS"
+		LIBS="$LIBS $SDL3_LIBS"
+		AC_MSG_CHECKING([if SDL3 is usable])
+		AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <SDL3/SDL.h>
+int main(int argc, char **argv) { (void)argc; (void)argv; SDL_Init(0); return 0; }
+				])], [
+			AC_MSG_RESULT([yes])
+			have_sdl3=1
+			], [AC_MSG_RESULT([no])] )
+		CFLAGS="$OLD_CFLAGS"
+		LIBS="$OLD_LIBS"
+		])
+
+AM_CONDITIONAL([UI_SDL3], [test -n "$have_sdl3"])
+AM_COND_IF([UI_SDL3], [AC_DEFINE([HAVE_SDL3], 1, [Have SDL3])])
+
+test -n "$have_sdl3" && with_sdl2=no
+
 ### SDL2
 
 AS_IF([test "x$with_sdl2" != "xno"], [
@@ -686,34 +714,6 @@ int main(int argc, char **argv) { (void)argc; (void)argv; SDL_Init(0); return 0;
 
 AM_CONDITIONAL([UI_SDL2], [test -n "$have_sdl2"])
 AM_COND_IF([UI_SDL2], [AC_DEFINE([HAVE_SDL2], 1, [Have SDL2])])
-
-test -n "$have_sdl2" && with_sdl3=no
-
-### SDL3
-
-AS_IF([test "x$with_sdl3" != "xno"], [
-		PKG_CHECK_MODULES([SDL3], [sdl3], :, :)], :)
-
-unset have_sdl3
-AS_IF([test -n "$SDL3_LIBS"], [
-		OLD_CFLAGS="$CFLAGS"
-		OLD_LIBS="$LIBS"
-		CFLAGS="$CFLAGS $SDL3_CFLAGS"
-		LIBS="$LIBS $SDL3_LIBS"
-		AC_MSG_CHECKING([if SDL3 is usable])
-		AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <SDL3/SDL.h>
-int main(int argc, char **argv) { (void)argc; (void)argv; SDL_Init(0); return 0; }
-				])], [
-			AC_MSG_RESULT([yes])
-			have_sdl3=1
-			], [AC_MSG_RESULT([no])] )
-		CFLAGS="$OLD_CFLAGS"
-		LIBS="$OLD_LIBS"
-		])
-
-AM_CONDITIONAL([UI_SDL3], [test -n "$have_sdl3"])
-AM_COND_IF([UI_SDL3], [AC_DEFINE([HAVE_SDL3], 1, [Have SDL3])])
 
 ### SDL_image 2
 
