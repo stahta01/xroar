@@ -36,7 +36,6 @@
 #include <math.h>
 #include <string.h>
 #include <complex.h>
-#include <stdbool.h>
 
 #include "xalloc.h"
 
