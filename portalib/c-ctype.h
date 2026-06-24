@@ -23,8 +23,6 @@
 #ifndef PORTALIB_C_CTYPE_H_
 #define PORTALIB_C_CTYPE_H_
 
-#include <stdbool.h>
-
 int c_tolower(int c);
 int c_toupper(int c);
 

@@ -8,6 +8,18 @@
 #include "config.h"
 #endif
 
+// Note: In C <= 17, stdbool.h will define bool as a macro, rewriting it to
+// _Bool.  In C > 17, bool is a built-in type.  We need it to be consistent,
+// mostly because the word "bool" is token-pasted in delegate names.  Since
+// SDL3 includes stdbool.h itself, we have to switch from consistently never
+// including stdbool.h to consistently always including stdbool.h.  So we do
+// that here.
+
+#if defined __STDC_VERSION__ && __STDC_VERSION__ > 201710L
+#else
+#include <stdbool.h>
+#endif
+
 #ifdef HAVE___BUILTIN_EXPECT
 #define LIKELY(x)   __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
