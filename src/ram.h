@@ -124,7 +124,7 @@ inline uint16_t *ram_a16(struct ram *ram, unsigned bank, unsigned row, unsigned 
 	return &(((uint16_t *)ram->d[bank])[a]);
 }
 
-inline void ram_d8(struct ram *ram, _Bool RnW, unsigned bank,
+inline void ram_d8(struct ram *ram, bool RnW, unsigned bank,
 		   unsigned row, unsigned col, uint8_t *d) {
 	uint8_t *p = ram_a8(ram, bank, row, col);
 	if (!p)
@@ -136,7 +136,7 @@ inline void ram_d8(struct ram *ram, _Bool RnW, unsigned bank,
 	}
 }
 
-inline void ram_d16(struct ram *ram, _Bool RnW, unsigned bank,
+inline void ram_d16(struct ram *ram, bool RnW, unsigned bank,
 		    unsigned row, unsigned col, uint16_t *d) {
 	uint16_t *p = ram_a16(ram, bank, row, col);
 	if (!p)

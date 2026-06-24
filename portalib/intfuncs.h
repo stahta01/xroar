@@ -57,9 +57,9 @@ inline int int_clamp_u8(int v) {
 //
 // from https://graphics.stanford.edu/~seander/bithacks.html
 
-inline _Bool u32_parity(uint32_t val) {
+inline bool u32_parity(uint32_t val) {
 #ifdef HAVE___BUILTIN_PARITY
-	return (_Bool)__builtin_parity(val);
+	return (bool)__builtin_parity(val);
 #else
 	val ^= val >> 16;
 	val ^= val >> 8;

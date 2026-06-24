@@ -51,10 +51,10 @@ struct vdrive_interface_private {
 	// Messenger client id
 	int msgr_client_id;
 
-	_Bool ready_state;
-	_Bool tr00_state;
-	_Bool index_state;
-	_Bool write_protect_state;
+	bool ready_state;
+	bool tr00_state;
+	bool index_state;
+	bool write_protect_state;
 
 	struct drive_data drives[MAX_DRIVES];
 	struct drive_data *current_drive;
@@ -97,8 +97,8 @@ static const struct ser_struct ser_struct_vdrive[] = {
 
 };
 
-static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data vdrive_ser_struct_data = {
 	.elems = ser_struct_vdrive,
@@ -119,8 +119,8 @@ void vdrive_ui_set_write_back(void *, int tag, void *smsg);
 
 /* Public methods */
 
-static void vdrive_set_dirc(void *sptr, _Bool dirc);
-static void vdrive_set_dden(void *sptr, _Bool dden);
+static void vdrive_set_dirc(void *sptr, bool dirc);
+static void vdrive_set_dden(void *sptr, bool dden);
 static void vdrive_set_sso(void *sptr, unsigned head);
 static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive);
 
@@ -138,10 +138,10 @@ static void vdrive_update_connection(void *sptr);
 
 /* Support */
 
-static void set_ready_state(struct vdrive_interface_private *vip, _Bool state);
-static void set_tr00_state(struct vdrive_interface_private *vip, _Bool state);
-static void set_index_state(struct vdrive_interface_private *vip, _Bool state);
-static void set_write_protect_state(struct vdrive_interface_private *vip, _Bool state);
+static void set_ready_state(struct vdrive_interface_private *vip, bool state);
+static void set_tr00_state(struct vdrive_interface_private *vip, bool state);
+static void set_index_state(struct vdrive_interface_private *vip, bool state);
+static void set_write_protect_state(struct vdrive_interface_private *vip, bool state);
 static void update_signals(struct vdrive_interface_private *vip);
 static int compar_idams(const void *aa, const void *bb);
 
@@ -233,7 +233,7 @@ static void deserialise_drive_data(struct drive_data *drive, struct ser_handle *
 	}
 }
 
-static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct vdrive_interface_private *vip = sptr;
 	switch (tag) {
 	case VDRIVE_SER_DRIVE:
@@ -251,7 +251,7 @@ static _Bool vdrive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool vdrive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	const struct vdrive_interface_private *vip = sptr;
 	switch (tag) {
 	case VDRIVE_SER_DRIVE:
@@ -408,12 +408,12 @@ void vdrive_ui_set_write_back(void *sptr, int tag, void *smsg) {
 
 /* Signals to all drives */
 
-static void vdrive_set_dirc(void *sptr, _Bool dirc) {
+static void vdrive_set_dirc(void *sptr, bool dirc) {
 	struct vdrive_interface_private *vip = sptr;
 	vip->cur_direction = dirc ? 1 : -1;
 }
 
-static void vdrive_set_dden(void *sptr, _Bool dden) {
+static void vdrive_set_dden(void *sptr, bool dden) {
 	struct vdrive_interface_private *vip = sptr;
 	vip->cur_density = dden ? VDISK_DOUBLE_DENSITY : VDISK_SINGLE_DENSITY;
 	vip->head_incr = dden ? 1 : 2;
@@ -612,7 +612,7 @@ static void vdrive_update_connection(void *sptr) {
 
 /* Support */
 
-static void set_ready_state(struct vdrive_interface_private *vip, _Bool state) {
+static void set_ready_state(struct vdrive_interface_private *vip, bool state) {
 	struct vdrive_interface *vi = &vip->public;
 	if (vip->ready_state == state)
 		return;
@@ -620,7 +620,7 @@ static void set_ready_state(struct vdrive_interface_private *vip, _Bool state) {
 	DELEGATE_CALL(vi->ready, state);
 }
 
-static void set_tr00_state(struct vdrive_interface_private *vip, _Bool state) {
+static void set_tr00_state(struct vdrive_interface_private *vip, bool state) {
 	struct vdrive_interface *vi = &vip->public;
 	if (vip->tr00_state == state)
 		return;
@@ -628,7 +628,7 @@ static void set_tr00_state(struct vdrive_interface_private *vip, _Bool state) {
 	DELEGATE_CALL(vi->tr00, state);
 }
 
-static void set_index_state(struct vdrive_interface_private *vip, _Bool state) {
+static void set_index_state(struct vdrive_interface_private *vip, bool state) {
 	struct vdrive_interface *vi = &vip->public;
 	if (vip->index_state == state)
 		return;
@@ -636,7 +636,7 @@ static void set_index_state(struct vdrive_interface_private *vip, _Bool state) {
 	DELEGATE_CALL(vi->index_pulse, state);
 }
 
-static void set_write_protect_state(struct vdrive_interface_private *vip, _Bool state) {
+static void set_write_protect_state(struct vdrive_interface_private *vip, bool state) {
 	struct vdrive_interface *vi = &vip->public;
 	if (vip->write_protect_state == state)
 		return;

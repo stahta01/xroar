@@ -156,13 +156,13 @@ static inline sds sdsx_parse_str(const char *str) {
 // Returns a new SDS containing the token, or NULL on error (e.g. unterminated
 // quotes).  Supplied string will become NULL when no more tokens are found.
 
-sds sdsx_tok_str_len(const char **s, size_t *len, const char *ere, _Bool parse);
+sds sdsx_tok_str_len(const char **s, size_t *len, const char *ere, bool parse);
 
 
 // Wraps sdsx_tok_str_len() such that data is consumed from the left of a
 // source SDS string.  The source is modified, but its address will not change.
 
-sds sdsx_tok(sds s, const char *ere, _Bool parse);
+sds sdsx_tok(sds s, const char *ere, bool parse);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -171,13 +171,13 @@ sds sdsx_tok(sds s, const char *ere, _Bool parse);
 // the list will contain at least one (potentially empty) element.
 
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *cset,
-				     _Bool parse);
+				     bool parse);
 
-static inline struct sdsx_list *sdsx_split(const sds s, const char *cset, _Bool parse) {
+static inline struct sdsx_list *sdsx_split(const sds s, const char *cset, bool parse) {
 	return sdsx_split_str_len(s, sdslen(s), cset, parse);
 }
 
-static inline struct sdsx_list *sdsx_split_str(const char *str, const char *cset, _Bool parse) {
+static inline struct sdsx_list *sdsx_split_str(const char *str, const char *cset, bool parse) {
 	return sdsx_split_str_len(str, strlen(str), cset, parse);
 }
 

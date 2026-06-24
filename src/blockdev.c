@@ -56,10 +56,10 @@ struct blkdev_private {
 	unsigned sector_size;  // pad or truncate reads & writes to this
 	unsigned num_sectors;  // total number of sectors in image
 
-	_Bool valid_position;  // set after a successful seek
+	bool valid_position;  // set after a successful seek
 
 	struct {
-		_Bool valid;  // 0 until something sets these parameters
+		bool valid;  // 0 until something sets these parameters
 		unsigned nheads;
 		unsigned nsectors;
 		unsigned sector_base;  // generally 0 or (more usual) 1
@@ -74,7 +74,7 @@ struct blkdev_private {
 
 };
 
-static _Bool bd_ide_verify(struct blkdev_private *bdp);
+static bool bd_ide_verify(struct blkdev_private *bdp);
 static void bp_ide_identify_init(struct blkdev *bd);
 static void bd_set_sector_size(struct blkdev_private *bdp, unsigned size);
 static uint16_t from_le16(uint16_t v);
@@ -127,7 +127,7 @@ struct blkdev *bd_open(const char *name) {
 
 // Create new block device.
 
-_Bool bd_create(const char *name, int hd_type) {
+bool bd_create(const char *name, int hd_type) {
 	int filetype = xroar_filetype_by_ext(name);
 
 	int fd = open(name, O_RDWR|O_CREAT|O_TRUNC|O_BINARY, 0600);
@@ -217,7 +217,7 @@ void bd_close(struct blkdev *bd) {
 
 // Seek to a particular LSN.
 
-_Bool bd_seek_lsn(struct blkdev *bd, unsigned lsn) {
+bool bd_seek_lsn(struct blkdev *bd, unsigned lsn) {
 	assert(bd != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;
 	// This should avoid overflows in lsn * sector_size
@@ -234,7 +234,7 @@ _Bool bd_seek_lsn(struct blkdev *bd, unsigned lsn) {
 
 // Read sector from current position.
 
-_Bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize) {
+bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize) {
 	assert(bd != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;
 
@@ -263,7 +263,7 @@ _Bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize) {
 
 // Write sector to current position.
 
-_Bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize) {
+bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize) {
 	assert(bd != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;
 
@@ -293,21 +293,21 @@ _Bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize) {
 
 // Read sector from block device in LBA mode.
 
-_Bool bd_read_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize) {
+bool bd_read_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize) {
 	bd_seek_lsn(bd, lsn);
 	return bd_read(bd, buf, bufsize);
 }
 
 // Write sector to block device in LBA mode.
 
-_Bool bd_write_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize) {
+bool bd_write_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize) {
 	bd_seek_lsn(bd, lsn);
 	return bd_write(bd, buf, bufsize);
 }
 
 // Read sector from block device in CHS mode.
 
-_Bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
+bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		  void *buf, unsigned bufsize) {
 	assert(bd != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;
@@ -321,7 +321,7 @@ _Bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 
 // Write sector from block device in CHS mode.
 
-_Bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
+bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		   void *buf, unsigned bufsize) {
 	assert(bd != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;
@@ -338,7 +338,7 @@ _Bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 // Verify that an opened block device looks like an IDE image with header.
 // Note: sets sector_size to 512.
 
-static _Bool bd_ide_verify(struct blkdev_private *bdp) {
+static bool bd_ide_verify(struct blkdev_private *bdp) {
 	struct blkdev *bd = &bdp->blkdev;
 
 	// Buffer large enough for 512 bytes (organised as 256 16-bit
@@ -391,7 +391,7 @@ static _Bool bd_ide_verify(struct blkdev_private *bdp) {
 // endianness, so this function explicitly converts it to little-endian, as
 // expected by IDE drivers.  Supplied buffer must be large enough.
 
-_Bool bd_ide_read_identify(struct blkdev *bd, void *buf, unsigned bufsize) {
+bool bd_ide_read_identify(struct blkdev *bd, void *buf, unsigned bufsize) {
 	assert(bd != NULL);
 	assert(buf != NULL);
 	struct blkdev_private *bdp = (struct blkdev_private *)bd;

@@ -74,9 +74,9 @@ struct joystick_module sdl_js_mod_exported = {
 // its description to NULL.
 
 struct sdl_js_device {
-	_Bool valid;
+	bool valid;
 
-	_Bool is_gamecontroller;
+	bool is_gamecontroller;
 	int joystick_index;
 	union {
 		SDL_Joystick *joystick;
@@ -96,7 +96,7 @@ struct sdl_js_device {
 
 static SDL_JoystickID *device_id = NULL;
 static int num_devices = 0;
-static _Bool events_enabled = 0;
+static bool events_enabled = 0;
 static struct sdl_js_device *devices = NULL;
 
 struct sdl_js_control {
@@ -107,7 +107,7 @@ struct sdl_js_control {
 		int axis;
 		unsigned button_mask;
 	} control;
-	_Bool inverted;
+	bool inverted;
 };
 
 // Add a joystick.  Called during initialisation, and when running the SDL UI,
@@ -455,7 +455,7 @@ static void debug_controls(struct sdl_js_device *d) {
 			d->debug_axes[i] = 32768;
 		}
 	}
-	_Bool report = 0;
+	bool report = 0;
 	for (int i = 0; i < d->num_axes; ++i) {
 		unsigned v;
 		if (d->is_gamecontroller) {
@@ -471,7 +471,7 @@ static void debug_controls(struct sdl_js_device *d) {
 	{
 		unsigned v = 0;
 		for (int i = 0; i < d->num_buttons; ++i) {
-			_Bool b;
+			bool b;
 			if (d->is_gamecontroller) {
 				b = SDL_GetGamepadButton(d->handle.gamecontroller, i);
 			} else {
@@ -509,10 +509,10 @@ static void sdl_js_control_free(void *);
 // index.  Buttons can be specified as a bitmask of available buttons with '%'
 // - not very user-friendly; I'm only using that for auto-configured joystick
 // profiles at the moment.
-static struct sdl_js_control *configure_control(char *spec, unsigned control, _Bool buttons) {
+static struct sdl_js_control *configure_control(char *spec, unsigned control, bool buttons) {
 	unsigned joystick = 0;
-	_Bool inverted = 0;
-	_Bool is_mask = 0;
+	bool inverted = 0;
+	bool is_mask = 0;
 	char *tmp = NULL;
 	if (spec) {
 		tmp = strsep(&spec, ",");
@@ -636,7 +636,7 @@ static int sdl_js_button_read(void *sptr) {
 	}
 	unsigned v = 0;
 	for (int i = 0; i < c->device->num_buttons; ++i) {
-		_Bool b;
+		bool b;
 		if (c->device->is_gamecontroller) {
 			b = SDL_GetGamepadButton(c->device->handle.gamecontroller, i);
 		} else {

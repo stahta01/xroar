@@ -47,7 +47,7 @@ static const struct ser_struct_data mos6551_ser_struct_data = {
 // MOS6551 ACIA part creation
 
 static struct part *mos6551_allocate(void);
-static _Bool mos6551_finish(struct part *p);
+static bool mos6551_finish(struct part *p);
 
 static const struct partdb_entry_funcs mos6551_funcs = {
 	.allocate = mos6551_allocate,
@@ -69,7 +69,7 @@ static struct part *mos6551_allocate(void) {
 	return p;
 }
 
-static _Bool mos6551_finish(struct part *p) {
+static bool mos6551_finish(struct part *p) {
 	struct MOS6551 *acia = (struct MOS6551 *)p;
 
 	// No-op
@@ -138,7 +138,7 @@ static void mos6551_write(struct MOS6551 *acia, unsigned A, uint8_t *D) {
 	}
 }
 
-void mos6551_access(void *sptr, _Bool RnW, unsigned A, uint8_t *D) {
+void mos6551_access(void *sptr, bool RnW, unsigned A, uint8_t *D) {
 	struct MOS6551 *acia = sptr;
 
 	if (RnW) {

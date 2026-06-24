@@ -119,7 +119,7 @@ struct MC6847 {
 
 void mc6847_reset(struct MC6847 *);
 
-void mc6847_set_inverted_text(struct MC6847 *, _Bool);
+void mc6847_set_inverted_text(struct MC6847 *, bool);
 
 // Render scanline up to current time
 void mc6847_update(void *sptr);

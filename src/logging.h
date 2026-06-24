@@ -160,8 +160,8 @@ struct logging {
 	unsigned debug_gdb;
 	unsigned debug_ui;
 	// Specific tracing
-	_Bool trace_cpu;
-	_Bool trace_cpu_timing;
+	bool trace_cpu;
+	bool trace_cpu_timing;
 	unsigned trace_cpu_counter;
 };
 

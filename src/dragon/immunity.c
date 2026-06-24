@@ -44,8 +44,8 @@ static const struct ser_struct ser_struct_immunity[] = {
 	SER_ID_STRUCT_ELEM(3, struct immunity, init1),
 };
 
-static _Bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data immunity_ser_struct_data = {
         .elems = ser_struct_immunity,
@@ -58,7 +58,7 @@ static const struct ser_struct_data immunity_ser_struct_data = {
 
 static struct part *immunity_allocate(void);
 static void immunity_initialise(struct part *p, void *options);
-static _Bool immunity_finish(struct part *p);
+static bool immunity_finish(struct part *p);
 
 static const struct partdb_entry_funcs immunity_funcs = {
 	.allocate = immunity_allocate,
@@ -93,7 +93,7 @@ static void immunity_initialise(struct part *p, void *options) {
 	part_add_component(p, (struct part *)mem, "EXTMEM");
 }
 
-static _Bool immunity_finish(struct part *p) {
+static bool immunity_finish(struct part *p) {
 	struct immunity *cj = (struct immunity *)p;
 	cj->mem = (struct ram *)part_component_by_id_is_a(p, "EXTMEM", "ram");
 	ram_report(cj->mem, "immunity", "extended RAM");
@@ -102,7 +102,7 @@ static _Bool immunity_finish(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct immunity *cj = sptr;
 	switch (tag) {
 	case IMMUNITY_SER_DAT:
@@ -119,7 +119,7 @@ static _Bool immunity_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct immunity *cj = sptr;
 	switch (tag) {
 	case IMMUNITY_SER_DAT:
@@ -140,18 +140,18 @@ static _Bool immunity_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void immunity_reset(struct immunity *cj, _Bool hard) {
+void immunity_reset(struct immunity *cj, bool hard) {
 	if (hard) {
 		ram_clear(cj->mem, ram_init_random);
 	}
 	cj->init0 = 0x80;
 }
 
-void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
+void immunity_cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct immunity *cj = sptr;
 	struct dragon *md = cj->dragon;
 	uint8_t data = md->CPU->D;
-	_Bool ignore_sam = 0;
+	bool ignore_sam = 0;
 	uint32_t addr = (uint32_t)A;
 
 	// Check watchpoints based on untransformed address
@@ -189,9 +189,9 @@ void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 #ifdef JIM_DEBUG
 		uint8_t b2;
 #endif
-		_Bool ffxx = (A & 0xff00) == 0xff00;
-		_Bool altvec = ((A & 0xffe0) == 0xffe0) && !(cj->init0 & 0x80);
-		_Bool io = ffxx && !altvec;
+		bool ffxx = (A & 0xff00) == 0xff00;
+		bool altvec = ((A & 0xffe0) == 0xffe0) && !(cj->init0 & 0x80);
+		bool io = ffxx && !altvec;
 		if ((((A & 0xff00) == 0xfe00) && ((cj->init0 & 0x08) == 0x08))
 		    || ffxx) { // pin CRM page and io, including vectors
 			bank = 0x3f;
@@ -206,8 +206,8 @@ void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 			| (bank & 0x20 ? 0 : 0x20)
 			| (bank & 0x10 ? 0 : 0x10)
 			| (bank & 0x08 ? 0 : 0x08);
-		_Bool cocoram = (bank < 8);
-		_Bool int_mem = (!cocoram
+		bool cocoram = (bank < 8);
+		bool int_mem = (!cocoram
 				 || (cocoram
 				     && ((bank & 0x07) == 0x07)
 				     && ((A & 0x1e00) == 0x1e00)

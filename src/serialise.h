@@ -116,7 +116,7 @@ enum ser_type {
 		int: ser_type_int, \
 		unsigned: ser_type_unsigned, \
 		default: _Generic((m), \
-			_Bool: ser_type_bool, \
+			bool: ser_type_bool, \
 			int8_t: ser_type_int8, \
 			uint8_t: ser_type_uint8, \
 			int16_t: ser_type_int16, \
@@ -153,8 +153,8 @@ struct ser_struct {
 struct ser_struct_data {
 	const struct ser_struct *elems;
 	const unsigned num_elems;
-	_Bool (* const read_elem)(void *sptr, struct ser_handle *sh, int tag);
-	_Bool (* const write_elem)(void *sptr, struct ser_handle *sh, int tag);
+	bool (* const read_elem)(void *sptr, struct ser_handle *sh, int tag);
+	bool (* const write_elem)(void *sptr, struct ser_handle *sh, int tag);
 };
 
 /** \brief Open a file.

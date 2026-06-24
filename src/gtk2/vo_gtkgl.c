@@ -76,7 +76,7 @@ static void resize(void *, unsigned int w, unsigned int h);
 static void draw(void *);
 static void set_viewport(void *, int vp_w, int vp_h);
 
-static void notify_frame_rate(void *, _Bool is_60hz);
+static void notify_frame_rate(void *, bool is_60hz);
 
 static void vogtkgl_ui_set_gl_filter(void *, int tag, void *smsg);
 static void vogtkgl_ui_set_vsync(void *, int tag, void *smsg);
@@ -87,7 +87,7 @@ static gboolean window_state(GtkWidget *, GdkEventWindowState *, gpointer);
 static gboolean configure(GtkWidget *, GdkEventConfigure *, gpointer);
 static void vo_gtkgl_set_vsync(struct ui_gtk2_interface *, int val);
 
-_Bool gtkgl_vo_init(struct ui_gtk2_interface *uigtk2) {
+bool gtkgl_vo_init(struct ui_gtk2_interface *uigtk2) {
 	struct vo_cfg *vo_cfg = &uigtk2->cfg->vo_cfg;
 
 	gtk_gl_init(NULL, NULL);
@@ -128,7 +128,7 @@ _Bool gtkgl_vo_init(struct ui_gtk2_interface *uigtk2) {
 	vr->notify_frame_rate = DELEGATE_AS1(void, bool, notify_frame_rate, vogtkgl);
 
 	// Configure drawing_area widget
-	_Bool is_coco3 = (strcmp(xroar.machine_config->architecture, "coco3") == 0);
+	bool is_coco3 = (strcmp(xroar.machine_config->architecture, "coco3") == 0);
 	if (is_coco3) {
 		vogtkgl->window_area.w = 720;
 		vogtkgl->window_area.h = 540;
@@ -189,7 +189,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 		g_assert_not_reached();
 	}
 
-	_Bool is_exact_multiple = 0;
+	bool is_exact_multiple = 0;
 	int multiple = 1;
 	int mw = vr->viewport.w;
 	int mh = vr->viewport.h * 2;
@@ -237,7 +237,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	gdk_gl_drawable_gl_end(gldrawable);
 }
 
-static void notify_frame_rate(void *sptr, _Bool is_60hz) {
+static void notify_frame_rate(void *sptr, bool is_60hz) {
 	struct vo_gtkgl_interface *vogtkgl = sptr;
 	struct vo_opengl_interface *vogl = &vogtkgl->vogl;
 	vo_opengl_set_frame_rate(vogl, is_60hz);
@@ -307,7 +307,7 @@ static void vogtkgl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uigtk2->public.vo_interface;
 
-	_Bool want_fullscreen = uimsg->value;
+	bool want_fullscreen = uimsg->value;
 
 	if (want_fullscreen) {
 		vo->show_menubar = 0;
@@ -326,7 +326,7 @@ static void vogtkgl_ui_set_menubar(void *sptr, int tag, void *smsg) {
 	struct vo_interface *vo = uigtk2->public.vo_interface;
 	struct vo_gtkgl_interface *vogtkgl = (struct vo_gtkgl_interface *)vo;
 
-	_Bool want_menubar = uimsg->value;
+	bool want_menubar = uimsg->value;
 
 	GtkAllocation allocation;
 	if (vo->is_fullscreen) {
@@ -436,7 +436,7 @@ static void draw(void *sptr) {
 
 // Test glX extensions string for presence of a particular extension.
 
-static _Bool opengl_has_extension(Display *display, const char *extension) {
+static bool opengl_has_extension(Display *display, const char *extension) {
 	const char *(*glXQueryExtensionsStringFunc)(Display *, int) = (const char *(*)(Display *, int))glXGetProcAddress((const GLubyte *)"glXQueryExtensionsString");
 	if (!glXQueryExtensionsStringFunc)
 		return 0;

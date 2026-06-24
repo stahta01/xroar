@@ -146,22 +146,22 @@ struct TCC1014_private {
 	// don't want this code to have to constantly generate two sets of
 	// output, we need to know which is desired.  Calling
 	// tcc1014_set_composite() sets or clears this flag:
-	_Bool want_composite;
+	bool want_composite;
 
 	// $FF22: PIA1B video control lines
 	// XXX there may be a need for latch propagation as with the VDG, but
 	// for now assume that VDG-compatible modes are simulated in a basic
 	// fashion.
 	struct {
-		_Bool ddr;     // snooped data direction register
+		bool ddr;     // snooped data direction register
 		unsigned pdr;  // snooped peripheral data register
 	} PIA1B_shadow;
 
 	struct {
-		_Bool GnA;
-		_Bool GM1;
-		_Bool GM0;
-		_Bool CSS;
+		bool GnA;
+		bool GM1;
+		bool GM0;
+		bool CSS;
 	} VDG;
 
 	// $FF90: Initialisation register 0 - INIT0
@@ -182,23 +182,23 @@ struct TCC1014_private {
 	uint8_t registers[16];
 
 	// $FF90: Initialisation register 0 - INIT0
-	_Bool COCO;  // 1=Color Computer Compatible
-	_Bool MMUEN;  // 1=MMU Enabled (COCO = 0)
-	_Bool MC3;  // 1=RAM at $FExx is constant
-	_Bool MC2;  // 1=$FF4x external; 0=internal
-	_Bool MC1;  // ROM map control
-	_Bool MC0;  // ROM map control
+	bool COCO;  // 1=Color Computer Compatible
+	bool MMUEN;  // 1=MMU Enabled (COCO = 0)
+	bool MC3;  // 1=RAM at $FExx is constant
+	bool MC2;  // 1=$FF4x external; 0=internal
+	bool MC1;  // ROM map control
+	bool MC0;  // ROM map control
 
 	// $FF91: Initialisation register 1 - INIT1
-	_Bool TINS;  // Timer source: 1=3.58MHz, 0=15.7kHz
+	bool TINS;  // Timer source: 1=3.58MHz, 0=15.7kHz
 	unsigned TR;  // MMU task select 0=task 1, 8=task 2
 
 	// $FF98: Video mode register - VMODE
-	_Bool BP;  // 1=Graphics; 0=Text
-	_Bool BPI;  // 1=Phase invert
+	bool BP;  // 1=Graphics; 0=Text
+	bool BPI;  // 1=Phase invert
 	unsigned burstn;  // 0=Monochrome, 1=Normal, 2=180°
-	_Bool MOCH;  // 1=Monochrome, 0=Colour
-	_Bool H50;  // 1=50Hz video; 0=60Hz video
+	bool MOCH;  // 1=Monochrome, 0=Colour
+	bool H50;  // 1=50Hz video; 0=60Hz video
 	unsigned LPR;  // Lines Per Row: 1, 2, 8, 9, 10, 11 or 65535 (=infinite)
 
 	// $FF99: Video resolution register - VRES
@@ -217,7 +217,7 @@ struct TCC1014_private {
 	uint32_t Y;
 
 	// $FF9F: Horizontal offset register
-	_Bool HVEN;  // 1=Horizontal virtual screen enable (256 bytes per row)
+	bool HVEN;  // 1=Horizontal virtual screen enable (256 bytes per row)
 	unsigned X;  // Horizontal offset
 
 	// $FFA0-$FFA7: MMU bank registers (task one)
@@ -240,10 +240,10 @@ struct TCC1014_private {
 	uint16_t SAM_F;
 
 	// $FFD8/$FFD9: Clear/set MPU rate
-	_Bool R1;
+	bool R1;
 
 	// $FFDE/$FFDF: Clear/set map type
-	_Bool TY;
+	bool TY;
 
 	unsigned irq_state;
 	unsigned firq_state;
@@ -252,13 +252,13 @@ struct TCC1014_private {
 	unsigned IL2_state;
 
 	// Flags
-	_Bool inverted_text;
+	bool inverted_text;
 
 	// Video address
 	uint32_t B;  // Current VRAM address
 	unsigned row;
 	unsigned rowmask;
-	_Bool row_advance;
+	bool row_advance;
 	unsigned Xoff;
 
 	// Video resolution
@@ -282,16 +282,16 @@ struct TCC1014_private {
 		unsigned lTB;  // lines of top border
 		unsigned lAA;  // lines of active area
 
-		_Bool sync;         // in sync state
-		_Bool active_area;  // in active area
+		bool sync;         // in sync state
+		bool active_area;  // in active area
 		unsigned lcount;    // number of scanlines rendered in current state
 	} vertical;
 
 	uint8_t border_colour;
 
 	// Internal state
-	_Bool blink;
-	_Bool have_vdata_cache;
+	bool blink;
+	bool have_vdata_cache;
 	uint8_t vdata_cache;
 
 	// Unsafe warning: pixel_data[] *may* need to be 16 elements longer
@@ -378,8 +378,8 @@ static struct ser_struct ser_struct_tcc1014[] = {
 	// 53 was is_1987, now replaced by pointer to variant constants
 };
 
-static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 const struct ser_struct_data tcc1014_ser_struct_data = {
 	.elems = ser_struct_tcc1014,
@@ -534,10 +534,10 @@ static inline unsigned l_dt(struct TCC1014_private *gime) { return event_current
 
 static struct part *tcc1014_allocate(void);
 static void tcc1014_initialise(struct part *p, void *options);
-static _Bool tcc1014_finish(struct part *p);
+static bool tcc1014_finish(struct part *p);
 static void tcc1014_free(struct part *p);
 
-static _Bool tcc1014_is_a(struct part *p, const char *name);
+static bool tcc1014_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs tcc1014_funcs = {
         .allocate = tcc1014_allocate,
@@ -579,10 +579,10 @@ static void tcc1014_initialise(struct part *p, void *options) {
 	(void)options;
 }
 
-static _Bool tcc1014_finish(struct part *p) {
+static bool tcc1014_finish(struct part *p) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)p;
 
-	_Bool is_1987 = (strcmp(p->partdb->name, "TCC1014-1987") == 0);
+	bool is_1987 = (strcmp(p->partdb->name, "TCC1014-1987") == 0);
 	gime->variant = &tcc1014_variant[is_1987];
 
 	if (gime->hs_fall_event.next == &gime->hs_fall_event)
@@ -614,7 +614,7 @@ void tcc1014_free(struct part *p) {
 	event_dequeue(&gime->hs_fall_event);
 }
 
-static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct TCC1014_private *gime = sptr;
 	switch (tag) {
 	case TCC1014_SER_REGISTERS:
@@ -634,7 +634,7 @@ static _Bool tcc1014_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag) {
         struct TCC1014_private *gime = sptr;
 	switch (tag) {
 	case TCC1014_SER_REGISTERS:
@@ -656,7 +656,7 @@ static _Bool tcc1014_write_elem(void *sptr, struct ser_handle *sh, int tag) {
         return 1;
 }
 
-static _Bool tcc1014_is_a(struct part *p, const char *name) {
+static bool tcc1014_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "TCC1014") == 0;
 }
@@ -690,7 +690,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	gime->have_vdata_cache = 0;
 }
 
-void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+void tcc1014_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct TCC1014 *gimep = sptr;
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 
@@ -714,7 +714,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	// Address decoding
 
 	if (A < 0xff00) {
-		_Bool use_mmu = gime->MMUEN;
+		bool use_mmu = gime->MMUEN;
 
 		if (A >= 0xfe00) {
 			if (gime->MC3) {
@@ -822,7 +822,7 @@ void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 unsigned tcc1014_decode(struct TCC1014 *gimep, uint16_t A) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	if (A < 0xff00) {
-		_Bool use_mmu = gime->MMUEN;
+		bool use_mmu = gime->MMUEN;
 
 		if (A >= 0xfe00) {
 			if (gime->MC3) {
@@ -860,7 +860,7 @@ void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val) {
 	update_from_sam_register(gime);
 }
 
-void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool value) {
+void tcc1014_set_inverted_text(struct TCC1014 *gimep, bool value) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	gime->inverted_text = value;
 }
@@ -893,7 +893,7 @@ void tcc1014_notify_mode(struct TCC1014 *gimep) {
 	DELEGATE_SAFE_CALL(gime->public.set_active_area, gime->horizontal.tHS_AA, gime->vertical.lTB + 3, tAA, gime->vertical.lAA);
 }
 
-void tcc1014_set_composite(struct TCC1014 *gimep, _Bool value) {
+void tcc1014_set_composite(struct TCC1014 *gimep, bool value) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 	gime->want_composite = value;
 }
@@ -1136,8 +1136,8 @@ static void do_vb_irq(void *sptr) {
 
 	if (gime->COCO) {
 		if (!gime->VDG.GnA) {
-			_Bool GM2 = gime->PIA1B_shadow.pdr & 0x40;
-			_Bool text_border = !gime->VDG.GM1 && GM2;
+			bool GM2 = gime->PIA1B_shadow.pdr & 0x40;
+			bool text_border = !gime->VDG.GM1 && GM2;
 			unsigned text_border_colour = gime->VDG.CSS ? 0x26 : 0x12;
 			gime->border_colour = text_border ? text_border_colour : 0;
 		} else {
@@ -1308,7 +1308,7 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 			// VDG compatible mode
 			uint_fast8_t vdata = fetch_byte_vram(gime);
 			unsigned font_row = gime->row & 0x0f;
-			_Bool SnA = vdata & 0x80;
+			bool SnA = vdata & 0x80;
 			if (gime->VDG.GnA) {
 				// Graphics mode
 				gdata = vdata;
@@ -1338,7 +1338,7 @@ static void render_scanline(struct TCC1014_private *gime, event_ticks t) {
 					render_mode = TCC1014_RENDER_SG;
 				} else {
 					// Alphanumeric
-					_Bool INV = vdata & 0x40;
+					bool INV = vdata & 0x40;
 					INV ^= gime->VDG.GM1;  // 6847T1-compatible invert flag
 					uint_fast8_t c = vdata & 0x7f;
 					if (c < 0x20) {

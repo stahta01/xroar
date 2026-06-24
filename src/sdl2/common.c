@@ -147,7 +147,7 @@ void run_sdl_event_loop(struct ui_sdl2_interface *uisdl2) {
 		case SDL_MOUSEBUTTONDOWN:
 			if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == 2) {
 				if (SDL_HasClipboardText()) {
-					_Bool uc = SDL_GetModState() & KMOD_SHIFT;
+					bool uc = SDL_GetModState() & KMOD_SHIFT;
 					char *text = SDL_GetClipboardText();
 					for (char *p = text; *p; p++) {
 						if (*p == '\n')

@@ -39,6 +39,6 @@ int gdb_run_lock(struct gdb_interface *gi);
 void gdb_run_unlock(struct gdb_interface *gi);
 void gdb_stop(struct gdb_interface *gi, int sig);
 void gdb_single_step(struct gdb_interface *gi);
-_Bool gdb_signal_lock(struct gdb_interface *gi, int sig);
+bool gdb_signal_lock(struct gdb_interface *gi, int sig);
 
 #endif

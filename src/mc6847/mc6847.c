@@ -59,11 +59,11 @@ struct MC6847_private {
 
 	/* Control lines */
 	unsigned GM;
-	_Bool nA_S;
-	_Bool nA_G;
-	_Bool EXT;
-	_Bool CSS, CSSa, CSSb;
-	_Bool inverted_text;
+	bool nA_S;
+	bool nA_G;
+	bool EXT;
+	bool CSS, CSSa, CSSb;
+	bool inverted_text;
 
 	/* Timing */
 	struct event hs_fall_event;
@@ -71,7 +71,7 @@ struct MC6847_private {
 	event_ticks scanline_start;
 	unsigned beam_pos;
 	unsigned scanline;
-	_Bool paused;
+	bool paused;
 
 	// Address
 	uint16_t A;
@@ -84,8 +84,8 @@ struct MC6847_private {
 	int frame;  // frameskip counter
 
 	/* Internal state */
-	_Bool is_32byte;
-	_Bool GM0;
+	bool is_32byte;
+	bool GM0;
 	unsigned nLPR;
 	uint8_t s_fg_colour;
 	uint8_t s_bg_colour;
@@ -98,7 +98,7 @@ struct MC6847_private {
 	unsigned render_mode;
 
 	// Set when pixel_data[] contains only the current border colour
-	_Bool have_border_only;
+	bool have_border_only;
 
 	/* Unsafe warning: pixel_data[] needs to be 8 elements longer than a
 	 * full scanline, for the mid-scanline 32 -> 16 byte mode switch case
@@ -118,9 +118,9 @@ struct MC6847_private {
 	unsigned rborder_remaining;
 
 	/* 6847T1 state */
-	_Bool is_t1;
-	_Bool inverse_text;
-	_Bool text_border;
+	bool is_t1;
+	bool inverse_text;
+	bool text_border;
 	uint8_t text_border_colour;
 };
 
@@ -183,8 +183,8 @@ static struct ser_struct ser_struct_mc6847[] = {
 	SER_ID_STRUCT_ELEM(41, struct MC6847_private, is_t1),
 };
 
-static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 const struct ser_struct_data mc6847_ser_struct_data = {
 	.elems = ser_struct_mc6847,
@@ -209,7 +209,7 @@ static void render_scanline(struct MC6847_private *vdg);
 
 static struct part *mc6847_allocate(void);
 static void mc6847_initialise(struct part *p, void *options);
-static _Bool mc6847_finish(struct part *p);
+static bool mc6847_finish(struct part *p);
 static void mc6847_free(struct part *p);
 
 static const struct partdb_entry_funcs mc6847_funcs = {
@@ -246,7 +246,7 @@ static void mc6847_initialise(struct part *p, void *options) {
 	vdg->is_t1 = options && (strcmp((char *)options, "6847T1") == 0);
 }
 
-static _Bool mc6847_finish(struct part *p) {
+static bool mc6847_finish(struct part *p) {
 	struct MC6847_private *vdg = (struct MC6847_private *)p;
 
 	if (vdg->hs_fall_event.next == &vdg->hs_fall_event)
@@ -270,7 +270,7 @@ static void mc6847_free(struct part *p) {
 	event_dequeue(&vdg->hs_rise_event);
 }
 
-static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6847_private *vdg = sptr;
 	switch (tag) {
 
@@ -293,7 +293,7 @@ static _Bool mc6847_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6847_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6847_private *vdg = sptr;
 	switch (tag) {
 
@@ -484,7 +484,7 @@ static void render_scanline(struct MC6847_private *vdg) {
 			vdg->text_border_colour = !vdg->CSSb ? VDG_GREEN : vdg->bright_orange;
 
 			if (!vdg->nA_G && !vdg->nA_S) {
-				_Bool INV;
+				bool INV;
 				if (vdg->is_t1) {
 					INV = vdg->EXT || (vdata & 0x40);
 					INV ^= vdg->inverse_text;
@@ -628,7 +628,7 @@ void mc6847_reset(struct MC6847 *vdgp) {
 	vdg->rborder_remaining = VDG_tRB;
 }
 
-void mc6847_set_inverted_text(struct MC6847 *vdgp, _Bool invert) {
+void mc6847_set_inverted_text(struct MC6847 *vdgp, bool invert) {
 	struct MC6847_private *vdg = (struct MC6847_private *)vdgp;
 	vdg->inverted_text = invert;
 }
@@ -653,7 +653,7 @@ void mc6847_set_mode(struct MC6847 *vdgp, unsigned mode) {
 	vdg->GM = (mode >> 4) & 7;
 	vdg->GM0 = vdg->GM & 1;
 	vdg->CSS = mode & 0x08;
-	_Bool new_nA_G = mode & 0x80;
+	bool new_nA_G = mode & 0x80;
 	vdg->nLPR = new_nA_G ? GM_nLPR[vdg->GM] : 12;
 
 	vdg->inverse_text = vdg->is_t1 && (vdg->GM & 2);

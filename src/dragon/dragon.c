@@ -77,8 +77,8 @@ static const struct ser_struct ser_struct_dragon[] = {
         SER_ID_STRUCT_ELEM(5, struct dragon, inverted_text),
 };
 
-static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 const struct ser_struct_data dragon_ser_struct_data = {
 	.elems = ser_struct_dragon,
@@ -107,7 +107,7 @@ struct xconfig_option const dragon_options[] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Set a ROM configuration to a default value if not "defined"
-void dragon_set_default_rom(_Bool dfn, char **romp, const char *dfl) {
+void dragon_set_default_rom(bool dfn, char **romp, const char *dfl) {
 	if (!dfn && romp && !*romp && dfl) {
 		*romp = xstrdup(dfl);
 	}
@@ -152,7 +152,7 @@ void dragon_config_complete(struct machine_config *mc) {
 	}
 }
 
-_Bool dragon_is_working_config(struct machine_config *mc) {
+bool dragon_is_working_config(struct machine_config *mc) {
 	if (!mc)
 		return 0;
 	sds tmp;
@@ -211,7 +211,7 @@ static void dragon_single_step(struct machine *m);
 static void dragon_signal(struct machine *m, int sig);
 
 static void dragon_ui_set_keymap(void *, int tag, void *smsg);
-static _Bool dragon_set_pause(struct machine *m, int state);
+static bool dragon_set_pause(struct machine *m, int state);
 static void dragon_ui_set_picture(void *, int tag, void *smsg);
 static void dragon_ui_set_tv_input(void *, int tag, void *smsg);
 static void dragon_ui_set_text_invert(void *, int tag, void *smsg);
@@ -228,7 +228,7 @@ static void dragon_add_breakpoint(struct machine *m, uint32_t A,
 				  DELEGATE_T2(void, bool, uint32) handler);
 static void dragon_remove_breakpoint(struct machine *m, int32_t A,
 				     DELEGATE_T2(void, bool, uint32) handler);
-static void dragon_add_watchpoint(struct machine *m, _Bool RnW,
+static void dragon_add_watchpoint(struct machine *m, bool RnW,
 				  uint32_t Astart, uint32_t Aend,
 				  DELEGATE_T2(void, bool, uint32) handler);
 static void dragon_remove_watchpoint(struct machine *m, int RnW,
@@ -243,15 +243,15 @@ static void dragon_set_register(void *sptr, int regno, uint32_t value);
 static void joystick_update(void *sptr);
 static void update_sound_mux_source(void *sptr);
 
-static void single_bit_feedback(void *sptr, _Bool level);
+static void single_bit_feedback(void *sptr, bool level);
 static void update_audio_from_tape(void *sptr, float value);
-static void cart_firq(void *sptr, _Bool level);
-static void cart_nmi(void *sptr, _Bool level);
-static void cart_halt(void *sptr, _Bool level);
+static void cart_firq(void *sptr, bool level);
+static void cart_nmi(void *sptr, bool level);
+static void cart_halt(void *sptr, bool level);
 static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
-static void printer_ack(void *sptr, _Bool ack);
+static void printer_ack(void *sptr, bool ack);
 
-static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
+static void cpu_cycle(void *sptr, bool RnW, uint16_t A);
 static void dragon_instruction_posthook(void *sptr);
 static void vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
@@ -371,7 +371,7 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	m->keyboard.type = mc->keymap;
 }
 
-_Bool dragon_finish_common(struct dragon *md) {
+bool dragon_finish_common(struct dragon *md) {
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
 	struct machine_config *mc = m->config;
@@ -415,7 +415,7 @@ _Bool dragon_finish_common(struct dragon *md) {
 	ui_messenger_join_group(md->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_frameskip, md));
 	ui_messenger_join_group(md->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(dragon_ui_set_ratelimit, md));
 
-	_Bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
+	bool is_dragon32 = strcmp(mc->architecture, "dragon32") == 0;
 
 #ifdef WANT_GDB_TARGET
 	m->debug.num_registers = md->CPU->debug_cpu.num_registers;
@@ -674,7 +674,7 @@ void dragon_free_common(struct part *p) {
 	rombank_free(md->ext_charset);
 }
 
-static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct dragon *md = sptr;
 	struct machine *m = &md->public;
 	struct part *p = &m->part;
@@ -709,7 +709,7 @@ static _Bool dragon_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool dragon_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct dragon *md = sptr;
 	(void)md;
 	(void)sh;
@@ -765,7 +765,7 @@ static void dragon_create_ram(struct dragon *md) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-_Bool dragon_has_interface(struct part *p, const char *ifname) {
+bool dragon_has_interface(struct part *p, const char *ifname) {
 	struct dragon *md = (struct dragon *)p;
 
 	struct cart *c = md->cart;
@@ -816,7 +816,7 @@ static void dragon_remove_cart(struct machine *m) {
 	md->cart = NULL;
 }
 
-void dragon_reset(struct machine *m, _Bool hard) {
+void dragon_reset(struct machine *m, bool hard) {
 	struct dragon *md = (struct dragon *)m;
 	struct machine_config *mc = m->config;
 	if (md->immunity) {
@@ -934,7 +934,7 @@ static void dragon_ui_set_keymap(void *sptr, int tag, void *smsg) {
 	uimsg->value = type;
 }
 
-static _Bool dragon_set_pause(struct machine *m, int state) {
+static bool dragon_set_pause(struct machine *m, int state) {
 	struct dragon *md = (struct dragon *)m;
 	switch (state) {
 	case 0: case 1:
@@ -1062,7 +1062,7 @@ extern inline void dragon_advance_clock(struct dragon *md, int ncycles);
 // See dragon/dragon.h for information on what CPU->cpu_cycle() is expected to
 // do.
 
-static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static void cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct dragon *md = sptr;
 
 	// Check watchpoints
@@ -1090,7 +1090,7 @@ static void cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 // nice to abstract those somehow, but the call graph is already somewhat
 // convoluted...
 
-void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol) {
+void dragon_cpu_cycle(struct dragon *md, bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol) {
 	md->Dread = 0xff;
 	if (md->SAM->nWE) {
 		if (md->SAM->RAS0) {
@@ -1101,7 +1101,7 @@ void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, u
 		}
 	}
 
-	_Bool EXTMEM = 0;
+	bool EXTMEM = 0;
 	if (md->cart) {
 		if (RnW) {
 			md->CPU->D = md->cart->read(md->cart, A, 0, 0, md->CPU->D);
@@ -1257,8 +1257,8 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 	(void)A;
 	struct dragon *md = sptr;
 	unsigned pia_vdg_mode = PIA_VALUE_B(md->PIA1);
-	_Bool GnA = pia_vdg_mode & 0x80;
-	_Bool EnI = pia_vdg_mode & 0x10;
+	bool GnA = pia_vdg_mode & 0x80;
+	bool EnI = pia_vdg_mode & 0x10;
 	uint16_t Aram7 = EnI ? 0x80 : 0;
 	while (nbytes > 0) {
 		int n = md->SAM->vdg_bytes(md->SAM, nbytes);
@@ -1266,7 +1266,7 @@ static void vdg_fetch_handler_chargen(void *sptr, uint16_t A, int nbytes, uint16
 		if (dest && Vp) {
 			for (int i = n; i; i--) {
 				uint16_t Dram = *(Vp++);
-				_Bool SnA = Dram & 0x80;
+				bool SnA = Dram & 0x80;
 				uint16_t D;
 				if (!GnA && !SnA) {
 					unsigned Aext = (md->VDG->row << 8) | Aram7 | Dram;
@@ -1336,7 +1336,7 @@ static void dragon_remove_breakpoint(struct machine *m, int32_t A,
 	}
 }
 
-static void dragon_add_watchpoint(struct machine *m, _Bool RnW,
+static void dragon_add_watchpoint(struct machine *m, bool RnW,
 				  uint32_t Astart, uint32_t Aend,
 				  DELEGATE_T2(void, bool, uint32) handler) {
 	struct part *p = &m->part;
@@ -1509,8 +1509,8 @@ static void pia1b_data_preread(void *sptr) {
 void dragon_pia1b_data_postwrite(void *sptr) {
 	struct dragon *md = sptr;
 	// Single-bit sound
-	_Bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
-	_Bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);
+	bool sbs_enabled = !((md->PIA1->b.out_source ^ md->PIA1->b.out_sink) & (1<<1));
+	bool sbs_level = md->PIA1->b.out_source & md->PIA1->b.out_sink & (1<<1);
 	sound_set_sbs(md->snd, sbs_enabled, sbs_level);
 	// VDG mode
 	dragon_update_vdg_mode(md);
@@ -1525,19 +1525,19 @@ static void pia1b_control_postwrite(void *sptr) {
 
 /* VDG edge delegates */
 
-void dragon_vdg_hs(void *sptr, _Bool level) {
+void dragon_vdg_hs(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->a, level ^ md->hs_invert);
 	md->SAM->vdg_hsync(md->SAM, level);
 	if (!level) {
 		unsigned p1bval = md->PIA1->b.out_source & md->PIA1->b.out_sink;
-		_Bool GM0 = p1bval & 0x10;
-		_Bool CSS = p1bval & 0x08;
+		bool GM0 = p1bval & 0x10;
+		bool CSS = p1bval & 0x08;
 		md->ntsc_burst_mod = (md->use_ntsc_burst_mod && GM0 && CSS) ? 2 : 0;
 	}
 }
 
-void dragon_vdg_fs(void *sptr, _Bool level) {
+void dragon_vdg_fs(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA0->b, level);
 	md->SAM->vdg_fsync(md->SAM, level);
@@ -1559,7 +1559,7 @@ static void vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_
 /* Dragon parallel printer line delegate. */
 
 // ACK is active low
-static void printer_ack(void *sptr, _Bool ack) {
+static void printer_ack(void *sptr, bool ack) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->a, !ack);
 }
@@ -1567,7 +1567,7 @@ static void printer_ack(void *sptr, _Bool ack) {
 /* Sound output can feed back into the single bit sound pin when it's
  * configured as an input. */
 
-static void single_bit_feedback(void *sptr, _Bool level) {
+static void single_bit_feedback(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	if (level) {
 		md->PIA1->b.in_source &= ~(1<<1);
@@ -1591,17 +1591,17 @@ static void update_audio_from_tape(void *sptr, float value) {
 
 /* Catridge signalling */
 
-static void cart_firq(void *sptr, _Bool level) {
+static void cart_firq(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	mc6821_set_cx1(&md->PIA1->b, level);
 }
 
-static void cart_nmi(void *sptr, _Bool level) {
+static void cart_nmi(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	MC6809_NMI_SET(md->CPU, level);
 }
 
-static void cart_halt(void *sptr, _Bool level) {
+static void cart_halt(void *sptr, bool level) {
 	struct dragon *md = sptr;
 	MC6809_HALT_SET(md->CPU, level);
 }

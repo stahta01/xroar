@@ -65,10 +65,10 @@ static const struct ser_struct_data gmc_ser_struct_data = {
 
 static void gmc_attach(struct cart *c);
 static void gmc_detach(struct cart *c);
-static uint8_t gmc_read(struct cart *, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t gmc_write(struct cart *, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void gmc_reset(struct cart *c, _Bool hard);
-static _Bool gmc_has_interface(struct cart *c, const char *ifname);
+static uint8_t gmc_read(struct cart *, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t gmc_write(struct cart *, uint16_t A, bool P2, bool R2, uint8_t D);
+static void gmc_reset(struct cart *c, bool hard);
+static bool gmc_has_interface(struct cart *c, const char *ifname);
 static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -77,7 +77,7 @@ static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf)
 
 static struct part *gmc_allocate(void);
 static void gmc_initialise(struct part *p, void *options);
-static _Bool gmc_finish(struct part *p);
+static bool gmc_finish(struct part *p);
 static void gmc_free(struct part *p);
 
 static const struct partdb_entry_funcs gmc_funcs = {
@@ -118,7 +118,7 @@ static void gmc_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("SN76489", NULL), "CSG");
 }
 
-static _Bool gmc_finish(struct part *p) {
+static bool gmc_finish(struct part *p) {
 	struct gmc *gmc = (struct gmc *)p;
 	struct cart *c = &gmc->cart;
 
@@ -145,7 +145,7 @@ static void gmc_free(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void gmc_reset(struct cart *c, _Bool hard) {
+static void gmc_reset(struct cart *c, bool hard) {
 	struct gmc *gmc = (struct gmc *)c;
 	cart_rom_reset(c, hard);
 	gmc->rom_bank = 0;
@@ -162,7 +162,7 @@ static void gmc_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static _Bool gmc_has_interface(struct cart *c, const char *ifname) {
+static bool gmc_has_interface(struct cart *c, const char *ifname) {
 	return c && (0 == strcmp(ifname, "sound"));
 }
 
@@ -175,7 +175,7 @@ static void gmc_attach_interface(struct cart *c, const char *ifname, void *intf)
 	gmc->snd->get_cart_audio = DELEGATE_AS3(float, uint32, int, floatp, sn76489_get_audio, gmc->csg);
 }
 
-static uint8_t gmc_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t gmc_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct gmc *gmc = (struct gmc *)c;
 	(void)P2;
 	if (R2) {
@@ -184,7 +184,7 @@ static uint8_t gmc_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 	return D;
 }
 
-static uint8_t gmc_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t gmc_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct gmc *gmc = (struct gmc *)c;
 	(void)R2;
 

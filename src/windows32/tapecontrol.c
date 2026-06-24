@@ -120,7 +120,7 @@ static void uiw32_tc_dialog_free(void *sptr) {
 // UI message reception
 
 static void update_input_filename(struct uiw32_tc_dialog *, const char *filename);
-static void update_tape_playing(struct uiw32_tc_dialog *, _Bool playing);
+static void update_tape_playing(struct uiw32_tc_dialog *, bool playing);
 
 static void tc_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct uiw32_tc_dialog *tc_dlg = sptr;
@@ -169,7 +169,7 @@ static void update_input_filename(struct uiw32_tc_dialog *tc_dlg, const char *fi
 	}
 }
 
-static void update_tape_playing(struct uiw32_tc_dialog *tc_dlg, _Bool playing) {
+static void update_tape_playing(struct uiw32_tc_dialog *tc_dlg, bool playing) {
 	struct uiw32_dialog *dlg = &tc_dlg->dialog;
 	HWND tc_bn_input_play = GetDlgItem(dlg->hWnd, IDC_BN_INPUT_PLAY);
 	HWND tc_bn_input_pause = GetDlgItem(dlg->hWnd, IDC_BN_INPUT_PAUSE);

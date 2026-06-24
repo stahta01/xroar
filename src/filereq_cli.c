@@ -50,7 +50,7 @@ struct cli_filereq_interface {
 
 	sds cwd;
 	sds path;
-	_Bool exists;
+	bool exists;
 };
 
 static void filereq_cli_free(void *sptr);
@@ -82,7 +82,7 @@ static void filereq_cli_free(void *sptr) {
 #define SEPSET "/"
 #endif
 
-static _Bool issep(char c) {
+static bool issep(char c) {
 #ifdef WINDOWS32
 	return (c == '/' || c == '\\');
 #else

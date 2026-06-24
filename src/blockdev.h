@@ -58,7 +58,7 @@ struct blkdev *bd_open(const char *name);
  * \return 1 on success, else 0.
  */
 
-_Bool bd_create(const char *name, int hd_type);
+bool bd_create(const char *name, int hd_type);
 
 /** \brief Close block device.
  */
@@ -68,21 +68,21 @@ void bd_close(struct blkdev *bd);
 /** \brief Seek to a particular LSN.
  */
 
-_Bool bd_seek_lsn(struct blkdev *bd, unsigned lsn);
+bool bd_seek_lsn(struct blkdev *bd, unsigned lsn);
 
 /** \brief Read sector from current position.
  *
  * Must follow a successful seek.
  */
 
-_Bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize);
+bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize);
 
 /** \brief Write sector to current position.
  *
  * Must follow a successful seek.
  */
 
-_Bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize);
+bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize);
 
 /** \brief Read sector from block device in LSN mode.
  *
@@ -91,21 +91,21 @@ _Bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize);
  * If the profile is ephemeral, it will be freed.
  */
 
-_Bool bd_read_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
+bool bd_read_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
 
 /** \brief Write sector to block device in LSN mode.
  *
  * \return True if read succeeded.
  */
 
-_Bool bd_write_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
+bool bd_write_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
 
 /** \brief Read sector from block device in CHS mode.
  *
  * \return True if read succeeded.
  */
 
-_Bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
+bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		  void *buf, unsigned bufsize);
 
 /** \brief Write sector from block device in CHS mode.
@@ -113,7 +113,7 @@ _Bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
  * \return True if read succeeded.
  */
 
-_Bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
+bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		   void *buf, unsigned bufsize);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -126,7 +126,7 @@ _Bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
  * stored little-endian.
  */
 
-_Bool bd_ide_read_identify(struct blkdev *bd, void *buf, unsigned bufsize);
+bool bd_ide_read_identify(struct blkdev *bd, void *buf, unsigned bufsize);
 
 /** \brief Extract ASCII string from IDE IDENTIFY DEVICE structure.
  *

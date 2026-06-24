@@ -713,7 +713,7 @@ void sdl_windows32_set_events_window(struct ui_sdl3_interface *uisdl3) {
 // while leaving the window size the same, so the video module should then
 // resize itself to account for this.
 
-void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *uisdl3, _Bool visible) {
+void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *uisdl3, bool visible) {
 	if (!uisdl3) {
 		return;
 	}
@@ -721,7 +721,7 @@ void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *uisdl3, _Bool visi
 	struct ui_windows32_interface *uiw32 = (struct ui_windows32_interface *)uisdl3;
 
 	HWND hwnd = get_hwnd(uisdl3->vo_window);
-	_Bool is_visible = (GetMenu(hwnd) != NULL);
+	bool is_visible = (GetMenu(hwnd) != NULL);
 
 	if (!is_visible && visible) {
 		SetMenu(hwnd, uiw32->top_menu);

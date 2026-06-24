@@ -57,8 +57,8 @@ static const struct ser_struct ser_struct_idecart[] = {
 
 #define IDECART_SER_CONTROLLER (2)
 
-static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data idecart_ser_struct_data = {
 	.elems = ser_struct_idecart,
@@ -77,9 +77,9 @@ static struct xconfig_option const idecart_options[] = {
 static void idecart_config_complete(struct cart_config *);
 static void idecart_ui_set_hd_filename(void *, int tag, void *smsg);
 
-static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void idecart_reset(struct cart *c, _Bool hard);
+static uint8_t idecart_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t idecart_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void idecart_reset(struct cart *c, bool hard);
 static void idecart_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -88,7 +88,7 @@ static void idecart_detach(struct cart *c);
 
 static struct part *idecart_allocate(void);
 static void idecart_initialise(struct part *p, void *options);
-static _Bool idecart_finish(struct part *p);
+static bool idecart_finish(struct part *p);
 static void idecart_free(struct part *p);
 
 static const struct partdb_entry_funcs idecart_funcs = {
@@ -143,7 +143,7 @@ static void idecart_initialise(struct part *p, void *options) {
 	ide->io_region &= 0xfff0;
 }
 
-static _Bool idecart_finish(struct part *p) {
+static bool idecart_finish(struct part *p) {
 	struct idecart *ide = (struct idecart *)p;
 	struct cart *c = &ide->cart;
 
@@ -172,7 +172,7 @@ static void idecart_free(struct part *p) {
 	ide_free(ide->controller);
 }
 
-static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct idecart *ide = sptr;
 	switch (tag) {
 	case IDECART_SER_CONTROLLER:
@@ -184,7 +184,7 @@ static _Bool idecart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool idecart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct idecart *ide = sptr;
 	switch (tag) {
 	case IDECART_SER_CONTROLLER:
@@ -229,7 +229,7 @@ static void idecart_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
 	ide_reset_drive(&ide->controller->drive[drive]);
 }
 
-static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t idecart_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct idecart *ide = (struct idecart *)c;
 
 	if (R2) {
@@ -265,7 +265,7 @@ static uint8_t idecart_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint
 	return D;
 }
 
-static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t idecart_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct idecart *ide = (struct idecart *)c;
 
 	if (R2) {
@@ -299,7 +299,7 @@ static uint8_t idecart_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 	return D;
 }
 
-static void idecart_reset(struct cart *c, _Bool hard) {
+static void idecart_reset(struct cart *c, bool hard) {
 	struct idecart *ide = (struct idecart *)c;
 	cart_rom_reset(c, hard);
 	if (ide->becker)

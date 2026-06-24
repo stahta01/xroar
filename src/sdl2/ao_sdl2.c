@@ -52,7 +52,7 @@ struct ao_sdl2_interface {
 	SDL_AudioSpec audiospec;
 
 	void *callback_buffer;
-	_Bool shutting_down;
+	bool shutting_down;
 
 	unsigned frame_nbytes;
 

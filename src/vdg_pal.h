@@ -53,7 +53,7 @@ struct vdg_pal {
 	int pal_stop_1, pal_delay_1;
 
 	// Set to inhibit HS during padding (e.g. Dragon 64)
-	_Bool pal_hs_inhibit;
+	bool pal_hs_inhibit;
 
 	// VDG being interposed
 	struct MC6847 *VDG;

@@ -65,7 +65,7 @@ struct SN76489_private {
 	int readyticks;  // computed conversion of systicks to refticks
 	int frameerror;  // track refrate/framerate error
 	int tickerror;  // track redrate/tickrate error
-	_Bool overrun;  // carry sample from previous call
+	bool overrun;  // carry sample from previous call
 	int nticks;
 
 	unsigned reg_sel;  // latched register select
@@ -74,13 +74,13 @@ struct SN76489_private {
 	unsigned frequency[4];  // counter reset value
 	float amplitude[4][2];  // output amplitudes
 	unsigned counter[4];  // current counter value
-	_Bool state[4];  // current output state (0/1, indexes amplitude)
+	bool state[4];  // current output state (0/1, indexes amplitude)
 	float level[4];  // set from amplitude[], decays over time
-	_Bool nstate;  // separate state toggle for noise channel
+	bool nstate;  // separate state toggle for noise channel
 
 	// noise-specific state
-	_Bool noise_white;  // 0 = periodic, 1 = white
-	_Bool noise_tone3;  // 1 = clocked from output of tone3
+	bool noise_white;  // 0 = periodic, 1 = white
+	bool noise_tone3;  // 1 = clocked from output of tone3
 	unsigned noise_lfsr;
 
 	// low-pass filter state
@@ -108,8 +108,8 @@ static struct ser_struct ser_struct_sn76489[] = {
 	SER_ID_STRUCT_ELEM(10, struct SN76489_private, noise_lfsr),
 };
 
-static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data sn76489_ser_struct_data = {
 	.elems = ser_struct_sn76489,
@@ -135,7 +135,7 @@ static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned 
 
 static struct part *sn76489_allocate(void);
 static void sn76489_initialise(struct part *p, void *options);
-static _Bool sn76489_finish(struct part *p);
+static bool sn76489_finish(struct part *p);
 static void sn76489_free(struct part *p);
 
 static const struct partdb_entry_funcs sn76489_funcs = {
@@ -176,7 +176,7 @@ static void sn76489_initialise(struct part *p, void *options) {
 	sn76489_configure(csg, 4000000, 48000, 14318180, 0);
 }
 
-static _Bool sn76489_finish(struct part *p) {
+static bool sn76489_finish(struct part *p) {
 	struct SN76489_private *csg_ = (struct SN76489_private *)p;
 
 	// 76489 needs 32 cycles of its reference clock between writes.
@@ -194,7 +194,7 @@ static void sn76489_free(struct part *p) {
 	}
 }
 
-static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct SN76489_private *csg_ = sptr;
 	switch (tag) {
 	case SN76489_SER_REG_VAL:
@@ -218,7 +218,7 @@ static _Bool sn76489_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	}
 }
 
-static _Bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool sn76489_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct SN76489_private *csg_ = sptr;
 	switch (tag) {
 	case SN76489_SER_REG_VAL:
@@ -274,7 +274,7 @@ void sn76489_configure(struct SN76489 *csg, int refrate, int framerate, int tick
 	csg_->filter = filter_iir_new(FILTER_BU|FILTER_LP, 3, 250000, framerate/2, 0);
 }
 
-static _Bool is_ready(struct SN76489 *csg, uint32_t tick) {
+static bool is_ready(struct SN76489 *csg, uint32_t tick) {
 	struct SN76489_private *csg_ = (struct SN76489_private *)csg;
 	if (csg->ready)
 		return 1;
@@ -289,7 +289,7 @@ static void update_reg(struct SN76489_private *csg_, unsigned reg_sel, unsigned 
 	unsigned c = reg_sel >> 1;
 	if (reg_sel & 1) {
 		csg_->amplitude[c][1] = attenuation[reg_val];
-		_Bool state = csg_->state[c];
+		bool state = csg_->state[c];
 		csg_->level[c] = csg_->amplitude[c][state];
 	} else {
 		if (c < 3) {
@@ -403,11 +403,11 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 
 		// noise is either clocked by independent frequency select, or
 		// by the output of tone generator 3
-		_Bool noise_clock = 0;
+		bool noise_clock = 0;
 
 		// tone generators 1, 2, 3
 		for (int c = 0; c < 3; c++) {
-			_Bool state = csg_->state[c] & 1;
+			bool state = csg_->state[c] & 1;
 			if (--csg_->counter[c] == 0) {
 				state = !state;
 				csg_->counter[c] = csg_->frequency[c];
@@ -435,7 +435,7 @@ float sn76489_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 			                   ((unsigned)(csg_->noise_white
 					     ? u32_parity(csg_->noise_lfsr & 0x0003)
 					     : (csg_->noise_lfsr & 1)) << 14);
-			_Bool state = csg_->noise_lfsr & 1;
+			bool state = csg_->noise_lfsr & 1;
 			csg_->state[3] = state;
 			csg_->level[3] = csg_->amplitude[3][state];
 		}

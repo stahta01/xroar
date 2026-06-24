@@ -72,7 +72,7 @@ struct SNDFILE {
 
 	unsigned fmt;
 
-	_Bool wrong_endian;
+	bool wrong_endian;
 
 	int framerate;
 	int nchannels;
@@ -91,27 +91,27 @@ struct SNDFILE {
 };
 
 static void set_error(SNDFILE *sf, int err);
-static _Bool read_cc4(SNDFILE *sf, uint32_t *dst);
-static _Bool read_uint8(SNDFILE *sf, uint8_t *dst);
-static _Bool read_uint16(SNDFILE *sf, uint16_t *dst);
-static _Bool read_uint32(SNDFILE *sf, uint32_t *dst);
-static _Bool write_cc4(SNDFILE *sf, uint32_t v);
-static _Bool write_uint8(SNDFILE *sf, uint8_t v);
-static _Bool write_uint16(SNDFILE *sf, uint16_t v);
-static _Bool write_uint32(SNDFILE *sf, uint32_t v);
+static bool read_cc4(SNDFILE *sf, uint32_t *dst);
+static bool read_uint8(SNDFILE *sf, uint8_t *dst);
+static bool read_uint16(SNDFILE *sf, uint16_t *dst);
+static bool read_uint32(SNDFILE *sf, uint32_t *dst);
+static bool write_cc4(SNDFILE *sf, uint32_t v);
+static bool write_uint8(SNDFILE *sf, uint8_t v);
+static bool write_uint16(SNDFILE *sf, uint16_t v);
+static bool write_uint32(SNDFILE *sf, uint32_t v);
 
 #ifdef SUPPORT_FLOAT
-static _Bool read_float(SNDFILE *sf, float *dst);
-static _Bool write_float(SNDFILE *sf, float v);
+static bool read_float(SNDFILE *sf, float *dst);
+static bool write_float(SNDFILE *sf, float v);
 #ifdef SUPPORT_DOUBLE
-static _Bool read_double(SNDFILE *sf, double *dst);
-static _Bool write_double(SNDFILE *sf, double v);
+static bool read_double(SNDFILE *sf, double *dst);
+static bool write_double(SNDFILE *sf, double v);
 #endif
 #endif
 
 // Scan an opened SNDFILE for WAV chunk information
 
-static _Bool wav_scan(SNDFILE *sf) {
+static bool wav_scan(SNDFILE *sf) {
 	assert(sf != NULL);
 
 	off_t old_position = ftello(sf->fd);
@@ -122,7 +122,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 
 	// RIFF or RIFX fourcc
 	uint32_t riff = 0;
-	_Bool error = !read_cc4(sf, &riff);
+	bool error = !read_cc4(sf, &riff);
 	if (!error && riff == 0x52494646) {
 		// "RIFF" - little-endian
 		sf->fmt = SF_FORMAT_WAV | SF_ENDIAN_LITTLE;
@@ -158,7 +158,7 @@ static _Bool wav_scan(SNDFILE *sf) {
 	// the size of a frame.  dwFileSize is read from a "fact" chunk, and if
 	// present, should match data_length.
 	uint32_t data_length = 0;
-	_Bool have_dwFileSize = 0;
+	bool have_dwFileSize = 0;
 	uint32_t dwFileSize = 0;
 
 	// wFormatTag in the 'fmt ' chunk.  Declare here so that we can
@@ -347,13 +347,13 @@ static _Bool wav_scan(SNDFILE *sf) {
 
 // Write a WAV header to open file
 
-static _Bool wav_write_header(SNDFILE *sf) {
+static bool wav_write_header(SNDFILE *sf) {
 	assert(sf != NULL);
 
 	uint32_t riff_length = 36;
 	uint32_t fmt_length = 16;
 	uint16_t wFormatTag = 0x0001;  // WAVE_FORMAT_PCM
-	_Bool want_fact = 0;
+	bool want_fact = 0;
 
 	if ((sf->fmt & SF_FORMAT_SUBMASK) == SF_FORMAT_FLOAT ||
 	    (sf->fmt & SF_FORMAT_SUBMASK) == SF_FORMAT_DOUBLE) {
@@ -364,7 +364,7 @@ static _Bool wav_write_header(SNDFILE *sf) {
 		riff_length += 12;  // fact chunk takes 12 bytes
 	}
 
-	_Bool error = 0;
+	bool error = 0;
 	// RIFF or RIFX fourcc
 	if (sf->wrong_endian) {
 		error = error || !write_cc4(sf, 0x52494646);  // "RIFF"
@@ -489,7 +489,7 @@ SNDFILE *sf_open(const char *path, int mode, SF_INFO *sf_info) {
 	// No magic - this is WAV-only code, so we attempt to treat it as a WAV
 	// file and if something breaks we return an error.
 
-	_Bool error = 0;
+	bool error = 0;
 
 	if (fs_file_size(fd) == 0 && mode != SFM_READ) {
 		// No data in file, need to write a WAV header
@@ -634,7 +634,7 @@ sf_count_t sf_seek(SNDFILE *sf, sf_count_t frames, int whence) {
 	return frame_offset;
 }
 
-static _Bool read_frame_float(SNDFILE *sf, float *dst) {
+static bool read_frame_float(SNDFILE *sf, float *dst) {
 	switch (sf->fmt & SF_FORMAT_SUBMASK) {
 	case SF_FORMAT_PCM_S8:
 		for (int i = sf->nchannels; i; i--) {
@@ -712,7 +712,7 @@ sf_count_t sf_readf_float(SNDFILE *sf, float *ptr, sf_count_t frames) {
 	return nread;
 }
 
-static _Bool write_frame_float(SNDFILE *sf, const float *src) {
+static bool write_frame_float(SNDFILE *sf, const float *src) {
 	switch (sf->fmt & SF_FORMAT_SUBMASK) {
 	case SF_FORMAT_PCM_S8:
 		for (int i = sf->nchannels; i; i--) {
@@ -844,7 +844,7 @@ static void set_error(SNDFILE *sf, int err) {
 	sf->error = err;
 }
 
-static _Bool read_cc4(SNDFILE *sf, uint32_t *dst) {
+static bool read_cc4(SNDFILE *sf, uint32_t *dst) {
 	assert(dst != NULL);
 	int msb = fs_read_uint16(sf->fd);
 	int lsb = fs_read_uint16(sf->fd);
@@ -857,7 +857,7 @@ static _Bool read_cc4(SNDFILE *sf, uint32_t *dst) {
 	return 1;
 }
 
-static _Bool read_uint8(SNDFILE *sf, uint8_t *dst) {
+static bool read_uint8(SNDFILE *sf, uint8_t *dst) {
 	assert(dst != NULL);
 	int v = fs_read_uint8(sf->fd);
 	if (v < 0) {
@@ -869,7 +869,7 @@ static _Bool read_uint8(SNDFILE *sf, uint8_t *dst) {
 	return 1;
 }
 
-static _Bool read_uint16(SNDFILE *sf, uint16_t *dst) {
+static bool read_uint16(SNDFILE *sf, uint16_t *dst) {
 	assert(dst != NULL);
 	int v = sf->wrong_endian ? fs_read_uint16_le(sf->fd) : fs_read_uint16(sf->fd);
 	if (v < 0) {
@@ -881,7 +881,7 @@ static _Bool read_uint16(SNDFILE *sf, uint16_t *dst) {
 	return 1;
 }
 
-static _Bool read_uint32(SNDFILE *sf, uint32_t *dst) {
+static bool read_uint32(SNDFILE *sf, uint32_t *dst) {
 	uint16_t w0, w1;
 	if (!read_uint16(sf, &w0))
 		return 0;
@@ -897,8 +897,8 @@ static _Bool read_uint32(SNDFILE *sf, uint32_t *dst) {
 
 #ifdef SUPPORT_FLOAT
 
-static _Bool read_float(SNDFILE *sf, float *dst) {
-	_Bool error = 0;
+static bool read_float(SNDFILE *sf, float *dst) {
+	bool error = 0;
 	uint8_t sample[4] = {0};
 	if (sf->wrong_endian == (__BYTE_ORDER != __BIG_ENDIAN)) {
 		for (int i = 0; i < 4; i++)
@@ -914,8 +914,8 @@ static _Bool read_float(SNDFILE *sf, float *dst) {
 }
 
 #ifdef SUPPORT_DOUBLE
-static _Bool read_double(SNDFILE *sf, double *dst) {
-	_Bool error = 0;
+static bool read_double(SNDFILE *sf, double *dst) {
+	bool error = 0;
 	uint8_t sample[8] = {0};
 	if (sf->wrong_endian == (__BYTE_ORDER != __BIG_ENDIAN)) {
 		for (int i = 0; i < 8; i++)
@@ -933,7 +933,7 @@ static _Bool read_double(SNDFILE *sf, double *dst) {
 
 #endif
 
-static _Bool write_cc4(SNDFILE *sf, uint32_t v) {
+static bool write_cc4(SNDFILE *sf, uint32_t v) {
 	if (fs_write_uint16(sf->fd, v >> 16) != 2)
 		return 0;
 	if (fs_write_uint16(sf->fd, v) != 2)
@@ -941,7 +941,7 @@ static _Bool write_cc4(SNDFILE *sf, uint32_t v) {
 	return 1;
 }
 
-static _Bool write_uint8(SNDFILE *sf, uint8_t v) {
+static bool write_uint8(SNDFILE *sf, uint8_t v) {
 	if (fs_write_uint8(sf->fd, v) != 1) {
 		set_error(sf, SF_ERR_SYSTEM);
 		errno = ferror(sf->fd);
@@ -950,7 +950,7 @@ static _Bool write_uint8(SNDFILE *sf, uint8_t v) {
 	return 1;
 }
 
-static _Bool write_uint16(SNDFILE *sf, uint16_t v) {
+static bool write_uint16(SNDFILE *sf, uint16_t v) {
 	int r = sf->wrong_endian ? fs_write_uint16_le(sf->fd, v) : fs_write_uint16(sf->fd, v);
 	if (r != 2) {
 		set_error(sf, SF_ERR_SYSTEM);
@@ -960,7 +960,7 @@ static _Bool write_uint16(SNDFILE *sf, uint16_t v) {
 	return 1;
 }
 
-static _Bool write_uint32(SNDFILE *sf, uint32_t v) {
+static bool write_uint32(SNDFILE *sf, uint32_t v) {
 	if (sf->wrong_endian) {
 		if (!write_uint16(sf, v))
 			return 0;
@@ -977,8 +977,8 @@ static _Bool write_uint32(SNDFILE *sf, uint32_t v) {
 
 #ifdef SUPPORT_FLOAT
 
-static _Bool write_float(SNDFILE *sf, float v) {
-	_Bool error = 0;
+static bool write_float(SNDFILE *sf, float v) {
+	bool error = 0;
 	uint8_t sample[4];
 	*(float *)sample = v;
 	if (sf->wrong_endian == (__BYTE_ORDER != __BIG_ENDIAN)) {
@@ -992,8 +992,8 @@ static _Bool write_float(SNDFILE *sf, float v) {
 }
 
 #ifdef SUPPORT_DOUBLE
-static _Bool write_double(SNDFILE *sf, double v) {
-	_Bool error = 0;
+static bool write_double(SNDFILE *sf, double v) {
+	bool error = 0;
 	uint8_t sample[8];
 	*(double *)sample = v;
 	if (sf->wrong_endian == (__BYTE_ORDER != __BIG_ENDIAN)) {

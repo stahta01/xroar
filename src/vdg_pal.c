@@ -28,8 +28,8 @@
 #include "vdg_pal.h"
 #include "xroar.h"
 
-static void vdg_pal_signal_hs(void *sptr, _Bool level);
-static void vdg_pal_signal_fs(void *sptr, _Bool level);
+static void vdg_pal_signal_hs(void *sptr, bool level);
+static void vdg_pal_signal_fs(void *sptr, bool level);
 static void vdg_pal_hs_fall(void *sptr);
 static void vdg_pal_hs_rise(void *sptr);
 
@@ -58,7 +58,7 @@ void vdg_pal_deinit(struct vdg_pal *v) {
 	v->VDG->signal_fs = v->signal_fs;
 }
 
-static void vdg_pal_signal_hs(void *sptr, _Bool level) {
+static void vdg_pal_signal_hs(void *sptr, bool level) {
 	struct vdg_pal *v = sptr;
 
 	DELEGATE_CALL(v->signal_hs, level);
@@ -81,7 +81,7 @@ static void vdg_pal_signal_hs(void *sptr, _Bool level) {
 	}
 }
 
-static void vdg_pal_signal_fs(void *sptr, _Bool level) {
+static void vdg_pal_signal_fs(void *sptr, bool level) {
 	struct vdg_pal *v = sptr;
 
 	DELEGATE_CALL(v->signal_fs, level);

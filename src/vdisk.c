@@ -255,7 +255,7 @@ static struct vdisk *vdisk_load_vdk(const char *filename) {
 	unsigned nheads = 1;
 	unsigned nsectors = 18;
 	unsigned ssize_code = 1, ssize;
-	_Bool write_protect;
+	bool write_protect;
 	int vdk_filename_length;
 	uint8_t buf[1024];
 	FILE *fd;
@@ -483,14 +483,14 @@ static int vdisk_save_vdk(struct vdisk *disk) {
  * ends in ".os9", the check is performed regardless.
  */
 
-static struct vdisk *do_load_jvc(const char *filename, _Bool auto_os9) {
+static struct vdisk *do_load_jvc(const char *filename, bool auto_os9) {
 	unsigned nsectors = 18;
 	unsigned nheads = 1;
 	unsigned ssize_code = 1;
 	unsigned first_sector = 1;
-	_Bool double_density = 1;
-	_Bool sector_attr_flag = 0;
-	_Bool headerless_os9 = 0;
+	bool double_density = 1;
+	bool sector_attr_flag = 0;
+	bool headerless_os9 = 0;
 
 	uint8_t buf[1024];
 	FILE *fd;
@@ -848,7 +848,7 @@ void vdisk_ctx_free(struct vdisk_ctx *ctx) {
 	free(ctx);
 }
 
-static _Bool vdisk_ctx_check(struct vdisk_ctx *ctx) {
+static bool vdisk_ctx_check(struct vdisk_ctx *ctx) {
 	if (!ctx) {
 		vdisk_errno = vdisk_err_internal;
 		return 0;
@@ -860,7 +860,7 @@ static _Bool vdisk_ctx_check(struct vdisk_ctx *ctx) {
 	return 1;
 }
 
-static _Bool vdisk_ctx_check_geometry(unsigned cyl, unsigned head) {
+static bool vdisk_ctx_check_geometry(unsigned cyl, unsigned head) {
 	if (cyl >= MAX_CYLINDERS || head >= MAX_HEADS) {
 		vdisk_errno = vdisk_err_bad_geometry;
 		return 0;
@@ -868,7 +868,7 @@ static _Bool vdisk_ctx_check_geometry(unsigned cyl, unsigned head) {
 	return 1;
 }
 
-_Bool vdisk_ctx_seek(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head) {
+bool vdisk_ctx_seek(struct vdisk_ctx *ctx, bool extend, unsigned cyl, unsigned head) {
 	if (!vdisk_ctx_check(ctx))
 		return 0;
 	if (!vdisk_ctx_check_geometry(cyl, head))
@@ -992,13 +992,13 @@ static uint8_t read_byte(struct vdisk_ctx *ctx) {
 
 /* Read CRC bytes and return 1 if valid */
 
-static _Bool read_crc(struct vdisk_ctx *ctx) {
+static bool read_crc(struct vdisk_ctx *ctx) {
 	(void)read_byte(ctx);
 	(void)read_byte(ctx);
 	return ctx->crc == 0;
 }
 
-_Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
+bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 			 unsigned cyl, unsigned head,
 			 unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
 
@@ -1104,7 +1104,7 @@ _Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
 	return 1;
 }
 
-_Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
+bool vdisk_format_disk(struct vdisk_ctx *ctx, bool dden,
 			unsigned ncyls, unsigned nheads,
 			unsigned nsectors, unsigned first_sector, unsigned ssize_code) {
 	assert(ctx != NULL);
@@ -1125,7 +1125,7 @@ _Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
  * from that provided.
  */
 
-_Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			 unsigned sector, unsigned ssize, uint8_t *buf) {
 
 	struct vdisk_idam vidam;
@@ -1173,7 +1173,7 @@ _Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
  * Similarly, locate a sector and copy out its data.
  */
 
-_Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			unsigned sector, unsigned ssize, uint8_t *buf) {
 
 	struct vdisk_idam vidam;
@@ -1217,7 +1217,7 @@ _Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
  * has been populated.  Doesn't verify data, but sets crc_error if necessary.
  */
 
-_Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
+bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 		      unsigned cyl, unsigned head, unsigned idam) {
 
 	if (cyl >= MAX_CYLINDERS || head >= MAX_HEADS || idam >= 64) {
@@ -1259,14 +1259,14 @@ _Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 	return 1;
 }
 
-_Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo) {
+bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo) {
 	if (!vdisk_ctx_check(ctx))
 		return 0;
 	struct vdisk *disk = ctx->disk;
 	assert(vinfo != NULL);
 
-	_Bool have_sden = 0;
-	_Bool have_dden = 0;
+	bool have_sden = 0;
+	bool have_dden = 0;
 	unsigned first_sector = 256;
 	unsigned last_sector = 0;
 	int ssize_code = -2;

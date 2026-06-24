@@ -38,7 +38,7 @@ struct mc10_cart {
 	uint8_t (*write)(struct mc10_cart *c, uint16_t A, uint8_t D);
 
 	// Cartridge asserts this to inhibit usual address decode by host.
-	_Bool SEL;
+	bool SEL;
 
 	// Ways for the cartridge to signal interrupt events to the host.
 	DELEGATE_T1(void, bool) signal_nmi;
@@ -48,7 +48,7 @@ struct mc10_cart {
 
 extern const struct ser_struct_data mc10_cart_ser_struct_data;
 
-_Bool mc10_cart_finish(struct part *p);
-_Bool mc10_cart_is_a(struct part *p, const char *name);
+bool mc10_cart_finish(struct part *p);
+bool mc10_cart_is_a(struct part *p, const char *name);
 
 #endif

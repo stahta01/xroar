@@ -36,17 +36,17 @@ struct MC6883 {
 	unsigned Vrow;
 	unsigned Vcol;
 
-	_Bool nWE;
-	_Bool RAS0;
-	_Bool RAS1;
+	bool nWE;
+	bool RAS0;
+	bool RAS1;
 
 	DELEGATE_T0(void) vdg_update;
 
 	void (*reset)(struct MC6883 *);
-	int (*mem_cycle)(void *, _Bool RnW, uint16_t A);
-	unsigned (*decode)(struct MC6883 *, _Bool RnW, uint16_t A);
-	void (*vdg_fsync)(struct MC6883 *, _Bool level);
-	void (*vdg_hsync)(struct MC6883 *, _Bool level);
+	int (*mem_cycle)(void *, bool RnW, uint16_t A);
+	unsigned (*decode)(struct MC6883 *, bool RnW, uint16_t A);
+	void (*vdg_fsync)(struct MC6883 *, bool level);
+	void (*vdg_hsync)(struct MC6883 *, bool level);
 	int (*vdg_bytes)(struct MC6883 *, int nbytes);
 	void (*set_register)(struct MC6883 *, unsigned value);
 	unsigned (*get_register)(struct MC6883 *);
@@ -56,6 +56,6 @@ struct MC6883 {
 	struct ram *RAM;  // provided by SAMx8
 };
 
-_Bool mc6883_is_a(struct part *p, const char *name);
+bool mc6883_is_a(struct part *p, const char *name);
 
 #endif

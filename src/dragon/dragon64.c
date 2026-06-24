@@ -59,10 +59,10 @@ struct dragon64 {
 
 static void dragon64_config_complete(struct machine_config *);
 
-static void dragon64_reset(struct machine *, _Bool hard);
+static void dragon64_reset(struct machine *, bool hard);
 
-static _Bool dragon64_read_byte(struct dragon *, unsigned A);
-static _Bool dragon64_write_byte(struct dragon *, unsigned A);
+static bool dragon64_read_byte(struct dragon *, unsigned A);
+static bool dragon64_write_byte(struct dragon *, unsigned A);
 
 static void dragon64_pia1b_data_postwrite(void *);
 
@@ -70,7 +70,7 @@ static void dragon64_pia1b_data_postwrite(void *);
 
 static struct part *dragon64_allocate(void);
 static void dragon64_initialise(struct part *, void *options);
-static _Bool dragon64_finish(struct part *);
+static bool dragon64_finish(struct part *);
 static void dragon64_free(struct part *);
 
 static const struct partdb_entry_funcs dragon64_funcs = {
@@ -123,7 +123,7 @@ static void dragon64_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("MOS6551", NULL), "ACIA");
 }
 
-static _Bool dragon64_finish(struct part *p) {
+static bool dragon64_finish(struct part *p) {
 	assert(p != NULL);
 	struct dragon64 *mdp = (struct dragon64 *)p;
 	struct dragon *md = &mdp->dragon;
@@ -221,7 +221,7 @@ static void dragon64_config_complete(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void dragon64_reset(struct machine *m, _Bool hard) {
+static void dragon64_reset(struct machine *m, bool hard) {
 	struct dragon64 *mdp = (struct dragon64 *)m;
 	dragon_reset(m, hard);
 	mos6551_reset(mdp->ACIA);
@@ -229,7 +229,7 @@ static void dragon64_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool dragon64_read_byte(struct dragon *md, unsigned A) {
+static bool dragon64_read_byte(struct dragon *md, unsigned A) {
 	struct dragon64 *mdp = (struct dragon64 *)md;
 
 	switch (md->SAM->S) {
@@ -251,7 +251,7 @@ static _Bool dragon64_read_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragon64_write_byte(struct dragon *md, unsigned A) {
+static bool dragon64_write_byte(struct dragon *md, unsigned A) {
 	struct dragon64 *mdp = (struct dragon64 *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
@@ -279,7 +279,7 @@ static void dragon64_pia1b_data_postwrite(void *sptr) {
 	struct dragon64 *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
-	_Bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
+	bool is_32k = PIA_VALUE_B(md->PIA1) & 0x04;
 	if (is_32k) {
 		mdp->rom = mdp->dragon.ROM0;
 		keyboard_set_chord_mode(md->keyboard.interface, keyboard_chord_mode_dragon_32k_basic);

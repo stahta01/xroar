@@ -48,8 +48,8 @@ struct vdrive_interface {
 	DELEGATE_T1(void,bool) write_protect;
 
 	// Signals to all drives
-	void (*set_dirc)(void *sptr, _Bool dirc);
-	void (*set_dden)(void *sptr, _Bool dden);
+	void (*set_dirc)(void *sptr, bool dirc);
+	void (*set_dden)(void *sptr, bool dden);
 	void (*set_sso)(void *sptr, unsigned sso);
 
 	// Drive select

@@ -150,7 +150,7 @@ static void dlg_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == dlg->ui_tag);
 
-	_Bool show;
+	bool show;
 	if (uimsg->value == UI_NEXT || uimsg->value == UI_PREV) {
 		LONG style = GetWindowLongA(dlg->hWnd, GWL_STYLE);
 		show = (style & WS_VISIBLE) ? 0 : 1;

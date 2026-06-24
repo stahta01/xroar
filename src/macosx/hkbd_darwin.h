@@ -23,6 +23,6 @@
 
 extern const uint8_t darwin_to_hk_scancode[128];
 
-_Bool hk_darwin_update_keymap(void);
+bool hk_darwin_update_keymap(void);
 
 #endif

@@ -146,7 +146,7 @@ int ui_msg_adjust_value_range(struct ui_state_message *uimsg, int cur, int dfl,
 	assert(uimsg != NULL);
 	assert(min <= max);  // I could just swap them, I suppose...
 	int value = uimsg->value;
-	_Bool keep_auto = 0;
+	bool keep_auto = 0;
 	if (min >= 0 && uimsg->value == UI_NEXT) {
 		value = cur + 1;
 		if ((flags & UI_ADJUST_FLAG_CYCLE) && value > max) {

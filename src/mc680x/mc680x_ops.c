@@ -516,9 +516,9 @@ static uint16_t op_add16(STRUCT_CPU *cpu, uint16_t a, uint16_t b) {
 
 // Determine branch condition from op-code
 
-static _Bool branch_condition(STRUCT_CPU const *cpu, unsigned op) {
-	_Bool cond;
-	_Bool invert = op & 1;
+static bool branch_condition(STRUCT_CPU const *cpu, unsigned op) {
+	bool cond;
+	bool invert = op & 1;
 	switch ((op >> 1) & 7) {
 	default:
 	case 0x0: cond = 1; break; // BRA, !BRN

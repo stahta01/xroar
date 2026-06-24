@@ -142,7 +142,7 @@ struct dkbd_map {
 struct dkbd_bind {
 	const char *hostkey;
 	int8_t dk_key;
-	_Bool preempt;
+	bool preempt;
 };
 
 void dkbd_map_init(struct dkbd_map *map, enum dkbd_layout);

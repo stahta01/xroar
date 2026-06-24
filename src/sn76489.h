@@ -27,7 +27,7 @@
 
 struct SN76489 {
 	struct part part;
-	_Bool ready;
+	bool ready;
 };
 
 // Configure sound chip.  refrate is the reference clock to the sound chip

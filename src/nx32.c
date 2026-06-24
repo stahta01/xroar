@@ -40,8 +40,8 @@ struct nx32 {
 	struct cart cart;
 	struct spi65 *spi65;
 	uint8_t *extmem;
-	_Bool extmem_map;
-	_Bool extmem_ty;
+	bool extmem_map;
+	bool extmem_ty;
 	uint8_t extmem_bank;
 	struct becker *becker;
 	int msgr_client_id;  // messenger client id
@@ -57,8 +57,8 @@ static const struct ser_struct ser_struct_nx32[] = {
 	SER_ID_STRUCT_ELEM(5, struct nx32, extmem_bank),
 };
 
-static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data nx32_ser_struct_data = {
 	.elems = ser_struct_nx32,
@@ -71,9 +71,9 @@ static const struct ser_struct_data nx32_ser_struct_data = {
 
 static void nx32_ui_set_hd_filename(void *, int tag, void *smsg);
 
-static void nx32_reset(struct cart *c, _Bool hard);
-static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void nx32_reset(struct cart *c, bool hard);
+static uint8_t nx32_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t nx32_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
 static void nx32_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -82,7 +82,7 @@ static void nx32_detach(struct cart *c);
 
 static struct part *nx32_allocate(void);
 static void nx32_initialise(struct part *p, void *options);
-static _Bool nx32_finish(struct part *p);
+static bool nx32_finish(struct part *p);
 static void nx32_free(struct part *p);
 
 static const struct partdb_entry_funcs nx32_funcs = {
@@ -129,7 +129,7 @@ static void nx32_initialise(struct part *p, void *options) {
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 }
 
-static _Bool nx32_finish(struct part *p) {
+static bool nx32_finish(struct part *p) {
 	struct nx32 *n = (struct nx32 *)p;
 	struct cart *c = &n->cart;
 
@@ -167,7 +167,7 @@ static void nx32_free(struct part *p) {
 	cart_rom_free(p);
 }
 
-static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct nx32 *n = sptr;
 	switch (tag) {
 	case NX32_SER_EXTMEM:
@@ -179,7 +179,7 @@ static _Bool nx32_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool nx32_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct nx32 *n = sptr;
 	switch (tag) {
 	case NX32_SER_EXTMEM:
@@ -215,7 +215,7 @@ static void nx32_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
 	}
 }
 
-static void nx32_reset(struct cart *c, _Bool hard) {
+static void nx32_reset(struct cart *c, bool hard) {
 	struct nx32 *n = (struct nx32 *)c;
 	cart_rom_reset(c, hard);
 	n->extmem_map = 0;
@@ -233,7 +233,7 @@ static void nx32_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t nx32_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct nx32 *n = (struct nx32 *)c;
 	(void)R2;
 	c->EXTMEM = 0;
@@ -258,7 +258,7 @@ static uint8_t nx32_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
-static uint8_t nx32_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t nx32_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct nx32 *n = (struct nx32 *)c;
 	(void)R2;
 	c->EXTMEM = 0;

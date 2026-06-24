@@ -103,7 +103,7 @@ struct xroar_cfg {
 
 	// Becker port
 	struct {
-		_Bool prefer;
+		bool prefer;
 		char *ip;
 		char *port;
 	} becker;
@@ -124,20 +124,20 @@ struct xroar_cfg {
 
 	// Disks
 	struct {
-		_Bool write_back;
-		_Bool auto_os9;
-		_Bool auto_sd;
+		bool write_back;
+		bool auto_os9;
+		bool auto_sd;
 	} disk;
 
 	// XXX this might make more sense as a per-machine option
-	_Bool force_crc_match;
+	bool force_crc_match;
 
 	// Debugging
 	struct {
-		_Bool gdb;
+		bool gdb;
 		char *gdb_ip;
 		char *gdb_port;
-		_Bool gdb_pseudo_regs;
+		bool gdb_pseudo_regs;
 	} debug;
 };
 
@@ -169,10 +169,10 @@ struct xroar {
 	struct {
 		struct {
 			int picture;
-			_Bool frameskip;
+			bool frameskip;
 		} vo;
 
-		_Bool ratelimit_latch;
+		bool ratelimit_latch;
 	} state;
 };
 
@@ -208,7 +208,7 @@ void xroar_run(int ncycles);
 
 int xroar_filetype_by_ext(const char *filename);
 void xroar_load_file_by_type(const char *filename, int autorun);
-void xroar_load_disk(const char *filename, int drive, _Bool autorun);
+void xroar_load_disk(const char *filename, int drive, bool autorun);
 
 /* Scheduled shutdown */
 struct xroar_timeout *xroar_set_timeout(char const *timestring);
@@ -222,8 +222,8 @@ void xroar_insert_disk(int drive);
 void xroar_eject_disk(int drive);
 void xroar_insert_hd_file(int drive, const char *filename);
 void xroar_set_ratelimit(int action);
-void xroar_set_ratelimit_latch(_Bool notify, int action);
-void xroar_set_pause(_Bool notify, int action);
+void xroar_set_ratelimit_latch(bool notify, int action);
+void xroar_set_pause(bool notify, int action);
 #define xroar_quit() exit(EXIT_SUCCESS)
 void xroar_load_file(void);
 void xroar_run_file(void);
@@ -246,15 +246,15 @@ void xroar_screenshot(void);
 void xroar_cfg_print_inc_indent(void);
 void xroar_cfg_print_dec_indent(void);
 void xroar_cfg_print_indent(FILE *f);
-void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int normal);
-void xroar_cfg_print_int(FILE *f, _Bool all, char const *opt, int value, int normal);
-void xroar_cfg_print_int_nz(FILE *f, _Bool all, char const *opt, int value);
-void xroar_cfg_print_double(FILE *f, _Bool all, char const *opt, double value, double normal);
-void xroar_cfg_print_flags(FILE *f, _Bool all, char const *opt, unsigned value);
-void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *value,
+void xroar_cfg_print_bool(FILE *f, bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int(FILE *f, bool all, char const *opt, int value, int normal);
+void xroar_cfg_print_int_nz(FILE *f, bool all, char const *opt, int value);
+void xroar_cfg_print_double(FILE *f, bool all, char const *opt, double value, double normal);
+void xroar_cfg_print_flags(FILE *f, bool all, char const *opt, unsigned value);
+void xroar_cfg_print_string(FILE *f, bool all, char const *opt, char const *value,
 			    char const *normal);
-void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int normal,
+void xroar_cfg_print_enum(FILE *f, bool all, char const *opt, int value, int normal,
 			  struct xconfig_enum const *e);
-void xroar_cfg_print_string_list(FILE *f, _Bool all, char const *opt, struct slist *l);
+void xroar_cfg_print_string_list(FILE *f, bool all, char const *opt, struct slist *l);
 
 #endif

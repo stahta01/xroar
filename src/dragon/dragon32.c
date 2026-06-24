@@ -51,7 +51,7 @@ static void dragon32_config_complete(struct machine_config *mc) {
 
 static struct part *dragon32_allocate(void);
 static void dragon32_initialise(struct part *p, void *options);
-static _Bool dragon32_finish(struct part *p);
+static bool dragon32_finish(struct part *p);
 static void dragon32_free(struct part *p);
 
 static const struct partdb_entry_funcs dragon32_funcs = {
@@ -90,7 +90,7 @@ static void dragon32_initialise(struct part *p, void *options) {
 	dragon_initialise_common(md, mc);
 }
 
-static _Bool dragon32_finish(struct part *p) {
+static bool dragon32_finish(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;

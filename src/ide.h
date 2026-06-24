@@ -74,7 +74,7 @@ struct ide_taskfile {
 struct ide_drive {
 	struct ide_controller *controller;
 	struct ide_taskfile taskfile;
-	_Bool present, intrq, failed, lba, eightbit;
+	bool present, intrq, failed, lba, eightbit;
 	uint16_t cylinders;
 	uint8_t heads, sectors;
 	uint8_t data[512];

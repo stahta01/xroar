@@ -129,9 +129,9 @@ sds path_interp_full(const char *path, uint32_t flags) {
 		struct stat statbuf;
 		if (stat(s, &statbuf) != 0) {
 #ifdef WINDOWS32
-			_Bool err = (_mkdir(s) != 0);
+			bool err = (_mkdir(s) != 0);
 #else
-			_Bool err = (mkdir(s, 0755) != 0);
+			bool err = (mkdir(s, 0755) != 0);
 #endif
 			if (err) {
 				sdsfree(s);

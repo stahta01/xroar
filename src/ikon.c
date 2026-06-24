@@ -44,7 +44,7 @@ struct ikon {
 
 	struct MC6821 *PIA;
 
-	_Bool nmi_state;
+	bool nmi_state;
 };
 
 static const struct ser_struct ser_struct_ikon[] = {
@@ -61,11 +61,11 @@ static const struct ser_struct_data ikon_ser_struct_data = {
 static void ikon_config_complete(struct cart_config *);
 
 /* Cart interface */
-static uint8_t ikon_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t ikon_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void ikon_reset(struct cart *c, _Bool hard);
+static uint8_t ikon_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t ikon_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void ikon_reset(struct cart *c, bool hard);
 static void ikon_detach(struct cart *c);
-static _Bool ikon_has_interface(struct cart *c, const char *ifname);
+static bool ikon_has_interface(struct cart *c, const char *ifname);
 static void ikon_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -74,7 +74,7 @@ static void ikon_attach_interface(struct cart *c, const char *ifname, void *intf
 
 static struct part *ikon_allocate(void);
 static void ikon_initialise(struct part *p, void *options);
-static _Bool ikon_finish(struct part *p);
+static bool ikon_finish(struct part *p);
 static void ikon_free(struct part *p);
 
 static const struct partdb_entry_funcs ikon_funcs = {
@@ -117,7 +117,7 @@ static void ikon_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("MC6821", "MC6821"), "PIA");
 }
 
-static _Bool ikon_finish(struct part *p) {
+static bool ikon_finish(struct part *p) {
 	struct ikon *d = (struct ikon *)p;
 	struct cart *c = &d->cart;
 	(void)c;
@@ -152,7 +152,7 @@ static void ikon_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void ikon_reset(struct cart *c, _Bool hard) {
+static void ikon_reset(struct cart *c, bool hard) {
 	struct ikon *d = (struct ikon *)c;
 	cart_rom_reset(c, hard);
 	mc6821_reset(d->PIA);
@@ -164,7 +164,7 @@ static void ikon_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t ikon_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t ikon_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct ikon *d = (struct ikon *)c;
 
 	if (d->nmi_state != d->PIA->a.irq) {
@@ -186,7 +186,7 @@ static uint8_t ikon_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
-static uint8_t ikon_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t ikon_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct ikon *d = (struct ikon *)c;
 
 	if (d->nmi_state != d->PIA->a.irq) {
@@ -208,7 +208,7 @@ static uint8_t ikon_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	return D;
 }
 
-static _Bool ikon_has_interface(struct cart *c, const char *ifname) {
+static bool ikon_has_interface(struct cart *c, const char *ifname) {
 	(void)c;
 	(void)ifname;
 	return 0;

@@ -98,21 +98,21 @@ struct WD279X {
 	int direction;
 	int side;
 	int step_delay;
-	_Bool double_density;
-	_Bool ready_state;
-	_Bool tr00_state;
-	_Bool index_state;
-	_Bool write_protect_state;
+	bool double_density;
+	bool ready_state;
+	bool tr00_state;
+	bool index_state;
+	bool write_protect_state;
 	/* During & after type 1 commands, and sometimes after a forced
 	 * interrupt, status reads reflect tr00 & index status: */
-	_Bool status_type1;
+	bool status_type1;
 	/* Forced interrupts: */
-	_Bool intrq_nready_to_ready;
-	_Bool intrq_ready_to_nready;
-	_Bool intrq_index_pulse;
-	_Bool intrq_immediate;
+	bool intrq_nready_to_ready;
+	bool intrq_ready_to_nready;
+	bool intrq_index_pulse;
+	bool intrq_immediate;
 
-	_Bool is_step_cmd;
+	bool is_step_cmd;
 	uint16_t crc;
 	int dam;
 	int bytes_left;
@@ -121,8 +121,8 @@ struct WD279X {
 
 	/* Private */
 
-	_Bool has_sso;
-	_Bool has_length_flag;
+	bool has_sso;
+	bool has_length_flag;
 	uint8_t invert_data;
 
 	// Debugging
@@ -137,11 +137,11 @@ void wd279x_disconnect(struct WD279X *fdc);
 /* Signal all connected delegates */
 void wd279x_update_connection(struct WD279X *fdc);
 
-void wd279x_ready(void *sptr, _Bool state);
-void wd279x_tr00(void *sptr, _Bool state);
-void wd279x_index_pulse(void *sptr, _Bool state);
-void wd279x_write_protect(void *sptr, _Bool state);
-void wd279x_set_dden(struct WD279X *fdc, _Bool dden);  /* 1 = Double density, 0 = Single */
+void wd279x_ready(void *sptr, bool state);
+void wd279x_tr00(void *sptr, bool state);
+void wd279x_index_pulse(void *sptr, bool state);
+void wd279x_write_protect(void *sptr, bool state);
+void wd279x_set_dden(struct WD279X *fdc, bool dden);  /* 1 = Double density, 0 = Single */
 uint8_t wd279x_read(struct WD279X *fdc, uint16_t A);
 void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D);
 

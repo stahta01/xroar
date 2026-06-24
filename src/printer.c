@@ -50,8 +50,8 @@ struct printer_interface_private {
 
 	FILE *stream;
 	struct event ack_clear_event;
-	_Bool strobe_state;
-	_Bool busy;
+	bool strobe_state;
+	bool busy;
 
 	int chars_printed;
 	struct event update_chars_printed_event;
@@ -189,7 +189,7 @@ void printer_flush(struct printer_interface *pi) {
 
 // Called when the PIA bus containing STROBE is changed
 
-void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
+void printer_strobe(struct printer_interface *pi, bool strobe, int data) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	// Ignore if this is not a transition to high
 	if (strobe == pip->strobe_state) return;
@@ -212,7 +212,7 @@ void printer_strobe(struct printer_interface *pi, _Bool strobe, int data) {
 	event_queue_dt(&pip->ack_clear_event, EVENT_US(7));
 }
 
-_Bool printer_busy(struct printer_interface *pi) {
+bool printer_busy(struct printer_interface *pi) {
 	struct printer_interface_private *pip = (struct printer_interface_private *)pi;
 	return pip->busy;
 }

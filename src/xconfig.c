@@ -111,13 +111,13 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_bool(1);
 			else
-				*(_Bool *)object = 1;
+				*(bool *)object = 1;
 			break;
 		case XCONFIG_BOOL0:
 			if (option->flags & XCONFIG_FLAG_CALL)
 				option->dest.func_bool(0);
 			else
-				*(_Bool *)object = 0;
+				*(bool *)object = 0;
 			break;
 		case XCONFIG_INT:
 			{
@@ -220,7 +220,7 @@ static void set_option(struct xconfig_option const *options, struct xconfig_opti
 }
 
 // Returns false on error.
-static _Bool unset_option(struct xconfig_option const *option, void *sptr) {
+static bool unset_option(struct xconfig_option const *option, void *sptr) {
 	void *object;
 	if (option->flags & XCONFIG_FLAG_OFFSET) {
 		// A non-NULL struct pointer must have been passed if we are to
@@ -239,13 +239,13 @@ static _Bool unset_option(struct xconfig_option const *option, void *sptr) {
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_bool(0);
 		else
-			*(_Bool *)object = 0;
+			*(bool *)object = 0;
 		return 1;
 	case XCONFIG_BOOL0:
 		if (option->flags & XCONFIG_FLAG_CALL)
 			option->dest.func_bool(1);
 		else
-			*(_Bool *)object = 1;
+			*(bool *)object = 1;
 		return 1;
 	case XCONFIG_INT0:
 		if (option->flags & XCONFIG_FLAG_CALL)

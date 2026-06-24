@@ -57,15 +57,15 @@
 /* Define a set of delegate types. */
 
 typedef DELEGATE_S0(void) DELEGATE_T0(void);
-typedef DELEGATE_S1(void, _Bool) DELEGATE_T1(void, bool);
-typedef DELEGATE_S2(void, _Bool, uint16_t) DELEGATE_T2(void, bool, uint16);
-typedef DELEGATE_S2(void, _Bool, uint32_t) DELEGATE_T2(void, bool, uint32);
+typedef DELEGATE_S1(void, bool) DELEGATE_T1(void, bool);
+typedef DELEGATE_S2(void, bool, uint16_t) DELEGATE_T2(void, bool, uint16);
+typedef DELEGATE_S2(void, bool, uint32_t) DELEGATE_T2(void, bool, uint32);
 typedef DELEGATE_S1(void, int) DELEGATE_T1(void, int);
-typedef DELEGATE_S2(void, int, _Bool) DELEGATE_T2(void, int, bool);
+typedef DELEGATE_S2(void, int, bool) DELEGATE_T2(void, int, bool);
 typedef DELEGATE_S2(void, int, int) DELEGATE_T2(void, int, int);
 typedef DELEGATE_S4(void, int, int, int, int) DELEGATE_T4(void, int, int, int, int);
 typedef DELEGATE_S3(void, int, int, double) DELEGATE_T3(void, int, int, double);
-typedef DELEGATE_S3(void, int, _Bool, uint16_t) DELEGATE_T3(void, int, bool, uint16);
+typedef DELEGATE_S3(void, int, bool, uint16_t) DELEGATE_T3(void, int, bool, uint16);
 typedef DELEGATE_S3(void, int, int, const void *) DELEGATE_T3(void, int, int, cvoidp);
 typedef DELEGATE_S2(void, int, uint8_t *) DELEGATE_T2(void, int, uint8p);
 typedef DELEGATE_S2(void, int, uint16_t *) DELEGATE_T2(void, int, uint16p);
@@ -89,7 +89,7 @@ typedef DELEGATE_S1(void, uint32_t) DELEGATE_T1(void, uint32);
 typedef DELEGATE_S1(void, float) DELEGATE_T1(void, float);
 typedef DELEGATE_S2(void, float, float) DELEGATE_T2(void, float, float);
 typedef DELEGATE_S1(void *, void *) DELEGATE_T1(voidp, voidp);
-typedef DELEGATE_S0(_Bool) DELEGATE_T0(bool);
+typedef DELEGATE_S0(bool) DELEGATE_T0(bool);
 typedef DELEGATE_S1(const char *, int) DELEGATE_T1(charcp, int);
 typedef DELEGATE_S1(const char *, unsigned) DELEGATE_T1(charcp, unsigned);
 typedef DELEGATE_S0(unsigned) DELEGATE_T0(unsigned);
@@ -97,7 +97,7 @@ typedef DELEGATE_S1(unsigned, int) DELEGATE_T1(unsigned, int);
 typedef DELEGATE_S1(unsigned, unsigned) DELEGATE_T1(unsigned, unsigned);
 typedef DELEGATE_S1(unsigned, void *) DELEGATE_T1(unsigned, voidp);
 typedef DELEGATE_S0(uint8_t) DELEGATE_T0(uint8);
-typedef DELEGATE_S2(uint8_t, uint8_t, _Bool) DELEGATE_T2(uint8, uint8, bool);
+typedef DELEGATE_S2(uint8_t, uint8_t, bool) DELEGATE_T2(uint8, uint8, bool);
 typedef DELEGATE_S1(uint8_t, uint16_t) DELEGATE_T1(uint8, uint16);
 typedef DELEGATE_S1(uint8_t, uint32_t) DELEGATE_T1(uint8, uint32);
 typedef DELEGATE_S0(uint8_t *) DELEGATE_T0(uint8p);
@@ -105,7 +105,7 @@ typedef DELEGATE_S3(uint8_t *, unsigned, unsigned, unsigned) DELEGATE_T3(uint8p,
 typedef DELEGATE_S1(uint16_t, uint32_t) DELEGATE_T1(uint16, uint32);
 typedef DELEGATE_S1(uint32_t, int) DELEGATE_T1(uint32, int);
 typedef DELEGATE_S1(uint32_t, unsigned) DELEGATE_T1(uint32, unsigned);
-typedef DELEGATE_S1(int, _Bool) DELEGATE_T1(int, bool);
+typedef DELEGATE_S1(int, bool) DELEGATE_T1(int, bool);
 typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, int, floatp);
 
 /* Convenience function for declaring anonymous structs. */
@@ -149,18 +149,18 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_DEF_FUNC6(T,N,T0,N0,T1,N1,T2,N2,T3,N3,T4,N4,T5,N5,R) T DELEGATE_DEFAULT_F6(N,N0,N1,N2,N3,N4,N5)(void *sptr, T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5) { (void)sptr; (void)v0; (void)v1; (void)v2; (void)v3; (void)v4; (void)v5; return R; }
 
 DELEGATE_DEF_PROTO0(void, void);
-DELEGATE_DEF_PROTO1(void, void, _Bool, bool);
-DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint16_t, uint16);
-DELEGATE_DEF_PROTO2(void, void, _Bool, bool, uint32_t, uint32);
+DELEGATE_DEF_PROTO1(void, void, bool, bool);
+DELEGATE_DEF_PROTO2(void, void, bool, bool, uint16_t, uint16);
+DELEGATE_DEF_PROTO2(void, void, bool, bool, uint32_t, uint32);
 DELEGATE_DEF_PROTO1(void, void, int, int);
-DELEGATE_DEF_PROTO2(void, void, int, int, _Bool, bool);
+DELEGATE_DEF_PROTO2(void, void, int, int, bool, bool);
 DELEGATE_DEF_PROTO2(void, void, int, int, int, int);
 DELEGATE_DEF_PROTO4(void, void, int, int, int, int, int, int, int, int);
 DELEGATE_DEF_PROTO3(void, void, int, int, int, int, double, double);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint8_t *, uint8p);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint16_t *, uint16p);
 DELEGATE_DEF_PROTO2(void, void, int, int, uint32_t, uint32);
-DELEGATE_DEF_PROTO3(void, void, int, int, _Bool, bool, uint16_t, uint16);
+DELEGATE_DEF_PROTO3(void, void, int, int, bool, bool, uint16_t, uint16);
 DELEGATE_DEF_PROTO3(void, void, int, int, int, int, const void *, cvoidp);
 DELEGATE_DEF_PROTO1(void, void, unsigned, unsigned);
 DELEGATE_DEF_PROTO2(void, void, unsigned, unsigned, int, int);
@@ -179,7 +179,7 @@ DELEGATE_DEF_PROTO1(void, void, uint32_t, uint32);
 DELEGATE_DEF_PROTO1(void, void, float, float);
 DELEGATE_DEF_PROTO2(void, void, float, float, float, float);
 DELEGATE_DEF_PROTO1(void *, voidp, void *, voidp);
-DELEGATE_DEF_PROTO0(_Bool, bool);
+DELEGATE_DEF_PROTO0(bool, bool);
 DELEGATE_DEF_PROTO1(const char *, charcp, int, int);
 DELEGATE_DEF_PROTO1(const char *, charcp, unsigned, unsigned);
 DELEGATE_DEF_PROTO0(unsigned, unsigned);
@@ -187,7 +187,7 @@ DELEGATE_DEF_PROTO1(unsigned, unsigned, int, int);
 DELEGATE_DEF_PROTO1(unsigned, unsigned, unsigned, unsigned);
 DELEGATE_DEF_PROTO1(unsigned, unsigned, void *, voidp);
 DELEGATE_DEF_PROTO0(uint8_t, uint8);
-DELEGATE_DEF_PROTO2(uint8_t, uint8, uint8_t, uint8, _Bool, bool);
+DELEGATE_DEF_PROTO2(uint8_t, uint8, uint8_t, uint8, bool, bool);
 DELEGATE_DEF_PROTO1(uint8_t, uint8, uint16_t, uint16);
 DELEGATE_DEF_PROTO1(uint8_t, uint8, uint32_t, uint32);
 DELEGATE_DEF_PROTO1(uint16_t, uint16, uint32_t, uint32);
@@ -195,7 +195,7 @@ DELEGATE_DEF_PROTO1(uint32_t, uint32, int, int);
 DELEGATE_DEF_PROTO1(uint32_t, uint32, unsigned, unsigned);
 DELEGATE_DEF_PROTO0(uint8_t *, uint8p);
 DELEGATE_DEF_PROTO3(uint8_t *, uint8p, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
-DELEGATE_DEF_PROTO1(int, int, _Bool, bool);
+DELEGATE_DEF_PROTO1(int, int, bool, bool);
 DELEGATE_DEF_PROTO3(float, float, uint32_t, uint32, int, int, float *, floatp);
 
 #define DELEGATE_DEFAULT0(N) DELEGATE_AS0(N, DELEGATE_DEFAULT_F0(N), NULL)

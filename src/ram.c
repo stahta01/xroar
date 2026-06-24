@@ -46,8 +46,8 @@ static struct ser_struct ser_struct_ram[] = {
 
 #define RAM_SER_D_DATA (1)
 
-static _Bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool ram_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ram_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data ram_ser_struct_data = {
 	.elems = ser_struct_ram,
@@ -62,7 +62,7 @@ static const struct ser_struct_data ram_ser_struct_data = {
 
 static struct part *ram_allocate(void);
 static void ram_initialise(struct part *p, void *options);
-static _Bool ram_finish(struct part *p);
+static bool ram_finish(struct part *p);
 static void ram_free(struct part *p);
 
 static const struct partdb_entry_funcs ram_funcs = {
@@ -92,7 +92,7 @@ static void ram_initialise(struct part *p, void *options) {
 	ram->organisation = config->organisation;
 }
 
-static _Bool ram_finish(struct part *p) {
+static bool ram_finish(struct part *p) {
 	struct ram *ram = (struct ram *)p;
 	size_t old_nelems = ram->bank_nelems;
 	recalculate_bank_size(ram);
@@ -143,7 +143,7 @@ static void deserialise_bank(struct ser_handle *sh, struct ram *ram, unsigned ba
 	}
 }
 
-static _Bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ram *ram = sptr;
 	switch (tag) {
 	case RAM_SER_NBANKS:
@@ -180,7 +180,7 @@ static _Bool ram_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool ram_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ram_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ram *ram = sptr;
 	switch (tag) {
 	case RAM_SER_NBANKS:
@@ -351,9 +351,9 @@ void ram_ser_read(struct ram *ram, struct ser_handle *sh) {
 
 extern inline uint8_t *ram_a8(struct ram *ram, unsigned bank, unsigned row, unsigned col);
 extern inline uint16_t *ram_a16(struct ram *ram, unsigned bank, unsigned row, unsigned col);
-extern inline void ram_d8(struct ram *ram, _Bool RnW, unsigned bank,
+extern inline void ram_d8(struct ram *ram, bool RnW, unsigned bank,
 			  unsigned row, unsigned col, uint8_t *d);
-extern inline void ram_d16(struct ram *ram, _Bool RnW, unsigned bank,
+extern inline void ram_d16(struct ram *ram, bool RnW, unsigned bank,
 			   unsigned row, unsigned col, uint16_t *d);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

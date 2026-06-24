@@ -56,7 +56,7 @@ struct auto_event {
 		sds string;
 		struct {
 			FILE *fd;
-			_Bool utf8;
+			bool utf8;
 		} basic_file;
 	} data;
 };
@@ -70,17 +70,17 @@ enum type_state {
 struct auto_kbd {
 	struct machine *machine;
 	struct debug_cpu *debug_cpu;
-	_Bool is_6809;
-	_Bool is_6803;
+	bool is_6809;
+	bool is_6803;
 
 	// These are refreshed each time data is submitted by checking the
 	// machine's keyboard map.  XXX this should really be based on the
 	// machine/ROM combination.
-	_Bool is_dragon200e;
-	_Bool is_mc10;
+	bool is_dragon200e;
+	bool is_mc10;
 
-	_Bool ansi_bold;    // track whether ANSI 'bold' is on or off
-	_Bool sg6_mode;     // how to interpret block characters on MC-10
+	bool ansi_bold;    // track whether ANSI 'bold' is on or off
+	bool sg6_mode;     // how to interpret block characters on MC-10
 	uint8_t sg4_colour;  // colour of SG4 graphics on MC-10
 	uint8_t sg6_colour;  // colour of SG6 graphics on MC-10
 
@@ -101,8 +101,8 @@ static void auto_event_free(struct auto_event *ae);
 static sds parse_string(struct auto_kbd *ak, sds s);
 static void queue_auto_event(struct auto_kbd *ak, struct auto_event *ae);
 
-static void do_rts(void *, _Bool RnW, uint32_t A);
-static void do_auto_event(void *, _Bool RnW, uint32_t A);
+static void do_rts(void *, bool RnW, uint32_t A);
+static void do_auto_event(void *, bool RnW, uint32_t A);
 static int parse_char(struct auto_kbd *ak, uint8_t c);
 
 static struct machine_bp_entry basic_command_breakpoint[] = {
@@ -212,14 +212,14 @@ static void auto_event_free(struct auto_event *ae) {
 	free(ae);
 }
 
-static void do_rts(void *sptr, _Bool RnW, uint32_t A) {
+static void do_rts(void *sptr, bool RnW, uint32_t A) {
 	struct auto_kbd *ak = sptr;
 	(void)RnW;
 	(void)A;
 	ak->machine->op_rts(ak->machine);
 }
 
-static void do_auto_event(void *sptr, _Bool RnW, uint32_t A) {
+static void do_auto_event(void *sptr, bool RnW, uint32_t A) {
 	struct auto_kbd *ak = sptr;
 	struct MC6801 *cpu01 = (struct MC6801 *)ak->debug_cpu;
 	struct MC6809 *cpu09 = (struct MC6809 *)ak->debug_cpu;
@@ -240,7 +240,7 @@ static void do_auto_event(void *sptr, _Bool RnW, uint32_t A) {
 	}
 
 	struct auto_event *ae = ak->auto_event_list->data;
-	_Bool next_event = 0;
+	bool next_event = 0;
 
 	if (ae->type == auto_type_basic_command) {
 		// type a command into BASIC

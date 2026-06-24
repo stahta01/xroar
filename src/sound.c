@@ -54,7 +54,7 @@ struct sound_interface_private {
 	int output_nchannels;
 	enum sound_fmt output_fmt;
 	void *output_buffer;  // final output may not be floats
-	_Bool output_buffer_is_silent;
+	bool output_buffer_is_silent;
 
 	// Current index into the buffer
 	unsigned buffer_frame;
@@ -75,10 +75,10 @@ struct sound_interface_private {
 	// Audio circuit state
 	struct {
 		// Single-bit sound
-		_Bool sbs_enabled;
-		_Bool sbs_level;
+		bool sbs_enabled;
+		bool sbs_level;
 		// Analogue multiplexer
-		_Bool mux_enabled;
+		bool mux_enabled;
 		unsigned mux_source;
 		// External audio, potentially stereo
 		float external[2];
@@ -169,7 +169,7 @@ struct sound_interface *sound_interface_new(void *buf, enum sound_fmt fmt, unsig
 
 	snd->gain = 0.7;  // -3dBFS
 
-	_Bool fmt_big_endian = 1;
+	bool fmt_big_endian = 1;
 
 	if (nchannels < 1 || nchannels > 2) {
 		LOG_MOD_WARN("sound", "invalid number of audio channels: %u\n", nchannels);
@@ -391,7 +391,7 @@ void sound_update(struct sound_interface *sndp) {
 	// used.  may save some calls to sample-rate conversion / low-pass
 	// filtering.
 
-	_Bool mux_enabled = snd->current.mux_enabled;
+	bool mux_enabled = snd->current.mux_enabled;
 	unsigned mux_source = snd->current.mux_source;
 	if (!mux_enabled) {
 		mux_source = SOURCE_NONE;
@@ -529,7 +529,7 @@ void sound_update(struct sound_interface *sndp) {
 }
 
 // Rate limit control
-void sound_set_ratelimit(struct sound_interface *sndp, _Bool ratelimit) {
+void sound_set_ratelimit(struct sound_interface *sndp, bool ratelimit) {
 	sndp->ratelimit = ratelimit;
 }
 
@@ -575,7 +575,7 @@ static void sound_ui_set_gain(void *sptr, int tag, void *smsg) {
 	}
 }
 
-void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level) {
+void sound_set_sbs(struct sound_interface *sndp, bool enabled, bool level) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	if (snd->next.sbs_enabled == enabled && snd->next.sbs_level == level)
 		return;
@@ -584,7 +584,7 @@ void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level) {
 	sound_update(sndp);
 }
 
-void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled) {
+void sound_set_mux_enabled(struct sound_interface *sndp, bool enabled) {
 	struct sound_interface_private *snd = (struct sound_interface_private *)sndp;
 	if (snd->next.mux_enabled == enabled)
 		return;

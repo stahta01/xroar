@@ -64,7 +64,7 @@ void ay891x_configure(struct AY891X *csg, int refrate, int framerate, int tickra
 //      1       0       Write
 //      1       1       Latch address
 
-void ay891x_cycle(struct AY891X *csg, _Bool BDIR, _Bool BC1, uint8_t *D);
+void ay891x_cycle(struct AY891X *csg, bool BDIR, bool BC1, uint8_t *D);
 
 // Fill a buffer with (float, mono) audio at the desired frame rate.  Returned
 // value is the audio output at the elapsed system time (which due to sample

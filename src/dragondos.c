@@ -45,10 +45,10 @@ struct dragondos {
 	struct cart cart;
 	unsigned latch_old;
 	unsigned latch_drive_select;
-	_Bool latch_motor_enable;
-	_Bool latch_precomp_enable;
-	_Bool latch_density;
-	_Bool latch_nmi_enable;
+	bool latch_motor_enable;
+	bool latch_precomp_enable;
+	bool latch_density;
+	bool latch_nmi_enable;
 	struct becker *becker;
 	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
@@ -73,16 +73,16 @@ static const struct ser_struct_data dragondos_ser_struct_data = {
 static void dragondos_config_complete(struct cart_config *);
 
 /* Cart interface */
-static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void dragondos_reset(struct cart *c, _Bool hard);
+static uint8_t dragondos_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t dragondos_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void dragondos_reset(struct cart *c, bool hard);
 static void dragondos_detach(struct cart *c);
-static _Bool dragondos_has_interface(struct cart *c, const char *ifname);
+static bool dragondos_has_interface(struct cart *c, const char *ifname);
 static void dragondos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 /* Handle signals from WD2797 */
-static void set_drq(void *sptr, _Bool value);
-static void set_intrq(void *sptr, _Bool value);
+static void set_drq(void *sptr, bool value);
+static void set_intrq(void *sptr, bool value);
 
 /* Latch */
 static void latch_write(struct dragondos *d, unsigned D);
@@ -93,7 +93,7 @@ static void latch_write(struct dragondos *d, unsigned D);
 
 static struct part *dragondos_allocate(void);
 static void dragondos_initialise(struct part *p, void *options);
-static _Bool dragondos_finish(struct part *p);
+static bool dragondos_finish(struct part *p);
 static void dragondos_free(struct part *p);
 
 static const struct partdb_entry_funcs dragondos_funcs = {
@@ -136,7 +136,7 @@ static void dragondos_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }
 
-static _Bool dragondos_finish(struct part *p) {
+static bool dragondos_finish(struct part *p) {
 	struct dragondos *d = (struct dragondos *)p;
 	struct cart *c = &d->cart;
 
@@ -174,7 +174,7 @@ static void dragondos_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void dragondos_reset(struct cart *c, _Bool hard) {
+static void dragondos_reset(struct cart *c, bool hard) {
 	struct dragondos *d = (struct dragondos *)c;
 	cart_rom_reset(c, hard);
 	wd279x_reset(d->fdc);
@@ -193,7 +193,7 @@ static void dragondos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t dragondos_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	if (R2) {
 		rombank_d8(c->ROM, A, &D);
@@ -220,7 +220,7 @@ static uint8_t dragondos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	return D;
 }
 
-static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t dragondos_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct dragondos *d = (struct dragondos *)c;
 	(void)R2;
 	if (R2) {
@@ -253,7 +253,7 @@ static uint8_t dragondos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, u
 	return D;
 }
 
-static _Bool dragondos_has_interface(struct cart *c, const char *ifname) {
+static bool dragondos_has_interface(struct cart *c, const char *ifname) {
 	return c && (0 == strcmp(ifname, "floppy"));
 }
 
@@ -321,13 +321,13 @@ static void latch_write(struct dragondos *d, unsigned D) {
 	d->latch_nmi_enable = D & 0x20;
 }
 
-static void set_drq(void *sptr, _Bool value) {
+static void set_drq(void *sptr, bool value) {
 	struct dragondos *d = sptr;
 	struct cart *c = &d->cart;
 	DELEGATE_CALL(c->signal_firq, value);
 }
 
-static void set_intrq(void *sptr, _Bool value) {
+static void set_intrq(void *sptr, bool value) {
 	struct dragondos *d = sptr;
 	struct cart *c = &d->cart;
 	if (value) {

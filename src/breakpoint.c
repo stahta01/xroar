@@ -46,7 +46,7 @@ static int compar_breakpoint_a(const void *aa, const void *bb);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-_Bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
+bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
 			DELEGATE_T2(void, bool, uint32) handler) {
 	struct bp_breakpoint key = { .A = A };
 	struct bp_breakpoint *ent = bbs->list ? bsearch(&key, bbs->list, bbs->nbreakpoints, sizeof(key), compar_breakpoint_a) : NULL;
@@ -125,7 +125,7 @@ void bp_breakpoint_remove(struct bp_breakpoint_set *bbs, int32_t A,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-_Bool bp_watchpoint_add(struct bp_watchpoint_set *set, _Bool RnW, uint32_t Astart,
+bool bp_watchpoint_add(struct bp_watchpoint_set *set, bool RnW, uint32_t Astart,
 			uint32_t Aend, DELEGATE_T2(void, bool, uint32) handler) {
 	struct bp_watchpoint **list = &set->list[RnW];
 	// Does this watchpoint with this handler already exist?
@@ -174,7 +174,7 @@ void bp_watchpoint_remove(struct bp_watchpoint_set *set, int RnW, int32_t Astart
 	}
 }
 
-extern inline void bp_check_watchpoints(struct bp_watchpoint_set *set, _Bool RnW, uint32_t A);
+extern inline void bp_check_watchpoints(struct bp_watchpoint_set *set, bool RnW, uint32_t A);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

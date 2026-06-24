@@ -204,7 +204,7 @@ const struct partdb_entry *partdb_find_entry(const char *name) {
 	return NULL;
 }
 
-_Bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a) {
+bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a) {
 	if (!pe)
 		return 0;
 	// always match the actual part entry...
@@ -215,7 +215,7 @@ _Bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a) {
 	return pe->funcs->is_a && pe->funcs->is_a(NULL, is_a);
 }
 
-_Bool partdb_is_a(const char *name, const char *is_a) {
+bool partdb_is_a(const char *name, const char *is_a) {
 	// find partname
 	const struct partdb_entry *pe = partdb_find_entry(name);
 	if (!pe)
@@ -372,7 +372,7 @@ struct part *part_component_by_id_is_a(struct part *p, const char *id, const cha
 	return NULL;
 }
 
-_Bool part_is_a(struct part *p, const char *is_a) {
+bool part_is_a(struct part *p, const char *is_a) {
 	if (!p)
 		return 0;
 	const struct partdb_entry *pe = p->partdb;
@@ -512,7 +512,7 @@ void intf_free(struct intf *i) {
 	}
 }
 
-_Bool intf_attach(struct part *p0, void *p0_idata,
+bool intf_attach(struct part *p0, void *p0_idata,
 		  struct part *p1, void *p1_idata, const char *intf_name) {
 
 	assert(p0 != NULL);

@@ -60,8 +60,8 @@ struct tape_interface_private {
 	struct ui_interface *ui;
 
 	struct debug_cpu *debug_cpu;
-	_Bool is_6809;
-	_Bool is_6803;
+	bool is_6809;
+	bool is_6803;
 	struct {
 		uint16_t pwcount;
 		uint16_t bcount;
@@ -75,10 +75,10 @@ struct tape_interface_private {
 	int short_leader_threshold;
 	int initial_motor_delay;
 
-	_Bool tape_fast;
-	_Bool tape_pad_auto;
-	_Bool tape_rewrite;
-	_Bool short_leader;
+	bool tape_fast;
+	bool tape_pad_auto;
+	bool tape_rewrite;
+	bool short_leader;
 
 	int in_pulse;
 	int in_pulse_width;
@@ -86,13 +86,13 @@ struct tape_interface_private {
 	int skip_ncycles;
 
 	uint8_t last_tape_output;
-	_Bool playing;  // manual motor control
-	_Bool motor;  // automatic motor control
+	bool playing;  // manual motor control
+	bool motor;  // automatic motor control
 
 	struct {
 		// Whether a sync byte has been detected yet.  If false, we're still
 		// reading the leader.
-		_Bool have_sync;
+		bool have_sync;
 		// Amount of leader bytes to write when the next sync byte is detected
 		int leader_count;
 		// Track number of bits written and keep things byte-aligned
@@ -101,7 +101,7 @@ struct tape_interface_private {
 		int sremain;
 		// Was the last thing rewritten silence?  If so, any subsequent motor
 		// events won't trigger a trailer byte.
-		_Bool silence;
+		bool silence;
 
 		// Input pulse buffer during sync.  When synced, contents will
 		// be analysed for average pulse widths then writes will use
@@ -109,7 +109,7 @@ struct tape_interface_private {
 		int pulse_buffer_index;
 		int pulse_buffer[PULSE_BUFFER_SIZE];
 
-		_Bool have_pulse_widths;
+		bool have_pulse_widths;
 		int bit0_pwt;
 		int bit1_pwt;
 	} rewrite;
@@ -125,10 +125,10 @@ static void tape_ui_set_tape_flag(void *, int tag, void *smsg);
 static void update_motor(struct tape_interface_private *tip);
 
 static void rewrite_tape_desync(struct tape_interface_private *tip, int leader);
-static void rewrite_sync(void *sptr, _Bool RnW, uint32_t A);
-static void rewrite_bitin(void *sptr, _Bool RnW, uint32_t A);
-static void rewrite_tape_on(void *sptr, _Bool RnW, uint32_t A);
-static void rewrite_end_of_block(void *sptr, _Bool RnW, uint32_t A);
+static void rewrite_sync(void *sptr, bool RnW, uint32_t A);
+static void rewrite_bitin(void *sptr, bool RnW, uint32_t A);
+static void rewrite_tape_on(void *sptr, bool RnW, uint32_t A);
+static void rewrite_end_of_block(void *sptr, bool RnW, uint32_t A);
 
 static void set_breakpoints(struct tape_interface_private *tip);
 
@@ -305,7 +305,7 @@ void tape_interface_free(struct tape_interface *ti) {
 void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 
-	_Bool is_dragon = 0;
+	bool is_dragon = 0;
 	if (strcmp(m->config->architecture, "dragon32") == 0
 	    || strcmp(m->config->architecture, "dragon64") == 0) {
 		is_dragon = 1;
@@ -700,13 +700,13 @@ void tape_close_writing(struct tape_interface *ti) {
 // MC-10 has no remote control, so for autorun, support a rom hook to press
 // play at an appropriate time.
 
-static void press_play(void *sptr, _Bool RnW, uint32_t A);
+static void press_play(void *sptr, bool RnW, uint32_t A);
 
 static struct machine_bp_entry bp_list_press_play[] = {
 	{ "CSRDON", press_play },
 };
 
-static void press_play(void *sptr, _Bool RnW, uint32_t A) {
+static void press_play(void *sptr, bool RnW, uint32_t A) {
 	struct tape_interface_private *tip = sptr;
 	(void)RnW;
 	(void)A;
@@ -728,7 +728,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 	}
 
 	int type = f->type;
-	_Bool done = 0;
+	bool done = 0;
 
 	if (logging.debug_file & LOG_FILE_TAPE_FNBLOCK) {
 		sds name = sdsx_quote_str(f->name);
@@ -774,7 +774,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 	// Otherwise, use a simple heuristic:
 	if (!done) {
-		_Bool need_exec = (type == 2 && f->load_address >= 0x01a9);
+		bool need_exec = (type == 2 && f->load_address >= 0x01a9);
 
 		switch (type) {
 			case 0:
@@ -804,9 +804,9 @@ int tape_autorun(struct tape_interface *ti, const char *filename) {
 
 // Automatic motor control.  Simulates cassette relay.
 
-void tape_set_motor(struct tape_interface *ti, _Bool motor) {
+void tape_set_motor(struct tape_interface *ti, bool motor) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
-	_Bool prev_state = tip->motor;
+	bool prev_state = tip->motor;
 	tip->motor = motor;
 	update_motor(tip);
 	if (motor != prev_state) {
@@ -821,7 +821,7 @@ static void tape_ui_set_playing(void *sptr, int tag, void *smsg) {
 	struct tape_interface_private *tip = sptr;
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == ui_tag_tape_playing);
-	_Bool play = ui_msg_adjust_value_range(uimsg, tip->playing, 0, 0, 1,
+	bool play = ui_msg_adjust_value_range(uimsg, tip->playing, 0, 0, 1,
 					       UI_ADJUST_FLAG_CYCLE);
 	if (logging.level >= 2) {
 		if (play != tip->playing) {
@@ -873,7 +873,7 @@ static void tape_ui_set_tape_flag(void *sptr, int tag, void *smsg) {
 
 static void update_motor(struct tape_interface_private *tip) {
 	struct tape_interface *ti = &tip->public;
-	_Bool running = tip->motor && tip->playing;
+	bool running = tip->motor && tip->playing;
 	if (running) {
 		if (ti->tape_input && !tip->waggle_event.queued) {
 			// If motor running and tape file attached, enable the
@@ -1263,7 +1263,7 @@ enum {
 static void sync_leader(struct tape_interface_private *tip) {
 	int phase = 0;
 	int state = L_BDED;
-	_Bool done = 0;
+	bool done = 0;
 
 	while (!done && tip->in_pulse >= 0) {
 		switch (state) {
@@ -1374,7 +1374,7 @@ static void cbin(struct tape_interface_private *tip) {
 // fast_motor_on() skips the standard delay if a short leader was detected
 // (usually old CAS files).
 
-static void fast_motor_on(void *sptr, _Bool RnW, uint32_t A) {
+static void fast_motor_on(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: CASON, after switching on, before delay
 	struct tape_interface_private *tip = sptr;
 	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
@@ -1394,7 +1394,7 @@ static void fast_motor_on(void *sptr, _Bool RnW, uint32_t A) {
 
 // Similarly, fast_sync_leader() just assumes leader has been sensed
 
-static void fast_sync_leader(void *sptr, _Bool RnW, uint32_t A) {
+static void fast_sync_leader(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: CSRDON, after calling CASON
 	struct tape_interface_private *tip = sptr;
 	(void)RnW;
@@ -1411,7 +1411,7 @@ static void fast_sync_leader(void *sptr, _Bool RnW, uint32_t A) {
 // If tape was paused, breakpoints would not have been in place, meaning this
 // code can be reached during initial silence.
 
-static void fast_tape_p0_wait_p1(void *sptr, _Bool RnW, uint32_t A) {
+static void fast_tape_p0_wait_p1(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: waiting for high pulse
 	struct tape_interface_private *tip = sptr;
 	(void)RnW;
@@ -1423,7 +1423,7 @@ static void fast_tape_p0_wait_p1(void *sptr, _Bool RnW, uint32_t A) {
 	do_skip_read_time(tip);
 }
 
-static void fast_bitin(void *sptr, _Bool RnW, uint32_t A) {
+static void fast_bitin(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: BITIN
 	struct tape_interface_private *tip = sptr;
 
@@ -1436,7 +1436,7 @@ static void fast_bitin(void *sptr, _Bool RnW, uint32_t A) {
 	}
 }
 
-static void fast_cbin(void *sptr, _Bool RnW, uint32_t A) {
+static void fast_cbin(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: CBIN
 	struct tape_interface_private *tip = sptr;
 	(void)RnW;
@@ -1492,7 +1492,7 @@ static void rewrite_tape_desync(struct tape_interface_private *tip, int leader) 
 // followed by the sync byte.  Flag stream as in sync - subsequent bits will be
 // rewritten verbatim.
 
-static void rewrite_sync(void *sptr, _Bool RnW, uint32_t A) {
+static void rewrite_sync(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: BLKIN, having read sync byte $3C
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
@@ -1532,7 +1532,7 @@ static void rewrite_sync(void *sptr, _Bool RnW, uint32_t A) {
 // Rewrites bits returned by the BITIN routine, but only while flagged as
 // synced.
 
-static void rewrite_bitin(void *sptr, _Bool RnW, uint32_t A) {
+static void rewrite_bitin(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: RTS from BITIN
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
@@ -1550,7 +1550,7 @@ static void rewrite_bitin(void *sptr, _Bool RnW, uint32_t A) {
 // When tape motor turned on, rewrite a standard duration of silence and flag
 // the stream as desynced, expecting a long leader before the next block.
 
-static void rewrite_tape_on(void *sptr, _Bool RnW, uint32_t A) {
+static void rewrite_tape_on(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: CSRDON
 	struct tape_interface_private *tip = sptr;
 	struct tape_interface *ti = &tip->public;
@@ -1569,7 +1569,7 @@ static void rewrite_tape_on(void *sptr, _Bool RnW, uint32_t A) {
 // When finished reading a block, flag the stream as desynced expecting a short
 // intra-block leader before the next.
 
-static void rewrite_end_of_block(void *sptr, _Bool RnW, uint32_t A) {
+static void rewrite_end_of_block(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: BLKIN, having confirmed checksum
 	struct tape_interface_private *tip = sptr;
 	(void)RnW;

@@ -76,14 +76,14 @@ struct partdb_entry_funcs {
 
 	// Finish any internal setup once all sub-parts are available (either
 	// by the call to initialise(), or through deserialisation)
-	_Bool (* const finish)(struct part *part);
+	bool (* const finish)(struct part *part);
 
 	// Any extra work needed before free()ing the allocated memory
 	void (* const free)(struct part *part);
 
 	// In addition to the part name (in the partdb entry), this returns
 	// true for any other simple strings that this part identifies as
-	_Bool (* const is_a)(struct part *p, const char *name);
+	bool (* const is_a)(struct part *p, const char *name);
 };
 
 /** \brief Part database mapping entry
@@ -98,7 +98,7 @@ struct partdb_entry {
 	const struct partdb_entry_funcs *funcs;
 };
 
-typedef _Bool (*partdb_match_func)(const struct partdb_entry *pe, void *mdata);
+typedef bool (*partdb_match_func)(const struct partdb_entry *pe, void *mdata);
 typedef void (*partdb_iter_func)(const struct partdb_entry *pe, void *idata);
 
 // (struct part) and (struct intf) are designed to be extended.
@@ -132,7 +132,7 @@ struct part {
 	// with details about p1, then call p0->attach_intf().  p0 should call
 	// p1->attach_intf() at an appropriate point in its own initialisation.
 	// Returns true on success.
-	_Bool (*attach_intf)(struct part *part, struct intf *intf);
+	bool (*attach_intf)(struct part *part, struct intf *intf);
 
 	// As with attaching, intf_detach() will call p0->detach_intf(), which
 	// should itself call p1->detach_intf().  After detaching, the
@@ -165,10 +165,10 @@ struct intf {
 const struct partdb_entry *partdb_find_entry(const char *name);
 
 // test type of a partdb entry
-_Bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a);
+bool partdb_ent_is_a(const struct partdb_entry *pe, const char *is_a);
 
 // test type of a partdb entry by name
-_Bool partdb_is_a(const char *partname, const char *is_a);
+bool partdb_is_a(const char *partname, const char *is_a);
 
 // iterate over partdb, calling 'iter' for every entry for which 'match'
 // returns true (or all entries if 'match' is NULL)
@@ -196,7 +196,7 @@ struct part *part_component_by_id(struct part *p, const char *id);
 struct part *part_component_by_id_is_a(struct part *p, const char *id, const char *name);
 
 // test type of an already-created part
-_Bool part_is_a(struct part *p, const char *is_a);
+bool part_is_a(struct part *p, const char *is_a);
 
 void part_serialise(struct part *p, struct ser_handle *sh);
 struct part *part_deserialise(struct ser_handle *sh);
@@ -208,7 +208,7 @@ struct intf *intf_new(size_t isize);
 void intf_init0(struct intf *i, struct part *p0, void *p0_idata, const char *name);
 void intf_free(struct intf *i);
 
-_Bool intf_attach(struct part *p0, void *p0_idata,
+bool intf_attach(struct part *p0, void *p0_idata,
 		  struct part *p1, void *p1_idata, const char *intf_name);
 
 void intf_detach(struct intf *i);

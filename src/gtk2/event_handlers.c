@@ -138,7 +138,7 @@ static void clipboard_text_received(GtkClipboard *clipboard, const gchar *text,
 	if (!ntext)
 		return;
 	guint state = (uintptr_t)data;
-	_Bool uc = state & GDK_SHIFT_MASK;
+	bool uc = state & GDK_SHIFT_MASK;
 	for (char *p = ntext; *p; p++) {
 		if (*p == '\n')
 			*p = '\r';

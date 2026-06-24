@@ -36,7 +36,7 @@ struct messenger_group_member {
 struct messenger_group {
 	int group_id;
 	char *name;
-	_Bool sending;  // prevent recursive message sending
+	bool sending;  // prevent recursive message sending
 	int nmembers;
 	struct messenger_group_member *members;
 };

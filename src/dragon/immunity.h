@@ -39,8 +39,8 @@ struct immunity {
 
 // iMMUnity interposes the CPU when used.
 
-void immunity_reset(struct immunity *cj, _Bool hard);
+void immunity_reset(struct immunity *cj, bool hard);
 
-void immunity_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
+void immunity_cpu_cycle(void *sptr, bool RnW, uint16_t A);
 
 #endif

@@ -77,14 +77,14 @@ static const struct ser_struct_data mc6821_ser_struct_data = {
 static void do_irq(void *sptr);
 static void do_strobe_cx2(void *sptr);
 static void do_restore_cx2(void *sptr);
-static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level);
+static void mc6821_update_cx2_state(struct MC6821_side *side, bool level);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // MC6821 PIA part creation
 
 static struct part *mc6821_allocate(void);
-static _Bool mc6821_finish(struct part *p);
+static bool mc6821_finish(struct part *p);
 static void mc6821_free(struct part *p);
 
 static const struct partdb_entry_funcs mc6821_funcs = {
@@ -117,7 +117,7 @@ static struct part *mc6821_allocate(void) {
 	return p;
 }
 
-static _Bool mc6821_finish(struct part *p) {
+static bool mc6821_finish(struct part *p) {
 	struct MC6821 *pia = (struct MC6821 *)p;
 
 	if (pia->a.irq_event.next == &pia->a.irq_event) {
@@ -184,18 +184,18 @@ void mc6821_reset(struct MC6821 *pia) {
 	mc6821_update_b_state(pia);
 }
 
-void mc6821_set_cx1(struct MC6821_side *side, _Bool level) {
+void mc6821_set_cx1(struct MC6821_side *side, bool level) {
 	if (level == side->cx1)
 		return;
 	side->cx1 = level;
-	_Bool active_high = side->control_register & 0x02;
+	bool active_high = side->control_register & 0x02;
 	if (active_high == level) {
 		if ((side->control_register & 0x38) == 0x28) {
 			// Read/Write Strobe with Cx1 Restore
 			side->cx2_out_source = side->cx2_out_sink = 1;
 			DELEGATE_SAFE_CALL(side->control_postwrite);
 		}
-		_Bool irq1_enabled = side->control_register & 0x01;
+		bool irq1_enabled = side->control_register & 0x01;
 		side->irq1_received = 0x80;
 		if (irq1_enabled) {
 			// Figure 13, tRS3 = 1µs
@@ -389,7 +389,7 @@ static void do_restore_cx2(void *sptr) {
 	DELEGATE_SAFE_CALL(side->control_postwrite);
 }
 
-static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
+static void mc6821_update_cx2_state(struct MC6821_side *side, bool level) {
 	// Bit 5 set configures Cx2 as output
 	if (side->control_register & 0x20) {
 		side->irq2_received = 0;
@@ -398,9 +398,9 @@ static void mc6821_update_cx2_state(struct MC6821_side *side, _Bool level) {
 	if (level == side->cx2)
 		return;
 	side->cx2 = level;
-	_Bool active_high = side->control_register & 0x10;
+	bool active_high = side->control_register & 0x10;
 	if (active_high == level) {
-		_Bool irq2_enabled = side->control_register & 0x08;
+		bool irq2_enabled = side->control_register & 0x08;
 		side->irq2_received = 0x40;
 		if (irq2_enabled) {
 			// Figure 13, tRS3 = 1µs

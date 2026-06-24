@@ -417,7 +417,7 @@ sds sdsx_cat_quote_str_len(sds s, const char *str, size_t len) {
 	// Track whether we've seen any unsafe characters.  If we don't see
 	// any, we'll undo the quoting later.  Although escape sequences can
 	// appear outside quoted section, flag those as unsafe, too.
-	_Bool unsafe = 0;
+	bool unsafe = 0;
 	while (len > 0) {
 		char c = *(str++);
 		len--;
@@ -607,7 +607,7 @@ sds sdsx_cat_parse_str_len(sds s, const char *str, size_t len) {
 // Returns a new SDS containing the token, or NULL on error (e.g. unterminated
 // quotes).  Supplied string will become NULL when no more tokens are found.
 
-sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse) {
+sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, bool parse) {
 	// default delimiter, space/tab
 	if (!ere)
 		ere = "[ \t]+";
@@ -736,7 +736,7 @@ sds sdsx_tok_str_len(const char **s, size_t *lenp, const char *ere, _Bool parse)
 // Wraps sdsx_tok_str_len() such that data is consumed from the left of a
 // source SDS string.  The source is modified, but its address will not change.
 
-sds sdsx_tok(sds s, const char *ere, _Bool parse) {
+sds sdsx_tok(sds s, const char *ere, bool parse) {
 	const char *p = s;
 	size_t len = sdslen(s);
 	sds r = sdsx_tok_str_len(&p, &len, ere, parse);
@@ -764,7 +764,7 @@ static void sdsfree_void(void *sptr) {
 // the list will contain at least one (potentially empty) element.
 
 struct sdsx_list *sdsx_split_str_len(const char *str, size_t len, const char *ere,
-				     _Bool parse) {
+				     bool parse) {
 
 	struct sdsx_list *sl = sdsx_list_new((sdsx_list_free_func)sdsfree_void);
 

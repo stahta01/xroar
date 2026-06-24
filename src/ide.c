@@ -962,8 +962,8 @@ static const struct ser_struct ser_struct_ide_drive[] = {
 	SER_ID_STRUCT_ELEM(19, struct ide_drive, length),
 };
 
-static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data ide_drive_ser_struct_data = {
 	.elems = ser_struct_ide_drive,
@@ -980,8 +980,8 @@ static const struct ser_struct ser_struct_ide_controller[] = {
 	SER_ID_STRUCT_ELEM(3, struct ide_controller, data_latch),
 };
 
-static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data ide_controller_ser_struct_data = {
 	.elems = ser_struct_ide_controller,
@@ -990,7 +990,7 @@ static const struct ser_struct_data ide_controller_ser_struct_data = {
 	.write_elem = ide_controller_write_elem,
 };
 
-static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ide_drive *ided = sptr;
 	switch (tag) {
 	case IDE_DRIVE_SER_DATA:
@@ -1009,7 +1009,7 @@ static _Bool ide_drive_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ide_drive *ided = sptr;
 	switch (tag) {
 	case IDE_DRIVE_SER_DATA:
@@ -1028,7 +1028,7 @@ static _Bool ide_drive_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ide_controller *ide = sptr;
 	switch (tag) {
 	case IDE_CONTROLLER_SER_DRIVE:
@@ -1046,7 +1046,7 @@ static _Bool ide_controller_read_elem(void *sptr, struct ser_handle *sh, int tag
 	return 1;
 }
 
-static _Bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ide_controller_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct ide_controller *ide = sptr;
 	switch (tag) {
 	case IDE_CONTROLLER_SER_DRIVE:

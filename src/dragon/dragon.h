@@ -69,10 +69,10 @@ struct dragon {
 
 	// Derived machines can use these to redirect address decoding.  If
 	// they return true, the address was handled, no need to continue.
-	_Bool (*read_byte)(struct dragon *, unsigned A);
-	_Bool (*write_byte)(struct dragon *, unsigned A);
+	bool (*read_byte)(struct dragon *, unsigned A);
+	bool (*write_byte)(struct dragon *, unsigned A);
 
-	_Bool inverted_text;
+	bool inverted_text;
 	struct cart *cart;
 	unsigned configured_frameskip;
 	unsigned frameskip;
@@ -81,13 +81,13 @@ struct dragon {
 
 	// Clock inhibit - for when "speed up" code wants to access memory
 	// without advancing the clock.
-	_Bool clock_inhibit;
+	bool clock_inhibit;
 
 	// RAM read buffer.  Driven to data bus only when SAM S == 0.
 	uint8_t Dread;
 
 	// Debug
-	_Bool single_step;
+	bool single_step;
 	int stop_signal;
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
@@ -105,28 +105,28 @@ struct dragon {
 	} keyboard;
 
 	// Set to invert HS to PIA
-	_Bool hs_invert;
+	bool hs_invert;
 
 	// NTSC colour bursts
-	_Bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
+	bool use_ntsc_burst_mod; // 0 for PAL-M (green-magenta artefacting)
 	unsigned ntsc_burst_mod;
 
 	// UI message receipt
 	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
-	_Bool has_bas, has_extbas, has_altbas, has_combined;
-	_Bool has_ext_charset;
+	bool has_bas, has_extbas, has_altbas, has_combined;
+	bool has_ext_charset;
 	uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
 	uint32_t crc_ext_charset;
-	_Bool is_dragon;
-	_Bool unexpanded_dragon32;
-	_Bool relaxed_pia0_decode;
-	_Bool relaxed_pia1_decode;
+	bool is_dragon;
+	bool unexpanded_dragon32;
+	bool relaxed_pia0_decode;
+	bool relaxed_pia1_decode;
 
 	struct {
 		int sam_variant;
-		_Bool immunity;
+		bool immunity;
 	} option;
 };
 
@@ -166,26 +166,26 @@ inline void dragon_advance_clock(struct dragon *md, int ncycles) {
 }
 
 // Common cycle-handling code.
-void dragon_cpu_cycle(struct dragon *md, _Bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol);
+void dragon_cpu_cycle(struct dragon *md, bool RnW, uint16_t A, unsigned Zrow, unsigned Zcol);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Set a ROM configuration to a default value if not "defined"
-void dragon_set_default_rom(_Bool dfn, char **romp, const char *dfl);
+void dragon_set_default_rom(bool dfn, char **romp, const char *dfl);
 
 void dragon_config_complete(struct machine_config *mc);
-_Bool dragon_is_working_config(struct machine_config *mc);
+bool dragon_is_working_config(struct machine_config *mc);
 void dragon_verify_ram_size(struct machine_config *mc);
 
 void dragon_allocate_common(struct dragon *md);
 void dragon_initialise_common(struct dragon *md, struct machine_config *mc);
-_Bool dragon_finish_common(struct dragon *md);
+bool dragon_finish_common(struct dragon *md);
 void dragon_free_common(struct part *p);
 
-_Bool dragon_has_interface(struct part *p, const char *ifname);
+bool dragon_has_interface(struct part *p, const char *ifname);
 void dragon_attach_interface(struct part *p, const char *ifname, void *intf);
 
-void dragon_reset(struct machine *m, _Bool hard);
+void dragon_reset(struct machine *m, bool hard);
 
 void dragon_keyboard_update(void *sptr);
 void dragon_update_vdg_mode(struct dragon *md);
@@ -193,7 +193,7 @@ void dragon_update_vdg_mode(struct dragon *md);
 void dragon_pia1b_data_postwrite(void *sptr);
 
 // VDG interfacing
-void dragon_vdg_hs(void *sptr, _Bool level);
-void dragon_vdg_fs(void *sptr, _Bool level);
+void dragon_vdg_hs(void *sptr, bool level);
+void dragon_vdg_fs(void *sptr, bool level);
 
 #endif

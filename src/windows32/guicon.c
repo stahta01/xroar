@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include <io.h>
 
-static _Bool have_console = 0;
+static bool have_console = 0;
 
 void windows32_attach_to_parent_console(void) {
 	have_console = AttachConsole(ATTACH_PARENT_PROCESS);

@@ -35,7 +35,7 @@
 struct tape_sndfile {
 	SF_INFO info;
 	SNDFILE *fd;
-	_Bool writing;
+	bool writing;
 	int cycles_per_frame;
 	float *block;
 	sf_count_t block_length;
@@ -68,7 +68,7 @@ struct tape_module tape_sndfile_module = {
 struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate) {
 	SF_INFO sf_info;
 	SNDFILE *sfd = NULL;
-	_Bool writing = (mode[0] == 'w');
+	bool writing = (mode[0] == 'w');
 
 	sf_info.format = 0;
 	if (writing) {

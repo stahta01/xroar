@@ -50,31 +50,31 @@ struct AY891X_ {
 
 	int frameerror;  // track refrate/framerate error
 	int tickerror;  // track redrate/tickrate error
-	_Bool overrun;  // carry sample from previous call
+	bool overrun;  // carry sample from previous call
 	int nticks;
 
 	unsigned address;  // latched address
 	uint8_t regs[16];  // raw register value (interpreted below)
 
 	unsigned tone_period[3];  // Tone Period A-C
-	_Bool tone_enable[3];
+	bool tone_enable[3];
 
 	unsigned noise_period;
-	_Bool noise_enable[3];
+	bool noise_enable[3];
 
-	_Bool InOA;  // IO mode port A (1 = input)
-	_Bool InOB;  // IO mode port B (1 = input)
+	bool InOA;  // IO mode port A (1 = input)
+	bool InOB;  // IO mode port B (1 = input)
 
-	_Bool envelope_mode[3];
+	bool envelope_mode[3];
 	float amplitude[3][2];
 	unsigned envelope_period;
-	_Bool envelope_hold;
-	_Bool envelope_alt;
-	_Bool envelope_att;
-	_Bool envelope_cont;
+	bool envelope_hold;
+	bool envelope_alt;
+	bool envelope_att;
+	bool envelope_cont;
 
 	int tone_counter[3];  // current counter value
-	_Bool tone_state[3];  // current output state (0/1, indexes amplitude)
+	bool tone_state[3];  // current output state (0/1, indexes amplitude)
 	float level[3];  // set from amplitude[]
 
 	int envelope_counter;
@@ -82,7 +82,7 @@ struct AY891X_ {
 
 	// noise-specific state
 	int noise_counter;
-	_Bool noise_state;
+	bool noise_state;
 	unsigned noise_lfsr;
 
 	// low-pass filter state
@@ -109,8 +109,8 @@ static struct ser_struct ser_struct_ay891x[] = {
 	SER_ID_STRUCT_ELEM(9, struct AY891X_, noise_lfsr),
 };
 
-static _Bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool ay891x_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool ay891x_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data ay891x_ser_struct_data = {
 	.elems = ser_struct_ay891x,
@@ -139,7 +139,7 @@ static void update_reg(struct AY891X_ *psg_, unsigned address);
 
 static struct part *ay891x_allocate(void);
 static void ay891x_initialise(struct part *p, void *options);
-static _Bool ay891x_finish(struct part *p);
+static bool ay891x_finish(struct part *p);
 static void ay891x_free(struct part *p);
 
 static const struct partdb_entry_funcs ay891x_funcs = {
@@ -182,7 +182,7 @@ static void ay891x_initialise(struct part *p, void *options) {
 	ay891x_configure(&psg_->ay891x, 4000000, 48000, 14318180, 0);
 }
 
-static _Bool ay891x_finish(struct part *p) {
+static bool ay891x_finish(struct part *p) {
 	struct AY891X_ *psg_ = (struct AY891X_ *)p;
 	(void)psg_;
 	return 1;
@@ -195,7 +195,7 @@ static void ay891x_free(struct part *p) {
 	}
 }
 
-static _Bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct AY891X_ *psg_ = sptr;
 	switch (tag) {
 	case AY891X_SER_REG_VAL:
@@ -219,7 +219,7 @@ static _Bool ay891x_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	}
 }
 
-static _Bool ay891x_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool ay891x_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct AY891X_ *psg_ = sptr;
 	switch (tag) {
 	case AY891X_SER_REG_VAL:
@@ -326,7 +326,7 @@ static void update_reg(struct AY891X_ *psg_, unsigned address) {
 		// from input to output, the old input value will have
 		// overwritten the register.
 		{
-			_Bool new_InOA = ~psg_->regs[7] & 0x40;
+			bool new_InOA = ~psg_->regs[7] & 0x40;
 			if (psg_->InOA != new_InOA) {
 				psg_->InOA = new_InOA;
 				if (new_InOA) {
@@ -340,7 +340,7 @@ static void update_reg(struct AY891X_ *psg_, unsigned address) {
 			}
 		}
 		{
-			_Bool new_InOB = ~psg_->regs[7] & 0x80;
+			bool new_InOB = ~psg_->regs[7] & 0x80;
 			if (psg_->InOB != new_InOB) {
 				psg_->InOB = new_InOB;
 				if (new_InOB) {
@@ -404,7 +404,7 @@ static void update_reg(struct AY891X_ *psg_, unsigned address) {
 	}
 }
 
-void ay891x_cycle(struct AY891X *psg, _Bool BDIR, _Bool BC1, uint8_t *D) {
+void ay891x_cycle(struct AY891X *psg, bool BDIR, bool BC1, uint8_t *D) {
 	struct AY891X_ *psg_ = (struct AY891X_ *)psg;
 
 	if (!BDIR && !BC1) {
@@ -509,7 +509,7 @@ float ay891x_get_audio(void *sptr, uint32_t tick, int nframes, float *buf) {
 				psg_->tone_state[c] = !psg_->tone_state[c];
 			}
 			// mix tone with noise
-			_Bool state = (psg_->tone_enable[c] && psg_->tone_state[c]) ||
+			bool state = (psg_->tone_enable[c] && psg_->tone_state[c]) ||
 			              (psg_->noise_state && psg_->noise_enable[c]);
 			if (psg_->envelope_mode[c]) {
 				unsigned level = state ? psg_->envelope_level : 0;

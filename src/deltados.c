@@ -46,8 +46,8 @@ struct deltados {
 	struct cart cart;
 	unsigned latch_old;
 	unsigned latch_drive_select;
-	_Bool latch_side_select;
-	_Bool latch_density;
+	bool latch_side_select;
+	bool latch_density;
 	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
 };
@@ -70,11 +70,11 @@ static void deltados_config_complete(struct cart_config *);
 
 /* Cart interface */
 
-static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void deltados_reset(struct cart *c, _Bool hard);
+static uint8_t deltados_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t deltados_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void deltados_reset(struct cart *c, bool hard);
 static void deltados_detach(struct cart *c);
-static _Bool deltados_has_interface(struct cart *c, const char *ifname);
+static bool deltados_has_interface(struct cart *c, const char *ifname);
 static void deltados_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 /* Latch */
@@ -87,7 +87,7 @@ static void latch_write(struct deltados *d, unsigned D);
 
 static struct part *deltados_allocate(void);
 static void deltados_initialise(struct part *p, void *options);
-static _Bool deltados_finish(struct part *p);
+static bool deltados_finish(struct part *p);
 static void deltados_free(struct part *p);
 
 static const struct partdb_entry_funcs deltados_funcs = {
@@ -130,7 +130,7 @@ static void deltados_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("WD2791", "WD2791"), "FDC");
 }
 
-static _Bool deltados_finish(struct part *p) {
+static bool deltados_finish(struct part *p) {
 	struct deltados *d = (struct deltados *)p;
 
 	// Find attached parts
@@ -161,7 +161,7 @@ static void deltados_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void deltados_reset(struct cart *c, _Bool hard) {
+static void deltados_reset(struct cart *c, bool hard) {
 	struct deltados *d = (struct deltados *)c;
 	cart_rom_reset(c, hard);
 	wd279x_reset(d->fdc);
@@ -176,7 +176,7 @@ static void deltados_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t deltados_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct deltados *d = (struct deltados *)c;
 	if (R2) {
 		rombank_d8(c->ROM, A, &D);
@@ -190,7 +190,7 @@ static uint8_t deltados_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uin
 	return D;
 }
 
-static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t deltados_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct deltados *d = (struct deltados *)c;
 	(void)R2;
 	if (R2) {
@@ -208,7 +208,7 @@ static uint8_t deltados_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, ui
 	return D;
 }
 
-static _Bool deltados_has_interface(struct cart *c, const char *ifname) {
+static bool deltados_has_interface(struct cart *c, const char *ifname) {
 	return c && (0 == strcmp(ifname, "floppy"));
 }
 

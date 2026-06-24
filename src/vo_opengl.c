@@ -104,7 +104,7 @@ void vo_opengl_free(void *sptr) {
 	free(vogl);
 }
 
-_Bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
+bool vo_opengl_configure(struct vo_opengl_interface *vogl, struct vo_cfg *cfg) {
 	struct vo_interface *vo = &vogl->vo;
 
 	vogl->texture.buf_format = GL_RGBA;
@@ -240,7 +240,7 @@ void vo_opengl_set_viewport(struct vo_opengl_interface *vogl, int vp_w, int vp_h
 	update_viewport(vogl);
 }
 
-void vo_opengl_set_frame_rate(struct vo_opengl_interface *vogl, _Bool is_60hz) {
+void vo_opengl_set_frame_rate(struct vo_opengl_interface *vogl, bool is_60hz) {
 	vogl->scale_60hz = is_60hz;
 	update_viewport(vogl);
 }

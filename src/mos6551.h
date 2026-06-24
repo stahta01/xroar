@@ -30,7 +30,7 @@
 struct MOS6551 {
 	struct part part;
 
-	_Bool IRQ;
+	bool IRQ;
 
 	uint8_t status_reg;
 	uint8_t command_reg;
@@ -41,6 +41,6 @@ struct MOS6551 {
 void mos6551_reset(struct MOS6551 *);
 
 // CPU interface
-void mos6551_access(void *, _Bool RnW, unsigned A, uint8_t *D);
+void mos6551_access(void *, bool RnW, unsigned A, uint8_t *D);
 
 #endif

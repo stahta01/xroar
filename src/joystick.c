@@ -204,7 +204,7 @@ struct joystick_config *joystick_config_by_name(const char *name) {
 	return NULL;
 }
 
-void joystick_config_print_all(FILE *f, _Bool all) {
+void joystick_config_print_all(FILE *f, bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct joystick_config *jc = l->data;
 		fprintf(f, "joy %s\n", jc->name);
@@ -353,7 +353,7 @@ static int hexdigit(char c) {
 	return -1;
 }
 
-static _Bool string_to_guid(const char *str, uint8_t *guid) {
+static bool string_to_guid(const char *str, uint8_t *guid) {
 	for (int i = 0; i < 16; ++i) {
 		if (!*str || !*(str+1)) {
 			return 0;
@@ -534,13 +534,13 @@ static struct js_db_entry *js_find_db_entry_by_guid(const uint8_t guid[16]) {
 	return best_match;
 }
 
-static _Bool js_add_db_entry(const char *db_string) {
+static bool js_add_db_entry(const char *db_string) {
 	struct js_db_entry *map = js_parse_db_entry(db_string);
 	if (!map) {
 		return 0;
 	}
 
-	_Bool count = 0;
+	bool count = 0;
 	(void)count;  // avoid warning
 
 #ifdef HAVE_SDL2
@@ -799,7 +799,7 @@ static struct joystick *joystick_new_from_config(const struct joystick_config *j
 	j->config = jc;
 
 	// We parse joystick specs here, so a config could still be invalid
-	_Bool valid_joystick = 0;
+	bool valid_joystick = 0;
 	struct joystick_submodule *submod = NULL;
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; ++i) {
 		if (!jc->axis_specs[i]) {
@@ -960,7 +960,7 @@ struct joystick_mouse_axis {
 	struct joystick_control joystick_control;
 	struct ui_interface *ui;
 	int axis;
-	_Bool active_area_relative;
+	bool active_area_relative;
 	double offset;
 	double scale;
 };

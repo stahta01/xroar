@@ -37,7 +37,7 @@ enum sound_fmt {
 
 struct sound_interface {
 	int framerate;  // output rate
-	_Bool ratelimit;  // ratelimit
+	bool ratelimit;  // ratelimit
 	DELEGATE_T1(void, bool) sbs_feedback;  // single-bit sound feedback
 	DELEGATE_T3(float, uint32, int, floatp) get_non_muxed_audio;
 	DELEGATE_T3(float, uint32, int, floatp) get_tape_audio;
@@ -55,11 +55,11 @@ void sound_update(struct sound_interface *sndp);
 void sound_send_silence(struct sound_interface *);
 
 // Rate limit control
-void sound_set_ratelimit(struct sound_interface *sndp, _Bool ratelimit);
+void sound_set_ratelimit(struct sound_interface *sndp, bool ratelimit);
 
 // Dragon/CoCo-specific manipulation
-void sound_set_sbs(struct sound_interface *sndp, _Bool enabled, _Bool level);
-void sound_set_mux_enabled(struct sound_interface *sndp, _Bool enabled);
+void sound_set_sbs(struct sound_interface *sndp, bool enabled, bool level);
+void sound_set_mux_enabled(struct sound_interface *sndp, bool enabled);
 void sound_set_mux_source(struct sound_interface *sndp, unsigned source);
 void sound_set_dac_level(struct sound_interface *sndp, float level);
 void sound_set_tape_level(struct sound_interface *sndp, float level);

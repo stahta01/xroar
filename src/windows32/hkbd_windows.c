@@ -569,7 +569,7 @@ const uint16_t windows_to_hk_sym[] = {
 
 // Update table of scancode+shift level to symbol mappings
 
-_Bool hk_windows_update_keymap(void) {
+bool hk_windows_update_keymap(void) {
 
 	BYTE state[256];
 	memset(state, 0, sizeof(state));

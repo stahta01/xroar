@@ -97,7 +97,7 @@ struct evdev_js_control {
 		int axis;
 		unsigned button_mask;
 	} control;
-	_Bool inverted;
+	bool inverted;
 };
 
 struct code_to_control {
@@ -105,7 +105,7 @@ struct code_to_control {
 		int type;     // CTL_TYPE_*
 		int control;  // indexed from 0
 		int action;   // JS_CONTROL_ACTION_*
-		_Bool state;  // previous threshold state, only for LOW/HIGH
+		bool state;  // previous threshold state, only for LOW/HIGH
 	} input_state[NUM_JS_INPUT_STATES];
 
 	struct {
@@ -130,7 +130,7 @@ struct evdev_js_device {
 
 	// We only recognise D-pad key events as controlling axes if this is a
 	// gamepad:
-	_Bool is_gamepad;
+	bool is_gamepad;
 
 	// Indexed from ABS_X, maps ABS_* evdev code to a control
 	int nabs_codes;
@@ -174,13 +174,13 @@ struct evdev_js_context {
 struct device_map_context {
 	struct evdev_js_device *device;
 	struct libevdev *levd;
-	_Bool is_gamepad;
+	bool is_gamepad;
 
 	// Arrays of flags indicating which controls are mapped to
 	int naxis_flags;
-	_Bool *axis_flags;
+	bool *axis_flags;
 	int nbutton_flags;
-	_Bool *button_flags;
+	bool *button_flags;
 
 	// Track the "next" input number for axes, hats, buttons.
 	int anum;
@@ -214,14 +214,14 @@ static struct evdev_js_device *open_device(struct evdev_js_context *, int index)
 
 // Check that a device index is accessible by the user.
 
-static _Bool device_access_ok(int evid) {
+static bool device_access_ok(int evid) {
 	sds path = sdscatprintf(sdsempty(), "/dev/input/event%d", evid);
 	struct stat statbuf;
 	if (stat(path, &statbuf) != 0) {
 		sdsfree(path);
 		return 0;
 	}
-	_Bool r = (access(path, R_OK) == 0);
+	bool r = (access(path, R_OK) == 0);
 	sdsfree(path);
 	return r;
 }
@@ -333,7 +333,7 @@ static struct code_to_control *code_map_by_index(int *ncodes, struct code_to_con
 
 static void set_control_flag(struct device_map_context *dmctx, int ctl_type, int ctl) {
 	int *nelems = (ctl_type == CTL_TYPE_AXIS) ? &dmctx->naxis_flags : &dmctx->nbutton_flags;
-	_Bool **elems = (ctl_type == CTL_TYPE_AXIS) ? &dmctx->axis_flags : &dmctx->button_flags;
+	bool **elems = (ctl_type == CTL_TYPE_AXIS) ? &dmctx->axis_flags : &dmctx->button_flags;
 	if (ctl >= *nelems) {
 		*elems = xrealloc(*elems, (ctl + 1) * sizeof(**elems));
 		while (*nelems <= ctl) {
@@ -346,7 +346,7 @@ static void set_control_flag(struct device_map_context *dmctx, int ctl_type, int
 
 // Test whether a control (for the specified type) has been mapped to.
 
-static _Bool have_control_flag(struct device_map_context *dmctx, int ctl_type, int ctl) {
+static bool have_control_flag(struct device_map_context *dmctx, int ctl_type, int ctl) {
 	if (ctl_type == CTL_TYPE_AXIS) {
 		return (ctl >= 0) && (ctl < dmctx->naxis_flags) && dmctx->axis_flags[ctl];
 	}
@@ -356,7 +356,7 @@ static _Bool have_control_flag(struct device_map_context *dmctx, int ctl_type, i
 // Test if a particular control (by type) is mapped to (without needing the
 // mapping context, which only exists during initial device add).
 
-static _Bool have_control(struct evdev_js_device *d, int ctl_type, int ctl) {
+static bool have_control(struct evdev_js_device *d, int ctl_type, int ctl) {
 	if (ctl < 0) {
 		return 0;
 	}
@@ -534,8 +534,8 @@ static void process_map(struct device_map_context *dmctx, int ev_type, int ev_co
 		}
 
 		// Determine input type from event type and code
-		_Bool is_hat = (ev_type == EV_ABS) && (ev_code >= ABS_HAT0X && ev_code <= ABS_HAT3Y);
-		_Bool is_axis = (ev_type == EV_ABS) && !is_hat;
+		bool is_hat = (ev_type == EV_ABS) && (ev_code >= ABS_HAT0X && ev_code <= ABS_HAT3Y);
+		bool is_axis = (ev_type == EV_ABS) && !is_hat;
 
 		// Choose which mapping metadata we're going to update based on
 		// this input type:
@@ -670,8 +670,8 @@ static void evdev_js_device_add(struct evdev_js_context *ctx, int evid) {
 		return;
 	}
 
-	_Bool is_gamepad = libevdev_has_event_code(levd, EV_KEY, BTN_GAMEPAD);
-	_Bool is_joystick = !is_gamepad && libevdev_has_event_code(levd, EV_KEY, BTN_JOYSTICK);
+	bool is_gamepad = libevdev_has_event_code(levd, EV_KEY, BTN_GAMEPAD);
+	bool is_joystick = !is_gamepad && libevdev_has_event_code(levd, EV_KEY, BTN_JOYSTICK);
 
 	// Neither gamepad nor joystick: discuss.
 	if (!is_gamepad && !is_joystick) {
@@ -1007,7 +1007,7 @@ static void evdev_js_device_remove(struct evdev_js_context *ctx, int evid) {
 	}
 }
 
-void digital_action(struct evdev_js_device *d, int typ, int ctl, int act, _Bool v) {
+void digital_action(struct evdev_js_device *d, int typ, int ctl, int act, bool v) {
 	if (typ == CTL_TYPE_BUTTON) {
 		if (v) {
 			d->button_controls |= (1 << ctl);
@@ -1038,7 +1038,7 @@ static void evdev_js_device_update(struct evdev_js_device *d) {
 	if (!d->levd) {
 		return;
 	}
-	_Bool report = 0;
+	bool report = 0;
 	while (libevdev_has_event_pending(d->levd)) {
 		if (libevdev_next_event(d->levd, LIBEVDEV_READ_FLAG_NORMAL, &event) != 0) {
 			continue;
@@ -1060,14 +1060,14 @@ static void evdev_js_device_update(struct evdev_js_device *d) {
 				int ctl_high = ccmap->input_state[JS_INPUT_STATE_HIGH].control;
 				int act_high = ccmap->input_state[JS_INPUT_STATE_HIGH].action;
 				if (ctl_low >= 0) {
-					_Bool new_state = (v < 16384);
+					bool new_state = (v < 16384);
 					if (ccmap->input_state[JS_INPUT_STATE_LOW].state != new_state) {
 						digital_action(d, typ_low, ctl_low, act_low, new_state);
 						ccmap->input_state[JS_INPUT_STATE_LOW].state = new_state;
 					}
 				}
 				if (ctl_high >= 0) {
-					_Bool new_state = (v >= 49152);
+					bool new_state = (v >= 49152);
 					if (ccmap->input_state[JS_INPUT_STATE_HIGH].state != new_state) {
 						digital_action(d, typ_high, ctl_high, act_high, new_state);
 						ccmap->input_state[JS_INPUT_STATE_HIGH].state = new_state;
@@ -1085,7 +1085,7 @@ static void evdev_js_device_update(struct evdev_js_device *d) {
 				int ctl = ccmap->input_state[JS_INPUT_STATE_DIRECT].control;
 				int act = ccmap->input_state[JS_INPUT_STATE_DIRECT].action;
 				if (ctl >= 0) {
-					_Bool new_state = event.value;
+					bool new_state = event.value;
 					if (ccmap->input_state[JS_INPUT_STATE_DIRECT].state != new_state) {
 						digital_action(d, typ, ctl, act, new_state);
 						ccmap->input_state[JS_INPUT_STATE_DIRECT].state = new_state;
@@ -1185,8 +1185,8 @@ static struct evdev_js_device *open_device(struct evdev_js_context *ctx, int ind
 		return NULL;
 	}
 
-	_Bool is_gamepad = libevdev_has_event_code(levd, EV_KEY, BTN_GAMEPAD);
-	_Bool is_joystick = !is_gamepad && libevdev_has_event_code(levd, EV_KEY, BTN_JOYSTICK);
+	bool is_gamepad = libevdev_has_event_code(levd, EV_KEY, BTN_GAMEPAD);
+	bool is_joystick = !is_gamepad && libevdev_has_event_code(levd, EV_KEY, BTN_JOYSTICK);
 
 	// Neither gamepad nor joystick: discuss.
 	if (!is_gamepad && !is_joystick) {
@@ -1226,10 +1226,10 @@ static void evdev_js_control_free(void *);
 
 // axis & button specs are basically the same, just track a different
 // "selected" variable.
-static struct evdev_js_control *configure_control(char *spec, unsigned control, _Bool buttons) {
+static struct evdev_js_control *configure_control(char *spec, unsigned control, bool buttons) {
 	unsigned joystick = 0;
-	_Bool inverted = 0;
-	_Bool is_mask = 0;
+	bool inverted = 0;
+	bool is_mask = 0;
 	const char *tmp = NULL;
 	if (spec) {
 		tmp = strsep(&spec, ",");

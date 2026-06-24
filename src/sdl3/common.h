@@ -41,10 +41,10 @@ struct ui_sdl3_interface {
 	// Viewport size not modified by 60Hz scaling
 	struct vo_viewport viewport;
 	// User-specified geometry inhibits auto-resize
-	_Bool user_specified_geometry;
+	bool user_specified_geometry;
 
 	// Pointer state
-	_Bool mouse_hidden;
+	bool mouse_hidden;
 };
 
 extern struct ui_sdl3_interface *global_uisdl3;
@@ -54,7 +54,7 @@ void ui_sdl_init(struct ui_sdl3_interface *, struct ui_cfg *ui_cfg);
 void ui_sdl_free(void *);
 void ui_sdl_run(void *);
 
-_Bool sdl_vo_init(struct ui_sdl3_interface *);
+bool sdl_vo_init(struct ui_sdl3_interface *);
 void sdl_keyboard_init(struct ui_sdl3_interface *);
 
 extern struct joystick_submodule sdl_js_physical;
@@ -91,7 +91,7 @@ bool SDLCALL sdl_x11_event_hook(void *sptr, XEvent *xevent);
 /* These functions will be in the windows32-specific code. */
 
 void sdl_windows32_set_events_window(struct ui_sdl3_interface *uisdl3);
-void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *, _Bool visible);
+void sdl_windows32_set_menu_visible(struct ui_sdl3_interface *, bool visible);
 
 #endif
 

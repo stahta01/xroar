@@ -136,7 +136,7 @@ static unsigned num_trap_defs = 0;
 static struct trap_def *trap_defs = NULL;
 static struct trap_def *cur_trap_def = NULL;
 
-static _Bool tape_motor_state = 0;
+static bool tape_motor_state = 0;
 static event_ticks tape_motor_on_time = 0;
 static struct slist *tape_motor_traps = NULL;
 
@@ -144,7 +144,7 @@ static void set_trap(const char *);
 static void set_trap_count(const char *);
 
 static void handle_trap(void *);
-static void handle_trap_new(void *, _Bool RnW, uint32_t A);
+static void handle_trap_new(void *, bool RnW, uint32_t A);
 static void enable_all_traps(void);
 static void disable_all_traps(void);
 
@@ -167,20 +167,20 @@ struct private_cfg {
 		int keymap;
 		int cpu;
 		char *palette;
-		_Bool bas_dfn;
+		bool bas_dfn;
 		char *bas;
-		_Bool extbas_dfn;
+		bool extbas_dfn;
 		char *extbas;
-		_Bool altbas_dfn;
+		bool altbas_dfn;
 		char *altbas;
-		_Bool ext_charset_dfn;
+		bool ext_charset_dfn;
 		char *ext_charset;
 		int tv_type;
 		int tv_input;
 		int vdg_type;
 		int ram_org;
 		int ram_init;
-		_Bool cart_dfn;
+		bool cart_dfn;
 		char *cart;
 		int ram;
 		struct slist *opts;
@@ -190,9 +190,9 @@ struct private_cfg {
 	struct {
 		char *description;
 		char *type;
-		_Bool rom_dfn;
+		bool rom_dfn;
 		char *rom;
-		_Bool rom2_dfn;
+		bool rom2_dfn;
 		char *rom2;
 		int becker;
 		int autorun;
@@ -202,7 +202,7 @@ struct private_cfg {
 		} mpi;
 		struct slist *opts;
 	} cart;
-	_Bool cart_dfn;
+	bool cart_dfn;
 
 	// Cassettes
 	struct {
@@ -215,7 +215,7 @@ struct private_cfg {
 	struct {
 		int layout;
 		int lang;
-		_Bool translate;
+		bool translate;
 		struct slist *type_list;
 	} kbd;
 
@@ -235,19 +235,19 @@ struct private_cfg {
 
 	// Video
 	struct {
-		_Bool fullscreen;
+		bool fullscreen;
 		int frameskip;
 		int ccr;
 		int gl_filter;
 		int vsync;
-		_Bool vdg_inverted_text;
+		bool vdg_inverted_text;
 		int picture;
-		_Bool ntsc_scaling;
+		bool ntsc_scaling;
 		int brightness;
 		int contrast;
 		int saturation;
 		int hue;
-		_Bool colour_killer;
+		bool colour_killer;
 	} vo;
 
 	// Audio
@@ -260,7 +260,7 @@ struct private_cfg {
 	// Joysticks
 	struct {
 #ifdef HAVE_WASM
-		_Bool wasm_virtual;
+		bool wasm_virtual;
 #endif
 		char *db_file;
 		char *description;
@@ -283,16 +283,16 @@ struct private_cfg {
 #ifdef WANT_TRAPS
 		struct trap_def trap_def;
 #endif
-		_Bool ratelimit;
+		bool ratelimit;
 	} debug;
 
 #ifndef HAVE_WASM
 	// Other options
 	struct {
-		_Bool joystick_print_list;
-		_Bool config_print;
-		_Bool config_print_all;
-		_Bool config_autosave;
+		bool joystick_print_list;
+		bool config_print;
+		bool config_print_all;
+		bool config_autosave;
 	} help;
 #endif
 };
@@ -369,7 +369,7 @@ static void set_joystick_button(const char *spec);
 #ifndef HAVE_WASM
 static void helptext(void);
 static void versiontext(void);
-static void config_print_all(FILE *f, _Bool all);
+static void config_print_all(FILE *f, bool all);
 #endif
 
 static void xroar_ui_state_notify(void *, int tag, void *smsg);
@@ -392,9 +392,9 @@ static struct xconfig_option const xroar_options[];
 
 // Config autosave functions
 #ifdef AUTOSAVE_PREFIX
-static _Bool inhibit_autosave;
-static _Bool have_autosave_flag_file(void);
-static _Bool create_autosave_flag_file(void);
+static bool inhibit_autosave;
+static bool have_autosave_flag_file(void);
+static bool create_autosave_flag_file(void);
 static void remove_autosave_flag_file(void);
 #endif
 
@@ -879,8 +879,8 @@ static struct {
 struct ui_interface *xroar_init(int argc, char **argv) {
 	int argn = 1, ret;
 	char *conffile = NULL;
-	_Bool no_conffile = 0;
-	_Bool no_builtin = 0;
+	bool no_conffile = 0;
+	bool no_builtin = 0;
 #ifdef WINDOWS32
 	int alloc_console = -1;
 #endif
@@ -1027,7 +1027,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	_Bool no_cart = (private_cfg.cart_dfn && selected_cart_config == NULL);
+	bool no_cart = (private_cfg.cart_dfn && selected_cart_config == NULL);
 
 	// Finish any machine or cart config on command line.
 	set_machine(NULL);
@@ -1105,7 +1105,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	// Default to enabling default_cart (typically a DOS cart)
-	_Bool auto_dos = 1;
+	bool auto_dos = 1;
 
 	// Attaching a tape generally means we don't want a DOS.
 	if (!selected_cart_config && private_cfg.file.tape) {
@@ -1369,7 +1369,7 @@ void xroar_init_finish(void) {
 		// Floppy disks
 		for (unsigned i = 0; i < 4; i++) {
 			if (private_cfg.file.fd[i]) {
-				_Bool autorun = (autorun_media_slot == (media_slot_fd0 + i));
+				bool autorun = (autorun_media_slot == (media_slot_fd0 + i));
 				xroar_load_disk(private_cfg.file.fd[i], i, autorun);
 			}
 		}
@@ -1434,7 +1434,7 @@ static void xroar_ui_set_config_autosave(void *sptr, int tag, void *smsg) {
 #ifndef AUTOSAVE_PREFIX
 	uimsg->value = 0;
 #else
-	_Bool autosave = private_cfg.help.config_autosave;
+	bool autosave = private_cfg.help.config_autosave;
 	autosave = ui_msg_adjust_value_range(uimsg, autosave, 0, 0, 1, UI_ADJUST_FLAG_CYCLE)
 	           && !inhibit_autosave;
 	private_cfg.help.config_autosave = autosave;
@@ -1460,7 +1460,7 @@ static void save_config(void) {
  */
 
 void xroar_shutdown(void) {
-	static _Bool shutting_down = 0;
+	static bool shutting_down = 0;
 	if (shutting_down)
 		return;
 	shutting_down = 1;
@@ -1520,8 +1520,8 @@ void xroar_shutdown(void) {
 #define PSEP "/"
 #endif
 
-static _Bool have_autosave_flag_file(void) {
-	_Bool have_flag_file = 0;
+static bool have_autosave_flag_file(void) {
+	bool have_flag_file = 0;
 	sds flag_file = path_interp(AUTOSAVE_PREFIX""PSEP"autosave");
 	struct stat statbuf;
 	have_flag_file = (stat(flag_file, &statbuf) == 0);
@@ -1529,7 +1529,7 @@ static _Bool have_autosave_flag_file(void) {
 	return have_flag_file;
 }
 
-static _Bool create_autosave_flag_file(void) {
+static bool create_autosave_flag_file(void) {
 	// If flag file already exists, do nothing
 	if (have_autosave_flag_file()) {
 		return 1;
@@ -1546,9 +1546,9 @@ static _Bool create_autosave_flag_file(void) {
 		}
 	} else {
 #ifdef WINDOWS32
-		_Bool err = (_mkdir(prefix) != 0);
+		bool err = (_mkdir(prefix) != 0);
 #else
-		_Bool err = (mkdir(prefix, 0755) != 0);
+		bool err = (mkdir(prefix, 0755) != 0);
 #endif
 		if (err) {
 			LOG_MOD_WARN("config", "%s: %s\n", prefix, strerror(errno));
@@ -1726,14 +1726,14 @@ static void do_load_binaries(void *sptr) {
 	(void)sptr;
 	for (struct slist *iter = private_cfg.file.binaries; iter; iter = iter->next) {
 		char *filename = iter->data;
-		_Bool autorun = (autorun_media_slot == media_slot_binary) && !iter->next;
+		bool autorun = (autorun_media_slot == media_slot_binary) && !iter->next;
 		xroar_load_file_by_type(filename, autorun);
 	}
 	slist_free_full(private_cfg.file.binaries, (slist_free_func)free);
 	private_cfg.file.binaries = NULL;
 }
 
-void xroar_load_disk(const char *filename, int drive, _Bool autorun) {
+void xroar_load_disk(const char *filename, int drive, bool autorun) {
 	if (drive < 0 || drive >= 4)
 		drive = 0;
 	xroar_insert_disk_file(drive, filename);
@@ -1863,8 +1863,8 @@ void xroar_insert_disk_file(int drive, const char *filename) {
 	if (!filename) return;
 	struct vdisk *disk = vdisk_load(filename);
 	vdrive_insert_disk(xroar.vdrive_interface, drive, disk);
-	_Bool write_enable = 0;
-	_Bool write_back = 0;
+	bool write_enable = 0;
+	bool write_back = 0;
 	if (disk) {
 		write_enable = !disk->write_protect;  // note inverted
 		write_back = disk->write_back;
@@ -1930,7 +1930,7 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 		// many time a BASIC ROM is expected to flip that state, and
 		// ignore the first N?
 		{
-			_Bool new_motor_state = (value > 0);
+			bool new_motor_state = (value > 0);
 			if (new_motor_state == tape_motor_state) {
 				break;
 			}
@@ -1938,8 +1938,8 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 			if (tape_motor_state) {
 				tape_motor_on_time = event_current_tick;
 			}
-			_Bool motor_off = !tape_motor_state;
-			_Bool cancel_timeout = tape_motor_state;
+			bool motor_off = !tape_motor_state;
+			bool cancel_timeout = tape_motor_state;
 			if (motor_off) {
 				int delta = event_tick_delta(event_current_tick, tape_motor_on_time);
 				if (delta >= 0 && delta <= 416) {
@@ -2075,9 +2075,9 @@ static void xroar_ui_set_frameskip(void *sptr, int tag, void *smsg) {
 	emu->state.vo.frameskip = uimsg->value;
 }
 
-void xroar_set_pause(_Bool notify, int action) {
+void xroar_set_pause(bool notify, int action) {
 	if (xroar.machine->set_pause) {
-		_Bool state = xroar.machine->set_pause(xroar.machine, action);
+		bool state = xroar.machine->set_pause(xroar.machine, action);
 		// TODO: UI indication of paused state
 		(void)state;
 		(void)notify;
@@ -2200,8 +2200,8 @@ void xroar_connect_machine(void) {
 
 	connect_interfaces();
 
-	_Bool is_coco3 = strcmp(xroar.machine_config->architecture, "coco3") == 0;
-	_Bool is_coco = is_coco3 || strcmp(xroar.machine_config->architecture, "coco") == 0;
+	bool is_coco3 = strcmp(xroar.machine_config->architecture, "coco3") == 0;
+	bool is_coco = is_coco3 || strcmp(xroar.machine_config->architecture, "coco") == 0;
 
 	if (is_coco) {
 		vdisk_set_interleave(VDISK_SINGLE_DENSITY, 5);
@@ -2255,7 +2255,7 @@ static void xroar_ui_set_machine(void *sptr, int tag, void *smsg) {
 	// Verify ROMs required by this machine (and any default cartridge)
 	// are available in the WebAssembly build.  If not, schedule an event
 	// to retry once any file transfers are complete.
-	_Bool waiting = !wasm_ui_prepare_machine(mc);
+	bool waiting = !wasm_ui_prepare_machine(mc);
 	if (mc->cart_enabled && mc->default_cart) {
 		struct cart_config *cc = cart_config_by_name(mc->default_cart);
 		cart_config_complete(cc);
@@ -2335,7 +2335,7 @@ static void xroar_ui_set_cartridge(void *sptr, int tag, void *smsg) {
 	// Verify ROMs required by this cartridge are available in the
 	// WebAssembly build.  If not, schedule an event to retry once any file
 	// transfers are complete.
-	_Bool waiting = !wasm_ui_prepare_cartridge(cc);
+	bool waiting = !wasm_ui_prepare_cartridge(cc);
 	if (waiting) {
 		wasm_queue_message_value_event(ui_tag_cartridge, cc ? cc->id : 0);
 		uimsg->value = old_ccid;
@@ -2832,7 +2832,7 @@ static void set_kbd_bind(const char *spec) {
 		} else {
 			dkey = tmp;
 		}
-		_Bool preempt = 0;
+		bool preempt = 0;
 		if (flag && c_strncasecmp(flag, "pre", 3) == 0) {
 			preempt = 1;
 		}
@@ -2948,7 +2948,7 @@ static void parse_range_ul(const char *str, unsigned long *a, unsigned long *b) 
 	free(str_copy);
 }
 
-static void enable_trap(struct trap_def *trap, _Bool enable) {
+static void enable_trap(struct trap_def *trap, bool enable) {
 	if (0 == c_strcasecmp(trap->cond, "immediate") ||
 	    0 == strcmp(trap->cond, "-")) {
 		if (enable) {
@@ -3025,7 +3025,7 @@ static void disable_all_traps(void) {
 }
 
 // Temporarily wrap handle_trap() until we modernise watchpoints too
-static void handle_trap_new(void *sptr, _Bool RnW, uint32_t A) {
+static void handle_trap_new(void *sptr, bool RnW, uint32_t A) {
 	(void)RnW;
 	(void)A;
 	handle_trap(sptr);
@@ -3660,7 +3660,7 @@ static void versiontext(void) {
  */
 
 #ifndef HAVE_WASM
-static void config_print_all(FILE *f, _Bool all) {
+static void config_print_all(FILE *f, bool all) {
 	fputs("# Machines\n\n", f);
 	xroar_cfg_print_string(f, all, "default-machine", private_cfg.default_machine, NULL);
 	fputs("\n", f);
@@ -3803,7 +3803,7 @@ void xroar_cfg_print_indent(FILE *f) {
 	}
 }
 
-void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int normal) {
+void xroar_cfg_print_bool(FILE *f, bool all, char const *opt, int value, int normal) {
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent(f);
@@ -3816,14 +3816,14 @@ void xroar_cfg_print_bool(FILE *f, _Bool all, char const *opt, int value, int no
 	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_int(FILE *f, _Bool all, char const *opt, int value, int normal) {
+void xroar_cfg_print_int(FILE *f, bool all, char const *opt, int value, int normal) {
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent(f);
 	fprintf(f, "%s %d\n", opt, value);
 }
 
-void xroar_cfg_print_int_nz(FILE *f, _Bool all, char const *opt, int value) {
+void xroar_cfg_print_int_nz(FILE *f, bool all, char const *opt, int value) {
 	if (!all && value == 0)
 		return;
 	xroar_cfg_print_indent(f);
@@ -3834,21 +3834,21 @@ void xroar_cfg_print_int_nz(FILE *f, _Bool all, char const *opt, int value) {
 	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_double(FILE *f, _Bool all, char const *opt, double value, double normal) {
+void xroar_cfg_print_double(FILE *f, bool all, char const *opt, double value, double normal) {
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent(f);
 	fprintf(f, "%s %.4f\n", opt, value);
 }
 
-void xroar_cfg_print_flags(FILE *f, _Bool all, char const *opt, unsigned value) {
+void xroar_cfg_print_flags(FILE *f, bool all, char const *opt, unsigned value) {
 	if (!all && value == 0)
 		return;
 	xroar_cfg_print_indent(f);
 	fprintf(f, "%s 0x%x\n", opt, value);
 }
 
-void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *value, char const *normal) {
+void xroar_cfg_print_string(FILE *f, bool all, char const *opt, char const *value, char const *normal) {
 	if (!all && !value)
 		return;
 	xroar_cfg_print_indent(f);
@@ -3862,7 +3862,7 @@ void xroar_cfg_print_string(FILE *f, _Bool all, char const *opt, char const *val
 	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int normal, struct xconfig_enum const *e) {
+void xroar_cfg_print_enum(FILE *f, bool all, char const *opt, int value, int normal, struct xconfig_enum const *e) {
 	if (!all && value == normal)
 		return;
 	xroar_cfg_print_indent(f);
@@ -3875,7 +3875,7 @@ void xroar_cfg_print_enum(FILE *f, _Bool all, char const *opt, int value, int no
 	fprintf(f, "# %s undefined\n", opt);
 }
 
-void xroar_cfg_print_string_list(FILE *f, _Bool all, char const *opt, struct slist *l) {
+void xroar_cfg_print_string_list(FILE *f, bool all, char const *opt, struct slist *l) {
 	if (!all  && !l)
 		return;
 	xroar_cfg_print_indent(f);

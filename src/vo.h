@@ -123,9 +123,9 @@ struct vo_picture_area {
 // Viewport and Active Area defined in vo_render.h.
 
 struct vo_interface {
-	_Bool is_fullscreen;
-	_Bool show_menubar;
-	_Bool vsync;
+	bool is_fullscreen;
+	bool show_menubar;
+	bool vsync;
 
 	// Messenger client id
 	int msgr_client_id;
@@ -154,7 +154,7 @@ struct vo_interface {
 	// Mouse tracking
 	struct {
 		int axis[2];
-		_Bool button[3];
+		bool button[3];
 	} mouse;
 
 	// Called by vo_free before freeing the struct to handle
@@ -274,7 +274,7 @@ void vo_set_draw_area(struct vo_interface *, int x, int y, int w, int h);
 // vo_render_vsync().  Called with draw=0 during frameskip, as we still want to
 // count scanlines.
 
-inline void vo_vsync(struct vo_interface *vo, _Bool draw) {
+inline void vo_vsync(struct vo_interface *vo, bool draw) {
 	if (draw)
 		DELEGATE_SAFE_CALL(vo->draw);
 	vo_render_vsync(vo->renderer);

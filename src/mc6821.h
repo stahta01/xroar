@@ -55,11 +55,11 @@ struct MC6821_side {
 	uint8_t direction_register;
 	uint8_t output_register;
 
-	_Bool cx1;  // input-only
-	_Bool cx2;
+	bool cx1;  // input-only
+	bool cx2;
 	uint8_t irq1_received;
 	uint8_t irq2_received;
-	_Bool irq;
+	bool irq;
 
 	// For calculating pin state
 	uint8_t out_source;  // ignored for side A
@@ -68,10 +68,10 @@ struct MC6821_side {
 	uint8_t in_sink;
 
 	// Same for Cx2
-	_Bool cx2_out_source;  // ignored for side A
-	_Bool cx2_out_sink;
-	_Bool cx2_in_source;  // ignored for side A
-	_Bool cx2_in_sink;
+	bool cx2_out_source;  // ignored for side A
+	bool cx2_out_sink;
+	bool cx2_in_source;  // ignored for side A
+	bool cx2_in_sink;
 
 	// There is a propagation delay of about 1µs (independent of clock
 	// rate) from an active transition causing the IRQ line to fall.
@@ -122,7 +122,7 @@ void mc6821_write(struct MC6821 *pia, uint16_t A, uint8_t D);
 // Cx1 is input-only, and acts as an interrupt trigger with configurable active
 // edge.  This function sets the current level seen at the pin:
 
-void mc6821_set_cx1(struct MC6821_side *side, _Bool level);
+void mc6821_set_cx1(struct MC6821_side *side, bool level);
 
 // After modifying the external sink/source of a port or the Cx2 control line,
 // call these functions to update internal state.  For Cx2, this may trigger an

@@ -56,7 +56,7 @@ struct ao_macosx_interface {
 #endif
 
 	void *callback_buffer;
-	_Bool shutting_down;
+	bool shutting_down;
 
 	unsigned nfragments;
 	unsigned fragment_nbytes;

@@ -57,7 +57,7 @@ struct hkbd_js_control {
 		} axis;
 		struct {
 			uint8_t key_code;
-			_Bool value;
+			bool value;
 		} button;
 	};
 };
@@ -84,8 +84,8 @@ void hkbd_js_init(void) {
 
 // Returns true if handled as a virtual joystick control
 
-_Bool hkbd_js_keypress(uint8_t code) {
-	_Bool handled = 0;
+bool hkbd_js_keypress(uint8_t code) {
+	bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (code == enabled_axis[i]->axis.key0_code) {
@@ -109,8 +109,8 @@ _Bool hkbd_js_keypress(uint8_t code) {
 	return handled;
 }
 
-_Bool hkbd_js_keyrelease(uint8_t code) {
-	_Bool handled = 0;
+bool hkbd_js_keyrelease(uint8_t code) {
+	bool handled = 0;
 	for (unsigned i = 0; i < MAX_AXES; i++) {
 		if (enabled_axis[i]) {
 			if (code == enabled_axis[i]->axis.key0_code) {

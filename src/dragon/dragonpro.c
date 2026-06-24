@@ -101,10 +101,10 @@ struct dragonpro {
 	uint8_t old_ay_io;  // to test if AY I/O output has changed
 	struct {
 		unsigned device_select;
-		_Bool motor_enable;
-		_Bool single_density;
-		_Bool precomp_enable;
-		_Bool nmi_enable;
+		bool motor_enable;
+		bool single_density;
+		bool precomp_enable;
+		bool nmi_enable;
 		struct WD279X *fdc;
 		struct vdrive_interface *vdrive_interface;
 	} dos;
@@ -131,14 +131,14 @@ static const struct ser_struct_data dragonpro_ser_struct_data = {
 
 static void dragonpro_config_complete(struct machine_config *);
 
-static _Bool dragonpro_has_interface(struct part *, const char *ifname);
+static bool dragonpro_has_interface(struct part *, const char *ifname);
 static void dragonpro_attach_interface(struct part *, const char *ifname, void *intf);
 
-static void dragonpro_reset(struct machine *m, _Bool hard);
+static void dragonpro_reset(struct machine *m, bool hard);
 
-static _Bool dragonpro_read_byte(struct dragon *, unsigned A);
-static _Bool dragonpro_write_byte(struct dragon *, unsigned A);
-static void dragonpro_cpu_cycle(void *sptr, _Bool RnW, uint16_t A);
+static bool dragonpro_read_byte(struct dragon *, unsigned A);
+static bool dragonpro_write_byte(struct dragon *, unsigned A);
+static void dragonpro_cpu_cycle(void *sptr, bool RnW, uint16_t A);
 
 #define dragonpro_pia2a_data_preread NULL
 static void dragonpro_pia2a_data_postwrite(void *sptr);
@@ -150,14 +150,14 @@ static void dragonpro_pia2b_control_postwrite(void *sptr);
 static void dragonpro_ay891x_data_postwrite(void *sptr);
 
 // Handle signals from WD2797
-static void set_drq(void *sptr, _Bool value);
-static void set_intrq(void *sptr, _Bool value);
+static void set_drq(void *sptr, bool value);
+static void set_intrq(void *sptr, bool value);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct part *dragonpro_allocate(void);
 static void dragonpro_initialise(struct part *, void *options);
-static _Bool dragonpro_finish(struct part *);
+static bool dragonpro_finish(struct part *);
 static void dragonpro_free(struct part *);
 
 static const struct partdb_entry_funcs dragonpro_funcs = {
@@ -219,7 +219,7 @@ static void dragonpro_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }
 
-static _Bool dragonpro_finish(struct part *p) {
+static bool dragonpro_finish(struct part *p) {
 	assert(p != NULL);
 	struct dragonpro *mdp = (struct dragonpro *)p;
 	struct dragon *md = &mdp->dragon;
@@ -338,7 +338,7 @@ static void dragonpro_config_complete(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool dragonpro_has_interface(struct part *p, const char *ifname) {
+static bool dragonpro_has_interface(struct part *p, const char *ifname) {
 	if (0 == strcmp(ifname, "floppy"))
 		return 1;
 	if (0 == strcmp(ifname, "sound"))
@@ -395,7 +395,7 @@ static void dragonpro_attach_interface(struct part *p, const char *ifname, void 
 	wd279x_ready(mdp->dos.fdc, 1);
 }
 
-static void dragonpro_reset(struct machine *m, _Bool hard) {
+static void dragonpro_reset(struct machine *m, bool hard) {
 	struct dragonpro *mdp = (struct dragonpro *)m;
 	dragon_reset(m, hard);
 	mos6551_reset(mdp->ACIA);
@@ -409,7 +409,7 @@ static void dragonpro_reset(struct machine *m, _Bool hard) {
 static uint8_t dragonpro_dos_read(struct dragon *, uint16_t A, uint8_t D);
 static uint8_t dragonpro_dos_write(struct dragon *, uint16_t A, uint8_t D);
 
-static _Bool dragonpro_read_byte(struct dragon *md, unsigned A) {
+static bool dragonpro_read_byte(struct dragon *md, unsigned A) {
 	struct dragonpro *mdp = (struct dragonpro *)md;
 
 	switch (md->SAM->S) {
@@ -442,7 +442,7 @@ static _Bool dragonpro_read_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool dragonpro_write_byte(struct dragon *md, unsigned A) {
+static bool dragonpro_write_byte(struct dragon *md, unsigned A) {
 	struct dragonpro *mdp = (struct dragonpro *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
@@ -475,7 +475,7 @@ static _Bool dragonpro_write_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-static void dragonpro_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static void dragonpro_cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct dragonpro *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
@@ -488,7 +488,7 @@ static void dragonpro_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	// Advance clock, collect IRQs
 	if (!md->clock_inhibit) {
 		dragon_advance_clock(md, ncycles);
-		_Bool supp_firq = mdp->PIA2->a.irq || mdp->PIA2->b.irq;
+		bool supp_firq = mdp->PIA2->a.irq || mdp->PIA2->b.irq;
 		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq);
 		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq || supp_firq);
 	}
@@ -505,8 +505,8 @@ static void dragonpro_pia2a_data_postwrite(void *sptr) {
 	mdp->PIA2->b.in_sink = 0xff;
 	mdp->PIA2->b.in_source = 0xff;
 	uint8_t out = PIA_VALUE_A(mdp->PIA2);
-	_Bool BDIR = out & 0x01;
-	_Bool BC1 = out & 0x02;
+	bool BDIR = out & 0x01;
+	bool BC1 = out & 0x02;
 	mdp->rom = (out & 0x04) ? mdp->BOOT : mdp->dragon.ROM0;
 	sound_update(md->snd);
 	uint8_t D = PIA_VALUE_B(mdp->PIA2);
@@ -518,7 +518,7 @@ static void dragonpro_pia2a_data_postwrite(void *sptr) {
 
 static void dragonpro_pia2a_control_postwrite(void *sptr) {
 	struct dragonpro *mdp = sptr;
-	_Bool nmi_enable = PIA_VALUE_CA2(mdp->PIA2);
+	bool nmi_enable = PIA_VALUE_CA2(mdp->PIA2);
 	if (nmi_enable != mdp->dos.nmi_enable) {
 		LOG_MOD_DEBUG(2, "dragonpro", "disk NMI %s\n", nmi_enable?"ENABLED":"DISABLED");
 	}
@@ -620,12 +620,12 @@ static uint8_t dragonpro_dos_write(struct dragon *md, uint16_t A, uint8_t D) {
 	return D;
 }
 
-static void set_drq(void *sptr, _Bool value) {
+static void set_drq(void *sptr, bool value) {
 	struct dragonpro *mdp = sptr;
 	mc6821_set_cx1(&mdp->PIA2->b, value);
 }
 
-static void set_intrq(void *sptr, _Bool value) {
+static void set_intrq(void *sptr, bool value) {
 	struct dragonpro *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 

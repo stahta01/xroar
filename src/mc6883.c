@@ -76,8 +76,8 @@ static const int vdg_hclrs[8] = {  CLR4, CLR3, CLR4, CLR3, CLR4, CLR3, CLR4, CLR
 
 struct vcounter {
 	uint16_t value;
-	_Bool input;
-	_Bool output;
+	bool input;
+	bool output;
 	uint16_t val_mod;
 	uint16_t out_mask;
 	int input_from;
@@ -139,7 +139,7 @@ struct MC6883_private {
 	uint16_t F;
 
 	// P: Page bit.
-	_Bool P;
+	bool P;
 
         // R: MPU rate.
         unsigned R;
@@ -148,15 +148,15 @@ struct MC6883_private {
         unsigned M;
 
 	// TY: Map type.  0 selects 32K RAM, 32K ROM.  1 selects 64K RAM.
-	_Bool TY;
+	bool TY;
 
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 	// -- Timing
 
-	_Bool mpu_rate_fast;
-	_Bool mpu_rate_ad;
-	_Bool running_fast;
-	_Bool extend_slow_cycle;
+	bool mpu_rate_fast;
+	bool mpu_rate_ad;
+	bool running_fast;
+	bool extend_slow_cycle;
 
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 	// -- Address multiplexer
@@ -186,7 +186,7 @@ struct MC6883_private {
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 	// -- Variant
 
-	_Bool want_785;
+	bool want_785;
 
 };
 
@@ -251,8 +251,8 @@ static struct ser_struct ser_struct_mc6883[] = {
 	SER_ID_STRUCT_ELEM(38, struct MC6883_private, want_785),
 };
 
-static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data mc6883_ser_struct_data = {
 	.elems = ser_struct_mc6883,
@@ -269,13 +269,13 @@ static void update_from_register(struct MC6883_private *);
 // SAM part creation
 
 static struct part *mc6883_allocate(void);
-static _Bool mc6883_finish(struct part *p);
+static bool mc6883_finish(struct part *p);
 
 static void mc6883_reset(struct MC6883 *);
-static int mc6883_mem_cycle(void *, _Bool RnW, uint16_t A);
-static unsigned mc6883_decode(struct MC6883 *, _Bool RnW, uint16_t A);
-static void mc6883_vdg_hsync(struct MC6883 *, _Bool level);
-static void mc6883_vdg_fsync(struct MC6883 *, _Bool level);
+static int mc6883_mem_cycle(void *, bool RnW, uint16_t A);
+static unsigned mc6883_decode(struct MC6883 *, bool RnW, uint16_t A);
+static void mc6883_vdg_hsync(struct MC6883 *, bool level);
+static void mc6883_vdg_fsync(struct MC6883 *, bool level);
 static int mc6883_vdg_bytes(struct MC6883 *, int nbytes);
 static void mc6883_set_register(struct MC6883 *, unsigned value);
 static unsigned mc6883_get_register(struct MC6883 *);
@@ -324,7 +324,7 @@ static struct part *mc6883_allocate(void) {
 	return p;
 }
 
-static _Bool mc6883_finish(struct part *p) {
+static bool mc6883_finish(struct part *p) {
 	struct MC6883_private *sam = (struct MC6883_private *)p;
 	sam->want_785 = part_is_a(p, "SN74LS785");
 	sam->Vprev = sam->V;
@@ -333,12 +333,12 @@ static _Bool mc6883_finish(struct part *p) {
 	return 1;
 }
 
-_Bool mc6883_is_a(struct part *p, const char *name) {
+bool mc6883_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "SN74LS783") == 0;
 }
 
-static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
 	switch (tag) {
 	case MC6883_SER_REG:
@@ -378,7 +378,7 @@ static _Bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6883_private *sam = sptr;
 	(void)sam;
 	(void)sh;
@@ -430,26 +430,26 @@ static void mc6883_reset(struct MC6883 *samp) {
 static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static int mc6883_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	int ncycles;
-	_Bool fast_cycle;
-	_Bool want_register_update = 0;
+	bool fast_cycle;
+	bool want_register_update = 0;
 
-	_Bool is_FFxx    = ((A >> 8) & 0xff) == 0xff;
-	_Bool is_IO0     = is_FFxx && ((A >> 5) & 0x7) == 0x0;  // FF0x and FF1x
-	_Bool is_IO1     = is_FFxx && ((A >> 5) & 0x7) == 0x1;  // FF2x and FF3x
-	_Bool is_IO2     = is_FFxx && ((A >> 5) & 0x7) == 0x2;  // FF4x and FF5x
-	_Bool is_SAM_REG = is_FFxx && ((A >> 5) & 0x7) == 0x6;  // FFCx and FFDx
-	_Bool is_IRQ_VEC = is_FFxx && ((A >> 5) & 0x7) == 0x7;  // FFEx and FFFx
+	bool is_FFxx    = ((A >> 8) & 0xff) == 0xff;
+	bool is_IO0     = is_FFxx && ((A >> 5) & 0x7) == 0x0;  // FF0x and FF1x
+	bool is_IO1     = is_FFxx && ((A >> 5) & 0x7) == 0x1;  // FF2x and FF3x
+	bool is_IO2     = is_FFxx && ((A >> 5) & 0x7) == 0x2;  // FF4x and FF5x
+	bool is_SAM_REG = is_FFxx && ((A >> 5) & 0x7) == 0x6;  // FFCx and FFDx
+	bool is_IRQ_VEC = is_FFxx && ((A >> 5) & 0x7) == 0x7;  // FFEx and FFFx
 
-	_Bool is_8xxx = ((A >> 13) & 0x7) == 0x4;
-	_Bool is_Axxx = ((A >> 13) & 0x7) == 0x5;
-	_Bool is_Cxxx = ((A >> 14) & 0x3) == 0x3 && !is_FFxx;
-	_Bool is_upper_32K = is_8xxx || is_Axxx || is_Cxxx;
+	bool is_8xxx = ((A >> 13) & 0x7) == 0x4;
+	bool is_Axxx = ((A >> 13) & 0x7) == 0x5;
+	bool is_Cxxx = ((A >> 14) & 0x3) == 0x3 && !is_FFxx;
+	bool is_upper_32K = is_8xxx || is_Axxx || is_Cxxx;
 
-	_Bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
+	bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
 
 	if (!sam->want_785) {
 		// Regular '783 behaviour
@@ -560,7 +560,7 @@ static int mc6883_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 // Just the address decode from mc6883_mem_cycle().  Used to verify that a
 // breakpoint refers to ROM.
 
-static unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
+static unsigned mc6883_decode(struct MC6883 *samp, bool RnW, uint16_t A) {
 	const struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if ((A >> 8) == 0xff) {
 		// I/O area
@@ -574,8 +574,8 @@ static unsigned mc6883_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
 static void vcounter_set(struct MC6883_private *sam, int i, int val);
 
 static void vcounter_update(struct MC6883_private *sam, int i) {
-	_Bool old_input = sam->vcounter[i].input;
-	_Bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
+	bool old_input = sam->vcounter[i].input;
+	bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
 	if (new_input != old_input) {
 		sam->vcounter[i].input = new_input;
 		if (!new_input) {
@@ -594,7 +594,7 @@ static void vcounter_set(struct MC6883_private *sam, int i, int val) {
 	}
 }
 
-static void mc6883_vdg_hsync(struct MC6883 *samp, _Bool level) {
+static void mc6883_vdg_hsync(struct MC6883 *samp, bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (level)
 		return;
@@ -637,7 +637,7 @@ static inline void vcounter_reset(struct MC6883_private *sam, int i) {
 	sam->vcounter[i].output = 0;
 }
 
-static void mc6883_vdg_fsync(struct MC6883 *samp, _Bool level) {
+static void mc6883_vdg_fsync(struct MC6883 *samp, bool level) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 	if (!level) {
 		return;

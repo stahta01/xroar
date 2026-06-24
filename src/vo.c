@@ -215,7 +215,7 @@ void vo_set_draw_area(struct vo_interface *vo, int x, int y, int w, int h) {
 	}
 }
 
-extern inline void vo_vsync(struct vo_interface *vo, _Bool draw);
+extern inline void vo_vsync(struct vo_interface *vo, bool draw);
 extern inline void vo_refresh(struct vo_interface *vo);
 
 // Helper function to parse geometry string
@@ -227,7 +227,7 @@ void vo_parse_geometry(const char *str, struct vo_geometry *geometry) {
 	geometry->flags = 0;
 
 	while (*str) {
-		_Bool is_x = (*str == 'x' || *str == 'X');
+		bool is_x = (*str == 'x' || *str == 'X');
 		if (is_x)
 			str++;
 		char *next;
@@ -236,7 +236,7 @@ void vo_parse_geometry(const char *str, struct vo_geometry *geometry) {
 			break;
 
 		if (*str == '+' || *str == '-') {
-			_Bool is_negative = (*str == '-');
+			bool is_negative = (*str == '-');
 			str++;
 			if (!(geometry->flags & VO_GEOMETRY_X)) {
 				geometry->flags |= VO_GEOMETRY_X;

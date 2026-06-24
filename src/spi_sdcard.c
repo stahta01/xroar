@@ -64,8 +64,8 @@ struct spi_sdcard {
 	unsigned blkcount;
 	unsigned respcount;
 	unsigned csdcount;
-	_Bool idle_state;
-	_Bool acmd;
+	bool idle_state;
+	bool acmd;
 };
 
 #define SPI_SDCARD_SER_CMDARG (5)
@@ -86,8 +86,8 @@ static const struct ser_struct ser_struct_spi_sdcard[] = {
 	SER_ID_STRUCT_ELEM(12, struct spi_sdcard, acmd),
 };
 
-static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data spi_sdcard_ser_struct_data = {
 	.elems = ser_struct_spi_sdcard,
@@ -107,7 +107,7 @@ static const uint8_t csd[16] = { 0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, 0x00,
 #define CMD(x) (0x40 | x)
 #define ACMD(x) (APP_FLAG | CMD(x))
 
-static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active);
+static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, bool ss_active);
 static void spi_sdcard_reset(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -116,10 +116,10 @@ static void spi_sdcard_reset(void *sptr);
 
 static struct part *spi_sdcard_allocate(void);
 static void spi_sdcard_initialise(struct part *p, void *options);
-static _Bool spi_sdcard_finish(struct part *p);
+static bool spi_sdcard_finish(struct part *p);
 static void spi_sdcard_free(struct part *p);
 
-static _Bool spi_sdcard_is_a(struct part *p, const char *name);
+static bool spi_sdcard_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs spi_sdcard_funcs = {
 	.allocate = spi_sdcard_allocate,
@@ -153,7 +153,7 @@ static void spi_sdcard_initialise(struct part *p, void *options) {
 	}
 }
 
-static _Bool spi_sdcard_finish(struct part *p) {
+static bool spi_sdcard_finish(struct part *p) {
 	struct spi_sdcard *sdcard = (struct spi_sdcard *)p;
 	if (!sdcard->imagefile)
 		return 0;
@@ -172,7 +172,7 @@ static void spi_sdcard_free(struct part *p) {
 	free(sdcard->imagefile);
 }
 
-static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct spi_sdcard *sdcard = sptr;
 	switch (tag) {
 	case SPI_SDCARD_SER_CMDARG:
@@ -188,7 +188,7 @@ static _Bool spi_sdcard_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct spi_sdcard *sdcard = sptr;
 	switch (tag) {
 	case SPI_SDCARD_SER_CMDARG:
@@ -203,7 +203,7 @@ static _Bool spi_sdcard_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool spi_sdcard_is_a(struct part *p, const char *name) {
+static bool spi_sdcard_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "spi-device") == 0;
 }
@@ -222,7 +222,7 @@ static void write_image(struct spi_sdcard *sdcard, uint8_t *buffer, uint32_t lba
 	}
 }
 
-static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, _Bool ss_active) {
+static uint8_t spi_sdcard_transfer(void *sptr, uint8_t data_out, bool ss_active) {
 	struct spi_sdcard *sdcard = sptr;
 	enum sd_states next = sdcard->state_sd;
 	uint8_t data_in = 0xff;

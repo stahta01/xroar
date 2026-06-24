@@ -43,12 +43,12 @@ struct TCC1014 {
 
 	unsigned S;
 	uint32_t Z;
-	_Bool RAS;
+	bool RAS;
 
-	_Bool FIRQ;
-	_Bool IRQ;
+	bool FIRQ;
+	bool IRQ;
 
-	_Bool IL0, IL1, IL2;
+	bool IL0, IL1, IL2;
 
 	uint8_t *CPUD;
 
@@ -81,13 +81,13 @@ struct TCC1014 {
 };
 
 void tcc1014_reset(struct TCC1014 *gimep);
-void tcc1014_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
+void tcc1014_mem_cycle(void *sptr, bool RnW, uint16_t A);
 
 unsigned tcc1014_decode(struct TCC1014 *, uint16_t A);
 void tcc1014_set_sam_register(struct TCC1014 *gimep, unsigned val);
 
-void tcc1014_set_inverted_text(struct TCC1014 *gimep, _Bool);
+void tcc1014_set_inverted_text(struct TCC1014 *gimep, bool);
 void tcc1014_notify_mode(struct TCC1014 *gimep);
-void tcc1014_set_composite(struct TCC1014 *, _Bool);
+void tcc1014_set_composite(struct TCC1014 *, bool);
 
 #endif

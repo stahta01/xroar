@@ -56,8 +56,8 @@ void wasm_wget(const char *file);
 // been attempted.  If any weren't already downloaded, submits wasm_wget()
 // requests and returns false.
 
-_Bool wasm_ui_prepare_machine(struct machine_config *mc);
-_Bool wasm_ui_prepare_cartridge(struct cart_config *cc);
+bool wasm_ui_prepare_machine(struct machine_config *mc);
+bool wasm_ui_prepare_cartridge(struct cart_config *cc);
 
 // Queue simple value-only message as an event
 

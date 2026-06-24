@@ -83,11 +83,11 @@ struct deluxecoco {
 
 	// Deluxe CoCo GAL
 	unsigned page;
-	_Bool page_enable;
-	_Bool burst;
-	_Bool irq_60hz_enable;
-	_Bool irq_60hz;
-	_Bool cart_inhibit;
+	bool page_enable;
+	bool burst;
+	bool irq_60hz_enable;
+	bool irq_60hz;
+	bool cart_inhibit;
 };
 
 static const struct ser_struct ser_struct_deluxecoco[] = {
@@ -109,23 +109,23 @@ static const struct ser_struct_data deluxecoco_ser_struct_data = {
 
 static void deluxecoco_config_complete(struct machine_config *);
 
-static _Bool deluxecoco_has_interface(struct part *, const char *ifname);
+static bool deluxecoco_has_interface(struct part *, const char *ifname);
 static void deluxecoco_attach_interface(struct part *, const char *ifname, void *intf);
 
-static void deluxecoco_reset(struct machine *, _Bool hard);
+static void deluxecoco_reset(struct machine *, bool hard);
 
-static _Bool deluxecoco_read_byte(struct dragon *, unsigned A);
-static _Bool deluxecoco_write_byte(struct dragon *, unsigned A);
-static void deluxecoco_cpu_cycle(void *, _Bool RnW, uint16_t A);
+static bool deluxecoco_read_byte(struct dragon *, unsigned A);
+static bool deluxecoco_write_byte(struct dragon *, unsigned A);
+static void deluxecoco_cpu_cycle(void *, bool RnW, uint16_t A);
 
-static void deluxecoco_vdg_hs(void *, _Bool level);
-static void deluxecoco_vdg_fs(void *, _Bool level);
+static void deluxecoco_vdg_hs(void *, bool level);
+static void deluxecoco_vdg_fs(void *, bool level);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct part *deluxecoco_allocate(void);
 static void deluxecoco_initialise(struct part *, void *options);
-static _Bool deluxecoco_finish(struct part *);
+static bool deluxecoco_finish(struct part *);
 static void deluxecoco_free(struct part *);
 
 static const struct partdb_entry_funcs deluxecoco_funcs = {
@@ -184,7 +184,7 @@ static void deluxecoco_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("WD2797", "WD2797"), "FDC");
 }
 
-static _Bool deluxecoco_finish(struct part *p) {
+static bool deluxecoco_finish(struct part *p) {
 	assert(p != NULL);
 	struct deluxecoco *mdp = (struct deluxecoco *)p;
 	struct dragon *md = &mdp->dragon;
@@ -305,7 +305,7 @@ static void deluxecoco_config_complete(struct machine_config *mc) {
 
 // Called by dragon_has_interface()
 
-static _Bool deluxecoco_has_interface(struct part *p, const char *ifname) {
+static bool deluxecoco_has_interface(struct part *p, const char *ifname) {
 	if (0 == strcmp(ifname, "sound"))
 		return 1;
 	return dragon_has_interface(p, ifname);
@@ -330,7 +330,7 @@ static void deluxecoco_attach_interface(struct part *p, const char *ifname, void
 	return;
 }
 
-static void deluxecoco_reset(struct machine *m, _Bool hard) {
+static void deluxecoco_reset(struct machine *m, bool hard) {
         struct deluxecoco *mdp = (struct deluxecoco *)m;
 	(void)mdp;
 	dragon_reset(m, hard);
@@ -340,7 +340,7 @@ static void deluxecoco_reset(struct machine *m, _Bool hard) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool deluxecoco_read_byte(struct dragon *md, unsigned A) {
+static bool deluxecoco_read_byte(struct dragon *md, unsigned A) {
 	struct deluxecoco *mdp = (struct deluxecoco *)md;
 
 	switch (md->SAM->S) {
@@ -380,7 +380,7 @@ static _Bool deluxecoco_read_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
+static bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
 	struct deluxecoco *mdp = (struct deluxecoco *)md;
 
 	if (md->SAM->S & 4) switch (md->SAM->S) {
@@ -426,7 +426,7 @@ static _Bool deluxecoco_write_byte(struct dragon *md, unsigned A) {
 	return 0;
 }
 
-static void deluxecoco_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static void deluxecoco_cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 
@@ -439,7 +439,7 @@ static void deluxecoco_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 	// Advance clock, collect IRQs
 	if (!md->clock_inhibit) {
 		dragon_advance_clock(md, ncycles);
-		_Bool supp_irq = mdp->irq_60hz;
+		bool supp_irq = mdp->irq_60hz;
 		MC6809_IRQ_SET(md->CPU, md->PIA0->a.irq || md->PIA0->b.irq || supp_irq);
 		MC6809_FIRQ_SET(md->CPU, md->PIA1->a.irq || md->PIA1->b.irq);
 	}
@@ -459,7 +459,7 @@ static void deluxecoco_cpu_cycle(void *sptr, _Bool RnW, uint16_t A) {
 
 // VDG edge delegates
 
-static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
+static void deluxecoco_vdg_hs(void *sptr, bool level) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 	dragon_vdg_hs(md, level);
@@ -468,7 +468,7 @@ static void deluxecoco_vdg_hs(void *sptr, _Bool level) {
 	}
 }
 
-static void deluxecoco_vdg_fs(void *sptr, _Bool level) {
+static void deluxecoco_vdg_fs(void *sptr, bool level) {
 	struct deluxecoco *mdp = sptr;
 	struct dragon *md = &mdp->dragon;
 	dragon_vdg_fs(md, level);

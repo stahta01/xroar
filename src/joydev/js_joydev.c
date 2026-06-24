@@ -86,7 +86,7 @@ struct joydev_js_device {
 	unsigned num_axes;
 	unsigned num_buttons;
 	unsigned *axis_value;
-	_Bool *button_value;
+	bool *button_value;
 };
 
 struct joydev_js_control {
@@ -94,7 +94,7 @@ struct joydev_js_control {
 
 	struct joydev_js_device *device;
 	unsigned control;
-	_Bool inverted;
+	bool inverted;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -319,7 +319,7 @@ static void joydev_js_control_free(void *);
 // "selected" variable.
 static struct joydev_js_control *configure_control(char *spec, unsigned control) {
 	unsigned joystick = 0;
-	_Bool inverted = 0;
+	bool inverted = 0;
 	char *tmp = NULL;
 	if (spec)
 		tmp = strsep(&spec, ",");

@@ -35,7 +35,7 @@
 struct crclist {
 	char *name;
 	struct slist *list;
-	_Bool flag;
+	bool flag;
 };
 
 /* List containing all defined CRC lists */

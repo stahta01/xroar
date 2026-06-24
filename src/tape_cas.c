@@ -98,7 +98,7 @@ struct cue_entry {
 
 	// block metadata used to encapsulate a section
 	struct {
-		_Bool ascii;
+		bool ascii;
 		uint8_t type;
 		uint8_t checksum;
 	} block;
@@ -106,9 +106,9 @@ struct cue_entry {
 
 struct tape_cas {
 	FILE *fd;
-	_Bool writing;
+	bool writing;
 	off_t size;  // file size minus CUE data
-	_Bool rewind;  // writing and rewound - drop CUE data
+	bool rewind;  // writing and rewound - drop CUE data
 
 	// CUE data
 	struct {
@@ -171,19 +171,19 @@ static void cue_set_timing(struct tape_cas *cas, int bit0_cw, int bit1_cw);
 static void cue_add_silence(struct tape_cas *cas, int ms);
 static void cue_add_leader(struct tape_cas *cas, int size);
 static void cue_add_raw_section(struct tape_cas *cas, int size, off_t offset, uint8_t *data);
-static void cue_add_block(struct tape_cas *cas, int type, int size, _Bool ascii,
+static void cue_add_block(struct tape_cas *cas, int type, int size, bool ascii,
 			  off_t offset, uint8_t *data);
 
 static void cue_list_free(struct tape_cas *cas);
 static long cue_data_size(struct tape_cas *cas);
-static _Bool cue_next(struct tape_cas *cas);
+static bool cue_next(struct tape_cas *cas);
 
-static _Bool read_cue_data(struct tape_cas *cas);
+static bool read_cue_data(struct tape_cas *cas);
 static void write_cue_data(struct tape_cas *cas);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void init_filename_block(uint8_t *block, const char *filename, int type, _Bool is_ascii, _Bool gap, int exec, int load) {
+static void init_filename_block(uint8_t *block, const char *filename, int type, bool is_ascii, bool gap, int exec, int load) {
 	const char *basename = filename;
 	while (*filename) {
 		if (*(filename+1) != 0 && ((*filename == '/') || (*filename == '\\')))
@@ -211,15 +211,15 @@ static void cue_read_ascii(struct tape_cas *cas, const char *filename);
 static void cue_read_k7(struct tape_cas *cas);
 
 static struct tape *do_tape_cas_open(const char *filename,
-				     const char *mode, _Bool is_ascii, _Bool is_k7) {
+				     const char *mode, bool is_ascii, bool is_k7) {
 	struct tape *t;
 	struct tape_cas *cas;
 	FILE *fd;
 
 	const char *mod = is_ascii ? "tape/asc" : (is_k7 ? "tape/k7" : "tape/cas");
 
-	_Bool writing = mode[0] == 'w';
-	_Bool new_file = 0;
+	bool writing = mode[0] == 'w';
+	bool new_file = 0;
 	// if writing, open in read/write mode so that existing cue data can be
 	// read.  new data will be appended unless user rewinds tape.
 	if (writing) {
@@ -328,7 +328,7 @@ static void cue_read_k7(struct tape_cas *cas) {
 	off_t nbytes = cas->size;
 	int leader_length = 0;
 	off_t block_length = 0;
-	_Bool have_preamble = 0;
+	bool have_preamble = 0;
 	off_t block_start = ftello(cas->fd);
 	int block_num = 0;
 	while (nbytes > 0) {
@@ -644,7 +644,7 @@ static long cas_ms_to(struct tape const *t, int ms) {
 
 /* Reading */
 
-static _Bool cue_next(struct tape_cas *cas) {
+static bool cue_next(struct tape_cas *cas) {
 	if (!cas->cue.next)
 		return 0;
 
@@ -1021,7 +1021,7 @@ static void cue_add_leader(struct tape_cas *cas, int size) {
 // (supplied), size (supplied), checksum (computed).  'ascii' flag indicates
 // that LF should be translated to CR.
 
-static void cue_add_block(struct tape_cas *cas, int type, int size, _Bool ascii,
+static void cue_add_block(struct tape_cas *cas, int type, int size, bool ascii,
 			  off_t offset, uint8_t *data) {
 	struct cue_entry *entry = cue_entry_new(cue_block);
 	assert(size >= 0 && size <= 255);
@@ -1075,7 +1075,7 @@ static long cue_data_size(struct tape_cas *cas) {
 // modifies that value to omit the CUE data.  Must reset absolute filesize
 // before calling again.
 
-static _Bool read_cue_data(struct tape_cas *cas) {
+static bool read_cue_data(struct tape_cas *cas) {
 	FILE *fd = cas->fd;
 
 	off_t filesize = cas->size;

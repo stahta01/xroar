@@ -67,8 +67,8 @@ static const struct ser_struct ser_struct_machine_config[] = {
 	SER_ID_STRUCT_TYPE(21, ser_type_sds_list, struct machine_config, opts),
 };
 
-static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data machine_config_ser_struct_data = {
 	.elems = ser_struct_machine_config,
@@ -84,8 +84,8 @@ static const struct ser_struct ser_struct_machine[] = {
 	SER_ID_STRUCT_ELEM(2, struct machine, keyboard.type),
 };
 
-static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 // External; struct data nested by machines:
 const struct ser_struct_data machine_ser_struct_data = {
@@ -203,7 +203,7 @@ void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machi
 	ser_write_struct_data(sh, &machine_config_ser_struct_data, mc);
 }
 
-static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine_config *mc = sptr;
 	switch (tag) {
 	case MACHINE_CONFIG_SER_ARCHITECTURE_OLD: {
@@ -222,7 +222,7 @@ static _Bool machine_config_read_elem(void *sptr, struct ser_handle *sh, int tag
 	return 1;
 }
 
-static _Bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool machine_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	(void)sptr;
 	(void)sh;
 	switch (tag) {
@@ -267,7 +267,7 @@ struct machine_config *machine_config_by_arch(int arch) {
 	return NULL;
 }
 
-static _Bool machine_is_working_config(struct machine_config *mc) {
+static bool machine_is_working_config(struct machine_config *mc) {
 	if (!mc) {
 		return 0;
 	}
@@ -331,7 +331,7 @@ static void machine_config_free(struct machine_config *mc) {
 	free(mc);
 }
 
-_Bool machine_config_remove(const char *name) {
+bool machine_config_remove(const char *name) {
 	struct machine_config *mc = machine_config_by_name(name);
 	if (!mc)
 		return 0;
@@ -356,7 +356,7 @@ struct slist *machine_config_list(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void machine_config_print_all(FILE *f, _Bool all) {
+void machine_config_print_all(FILE *f, bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct machine_config *mc = l->data;
 		fprintf(f, "machine %s\n", mc->name);
@@ -403,12 +403,12 @@ struct machine *machine_new(struct machine_config *mc) {
 	return m;
 }
 
-_Bool machine_is_a(struct part *p, const char *name) {
+bool machine_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "machine") == 0;
 }
 
-static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine *m = sptr;
 	switch (tag) {
 	case MACHINE_SER_MACHINE_CONFIG:
@@ -420,7 +420,7 @@ static _Bool machine_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool machine_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct machine *m = sptr;
 	switch (tag) {
 	case MACHINE_SER_MACHINE_CONFIG:
@@ -472,7 +472,7 @@ void machine_remove_breakpoint_list_n(struct machine *m, struct machine_bp_entry
 // Hardware breakpoints send SIGRAP to machine
 
 #ifdef WANT_GDB_TARGET
-static void machine_trap_handler(void *sptr, _Bool RnW, uint32_t A) {
+static void machine_trap_handler(void *sptr, bool RnW, uint32_t A) {
 	struct machine *m = sptr;
 	(void)RnW;
 	(void)A;
@@ -487,7 +487,7 @@ void machine_remove_hbreak(struct machine *m, int32_t A) {
 	machine_remove_breakpoint(m, A, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
 }
 
-void machine_add_hwatch(struct machine *m, _Bool RnW, uint32_t Astart, uint32_t Aend) {
+void machine_add_hwatch(struct machine *m, bool RnW, uint32_t Astart, uint32_t Aend) {
 	machine_add_watchpoint(m, RnW, Astart, Aend, DELEGATE_AS2(void, bool, uint32, machine_trap_handler, m));
 }
 

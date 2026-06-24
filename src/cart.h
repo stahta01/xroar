@@ -39,12 +39,12 @@ struct cart_config {
 	char *description;
 	char *type;
 	int id;
-	_Bool rom_dfn;
+	bool rom_dfn;
 	char *rom;
-	_Bool rom2_dfn;
+	bool rom2_dfn;
 	char *rom2;
-	_Bool no_header;  // don't try and skip header if filesize % 256 != 0
-	_Bool becker_port;
+	bool no_header;  // don't try and skip header if filesize % 256 != 0
+	bool becker_port;
 	int autorun;
 
 	struct {
@@ -68,14 +68,14 @@ struct cart {
 	// Read & write cycles.  Called every cycle before decode.  If EXTMEM
 	// is not asserted, called again when cartridge IO (P2) or ROM (R2)
 	// areas are accessed.
-	uint8_t (*read)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-	uint8_t (*write)(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+	uint8_t (*read)(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+	uint8_t (*write)(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
 
 	// Reset line.
-	void (*reset)(struct cart *c, _Bool hard);
+	void (*reset)(struct cart *c, bool hard);
 
 	// Cartridge asserts this to inhibit usual address decode by host.
-	_Bool EXTMEM;
+	bool EXTMEM;
 
 	// Ways for the cartridge to signal interrupt events to the host.
 	DELEGATE_T1(void, bool) signal_firq;
@@ -91,7 +91,7 @@ struct cart {
 	struct event firq_event;
 
 	// Query if cartridge supports a named interface.
-	_Bool (*has_interface)(struct cart *c, const char *ifname);
+	bool (*has_interface)(struct cart *c, const char *ifname);
 	// Connect a named interface.
 	void (*attach_interface)(struct cart *c, const char *ifname, void *intf);
 };
@@ -114,8 +114,8 @@ struct slist *cart_config_list(void);
 struct slist *cart_config_list_is_a(const char *is_a);
 struct cart_config *cart_find_working_dos(struct machine_config *mc);
 void cart_config_complete(struct cart_config *cc);
-void cart_config_print_all(FILE *f, _Bool all);
-_Bool cart_config_remove(const char *name);
+void cart_config_print_all(FILE *f, bool all);
+bool cart_config_remove(const char *name);
 void cart_config_remove_all(void);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -136,16 +136,16 @@ extern const struct ser_struct_data cart_ser_struct_data;
 
 struct cart *cart_create_from_config(struct cart_config *cc);
 struct cart *cart_create(const char *cc_name);
-_Bool cart_finish(struct part *p);
-_Bool cart_is_a(struct part *p, const char *name);
-_Bool dragon_cart_is_a(struct part *p, const char *name);
+bool cart_finish(struct part *p);
+bool cart_is_a(struct part *p, const char *name);
+bool dragon_cart_is_a(struct part *p, const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void cart_rom_initialise(struct part *p, void *options);
-_Bool cart_rom_finish(struct part *p);
+bool cart_rom_finish(struct part *p);
 void cart_rom_init(struct cart *c);
-void cart_rom_reset(struct cart *c, _Bool hard);
+void cart_rom_reset(struct cart *c, bool hard);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
 void cart_rom_free(struct part *p);

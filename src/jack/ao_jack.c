@@ -58,7 +58,7 @@ struct ao_jack_interface {
 	jack_port_t *output_port;
 
 	float *callback_buffer;
-	_Bool shutting_down;
+	bool shutting_down;
 
 	unsigned nfragments;
 

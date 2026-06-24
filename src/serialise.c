@@ -623,7 +623,7 @@ void ser_write_struct_data(struct ser_handle *sh, const struct ser_struct_data *
 		switch (type) {
 
 		case ser_type_bool:
-			ser_write_vuint32(sh, tag, *(_Bool *)ptr);
+			ser_write_vuint32(sh, tag, *(bool *)ptr);
 			break;
 		case ser_type_int:
 			ser_write_vint32(sh, tag, *(int *)ptr);
@@ -749,7 +749,7 @@ void ser_read_struct_data(struct ser_handle *sh, const struct ser_struct_data *s
 		switch (type) {
 
 		case ser_type_bool:
-			*(_Bool *)ptr = ser_read_vuint32(sh);
+			*(bool *)ptr = ser_read_vuint32(sh);
 			break;
 		case ser_type_int:
 			*(int *)ptr = ser_read_vint32(sh);

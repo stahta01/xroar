@@ -61,8 +61,8 @@ static const struct ser_struct ser_struct_cart_config[] = {
 	SER_ID_STRUCT_UNHANDLED(CART_CONFIG_SER_MPI_LOAD_SLOT),
 };
 
-static _Bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data cart_config_ser_struct_data = {
 	.elems = ser_struct_cart_config,
@@ -83,8 +83,8 @@ static const struct ser_struct ser_struct_cart[] = {
 	SER_ID_STRUCT_TYPE(4, ser_type_event,  struct cart, firq_event),
 };
 
-static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 // External; struct data nested by Dragon/CoCo carts:
 const struct ser_struct_data cart_ser_struct_data = {
@@ -113,10 +113,10 @@ static struct cart_config *rom_cart_config = NULL;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t cart_rom_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
 static void do_firq(void *);
-static _Bool cart_rom_has_interface(struct cart *c, const char *ifname);
+static bool cart_rom_has_interface(struct cart *c, const char *ifname);
 
 /**************************************************************************/
 
@@ -138,7 +138,7 @@ struct cart_fingerprint {
 	off_t size;
 	uint32_t crc32;
 	const char *type;
-	_Bool no_autorun;  // e.g., DOS ROMs
+	bool no_autorun;  // e.g., DOS ROMs
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -195,7 +195,7 @@ static void deserialise_mpi_slot(struct cart_config *cc, struct ser_handle *sh, 
 	}
 }
 
-static _Bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart_config *cc = sptr;
 	switch (tag) {
 	case CART_CONFIG_SER_MPI_LOAD_SLOT:
@@ -213,7 +213,7 @@ static _Bool cart_config_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool cart_config_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart_config *cc = sptr;
 	switch (tag) {
 	case CART_CONFIG_SER_MPI_LOAD_SLOT:
@@ -439,7 +439,7 @@ struct slist *cart_config_list_is_a(const char *is_a) {
 	return l;
 }
 
-void cart_config_print_all(FILE *f, _Bool all) {
+void cart_config_print_all(FILE *f, bool all) {
 	for (struct slist *l = config_list; l; l = l->next) {
 		struct cart_config *cc = l->data;
 		fprintf(f, "cart %s\n", cc->name);
@@ -485,7 +485,7 @@ static void cart_config_free(struct cart_config *cc) {
 	free(cc);
 }
 
-_Bool cart_config_remove(const char *name) {
+bool cart_config_remove(const char *name) {
 	struct cart_config *cc = cart_config_by_name(name);
 	if (!cc)
 		return 0;
@@ -534,7 +534,7 @@ struct cart *cart_create(const char *cc_name) {
 	return cart_create_from_config(cc);
 }
 
-_Bool cart_finish(struct part *p) {
+bool cart_finish(struct part *p) {
 	struct cart *c = (struct cart *)p;
 	if (c->firq_event.next == &c->firq_event) {
 		event_queue(&c->firq_event);
@@ -542,17 +542,17 @@ _Bool cart_finish(struct part *p) {
 	return 1;
 }
 
-_Bool cart_is_a(struct part *p, const char *name) {
+bool cart_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "cart") == 0;
 }
 
-_Bool dragon_cart_is_a(struct part *p, const char *name) {
+bool dragon_cart_is_a(struct part *p, const char *name) {
 	(void)p;
 	return strcmp(name, "dragon-cart") == 0 || cart_is_a(p, name);
 }
 
-static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart *c = sptr;
 	switch (tag) {
 	case CART_SER_CART_CONFIG:
@@ -566,7 +566,7 @@ static _Bool cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart *c = sptr;
 	switch (tag) {
 	case CART_SER_CART_CONFIG:
@@ -618,7 +618,7 @@ void cart_rom_initialise(struct part *p, void *options) {
 	c->config = cc;
 }
 
-_Bool cart_rom_finish(struct part *p) {
+bool cart_rom_finish(struct part *p) {
 	struct cart *c = (struct cart *)p;
 	struct cart_config *cc = c->config;
 
@@ -692,21 +692,21 @@ void cart_rom_init(struct cart *c) {
 	c->has_interface = cart_rom_has_interface;
 }
 
-static uint8_t cart_rom_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t cart_rom_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
 		rombank_d8(c->ROM, A, &D);
 	return D;
 }
 
-static uint8_t cart_rom_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t cart_rom_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	(void)P2;
 	if (R2)
 		rombank_d8(c->ROM, A, &D);
 	return D;
 }
 
-void cart_rom_reset(struct cart *c, _Bool hard) {
+void cart_rom_reset(struct cart *c, bool hard) {
 	if (hard) {
 		rombank_reset(c->ROM);
 	}
@@ -735,7 +735,7 @@ void cart_rom_detach(struct cart *c) {
 
 // Toggles the cartridge interrupt line.
 static void do_firq(void *data) {
-	static _Bool level = 0;
+	static bool level = 0;
 	struct cart *c = data;
 	DELEGATE_SAFE_CALL(c->signal_firq, level);
 	event_queue_dt(&c->firq_event, EVENT_MS(100));
@@ -744,7 +744,7 @@ static void do_firq(void *data) {
 
 /* Default has_interface() - no interfaces supported */
 
-static _Bool cart_rom_has_interface(struct cart *c, const char *ifname) {
+static bool cart_rom_has_interface(struct cart *c, const char *ifname) {
 	(void)c;
 	(void)ifname;
 	return 0;

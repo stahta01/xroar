@@ -1007,7 +1007,7 @@ static struct {
 static struct {
 	uint8_t code;
 	int8_t dkey;
-	_Bool preempt;  // key overrides unicode translation
+	bool preempt;  // key overrides unicode translation
 } code_dkey_default[] = {
 	// Rest of the normal keys
 	{ hk_scan_0, DSCAN_0, 0 },
@@ -1104,18 +1104,18 @@ struct xconfig_enum hkbd_lang_list[] = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool hk_default_update_keymap(void);
+static bool hk_default_update_keymap(void);
 static void apply_lang_table(unsigned lang);
 
-static _Bool is_dragon_key(uint16_t sym);
-static void emulator_command(uint16_t sym, _Bool shift);
+static bool is_dragon_key(uint16_t sym);
+static void emulator_command(uint16_t sym, bool shift);
 
 static void hk_ui_set_hkbd_layout(void *, int tag, void *smsg);
 static void hk_ui_set_hkbd_lang(void *, int tag, void *smsg);
 static void hk_ui_set_kbd_translate(void *, int tag, void *smsg);
 
-_Bool hkbd_js_keypress(uint8_t code);
-_Bool hkbd_js_keyrelease(uint8_t code);
+bool hkbd_js_keypress(uint8_t code);
+bool hkbd_js_keyrelease(uint8_t code);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1152,7 +1152,7 @@ void hk_update_keymap(void) {
 	os_scancode_to_hk_scancode = NULL;
 
 	// Any OS-specific defaults
-	_Bool have_keymap = 0;
+	bool have_keymap = 0;
 #if defined(HAVE_X11)
 	have_keymap = have_keymap || hk_x11_update_keymap();
 #elif defined(WINDOWS32)
@@ -1226,7 +1226,7 @@ void hk_update_keymap(void) {
 }
 
 void hk_focus_in(void) {
-	_Bool done = 0;
+	bool done = 0;
 #if defined(HAVE_X11)
 	done = done || hk_x11_focus_in();
 #endif
@@ -1329,8 +1329,8 @@ void hk_scan_press(uint8_t code) {
 	if (hkbd.scancode_mod[code]) {
 		hkbd.state |= hkbd.scancode_mod[code];
 	}
-	_Bool shift = hkbd.state & HK_MASK_SHIFT;
-	_Bool altgr = hkbd.state & HK_MASK_ALTGR;
+	bool shift = hkbd.state & HK_MASK_SHIFT;
+	bool altgr = hkbd.state & HK_MASK_ALTGR;
 
 	int level = (shift ? HK_LEVEL_SHIFT : 0) | (altgr ? HK_LEVEL_ALTGR : 0);
 	uint16_t sym = hkbd.code_to_sym[level][code];
@@ -1426,8 +1426,8 @@ void hk_scan_release(uint8_t code) {
 	if (hkbd.scancode_mod[code]) {
 		hkbd.state &= ~hkbd.scancode_mod[code];
 	}
-	_Bool shift = hkbd.state & HK_MASK_SHIFT;
-	_Bool altgr = hkbd.state & HK_MASK_ALTGR;
+	bool shift = hkbd.state & HK_MASK_SHIFT;
+	bool altgr = hkbd.state & HK_MASK_ALTGR;
 
 	int level = (shift ? HK_LEVEL_SHIFT : 0) | (altgr ? HK_LEVEL_ALTGR : 0);
 	uint16_t sym = hkbd.scancode_pressed_sym[code];
@@ -1481,7 +1481,7 @@ void hk_scan_release(uint8_t code) {
 // Use a specific keyboard language table.  These are fixed, and should only be
 // used as a last resort, or if the user explicitly specifies a language.
 
-static _Bool hk_default_update_keymap(void) {
+static bool hk_default_update_keymap(void) {
 	// Initialise
 	for (unsigned c = 0; c < HK_NUM_SCANCODES; c++) {
 		for (unsigned l = 0; l < HK_NUM_LEVELS; l++) {
@@ -1593,7 +1593,7 @@ static void apply_lang_table(unsigned lang) {
 // Purely used to avoid mapping the 'grave' key as CLEAR if it's got a useful
 // character on it.
 
-static _Bool is_dragon_key(uint16_t sym) {
+static bool is_dragon_key(uint16_t sym) {
 	if (sym >= hk_sym_space && sym <= hk_sym_asciicircum)
 		return 1;
 	if (sym >= hk_sym_a && sym <= hk_sym_z)
@@ -1614,7 +1614,7 @@ static _Bool is_dragon_key(uint16_t sym) {
 // Note that a lot of shortcuts are omitted in WebAssembly builds - browsers
 // tend to steal all those keys for themselves.
 
-static void emulator_command(uint16_t sym, _Bool shift) {
+static void emulator_command(uint16_t sym, bool shift) {
 	switch (sym) {
 	case hk_sym_1: case hk_sym_2: case hk_sym_3: case hk_sym_4:
 		if (shift) {

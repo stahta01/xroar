@@ -99,7 +99,7 @@ struct gdb_interface_private {
 	int sockfd;
 
 	// Session state
-	_Bool no_ack_mode;
+	bool no_ack_mode;
 
 	// Run state
 	enum gdb_run_state run_state;
@@ -263,7 +263,7 @@ void gdb_run_unlock(struct gdb_interface *gi) {
 	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
-static void gdb_handle_signal(struct gdb_interface_private *gip, int sig, _Bool ack) {
+static void gdb_handle_signal(struct gdb_interface_private *gip, int sig, bool ack) {
 	gip->last_signal = sig;
 	if (ack)
 		send_last_signal(gip);
@@ -291,7 +291,7 @@ static void gdb_machine_single_step(struct gdb_interface_private *gip) {
 	pthread_mutex_unlock(&gip->run_state_mt);
 }
 
-static void gdb_machine_signal(struct gdb_interface_private *gip, int sig, _Bool ack) {
+static void gdb_machine_signal(struct gdb_interface_private *gip, int sig, bool ack) {
 	pthread_mutex_lock(&gip->run_state_mt);
 	if (gip->run_state == gdb_run_state_running) {
 		gip->machine->signal(gip->machine, sig);
@@ -351,7 +351,7 @@ static void *handle_tcp_sock(void *sptr) {
 		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection accepted\n");
 
 		gdb_machine_signal(gip, MACHINE_SIGINT, 0);
-		_Bool attached = 1;
+		bool attached = 1;
 		while (attached) {
 			ssize_t l = read_packet(gip, in_packet, sizeof(in_packet));
 			if (l == -GDBE_BREAK) {
@@ -1049,7 +1049,7 @@ static int scan_value_endian(char *src, size_t ssize, int endian,
 	int nbytes = vsize * 2;
 	if (ssize < (size_t)nbytes)
 		return 0;
-	_Bool valid = 1;
+	bool valid = 1;
 	uint32_t rval = 0;
 	for (unsigned i = 0; i < vsize; ++i) {
 		int tmp = hex8(src);

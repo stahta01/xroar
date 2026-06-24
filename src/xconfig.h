@@ -168,7 +168,7 @@ enum xconfig_option_type {
 	XCONFIG_END
 };
 
-typedef void (*xconfig_func_bool)(_Bool);
+typedef void (*xconfig_func_bool)(bool);
 typedef void (*xconfig_func_int)(int);
 typedef void (*xconfig_func_double)(double);
 typedef void (*xconfig_func_string)(const char *);
@@ -188,10 +188,10 @@ struct xconfig_option {
 		xconfig_func_assign func_assign;
 		xconfig_func_null func_null;
 	} dest;
-	_Bool *defined;
+	bool *defined;
 	void *ref;
 	unsigned flags;
-	_Bool deprecated;
+	bool deprecated;
 };
 
 struct xconfig_enum {

@@ -68,7 +68,7 @@ static const struct ser_struct_data mcx128_ser_struct_data = {
 
 static void mcx128_config_complete(struct cart_config *);
 
-static void mcx128_reset(struct cart *, _Bool hard);
+static void mcx128_reset(struct cart *, bool hard);
 static uint8_t mcx128_read(struct mc10_cart *, uint16_t A, uint8_t D);
 static uint8_t mcx128_write(struct mc10_cart *, uint16_t A, uint8_t D);
 
@@ -78,7 +78,7 @@ static uint8_t mcx128_write(struct mc10_cart *, uint16_t A, uint8_t D);
 
 static struct part *mcx128_allocate(void);
 static void mcx128_initialise(struct part *p, void *options);
-static _Bool mcx128_finish(struct part *p);
+static bool mcx128_finish(struct part *p);
 static void mcx128_free(struct part *p);
 
 static const struct partdb_entry_funcs mcx128_funcs = {
@@ -142,7 +142,7 @@ static void mcx128_initialise(struct part *p, void *options) {
 	part_add_component(p, (struct part *)ram, "EXTRAM");
 }
 
-static _Bool mcx128_finish(struct part *p) {
+static bool mcx128_finish(struct part *p) {
 	struct mcx128 *n = (struct mcx128 *)p;
 	struct mc10_cart *cm = &n->cart;
 	struct cart *c = &cm->cart;
@@ -209,7 +209,7 @@ static void mcx128_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void mcx128_reset(struct cart *c, _Bool hard) {
+static void mcx128_reset(struct cart *c, bool hard) {
 	struct mcx128 *n = (struct mcx128 *)c;
 
 	n->P1 = n->P0 = 0;
@@ -228,27 +228,27 @@ enum {
 	map_mode_all_ram = 3,
 };
 
-static uint8_t mcx128_cycle(struct mc10_cart *c, _Bool RnW, uint16_t A, uint8_t D) {
+static uint8_t mcx128_cycle(struct mc10_cart *c, bool RnW, uint16_t A, uint8_t D) {
 	struct mcx128 *n = (struct mcx128 *)c;
 
 	unsigned page = (A >> 14) & 3;  // 16K pages
-	_Bool intram = (A & n->intram_mask) == 0x4000; // 4000-4FFF (4K) / 4000-5FFF (8K)
-	_Bool io_page   = (A & 0xff00) == 0xbf00;      // BF00-BFFF
-	_Bool reg_addrs = (A & 0xff80) == 0xbf00;      // BF00-BF7F
-	_Bool kbd_vdg   = (A & 0xff80) == 0xbf80;      // BF80-BFFF
-	_Bool rom_low   = (A & 0xe000) == 0xc000;      // C000-DFFF
-	_Bool rom_hi    = (A & 0xe000) == 0xe000;      // E000-FFFF
-	_Bool unbanked  = (A & 0xff00) == 0xff00;      // FF00-FFFF
+	bool intram = (A & n->intram_mask) == 0x4000; // 4000-4FFF (4K) / 4000-5FFF (8K)
+	bool io_page   = (A & 0xff00) == 0xbf00;      // BF00-BFFF
+	bool reg_addrs = (A & 0xff80) == 0xbf00;      // BF00-BF7F
+	bool kbd_vdg   = (A & 0xff80) == 0xbf80;      // BF80-BFFF
+	bool rom_low   = (A & 0xe000) == 0xc000;      // C000-DFFF
+	bool rom_hi    = (A & 0xe000) == 0xe000;      // E000-FFFF
+	bool unbanked  = (A & 0xff00) == 0xff00;      // FF00-FFFF
 
-	_Bool internal = (intram && !n->P1)  // Internal RAM range (4000-4FFF or 5FFF) when Page 1 Bank is 0
+	bool internal = (intram && !n->P1)  // Internal RAM range (4000-4FFF or 5FFF) when Page 1 Bank is 0
 	                 || kbd_vdg         // Keyboard / VDG (BF80-BFFF)
 	                 // Reading the upper 8K ROM region (E000-FFFF) using Internal ROM map mode
 		         || (rom_hi && (n->map_mode == map_mode_int_rom_ram) && RnW);
 
-	_Bool rom = (page == 3 && (n->map_mode == map_mode_all_rom))  // Either ROM region (C000-FFFF) using All ROM map mode
+	bool rom = (page == 3 && (n->map_mode == map_mode_all_rom))  // Either ROM region (C000-FFFF) using All ROM map mode
 	            || (rom_hi && (n->map_mode == map_mode_ext_rom_ram));  // Upper 8K ROM region (E000-FFFF) using External ROM map mode
 
-	_Bool ram = (page == 0)                  // 0000-3FFF
+	bool ram = (page == 0)                  // 0000-3FFF
 	            || (page == 1 && !internal)  // 4000-7FFF (4000-4FFF or 5FFF only while Page 1 Bank is 1)
 		    || (page == 2 && !io_page)   // 8000-BEFF
 		    || (page == 3 && !RnW)       // C000-FFFF (Writes to ROM space always pass thru to RAM)

@@ -75,7 +75,7 @@ struct vo_interface;
 
 struct machine_bp_entry {
 	const char *label;
-	void (*handler_func)(void *, _Bool, uint32_t);
+	void (*handler_func)(void *, bool, uint32_t);
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -94,17 +94,17 @@ struct machine_config {
 	int ram_org;
 	int ram;
 	int ram_init;
-	_Bool bas_dfn;
+	bool bas_dfn;
 	char *bas_rom;
-	_Bool extbas_dfn;
+	bool extbas_dfn;
 	char *extbas_rom;
-	_Bool altbas_dfn;
+	bool altbas_dfn;
 	char *altbas_rom;
 	char *ext_charset_rom;
-	_Bool default_cart_dfn;
+	bool default_cart_dfn;
 	char *default_cart;
-	_Bool nodos;
-	_Bool cart_enabled;
+	bool nodos;
+	bool cart_enabled;
 	struct slist *opts;
 };
 
@@ -133,12 +133,12 @@ struct machine_config *machine_config_by_id(int id);
 struct machine_config *machine_config_by_name(const char *name);
 struct machine_config *machine_config_by_arch(int arch);
 void machine_config_complete(struct machine_config *mc);
-_Bool machine_config_remove(const char *name);
+bool machine_config_remove(const char *name);
 void machine_config_remove_all(void);
 struct slist *machine_config_list(void);
 /* Find a working machine by searching available ROMs: */
 struct machine_config *machine_config_first_working(void);
-void machine_config_print_all(FILE *f, _Bool all);
+void machine_config_print_all(FILE *f, bool all);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -151,7 +151,7 @@ struct machine_partdb_entry {
 	void (*config_complete)(struct machine_config *mc);
 
 	// check everything ok for this machine to run (e.g. ROM files exist)
-	_Bool (*is_working_config)(struct machine_config *mc);
+	bool (*is_working_config)(struct machine_config *mc);
 
 	// cartridge architecture valid for this machine
 	const char *cart_arch;
@@ -182,16 +182,16 @@ struct machine {
 	void (*insert_cart)(struct machine *m, struct cart *c);
 	void (*remove_cart)(struct machine *m);
 
-	void (*reset)(struct machine *m, _Bool hard);
+	void (*reset)(struct machine *m, bool hard);
 	enum machine_run_state (*run)(struct machine *m, int ncycles);
 	void (*single_step)(struct machine *m);
 	void (*signal)(struct machine *m, int sig);
 
-	_Bool (*set_pause)(struct machine *m, int action);
+	bool (*set_pause)(struct machine *m, int action);
 	void *(*get_interface)(struct machine *m, const char *ifname);
 
 	// Query if machine (or possibly sub-part) supports a named interface.
-	_Bool (*has_interface)(struct part *p, const char *ifname);
+	bool (*has_interface)(struct part *p, const char *ifname);
 	// Connect a named interface.
 	void (*attach_interface)(struct part *p, const char *ifname, void *intf);
 
@@ -222,7 +222,7 @@ struct machine {
 					  DELEGATE_T2(void, bool, uint32) handler);
 
 		// Add a watchpoint
-		void (*add_watchpoint)(struct machine *, _Bool RnW,
+		void (*add_watchpoint)(struct machine *, bool RnW,
 				       uint32_t Astart, uint32_t Aend,
 				       DELEGATE_T2(void, bool, uint32) handler);
 
@@ -256,7 +256,7 @@ struct machine {
 extern const struct ser_struct_data machine_ser_struct_data;
 
 struct machine *machine_new(struct machine_config *mc);
-_Bool machine_is_a(struct part *p, const char *name);
+bool machine_is_a(struct part *p, const char *name);
 
 #define machine_add_breakpoint(m,a,h) (m)->debug.add_breakpoint((m), (a), (h))
 #define machine_remove_breakpoint(m,a,h) (m)->debug.remove_breakpoint((m), (a), (h))
@@ -295,7 +295,7 @@ void machine_remove_hbreak(struct machine *m, int32_t A);
 #define machine_remove_watchpoint_all(m,s) machine_remove_watchpoint((m), -1, 0, DELEGATE_AS2(void, bool, uint32, NULL, (s)))
 
 #ifdef WANT_GDB_TARGET
-void machine_add_hwatch(struct machine *m, _Bool RnW, uint32_t Astart, uint32_t Aend);
+void machine_add_hwatch(struct machine *m, bool RnW, uint32_t Astart, uint32_t Aend);
 void machine_remove_hwatch(struct machine *m, int RnW, int32_t Astart, uint32_t Aend);
 #define machine_remove_hwatch_all(m) machine_remove_hwatch((m), -1, -1, 0)
 #endif

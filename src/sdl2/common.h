@@ -42,10 +42,10 @@ struct ui_sdl2_interface {
 	// Viewport size not modified by 60Hz scaling
 	struct vo_viewport viewport;
 	// User-specified geometry inhibits auto-resize
-	_Bool user_specified_geometry;
+	bool user_specified_geometry;
 
 	// Pointer state
-	_Bool mouse_hidden;
+	bool mouse_hidden;
 };
 
 extern struct ui_sdl2_interface *global_uisdl2;
@@ -55,7 +55,7 @@ void ui_sdl_init(struct ui_sdl2_interface *, struct ui_cfg *ui_cfg);
 void ui_sdl_free(void *);
 void ui_sdl_run(void *);
 
-_Bool sdl_vo_init(struct ui_sdl2_interface *);
+bool sdl_vo_init(struct ui_sdl2_interface *);
 void sdl_keyboard_init(struct ui_sdl2_interface *);
 
 extern struct joystick_submodule sdl_js_physical;

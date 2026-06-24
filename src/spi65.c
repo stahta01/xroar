@@ -80,7 +80,7 @@ static const struct ser_struct_data spi65_ser_struct_data = {
 // 65SPI-B part creation
 
 static struct part *spi65_allocate(void);
-static _Bool spi65_finish(struct part *p);
+static bool spi65_finish(struct part *p);
 
 static const struct partdb_entry_funcs spi65_funcs = {
 	.allocate = spi65_allocate,
@@ -100,7 +100,7 @@ static struct part *spi65_allocate(void) {
 	return p;
 }
 
-static _Bool spi65_finish(struct part *p) {
+static bool spi65_finish(struct part *p) {
 	struct spi65_private *spi65p = (struct spi65_private *)p;
 
 	// Find attached devices

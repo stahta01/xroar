@@ -76,7 +76,7 @@ struct mc10 {
 
 	unsigned ram0_inhibit_bit;
 
-	_Bool inverted_text;
+	bool inverted_text;
 	struct mc10_cart *cart;
 	unsigned configured_frameskip;
 	unsigned frameskip;
@@ -86,7 +86,7 @@ struct mc10 {
 	int cycles;
 
 	// Debug
-	_Bool single_step;
+	bool single_step;
 	int stop_signal;
 #ifdef WANT_GDB_TARGET
 	struct gdb_interface *gdb_interface;
@@ -113,7 +113,7 @@ struct mc10 {
 	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
-	_Bool has_bas;
+	bool has_bas;
 	uint32_t crc_bas;
 };
 
@@ -129,8 +129,8 @@ static const struct ser_struct ser_struct_mc10[] = {
 	SER_ID_STRUCT_ELEM(6, struct mc10, video_attr),
 };
 
-static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data mc10_ser_struct_data = {
 	.elems = ser_struct_mc10,
@@ -172,7 +172,7 @@ static void mc10_config_complete(struct machine_config *mc) {
 	}
 }
 
-static _Bool mc10_is_working_config(struct machine_config *mc) {
+static bool mc10_is_working_config(struct machine_config *mc) {
 	if (!mc)
 		return 0;
 	if (mc->bas_rom) {
@@ -188,14 +188,14 @@ static _Bool mc10_is_working_config(struct machine_config *mc) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool mc10_has_interface(struct part *p, const char *ifname);
+static bool mc10_has_interface(struct part *p, const char *ifname);
 static void mc10_attach_interface(struct part *p, const char *ifname, void *intf);
 
 static void mc10_connect_cart(struct part *p);
 static void mc10_insert_cart(struct machine *m, struct cart *c);
 static void mc10_remove_cart(struct machine *m);
 
-static void mc10_reset(struct machine *m, _Bool hard);
+static void mc10_reset(struct machine *m, bool hard);
 static enum machine_run_state mc10_run(struct machine *m, int ncycles);
 static void mc10_single_step(struct machine *m);
 static void mc10_signal(struct machine *m, int sig);
@@ -208,7 +208,7 @@ static void mc10_add_breakpoint(struct machine *m, uint32_t A,
 				DELEGATE_T2(void, bool, uint32) handler);
 static void mc10_remove_breakpoint(struct machine *m, int32_t A,
 				   DELEGATE_T2(void, bool, uint32) handler);
-static void mc10_add_watchpoint(struct machine *m, _Bool RnW,
+static void mc10_add_watchpoint(struct machine *m, bool RnW,
 				uint32_t Astart, uint32_t Aend,
 				DELEGATE_T2(void, bool, uint32) handler);
 static void mc10_remove_watchpoint(struct machine *m, int RnW,
@@ -220,12 +220,12 @@ static uint32_t mc10_get_register(void *sptr, int regno);
 static void mc10_set_register(void *sptr, int regno, uint32_t value);
 #endif
 
-static void mc10_vdg_fs(void *sptr, _Bool level);
+static void mc10_vdg_fs(void *sptr, bool level);
 static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
 static void mc10_vdg_fetch_handler(void *sptr, uint16_t A, int nbytes, uint16_t *dest);
 static void mc10_vdg_update_mode(void *sptr);
 
-static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A);
+static void mc10_mem_cycle(void *sptr, bool RnW, uint16_t A);
 
 static void mc10_ui_set_keymap(void *, int tag, void *smsg);
 static void mc10_ui_set_picture(void *, int tag, void *smsg);
@@ -235,12 +235,12 @@ static void *mc10_get_interface(struct machine *m, const char *ifname);
 static void mc10_ui_set_frameskip(void *, int tag, void *smsg);
 static void mc10_ui_set_ratelimit(void *, int tag, void *smsg);
 
-static void mc10_print_byte(void *, _Bool RnW, uint32_t A);
+static void mc10_print_byte(void *, bool RnW, uint32_t A);
 static void mc10_keyboard_update(void *sptr);
 static void mc10_update_tape_input(void *sptr, float value);
 static void mc10_mc6803_port2_postwrite(void *sptr);
 
-static void cart_nmi(void *sptr, _Bool level);
+static void cart_nmi(void *sptr, bool level);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -248,7 +248,7 @@ static void cart_nmi(void *sptr, _Bool level);
 
 static struct part *mc10_allocate(void);
 static void mc10_initialise(struct part *p, void *options);
-static _Bool mc10_finish(struct part *p);
+static bool mc10_finish(struct part *p);
 static void mc10_free(struct part *p);
 
 static const struct partdb_entry_funcs mc10_funcs = {
@@ -385,7 +385,7 @@ static void mc10_initialise(struct part *p, void *options) {
 	m->keyboard.type = mc->keymap;
 }
 
-static _Bool mc10_finish(struct part *p) {
+static bool mc10_finish(struct part *p) {
 	struct mc10 *mp = (struct mc10 *)p;
 	struct machine *m = &mp->machine;
 	struct machine_config *mc = m->config;
@@ -585,7 +585,7 @@ static void mc10_free(struct part *p) {
 	rombank_free(mp->ROM0);
 }
 
-static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mc10 *mp = sptr;
         struct part *p = &mp->machine.part;
 	size_t length = ser_data_length(sh);
@@ -625,7 +625,7 @@ static _Bool mc10_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mc10 *mp = sptr;
 	(void)mp;
 	(void)sh;
@@ -643,7 +643,7 @@ static _Bool mc10_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool mc10_has_interface(struct part *p, const char *ifname) {
+static bool mc10_has_interface(struct part *p, const char *ifname) {
 	struct mc10 *mp = (struct mc10 *)p;
 	(void)mp;
 	(void)ifname;
@@ -685,7 +685,7 @@ static void mc10_remove_cart(struct machine *m) {
 	}
 }
 
-static void mc10_reset(struct machine *m, _Bool hard) {
+static void mc10_reset(struct machine *m, bool hard) {
 	struct mc10 *mp = (struct mc10 *)m;
 	struct machine_config *mc = m->config;
 	if (hard) {
@@ -918,7 +918,7 @@ static void mc10_remove_breakpoint(struct machine *m, int32_t A,
 	}
 }
 
-static void mc10_add_watchpoint(struct machine *m, _Bool RnW,
+static void mc10_add_watchpoint(struct machine *m, bool RnW,
 				  uint32_t Astart, uint32_t Aend,
 				  DELEGATE_T2(void, bool, uint32) handler) {
 	struct part *p = &m->part;
@@ -1048,7 +1048,7 @@ static void *mc10_get_interface(struct machine *m, const char *ifname) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mc10_vdg_fs(void *sptr, _Bool level) {
+static void mc10_vdg_fs(void *sptr, bool level) {
 	struct mc10 *mp = sptr;
 	if (level) {
 		sound_update(mp->snd);
@@ -1094,11 +1094,11 @@ static void mc10_vdg_update_mode(void *sptr) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mc10_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static void mc10_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct mc10 *mp = sptr;
 	struct machine *m = &mp->machine;
 
-	_Bool SEL = 0;
+	bool SEL = 0;
 	if (mp->cart) {
 		if (RnW) {
 			mp->CPU->D = mp->cart->read(mp->cart, A, mp->CPU->D);
@@ -1153,7 +1153,7 @@ static void mc10_ui_set_ratelimit(void *sptr, int tag, void *smsg) {
 
 // MC-10 serial printing ROM hook
 
-static void mc10_print_byte(void *sptr, _Bool RnW, uint32_t A) {
+static void mc10_print_byte(void *sptr, bool RnW, uint32_t A) {
 	struct mc10 *mp = sptr;
 	(void)RnW;
 	(void)A;
@@ -1208,7 +1208,7 @@ static void mc10_mc6803_port2_postwrite(void *sptr) {
 
 /* Catridge signalling */
 
-static void cart_nmi(void *sptr, _Bool level) {
+static void cart_nmi(void *sptr, bool level) {
 	struct mc10 *mp = sptr;
 	MC6801_NMI_SET(mp->CPU, level);
 }

@@ -91,7 +91,7 @@ void hk_x11_set_display(Display *d) {
 
 // Fingerprint keyboard and update code to sym mapping table.
 
-_Bool hk_x11_update_keymap(void) {
+bool hk_x11_update_keymap(void) {
 	// Toolkit should have called hk_x11_set_display() first:
 	if (!display) {
 		return 0;
@@ -515,7 +515,7 @@ void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap) {
 // not press them here, otherwise phantom keypresses fall through to us when a
 // dialog window is closed and we happen to get focus next.
 
-_Bool hk_x11_focus_in(void) {
+bool hk_x11_focus_in(void) {
 	if (!display || !os_scancode_to_hk_scancode) {
 		return 0;
 	}

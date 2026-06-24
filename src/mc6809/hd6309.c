@@ -74,8 +74,8 @@ static const struct ser_struct ser_struct_hd6309[] = {
 	SER_ID_STRUCT_ELEM(10, struct HD6309, tfm_dest_mod),
 };
 
-static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data hd6309_ser_struct_data = {
 	.elems = ser_struct_hd6309,
@@ -111,7 +111,7 @@ static uint16_t ea_indexed(struct MC6809 *cpu);
 
 static void push_irq_registers(struct MC6809 *cpu);
 static void push_firq_registers(struct MC6809 *cpu);
-static void stack_irq_registers(struct MC6809 *cpu, _Bool entire);
+static void stack_irq_registers(struct MC6809 *cpu, bool entire);
 static void take_interrupt(struct MC6809 *cpu, uint8_t mask, uint16_t vec);
 static void instruction_posthook(struct MC6809 *cpu);
 
@@ -191,7 +191,7 @@ static struct part *hd6309_allocate(void);
 static void hd6309_initialise(struct part *p, void *options);
 static void hd6309_free(struct part *p);
 
-static _Bool hd6309_is_a(struct part *p, const char *name);
+static bool hd6309_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs hd6309_funcs = {
         .allocate = hd6309_allocate,
@@ -275,7 +275,7 @@ static void hd6309_free(struct part *p) {
 #endif
 }
 
-static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct HD6309 *hcpu = sptr;
 	switch (tag) {
 	case HD6309_SER_TFM_SRC:
@@ -290,7 +290,7 @@ static _Bool hd6309_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag) {
         struct HD6309 *hcpu = sptr;
 	switch (tag) {
 	case HD6309_SER_TFM_SRC:
@@ -305,7 +305,7 @@ static _Bool hd6309_write_elem(void *sptr, struct ser_handle *sh, int tag) {
         return 1;
 }
 
-static _Bool hd6309_is_a(struct part *p, const char *name) {
+static bool hd6309_is_a(struct part *p, const char *name) {
 	return strcmp(name, "MC6809") == 0 || mc6809_is_a(p, name);
 }
 
@@ -1816,8 +1816,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
 					continue;
 				}
-				_Bool nsign = 0;  // dividend sign
-				_Bool vsign = 0;  // divisor sign
+				bool nsign = 0;  // dividend sign
+				bool vsign = 0;  // divisor sign
 				if ((tmp1 >> 15) & 1) {
 					tmp1 = ~tmp1 + 1;
 					// Even if calculation is aborted, this
@@ -1904,8 +1904,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 					take_interrupt(cpu, CC_F|CC_I, HD6309_INT_VEC_ILLEGAL);
 					continue;
 				}
-				_Bool nsign = 0;  // dividend sign
-				_Bool vsign = 0;  // divisor sign
+				bool nsign = 0;  // dividend sign
+				bool vsign = 0;  // divisor sign
 				if ((tmp1 >> 31) & 1) {
 					tmp1 = ~tmp1 + 1;
 					// Even if calculation is aborted, this
@@ -2151,7 +2151,7 @@ static void push_firq_registers(struct MC6809 *cpu) {
 	push_s_byte(cpu, REG_CC);
 }
 
-static void stack_irq_registers(struct MC6809 *cpu, _Bool entire) {
+static void stack_irq_registers(struct MC6809 *cpu, bool entire) {
 	if (entire) {
 		REG_CC |= CC_E;
 		push_irq_registers(cpu);

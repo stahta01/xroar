@@ -53,8 +53,8 @@ static const int vdg_hclrs[8] = {  CLR4, CLR3, CLR4, CLR3, CLR4, CLR3, CLR4, CLR
 
 struct vcounter {
 	uint16_t value;
-	_Bool input;
-	_Bool output;
+	bool input;
+	bool output;
 	uint16_t val_mod;
 	uint16_t out_mask;
 	int input_from;
@@ -112,20 +112,20 @@ struct SAMx8_private {
 	uint32_t F;
 
 	// TASK: Task selection.
-	_Bool TASK;
+	bool TASK;
 
         // R: MPU rate.
-        _Bool R;
+        bool R;
 
 	// TY: Map type.  0 selects 32K RAM, 32K ROM.  1 selects 64K RAM.
-	_Bool TY;
+	bool TY;
 
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 	// -- Timing
 
-	_Bool mpu_rate_fast;
-	_Bool running_fast;
-	_Bool extend_slow_cycle;
+	bool mpu_rate_fast;
+	bool running_fast;
+	bool extend_slow_cycle;
 
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 	// -- VDG
@@ -191,8 +191,8 @@ static struct ser_struct ser_struct_samx8[] = {
 	SER_ID_STRUCT_SUBSTRUCT(27, struct SAMx8_private, vcounter[VC_XDIV2], &vcounter_ser_struct_data),
 };
 
-static _Bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data samx8_ser_struct_data = {
 	.elems = ser_struct_samx8,
@@ -210,13 +210,13 @@ static void update_from_register(struct SAMx8_private *);
 
 static struct part *samx8_allocate(void);
 static void samx8_initialise(struct part *p, void *options);
-static _Bool samx8_finish(struct part *p);
+static bool samx8_finish(struct part *p);
 
 static void samx8_reset(struct MC6883 *);
-static int samx8_mem_cycle(void *, _Bool RnW, uint16_t A);
-static unsigned samx8_decode(struct MC6883 *, _Bool RnW, uint16_t A);
-static void samx8_vdg_hsync(struct MC6883 *, _Bool level);
-static void samx8_vdg_fsync(struct MC6883 *, _Bool level);
+static int samx8_mem_cycle(void *, bool RnW, uint16_t A);
+static unsigned samx8_decode(struct MC6883 *, bool RnW, uint16_t A);
+static void samx8_vdg_hsync(struct MC6883 *, bool level);
+static void samx8_vdg_fsync(struct MC6883 *, bool level);
 static int samx8_vdg_bytes(struct MC6883 *, int nbytes);
 static void samx8_set_register(struct MC6883 *, unsigned value);
 static unsigned samx8_get_register(struct MC6883 *);
@@ -277,7 +277,7 @@ static void samx8_initialise(struct part *p, void *options) {
 	part_add_component(p, (struct part *)ram, "RAM");
 }
 
-static _Bool samx8_finish(struct part *p) {
+static bool samx8_finish(struct part *p) {
 	struct SAMx8_private *sam = (struct SAMx8_private *)p;
 
 	// Find attached parts
@@ -298,7 +298,7 @@ static _Bool samx8_finish(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static _Bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct SAMx8_private *sam = sptr;
 	switch (tag) {
 	case SAMX8_SER_PAGE_MAP:
@@ -313,7 +313,7 @@ static _Bool samx8_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool samx8_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct SAMx8_private *sam = sptr;
 	switch (tag) {
 	case SAMX8_SER_PAGE_MAP:
@@ -361,33 +361,33 @@ void samx8_reset(struct MC6883 *samp) {
 static uint8_t const io_S[8] = { 4, 5, 6, 7, 7, 7, 7, 2 };
 static uint8_t const data_S[8] = { 7, 7, 7, 7, 1, 2, 3, 3 };
 
-static int samx8_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
+static int samx8_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 	struct MC6883 *samp = sptr;
 	struct SAMx8_private *sam = (struct SAMx8_private *)samp;
 	int ncycles;
-	_Bool fast_cycle;
-	_Bool want_register_update = 0;
+	bool fast_cycle;
+	bool want_register_update = 0;
 
-	_Bool is_FFxx    = ((A >> 8) & 0xff) == 0xff;
-	_Bool is_IO0     = is_FFxx && ((A >> 5) & 0x7) == 0x0;  // FF0x and FF1x
-	_Bool is_IO1     = is_FFxx && ((A >> 4) & 0xf) == 0x2;  // FF2x ONLY
-	_Bool is_FF3x    = is_FFxx && ((A >> 4) & 0xf) == 0x3;  // FF3x ONLY
-	_Bool is_IO2     = is_FFxx && ((A >> 5) & 0x7) == 0x2;  // FF4x and FF5x
-	_Bool is_SAM_REG = is_FFxx && ((A >> 5) & 0x7) == 0x6;  // FFCx and FFDx
-	_Bool is_IRQ_VEC = is_FFxx && ((A >> 5) & 0x7) == 0x7;  // FFEx and FFFx
+	bool is_FFxx    = ((A >> 8) & 0xff) == 0xff;
+	bool is_IO0     = is_FFxx && ((A >> 5) & 0x7) == 0x0;  // FF0x and FF1x
+	bool is_IO1     = is_FFxx && ((A >> 4) & 0xf) == 0x2;  // FF2x ONLY
+	bool is_FF3x    = is_FFxx && ((A >> 4) & 0xf) == 0x3;  // FF3x ONLY
+	bool is_IO2     = is_FFxx && ((A >> 5) & 0x7) == 0x2;  // FF4x and FF5x
+	bool is_SAM_REG = is_FFxx && ((A >> 5) & 0x7) == 0x6;  // FFCx and FFDx
+	bool is_IRQ_VEC = is_FFxx && ((A >> 5) & 0x7) == 0x7;  // FFEx and FFFx
 
-	_Bool is_COMMON0 = (sam->COMMON & 1) && ((A >> 12) & 0xf) == 0xf;
-	_Bool is_COMMON1 = (sam->COMMON & 2) && ((A >> 12) & 0xf) == 0xe;
-	_Bool is_COMMON = (is_COMMON0 || is_COMMON1) && (is_IRQ_VEC || !is_FFxx);
-	_Bool is_8xxx = ((A >> 13) & 0x7) == 0x4;
-	_Bool is_Axxx = ((A >> 13) & 0x7) == 0x5;
-	_Bool is_Cxxx = ((A >> 14) & 0x3) == 0x3 && !is_FFxx;
+	bool is_COMMON0 = (sam->COMMON & 1) && ((A >> 12) & 0xf) == 0xf;
+	bool is_COMMON1 = (sam->COMMON & 2) && ((A >> 12) & 0xf) == 0xe;
+	bool is_COMMON = (is_COMMON0 || is_COMMON1) && (is_IRQ_VEC || !is_FFxx);
+	bool is_8xxx = ((A >> 13) & 0x7) == 0x4;
+	bool is_Axxx = ((A >> 13) & 0x7) == 0x5;
+	bool is_Cxxx = ((A >> 14) & 0x3) == 0x3 && !is_FFxx;
 
-	_Bool is_ROM0 = !sam->TY && is_8xxx;
-	_Bool is_ROM1 = !sam->TY && is_Axxx;
-	_Bool is_ROM2 = !sam->TY && is_Cxxx;
+	bool is_ROM0 = !sam->TY && is_8xxx;
+	bool is_ROM1 = !sam->TY && is_Axxx;
+	bool is_ROM2 = !sam->TY && is_Cxxx;
 
-	_Bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
+	bool is_RAM = !(A & 0x8000) || (sam->TY && !is_FFxx);
 
 	// IO, SAM registers, IRQ vectors
 	if (is_IO0) samp->S = 0x4;
@@ -504,7 +504,7 @@ static int samx8_mem_cycle(void *sptr, _Bool RnW, uint16_t A) {
 // Just the address decode from samx8_mem_cycle().  Used to verify that a
 // breakpoint refers to ROM.
 
-unsigned samx8_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
+unsigned samx8_decode(struct MC6883 *samp, bool RnW, uint16_t A) {
 	const struct SAMx8_private *sam = (struct SAMx8_private *)samp;
 	if ((A >> 8) == 0xff) {
 		// I/O area
@@ -518,8 +518,8 @@ unsigned samx8_decode(struct MC6883 *samp, _Bool RnW, uint16_t A) {
 static void vcounter_set(struct SAMx8_private *sam, int i, int val);
 
 static void vcounter_update(struct SAMx8_private *sam, int i) {
-	_Bool old_input = sam->vcounter[i].input;
-	_Bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
+	bool old_input = sam->vcounter[i].input;
+	bool new_input = sam->vcounter[sam->vcounter[i].input_from].output;
 	if (new_input != old_input) {
 		sam->vcounter[i].input = new_input;
 		if (!new_input) {
@@ -537,7 +537,7 @@ static void vcounter_set(struct SAMx8_private *sam, int i, int val) {
 	}
 }
 
-void samx8_vdg_hsync(struct MC6883 *samp, _Bool level) {
+void samx8_vdg_hsync(struct MC6883 *samp, bool level) {
 	struct SAMx8_private *sam = (struct SAMx8_private *)samp;
 	if (level)
 		return;
@@ -580,7 +580,7 @@ static inline void vcounter_reset(struct SAMx8_private *sam, int i) {
 	sam->vcounter[i].output = 0;
 }
 
-void samx8_vdg_fsync(struct MC6883 *samp, _Bool level) {
+void samx8_vdg_fsync(struct MC6883 *samp, bool level) {
 	struct SAMx8_private *sam = (struct SAMx8_private *)samp;
 	if (!level) {
 		return;

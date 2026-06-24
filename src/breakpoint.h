@@ -41,12 +41,12 @@ struct bp_breakpoint_set {
 	size_t nbreakpoints;
 	size_t nallocated;
 	struct bp_breakpoint *list;
-	_Bool modified;  // an add or delete has occurred during list run
+	bool modified;  // an add or delete has occurred during list run
 };
 
 // Add a breakpoint.  Returns 1 if successful, else 0 (e.g. identical
 // breakpoint already exists)
-_Bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
+bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
 			DELEGATE_T2(void, bool, uint32) handler);
 
 // Remove specific breakpoint.
@@ -80,7 +80,7 @@ struct bp_watchpoint_set {
 
 // Add a watchpoint.  Returns 1 if successful, else 0 (e.g. identical
 // watchpoint already exists)
-_Bool bp_watchpoint_add(struct bp_watchpoint_set *wps, _Bool Rnw,
+bool bp_watchpoint_add(struct bp_watchpoint_set *wps, bool Rnw,
 			uint32_t Astart, uint32_t Aend,
 			DELEGATE_T2(void, bool, uint32) handler);
 
@@ -90,7 +90,7 @@ void bp_watchpoint_remove(struct bp_watchpoint_set *wps, int Rnw,
 			  DELEGATE_T2(void, bool, uint32) handler);
 
 // Inlined watchpoint match & dispatch
-inline void bp_check_watchpoints(struct bp_watchpoint_set *set, _Bool RnW, uint32_t A) {
+inline void bp_check_watchpoints(struct bp_watchpoint_set *set, bool RnW, uint32_t A) {
 	struct bp_watchpoint *list = set->list[RnW];
 	struct bp_watchpoint *next;
 	for (struct bp_watchpoint *iter = list; iter; iter = next) {

@@ -44,7 +44,7 @@ struct tape_interface {
 
 	// Set by machines without motor control.  When set, tape interface
 	// will pause on reset or when a new tape is inserted.
-	_Bool default_paused;
+	bool default_paused;
 };
 
 struct tape_module;
@@ -88,11 +88,11 @@ struct tape_file {
 	long offset;
 	char name[9];
 	int type;
-	_Bool ascii_flag;
-	_Bool gap_flag;
+	bool ascii_flag;
+	bool gap_flag;
 	int start_address;
 	int load_address;
-	_Bool checksum_error;
+	bool checksum_error;
 	int fnblock_size;
 	uint16_t fnblock_crc;
 };
@@ -130,7 +130,7 @@ int tape_autorun(struct tape_interface *ti, const char *filename);
 
 
 // Automatic motor control.  Simulates cassette relay.
-void tape_set_motor(struct tape_interface *ti, _Bool motor);
+void tape_set_motor(struct tape_interface *ti, bool motor);
 
 // Called by machine to reflect change in tape output level.
 void tape_update_output(struct tape_interface *ti, uint8_t value);

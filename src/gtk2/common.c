@@ -156,12 +156,12 @@ void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-_Bool uigtk2_update_adjustment(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+bool uigtk2_update_adjustment(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
 			       gdouble min, gdouble max, gdouble pos) {
 	GtkAdjustment *a = GTK_ADJUSTMENT(gtk_builder_get_object(uigtk2->builder, a_name));
 	if (!a)
 		return 0;
-	_Bool changed = 0;
+	bool changed = 0;
 	gdouble old_min = gtk_adjustment_get_lower(a);
 	gdouble old_max = gtk_adjustment_get_upper(a);
 	gdouble old_pos = gtk_adjustment_get_value(a);

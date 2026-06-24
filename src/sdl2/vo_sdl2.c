@@ -68,7 +68,7 @@ struct vo_sdl_interface {
 	SDL_Renderer *sdl_renderer;
 
 	struct vo_window_area window_area;
-	_Bool scale_60hz;
+	bool scale_60hz;
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -94,11 +94,11 @@ static void vosdl_ui_set_fullscreen(void *, int tag, void *smsg);
 #endif
 static void vosdl_ui_set_menubar(void *, int tag, void *smsg);
 
-static void notify_frame_rate(void *, _Bool is_60hz);
+static void notify_frame_rate(void *, bool is_60hz);
 
 static void recreate_renderer(struct ui_sdl2_interface *);
 
-_Bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
+bool sdl_vo_init(struct ui_sdl2_interface *uisdl2) {
 	struct vo_cfg *vo_cfg = &uisdl2->cfg->vo_cfg;
 
 	struct vo_sdl_interface *vosdl = vo_interface_new(sizeof(*vosdl));
@@ -350,7 +350,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 
-	_Bool is_exact_multiple = 0;
+	bool is_exact_multiple = 0;
 	int multiple = 1;
 	int mw = uisdl2->viewport.w;
 	int mh = uisdl2->viewport.h * 2;
@@ -387,7 +387,7 @@ static void set_viewport(void *sptr, int vp_w, int vp_h) {
 	update_viewport(uisdl2);
 }
 
-static void notify_frame_rate(void *sptr, _Bool is_60hz) {
+static void notify_frame_rate(void *sptr, bool is_60hz) {
 	struct ui_sdl2_interface *uisdl2 = sptr;
 
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
@@ -443,8 +443,8 @@ static void vosdl_ui_set_fullscreen(void *sptr, int tag, void *smsg) {
 	struct ui_state_message *uimsg = smsg;
 	struct vo_interface *vo = uisdl2->ui_interface.vo_interface;
 
-	_Bool want_fullscreen = uimsg->value;
-	_Bool is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
+	bool want_fullscreen = uimsg->value;
+	bool is_fullscreen = SDL_GetWindowFlags(uisdl2->vo_window) & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 	if (is_fullscreen == want_fullscreen) {
 		return;
@@ -474,7 +474,7 @@ static void vosdl_ui_set_menubar(void *sptr, int tag, void *smsg) {
 	struct vo_sdl_interface *vosdl = (struct vo_sdl_interface *)vo;
 	(void)vosdl;
 
-	_Bool want_menubar = uimsg->value;
+	bool want_menubar = uimsg->value;
 
 	vo->show_menubar = want_menubar;
 }

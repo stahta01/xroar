@@ -27,7 +27,7 @@
 #include "xalloc.h"
 
 extern inline int int_clamp_u8(int v);
-extern inline _Bool u32_parity(uint32_t val);
+extern inline bool u32_parity(uint32_t val);
 
 // Integer compare suitable for passing to qsort()
 

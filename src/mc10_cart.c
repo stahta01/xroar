@@ -39,8 +39,8 @@ static const struct ser_struct ser_struct_mc10_cart[] = {
 	SER_ID_STRUCT_ELEM(2, struct mc10_cart, SEL),
 };
 
-static _Bool mc10_cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc10_cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc10_cart_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc10_cart_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 // External; struct data nested by MC-10 carts:
 const struct ser_struct_data mc10_cart_ser_struct_data = {
@@ -52,16 +52,16 @@ const struct ser_struct_data mc10_cart_ser_struct_data = {
 
 /**************************************************************************/
 
-_Bool mc10_cart_finish(struct part *p) {
+bool mc10_cart_finish(struct part *p) {
 	(void)p;
 	return 1;
 }
 
-_Bool mc10_cart_is_a(struct part *p, const char *name) {
+bool mc10_cart_is_a(struct part *p, const char *name) {
 	return strcmp(name, "mc10-cart") == 0 || cart_is_a(p, name);
 }
 
-static _Bool mc10_cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc10_cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart *c = sptr;
 	switch (tag) {
 	case CART_SER_CART_CONFIG:
@@ -73,7 +73,7 @@ static _Bool mc10_cart_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc10_cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc10_cart_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct cart *c = sptr;
 	switch (tag) {
 	case CART_SER_CART_CONFIG:

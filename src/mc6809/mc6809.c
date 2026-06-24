@@ -107,10 +107,10 @@ static unsigned mc6809_register_size(void *sptr, int n);
 static uint32_t mc6809_get_register(void *sptr, int n);
 static void mc6809_set_register(void *sptr, int n, uint32_t v);
 
-extern inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val);
-extern inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val);
-extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val);
-extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val);
+extern inline void MC6809_HALT_SET(struct MC6809 *cpu, bool val);
+extern inline void MC6809_NMI_SET(struct MC6809 *cpu, bool val);
+extern inline void MC6809_FIRQ_SET(struct MC6809 *cpu, bool val);
+extern inline void MC6809_IRQ_SET(struct MC6809 *cpu, bool val);
 
 /*
  * External interface
@@ -236,7 +236,7 @@ static void mc6809_free(struct part *p) {
 #endif
 }
 
-_Bool mc6809_is_a(struct part *p, const char *name) {
+bool mc6809_is_a(struct part *p, const char *name) {
 	(void)p;
         return strcmp(name, "DEBUG-CPU") == 0;
 }

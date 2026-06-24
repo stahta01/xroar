@@ -26,7 +26,7 @@
 #include "logging.h"
 
 extern inline int event_tick_delta(event_ticks t0, event_ticks t1);
-extern inline _Bool event_pending(struct event_list *, event_ticks to_time);
+extern inline bool event_pending(struct event_list *, event_ticks to_time);
 extern inline void event_dispatch_next(struct event_list *);
 extern inline void event_run_queue(struct event_list *, event_ticks dt);
 

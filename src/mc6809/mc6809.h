@@ -73,7 +73,7 @@ struct MC6809 {
 	struct debug_cpu debug_cpu;
 
 	/* Interrupt lines */
-	_Bool halt, nmi, firq, irq;
+	bool halt, nmi, firq, irq;
 	uint8_t D;
 
 	/* Methods */
@@ -89,7 +89,7 @@ struct MC6809 {
 	/* Internal state */
 
 	unsigned state;
-	_Bool running;
+	bool running;
 	uint16_t page;  // 0, 0x200, or 0x300
 #ifdef TRACE
 	struct mc6809_trace *tracer;
@@ -109,9 +109,9 @@ struct MC6809 {
 	uint16_t reg_d;
 	uint16_t reg_x, reg_y, reg_u, reg_s, reg_pc;
 	/* Interrupts */
-	_Bool nmi_armed;
-	_Bool nmi_latch, firq_latch, irq_latch;
-	_Bool nmi_active, firq_active, irq_active;
+	bool nmi_armed;
+	bool nmi_latch, firq_latch, irq_latch;
+	bool nmi_active, firq_active, irq_active;
 
 #ifdef WANT_GDB_TARGET
 	const char *gdb_architecture;
@@ -132,24 +132,24 @@ struct MC6809 {
 
 extern const struct ser_struct_data mc6809_ser_struct_data;
 
-inline void MC6809_HALT_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_HALT_SET(struct MC6809 *cpu, bool val) {
 	cpu->halt = val;
 }
 
-inline void MC6809_NMI_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_NMI_SET(struct MC6809 *cpu, bool val) {
 	cpu->nmi = val;
 }
 
-inline void MC6809_FIRQ_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_FIRQ_SET(struct MC6809 *cpu, bool val) {
 	cpu->firq = val;
 }
 
-inline void MC6809_IRQ_SET(struct MC6809 *cpu, _Bool val) {
+inline void MC6809_IRQ_SET(struct MC6809 *cpu, bool val) {
 	cpu->irq = val;
 }
 
 // Used by MC6809-compatibles:
-_Bool mc6809_is_a(struct part *p, const char *name);
+bool mc6809_is_a(struct part *p, const char *name);
 #ifdef TRACE
 unsigned mc6809_get_trace_pc(void *sptr);
 #endif

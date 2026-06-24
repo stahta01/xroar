@@ -143,9 +143,9 @@ void rombank_report(struct rombank *rb, const char *par, const char *name) {
 
 // Verify ROM bank CRC.  Pass negative slot id to check combined CRC.
 
-_Bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
-			 const char *crclist, _Bool force, uint32_t *crc32) {
-	_Bool present = 0;
+bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
+			 const char *crclist, bool force, uint32_t *crc32) {
+	bool present = 0;
 	uint32_t check_crc32 = CRC32_RESET;
 	if (slot < 0) {
 		check_crc32 = rb->combined_crc32;
@@ -161,8 +161,8 @@ _Bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
 		present = 1;
 	}
 
-	_Bool valid = present && crclist_match(crclist, check_crc32);
-	_Bool forced = present && !valid && force;
+	bool valid = present && crclist_match(crclist, check_crc32);
+	bool forced = present && !valid && force;
 
 	if (forced) {
 		LOG_DEBUG(1, "\t%s CRC32 forced to 0x%08x\n", name, *crc32);

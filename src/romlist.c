@@ -37,7 +37,7 @@
 struct romlist {
 	char *name;
 	struct slist *list;
-	_Bool flag;
+	bool flag;
 };
 
 /* List containing all defined rom lists */

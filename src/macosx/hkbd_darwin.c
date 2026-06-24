@@ -199,7 +199,7 @@ static int8_t hk_scancode_to_darwin[HK_NUM_SCANCODES];
 
 // Update table of scancode+shift level to symbol mappings
 
-_Bool hk_darwin_update_keymap(void) {
+bool hk_darwin_update_keymap(void) {
 	// Invert the table above
 	for (size_t i = 0; i < ARRAY_N_ELEMENTS(hk_scancode_to_darwin); ++i) {
 		hk_scancode_to_darwin[i] = -1;

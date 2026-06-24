@@ -239,10 +239,10 @@ struct vo_render {
 		float cha_phase;  // default 90° = π/2
 
 		// Whether to chroma average successive lines (eg PAL)
-		_Bool average_chroma;
+		bool average_chroma;
 
 		// Whether colour-killer is enabled for no colourburst (burstn=0)
-		_Bool colour_killer;
+		bool colour_killer;
 
 		// PAL v-switch
 		int vswitch;
@@ -313,7 +313,7 @@ struct vo_render {
 	struct vo_active_area active_area;
 
 	// Whether 60Hz scaling is enabled
-	_Bool ntsc_scaling;
+	bool ntsc_scaling;
 
 	// Current time, measured in pixels
 	unsigned t;
@@ -332,7 +332,7 @@ struct vo_render {
 	int scanline;
 
 	// Current frame rate - used for notifying video module of change
-	_Bool is_60hz;
+	bool is_60hz;
 
 	// Top-left of output buffer; where vo_render_vsync() will return pixel to
 	void *buffer;
@@ -356,7 +356,7 @@ struct vo_render {
 	// Notify video module if frame rate changes, based on scanline count.
 	// Default assumption should be 50Hz.
 	//
-	//     _Bool is_60hz;  // false = 50Hz, true = 60Hz
+	//     bool is_60hz;  // false = 50Hz, true = 60Hz
 
 	DELEGATE_T1(void, bool) notify_frame_rate;
 

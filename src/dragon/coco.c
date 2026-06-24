@@ -44,7 +44,7 @@
 
 static void coco_config_complete(struct machine_config *mc);
 
-static void coco_reset(struct machine *, _Bool hard);
+static void coco_reset(struct machine *, bool hard);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -52,7 +52,7 @@ static void coco_reset(struct machine *, _Bool hard);
 
 static struct part *coco_allocate(void);
 static void coco_initialise(struct part *p, void *options);
-static _Bool coco_finish(struct part *p);
+static bool coco_finish(struct part *p);
 static void coco_free(struct part *p);
 
 static const struct partdb_entry_funcs coco_funcs = {
@@ -71,7 +71,7 @@ const struct machine_partdb_entry coco_part = { .partdb_entry = { .name = "coco"
 static void pia0b_data_preread_coco64k(void *sptr);
 static void pia1a_data_postwrite_coco(void *sptr);
 static void pia1b_data_preread_coco64k(void *sptr);
-static void coco_print_byte(void *, _Bool RnW, uint32_t A);
+static void coco_print_byte(void *, bool RnW, uint32_t A);
 
 static struct machine_bp_entry coco_print_breakpoint[] = {
 	{ "serial.printchr", coco_print_byte },
@@ -126,7 +126,7 @@ void coco_pia_configuration(struct dragon *md) {
 	md->PIA1->a.data_postwrite = DELEGATE_AS0(void, pia1a_data_postwrite_coco, md);
 }
 
-static _Bool coco_finish(struct part *p) {
+static bool coco_finish(struct part *p) {
 	struct dragon *md = (struct dragon *)p;
 	struct machine *m = &md->public;
 	struct machine_config *mc = m->config;
@@ -213,7 +213,7 @@ static void coco_config_complete(struct machine_config *mc) {
 	dragon_config_complete(mc);
 }
 
-static void coco_reset(struct machine *m, _Bool hard) {
+static void coco_reset(struct machine *m, bool hard) {
         struct dragon *md = (struct dragon *)m;
         dragon_reset(m, hard);
 	machine_remove_breakpoint_all(m, md);
@@ -255,7 +255,7 @@ static void pia1b_data_preread_coco64k(void *sptr) {
 
 // CoCo serial printing ROM hook.
 
-static void coco_print_byte(void *sptr, _Bool RnW, uint32_t A) {
+static void coco_print_byte(void *sptr, bool RnW, uint32_t A) {
 	struct dragon *md = sptr;
 	(void)RnW;
 	(void)A;

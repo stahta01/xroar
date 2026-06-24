@@ -103,7 +103,7 @@ struct ui_gtk2_interface {
 	int msgr_client_id;
 
 	// Window geometry
-	_Bool user_specified_geometry;
+	bool user_specified_geometry;
 
 	// Printer state
 	struct {
@@ -113,13 +113,13 @@ struct ui_gtk2_interface {
 	// Keyboard state
 	struct {
 		// Is a non-preempted control key pressed?
-		_Bool control;
+		bool control;
 		struct gtk_kbd_js_axis *enabled_axis[GTK_KBD_JS_MAX_AXES];
 		struct gtk_kbd_js_button *enabled_button[GTK_KBD_JS_MAX_BUTTONS];
 	} keyboard;
 
 	// Cursor hiding
-	_Bool cursor_hidden;
+	bool cursor_hidden;
 	GdkCursor *old_cursor;
 	GdkCursor *blank_cursor;
 
@@ -132,7 +132,7 @@ extern struct ui_gtk2_interface *global_uigtk2;
 
 void gtk2_create_about_window(struct ui_gtk2_interface *);
 
-_Bool gtkgl_vo_init(struct ui_gtk2_interface *);
+bool gtkgl_vo_init(struct ui_gtk2_interface *);
 
 extern struct joystick_module *gtk2_js_modlist[];
 
@@ -196,7 +196,7 @@ void uigtk2_widget_show(struct ui_gtk2_interface *uigtk2, const gchar *w_name);
 
 // Update an adjustment.  Returns true if any parameter changed.
 
-_Bool uigtk2_update_adjustment(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
+bool uigtk2_update_adjustment(struct ui_gtk2_interface *uigtk2, const gchar *a_name,
 			       gdouble min, gdouble max, gdouble pos);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -172,10 +172,10 @@ static void wd279x_debug_state(const struct WD279X *);
 
 static struct part *wd279x_allocate(void);
 static void wd279x_initialise(struct part *, void *options);
-static _Bool wd279x_finish(struct part *);
+static bool wd279x_finish(struct part *);
 static void wd279x_free(struct part *);
 
-static _Bool wd279x_is_a(struct part *, const char *name);
+static bool wd279x_is_a(struct part *, const char *name);
 
 static const struct partdb_entry_funcs wd279x_funcs = {
 	.allocate = wd279x_allocate,
@@ -225,7 +225,7 @@ static void wd279x_initialise(struct part *p, void *options) {
 	fdc->type = type;
 }
 
-static _Bool wd279x_finish(struct part *p) {
+static bool wd279x_finish(struct part *p) {
 	struct WD279X *fdc = (struct WD279X *)p;
 
 	fdc->has_sso = (fdc->type == WD2795 || fdc->type == WD2797);
@@ -247,7 +247,7 @@ static void wd279x_free(struct part *p) {
 	event_dequeue(&fdc->state_event);
 }
 
-static _Bool wd279x_is_a(struct part *p, const char *name) {
+static bool wd279x_is_a(struct part *p, const char *name) {
 	if (!p)
 		return 0;
 	struct WD279X *fdc = (struct WD279X *)p;
@@ -302,7 +302,7 @@ void wd279x_reset(struct WD279X *fdc) {
 	SET_SIDE(fdc, 0);
 }
 
-void wd279x_ready(void *sptr, _Bool state) {
+void wd279x_ready(void *sptr, bool state) {
 	struct WD279X *fdc = sptr;
 	if (fdc->ready_state == state)
 		return;
@@ -317,14 +317,14 @@ void wd279x_ready(void *sptr, _Bool state) {
 	}
 }
 
-void wd279x_tr00(void *sptr, _Bool state) {
+void wd279x_tr00(void *sptr, bool state) {
 	struct WD279X *fdc = sptr;
 	if (fdc->tr00_state == state)
 		return;
 	fdc->tr00_state = state;
 }
 
-void wd279x_index_pulse(void *sptr, _Bool state) {
+void wd279x_index_pulse(void *sptr, bool state) {
 	struct WD279X *fdc = sptr;
 	if (fdc->index_state == state)
 		return;
@@ -338,14 +338,14 @@ void wd279x_index_pulse(void *sptr, _Bool state) {
 	}
 }
 
-void wd279x_write_protect(void *sptr, _Bool state) {
+void wd279x_write_protect(void *sptr, bool state) {
 	struct WD279X *fdc = sptr;
 	if (fdc->write_protect_state == state)
 		return;
 	fdc->write_protect_state = state;
 }
 
-void wd279x_set_dden(struct WD279X *fdc, _Bool dden) {
+void wd279x_set_dden(struct WD279X *fdc, bool dden) {
 	fdc->double_density = dden;
 	DELEGATE_CALL(fdc->set_dden, dden);
 }
@@ -1134,7 +1134,7 @@ static void wd279x_debug_state(const struct WD279X *fdc) {
 	unsigned level = logging.debug_fdc & LOG_FDC_STATE;
 	if (level == 0)
 		return;
-	_Bool forced_interrupt = ((fdc->command_register & 0xf0) == 0xd0);
+	bool forced_interrupt = ((fdc->command_register & 0xf0) == 0xd0);
 	if (fdc->state == WD279X_state_accept_command || forced_interrupt) {
 		// command (incl. forced interrupt)
 		unsigned type = ((fdc->command_register) >> 4) & 15;

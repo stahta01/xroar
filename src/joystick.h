@@ -205,7 +205,7 @@ void joystick_shutdown(void);
 struct joystick_config *joystick_config_new(void);
 struct joystick_config *joystick_config_by_id(int jsid);
 struct joystick_config *joystick_config_by_name(const char *name);
-void joystick_config_print_all(FILE *f, _Bool all);
+void joystick_config_print_all(FILE *f, bool all);
 void joystick_config_remove(struct joystick_config *);
 void joystick_config_remove_by_id(int jsid);
 void joystick_config_remove_by_name(const char *name);

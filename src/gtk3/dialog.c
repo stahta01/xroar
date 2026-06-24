@@ -155,7 +155,7 @@ static void dlg_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct ui_state_message *uimsg = smsg;
 	assert(tag == dlg->ui_tag);
 
-	_Bool show;
+	bool show;
 	if (uimsg->value == UI_NEXT || uimsg->value == UI_PREV) {
 		show = !gtk_widget_is_visible(GTK_WIDGET(dlg->window));
 	} else {

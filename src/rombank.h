@@ -67,8 +67,8 @@ void rombank_report(struct rombank *, const char *par, const char *name);
 // is set to true, the value pointed to by crc32 is not overwritten if the CRC
 // did not check.
 
-_Bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
-			 const char *crclist, _Bool force, uint32_t *crc32);
+bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
+			 const char *crclist, bool force, uint32_t *crc32);
 
 // Load ROM image.
 

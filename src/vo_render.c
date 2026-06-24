@@ -994,7 +994,7 @@ void vo_render_vsync(void *sptr) {
 		return;
 	vr->pixel = vr->buffer;
 
-	_Bool is_60hz = vr->ntsc_scaling && (vr->scanline < 288);
+	bool is_60hz = vr->ntsc_scaling && (vr->scanline < 288);
 	if (is_60hz != vr->is_60hz) {
 		vr->is_60hz = is_60hz;
 		DELEGATE_SAFE_CALL(vr->notify_frame_rate, is_60hz);

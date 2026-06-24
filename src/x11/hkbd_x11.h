@@ -25,7 +25,7 @@
 // Toolkit should call this before calling hk_init()
 void hk_x11_set_display(Display *d);
 
-_Bool hk_x11_update_keymap(void);
+bool hk_x11_update_keymap(void);
 
 // Map X11 keysym to HK sym.
 
@@ -43,6 +43,6 @@ void hk_x11_handle_keymap_event(XKeymapEvent *xkeymap);
 
 // Call on focus event.
 
-_Bool hk_x11_focus_in(void);
+bool hk_x11_focus_in(void);
 
 #endif

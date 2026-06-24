@@ -36,7 +36,7 @@ void printer_interface_free(struct printer_interface *pi);
 void printer_reset(struct printer_interface *pi);
 
 void printer_flush(struct printer_interface *pi);
-void printer_strobe(struct printer_interface *pi, _Bool strobe, int data);
-_Bool printer_busy(struct printer_interface *pi);
+void printer_strobe(struct printer_interface *pi, bool strobe, int data);
+bool printer_busy(struct printer_interface *pi);
 
 #endif

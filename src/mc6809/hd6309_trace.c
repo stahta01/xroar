@@ -1080,7 +1080,7 @@ void hd6309_trace_instruction(struct hd6309_trace *tracer, uint16_t pc,
 			// 5-bit offsets considered separately
 			snprintf(operand_text, sizeof(operand_text), "%d,%s", sex5(postbyte), idx_reg);
 		} else {
-			_Bool idx_indirect = postbyte & 0x10;
+			bool idx_indirect = postbyte & 0x10;
 			unsigned idx_mode = postbyte & 0x0f;
 			const char *pre = idx_indirect ? "[" : "";
 			const char *post = idx_indirect ? "]" : "";
@@ -1244,7 +1244,7 @@ static unsigned next_word(struct byte_iter *iter) {
 // string or NULL if it ran out of space.
 
 static char *stack_operand(char *dst, char *dend, unsigned *postbyte, const char *r) {
-	_Bool pr = *postbyte & 1;
+	bool pr = *postbyte & 1;
 	*postbyte >>= 1;
 	if (pr) {
 		dst = pl_estrcpy(dst, dend, r);

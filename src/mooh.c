@@ -45,13 +45,13 @@ struct mooh {
 	struct cart cart;
 	struct spi65 *spi65;
 	struct ram *extmem;
-	_Bool mmu_enable;
-	_Bool crm_enable;
+	bool mmu_enable;
+	bool crm_enable;
 	uint8_t taskreg[8][2];
 	uint8_t task;
 	uint8_t rom_conf;
 	struct becker *becker;
-	_Bool crt9128_to_stderr;  // console output to stderr if set
+	bool crt9128_to_stderr;  // console output to stderr if set
 	uint8_t crt9128_reg_addr;
 	int msgr_client_id;  // messenger client id
 };
@@ -70,8 +70,8 @@ static const struct ser_struct ser_struct_mooh[] = {
 	SER_ID_STRUCT_ELEM(8, struct mooh, crt9128_to_stderr),
 };
 
-static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data mooh_ser_struct_data = {
 	.elems = ser_struct_mooh,
@@ -90,9 +90,9 @@ static struct xconfig_option const mooh_options[] = {
 static void mooh_config_complete(struct cart_config *);
 static void mooh_ui_set_hd_filename(void *, int tag, void *smsg);
 
-static void mooh_reset(struct cart *c, _Bool hard);
-static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
+static void mooh_reset(struct cart *c, bool hard);
+static uint8_t mooh_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t mooh_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
 static void mooh_detach(struct cart *c);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -101,7 +101,7 @@ static void mooh_detach(struct cart *c);
 
 static struct part *mooh_allocate(void);
 static void mooh_initialise(struct part *p, void *options);
-static _Bool mooh_finish(struct part *p);
+static bool mooh_finish(struct part *p);
 static void mooh_free(struct part *p);
 
 static const struct partdb_entry_funcs mooh_funcs = {
@@ -167,7 +167,7 @@ static void mooh_initialise(struct part *p, void *options) {
 	part_add_component(&c->part, (struct part *)spi65, "SPI65");
 }
 
-static _Bool mooh_finish(struct part *p) {
+static bool mooh_finish(struct part *p) {
 	struct mooh *n = (struct mooh *)p;
 	struct cart *c = &n->cart;
 
@@ -205,7 +205,7 @@ static void mooh_free(struct part *p) {
 	cart_rom_free(p);
 }
 
-static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mooh *n = sptr;
 	struct part *p = &n->cart.part;
 	size_t length = ser_data_length(sh);
@@ -231,7 +231,7 @@ static _Bool mooh_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mooh_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct mooh *n = sptr;
 	switch (tag) {
 	case MOOH_SER_EXTMEM:
@@ -277,7 +277,7 @@ static void mooh_ui_set_hd_filename(void *sptr, int tag, void *smsg) {
 	}
 }
 
-static void mooh_reset(struct cart *c, _Bool hard) {
+static void mooh_reset(struct cart *c, bool hard) {
 	struct mooh *n = (struct mooh *)c;
 	int i;
 
@@ -309,7 +309,7 @@ static void mooh_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mooh_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct mooh *n = (struct mooh *)c;
 
 	c->EXTMEM = 0;
@@ -370,7 +370,7 @@ static uint8_t mooh_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 	return D;
 }
 
-static uint8_t mooh_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mooh_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct mooh *n = (struct mooh *)c;
 
 	c->EXTMEM = 0;

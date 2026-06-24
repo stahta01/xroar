@@ -1143,7 +1143,7 @@ struct hkbd {
 	uint16_t code_to_sym[HK_NUM_LEVELS][HK_NUM_SCANCODES];
 
 	// Symbol translation enabled
-	_Bool translate;
+	bool translate;
 
 	// The symbol that was registered as pressed last by each scancode.
 	// Lets us report release of the same symbol as was pressed, even if
@@ -1155,7 +1155,7 @@ struct hkbd {
 
 	// Map scancode to emulated key (TODO: move this elsewhere?)
 	int8_t code_to_dkey[HK_NUM_SCANCODES];
-	_Bool code_preempt[HK_NUM_SCANCODES];
+	bool code_preempt[HK_NUM_SCANCODES];
 
 	uint8_t state;  // current modifier state
 };

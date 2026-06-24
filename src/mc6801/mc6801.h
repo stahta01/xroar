@@ -101,10 +101,10 @@ struct MC6801 {
 	struct debug_cpu debug_cpu;
 
 	// 6801 or 6803?
-	_Bool is_6801;
+	bool is_6801;
 
 	// Interrupt lines
-	_Bool nmi, irq1;
+	bool nmi, irq1;
 
 	// Data bus (in real hardware, shared with port 3)
 	uint8_t D;
@@ -132,7 +132,7 @@ struct MC6801 {
 	// Internal state
 
 	unsigned state;
-	_Bool running;
+	bool running;
 #ifdef TRACE
 	struct mc6801_trace *tracer;
 	uint16_t trace_pc;  // base address of instruction
@@ -159,16 +159,16 @@ struct MC6801 {
 	uint16_t counter;
 	uint8_t counter_lsb_buf;
 	uint16_t output_compare;
-	_Bool output_compare_inhibit;
+	bool output_compare_inhibit;
 
 	// Internal RAM
 	uint8_t ram[128];
 
 	// Interrupts
 	uint8_t itmp;
-	_Bool nmi_latch, nmi_active;
-	_Bool irq1_latch, irq1_active;
-	_Bool irq2_latch, irq2_active;
+	bool nmi_latch, nmi_active;
+	bool irq1_latch, irq1_active;
+	bool irq2_latch, irq2_active;
 
 #ifdef WANT_GDB_TARGET
 	const char *gdb_architecture;
@@ -187,11 +187,11 @@ struct MC6801 {
 #define MC6801_REG_A(cpu) (*((uint8_t *)&cpu->reg_d + MC6801_REG_HI))
 #define MC6801_REG_B(cpu) (*((uint8_t *)&cpu->reg_d + MC6801_REG_LO))
 
-inline void MC6801_NMI_SET(struct MC6801 *cpu, _Bool val) {
+inline void MC6801_NMI_SET(struct MC6801 *cpu, bool val) {
 	cpu->nmi = val;
 }
 
-inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val) {
+inline void MC6801_IRQ1_SET(struct MC6801 *cpu, bool val) {
 	cpu->irq1 = val;
 }
 

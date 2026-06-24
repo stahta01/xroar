@@ -69,7 +69,7 @@ static void pc_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_print_dialog:
 		{
-			_Bool show;
+			bool show;
 			if (value == UI_NEXT || value == UI_PREV) {
 				LONG style = GetWindowLongA(dlg->hWnd, GWL_STYLE);
 				show = (style & WS_VISIBLE) ? 0 : 1;

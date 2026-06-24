@@ -49,8 +49,8 @@ struct event_list {
 struct event {
 	event_ticks at_tick;
 	DELEGATE_T0(void) delegate;
-	_Bool queued;
-	_Bool autofree;
+	bool queued;
+	bool autofree;
 	struct event_list *list;
 	struct event *next;
 };
@@ -107,7 +107,7 @@ inline int event_tick_delta(event_ticks t0, event_ticks t1) {
 	return *(int32_t *)&dt;
 }
 
-inline _Bool event_pending(struct event_list *list, event_ticks to_time) {
+inline bool event_pending(struct event_list *list, event_ticks to_time) {
 	return list->events && event_tick_delta(to_time, list->events->at_tick) >= 0;
 }
 

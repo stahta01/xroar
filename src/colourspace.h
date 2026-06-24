@@ -58,7 +58,7 @@ struct cs_profile {
 	float xg, yg;
 	float xb, yb;
 	float xn, yn;
-	_Bool init;
+	bool init;
 	float RGB_to_XYZ[3][3];
 	float XYZ_to_RGB[3][3];
 };

@@ -38,7 +38,7 @@ struct rom_meta_internal {
 	const char *machine;  // machine required (where != part)
 	const char *cart;     // cart required (where != part)
 	uint8_t bank, slot;
-	_Bool no_autorun;
+	bool no_autorun;
 };
 
 // Shortcuts

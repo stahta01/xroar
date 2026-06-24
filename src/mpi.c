@@ -60,8 +60,8 @@ struct mpi_slot {
 
 struct mpi {
 	struct cart cart;
-	_Bool is_race;
-	_Bool switch_enable;
+	bool is_race;
+	bool switch_enable;
 	unsigned cts_route;
 	unsigned p2_route;
 	unsigned firq_state;
@@ -90,16 +90,16 @@ static const struct ser_struct_data mpi_ser_struct_data = {
 /* Protect against chained MPI initialisation */
 
 /* Handle signals from cartridges */
-static void mpi_set_firq(void *, _Bool);
-static void mpi_set_nmi(void *, _Bool);
-static void mpi_set_halt(void *, _Bool);
+static void mpi_set_firq(void *, bool);
+static void mpi_set_nmi(void *, bool);
+static void mpi_set_halt(void *, bool);
 
 static void mpi_attach(struct cart *c);
 static void mpi_detach(struct cart *c);
-static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void mpi_reset(struct cart *c, _Bool hard);
-static _Bool mpi_has_interface(struct cart *c, const char *ifname);
+static uint8_t mpi_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t mpi_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void mpi_reset(struct cart *c, bool hard);
+static bool mpi_has_interface(struct cart *c, const char *ifname);
 static void mpi_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 static void select_slot(struct mpi *, unsigned D);
@@ -110,7 +110,7 @@ static void select_slot(struct mpi *, unsigned D);
 
 static struct part *mpi_allocate(void);
 static void mpi_initialise(struct part *p, void *options);
-static _Bool mpi_finish(struct part *p);
+static bool mpi_finish(struct part *p);
 
 static const struct partdb_entry_funcs mpi_funcs = {
 	.allocate = mpi_allocate,
@@ -179,7 +179,7 @@ static void mpi_initialise(struct part *p, void *options) {
 	select_slot(mpi, (initial_slot << 4) | initial_slot);
 }
 
-static _Bool mpi_finish(struct part *p) {
+static bool mpi_finish(struct part *p) {
 	struct mpi *mpi = (struct mpi *)p;
 
 	// Find attached cartridges
@@ -202,7 +202,7 @@ static _Bool mpi_finish(struct part *p) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void mpi_reset(struct cart *c, _Bool hard) {
+static void mpi_reset(struct cart *c, bool hard) {
 	struct cart_config *cc = c->config;
 	struct mpi *mpi = (struct mpi *)c;
 	mpi->firq_state = 0;
@@ -241,7 +241,7 @@ static void mpi_detach(struct cart *c) {
 	}
 }
 
-static _Bool mpi_has_interface(struct cart *c, const char *ifname) {
+static bool mpi_has_interface(struct cart *c, const char *ifname) {
 	struct mpi *mpi = (struct mpi *)c;
 	for (int i = 0; i < 4; i++) {
 		struct cart *c2 = mpi->slot[i].cart;
@@ -300,7 +300,7 @@ void mpi_switch_slot(struct cart *c, unsigned slot) {
 	select_slot(mpi, (slot << 4) | slot);
 }
 
-static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mpi_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct mpi *mpi = (struct mpi *)c;
 	mpi->cart.EXTMEM = 0;
 	if (!mpi->is_race) {
@@ -338,7 +338,7 @@ static uint8_t mpi_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t 
 	return D;
 }
 
-static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t mpi_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct mpi *mpi = (struct mpi *)c;
 	mpi->cart.EXTMEM = 0;
 	if (!mpi->is_race) {
@@ -379,7 +379,7 @@ static uint8_t mpi_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t
 
 // FIRQ line is treated differently.
 
-static void mpi_set_firq(void *sptr, _Bool value) {
+static void mpi_set_firq(void *sptr, bool value) {
 	struct mpi_slot *ms = sptr;
 	struct mpi *mpi = ms->mpi;
 	unsigned firq_bit = 1 << ms->id;
@@ -391,7 +391,7 @@ static void mpi_set_firq(void *sptr, _Bool value) {
 	DELEGATE_CALL(mpi->cart.signal_firq, mpi->firq_state & (1 << mpi->cts_route));
 }
 
-static void mpi_set_nmi(void *sptr, _Bool value) {
+static void mpi_set_nmi(void *sptr, bool value) {
 	struct mpi_slot *ms = sptr;
 	struct mpi *mpi = ms->mpi;
 	unsigned nmi_bit = 1 << ms->id;
@@ -403,7 +403,7 @@ static void mpi_set_nmi(void *sptr, _Bool value) {
 	DELEGATE_CALL(mpi->cart.signal_nmi, mpi->nmi_state);
 }
 
-static void mpi_set_halt(void *sptr, _Bool value) {
+static void mpi_set_halt(void *sptr, bool value) {
 	struct mpi_slot *ms = sptr;
 	struct mpi *mpi = ms->mpi;
 	unsigned halt_bit = 1 << ms->id;

@@ -28,7 +28,7 @@ struct rom_meta {
 	char *machine;  // machine required (where != part)
 	char *cart;     // cart required (where != part)
 	uint8_t bank, slot;
-	_Bool no_autorun;
+	bool no_autorun;
 };
 
 // TODO: add command-line options and functions here to allow user to populate

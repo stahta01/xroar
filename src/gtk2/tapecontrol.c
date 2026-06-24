@@ -140,7 +140,7 @@ struct uigtk2_dialog *gtk2_tc_dialog_new(struct ui_gtk2_interface *uigtk2) {
 // UI message reception
 
 static void update_input_filename(struct uigtk2_dialog *, const char *filename);
-static void update_tape_playing(struct uigtk2_dialog *, _Bool playing);
+static void update_tape_playing(struct uigtk2_dialog *, bool playing);
 
 static void tc_ui_state_notify(void *sptr, int tag, void *smsg) {
 	struct uigtk2_dialog *dlg = sptr;
@@ -198,7 +198,7 @@ static void update_input_filename(struct uigtk2_dialog *dlg, const char *filenam
 	}
 }
 
-static void update_tape_playing(struct uigtk2_dialog *dlg, _Bool playing) {
+static void update_tape_playing(struct uigtk2_dialog *dlg, bool playing) {
 	struct ui_gtk2_interface *uigtk2 = dlg->uigtk2;
 	uigtk2_widget_set_sensitive(uigtk2, "input_play", !playing);
 	uigtk2_widget_set_sensitive(uigtk2, "input_pause", playing);

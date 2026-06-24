@@ -569,7 +569,7 @@ void wasm_reset_tv_input(void) {
 // file.  This half-baked approach to file locking is probably fine for our
 // purposes.  It seems to work :)
 
-static _Bool lock_fetch(const char *file) {
+static bool lock_fetch(const char *file) {
 	WASM_DEBUG("lock_fetch(%s)\n", file);
 	sds lockfile = rehomed_path("/.lock", file);
 	int fd = open(lockfile, O_CREAT|O_EXCL|O_WRONLY, 0666);
@@ -703,7 +703,7 @@ static void wasm_wget_rom(const char *rom) {
 // been attempted.  If any weren't already downloaded, submits wasm_wget()
 // requests and returns false.
 
-_Bool wasm_ui_prepare_machine(struct machine_config *mc) {
+bool wasm_ui_prepare_machine(struct machine_config *mc) {
 	if (!mc) {
 		return 1;
 	}
@@ -726,7 +726,7 @@ _Bool wasm_ui_prepare_machine(struct machine_config *mc) {
 	return 0;
 }
 
-_Bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
+bool wasm_ui_prepare_cartridge(struct cart_config *cc) {
 	if (!cc) {
 		return 1;
 	}

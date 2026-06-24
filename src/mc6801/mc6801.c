@@ -120,8 +120,8 @@ static const struct ser_struct ser_struct_mc6801[] = {
 	SER_ID_STRUCT_ELEM(32, struct MC6801, is_6801),
 };
 
-static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);
-static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag);
+static bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag);
 
 static const struct ser_struct_data mc6801_ser_struct_data = {
 	.elems = ser_struct_mc6801,
@@ -136,8 +136,8 @@ static unsigned mc6801_register_size(void *sptr, int n);
 static uint32_t mc6801_get_register(void *sptr, int n);
 static void mc6801_set_register(void *sptr, int n, uint32_t v);
 
-extern inline void MC6801_NMI_SET(struct MC6801 *cpu, _Bool val);
-extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, _Bool val);
+extern inline void MC6801_NMI_SET(struct MC6801 *cpu, bool val);
+extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, bool val);
 
 // External interface
 
@@ -217,10 +217,10 @@ static void instruction_posthook(struct MC6801 *cpu);
 
 static struct part *mc6801_allocate(void);
 static void mc6801_initialise(struct part *p, void *options);
-static _Bool mc6801_finish(struct part *p);
+static bool mc6801_finish(struct part *p);
 static void mc6801_free(struct part *p);
 
-static _Bool mc6801_is_a(struct part *p, const char *name);
+static bool mc6801_is_a(struct part *p, const char *name);
 
 static const struct partdb_entry_funcs mc6801_funcs = {
 	.allocate = mc6801_allocate,
@@ -277,7 +277,7 @@ static void mc6801_initialise(struct part *p, void *options) {
 	mc6801_reset(cpu);
 }
 
-static _Bool mc6801_finish(struct part *p) {
+static bool mc6801_finish(struct part *p) {
 	struct MC6801 *cpu = (struct MC6801 *)p;
 	if (cpu->is_6801) {
 #ifdef WANT_GDB_TARGET
@@ -305,7 +305,7 @@ static void mc6801_free(struct part *p) {
 	free(cpu->rom);
 }
 
-static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
 	case MC6801_SER_REG:
@@ -320,7 +320,7 @@ static _Bool mc6801_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
+static bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	struct MC6801 *cpu = sptr;
 	switch (tag) {
 	case MC6801_SER_REG:
@@ -335,7 +335,7 @@ static _Bool mc6801_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 	return 1;
 }
 
-static _Bool mc6801_is_a(struct part *p, const char *name) {
+static bool mc6801_is_a(struct part *p, const char *name) {
 	if (!p)
 		return 0;
 	if (strcmp(name, "DEBUG-CPU") == 0)

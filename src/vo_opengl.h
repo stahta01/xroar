@@ -64,7 +64,7 @@ struct vo_opengl_interface {
 
 	struct vo_viewport viewport;
 
-	_Bool scale_60hz;
+	bool scale_60hz;
 
 	GLuint blit_fbo;
 	GLenum blit_filter;
@@ -81,7 +81,7 @@ void vo_opengl_free(void *sptr);
 // Configure parameters.  This finishes setting things up, including creating a
 // renderer.  If required functions are not found, returns false.
 
-_Bool vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
+bool vo_opengl_configure(struct vo_opengl_interface *, struct vo_cfg *cfg);
 
 // Set up OpenGL context for rendering
 
@@ -91,7 +91,7 @@ void vo_opengl_setup_context(struct vo_opengl_interface *);
 
 void vo_opengl_update_gl_filter(struct vo_opengl_interface *vogl);
 void vo_opengl_set_viewport(struct vo_opengl_interface *, int w, int h);
-void vo_opengl_set_frame_rate(struct vo_opengl_interface *, _Bool is_60hz);
+void vo_opengl_set_frame_rate(struct vo_opengl_interface *, bool is_60hz);
 
 // Update texture and draw it
 

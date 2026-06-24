@@ -45,10 +45,10 @@ struct rsdos {
 	struct cart cart;
 	unsigned latch_old;
 	unsigned latch_drive_select;
-	_Bool latch_density;
-	_Bool drq_flag;
-	_Bool intrq_flag;
-	_Bool halt_enable;
+	bool latch_density;
+	bool drq_flag;
+	bool intrq_flag;
+	bool halt_enable;
 	struct becker *becker;
 	struct WD279X *fdc;
 	struct vdrive_interface *vdrive_interface;
@@ -74,17 +74,17 @@ static void rsdos_config_complete(struct cart_config *);
 
 /* Cart interface */
 
-static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void rsdos_reset(struct cart *c, _Bool hard);
+static uint8_t rsdos_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static uint8_t rsdos_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void rsdos_reset(struct cart *c, bool hard);
 static void rsdos_detach(struct cart *c);
-static _Bool rsdos_has_interface(struct cart *c, const char *ifname);
+static bool rsdos_has_interface(struct cart *c, const char *ifname);
 static void rsdos_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 /* Handle signals from WD2793 */
 
-static void set_drq(void *sptr, _Bool value);
-static void set_intrq(void *sptr, _Bool value);
+static void set_drq(void *sptr, bool value);
+static void set_intrq(void *sptr, bool value);
 
 /* Latch */
 
@@ -96,7 +96,7 @@ static void latch_write(struct rsdos *d, unsigned D);
 
 static struct part *rsdos_allocate(void);
 static void rsdos_initialise(struct part *p, void *options);
-static _Bool rsdos_finish(struct part *p);
+static bool rsdos_finish(struct part *p);
 static void rsdos_free(struct part *p);
 
 static const struct partdb_entry_funcs rsdos_funcs = {
@@ -139,7 +139,7 @@ static void rsdos_initialise(struct part *p, void *options) {
 	part_add_component(p, part_create("WD2793", "WD2793"), "FDC");
 }
 
-static _Bool rsdos_finish(struct part *p) {
+static bool rsdos_finish(struct part *p) {
 	struct rsdos *d = (struct rsdos *)p;
 	struct cart *c = &d->cart;
 
@@ -177,7 +177,7 @@ static void rsdos_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void rsdos_reset(struct cart *c, _Bool hard) {
+static void rsdos_reset(struct cart *c, bool hard) {
 	struct rsdos *d = (struct rsdos *)c;
 	cart_rom_reset(c, hard);
 	wd279x_reset(d->fdc);
@@ -198,7 +198,7 @@ static void rsdos_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t rsdos_read(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
 		rombank_d8(c->ROM, A, &D);
@@ -223,7 +223,7 @@ static uint8_t rsdos_read(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_
 	return D;
 }
 
-static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t rsdos_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct rsdos *d = (struct rsdos *)c;
 	if (R2) {
 		rombank_d8(c->ROM, A, &D);
@@ -255,7 +255,7 @@ static uint8_t rsdos_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8
 	return D;
 }
 
-static _Bool rsdos_has_interface(struct cart *c, const char *ifname) {
+static bool rsdos_has_interface(struct cart *c, const char *ifname) {
 	return c && (0 == strcmp(ifname, "floppy"));
 }
 
@@ -341,14 +341,14 @@ static void latch_write(struct rsdos *d, unsigned D) {
 	DELEGATE_CALL(c->signal_halt, d->halt_enable && !d->drq_flag);
 }
 
-static void set_drq(void *sptr, _Bool value) {
+static void set_drq(void *sptr, bool value) {
 	struct rsdos *d = sptr;
 	struct cart *c = &d->cart;
 	d->drq_flag = value;
 	DELEGATE_CALL(c->signal_halt, d->halt_enable && !d->drq_flag);
 }
 
-static void set_intrq(void *sptr, _Bool value) {
+static void set_intrq(void *sptr, bool value) {
 	struct rsdos *d = sptr;
 	struct cart *c = &d->cart;
 	d->intrq_flag = value;

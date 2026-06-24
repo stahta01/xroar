@@ -63,10 +63,10 @@ struct vdisk {
 
 	enum xroar_filetype filetype;
 	char *filename;
-	_Bool new_disk;  // a new disk doesn't need backed up on rewrite
-	_Bool dirty;  // modified: needs saving, if write_back is enabled
-	_Bool write_back;
-	_Bool write_protect;
+	bool new_disk;  // a new disk doesn't need backed up on rewrite
+	bool dirty;  // modified: needs saving, if write_back is enabled
+	bool write_back;
+	bool write_protect;
 	unsigned num_cylinders;
 	unsigned num_heads;
 	unsigned track_length;
@@ -79,7 +79,7 @@ struct vdisk {
 			uint8_t *extra;
 		} vdk;
 		struct {
-			_Bool headerless_os9;
+			bool headerless_os9;
 		} jvc;
 	} fmt;
 };
@@ -96,16 +96,16 @@ struct vdisk_ctx {
 	uint16_t *idam_data;
 	uint8_t *track_data;
 
-	_Bool dden;
+	bool dden;
 	unsigned head_pos;
 	unsigned crc;
 
-	_Bool idam_crc_error;
-	_Bool data_crc_error;
+	bool idam_crc_error;
+	bool data_crc_error;
 };
 
 struct vdisk_idam {
-	_Bool valid;
+	bool valid;
 	unsigned cyl;
 	unsigned side;
 	unsigned sector;
@@ -156,29 +156,29 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head);
 struct vdisk_ctx *vdisk_ctx_new(struct vdisk *disk);
 void vdisk_ctx_free(struct vdisk_ctx *ctx);
 
-_Bool vdisk_ctx_seek(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head);
+bool vdisk_ctx_seek(struct vdisk_ctx *ctx, bool extend, unsigned cyl, unsigned head);
 
-_Bool vdisk_format_track(struct vdisk_ctx *ctx, _Bool dden,
+bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 			 unsigned cyl, unsigned head,
 			 unsigned nsectors, unsigned first_sector, unsigned ssize_code);
-_Bool vdisk_format_disk(struct vdisk_ctx *ctx, _Bool dden,
+bool vdisk_format_disk(struct vdisk_ctx *ctx, bool dden,
 			unsigned ncyls, unsigned nheads,
 			unsigned nsectors, unsigned first_sector, unsigned ssize_code);
 
-_Bool vdisk_set_track(struct vdisk_ctx *ctx, _Bool extend, unsigned cyl, unsigned head);
+bool vdisk_set_track(struct vdisk_ctx *ctx, bool extend, unsigned cyl, unsigned head);
 
-_Bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			 unsigned sector, unsigned sector_length, uint8_t *buf);
-_Bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
+bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			unsigned sector, unsigned sector_length, uint8_t *buf);
 
 // Return information about a particular IDAM.
 
-_Bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
+bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 		      unsigned cyl, unsigned head, unsigned idam);
 
 // Scan disk and return information about its structure.
 
-_Bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo);
+bool vdisk_get_info(struct vdisk_ctx *ctx, struct vdisk_info *vinfo);
 
 #endif

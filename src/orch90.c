@@ -53,11 +53,11 @@ static const struct ser_struct_data orch90_ser_struct_data = {
 
 static void orch90_config_complete(struct cart_config *);
 
-static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D);
-static void orch90_reset(struct cart *c, _Bool hard);
+static uint8_t orch90_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D);
+static void orch90_reset(struct cart *c, bool hard);
 static void orch90_attach(struct cart *c);
 static void orch90_detach(struct cart *c);
-static _Bool orch90_has_interface(struct cart *c, const char *ifname);
+static bool orch90_has_interface(struct cart *c, const char *ifname);
 static void orch90_attach_interface(struct cart *c, const char *ifname, void *intf);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -66,7 +66,7 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 
 static struct part *orch90_allocate(void);
 static void orch90_initialise(struct part *p, void *options);
-static _Bool orch90_finish(struct part *p);
+static bool orch90_finish(struct part *p);
 
 static const struct partdb_entry_funcs orch90_funcs = {
 	.allocate = orch90_allocate,
@@ -107,7 +107,7 @@ static void orch90_initialise(struct part *p, void *options) {
 	cart_rom_initialise(p, options);
 }
 
-static _Bool orch90_finish(struct part *p) {
+static bool orch90_finish(struct part *p) {
 	if (!cart_rom_finish(p)) {
 		return 0;
 	}
@@ -123,7 +123,7 @@ static void orch90_config_complete(struct cart_config *cc) {
 	}
 }
 
-static void orch90_reset(struct cart *c, _Bool hard) {
+static void orch90_reset(struct cart *c, bool hard) {
 	cart_rom_reset(c, hard);
 }
 
@@ -135,7 +135,7 @@ static void orch90_detach(struct cart *c) {
 	cart_rom_detach(c);
 }
 
-static _Bool orch90_has_interface(struct cart *c, const char *ifname) {
+static bool orch90_has_interface(struct cart *c, const char *ifname) {
 	return c && (0 == strcmp(ifname, "sound"));
 }
 
@@ -146,7 +146,7 @@ static void orch90_attach_interface(struct cart *c, const char *ifname, void *in
 	o->snd = intf;
 }
 
-static uint8_t orch90_write(struct cart *c, uint16_t A, _Bool P2, _Bool R2, uint8_t D) {
+static uint8_t orch90_write(struct cart *c, uint16_t A, bool P2, bool R2, uint8_t D) {
 	struct orch90 *o = (struct orch90 *)c;
 	(void)P2;
 	(void)R2;
