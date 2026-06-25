@@ -498,7 +498,6 @@ static int samx8_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 	}
 
 	return ncycles;
-	//DELEGATE_CALL(samp->cpu_cycle, ncycles, RnW, A);
 }
 
 // Just the address decode from samx8_mem_cycle().  Used to verify that a
