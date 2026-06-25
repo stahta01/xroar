@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ *  \copyright Copyright 2015-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -69,7 +69,11 @@ static const struct ser_struct_data idecart_ser_struct_data = {
 
 static struct xconfig_option const idecart_options[] = {
 	{ XCO_SET_UINT16("ide-addr", struct idecart, io_region) },
-	{ XC_OPT_END() }
+};
+
+static const struct xconfig_set idecart_option_set = {
+	ARRAY_N_ELEMENTS(idecart_options),
+	idecart_options
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -139,7 +143,7 @@ static void idecart_initialise(struct part *p, void *options) {
 
 	cart_rom_initialise(p, options);
 
-	xconfig_parse_list_struct(idecart_options, cc->opts, ide);
+	xconfig_parse_list_struct(&idecart_option_set, cc->opts, ide);
 	ide->io_region &= 0xfff0;
 }
 

@@ -4,7 +4,7 @@
  *
  *  \copyright Copyright 2016-2018 Tormod Volden
  *
- *  \copyright Copyright 2018-2024 Ciaran Anscomb
+ *  \copyright Copyright 2018-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -35,6 +35,7 @@
 #include "rombank.h"
 #include "serialise.h"
 #include "spi65.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 /* Number of 8KB mappable RAM pages in cartridge */
@@ -82,7 +83,11 @@ static const struct ser_struct_data mooh_ser_struct_data = {
 
 static struct xconfig_option const mooh_options[] = {
 	{ XCO_SET_BOOL("mooh-crt9128-stderr", struct mooh, crt9128_to_stderr) },
-	{ XC_OPT_END() }
+};
+
+static const struct xconfig_set mooh_option_set = {
+	ARRAY_N_ELEMENTS(mooh_options),
+	mooh_options
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -156,7 +161,7 @@ static void mooh_initialise(struct part *p, void *options) {
 	cart_rom_initialise(p, options);
 
 	// MOOH-specific options
-	xconfig_parse_list_struct(mooh_options, cc->opts, n);
+	xconfig_parse_list_struct(&mooh_option_set, cc->opts, n);
 
 	// RAM
 	struct ram *ram = mooh_create_ram();

@@ -131,7 +131,6 @@ struct dragon {
 };
 
 extern const struct ser_struct_data dragon_ser_struct_data;
-extern struct xconfig_option const dragon_options[];
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

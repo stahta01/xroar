@@ -61,6 +61,7 @@
 #include "ui.h"
 #include "vdg_palette.h"
 #include "vo.h"
+#include "xconfig.h"
 #include "xroar.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -98,10 +99,14 @@ static struct xconfig_enum dragon_sam_list[] = {
 	{ XC_ENUM_INT("samx8", DRAGON_SAM_SAMX8, "SAMx8") },
 };
 
-struct xconfig_option const dragon_options[] = {
+static struct xconfig_option const dragon_options[] = {
 	{ XCO_SET_ENUM("sam", struct dragon, option.sam_variant, dragon_sam_list) },
 	{ XCO_SET_BOOL("immunity", struct dragon, option.immunity) },
-	{ XC_OPT_END() }
+};
+
+static const struct xconfig_set dragon_option_set = {
+	ARRAY_N_ELEMENTS(dragon_options),
+	dragon_options
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -317,7 +322,7 @@ void dragon_initialise_common(struct dragon *md, struct machine_config *mc) {
 	m->config = mc;
 
 	// Dragon-specific options
-	xconfig_parse_list_struct(dragon_options, mc->opts, md);
+	xconfig_parse_list_struct(&dragon_option_set, mc->opts, md);
 
 	dragon_verify_ram_size(mc);
 

@@ -388,7 +388,7 @@ static unsigned load_hd_to_drive = 0;
 
 static struct joystick_config *cur_joy_config = NULL;
 
-static struct xconfig_option const xroar_options[];
+static const struct xconfig_set xroar_option_set;
 
 // Config autosave functions
 #ifdef AUTOSAVE_PREFIX
@@ -941,7 +941,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 		xroar.cfg.file.rompath = xstrdup(ROMPATH);
 		// Process builtin directives
 		for (unsigned i = 0; i < ARRAY_N_ELEMENTS(default_config); i++) {
-			xconfig_parse_line(xroar_options, default_config[i]);
+			xconfig_parse_line(&xroar_option_set, default_config[i]);
 		}
 
 		// Finish any machine or cart config in defaults.
@@ -981,7 +981,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 			conffile = find_in_path(xroar_conf_path, "xroar.conf");
 		}
 		if (conffile) {
-			(void)xconfig_parse_file(xroar_options, conffile);
+			(void)xconfig_parse_file(&xroar_option_set, conffile);
 			sdsfree(conffile);
 
 			// Finish any machine or cart config in config file.
@@ -1003,7 +1003,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 
 	// Parse command line options.
 
-	ret = xconfig_parse_cli(xroar_options, argc, argv, &argn);
+	ret = xconfig_parse_cli(&xroar_option_set, argc, argv, &argn);
 	if (ret != XCONFIG_OK) {
 		exit(EXIT_FAILURE);
 	}
@@ -1499,7 +1499,7 @@ void xroar_shutdown(void) {
 	vdrive_interface_free(xroar.vdrive_interface);
 	tape_interface_free(xroar.tape_interface);
 	hk_shutdown();
-	xconfig_shutdown(xroar_options);
+	xconfig_shutdown(&xroar_option_set);
 	if (xroar.ui_interface) {
 		DELEGATE_SAFE_CALL(xroar.ui_interface->free);
 	}
@@ -3137,20 +3137,20 @@ static void set_trap_count(const char *count) {
 
 static void set_snap_motoroff(const char *arg) {
 	set_trap("tape-motor-off");
-	xconfig_set_option(xroar_options, "trap-range", "1-");
-	xconfig_set_option(xroar_options, "trap-snap", arg);
+	xconfig_set_option(&xroar_option_set, "trap-range", "1-");
+	xconfig_set_option(&xroar_option_set, "trap-snap", arg);
 	set_trap(NULL);
 }
 
 static void set_timeout(const char *arg) {
 	set_trap("immediate");
-	xconfig_set_option(xroar_options, "trap-timeout", arg);
+	xconfig_set_option(&xroar_option_set, "trap-timeout", arg);
 	set_trap(NULL);
 }
 
 static void set_timeout_motoroff(const char *arg) {
 	set_trap("tape-motor-off");
-	xconfig_set_option(xroar_options, "trap-timeout", arg);
+	xconfig_set_option(&xroar_option_set, "trap-timeout", arg);
 	set_trap(NULL);
 }
 
@@ -3376,7 +3376,11 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_CALL_NONE("version", &versiontext) },
 	{ XC_CALL_NONE("V", &versiontext) },
 #endif
-	{ XC_OPT_END() }
+};
+
+static const struct xconfig_set xroar_option_set = {
+	ARRAY_N_ELEMENTS(xroar_options),
+	xroar_options
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

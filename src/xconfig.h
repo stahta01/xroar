@@ -2,7 +2,7 @@
  *
  *  \brief Command-line and file-based configuration options.
  *
- *  \copyright Copyright 2009-2022 Ciaran Anscomb
+ *  \copyright Copyright 2009-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -125,8 +125,6 @@ struct slist;
 #define XC_CALL_ASSIGN_NE(n,d) XCF_CALL(ASSIGN,n,XCONFIG_FLAG_CLI_NOESC,d)
 #define XC_CALL_NONE(n,d) XC_CALL(NONE,n,d)
 
-#define XC_OPT_END() .type = XCONFIG_END
-
 #define XC_ENUM_INT(k,v,d) .name = (k), .value = (v), .description = (d)
 #define XC_ENUM_END() .name = NULL
 
@@ -165,7 +163,6 @@ enum xconfig_option_type {
 	XCONFIG_ALIAS,  // alias with no user-supplied argument
 	XCONFIG_ALIAS1,  // alias with user-supplied argument
 	XCONFIG_LINK,  // continue option processing with new list
-	XCONFIG_END
 };
 
 typedef void (*xconfig_func_bool)(bool);
@@ -194,6 +191,11 @@ struct xconfig_option {
 	bool deprecated;
 };
 
+struct xconfig_set {
+	size_t noptions;
+	struct xconfig_option const *options;
+};
+
 struct xconfig_enum {
 	int value;
 	const char *name;
@@ -204,31 +206,29 @@ struct xconfig_enum {
 extern char *xconfig_option;
 extern int xconfig_line_number;
 
-enum xconfig_result xconfig_set_option(struct xconfig_option const *options,
+enum xconfig_result xconfig_set_option(const struct xconfig_set *set,
 				       const char *opt, const char *arg);
 
-enum xconfig_result xconfig_set_option_struct(struct xconfig_option const *options,
+enum xconfig_result xconfig_set_option_struct(const struct xconfig_set *set,
 				       const char *opt, const char *arg, void *sptr);
 
-enum xconfig_result xconfig_parse_file(struct xconfig_option const *options,
-		const char *filename);
+enum xconfig_result xconfig_parse_file(const struct xconfig_set *set, const char *filename);
 
-enum xconfig_result xconfig_parse_file_struct(struct xconfig_option const *options,
+enum xconfig_result xconfig_parse_file_struct(const struct xconfig_set *set,
 		const char *filename, void *sptr);
 
-enum xconfig_result xconfig_parse_line(struct xconfig_option const *options,
-		const char *line);
+enum xconfig_result xconfig_parse_line(const struct xconfig_set *set, const char *line);
 
-enum xconfig_result xconfig_parse_line_struct(struct xconfig_option const *options,
+enum xconfig_result xconfig_parse_line_struct(const struct xconfig_set *set,
 		const char *line, void *sptr);
 
-enum xconfig_result xconfig_parse_list_struct(struct xconfig_option const *options,
+enum xconfig_result xconfig_parse_list_struct(const struct xconfig_set *set,
 					      struct slist *list, void *sptr);
 
-enum xconfig_result xconfig_parse_cli(struct xconfig_option const *options,
-		int argc, char **argv, int *argn);
+enum xconfig_result xconfig_parse_cli(const struct xconfig_set *set,
+				      int argc, char **argv, int *argn);
 
-enum xconfig_result xconfig_parse_cli_struct(struct xconfig_option const *options,
+enum xconfig_result xconfig_parse_cli_struct(const struct xconfig_set *set,
 		int argc, char **argv, int *argn, void *sptr);
 
 // Return members of an enum searching by other members
@@ -243,6 +243,6 @@ const char *xconfig_enum_value_description(struct xconfig_enum *, int value);
 
 int xconfig_check_enum(struct xconfig_enum *list, int val, int dfl);
 
-void xconfig_shutdown(struct xconfig_option const *options);
+void xconfig_shutdown(const struct xconfig_set *set);
 
 #endif
