@@ -622,7 +622,7 @@ static int read_v1_snapshot(const char *filename) {
 						LOG_MOD_WARN("snapshot/v1", "read: SAM not found - skipping SAM registers chunk\n");
 						break;
 					}
-					sam->set_register(sam, tmp);
+					DELEGATE_CALL(sam->debug.part.set_register, 0, tmp);
 				}
 				break;
 

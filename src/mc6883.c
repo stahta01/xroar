@@ -277,8 +277,6 @@ static unsigned mc6883_decode(struct MC6883 *, bool RnW, uint16_t A);
 static void mc6883_vdg_hsync(struct MC6883 *, bool level);
 static void mc6883_vdg_fsync(struct MC6883 *, bool level);
 static int mc6883_vdg_bytes(struct MC6883 *, int nbytes);
-static void mc6883_set_register(struct MC6883 *, unsigned value);
-static unsigned mc6883_get_register(struct MC6883 *);
 
 static const struct partdb_entry_funcs mc6883_funcs = {
 	.allocate = mc6883_allocate,
@@ -292,6 +290,11 @@ static const struct partdb_entry_funcs mc6883_funcs = {
 const struct partdb_entry mc6883_part = { .name = "SN74LS783", .description = "Motorola | SN74LS783/MC6883 SAM", .funcs = &mc6883_funcs };
 
 const struct partdb_entry sn74ls785_part = { .name = "SN74LS785", .description = "Motorola | SN74LS785 SAM", .funcs = &mc6883_funcs };
+
+static const struct debug_feature mc6883_feature;
+static const struct debug_feature *features[] = { &mc6883_feature };
+static uint32_t mc6883_get_register(void *sptr, int n);
+static void mc6883_set_register(void *sptr, int n, uint32_t v);
 
 static struct part *mc6883_allocate(void) {
 	struct MC6883_private *sam = part_new(sizeof(*sam));
@@ -308,8 +311,11 @@ static struct part *mc6883_allocate(void) {
 	samp->vdg_hsync = mc6883_vdg_hsync;
 	samp->vdg_fsync = mc6883_vdg_fsync;
 	samp->vdg_bytes = mc6883_vdg_bytes;
-	samp->set_register = mc6883_set_register;
-	samp->get_register = mc6883_get_register;
+
+	samp->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	samp->debug.part.feature = features;
+	samp->debug.part.get_register = DELEGATE_AS1(uint32, int, mc6883_get_register, sam);
+	samp->debug.part.set_register = DELEGATE_AS2(void, int, uint32, mc6883_set_register, sam);
 
 	// Set up VDG address divider sources.  Set initial Vprev=7 so that first
 	// call to reset() changes them.
@@ -344,7 +350,7 @@ static bool mc6883_read_elem(void *sptr, struct ser_handle *sh, int tag) {
 	case MC6883_SER_REG:
 		{
 			uint16_t reg = ser_read_vuint32(sh);
-			mc6883_set_register(&sam->public, reg);
+			mc6883_set_register(&sam->public, 0, reg);
 		}
 		break;
 
@@ -405,7 +411,7 @@ static bool mc6883_write_elem(void *sptr, struct ser_handle *sh, int tag) {
 static void mc6883_reset(struct MC6883 *samp) {
 	struct MC6883_private *sam = (struct MC6883_private *)samp;
 
-	mc6883_set_register(samp, 0);
+	mc6883_set_register(sam, 0, 0);
 	mc6883_vdg_fsync(samp, 1);
 	sam->running_fast = 0;
 	sam->extend_slow_cycle = 0;
@@ -700,28 +706,6 @@ static int mc6883_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	return nbytes;
 }
 
-static void mc6883_set_register(struct MC6883 *samp, unsigned value) {
-	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	sam->V = value & 7;
-	sam->F = (value << 6) & 0xfe00;
-	sam->P = (value >> 10) & 1;
-	sam->R = (value >> 11) & 3;
-	sam->M = (value >> 13) & 3;
-	sam->TY = (value >> 15) & 1;
-	update_from_register(sam);
-}
-
-static unsigned mc6883_get_register(struct MC6883 *samp) {
-	struct MC6883_private *sam = (struct MC6883_private *)samp;
-	unsigned value = sam->V & 7;
-	value |= (sam->F & 0xfe00) >> 6;
-	value |= (sam->P ? 0x0400 : 0);
-	value |= (sam->R << 11);
-	value |= (sam->M << 13);
-	value |= (sam->TY ? 0x8000 : 0);
-	return value;
-}
-
 static void update_vcounter_inputs(struct MC6883_private *sam) {
 	switch (vdg_ydivs[sam->V]) {
 	case DIV12:
@@ -854,4 +838,69 @@ static void update_from_register(struct MC6883_private *sam) {
 	sam->mpu_rate_fast = sam->R & 0x2;
 	// XXX it isn't as simple as this
 	sam->mpu_rate_ad = !sam->TY && (sam->R & 0x1);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static const struct debug_feature_field feature_type_mc6883_fields[] = {
+	{ .name = "V", .start = 0, .end = 2, .type = &debug_feature_type_uint8 },
+	{ .name = "F", .start = 3, .end = 9, .type = &debug_feature_type_uint8 },
+	{ .name = "P1", .start = 10, .end = 10, .type = &debug_feature_type_uint8 },
+	{ .name = "R", .start = 11, .end = 12, .type = &debug_feature_type_uint8 },
+	{ .name = "M", .start = 13, .end = 14, .type = &debug_feature_type_uint8 },
+	{ .name = "TY", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_mc6883 = {
+	.type = debug_feature_base_type_struct,
+	.id = "mc6883",
+	.size = 2,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_mc6883_fields),
+		.field = feature_type_mc6883_fields
+	}
+};
+
+static const struct debug_feature_type *feature_types[] = {
+	&feature_type_mc6883,
+};
+
+static const struct debug_feature_reg feature_regs[] = {
+	{ .name = "sam", .bitsize = 16, .type = &feature_type_mc6883, .group = "sam" },
+};
+
+static const struct debug_feature mc6883_feature = {
+	"uk.org.6809.gdb.mc6883",
+	.ntypes = ARRAY_N_ELEMENTS(feature_types), .type = feature_types,
+	.nregs = ARRAY_N_ELEMENTS(feature_regs), .reg = feature_regs
+};
+
+static uint32_t mc6883_get_register(void *sptr, int n) {
+	struct MC6883_private *sam = sptr;
+
+	if (n != 0)
+		return (uint32_t)-1;
+
+	unsigned v = sam->V & 7;
+	v |= (sam->F & 0xfe00) >> 6;
+	v |= (sam->P ? 0x0400 : 0);
+	v |= (sam->R << 11);
+	v |= (sam->M << 13);
+	v |= (sam->TY ? 0x8000 : 0);
+	return v;
+}
+
+static void mc6883_set_register(void *sptr, int n, uint32_t v) {
+	struct MC6883_private *sam = sptr;
+
+	if (n != 0)
+		return;
+
+	sam->V = v & 7;
+	sam->F = (v << 6) & 0xfe00;
+	sam->P = (v >> 10) & 1;
+	sam->R = (v >> 11) & 3;
+	sam->M = (v >> 13) & 3;
+	sam->TY = (v >> 15) & 1;
+	update_from_register(sam);
 }

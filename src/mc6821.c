@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -18,12 +18,14 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "array.h"
 #include "delegate.h"
 
+#include "debug.h"
 #include "events.h"
 #include "mc6821.h"
 #include "logging.h"
@@ -97,6 +99,11 @@ static const struct partdb_entry_funcs mc6821_funcs = {
 
 const struct partdb_entry mc6821_part = { .name = "MC6821", .description = "Motorola | MC6821 PIA", .funcs = &mc6821_funcs };
 
+static const struct debug_feature mc6821_feature;
+static const struct debug_feature *features[] = { &mc6821_feature };
+static int mc6821_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
+static int mc6821_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src);
+
 static struct part *mc6821_allocate(void) {
 	struct MC6821 *pia = part_new(sizeof(*pia));
 	struct part *p = &pia->part;
@@ -113,6 +120,12 @@ static struct part *mc6821_allocate(void) {
 	event_init(&pia->b.irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_irq, &pia->b));
 	event_init(&pia->b.strobe_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_strobe_cx2, &pia->b));
 	event_init(&pia->b.restore_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_restore_cx2, &pia->b));
+
+	pia->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	pia->debug.part.feature = features;
+	pia->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, mc6821_get_register_composite, pia);
+	pia->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, mc6821_set_register_composite, pia);
+
 
 	return p;
 }
@@ -410,5 +423,93 @@ static void mc6821_update_cx2_state(struct MC6821_side *side, bool level) {
 		} else {
 			side->irq = side->control_register & 0x80;
 		}
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static const struct debug_feature_field feature_type_mc6821_side_fields[] = {
+	{ .name = "DDR", .start = 16, .end = 23, .type = &debug_feature_type_uint8 },
+	{ .name = "PDR", .start = 8, .end = 15, .type = &debug_feature_type_uint8 },
+	{ .name = "CR", .start = 0, .end = 7, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_mc6821_side = {
+        .type = debug_feature_base_type_struct,
+        .id = "mc6821_side",
+        .size = 3,
+        .as_struct = {
+                .nfields = ARRAY_N_ELEMENTS(feature_type_mc6821_side_fields),
+                .field = feature_type_mc6821_side_fields
+        }
+};
+
+static const struct debug_feature_field feature_type_mc6821_fields[] = {
+	{ .name = "a", .start = 24, .end = 47, .type = &feature_type_mc6821_side },
+	{ .name = "b", .start = 0, .end = 23, .type = &feature_type_mc6821_side },
+};
+
+static const struct debug_feature_type feature_type_mc6821 = {
+        .type = debug_feature_base_type_struct,
+        .id = "mc6821",
+        .size = 6,
+        .as_struct = {
+                .nfields = ARRAY_N_ELEMENTS(feature_type_mc6821_fields),
+                .field = feature_type_mc6821_fields
+        }
+};
+
+static const struct debug_feature_type *feature_types[] = {
+	&feature_type_mc6821_side,
+	&feature_type_mc6821,
+};
+
+static const struct debug_feature_reg feature_regs[] = {
+	{ .name = NULL, .bitsize = 48, .type = &feature_type_mc6821, .group = "pia" },
+};
+
+static const struct debug_feature mc6821_feature = {
+	"uk.org.6809.gdb.mc6821",
+	.ntypes = ARRAY_N_ELEMENTS(feature_types), .type = feature_types,
+	.nregs = ARRAY_N_ELEMENTS(feature_regs), .reg = feature_regs
+};
+
+static int mc6821_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
+	struct MC6821 *pia = sptr;
+	// error out for any register where get_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("mc6821", "invalid composite register read: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 0:
+		assert(dsize >= 6);
+		dest[0] = pia->a.direction_register;
+		dest[1] = pia->a.output_register;
+		dest[2] = pia->a.control_register;
+		dest[3] = pia->b.direction_register;
+		dest[4] = pia->b.output_register;
+		dest[5] = pia->b.control_register;
+		return 6;
+	}
+}
+
+static int mc6821_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src) {
+	struct MC6821 *pia = sptr;
+	// error out for any register where set_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("mc6821", "invalid composite register write: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 0:
+		assert(ssize >= 6);
+		pia->a.direction_register = src[0];
+		pia->a.output_register = src[1];
+		mc6821_update_a_state(pia);
+		mc6821_write(pia, 1, src[2]);
+		pia->b.direction_register = src[3];
+		pia->b.output_register = src[4];
+		mc6821_update_b_state(pia);
+		mc6821_write(pia, 3, src[5]);
+		return 6;
 	}
 }

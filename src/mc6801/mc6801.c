@@ -132,9 +132,17 @@ static const struct ser_struct_data mc6801_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned mc6801_register_size(void *sptr, int n);
+// Debug interface: registers
+
 static uint32_t mc6801_get_register(void *sptr, int n);
 static void mc6801_set_register(void *sptr, int n, uint32_t v);
+
+// Debug interface: CC manipulation
+
+static bool mc6801_get_flag(void *sptr, int n);
+static void mc6801_set_flag(void *sptr, int n, bool v);
+
+// Set interrupt state
 
 extern inline void MC6801_NMI_SET(struct MC6801 *cpu, bool val);
 extern inline void MC6801_IRQ1_SET(struct MC6801 *cpu, bool val);
@@ -236,25 +244,28 @@ static const struct partdb_entry_funcs mc6801_funcs = {
 const struct partdb_entry mc6801_part = { .name = "MC6801", .description = "Motorola | MC6801 CPU", .funcs = &mc6801_funcs };
 const struct partdb_entry mc6803_part = { .name = "MC6803", .description = "Motorola | MC6803 CPU", .funcs = &mc6801_funcs };
 
-#ifdef WANT_GDB_TARGET
-static const char *gdb_features[] = { "m6801-core.xml", NULL };
-#endif
+static const struct debug_feature m6801_core_feature;
+static const struct debug_feature *features[] = { &m6801_core_feature };
+static uint32_t mc6801_get_register(void *sptr, int r);
+static void mc6801_set_register(void *sptr, int r, uint32_t v);
 
 static struct part *mc6801_allocate(void) {
 	struct MC6801 *cpu = part_new(sizeof(*cpu));
-	struct part *p = &cpu->debug_cpu.part;
+	struct part *p = &cpu->part;
 
 	*cpu = (struct MC6801){0};
 
-	cpu->debug_cpu.num_registers = 6;
-	cpu->debug_cpu.register_sp = 4;
-	cpu->debug_cpu.register_pc = 5;
-	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, mc6801_register_size, cpu);
-	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, mc6801_get_register, cpu);
-	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, mc6801_set_register, cpu);
-#ifdef WANT_GDB_TARGET
-	cpu->gdb_features = gdb_features;
-#endif
+	cpu->debug.cpu.endian = debug_endian_big;
+	cpu->debug.cpu.register_ps = 0;  // CC
+	cpu->debug.cpu.register_sp = 4;  // SP
+	cpu->debug.cpu.register_pc = 5;  // PC
+	cpu->debug.cpu.get_flag = DELEGATE_AS1(bool, int, mc6801_get_flag, cpu);
+	cpu->debug.cpu.set_flag = DELEGATE_AS2(void, int, bool, mc6801_set_flag, cpu);
+
+	cpu->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	cpu->debug.part.feature = features;
+	cpu->debug.part.get_register = DELEGATE_AS1(uint32, int, mc6801_get_register, cpu);
+	cpu->debug.part.set_register = DELEGATE_AS2(void, int, uint32, mc6801_set_register, cpu);
 
 	cpu->reset = mc6801_reset;
 	cpu->run = mc6801_run;
@@ -281,7 +292,7 @@ static bool mc6801_finish(struct part *p) {
 	struct MC6801 *cpu = (struct MC6801 *)p;
 	if (cpu->is_6801) {
 #ifdef WANT_GDB_TARGET
-		cpu->gdb_architecture = "m6801";
+		cpu->debug.cpu.architecture = "m6801";
 #endif
 		if (!cpu->rom) {
 			cpu->rom = xzalloc(2048);
@@ -289,7 +300,7 @@ static bool mc6801_finish(struct part *p) {
 		}
 	} else {
 #ifdef WANT_GDB_TARGET
-		cpu->gdb_architecture = "m6803";
+		cpu->debug.cpu.architecture = "m6803";
 #endif
 	}
 	return 1;
@@ -1372,14 +1383,43 @@ static void instruction_posthook(struct MC6801 *cpu) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static const unsigned register_size[6] = { 1, 1, 1, 2, 2, 2 };
+static struct debug_feature_field feature_type_cc_flags_fields[] = {
+	{ .name = "C", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
+	{ .name = "V", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
+	{ .name = "Z", .start = 2, .end = 2, .type = &debug_feature_type_uint8 },
+	{ .name = "N", .start = 3, .end = 3, .type = &debug_feature_type_uint8 },
+	{ .name = "I", .start = 4, .end = 4, .type = &debug_feature_type_uint8 },
+	{ .name = "H", .start = 5, .end = 5, .type = &debug_feature_type_uint8 },
+};
 
-static unsigned mc6801_register_size(void *sptr, int n) {
-	(void)sptr;
-	if (n < 0 || (size_t)n > ARRAY_N_ELEMENTS(register_size))
-		return 0;
-	return register_size[n];
-}
+static const struct debug_feature_type feature_type_cc_flags = {
+	.type = debug_feature_base_type_struct,
+	.id = "cc_flags",
+	.size = 1,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_cc_flags_fields),
+		feature_type_cc_flags_fields
+	}
+};
+
+static const struct debug_feature_type *feature_types[] = {
+	&feature_type_cc_flags,
+};
+
+static const struct debug_feature_reg feature_regs[] = {
+	{ .name = "cc", .bitsize = 8, .type = &feature_type_cc_flags },
+	{ .name = "a", .bitsize = 8, .type = &debug_feature_type_uint8 },
+	{ .name = "b", .bitsize = 8, .type = &debug_feature_type_uint8 },
+	{ .name = "x", .bitsize = 16, .type = &debug_feature_type_uint16 },
+	{ .name = "sp", .bitsize = 16, .type = &debug_feature_type_uint16 },
+	{ .name = "pc", .bitsize = 16, .type = &debug_feature_type_code_ptr16 },
+};
+
+static const struct debug_feature m6801_core_feature = {
+	"org.gnu.gdb.m6801.core",
+	ARRAY_N_ELEMENTS(feature_types), feature_types,
+	ARRAY_N_ELEMENTS(feature_regs), feature_regs
+};
 
 static uint32_t mc6801_get_register(void *sptr, int n) {
 	struct MC6801 *cpu = sptr;
@@ -1398,7 +1438,7 @@ static uint32_t mc6801_get_register(void *sptr, int n) {
 static void mc6801_set_register(void *sptr, int n, uint32_t v) {
 	struct MC6801 *cpu = sptr;
 	switch (n) {
-	case 0: REG_CC = v; break;
+	case 0: REG_CC = v | 0xc0; break;
 	case 1: REG_A = v; break;
 	case 2: REG_B = v; break;
 	case 3: REG_X = v; break;
@@ -1406,4 +1446,29 @@ static void mc6801_set_register(void *sptr, int n, uint32_t v) {
 	case 5: REG_PC = v; break;
 	default: break;
 	}
+}
+
+static uint8_t flag_bit(int n) {
+	switch (n) {
+	case debug_cpu_flag_carry: return CC_C;
+	case debug_cpu_flag_overflow: return CC_V;
+	case debug_cpu_flag_zero: return CC_Z;
+	case debug_cpu_flag_negative: return CC_N;
+	default: break;
+	}
+	return 0;
+}
+
+static bool mc6801_get_flag(void *sptr, int n) {
+	struct MC6801 *cpu = sptr;
+	return REG_CC & flag_bit(n);
+}
+
+static void mc6801_set_flag(void *sptr, int n, bool v) {
+	struct MC6801 *cpu = sptr;
+	uint8_t bit = flag_bit(n);
+	if (v)
+		REG_CC |= bit;
+	else
+		REG_CC &= ~bit;
 }

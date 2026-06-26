@@ -2,7 +2,7 @@
  *
  *  \brief TCC1014 (GIME) support.
  *
- *  \copyright Copyright 2019-2025 Ciaran Anscomb
+ *  \copyright Copyright 2019-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -503,7 +503,7 @@ static const struct tcc1014_variant tcc1014_variant[2] = {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // GIME register writes
-static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val);
+static void tcc1014_write_register(struct TCC1014_private *gime, unsigned reg, unsigned val);
 
 // Horizontal timing points
 static void do_hs_fall(void *);
@@ -553,6 +553,14 @@ static const struct partdb_entry_funcs tcc1014_funcs = {
 const struct partdb_entry tcc1014_1986_part = { .name = "TCC1014-1986", .description = "Tandy, VLSI | TCC1014 ACVC (GIME) (1986)", .funcs = &tcc1014_funcs };
 const struct partdb_entry tcc1014_1987_part = { .name = "TCC1014-1987", .description = "Tandy, VLSI | TCC1014 ACVC (GIME) (1987)", .funcs = &tcc1014_funcs };
 
+static const struct debug_feature tcc1014_feature;
+static const struct debug_feature *features[] = { &tcc1014_feature };
+static uint32_t tcc1014_get_register(void *sptr, int n);
+static void tcc1014_set_register(void *sptr, int n, uint32_t v);
+static int tcc1014_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
+static int tcc1014_set_register_composite(void *sptr, int n, unsigned ssize,
+					  const uint8_t *src);
+
 static struct part *tcc1014_allocate(void) {
 	struct TCC1014_private *gime = part_new(sizeof(*gime));
 	struct part *p = &gime->public.part;
@@ -570,6 +578,13 @@ static struct part *tcc1014_allocate(void) {
 	event_init(&gime->hb_irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_hb_irq, gime));
 	event_init(&gime->vb_irq_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_vb_irq, gime));
 	event_init(&gime->timer.update_event, MACHINE_EVENT_LIST, DELEGATE_AS0(void, do_update_timer, gime));
+
+	gime->public.debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	gime->public.debug.part.feature = features;
+	gime->public.debug.part.get_register = DELEGATE_AS1(uint32, int, tcc1014_get_register, gime);
+	gime->public.debug.part.set_register = DELEGATE_AS2(void, int, uint32, tcc1014_set_register, gime);
+	gime->public.debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, tcc1014_get_register_composite, gime);
+	gime->public.debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, tcc1014_set_register_composite, gime);
 
 	return p;
 }
@@ -599,7 +614,7 @@ static bool tcc1014_finish(struct part *p) {
 	update_from_sam_register(gime);
 
 	for (int i = 0; i < 16; i++) {
-		tcc1014_set_register(gime, i, gime->registers[i]);
+		tcc1014_write_register(gime, i, gime->registers[i]);
 	}
 
 	return 1;
@@ -667,7 +682,7 @@ void tcc1014_reset(struct TCC1014 *gimep) {
 	struct TCC1014_private *gime = (struct TCC1014_private *)gimep;
 
 	for (int i = 0; i < 16; i++) {
-		tcc1014_set_register(gime, i, 0);
+		tcc1014_write_register(gime, i, 0);
 		gime->palette_reg[i] = 0;
 	}
 	tcc1014_set_sam_register(gimep, 0);
@@ -763,7 +778,7 @@ void tcc1014_mem_cycle(void *sptr, bool RnW, uint16_t A) {
 
 	} else if (A < 0xffa0) {
 		if (!RnW) {
-			tcc1014_set_register(gime, A & 15, *gimep->CPUD);
+			tcc1014_write_register(gime, A & 15, *gimep->CPUD);
 		} else {
 			// Contrary to my earlier understanding, _none_ of the
 			// other registers in this region are readable.  Just
@@ -902,7 +917,7 @@ void tcc1014_set_composite(struct TCC1014 *gimep, bool value) {
 
 // GIME register writes
 
-static void tcc1014_set_register(struct TCC1014_private *gime, unsigned reg, unsigned val) {
+static void tcc1014_write_register(struct TCC1014_private *gime, unsigned reg, unsigned val) {
 	render_scanline(gime, event_current_tick);
 	reg &= 15;
 	unsigned changed = gime->registers[reg] ^ val;
@@ -1609,4 +1624,335 @@ static void update_from_sam_register(struct TCC1014_private *gime) {
 	gime->SAM_F = (gime->SAM_register >> 3) & 0x7f;
 	gime->SAM_V = gime->SAM_register & 0x7;
 	update_from_gime_registers(gime);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static const struct debug_feature_field feature_type_mc6883_fields[] = {
+        { .name = "V", .start = 0, .end = 2, .type = &debug_feature_type_uint8 },
+        { .name = "F", .start = 3, .end = 9, .type = &debug_feature_type_uint8 },
+        { .name = "R1", .start = 12, .end = 12, .type = &debug_feature_type_uint8 },
+        { .name = "TY", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_mc6883 = {
+        .type = debug_feature_base_type_struct,
+        .id = "mc6883",
+        .size = 2,
+        .as_struct = {
+                .nfields = ARRAY_N_ELEMENTS(feature_type_mc6883_fields),
+                .field = feature_type_mc6883_fields
+        }
+};
+
+// Combine INIT0 and INIT1 into a 16-bit register
+static const struct debug_feature_field feature_type_init_fields[] = {
+        { .name = "MC", .start = 8, .end = 9, .type = &debug_feature_type_uint8 },
+        { .name = "MC2", .start = 10, .end = 10, .type = &debug_feature_type_uint8 },
+        { .name = "MC3", .start = 11, .end = 11, .type = &debug_feature_type_uint8 },
+        { .name = "FEN", .start = 12, .end = 12, .type = &debug_feature_type_uint8 },
+        { .name = "IEN", .start = 13, .end = 13, .type = &debug_feature_type_uint8 },
+        { .name = "MMUEN", .start = 14, .end = 14, .type = &debug_feature_type_uint8 },
+        { .name = "COCO", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+
+        { .name = "TR", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
+        { .name = "TINS", .start = 5, .end = 5, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_init = {
+	.type = debug_feature_base_type_struct,
+	.id = "init",
+	.size = 2,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_init_fields),
+		.field = feature_type_init_fields
+	}
+};
+
+static const struct debug_feature_field feature_type_irqenr_fields[] = {
+        { .name = "EI0", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
+        { .name = "EI1", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
+        { .name = "EI2", .start = 2, .end = 2, .type = &debug_feature_type_uint8 },
+        { .name = "VBORD", .start = 3, .end = 3, .type = &debug_feature_type_uint8 },
+        { .name = "HBORD", .start = 4, .end = 4, .type = &debug_feature_type_uint8 },
+        { .name = "TMR", .start = 5, .end = 5, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_irqenr = {
+	.type = debug_feature_base_type_struct,
+	.id = "irqenr",
+	.size = 1,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_irqenr_fields),
+		.field = feature_type_irqenr_fields
+	}
+};
+
+// Combine VMODE and VRES into a 16-bit register
+static const struct debug_feature_field feature_type_vmode_fields[] = {
+        { .name = "LPR", .start = 8, .end = 10, .type = &debug_feature_type_uint8 },
+        { .name = "HS0", .start = 11, .end = 11, .type = &debug_feature_type_uint8 },
+        { .name = "MOCH", .start = 12, .end = 12, .type = &debug_feature_type_uint8 },
+        { .name = "BPI", .start = 13, .end = 13, .type = &debug_feature_type_uint8 },
+        { .name = "BP", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+
+        { .name = "CRES", .start = 0, .end = 1, .type = &debug_feature_type_uint8 },
+        { .name = "HRES", .start = 2, .end = 4, .type = &debug_feature_type_uint8 },
+        { .name = "LPF", .start = 5, .end = 6, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_vmode = {
+	.type = debug_feature_base_type_struct,
+	.id = "vmode",
+	.size = 2,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_vmode_fields),
+		.field = feature_type_vmode_fields
+	}
+};
+
+// Combine VSC, Y, HVEN, X into a 32-bit register
+static const struct debug_feature_field feature_type_vpos_fields[] = {
+        { .name = "VSC", .start = 24, .end = 27, .type = &debug_feature_type_uint8 },
+
+        { .name = "Y", .start = 8, .end = 23, .type = &debug_feature_type_uint16 },
+
+        { .name = "HVEN", .start = 7, .end = 7, .type = &debug_feature_type_uint8 },
+        { .name = "X", .start = 0, .end = 6, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_vpos = {
+	.type = debug_feature_base_type_struct,
+	.id = "vpos",
+	.size = 4,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_vpos_fields),
+		.field = feature_type_vpos_fields
+	}
+};
+
+// GDB structs can't be > 64 bits, but vectors can so we make the page map a
+// 2x8 array:
+
+static const struct debug_feature_type feature_type_page_bank = {
+	.type = debug_feature_base_type_vector,
+	.id = "page_bank",
+	.size = 8,
+	.as_vector = {
+		.nelems = 8,
+		.type = &debug_feature_type_uint8
+	}
+};
+
+static const struct debug_feature_type feature_type_page = {
+	.type = debug_feature_base_type_vector,
+	.id = "page",
+	.size = 16,
+	.as_vector = {
+		.nelems = 2,
+		.type = &feature_type_page_bank
+	}
+};
+
+static const struct debug_feature_type feature_type_palette = {
+	.type = debug_feature_base_type_vector,
+	.id = "palette",
+	.size = 16,
+	.as_vector = {
+		.nelems = 16,
+		.type = &debug_feature_type_uint8
+	}
+};
+
+static const struct debug_feature_type *feature_types[] = {
+	&feature_type_mc6883,
+	&feature_type_init,
+	&feature_type_irqenr,
+	&feature_type_vmode,
+	&feature_type_vpos,
+	&feature_type_page_bank,
+	&feature_type_page,
+	&feature_type_palette,
+};
+
+static const struct debug_feature_reg feature_regs[] = {
+	{ .name = "sam", .bitsize = 16, .type = &feature_type_mc6883, .group = "gime" },
+	{ .name = "init", .bitsize = 16, .type = &feature_type_init, .group = "gime" },
+	{ .name = "irqenr", .bitsize = 8, .type = &feature_type_irqenr, .group = "gime" },
+	{ .name = "firqenr", .bitsize = 8, .type = &feature_type_irqenr, .group = "gime" },
+	{ .name = "tmr", .bitsize = 16, .type = &debug_feature_type_uint16, .group = "gime" },
+	{ .name = "vmode", .bitsize = 16, .type = &feature_type_vmode, .group = "gime" },
+	{ .name = "brdr", .bitsize = 8, .type = &debug_feature_type_uint8, .group = "gime" },
+	{ .name = "vpos", .bitsize = 32, .type = &feature_type_vpos, .group = "gime" },
+	{ .name = "page", .bitsize = 128, .type = &feature_type_page, .group = "gime" },
+	{ .name = "palette", .bitsize = 128, .type = &feature_type_palette, .group = "gime" },
+};
+
+static const struct debug_feature tcc1014_feature = {
+	"uk.org.6809.gdb.tcc1014",
+	.ntypes = ARRAY_N_ELEMENTS(feature_types), .type = feature_types,
+	.nregs = ARRAY_N_ELEMENTS(feature_regs), .reg = feature_regs
+};
+
+static uint32_t tcc1014_get_register(void *sptr, int n) {
+	struct TCC1014_private *gime = sptr;
+
+	uint32_t v = (uint32_t)-1;
+
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("tcc1014", "invalid simple register read: %d\n", n);
+		break;
+
+	case 0:
+		// SAM-equivalent register
+		v = gime->SAM_register;
+		break;
+
+	case 1:
+		// INIT (0+1 combined)
+		v = (gime->registers[0] << 8) | gime->registers[1];
+		break;
+
+	case 2:
+	case 3:
+		// IRQENR, FIRQENR
+		v = gime->registers[n];  // happens to match up
+		break;
+
+	case 4:
+		// TMR
+		v = (gime->registers[4] << 8) | gime->registers[5];
+		break;
+
+	case 5:
+		// VMODE, VRES
+		v = (gime->registers[8] << 8) | gime->registers[9];
+		break;
+
+	case 6:
+		// BRDR
+		v = gime->registers[10];
+		break;
+
+	case 7:
+		// VSC, Y, HVEN, X
+		v = (gime->registers[12] << 24);
+		v |= (gime->registers[13] << 16);
+		v |= (gime->registers[14] << 8);
+		v |= gime->registers[15];
+		break;
+	}
+
+	return v;
+}
+
+static void tcc1014_set_register(void *sptr, int n, uint32_t v) {
+	struct TCC1014_private *gime = sptr;
+
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("tcc1014", "invalid simple register write: %d\n", n);
+		exit(EXIT_FAILURE);
+
+	case 0:
+		// SAM-equivalent register
+		gime->SAM_register = v;
+		update_from_sam_register(gime);
+		break;
+
+	case 1:
+		// INIT (0+1 combined)
+		tcc1014_write_register(gime, 0, (v >> 8) & 0xff);
+		tcc1014_write_register(gime, 1, v & 0xff);
+		break;
+
+	case 2:
+	case 3:
+		// IRQENR, FIRQENR
+		tcc1014_write_register(gime, n, v & 0xff);  // happens to match up
+		break;
+
+	case 4:
+		// TMR: write LSB first so that MSB write reschedules timer
+		tcc1014_write_register(gime, 5, v & 0xff);
+		tcc1014_write_register(gime, 4, (v >> 8) & 0xff);
+		break;
+
+	case 5:
+		// VMODE, VRES
+		tcc1014_write_register(gime, 8, (v >> 8) & 0xff);
+		tcc1014_write_register(gime, 9, v & 0xff);
+		break;
+
+	case 6:
+		// BRDR
+		tcc1014_write_register(gime, 10, v & 0xff);
+		break;
+
+	case 7:
+		// VSC, Y, HVEN, X
+		tcc1014_write_register(gime, 12, (v >> 24) & 0xff);
+		tcc1014_write_register(gime, 13, (v >> 16) & 0xff);
+		tcc1014_write_register(gime, 14, (v >> 8) & 0xff);
+		tcc1014_write_register(gime, 15, v & 0xff);
+		break;
+	}
+}
+
+static int tcc1014_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
+	struct TCC1014_private *gime = sptr;
+
+	// error out for any register where get_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("tcc1014", "invalid composite register read: %d\n", n);
+		exit(EXIT_FAILURE);
+
+	case 8:
+		// PAGE
+		assert(dsize >= 16);
+		for (int i = 0; i < 16; ++i) {
+			dest[i] = gime->mmu_bank[i] & 0x3f;
+		}
+		return 16;
+
+	case 9:
+		// PALETTE
+		assert(dsize >= 16);
+		for (int i = 0; i < 16; ++i) {
+			dest[i] = gime->palette_reg[i] & 0x3f;
+		}
+		return 16;
+
+	}
+}
+
+static int tcc1014_set_register_composite(void *sptr, int n, unsigned ssize,
+					  const uint8_t *src) {
+	struct TCC1014_private *gime = sptr;
+
+	// error out for any register where set_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("tcc1014", "invalid composite register write: %d\n", n);
+		exit(EXIT_FAILURE);
+
+	case 8:
+		// PAGE
+		assert(ssize >= 16);
+		for (int i = 0; i < 16; ++i) {
+			gime->mmu_bank[i] = src[i] & 0x3f;
+		}
+		return 16;
+
+	case 9:
+		// PALETTE
+		assert(ssize >= 16);
+		for (int i = 0; i < 16; ++i) {
+			gime->palette_reg[i] = src[i] & 0x3f;
+		}
+		return 16;
+
+	}
 }

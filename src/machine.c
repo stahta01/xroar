@@ -28,6 +28,7 @@
 
 #include "array.h"
 #include "c-strcase.h"
+#include "sds.h"
 #include "slist.h"
 #include "xalloc.h"
 

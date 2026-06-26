@@ -29,7 +29,7 @@ xroar_SOURCES = \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
 	crclist.c crclist.h \
-	debug_cpu.h \
+	debug.c debug.h \
 	dkbd.c dkbd.h \
 	events.c events.h \
 	filter.c filter.h \
@@ -577,8 +577,7 @@ xroar_LDADD += $(PTHREADS_LIBS)
 
 if GDB
 xroar_SOURCES += \
-	gdb.c gdb.h \
-	gdb_annex.c gdb_annex.h
+	gdb.c gdb.h
 endif
 
 endif

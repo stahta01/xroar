@@ -2,7 +2,7 @@
  *
  *  \brief Support for various binary representations.
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -34,7 +34,7 @@
 
 #include "delegate.h"
 
-#include "debug_cpu.h"
+#include "debug.h"
 #include "fs.h"
 #include "hexs19.h"
 #include "logging.h"
@@ -130,13 +130,9 @@ int intel_hex_read(const char *filename, int autorun) {
 	if (logging.debug_file & LOG_FILE_BIN_DATA)
 		log_close(&log_hex);
 	if (exec != 0) {
-		struct debug_cpu *dcpu = NULL;
 		if (autorun) {
-			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
-		}
-		if (autorun && dcpu) {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - autorunning\n", exec);
-			DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
+			debug_set_register(xroar.machine->debug.target, xroar.machine->debug.cpu.register_pc, exec);
 		} else {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "hex", "EXEC $%04x - not autorunning\n", exec);
 		}
@@ -205,13 +201,9 @@ int motorola_s19_read(const char *filename, int autorun) {
 	if (logging.debug_file & LOG_FILE_BIN_DATA)
 		log_close(&log_s19);
 	if (exec != 0) {
-		struct debug_cpu *dcpu = NULL;
 		if (autorun) {
-			dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
-		}
-		if (autorun && dcpu) {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - autorunning\n", exec);
-			DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
+			debug_set_register(xroar.machine->debug.target, xroar.machine->debug.cpu.register_pc, exec);
 		} else {
 			LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "s19", "EXEC $%04x - not autorunning\n", exec);
 		}
@@ -284,13 +276,9 @@ static int dragon_bin_load(const char *filename, int autorun) {
 		log_hexdump_byte(log_bin, data);
 	}
 	log_close(&log_bin);
-	struct debug_cpu *dcpu = NULL;
 	if (autorun) {
-		dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
-	}
-	if (autorun && dcpu) {
 		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - autorunning\n", exec);
-		DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
+		debug_set_register(xroar.machine->debug.target, xroar.machine->debug.cpu.register_pc, exec);
 	} else {
 		LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "ddos", "EXEC $%04x - not autorunning\n", exec);
 	}
@@ -345,13 +333,9 @@ static int coco_bin_load(const char *filename, int autorun) {
 				LOG_MOD_SUB_WARN("binary", "rsdos", "%s: short read in exec chunk\n", filename);
 				break;
 			}
-			struct debug_cpu *dcpu = NULL;
 			if (autorun) {
-				dcpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)xroar.machine, "CPU", "DEBUG-CPU");
-			}
-			if (autorun && dcpu) {
 				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - autorunning\n", exec);
-				DELEGATE_CALL(dcpu->set_register, dcpu->register_pc, exec);
+				debug_set_register(xroar.machine->debug.target, xroar.machine->debug.cpu.register_pc, exec);
 			} else {
 				LOG_MOD_SUB_DEBUG_FILE(LOG_FILE_BIN, "binary", "rsdos", "EXEC $%04x - not autorunning\n", exec);
 			}

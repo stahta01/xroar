@@ -23,6 +23,7 @@
 
 #include "delegate.h"
 
+#include "debug.h"
 #include "part.h"
 
 struct ram;
@@ -48,12 +49,14 @@ struct MC6883 {
 	void (*vdg_fsync)(struct MC6883 *, bool level);
 	void (*vdg_hsync)(struct MC6883 *, bool level);
 	int (*vdg_bytes)(struct MC6883 *, int nbytes);
-	void (*set_register)(struct MC6883 *, unsigned value);
-	unsigned (*get_register)(struct MC6883 *);
 
 	// Not used by real MC6883, may be required by some replacements:
 	uint8_t *CPUD;    // provided by per-machine code
 	struct ram *RAM;  // provided by SAMx8
+
+	struct {
+		struct debug_part part;
+	} debug;
 };
 
 bool mc6883_is_a(struct part *p, const char *name);

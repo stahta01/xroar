@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,15 +31,12 @@
 
 #include "auto_kbd.h"
 #include "breakpoint.h"
-#include "debug_cpu.h"
+#include "debug.h"
 #include "dkbd.h"
 #include "events.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6801/mc6801.h"
-#include "mc6809/mc6809.h"
-#include "part.h"
 #include "xroar.h"
 
 // Each entry in the queue has a type:
@@ -69,9 +67,9 @@ enum type_state {
 
 struct auto_kbd {
 	struct machine *machine;
-	struct debug_cpu *debug_cpu;
-	bool is_6809;
-	bool is_6803;
+
+	// Register number of 'A'
+	int regno_a;
 
 	// These are refreshed each time data is submitted by checking the
 	// machine's keyboard map.  XXX this should really be based on the
@@ -117,10 +115,10 @@ struct auto_kbd *auto_kbd_new(struct machine *m) {
 	struct auto_kbd *ak = xmalloc(sizeof(*ak));
 	*ak = (struct auto_kbd){0};
 
+	assert(DELEGATE_DEFINED(m->debug.cpu.set_flag));
+
 	ak->machine = m;
-	ak->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
-	ak->is_6809 = part_is_a(&ak->debug_cpu->part, "MC6809");
-	ak->is_6803 = part_is_a(&ak->debug_cpu->part, "MC6803");
+	ak->regno_a = debug_register_by_name(m->debug.target, "a");
 	ak->sg6_mode = 0;
 	ak->sg4_colour = 0x80;
 	ak->sg6_colour = 0x80;
@@ -221,23 +219,15 @@ static void do_rts(void *sptr, bool RnW, uint32_t A) {
 
 static void do_auto_event(void *sptr, bool RnW, uint32_t A) {
 	struct auto_kbd *ak = sptr;
-	struct MC6801 *cpu01 = (struct MC6801 *)ak->debug_cpu;
-	struct MC6809 *cpu09 = (struct MC6809 *)ak->debug_cpu;
 	(void)RnW;
 	(void)A;
 
 	if (!ak->auto_event_list)
 		return;
 
-	// Default to no key pressed
-	if (ak->is_6809 && cpu09) {
-		MC6809_REG_A(cpu09) = 0;
-		cpu09->reg_cc |= 4;
-	}
-	if (ak->is_6803 && cpu01) {
-		MC6801_REG_A(cpu01) = 0;
-		cpu01->reg_cc |= 4;
-	}
+	// A is register 1 in all supported architecture
+	debug_set_register(ak->machine->debug.target, ak->regno_a, 0);
+	DELEGATE_CALL(ak->machine->debug.cpu.set_flag, debug_cpu_flag_zero, 1);
 
 	struct auto_event *ae = ak->auto_event_list->data;
 	bool next_event = 0;
@@ -248,14 +238,8 @@ static void do_auto_event(void *sptr, bool RnW, uint32_t A) {
 			uint8_t byte = ae->data.string[ak->command_index++];
 			// CHR$(0)="[" on Dragon 200-E, so clear Z flag even if zero,
 			// as otherwise BASIC will skip it.
-			if (ak->is_6809 && cpu09) {
-				MC6809_REG_A(cpu09) = byte;
-				cpu09->reg_cc &= ~4;
-			}
-			if (ak->is_6803 && cpu01) {
-				MC6801_REG_A(cpu01) = byte;
-				cpu01->reg_cc &= ~4;
-			}
+			debug_set_register(ak->machine->debug.target, ak->regno_a, byte);
+			DELEGATE_CALL(ak->machine->debug.cpu.set_flag, debug_cpu_flag_zero, 0);
 		}
 		if (ak->command_index >= sdslen(ae->data.string)) {
 			next_event = 1;
@@ -274,14 +258,8 @@ static void do_auto_event(void *sptr, bool RnW, uint32_t A) {
 			if (ae->data.basic_file.utf8)
 				byte = parse_char(ak, byte);
 			if (byte >= 0) {
-				if (ak->is_6809 && cpu09) {
-					MC6809_REG_A(cpu09) = byte;
-					cpu09->reg_cc &= ~4;
-				}
-				if (ak->is_6803 && cpu01) {
-					MC6801_REG_A(cpu01) = byte;
-					cpu01->reg_cc &= ~4;
-				}
+				debug_set_register(ak->machine->debug.target, ak->regno_a, byte);
+				DELEGATE_CALL(ak->machine->debug.cpu.set_flag, debug_cpu_flag_zero, 0);
 				break;
 			}
 		}

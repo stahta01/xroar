@@ -37,8 +37,6 @@
 #include "fs.h"
 #include "logging.h"
 #include "machine.h"
-#include "mc6801/mc6801.h"
-#include "mc6809/mc6809.h"
 #include "messenger.h"
 #include "part.h"
 #include "snapshot.h"
@@ -59,9 +57,9 @@ struct tape_interface_private {
 	struct machine *machine;
 	struct ui_interface *ui;
 
-	struct debug_cpu *debug_cpu;
-	bool is_6809;
-	bool is_6803;
+	int regno_cc;
+	int regno_a;
+	int regno_x;
 	struct {
 		uint16_t pwcount;
 		uint16_t bcount;
@@ -72,6 +70,7 @@ struct tape_interface_private {
 		uint16_t motor_delay;
 	} addr;
 
+	int bsr_cycles;
 	int short_leader_threshold;
 	int initial_motor_delay;
 
@@ -313,9 +312,12 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 
 	tip->machine = m;
 
-	tip->debug_cpu = (struct debug_cpu *)part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
-	tip->is_6809 = part_is_a(&tip->debug_cpu->part, "MC6809");
-	tip->is_6803 = part_is_a(&tip->debug_cpu->part, "MC6803");
+	struct part *cpu = part_component_by_id_is_a((struct part *)m, "CPU", "DEBUG-CPU");
+	bool is_6809 = part_is_a(cpu, "MC6809");
+	tip->bsr_cycles = is_6809 ? 7 : 6;
+	tip->regno_cc = debug_register_by_name(m->debug.target, "cc");
+	tip->regno_a = debug_register_by_name(m->debug.target, "a");
+	tip->regno_x = debug_register_by_name(m->debug.target, "x");
 
 	tip->short_leader_threshold = is_dragon ? 114 : 130;
 	tip->initial_motor_delay = is_dragon ? 5 : 0;
@@ -335,7 +337,6 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 void tape_interface_disconnect_machine(struct tape_interface *ti) {
 	struct tape_interface_private *tip = (struct tape_interface_private *)ti;
 	tip->machine = NULL;
-	tip->debug_cpu = NULL;
 	ti->update_audio = DELEGATE_DEFAULT1(void, float);
 }
 
@@ -976,32 +977,16 @@ static void flush_output(void *sptr) {
 // Register access
 
 static inline uint8_t GET_CC(struct tape_interface_private *tip) {
-	if (tip->is_6809) {
-		return ((struct MC6809 *)tip->debug_cpu)->reg_cc;
-	}
-	if (tip->is_6803) {
-		return ((struct MC6801 *)tip->debug_cpu)->reg_cc;
-	}
-	return 0;
+	return debug_get_register(tip->machine->debug.target, tip->regno_cc);
 }
 
 static inline uint8_t SET_CC(struct tape_interface_private *tip, uint8_t v) {
-	if (tip->is_6809) {
-		((struct MC6809 *)tip->debug_cpu)->reg_cc = v;
-	}
-	if (tip->is_6803) {
-		((struct MC6801 *)tip->debug_cpu)->reg_cc = v | 0xc0;
-	}
+	debug_set_register(tip->machine->debug.target, tip->regno_cc, v);
 	return 0;
 }
 
 static inline uint8_t SET_A(struct tape_interface_private *tip, uint8_t v) {
-	if (tip->is_6809) {
-		MC6809_REG_A(((struct MC6809 *)tip->debug_cpu)) = v;
-	}
-	if (tip->is_6803) {
-		MC6801_REG_A(((struct MC6801 *)tip->debug_cpu)) = v;
-	}
+	debug_set_register(tip->machine->debug.target, tip->regno_a, v);
 	return 0;
 }
 
@@ -1043,7 +1028,7 @@ static uint8_t op_clr(struct tape_interface_private *tip) {
 
 static void FAKE_BSR(struct tape_interface_private *tip,
 		void (*f)(struct tape_interface_private *)) {
-	SKIP_CPU_CYCLES(tip, tip->is_6809 ? 7 : 6);
+	SKIP_CPU_CYCLES(tip, tip->bsr_cycles);
 	f(tip);
 }
 
@@ -1140,7 +1125,8 @@ static void update_read_time(struct tape_interface_private *tip) {
 // Called by fast_motor_on().  Skipped if a short leader is detected.
 
 static void motor_on_delay(struct tape_interface_private *tip) {
-	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
+	if (tip->regno_x < 0)
+		return;
 	SKIP_CPU_CYCLES(tip, 5);  /* LDX <$95 */
 	uint16_t X = mem_read16(tip, tip->addr.motor_delay);
 	SKIP_CPU_CYCLES(tip, tip->initial_motor_delay);  /* LBRA delay_X */
@@ -1151,8 +1137,8 @@ static void motor_on_delay(struct tape_interface_private *tip) {
 		if ((X & 63) == 0)
 			do_skip_read_time(tip);
 	}
-	cpu09->reg_x = 0;
-	cpu09->reg_cc |= CC_Z;
+	debug_set_register(tip->machine->debug.target, tip->regno_x, 0);
+	DELEGATE_CALL(tip->machine->debug.cpu.set_flag, debug_cpu_flag_zero, 1);
 	FAKE_RTS(tip);
 }
 
@@ -1368,7 +1354,8 @@ static void cbin(struct tape_interface_private *tip) {
 static void fast_motor_on(void *sptr, bool RnW, uint32_t A) {
 	// Breakpoint: CASON, after switching on, before delay
 	struct tape_interface_private *tip = sptr;
-	struct MC6809 *cpu09 = (struct MC6809 *)tip->debug_cpu;
+	if (tip->regno_x < 0)
+		return;
 	(void)RnW;
 	(void)A;
 
@@ -1376,8 +1363,8 @@ static void fast_motor_on(void *sptr, bool RnW, uint32_t A) {
 	if (!tip->short_leader) {
 		motor_on_delay(tip);
 	} else {
-		cpu09->reg_x = 0;
-		cpu09->reg_cc |= CC_Z;
+		debug_set_register(tip->machine->debug.target, tip->regno_x, 0);
+		DELEGATE_CALL(tip->machine->debug.cpu.set_flag, debug_cpu_flag_zero, 1);
 	}
 	tip->machine->op_rts(tip->machine);
 	do_skip_read_time(tip);
@@ -1601,7 +1588,7 @@ static struct machine_bp_entry bp_list_rewrite[] = {
 };
 
 static void set_breakpoints(struct tape_interface_private *tip) {
-	if (!tip->debug_cpu)
+	if (!tip->machine)
 		return;
 	// clear any old breakpoints
 	machine_remove_breakpoint_all(tip->machine, tip);

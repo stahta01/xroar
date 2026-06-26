@@ -2,7 +2,7 @@
  *
  *  \brief Motorola MC6821 Peripheral Interface Adaptor.
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ *  \copyright Copyright 2003-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -101,6 +101,10 @@ struct MC6821_side {
 struct MC6821 {
 	struct part part;
 	struct MC6821_side a, b;
+
+	struct {
+		struct debug_part part;
+	} debug;
 };
 
 /* Convenience macros to calculate the effective value of a port output, for

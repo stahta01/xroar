@@ -18,6 +18,7 @@
 
 #include "top-config.h"
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -25,6 +26,7 @@
 #include "delegate.h"
 
 #include "events.h"
+#include "logging.h"
 #include "mc6883.h"
 #include "part.h"
 #include "ram.h"
@@ -218,8 +220,6 @@ static unsigned samx8_decode(struct MC6883 *, bool RnW, uint16_t A);
 static void samx8_vdg_hsync(struct MC6883 *, bool level);
 static void samx8_vdg_fsync(struct MC6883 *, bool level);
 static int samx8_vdg_bytes(struct MC6883 *, int nbytes);
-static void samx8_set_register(struct MC6883 *, unsigned value);
-static unsigned samx8_get_register(struct MC6883 *);
 
 static const struct partdb_entry_funcs samx8_funcs = {
 	.allocate = samx8_allocate,
@@ -232,6 +232,15 @@ static const struct partdb_entry_funcs samx8_funcs = {
 };
 
 const struct partdb_entry samx8_part = { .name = "SAMx8", .description = "Teipen Mwnci | SAMx8", .funcs = &samx8_funcs };
+
+// 0. SAM-equivalent register (16-bit)
+// 1. SAMx8 struct (16-bit)
+static const struct debug_feature samx8_feature;
+static const struct debug_feature *features[] = { &samx8_feature };
+static uint32_t samx8_get_register(void *sptr, int n);
+static void samx8_set_register(void *sptr, int n, uint32_t v);
+static int samx8_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
+static int samx8_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src);
 
 static struct part *samx8_allocate(void) {
 	struct SAMx8_private *sam = part_new(sizeof(*sam));
@@ -249,8 +258,13 @@ static struct part *samx8_allocate(void) {
 	samp->vdg_hsync = samx8_vdg_hsync;
 	samp->vdg_fsync = samx8_vdg_fsync;
 	samp->vdg_bytes = samx8_vdg_bytes;
-	samp->set_register = samx8_set_register;
-	samp->get_register = samx8_get_register;
+
+	samp->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	samp->debug.part.feature = features;
+	samp->debug.part.get_register = DELEGATE_AS1(uint32, int, samx8_get_register, sam);
+	samp->debug.part.set_register = DELEGATE_AS2(void, int, uint32, samx8_set_register, sam);
+	samp->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, samx8_get_register_composite, sam);
+	samp->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, samx8_set_register_composite, sam);
 
 	// Set up VDG address divider sources.  Set initial Vprev=7 so that first
 	// call to reset() changes them.
@@ -635,16 +649,6 @@ int samx8_vdg_bytes(struct MC6883 *samp, int nbytes) {
 	return nbytes;
 }
 
-static void samx8_set_register(struct MC6883 *samp, unsigned value) {
-	(void)samp;
-	(void)value;
-}
-
-static unsigned samx8_get_register(struct MC6883 *samp) {
-	(void)samp;
-	return 0;
-}
-
 static void update_vcounter_inputs(struct SAMx8_private *sam) {
 	switch (vdg_ydivs[sam->V]) {
 	case DIV12:
@@ -722,4 +726,154 @@ static void update_from_register(struct SAMx8_private *sam) {
 	}
 
 	sam->mpu_rate_fast = sam->R;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Replicate the supported aspects of the original SAM register
+
+static const struct debug_feature_field feature_type_sam_fields[] = {
+	{ .name = "V", .start = 0, .end = 2, .type = &debug_feature_type_uint8 },
+	{ .name = "F", .start = 3, .end = 9, .type = &debug_feature_type_uint8 },
+	{ .name = "TASK", .start = 10, .end = 10, .type = &debug_feature_type_uint8 },
+	{ .name = "R", .start = 11, .end = 11, .type = &debug_feature_type_uint8 },
+	{ .name = "TY", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_sam = {
+        .type = debug_feature_base_type_struct,
+        .id = "sam",
+        .size = 2,
+        .as_struct = {
+                .nfields = ARRAY_N_ELEMENTS(feature_type_sam_fields),
+                .field = feature_type_sam_fields
+        }
+};
+
+static const struct debug_feature_type feature_type_page_bank = {
+	.type = debug_feature_base_type_vector,
+	.id = "page_bank",
+	.size = 4,
+	.as_vector = {
+		.nelems = 4,
+		.type = &debug_feature_type_uint8
+	}
+};
+
+static const struct debug_feature_type feature_type_page = {
+	.type = debug_feature_base_type_vector,
+	.id = "page",
+	.size = 8,
+	.as_vector = {
+		.nelems = 2,
+		.type = &feature_type_page_bank
+	}
+};
+
+static const struct debug_feature_type *samx8_feature_types[] = {
+        &feature_type_sam,
+	&feature_type_page_bank,
+	&feature_type_page,
+};
+
+static const struct debug_feature_reg samx8_feature_regs[] = {
+        { .name = "sam", .bitsize = 16, .type = &feature_type_sam, .group = "sam" },
+        { .name = "page", .bitsize = 64, .type = &feature_type_page, .group = "sam" },
+        { .name = "f", .bitsize = 16, .type = &debug_feature_type_uint16, .group = "sam" },
+        { .name = "common", .bitsize = 8, .type = &debug_feature_type_uint8, .group = "sam" },
+};
+
+static const struct debug_feature samx8_feature = {
+        "uk.org.6809.gdb.samx8",
+        .ntypes = ARRAY_N_ELEMENTS(samx8_feature_types), .type = samx8_feature_types,
+        .nregs = ARRAY_N_ELEMENTS(samx8_feature_regs), .reg = samx8_feature_regs
+};
+
+static uint32_t samx8_get_register(void *sptr, int n) {
+	struct SAMx8_private *sam = sptr;
+
+	uint32_t v = (uint32_t)-1;
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("samx8", "invalid simple register read: %d\n", n);
+		break;
+	case 0:
+		// SAM-equivalent register
+		v = sam->V & 7;
+		v |= (sam->F & 0xfe00) >> 6;
+		v |= (sam->TASK << 10);
+		v |= (sam->R << 12);
+		v |= (sam->TY << 15);
+		break;
+	case 2:
+		// F
+		v = (sam->F >> 5) & 0x3fff;
+		break;
+	case 3:
+		// COMMON
+		v = sam->COMMON & 3;
+		break;
+	}
+	return v;
+}
+
+static void samx8_set_register(void *sptr, int n, uint32_t v) {
+	struct SAMx8_private *sam = sptr;
+
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("samx8", "invalid simple register write: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 0:
+		// SAM-equivalent register
+		sam->V = v & 7;
+		sam->F = (sam->F & ~0xfe00) | (((v >> 3) & 0x7f) << 9);
+		sam->TASK = (v >> 10) & 1;
+		sam->R = (v >> 12) & 1;
+		sam->TY = (v >> 15) & 1;
+		update_from_register(sam);
+		break;
+	case 2:
+		// F
+		sam->F = (v & 0x3fff) << 5;
+		break;
+	case 3:
+		// COMMON
+		sam->COMMON = v & 3;
+		break;
+	}
+}
+
+static int samx8_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
+	struct SAMx8_private *sam = sptr;
+	// error out for any register where get_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("samx8", "invalid composite register read: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 1:
+		// PAGE
+		assert(dsize >= 8);
+		for (int i = 0; i < 8; ++i) {
+			dest[i] = sam->page_map[i] & 0x1f;
+		}
+		return 8;
+	}
+}
+
+static int samx8_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src) {
+	struct SAMx8_private *sam = sptr;
+	// error out for any register where set_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("samx8", "invalid composite register write: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 1:
+		// PAGE
+		assert(ssize >= 8);
+		for (int i = 0; i < 8; ++i) {
+			sam->page_map[i] = src[i] & 0x1f;
+		}
+		return 8;
+	}
 }

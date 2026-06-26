@@ -40,7 +40,6 @@
 #include "crc32.h"
 #include "crclist.h"
 #include "gdb.h"
-#include "gdb_annex.h"
 #include "joystick.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -319,11 +318,6 @@ static void coco3_add_watchpoint(struct machine *m, bool RnW,
 static void coco3_remove_watchpoint(struct machine *m, int RnW,
 				    int32_t Astart, uint32_t Aend,
 				    DELEGATE_T2(void, bool, uint32) handler);
-#ifdef WANT_GDB_TARGET
-static unsigned coco3_register_size(void *sptr, int regno);
-static uint32_t coco3_get_register(void *sptr, int regno);
-static void coco3_set_register(void *sptr, int regno, uint32_t value);
-#endif
 
 static void keyboard_update(void *sptr);
 static void joystick_update(void *sptr);
@@ -410,13 +404,6 @@ static struct part *coco3_allocate(void) {
 	m->debug.remove_breakpoint = coco3_remove_breakpoint;
 	m->debug.add_watchpoint = coco3_add_watchpoint;
 	m->debug.remove_watchpoint = coco3_remove_watchpoint;
-
-#ifdef WANT_GDB_TARGET
-	m->debug.endian = machine_endian_big;
-	m->debug.register_size = DELEGATE_AS1(unsigned, int, coco3_register_size, mcc3);
-	m->debug.get_register = DELEGATE_AS1(uint32, int, coco3_get_register, mcc3);
-	m->debug.set_register = DELEGATE_AS2(void, int, uint32, coco3_set_register, mcc3);
-#endif
 
 	m->keyboard.type = dkbd_layout_coco3;
 
@@ -532,17 +519,16 @@ static bool coco3_finish(struct part *p) {
 	ui_messenger_join_group(mcc3->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_frameskip, mcc3));
 	ui_messenger_join_group(mcc3->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(coco3_ui_set_ratelimit, mcc3));
 
+	memcpy(&m->debug.cpu, &mcc3->CPU->debug.cpu, sizeof(m->debug.cpu));
+	m->debug.target = debug_target_new(m->debug.cpu.architecture, m->debug.cpu.endian);
+	debug_target_add_part(m->debug.target, NULL, &mcc3->CPU->debug.part);
 #ifdef WANT_GDB_TARGET
-	m->debug.num_registers = mcc3->CPU->debug_cpu.num_registers;
-
-	if (mcc3->CPU->gdb_architecture) {
-		m->debug.target_xml = gdb_annex_target_new(mcc3->CPU->gdb_architecture);
-		if (mcc3->CPU->gdb_features) {
-			for (const char **f = mcc3->CPU->gdb_features; *f; ++f) {
-				m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, *f);
-			}
-		}
+	if (xroar.cfg.debug.gdb_pseudo_regs) {
+		debug_target_add_part(m->debug.target, NULL, &mcc3->GIME->debug.part);
+		debug_target_add_part(m->debug.target, "pia0", &mcc3->PIA0->debug.part);
+		debug_target_add_part(m->debug.target, "pia1", &mcc3->PIA1->debug.part);
 	}
+	m->debug.target_xml = debug_target_xml(m->debug.target);
 #endif
 
 	// ROM
@@ -726,6 +712,7 @@ static void coco3_free(struct part *p) {
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mcc3->msgr_client_id);
 	machine_remove_breakpoint_all(&mcc3->public, NULL);
+	debug_target_free(mcc3->public.debug.target);
 #ifdef WANT_GDB_TARGET
 	if (mcc3->gdb_interface) {
 		gdb_interface_free(mcc3->gdb_interface);
@@ -1372,32 +1359,6 @@ static void coco3_remove_watchpoint(struct machine *m, int RnW,
 	struct coco3 *mcc3 = (struct coco3 *)m;
 	bp_watchpoint_remove(&mcc3->watchpoint_set, RnW, Astart, Aend, handler);
 }
-
-#ifdef WANT_GDB_TARGET
-
-static unsigned coco3_register_size(void *sptr, int regno) {
-        struct coco3 *mcc3 = sptr;
-        if ((unsigned)regno < mcc3->CPU->debug_cpu.num_registers)
-                return DELEGATE_CALL(mcc3->CPU->debug_cpu.register_size, regno);
-        return 0;
-}
-
-static uint32_t coco3_get_register(void *sptr, int regno) {
-        struct coco3 *mcc3 = sptr;
-        if ((unsigned)regno < mcc3->CPU->debug_cpu.num_registers)
-                return DELEGATE_CALL(mcc3->CPU->debug_cpu.get_register, regno);
-        return 0;
-}
-
-static void coco3_set_register(void *sptr, int regno, uint32_t value) {
-        struct coco3 *mcc3 = sptr;
-        if ((unsigned)regno < mcc3->CPU->debug_cpu.num_registers) {
-                DELEGATE_CALL(mcc3->CPU->debug_cpu.set_register, regno, value);
-                return;
-        }
-}
-
-#endif
 
 static uint16_t fetch_vram(void *sptr, uint32_t A) {
 	struct coco3 *mcc3 = sptr;

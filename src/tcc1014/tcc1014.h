@@ -23,6 +23,9 @@
 
 #include "delegate.h"
 
+#include "debug.h"
+#include "part.h"
+
 // Virtually all timings vary by GIME model selected, however the line length
 // remains constant (measured in pixels (1/14.31818µs);
 
@@ -78,6 +81,10 @@ struct TCC1014 {
 	// GIME will set 'burst' to 0 (normal burst) or 1 (inverted burst).
 
 	DELEGATE_T3(void, unsigned, unsigned, uint8cp) render_line;
+
+	struct {
+		struct debug_part part;
+	} debug;
 };
 
 void tcc1014_reset(struct TCC1014 *gimep);

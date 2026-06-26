@@ -24,7 +24,7 @@
 #include "delegate.h"
 #include "pl-endian.h"
 
-#include "debug_cpu.h"
+#include "debug.h"
 #include "part.h"
 
 struct ser_struct_data;
@@ -69,8 +69,8 @@ enum mc6809_state {
 
 /* Interface shared with all 6809-compatible CPUs */
 struct MC6809 {
-	// Is a debuggable CPU, which is a part
-	struct debug_cpu debug_cpu;
+	// Is a part
+	struct part part;
 
 	/* Interrupt lines */
 	bool halt, nmi, firq, irq;
@@ -113,10 +113,10 @@ struct MC6809 {
 	bool nmi_latch, firq_latch, irq_latch;
 	bool nmi_active, firq_active, irq_active;
 
-#ifdef WANT_GDB_TARGET
-	const char *gdb_architecture;
-	const char **gdb_features;
-#endif
+	struct {
+		struct debug_cpu cpu;
+		struct debug_part part;
+	} debug;
 };
 
 #if __BYTE_ORDER == __BIG_ENDIAN
@@ -150,5 +150,9 @@ inline void MC6809_IRQ_SET(struct MC6809 *cpu, bool val) {
 
 // Used by MC6809-compatibles:
 bool mc6809_is_a(struct part *p, const char *name);
+void mc6809_init_debug_info(struct MC6809 *cpu);
+extern const struct debug_feature m6809_core_feature;
+bool mc6809_get_flag(void *sptr, int n);
+void mc6809_set_flag(void *sptr, int n, bool v);
 
 #endif

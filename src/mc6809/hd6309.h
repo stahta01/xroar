@@ -2,7 +2,7 @@
  *
  *  \brief Hitach HD6309 CPU.
  *
- *  \copyright Copyright 2012-2025 Ciaran Anscomb
+ *  \copyright Copyright 2012-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -21,9 +21,7 @@
 
 #include <stdint.h>
 
-#include "debug_cpu.h"
 #include "mc6809.h"
-#include "part.h"
 
 #ifdef TRACE
 struct hd6309_trace;
@@ -58,7 +56,7 @@ enum hd6309_state {
 };
 
 struct HD6309 {
-	// Is an MC6809, which is a debuggable CPU, which is a part
+	// Is an MC6809, which is a part
 	struct MC6809 mc6809;
 
 	// Separate state variable for the sake of debugging

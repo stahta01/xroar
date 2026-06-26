@@ -46,6 +46,7 @@
 #define _BSD_SOURCE
 #define _DARWIN_C_SOURCE
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -81,7 +82,6 @@
 #include "breakpoint.h"
 #include "events.h"
 #include "gdb.h"
-#include "gdb_annex.h"
 #include "logging.h"
 #include "machine.h"
 #include "mc6809/hd6309.h"
@@ -120,8 +120,8 @@ enum gdb_error {
 	GDBE_WRITE_ERROR,
 };
 
-static char in_packet[1025];
-static char packet[1025];
+static uint8_t in_packet[1025];
+static uint8_t packet[1025];
 
 static ssize_t read_packet(struct gdb_interface_private *gip, void *buf, size_t count);
 static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, size_t count);
@@ -148,10 +148,10 @@ static void send_supported(struct gdb_interface_private *gip, char *args);  // q
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int snprint_value_endian(char *dst, size_t dsize, int endian,
-				uint32_t value, unsigned vsize);
-static int scan_value_endian(char *src, size_t ssize, int endian,
-			     uint32_t *value, unsigned vsize);
+static int set_register_hex(struct gdb_interface_private *gip, int regno,
+			    size_t ssize, char *src);
+static int get_register_hex(struct gdb_interface_private *gip, int regno,
+			    size_t dsize, char *dest);
 static int hexdigit(char c);
 static int hex8(char *s);
 
@@ -395,7 +395,7 @@ static void *handle_tcp_sock(void *sptr) {
 			if (!gip->no_ack_mode && send_char(gip, '+') < 0)
 				break;
 
-			char *args = &in_packet[1];
+			uint8_t *args = &in_packet[1];
 
 			switch (in_packet[0]) {
 
@@ -417,31 +417,31 @@ static void *handle_tcp_sock(void *sptr) {
 				break;
 
 			case 'G':
-				set_general_registers(gip, args);
+				set_general_registers(gip, (char *)args);
 				break;
 
 			case 'm':
-				send_memory(gip, args);
+				send_memory(gip, (char *)args);
 				break;
 
 			case 'M':
-				set_memory(gip, args);
+				set_memory(gip, (char *)args);
 				break;
 
 			case 'p':
-				send_register(gip, args);
+				send_register(gip, (char *)args);
 				break;
 
 			case 'P':
-				set_register(gip, args);
+				set_register(gip, (char *)args);
 				break;
 
 			case 'q':
-				general_query(gip, args);
+				general_query(gip, (char *)args);
 				break;
 
 			case 'Q':
-				general_set(gip, args);
+				general_set(gip, (char *)args);
 				break;
 
 			case 's':
@@ -449,11 +449,11 @@ static void *handle_tcp_sock(void *sptr) {
 				break;
 
 			case 'z':
-				remove_breakpoint(gip, args);
+				remove_breakpoint(gip, (char *)args);
 				break;
 
 			case 'Z':
-				add_breakpoint(gip, args);
+				add_breakpoint(gip, (char *)args);
 				break;
 
 			default:
@@ -679,29 +679,26 @@ static void send_last_signal(struct gdb_interface_private *gip) {
 }
 
 static void send_general_registers(struct gdb_interface_private *gip) {
-	char *dst = packet;
-	size_t dsize = sizeof(packet);
-	for (unsigned i = 0; i < gip->machine->debug.num_registers; ++i) {
-		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, i);
-		uint32_t rval = DELEGATE_CALL(gip->machine->debug.get_register, i);
-		int n = snprint_value_endian(dst, dsize, gip->machine->debug.endian, rval, rsize);
-		dst += n;
+	// Fetch all registers into buffer
+	char *dest = (char *)packet;
+	unsigned dsize = (sizeof(packet) - 1) / 2;
+	for (unsigned i = 0; i < gip->machine->debug.target->nregs; ++i) {
+		int n = get_register_hex(gip, i, dsize, dest);
+		if (n < 0)
+			break;
+		dest += n;
 		dsize -= n;
 	}
-	send_packet_string(gip, packet);
+	send_packet_string(gip, (char *)packet);
 }
 
 static void set_general_registers(struct gdb_interface_private *gip, char *args) {
 	size_t asize = strlen(args);
-	for (unsigned i = 0; i < gip->machine->debug.num_registers; ++i) {
-		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, i);
-		uint32_t rval = 0;
-		int n = scan_value_endian(args, asize, gip->machine->debug.endian, &rval, rsize);
-		if (n == 0)
+	for (unsigned i = 0; i < gip->machine->debug.target->nregs; ++i) {
+		int n = set_register_hex(gip, i, asize, args);
+		if (n < 0)
 			break;
 		args += n;
-		asize -= n;
-		DELEGATE_CALL(gip->machine->debug.set_register, i, rval);
 	}
 	send_packet_string(gip, "OK");
 }
@@ -722,13 +719,13 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 		return;
 	for (unsigned i = 0; i < length; i++) {
 		uint8_t b = gip->machine->read_byte(gip->machine, A++, 0);
-		snprintf(packet, sizeof(packet), "%02x", b);
+		snprintf((char *)packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
 		if (send(gip->sockfd, packet, 2, 0) < 0)
 			return;
 	}
-	snprintf(packet, sizeof(packet), "#%02x", csum);
+	snprintf((char *)packet, sizeof(packet), "#%02x", csum);
 	if (send(gip->sockfd, packet, 3, 0) < 0)
 		return;
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
@@ -762,30 +759,25 @@ error:
 }
 
 static void send_register(struct gdb_interface_private *gip, char *args) {
-	unsigned regnum = strtoul(args, NULL, 16);
-	if (regnum >= gip->machine->debug.num_registers) {
+	unsigned regno = strtoul(args, NULL, 16);
+	int n = get_register_hex(gip, regno, sizeof(packet), (char *)packet);
+	if (n <= 0) {
 		send_packet_string(gip, "E00");
 	} else {
-		unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, regnum);
-		uint32_t rval = DELEGATE_CALL(gip->machine->debug.get_register, regnum);
-		snprint_value_endian(packet, sizeof(packet), gip->machine->debug.endian, rval, rsize);
-		send_packet_string(gip, packet);
+		send_packet_string(gip, (char *)packet);
 	}
 }
 
 static void set_register(struct gdb_interface_private *gip, char *args) {
-	char *regnum_str = strsep(&args, "=");
-	if (!regnum_str || !args)
+	char *regno_str = strsep(&args, "=");
+	if (!regno_str || !args)
 		goto error;
-	unsigned regnum = strtoul(regnum_str, NULL, 16);
-	if (regnum >= gip->machine->debug.num_registers)
+	unsigned regno = strtoul(regno_str, NULL, 16);
+	if (regno >= gip->machine->debug.target->nregs)
 		goto error;
-	unsigned rsize = DELEGATE_CALL(gip->machine->debug.register_size, regnum);
-	uint32_t rval = 0;
-	int n = scan_value_endian(args, strlen(args), gip->machine->debug.endian, &rval, rsize);
-	if (n == 0)
+	size_t asize = strlen(args);
+	if (set_register_hex(gip, regno, asize, args) < 0)
 		goto error;
-	DELEGATE_CALL(gip->machine->debug.set_register, regnum, rval);
 	send_packet_string(gip, "OK");
 	return;
 error:
@@ -814,38 +806,16 @@ static void general_query(struct gdb_interface_private *gip, char *args) {
 		LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: Attached\n");
 		send_packet_string(gip, "1");
 	} else if (0 == strcmp(query, "Xfer")) {
-		if (0 == strncmp(args, "features:read:", 14)) {
-			args += 14;
-			char *annex = NULL;
-			const char *data = NULL;
-			size_t data_size = 0;
-			if (0 == strncmp(args, "target.xml:", 11)) {
-				args += 11;
-				data = gip->machine->debug.target_xml;
-				data_size = sdslen(gip->machine->debug.target_xml);
-			} else {
-				annex = strsep(&args, ":");
-			}
+		if (0 == strncmp(args, "features:read:target.xml:", 25)) {
+			args += 25;
+			const char *data = gip->machine->debug.target_xml;
+			size_t data_size = sdslen(gip->machine->debug.target_xml);
 			size_t offset = strtol(args, &args, 16);
 			if (*args == ',')
 				++args;
 			size_t length = strtol(args, &args, 16);
-			if (annex) {
-				for (size_t i = 0; i < num_gdb_annex; ++i) {
-					struct gdb_annex *ga = &gdb_annex_list[i];
-					if (0 == strcmp(ga->name, annex)) {
-						data = ga->data;
-						data_size = ga->data_size;
-						break;
-					}
-				}
-			}
-			if (data) {
-				qXfer(gip, data, data_size, offset, length);
-				return;
-			}
-			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer features read: %s\n", args);
-			send_packet(gip, NULL, 0);
+			qXfer(gip, data, data_size, offset, length);
+			return;
 		} else {
 			LOG_MOD_DEBUG_GDB(LOG_GDB_QUERY, "gdb", "query: unknown qXfer: %s\n", args);
 			send_packet(gip, NULL, 0);
@@ -943,8 +913,8 @@ error:
 
 static void send_supported(struct gdb_interface_private *gip, char *args) {
 	(void)args;  // args ignored at the moment
-	snprintf(packet, sizeof(packet), "PacketSize=%zx;QStartNoAckMode+;qXfer:features:read+", sizeof(packet)-1);
-	send_packet_string(gip, packet);
+	snprintf((char *)packet, sizeof(packet), "PacketSize=%zx;QStartNoAckMode+;qXfer:features:read+", sizeof(packet)-1);
+	send_packet_string(gip, (char *)packet);
 }
 
 // Response handler for 'qRcmd' (execute command).
@@ -1025,56 +995,60 @@ static void qXfer(struct gdb_interface_private *gip,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static int snprint_value_endian(char *dst, size_t dsize, int endian,
-				uint32_t value, unsigned vsize) {
-	if (vsize > 4)
-		return 0;
-	int nbytes = 0;
-	for (unsigned i = 0; i < vsize; ++i) {
-		if (dsize < 3)
-			return nbytes;
-		int shift;
-		switch (endian) {
-		case machine_endian_big: default: shift = (vsize - i - 1) * 8; break;
-		case machine_endian_little: shift = i * 8;
-		}
-		int v = (value >> shift) & 0xff;
-		int n = snprintf(dst, dsize, "%02x", v);
-		dst += n;
-		dsize -= n;
-		nbytes += n;
+// Convert hex representation of a register to binary in-place and, if valid,
+// set the appropriate register.  Returns 0 if invalid hex, -1 if not enough
+// hex digits or invalid register.
+static int set_register_hex(struct gdb_interface_private *gip, int regno,
+			    size_t ssize, char *src) {
+	if (regno < 0 || (unsigned)regno >= gip->machine->debug.target->nregs)
+		return -1;
+	unsigned rsize = gip->machine->debug.target->reg_size[regno];
+	assert(rsize > 0);
+	unsigned hsize = rsize * 2;
+	if (hsize > ssize)
+		return -1;
+	uint8_t *rsrc = (uint8_t *)src;
+	for (unsigned i = 0; i < rsize; ++i) {
+		int v = hex8(src);
+		if (v < 0)
+			return 0;
+		src += 2;
+		rsrc[i] = v;
 	}
-	return nbytes;
+	int n = debug_set_register_composite(gip->machine->debug.target, regno, rsize, rsrc);
+	assert((unsigned)n == rsize);
+	return hsize;
 }
 
-static int scan_value_endian(char *src, size_t ssize, int endian,
-			     uint32_t *value, unsigned vsize) {
-	if (vsize > 4)
-		return 0;
-	int nbytes = vsize * 2;
-	if (ssize < (size_t)nbytes)
-		return 0;
-	bool valid = 1;
-	uint32_t rval = 0;
-	for (unsigned i = 0; i < vsize; ++i) {
-		int tmp = hex8(src);
-		if (tmp < 0) {
-			valid = 0;
-		} else {
-			int shift;
-			switch (endian) {
-			case machine_endian_big: default: shift = (vsize - i - 1) * 8; break;
-			case machine_endian_little: shift = i * 8;
-			}
-			rval |= (uint32_t)(tmp & 0xff) << shift;
+// Get requested register and convert it to a hex representation.  Returns -1
+// if not enough space for hex digits or invalid register.  Populates with "xx"
+// if there is a problem fetching the register.
+static int get_register_hex(struct gdb_interface_private *gip, int regno,
+			    size_t dsize, char *dest) {
+	if (regno < 0 || (unsigned)regno >= gip->machine->debug.target->nregs)
+		return -1;
+	unsigned rsize = gip->machine->debug.target->reg_size[regno];
+	assert(rsize > 0);
+	unsigned hsize = rsize * 2;
+	if ((hsize + 1) > dsize)
+		return -1;
+	// Fetch binary representation to end of area we will write into.
+	uint8_t *rdest = (uint8_t *)dest + hsize + 1 - rsize;
+	int n = debug_get_register_composite(gip->machine->debug.target, regno, rsize, rdest);
+	if (n < 0 || (unsigned)n != rsize) {
+		for (unsigned i = 0; i < hsize; ++i) {
+			rdest[i] = 'x';
 		}
-		src += 2;
-		ssize -= 2;
+		return hsize;
 	}
-	if (valid && value) {
-		*value = rval;
+	for (unsigned i = 0; i < rsize; ++i) {
+		int n = snprintf(dest, dsize, "%02x", rdest[i]);
+		if (n != 2)
+			return -1;
+		dest += n;
+		dsize -= n;
 	}
-	return nbytes;
+	return hsize;
 }
 
 static int hexdigit(char c) {

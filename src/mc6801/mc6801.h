@@ -24,7 +24,7 @@
 #include "delegate.h"
 #include "pl-endian.h"
 
-#include "debug_cpu.h"
+#include "debug.h"
 #include "part.h"
 
 #ifdef TRACE
@@ -97,8 +97,8 @@ struct MC6801_port {
 };
 
 struct MC6801 {
-	// Is a debuggable CPU, which is a part
-	struct debug_cpu debug_cpu;
+	// Is a part
+	struct part part;
 
 	// 6801 or 6803?
 	bool is_6801;
@@ -170,10 +170,10 @@ struct MC6801 {
 	bool irq1_latch, irq1_active;
 	bool irq2_latch, irq2_active;
 
-#ifdef WANT_GDB_TARGET
-	const char *gdb_architecture;
-	const char **gdb_features;
-#endif
+	struct {
+		struct debug_cpu cpu;
+		struct debug_part part;
+	} debug;
 };
 
 #if __BYTE_ORDER == __BIG_ENDIAN

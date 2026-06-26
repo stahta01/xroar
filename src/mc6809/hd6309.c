@@ -86,10 +86,6 @@ static const struct ser_struct_data hd6309_ser_struct_data = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static unsigned hd6309_register_size(void *sptr, int n);
-static uint32_t hd6309_get_register(void *sptr, int n);
-static void hd6309_set_register(void *sptr, int n, uint32_t v);
-
 /*
  * External interface
  */
@@ -205,28 +201,30 @@ static const struct partdb_entry_funcs hd6309_funcs = {
 
 const struct partdb_entry hd6309_part = { .name = "HD6309", .description = "Hitachi | HD6309E CPU", .funcs = &hd6309_funcs };
 
-#ifdef WANT_GDB_TARGET
-static const char *gdb_architecture = "h6309";
-static const char *gdb_features[] = { "m6809-core.xml", "m6809-h6309.xml", NULL };
-#endif
+static const struct debug_feature h6309_core_feature;
+static const struct debug_feature *features[] = { &m6809_core_feature, &h6309_core_feature };
+static uint32_t hd6309_get_register(void *sptr, int r);
+static void hd6309_set_register(void *sptr, int r, uint32_t v);
 
 static struct part *hd6309_allocate(void) {
 	struct HD6309 *hcpu = part_new(sizeof(*hcpu));
 	struct MC6809 *cpu = &hcpu->mc6809;
-	struct part *p = &cpu->debug_cpu.part;
+	struct part *p = &cpu->part;
 
 	*hcpu = (struct HD6309){0};
 
-	cpu->debug_cpu.num_registers = 13;
-	cpu->debug_cpu.register_sp = 7;
-	cpu->debug_cpu.register_pc = 8;
-	cpu->debug_cpu.register_size = DELEGATE_AS1(unsigned, int, hd6309_register_size, cpu);
-	cpu->debug_cpu.get_register = DELEGATE_AS1(uint32, int, hd6309_get_register, cpu);
-	cpu->debug_cpu.set_register = DELEGATE_AS2(void, int, uint32, hd6309_set_register, cpu);
-#ifdef WANT_GDB_TARGET
-	cpu->gdb_architecture = gdb_architecture;
-	cpu->gdb_features = gdb_features;
-#endif
+	cpu->debug.cpu.architecture = "h6309";
+	cpu->debug.cpu.endian = debug_endian_big;
+	cpu->debug.cpu.register_ps = 0;  // CC
+	cpu->debug.cpu.register_sp = 7;  // S
+	cpu->debug.cpu.register_pc = 8;  // PC
+	cpu->debug.cpu.get_flag = DELEGATE_AS1(bool, int, mc6809_get_flag, cpu);
+	cpu->debug.cpu.set_flag = DELEGATE_AS2(void, int, bool, mc6809_set_flag, cpu);
+
+	cpu->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	cpu->debug.part.feature = features;
+	cpu->debug.part.get_register = DELEGATE_AS1(uint32, int, hd6309_get_register, cpu);
+	cpu->debug.part.set_register = DELEGATE_AS2(void, int, uint32, hd6309_set_register, cpu);
 
 	cpu->reset = hd6309_reset;
 	cpu->run = hd6309_run;
@@ -2197,14 +2195,39 @@ static void instruction_posthook(struct MC6809 *cpu) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static const unsigned register_size[13] = { 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 2 };
+static struct debug_feature_field feature_type_md_flags_fields[] = {
+	{ .name = "NM", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
+	{ .name = "FM", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
+	{ .name = "IL", .start = 6, .end = 6, .type = &debug_feature_type_uint8 },
+	{ .name = "D0", .start = 7, .end = 7, .type = &debug_feature_type_uint8 },
+};
 
-static unsigned hd6309_register_size(void *sptr, int n) {
-	(void)sptr;
-        if (n < 0 || (size_t)n > ARRAY_N_ELEMENTS(register_size))
-                return 0;
-        return register_size[n];
-}
+static const struct debug_feature_type feature_type_md_flags = {
+	.type = debug_feature_base_type_struct,
+	.id = "md_flags",
+	.size = 1,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_md_flags_fields),
+		feature_type_md_flags_fields
+	}
+};
+
+static const struct debug_feature_type *feature_types[] = {
+        &feature_type_md_flags,
+};
+
+static const struct debug_feature_reg feature_regs[] = {
+	{ .name = "md", .bitsize = 8, .type = &feature_type_md_flags },
+	{ .name = "e", .bitsize = 8, .type = &debug_feature_type_uint8 },
+	{ .name = "f", .bitsize = 8, .type = &debug_feature_type_uint8 },
+	{ .name = "v", .bitsize = 16, .type = &debug_feature_type_uint16 },
+};
+
+static const struct debug_feature h6309_core_feature = {
+	"org.gnu.gdb.h6309.core",
+	ARRAY_N_ELEMENTS(feature_types), feature_types,
+	ARRAY_N_ELEMENTS(feature_regs), feature_regs
+};
 
 static uint32_t hd6309_get_register(void *sptr, int n) {
 	struct HD6309 *hcpu = sptr;

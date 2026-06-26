@@ -27,6 +27,7 @@
 #include "sds.h"
 
 #include "breakpoint.h"
+#include "debug.h"
 #include "part.h"
 #include "xconfig.h"
 
@@ -232,24 +233,15 @@ struct machine {
 					  int32_t Astart, uint32_t Aend,
 					  DELEGATE_T2(void, bool, uint32) handler);
 
-#ifdef WANT_GDB_TARGET
-		// Target description (to send to GDB)
+		// CPU debug information copied from main CPU (the one that
+		// would be debugged)
+		struct debug_cpu cpu;
+
+		// Debug target definition
+		struct debug_target *target;
+
+		// Target description as XML (to send to GDB)
 		sds target_xml;
-
-		// Target byte order (for communicating with GDB)
-		enum machine_endian endian;
-
-		// Number of registers.  Includes CPU registers and optionally
-		// pseudo-registers representing other aspects of the machine.
-		unsigned num_registers;
-
-		// Report register size (mainly for reporting to GDB)
-		DELEGATE_T1(unsigned, int) register_size;
-
-		// Get & set registers
-		DELEGATE_T1(uint32, int) get_register;
-		DELEGATE_T2(void, int, uint32) set_register;
-#endif
 	} debug;
 };
 

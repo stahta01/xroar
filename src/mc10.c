@@ -35,7 +35,6 @@
 #include "crc32.h"
 #include "crclist.h"
 #include "gdb.h"
-#include "gdb_annex.h"
 #include "keyboard.h"
 #include "logging.h"
 #include "machine.h"
@@ -214,11 +213,6 @@ static void mc10_add_watchpoint(struct machine *m, bool RnW,
 static void mc10_remove_watchpoint(struct machine *m, int RnW,
 				   int32_t Astart, uint32_t Aend,
 				   DELEGATE_T2(void, bool, uint32) handler);
-#ifdef WANT_GDB_TARGET
-static unsigned mc10_register_size(void *sptr, int regno);
-static uint32_t mc10_get_register(void *sptr, int regno);
-static void mc10_set_register(void *sptr, int regno, uint32_t value);
-#endif
 
 static void mc10_vdg_fs(void *sptr, bool level);
 static void mc10_vdg_render_line(void *sptr, unsigned burst, unsigned npixels, uint8_t const *data);
@@ -289,13 +283,6 @@ static struct part *mc10_allocate(void) {
 	m->debug.remove_breakpoint = mc10_remove_breakpoint;
 	m->debug.add_watchpoint = mc10_add_watchpoint;
 	m->debug.remove_watchpoint = mc10_remove_watchpoint;
-
-#ifdef WANT_GDB_TARGET
-	m->debug.endian = machine_endian_big;
-	m->debug.register_size = DELEGATE_AS1(unsigned, int, mc10_register_size, mp);
-	m->debug.get_register = DELEGATE_AS1(uint32, int, mc10_get_register, mp);
-	m->debug.set_register = DELEGATE_AS2(void, int, uint32, mc10_set_register, mp);
-#endif
 
 	m->get_interface = mc10_get_interface;
 
@@ -420,17 +407,13 @@ static bool mc10_finish(struct part *p) {
 	ui_messenger_join_group(mp->msgr_client_id, ui_tag_frameskip, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_frameskip, mp));
 	ui_messenger_join_group(mp->msgr_client_id, ui_tag_ratelimit, MESSENGER_NOTIFY_DELEGATE(mc10_ui_set_ratelimit, mp));
 
+	memcpy(&m->debug.cpu, &mp->CPU->debug.cpu, sizeof(m->debug.cpu));
+	m->debug.target = debug_target_new(m->debug.cpu.architecture, m->debug.cpu.endian);
+        debug_target_add_part(m->debug.target, NULL, &mp->CPU->debug.part);
 #ifdef WANT_GDB_TARGET
-	m->debug.num_registers = mp->CPU->debug_cpu.num_registers;
-
-	if (mp->CPU->gdb_architecture) {
-		m->debug.target_xml = gdb_annex_target_new(mp->CPU->gdb_architecture);
-		if (mp->CPU->gdb_features) {
-			for (const char **f = mp->CPU->gdb_features; *f; ++f) {
-				m->debug.target_xml = gdb_annex_target_include(m->debug.target_xml, *f);
-			}
-		}
+	if (xroar.cfg.debug.gdb_pseudo_regs) {
 	}
+	m->debug.target_xml = debug_target_xml(m->debug.target);
 #endif
 
 	// ROM
@@ -569,6 +552,7 @@ static void mc10_free(struct part *p) {
 	struct mc10 *mp = (struct mc10 *)p;
 	// Stop receiving any UI state updates
 	messenger_client_unregister(mp->msgr_client_id);
+	debug_target_free(mp->machine.debug.target);
 #ifdef WANT_GDB_TARGET
 	if (mp->gdb_interface) {
 		gdb_interface_free(mp->gdb_interface);
@@ -934,32 +918,6 @@ static void mc10_remove_watchpoint(struct machine *m, int RnW,
 	struct mc10 *mp = (struct mc10 *)m;
 	bp_watchpoint_remove(&mp->watchpoint_set, RnW, Astart, Aend, handler);
 }
-
-#ifdef WANT_GDB_TARGET
-
-static unsigned mc10_register_size(void *sptr, int regno) {
-	struct mc10 *mp = sptr;
-	if ((unsigned)regno < mp->CPU->debug_cpu.num_registers)
-		return DELEGATE_CALL(mp->CPU->debug_cpu.register_size, regno);
-	return 0;
-}
-
-static uint32_t mc10_get_register(void *sptr, int regno) {
-	struct mc10 *mp = sptr;
-	if ((unsigned)regno < mp->CPU->debug_cpu.num_registers)
-		return DELEGATE_CALL(mp->CPU->debug_cpu.get_register, regno);
-	return 0;
-}
-
-static void mc10_set_register(void *sptr, int regno, uint32_t value) {
-	struct mc10 *mp = sptr;
-	if ((unsigned)regno < mp->CPU->debug_cpu.num_registers) {
-		DELEGATE_CALL(mp->CPU->debug_cpu.set_register, regno, value);
-		return;
-	}
-}
-
-#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
