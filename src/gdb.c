@@ -353,6 +353,8 @@ static void *handle_tcp_sock(void *sptr) {
 		}
 		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection accepted\n");
 
+		gip->no_ack_mode = 0;
+
 		gdb_machine_signal(gip, MACHINE_SIGINT, 0);
 		bool attached = 1;
 		while (attached) {
