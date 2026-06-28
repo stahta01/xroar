@@ -217,6 +217,9 @@ failed:
 	if (gip->listenfd != -1) {
 		close(gip->listenfd);
 	}
+	if (gip->info) {
+		freeaddrinfo(gip->info);
+	}
 	free(gip);
 	return NULL;
 }
