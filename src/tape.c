@@ -318,24 +318,15 @@ void tape_interface_connect_machine(struct tape_interface *ti, struct machine *m
 	tip->is_6803 = part_is_a(&tip->debug_cpu->part, "MC6803");
 
 	tip->short_leader_threshold = is_dragon ? 114 : 130;
+	tip->initial_motor_delay = is_dragon ? 5 : 0;
 
-	if (tip->is_6809) {
-		tip->addr.pwcount = is_dragon ? 0x0082 : 0x0083;
-		tip->addr.bcount = is_dragon ? 0x0083 : 0x0082;
-		tip->addr.bphase = 0x0084;
-		tip->addr.minpw1200 = is_dragon ? 0x0093 : 0x0091;
-		tip->addr.maxpw1200 = is_dragon ? 0x0094 : 0x0090;
-		tip->addr.mincw1200 = is_dragon ? 0x0092 : 0x008f;
-		tip->initial_motor_delay = is_dragon ? 5 : 0;
-		tip->addr.motor_delay = is_dragon ? 0x0095 : 0x008a;
-	} else if (tip->is_6803) {
-		tip->addr.pwcount = 0x427d;
-		tip->addr.bcount = 0x427c;
-		tip->addr.bphase = 0x427e;
-		tip->addr.minpw1200 = 0x422e;
-		tip->addr.maxpw1200 = 0x422d;
-		tip->addr.mincw1200 = 0x422c;
-	}
+	tip->addr.pwcount = tip->machine->debug.get_symbol(tip->machine, "tape.pwcount");
+	tip->addr.bcount = tip->machine->debug.get_symbol(tip->machine, "tape.bcount");
+	tip->addr.bphase = tip->machine->debug.get_symbol(tip->machine, "tape.bphase");
+	tip->addr.minpw1200 = tip->machine->debug.get_symbol(tip->machine, "tape.minpw1200");
+	tip->addr.maxpw1200 = tip->machine->debug.get_symbol(tip->machine, "tape.maxpw1200");
+	tip->addr.mincw1200 = tip->machine->debug.get_symbol(tip->machine, "tape.mincw1200");
+	tip->addr.motor_delay = tip->machine->debug.get_symbol(tip->machine, "tape.motor_delay");
 
 	ti->update_audio = *(DELEGATE_T1(void, float) *)m->get_interface(m, "tape-update-audio");
 	DELEGATE_CALL(ti->update_audio, 0.5);
