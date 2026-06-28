@@ -30,7 +30,6 @@
 #include "xalloc.h"
 
 #include "breakpoint.h"
-#include "debug_cpu.h"
 #include "logging.h"
 #include "machine.h"
 #include "part.h"
