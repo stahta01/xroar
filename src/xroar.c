@@ -3602,6 +3602,11 @@ static void helptext(void) {
 "  -V, --version       output version information and exit\n"
 "\n"
 
+"Boolean options (those that take no argument) are generally of the form\n"
+"-OPTION, or -no-OPTION to invert their meaning.  e.g., -no-cart-autorun or\n"
+"-vo-scale-60hz.\n"
+"\n"
+
 "When configuring a Multi-Pak Interface (MPI), only the last configured DOS\n"
 "cartridge will end up connected to the virtual drives.\n"
 "\n"
