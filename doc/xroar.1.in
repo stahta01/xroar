@@ -1,479 +1,758 @@
-.TH XROAR 1 "@MANPAGE_DATE@" "XRoar @PACKAGE_VERSION@"
-.SH NAME
-xroar \- Dragon and Tandy 8-bit computer emulator
-.SH SYNOPSIS
-\fBxroar\fR [\fB\-c\fR \fIconffile\fR] [\fIOPTION\fR]... [\fIFILENAME\fR]...
-.SH DESCRIPTION
-\fBXRoar\fR emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the
-Tandy MC-10; and some other similar machines or clones. It runs on a wide
-variety of platforms.
-
+'\" t
+.
+.\" ASCII for Unicode ellipsis is three dots
+.schar \[u2026] ...
+.\" New escape [...] maps to Unicode ellipsis
+.char \[...] \[u2026]
+.
+.\" an-ext.tmac: Check whether we are using grohtml.
+.nr mH 0
+.if \n(.g \
+.  if '\*(.T'html' \
+.    nr mH 1
+.
+.\" What about gropdf?
+.nr mP 0
+.if \n(.g \
+.  if '\*(.T'pdf' \
+.    nr mP 1
+.
+.\" an-ext.tmac: Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.\" an-ext.tmac: End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.
+.\" Top level heading; wraps .SH
+.de H1
+.  if \\n(mP .pdfhref O 1 \\$*
+.  SH \\$*
+..
+.
+.\" 2nd level heading; wraps .SS
+.de H2
+.  if \\n(mP .pdfhref O 2 \\$*
+.  SS \\$*
+..
+.
+.\" 3rd level heading; bold font, no indent
+.de H3
+.  if \\n(.$ \{\
+.    if \\n(mP .pdfhref O 3 \\$*
+.    .B \&"\\$*"
+.  \}
+.  br
+..
+.
+.\" Render URL
+.de UU
+.  ie \\n(mH \{\
+\\$1\c
+.    do HTML-NS "<a href='\\$2'>"
+\\$2\c
+.    do HTML-NS "</a>"
+\\$3
+.  \}
+.  el \{\
+.    ie \\n(mP \{\
+.      pdfhref -W -P "\\$1" -A "\\$3" "\\$2"
+.    \}
+.    el \{\
+\\$1\\$2\\$3
+.    \}
+.  \}
+..
+.
+.nr PDFOUTLINE.FOLDLEVEL 3
+.\"
+.pdfview /PageMode /UseOutlines
+.pdfinfo /Title xroar @PACKAGE_VERSION@
+.pdfinfo /Author Ciaran Anscomb
+.
+.TH "xroar" "1" "@MANPAGE_DATE@" "xroar-@PACKAGE_VERSION@"
+.hy 0
+.nh
+.H1 NAME
 .PP
-.SH OPTIONS
-Options are first read from a configuration file
-(by default, \fI$HOME/.xroar/xroar.conf\fR).  Options on the command line override
-any found in the configuration file.
+xroar\[em]Dragon and Tandy 8-bit computer emulator
+.H1 SYNOPSIS
 .PP
+\fBxroar\fR \[lB]\f(CB\-c\fR \fIconffile\fR\[rB] \[lB]\fIOPTION\fR\[rB]\[...] \[lB]\fIFILENAME\fR\[rB]\[...]
+.H1 DESCRIPTION
+.PP
+\fBXRoar\fR emulates the Dragon 32/64; Tandy Colour Computers 1, 2 and 3; the Tandy MC-10; and some other similar machines or clones. It runs on a wide variety of platforms.
+.H1 OPTIONS
+.PP
+Options are first read from a configuration file (by default, \fI$HOME/.xroar/xroar.conf\fR). Options on the command line override any found in the configuration file.
 .TP
-\fB\-C\fR
-Allocate a console window (Windows only)
+\f(CB\-C\fR
+Allocate a console window (Windows only).
 .TP
-\fB\-c\fR \fIconffile\fR
+\f(CB\-c\fR \fIconffile\fR
 Specify a configuration file.
-
-.SS Machines:
-
+.H2 Machines:
 .TP
-\fB\-m\fR \fIname\fR, \fB\-default\-machine\fR \fIname\fR
+\f(CB\-m\fR \fIname\fR, \f(CB\-default\-machine\fR \fIname\fR
 Default machine profile to select on startup.
 .TP
-\fB\-machine\fR \fIname\fR
-Create or modify named machine profile.  \fB\-machine help\fR lists currently
-defined profiles.
-
+\f(CB\-machine\fR \fIname\fR
+Create or modify named machine profile. \f(CB\-machine help\fR lists currently defined profiles.
 .PP
 The remaining options configure the currently selected machine:
-
 .TP
-\fB\-machine\-desc\fR \fItext\fR
-Machine description shown in \fB\-machine help\fR and menu options.
+\f(CB\-machine\-desc\fR \fItext\fR
+Machine description shown in \f(CB\-machine help\fR and menu options.
 .TP
-\fB\-machine\-arch\fR \fIarch\fR
-Machine architecture (\fBdragon64, dragon32, coco, coco3\fR or \fBmc10\fR)
+\f(CB\-machine\-arch\fR \fIarch\fR
+Machine architecture (\f(CBdragon64\fR, \f(CBdragon32\fR, \f(CBcoco\fR, \f(CBcoco3\fR or \f(CBmc10\fR).
 .TP
-\fB\-machine\-keyboard\fR \fIlayout\fR
-Keyboard layout (\fBdragon, dragon200e, coco\fR or \fBcoco3\fR)
+\f(CB\-machine\-keyboard\fR \fIlayout\fR
+Keyboard layout (\f(CBdragon\fR, \f(CBdragon200e\fR, \f(CBcoco\fR or \f(CBcoco3\fR).
 .TP
-\fB\-machine\-cpu\fR \fIcpu\fR
-Machine CPU (\fB6809\fR or \fB6309\fR).  Not applicable to the MC-10.
+\f(CB\-machine\-cpu\fR \fIcpu\fR
+Machine CPU (\f(CB6809\fR or \f(CB6309\fR). Not applicable to the MC-10.
 .TP
-\fB\-bas\fR \fIrom\fR
+\f(CB\-bas\fR \fIrom\fR
 ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
 .TP
-\fB\-extbas\fR \fIrom\fR
+\f(CB\-extbas\fR \fIrom\fR
 ROM image for Extended BASIC (Super Extended BASIC on the CoCo 3).
 .TP
-\fB\-altbas\fR \fIrom\fR
+\f(CB\-altbas\fR \fIrom\fR
 ROM image for 64K-mode Extended BASIC (Dragon 64, Dragon 200-E).
 .TP
-\fB\-nobas, \-noextbas, \-noaltbas\fR
+\f(CB\-nobas\fR, \f(CB\-noextbas\fR, \f(CB\-noaltbas\fR
 Indicate the corresponding ROM is not fitted in this machine.
 .TP
-\fB\-ext\-charset\fR \fIrom\fR
+\f(CB\-ext\-charset\fR \fIrom\fR
 External character generator ROM to use.
 .TP
-\fB\-tv\-type\fR \fItype\fR
-TV type (\fBpal, ntsc\fR or \fBpal\-m\fR).
+\f(CB\-tv\-type\fR \fItype\fR
+TV type (\f(CBpal\fR, \f(CBntsc\fR or \f(CBpal\-m\fR).
 .TP
-\fB\-tv\-input\fR \fIinput\fR
-One of ‘cmp’ (composite video, no cross-colour), ‘cmp-br’ (composite video,
-blue-red cross-colour), ‘cmp-rb’ (composite video, red-blue cross-colour) or
-‘rgb’ (RGB video, CoCo 3 only).
+\f(CB\-tv\-input\fR \fIinput\fR
+One of \f(CBcmp\fR (composite video, no cross-colour), \f(CBcmp\-br\fR (composite video, blue-red cross-colour), \f(CBcmp\-rb\fR (composite video, red-blue cross-colour) or \f(CBrgb\fR (RGB video, CoCo 3 only).
 .TP
-\fB\-vdg\-type\fR \fItype\fR
-Indicate the VDG variant fitted. One of \fB6847\fR or \fB6847t1\fR.
+\f(CB\-vdg\-type\fR \fItype\fR
+Indicate the VDG variant fitted. One of \f(CB6847\fR or \f(CB6847t1\fR.
 .TP
-\fB\-ram\fR \fIkbytes\fR
-Amount of RAM fitted in kilobytes. Valid sizes are 4-64K for Dragon and Tandy
-CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
+\f(CB\-ram\-org\fR \fIorganisation\fR
+RAM organisation (\f(CB\-ram\-org help\fR for list).
 .TP
-\fB\-machine\-cart\fR \fIname\fR
-Default cartridge to attach.
+\f(CB\-ram\fR \fIkbytes\fR
+Amount of RAM fitted in kilobytes. Valid sizes are 4–64K for Dragon and Tandy CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy MC-10.
 .TP
-\fB\-nodos\fR
-Indicate that XRoar is not to automatically attempt to attach a DOS cartridge
-to this machine (the default is to try).
-
-.SS Cartridges:
-
+\f(CB\-ram\-init\fR \fIpattern\fR
+RAM start pattern (\f(CB\-ram\-init help\fR for list).
 .TP
-\fB\-cart\fR \fIname\fR
-Create or modify named cartridge profile.  \fB\-cart help\fR lists currently
-defined profiles.
-
+\f(CB\-machine\-cart\fR \fIname\fR
+Default cartridge to attach. \f(CB\-no\-machine\-cart\fR to inhibit the default behaviour of searching for a workign DOS cartridge.
+.H2 Cartridges:
+.TP
+\f(CB\-cart\fR \fIname\fR
+Create or modify named cartridge profile. \f(CB\-cart help\fR lists currently defined profiles.
 .PP
 The remaining options configure the currently selected cartridge:
-
 .TP
-\fB\-cart\-desc\fR \fItext\fR
-Cartridge description shown in \fB\-cart help\fR and menu options.
+\f(CB\-cart\-desc\fR \fItext\fR
+Cartridge description shown in \f(CB\-cart help\fR and menu options.
 .TP
-\fB\-cart\-type\fR \fItype\fR
-Cartridge base type (\fB\-cart\-type help\fR for list).
+\f(CB\-cart\-type\fR \fItype\fR
+Cartridge base type (\f(CB\-cart\-type help\fR for list).
 .TP
-\fB\-cart\-rom\fR \fIrom\fR
-ROM image to load ($C000\-).
+\f(CB\-cart\-rom\fR \fIrom\fR
+ROM image to load ($C000-).
 .TP
-\fB\-cart\-rom2\fR \fIrom\fR
-Second ROM image to load ($E000\-).
+\f(CB\-cart\-rom2\fR \fIrom\fR
+Second ROM image to load ($E000-).
 .TP
-\fB\-cart\-autorun\fR
+\f(CB\-cart\-autorun\fR
 Autorun cartridge.
 .TP
-\fB\-cart\-becker\fR
+\f(CB\-cart\-becker\fR
 Enable becker port where supported.
 .TP
-\fB\-mpi\-slot\fR \fIslot\fR
-(MPI) initially select slot (0\-3).
+\f(CB\-mpi\-slot\fR \fIslot\fR
+(MPI) initially select slot (0–3).
 .TP
-\fB\-mpi\-load\-cart\fR \fI[slot=]name\fR
-(MPI) insert cartridge into next or numbered slot.
-
+\f(CB\-mpi\-load\-cart\fR \[lB]\fIslot\fR=\[rB]\fIname\fR
+(MPI) insert cartridge into next or numbered \fIslot\fR.
 .PP
-These options also apply to the similar RACE Computer Expansion Cage.
-
-.SS Becker port:
-
+When configuring a Multi-Pak Interface (MPI), only the last configured DOS cartridge will end up connected to the virtual drives. MPI options also apply to the similar RACE Computer Expansion Cage.
+.H2 Becker port:
 .TP
-\fB\-becker\fR
-Prefer becker\-enabled DOS cartridge when picked automatically.
+\f(CB\-becker\fR
+Prefer becker-enabled DOS cartridge when picked automatically.
 .TP
-\fB\-becker\-ip\fR \fIaddress\fR
-Address or hostname of DriveWire server [127.0.0.1]
+\f(CB\-becker\-ip\fR \fIaddress\fR
+Address or hostname of DriveWire server \[lB]127.0.0.1\[rB]
 .TP
-\fB\-becker\-port\fR \fIport\fR
-Port of DriveWire server [65504]
-
-.SS Cassettes:
-
+\f(CB\-becker\-port\fR \fIport\fR
+Port of DriveWire server \[lB]65504\[rB]
+.H2 Cassettes:
 .TP
-\fB\-load\-tape\fR \fIfile\fR
+\f(CB\-load\-tape\fR \fIfile\fR
 Attach \fIfile\fR as tape image for reading.
 .TP
-\fB\-tape\-write\fR \fIfile\fR
+\f(CB\-tape\-write\fR \fIfile\fR
 Open \fIfile\fR for tape writing.
 .TP
-\fB\-tape\-pan\fR \fIpanning\fR
-Pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
+\f(CB\-tape\-pan\fR \fIpanning\fR
+Pan stereo input (0.0 = full left, 1.0 = full right) \[lB]0.5\[rB]
 .TP
-\fB\-tape\-hysteresis\fR \fIpercent\fR
-Read hysteresis as percentage of full scale [1]
+\f(CB\-tape\-hysteresis\fR \fIpercent\fR
+Read hysteresis as percentage of full scale \[lB]1\[rB]
 .TP
-\fB\-no\-tape\-fast\fR
+\f(CB\-no\-tape\-fast\fR
 Disable fast tape loading.
 .TP
-\fB\-no\-tape\-pad\-auto\fR
+\f(CB\-no\-tape\-pad\-auto\fR
 Disable automatic leader padding.
 .TP
-\fB\-tape\-ao\-rate\fR \fIhz\fR
-Set tape writing frame rate [9600]
-.TP
-\fB\-tape\-rewrite\fR
+\f(CB\-tape\-rewrite\fR
 Enable tape rewriting.
 .TP
-\fB\-tape\-rewrite\-gap\-ms\fR \fIms\fR
-Gap length in milliseconds to write in rewrite mode (1-5000ms, default 500ms).
+\f(CB\-tape\-rewrite\-gap\-ms\fR \fIms\fR
+Gap length in milliseconds to write in rewrite mode (1–5000ms, default 500ms).
 .TP
-\fB\-tape\-rewrite\-leader\fR \fIbytes\fR
-Length of leaders in bytes to write in rewrite mode (1-2048 bytes, default 256).
-
-.SS Floppy disks:
-
+\f(CB\-tape\-rewrite\-leader\fR \fIbytes\fR
+Length of leaders in bytes to write in rewrite mode (1–2048 bytes, default 256).
 .TP
-\fB\-load\-fd\fIX\fR\fR \fIfile\fR
-Insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3).
+\f(CB\-tape\-ao\-rate\fR \fIhz\fR
+Set tape writing frame rate \[lB]9600\[rB]
+.H2 Floppy disks:
 .TP
-\fB\-no\-disk\-write\-back\fR
-Don't default to enabling write\-back for disk images.
+\f(CB\-load\-fd\fIX\fB\fR \fIfile\fR
+Insert disk image \fIfile\fR into floppy drive \fIX\fR (0–3).
 .TP
-\fB\-no\-disk\-auto\-os9\fR
-Don't try to detect headerless OS\-9 JVC disk images.
+\f(CB\-no\-disk\-write\-back\fR
+Don\[aq]t default to enabling write-back for disk images.
 .TP
-\fB\-no\-disk\-auto\-sd\fR
-Don't assume single density for 10 sec/track disks.
-
-.SS Hard disks:
-
+\f(CB\-no\-disk\-auto\-os9\fR
+Don\[aq]t try to detect headerless OS-9 JVC disk images.
 .TP
-\fB\-load-hd\fIX\fR\fR \fIfile\fR
-Use \fIfile\fR as the hard disk image for drive \fIX\fR (0-1).
+\f(CB\-no\-disk\-auto\-sd\fR
+Don\[aq]t assume single density for 10 sec/track disks.
+.H2 Hard disks:
 .TP
-\fB\-load-sd\fR \fIfile\fR
-Use \fIfile\fR as the SD card image.
-
-.SS Keyboard:
-
+\f(CB\-load\-hd\fIX\fB\fR \fIfile\fR
+Use \fIfile\fR as the hard disk image for drive \fIX\fR (0–1).
 .TP
-\fB\-kbd\-layout\fR \fIlayout\fR
-Host keyboard layout (\fB\-kbd\-layout help\fR for list).
+\f(CB\-load\-sd\fR \fIfile\fR
+Use \fIfile\fR as the SD card image (e.g. for mooh, nx32).
+.H2 Keyboard:
 .TP
-\fB\-kbd\-lang\fR \fIlang\fR
-Host keyboard language (\fB\-kbd\-lang help\fR for list).
+\f(CB\-kbd\-layout\fR \fIlayout\fR
+Host keyboard layout (\f(CB\-kbd\-layout help\fR for list).
 .TP
-\fB\-kbd\-bind\fR \fIhostkey\fR=[pre:]\fIemukey\fR
-Map host key to emulated key (pre = no translate).
+\f(CB\-kbd\-lang\fR \fIlang\fR
+Host keyboard language (\f(CB\-kbd\-lang help\fR for list).
 .TP
-\fB\-kbd\-translate\fR
+\f(CB\-kbd\-bind\fR \fIhostkey\fR=\[lB]pre:\[rB]\fIemukey\fR
+Map host key to emulated key. Prefixing emulated key name with \[aq]pre:\[aq] disables translation for the bind (the bind "preempts" translation). Host key names can be determined by running with \f(CB\-debug\-ui 1\fR, which will log keypresses.
+.TP
+\f(CB\-kbd\-translate\fR
 Enable keyboard translation.
 .TP
-\fB\-type\fR \fIstring\fR
+\f(CB\-type\fR \fIstring\fR
 Intercept ROM calls to type \fIstring\fR into BASIC.
 .TP
-\fB\-load\-text\fR \fIfile\fR
+\f(CB\-load\-text\fR \fIfile\fR
 Type \fIfile\fR into BASIC.
-
-.SS Joysticks:
-
+.H2 Joysticks:
 .TP
-\fB\-joy\-db\-file\fR \fIfile\fR
-Load gamepad mappings from file.
+\f(CB\-joy\-db\-file\fR \fIfile\fR
+Load gamepad mappings from \fIfile\fR.
 .TP
-\fB\-joy\-right\fR \fIname\fR
+\f(CB\-joy\-right\fR \fIname\fR
 Map right joystick.
 .TP
-\fB\-joy\-left\fR \fIname\fR
+\f(CB\-joy\-left\fR \fIname\fR
 Map left joystick.
 .TP
-\fB\-joy\-virtual\fR \fIname\fR
-Specify the 'virtual' joystick to cycle [kjoy0]
+\f(CB\-joy\-virtual\fR \fIname\fR
+Specify the \[aq]virtual\[aq] joystick to cycle \[lB]kjoy0\[rB]
 .TP
-\fB\-joy\fR \fIname\fR
-Configure named joystick (\fB\-joy help\fR for list).
-
+\f(CB\-joy\fR \fIname\fR
+Configure named joystick (\f(CB\-joy help\fR for list).
 .PP
 The remaining options configure the currently selected joystick:
-
 .TP
-\fB\-joy\-desc\fR \fItext\fR
+\f(CB\-joy\-desc\fR \fItext\fR
 Joystick description.
 .TP
-\fB\-joy\-axis\fR \fIaxis\fR=\fIspec\fR
+\f(CB\-joy\-axis\fR \fIaxis\fR=\fIspec\fR
 Configure joystick axis.
 .TP
-\fB\-joy\-button\fR \fIbtn\fR=\fIspec\fR
+\f(CB\-joy\-button\fR \fIbtn\fR=\fIspec\fR
 Configure joystick button.
-
-.SS Printers:
-
+.PP
+Joystick \fIspec\fRs are of the form \[lB]\fImodule\fR:\[rB]\[lB]\fIarg\fR\[lB],\fIarg\fR\[rB]\[...]\[rB], from:
+.P
+.TS
+tab(@);
+l l lx.
+\fBModule\fR@\fBAxis \fIarg\fRs\fR@T{
+\fBButton \fIarg\fRs\fR
+T}
+.T&
+_ _ _
+l l lx.
+physical@joystick-index,\[lB]-\[rB]axis-index@T{
+joystick-index,button-index
+T}
+keyboard@key-name0,key-name1@T{
+key-name
+T}
+mouse@screen-offset0,screen-offset1@T{
+button-number
+T}
+.TE
+.PP
+For physical joysticks a \[aq]-\[aq] before the axis index inverts the axis. Axis 0 is the X-axis, and axis 1 the Y-axis. Buttons are numbered 0 or 1 (the second is only used when connected to a CoCo 3).
+.H2 Printers:
 .TP
-\fB\-lp\-file\fR \fIfile\fR
+\f(CB\-lp\-file\fR \fIfile\fR
 Append printer output to \fIfile\fR.
 .TP
-\fB\-lp\-pipe\fR \fIcommand\fR
+\f(CB\-lp\-pipe\fR \fIcommand\fR
 Pipe printer output to \fIcommand\fR.
-
-.SS Files:
-
+.H2 Files:
 .TP
-\fB\-load\fR \fIfile\fR
+\f(CB\-load\fR \fIfile\fR
 Load or attach \fIfile\fR
 .TP
-\fB\-run\fR \fIfile\fR
+\f(CB\-run\fR \fIfile\fR
 Load or attach \fIfile\fR and attempt autorun
 .TP
-\fB\-load\-fd\fIX\fR\fR \fIfile\fR
-Insert disk image \fIfile\fR into floppy drive \fIX\fR (0-3).
+\f(CB\-load\-fd\fIX\fB\fR \fIfile\fR
+Insert disk image \fIfile\fR into floppy drive \fIX\fR (0–3).
 .TP
-\fB\-load\-hd\fIX\fR\fR \fIfile\fR
-Use \fIfile\fR as the hard disk image for drive \fIX\fR (0-1).
+\f(CB\-load\-hd\fIX\fB\fR \fIfile\fR
+Use \fIfile\fR as the hard disk image for drive \fIX\fR (0–1).
 .TP
-\fB\-load\-sd\fR \fIfile\fR
-Use \fIfile\fR as the SD card image.
+\f(CB\-load\-sd\fR \fIfile\fR
+Use \fIfile\fR as the SD card image (e.g. for mooh, nx32).
 .TP
-\fB\-load\-tape\fR \fIfile\fR
+\f(CB\-load\-tape\fR \fIfile\fR
 Attach \fIfile\fR as tape image for reading.
 .TP
-\fB\-tape\-write\fR \fIfile\fR
+\f(CB\-tape\-write\fR \fIfile\fR
 Open \fIfile\fR for tape writing.
 .TP
-\fB\-load\-text\fR \fIfile\fR
+\f(CB\-load\-text\fR \fIfile\fR
 Type \fIfile\fR into BASIC.
-
-.SS Firmware ROM images:
-
+.H2 Firmware ROM images:
 .TP
-\fB\-rompath\fR \fIpath\fR
-ROM search path (colon\-separated list)
+\f(CB\-rompath\fR \fIpath\fR
+ROM search path (colon-separated list).
 .TP
-\fB\-romlist\fR \fIname\fR=\fIlist\fR
-define a ROM list
+\f(CB\-romlist\fR \fIname\fR=\fIlist\fR
+Define a ROM list.
 .TP
-\fB\-romlist\-print\fR
-print defined ROM lists
+\f(CB\-romlist\-print\fR
+Print defined ROM lists.
 .TP
-\fB\-crclist\fR \fIname\fR=\fIlist\fR
-define a ROM CRC list
+\f(CB\-crclist\fR \fIname\fR=\fIlist\fR
+Define a ROM CRC list.
 .TP
-\fB\-crclist\-print\fR
-print defined ROM CRC lists
+\f(CB\-crclist\-print\fR
+Print defined ROM CRC lists.
 .TP
-\fB\-force\-crc\-match\fR
-force per\-architecture CRC matches
-
-.SS User interface:
-
+\f(CB\-force\-crc\-match\fR
+Force per-architecture CRC matches.
+.H2 User interface:
 .TP
-\fB\-ui\fR \fImodule\fR
-user\-interface module (\fB\-ui help\fR for list)
-
-.SS Video:
-
+\f(CB\-ui\fR \fImodule\fR
+User-interface module (\f(CB\-ui help\fR for list).
+.H2 Video:
 .TP
-\fB\-vo\fR \fImodule\fR
-video module (\fB\-vo help\fR for list)
+\f(CB\-fs\fR
+Start emulator full-screen if possible.
 .TP
-\fB\-fs\fR
-start emulator full\-screen if possible
+\f(CB\-fskip\fR \fIframes\fR
+Frameskip (default: 0).
 .TP
-\fB\-fskip\fR \fIframes\fR
-frameskip (default: 0)
+\f(CB\-ccr\fR \fIrenderer\fR
+Cross-colour renderer (\f(CBsimple\fR, \f(CB5bit\fR, \f(CBpartial\fR or \f(CBsimulated\fR).
 .TP
-\fB\-ccr\fR \fIrenderer\fR
-cross\-colour renderer (\fBsimple\fR, \fB5bit\fR, \fBpartial\fR or
-\fBsimulated\fR)
+\f(CB\-gl\-filter\fR \fIfilter\fR
+OpenGL texture filter (\f(CBauto\fR, \f(CBnearest\fR or \f(CBlinear\fR).
 .TP
-\fB\-gl\-filter\fR \fIfilter\fR
-OpenGL texture filter (\fBauto\fR, \fBnearest\fR or \fBlinear\fR)
+\f(CB\-vo\-vsync\fR
+Start with vsync enabled.
 .TP
-\fB\-geometry\fR \fIw\fRx\fIh\fR+\fIx\fR+\fIy\fR
-initial emulator geometry
+\f(CB\-vo\-pixel\-fmt\fR \fIformat\fR
+Pixel format (\f(CB\-vo\-pixel\-fmt help\fR for list).
 .TP
-\fB\-vo\-picture\fR \fIp\fR
-initial picture area (\fB\-vo\-picture help\fR for list)
+\f(CB\-geometry\fR \fIw\fRx\fIh\fR+\fIx\fR+\fIy\fR
+Initial emulator geometry.
 .TP
-\fB\-no\-vo\-scale\-60hz\fR
-disable vertical scaling for 60Hz video
+\f(CB\-vo\-picture\fR \fIp\fR
+Initial picture area (\f(CB\-vo\-picture help\fR for list).
 .TP
-\fB\-invert\-text\fR
-start with text mode inverted
+\f(CB\-no\-vo\-scale\-60hz\fR
+Disable vertical scaling for 60Hz video.
 .TP
-\fB\-vo\-brightness\fR \fIn\fR
-set TV brightness (0-100) [50]
+\f(CB\-invert\-text\fR
+Start with text mode inverted.
 .TP
-\fB\-vo\-contrast\fR \fIn\fR
-set TV contrast (0-100) [50]
+\f(CB\-vo\-brightness\fR \fIn\fR
+Set TV brightness (0–100) \[lB]50\[rB]
 .TP
-\fB\-vo\-colour\fR \fIn\fR
-set TV colour saturation (0-100) [50]
+\f(CB\-vo\-contrast\fR \fIn\fR
+Set TV contrast (0–100) \[lB]50\[rB]
 .TP
-\fB\-vo\-hue\fR \fIn\fR
-set TV hue control (-179 to +180) [0]
+\f(CB\-vo\-colour\fR \fIn\fR
+Set TV colour saturation (0–100) \[lB]50\[rB]
 .TP
-\fB\-no\-vo\-colour\-killer\fR
-disable colour killer (enabled by default)
-
-.SS Audio:
-
+\f(CB\-vo\-hue\fR \fIn\fR
+Set TV hue control (-179 to +180) \[lB]0\[rB]
 .TP
-\fB\-ao\fR \fImodule\fR
-audio module (\fB\-ao help\fR for list)
+\f(CB\-no\-vo\-colour\-killer\fR
+Disable colour killer (enabled by default).
+.H2 Audio:
 .TP
-\fB\-ao\-device\fR \fIstring\fR
-device to use for audio module
+\f(CB\-ao\fR \fImodule\fR
+Audio module (\f(CB\-ao help\fR for list).
 .TP
-\fB\-ao\-format\fR \fIfmt\fR
-set audio sample format (\fB\-ao\-format help\fR for list)
+\f(CB\-ao\-device\fR \fIstring\fR
+Device to use for audio module.
 .TP
-\fB\-ao\-rate\fR \fIhz\fR
-set audio frame rate (if supported by module)
+\f(CB\-ao\-format\fR \fIfmt\fR
+Set audio sample format (\f(CB\-ao\-format help\fR for list).
 .TP
-\fB\-ao\-channels\fR \fIn\fR
-set number of audio channels, \fB1\fR or \fB2\fR
+\f(CB\-ao\-rate\fR \fIhz\fR
+Set audio frame rate (if supported by module).
 .TP
-\fB\-ao\-fragments\fR \fIn\fR
-set number of audio fragments
+\f(CB\-ao\-channels\fR \fIn\fR
+Set number of audio channels, \f(CB1\fR or \f(CB2\fR.
 .TP
-\fB\-ao\-fragment\-ms\fR \fIms\fR
-set audio fragment size in ms (if supported)
+\f(CB\-ao\-fragments\fR \fIn\fR
+Set number of audio fragments.
 .TP
-\fB\-ao\-fragment\-frames\fR \fIn\fR
-set audio fragment size in samples (if supported)
+\f(CB\-ao\-fragment\-ms\fR \fIms\fR
+Set audio fragment size in ms (if supported).
 .TP
-\fB\-ao\-buffer\-ms\fR \fIms\fR
-set total audio buffer size in ms (if supported)
+\f(CB\-ao\-fragment\-frames\fR \fIn\fR
+Set audio fragment size in samples (if supported).
 .TP
-\fB\-ao\-buffer\-frames\fR \fIn\fR
-set total audio buffer size in samples (if supported)
+\f(CB\-ao\-buffer\-ms\fR \fIms\fR
+Set total audio buffer size in ms (if supported).
 .TP
-\fB\-ao\-gain\fR \fIdb\fR
-audio gain in dB relative to 0 dBFS [\-3.0]
+\f(CB\-ao\-buffer\-frames\fR \fIn\fR
+Set total audio buffer size in samples (if supported).
 .TP
-\fB\-volume\fR \fIvolume\fR
-older way to specify audio volume, linear (0\-100)
-
-.SS Debugging:
-
+\f(CB\-ao\-gain\fR \fIdb\fR
+Audio gain in dB relative to 0 dBFS \[lB]-3.0\[rB]
 .TP
-\fB\-gdb\fR
-enable GDB target
+\f(CB\-volume\fR \fIvolume\fR
+Older way to specify audio volume, linear (0–100).
+.H2 Debugging:
 .TP
-\fB\-gdb\-ip\fR \fIaddress\fR
-address of interface for GDB target [127.0.0.1]
+\f(CB\-gdb\fR
+Enable GDB target.
 .TP
-\fB\-gdb\-port\fR \fIport\fR
-port for GDB target to listen on [65520]
+\f(CB\-gdb\-ip\fR \fIaddress\fR
+Address of interface for GDB target \[lB]127.0.0.1\[rB]
 .TP
-\fB\-trace\fR
-start with trace mode on
+\f(CB\-gdb\-port\fR \fIport\fR
+Port for GDB target to listen on \[lB]65520\[rB]
 .TP
-\fB\-debug\-fdc\fR \fIflags\fR
-FDC debugging (see manual, or \fB\-1\fR for all)
+\f(CB\-gdb\-pseudo\-regs\fR
+Enable pseudo-registers (e.g. SAM, PIA) for GDB.
 .TP
-\fB\-debug\-file\fR \fIflags\fR
-file debugging (see manual, or \fB\-1\fR for all)
+\f(CB\-no\-ratelimit\fR
+Run CPU as fast as possible.
 .TP
-\fB\-debug\-gdb\fR \fIflags\fR
-GDB target debugging (see manual, or \fB\-1\fR for all)
+\f(CB\-trace\fR
+Start with trace mode on.
 .TP
-\fB\-debug\-ui\fR \fIflags\fR
-UI debugging (see manual, or \fB\-1\fR for all)
+\f(CB\-trace\-timing\fR
+Print timings in trace mode.
 .TP
-\fB\-v\fR, \fB\-\-verbose\fR \fIlevel\fR
-general debug verbosity (\fB0\fR to \fB3\fR) [1]
+\f(CB\-debug\-fdc\fR \fIflags\fR
+FDC debugging (see manual, or \f(CB\-1\fR for all).
 .TP
-\fB\-q\fR, \fB\-\-quiet\fR
-equivalent to \fB\-\-verbose 0\fR
+\f(CB\-debug\-file\fR \fIflags\fR
+File debugging (see manual, or \f(CB\-1\fR for all).
 .TP
-\fB\-trap\fR \fIcondition\fR
-configure a trap to fire on \fIcondition\fR.
-
+\f(CB\-debug\-gdb\fR \fIflags\fR
+GDB target debugging (see manual, or \f(CB\-1\fR for all).
+.TP
+\f(CB\-debug\-ui\fR \fIflags\fR
+UI debugging (see manual, or \f(CB\-1\fR for all).
+.TP
+\f(CB\-v, \-verbose\fR \fIlevel\fR
+General debug verbosity (\f(CB0\fR to \f(CB3\fR) \[lB]1\[rB]
+.TP
+\f(CB\-q\fR, \f(CB\-quiet\fR
+Equivalent to \f(CB\-verbose 0\fR.
+.TP
+\f(CB\-trap\fR \fIcondition\fR
+Configure a trap to fire on \fIcondition\fR.
 .PP
-The remaining options affect the configured trap:
-
+These options affect the configured trap:
 .TP
-\fB\-trap\-range\fR \fIm\fR-\fIn\fR
-perform trap's action only on \fIm\fRth-\fIn\fRth trigger.
+\f(CB\-trap\-range\fR \fIm\fR-\fIn\fR
+Perform trap\[aq]s action only on \fIm\fRth-\fIn\fRth trigger.
 .TP
-\fB\-trap\-snap\fR \fIfile\fR
-write snapshot at trap.
+\f(CB\-trap\-snap\fR \fIfile\fR
+Write snapshot at trap.
 .TP
-\fB\-trap\-timeout\fR \fIn\fR
-quit emulator \fIn\fR seconds after trap.
+\f(CB\-trap\-timeout\fR \fIn\fR
+Quit emulator \fIn\fR seconds after trap.
 .TP
-\fB\-trap\-trace\fR
-start trace mode at trap.
+\f(CB\-trap\-trace\fR
+Start trace mode at trap.
 .TP
-\fB\-trap\-no\-trace\fR
-stop trace mode at trap.
-
+\f(CB\-trap\-trace\-n\fR \fIn\fR
+Start trace mode at trap for \fIn\fR instructions.
+.TP
+\f(CB\-trap\-no\-trace\fR
+Stop trace mode at trap.
+.PP
+Trap \fIcondition\fRs can be one of the following:
+.P
+.TS
+tab(;);
+l lx.
+\fBCondition\fR;T{
+\fBAction\fR
+T}
+.T&
+_ _
+l lx.
+immediate (or \[aq]-\[aq]);T{
+trigger immediately
+T}
+pc=\fIaddr\fR;T{
+trigger at CPU Program Counter value
+T}
+read=\fIa\fR\[lB]-\fIb\fR\[rB];T{
+trigger on read from address range
+T}
+write=\fIa\fR\[lB]-\fIb\fR\[rB];T{
+trigger on write to address range
+T}
+access=\fIa\fR\[lB]-\fIb\fR\[rB];T{
+trigger on either read or write
+T}
+tape-motor-off;T{
+trigger when tape motor switches off
+T}
+.TE
 .PP
 Older options remain that can be implemented using traps:
+.TP
+\f(CB\-timeout\fR \fIs\fR
+Run for \fIs\fR seconds then quit.
+.TP
+\f(CB\-timeout\-motoroff\fR \fIs\fR
+Quit \fIs\fR seconds after tape motor switches off.
+.TP
+\f(CB\-snap\-motoroff\fR \fIfile\fR
+Write a snapshot each time tape motor switches off.
+.H2 Other options:
+.TP
+\f(CB\-config\-print\fR
+Print configuration to standard out, omitting (most) default options.
+.TP
+\f(CB\-config\-print\-all\fR
+Print configuration to standard out, including defaults.
+.TP
+\f(CB\-config\-auto\-save\fR
+Write configuration to \fI$HOME/.xroar/xroar.conf\fR on exit.
+.TP
+\f(CB\-h\fR, \f(CB\-\-help\fR
+Display help and exit.
+.TP
+\f(CB\-V\fR, \f(CB\-\-version\fR
+Output version information and exit.
+.H1 KEYBOARD SHORTCUTS
+.P
+.TS
+tab(;);
+l lx.
+\fBShortcut\fR;T{
+\fBAction\fR
+T}
+.T&
+_ _
+l lx.
+CTRL+\[lB]1–4\[rB];T{
+Insert disk into drive 1–4.
+T}
+CTRL+SHIFT+\[lB]1–4\[rB];T{
+Create new disk in drive 1–4.
+T}
+CTRL+\[lB]5–8\[rB];T{
+Toggle write enable on disk in drive 1–4.
+T}
+CTRL+SHIFT+\[lB]5–8\[rB];T{
+Toggle write back on disk in drive 1–4.
+T}
+CTRL+A;T{
+Cycle through cross-colour modes (and RGB on CoCo 3).
+T}
+CTRL+D;T{
+Open disk control tool (GTK+ & Windows only).
+T}
+CTRL+SHIFT+D;T{
+Flush disk images.
+T}
+CTRL+E;T{
+Toggle cartridge on/off - reset to take effect.
+T}
+CTRL+F;T{
+Toggle full screen mode.
+T}
+or F11;T{
 
-.TP
-\fB\-timeout\fR \fIs\fR
-run for \fIs\fR seconds then quit.
-.TP
-\fB\-timeout\-motoroff\fR \fIs\fR
-quit \fIs\fR seconds after tape motor switches off.
-.TP
-\fB\-snap\-motoroff\fR \fIfile\fR
-write a snapshot each time tape motor switches off.
+T}
+CTRL+SHIFT+H;T{
+Halt the CPU (not on the MC-10).
+T}
+or PAUSE;T{
 
-.SS Help options:
-
+T}
+CTRL+SHIFT+I;T{
+Toggle text mode inverse video.
+T}
+CTRL+J;T{
+Cycle through joystick emulation modes (None, Right, Left).
+T}
+CTRL+SHIFT+J;T{
+Swap left and right joysticks.
+T}
+CTRL+K;T{
+Toggle Dragon/CoCo keyboard layout (not on the MC-10).
+T}
+CTRL+L;T{
+Load a file.
+T}
+CTRL+SHIFT+L;T{
+Load and attempt to autorun a file.
+T}
+CTRL+M;T{
+Toggle menubar.
+T}
+CTRL+SHIFT+P;T{
+Flush printer output.
+T}
+CTRL+Q;T{
+Quit emulator.
+T}
+CTRL+R;T{
+Soft reset emulated machine.
+T}
+CTRL+SHIFT+R;T{
+Hard reset emulated machine.
+T}
+CTRL+S;T{
+Save a snapshot.
+T}
+CTRL+SHIFT+S;T{
+Write screenshot as PNG.
+T}
+CTRL+T;T{
+Open the tape control tool (GTK+ & Windows only).
+T}
+CTRL+V;T{
+Toggle trace mode.
+T}
+CTRL+SHIFT+V;T{
+Open TV controls window (GTK+ & Windows only).
+T}
+CTRL+W;T{
+Attach a virtual cassette file for writing.
+T}
+CTRL+Z;T{
+Enable keyboard translation mode.
+T}
+CTRL+-;T{
+Zoom out (smaller emulated display).
+T}
+CTRL++;T{
+Zoom in (larger emulated display).
+T}
+CTRL+<;T{
+Zoom out picture (see more border).
+T}
+CTRL+>;T{
+Zoom in picture area (see less border).
+T}
+F12;T{
+Run at maximum speed while held.
+T}
+SHIFT+F12;T{
+Maximum speed toggle.
+T}
+.TE
+.H1 LICENCE
+.PP
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License along with this program. If not, see 
+.UU "<" "http://www.gnu.org/licenses/" ">."
+.H1 FILES
 .TP
-\fB\-config\-print\fR
-print configuration to standard out.
-.TP
-\fB\-config\-print\-all\fR
-print configuration to standard out, including defaults.
-.TP
-\fB\-h\fR, \fB\-\-help\fR
-display help and exit.
-.TP
-\fB\-V\fR, \fB\-\-version\fR
-output version information and exit.
-.SH FILES
 \fI$HOME/.xroar/xroar.conf\fR
-.SH AUTHOR
-Ciaran Anscomb <xroar@6809.org.uk>
+Configuration file.
+.TP
+\fI$HOME/.xroar/roms/\fR
+Directory for firmware ROM images.
+.PP
+Here are some well-known filenames for firmware ROM images. Consult the full manual for more.
+.P
+.TS
+tab(;);
+l lx.
+\fBFirmware ROM\fR;T{
+\fBCanonical image filenames\fR
+T}
+.T&
+_ _
+l lx.
+Dragon 32 BASIC;T{
+d32.rom
+T}
+Dragon 64 32K BASIC;T{
+d64_1.rom
+T}
+Dragon 64 64K BASIC;T{
+d64_2.rom
+T}
+DragonDOS;T{
+dplus49b.rom, sdose6.rom, ddos10.rom
+T}
+Tandy Colour BASIC;T{
+bas13.rom, bas12.rom, bas11.rom, bas10.rom
+T}
+Tandy Extended BASIC;T{
+extbas11.rom, extbas10.rom
+T}
+RS-DOS;T{
+disk11.rom, disk10.rom
+T}
+Tandy Super ECB (CoCo 3);T{
+coco3.rom
+T}
+Tandy Super ECB (PAL CoCo 3);T{
+coco3p.rom
+T}
+Tandy Microcolour BASIC (MC-10);T{
+mc10.rom
+T}
+.TE

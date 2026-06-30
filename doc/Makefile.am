@@ -24,3 +24,9 @@ EXTRA_DIST += \
 	tv-controls.png \
 	view-composite-rendering.png \
 	view-tv-input.png
+
+xroar.1.in: manpage-header xroar-man.html
+	(cat manpage-header; hxnormalize -xe -l 99999 xroar-man.html | hxpipe | ./html2man.pl) > $@
+
+xroar-man.pdf: xroar.1
+	groff -Tpdf -P-pa4 -t -mpdfmark -mandoc $< > $@

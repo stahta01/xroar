@@ -1,0 +1,80 @@
+'\" t
+.
+.\" ASCII for Unicode ellipsis is three dots
+.schar \[u2026] ...
+.\" New escape [...] maps to Unicode ellipsis
+.char \[...] \[u2026]
+.
+.\" an-ext.tmac: Check whether we are using grohtml.
+.nr mH 0
+.if \n(.g \
+.  if '\*(.T'html' \
+.    nr mH 1
+.
+.\" What about gropdf?
+.nr mP 0
+.if \n(.g \
+.  if '\*(.T'pdf' \
+.    nr mP 1
+.
+.\" an-ext.tmac: Start example.
+.de EX
+.  nr mE \\n(.f
+.  nf
+.  nh
+.  ft CW
+..
+.
+.\" an-ext.tmac: End example.
+.de EE
+.  ft \\n(mE
+.  fi
+.  hy \\n(HY
+..
+.
+.\" Top level heading; wraps .SH
+.de H1
+.  if \\n(mP .pdfhref O 1 \\$*
+.  SH \\$*
+..
+.
+.\" 2nd level heading; wraps .SS
+.de H2
+.  if \\n(mP .pdfhref O 2 \\$*
+.  SS \\$*
+..
+.
+.\" 3rd level heading; bold font, no indent
+.de H3
+.  if \\n(.$ \{\
+.    if \\n(mP .pdfhref O 3 \\$*
+.    .B \&"\\$*"
+.  \}
+.  br
+..
+.
+.\" Render URL
+.de UU
+.  ie \\n(mH \{\
+\\$1\c
+.    do HTML-NS "<a href='\\$2'>"
+\\$2\c
+.    do HTML-NS "</a>"
+\\$3
+.  \}
+.  el \{\
+.    ie \\n(mP \{\
+.      pdfhref -W -P "\\$1" -A "\\$3" "\\$2"
+.    \}
+.    el \{\
+\\$1\\$2\\$3
+.    \}
+.  \}
+..
+.
+.nr PDFOUTLINE.FOLDLEVEL 3
+.\"
+.pdfview /PageMode /UseOutlines
+.pdfinfo /Title xroar @PACKAGE_VERSION@
+.pdfinfo /Author Ciaran Anscomb
+.

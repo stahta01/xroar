@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
+</head>
+
+<body>
+
+<h1 man:date='@MANPAGE_DATE@' man:section='1' man:dist='xroar-@PACKAGE_VERSION@'>xroar</h1>
+
+<h2 id='name'>NAME</h2>
+
+<p>xroar—Dragon and Tandy 8-bit computer emulator
+
+<h2 id='synopsis'>SYNOPSIS</h2>
+
+<p><strong>xroar</strong> [<code>-c</code> <var>conffile</var>] [<var>OPTION</var>]… [<var>FILENAME</var>]…
+
+<h2 id='description'>DESCRIPTION</h2>
+
+<p><strong>XRoar</strong> emulates the Dragon 32/64; Tandy Colour Computers 1,
+2 and 3; the Tandy MC-10; and some other similar machines or clones. It runs on
+a wide variety of platforms.
+
+<h2 id='options'>OPTIONS</h2>
+
+<p>Options are first read from a configuration file (by default,
+<var>$HOME/.xroar/xroar.conf</var>).  Options on the command line override any
+found in the configuration file.
+
+<dl class='compact'>
+
+<dt><code>-C</code>
+
+<dd>Allocate a console window (Windows only).
+
+<dt><code>-c</code> <var>conffile</var>
+
+<dd>Specify a configuration file.
+
+</dl>
+
+<h3 id='machines'>Machines:</h3>
+
+<dl class='compact'>
+
+<dt><code>-m</code> <var>name</var>, <code>-default-machine</code> <var>name</var>
+
+<dd>Default machine profile to select on startup.
+
+<dt><code>-machine</code> <var>name</var>
+
+<dd>Create or modify named machine profile.  <code>-machine help</code> lists
+currently defined profiles.
+
+</dl>
+
+<p>The remaining options configure the currently selected machine:
+
+<dl class='compact'>
+
+<dt><code>-machine-desc</code> <var>text</var>
+
+<dd>Machine description shown in <code>-machine help</code> and menu options.
+
+<dt><code>-machine-arch</code> <var>arch</var>
+
+<dd>Machine architecture (<code>dragon64</code>, <code>dragon32</code>,
+<code>coco</code>, <code>coco3</code> or <code>mc10</code>).
+
+<dt><code>-machine-keyboard</code> <var>layout</var>
+
+<dd>Keyboard layout (<code>dragon</code>, <code>dragon200e</code>,
+<code>coco</code> or <code>coco3</code>).
+
+<dt><code>-machine-cpu</code> <var>cpu</var>
+
+<dd>Machine CPU (<code>6809</code> or <code>6309</code>).  Not applicable to the MC-10.
+
+<dt><code>-bas</code> <var>rom</var>
+
+<dd>ROM image for Colour BASIC (CoCo) or Microcolour BASIC (MC-10).
+
+<dt><code>-extbas</code> <var>rom</var>
+
+<dd>ROM image for Extended BASIC (Super Extended BASIC on the CoCo 3).
+
+<dt><code>-altbas</code> <var>rom</var>
+
+<dd>ROM image for 64K-mode Extended BASIC (Dragon 64, Dragon 200-E).
+
+<dt><code>-nobas</code>, <code>-noextbas</code>, <code>-noaltbas</code>
+
+<dd>Indicate the corresponding ROM is not fitted in this machine.
+
+<dt><code>-ext-charset</code> <var>rom</var>
+
+<dd>External character generator ROM to use.
+
+<dt><code>-tv-type</code> <var>type</var>
+
+<dd>TV type (<code>pal</code>, <code>ntsc</code> or <code>pal-m</code>).
+
+<dt><code>-tv-input</code> <var>input</var>
+
+<dd>One of <code>cmp</code> (composite video, no cross-colour),
+<code>cmp-br</code> (composite video, blue-red cross-colour),
+<code>cmp-rb</code> (composite video, red-blue cross-colour) or
+<code>rgb</code> (RGB video, CoCo 3 only).
+
+<dt><code>-vdg-type</code> <var>type</var>
+
+<dd>Indicate the VDG variant fitted. One of <code>6847</code> or <code>6847t1</code>.
+
+<dt><code>-ram-org</code> <var>organisation</var>
+
+<dd>RAM organisation (<code>-ram-org help</code> for list).
+
+<dt><code>-ram</code> <var>kbytes</var>
+
+<dd>Amount of RAM fitted in kilobytes. Valid sizes are 4–64K for Dragon and
+Tandy CoCo 1/2; 128K or 512K for the Tandy CoCo 3; 2K, 4K or 20K for the Tandy
+MC-10.
+
+<dt><code>-ram-init</code> <var>pattern</var>
+
+<dd>RAM start pattern (<code>-ram-init help</code> for list).
+
+<dt><code>-machine-cart</code> <var>name</var>
+
+<dd>Default cartridge to attach.  <code>-no-machine-cart</code> to inhibit the
+default behaviour of searching for a workign DOS cartridge.
+
+</dl>
+
+<h3 id='cartridges'>Cartridges:</h3>
+
+<dl class='compact'>
+
+<dt><code>-cart</code> <var>name</var>
+
+<dd>Create or modify named cartridge profile.  <code>-cart help</code> lists
+currently defined profiles.
+
+</dl>
+
+<dl class='compact'>
+
+<p>The remaining options configure the currently selected cartridge:
+
+<dt><code>-cart-desc</code> <var>text</var>
+
+<dd>Cartridge description shown in <code>-cart help</code> and menu options.
+
+<dt><code>-cart-type</code> <var>type</var>
+
+<dd>Cartridge base type (<code>-cart-type help</code> for list).
+
+<dt><code>-cart-rom</code> <var>rom</var>
+
+<dd>ROM image to load ($C000-).
+
+<dt><code>-cart-rom2</code> <var>rom</var>
+
+<dd>Second ROM image to load ($E000-).
+
+<dt><code>-cart-autorun</code>
+
+<dd>Autorun cartridge.
+
+<dt><code>-cart-becker</code>
+
+<dd>Enable becker port where supported.
+
+<dt><code>-mpi-slot</code> <var>slot</var>
+
+<dd>(MPI) initially select slot (0–3).
+
+<dt><code>-mpi-load-cart</code> [<var>slot</var>=]<var>name</var>
+
+<dd>(MPI) insert cartridge into next or numbered <var>slot</var>.
+
+</dl>
+
+<p>When configuring a Multi-Pak Interface (MPI), only the last configured DOS
+cartridge will end up connected to the virtual drives.  MPI options also apply
+to the similar RACE Computer Expansion Cage.
+
+<h3 id='becker-port'>Becker port:</h3>
+
+<dl class='compact'>
+
+<dt><code>-becker</code>
+
+<dd>Prefer becker-enabled DOS cartridge when picked automatically.
+
+<dt><code>-becker-ip</code> <var>address</var>
+
+<dd>Address or hostname of DriveWire server [127.0.0.1]
+
+<dt><code>-becker-port</code> <var>port</var>
+
+<dd>Port of DriveWire server [65504]
+
+</dl>
+
+<h3 id='cassettes'>Cassettes:</h3>
+
+<dl class='compact'>
+
+<dt><code>-load-tape</code> <var>file</var>
+
+<dd>Attach <var>file</var> as tape image for reading.
+
+<dt><code>-tape-write</code> <var>file</var>
+
+<dd>Open <var>file</var> for tape writing.
+
+<dt><code>-tape-pan</code> <var>panning</var>
+
+<dd>Pan stereo input (0.0 = full left, 1.0 = full right) [0.5]
+
+<dt><code>-tape-hysteresis</code> <var>percent</var>
+
+<dd>Read hysteresis as percentage of full scale [1]
+
+<dt><code>-no-tape-fast</code>
+
+<dd>Disable fast tape loading.
+
+<dt><code>-no-tape-pad-auto</code>
+
+<dd>Disable automatic leader padding.
+
+<dt><code>-tape-rewrite</code>
+
+<dd>Enable tape rewriting.
+
+<dt><code>-tape-rewrite-gap-ms</code> <var>ms</var>
+
+<dd>Gap length in milliseconds to write in rewrite mode (1–5000ms, default
+500ms).
+
+<dt><code>-tape-rewrite-leader</code> <var>bytes</var>
+
+<dd>Length of leaders in bytes to write in rewrite mode (1–2048 bytes, default
+256).
+
+<dt><code>-tape-ao-rate</code> <var>hz</var>
+
+<dd>Set tape writing frame rate [9600]
+
+</dl>
+
+<h3 id='floppy-disks'>Floppy disks:</h3>
+
+<dl class='compact'>
+
+<dt><code>-load-fd<var>X</var></code> <var>file</var>
+
+<dd>Insert disk image <var>file</var> into floppy drive <var>X</var> (0–3).
+
+<dt><code>-no-disk-write-back</code>
+
+<dd>Don't default to enabling write-back for disk images.
+
+<dt><code>-no-disk-auto-os9</code>
+
+<dd>Don't try to detect headerless OS-9 JVC disk images.
+
+<dt><code>-no-disk-auto-sd</code>
+
+<dd>Don't assume single density for 10 sec/track disks.
+
+</dl>
+
+<h3 id='hard-disks'>Hard disks:</h3>
+
+<dl class='compact'>
+
+<dt><code>-load-hd<var>X</var></code> <var>file</var>
+
+<dd>Use <var>file</var> as the hard disk image for drive <var>X</var> (0–1).
+
+<dt><code>-load-sd</code> <var>file</var>
+
+<dd>Use <var>file</var> as the SD card image (e.g. for mooh, nx32).
+
+</dl>
+
+<h3 id='keyboard'>Keyboard:</h3>
+
+<dl class='compact'>
+
+<dt><code>-kbd-layout</code> <var>layout</var>
+
+<dd>Host keyboard layout (<code>-kbd-layout help</code> for list).
+
+<dt><code>-kbd-lang</code> <var>lang</var>
+
+<dd>Host keyboard language (<code>-kbd-lang help</code> for list).
+
+<dt><code>-kbd-bind</code> <var>hostkey</var>=[pre:]<var>emukey</var>
+
+<dd>Map host key to emulated key.  Prefixing emulated key name with 'pre:'
+disables translation for the bind (the bind "preempts" translation).  Host key
+names can be determined by running with <code>-debug-ui 1</code>, which will
+log keypresses.
+
+<dt><code>-kbd-translate</code>
+
+<dd>Enable keyboard translation.
+
+<dt><code>-type</code> <var>string</var>
+
+<dd>Intercept ROM calls to type <var>string</var> into BASIC.
+
+<dt><code>-load-text</code> <var>file</var>
+
+<dd>Type <var>file</var> into BASIC.
+
+</dl>
+
+<h3 id='joysticks'>Joysticks:</h3>
+
+<dl class='compact'>
+
+<dt><code>-joy-db-file</code> <var>file</var>
+
+<dd>Load gamepad mappings from <var>file</var>.
+
+<dt><code>-joy-right</code> <var>name</var>
+
+<dd>Map right joystick.
+
+<dt><code>-joy-left</code> <var>name</var>
+
+<dd>Map left joystick.
+
+<dt><code>-joy-virtual</code> <var>name</var>
+
+<dd>Specify the 'virtual' joystick to cycle [kjoy0]
+
+<dt><code>-joy</code> <var>name</var>
+
+<dd>Configure named joystick (<code>-joy help</code> for list).
+
+</dl>
+
+<p>The remaining options configure the currently selected joystick:
+
+<dl class='compact'>
+
+<dt><code>-joy-desc</code> <var>text</var>
+
+<dd>Joystick description.
+
+<dt><code>-joy-axis</code> <var>axis</var>=<var>spec</var>
+
+<dd>Configure joystick axis.
+
+<dt><code>-joy-button</code> <var>btn</var>=<var>spec</var>
+
+<dd>Configure joystick button.
+
+</dl>
+
+<p>Joystick <var>spec</var>s are of the form
+[<var>module</var>:][<var>arg</var>[,<var>arg</var>]…], from:
+
+<table tab='@' align='l l lx'>
+<thead>
+<tr><th>Module<th>Axis <var>arg</var>s<th>Button <var>arg</var>s
+<tbody>
+<tr><td>physical<td>joystick-index,[-]axis-index<td>joystick-index,button-index
+<tr><td>keyboard<td>key-name0,key-name1<td>key-name
+<tr><td>mouse<td>screen-offset0,screen-offset1<td>button-number
+</table>
+
+<p>For physical joysticks a '-' before the axis index inverts the axis.  Axis 0
+is the X-axis, and axis 1 the Y-axis.  Buttons are numbered 0 or 1 (the second
+is only used when connected to a CoCo 3).
+
+<h3 id='printers'>Printers:</h3>
+
+<dl class='compact'>
+
+<dt><code>-lp-file</code> <var>file</var>
+
+<dd>Append printer output to <var>file</var>.
+
+<dt><code>-lp-pipe</code> <var>command</var>
+
+<dd>Pipe printer output to <var>command</var>.
+
+</dl>
+
+<h3 id='files'>Files:</h3>
+
+<dl class='compact'>
+
+<dt><code>-load</code> <var>file</var>
+
+<dd>Load or attach <var>file</var>
+
+<dt><code>-run</code> <var>file</var>
+
+<dd>Load or attach <var>file</var> and attempt autorun
+
+<dt><code>-load-fd<var>X</var></code> <var>file</var>
+
+<dd>Insert disk image <var>file</var> into floppy drive <var>X</var> (0–3).
+
+<dt><code>-load-hd<var>X</var></code> <var>file</var>
+
+<dd>Use <var>file</var> as the hard disk image for drive <var>X</var> (0–1).
+
+<dt><code>-load-sd</code> <var>file</var>
+
+<dd>Use <var>file</var> as the SD card image (e.g. for mooh, nx32).
+
+<dt><code>-load-tape</code> <var>file</var>
+
+<dd>Attach <var>file</var> as tape image for reading.
+
+<dt><code>-tape-write</code> <var>file</var>
+
+<dd>Open <var>file</var> for tape writing.
+
+<dt><code>-load-text</code> <var>file</var>
+
+<dd>Type <var>file</var> into BASIC.
+
+</dl>
+
+<h3 id='firmware-rom-images'>Firmware ROM images:</h3>
+
+<dl class='compact'>
+
+<dt><code>-rompath</code> <var>path</var>
+
+<dd>ROM search path (colon-separated list).
+
+<dt><code>-romlist</code> <var>name</var>=<var>list</var>
+
+<dd>Define a ROM list.
+
+<dt><code>-romlist-print</code>
+
+<dd>Print defined ROM lists.
+
+<dt><code>-crclist</code> <var>name</var>=<var>list</var>
+
+<dd>Define a ROM CRC list.
+
+<dt><code>-crclist-print</code>
+
+<dd>Print defined ROM CRC lists.
+
+<dt><code>-force-crc-match</code>
+
+<dd>Force per-architecture CRC matches.
+
+</dl>
+
+<h3 id='user-interface'>User interface:</h3>
+
+<dl class='compact'>
+
+<dt><code>-ui</code> <var>module</var>
+
+<dd>User-interface module (<code>-ui help</code> for list).
+
+</dl>
+
+<h3 id='video'>Video:</h3>
+
+<dl class='compact'>
+
+<dt><code>-fs</code>
+
+<dd>Start emulator full-screen if possible.
+
+<dt><code>-fskip</code> <var>frames</var>
+
+<dd>Frameskip (default: 0).
+
+<dt><code>-ccr</code> <var>renderer</var>
+
+<dd>Cross-colour renderer (<code>simple</code>, <code>5bit</code>,
+<code>partial</code> or <code>simulated</code>).
+
+<dt><code>-gl-filter</code> <var>filter</var>
+
+<dd>OpenGL texture filter (<code>auto</code>, <code>nearest</code> or
+<code>linear</code>).
+
+<dt><code>-vo-vsync</code>
+
+<dd>Start with vsync enabled.
+
+<dt><code>-vo-pixel-fmt</code> <var>format</var>
+
+<dd>Pixel format (<code>-vo-pixel-fmt help</code> for list).
+
+<dt><code>-geometry</code> <var>w</var>x<var>h</var>+<var>x</var>+<var>y</var>
+
+<dd>Initial emulator geometry.
+
+<dt><code>-vo-picture</code> <var>p</var>
+
+<dd>Initial picture area (<code>-vo-picture help</code> for list).
+
+<dt><code>-no-vo-scale-60hz</code>
+
+<dd>Disable vertical scaling for 60Hz video.
+
+<dt><code>-invert-text</code>
+
+<dd>Start with text mode inverted.
+
+<dt><code>-vo-brightness</code> <var>n</var>
+
+<dd>Set TV brightness (0–100) [50]
+
+<dt><code>-vo-contrast</code> <var>n</var>
+
+<dd>Set TV contrast (0–100) [50]
+
+<dt><code>-vo-colour</code> <var>n</var>
+
+<dd>Set TV colour saturation (0–100) [50]
+
+<dt><code>-vo-hue</code> <var>n</var>
+
+<dd>Set TV hue control (-179 to +180) [0]
+
+<dt><code>-no-vo-colour-killer</code>
+
+<dd>Disable colour killer (enabled by default).
+
+</dl>
+
+<h3 id='audio'>Audio:</h3>
+
+<dl class='compact'>
+
+<dt><code>-ao</code> <var>module</var>
+
+<dd>Audio module (<code>-ao help</code> for list).
+
+<dt><code>-ao-device</code> <var>string</var>
+
+<dd>Device to use for audio module.
+
+<dt><code>-ao-format</code> <var>fmt</var>
+
+<dd>Set audio sample format (<code>-ao-format help</code> for list).
+
+<dt><code>-ao-rate</code> <var>hz</var>
+
+<dd>Set audio frame rate (if supported by module).
+
+<dt><code>-ao-channels</code> <var>n</var>
+
+<dd>Set number of audio channels, <code>1</code> or <code>2</code>.
+
+<dt><code>-ao-fragments</code> <var>n</var>
+
+<dd>Set number of audio fragments.
+
+<dt><code>-ao-fragment-ms</code> <var>ms</var>
+
+<dd>Set audio fragment size in ms (if supported).
+
+<dt><code>-ao-fragment-frames</code> <var>n</var>
+
+<dd>Set audio fragment size in samples (if supported).
+
+<dt><code>-ao-buffer-ms</code> <var>ms</var>
+
+<dd>Set total audio buffer size in ms (if supported).
+
+<dt><code>-ao-buffer-frames</code> <var>n</var>
+
+<dd>Set total audio buffer size in samples (if supported).
+
+<dt><code>-ao-gain</code> <var>db</var>
+
+<dd>Audio gain in dB relative to 0 dBFS [-3.0]
+
+<dt><code>-volume</code> <var>volume</var>
+
+<dd>Older way to specify audio volume, linear (0–100).
+
+</dl>
+
+<h3 id='debugging'>Debugging:</h3>
+
+<dl class='compact'>
+
+<dt><code>-gdb</code>
+
+<dd>Enable GDB target.
+
+<dt><code>-gdb-ip</code> <var>address</var>
+
+<dd>Address of interface for GDB target [127.0.0.1]
+
+<dt><code>-gdb-port</code> <var>port</var>
+
+<dd>Port for GDB target to listen on [65520]
+
+<dt><code>-gdb-pseudo-regs</code>
+
+<dd>Enable pseudo-registers (e.g. SAM, PIA) for GDB.
+
+<dt><code>-no-ratelimit</code>
+
+<dd>Run CPU as fast as possible.
+
+<dt><code>-trace</code>
+
+<dd>Start with trace mode on.
+
+<dt><code>-trace-timing</code>
+
+<dd>Print timings in trace mode.
+
+<dt><code>-debug-fdc</code> <var>flags</var>
+
+<dd>FDC debugging (see manual, or <code>-1</code> for all).
+
+<dt><code>-debug-file</code> <var>flags</var>
+
+<dd>File debugging (see manual, or <code>-1</code> for all).
+
+<dt><code>-debug-gdb</code> <var>flags</var>
+
+<dd>GDB target debugging (see manual, or <code>-1</code> for all).
+
+<dt><code>-debug-ui</code> <var>flags</var>
+
+<dd>UI debugging (see manual, or <code>-1</code> for all).
+
+<dt><code>-v, -verbose</code> <var>level</var>
+
+<dd>General debug verbosity (<code>0</code> to <code>3</code>) [1]
+
+<dt><code>-q</code>, <code>-quiet</code>
+
+<dd>Equivalent to <code>-verbose 0</code>.
+
+<dt><code>-trap</code> <var>condition</var>
+
+<dd>Configure a trap to fire on <var>condition</var>.
+
+</dl>
+
+<p>These options affect the configured trap:
+
+<dl class='compact'>
+
+<dt><code>-trap-range</code> <var>m</var>-<var>n</var>
+
+<dd>Perform trap's action only on <var>m</var>th-<var>n</var>th trigger.
+
+<dt><code>-trap-snap</code> <var>file</var>
+
+<dd>Write snapshot at trap.
+
+<dt><code>-trap-timeout</code> <var>n</var>
+
+<dd>Quit emulator <var>n</var> seconds after trap.
+
+<dt><code>-trap-trace</code>
+
+<dd>Start trace mode at trap.
+
+<dt><code>-trap-trace-n</code> <var>n</var>
+
+<dd>Start trace mode at trap for <var>n</var> instructions.
+
+<dt><code>-trap-no-trace</code>
+
+<dd>Stop trace mode at trap.
+
+</dl>
+
+<p>Trap <var>condition</var>s can be one of the following:
+
+<table tab=';' align='l lx'>
+<thead>
+<tr><th>Condition<th>Action
+<tbody>
+<tr><td>immediate (or '-')<td>trigger immediately
+<tr><td>pc=<var>addr</var><td>trigger at CPU Program Counter value
+<tr><td>read=<var>a</var>[-<var>b</var>]<td>trigger on read from address range
+<tr><td>write=<var>a</var>[-<var>b</var>]<td>trigger on write to address range
+<tr><td>access=<var>a</var>[-<var>b</var>]<td>trigger on either read or write
+<tr><td>tape-motor-off<td>trigger when tape motor switches off
+</table>
+
+<p>Older options remain that can be implemented using traps:
+
+<dl class='compact'>
+
+<dt><code>-timeout</code> <var>s</var>
+
+<dd>Run for <var>s</var> seconds then quit.
+
+<dt><code>-timeout-motoroff</code> <var>s</var>
+
+<dd>Quit <var>s</var> seconds after tape motor switches off.
+
+<dt><code>-snap-motoroff</code> <var>file</var>
+
+<dd>Write a snapshot each time tape motor switches off.
+
+</dl>
+
+<h3 id='other-options'>Other options:</h3>
+
+<dl class='compact'>
+
+<dt><code>-config-print</code>
+
+<dd>Print configuration to standard out, omitting (most) default options.
+
+<dt><code>-config-print-all</code>
+
+<dd>Print configuration to standard out, including defaults.
+
+<dt><code>-config-auto-save</code>
+
+<dd>Write configuration to <var>$HOME/.xroar/xroar.conf</var> on exit.
+
+<dt><code>-h</code>, <code>--help</code>
+
+<dd>Display help and exit.
+
+<dt><code>-V</code>, <code>--version</code>
+
+<dd>Output version information and exit.
+
+</dl>
+
+<h2 id='keyboard-shortcuts'>KEYBOARD SHORTCUTS</h2>
+
+<table tab=';' align='l lx'>
+<thead>
+<tr><th>Shortcut<th>Action
+<tbody>
+<tr><td>CTRL+[1–4]<td>Insert disk into drive 1–4.
+<tr><td>CTRL+SHIFT+[1–4]<td>Create new disk in drive 1–4.
+<tr><td>CTRL+[5–8]<td>Toggle write enable on disk in drive 1–4.
+<tr><td>CTRL+SHIFT+[5–8]<td>Toggle write back on disk in drive 1–4.
+<tr><td>CTRL+A<td>Cycle through cross-colour modes (and RGB on CoCo 3).
+<tr><td>CTRL+D<td>Open disk control tool (GTK+ &amp; Windows only).
+<tr><td>CTRL+SHIFT+D<td>Flush disk images.
+<tr><td>CTRL+E<td>Toggle cartridge on/off - reset to take effect.
+<tr><td>CTRL+F<td>Toggle full screen mode.
+<tr><td>or F11<td>
+<tr><td>CTRL+SHIFT+H<td>Halt the CPU (not on the MC-10).
+<tr><td>or PAUSE<td>
+<tr><td>CTRL+SHIFT+I<td>Toggle text mode inverse video.
+<tr><td>CTRL+J<td>Cycle through joystick emulation modes (None, Right, Left).
+<tr><td>CTRL+SHIFT+J<td>Swap left and right joysticks.
+<tr><td>CTRL+K<td>Toggle Dragon/CoCo keyboard layout (not on the MC-10).
+<tr><td>CTRL+L<td>Load a file.
+<tr><td>CTRL+SHIFT+L<td>Load and attempt to autorun a file.
+<tr><td>CTRL+M<td>Toggle menubar.
+<tr><td>CTRL+SHIFT+P<td>Flush printer output.
+<tr><td>CTRL+Q<td>Quit emulator.
+<tr><td>CTRL+R<td>Soft reset emulated machine.
+<tr><td>CTRL+SHIFT+R<td>Hard reset emulated machine.
+<tr><td>CTRL+S<td>Save a snapshot.
+<tr><td>CTRL+SHIFT+S<td>Write screenshot as PNG.
+<tr><td>CTRL+T<td>Open the tape control tool (GTK+ &amp; Windows only).
+<tr><td>CTRL+V<td>Toggle trace mode.
+<tr><td>CTRL+SHIFT+V<td>Open TV controls window (GTK+ &amp; Windows only).
+<tr><td>CTRL+W<td>Attach a virtual cassette file for writing.
+<tr><td>CTRL+Z<td>Enable keyboard translation mode.
+<tr><td>CTRL+-<td>Zoom out (smaller emulated display).
+<tr><td>CTRL++<td>Zoom in (larger emulated display).
+<tr><td>CTRL+&lt;<td>Zoom out picture (see more border).
+<tr><td>CTRL+&gt;<td>Zoom in picture area (see less border).
+<tr><td>F12<td>Run at maximum speed while held.
+<tr><td>SHIFT+F12<td>Maximum speed toggle.
+</table>
+
+<h2 id='licence'>LICENCE</h2>
+
+<p>This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+<p>This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+<p>You should have received a copy of the GNU General Public License along
+with this program. If not, see
+&lt;<a href='http://www.gnu.org/licenses/'>http://www.gnu.org/licenses/</a>&gt;.
+
+<h2 id='files'>FILES</h2>
+
+<dl class='compact'>
+
+<dt><var>$HOME/.xroar/xroar.conf</var>
+
+<dd>Configuration file.
+
+<dt><var>$HOME/.xroar/roms/</var>
+
+<dd>Directory for firmware ROM images.
+
+</dl>
+
+<p>Here are some well-known filenames for firmware ROM images.  Consult the
+full manual for more.
+
+<table tab=';' align='l lx'>
+<thead>
+<tr><th>Firmware ROM<th>Canonical image filenames
+<tbody>
+<tr><td>Dragon 32 BASIC<td>d32.rom
+<tr><td>Dragon 64 32K BASIC<td>d64_1.rom
+<tr><td>Dragon 64 64K BASIC<td>d64_2.rom
+<tr><td>DragonDOS<td>dplus49b.rom, sdose6.rom, ddos10.rom
+<tr><td>Tandy Colour BASIC<td>bas13.rom, bas12.rom, bas11.rom, bas10.rom
+<tr><td>Tandy Extended BASIC<td>extbas11.rom, extbas10.rom
+<tr><td>RS-DOS<td>disk11.rom, disk10.rom
+<tr><td>Tandy Super ECB (CoCo 3)<td>coco3.rom
+<tr><td>Tandy Super ECB (PAL CoCo 3)<td>coco3p.rom
+<tr><td>Tandy Microcolour BASIC (MC-10)<td>mc10.rom
+</table>
+
+</body>
+</html>
