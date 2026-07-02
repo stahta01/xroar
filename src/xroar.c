@@ -3471,7 +3471,7 @@ static void helptext(void) {
 
 " Hard disks:\n"
 "  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
-"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32)\n"
 "\n"
 
 " Keyboard:\n"
@@ -3506,7 +3506,7 @@ static void helptext(void) {
 "  -run FILE             load or attach FILE and attempt autorun\n"
 "  -load-fdX FILE        insert disk image FILE into floppy drive X (0-3)\n"
 "  -load-hdX FILE        use hard disk image FILE as drive X (0-1, e.g. for ide)\n"
-"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32))\n"
+"  -load-sd FILE         use SD card image FILE (e.g. for mooh, nx32)\n"
 "  -load-tape FILE       attach FILE as tape image for reading\n"
 "  -tape-write FILE      open FILE for tape writing\n"
 "  -load-text FILE       type FILE into BASIC\n"
