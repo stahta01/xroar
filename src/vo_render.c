@@ -691,7 +691,13 @@ static void update_cmp_system(struct vo_render *vr) {
 
 		set_lp_filter(&vr->cmp.mod.ufilter, 0.0, 0);
 		set_lp_filter(&vr->cmp.mod.vfilter, 0.0, 0);
-		set_lp_filter(&vr->cmp.demod.yfilter, 2.1/fs_mhz, 11);
+		if (vr->monochrome) {
+			// let slightly higher frequencies through in monochrome mode
+			set_lp_filter(&vr->cmp.demod.yfilter, 2.5/fs_mhz, 11);
+		} else {
+			// else set the filter quite low so that colour is smoothed
+			set_lp_filter(&vr->cmp.demod.yfilter, 2.1/fs_mhz, 11);
+		}
 		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 8);
 		set_lp_filter(&vr->cmp.demod.vfilter, 1.3/fs_mhz, 8);
 		break;
@@ -709,6 +715,8 @@ static void update_cmp_system(struct vo_render *vr) {
 
 		set_lp_filter(&vr->cmp.mod.ufilter, 1.3/fs_mhz, 6);
 		set_lp_filter(&vr->cmp.mod.vfilter, 1.3/fs_mhz, 6);
+		// PAL-I luma filter seems fine for both colour and you can see
+		// the dot crawl in mono
 		set_lp_filter(&vr->cmp.demod.yfilter, 3.0/fs_mhz, 10);
 		set_lp_filter(&vr->cmp.demod.ufilter, 1.3/fs_mhz, 6);
 		set_lp_filter(&vr->cmp.demod.vfilter, 1.3/fs_mhz, 6);
@@ -922,6 +930,7 @@ static void vr_ui_set_monochrome(void *sptr, int tag, void *smsg) {
 
 	vr->monochrome = ui_msg_adjust_value_range(uimsg, vr->monochrome, 0, 0, 1,
 	                                           UI_ADJUST_FLAG_CYCLE);
+	update_cmp_system(vr);
 }
 
 // Set whether colour decoding disabled when no colourburst indicated
