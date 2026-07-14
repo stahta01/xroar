@@ -498,7 +498,7 @@ static void vo_gtk3_set_vsync(struct ui_gtk3_interface *uigtk3, int val) {
 			val = abs(val);
 		}
 		if (dpy && win) {
-			LOG_MOD_DEBUG(3, "gtk3/vo", "glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
+			LOG_MOD_DEBUG(3, "gtk3/vo", "glXSwapIntervalEXT(%p, %lu, %d)\n", (void *)dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			return;
 		}

@@ -500,7 +500,7 @@ static void vo_gtkgl_set_vsync(struct ui_gtk2_interface *uigtk2, int val) {
 			val = abs(val);
 		}
 		if (dpy && win) {
-			LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "glXSwapIntervalEXT(%p, %lu, %d)\n", dpy, win, val);
+			LOG_MOD_SUB_DEBUG(3, "gtk2", "vo_gtkgl", "glXSwapIntervalEXT(%p, %lu, %d)\n", (void *)dpy, win, val);
 			glXSwapIntervalEXT(dpy, win, val);
 			gdk_gl_drawable_gl_end(gldrawable);
 			return;
