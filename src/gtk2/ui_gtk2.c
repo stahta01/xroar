@@ -117,6 +117,7 @@ static void do_quit(GtkEntry *entry, gpointer user_data);
 static void set_tv_input(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
 static void set_ccr(GtkRadioAction *action, GtkRadioAction *current, gpointer user_data);
 static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data);
+static void toggle_monochrome(GtkToggleAction *current, gpointer user_data);
 static void zoom_in(GtkEntry *entry, gpointer user_data);
 static void zoom_out(GtkEntry *entry, gpointer user_data);
 static void zoom_reset(GtkEntry *entry, gpointer user_data);
@@ -263,6 +264,8 @@ static GtkToggleActionEntry const ui_toggles[] = {
 	{ .name = "InverseTextAction", .label = "_Inverse text",
 	  .accelerator = "<shift><control>I",
 	  .callback = G_CALLBACK(toggle_inverse_text) },
+	{ .name = "MonochromeAction", .label = "_Monochrome",
+	  .callback = G_CALLBACK(toggle_monochrome) },
 	{ .name = "FullScreenAction", .label = "_Full screen",
 	  .accelerator = "F11",
 	  .callback = G_CALLBACK(set_fullscreen) },
@@ -326,6 +329,7 @@ static void *ui_gtk2_new(void *cfg) {
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
+	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
 	ui_messenger_join_group(uigtk2->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uigtk2_ui_state_notify, uigtk2));
@@ -562,6 +566,10 @@ static void uigtk2_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_vdg_inverse:
 		uigtk2_toggle_action_set_active(uigtk2, "/MainMenu/ViewMenu/InverseText", value ? TRUE : FALSE);
+		break;
+
+	case ui_tag_monochrome:
+		uigtk2_toggle_action_set_active(uigtk2, "/MainMenu/ViewMenu/Monochrome", value ? TRUE : FALSE);
 		break;
 
 	// Keyboard
@@ -865,6 +873,12 @@ static void toggle_inverse_text(GtkToggleAction *current, gpointer user_data) {
 	(void)user_data;
 	gboolean val = gtk_toggle_action_get_active(current);
 	ui_update_state(-1, ui_tag_vdg_inverse, val, NULL);
+}
+
+static void toggle_monochrome(GtkToggleAction *current, gpointer user_data) {
+	(void)user_data;
+	gboolean val = gtk_toggle_action_get_active(current);
+	ui_update_state(-1, ui_tag_monochrome, val, NULL);
 }
 
 static void zoom_in(GtkEntry *entry, gpointer user_data) {

@@ -56,6 +56,7 @@ struct uiw32_dialog *uiw32_tv_dialog_new(struct ui_windows32_interface *uiw32) {
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(vo_ui_state_notify, dlg));
@@ -121,6 +122,10 @@ static void vo_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_cmp_system:
 		uiw32_combo_box_select_by_data(dlg->hWnd, IDC_CB_SYSTEM, value);
+		break;
+
+	case ui_tag_monochrome:
+		uiw32_send_message(dlg->hWnd, IDC_BN_MONOCHROME, BM_SETCHECK, value ? BST_CHECKED : BST_UNCHECKED, 0);
 		break;
 
 	case ui_tag_cmp_colour_killer:
@@ -272,6 +277,13 @@ static INT_PTR CALLBACK tv_proc(struct uiw32_dialog *dlg, UINT msg, WPARAM wPara
 				{
 					int value = !uiw32_bm_getcheck(dlg->hWnd, IDC_BN_NTSC_SCALING);
 					ui_update_state(-1, ui_tag_ntsc_scaling, value, NULL);
+				}
+				return FALSE;
+
+			case IDC_BN_MONOCHROME:
+				{
+					int value = !uiw32_bm_getcheck(dlg->hWnd, IDC_BN_MONOCHROME);
+					ui_update_state(-1, ui_tag_monochrome, value, NULL);
 				}
 				return FALSE;
 

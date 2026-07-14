@@ -61,6 +61,7 @@ struct TNAME(vo_render) {
 
 	struct {
 		VR_PTYPE palette[256];
+		VR_PTYPE mono_palette[256];
 	} rgb;
 
 	TNAME(map_rgb_func) map_rgb;
@@ -107,15 +108,19 @@ static void TNAME(set_palette_entry)(void *sptr, int palette, int index,
 	struct TNAME(vo_render) *vrt = sptr;
 
 	VR_PTYPE colour = vrt->map_rgb(R, G, B);
-	int y = (int)(0.299 * (float)R + 0.587 * (float)G + 0.114 * (float)B);
 
 	switch (palette) {
 	case VO_RENDER_PALETTE_CMP:
 		vrt->cmp.palette[index & 0xff] = colour;
-		vrt->cmp.mono_palette[index & 0xff] = vrt->map_rgb(y, y, y);
+		break;
+	case VO_RENDER_PALETTE_CMP_MONO:
+		vrt->cmp.mono_palette[index & 0xff] = colour;
 		break;
 	case VO_RENDER_PALETTE_RGB:
 		vrt->rgb.palette[index & 0xff] = colour;
+		break;
+	case VO_RENDER_PALETTE_RGB_MONO:
+		vrt->rgb.mono_palette[index & 0xff] = colour;
 		break;
 	case VO_RENDER_PALETTE_CMP_2BIT:
 		vrt->cmp.cc_2bit[(index>>2)&1][index&3] = colour;
@@ -172,7 +177,8 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 	struct vo_render *vr = &vrt->generic;
 	if (!burstn && !vr->cmp.colour_killer)
 		burstn = 1;
-	VR_PTYPE *palette = burstn ? vrt->cmp.palette : vrt->cmp.mono_palette;
+	VR_PTYPE *palette = (vr->monochrome || !burstn) ?
+	                         vrt->cmp.mono_palette : vrt->cmp.palette;
 	TNAME(do_render_palette)(vrt, npixels, palette, data);
 }
 
@@ -180,8 +186,10 @@ static void TNAME(render_cmp_palette)(void *sptr, unsigned burstn, unsigned npix
 
 static void TNAME(render_rgb_palette)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
+	struct vo_render *vr = &vrt->generic;
 	(void)burstn;
-	TNAME(do_render_palette)(vrt, npixels, vrt->rgb.palette, data);
+	VR_PTYPE *palette = vr->monochrome ? vrt->rgb.mono_palette : vrt->rgb.palette;
+	TNAME(do_render_palette)(vrt, npixels, palette, data);
 }
 
 // Render artefact colours using simple 2-bit LUT.
@@ -189,9 +197,8 @@ static void TNAME(render_rgb_palette)(void *sptr, unsigned burstn, unsigned npix
 static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
 	struct vo_render *vr = &vrt->generic;
-	(void)burstn;
 
-	if (!burstn && vr->cmp.colour_killer) {
+	if (vr->monochrome || (!burstn && vr->cmp.colour_killer)) {
 		TNAME(render_cmp_palette)(sptr, burstn, npixels, data);
 		return;
 	}
@@ -240,9 +247,8 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels, uint8_t const *data) {
 	struct TNAME(vo_render) *vrt = sptr;
 	struct vo_render *vr = &vrt->generic;
-	(void)burstn;
 
-	if (!burstn && vr->cmp.colour_killer) {
+	if (vr->monochrome || (!burstn && vr->cmp.colour_killer)) {
 		TNAME(render_cmp_palette)(sptr, burstn, npixels, data);
 		return;
 	}

@@ -2124,6 +2124,8 @@ here for reference.
 @tab Set initial colour saturation (0-100).  Default is 50.
 @item @option{-vo-hue @var{value}}
 @tab Set initial hue (-179 to +180).  Default is 0.
+@item @option{-vo-monochrome}
+@tab Use a black-and-white television display (disabled by default).
 @item @option{-vo-colour-killer}
 @tab Enable colour killer (disabled by default).
 @end multitable
@@ -2161,6 +2163,11 @@ display.  You can enable this behaviour with @option{-vo-colour-killer}.  NTSC
 machines add circuitry to reintroduce a (modified) burst to enable cross-colour
 in high resolution black & white, so enabling the colour killer would not
 prevent colour in these modes.
+
+Use @option{-vo-monochrome} to model a black-and-white receiver for every TV
+input and video mode.  RGB input is converted to luma using the active colour
+profile; composite input retains its transmitted waveform and luminance
+filtering, but chroma is not decoded.
 
 A quirk of the VDG is that it can operate in-phase or 180° out of phase with
 its clock signal, and how it starts up is essentially random.  This clock

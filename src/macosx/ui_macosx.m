@@ -314,6 +314,9 @@ int cocoa_super_all_keys = 0;
 	case ui_tag_cmp_system:
 		ui_update_state(-1, ui_tag_cmp_system, value, NULL);
 		break;
+	case ui_tag_monochrome:
+		ui_update_state(-1, ui_tag_monochrome, UI_NEXT, NULL);
+		break;
 	case ui_tag_cmp_colour_killer:
 		ui_update_state(-1, ui_tag_cmp_colour_killer, UI_NEXT, NULL);
 		break;
@@ -442,6 +445,9 @@ int cocoa_super_all_keys = 0;
 		break;
 	case ui_tag_cmp_system:
 		[item setState:((value == uimac->vo.cmp_system) ? NSOnState : NSOffState)];
+		break;
+	case ui_tag_monochrome:
+		[item setState:((uimac->vo.monochrome) ? NSOnState : NSOffState)];
 		break;
 	case ui_tag_cmp_colour_killer:
 		[item setState:((uimac->vo.cmp_colour_killer) ? NSOnState : NSOffState)];
@@ -862,6 +868,11 @@ static void setup_view_menu(void) {
 	[view_menu addItem:item];
 	[item release];
 
+	item = [[NSMenuItem alloc] initWithTitle:@"Monochrome" action:@selector(do_set_state:) keyEquivalent:@""];
+	[item setTag:UIMAC_TAG(ui_tag_monochrome)];
+	[view_menu addItem:item];
+	[item release];
+
 	[view_menu addItem:[NSMenuItem separatorItem]];
 
 	submenu = [[NSMenu alloc] initWithTitle:@"Zoom"];
@@ -1236,6 +1247,7 @@ static void *ui_cocoa_new(void *cfg) {
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
+	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
 	ui_messenger_join_group(uimac->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(cocoa_ui_state_notify, uimac));
@@ -1455,6 +1467,10 @@ static void cocoa_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_cmp_system:
 		uimac->vo.cmp_system = value;
+		break;
+
+	case ui_tag_monochrome:
+		uimac->vo.monochrome = value;
 		break;
 
 	case ui_tag_cmp_colour_killer:

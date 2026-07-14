@@ -29,6 +29,7 @@
       <menuitem name='VideoOptions' action='VideoOptionsAction'/>
       <separator/>
       <menuitem name='InverseText' action='InverseTextAction'/>
+      <menuitem name='Monochrome' action='MonochromeAction'/>
       <separator/>
       <menu name='ZoomMenu' action='ZoomMenuAction'>
         <menuitem action='zoom_in'/>

@@ -172,6 +172,8 @@ be a better way to make this usable...
 
 <tr title="TV Input"><th>Input:</td><td><select id='tv_input' onchange='wasm_set_int("tv_input", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
 
+<tr title="Use a monochrome display"><th>Monochrome:</td><td><input type='checkbox' id='monochrome' onchange='wasm_set_int("monochrome", this.checked, 1)'/></td><td/></tr>
+
 <tr title="Cross-colour renderer complexity"><th>Renderer:</td><td><select id='ccr' onchange='wasm_set_int("ccr", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>
 
 <tr title="Sampling frequency"><th>F<sub>S</sub>:</td><td><select id='cmp_fs' onchange='wasm_set_int("cmp_fs", this.options[this.selectedIndex].value, 1)'/></td><td/></tr>

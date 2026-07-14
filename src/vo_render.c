@@ -215,6 +215,7 @@ static void update_cmp_system(struct vo_render *vr);
 static void vr_ui_set_cmp_fs(void *, int tag, void *smsg);
 static void vr_ui_set_cmp_fsc(void *, int tag, void *smsg);
 static void vr_ui_set_cmp_system(void *, int tag, void *smsg);
+static void vr_ui_set_monochrome(void *, int tag, void *smsg);
 static void vr_ui_set_cmp_colour_killer(void *, int tag, void *smsg);
 static void vr_ui_set_ntsc_scaling(void *, int tag, void *smsg);
 static void vr_ui_set_brightness(void *, int tag, void *smsg);
@@ -271,6 +272,7 @@ struct vo_render *vo_render_new(int fmt) {
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_fs, vr));
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_fsc, vr));
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_system, vr));
+	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_monochrome, vr));
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_cmp_colour_killer, vr));
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_ntsc_scaling, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_ntsc_scaling, vr));
 	ui_messenger_preempt_group(vr->msgr_client_id, ui_tag_brightness, MESSENGER_NOTIFY_DELEGATE(vr_ui_set_brightness, vr));
@@ -466,6 +468,15 @@ static void render_rgb565(struct vo_render *vr, int_xyz *src, void *dest, unsign
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// Convert a video luma level to the active display colourspace.
+
+static int display_luma_u8(struct vo_render *vr, float y) {
+	float brightness = (float)(vr->brightness - 50) / 50.;
+	float contrast = (float)vr->contrast / 50.;
+	y = (y * contrast) + brightness;
+	return int_clamp_u8((int)(cs_mlaw_1(vr->cs, y) * 255.));
+}
+
 // Update a composite palette entry, applying brightness & contrast
 
 static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
@@ -532,6 +543,8 @@ static void update_cmp_palette(struct vo_render *vr, uint8_t c) {
 	int Gi = (int)(G * 255.);
 	int Bi = (int)(B * 255.);
 	vr->set_palette_entry(vr, VO_RENDER_PALETTE_CMP, c, Ri, Gi, Bi);
+	int Yi = display_luma_u8(vr, y);
+	vr->set_palette_entry(vr, VO_RENDER_PALETTE_CMP_MONO, c, Yi, Yi, Yi);
 }
 
 // Update an RGB palette entry, applying brightness & contrast
@@ -540,6 +553,8 @@ static void update_rgb_palette(struct vo_render *vr, uint8_t c) {
 	float r = vr->rgb.colour[c].r;
 	float g = vr->rgb.colour[c].g;
 	float b = vr->rgb.colour[c].b;
+	float y, u, v;
+	cs1_rgb_to_yuv(vr->cs, r, g, b, &y, &u, &v);
 
 	// Apply brightness & contrast
 	float brightness = (float)(vr->brightness - 50) / 50.;
@@ -558,6 +573,8 @@ static void update_rgb_palette(struct vo_render *vr, uint8_t c) {
 	int Gi = (int)(G * 255.);
 	int Bi = (int)(B * 255.);
 	vr->set_palette_entry(vr, VO_RENDER_PALETTE_RGB, c, Ri, Gi, Bi);
+	int Yi = display_luma_u8(vr, y);
+	vr->set_palette_entry(vr, VO_RENDER_PALETTE_RGB_MONO, c, Yi, Yi, Yi);
 }
 
 // Update gamma LUT
@@ -895,6 +912,18 @@ static void vr_ui_set_cmp_system(void *sptr, int tag, void *smsg) {
 	update_cmp_system(vr);
 }
 
+// Set whether the attached display decodes colour
+//     value = enabled
+
+static void vr_ui_set_monochrome(void *sptr, int tag, void *smsg) {
+	struct vo_render *vr = sptr;
+	struct ui_state_message *uimsg = smsg;
+	assert(tag == ui_tag_monochrome);
+
+	vr->monochrome = ui_msg_adjust_value_range(uimsg, vr->monochrome, 0, 0, 1,
+	                                           UI_ADJUST_FLAG_CYCLE);
+}
+
 // Set whether colour decoding disabled when no colourburst indicated
 //     value = enabled
 
@@ -1025,6 +1054,7 @@ void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_
 
 	if (!burstn && !vr->cmp.colour_killer)
 		burstn = 1;
+	bool decode_chroma = burstn && !vr->monochrome;
 
 	struct ntsc_burst *burst = &vr->cmp.burst[burstn].ntsc_burst;
 	const unsigned tmax = NTSC_NPHASES;
@@ -1042,7 +1072,7 @@ void vo_render_cmp_partial(void *sptr, unsigned burstn, unsigned npixels, uint8_
 	uint8_t const *src = (uint8_t *)vr->cmp.demod.fubuf[0];
 	int_xyz rgb[912];
 	int_xyz *idest = rgb;
-	if (burstn) {
+	if (decode_chroma) {
 		for (int i = vr->viewport.x; i < (vr->viewport.x + vr->viewport.w); i++) {
 			*(idest++) = ntsc_decode(burst, src++, i);
 		}
@@ -1079,6 +1109,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 
 	if (!burstn && !vr->cmp.colour_killer)
 		burstn = 1;
+	bool decode_chroma = burstn && !vr->monochrome;
 
 	struct vo_render_burst *burst = &vr->cmp.burst[burstn];
 	unsigned tmax = vr->tmax;
@@ -1115,7 +1146,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 
 		// Multiply results by 2sin(wt)/2cos(wt), preempting
 		// demodulation:
-		if (burstn) {
+		if (decode_chroma) {
 			ubuf[i] = (mbuf[i] * burst->demod.u[(i+t) % tmax]) >> 9;
 			vbuf[i] = (mbuf[i] * burst->demod.v[vswitch][(i+t) % tmax]) >> 9;
 		}
@@ -1137,7 +1168,7 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 		fy >>= (15-9);  // fy won't be multiplied by [rgb]_conv
 
 		int fu0 = 0, fv0 = 0;
-		if (burstn) {
+		if (decode_chroma) {
 			int corder = vr->cmp.demod.corder;
 			for (int ft = -corder; ft <= corder; ft++) {
 				fu0 += vr->cmp.demod.ufilter.coeff[ft] * ubuf[i+ft];
@@ -1148,6 +1179,15 @@ void vo_render_cmp_simulated(void *sptr, unsigned burstn, unsigned npixels, uint
 		}
 		fubuf0[i] = fu0;
 		fvbuf0[i] = fv0;
+		if (!decode_chroma) {
+			fubuf1[i] = 0;
+			fvbuf1[i] = 0;
+			int y = fy >> 10;
+			rgb[i].x = y;
+			rgb[i].y = y;
+			rgb[i].z = y;
+			continue;
+		}
 
 		int fu1 = fubuf1[i];
 		int fu = (fu0 + fu1) >> 1;

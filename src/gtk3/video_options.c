@@ -53,6 +53,7 @@ static void tv_change_cmp_renderer(GtkComboBox *widget, gpointer user_data);
 static void tv_change_cmp_fs(GtkComboBox *widget, gpointer user_data);
 static void tv_change_cmp_fsc(GtkComboBox *widget, gpointer user_data);
 static void tv_change_cmp_system(GtkComboBox *widget, gpointer user_data);
+static void tv_change_monochrome(GtkToggleButton *widget, gpointer user_data);
 static void tv_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data);
 
 // UI message reception
@@ -71,6 +72,7 @@ struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(tv_ui_state_notify, uigtk3));
@@ -99,6 +101,7 @@ struct uigtk3_dialog *gtk3_tv_dialog_new(struct ui_gtk3_interface *uigtk3) {
 	uigtk3_signal_connect(uigtk3, "sb_saturation", "value-changed", G_CALLBACK(tv_change_saturation), uigtk3);
 	uigtk3_signal_connect(uigtk3, "sb_hue", "value-changed", G_CALLBACK(tv_change_hue), uigtk3);
 	uigtk3_signal_connect(uigtk3, "tb_ntsc_scaling", "toggled", G_CALLBACK(tv_change_ntsc_scaling), uigtk3);
+	uigtk3_signal_connect(uigtk3, "tb_monochrome", "toggled", G_CALLBACK(tv_change_monochrome), uigtk3);
 	uigtk3_signal_connect(uigtk3, "tb_cmp_colour_killer", "toggled", G_CALLBACK(tv_change_cmp_colour_killer), uigtk3);
 
 	return dlg;
@@ -128,6 +131,10 @@ static void tv_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_cmp_system:
 		uigtk3_cbt_value_by_name_set_value(uigtk3, "cbt_cmp_system", (void *)(intptr_t)value);
+		break;
+
+	case ui_tag_monochrome:
+		uigtk3_toggle_button_set_active(uigtk3, "tb_monochrome", value);
 		break;
 
 	case ui_tag_cmp_colour_killer:
@@ -258,6 +265,12 @@ static void tv_change_cmp_system(GtkComboBox *widget, gpointer user_data) {
 	struct uigtk3_cbt_value *cbtv = user_data;
 	int value = (intptr_t)uigtk3_cbt_value_get_value(cbtv);
 	ui_update_state(-1, ui_tag_cmp_system, value, NULL);
+}
+
+static void tv_change_monochrome(GtkToggleButton *widget, gpointer user_data) {
+	(void)user_data;
+	int value = gtk_toggle_button_get_active(widget);
+	ui_update_state(-1, ui_tag_monochrome, value, NULL);
 }
 
 static void tv_change_cmp_colour_killer(GtkToggleButton *widget, gpointer user_data) {

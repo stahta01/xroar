@@ -111,9 +111,11 @@ extern struct xconfig_enum vo_pixel_fmt_list[];
 
 enum {
 	VO_RENDER_PALETTE_CMP,
+	VO_RENDER_PALETTE_CMP_MONO,
 	VO_RENDER_PALETTE_CMP_2BIT,
 	VO_RENDER_PALETTE_CMP_5BIT,
 	VO_RENDER_PALETTE_RGB,
+	VO_RENDER_PALETTE_RGB_MONO,
 };
 
 // Pixel rates - used as sampling frequency when filtering
@@ -314,6 +316,9 @@ struct vo_render {
 
 	// Whether 60Hz scaling is enabled
 	bool ntsc_scaling;
+
+	// Whether the attached display decodes colour
+	bool monochrome;
 
 	// Current time, measured in pixels
 	unsigned t;

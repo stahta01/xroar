@@ -120,6 +120,7 @@ static void *ui_windows32_new(void *cfg) {
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_tv_input, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_vdg_inverse, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
+	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_keymap, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_hkbd_layout, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
 	ui_messenger_join_group(uiw32->msgr_client_id, ui_tag_hkbd_lang, MESSENGER_NOTIFY_DELEGATE(uiw32_ui_state_notify, uiw32));
@@ -234,6 +235,7 @@ static void setup_view_menu(struct ui_windows32_interface *uiw32) {
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	AppendMenu(view_menu, MF_STRING, UIW32_TAG(ui_tag_vdg_inverse), "&Inverse text");
+	AppendMenu(view_menu, MF_STRING, UIW32_TAG(ui_tag_monochrome), "&Monochrome");
 
 	AppendMenu(view_menu, MF_SEPARATOR, 0, NULL);
 	submenu = CreatePopupMenu();
@@ -530,6 +532,9 @@ static bool SDLCALL sdl_windows_message_hook(void *sptr, MSG *msg) {
 	case ui_tag_vdg_inverse:
 		ui_update_state(-1, ui_tag_vdg_inverse, UI_NEXT, NULL);
 		break;
+	case ui_tag_monochrome:
+		ui_update_state(-1, ui_tag_monochrome, UI_NEXT, NULL);
+		break;
 
 	case ui_tag_zoom:
 		ui_update_state(-1, tag_type, tag_value, NULL);
@@ -643,6 +648,10 @@ static void uiw32_ui_state_notify(void *sptr, int tag, void *smsg) {
 		break;
 
 	case ui_tag_vdg_inverse:
+		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
+		break;
+
+	case ui_tag_monochrome:
 		CheckMenuItem(uiw32->top_menu, UIW32_TAG(tag), MF_BYCOMMAND | (value ? MF_CHECKED : MF_UNCHECKED));
 		break;
 

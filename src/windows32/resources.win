@@ -69,6 +69,8 @@ tr td text Picture Area
    td id=PICTURE combobox
 tr td text 60Hz Scaling
    td id=NTSC_SCALING checkbox
+tr td text Monochrome
+   td id=MONOCHROME checkbox
 end table
 
 h1 Composite Video

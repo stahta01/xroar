@@ -247,6 +247,7 @@ struct private_cfg {
 		int contrast;
 		int saturation;
 		int hue;
+		bool monochrome;
 		bool colour_killer;
 	} vo;
 
@@ -1182,6 +1183,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_print_pipe, MESSENGER_NOTIFY_DELEGATE(xroar_ui_set_print_pipe, NULL));
 
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_tape_motor, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
+	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
 	ui_messenger_join_group(xroar.msgr_client_id, ui_tag_gl_filter, MESSENGER_NOTIFY_DELEGATE(xroar_ui_state_notify, &xroar));
@@ -1301,6 +1303,7 @@ struct ui_interface *xroar_init(int argc, char **argv) {
 	ui_update_state(-1, ui_tag_tape_flag_pad_auto, private_cfg.tape.pad_auto, NULL);
 	ui_update_state(-1, ui_tag_tape_flag_rewrite, private_cfg.tape.rewrite, NULL);
 
+	ui_update_state(-1, ui_tag_monochrome, private_cfg.vo.monochrome, NULL);
 	ui_update_state(-1, ui_tag_cmp_colour_killer, private_cfg.vo.colour_killer, NULL);
 	ui_update_state(-1, ui_tag_gl_filter, private_cfg.vo.gl_filter, NULL);
 	ui_update_state(-1, ui_tag_vsync, private_cfg.vo.vsync, NULL);
@@ -1974,6 +1977,10 @@ static void xroar_ui_state_notify(void *sptr, int tag, void *smsg) {
 			}
 		}
 #endif
+		break;
+
+	case ui_tag_monochrome:
+		private_cfg.vo.monochrome = value;
 		break;
 
 	case ui_tag_cmp_colour_killer:
@@ -3284,6 +3291,7 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_INT("vo-contrast", &private_cfg.vo.contrast) },
 	{ XC_SET_INT("vo-colour", &private_cfg.vo.saturation) },
 	{ XC_SET_INT("vo-hue", &private_cfg.vo.hue) },
+	{ XC_SET_BOOL("vo-monochrome", &private_cfg.vo.monochrome) },
 	{ XC_SET_BOOL("vo-colour-killer", &private_cfg.vo.colour_killer) },
 	/* Deliberately undocumented: */
 	{ XC_SET_STRING("vo", &xroar_ui_cfg.vo), .deprecated = 1 },
@@ -3540,6 +3548,7 @@ static void helptext(void) {
 "  -vo-contrast N        set TV contrast (0-100) [50]\n"
 "  -vo-colour N          set TV colour saturation (0-100) [50]\n"
 "  -vo-hue N             set TV hue control (-179 to +180) [0]\n"
+"  -vo-monochrome        use a black-and-white display (disabled by default)\n"
 "  -vo-colour-killer     enable colour killer (disabled by default)\n"
 "\n"
 
@@ -3738,6 +3747,7 @@ static void config_print_all(FILE *f, bool all) {
 	xroar_cfg_print_int(f, all, "vo-contrast", private_cfg.vo.contrast, 50);
 	xroar_cfg_print_int(f, all, "vo-colour", private_cfg.vo.saturation, 50);
 	xroar_cfg_print_int(f, all, "vo-hue", private_cfg.vo.hue, 0);
+	xroar_cfg_print_bool(f, all, "vo-monochrome", private_cfg.vo.monochrome, 0);
 	xroar_cfg_print_bool(f, all, "vo-colour-killer", private_cfg.vo.colour_killer, 0);
 	fputs("\n", f);
 

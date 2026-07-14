@@ -61,6 +61,7 @@ struct ui_macosx_interface {
 		int cmp_fs;
 		int cmp_fsc;
 		int cmp_system;
+		int monochrome;
 		int cmp_colour_killer;
 		int ccr;
 		int picture;

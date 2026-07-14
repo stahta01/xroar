@@ -221,6 +221,9 @@ enum ui_tag {
 	// Simple radio selection of the composite video system in use.  One of
 	// VO_RENDER_SYSTEM_*.  Handled in vo_render.c.
 
+	ui_tag_monochrome,
+	// Simple toggle controls whether the attached display decodes colour.
+
 	ui_tag_cmp_colour_killer,
 	// Simple toggle controls whether black & white modes are interpreted
 	// for cross-colour.

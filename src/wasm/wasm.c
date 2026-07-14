@@ -114,6 +114,7 @@ static void *ui_wasm_new(void *cfg) {
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fsc, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_system, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_monochrome, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_colour_killer, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_ccr, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_picture, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
@@ -341,6 +342,10 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 
 	case ui_tag_cmp_system:
 		EM_ASM_({ ui_menu_select($0, $1); }, "cmp_system", value);
+		break;
+
+	case ui_tag_monochrome:
+		EM_ASM_({ ui_set_checkbox($0, $1); }, "monochrome", value);
 		break;
 
 	case ui_tag_cmp_colour_killer:
@@ -781,6 +786,7 @@ const struct {
 	{ "cmp_fs", ui_tag_cmp_fs },
 	{ "cmp_fsc", ui_tag_cmp_fsc },
 	{ "cmp_system", ui_tag_cmp_system },
+	{ "monochrome", ui_tag_monochrome },
 	{ "cmp_colour_killer", ui_tag_cmp_colour_killer },
 	{ "ccr", ui_tag_ccr },
 	{ "picture", ui_tag_picture },
