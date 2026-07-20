@@ -284,11 +284,11 @@ static const struct rom_meta_internal rom_internal[] = {
 	{ DESC(0x82929650, 0x4000, "Castle of Tharoggad (1988) (Tandy) (26-3159)"), P_ROM, M_COCO3 },
 	{ DESC(0xd45e59e3, 0x2000, "Dungeons of Daggorath (1982) (Tandy) (26-3093)"), P_ROM, M_COCO3 },
 	{ DESC(0x899978e7, 0x8000, "GFL Championship Football II (1988) (ZCT Systems)"), P_ROM, M_COCO3 },
-	{ DESC(0x83bd6056, 0x8000, "Mind Roll (1988) (Tandy) (26-3100)"), P_ROM, .machine = "coco3,coco" },
-	{ DESC(0xa9680ede, 0x10000, "Predator (1989) (Tandy) (26-3165)"), P_ROM, M_COCO3 },
+	{ DESC(0x83bd6056, 0x8000, "Mind Roll (1988) (Tandy) (26-3100)"), P_GMC, .machine = "coco3,coco" },
+	{ DESC(0xa9680ede, 0x10000, "Predator (1989) (Tandy) (26-3165)"), P_GMC, M_COCO3 },
 	{ DESC(0xc8b64049, 0x8000, "RAD Warrior (1987) (Tandy)"), P_ROM, M_COCO3 },
 	{ DESC(0x09c2e97d, 0x8000, "Rampage! (1989) (Activision)"), P_ROM, M_COCO3 },
-	{ DESC(0xdd94dd06, 0x20000, "RoboCop (1988) (Tandy) (26-3164)"), P_ROM, M_COCO3 },
+	{ DESC(0xdd94dd06, 0x20000, "RoboCop (1988) (Tandy) (26-3164)"), P_GMC, M_COCO3 },
 	{ DESC(0x3dc0ba73, 0x4000, "Shanghai (1987) (Tandy) (26-3084)"), P_ROM, M_COCO3 },
 	{ DESC(0xccfd0a0c, 0x8000, "Silpheed (1988) (Sierra)"), P_ROM, M_COCO3 },
 	{ DESC(0xf47d3880, 0x4000, "Springster (1987) (Tandy) (26-3078)"), P_ROM, M_COCO3 },
@@ -298,7 +298,7 @@ static const struct rom_meta_internal rom_internal[] = {
 
 	// CoCo 3 carts (alternates, bad dumps)
 	{ DESC(0xc985282a, 0x2000, "Dungeons of Daggorath (1982) (Tandy) (26-3093) [f shield, Aaron Oliver]"), P_ROM, M_COCO3 },
-	{ DESC(0x878906fe, 0x8000, "Mind Roll (1988) (Tandy) (26-3100) [f plane1]"), P_ROM, .machine = "coco3,coco" },
+	{ DESC(0x878906fe, 0x8000, "Mind Roll (1988) (Tandy) (26-3100) [f plane1]"), P_GMC, .machine = "coco3,coco" },
 
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
