@@ -33,7 +33,7 @@
 This manual is for XRoar (version @value{VERSION}), a Dragon and Tandy 8-bit
 computer emulator.
 
-Copyright @copyright{} 2025
+Copyright @copyright{} 2026
 Ciaran Anscomb.
 @end copying
 
@@ -111,15 +111,17 @@ may provide a convenient way for users to run your Dragon software.  See
 @node Recent changes
 @section Recent changes
 
-Changes in version 1.11 include:
+Changes in version 1.12 include:
 
 @itemize
 
-@item New option @option{-trap-trace-n @var{n}} turns on trace mode for specified number of instructions when a trap is matched.
-@item Windows builds will try to use the parent console if available, so there is no need to specify @option{-C} if running from a shell window.
-@item S19 records supported, recognised by the @file{.s19} file extension.
-@item 74LS785 SAM support, and new @option{-machine-opt sam=@var{type}} option.
-@item Initial iMMUnity support has been contributed by Jim Brain.  Specify @option{-machine-opt immunity} for a Dragon or CoCo 1/2 to use.
+@item Monochrome display support, contribute by Erik Gavriluk.  Select from the
+TV Controls dialog, or with the @option{-vo-monochrome} options.
+@item XRoar will report CPU architecture and a list registers to GDB as a
+@emph{Target Description}.  With the @option{-gdb-pseudo-regs}, it will include
+extra state for the PIAs, SAM, SAMx8 or GIME for inspection or manipulation by
+GDB.  The 6803 CPU in the MC-10 is now also supported.
+@item SDL 3 is supported.
 
 @end itemize
 
@@ -282,14 +284,7 @@ Start the emulator by double clicking @file{xroar.exe} or, if you installed the
 @c XXX check that the MSI actually does that
 
 You can also run XRoar from the command line, and it supports the same options
-as under Linux/Unix.  By default GUI applications under Windows have no access
-to a console, so run XRoar with @option{-C} as the very first option and it
-will first try to attach to the console of the parent process---that is, send
-text output to the shell window you have open---and if that fails, it will
-create its own console window.  This lets you see various notifications that
-can be useful when determining why something isn't working the way you expect.
-
-For example, run @command{xroar.exe -C --help} to display a list of the
+as under Linux/Unix.  Run @command{xroar.exe --help} to display a list of the
 supported command line options.  Each of the command line options can also
 appear in a configuration file, which should be called
 @file{%LOCALAPPDATA%\XRoar\xroar.conf}.  You can configure many defaults and
@@ -411,9 +406,11 @@ quoting, so any quote characters will be included verbatim.  Escape sequences
 are still parsed, except when an option expects a filename, as shells often use
 their own escaping mechanisms when autocompleting filename arguments.
 
-Windows has a bit of an odd relationship with standard I/O, so in order to see
-diagnostic output or help text, you need to tell XRoar to attach to a console.
-Do this by specifying @option{-C} (capital 'c') as the very first option.
+Windows has a bit of an odd relationship with standard I/O.  By default, XRoar
+will try to attach to the so-called ``parent console'' (e.g. the command shell
+window), but you can force the allocation of a console (which may create a new
+window) by specifying @option{-C} (capital 'c') as the very first option.  The
+@option{-no-C} alternative inhibits all attempts to use a console.
 
 As a special case, the last machine selected on the command line is used as the
 default machine, and the last cartridge specified is attached to that machine.
@@ -467,9 +464,8 @@ these may help narrow down a problem.  You can increase their verbosity with
 various command line options.  See @ref{Debugging options} for more
 information.
 
-Windows generally does not show these messages by default, but if you run XRoar
-with @option{-C} as the very first option, it will attempt to attach to the
-parent console (if running from a shell), or create a new console window.
+If you do not see these messages under Windows, you may need to force the
+allocation of a console by specifying @option{-C} as the very first option.
 
 @c = === === === === === === === === === === === === === === === === === ===
 
@@ -1605,7 +1601,9 @@ other option, as they affect how the rest are treated.
 
 @multitable @columnfractions .25 .71
 @item @option{-C}
-@tab Attach to or create new console window (Windows-only).
+@tab Force creation of a console window if attach to parent fails (Windows-only).
+@item @option{-no-C}
+@tab Do not attempt to use any console (Windows-only).
 @item @option{-c @var{file}}
 @tab Specify a different configuration file.
 @item @option{-no-c}
@@ -2166,8 +2164,8 @@ prevent colour in these modes.
 
 Use @option{-vo-monochrome} to model a black-and-white receiver for every TV
 input and video mode.  RGB input is converted to luma using the active colour
-profile; composite input retains its transmitted waveform and luminance
-filtering, but chroma is not decoded.
+profile; composite input retains its transmitted waveform.  Chroma is
+not decoded, and luminance is filtered more gently, revealing ``dot crawl''.
 
 A quirk of the VDG is that it can operate in-phase or 180° out of phase with
 its clock signal, and how it starts up is essentially random.  This clock
@@ -2250,6 +2248,9 @@ give plenty of headroom (at the expense of a quieter overall sound).
 @tab Address of interface for GDB target.  Default: @samp{127.0.0.1}
 @item @option{-gdb-port @var{port}}
 @tab Port for GDB target to listen on.  Default: @samp{65520}
+@item @option{-gdb-pseudo-regs}
+@tab Report an extended set of pseudo-registers to GDB, allowing inspection of
+SAM, PIA or GIME state.
 
 @item @option{-trace}
 @tab Start with trace mode on.  @kbd{@key{CTRL}+V} toggles.
@@ -2333,10 +2334,6 @@ is equivalent to @option{-verbose 0}.  Levels are:
 @item 3
 @tab Miscellaneous internal debugging.
 @end multitable
-
-To see debug output from the pre-built Windows binary, run with @option{-C} as
-the first option to attach to the parent console or create a new console
-window.
 
 Traps are a somewhat flexible way of triggering emulator actions on particular
 events.  Conditions can be:
@@ -2460,9 +2457,11 @@ File types containing raw binary data to be loaded into RAM:
 @item .bin,@ .dgn,@ .cco
 @tab Binary file (DragonDOS or CoCo).  XRoar can load these directly into memory
 and optionally autorun them.  Read-only
+@item .s19
+@tab Motorola hex record.  An ASCII format that encodes binary data and where
+in memory to load it.  Read-only.
 @item .hex
-@tab Intel hex record.  An ASCII format that encodes binary data and
-where in memory to load it.  Read-only
+@tab Intel hex record.  Another similar ASCII format.  Read-only.
 @end multitable
 
 @c - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2551,6 +2550,8 @@ Alan Cox contributed the IDE code.
 
 Greg Dionne and Ron Klein have been very helpful with information and testing
 of MC-10 related behaviour.
+
+Erik Gavriluk contributed code to select a monochrome display.
 
 Phill Harvey-Smith is the primary source of information about the Dragon
 Professional, and as well as his comments about it for MAME, has traced
@@ -2675,9 +2676,11 @@ RAM dump is generated instead.  Write-only.
 
 @item @file{.bin, .dgn, .cco}
 @tab Binary file in DragonDOS or RS-DOS format (autodetected).  Read-only.
+@item @file{.s19}
+@tab Motorola hex record.  An ASCII format that encodes binary data and where
+in memory to load it.  Read-only.
 @item @file{.hex}
-@tab Intel hex record.  An ASCII format that encodes binary data and where in
-memory to load it.  Read-only.
+@tab Intel hex record.  Another similar ASCII format.  Read-only.
 
 @item @file{.rom, .ccc}
 

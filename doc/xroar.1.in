@@ -418,6 +418,9 @@ Set TV colour saturation (0–100) \[lB]50\[rB]
 \f(CB\-vo\-hue\fR \fIn\fR
 Set TV hue control (-179 to +180) \[lB]0\[rB]
 .TP
+\f(CB\-vo\-monochrome\fR
+Use a black-and-white display (disabled by default).
+.TP
 \f(CB\-no\-vo\-colour\-killer\fR
 Disable colour killer (enabled by default).
 .H2 Audio:
