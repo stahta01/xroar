@@ -5,6 +5,7 @@
  * New option -gdb-pseudo-regs exposes more state as faux registers to GDB
  * SDL3 support
  * Windows UI migrated to use SDL3
+ * New option -vo-monochrome selects black & white display [by Erik Gavriluk]
 
 Version 1.11, Tue 12 May 2026
 
