@@ -1,3 +1,5 @@
+Version 1.12, Mon 27 Jul 2026
+
  * Internal rework of breakpoints and watchpoints
  * Target description sent to GDB
  * Enable GDB for MC-10

@@ -2,6 +2,19 @@ XRoar - a Dragon and Tandy 8-bit computer emulator
 Copyright 2003-2026 Ciaran Anscomb <xroar@6809.org.uk>
 
 
+   XRoar is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+   XRoar is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+   You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 Introduction
 ************
 
@@ -35,32 +48,19 @@ this form may provide a convenient way for users to run your Dragon
 software.  See XRoar Online (https://www.6809.org.uk/xroar/online/) for
 an example.
 
-   XRoar is free software; you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
-
-   XRoar is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-more details.
-
-   You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 Recent changes
 ==============
 
-Changes in version 1.11 include:
+Changes in version 1.12 include:
 
-   * New option '-trap-trace-n N' turns on trace mode for specified
-     number of instructions when a trap is matched.
-   * Windows builds will try to use the parent console if available, so
-     there is no need to specify '-C' if running from a shell window.
-   * S19 records supported, recognised by the '.s19' file extension.
-   * 74LS785 SAM support, and new '-machine-opt sam=TYPE' option.
-   * Initial iMMUnity support has been contributed by Jim Brain.
-     Specify '-machine-opt immunity' for a Dragon or CoCo 1/2 to use.
+   * Monochrome display support, contribute by Erik Gavriluk.  Select
+     from the TV Controls dialog, or with the '-vo-monochrome' options.
+   * XRoar will report CPU architecture and a list registers to GDB as a
+     _Target Description_.  With the '-gdb-pseudo-regs', it will include
+     extra state for the PIAs, SAM, SAMx8 or GIME for inspection or
+     manipulation by GDB. The 6803 CPU in the MC-10 is now also
+     supported.
+   * SDL 3 is supported.
 
    Previous changes in 1.x include:
 
@@ -203,17 +203,9 @@ copy your ROM images into '%LOCALAPPDATA%\XRoar\roms\'.
 installed the '.msi', by selecting XRoar from the start menu.
 
    You can also run XRoar from the command line, and it supports the
-same options as under Linux/Unix.  By default GUI applications under
-Windows have no access to a console, so run XRoar with '-C' as the very
-first option and it will first try to attach to the console of the
-parent process--that is, send text output to the shell window you have
-open--and if that fails, it will create its own console window.  This
-lets you see various notifications that can be useful when determining
-why something isn't working the way you expect.
-
-   For example, run 'xroar.exe -C --help' to display a list of the
-supported command line options.  Each of the command line options can
-also appear in a configuration file, which should be called
+same options as under Linux/Unix.  Run 'xroar.exe --help' to display a
+list of the supported command line options.  Each of the command line
+options can also appear in a configuration file, which should be called
 '%LOCALAPPDATA%\XRoar\xroar.conf'.  You can configure many defaults and
 even extra machines and cartridges in this file.  See *note Configuring
 XRoar:: for more details.
@@ -302,8 +294,8 @@ process should be very familiar.  The following process compiles XRoar
 and installs it into '/usr/local', like most other software built this
 way:
 
-     $ gzip -dc xroar-1.11.tar.gz | tar xvf -
-     $ cd xroar-1.11
+     $ gzip -dc xroar-1.12.tar.gz | tar xvf -
+     $ cd xroar-1.12
      $ ./configure
      $ make
      $ sudo make install
