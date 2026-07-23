@@ -363,7 +363,7 @@ void symtab_include(struct symtab *ss, const char *name) {
 // Find a symbol by label.
 
 int32_t sym_find(struct symtab *ss, const char *label) {
-	if (!ss)
+	if (!ss || !ss->list)
 		return -1;
 	struct sym_entry key = { .label = /*(char *)*/label };
 	struct sym_entry *ent = bsearch(&key, ss->list, ss->nelems, sizeof(*ent), compar_sym_label);
