@@ -166,6 +166,11 @@ bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
 
 	if (forced) {
 		LOG_DEBUG(1, "\t%s CRC32 forced to 0x%08x\n", name, *crc32);
+		symtab_clear(&rb->symtab);
+		struct rom_meta *rm = rom_meta_by_crc32(*crc32, 16384);
+		if (rm && rm->symtab) {
+			symtab_include(&rb->symtab, rm->symtab);
+		}
 		return 1;
 	}
 
