@@ -10,23 +10,25 @@ EXTRA_DIST += \
 	building-for-windows.md \
 	xroar-example.conf \
 	xroar.pdf \
-	file-run.png \
-	drive-control.png \
-	gamepad.png \
-	hardware-cartridge.png \
-	hardware-machine.png \
-	menubar.png \
-	printer-control.png \
-	tape-input.png \
-	tool-kbd-lang.png \
-	trouble-cross-colour.png \
-	trouble-no-basic.png \
-	tv-controls.png \
-	view-composite-rendering.png \
-	view-tv-input.png
+	images/file-run.png \
+	images/drive-control.png \
+	images/gamepad.png \
+	images/hardware-cartridge.png \
+	images/hardware-machine.png \
+	images/menubar.png \
+	images/printer-control.png \
+	images/tape-input.png \
+	images/tool-kbd-lang.png \
+	images/trouble-cross-colour.png \
+	images/trouble-no-basic.png \
+	images/tv-controls.png \
+	images/view-composite-rendering.png \
+	images/view-tv-input.png
+
+HTML2MAN = $(top_builddir)/tools/html2man.pl
 
 xroar.1.in: manpage-header xroar-man.html
-	(cat manpage-header; hxnormalize -xe -l 99999 xroar-man.html | hxpipe | ./html2man.pl) > $@
+	(cat manpage-header; hxnormalize -xe -l 99999 xroar-man.html | hxpipe | $(HTML2MAN)) > $@
 
 xroar-man.pdf: xroar.1
 	groff -Tpdf -P-pa4 -t -mpdfmark -mandoc $< > $@

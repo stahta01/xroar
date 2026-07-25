@@ -432,7 +432,7 @@ CoCo 3, some other pattern that's not the usual copyright messages).  This
 probably indicates that XRoar could not locate any BASIC ROM images.  Acquire
 some and put them in the directory appropriate to your platform.
 
-@image{trouble-no-basic, 6.25in,, Dragon emulation with different ROMs available, png}
+@image{images/trouble-no-basic, 6.25in,, Dragon emulation with different ROMs available, png}
 
 @c
 
@@ -440,7 +440,7 @@ some and put them in the directory appropriate to your platform.
 
 You remember a program being in colour, but all you see is black and white.
 
-@image{trouble-cross-colour, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes, png}
+@image{images/trouble-cross-colour, 6.25in,, @cite{Time Bandit, Dunlevy & Lafnear, 1983} in different cross-colour modes, png}
 
 American software is often written to exploit cross-colour artefacts, where
 alternating patterns of black and white will ``trick'' the TV into displaying
@@ -478,7 +478,7 @@ command line options will be demonstrated.  For more detailed information on
 configuring XRoar through the command line or configuration file, see
 @ref{Configuring XRoar}.
 
-@image{menubar, 5.125in,, XRoar menubar, png}
+@image{images/menubar, 5.125in,, XRoar menubar, png}
 
 When you run XRoar, it will start emulating the default machine in a window
 with a menu bar above it.
@@ -505,7 +505,7 @@ configurable from the UI.  You have the most control by modifying this file.
 The @clicksequence{Hardware @click{} Machine} submenu allows you to select a
 different machine to emulate.  XRoar will hard reset the new machine.
 
-@image{hardware-machine, 5.3125in,, Machine menu, png}
+@image{images/hardware-machine, 5.3125in,, Machine menu, png}
 
 You can specify a default machine in @file{xroar.conf}:
 
@@ -527,7 +527,7 @@ reset the machine, but it is usually advisable to do so, either by selecting
 @clicksequence{Hardware @click{} Hard Reset} or by pressing
 @kbd{@key{CTRL}+@key{SHIFT}+R}.
 
-@image{hardware-cartridge, 5.625in,, Cartridge menu, png}
+@image{images/hardware-cartridge, 5.625in,, Cartridge menu, png}
 
 You can specify a default cartridge for a machine in @file{xroar.conf}:
 
@@ -554,7 +554,7 @@ to autorun a program, select @clicksequence{File @click{} Load} or press
 @kbd{@key{CTRL}+L}.  Alternatively, open one of the media control dialogs; see
 @ref{Cassette tape control} or @ref{Drive control}.
 
-@image{file-run, 3in,, File menu, png}
+@image{images/file-run, 3in,, File menu, png}
 
 From the command line, you can use @option{-load @var{file}} or @option{-run
 @var{file}} to achieve the same results.  You can even simply specify a
@@ -618,7 +618,7 @@ of, just the ones it knows how to automatically load programs from.
 @node Cassette tape control
 @section Cassette tape control
 
-@image{tape-input, 3.75in,, Cassette tape dialog, png}
+@image{images/tape-input, 3.75in,, Cassette tape dialog, png}
 
 Select @clicksequence{File @click{} Cassette tapes} or press @kbd{@key{CTRL}+T}
 to open the cassette tape control dialog.
@@ -666,7 +666,7 @@ Under Mac OS X+, most functionality is found in the @clicksequence{File
 @node Drive control
 @section Drive control
 
-@image{drive-control, 4.625in,, Floppy/hard disks dialog, png}
+@image{images/drive-control, 4.625in,, Floppy/hard disks dialog, png}
 
 Select @clicksequence{File @click{} Floppy/hard disks} or press
 @kbd{@key{CTRL}+D} to open the drive control dialog.
@@ -717,7 +717,7 @@ bit more explanation.
 @node TV input
 @subsection TV input
 
-@image{view-tv-input, 4.875in,, TV input, png}
+@image{images/view-tv-input, 4.875in,, TV input, png}
 
 The @clicksequence{TV input} menu lets you pick between various video signals
 from the emulated machine.  ``S-Video'' is basically a palette-based output,
@@ -733,7 +733,7 @@ random, so this lets you pick the ``other'' one if a title expects it.
 @node Composite rendering
 @subsection Composite rendering
 
-@image{view-composite-rendering, 4.75in,, Composite rendering, png}
+@image{images/view-composite-rendering, 4.75in,, Composite rendering, png}
 
 XRoar has a selection of composite renderers built in that trade off CPU time
 for accuracy in different ways to reproduce the artefacts of composite video.
@@ -772,7 +772,7 @@ It is also the most CPU-hungry.
 @node TV controls
 @subsection TV controls
 
-@image{tv-controls, 5.625in,, TV controls dialog, png}
+@image{images/tv-controls, 5.625in,, TV controls dialog, png}
 
 Select @clicksequence{View @click{} TV controls} or press
 @kbd{@key{CTRL}+@key{SHIFT}+V} to open the TV controls dialog.  The dialog is
@@ -879,7 +879,7 @@ XRoar queries your operating system for information about which symbol is on
 which key, but in case it gets it wrong, you can pick from several built-in
 languages using @clicksequence{Tool @click{} Keyboard language}.
 
-@image{tool-kbd-lang, 4.75in,, Keyboard language, png}
+@image{images/tool-kbd-lang, 4.75in,, Keyboard language, png}
 
 @c
 
@@ -887,7 +887,7 @@ languages using @clicksequence{Tool @click{} Keyboard language}.
 @node Printer control
 @section Printer control
 
-@image{printer-control, 2.5in,, Printer control dialog, png}
+@image{images/printer-control, 2.5in,, Printer control dialog, png}
 
 Select @clicksequence{File @click{} Printer control} or press
 @kbd{@key{CTRL}+P} to open the printer control dialog.
@@ -2004,7 +2004,7 @@ contains a comprehensive list of mappings.
 
 This diagram shows the controls that can be mapped:
 
-@image{gamepad, 4.75in,, Gamepad controls, png}
+@image{images/gamepad, 4.75in,, Gamepad controls, png}
 
 The short codes in this diagram correspond to these control names, used in SDL
 mapping database lines:
