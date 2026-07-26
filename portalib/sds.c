@@ -1133,7 +1133,10 @@ sds sdsjoin(char **argv, int argc, char *sep) {
     for (j = 0; j < argc; j++) {
         join = sdscat(join, argv[j]);
 	if (join == NULL) return NULL;
-        if (j != argc-1) join = sdscat(join,sep);
+        if (j != argc-1) {
+		join = sdscat(join,sep);
+		if (join == NULL) return NULL;
+	}
     }
     return join;
 }
