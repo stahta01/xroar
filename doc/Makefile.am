@@ -23,7 +23,9 @@ EXTRA_DIST += \
 	images/trouble-no-basic.png \
 	images/tv-controls.png \
 	images/view-composite-rendering.png \
-	images/view-tv-input.png
+	images/view-tv-input.png \
+	manpage-header \
+	xroar-man.html
 
 HTML2MAN = $(top_builddir)/tools/html2man.pl
 

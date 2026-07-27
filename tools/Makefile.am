@@ -14,6 +14,7 @@ font2c_SOURCES = font2c.c
 
 EXTRA_DIST += \
 	hkbd_lang_tables.pl \
+	html2man.pl \
 	keycodes/macintosh \
 	win2rc \
 	xkb_to_hk_scancode.pl
