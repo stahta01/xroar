@@ -23,6 +23,7 @@
 
 #include "delegate.h"
 
+#include "debug.h"
 #include "events.h"
 #include "part.h"
 
