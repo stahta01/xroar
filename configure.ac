@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([xroar],[1.12])
+AC_INIT([xroar],[1.13.0.dev])
 AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([yes])
 
