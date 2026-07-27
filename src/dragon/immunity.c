@@ -24,6 +24,7 @@
 
 #include "dragon/dragon.h"
 #include "dragon/immunity.h"
+#include "logging.h"
 #include "mc6809/mc6809.h"
 #include "mc6821.h"
 #include "mc6883.h"
@@ -70,12 +71,28 @@ static const struct partdb_entry_funcs immunity_funcs = {
 
 const struct partdb_entry immunity_part = { .name = "immunity", .description = "Jim Brain | iMMUnity", .funcs = &immunity_funcs };
 
+static const struct debug_feature immunity_feature;
+static const struct debug_feature *features[] = { &immunity_feature };
+static uint32_t immunity_get_register(void *sptr, int n);
+static void immunity_set_register(void *sptr, int n, uint32_t v);
+static int immunity_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
+static int immunity_set_register_composite(void *sptr, int n,
+					   unsigned ssize, const uint8_t *src);
+
 static struct part *immunity_allocate(void) {
 	struct immunity *cj = part_new(sizeof(*cj));
 	struct part *p = &cj->part;
 	*cj = (struct immunity){0};
 
 	cj->init0 = 0x80;
+
+	cj->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
+	cj->debug.part.feature = features;
+
+	cj->debug.part.get_register = DELEGATE_AS1(uint32, int, immunity_get_register, cj);
+	cj->debug.part.set_register = DELEGATE_AS2(void, int, uint32, immunity_set_register, cj);
+	cj->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, immunity_get_register_composite, cj);
+	cj->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, immunity_set_register_composite, cj);
 
 	return p;
 }
@@ -260,5 +277,138 @@ void immunity_cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 	// Ensure iMMUnity RAM is used for reads where appropriate
 	if (ignore_sam && RnW) {
 		md->CPU->D = data;
+	}
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// Combine INIT0 and INIT1 into a 16-bit register
+static const struct debug_feature_field feature_type_init_fields[] = {
+	{ .name = "PIN", .start = 11, .end = 11, .type = &debug_feature_type_uint8 },
+	{ .name = "MMUEN", .start = 14, .end = 14, .type = &debug_feature_type_uint8 },
+	{ .name = "ALTVEC", .start = 15, .end = 15, .type = &debug_feature_type_uint8 },
+
+	{ .name = "TR", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
+};
+
+static const struct debug_feature_type feature_type_init = {
+	.type = debug_feature_base_type_struct,
+	.id = "init",
+	.size = 2,
+	.as_struct = {
+		.nfields = ARRAY_N_ELEMENTS(feature_type_init_fields),
+		.field = feature_type_init_fields
+	}
+};
+
+static const struct debug_feature_type feature_type_page_bank = {
+	.type = debug_feature_base_type_vector,
+	.id = "page_bank",
+	.size = 8,
+	.as_vector = {
+		.nelems = 8,
+		.type = &debug_feature_type_uint8
+	}
+};
+
+static const struct debug_feature_type feature_type_page = {
+	.type = debug_feature_base_type_vector,
+	.id = "page",
+	.size = 16,
+	.as_vector = {
+		.nelems = 2,
+		.type = &feature_type_page_bank
+	}
+};
+
+static const struct debug_feature_type *immunity_feature_types[] = {
+	&feature_type_init,
+	&feature_type_page_bank,
+	&feature_type_page,
+};
+
+static const struct debug_feature_reg immunity_feature_regs[] = {
+	{ .name = "init", .bitsize = 16, .type = &feature_type_init, .group = "immunity" },
+	{ .name = "page", .bitsize = 128, .type = &feature_type_page, .group = "immunity" },
+};
+
+static const struct debug_feature immunity_feature = {
+	"uk.org.6809.gdb.immunity",
+	.ntypes = ARRAY_N_ELEMENTS(immunity_feature_types), .type = immunity_feature_types,
+	.nregs = ARRAY_N_ELEMENTS(immunity_feature_regs), .reg = immunity_feature_regs
+};
+
+static uint32_t immunity_get_register(void *sptr, int n) {
+	struct immunity *cj = sptr;
+
+	uint32_t v = (uint32_t)-1;
+
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("immunity", "invalid simple register read: %d\n", n);
+		break;
+
+	case 0:
+		// INIT (0+1 combined)
+		v = (cj->init0 << 8) | cj->init1;
+		break;
+	}
+
+	return v;
+}
+
+static void immunity_set_register(void *sptr, int n, uint32_t v) {
+	struct immunity *cj = sptr;
+
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("immunity", "invalid simple register write: %d\n", n);
+		exit(EXIT_FAILURE);
+
+	case 0:
+		// INIT (0+1 combined)
+		cj->init0 = (v >> 8) & 0xff;
+		cj->init1 = v & 0xff;
+		break;
+
+	}
+}
+
+static int immunity_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
+	struct immunity *cj = sptr;
+	// error out for any register where get_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("immunity", "invalid composite register read: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 1:
+		// PAGE
+		assert(dsize >= 16);
+		for (int i = 0; i < 2; ++i) {
+			for (int j = 0; j < 8; ++j) {
+				dest[i*8+j] = cj->dat[i][j];
+			}
+		}
+		return 16;
+	}
+}
+
+static int immunity_set_register_composite(void *sptr, int n,
+					   unsigned ssize, const uint8_t *src) {
+	struct immunity *cj = sptr;
+	// error out for any register where set_register() should have been called
+	switch (n) {
+	default:
+		LOG_MOD_ERROR("immunity", "invalid composite register write: %d\n", n);
+		exit(EXIT_FAILURE);
+	case 1:
+		// PAGE
+		assert(ssize >= 16);
+		for (int i = 0; i < 2; ++i) {
+			for (int j = 0; j < 8; ++j) {
+				cj->dat[i][j] = src[i*8+j];
+			}
+		}
+		return 16;
 	}
 }

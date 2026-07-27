@@ -418,6 +418,9 @@ bool dragon_finish_common(struct dragon *md) {
 		debug_target_add_part(m->debug.target, NULL, &md->SAM->debug.part);
 		debug_target_add_part(m->debug.target, "pia0", &md->PIA0->debug.part);
 		debug_target_add_part(m->debug.target, "pia1", &md->PIA1->debug.part);
+		if (md->immunity) {
+			debug_target_add_part(m->debug.target, NULL, &md->immunity->debug.part);
+		}
 	}
 	m->debug.target_xml = debug_target_xml(m->debug.target);
 #endif
