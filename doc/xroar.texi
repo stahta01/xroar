@@ -115,12 +115,12 @@ Changes in version 1.12 include:
 
 @itemize
 
-@item Monochrome display support, contribute by Erik Gavriluk.  Select from the
-TV Controls dialog, or with the @option{-vo-monochrome} options.
-@item XRoar will report CPU architecture and a list registers to GDB as a
-@emph{Target Description}.  With the @option{-gdb-pseudo-regs}, it will include
-extra state for the PIAs, SAM, SAMx8 or GIME for inspection or manipulation by
-GDB.  The 6803 CPU in the MC-10 is now also supported.
+@item Monochrome display support, contributed by Erik Gavriluk.  Select from the
+TV Controls dialog, or with the @option{-vo-monochrome} option.
+@item XRoar will report CPU architecture and a list of registers to GDB as a
+@emph{Target Description}.  With the @option{-gdb-pseudo-regs} option, it will
+include extra state for the PIAs, SAM, SAMx8 or GIME for inspection or
+manipulation by GDB.  The 6803 CPU in the MC-10 is now also supported.
 @item SDL 3 is supported.
 
 @end itemize
