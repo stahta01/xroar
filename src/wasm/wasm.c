@@ -1002,3 +1002,9 @@ void wasm_new_disk(int drive) {
 void wasm_vdrive_flush(void) {
 	vdrive_flush(xroar.vdrive_interface);
 }
+
+// Return package version
+
+char *wasm_package_version(void) {
+	return PACKAGE_VERSION;
+}
