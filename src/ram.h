@@ -2,7 +2,7 @@
  *
  *  \brief RAM.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -151,5 +151,7 @@ inline void ram_d16(struct ram *ram, bool RnW, unsigned bank,
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 unsigned ram_report(struct ram *ram, const char *par, const char *name);
+void ram_dump_bank(struct ram *ram, unsigned bank, FILE *fd);
+void ram_dump(struct ram *ram, FILE *fd);
 
 #endif

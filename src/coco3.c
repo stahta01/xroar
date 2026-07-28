@@ -1306,11 +1306,7 @@ static void coco3_op_rts(struct machine *m) {
 static void coco3_dump_ram(struct machine *m, FILE *fd) {
 	struct coco3 *mcc3 = (struct coco3 *)m;
 	struct ram *ram = mcc3->RAM;
-	for (unsigned bank = 0; bank < ram->nbanks; bank++) {
-		if (ram->d && ram->d[bank]) {
-			fwrite(ram->d[bank], ram->bank_nelems, 1, fd);
-		}
-	}
+	ram_dump(ram, fd);
 }
 
 static int32_t coco3_get_symbol(struct machine *m, const char *label) {

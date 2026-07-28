@@ -2,7 +2,7 @@
  *
  *  \brief RAM.
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ *  \copyright Copyright 2024-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -20,6 +20,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -365,4 +366,16 @@ unsigned ram_report(struct ram *ram, const char *par, const char *name) {
 	LOG_PAR_MOD_DEBUG(1, par, "ram", "%u bank%s * %uK = %uK %s\n", nbanks,
 			  (nbanks == 1) ? "" : "s", bank_k, k, name);
 	return k;
+}
+
+void ram_dump_bank(struct ram *ram, unsigned bank, FILE *fd) {
+	if (ram->d && ram->d[bank]) {
+		fwrite(ram->d[bank], ram->bank_nelems, 1, fd);
+	}
+}
+
+void ram_dump(struct ram *ram, FILE *fd) {
+	for (unsigned bank = 0; bank < ram->nbanks; bank++) {
+		ram_dump_bank(ram, bank, fd);
+	}
 }

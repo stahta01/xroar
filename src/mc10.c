@@ -856,18 +856,12 @@ static void mc10_op_rts(struct machine *m) {
 static void mc10_dump_ram(struct machine *m, FILE *fd) {
 	struct mc10 *mp = (struct mc10 *)m;
 	struct ram *ram0 = mp->RAM0;
-	for (unsigned bank = 0; bank < ram0->nbanks; bank++) {
-		if (ram0->d && ram0->d[bank]) {
-			fwrite(ram0->d[bank], ram0->bank_nelems, 1, fd);
-		}
-	}
+	ram_dump(ram0, fd);
 	struct ram *ram1 = mp->RAM1;
 	if (ram1) {
 		for (unsigned i = 0; i < ram1->nbanks; i++) {
 			unsigned bank = (i + 1) & 3;
-			if (ram1->d && ram1->d[bank]) {
-				fwrite(ram1->d[bank], ram1->bank_nelems, 1, fd);
-			}
+			ram_dump_bank(ram1, bank, fd);
 		}
 	}
 }
