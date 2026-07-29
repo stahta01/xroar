@@ -588,7 +588,7 @@ static ssize_t read_packet(struct gdb_interface_private *gip, void *buf, size_t 
 
 static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, size_t count) {
 	const char *cbuf = buf;
-	char tmpbuf[16];
+	char tmpbuf[4];
 	uint8_t csum = 0;
 
 	// Apply Linux write() limit
@@ -604,7 +604,6 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 		return -GDBE_WRITE_ERROR;
 	}
 
-	size_t j = 0;
 	for (size_t i = 0; i < count; ++i) {
 		csum += cbuf[i];
 		switch (cbuf[i]) {
@@ -612,19 +611,19 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 		case '$':
 		case 0x7d:
 		case '*':
-			tmpbuf[j++] = 0x7d;
-			tmpbuf[j++] = cbuf[i] ^ 0x20;
-			break;
-		default:
-			tmpbuf[j++] = cbuf[i];
-			break;
-		}
-		if (i == (count - 1) || j >= (sizeof(tmpbuf) - 1)) {
-			if (send(gip->sockfd, tmpbuf, j, 0) < 0) {
+			tmpbuf[0] = 0x7d;
+			tmpbuf[1] = cbuf[i] ^ 0x20;
+			if (send(gip->sockfd, tmpbuf, 2, 0) < 0) {
 				set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 				return -GDBE_WRITE_ERROR;
 			}
-			j = 0;
+			break;
+		default:
+			if (send(gip->sockfd, &cbuf[i], 1, 0) < 0) {
+				set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
+				return -GDBE_WRITE_ERROR;
+			}
+			break;
 		}
 	}
 	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", (unsigned)csum);
