@@ -166,6 +166,8 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 
 	gip->machine = m;
 	gip->run_state = gdb_run_state_running;
+	gip->listenfd = -1;
+	gip->sockfd = -1;
 
 	struct addrinfo hints;
 	if (!hostname)
@@ -214,7 +216,7 @@ struct gdb_interface *gdb_interface_new(const char *hostname, const char *portna
 	return (struct gdb_interface *)gip;
 
 failed:
-	if (gip->listenfd != -1) {
+	if (gip->listenfd >= 0) {
 		close(gip->listenfd);
 	}
 	if (gip->info) {
@@ -228,13 +230,14 @@ void gdb_interface_free(struct gdb_interface *gi) {
 	struct gdb_interface_private *gip = (struct gdb_interface_private *)gi;
 	pthread_cancel(gip->sock_thread);
 	pthread_join(gip->sock_thread, NULL);
+	if (gip->sockfd >= 0)
+		close(gip->sockfd);
 	if (gip->info)
 		freeaddrinfo(gip->info);
 	pthread_mutex_destroy(&gip->run_state_mt);
 	pthread_cond_destroy(&gip->run_state_cv);
-	if (gip->listenfd != -1) {
+	if (gip->listenfd >= 0)
 		close(gip->listenfd);
-	}
 	free(gip);
 }
 
@@ -462,6 +465,7 @@ static void *handle_tcp_sock(void *sptr) {
 			}
 		}
 		close(gip->sockfd);
+		gip->sockfd = -1;
 		gdb_continue(gip);
 		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection closed\n");
 	}
