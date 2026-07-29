@@ -474,6 +474,9 @@ Port for GDB target to listen on \[lB]65520\[rB]
 \f(CB\-gdb\-pseudo\-regs\fR
 Enable pseudo-registers (e.g. SAM, PIA) for GDB.
 .TP
+\f(CB\-gdb\-flags\-as\-struct\fR
+Describe CPU flags as a struct to GDB.
+.TP
 \f(CB\-no\-ratelimit\fR
 Run CPU as fast as possible.
 .TP

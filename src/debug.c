@@ -29,6 +29,7 @@
 
 #include "debug.h"
 #include "logging.h"
+#include "xroar.h"
 
 // Some built-in composite types used in target descriptions
 
@@ -119,6 +120,7 @@ void debug_target_add_part(struct debug_target *target, const char *name,
 
 static sds debug_add_type_xml(sds xml, const struct debug_feature_type *type) {
 	const char *typestr = NULL;
+	bool flags_to_struct = 0;
 	switch (type->type) {
 	case debug_feature_base_type_uint:
 		return xml;
@@ -130,7 +132,8 @@ static sds debug_add_type_xml(sds xml, const struct debug_feature_type *type) {
 		}
 		return sdscatprintf(xml, "/>");
 	case debug_feature_base_type_flags:
-		typestr = "flags";
+		flags_to_struct = xroar.cfg.debug.gdb_flags_as_struct;
+		typestr = flags_to_struct ? "struct" : "flags";
 		break;
 	case debug_feature_base_type_struct:
 		typestr = "struct";
@@ -149,6 +152,10 @@ static sds debug_add_type_xml(sds xml, const struct debug_feature_type *type) {
 				   type->as_struct.field[i].start,
 				   type->as_struct.field[i].end);
 		const struct debug_feature_type *ttype = type->as_struct.field[i].type;
+		unsigned bitsize = type->as_struct.field[i].end - type->as_struct.field[i].start;
+		if (flags_to_struct && !ttype && bitsize < 8) {
+			ttype = &debug_feature_type_uint8;
+		}
 		if (ttype && ttype->id) {
 			xml = sdscatprintf(xml, " type=\"%s\"", ttype->id);
 		}

@@ -2251,6 +2251,8 @@ give plenty of headroom (at the expense of a quieter overall sound).
 @item @option{-gdb-pseudo-regs}
 @tab Report an extended set of pseudo-registers to GDB, allowing inspection of
 SAM, PIA or GIME state.
+@item @option{-gdb-flags-as-struct}
+@tab Describe CPU flags as a struct to GDB.
 
 @item @option{-trace}
 @tab Start with trace mode on.  @kbd{@key{CTRL}+V} toggles.
