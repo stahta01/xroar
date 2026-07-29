@@ -128,9 +128,11 @@ struct debug_part {
 	DELEGATE_T1(uint32, int) get_register;  // regno, -> value
 	DELEGATE_T2(void, int, uint32) set_register;  // regno, value
 
+#ifdef WANT_GDB_TARGET
 	// Get/set composite registers; r, buffer_size, buffer
 	DELEGATE_T3(int, int, unsigned, uint8p) get_register_composite;
 	DELEGATE_T3(int, int, unsigned, cuint8p) set_register_composite;
+#endif
 };
 
 // A machine will create a debug target based on the primary architecture
@@ -199,11 +201,13 @@ uint32_t debug_get_register(struct debug_target *target, int regno);
 
 void debug_set_register(struct debug_target *target, int regno, uint32_t value);
 
+#ifdef WANT_GDB_TARGET
 int debug_get_register_composite(struct debug_target *target, int regno,
 				 unsigned nbytes, uint8_t *buf);
 
 int debug_set_register_composite(struct debug_target *target, int regno,
 				 unsigned nbytes, const uint8_t *buf);
+#endif
 
 #endif
 

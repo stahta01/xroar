@@ -244,6 +244,8 @@ void debug_set_register(struct debug_target *target, int regno, uint32_t value) 
 	DELEGATE_CALL(part->set_register, regno, value);
 }
 
+#ifdef WANT_GDB_TARGET
+
 static int value_to_buf(enum debug_endian endian, unsigned vsize, uint32_t value,
 			size_t dsize, uint8_t *dst) {
 	if (vsize > 4)
@@ -327,3 +329,5 @@ int debug_set_register_composite(struct debug_target *target, int regno,
 		DELEGATE_CALL(dpart->set_register, reg_num, value);
 	return n;
 }
+
+#endif

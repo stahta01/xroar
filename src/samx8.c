@@ -239,8 +239,10 @@ static const struct debug_feature samx8_feature;
 static const struct debug_feature *features[] = { &samx8_feature };
 static uint32_t samx8_get_register(void *sptr, int n);
 static void samx8_set_register(void *sptr, int n, uint32_t v);
+#ifdef WANT_GDB_TARGET
 static int samx8_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
 static int samx8_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src);
+#endif
 
 static struct part *samx8_allocate(void) {
 	struct SAMx8_private *sam = part_new(sizeof(*sam));
@@ -263,8 +265,10 @@ static struct part *samx8_allocate(void) {
 	samp->debug.part.feature = features;
 	samp->debug.part.get_register = DELEGATE_AS1(uint32, int, samx8_get_register, sam);
 	samp->debug.part.set_register = DELEGATE_AS2(void, int, uint32, samx8_set_register, sam);
+#ifdef WANT_GDB_TARGET
 	samp->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, samx8_get_register_composite, sam);
 	samp->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, samx8_set_register_composite, sam);
+#endif
 
 	// Set up VDG address divider sources.  Set initial Vprev=7 so that first
 	// call to reset() changes them.
@@ -844,6 +848,8 @@ static void samx8_set_register(void *sptr, int n, uint32_t v) {
 	}
 }
 
+#ifdef WANT_GDB_TARGET
+
 static int samx8_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
 	struct SAMx8_private *sam = sptr;
 	// error out for any register where get_register() should have been called
@@ -877,3 +883,5 @@ static int samx8_set_register_composite(void *sptr, int n, unsigned ssize, const
 		return 8;
 	}
 }
+
+#endif

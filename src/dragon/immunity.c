@@ -75,9 +75,11 @@ static const struct debug_feature immunity_feature;
 static const struct debug_feature *features[] = { &immunity_feature };
 static uint32_t immunity_get_register(void *sptr, int n);
 static void immunity_set_register(void *sptr, int n, uint32_t v);
+#ifdef WANT_GDB_TARGET
 static int immunity_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
 static int immunity_set_register_composite(void *sptr, int n,
 					   unsigned ssize, const uint8_t *src);
+#endif
 
 static struct part *immunity_allocate(void) {
 	struct immunity *cj = part_new(sizeof(*cj));
@@ -91,8 +93,10 @@ static struct part *immunity_allocate(void) {
 
 	cj->debug.part.get_register = DELEGATE_AS1(uint32, int, immunity_get_register, cj);
 	cj->debug.part.set_register = DELEGATE_AS2(void, int, uint32, immunity_set_register, cj);
+#ifdef WANT_GDB_TARGET
 	cj->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, immunity_get_register_composite, cj);
 	cj->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, immunity_set_register_composite, cj);
+#endif
 
 	return p;
 }
@@ -374,6 +378,8 @@ static void immunity_set_register(void *sptr, int n, uint32_t v) {
 	}
 }
 
+#ifdef WANT_GDB_TARGET
+
 static int immunity_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
 	struct immunity *cj = sptr;
 	// error out for any register where get_register() should have been called
@@ -412,3 +418,5 @@ static int immunity_set_register_composite(void *sptr, int n,
 		return 16;
 	}
 }
+
+#endif

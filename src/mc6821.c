@@ -101,8 +101,10 @@ const struct partdb_entry mc6821_part = { .name = "MC6821", .description = "Moto
 
 static const struct debug_feature mc6821_feature;
 static const struct debug_feature *features[] = { &mc6821_feature };
+#ifdef WANT_GDB_TARGET
 static int mc6821_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
 static int mc6821_set_register_composite(void *sptr, int n, unsigned ssize, const uint8_t *src);
+#endif
 
 static struct part *mc6821_allocate(void) {
 	struct MC6821 *pia = part_new(sizeof(*pia));
@@ -123,8 +125,10 @@ static struct part *mc6821_allocate(void) {
 
 	pia->debug.part.nfeatures = ARRAY_N_ELEMENTS(features);
 	pia->debug.part.feature = features;
+#ifdef WANT_GDB_TARGET
 	pia->debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, mc6821_get_register_composite, pia);
 	pia->debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, mc6821_set_register_composite, pia);
+#endif
 
 
 	return p;
@@ -474,6 +478,8 @@ static const struct debug_feature mc6821_feature = {
 	.nregs = ARRAY_N_ELEMENTS(feature_regs), .reg = feature_regs
 };
 
+#ifdef WANT_GDB_TARGET
+
 static int mc6821_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
 	struct MC6821 *pia = sptr;
 	// error out for any register where get_register() should have been called
@@ -513,3 +519,5 @@ static int mc6821_set_register_composite(void *sptr, int n, unsigned ssize, cons
 		return 6;
 	}
 }
+
+#endif

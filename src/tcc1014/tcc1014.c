@@ -557,9 +557,11 @@ static const struct debug_feature tcc1014_feature;
 static const struct debug_feature *features[] = { &tcc1014_feature };
 static uint32_t tcc1014_get_register(void *sptr, int n);
 static void tcc1014_set_register(void *sptr, int n, uint32_t v);
+#ifdef WANT_GDB_TARGET
 static int tcc1014_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest);
 static int tcc1014_set_register_composite(void *sptr, int n, unsigned ssize,
 					  const uint8_t *src);
+#endif
 
 static struct part *tcc1014_allocate(void) {
 	struct TCC1014_private *gime = part_new(sizeof(*gime));
@@ -583,8 +585,10 @@ static struct part *tcc1014_allocate(void) {
 	gime->public.debug.part.feature = features;
 	gime->public.debug.part.get_register = DELEGATE_AS1(uint32, int, tcc1014_get_register, gime);
 	gime->public.debug.part.set_register = DELEGATE_AS2(void, int, uint32, tcc1014_set_register, gime);
+#ifdef WANT_GDB_TARGET
 	gime->public.debug.part.get_register_composite = DELEGATE_AS3(int, int, unsigned, uint8p, tcc1014_get_register_composite, gime);
 	gime->public.debug.part.set_register_composite = DELEGATE_AS3(int, int, unsigned, cuint8p, tcc1014_set_register_composite, gime);
+#endif
 
 	return p;
 }
@@ -1900,6 +1904,8 @@ static void tcc1014_set_register(void *sptr, int n, uint32_t v) {
 	}
 }
 
+#ifdef WANT_GDB_TARGET
+
 static int tcc1014_get_register_composite(void *sptr, int n, unsigned dsize, uint8_t *dest) {
 	struct TCC1014_private *gime = sptr;
 
@@ -1956,3 +1962,5 @@ static int tcc1014_set_register_composite(void *sptr, int n, unsigned ssize,
 
 	}
 }
+
+#endif
