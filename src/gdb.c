@@ -318,6 +318,13 @@ static void gdb_continue(struct gdb_interface_private *gip) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// We turn TCP_NODELAY OFF during send_packet() and send_memory() for efficient
+// buffering, and turn it back ON once done, which will flush said buffer.
+
+static void set_tcp_nodelay(int sockfd, int enabled) {
+	setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&enabled, sizeof(enabled));
+}
+
 static void *handle_tcp_sock(void *sptr) {
 	struct gdb_interface_private *gip = sptr;
 
@@ -350,10 +357,7 @@ static void *handle_tcp_sock(void *sptr) {
 			LOG_MOD_WARN("gdb", "accept() failed\n");
 			continue;
 		}
-		{
-			int flag = 1;
-			setsockopt(gip->sockfd, IPPROTO_TCP, TCP_NODELAY, (void const *)&flag, sizeof(flag));
-		}
+		set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 		LOG_MOD_DEBUG_GDB(LOG_GDB_CONNECT, "gdb", "connection accepted\n");
 
 		gip->no_ack_mode = 0;
@@ -592,8 +596,11 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 		count = 0x7ffff000;
 	}
 
+	set_tcp_nodelay(gip->sockfd, 0);  // Nagle's ON
+
 	tmpbuf[0] = '$';
 	if (send(gip->sockfd, tmpbuf, 1, 0) < 0) {
+		set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 		return -GDBE_WRITE_ERROR;
 	}
 
@@ -614,6 +621,7 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 		}
 		if (i == (count - 1) || j >= (sizeof(tmpbuf) - 1)) {
 			if (send(gip->sockfd, tmpbuf, j, 0) < 0) {
+				set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 				return -GDBE_WRITE_ERROR;
 			}
 			j = 0;
@@ -621,6 +629,7 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 	}
 	snprintf(tmpbuf, sizeof(tmpbuf), "#%02x", (unsigned)csum);
 	if (send(gip->sockfd, tmpbuf, 3, 0) < 0) {
+		set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 		return -GDBE_WRITE_ERROR;
 	}
 	// the reply ("+" or "-") will be discarded by the next read_packet
@@ -636,6 +645,7 @@ static ssize_t send_packet(struct gdb_interface_private *gip, const void *buf, s
 		}
 		LOG_PRINT("\n");
 	}
+	set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 
 	return count;
 }
@@ -719,19 +729,27 @@ static void send_memory(struct gdb_interface_private *gip, char *args) {
 	unsigned length = strtoul(args, NULL, 16);
 	uint8_t csum = 0;
 	packet[0] = '$';
-	if (send(gip->sockfd, packet, 1, 0) < 0)
+	set_tcp_nodelay(gip->sockfd, 0);  // Nagle's ON
+	if (send(gip->sockfd, packet, 1, 0) < 0) {
+		set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 		return;
+	}
 	for (unsigned i = 0; i < length; i++) {
 		uint8_t b = gip->machine->read_byte(gip->machine, A++, 0);
 		snprintf((char *)packet, sizeof(packet), "%02x", b);
 		csum += packet[0];
 		csum += packet[1];
-		if (send(gip->sockfd, packet, 2, 0) < 0)
+		if (send(gip->sockfd, packet, 2, 0) < 0) {
+			set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 			return;
+		}
 	}
 	snprintf((char *)packet, sizeof(packet), "#%02x", csum);
-	if (send(gip->sockfd, packet, 3, 0) < 0)
+	if (send(gip->sockfd, packet, 3, 0) < 0) {
+		set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 		return;
+	}
+	set_tcp_nodelay(gip->sockfd, 1);  // Nagle's OFF
 	// the ACK ("+") or NAK ("-") will be discarded by the next read_packet
 	LOG_MOD_DEBUG_GDB(LOG_GDB_PACKET, "gdb", "packet sent (binary): %u bytes\n", length);
 }
