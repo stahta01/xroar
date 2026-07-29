@@ -2196,14 +2196,14 @@ static void instruction_posthook(struct MC6809 *cpu) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct debug_feature_field feature_type_md_flags_fields[] = {
-	{ .name = "NM", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
-	{ .name = "FM", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
-	{ .name = "IL", .start = 6, .end = 6, .type = &debug_feature_type_uint8 },
 	{ .name = "D0", .start = 7, .end = 7, .type = &debug_feature_type_uint8 },
+	{ .name = "IL", .start = 6, .end = 6, .type = &debug_feature_type_uint8 },
+	{ .name = "FM", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
+	{ .name = "NM", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
 };
 
 static const struct debug_feature_type feature_type_md_flags = {
-	.type = debug_feature_base_type_struct,
+	.type = debug_feature_base_type_flags,
 	.id = "md_flags",
 	.size = 1,
 	.as_struct = {

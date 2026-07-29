@@ -1384,16 +1384,16 @@ static void instruction_posthook(struct MC6801 *cpu) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct debug_feature_field feature_type_cc_flags_fields[] = {
-	{ .name = "C", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
-	{ .name = "V", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
-	{ .name = "Z", .start = 2, .end = 2, .type = &debug_feature_type_uint8 },
-	{ .name = "N", .start = 3, .end = 3, .type = &debug_feature_type_uint8 },
-	{ .name = "I", .start = 4, .end = 4, .type = &debug_feature_type_uint8 },
 	{ .name = "H", .start = 5, .end = 5, .type = &debug_feature_type_uint8 },
+	{ .name = "I", .start = 4, .end = 4, .type = &debug_feature_type_uint8 },
+	{ .name = "N", .start = 3, .end = 3, .type = &debug_feature_type_uint8 },
+	{ .name = "Z", .start = 2, .end = 2, .type = &debug_feature_type_uint8 },
+	{ .name = "V", .start = 1, .end = 1, .type = &debug_feature_type_uint8 },
+	{ .name = "C", .start = 0, .end = 0, .type = &debug_feature_type_uint8 },
 };
 
 static const struct debug_feature_type feature_type_cc_flags = {
-	.type = debug_feature_base_type_struct,
+	.type = debug_feature_base_type_flags,
 	.id = "cc_flags",
 	.size = 1,
 	.as_struct = {
