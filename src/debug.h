@@ -174,7 +174,9 @@ void debug_target_add_part(struct debug_target *target, const char *name,
 
 // Generate an XML target description for GDB.
 
+#ifdef WANT_GDB_TARGET
 sds debug_target_xml(struct debug_target *target);
+#endif
 
 int debug_register_by_name(struct debug_target *target, const char *name);
 

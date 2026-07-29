@@ -116,6 +116,8 @@ void debug_target_add_part(struct debug_target *target, const char *name,
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+#ifdef WANT_GDB_TARGET
+
 // Helper to add a composite type definition to a target description
 
 static sds debug_add_type_xml(sds xml, const struct debug_feature_type *type) {
@@ -212,6 +214,8 @@ sds debug_target_xml(struct debug_target *target) {
 
 	return sdscatprintf(xml, "</target>");
 }
+
+#endif
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
