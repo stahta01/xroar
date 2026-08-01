@@ -610,6 +610,10 @@ static char const * const default_config[] = {
 	"cart-becker",
 #ifndef HAVE_WASM
 #ifdef WANT_EXPERIMENTAL
+	// CoCoSDC cartridge
+	"cart cocosdc",
+	"cart-desc 'CoCoSDC'",
+	"cart-type cocosdc",
 	// Ikon Ultra Drive cartridge
 	"cart ikon",
 	"cart-desc 'Ikon Ultra Drive cartridge'",
