@@ -706,7 +706,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned data;
 				data = byte_immediate(cpu);
 				REG_CC |= data;
-				peek_byte(cpu, REG_PC);
+				if (!NATIVE_MODE)
+					peek_byte(cpu, REG_PC);
 			} break;
 
 			// 0x1c ANDCC immediate
@@ -714,7 +715,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				unsigned data;
 				data = byte_immediate(cpu);
 				REG_CC &= data;
-				peek_byte(cpu, REG_PC);
+				if (!NATIVE_MODE)
+					peek_byte(cpu, REG_PC);
 			} break;
 
 			// 0x1d SEX inherent
