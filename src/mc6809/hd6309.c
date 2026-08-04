@@ -641,7 +641,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 				continue;
 
 			// 0x12 NOP inherent
-			case 0x12: peek_byte(cpu, REG_PC); break;
+			case 0x12:
+				if (!NATIVE_MODE)
+					peek_byte(cpu, REG_PC);
+				break;
 
 			// 0x13 SYNC inherent
 			// TODO: "There appears to be a bug with SYNC in native
@@ -694,7 +697,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 				// TODO: behaviour for illegal input differs on
 				// the 6309 [hoglet67]
 				REG_A = op_daa(cpu, REG_A);
-				peek_byte(cpu, REG_PC);
+				if (!NATIVE_MODE)
+					peek_byte(cpu, REG_PC);
 				break;
 
 			// 0x1a ORCC immediate
@@ -955,7 +959,8 @@ static void hd6309_run(struct MC6809 *cpu) {
 
 			// 0x39 RTS inherent
 			case 0x39:
-				peek_byte(cpu, REG_PC);
+				if (!NATIVE_MODE)
+					peek_byte(cpu, REG_PC);
 				REG_PC = pull_s_word(cpu);
 				NVMA_CYCLE;
 				break;
@@ -963,9 +968,10 @@ static void hd6309_run(struct MC6809 *cpu) {
 			// 0x3a ABX inherent
 			case 0x3a:
 				REG_X += REG_B;
-				peek_byte(cpu, REG_PC);
-				if (!NATIVE_MODE)
+				if (!NATIVE_MODE) {
+					peek_byte(cpu, REG_PC);
 					NVMA_CYCLE;
+				}
 				break;
 
 			// 0x3b RTI inherent
