@@ -2,6 +2,10 @@
  * Include SAMx8 / iMMUnity in RAM dumps
  * Represent CPU CC registers to GDB as flags, not structs
  * New option -gdb-flags-as-struct
+ * RAM dumps now include SAMx8/iMMUnity connected RAM [Pere Serrat]
+ * 6309 timing fixes [by Erik Gavriluk]
+ * FDC floppy disk sector reporting to UI [with Mauricio Matte]
+ * Shutdown cleanly on SIGTERM, SIGINT [Erik Gavriluk]
 
 Version 1.12, Mon 27 Jul 2026
 
