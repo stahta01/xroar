@@ -250,7 +250,7 @@ end table
 
 pad=2 nop
 
-id=DRIVE_CYL_HEAD align=centre text Dr ? Tr ?? He ?
+id=DRIVE_CYL_HEAD align=centre text Dr ? Tr ?? He ? Se   ?
 
 pad=2 nop
 
