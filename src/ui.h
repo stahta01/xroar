@@ -373,6 +373,14 @@ enum ui_tag {
 	ui_tag_config_autosave,
 	// Whether configuration is automatically saved on exit.
 
+	ui_tag_fdc_status,
+	// data  = (const struct wd279x_status *) describing current floppy
+	// disk controller activity: whether a sector read or write is in
+	// progress, and the track/sector/side it applies to.
+	//
+	// Originated in wd279x.c, not a request.  Intended to drive a disk
+	// activity indicator ("LED") and a track/sector readout.
+
 	ui_num_tags
 };
 

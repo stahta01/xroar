@@ -46,6 +46,7 @@
 #include "romlist.h"
 #include "vdisk.h"
 #include "vdrive.h"
+#include "wd279x.h"
 #include "xconfig.h"
 #include "xroar.h"
 
@@ -109,6 +110,7 @@ static void *ui_wasm_new(void *cfg) {
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_tape_playing, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_data, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
+	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_fdc_status, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_fullscreen, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
 	ui_messenger_join_group(uiwasm->msgr_client_id, ui_tag_cmp_fs, MESSENGER_NOTIFY_DELEGATE(wasm_ui_state_notify, uiwasm));
@@ -314,6 +316,25 @@ static void wasm_ui_state_notify(void *sptr, int tag, void *smsg) {
 			char string[16];
 			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
 			EM_ASM_({ ui_set_html($0, $1); }, "drive_info", string);
+			// Also report the drive separately, so a status bar can
+			// combine it with the sector from ui_tag_fdc_status.
+			// Guarded: older host pages do not define this.
+			EM_ASM_({
+				if (typeof ui_fdc_drive === 'function')
+					ui_fdc_drive($0, $1, $2);
+			}, vi->drive, c, h);
+		}
+		break;
+
+	case ui_tag_fdc_status:
+		{
+			const struct wd279x_status *st = data;
+			// Guarded: a host page that predates the status bar
+			// simply ignores this, rather than throwing.
+			EM_ASM_({
+				if (typeof ui_fdc_status === 'function')
+					ui_fdc_status($0, $1, $2, $3);
+			}, st->active, st->track, st->sector, st->side);
 		}
 		break;
 

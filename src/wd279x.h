@@ -131,6 +131,21 @@ struct WD279X {
 	struct log_handle *log_wtrk_hex;
 };
 
+// Reported to the UI (ui_tag_fdc_status) so it can show a disk activity
+// indicator and a track/sector readout.  'active' is one of:
+
+#define WD279X_ACTIVITY_IDLE  (0)
+#define WD279X_ACTIVITY_READ  (1)
+#define WD279X_ACTIVITY_WRITE (2)
+#define WD279X_ACTIVITY_SEEK  (3)
+
+struct wd279x_status {
+	unsigned active;
+	unsigned track;
+	unsigned sector;
+	unsigned side;
+};
+
 void wd279x_reset(struct WD279X *fdc);
 void wd279x_disconnect(struct WD279X *fdc);
 
