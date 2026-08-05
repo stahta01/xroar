@@ -24,6 +24,12 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include <glib.h>
+#ifdef G_OS_UNIX
+#include <signal.h>
+#include <glib-unix.h>
+#endif
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gtk/gtk.h>
@@ -87,6 +93,10 @@ struct ui_module ui_gtk2_module = {
 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+#ifdef G_OS_UNIX
+static gboolean handle_os_signal(gpointer sptr);
+#endif
 
 // Dynamic menus
 
@@ -306,6 +316,11 @@ static void *ui_gtk2_new(void *cfg) {
 	struct ui_gtk2_interface *uigtk2 = g_malloc(sizeof(*uigtk2));
 	*uigtk2 = (struct ui_gtk2_interface){0};
 	struct ui_interface *ui = &uigtk2->public;
+
+#ifdef G_OS_UNIX
+	g_unix_signal_add(SIGHUP, (GSourceFunc)handle_os_signal, uigtk2);
+	g_unix_signal_add(SIGINT, (GSourceFunc)handle_os_signal, uigtk2);
+#endif
 
 	uigtk2->builder = gtk_builder_new();
 	uigtk2_add_from_resource(uigtk2, "/uk/org/6809/xroar/gtk2/application.ui");
@@ -751,6 +766,16 @@ static void gtk2_update_joystick_menus(void *sptr) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // Callbacks
+
+// Signal handler
+
+#ifdef G_OS_UNIX
+static gboolean handle_os_signal(gpointer sptr) {
+	(void)sptr;
+	xroar_shutdown();
+	return 0;
+}
+#endif
 
 // File menu callbacks
 
