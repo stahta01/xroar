@@ -32,6 +32,7 @@
 #include "ui.h"
 #include "vdisk.h"
 #include "vdrive.h"
+#include "wd279x.h"
 #include "xroar.h"
 
 #include "gtk2/common.h"
@@ -109,6 +110,8 @@ static void dc_hd_attach(GtkButton *, gpointer user_data);
 static void dc_hd_new(GtkButton *, gpointer user_data);
 static void dc_hd_detach(GtkButton *, gpointer user_data);
 
+static void gtk2_update_drive_info(struct ui_gtk2_interface *uigtk2);
+
 // UI message reception
 
 static void dc_ui_state_notify(void *sptr, int tag, void *smsg);
@@ -125,6 +128,7 @@ struct uigtk2_dialog *gtk2_dc_dialog_new(struct ui_gtk2_interface *uigtk2) {
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_enable, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_write_back, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_disk_drive_info, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
+	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_fdc_status, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
 	ui_messenger_join_group(dlg->msgr_client_id, ui_tag_hd_filename, MESSENGER_NOTIFY_DELEGATE(dc_ui_state_notify, uigtk2));
 
 	// Connect signals
@@ -192,14 +196,21 @@ static void dc_ui_state_notify(void *sptr, int tag, void *smsg) {
 	case ui_tag_disk_drive_info:
 		{
 			const struct vdrive_info *vi = data;
-			unsigned d = vi->drive + 1;
-			unsigned c = vi->cylinder;
-			unsigned h = vi->head;
-			char string[16];
-			snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u", d, c, h);
-			uigtk2_label_set_text(uigtk2, "drive_cyl_head", string);
+			uigtk2->floppy.drive = vi->drive;
+			uigtk2->floppy.cylinder = vi->cylinder;
+			uigtk2->floppy.head = vi->head;
+			gtk2_update_drive_info(uigtk2);
 		}
 		break;
+
+	case ui_tag_fdc_status:
+		{
+			const struct wd279x_status *st = data;
+			uigtk2->floppy.sector = st->sector;
+			gtk2_update_drive_info(uigtk2);
+		}
+		break;
+
 
 	case ui_tag_hd_filename:
 		if (value >= 0 && value <= 1) {
@@ -370,4 +381,16 @@ static void dc_hd_detach(GtkButton *button, gpointer user_data) {
 	int hd = hi->hd;
 	(void)button;
 	xroar_insert_hd_file(hd, NULL);
+}
+
+// Helpers
+
+static void gtk2_update_drive_info(struct ui_gtk2_interface *uigtk2) {
+	unsigned d = uigtk2->floppy.drive + 1;
+	unsigned c = uigtk2->floppy.cylinder;
+	unsigned h = uigtk2->floppy.head;
+	unsigned s = uigtk2->floppy.sector;
+	char string[23];
+	snprintf(string, sizeof(string), "Dr %01u Tr %02u He %01u Se %3u", d, c, h, s);
+	uigtk2_label_set_text(uigtk2, "drive_cyl_head", string);
 }
