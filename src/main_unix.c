@@ -60,9 +60,11 @@ static void handle_signal(int sig) {
 		shutdown = 1;
 		break;
 
+#ifdef SIGHUP
 	case SIGHUP:
 		signal(SIGHUP, handle_signal);
 		break;
+#endif
 
 	default:
 		break;
@@ -107,7 +109,9 @@ int main(int argc, char **argv) {
 		// Intercept signals to shutdown emulator
 		signal(SIGTERM, handle_signal);
 		signal(SIGINT, handle_signal);
+#ifdef SIGHUP
 		signal(SIGHUP, handle_signal);
+#endif
 #endif
 		while (!shutdown) {
 			xroar_run(EVENT_MS(10));
