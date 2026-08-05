@@ -33,7 +33,7 @@ AC_CHECK_TOOL(RC, windres, :)
 # Checks for libraries.
 
 # Checks for header files.
-AC_CHECK_HEADERS([endian.h regex.h])
+AC_CHECK_HEADERS([endian.h regex.h signal.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT16_T
