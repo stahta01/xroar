@@ -625,7 +625,7 @@
           <object class="GtkLabel" id="drive_cyl_head">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="label" translatable="yes">Dr ? Tr ?? He ?</property>
+            <property name="label" translatable="yes">Dr ? Tr ?? He ? Se   ?</property>
           </object>
           <packing>
             <property name="expand">False</property>
