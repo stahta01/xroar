@@ -24,10 +24,13 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#ifdef HAVE_SIGNAL_H
 #include <glib.h>
-#ifdef G_OS_UNIX
 #include <signal.h>
+#ifdef G_OS_UNIX
 #include <glib-unix.h>
+#define USE_SIGNAL_HANDLER
+#endif
 #endif
 
 #pragma GCC diagnostic push
@@ -94,7 +97,7 @@ struct ui_module ui_gtk2_module = {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#ifdef G_OS_UNIX
+#ifdef USE_SIGNAL_HANDLER
 static gboolean handle_os_signal(gpointer sptr);
 #endif
 
@@ -317,7 +320,7 @@ static void *ui_gtk2_new(void *cfg) {
 	*uigtk2 = (struct ui_gtk2_interface){0};
 	struct ui_interface *ui = &uigtk2->public;
 
-#ifdef G_OS_UNIX
+#ifdef USE_SIGNAL_HANDLER
 	g_unix_signal_add(SIGHUP, (GSourceFunc)handle_os_signal, uigtk2);
 	g_unix_signal_add(SIGINT, (GSourceFunc)handle_os_signal, uigtk2);
 #endif
@@ -769,7 +772,7 @@ static void gtk2_update_joystick_menus(void *sptr) {
 
 // Signal handler
 
-#ifdef G_OS_UNIX
+#ifdef USE_SIGNAL_HANDLER
 static gboolean handle_os_signal(gpointer sptr) {
 	(void)sptr;
 	xroar_shutdown();
