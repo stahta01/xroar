@@ -278,13 +278,13 @@ endif
 if GTK3
 xroar_CFLAGS += $(GTK3_CFLAGS)
 xroar_LDADD += $(GTK3_LIBS)
+if OPENGL
 xroar_SOURCES += \
 	gtk3/about.c \
 	gtk3/common.c gtk3/common.h \
 	gtk3/dialog.c gtk3/dialog.h \
 	gtk3/drivecontrol.c gtk3/drivecontrol.h \
 	gtk3/event_handlers.c gtk3/event_handlers.h \
-	gtk3/filereq_gtk3.c \
 	gtk3/gtk3.gresource.c \
 	gtk3/joystick_gtk3.c \
 	gtk3/printercontrol.c gtk3/printercontrol.h \
@@ -292,6 +292,9 @@ xroar_SOURCES += \
 	gtk3/ui_gtk3.c \
 	gtk3/video_options.c gtk3/video_options.h \
 	gtk3/vo_gtk3.c
+endif
+xroar_SOURCES += \
+	gtk3/filereq_gtk3.c
 
 BUILT_SOURCES += \
 	gtk3/gtk3.gresource.c
@@ -328,19 +331,22 @@ endif
 if GTK2
 xroar_CFLAGS += $(GTK2_CFLAGS)
 xroar_LDADD += $(GTK2_LIBS)
+if OPENGL
 xroar_SOURCES += \
 	gtk2/about.c \
 	gtk2/common.c gtk2/common.h \
 	gtk2/dialog.c gtk2/dialog.h \
 	gtk2/drivecontrol.c gtk2/drivecontrol.h \
 	gtk2/event_handlers.c gtk2/event_handlers.h \
-	gtk2/filereq_gtk2.c \
 	gtk2/gtk2.gresource.c \
 	gtk2/joystick_gtk2.c \
 	gtk2/printercontrol.c gtk2/printercontrol.h \
 	gtk2/tapecontrol.c gtk2/tapecontrol.h \
 	gtk2/ui_gtk2.c \
 	gtk2/video_options.c gtk2/video_options.h
+endif
+xroar_SOURCES += \
+	gtk2/filereq_gtk2.c
 
 BUILT_SOURCES += \
 	gtk2/gtk2.gresource.c

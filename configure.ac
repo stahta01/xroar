@@ -99,6 +99,9 @@ AC_ARG_WITH([sdl2],
 AC_ARG_ENABLE([ui_sdl],
 	AS_HELP_STRING([--enable-ui-sdl], [force inclusion of basic SDL UI]) )
 
+AC_ARG_WITH([opengl],
+	AS_HELP_STRING([--without-opengl], [don't test for OpenGL]) )
+
 AC_ARG_WITH([cocoa],
 	AS_HELP_STRING([--without-cocoa], [don't test for Mac OS X Cocoa]) )
 
@@ -161,8 +164,6 @@ AC_ARG_ENABLE([gdb_target],
 
 AC_ARG_ENABLE([experimental],
 	AS_HELP_STRING([--enable-experimental], [include experimental/incomplete code]) )
-
-unset with_opengl
 
 #'
 

@@ -75,7 +75,9 @@ extern struct ui_module ui_cocoa_module;
 extern struct ui_module ui_sdl_module;
 static struct ui_module * const default_ui_module_list[] = {
 #ifdef HAVE_GTK3
+#ifdef HAVE_GL
 	&ui_gtk3_module,
+#endif
 #endif
 #ifdef HAVE_GTK2
 #ifdef HAVE_GTKGL
