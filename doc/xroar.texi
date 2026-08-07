@@ -567,38 +567,34 @@ xroar -m cocous daggorath.rom
 XRoar will decide how to treat the file you select based on its extension:
 
 @table @b
-@item .cas, .c10, .wav, .k7@
 
+@item .cas, .c10, .wav, .k7
 Cassette image.  XRoar will attach the image as the input cassette and try and
 look for the first file on the tape.  Depending on its type, it will
 automatically type @samp{CLOADM} (machine code) or @samp{CLOAD} followed by
 @samp{RUN} (BASIC).  Some programs with special load instructions are
 recognised automatically.
 
-@item .bas, .asc@
-
+@item .bas, .asc
 ASCII BASIC program.  The Dragon (and Tandy Colour Computer) ROM has the
 ability to save and load BASIC in an untokenised form.  It still requires
 saving as a series of short blocks though, so if you load one of these, XRoar
 will automatically simulate this format to load with @samp{CLOAD}.
 
-@item .rom, .ccc@
-
+@item .rom, .ccc
 Cartridge image.  XRoar will create and insert a ROM cartridge with this file
 as its ROM data.  Some cartridges aren't simple ROM images; XRoar can
 automatically recognise some of these and decide whether a Games Master
 Cartridge should be used, for example.
 
-@item .vdk, .dsk, .jvc, .os9, .dmk@
-
+@item .vdk, .dsk, .jvc, .os9, .dmk
 Floppy disk image.  XRoar will insert the floppy and type @samp{BOOT} (or
 @samp{DOS} under RS-DOS).  If the result is @samp{?BT ERROR} (DragonDOS) or a
 clear screen (RS-DOS) and nothing else happening, that just means there was no
 boot track.  You'll have to follow the load instructions for the software in
 question, which vary too much for XRoar to have built-in rules for.
 
-@item .bin@
-
+@item .bin
 A DragonDOS or RS-DOS binary file.  XRoar will determine which type it is from
 the header and load it into RAM, then tell the CPU to jump to its start (EXEC)
 address.
@@ -641,21 +637,20 @@ In the input tab, you can also see some tick boxes for setting emulator
 options:
 
 @table @b
-@item Fast loading@
 
+@item Fast loading
 XRoar intercepts ROM calls to speed loading.
 
-@item CAS padding@
-
+@item CAS padding
 XRoar automatically inserts extra leader if a CAS file doesn't seem to have
 enough.  This is common with early tape conversions.
 
-@item Rewrite@
-
+@item Rewrite
 XRoar intercepts ROM calls to rewrite any data read from the input tape to the
 output tape in a sanitised format, with consistent leaders, gaps, and
 byte-aligned data.  Useful for creating CAS files from WAV input, or even to
 regenerate a cleaner WAV file.
+
 @end table
 
 Under Mac OS X+, most functionality is found in the @clicksequence{File
@@ -680,15 +675,15 @@ head are also displayed.
 There are tick boxes per inserted disk to control emulator behaviour:
 
 @table @b
-@item Write enable@
 
+@item Write enable
 Basically the ``write protect label'' (or tab) on a floppy disk.  Unticking
 this prevents the emulated system from writing to the disk.
 
-@item Write back@
-
+@item Write back
 Unticking this box means that whatever changes are made to the in-RAM copy will
 not be written back to the floppy image file.
+
 @end table
 
 Note that RS-DOS for the Tandy Colour Computer numbers its drives from zero
@@ -739,28 +734,24 @@ XRoar has a selection of composite renderers built in that trade off CPU time
 for accuracy in different ways to reproduce the artefacts of composite video.
 
 @table @b
-@item None@
 
+@item None
 Disable all composite video effects.  Output will be simple colours, the same
 as picking the ``S-Video'' TV input.
 
-@item Simple (2-bit LUT)@
-
+@item Simple (2-bit LUT)
 Gives a very coarse 4-colour rendition of NTSC artefact colours between black &
 white pixels only.
 
-@item 5-bit LUT@
-
+@item 5-bit LUT
 A better set of NTSC artefact colours using a 5-bit LUT, but still only between
 black & white pixels.
 
-@item Partial NTSC@
-
+@item Partial NTSC
 Performs a composite video encode/decode chain with filtering, taking lots of
 shortcuts.  Pretty decent NTSC output, but doesn't handle PAL.
 
-@item Simulated@
-
+@item Simulated
 Performs a more complete composite video encode/decode chain with filtering.
 This is the only renderer that will accurately reproduce PAL colour effects.
 It is also the most CPU-hungry.
@@ -780,38 +771,33 @@ divided into three sections.  The first, Audio, only contains a gain control.
 The Video section has the following controls:
 
 @table @b
-@item Brightness@
 
+@item Brightness
 Or black level.  0--100, where 0 pulls everything to black, and 100 drives
 everything up to white, effectively adjusting the @emph{contrast} of the
 picture.
 
-@item Contrast@
-
+@item Contrast
 Or gain.  0--100, with 50 meaning no gain.  Scales the RGB output, affecting
 the overall @emph{brightness}.  See
 @myuref{https://poynton.ca/notes/brightness_and_contrast/, Charles Poynton on
 Brightness & Contrast} for more on the labelling issue.
 
-@item Colour@
-
+@item Colour
 Adjusts the saturation of colour without affecting the luminance.  0--100,
 where 0 yields a greyscale image.
 
-@item Hue@
-
+@item Hue
 Adjusts the phase of a composite colour signal.  -179--180, with the centre
 value of 0 being normal.  A common control on NTSC displays.  Not strictly
 necessary in an emulator, but it's fun to spin it and watch the pretty colours.
 
-@item Picture Area@
-
+@item Picture Area
 The picture area is the portion of the output signal that is rendered into the
 window, and this control lets you show more or less border around the active
 area (picking from four different crop regions).
 
-@item 60Hz Scaling@
-
+@item 60Hz Scaling
 When this is enabled, 60Hz output (NTSC, PAL-M) will be scaled vertically, to
 better represent the picture shape that would be seen on 60Hz CRTs.  This
 scaling occurs because in a 60Hz TV system, fewer scanlines fill the same
@@ -823,29 +809,25 @@ Finally, the Composite Video section of the dialog includes more advanced
 control over the rendering when a composite signal is being simulated.
 
 @table @b
-@item Renderer@
 
+@item Renderer
 Another place to pick the composite renderer, described above.
 
-@item F@sub{S}@
-
+@item F@sub{S}
 The video sample rate when using the ``Simulated'' renderer.  The options here
 reflect the different crystals used as SAM oscillators in Dragons and CoCos.
 
-@item F@sub{SC}@
-
+@item F@sub{SC}
 The frequency of the colour subcarrier, either 4.43MHz (PAL-I) or 3.58MHz
 (NTSC, PAL-M).  Together with F@sub{S}, this affects how the ``Simulated''
 renderer tracks colour modulation and demodulation.
 
-@item System@
-
+@item System
 The TV colour system in use, one of @samp{PAL-I} (e.g. UK), @samp{PAL-M} (e.g.
 Brazil) or @samp{NTSC} (e.g. USA or Canada).  Setting only used by the
 ``Simulated'' renderer.
 
-@item Colour Killer@
-
+@item Colour Killer
 Television sets vary in how they react to a composite video signal that lacks a
 colourburst.  The recommended approach is to disable colour processing and show
 a greyscale picture (to be backwards-compatible with black & white broadcasts),
