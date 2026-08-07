@@ -2,7 +2,7 @@
  *
  *  \brief PulseAudio sound module.
  *
- *  \copyright Copyright 2010-2024 Ciaran Anscomb
+ *  \copyright Copyright 2010-2026 Ciaran Anscomb
  *
  *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
@@ -61,15 +61,35 @@ static void *new(void *cfg) {
 	ao->free = DELEGATE_AS0(void, ao_pulse_free, ao);
 
 	const char *device = xroar.cfg.ao.device;
-	pa_sample_spec ss = {
-		.format = PA_SAMPLE_S16NE,
-	};
+	pa_sample_spec ss = (pa_sample_spec){0};
 	pa_buffer_attr ba = {
 		.maxlength = -1,
 		.minreq = -1,
 		.prebuf = -1,
 	};
 	int error;
+
+	switch (xroar.cfg.ao.format) {
+	case SOUND_FMT_U8:
+		ss.format = PA_SAMPLE_U8;
+		break;
+	case SOUND_FMT_S16_BE:
+		ss.format = PA_SAMPLE_S16BE;
+		break;
+	case SOUND_FMT_S16_LE:
+		ss.format = PA_SAMPLE_S16LE;
+		break;
+	case SOUND_FMT_S16_SE:
+		ss.format = PA_SAMPLE_S16RE;
+		break;
+	case SOUND_FMT_S16_HE:
+	default:
+		ss.format = PA_SAMPLE_S16NE;
+		break;
+	case SOUND_FMT_FLOAT:
+		ss.format = PA_SAMPLE_FLOAT32NE;
+		break;
+	}
 
 	unsigned rate = (xroar.cfg.ao.rate > 0) ? xroar.cfg.ao.rate : 48000;
 	unsigned nchannels = xroar.cfg.ao.channels;
@@ -83,12 +103,15 @@ static void *new(void *cfg) {
 	if (ss.format == PA_SAMPLE_U8) {
 		request_fmt = SOUND_FMT_U8;
 		sample_nbytes = 1;
-	} else if (ss.format & PA_SAMPLE_S16LE) {
+	} else if (ss.format == PA_SAMPLE_S16LE) {
 		request_fmt = SOUND_FMT_S16_LE;
 		sample_nbytes = 2;
-	} else if (ss.format & PA_SAMPLE_S16BE) {
+	} else if (ss.format == PA_SAMPLE_S16BE) {
 		request_fmt = SOUND_FMT_S16_BE;
 		sample_nbytes = 2;
+	} else if (ss.format == PA_SAMPLE_FLOAT32NE) {
+		request_fmt = SOUND_FMT_FLOAT;
+		sample_nbytes = 4;
 	} else {
 		LOG_MOD_WARN("pulse", "unhandled audio format");
 		goto failed;
