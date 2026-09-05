@@ -32,8 +32,6 @@
 #include "ao.h"
 #include "breakpoint.h"
 #include "cart.h"
-#include "crc32.h"
-#include "crclist.h"
 #include "gdb.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -110,9 +108,6 @@ struct mc10 {
 
 	// UI message receipt
 	int msgr_client_id;
-
-	// Useful configuration side-effect tracking
-	uint32_t crc_bas;
 };
 
 #define MC10_SER_RAM        (2)
@@ -429,8 +424,6 @@ static bool mc10_finish(struct part *p) {
 
 	// Report and check CRC (Microcolour BASIC)
 	rombank_report(mp->ROM0, "mc10", "MicroColour BASIC");
-	mp->crc_bas = 0x11fda97e;  // MicroColour BASIC 1.0 (MC-10)
-	(void)rombank_verify_crc(mp->ROM0, "MicroColour BASIC", -1, "@mc10_compat", xroar.cfg.force_crc_match, &mp->crc_bas);
 
 	// RAM configuration
 	{

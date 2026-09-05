@@ -115,9 +115,6 @@ struct dragon {
 	int msgr_client_id;
 
 	// Useful configuration side-effect tracking
-	bool has_ext_charset;
-	uint32_t crc_bas, crc_extbas, crc_altbas, crc_combined;
-	uint32_t crc_ext_charset;
 	bool is_dragon;
 	bool unexpanded_dragon32;
 	bool relaxed_pia0_decode;

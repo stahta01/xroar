@@ -32,8 +32,6 @@
 #include "ao.h"
 #include "breakpoint.h"
 #include "cart.h"
-#include "crc32.h"
-#include "crclist.h"
 #include "debug.h"
 #include "dragon/dragon.h"
 #include "dragon/immunity.h"
@@ -425,9 +423,7 @@ bool dragon_finish_common(struct dragon *md) {
 	m->debug.target_xml = debug_target_xml(m->debug.target);
 #endif
 
-	md->crc_combined = md->crc_extbas = md->crc_bas = md->crc_altbas = 0;
-	md->has_ext_charset = 0;
-	md->crc_ext_charset = 0;
+	_Bool has_ext_charset = 0;
 
 	if (mc->ext_charset_rom) {
 		md->ext_charset = rombank_new(8, 4096, 1);
@@ -443,8 +439,7 @@ bool dragon_finish_common(struct dragon *md) {
 			md->ext_charset = NULL;
 		} else {
 			rombank_report(md->ext_charset, p->partdb->name, "External character set");
-			md->crc_ext_charset = md->ext_charset->combined_crc32;
-			md->has_ext_charset = 1;
+			has_ext_charset = 1;
 		}
 	}
 
@@ -572,7 +567,7 @@ bool dragon_finish_common(struct dragon *md) {
 	}
 
 	/* VDG external charset */
-	if (md->has_ext_charset)
+	if (has_ext_charset)
 		md->VDG->fetch_data = DELEGATE_AS3(void, uint16, int, uint16p, vdg_fetch_handler_chargen, md);
 
 	/* Default all PIA connections to unconnected (no source, no sink) */

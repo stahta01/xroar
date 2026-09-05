@@ -37,8 +37,6 @@
 #include "ao.h"
 #include "breakpoint.h"
 #include "cart.h"
-#include "crc32.h"
-#include "crclist.h"
 #include "gdb.h"
 #include "joystick.h"
 #include "keyboard.h"
@@ -184,9 +182,6 @@ struct coco3 {
 
 	// UI message receipt
 	int msgr_client_id;
-
-	// Useful configuration side-effect tracking
-	uint32_t crc_secb;
 };
 
 #define COCO3_SER_RAM           (2)
@@ -544,8 +539,6 @@ static bool coco3_finish(struct part *p) {
 
 	// Report and check CRC (Super Extended Colour BASIC)
 	rombank_report(mcc3->ROM0, "coco3", "Super Extended Colour BASIC");
-	mcc3->crc_secb = 0xb4c88d6c;  // Super Extended Colour BASIC (NTSC)
-	(void)rombank_verify_crc(mcc3->ROM0, "Super Extended Colour BASIC", -1, "@coco3", xroar.cfg.force_crc_match, &mcc3->crc_secb);
 
 	// RAM configuration
 	ram_report(mcc3->RAM, "coco3", "motherboard RAM");
