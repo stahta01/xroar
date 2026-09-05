@@ -1,31 +1,28 @@
-/** \file
+/* Digital filters.
  *
- *  \brief Digital filters.
+ * Copyright 1992 A.J. Fisher, University of York
  *
- *  \copyright Copyright 1992 A.J. Fisher, University of York
+ * Copyright 2008-2011 Nicolas Bourdaud
  *
- *  \copyright Copyright 2008-2011 Nicolas Bourdaud
+ * Copyright 2021-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Filter creation derived from A. J. Fisher's "mkfilter" tool.  Stripped back
+ * to only generate Butterworth low-pass filters.  Any errors introduced in the
+ * simplification are my fault...
  *
- *  See COPYING.GPL for redistribution conditions.
+ * https://github.com/university-of-york/cs-www-users-fisher
  *
- *  \endlicenseblock
- *
- *  Filter creation derived from A. J. Fisher's "mkfilter" tool.  Stripped back
- *  to only generate Butterworth low-pass filters.  Any errors introduced in
- *  the simplification are my fault...
- *
- *  https://github.com/university-of-york/cs-www-users-fisher
- *
- *  Windowed sinc filter creation derived from rtfilter by Nicolas Bourdaud.
+ * Windowed sinc filter creation derived from rtfilter by Nicolas Bourdaud.
  */
 
 #include "top-config.h"

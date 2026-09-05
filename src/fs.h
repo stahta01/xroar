@@ -1,19 +1,15 @@
-/** \file
+/* File operations.
  *
- *  \brief File operations.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_FS_H_
@@ -82,6 +78,7 @@ int32_t fs_read_vint32(FILE *fd, int *nread);
 
 // Wrap getcwd(), automatically allocating a buffer.  May still return NULL for
 // other reasons, so check errno (check getcwd manpage).
+
 char *fs_getcwd(void);
 
 #endif

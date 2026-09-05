@@ -1,25 +1,22 @@
-/** \file
+/* AY-3-891x sound chip.
  *
- *  \brief AY-3-891x sound chip.
+ * Copyright 2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* AY-3-891X is listed in the part database.  Create with:
  *
- *  See COPYING.GPL for redistribution conditions.
+ * struct part *p = part_create("AY891X", NULL);
  *
- *  \endlicenseblock
- *
- *  AY-3-891X is listed in the part database.  Create with:
- *
- *  struct part *p = part_create("AY891X", NULL);
- *
- *  No options are needed for this part.
+ * No options are needed for this part.
  */
 
 #ifndef XROAR_AY891X_H_

@@ -1,19 +1,15 @@
-/** \file
+/* Joysticks.
  *
- *  \brief Joysticks.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_JOYSTICK_H_
@@ -134,6 +130,7 @@ enum js_control {
 #define JS_NUM_NAMED_BUTTONS (11)
 
 // The states interpreted for an input
+
 enum {
 	// Input value is used directly
 	JS_INPUT_STATE_DIRECT = 0,
@@ -145,6 +142,7 @@ enum {
 };
 
 // The actions that the inputs perform on controls
+
 enum {
 	// Control mapped from input directly
 	JS_CONTROL_ACTION_DIRECT = 0,

@@ -1,28 +1,25 @@
-/** \file
+/* Motorola MC680x-compatible operations.
  *
- *  \brief Motorola MC680x-compatible operations.
+ * Copyright 2003-2021 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2021 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* This file is included directly into other source files.  It provides common
+ * functions across 680x ISA CPUs.
  *
- *  See COPYING.GPL for redistribution conditions.
+ * STRUCT_CPU should be a macro defining the type of the CPU struct.
  *
- *  \endlicenseblock
+ * REG_CC should be a macro aliasing the condition code register.
  *
- *  This file is included directly into other source files.  It provides
- *  common functions across 680x ISA CPUs.
- *
- *  STRUCT_CPU should be a macro defining the type of the CPU struct.
- *
- *  REG_CC should be a macro aliasing the condition code register.
- *
- *  CC_H, CC_N, etc. should be macros defined as appropriate bit within REG_CC.
+ * CC_H, CC_N, etc. should be macros defined as appropriate bit within REG_CC.
  */
 
 // Not all ops will be used by all cores, so ignore unused-function warnings

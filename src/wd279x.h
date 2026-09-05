@@ -1,19 +1,15 @@
-/** \file
+/* WD279x Floppy Drive Controller.
  *
- *  \brief WD279x Floppy Drive Controller.
+ * Copyright 2003-2022 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_WD279X_H_
@@ -33,7 +29,7 @@ enum WD279X_type {
 	WD2791, WD2793, WD2795, WD2797
 };
 
-/* FDC states: */
+// FDC states:
 enum WD279X_state {
 	WD279X_state_accept_command,
 	WD279X_state_type1_1,
@@ -68,14 +64,14 @@ struct WD279X {
 
 	unsigned type;
 
-	/* Registers */
+	// Registers
 	uint8_t status_register;
 	uint8_t track_register;
 	uint8_t sector_register;
 	uint8_t data_register;
 	uint8_t command_register;
 
-	/* External interface */
+	// External interface
 	DELEGATE_T1(void, bool) set_dirc;
 	DELEGATE_T1(void, bool) set_dden;
 	DELEGATE_T1(void, unsigned) set_sso;
@@ -92,7 +88,7 @@ struct WD279X {
 	DELEGATE_T0(uint8p) next_idam;
 	DELEGATE_T0(void) update_connection;
 
-	/* WD279X internal state */
+	// WD279X internal state
 	unsigned state;
 	struct event state_event;
 	int direction;
@@ -103,10 +99,10 @@ struct WD279X {
 	bool tr00_state;
 	bool index_state;
 	bool write_protect_state;
-	/* During & after type 1 commands, and sometimes after a forced
-	 * interrupt, status reads reflect tr00 & index status: */
+	// During & after type 1 commands, and sometimes after a forced
+	// interrupt, status reads reflect tr00 & index status:
 	bool status_type1;
-	/* Forced interrupts: */
+	// Forced interrupts:
 	bool intrq_nready_to_ready;
 	bool intrq_ready_to_nready;
 	bool intrq_index_pulse;
@@ -119,7 +115,7 @@ struct WD279X {
 	int index_holes_count;
 	uint8_t track_register_tmp;
 
-	/* Private */
+	// Private
 
 	bool has_sso;
 	bool has_length_flag;

@@ -1,19 +1,15 @@
-/** \file
+/* Event scheduling & dispatch.
  *
- *  \brief Event scheduling & dispatch.
+ * Copyright 2005-2025 Ciaran Anscomb
  *
- *  \copyright Copyright 2005-2025 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_EVENT_H_
@@ -62,31 +58,35 @@ void event_list_init(struct event_list *);
 
 struct event *event_new(struct event_list *, DELEGATE_T0(void));
 void event_init(struct event *event, struct event_list *, DELEGATE_T0(void));
-
-/* event_queue() guarantees that events scheduled for the same time will run in
- * order of their being added to queue */
-
 void event_free(struct event *event);
+
+// event_queue() guarantees that events scheduled for the same time will run in
+// order of their being added to queue.
+
 void event_queue(struct event *event);
 void event_dequeue(struct event *event);
 
-// Set event scheduling time relative to current time
+// Set event scheduling time relative to current time.
+
 #define event_set_dt(ev,dt) do { \
 		(ev)->at_tick = event_current_tick + (dt); \
 	} while (0)
 
-// Set event scheduling time to absolute value
+// Set event scheduling time to absolute value.
+
 #define event_set_abs(ev,abst) do { \
 		(ev)->at_tick = (abst); \
 	} while (0)
 
-// Queue event relative to current time
+// Queue event relative to current time.
+
 #define event_queue_dt(ev,dt) do { \
 		event_set_dt((ev), (dt)); \
 		event_queue(ev); \
 	} while (0)
 
-// Queue event using absolute time
+// Queue event using absolute time.
+
 #define event_queue_abs(ev,abst) do { \
 		event_set_abs((ev), (abst)); \
 		event_queue(ev); \
@@ -94,13 +94,12 @@ void event_dequeue(struct event *event);
 
 // Allocate an event and queue it, flagged to autofree.  Event will be
 // scheduled for current time + dt.
+
 void event_queue_auto(struct event_list *list, DELEGATE_T0(void), int dt);
 
 #define event_queued(e) ((e)->queued)
 
-/* In theory, C99 6.5:7 combined with the fact that fixed width integers are
- * guaranteed 2s complement should make this safe.  Kinda hard to tell, though.
- */
+// Safe delta between two times.
 
 inline int event_tick_delta(event_ticks t0, event_ticks t1) {
 	uint32_t dt = t0 - t1;

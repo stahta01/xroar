@@ -1,27 +1,25 @@
-/** \file
+/* NTSC encoding & decoding.
  *
- *  \brief NTSC encoding & decoding.
+ * Copyright 2016-2023 Ciaran Anscomb
  *
- *  \copyright Copyright 2016-2023 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - https://www.arc.id.au/FilterDesign.html
  *
- *  \endlicenseblock
+ * Low-pass, Fs=14.318MHz, Fb=2.15MHz, Kaiser-Bessel windows, 21dB att, M=7
+ * (Np=3).
  *
- *  \par Sources
- *
- *  - https://www.arc.id.au/FilterDesign.html
- *
- *  Low-pass, Fs=14.318MHz, Fb=2.15MHz, Kaiser-Bessel windows, 21dB att, M=7 (Np=3).
- *
- *  Coefficients scaled for integer maths.  Result should be divided by 32768.
+ * Coefficients scaled for integer maths.  Result should be divided by 32768.
  */
 
 #ifndef XROAR_NTSC_H_

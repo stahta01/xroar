@@ -1,19 +1,15 @@
-/** \file
+/* ALSA sound module.
  *
- *  \brief ALSA sound module.
+ * Copyright 2009-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2009-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -163,7 +159,7 @@ static void *new(void *cfg) {
 	} else if (xroar.cfg.ao.buffer_nframes > 0) {
 		buffer_nframes = xroar.cfg.ao.buffer_nframes;
 	}
-	/* Pick a sensible default: */
+	// Pick a sensible default:
 	if (nfragments == 0 && buffer_nframes == 0)
 		buffer_nframes = (rate * 20) / 1000;
 	if (buffer_nframes > 0) {
@@ -245,7 +241,7 @@ static void *new(void *cfg) {
 	ao->sound_interface->write_buffer = DELEGATE_AS1(voidp, voidp, ao_alsa_write_buffer, ao);
 	LOG_DEBUG(1, "\t%u frags * %ld frames/frag = %ld frames buffer (%ldms)\n", nfragments, aoalsa->fragment_nframes, buffer_nframes, (buffer_nframes * 1000) / rate);
 
-	/* snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes); */
+	// snd_pcm_writei(aoalsa->pcm_handle, buffer, aoalsa->fragment_nframes);
 	return aoalsa;
 
 failed:

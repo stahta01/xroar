@@ -31,9 +31,20 @@ struct gdb_interface;
 struct gdb_interface *gdb_interface_new(const char *hostname, const char *portname, struct machine *m);
 void gdb_interface_free(struct gdb_interface *gi);
 
+// Lock the run_state mutex and return true if ready to run.
+
 int gdb_run_lock(struct gdb_interface *gi);
+
+// Unlock the run_state mutex.
+
 void gdb_run_unlock(struct gdb_interface *gi);
+
+// Called by machine after receiving a signal.
+
 void gdb_stop(struct gdb_interface *gi, int sig);
+
+// Called by machine to acknowledge single-step.
+
 void gdb_single_step(struct gdb_interface *gi);
 
 #endif

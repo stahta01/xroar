@@ -1,21 +1,18 @@
-/** \file
+/* Parts & interfaces.
  *
- *  \brief Parts & interfaces.
+ * Copyright 2018-2021 Ciaran Anscomb
  *
- *  \copyright Copyright 2018-2021 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- * A _part_ is a required part of a device.  Typically, sub-parts are freed
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* A _part_ is a required part of a device.  Typically, sub-parts are freed
  * recursively.
  *
  * An _interface_ is a connection between parts.  One part hosts the interface
@@ -44,7 +41,7 @@ struct slist;
 struct intf;
 #endif
 
-/** \brief Part database entry functions
+/* Part database entry functions
  *
  * Called by part_create() and part_deserialise().
  *
@@ -86,11 +83,10 @@ struct partdb_entry_funcs {
 	bool (* const is_a)(struct part *p, const char *name);
 };
 
-/** \brief Part database mapping entry
- *
- * Maps a name to a set of part functions.  Multiple variants of a part can
- * then use the same general approach to creation.
- */
+// Part database mapping entry
+//
+// Maps a name to a set of part functions.  Multiple variants of a part can
+// then use the same general approach to creation.
 
 struct partdb_entry {
 	const char *name;

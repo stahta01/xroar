@@ -1,25 +1,22 @@
-/** \file
+/* MCX128 expansion module for MC-10.
  *
- *  \brief MCX128 expansion module for MC-10.
+ * Copyright 2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  \par Sources
- *
- *  - MCX128 GAL source, Darren Atkinson
- *    MCX128 Hardware Info, Darren Atkinson
- *    https://mcxwares.blogspot.com/2020/04/mcx128.html
+ * - MCX128 GAL source, Darren Atkinson
+ * - MCX128 Hardware Info, Darren Atkinson
+ *   https://mcxwares.blogspot.com/2020/04/mcx128.html
  */
 
 #include "top-config.h"

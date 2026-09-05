@@ -1,21 +1,18 @@
-/** \file
+/* Serialisation and deserialisation helpers.
  *
- *  \brief Serialisation and deserialisation helpers.
+ * Copyright 2015-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2015-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- * A set of simple tools to aid in the serialisation and deserialisation of
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* A set of simple tools to aid in the serialisation and deserialisation of
  * data.  The general structure is (TAG,LENGTH,DATA), where LENGTH is the
  * length in bytes of DATA.  TAG and LENGTH are both written as variable-length
  * unsigned integers (vuint32).
@@ -30,7 +27,6 @@
  * zero or NULL.
  *
  * ser_close() will return any flagged error.
- *
  */
 
 // When reading, any error is fatal, but it's ok to keep calling until a
@@ -86,8 +82,8 @@ struct ser_handle;
 
 struct ser_struct_data;
 
-/** \brief For marking up struct members in a struct ser_struct.
- */
+// For marking up struct members in a struct ser_struct.
+
 enum ser_type {
 	ser_type_bool,
 	ser_type_int,
@@ -125,7 +121,8 @@ enum ser_type {
 			uint32_t: ser_type_uint32, \
 			char *: ser_type_string ) )
 
-/** \brief Describes a struct member. */
+// Describes a struct member.
+
 struct ser_struct {
 	// While transitioning old code, a tag ID of 0 implies that ID is equal
 	// to its index into the metadata array + 1.
@@ -157,69 +154,82 @@ struct ser_struct_data {
 	bool (* const write_elem)(void *sptr, struct ser_handle *sh, int tag);
 };
 
-/** \brief Open a file.
- * \param filename File to open.
- * \return New file handle or NULL on error.
- */
+// Open a file.
+//
+// filename     File to open.
+//
+// Returns new file handle or NULL on error.
+
 struct ser_handle *ser_open(const char *filename, enum ser_mode mode);
 
-/** \brief Close a file.
- * \param sh Serialiser handle.
- * \return Zero or last error code.
- */
+// Close a file.
+//
+// sh           Serialiser handle.
+//
+// Returns zero or last error code.
+
 int ser_close(struct ser_handle *sh);
 
-/** \brief Write an open tag, with length information.
- * \param sh Serialiser handle.
- * \param tag Tag to write (must be positive and non-zero).
- * \param length Data length.
- */
+// Write an open tag, with length information.
+//
+// sh           Serialiser handle.
+// tag          Tag to write (must be positive and non-zero).
+// length       Data length.
+
 void ser_write_tag(struct ser_handle *sh, int tag, size_t length);
 
-/** \brief Write a close tag.
- * \param sh Serialiser handle.
- */
+// Write a close tag.
+//
+// sh           Serialiser handle.
+
 void ser_write_close_tag(struct ser_handle *sh);
 
-/** \brief Read the next open tag.
- * \param sh Serialiser handle.
- * \return Tag id (including zero for close tag).  Negative implies EOF or error.
- */
+// Read the next open tag.
+//
+// sh Serialiser handle.
+//
+// Returns tag id (including zero for close tag).  Negative implies EOF or error.
+
 int ser_read_tag(struct ser_handle *sh);
 
-/** \brief Number of bytes remaining in current tag's DATA.
- * \param sh Serialiser handle.
- * \return Bytes unread of current tag's DATA.
- */
+// Number of bytes remaining in current tag's DATA.
+//
+// sh           Serialiser handle.
+//
+// Returns bytes unread of current tag's DATA.
+
 size_t ser_data_length(struct ser_handle *sh);
 
-/** \brief Test for end of file.
- * \param sh Serialiser handle.
- * \return Non-zero if end of file.
- */
+// Test for end of file.
+//
+// sh           Serialiser handle.
+//
+// Returns non-zero if end of file.
+
 int ser_eof(struct ser_handle *sh);
 
-/** \brief Test error status.
- * \param sh Serialiser handle.
- * \return Zero or last error code.
- */
+// Test error status.
+//
+// sh           Serialiser handle.
+//
+// Returns zero or last error code.
+
 int ser_error(struct ser_handle *sh);
 
-/** \brief Set error status.
- * \param sh Serialiser handle.
- * \param error Error code.
- *
- * Usually called by deserialisers to report a format error.
- */
+// Set error status.
+//
+// sh           Serialiser handle.
+// error        Error code.
+//
+// Usually called by deserialisers to report a format error.
+
 void ser_set_error(struct ser_handle *sh, int error);
 
-/** \brief Get error string.
- */
+// Get error string.
 
 const char *ser_errstr(struct ser_handle *sh);
 
-/** \brief Get file position when error occurred.
- */
+// Get file position when error occurred.
 
 ssize_t ser_errpos(struct ser_handle *sh);
 

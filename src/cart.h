@@ -1,19 +1,15 @@
-/** \file
+/* Dragon/CoCo cartridge support.
  *
- *  \brief Dragon/CoCo cartridge support.
+ * Copyright 2005-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2005-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_CART_H_
@@ -96,27 +92,38 @@ struct cart {
 	void (*attach_interface)(struct cart *c, const char *ifname, void *intf);
 };
 
-/** \brief Create a new cart config.
- */
+// Create a new cart config.
+
 struct cart_config *cart_config_new(void);
 
-/** \brief Serialise cartridge.
- */
+// Serialise cartridge.
+
 void cart_config_serialise(struct cart_config *cc, struct ser_handle *sh, unsigned otag);
 
-/** \brief Deserialise cartridge.
- */
+// Deserialise cartridge.
+
 struct cart_config *cart_config_deserialise(struct ser_handle *sh);
+
+// Manipulate cartridge configs.
 
 struct cart_config *cart_config_by_id(int id);
 struct cart_config *cart_config_by_name(const char *name);
 struct slist *cart_config_list(void);
 struct slist *cart_config_list_is_a(const char *is_a);
-struct cart_config *cart_find_working_dos(struct machine_config *mc);
-void cart_config_complete(struct cart_config *cc);
-void cart_config_print_all(FILE *f, bool all);
 bool cart_config_remove(const char *name);
 void cart_config_remove_all(void);
+
+// Find an appropriate DOS cartridge for the specified machine.
+
+struct cart_config *cart_find_working_dos(struct machine_config *mc);
+
+// Fill in required configuration with sensible defaults.
+
+void cart_config_complete(struct cart_config *cc);
+
+// Print configuration to file.
+
+void cart_config_print_all(FILE *f, bool all);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -134,20 +141,36 @@ struct cart_partdb_entry {
 
 extern const struct ser_struct_data cart_ser_struct_data;
 
+// Calls cart_config_complete() then uses part_create() to actually create the
+// cartridge.
+
 struct cart *cart_create_from_config(struct cart_config *cc);
 struct cart *cart_create(const char *cc_name);
+
+// Part helpers.
+
 bool cart_finish(struct part *p);
 bool cart_is_a(struct part *p, const char *name);
 bool dragon_cart_is_a(struct part *p, const char *name);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+/* Dragon/CoCo simple ROM cart helpers.
+ *
+ * Should separate these out so "cart" is less Dragon-specific.
+ */
+
+// Part helpers.
+
 void cart_rom_initialise(struct part *p, void *options);
 bool cart_rom_finish(struct part *p);
+void cart_rom_free(struct part *p);
+
+// Cart helpers.
+
 void cart_rom_init(struct cart *c);
 void cart_rom_reset(struct cart *c, bool hard);
 void cart_rom_attach(struct cart *c);
 void cart_rom_detach(struct cart *c);
-void cart_rom_free(struct part *p);
 
 #endif

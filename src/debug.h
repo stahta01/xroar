@@ -1,21 +1,18 @@
-/** \file
+/* Generic CPU debug interface.
  *
- *  \brief Generic CPU debug interface.
+ * Copyright 2021-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2021-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  Common to all CPUs, provides hooks for breakpoints and debugging with GDB.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Common to all CPUs, provides hooks for breakpoints and debugging with GDB.
  */
 
 #ifndef XROAR_DEBUG_H_

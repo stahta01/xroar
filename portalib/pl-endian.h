@@ -1,22 +1,18 @@
-/** \file
+/* Missing endian.h.
  *
- *  \brief Missing endian.h.
+ * Copyright 2014 Ciaran Anscomb
  *
- *  \copyright Copyright 2014 Ciaran Anscomb
+ * This file is part of Portalib.
  *
- *  \licenseblock This file is part of Portalib.
+ * Portalib is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  Portalib is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU Lesser General Public License as published by the Free
- *  Software Foundation; either version 3 of the License, or (at your option)
- *  any later version.
+ * See COPYING.LGPL and COPYING.GPL for redistribution conditions.
  *
- *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  If endian.h was not found by configure, it should have performed a test or
- *  made an assumption, and HAVE_BIG_ENDIAN will be defined accordingly.
+ * If endian.h was not found by configure, it should have performed a test or
+ * made an assumption, and HAVE_BIG_ENDIAN will be defined accordingly.
  */
 
 #ifndef PORTALIB_PL_ENDIAN_H_

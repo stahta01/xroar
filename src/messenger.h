@@ -1,39 +1,36 @@
-/** \file
+/* Message groups.
  *
- *  \brief Message groups.
+ * Copyright 2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Simple message sending engine.  Code can register for a client id, join
+ * groups, send messages to groups.  Registering lets you send to "all but
+ * self".  Joining a group lets you receive messages.  You don't need to have
+ * done either to send messages, but you do need to register to receive them.
  *
- *  See COPYING.GPL for redistribution conditions.
+ * If a client preempts a group, it's the same as joining but ensures that this
+ * client gets the message first.  Useful if this is the handler that sanitises
+ * any values and acts on them, so the rest of the recipients get the rewritten
+ * message.
  *
- *  \endlicenseblock
+ * Messages are a simple (void *) passed to a notify delegate.  Messenger knows
+ * nothing about the data, certainly doesn't copy it, so group members need to
+ * manage the lifetime and know how to interpret them.
  *
- *  Simple message sending engine.  Code can register for a client id, join
- *  groups, send messages to groups.  Registering lets you send to "all but
- *  self".  Joining a group lets you receive messages.  You don't need to have
- *  done either to send messages, but you do need to register to receive them.
+ * While a message is sent to a group, no other messages to the same group will
+ * be accepted until all registrants have been notified.
  *
- *  If a client preempts a group, it's the same as joining but ensures that
- *  this client gets the message first.  Useful if this is the handler that
- *  sanitises any values and acts on them, so the rest of the recipients get
- *  the rewritten message.
- *
- *  Messages are a simple (void *) passed to a notify delegate.  Messenger
- *  knows nothing about the data, certainly doesn't copy it, so group members
- *  need to manage the lifetime and know how to interpret them.
- *
- *  While a message is sent to a group, no other messages to the same group
- *  will be accepted until all registrants have been notified.
- *
- *  Message groups are currently not pruned when they run out of members, so
- *  don't create them willy-nilly.
+ * Message groups are currently not pruned when they run out of members, so
+ * don't create them willy-nilly.
  */
 
 #ifndef XROAR_MESSENGER_H

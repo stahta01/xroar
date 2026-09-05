@@ -1,19 +1,15 @@
-/** \file
+/* VDG measured voltage "palette"s
  *
- *  \brief VDG measured voltage "palette"s
+ * Copyright 2011-2021 Ciaran Anscomb
  *
- *  \copyright Copyright 2011-2021 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -28,7 +24,7 @@
 
 static struct vdg_palette palette_templates[] = {
 
-	/* The "typical" figures from the VDG data sheet */
+	// The "typical" figures from the VDG data sheet
 	{
 		.name = "ideal",
 		.description = "Typical values from VDG data sheet",
@@ -53,7 +49,7 @@ static struct vdg_palette palette_templates[] = {
 		}
 	},
 
-	/* Real Dragon 64 */
+	// Real Dragon 64
 	{
 		.name = "dragon64",
 		.description = "Measured from a real Dragon 64",
@@ -82,7 +78,7 @@ static struct vdg_palette palette_templates[] = {
 
 static int num_palettes = ARRAY_N_ELEMENTS(palette_templates);
 
-/**************************************************************************/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 int vdg_palette_count(void) {
 	return num_palettes;

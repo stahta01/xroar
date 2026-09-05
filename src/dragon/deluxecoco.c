@@ -1,50 +1,47 @@
-/** \file
+/* Tandy Deluxe Color Computer support.
  *
- *  \brief Tandy Deluxe Color Computer support.
+ * Copyright 2024-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2024-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* This file is included into dragon.c and provides the code specific to the
+ * Deluxe Color Computer.
  *
- *  See COPYING.GPL for redistribution conditions.
+ * PROBABLY SOMEWHAT INCOMPLETE.
  *
- *  \endlicenseblock
+ * This is very much a work in progress based on the information coming out of
+ * Brian Wieseler's Deluxe CoCo prototype.
  *
- *  This file is included into dragon.c and provides the code specific to the
- *  Deluxe Color Computer.
+ * A GAL is added featuring an option register mapped to $FF30 and interfacing
+ * to the PSG.  Option register bits are documented as:
  *
- *  PROBABLY SOMEWHAT INCOMPLETE.
- *
- *  This is very much a work in progress based on the information coming out of
- *  Brian Wieseler's Deluxe CoCo prototype.
- *
- *  A GAL is added featuring an option register mapped to $FF30 and interfacing
- *  to the PSG.  Option register bits are documented as:
- *
- *  B7          ROM select (0=cartridge, 1=internal)
- *  B6          60Hz IRQ enable
- *  B5..4       N/A
- *  B3          Burst phase shift
- *  B2          Paging enable
- *  B1..0       Page select (which 16K is mapped to $4000-$7FFF)
+ * - B7         ROM select (0=cartridge, 1=internal)
+ * - B6         60Hz IRQ enable
+ * - B5..4      N/A
+ * - B3         Burst phase shift
+ * - B2         Paging enable
+ * - B1..0      Page select (which 16K is mapped to $4000-$7FFF)
  *
  *  An AY-3-8913 (no I/O port) PSG is added, interfaced through the GAL at the
  *  following addresses:
  *
- *  $FF38       Write data to PSG
- *  $FF39       Read data from PSG or write address to PSG
+ * - $FF38      Write data to PSG
+ * - $FF39      Read data from PSG or write address to PSG
  *
  *  A 6551 ACIA is added, mapped to the following addresses:
  *
- *  $FF3C       TX/RX register
- *  $FF3D       Status register
- *  $FF3E       Command register
- *  $FF3F       Control register
+ * - $FF3C      TX/RX register
+ * - $FF3D      Status register
+ * - $FF3E      Command register
+ * - $FF3F      Control register
  */
 
 #include "top-config.h"

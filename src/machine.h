@@ -1,19 +1,15 @@
-/** \file
+/* Machine configuration.
  *
- *  \brief Machine configuration.
+ * Copyright 2003-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_MACHINE_H_
@@ -117,27 +113,25 @@ extern struct xconfig_enum machine_vdg_type_list[];
 extern struct xconfig_enum machine_ram_org_list[];
 extern struct xconfig_enum machine_ram_init_list[];
 
-/** \brief Create a new machine config.
- */
+// Create a new machine config.
 struct machine_config *machine_config_new(void);
 
-/** \brief Serialise machine config.
- */
+// Serialise machine config.
 void machine_config_serialise(struct ser_handle *sh, unsigned otag, struct machine_config *mc);
 
-/** \brief Deserialise machine config.
- */
+// Deserialise machine config.
 struct machine_config *machine_config_deserialise(struct ser_handle *sh);
 
-/* For finding known configs: */
+// For finding known configs:
 struct machine_config *machine_config_by_id(int id);
 struct machine_config *machine_config_by_name(const char *name);
 struct machine_config *machine_config_by_arch(int arch);
+
 void machine_config_complete(struct machine_config *mc);
 bool machine_config_remove(const char *name);
 void machine_config_remove_all(void);
 struct slist *machine_config_list(void);
-/* Find a working machine by searching available ROMs: */
+// Find a working machine by searching available ROMs:
 struct machine_config *machine_config_first_working(void);
 void machine_config_print_all(FILE *f, bool all);
 

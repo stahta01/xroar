@@ -1,7 +1,4 @@
-/** \file
- *
- * \brief CRC-16 functions.
- */
+/* CRC-16 functions.  */
 
 #ifndef XROAR_CRC16_H_
 #define XROAR_CRC16_H_
@@ -10,8 +7,7 @@
 
 #include <stdint.h>
 
-/**
- * CRC-16, polynomial 0x8005 (reversed here).
+/* CRC-16, polynomial 0x8005 (reversed here).
  *
  * Adapted from SDL code which in turn is flagged as:
  *
@@ -19,11 +15,12 @@
  * http://home.thep.lu.se/~bjorn/crc/crc32_simple.c
  */
 
+#define CRC16_RESET (0)
+
 uint16_t crc16_byte(uint16_t crc, uint8_t value);
 uint16_t crc16_block(uint16_t crc, const uint8_t *block, unsigned length);
 
-/**
- * CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
+/* CRC-16-CCITT with bytes processed high bit first ("big-endian"), as used in
  * the WD279X FDC (polynomial 0x1021).  In the FDC, CRC is initialised to
  * 0xffff and NOT inverted before appending to the message.
  */

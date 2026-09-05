@@ -1,23 +1,20 @@
-/** \file
+/* CAS format tape images.
  *
- *  \brief CAS format tape images.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Includes CUE support, as proposed by Roberto CFG, here:
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  Includes CUE support, as proposed by Roberto CFG, here:
- *
- *  https://archive.worldofdragon.org/phpBB3/viewtopic.php?f=8&t=5621
+ * https://archive.worldofdragon.org/phpBB3/viewtopic.php?f=8&t=5621
  */
 
 #include "top-config.h"

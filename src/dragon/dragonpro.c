@@ -1,62 +1,59 @@
-/** \file
+/* Dragon Professional (Alpha) support.
  *
- *  \brief Dragon Professional (Alpha) support.
+ * Copyright 2024-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2024-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* This file is included into dragon.c and provides the code specific to the
+ * Dragon Professional (Alpha).
  *
- *  See COPYING.GPL for redistribution conditions.
+ * PROBABLY SOMEWHAT INCOMPLETE.
  *
- *  \endlicenseblock
+ * The vast majority of the information for this support has come from comments
+ * in the MAME source code by Phill Harvey-Smith.  I've not been able to find
+ * anything written down anywhere else.
  *
- *  This file is included into dragon.c and provides the code specific to the
- *  Dragon Professional (Alpha).
+ * Further thanks to Phill Harvey-Smith for checking connectivity to more FDC
+ * control lines from the AY I/O port.
  *
- *  PROBABLY SOMEWHAT INCOMPLETE.
+ * An extra PIA (PIA2) is added, addressed at $FF24-$FF27 with the following
+ * port use:
  *
- *  The vast majority of the information for this support has come from
- *  comments in the MAME source code by Phill Harvey-Smith.  I've not been able
- *  to find anything written down anywhere else.
+ * - PA7..3      N/C
+ * - PA2         ROM select (0=BASIC, 1=Boot)
+ * - PA1         PSG BC1
+ * - PA0         PSG BDIR
+ * - PB7..0      PSG D7..0
  *
- *  Further thanks to Phill Harvey-Smith for checking connectivity to more FDC
- *  control lines from the AY I/O port.
+ * - CA2         FDC NMI enable
+ * - CB1         FDC DRQ
  *
- *  An extra PIA (PIA2) is added, addressed at $FF24-$FF27 with the following
- *  port use:
+ * An AY-3-8912 (single I/O port) PSG is added, interfaced through PIA2.  I/O
+ * port use is dedicated to the floppy disk controller:
  *
- *  PA7..3      N/C
- *  PA2         ROM select (0=BASIC, 1=Boot)
- *  PA1         PSG BC1
- *  PA0         PSG BDIR
- *  PB7..0      PSG D7..0
+ * - IOA7        Drive type select (0=5.25", 1=8")
+ * - IOA6        Write precompensation enable
+ * - IOA5        Density select (0=double, 1=single)
+ * - IOA4        Drive motor
+ * - IOA3        Device select 3
+ * - IOA2        Device select 2
+ * - IOA1        Device select 1
+ * - IOA0        Device select 0
  *
- *  CA2         FDC NMI enable
- *  CB1         FDC DRQ
+ * A WD2797 FDC is added, addressed somewhat differently to DragonDOS:
  *
- *  An AY-3-8912 (single I/O port) PSG is added, interfaced through PIA2.  I/O
- *  port use is dedicated to the floppy disk controller:
- *
- *  IOA7        Drive type select (0=5.25", 1=8")
- *  IOA6        Write precompensation enable
- *  IOA5        Density select (0=double, 1=single)
- *  IOA4        Drive motor
- *  IOA3        Device select 3
- *  IOA2        Device select 2
- *  IOA1        Device select 1
- *  IOA0        Device select 0
- *
- *  A WD2797 FDC is added, addressed somewhat differently to DragonDOS:
- *
- *  $FF2C       Data register
- *  $FF2D       Sector register
- *  $FF2E       Track register
- *  $FF2F       Command / status register
+ * - $FF2C       Data register
+ * - $FF2D       Sector register
+ * - $FF2E       Track register
+ * - $FF2F       Command / status register
  */
 
 #include "top-config.h"

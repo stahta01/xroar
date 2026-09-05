@@ -1,19 +1,15 @@
-/** \file
+/* Command-line and file-based configuration options.
  *
- *  \brief Command-line and file-based configuration options.
+ * Copyright 2009-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2009-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -376,8 +372,8 @@ static bool unset_option(struct xconfig_option const *option, void *sptr) {
 		return 1;
 	case XCONFIG_STRING_LIST:
 		assert(!(option->flags & XCONFIG_FLAG_CALL));
-		/* providing an argument to remove here might more sense, but
-		 * for now just remove the entire list: */
+		// providing an argument to remove here might more sense, but
+		// for now just remove the entire list:
 		slist_free_full(*(struct slist **)object, (slist_free_func)sdsfree);
 		*(struct slist **)object = NULL;
 		return 1;
@@ -439,7 +435,8 @@ enum xconfig_result xconfig_set_option_struct(const struct xconfig_set *set,
 	return XCONFIG_OK;
 }
 
-/* Simple parser: one directive per line, "option argument" */
+// Simple parser: one directive per line, "option argument"
+
 enum xconfig_result xconfig_parse_file(const struct xconfig_set *set, const char *filename) {
 	FILE *cfg;
 	int ret = XCONFIG_OK;

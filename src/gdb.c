@@ -1,27 +1,24 @@
-/** \file
+/* GDB protocol support.
  *
- *  \brief GDB protocol support.
+ * Copyright 2013-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2013-2026 Ciaran Anscomb
+ * Copyright 2021 Tormod Volden
  *
- *  \copyright Copyright 2021 Tormod Volden
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
+ */
 
- * Support a subset of the gdb protocol over a socket.  See
+/* Support a subset of the gdb protocol over a socket.  See
  * http://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
  *
  * Accessible registers are defined per-machine.
-
+ *
  * 'g' packet responses will contain hex pairs comprising all registers the
  * machine interface exposes.
  *
@@ -31,10 +28,8 @@
  * Breakpoints and watchpoints are supported ('Z' and 'z').
  *
  * Some standard, and some vendor-specific general queries are supported:
-
- *      qSupported      | XX... | report PacketSize
- *      qAttached       | 1     | always report attached
-
+ * - qSupported     | XX... | report PacketSize
+ * - qAttached      | 1     | always report attached
  */
 
 #include "top-config.h"

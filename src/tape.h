@@ -1,19 +1,15 @@
-/** \file
+/* Cassette tape support.
  *
- *  \brief Cassette tape support.
+ * Copyright 2003-2022 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_TAPE_H_
@@ -26,8 +22,8 @@
 
 struct ui_interface;
 
-/* These are the usual cycle lengths for each bit as written by the Dragon
- * BASIC ROM. */
+// The usual cycle lengths for each bit as written by the Dragon BASIC ROM.
+
 #define TAPE_BIT0_LENGTH (813 * EVENT_TICKS_14M31818(16))
 #define TAPE_BIT1_LENGTH (435 * EVENT_TICKS_14M31818(16))
 #define TAPE_AV_BIT_LENGTH ((TAPE_BIT0_LENGTH + TAPE_BIT1_LENGTH) / 2)
@@ -73,10 +69,15 @@ struct tape_module {
 	void (* const set_hysteresis)(struct tape *, float hysteresis);  // % full swing
 };
 
+// For audio file input, the values used by tape_tell(), taps_seek() might be
+// an absolute file position or sample number, whichever is appropriate.  For
+// a CAS file, it'll probably be file position * 8 + bit position.
+//
+// tape_to_ms() and tape_ms_to() will convert between these format-specific
+// positions and milliseconds.
+
 #define tape_close(t) (t)->module->close(t)
-/* for audio file input, tape_tell() might return an absolute file position,
-   or sample number whichever is appropriate.  for cas file, it'll probably be
-   file position * 8 + bit position */
+
 #define tape_tell(t) (t)->module->tell(t)
 int tape_seek(struct tape *t, long offset, int whence);
 #define tape_to_ms(t,...) (t)->module->to_ms((t), __VA_ARGS__)
@@ -97,22 +98,27 @@ struct tape_file {
 	uint16_t fnblock_crc;
 };
 
-/* find next tape file */
+// Find next tape file.
+
 struct tape_file *tape_file_next(struct tape *t, int skip_bad);
-/* seek to a tape file */
+
+// Seek to a tape file.
+
 void tape_seek_to_file(struct tape *t, struct tape_file const *f);
 
-/* Module-specific open() calls */
+// Module-specific open() calls.
+
 struct tape *tape_cas_open(const char *filename, const char *mode);
 struct tape *tape_k7_open(const char *filename, const char *mode);
 struct tape *tape_asc_open(const char *filename, const char *mode);
 struct tape *tape_sndfile_open(const char *filename, const char *mode, int rate);
 
-/* Only to be used by tape modules */
+// Only to be used by tape modules.
+
 struct tape *tape_new(void);
 void tape_free(struct tape *t);
 
-/**************************************************************************/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 struct tape_interface *tape_interface_new(struct ui_interface *ui);
 void tape_interface_free(struct tape_interface *ti);
@@ -130,9 +136,11 @@ int tape_autorun(struct tape_interface *ti, const char *filename);
 
 
 // Automatic motor control.  Simulates cassette relay.
+
 void tape_set_motor(struct tape_interface *ti, bool motor);
 
 // Called by machine to reflect change in tape output level.
+
 void tape_update_output(struct tape_interface *ti, uint8_t value);
 
 #endif

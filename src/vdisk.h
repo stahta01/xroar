@@ -1,19 +1,15 @@
-/** \file
+/* Virtual floppy disks.
  *
- *  \brief Virtual floppy disks.
+ * Copyright 2003-2022 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2022 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_VDISK_H_
@@ -47,16 +43,14 @@ enum vdisk_err {
 	vdisk_err_max
 };
 
-/*
- * If write_back is not set, the image file will not be updated when the disk
- * is ejected or flushed.
- *
- * If write_protect is set, the FDC will not be permitted to write to the disk
- * image.
- *
- * The actual track data is organised by disk side - this makes dynamically
- * expanding disks easier.
- */
+// If write_back is not set, the image file will not be updated when the disk
+// is ejected or flushed.
+//
+// If write_protect is set, the FDC will not be permitted to write to the disk
+// image.
+//
+// The actual track data is organised by disk side - this makes dynamically
+// expanding disks easier.
 
 struct vdisk {
 	unsigned ref_count;
@@ -84,9 +78,7 @@ struct vdisk {
 	} fmt;
 };
 
-/*
- * struct vdisk_ctx used to track various data while manipulating a disk image.
- */
+// struct vdisk_ctx used to track various data while manipulating a disk image.
 
 struct vdisk_ctx {
 	struct vdisk *disk;
@@ -143,12 +135,10 @@ void vdisk_unref(struct vdisk *disk);
 struct vdisk *vdisk_load(const char *filename);
 int vdisk_save(struct vdisk *disk);
 
-/*
- * These both return a pointer to the beginning of the specified track's IDAM
- * list (followed by the track data).  vdisk_extend_disk() is called before
- * writing, as it additionally extends the disk if cyl or head exceed the
- * currently configured values.  NULL return indicates error.
- */
+// These both return a pointer to the beginning of the specified track's IDAM
+// list (followed by the track data).  vdisk_extend_disk() is called before
+// writing, as it additionally extends the disk if cyl or head exceed the
+// currently configured values.  NULL return indicates error.
 
 void *vdisk_track_base(struct vdisk const *disk, unsigned cyl, unsigned head);
 void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head);

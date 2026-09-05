@@ -1,19 +1,15 @@
-/** \file
+/* XRoar initialisation and top-level emulator functions.
  *
- *  \brief XRoar initialisation and top-level emulator functions.
+ * Copyright 2003-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -398,7 +394,7 @@ static bool create_autosave_flag_file(void);
 static void remove_autosave_flag_file(void);
 #endif
 
-/**************************************************************************/
+// =========================================================================
 /* Global flags */
 
 static struct cart_config *selected_cart_config;
@@ -814,7 +810,7 @@ static struct {
 	{ NULL, FILETYPE_UNKNOWN }
 };
 
-/**************************************************************************/
+// =========================================================================
 
 #ifndef ROMPATH
 # define ROMPATH "."
@@ -823,8 +819,8 @@ static struct {
 # define CONFPATH "."
 #endif
 
-/** Processes options from a builtin list, a configuration file, and the
- * command line.  Determines which modules to use (see ui.h, vo.h, ao.h) and
+/* Processes options from a builtin list, a configuration file, and the command
+ * line.  Determines which modules to use (see ui.h, vo.h, ao.h) and
  * initialises them.  Starts an emulated machine.
  *
  * Attaches any media images requested to the emulated machine and schedules
@@ -1414,7 +1410,7 @@ static void save_config(void) {
 #endif
 }
 
-/** Generally set as an atexit() handler by main(), this function flushes any
+/* Generally set as an atexit() handler by main(), this function flushes any
  * output, shuts down the emulated machine and frees any other allocated
  * resources.
  */
@@ -1568,10 +1564,9 @@ void xroar_save_config_file(void) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/** \param ncycles number of cycles to run.
- *
- * Called either by main() in a loop, or by a UI module's run().
- */
+// ncycles      number of cycles to run.
+//
+// Called either by main() in a loop, or by a UI module's run().
 
 void xroar_run(int ncycles) {
 	event_run_queue(UI_EVENT_LIST, 0);

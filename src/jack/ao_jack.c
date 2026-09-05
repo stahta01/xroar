@@ -1,21 +1,18 @@
-/** \file
+/* JACK sound module.
  *
- *  \brief JACK sound module.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  Currently only nfragments == 1 is supported.  The architecture of JACK is
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/*  Currently only nfragments == 1 is supported.  The architecture of JACK is
  *  sufficiently different that new code will be needed to properly support
  *  stereo, so nchannels == 1 too.
  */

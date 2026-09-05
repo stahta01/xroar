@@ -1,46 +1,40 @@
-/** \file
+/* Motorola MC6801/6803 CPUs.
  *
- *  \brief Motorola MC6801/6803 CPUs.
+ * Copyright 2021-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2021-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - MC6801/6803 data sheet, Motorola
+ * - MC6801 8-Bit Single-Chip Microcomputer Reference Manual, Motorola
  *
- *  \endlicenseblock
+ * Thanks to:
  *
- *  \par Sources
+ * - Simon Jonassen, for an interrupt test case that winkled out a problem in
+ *   the RTI instruction.
+ * - Greg Dionne, for lots of details about illegal instructions, from an
+ *   original list by James Tamer.
+ * - Ron Klein, for running tests on real hardware and sending me pictures of
+ *   the results.
  *
- *  -  MC6801/6803 data sheet, Motorola
+ * Lots of warnings:
  *
- *  -  MC6801 8-Bit Single-Chip Microcomputer Reference Manual, Motorola
+ * This implementation is very much INCOMPLETE.
  *
- *  Thanks to:
+ * Focus is to emulate what's needed of an MC6803 within a Tandy MC-10.
  *
- *  -  Simon Jonassen, for an interrupt test case that winkled out a problem in
- *     the RTI instruction.
+ * Interface does _not_ reflect the multiple-use nature of 680[13] ports.
  *
- *  -  Greg Dionne, for lots of details about illegal instructions, from an
- *     original list by James Tamer.
- *
- *  -  Ron Klein, for running tests on real hardware and sending me pictures of
- *     the results.
- *
- *  Lots of warnings:
- *
- *  This implementation is very much INCOMPLETE.
- *
- *  Focus is to emulate what's needed of an MC6803 within a Tandy MC-10.
- *
- *  Interface does _not_ reflect the multiple-use nature of 680[13] ports.
- *
- *  May eat your dog.  Well, maybe just your stick insects.
+ * May eat your dog.  Well, maybe just your stick insects.
  */
 
 #include "top-config.h"

@@ -1,19 +1,15 @@
-/** \file
+/* User-interface modules & interfaces.
  *
- *  \brief User-interface modules & interfaces.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_UI_H_
@@ -60,42 +56,41 @@ struct ui_module {
 
 extern struct ui_module * const *ui_module_list;
 
-/** \brief Interface to UI module.
- */
+/* Interface to UI module. */
 
 struct ui_interface {
 	DELEGATE_T0(void) free;
 
-	/** \brief UI-specific function providing emulator main loop.
-	 *
-	 * If not provided, main() should call xroar_run() in a loop.
-	 */
+	// UI-specific function providing emulator main loop.
+	//
+	// If not provided, main() should call xroar_run() in a loop.
+
 	DELEGATE_T0(void) run;
 
-	/** \brief Create or update machine menu.
-	 *
-	 * Called at startup, and whenever the machine config list changes.
-	 */
+	// Create or update machine menu.
+	//
+	// Called at startup, and whenever the machine config list changes.
+
 	DELEGATE_T0(void) update_machine_menu;
 
-	/** \brief Create or update cartridge menu.
-	 *
-	 * Called at startup, and whenever the cartridge config list changes.
-	 */
+	// Create or update cartridge menu.
+	//
+	// Called at startup, and whenever the cartridge config list changes.
+
 	DELEGATE_T0(void) update_cartridge_menu;
 
-	/** \brief Create or update joystick menus.
-	 *
-	 * Called at startup, and whenever the list of joysticks changes.
-	 */
+	// Create or update joystick menus.
+	//
+	// Called at startup, and whenever the list of joysticks changes.
+
 	DELEGATE_T0(void) update_joystick_menus;
 
-	/** \brief Interface to the file requester initialised by the UI.
-	 */
+	// Interface to the file requester initialised by the UI.
+
 	struct filereq_interface *filereq_interface;
 
-	/** \brief Interface to the video module initialised by the UI.
-	 */
+	// Interface to the video module initialised by the UI.
+
 	struct vo_interface *vo_interface;
 };
 

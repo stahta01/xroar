@@ -1,33 +1,28 @@
-/** \file
+/* Video ouput modules & interfaces.
  *
- *  \brief Video ouput modules & interfaces.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Successfully initialising a video module returns a (struct vo_interface),
+ * which is used by various parts of XRoar to do different things:
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - The UI may ask it to resize, toggle menubar, etc.
+ * - Selecting a machine may define colour palettes and select how things are
+ *   to be rendered.
+ * - While running, the emulated machine will use it to render scanlines,
+ *   indicate vertical sync, or just ask to refresh the screen.
  *
- *  \endlicenseblock
- *
- *  Successfully initialising a video module returns a (struct vo_interface),
- *  which is used by various parts of XRoar to do different things:
- *
- *  - The UI may ask it to resize, toggle menubar, etc.
- *
- *  - Selecting a machine may define colour palettes and select how things are
- *    to be rendered.
- *
- *  - While running, the emulated machine will use it to render scanlines,
- *    indicate vertical sync, or just ask to refresh the screen.
- *
- *  Palette entries are specified either as YPbPr (Y scaled 0-1, Pb and Pr
- *  scaled ±0.5) or as RGB (each scaled 0-1).
+ * Palette entries are specified either as YPbPr (Y scaled 0-1, Pb and Pr
+ * scaled ±0.5) or as RGB (each scaled 0-1).
  */
 
 #ifndef XROAR_VO_H_
@@ -164,25 +159,30 @@ struct vo_interface {
 	// Used by UI to adjust viewing parameters
 
 	// Resize window
+	//
 	//     unsigned w, h;  // dimensions in pixels
 	DELEGATE_T2(void, unsigned, unsigned) resize;
 
 	// Configure viewport dimensions
+	//
 	//     int w, h;  // dimensions in pixels/scanlines
 	DELEGATE_T2(void, int, int) set_viewport;
 
 	// Configure active area (used to centre display)
+	//
 	//     int x, y;  // top-left of active area
 	//     int w, h;  // size of active area
 	DELEGATE_T4(void, int, int, int, int) set_active_area;
 
 	// Set cross-colour phase
+	//
 	//     int phase;  // in degrees
 	DELEGATE_T1(void, int) set_cmp_phase;
 
 	// Used by machine to configure video output
 
 	// Set how the chroma components relate to each other (in degrees)
+	//
 	//     float chb_phase;  // øB phase, default 0°
 	//     float cha_phase;  // øA phase, default 90°
 	DELEGATE_T2(void, float, float) set_cmp_lead_lag;
@@ -193,27 +193,32 @@ struct vo_interface {
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_ybr;
 
 	// Add a colour to the palette usine RGB values
+	//
 	//     uint8_t index;  // palette index
 	//     float R, G, B;  // colour
 	DELEGATE_T4(void, uint8, float, float, float) palette_set_rgb;
 
 	// Set a burst phase
+	//
 	//     unsigned burstn;  // burst index
 	//     int phase;        // in degrees
 	DELEGATE_T2(void, unsigned, int) set_cmp_burst;
 
 	// Set burst phase in terms of B'-Y' and R'-Y'
+	//
 	//     unsigned burstn;  // burst index
 	//     float b_y, r_y;
 	DELEGATE_T3(void, unsigned, float, float) set_cmp_burst_br;
 
 	// Set machine default cross-colour phase
+	//
 	//     int phase;  // in degrees
 	DELEGATE_T1(void, int) set_cmp_phase_offset;
 
 	// Used by machine to render video
 
 	// Currently selected line renderer
+	//
 	//     unsigned burst;       // burst index for this line
 	//     unsigned npixels;     // no. pixels in scanline
 	//     const uint8_t *data;  // palettised data, NULL for dummy line
@@ -238,15 +243,15 @@ struct vo_geometry {
 	int x, y;
 };
 
-// Allocates at least enough space for (struct vo_interface)
+// Allocates at least enough space for (struct vo_interface).
 
 void *vo_interface_new(size_t isize);
 
-// Initialise common features of a vo_interface
+// Initialise common features of a vo_interface.
 
 void vo_interface_init(struct vo_interface *);
 
-// Calls free() delegate then frees structure
+// Calls free() delegate then frees structure.
 
 void vo_free(void *);
 
@@ -255,7 +260,8 @@ void vo_free(void *);
 
 void vo_set_renderer(struct vo_interface *vo, struct vo_render *vr);
 
-// Select input signal
+// Select input signal.
+//
 //     int signal;  // VO_SIGNAL_*
 
 void vo_set_signal(struct vo_interface *vo, int signal);
@@ -265,6 +271,7 @@ void vo_set_signal(struct vo_interface *vo, int signal);
 void vo_set_viewport(struct vo_interface *vo, int picture);
 
 // Set draw area.  Also calculates and updates picture area.
+//
 //     int x, y;  // offset into window
 //     int w, h;  // dimensions
 
@@ -287,13 +294,13 @@ inline void vo_refresh(struct vo_interface *vo) {
 	DELEGATE_SAFE_CALL(vo->draw);
 }
 
-// Zoom helpers
+// Zoom helpers.
 
 void vo_zoom_reset(struct vo_interface *);
 void vo_zoom_in(struct vo_interface *);
 void vo_zoom_out(struct vo_interface *);
 
-// Helper function to parse geometry string
+// Helper function to parse geometry string.
 
 void vo_parse_geometry(const char *str, struct vo_geometry *geometry);
 

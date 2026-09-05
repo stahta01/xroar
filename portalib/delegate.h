@@ -1,21 +1,17 @@
-/** \file
+/* Delegates in C.
  *
- *  \brief Delegates in C.
+ * Copyright 2014-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2014-2026 Ciaran Anscomb
+ * This file is part of Portalib.
  *
- *  \licenseblock This file is part of Portalib.
+ * Portalib is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  Portalib is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU Lesser General Public License as published by the Free
- *  Software Foundation; either version 3 of the License, or (at your option)
- *  any later version.
+ * See COPYING.LGPL and COPYING.GPL for redistribution conditions.
  *
- *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  Implements the default no-op functions for defined delegate types.
+ * Implements the default no-op functions for defined delegate types.
  */
 
 #ifndef PORTALIB_DELEGATE_H_
@@ -26,7 +22,7 @@
 #define DELEGATE_DEFINED(d) ((d).func != NULL)
 #define DELEGATE_EQ(d0,d1) (((d0).func == (d1).func) && ((d0).sptr == (d1).sptr))
 
-/* Underlying struct def for delegates. */
+// Underlying struct def for delegates.
 
 #define DELEGATE_S0(T) struct { T (*func)(void *); void *sptr; }
 #define DELEGATE_S1(T,T0) struct { T (*func)(void *, T0); void *sptr; }
@@ -36,7 +32,7 @@
 #define DELEGATE_S5(T,T0,T1,T2,T3,T4) struct { T (*func)(void *, T0, T1, T2, T3, T4); void *sptr; }
 #define DELEGATE_S6(T,T0,T1,T2,T3,T4,T5) struct { T (*func)(void *, T0, T1, T2, T3, T4, T5); void *sptr; }
 
-/* Type name for delegates. */
+// Type name for delegates.
 
 #define DELEGATE_T0_(N) delegate_##N
 #define DELEGATE_T1_(N,N0) delegate_##N##_##N0
@@ -54,7 +50,7 @@
 #define DELEGATE_T5(N,N0,N1,N2,N3,N4) DELEGATE_T5_(N,N0,N1,N2,N3,N4)
 #define DELEGATE_T6(N,N0,N1,N2,N3,N4,N5) DELEGATE_T6_(N,N0,N1,N2,N3,N4,N5)
 
-/* Define a set of delegate types. */
+// Define a set of delegate types.
 
 typedef DELEGATE_S0(void) DELEGATE_T0(void);
 typedef DELEGATE_S1(void, bool) DELEGATE_T1(void, bool);
@@ -111,7 +107,7 @@ typedef DELEGATE_S3(int, int, unsigned, uint8_t *) DELEGATE_T3(int, int, unsigne
 typedef DELEGATE_S3(int, int, unsigned, const uint8_t *) DELEGATE_T3(int, int, unsigned, cuint8p);
 typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, int, floatp);
 
-/* Convenience function for declaring anonymous structs. */
+// Convenience function for declaring anonymous structs.
 
 #define DELEGATE_INIT(f,s) {f,s}
 
@@ -123,7 +119,7 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_AS5(N,N0,N1,N2,N3,N4,f,s) (DELEGATE_T5(N,N0,N1,N2,N3,N4))DELEGATE_INIT(f,s)
 #define DELEGATE_AS6(N,N0,N1,N2,N3,N4,N5,f,s) (DELEGATE_T6(N,N0,N1,N2,N3,N4,N5))DELEGATE_INIT(f,s)
 
-/* Delegate default function names. */
+// Delegate default function names.
 
 #define DELEGATE_DEFAULT_F0(N) delegate_##N##_default
 #define DELEGATE_DEFAULT_F1(N,N0) delegate_##N##_default_##N0
@@ -133,7 +129,7 @@ typedef DELEGATE_S3(float, uint32_t, int, float *) DELEGATE_T3(float, uint32, in
 #define DELEGATE_DEFAULT_F5(N,N0,N1,N2,N3,N4) delegate_##N##_default_##N0##_##N1##_##N2##_##N3##_##N4
 #define DELEGATE_DEFAULT_F6(N,N0,N1,N2,N3,N4,N5) delegate_##N##_default_##N0##_##N1##_##N2##_##N3##_##N4##_##N5
 
-/* Default no-op functions for defined delegate types. */
+// Default no-op functions for defined delegate types.
 
 #define DELEGATE_DEF_PROTO0(T,N) T DELEGATE_DEFAULT_F0(N)(void *)
 #define DELEGATE_DEF_PROTO1(T,N,T0,N0) T DELEGATE_DEFAULT_F1(N,N0)(void *, T0)
@@ -212,7 +208,7 @@ DELEGATE_DEF_PROTO3(float, float, uint32_t, uint32, int, int, float *, floatp);
 #define DELEGATE_DEFAULT5(N,N0,N1,N2,N3,N4) DELEGATE_AS5(N, N0, N1, N2, N3, N4, DELEGATE_DEFAULT_F5(N, N0, N1, N2, N3, N4), NULL)
 #define DELEGATE_DEFAULT6(N,N0,N1,N2,N3,N4,N5) DELEGATE_AS6(N, N0, N1, N2, N3, N4, N5, DELEGATE_DEFAULT_F6(N, N0, N1, N2, N3, N4, N5), NULL)
 
-/* Calling interface. */
+// Calling interface.
 
 #define DELEGATE_CALL0(d) ((d).func((d).sptr))
 #define DELEGATE_CALLN(d,...) ((d).func((d).sptr,__VA_ARGS__))

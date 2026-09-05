@@ -1,19 +1,15 @@
-/** \file
+/* ROM filename database.
  *
- *  \brief ROM filename database.
+ * Copyright 2012-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -55,7 +51,7 @@ static int compare_entry(const void *a, const void *b) {
 	return strcmp(aa->name, bb);
 }
 
-/**************************************************************************/
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static struct romlist *new_romlist(const char *name) {
 	struct romlist *new = xmalloc(sizeof(*new));

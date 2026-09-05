@@ -1,26 +1,21 @@
-/** \file
+/* SDS extras.
  *
- *  \brief SDS extras.
+ * Copyright 2018-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2018-2024 Ciaran Anscomb
+ * This is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 3 of the License, or (at your option)
+ * any later version.
  *
- *  \licenseblock
+ * See COPYING.LGPL and COPYING.GPL for redistribution conditions.
  *
- *  This is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU Lesser General Public License as published by the Free
- *  Software Foundation; either version 3 of the License, or (at your option)
- *  any later version.
+ * Be aware that this depends on SDSLib functionality, which is distributed
+ * under the 3-clause "Modified BSD License".
+ */
+
+/* Layers on top of SDSLib 2.0, available here at time of writing:
  *
- *  See COPYING.LGPL and COPYING.GPL for redistribution conditions.
- *
- *  Be aware that this depends on SDSLib functionality, which is distributed
- *  under the 3-clause "Modified BSD License".
- *
- *  \endlicenseblock
- *
- *  Layers on top of SDSLib 2.0, available here at time of writing:
- *
- *  - https://github.com/antirez/sds
+ * - https://github.com/antirez/sds
  */
 
 #include "top-config.h"

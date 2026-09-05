@@ -1,19 +1,15 @@
-/** \file
+/* Windows user-interface common functions.
  *
- *  \brief Windows user-interface common functions.
+ * Copyright 2006-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2006-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -32,7 +28,7 @@
 #include "windows32/common_windows32.h"
 #include "windows32/guicon.h"
 
-/** A console window is created if requested, thus this should be called _after_
+/* A console window is created if requested, thus this should be called _after_
  * processing options that may call for a console, but _before_ generating any
  * output that should go to that console.
  *

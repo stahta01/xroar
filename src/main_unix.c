@@ -1,19 +1,15 @@
-/** \file
+/* main() function.
  *
- *  \brief main() function.
+ * Copyright 2003-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -41,7 +37,7 @@
 #ifdef HAVE_SIGNAL_H
 #ifndef HAVE_WASM
 
-/** \brief Signal handler.
+/* Signal handler.
  *
  * For UIs that do not provide their own run(), we trap SIGTERM and SIGINT to
  * point to this signal handler, which will set the shutdown flag, terminating
@@ -74,7 +70,7 @@ static void handle_signal(int sig) {
 #endif
 #endif
 
-/** \brief Entry point.
+/* Entry point.
  *
  * Sets up the exit handler and calls xroar_init(), which will process all
  * configuration and return a UI interface.

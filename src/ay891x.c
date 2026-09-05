@@ -1,25 +1,21 @@
-/** \file
+/* AY-3-891x sound chip.
  *
- *  \brief AY-3-891x sound chip.
+ * Copyright 2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  \par Sources
- *
- *  - AY-3-891x data sheet
- *
- *  - https://github.com/lvd2/ay-3-8910_reverse_engineered.git [deathsoft]
+ * - AY-3-891x data sheet
+ * - https://github.com/lvd2/ay-3-8910_reverse_engineered.git [deathsoft]
  */
 
 #include "top-config.h"

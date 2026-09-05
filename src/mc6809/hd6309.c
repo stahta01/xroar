@@ -1,40 +1,36 @@
-/** \file
+/* Hitach HD6309 CPU.
  *
- *  \brief Hitach HD6309 CPU.
+ * Copyright 2012-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2012-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* A drop-in replacement for the MC6809, this Hitachi CMOS version of the CPU
+ * includes many instruction set enhancements.
  *
- *  See COPYING.GPL for redistribution conditions.
+ * Sources
  *
- *  \endlicenseblock
+ * - MC6809E data sheet, Motorola
  *
- *  A drop-in replacement for the MC6809, this Hitachi CMOS version of the CPU
- *  includes many instruction set enhancements.
+ * - HD6309E data sheet, Hitachi
  *
- *  \par Sources
+ * - MC6809 Cycle-By-Cycle Performance,
+ *   http://atjs.great-site.net/mc6809/Information/6809cyc.txt
  *
- *  - MC6809E data sheet, Motorola
+ * - Motorola 6809 and Hitachi 6309 Programmers Reference, 2009 Darren Atkinson
  *
- *  - HD6309E data sheet, Hitachi
+ * - Undocumented 6309 Behaviours, David Banks [hoglet67],
+ *   https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6309-Behaviours
  *
- *  - MC6809 Cycle-By-Cycle Performance,
- *    http://atjs.great-site.net/mc6809/Information/6809cyc.txt
- *
- *  - Motorola 6809 and Hitachi 6309 Programmers Reference,
- *    2009 Darren Atkinson
- *
- *  - Undocumented 6309 Behaviours, David Banks [hoglet67]
- *    https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6309-Behaviours
- *
- *  - Tim Lindner's Hitachi 6309 Fuzzing Project
- *    https://github.com/tlindner/Fuzz6309
+ * - Tim Lindner's Hitachi 6309 Fuzzing Project,
+ *   https://github.com/tlindner/Fuzz6309
  */
 
 #include "top-config.h"

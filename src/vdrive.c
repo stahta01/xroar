@@ -1,19 +1,15 @@
-/** \file
+/* Virtual floppy drives.
  *
- *  \brief Virtual floppy drives.
+ * Copyright 2003-2025 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #include "top-config.h"
@@ -117,7 +113,7 @@ void vdrive_ui_set_write_back(void *, int tag, void *smsg);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Public methods */
+// Public methods
 
 static void vdrive_set_dirc(void *sptr, bool dirc);
 static void vdrive_set_dden(void *sptr, bool dden);
@@ -136,7 +132,7 @@ static void vdrive_update_connection(void *sptr);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Support */
+// Support
 
 static void set_ready_state(struct vdrive_interface_private *vip, bool state);
 static void set_tr00_state(struct vdrive_interface_private *vip, bool state);
@@ -147,7 +143,7 @@ static int compar_idams(const void *aa, const void *bb);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Event handlers */
+// Event handlers
 
 static void do_index_pulse(void *sptr);
 static void do_reset_index_pulse(void *sptr);
@@ -406,7 +402,7 @@ void vdrive_ui_set_write_back(void *sptr, int tag, void *smsg) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Signals to all drives */
+// Signals to all drives
 
 static void vdrive_set_dirc(void *sptr, bool dirc) {
 	struct vdrive_interface_private *vip = sptr;
@@ -427,7 +423,7 @@ static void vdrive_set_sso(void *sptr, unsigned head) {
 	update_signals(vip);
 }
 
-/* Drive select */
+// Drive select
 
 static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive) {
 	struct vdrive_interface_private *vip = (struct vdrive_interface_private *)vi;
@@ -437,7 +433,7 @@ static void vdrive_set_drive(struct vdrive_interface *vi, unsigned drive) {
 	update_signals(vip);
 }
 
-/* Operations on selected drive */
+// Operations on selected drive
 
 void vdrive_step(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
@@ -541,15 +537,15 @@ unsigned vdrive_time_to_next_byte(void *sptr) {
 	return (unsigned)to_time;
 }
 
-/* Calculates the number of cycles it would take to get from the current head
- * position to the next IDAM or next index pulse, whichever comes first. */
+// Calculates the number of cycles it would take to get from the current head
+// position to the next IDAM or next index pulse, whichever comes first.
 
 unsigned vdrive_time_to_next_idam(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
 	event_ticks next_cycle;
 	if (!vip->ready_state)
 		return EVENT_MS(200);
-	/* Update head_pos based on time elapsed since track start */
+	// Update head_pos based on time elapsed since track start
 	vip->head_pos = 128 + ((event_current_tick - vip->track_start_cycle) / BYTE_TIME);
 	unsigned next_head_pos = vip->current_drive->disk->track_length;
 	if (vip->idamptr) {
@@ -573,9 +569,9 @@ unsigned vdrive_time_to_next_idam(void *sptr) {
 	return to_time;
 }
 
-/* Updates head_pos to next IDAM and returns a pointer to it.  If no valid
- * IDAMs are present, an index pulse is generated and the head left at the
- * beginning of the track. */
+// Updates head_pos to next IDAM and returns a pointer to it.  If no valid
+// IDAMs are present, an index pulse is generated and the head left at the
+// beginning of the track.
 
 uint8_t *vdrive_next_idam(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;
@@ -610,7 +606,7 @@ static void vdrive_update_connection(void *sptr) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Support */
+// Support
 
 static void set_ready_state(struct vdrive_interface_private *vip, bool state) {
 	struct vdrive_interface *vi = &vip->public;
@@ -673,8 +669,9 @@ static void update_signals(struct vdrive_interface_private *vip) {
 	}
 }
 
-/* Compare IDAM pointers - normal int comparison with 0 being a special case
- * to come after everything else */
+// Compare IDAM pointers - normal int comparison with 0 being a special case
+// to come after everything else.
+
 static int compar_idams(const void *aa, const void *bb) {
 	uint16_t a = *((const uint16_t *)aa) & 0x3fff;
 	uint16_t b = *((const uint16_t *)bb) & 0x3fff;
@@ -687,7 +684,7 @@ static int compar_idams(const void *aa, const void *bb) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Event handlers */
+// Event handlers
 
 static void do_index_pulse(void *sptr) {
 	struct vdrive_interface_private *vip = sptr;

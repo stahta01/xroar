@@ -1,21 +1,20 @@
-/** \file
+/* Becker port support.
  *
- *  \brief Becker port support.
+ * Copyright 2012-2025 Ciaran Anscomb
  *
- *  The "becker port" is an IP version of the usually-serial DriveWire protocol.
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \copyright Copyright 2012-2025 Ciaran Anscomb
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
- *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* The "becker port" is a port-mapped version of the usually-serial DriveWire
+ * protocol.  Originally created for the CoCo3FPGA, it found use in emulators
+ * over IP.
  */
 
 #include "top-config.h"

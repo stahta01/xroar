@@ -1,34 +1,29 @@
-/** \file
+/* Multi-Pak Interface (MPI) support.
  *
- *  \brief Multi-Pak Interface (MPI) support.
+ * Copyright 2014-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2014-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - http://worldofdragon.org/index.php?title=RACE_Computer_Expansion_Cage
  *
- *  \endlicenseblock
+ * Also supports the RACE Computer Expansion Cage - similar to the MPI, but
+ * with some slightly different behaviour:
  *
- *  \par Sources
- *
- *  - http://worldofdragon.org/index.php?title=RACE_Computer_Expansion_Cage
- *
- *  Also supports the RACE Computer Expansion Cage - similar to the MPI, but
- *  with some slightly different behaviour:
- *
- *  - No separate IO select.
- *
- *  - Select register is at $FEFF.
- *
- *  - Reading $FEFF does same as writing (reference suggests it sets slot to
- *    '2', but my guess is that this just happened to be on the data bus at the
- *    time it was tested (confirmed for PEEK).
+ * - No separate IO select.
+ * - Select register is at $FEFF.
+ * - Reading $FEFF does same as writing (reference suggests it sets slot to
+ *   '2', but my guess is that this just happened to be on the data bus at the
+ *   time it was tested (confirmed for PEEK).
  */
 
 #include "top-config.h"

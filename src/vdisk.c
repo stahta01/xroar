@@ -1,27 +1,21 @@
-/** \file
+/* Virtual floppy disks.
  *
- *  \brief Virtual floppy disks.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
-/*
- * To avoid confusion, the position of the heads is referred to as the
- * 'cylinder' (often abbreviated to 'cyl').  The term 'track' refers only to
- * the data addressable within one cylinder by one head.  A 'side' is the
- * collection of all the tracks addressable by one head.
- */
+// To avoid confusion, the position of the heads is referred to as the
+// 'cylinder' (often abbreviated to 'cyl').  The term 'track' refers only to
+// the data addressable within one cylinder by one head.  A 'side' is the
+// collection of all the tracks addressable by one head.
 
 #include "top-config.h"
 
@@ -225,20 +219,19 @@ int vdisk_save(struct vdisk *disk) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * VDK header entry meanings taken from the source to PC-Dragon II:
-
- * [0..1]       Magic identified string "dk"
- * [2..3]       Header length (little-endian)
- * [4]          VDK version
- * [5]          VDK backwards compatibility version
- * [6]          Identity of file source ('P' - PC Dragon, 'X' - XRoar)
- * [7]          Version of file source
- * [8]          Number of cylinders
- * [9]          Number of heads
- * [10]         Flags
- * [11]         Compression flags (bits 0-2) and name length (bits 3-7)
-
+/* VDK header entry meanings taken from the source to PC-Dragon II:
+ *
+ * - [0..1]       Magic identified string "dk"
+ * - [2..3]       Header length (little-endian)
+ * - [4]          VDK version
+ * - [5]          VDK backwards compatibility version
+ * - [6]          Identity of file source ('P' - PC Dragon, 'X' - XRoar)
+ * - [7]          Version of file source
+ * - [8]          Number of cylinders
+ * - [9]          Number of heads
+ * - [10]         Flags
+ * - [11]         Compression flags (bits 0-2) and name length (bits 3-7)
+ *
  * PC-Dragon then reserves 31 bytes for a disk name, the number of significant
  * characters in which are indicated in the name length bitfield of byte 11.
  *
@@ -441,27 +434,26 @@ static int vdisk_save_vdk(struct vdisk *disk) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * The JVC format (as used in Jeff Vavasour's emulators) is also known as DSK.
+/* The JVC format (as used in Jeff Vavasour's emulators) is also known as DSK.
  * It consists of an optional header followed by a simple dump of the sector
  * data.  The header length is the file size modulo 256.  The header needn't be
  * large enough to contain all fields if they are to have their default value.
  * Potential header information, and the default values:
-
- * [0]  Sectors per track       18
- * [1]  Sides (1-2)             1
- * [2]  Sector size code (0-3)  1 (== 256 bytes)
- * [3]  First sector ID         1
- * [4]  Sector attribute flag   0
-
+ *
+ * - [0]  Sectors per track       18
+ * - [1]  Sides (1-2)             1
+ * - [2]  Sector size code (0-3)  1 (== 256 bytes)
+ * - [3]  First sector ID         1
+ * - [4]  Sector attribute flag   0
+ *
  * Sector size is 128 * 2 ^ (size code).  If the "sector attribute flag" is
  * non-zero, it indicates that each sector is preceded by an attribute byte,
  * containing the following information in its bitfields:
-
- * Bit 3        Set on CRC error
- * Bit 4        Set if sector not found
- * Bit 5        0 = Data Mark, 1 = Deleted Data Mark
-
+ *
+ * - Bit 3        Set on CRC error
+ * - Bit 4        Set if sector not found
+ * - Bit 5        0 = Data Mark, 1 = Deleted Data Mark
+ *
  * The potential for 128-byte sectors, and for each sector to be one byte
  * larger would interfere with the "modulo 256" method of identifying header
  * size, so XRoar takes the following precautions:
@@ -521,7 +513,7 @@ static struct vdisk *do_load_jvc(const char *filename, bool auto_os9) {
 		if (header_size >= 5)
 			sector_attr_flag = buf[4];
 	} else if (auto_os9) {
-		/* read first sector & check it makes sense */
+		// read first sector & check it makes sense
 		if (fread(buf + 256, 256, 1, fd) < 1) {
 			LOG_MOD_SUB_WARN("vdisk", "jvc", "%s: read failed (sector)\n", filename);
 			fclose(fd);
@@ -692,22 +684,21 @@ static int vdisk_save_jvc(struct vdisk *disk) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * DMK is the format use by David Keil's emulators.  It preserves far more of
+/* DMK is the format use by David Keil's emulators.  It preserves far more of
  * the underlying disk format than VDK or JVC.  A 16-byte header is followed by
  * raw track data as it would be written by the disk controller, though minus
  * the clocking information.  A special table preceeding each track contains
  * the location of sector ID Address Marks.  Header information is as follows:
-
- * [0]          Write protect ($00 = write enable, $FF = write protect)
- * [1]          Number of cylinders
- * [2..3]       Track length including 128-byte IDAM table (little-endian)
- * [4]          Option flags
- * [5..11]      Reserved
- * [12..15]     Must be 0x000000.  0x12345678 flags a real drive (unsupported)
-
- * In the option flags byte, bit 4 indicates a single-sided disk if set.  Bit 6
- * flags single-density-only, and bit 7 indicates mixed density; both are
+ *
+ * - [0]          Write protect ($00 = write enable, $FF = write protect)
+ * - [1]          Number of cylinders
+ * - [2..3]       Track length including 128-byte IDAM table (little-endian)
+ * - [4]          Option flags
+ * - [5..11]      Reserved
+ * - [12..15]     Must be 0x000000.  0x12345678 flags real drive (unsupported)
+ *
+ * In the option flags byte, bit 4 indicates a single-sided disk if set.  Bit
+ * 6 flags single-density-only, and bit 7 indicates mixed density; both are
  * ignored by XRoar.
  *
  * Next follows track data, each track consisting of a 64-entry table of 16-bit
@@ -716,8 +707,8 @@ static int vdisk_save_jvc(struct vdisk *disk) {
  *
  * Because XRoar maintains separate ideas of write protect and write back, the
  * write protect flag is interpreted as write back instead - a value of $FF
- * will disable overwriting the disk image with changes made in memory.  A
- * separate header entry at offset 11 (last of the reserved bytes) is used to
+ * will disable overwriting the disk image with changes made in memory.
+ * A separate header entry at offset 11 (last of the reserved bytes) is used to
  * indicate write protect instead.
  */
 
@@ -832,9 +823,7 @@ static int vdisk_save_dmk(struct vdisk *disk) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Helper functions for dealing with the in-memory disk images.
- */
+// Helper functions for dealing with the in-memory disk images.
 
 struct vdisk_ctx *vdisk_ctx_new(struct vdisk *disk) {
 	struct vdisk_ctx *ctx = xmalloc(sizeof(*ctx));
@@ -887,10 +876,8 @@ bool vdisk_ctx_seek(struct vdisk_ctx *ctx, bool extend, unsigned cyl, unsigned h
 	return (track_data != NULL);
 }
 
-/*
- * Returns a pointer to the beginning of the specified track.  Return type is
- * (void *) because track data is manipulated in 8-bit and 16-bit chunks.
- */
+// Returns a pointer to the beginning of the specified track.  Return type is
+// (void *) because track data is manipulated in 8-bit and 16-bit chunks.
 
 void *vdisk_track_base(struct vdisk const *disk, unsigned cyl, unsigned head) {
 	if (disk == NULL || head >= disk->num_heads || cyl >= disk->num_cylinders) {
@@ -899,10 +886,8 @@ void *vdisk_track_base(struct vdisk const *disk, unsigned cyl, unsigned head) {
 	return disk->side_data[head] + cyl * disk->track_length;
 }
 
-/*
- * Write routines call this instead of vdisk_track_base() - it will increase
- * disk size if required.  Returns same as above.
- */
+// Write routines call this instead of vdisk_track_base() - it will increase
+// disk size if required.  Returns same as above.
 
 void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 	assert(disk != NULL);
@@ -945,7 +930,7 @@ void *vdisk_extend_disk(struct vdisk *disk, unsigned cyl, unsigned head) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/* Write 'repeat' bytes of 'data', update CRC */
+// Write 'repeat' bytes of 'data', update CRC.
 
 static void write_bytes(struct vdisk_ctx *ctx, unsigned repeat, uint8_t data) {
 	assert(ctx->head_pos >= 128);
@@ -963,7 +948,7 @@ static void write_bytes(struct vdisk_ctx *ctx, unsigned repeat, uint8_t data) {
 	}
 }
 
-/* Write CRC, should leave ctx->crc == 0 */
+// Write CRC, should leave ctx->crc == 0.
 
 static void write_crc(struct vdisk_ctx *ctx) {
 	uint8_t hi = ctx->crc >> 8;
@@ -972,7 +957,7 @@ static void write_crc(struct vdisk_ctx *ctx) {
 	write_bytes(ctx, 1, lo);
 }
 
-/* Read a byte, update CRC */
+// Read a byte, update CRC.
 
 static uint8_t read_byte(struct vdisk_ctx *ctx) {
 	if (!ctx->track_data)
@@ -990,7 +975,7 @@ static uint8_t read_byte(struct vdisk_ctx *ctx) {
 	return data;
 }
 
-/* Read CRC bytes and return 1 if valid */
+// Read CRC bytes and return 1 if valid.
 
 static bool read_crc(struct vdisk_ctx *ctx) {
 	(void)read_byte(ctx);
@@ -1033,7 +1018,7 @@ bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 
 	if (!dden) {
 
-		/* Single density */
+		// Single density
 		write_bytes(ctx, 20, 0xff);
 		for (unsigned sector = 0; sector < nsectors; sector++) {
 			int sect = sector_id[sector];
@@ -1054,7 +1039,7 @@ bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 			write_crc(ctx);
 			write_bytes(ctx, 12, 0xff);
 		}
-		/* fill to end of disk */
+		// fill to end of disk
 		while (ctx->head_pos != 128) {
 			write_bytes(ctx, 1, 0xff);
 		}
@@ -1067,7 +1052,7 @@ bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 		int gap2 = 16 + (gap * 76) / (584 * nsectors);
 		int gap3 = 1 + (gap * 412) / (584 * nsectors);
 
-		/* Double density */
+		// Double density
 		write_bytes(ctx, pigap, 0x4e);
 		write_bytes(ctx, 9, 0x00);
 		write_bytes(ctx, 3, 0xc2);
@@ -1094,7 +1079,7 @@ bool vdisk_format_track(struct vdisk_ctx *ctx, bool dden,
 			write_crc(ctx);
 			write_bytes(ctx, gap3, 0x4e);
 		}
-		/* fill to end of disk */
+		// fill to end of disk
 		while (ctx->head_pos != 128) {
 			write_bytes(ctx, 1, 0x4e);
 		}
@@ -1120,10 +1105,8 @@ bool vdisk_format_disk(struct vdisk_ctx *ctx, bool dden,
 	return 1;
 }
 
-/*
- * Locate a sector on the disk by scanning the IDAM table, and update its data
- * from that provided.
- */
+// Locate a sector on the disk by scanning the IDAM table, and update its data
+// from that provided.
 
 bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			 unsigned sector, unsigned ssize, uint8_t *buf) {
@@ -1169,9 +1152,7 @@ bool vdisk_write_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 	return 0;
 }
 
-/*
- * Similarly, locate a sector and copy out its data.
- */
+// Similarly, locate a sector and copy out its data.
 
 bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 			unsigned sector, unsigned ssize, uint8_t *buf) {
@@ -1212,10 +1193,8 @@ bool vdisk_read_sector(struct vdisk_ctx *ctx, unsigned cyl, unsigned head,
 	return 0;
 }
 
-/*
- * Read numbered IDAM from specified track.  Returns true only if information
- * has been populated.  Doesn't verify data, but sets crc_error if necessary.
- */
+// Read numbered IDAM from specified track.  Returns true only if information
+// has been populated.  Doesn't verify data, but sets crc_error if necessary.
 
 bool vdisk_read_idam(struct vdisk_ctx *ctx, struct vdisk_idam *vidam,
 		      unsigned cyl, unsigned head, unsigned idam) {

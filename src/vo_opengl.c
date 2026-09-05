@@ -1,25 +1,22 @@
-/** \file
+/* Generic OpenGL support for video output modules.
  *
- *  \brief Generic OpenGL support for video output modules.
+ * Copyright 2012-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2012-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* OpenGL code is common to several video modules.  All the stuff that's not
+ * toolkit-specific goes in here.
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  OpenGL code is common to several video modules.  All the stuff that's not
- *  toolkit-specific goes in here.
- *
- *  This code now uses OpenGL 3+ Framebuffer Objects (FBO), which simplifies
- *  things a lot, but may make it harder to run on old machines.
+ * This code now uses OpenGL 3+ Framebuffer Objects (FBO), which simplifies
+ * things a lot, but may make it harder to run on old machines.
  */
 
 #include "top-config.h"

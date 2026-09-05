@@ -1,21 +1,17 @@
-/** \file
+/* IDE Emulation Layer for retro-style PIO interfaces.
  *
- *  \brief IDE Emulation Layer for retro-style PIO interfaces.
+ * Copyright 2015-2019 Alan Cox
  *
- *  \copyright Copyright 2015-2019 Alan Cox
+ * Copyright 2021-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2021-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_IDE_H_
@@ -27,14 +23,7 @@
 struct blkdev;
 struct ser_handle;
 
-// These are now defined as BD_ACME_* in blockdev.h:
-//
-//#define ACME_ROADRUNNER         1       /* 504MB classic IDE drive */
-//#define ACME_COYOTE             2       /* 20MB early IDE drive */
-//#define ACME_NEMESIS            3       /* 20MB LBA capable drive */
-//#define ACME_ULTRASONICUS       4       /* 40MB LBA capable drive */
-//#define ACME_ACCELLERATTI	5       /* 128MB LBA capable drive */
-//#define ACME_ZIPPIBUS		6       /* 256MB LBA capable drive */
+// Standard hard disk types are listed in blockdev.h
 
 #define MAX_DRIVE_TYPE          6
 

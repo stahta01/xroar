@@ -1,26 +1,22 @@
-/** \file
+/* DragonDOS cartridge.
  *
- *  \brief DragonDOS cartridge.
+ * Copyright 2003-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
  *
- *  See COPYING.GPL for redistribution conditions.
+ * Sources
  *
- *  \endlicenseblock
- *
- *  \par Sources
- *  DragonDOS cartridge detail from http://www.dragon-archive.co.uk/
+ * - DragonDOS cartridge detail from http://www.dragon-archive.co.uk/
  */
 
-/* TODO: I've hacked in an optional "becker port" at $FF49/$FF4A.  Is this the
- * best place for it? */
+// Includes an optional "becker port" at $FF49/$FF4A.
 
 #include "top-config.h"
 

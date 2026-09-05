@@ -1,40 +1,36 @@
-/** \file
+/* Motorola MC6809 CPU.
  *
- *  \brief Motorola MC6809 CPU.
+ * Copyright 2003-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - MC6809E data sheet, Motorola
  *
- *  \endlicenseblock
+ * - MC6809 Cycle-By-Cycle Performance,
+ *   http://atjs.great-site.net/mc6809/Information/6809cyc.txt
  *
- *  \par Sources
+ * - Dragon Update, Illegal Op-codes, Feb 1994 Ciaran Anscomb
  *
- *  -  MC6809E data sheet, Motorola
+ * - Motorola 6809 and Hitachi 6309 Programmers Reference, 2009 Darren Atkinson
+ *   [darrena]
  *
- *  -  MC6809 Cycle-By-Cycle Performance,
- *     http://atjs.great-site.net/mc6809/Information/6809cyc.txt
+ * - Undocumented 6809 Behaviours, David Banks [hoglet67],
+ *   https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6809-Behaviours
  *
- *  -  Dragon Update, Illegal Op-codes, Feb 1994 Ciaran Anscomb
+ * - The Comprehensive Document of 6809 Undocumented and Undefined Behavior,
+ *   David Flamand [dfffffff], https://gitlab.com/dfffffff/6809_undoc
  *
- *  -  Motorola 6809 and Hitachi 6309 Programmers Reference,
- *     2009 Darren Atkinson [darrena]
- *
- *  -  Undocumented 6809 Behaviours, David Banks [hoglet67]
- *     https://github.com/hoglet67/6809Decoder/wiki/Undocumented-6809-Behaviours
- *
- *  -  The Comprehensive Document of 6809 Undocumented and Undefined Behavior,
- *     David Flamand [dfffffff], https://gitlab.com/dfffffff/6809_undoc
- *
- *  -  6809 Exchange and Transfer Opcodes,
- *     http://tlindner.macmess.org/?p=945
+ * - 6809 Exchange and Transfer Opcodes, http://tlindner.macmess.org/?p=945
  */
 
 // Additionally, I quite early on made reference to MAME source to understand

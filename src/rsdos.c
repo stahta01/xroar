@@ -1,25 +1,21 @@
-/** \file
+/* Tandy CoCo disk controller ("RS-DOS").
  *
- *  \brief Tandy CoCo disk controller ("RS-DOS").
+ * Copyright 2005-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2005-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  \par Sources
- *
- *  CoCo DOS cartridge detail:
- *
- *  - http://www.coco3.com/unravalled/disk-basic-unravelled.pdf
+ * CoCo DOS cartridge detail:
+ * - http://www.coco3.com/unravalled/disk-basic-unravelled.pdf
  */
 
 #include "top-config.h"

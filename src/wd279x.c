@@ -1,23 +1,20 @@
-/** \file
+/* WD279x Floppy Drive Controller.
  *
- *  \brief WD279x Floppy Drive Controller.
+ * Copyright 2003-2025 Ciaran Anscomb
  *
- *  \copyright Copyright 2003-2025 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Sources
  *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
- *
- *  \par Sources
- *
- *  - TMS279X datasheet, http://www.swtpc.com/mholley/DC_5/TMS279X_DataSheet.pdf
+ * - TMS279X datasheet, http://www.swtpc.com/mholley/DC_5/TMS279X_DataSheet.pdf
  */
 
 #include "top-config.h"
@@ -458,7 +455,7 @@ void wd279x_write(struct WD279X *fdc, uint16_t A, uint8_t D) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/** \brief WD279X state machine
+/* WD279X state machine
  *
  * This is called from an event dispatch and from the write command function.
  */

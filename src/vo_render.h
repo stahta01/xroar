@@ -1,33 +1,28 @@
-/** \file
+/* Video renderers.
  *
- *  \brief Video renderers.
+ * Copyright 2023-2024 Ciaran Anscomb
  *
- *  \copyright Copyright 2023-2024 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
+ * See COPYING.GPL for redistribution conditions.
+ */
+
+/* Successfully initialising a video module returns a (struct vo_interface),
+ * which is used by various parts of XRoar to do different things:
  *
- *  See COPYING.GPL for redistribution conditions.
+ * - The UI may ask it to resize, toggle menubar, etc.
+ * - Selecting a machine may define colour palettes and select how things are
+ *   to be rendered.
+ * - While running, the emulated machine will use it to render scanlines,
+ *   indicate vertical sync, or just ask to refresh the screen.
  *
- *  \endlicenseblock
- *
- *  Successfully initialising a video module returns a (struct vo_interface),
- *  which is used by various parts of XRoar to do different things:
- *
- *  - The UI may ask it to resize, toggle menubar, etc.
- *
- *  - Selecting a machine may define colour palettes and select how things are
- *    to be rendered.
- *
- *  - While running, the emulated machine will use it to render scanlines,
- *    indicate vertical sync, or just ask to refresh the screen.
- *
- *  Palette entries are specified either as YPbPr (Y scaled 0-1, Pb and Pr
- *  scaled ±0.5) or as RGB (each scaled 0-1).
+ * Palette entries are specified either as YPbPr (Y scaled 0-1, Pb and Pr
+ * scaled ±0.5) or as RGB (each scaled 0-1).
  */
 
 #ifndef XROAR_VO_RENDER_H_

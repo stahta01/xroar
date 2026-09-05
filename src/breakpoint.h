@@ -1,19 +1,15 @@
-/** \file
+/* Breakpoint tracking for debugging.
  *
- *  \brief Breakpoint tracking for debugging.
+ * Copyright 2011-2026 Ciaran Anscomb
  *
- *  \copyright Copyright 2011-2026 Ciaran Anscomb
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
- *  \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * XRoar is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option) any later
+ * version.
  *
- *  XRoar is free software; you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
- *  Foundation, either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  See COPYING.GPL for redistribution conditions.
- *
- *  \endlicenseblock
+ * See COPYING.GPL for redistribution conditions.
  */
 
 #ifndef XROAR_BREAKPOINT_H_
@@ -28,9 +24,7 @@ struct slist;
 
 #define BP_HANDLERS_PER_ADDRESS (3)
 
-/*
- * Breakpoints.  Trap on execution from address.
- */
+/* Breakpoints.  Trap on execution from address.  */
 
 struct bp_breakpoint {
 	uint32_t A;
@@ -44,8 +38,9 @@ struct bp_breakpoint_set {
 	bool modified;  // an add or delete has occurred during list run
 };
 
-// Add a breakpoint.  Returns 1 if successful, else 0 (e.g. identical
+// Add a breakpoint.  Returns true if successful, else false (e.g. identical
 // breakpoint already exists)
+
 bool bp_breakpoint_add(struct bp_breakpoint_set *bbs, uint32_t A,
 			DELEGATE_T2(void, bool, uint32) handler);
 
@@ -61,8 +56,7 @@ void bp_instruction_hook(void *sptr, uint32_t A);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/*
- * Watchpoints.  Trap on memory range reads and writes.  These are simple
+/* Watchpoints.  Trap on memory range reads and writes.  These are simple
  * linked lists, so less efficient than breakpoints, but we need to match on
  * ranges.
  */
@@ -78,18 +72,21 @@ struct bp_watchpoint_set {
 	struct bp_watchpoint *list[2];
 };
 
-// Add a watchpoint.  Returns 1 if successful, else 0 (e.g. identical
-// watchpoint already exists)
+// Add a watchpoint.  Returns true if successful, else false (e.g. identical
+// watchpoint already exists).
+
 bool bp_watchpoint_add(struct bp_watchpoint_set *wps, bool Rnw,
 			uint32_t Astart, uint32_t Aend,
 			DELEGATE_T2(void, bool, uint32) handler);
 
 // Remove specific watchpoint.
+
 void bp_watchpoint_remove(struct bp_watchpoint_set *wps, int Rnw,
 			  int32_t Astart, uint32_t Aend,
 			  DELEGATE_T2(void, bool, uint32) handler);
 
-// Inlined watchpoint match & dispatch
+// Inlined watchpoint match & dispatch.
+
 inline void bp_check_watchpoints(struct bp_watchpoint_set *set, bool RnW, uint32_t A) {
 	struct bp_watchpoint *list = set->list[RnW];
 	struct bp_watchpoint *next;
