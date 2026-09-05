@@ -134,7 +134,7 @@ xroar_SOURCES += \
 	dragondos.c \
 	gmc.c \
 	ide.c ide.h \
-	idecart.c idecart.h \
+	idecart.c \
 	mooh.c \
 	mpi.c \
 	nx32.c \
