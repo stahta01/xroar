@@ -89,6 +89,105 @@ static const char *lookup_part(const char *name, const char *is_a) {
 	return NULL;
 }
 
+// Returns whether it is safe to actually set this option.  If no destination
+// is given, return false if the option is deprecated else abort with an error
+// message.
+
+static bool valid_dest(struct xconfig_option const *option, void *sptr) {
+	unsigned flags = option->flags;
+
+	// CALL options
+	if (option->flags & XCONFIG_FLAG_CALL) {
+		bool valid_call = 0;
+		switch (option->type) {
+		case XCONFIG_BOOL:
+		case XCONFIG_BOOL0:
+			valid_call = option->dest.func_bool != NULL;
+			break;
+		case XCONFIG_INT:
+		case XCONFIG_INT0:
+		case XCONFIG_INT1:
+		case XCONFIG_ENUM:
+			valid_call = option->dest.func_int != NULL;
+			break;
+		case XCONFIG_DOUBLE:
+			valid_call = option->dest.func_double != NULL;
+			break;
+		case XCONFIG_STRING:
+			valid_call = option->dest.func_string != NULL;
+			break;
+		case XCONFIG_NONE:
+			valid_call = option->dest.func_null != NULL;
+			break;
+		case XCONFIG_ASSIGN:
+			valid_call = option->dest.func_assign != NULL;
+			break;
+		default:
+			LOG_ERROR("Internal error: CALL not valid for option `%s'\n", option->name);
+			exit(EXIT_FAILURE);
+			break;
+		}
+
+		if (!valid_call && !option->deprecated) {
+			LOG_ERROR("Internal error: no function for undeprecated CALL option `%s'\n", option->name);
+			exit(EXIT_FAILURE);
+		}
+
+		return valid_call;
+	}
+
+	// Non-CALL offset options just need a valid sptr
+	if (flags & XCONFIG_FLAG_OFFSET)
+		return (sptr != NULL);
+
+	// Non-CALL options
+	void *object = option->dest.object;
+	bool valid_object = 0;
+	switch (option->type) {
+	case XCONFIG_BOOL:
+	case XCONFIG_BOOL0:
+		valid_object = (bool *)object != NULL;
+		break;
+	case XCONFIG_INT:
+	case XCONFIG_INT0:
+	case XCONFIG_INT1:
+	case XCONFIG_ENUM:
+		valid_object = (int *)object != NULL;
+		break;
+	case XCONFIG_UINT8:
+		valid_object = (uint8_t *)object != NULL;
+		break;
+	case XCONFIG_UINT16:
+		valid_object = (uint16_t *)object != NULL;
+		break;
+	case XCONFIG_DOUBLE:
+		valid_object = (double *)object != NULL;
+		break;
+	case XCONFIG_STRING:
+	case XCONFIG_PART:
+		valid_object = (char **)object != NULL;
+		break;
+	case XCONFIG_STRING_LIST:
+		valid_object = (struct slist **)object != NULL;
+		break;
+	case XCONFIG_ALIAS:
+	case XCONFIG_ALIAS1:
+		valid_object = (char *)object != NULL;
+		break;
+	default:
+		LOG_ERROR("Internal error: object not valid for option `%s'\n", option->name);
+		exit(EXIT_FAILURE);
+		break;
+	}
+
+	if (!valid_object && !option->deprecated) {
+		LOG_ERROR("Internal error: no object for undeprecated option `%s'\n", option->name);
+		exit(EXIT_FAILURE);
+	}
+
+	return valid_object;
+}
+
 // Handle simple zero or one argument option setting (ie, not XCONFIG_ASSIGN).
 // 'arg' should be parsed to handle any quoting or escape sequences by this
 // point.
@@ -105,8 +204,12 @@ static void set_option(const struct xconfig_set *set, struct xconfig_option cons
 		object = option->dest.object;
 	}
 
+	if (!valid_dest(option, sptr))
+		return;
+
 	if (option->defined)
 		*(option->defined) = 1;
+
 	switch (option->type) {
 		case XCONFIG_BOOL:
 			if (option->flags & XCONFIG_FLAG_CALL)
@@ -231,6 +334,9 @@ static bool unset_option(struct xconfig_option const *option, void *sptr) {
 	} else {
 		object = option->dest.object;
 	}
+
+	if (!valid_dest(option, sptr))
+		return XCONFIG_OK;
 
 	if (option->defined)
 		*(option->defined) = 1;
@@ -409,6 +515,9 @@ enum xconfig_result xconfig_parse_line_struct(const struct xconfig_set *set, con
 	}
 
 	if (option->type == XCONFIG_ASSIGN) {
+		if (!valid_dest(option, sptr))
+			return XCONFIG_OK;
+
 		// first part is key separated by '=' (or whitespace for now)
 		sds key = sdsx_tok(input, "([ \t]*=[ \t]*|[ \t]+)", 1);
 		if (!key) {
@@ -522,6 +631,7 @@ enum xconfig_result xconfig_parse_cli_struct(const struct xconfig_set *set,
 		if (option->type == XCONFIG_ASSIGN) {
 			const char *str = argv[_argn+1];
 			size_t len = strlen(str);
+
 			// first part is key separated by '=' (NO whitespace)
 			sds key = sdsx_tok_str_len(&str, &len, "=", 0);
 			if (!key) {
@@ -540,7 +650,9 @@ enum xconfig_result xconfig_parse_cli_struct(const struct xconfig_set *set,
 					values->elem[i] = new;
 				}
 			}
-			option->dest.func_assign(key, values);
+			if (valid_dest(option, sptr)) {
+				option->dest.func_assign(key, values);
+			}
 			sdsx_list_free(values);
 			sdsfree(key);
 		} else {
