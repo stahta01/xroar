@@ -32,7 +32,6 @@
 #include "xalloc.h"
 
 #include "crc32.h"
-#include "crclist.h"
 #include "fs.h"
 #include "logging.h"
 #include "rom.h"
@@ -139,50 +138,6 @@ void rombank_report(struct rombank *rb, const char *par, const char *name) {
 			LOG_PRINT("\tCombined: %s\n", rm->description);
 		}
 	}
-}
-
-// Verify ROM bank CRC.  Pass negative slot id to check combined CRC.
-
-bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
-			 const char *crclist, bool force, uint32_t *crc32) {
-	bool present = 0;
-	uint32_t check_crc32 = CRC32_RESET;
-	if (slot < 0) {
-		check_crc32 = rb->combined_crc32;
-		// Check that any slot is populated
-		for (unsigned i = 0; i < rb->nslots; i++) {
-			if (rb->d[i]) {
-				present = 1;
-				break;
-			}
-		}
-	} else if ((unsigned)slot < rb->nslots && rb->d[slot]) {
-		check_crc32 = rb->slot[slot].crc32;
-		present = 1;
-	}
-
-	bool valid = present && crclist_match(crclist, check_crc32);
-	bool forced = present && !valid && force;
-
-	if (forced) {
-		LOG_DEBUG(1, "\t%s CRC32 forced to 0x%08x\n", name, *crc32);
-		symtab_clear(&rb->symtab);
-		struct rom_meta *rm = rom_meta_by_crc32(*crc32, 16384);
-		if (rm && rm->symtab) {
-			symtab_include(&rb->symtab, rm->symtab);
-		}
-		return 1;
-	}
-
-	*crc32 = check_crc32;
-
-	if (valid) {
-		LOG_DEBUG(1, "\t%s CRC32 valid\n", name);
-		return 1;
-	}
-
-	LOG_DEBUG(1, "\t%s CRC32 INVALID\n", name);
-	return 0;
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

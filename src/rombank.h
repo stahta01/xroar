@@ -63,13 +63,6 @@ void rombank_free(struct rombank *);
 
 void rombank_report(struct rombank *, const char *par, const char *name);
 
-// Verify ROM bank CRC.  Pass negative slot id to check combined CRC.  If force
-// is set to true, the value pointed to by crc32 is not overwritten if the CRC
-// did not check.
-
-bool rombank_verify_crc(struct rombank *rb, const char *name, int slot,
-			 const char *crclist, bool force, uint32_t *crc32);
-
 // Load ROM image.
 
 int rombank_load_image(struct rombank *, unsigned slot, const char *filename, off_t offset);
