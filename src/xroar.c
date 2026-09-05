@@ -1636,7 +1636,7 @@ void xroar_run(int ncycles) {
 }
 
 int xroar_filetype_by_ext(const char *filename) {
-	char *ext;
+	const char *ext;
 	int i;
 	ext = strrchr(filename, '.');
 	if (ext == NULL)
