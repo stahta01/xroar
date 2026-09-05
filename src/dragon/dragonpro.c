@@ -272,7 +272,7 @@ static bool dragonpro_finish(struct part *p) {
 	// Report and check CRC (32K BASIC)
 	rombank_report(mdp->dragon.ROM0, "dragonpro", "32K BASIC");
 	md->crc_combined = 0x84f68bf9;  // Dragon 64 32K mode BASIC
-	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
+	(void)rombank_verify_crc(mdp->dragon.ROM0, "32K BASIC", -1, "@dragonpro_basic", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	md->CPU->mem_cycle = DELEGATE_AS2(void, bool, uint16, dragonpro_cpu_cycle, mdp);
 

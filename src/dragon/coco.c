@@ -165,10 +165,10 @@ static bool coco_finish(struct part *p) {
 	// Check CRCs
 	md->crc_bas = (mc->ram > 4) ? 0xd8f4d15e : 0x00b50aaa;  // CB 1.3/1.0
 	const char *crclist = (mc->ram > 4) ? "@coco" : "@bas10";
-	md->has_bas = rombank_verify_crc(md->ROM0, "Colour BASIC", 1, crclist, xroar.cfg.force_crc_match, &md->crc_bas);
+	(void)rombank_verify_crc(md->ROM0, "Colour BASIC", 1, crclist, xroar.cfg.force_crc_match, &md->crc_bas);
 
 	md->crc_extbas = 0xa82a6254;  // ECB 1.1
-	md->has_extbas = rombank_verify_crc(md->ROM0, "Extended Colour BASIC", 0, "@cocoext", xroar.cfg.force_crc_match, &md->crc_extbas);
+	(void)rombank_verify_crc(md->ROM0, "Extended Colour BASIC", 0, "@cocoext", xroar.cfg.force_crc_match, &md->crc_extbas);
 
 	coco_pia_configuration(md);
 

@@ -129,7 +129,7 @@ static bool dragon32_finish(struct part *p) {
 
 	// Check CRCs
 	md->crc_combined = 0xe3879310;  // Dragon 32 BASIC
-	md->has_combined = rombank_verify_crc(md->ROM0, "BASIC", -1, "@d32", xroar.cfg.force_crc_match, &md->crc_combined);
+	(void)rombank_verify_crc(md->ROM0, "BASIC", -1, "@d32", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	// Machine-specific PIA connections
 	switch (mc->ram_org) {

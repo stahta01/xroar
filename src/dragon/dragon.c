@@ -425,7 +425,6 @@ bool dragon_finish_common(struct dragon *md) {
 	m->debug.target_xml = debug_target_xml(m->debug.target);
 #endif
 
-	md->has_combined = md->has_extbas = md->has_bas = md->has_altbas = 0;
 	md->crc_combined = md->crc_extbas = md->crc_bas = md->crc_altbas = 0;
 	md->has_ext_charset = 0;
 	md->crc_ext_charset = 0;

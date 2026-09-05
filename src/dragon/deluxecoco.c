@@ -244,7 +244,7 @@ static bool deluxecoco_finish(struct part *p) {
 	// Report and check CRC (Advanced Colour BASIC)
 	rombank_report(mdp->dragon.ROM0, "deluxecoco", "Advanced Colour BASIC");
 	md->crc_combined = 0x1cce231e;  // ACB 00.00.07
-	md->has_combined = rombank_verify_crc(mdp->dragon.ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
+	(void)rombank_verify_crc(mdp->dragon.ROM0, "Advanced Colour BASIC", -1, "@deluxecoco", xroar.cfg.force_crc_match, &md->crc_combined);
 
 	coco_pia_configuration(md);
 
