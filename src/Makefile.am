@@ -28,7 +28,6 @@ xroar_SOURCES = \
 	colourspace.c colourspace.h \
 	crc16.c crc16.h \
 	crc32.c crc32.h \
-	crclist.c crclist.h \
 	debug.c debug.h \
 	dkbd.c dkbd.h \
 	events.c events.h \
