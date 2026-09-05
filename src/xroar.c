@@ -55,7 +55,6 @@
 #include "auto_kbd.h"
 #include "becker.h"
 #include "cart.h"
-#include "crclist.h"
 #include "dkbd.h"
 #include "events.h"
 #include "fs.h"
@@ -733,52 +732,6 @@ static char const * const default_config[] = {
 	// MCX128 BASIC
 	"romlist mcx128=mcx128,MCX_Basic_21",
 	"romlist mcx128_azerty=mcx128a,MCX_Basic_21_AZERTY",
-#endif
-
-	// CRC lists
-
-#ifdef WANT_MACHINE_ARCH_DRAGON
-	// Dragon BASIC
-	"crclist d64_1=0x84f68bf9,0x60a4634c,@woolham_d64_1",
-	"crclist d64_2=0x17893a42,@woolham_d64_2",
-	"crclist d32=0xe3879310,@woolham_d32",
-	"crclist d200e_1=0x95af0a0a",
-	"crclist dragon=@d64_1,@d32,@d200e_1",
-	"crclist woolham_d64_1=0xee33ae92",
-	"crclist woolham_d64_2=0x1660ae35",
-	"crclist woolham_d32=0xff7bf41e,0x9c7eed69",
-	// Dragon Pro
-	"crclist dragonpro_boot=0xd6172b56,0xc3dab585",
-	"crclist dragonpro_basic=@d64_1",
-	// CoCo BASIC
-	"crclist bas10=0x00b50aaa",
-	"crclist bas11=0x6270955a",
-	"crclist bas12=0x54368805",
-	"crclist bas13=0xd8f4d15e",
-	"crclist mx1600=0xd918156e,0xd11b1c96",  // 2nd is zephyr-patched
-	"crclist cp400=0x0b2903d4",
-	"crclist coco=@bas13,@bas12,@bas11,@bas10,@mx1600,@cp400",
-	"crclist extbas10=0xe031d076,0x6111a086",  // 2nd is corrupt dump
-	"crclist extbas11=0xa82a6254",
-	"crclist mx1600ext=0x322a3d58",
-	"crclist cp400ext=0x114accbc",
-	"crclist cocoext=@extbas11,@extbas10,@mx1600ext,@cp400ext",
-	"crclist coco_combined=@mx1600",
-	"crclist deluxecoco=0x1cce231e",
-#endif
-
-#ifdef WANT_MACHINE_ARCH_COCO3
-	// CoCo 3 Super Extended Colour BASIC
-	"crclist coco3=0xb4c88d6c,0xff050d80",
-#endif
-
-#ifdef WANT_MACHINE_ARCH_MC10
-	// MC-10 BASIC
-	"crclist mc10=0x11fda97e",
-	// Alice BASIC
-	"crclist alice=0xf876abe9",
-	// Both
-	"crclist mc10_compat=@mc10,@alice",
 #endif
 
 	// Joysticks
@@ -1494,7 +1447,6 @@ void xroar_shutdown(void) {
 		DELEGATE_SAFE_CALL(xroar.vo_interface->free);
 	}
 	romlist_shutdown();
-	crclist_shutdown();
 	for (unsigned i = 0; i < JOYSTICK_NUM_AXES; i++) {
 		free(private_cfg.joy.axis[i]);
 		private_cfg.joy.axis[i] = NULL;
@@ -3270,8 +3222,8 @@ static struct xconfig_option const xroar_options[] = {
 	{ XC_SET_STRING_NE("rompath", &xroar.cfg.file.rompath) },
 	{ XC_CALL_ASSIGN_NE("romlist", &romlist_assign) },
 	{ XC_CALL_NONE("romlist-print", &romlist_print) },
-	{ XC_CALL_ASSIGN("crclist", &crclist_assign) },
-	{ XC_CALL_NONE("crclist-print", &crclist_print) },
+	{ XC_CALL_ASSIGN("crclist", NULL), .deprecated = 1 },
+	{ XC_CALL_NONE("crclist-print", NULL), .deprecated = 1 },
 	{ XC_SET_BOOL("force-crc-match", &xroar.cfg.force_crc_match) },
 
 	/* User interface: */
@@ -3529,8 +3481,6 @@ static void helptext(void) {
 "  -rompath PATH         ROM search path (colon-separated list)\n"
 "  -romlist NAME=LIST    define a ROM list\n"
 "  -romlist-print        print defined ROM lists\n"
-"  -crclist NAME=LIST    define a ROM CRC list\n"
-"  -crclist-print        print defined ROM CRC lists\n"
 "  -force-crc-match      force per-architecture CRC matches\n"
 "\n"
 
@@ -3729,7 +3679,6 @@ static void config_print_all(FILE *f, bool all) {
 	fputs("# Firmware ROM images\n", f);
 	xroar_cfg_print_string(f, all, "rompath", xroar.cfg.file.rompath, NULL);
 	romlist_print_all(f);
-	crclist_print_all(f);
 	xroar_cfg_print_bool(f, all, "force-crc-match", xroar.cfg.force_crc_match, 0);
 	fputs("\n", f);
 
