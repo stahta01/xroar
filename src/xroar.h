@@ -211,10 +211,6 @@ int xroar_filetype_by_ext(const char *filename);
 void xroar_load_file_by_type(const char *filename, int autorun);
 void xroar_load_disk(const char *filename, int drive, bool autorun);
 
-/* Scheduled shutdown */
-struct xroar_timeout *xroar_set_timeout(char const *timestring);
-void xroar_cancel_timeout(struct xroar_timeout *);
-
 /* Helper functions */
 void xroar_set_trace(int mode, unsigned n);
 void xroar_new_disk(int drive);

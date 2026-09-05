@@ -1742,7 +1742,7 @@ static void handle_timeout_event(void *sptr) {
 
 /* Configure a timeout (period after which emulator will exit). */
 
-struct xroar_timeout *xroar_set_timeout(char const *timestring) {
+static struct xroar_timeout *xroar_set_timeout(char const *timestring) {
 	struct xroar_timeout *timeout = NULL;
 	double t = strtod(timestring, NULL);
 	if (t >= 0.0) {
@@ -1757,7 +1757,7 @@ struct xroar_timeout *xroar_set_timeout(char const *timestring) {
 	return timeout;
 }
 
-void xroar_cancel_timeout(struct xroar_timeout *timeout) {
+static void xroar_cancel_timeout(struct xroar_timeout *timeout) {
 	event_dequeue(&timeout->event);
 	free(timeout);
 }
