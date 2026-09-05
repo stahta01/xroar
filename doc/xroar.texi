@@ -2062,10 +2062,6 @@ here for reference.
 @tab Define a ROM list.
 @item @option{-romlist-print}
 @tab Print defined ROM lists and exit.
-@item @option{-crclist @var{name}=@var{list}}
-@tab Define a CRC list.
-@item @option{-crclist-print}
-@tab Print defined CRC lists and exit.
 @item @option{-force-crc-match}
 @tab Force per-architecture CRC matching.
 @end multitable
@@ -2504,12 +2500,7 @@ colon-separated list of directories to search.
 
 A CRC32 value is calculated and reported for each ROM image loaded.  XRoar uses
 these CRCs to determine whether certain breakpoints can be used (e.g. for fast
-tape loading).  The lists of CRCs matched can be defined in a similar way to
-ROM lists using the @option{-crclist @var{list}=@var{crc}[,@var{crc}]@dots{}}
-option.  Each @var{crc} is a 8-digit hex number preceded by @samp{0x}, or the
-name of a nested list preceded by @samp{@@}.  Use this if you have a modified
-version of a BASIC ROM that maintains compatible entry points with an original.
-View the current lists with @option{-crclist-print}.
+tape loading).
 
 Sometimes it may be useful to force CRC matching so that breakpoints apply
 (e.g. you are modifying a ROM image and don't wish to have to add its CRC to

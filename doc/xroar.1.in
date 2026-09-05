@@ -362,12 +362,6 @@ Define a ROM list.
 \f(CB\-romlist\-print\fR
 Print defined ROM lists.
 .TP
-\f(CB\-crclist\fR \fIname\fR=\fIlist\fR
-Define a ROM CRC list.
-.TP
-\f(CB\-crclist\-print\fR
-Print defined ROM CRC lists.
-.TP
 \f(CB\-force\-crc\-match\fR
 Force per-architecture CRC matches.
 .H2 User interface:
