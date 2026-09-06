@@ -1,10 +1,8 @@
-/** \file
+/* Block device abstraction.
  *
- * \brief Block device abstraction.
+ * Copyright 2022-2026 Ciaran Anscomb
  *
- * \copyright Copyright 2022-2024 Ciaran Anscomb
- *
- * \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
  * XRoar is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
@@ -12,8 +10,6 @@
  * version.
  *
  * See COPYING.GPL for redistribution conditions.
- *
- * \endlicenseblock
  */
 
 #ifndef XROAR_BLOCKDEV_H_
@@ -21,8 +17,9 @@
 
 #include <stdio.h>
 
-/** Built-in HD types.  Taken from Alan Cox's IDE code.
- */
+// Built-in HD types for passing to bd_create().  Taken from Alan Cox's IDE
+// code.
+
 enum {
 	BD_ACME_ROADRUNNER = 1, // 504MB classic IDE drive
 	BD_ACME_COYOTE,         // 20MB early IDE drive
@@ -34,118 +31,103 @@ enum {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/** \brief Block device public information.
- */
+// Block device public information.
 
 struct blkdev {
 	FILE *fd;
 };
 
-/** \brief Open block device.
- *
- * \param name      Filename of device to open.
- *
- * \return New block device handle or NULL on error.
- */
+// Open block device.
+//
+// name:    Filename of device to open.
+//
+// Returns new block device handle or NULL on error.
 
 struct blkdev *bd_open(const char *name);
 
-/** \brief Create block device.
- *
- * \param name      Filename of device to open.
- * \param hd_type   One of BD_ACME_*.
- *
- * \return 1 on success, else 0.
- */
+// Create block device.
+//
+// name:    Filename of device to open.
+// hd_type: One of BD_ACME_*.
+//
+// Returns true on success.
 
 bool bd_create(const char *name, int hd_type);
 
-/** \brief Close block device.
- */
+// Close block device.
 
 void bd_close(struct blkdev *bd);
 
-/** \brief Seek to a particular LSN.
- */
+// Query block device information.
+
+unsigned bd_sector_size(struct blkdev *bd);
+unsigned bd_num_sectors(struct blkdev *bd);
+
+// Seek to a particular LSN.
 
 bool bd_seek_lsn(struct blkdev *bd, unsigned lsn);
 
-/** \brief Read sector from current position.
- *
- * Must follow a successful seek.
- */
+// Read sector from current position.  Must follow a successful seek.
 
 bool bd_read(struct blkdev *bd, void *buf, unsigned bufsize);
 
-/** \brief Write sector to current position.
- *
- * Must follow a successful seek.
- */
+// Write sector to current position.  Must follow a successful seek.
 
 bool bd_write(struct blkdev *bd, void *buf, unsigned bufsize);
 
-/** \brief Read sector from block device in LSN mode.
- *
- * \return True if read succeeded.
- *
- * If the profile is ephemeral, it will be freed.
- */
+// Read sector from block device in LSN mode.
+//
+// Returns true if read succeeded.
 
 bool bd_read_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
 
-/** \brief Write sector to block device in LSN mode.
- *
- * \return True if read succeeded.
- */
+// Write sector to block device in LSN mode.
+//
+// Returns true if write succeeded.
 
 bool bd_write_lsn(struct blkdev *bd, unsigned lsn, void *buf, unsigned bufsize);
 
-/** \brief Read sector from block device in CHS mode.
- *
- * \return True if read succeeded.
- */
+// Read sector from block device in CHS mode.
+//
+// Returns true if read succeeded.
 
 bool bd_read_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		  void *buf, unsigned bufsize);
 
-/** \brief Write sector from block device in CHS mode.
- *
- * \return True if read succeeded.
- */
+// Write sector from block device in CHS mode.
+//
+// Returns true if write succeeded.
 
 bool bd_write_chs(struct blkdev *bd, unsigned c, unsigned h, unsigned s,
 		   void *buf, unsigned bufsize);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/** \brief Read IDE IDENTIFY DEVICE information.
- *
- * \return True if read succeeded.
- *
- * Destination will be populated with an array of 256 16-bit words explicitly
- * stored little-endian.
- */
+// Read IDE IDENTIFY DEVICE information.
+//
+// Returns true if read succeeded.
+//
+// Destination will be populated with an array of 256 16-bit words explicitly
+// stored little-endian.
 
 bool bd_ide_read_identify(struct blkdev *bd, void *buf, unsigned bufsize);
 
-/** \brief Extract ASCII string from IDE IDENTIFY DEVICE structure.
- *
- * \param bd        Block device structure.
- * \param index     Index into IDENTIFY DEVICE structure (in words).
- * \param size      Number of words to extract.
- *
- * \return          Pointer to allocated string.
- */
+// Extract ASCII string from IDE IDENTIFY DEVICE structure.
+//
+// bd:      Block device structure.
+// index:   Index into IDENTIFY DEVICE structure (in words).
+// size:    Number of words to extract.
+//
+// Returns pointer to allocated string.
 
 char *bd_ide_get_string(struct blkdev *bd, unsigned index, unsigned size);
 
-/** \brief Update ASCII string within IDE IDENTIFY DEVICE structure.
- *
- * \param bd        Block device structure.
- * \param index     Index into IDENTIFY DEVICE structure (in words).
- * \param size      Number of words to store.
- * \param s         Source string.
- */
+// Update ASCII string within IDE IDENTIFY DEVICE structure.
+//
+// bd:      Block device structure.
+// index:   Index into IDENTIFY DEVICE structure (in words).
+// size:    Number of words to store.
+// s:       Source string.
 
 void bd_ide_set_string(struct blkdev *bd, unsigned index, unsigned size, char *s);
 

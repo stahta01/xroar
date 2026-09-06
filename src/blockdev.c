@@ -1,10 +1,8 @@
-/** \file
+/* Block device abstraction.
  *
- * \brief Block device abstraction.
+ * Copyright 2022-2026 Ciaran Anscomb
  *
- * \copyright Copyright 2022-2024 Ciaran Anscomb
- *
- * \licenseblock This file is part of XRoar, a Dragon/Tandy CoCo emulator.
+ * This file is part of XRoar, a Dragon/Tandy CoCo emulator.
  *
  * XRoar is free software; you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
@@ -12,8 +10,6 @@
  * version.
  *
  * See COPYING.GPL for redistribution conditions.
- *
- * \endlicenseblock
  */
 
 #include "top-config.h"
@@ -45,8 +41,7 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-/** \brief Block device private information.
- */
+// Block device private information.
 
 struct blkdev_private {
 	struct blkdev blkdev;
@@ -213,6 +208,20 @@ bool bd_create(const char *name, int hd_type) {
 void bd_close(struct blkdev *bd) {
 	fclose(bd->fd);
 	free(bd);
+}
+
+// Query block device information.
+
+unsigned bd_sector_size(struct blkdev *bd) {
+	assert(bd != NULL);
+	struct blkdev_private *bdp = (struct blkdev_private *)bd;
+	return bdp->sector_size;
+}
+
+unsigned bd_num_sectors(struct blkdev *bd) {
+	assert(bd != NULL);
+	struct blkdev_private *bdp = (struct blkdev_private *)bd;
+	return bdp->num_sectors;
 }
 
 // Seek to a particular LSN.
