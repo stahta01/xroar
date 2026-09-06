@@ -108,6 +108,14 @@ struct blkdev *bd_open(const char *name) {
 		bd_set_sector_size(bdp, 256);
 		break;
 
+	case FILETYPE_JVC:
+		// 256 bytes per sector.  Bodged for now to allow attacking DSK
+		// images to WIP CoCoSDC.  TODO: consider movind general
+		// support for floppy images here.
+		bd_set_sector_size(bdp, 256);
+		bdp->offset = bdp->filesize % 256;
+		break;
+
 	case FILETYPE_IMG:
 	default:
 		// 512 bytes per sector
