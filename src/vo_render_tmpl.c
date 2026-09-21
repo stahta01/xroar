@@ -213,14 +213,17 @@ static void TNAME(render_cmp_2bit)(void *sptr, unsigned burstn, unsigned npixels
 	unsigned p = (vr->cmp.phase == 0);
 	for (int i = vr->viewport.w >> 2; i; i--) {
 		VR_PTYPE p0, p1, p2, p3;
-		uint8_t c0 = *src;
-		uint8_t c2 = *(src + 2);
-		if (vr->cmp.is_black_or_white[c0] && vr->cmp.is_black_or_white[c2]) {
+		uint8_t c0 = src[0];
+		uint8_t c1 = src[1];
+		uint8_t c2 = src[2];
+		uint8_t c3 = src[3];
+		// Only do palette lookups when each pair of pixels is the
+		// same, and are flagged as is_black_or_white.
+		if (c0 == c1 && c2 == c3 &&
+		    vr->cmp.is_black_or_white[c0] && vr->cmp.is_black_or_white[c2]) {
 			unsigned aindex = (vr->cmp.is_black_or_white[c0] << 1) | (vr->cmp.is_black_or_white[c2] & 1);
 			p0 = p1 = p2 = p3 = vrt->cmp.cc_2bit[p][aindex & 3];
 		} else {
-			uint8_t c1 = *(src+1);
-			uint8_t c3 = *(src+3);
 			p0 = vrt->cmp.palette[c0];
 			p1 = vrt->cmp.palette[c1];
 			p2 = vrt->cmp.palette[c2];
@@ -263,8 +266,9 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 	unsigned p = (vr->cmp.phase == 0);
 	unsigned ibwcount = 0;
 	unsigned aindex = 0;
-	uint8_t ibw0 = vr->cmp.is_black_or_white[*(src-6)];
-	uint8_t ibw1 = vr->cmp.is_black_or_white[*(src-2)];
+	// Prime the is-black-or-white tracking
+	uint8_t ibw0 = src[-6] == src[-5] ? vr->cmp.is_black_or_white[*(src-6)] : 0;
+	uint8_t ibw1 = src[-2] == src[-1] ? vr->cmp.is_black_or_white[*(src-2)] : 0;
 	if (ibw0 && ibw1) {
 		ibwcount = 7;
 		aindex = (ibw0 & 1) ? 14 : 0;
@@ -273,17 +277,20 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 	for (int i = vr->viewport.w >> 2; i; i--) {
 		VR_PTYPE p0, p1, p2, p3;
 
-		uint8_t ibw2 = vr->cmp.is_black_or_white[*(src+2)];
-		uint8_t ibw4 = vr->cmp.is_black_or_white[*(src+4)];
-		uint8_t ibw6 = vr->cmp.is_black_or_white[*(src+6)];
+		// Track is-black-or-white across 3 bits, LUT index across 5.
+		// And we do this for two pixels (one in each phase).  IBW only
+		// counts if a pair of pixels is identical.
+		uint8_t ibw2 = src[2] == src[3] ? vr->cmp.is_black_or_white[src[2]] : 0;
+		uint8_t ibw4 = src[4] == src[5] ? vr->cmp.is_black_or_white[src[4]] : 0;
+		uint8_t ibw6 = src[6] == src[7] ? vr->cmp.is_black_or_white[src[6]] : 0;
 
 		ibwcount = ((ibwcount << 1) | (ibw2 >> 1)) & 7;
 		aindex = ((aindex << 1) | (ibw4 & 1));
 		if (ibwcount == 7) {
 			p0 = p1 = vrt->cmp.cc_5bit[p][aindex & 31];
 		} else {
-			uint8_t c0 = *src;
-			uint8_t c1 = *(src+1);
+			uint8_t c0 = src[0];
+			uint8_t c1 = src[1];
 			p0 = vrt->cmp.palette[c0];
 			p1 = vrt->cmp.palette[c1];
 		}
@@ -293,8 +300,8 @@ static void TNAME(render_cmp_5bit)(void *sptr, unsigned burstn, unsigned npixels
 		if (ibwcount == 7) {
 			p2 = p3 = vrt->cmp.cc_5bit[!p][aindex & 31];
 		} else {
-			uint8_t c2 = *(src+2);
-			uint8_t c3 = *(src+3);
+			uint8_t c2 = src[2];
+			uint8_t c3 = src[3];
 			p2 = vrt->cmp.palette[c2];
 			p3 = vrt->cmp.palette[c3];
 		}
