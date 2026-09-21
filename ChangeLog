@@ -6,6 +6,8 @@
  * 6309 timing fixes [by Erik Gavriluk]
  * FDC floppy disk sector reporting to UI [with Mauricio Matte]
  * Shutdown cleanly on SIGTERM, SIGINT [Erik Gavriluk]
+ * Fix 2- and 5-bit LUT rendering of high-res GIME modes [with Glen Hewlett]
+ * iMMUnity fixes [by John Federico]
 
 Version 1.12, Mon 27 Jul 2026
 
