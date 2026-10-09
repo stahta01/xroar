@@ -227,7 +227,7 @@ void immunity_cpu_cycle(void *sptr, bool RnW, uint16_t A) {
 		bool int_mem = (!cocoram
 				 || (cocoram
 				     && ((bank & 0x07) == 0x07)
-				     && ((A & 0x1e00) == 0x1e00)
+				     && ((A & 0x1f00) == 0x1f00)
 				     && !io
 				    )
 				);
