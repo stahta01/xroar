@@ -71,11 +71,6 @@ void ui_sdl_init(struct ui_sdl3_interface *uisdl3, struct ui_cfg *ui_cfg) {
 
 	// Make available globally for other SDL3 code
 	global_uisdl3 = uisdl3;
-
-	// File requester.  TODO: move this to individual modules so they can
-	// refer to their own data.
-	struct module *fr_module = module_select_by_arg(default_filereq_module_list, ui_cfg->filereq);
-	ui->filereq_interface = module_init(fr_module, "filereq", NULL);
 }
 
 void ui_sdl_free(void *sptr) {
@@ -126,6 +121,10 @@ static void *ui_sdl_new(void *cfg) {
 	ui_sdl_init(uisdl3, ui_cfg);
 	struct ui_interface *ui = &uisdl3->ui_interface;
 	(void)ui;
+
+	// File requester.
+	struct module *fr_module = module_select_by_arg(default_filereq_module_list, ui_cfg->filereq);
+	ui->filereq_interface = module_init(fr_module, "filereq", NULL);
 
 	if (!sdl_vo_init(uisdl3)) {
 		free(uisdl3);
